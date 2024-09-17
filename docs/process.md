@@ -481,7 +481,7 @@ input:
 When a task is executed, Nextflow will check whether the received files for each path input match the declared arity, and fail if they do not.
 
 :::{note}
-Process `path` inputs have nearly the same interface as described in {ref}`stdlib-classes-path`, with one difference which is relevant when files are staged into a subdirectory. Given the following input:
+Process `path` inputs have nearly the same interface as described in {ref}`stdlib-types-path`, with one difference which is relevant when files are staged into a subdirectory. Given the following input:
 
 ```groovy
 path x, name: 'my-dir/*'

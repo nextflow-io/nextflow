@@ -61,7 +61,7 @@ assert path.parent == '/some/path'
 In Groovy, any method that looks like `get*()` can also be accessed as a field. For example, `myFile.getName()` is equivalent to `myFile.name`, `myFile.getBaseName()` is equivalent to `myFile.baseName`, and so on.
 :::
 
-See the {ref}`stdlib-classes-path` reference for the list of available methods.
+See the {ref}`stdlib-types-path` reference for the list of available methods.
 
 ## Reading and writing
 
@@ -174,7 +174,7 @@ myFile.withReader {
 
 The methods `newInputStream()` and `withInputStream()` work similarly. The main difference is that they create an [InputStream](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/InputStream.html) object useful for writing binary data.
 
-See the {ref}`stdlib-classes-path` reference for the list of available methods.
+See the {ref}`stdlib-types-path` reference for the list of available methods.
 
 ### Advanced file writing
 
@@ -193,11 +193,11 @@ sourceFile.withReader { source ->
 }
 ```
 
-See the {ref}`stdlib-classes-path` reference for the list of available methods.
+See the {ref}`stdlib-types-path` reference for the list of available methods.
 
 ## Filesystem operations
 
-Methods for performing filesystem operations such as copying, deleting, and directory listing are documented in the {ref}`stdlib-classes-path` reference.
+Methods for performing filesystem operations such as copying, deleting, and directory listing are documented in the {ref}`stdlib-types-path` reference.
 
 ### Listing directories
 

@@ -564,7 +564,7 @@ The following memory unit suffix can be used when specifying the disk value:
 | GB   | Gigabytes   |
 | TB   | Terabytes   |
 
-See {ref}`stdlib-classes-memoryunit` for more information.
+See {ref}`stdlib-types-memoryunit` for more information.
 
 :::{note}
 This directive is only used by certain executors. Refer to the {ref}`executor-page` page to see which executors support this directive.
@@ -925,7 +925,7 @@ The following memory unit suffix can be used when specifying the memory value:
 | GB   | Gigabytes   |
 | TB   | Terabytes   |
 
-See {ref}`stdlib-classes-memoryunit` for more information.
+See {ref}`stdlib-types-memoryunit` for more information.
 
 See also: [cpus](#cpus), [time](#time), [queue](#queue) and {ref}`dynamic-task-resources`.
 
@@ -1619,7 +1619,7 @@ The following time unit suffixes can be used when specifying the duration value:
 
 Multiple units can be used in a single declaration, for example: `'1day 6hours 3minutes 30seconds'`
 
-See {ref}`stdlib-classes-duration` for more information.
+See {ref}`stdlib-types-duration` for more information.
 
 :::{note}
 This directive is only used by certain executors. Refer to the {ref}`executor-page` page to see which executors support this directive.

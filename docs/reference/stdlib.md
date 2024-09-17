@@ -2,11 +2,13 @@
 
 # Standard library
 
-This page describes the built-in constants, functions, and classes provided by Nextflow.
+This page describes the built-in constants, functions, and types provided by Nextflow.
+
+## Globals
 
 (stdlib-constants)=
 
-## Constants
+### Constants
 
 The following constants are globally available in a Nextflow script:
 
@@ -183,7 +185,7 @@ The following constants are globally available in a Nextflow script:
 
 (stdlib-functions)=
 
-## Functions
+### Functions
 
 The following functions are available in Nextflow scripts:
 
@@ -248,31 +250,27 @@ The following functions are available in Nextflow scripts:
 `workflow.onError( closure )`
 : Define an action to take if the workflow is terminated due to a runtime error or task failure. Refer to the `workflow` implicit variable to see which additional properties are available in the error handler.
 
-(stdlib-classes)=
-
-## Classes
-
-### Default imports
+## Default imports
 
 The following classes are imported by default in Nextflow scripts:
 
-- `java.lang.*`
-- `java.util.*`
 - `java.io.*`
+- `java.lang.*`
+- `java.math.BigDecimal`
+- `java.math.BigInteger`
 - `java.net.*`
+- `java.nio.file.Path`
+- `java.util.*`
 - `groovy.lang.*`
 - `groovy.util.*`
-- `java.math.BigInteger`
-- `java.math.BigDecimal`
-- `java.nio.file.Path`
 
-### Channel
+## Channel
 
 The `Channel` class provides the channel factory methods. See {ref}`channel-factory` for more information.
 
-(stdlib-classes-duration)=
+(stdlib-types-duration)=
 
-### Duration
+## Duration
 
 A `Duration` represents some duration of time.
 
@@ -329,9 +327,9 @@ The following methods are available for a `Duration` object:
 `getSeconds()`, `toSeconds()`
 : Get the duration value in seconds (rounded down).
 
-(stdlib-classes-memoryunit)=
+(stdlib-types-memoryunit)=
 
-### MemoryUnit
+## MemoryUnit
 
 A `MemoryUnit` represents a quantity of bytes.
 
@@ -392,13 +390,13 @@ The following methods are available for a `MemoryUnit` object:
 `toUnit( unit )`
 : Get the memory value in terms of a given unit (rounded down). The unit can be one of: `'B'`, `'KB'`, `'MB'`, `'GB'`, `'TB'`, `'PB'`, `'EB'`, `'ZB'`.
 
-(stdlib-classes-path)=
+(stdlib-types-path)=
 
-### Path
+## Path
 
 The `file()` method returns a [Path](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/Path.html), so any method defined for Path can also be used in a Nextflow script.
 
-#### Getting attributes
+### Getting attributes
 
 The following methods are useful for getting attributes of a file:
 
@@ -454,7 +452,7 @@ The following methods are useful for getting attributes of a file:
   assert ref.toUriString() == 's3://some-bucket/foo.txt'
   ```
 
-#### Reading
+### Reading
 
 The following methods are available for reading files:
 
@@ -485,7 +483,7 @@ The following methods are available for reading files:
 `withReader( closure )`
 : Opens a file for reading and lets you access it with a [Reader](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/Reader.html) object.
 
-#### Writing
+### Writing
 
 The following methods are available for writing to files:
 
@@ -519,7 +517,7 @@ The following methods are available for writing to files:
 `write( text )`
 : Writes a string to a file, replacing any existing content.
 
-#### Filesystem operations
+### Filesystem operations
 
 The following methods are available for manipulating files and directories in a filesystem:
 
@@ -687,7 +685,3 @@ The following methods are available for splitting and counting the records in fi
 
 `splitText()`
 : Splits a text file into a list of lines. See the {ref}`operator-splittext` operator for available options.
-
-### ValueObject
-
-`ValueObject` is an AST transformation for classes and enums, which simply combines [AutoClone](http://docs.groovy-lang.org/latest/html/gapi/groovy/transform/AutoClone.html) and [Immutable](https://docs.groovy-lang.org/latest/html/gapi/groovy/transform/Immutable.html). It is useful for defining custom "record" types.
