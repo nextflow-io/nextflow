@@ -35,10 +35,10 @@ import nextflow.plugin.Priority
 class DefaultCacheFactory extends CacheFactory {
 
     @Override
-    protected CacheDB newInstance(UUID uniqueId, String runName, Path home) {
+    protected CacheDB newInstance(UUID uniqueId, String runName, String prevRunName, Path home) {
         if( !uniqueId ) throw new AbortOperationException("Missing cache `uuid`")
         if( !runName ) throw new AbortOperationException("Missing cache `runName`")
-        final store = new DefaultCacheStore(uniqueId, runName, home)
+        final store = new DefaultCacheStore(uniqueId, runName, prevRunName, home)
         return new CacheDB(store)
     }
 
