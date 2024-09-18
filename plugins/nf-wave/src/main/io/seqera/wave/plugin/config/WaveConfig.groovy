@@ -50,6 +50,7 @@ class WaveConfig {
     final private HttpOpts httpClientOpts
     final private Boolean freezeMode
     final private Boolean preserveFileTimestamp
+    final private Duration buildMaxDuration
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
@@ -67,6 +68,7 @@ class WaveConfig {
         this.reportOpts = new ReportOpts(opts.report as Map ?: Map.of())
         this.retryOpts = retryOpts0(opts)
         this.httpClientOpts = new HttpOpts(opts.httpClient as Map ?: Map.of())
+        this.buildMaxDuration = opts.navigate('build.maxDuration', '40m') as Duration
         // some validation
         validateConfig()
     }
@@ -94,6 +96,8 @@ class WaveConfig {
     String buildRepository() { buildRepository }
 
     String cacheRepository() { cacheRepository }
+
+    Duration buildMaxDuration() { buildMaxDuration }
 
     private void validateConfig() {
         def scheme= FileHelper.getUrlProtocol(endpoint)

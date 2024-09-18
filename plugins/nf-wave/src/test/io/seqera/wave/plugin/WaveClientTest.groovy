@@ -40,6 +40,7 @@ import io.seqera.wave.config.CondaOpts
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.container.inspect.ContainerInspectMode
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.processor.TaskRun
@@ -48,9 +49,11 @@ import org.apache.commons.compress.archivers.ArchiveStreamFactory
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
+import org.junit.Rule
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
+import test.OutputCapture
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -98,6 +101,9 @@ class WaveClientTest extends Specification {
             return buffer.toByteArray()
         }
     }
+
+    @Rule
+    OutputCapture capture = new OutputCapture()
 
     def 'should tar file' () {
         given:
@@ -1209,4 +1215,82 @@ class WaveClientTest extends Specification {
         100 .times { assert WaveClient.randomRange(0, 10) >= 0 }
     }
 
+    def 'should print info message' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [:] }
+        and:
+        def wave = Spy(new WaveClient(sess))
+        def BUILD_ID = 'build-123'
+        def PENDING = new BuildStatusResponse('123', BuildStatusResponse.Status.PENDING, Instant.now(), null, null)
+        def SUCCEEDED = new BuildStatusResponse('123', BuildStatusResponse.Status.COMPLETED, Instant.now(), Duration.ofMillis(1), true)
+
+        when:
+        wave.awaitCompletion(BUILD_ID, 'wave.com/foo')
+
+        then:
+        1 * wave.buildStatus(BUILD_ID) >> PENDING
+        and:
+        wave.awaitSleep0(_) >> { sleep 50 }
+        and:
+        1 * wave.buildStatus(BUILD_ID) >> PENDING
+        and:
+        wave.awaitSleep0(_) >> { sleep 50 }
+        and:
+        1 * wave.buildStatus(BUILD_ID) >> SUCCEEDED
+        and:
+        wave.awaitSleep0(_) >> { sleep 50 }
+        and:
+        capture.toString().count('Awaiting provisioning for container') == 1
+
+        then:
+        noExceptionThrown()
+    }
+
+    def 'should report an exception on build failure' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [:] }
+        and:
+        def wave = Spy(new WaveClient(sess))
+        def BUILD_ID = 'build-123'
+        def PENDING = new BuildStatusResponse('123', BuildStatusResponse.Status.PENDING, Instant.now(), null, null)
+        def FAILED = new BuildStatusResponse('123', BuildStatusResponse.Status.COMPLETED, Instant.now(), Duration.ofMillis(1), false)
+
+        when:
+        wave.awaitCompletion(BUILD_ID, 'wave.com/foo')
+
+        then:
+        1 * wave.buildStatus(BUILD_ID) >> PENDING
+        and:
+        wave.awaitSleep0(_) >> { sleep 50 }
+        and:
+        1 * wave.buildStatus(BUILD_ID) >> FAILED
+        and:
+        wave.awaitSleep0(_) >> { sleep 50 }
+
+        then:
+        def err = thrown(ProcessUnrecoverableException)
+        err.message == "Wave provisioning for container 'wave.com/foo' did not complete successfully - check details here: https://wave.seqera.io/view/builds/build-123"
+    }
+
+    def 'should fail on timeout' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [wave: [build:[maxDuration: '500ms']]] }
+        and:
+        def wave = Spy(new WaveClient(sess))
+        def BUILD_ID = 'build-123'
+        def PENDING = new BuildStatusResponse('123', BuildStatusResponse.Status.PENDING, Instant.now(), null, null)
+
+        when:
+        wave.awaitCompletion(BUILD_ID, 'wave.com/foo')
+
+        then:
+        wave.buildStatus(BUILD_ID) >> PENDING
+        and:
+        wave.awaitSleep0(_) >> { sleep 50 }
+        and:
+        sleep 500
+        then:
+        def err = thrown(ProcessUnrecoverableException)
+        err.message == "Wave provisioning for container 'wave.com/foo' is exceeding max allowed duration (500ms) - check details here: https://wave.seqera.io/view/builds/build-123"
+    }
 }
