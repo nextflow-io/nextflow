@@ -597,11 +597,11 @@ class WaveClient {
             if( ((count++)-1) % 12 == 0 ) {
                 log.info "Awaiting provisioning for container $containerImage"
             }
-            sleep0(randomRange(10,15) * 1_000)
+            awaitSleep0(randomRange(10,15) * 1_000)
         }
     }
 
-    protected void sleep0(long period) {
+    protected void awaitSleep0(long period) {
         Thread.sleep(period)
     }
 

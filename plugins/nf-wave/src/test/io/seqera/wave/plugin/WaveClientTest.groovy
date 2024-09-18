@@ -1230,15 +1230,15 @@ class WaveClientTest extends Specification {
         then:
         1 * wave.buildStatus(BUILD_ID) >> PENDING
         and:
-        wave.sleep0(_) >> { sleep 50 }
+        wave.awaitSleep0(_) >> { sleep 50 }
         and:
         1 * wave.buildStatus(BUILD_ID) >> PENDING
         and:
-        wave.sleep0(_) >> { sleep 50 }
+        wave.awaitSleep0(_) >> { sleep 50 }
         and:
         1 * wave.buildStatus(BUILD_ID) >> SUCCEEDED
         and:
-        wave.sleep0(_) >> { sleep 50 }
+        wave.awaitSleep0(_) >> { sleep 50 }
         and:
         capture.toString().count('Awaiting provisioning for container') == 1
 
@@ -1261,11 +1261,11 @@ class WaveClientTest extends Specification {
         then:
         1 * wave.buildStatus(BUILD_ID) >> PENDING
         and:
-        wave.sleep0(_) >> { sleep 50 }
+        wave.awaitSleep0(_) >> { sleep 50 }
         and:
         1 * wave.buildStatus(BUILD_ID) >> FAILED
         and:
-        wave.sleep0(_) >> { sleep 50 }
+        wave.awaitSleep0(_) >> { sleep 50 }
 
         then:
         def err = thrown(ProcessUnrecoverableException)
@@ -1286,7 +1286,7 @@ class WaveClientTest extends Specification {
         then:
         wave.buildStatus(BUILD_ID) >> PENDING
         and:
-        wave.sleep0(_) >> { sleep 50 }
+        wave.awaitSleep0(_) >> { sleep 50 }
         and:
         sleep 500
         then:
