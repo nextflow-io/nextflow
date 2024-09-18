@@ -812,7 +812,7 @@ The following settings are available:
 : The maximum size of the local cache used by the Fusion client.
 
 `fusion.containerConfigUrl`
-: The URL from where the container layer provisioning the Fusion client is downloaded. Use this option to pin a specific Fusion version to use with Nextflow. For example, set `https://fusionfs.seqera.io/releases/v2.4.2-amd64.json` to use Fusion v2.4.2 for AMD64 CPU architectures. 
+: The URL from where the container layer provisioning the Fusion client is downloaded. This option is useful to specify a development Fusion version for debugging purposes. 
 
 `fusion.exportStorageCredentials`
 : :::{versionadded} 23.05.0-edge
