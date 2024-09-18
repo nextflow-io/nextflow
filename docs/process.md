@@ -338,7 +338,7 @@ The following input qualifiers are available:
 - `tuple`: Handle a group of input values having any of the above qualifiers.
 - `each`: Execute the process for each element in the input collection.
 
-Refer to the {ref}`process reference <process-reference-inputs>` for the full list of available input methods and options.
+See {ref}`process reference <process-reference-inputs>` for the full list of input methods and options.
 
 ### Input variables (`val`)
 
@@ -1221,7 +1221,7 @@ In the above snippet, `task.cpus` and `task.memory` hold the values for the {ref
 
 A directive can be assigned *dynamically*, during the process execution, so that its actual value can be evaluated based on the process inputs.
 
-In order to be defined in a dynamic manner, the directive's value needs to be expressed using a {ref}`closure <script-closure>`, as in the following example:
+To be defined dynamically, the directive's value needs to be expressed using a {ref}`closure <script-closure>`. For example:
 
 ```groovy
 process foo {

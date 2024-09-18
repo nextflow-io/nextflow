@@ -2,9 +2,9 @@
 
 # Command line
 
-Nextflow provides a robust command line interface for the management and execution pipelines.
+Nextflow provides a robust command line interface (CLI) for the management and execution pipelines.
 
-Simply run `nextflow` with no options or `nextflow -h` to see the list of available top-level options and commands. Refer to the {ref}`cli-reference` for the full list of subcommands and examples for each.
+Simply run `nextflow` with no options or `nextflow -h` to see the list of available top-level options and commands. See {ref}`cli-reference` for the full list of subcommands with examples.
 
 :::{note}
 Nextflow options use a single dash prefix, e.g. `-foo`. Do not confuse with double dash notation, e.g. `--foo`, which is instead used for {ref}`Pipeline parameters <cli-params>`.
@@ -187,35 +187,34 @@ nextflow run http://github.com/foo/bar
 If the project is found, it will be automatically downloaded to the Nextflow home directory (`$HOME/.nextflow` by default) and cached for subsequent runs.
 
 :::{note}
-In the first case, if your project is hosted on a service other than GitHub, you will need to specify this hosting service in the command line by using the `-hub` option. For example `-hub bitbucket` or `-hub gitlab`. In the second case, i.e. when using the project URL as name, the `-hub` option is not needed.
+You must use the `-hub` option to specify the hosting service if your project is hosted on a service other than GitHub, e.g. `-hub bitbucket`. However, the `-hub` option is not required if you use the project URL.
 :::
 
-You can try this feature out by entering the following command in your terminal:
+Try this feature by running the following command:
 
 ```bash
 nextflow run nextflow-io/hello
 ```
 
-It will download a trivial example from the repository published at the following address <http://github.com/nextflow-io/hello> and execute it in your computer.
+It will download a trivial example from the repository published at <http://github.com/nextflow-io/hello> and execute it on your computer.
 
-If the `owner` part in the pipeline name is omitted, Nextflow will look for a pipeline between the ones you have already executed having a name that matches the name specified. If none is found it will try to download it using the `organization` name defined by the environment variable `NXF_ORG` (which by default is `nextflow-io`).
+If the `owner` is omitted, Nextflow will search your cached pipelines for a pipeline that matches the name specified. If no pipeline is found, Nextflow will try to download it using the `organization` name defined by the `NXF_ORG` environment variable (`nextflow-io` by default ).
 
 :::{tip}
-To access a private repository, specify the access credentials by using the `-user` command line option, then the program will ask you to enter the password interactively. Private repository access credentials can also be defined in the {ref}`Git configuration <git-page>`.
+To access a private repository, specify the access credentials using the `-user` command line option. Then follow the interactive prompts to enter your password. Alternatively, define your private repository access credentials using Git. See {ref}`Git configuration <git-page>` for more information.
 :::
 
 ### Using a specific revision
 
 Any Git branch, tag, or commit of a project repository can be used when launching a pipeline by specifying the `-r` option:
 
-```bash
-nextflow run nextflow-io/hello -r mybranch
-```
+```console
+$ nextflow run nextflow-io/hello -r mybranch
 
 or
 
-```bash
-nextflow run nextflow-io/hello -r v1.1
+```console
+$ nextflow run nextflow-io/hello -r v1.1
 ```
 
 These commands will execute two different project revisions based on the given Git branch/tag/commit.
@@ -224,10 +223,10 @@ These commands will execute two different project revisions based on the given G
 
 ### Pipeline parameters
 
-Pipeline scripts can use an arbitrary number of parameters that can be overridden, either using the command line or the Nextflow configuration file. Any script parameter can be specified on the command line, prefixing the parameter name with double dash characters, e.g.:
+Pipeline scripts can use an arbitrary number of parameters that can be overridden using the command line or Nextflow configuration files. Any script parameter can be specified on the command line by prefixing the parameter name with double-dash characters. For example:
 
-```bash
-nextflow run <pipeline> --foo Hello
+```console
+$ nextflow run <pipeline> --foo Hello
 ```
 
 Then, the parameter can be accessed in the pipeline script using the `params.foo` identifier.
@@ -239,8 +238,8 @@ When the parameter name is formatted using `camelCase`, a second parameter is cr
 :::{warning}
 When a command line parameter includes one or more glob characters, i.e. wildcards like `*` or `?`, the parameter value must be enclosed in quotes to prevent Bash expansion and preserve the glob characters. For example:
 
-```bash
-nextflow run <pipeline> --files "*.fasta"
+```console
+$ nextflow run <pipeline> --files "*.fasta"
 ```
 :::
 
@@ -248,7 +247,7 @@ nextflow run <pipeline> --files "*.fasta"
 
 Nextflow seamlessly integrates with popular Git providers, including [BitBucket](http://bitbucket.org/), [GitHub](http://github.com), and [GitLab](http://gitlab.com) for managing Nextflow pipelines as version-controlled Git repositories.
 
-The following commands allows you to perform some basic operations that can be used to manage your projects.
+The following commands allow you to perform basic operations to manage your projects.
 
 ### Listing available projects
 
@@ -258,7 +257,7 @@ The `list` command allows you to list all the projects you have downloaded in yo
 nextflow list
 ```
 
-This prints a list similar to the following one:
+This prints a list similar to the following:
 
 ```
 cbcrg/ampa-nf
@@ -284,30 +283,30 @@ revisions   :
   v1.2 [t]
 ```
 
-Starting from the top it shows: the project name; the Git repository URL; the local directory where the project has been downloaded; the script that is executed when launched; the list of available revisions i.e. branches and tags. Tags are marked with a `[t]` on the right, the current checked-out revision is marked with a `*` on the left.
+Starting from the top it shows: the project name; the Git repository URL; the local directory where the project has been downloaded; the script that is executed when launched; the list of available revisions i.e. branches and tags. Tags are marked with a `[t]` on the right and the checked-out revision is marked with a `*` on the left.
 
 ### Pulling or updating a project
 
 The `pull` command allows you to download a project from a GitHub repository or to update it if that repository has already been downloaded. For example:
 
-```bash
-nextflow pull nextflow-io/examples
+```console
+$ nextflow pull nextflow-io/hello
 ```
 
 Alternatively, you can use the repository URL as the name of the project to pull:
 
-```bash
-nextflow pull https://github.com/nextflow-io/examples
+```console
+$ nextflow pull https://github.com/nextflow-io/hello
 ```
 
-Downloaded pipeline projects are stored in the directory `$HOME/.nextflow/assets` in your computer.
+Downloaded pipeline projects are stored in your directory `$HOME/.nextflow/assets` directory.
 
 ### Viewing the project code
 
-The `view` command allows you to quickly show the content of the pipeline script you have downloaded. For example:
+The `view` command shows the content of the pipeline script you have pulled. For example:
 
-```bash
-nextflow view nextflow-io/hello
+```console
+$ nextflow view nextflow-io/hello
 ```
 
 By adding the `-l` option to the example above it will list the content of the repository.
@@ -316,13 +315,13 @@ By adding the `-l` option to the example above it will list the content of the r
 
 The `clone` command allows you to copy a Nextflow pipeline project to a directory of your choice. For example:
 
-```bash
-nextflow clone nextflow-io/hello target-dir
+```console
+$ nextflow clone nextflow-io/hello target-dir
 ```
 
 If the destination directory is omitted the specified project is cloned to a directory with the same name as the pipeline base name (e.g. `hello`) in the current directory.
 
-The clone command can be used to inspect or modify the source code of a pipeline project. You can eventually commit and push back your changes by using the usual Git/GitHub workflow.
+The `clone` command can be used to inspect or modify the source code of a pipeline project. You can eventually commit and push back your changes by using the usual Git/GitHub workflow.
 
 ### Deleting a project
 

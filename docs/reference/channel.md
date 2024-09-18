@@ -320,7 +320,7 @@ Available options:
 
 (channel-interval)=
 
-### interval
+## interval
 
 The `interval` method emits an incrementing index (starting from zero) at a periodic interval. For example:
 

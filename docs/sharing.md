@@ -10,7 +10,7 @@ Nextflow is not meant to completely replace the [Git](https://git-scm.com/) tool
 
 ## Git configuration
 
-You can configure your credentials for various Git providers in the Git configuration file, located at `$HOME/.nextflow/scm`. Refer to the {ref}`git-page` page for more information.
+You can configure your credentials for various Git providers in the Git configuration file, located at `$HOME/.nextflow/scm`. See {ref}`git-page` for more information.
 
 ## Using a local repository
 
@@ -138,7 +138,7 @@ When launching a pipeline, parameter values can be provided on the command line 
 nextflow run <your pipeline> --my_input /path/to/input/file --my_output /other/path --my_flag true
 ```
 
-In some cases, when a pipeline requires some small data which rarely changes, it may be easier to include this data in the pipeline repository. You can reference this data from the pipeline script in a portable manner (i.e. without relying on an absolute path) by using the `projectDir` implicit variable, which refers to the local copy of the pipeline repository.
+When a pipeline requires some small data that rarely changes, it may be easier to include the data in the pipeline repository. You can reference this data from the pipeline script in a portable manner (i.e. without relying on an absolute path) by using the `projectDir` implicit variable, which refers to the local copy of the pipeline repository.
 
 The following example references the file `dataset/sequences.fa` in the pipeline repository:
 
@@ -164,4 +164,4 @@ env {
 
 Similarly, if you use an HPC scheduler like SLURM or a cloud batch service like AWS Batch to execute tasks in a distributed manner, you can use a configuration profile to define the settings for a given environment.
 
-See the {ref}`config-page` page to learn more about Nextflow configuration, and the {ref}`executor-page` page to learn more about specific executors.
+See {ref}`config-page` for more information about Nextflow configuration and {ref}`executor-page` for more information about executors.

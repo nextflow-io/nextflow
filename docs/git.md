@@ -6,7 +6,7 @@
 
 The file `$HOME/.nextflow/scm` allows you to centralise the security credentials required to access private project repositories on Bitbucket, GitHub and GitLab source code management (SCM) platforms or to manage the configuration properties of private server installations (of the same platforms).
 
-The configuration properties for each Git provider are defined inside the `providers` section, properties for the same provider are grouped together with a common name and delimited with curly brackets as in this example:
+The configuration properties for each Git provider are defined inside the `providers` section. Properties for the same provider are grouped with a common name and delimited with curly brackets. For example:
 
 ```groovy
 providers {
@@ -71,7 +71,7 @@ App passwords are substitute passwords for a user account which you can use for 
 [BitBucket Server](https://confluence.atlassian.com/bitbucketserver) is a self-hosted Git repository and management platform.
 
 :::{note}
-BitBucket Server uses a different API from the [BitBucket](https://bitbucket.org/) cloud service. Make sure to use the right configuration whether you are using the cloud service or a self-hosted installation.
+BitBucket Server uses a different API from the [BitBucket](https://bitbucket.org/) Cloud service. Make sure to use the right configuration whether you are using the cloud service or a self-hosted installation.
 :::
 
 To access your local BitBucket Server create an entry in the [SCM configuration file](#git-configuration) specifying as shown below:
@@ -146,7 +146,7 @@ See [Gitea documentation](https://docs.gitea.io/en-us/api-usage/) about how to e
 
 ### Azure Repos
 
-Nextflow has a builtin support for [Azure Repos](https://azure.microsoft.com/en-us/services/devops/repos/), a Git source code management service hosted in the Azure cloud. To access your Azure Repos with Nextflow provide the repository credentials using the configuration snippet shown below:
+Nextflow has builtin support for [Azure Repos](https://azure.microsoft.com/en-us/services/devops/repos/), a Git source code management service hosted in the Azure cloud. To access your Azure Repos with Nextflow provide the repository credentials using the configuration snippet shown below:
 
 ```groovy
 providers {
@@ -185,7 +185,7 @@ providers {
 In the above snippet replace `<AWS ACCESS KEY>` and `<AWS SECRET KEY>` with your AWS credentials, and `my_aws_repo` with a name of your choice.
 
 :::{tip}
-The `user` and `password` are optional settings, if omitted the [AWS default credentials provider chain](https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html) is used.
+The `user` and `password` settings are optional. If omitted, the [AWS default credentials provider chain](https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html) is used.
 :::
 
 Then the pipeline can be accessed with Nextflow as shown below:
@@ -226,7 +226,7 @@ Then you will be able to run/pull a project with Nextflow using the following co
 nextflow run foo/bar -hub mygit
 ```
 
-Or, in alternative, using the Git clone URL:
+Or, alternatively, using the Git clone URL:
 
 ```bash
 nextflow run http://gitlab.acme.org/foo/bar.git
@@ -237,5 +237,5 @@ You must also specify the server API endpoint URL if it differs from the server 
 :::
 
 :::{warning}
-When accessing a private SCM installation over `https` from a server that uses a custom SSL certificate, you may need to import the certificate into your local Java keystore. Read more [here](https://docs.oracle.com/javase/tutorial/security/toolsign/rstep2.html).
+When accessing a private SCM installation over `https` from a server that uses a custom SSL certificate, you may need to import the certificate into your local Java keystore. See [Import the Certificate as a Trusted Certificate](https://docs.oracle.com/javase/tutorial/security/toolsign/rstep2.html) for more information.
 :::

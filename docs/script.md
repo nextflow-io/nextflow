@@ -132,7 +132,7 @@ The three variables on the left of the assignment operator are initialized by th
 
 Read more about [Multiple assignment](http://www.groovy-lang.org/semantics.html#_multiple_assignment) in the Groovy documentation.
 
-## Control flow
+## Conditional execution
 
 One of the most important features of any programming language is the ability to execute different code under different conditions. The simplest way to do this is to use the `if` construct:
 

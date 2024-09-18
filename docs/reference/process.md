@@ -266,7 +266,7 @@ Allowed values for the `arch` directive are as follows, grouped by equivalent fa
 - ARM 64 bit: `linux/aarch64`, `aarch64`, `linux/arm64`, `arm64`, `linux/arm64/v8`
 - ARM 64 bit, older generation: `linux/arm64/v7`
 
-Examples of values for the architecture `target` option are `cascadelake`, `icelake`, `zen2` and `zen3`. See the Spack documentation for the full and up-to-date [list of meaningful targets](https://spack.readthedocs.io/en/latest/basic_usage.html#support-for-specific-microarchitectures).
+Examples of values for the architecture `target` option are `cascadelake`, `icelake`, `zen2` and `zen3`. See the [Spack documentation](https://spack.readthedocs.io/en/latest/basic_usage.html#support-for-specific-microarchitectures) for the full and up-to-date list of meaningful targets.
 
 (process-array)=
 
@@ -680,7 +680,7 @@ process doSomething {
 ```
 
 :::{note}
-Each executor supports additional directives and `executor` configuration options. Refer to the {ref}`executor-page` page to see what each executor supports.
+Each executor supports additional directives and `executor` configuration options. See {ref}`executor-page` for more information.
 :::
 
 (process-ext)=
@@ -780,7 +780,7 @@ The same label can be applied to more than a process and multiple labels can be 
 A label must consist of alphanumeric characters or `_`, must start with an alphabetic character and must end with an alphanumeric character.
 :::
 
-Labels are useful to organise workflow processes in separate groups which can be referenced in the configuration file to select and configure subset of processes having similar computing requirements. See the {ref}`config-process-selectors` documentation for details.
+Labels are useful to organize workflow processes in separate groups which can be referenced in the configuration file to select and configure a subset of processes having similar computing requirements. See {ref}`config-process-selectors` for more information.
 
 See also: [resourceLabels](#resourcelabels)
 
