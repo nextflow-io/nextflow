@@ -808,7 +808,7 @@ The following settings are available:
 : The maximum size of the local cache used by the Fusion client.
 
 `fusion.containerConfigUrl`
-: The URL from where the container layer provisioning the Fusion client is downloaded.
+: The URL from where the container layer provisioning the Fusion client is downloaded. This option is useful to specify a development Fusion version for debugging purposes. 
 
 `fusion.exportStorageCredentials`
 : :::{versionadded} 23.05.0-edge
