@@ -98,8 +98,28 @@ class Manifest {
         target.doi
     }
 
+    String getDocsUrl() {
+        target.docsUrl
+    }
+
+    String getIconUrl(){
+        target.iconUrl
+    }
+
+    String getMaintainer(){
+        target.maintainer
+    }
+
+    String getOrganisation(){
+        target.organisation
+    }
+
+    String getLicense(){
+        target.license
+    }
+
     Map toMap() {
-        final result = new HashMap(10)
+        final result = new HashMap(15)
         result.author = getAuthor()
         result.defaultBranch = getDefaultBranch()
         result.description = getDescription()
@@ -109,6 +129,11 @@ class Manifest {
         result.version = getVersion()
         result.nextflowVersion = getNextflowVersion()
         result.doi = getDoi()
+        result.docsUrl = getDocsUrl()
+        result.iconUrl = getIconUrl()
+        result.maintainer = getMaintainer()
+        result.organisation = getOrganisation()
+        result.license = getLicense()
         return result
     }
 }
