@@ -27,7 +27,7 @@ class ManifestTest extends Specification {
 
         given:
         def MAN = [author: 'pablo', nextflowVersion: '1.2.3', name: 'foo',
-                   maintainer: 'john', organisation: 'My Organisation', iconUrl: 'icon.png',
+                   maintainer: 'john', organisation: 'My Organisation', icon: 'icon.png',
                    docsUrl: 'https://docs.io', license: 'Apache v2']
         when:
         def manifest = new Manifest(MAN)
@@ -38,7 +38,7 @@ class ManifestTest extends Specification {
             name == 'foo'
             maintainer == 'john'
             organisation == 'My Organisation'
-            iconUrl == 'icon.png'
+            icon == 'icon.png'
             docsUrl == 'https://docs.io'
             license == 'Apache v2'
         }
@@ -64,7 +64,7 @@ class ManifestTest extends Specification {
             maintainer == null
             docsUrl == null
             organisation == null
-            iconUrl == null
+            icon == null
             license == null
         }
 

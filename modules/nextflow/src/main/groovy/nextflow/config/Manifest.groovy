@@ -102,8 +102,8 @@ class Manifest {
         target.docsUrl
     }
 
-    String getIconUrl(){
-        target.iconUrl
+    String getIcon(){
+        target.icon
     }
 
     String getMaintainer(){
@@ -130,7 +130,7 @@ class Manifest {
         result.nextflowVersion = getNextflowVersion()
         result.doi = getDoi()
         result.docsUrl = getDocsUrl()
-        result.iconUrl = getIconUrl()
+        result.icon = getIcon()
         result.maintainer = getMaintainer()
         result.organisation = getOrganisation()
         result.license = getLicense()

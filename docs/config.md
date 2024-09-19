@@ -1246,7 +1246,7 @@ The following settings are available:
 `manifest.homePage`
 : Project home page URL.
 
-`manifest.iconUrl`
+`manifest.icon`
 : Project related icon location (Relative path or URL).
 
 `manifest.license`
