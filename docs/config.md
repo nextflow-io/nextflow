@@ -1237,14 +1237,26 @@ The following settings are available:
 `manifest.description`
 : Free text describing the workflow project.
 
+`manifest.docsUrl`
+: Project documentation URL.
+
 `manifest.doi`
 : Project related publication DOI identifier.
 
 `manifest.homePage`
 : Project home page URL.
 
+`manifest.icon`
+: Project related icon location (Relative path or URL).
+
+`manifest.license`
+: Project license.
+
 `manifest.mainScript`
 : Project main script (default: `main.nf`).
+
+`manifest.maintainer`
+: Project maintainer name (use a comma to separate multiple names).
 
 `manifest.name`
 : Project short name.
@@ -1261,6 +1273,9 @@ The following settings are available:
   manifest.nextflowVersion = '>=1.2, <=1.5' // any version in the 1.2 .. 1.5 range
   manifest.nextflowVersion = '!>=1.2'       // with ! prefix, stop execution if current version does not match required version.
   ```
+
+`manifest.organisation`
+: Project organisation
 
 `manifest.recurseSubmodules`
 : Pull submodules recursively from the Git repository.
