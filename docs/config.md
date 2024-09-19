@@ -1250,7 +1250,7 @@ The following settings are available:
 : Project related icon location (Relative path or URL).
 
 `manifest.license`
-: Workflow license.
+: Project license.
 
 `manifest.mainScript`
 : Project main script (default: `main.nf`).
