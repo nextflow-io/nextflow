@@ -679,7 +679,6 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             final hash = name.md5()
             result = result.substring(0,40) + '-' + hash
         }
-
         return "nf-" + result
     }
 
@@ -712,7 +711,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final opts = getAwsOptions()
         final labels = task.config.getResourceLabels()
         final result = new SubmitJobRequest()
-        result.setJobName(normalizeJobName(task.name))
+        result.setJobName(includeTowerPrefix(normalizeJobName(task.name)))
         result.setJobQueue(getJobQueue(task))
         result.setJobDefinition(getJobDefinition(task))
         if( labels ) {
@@ -800,6 +799,13 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return result
     }
 
+    protected String includeTowerPrefix(String name) {
+        if ( this.environment?.containsKey('TOWER_WORKFLOW_ID') )
+            return "tw-"+this.environment['TOWER_WORKFLOW_ID'] + "-" + name
+        else
+            return name
+    }
+
     /**
      * @return The list of environment variables to be defined in the Batch job execution context
      */
@@ -841,6 +847,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         def result = name.replaceAll(' ','_').replaceAll(/[^a-zA-Z0-9_]/,'')
         result.size()>128 ? result.substring(0,128) : result
     }
+
+
 
 
     protected CloudMachineInfo getMachineInfo() {
