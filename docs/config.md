@@ -1229,7 +1229,7 @@ The `manifest` scope allows you to define some meta-data information needed when
 The following settings are available:
 
 `manifest.author`
-: Project author name (use a comma to separate multiple names).
+: Project author name (String or map).
 
 `manifest.defaultBranch`
 : Git repository default branch (default: `master`).
@@ -1256,7 +1256,7 @@ The following settings are available:
 : Project main script (default: `main.nf`).
 
 `manifest.maintainer`
-: Project maintainer name (use a comma to separate multiple names).
+: Project maintainer(s) (String or map).
 
 `manifest.name`
 : Project short name.
