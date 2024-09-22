@@ -61,6 +61,7 @@ config
 executor
 cache-and-resume
 reports
+plugins
 ```
 
 ```{toctree}
@@ -86,7 +87,6 @@ dsl1
 :maxdepth: 1
 
 git
-plugins
 container
 conda
 spack
