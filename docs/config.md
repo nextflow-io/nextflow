@@ -1256,7 +1256,7 @@ The following settings are available:
 : Project main script (default: `main.nf`).
 
 `manifest.maintainer`
-: Project maintainer(s) (String or map).
+: Project maintainer(s). Can be a string of comma-separated values or a list of maps.
 
 `manifest.name`
 : Project short name.
