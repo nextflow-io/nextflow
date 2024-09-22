@@ -90,7 +90,7 @@ protected coordinates( it ) {
 /*
  * Compile and pack all packages
  */
-task packOne( dependsOn: [clean, compile, ":nextflow:shadowJar"]) {
+task packOne( dependsOn: [compile, ":nextflow:shadowJar"]) {
     doLast {
         def source = "modules/nextflow/build/libs/nextflow-${version}-one.jar"
         ant.copy(file: source, todir: releaseDir, overwrite: true)
@@ -99,7 +99,7 @@ task packOne( dependsOn: [clean, compile, ":nextflow:shadowJar"]) {
     }
 }
 
-task packDist( dependsOn: [clean, compile, ":nextflow:shadowJar"]) {
+task packDist( dependsOn: [compile, ":nextflow:shadowJar"]) {
 
     doLast {
         file(releaseDir).mkdirs()
@@ -168,7 +168,7 @@ task installLauncher(type: Copy, dependsOn: ['pack']) {
 
 task installScratch(type: Copy, dependsOn: ['pack']) {
     from "$releaseDir/nextflow-$version-one.jar"
-    into "${rootProject.projectDir}/docker-scratch/.nextflow/framework/$version/"
+    into "${rootProject.projectDir}/test-platform/.nextflow/framework/$version/"
 }
 
 /*
@@ -240,7 +240,7 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
     def launcherFile = file('nextflow').absoluteFile
     def launcherSha1 = file('nextflow.sha1').absoluteFile
     def launcherSha256 = file('nextflow.sha256').absoluteFile
-    def nextflowAllFile = file("$releaseDir/nextflow-${version}-all")
+    def nextflowAllFile = file("$releaseDir/nextflow-${version}-dist")
     def versionFile = file('VERSION').absoluteFile
 
     def snapshot = version ==~ /^.+(-RC\d+|-SNAPSHOT)$/

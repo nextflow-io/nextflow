@@ -143,7 +143,10 @@ The following settings are available:
 `aws.batch.maxSpotAttempts`
 : :::{versionadded} 22.04.0
   :::
-: Max number of execution attempts of a job interrupted by a EC2 spot reclaim event (default: `5`)
+: :::{versionchanged} 24.08.0-edge
+  The default value was changed from `5` to `0`.
+  :::
+: Max number of execution attempts of a job interrupted by a EC2 spot reclaim event (default: `0`)
 
 `aws.batch.maxTransferAttempts`
 : Max number of downloads attempts from S3 (default: `1`).
@@ -434,11 +437,14 @@ The `charliecloud` scope controls how [Charliecloud](https://hpc.github.io/charl
 
 The following settings are available:
 
-`charliecloud.cacheDir`
-: The directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
-
 `charliecloud.enabled`
 : Enable Charliecloud execution (default: `false`).
+
+`charliecloud.writeFake`
+: Enable `writeFake` with charliecloud (default: `true`) This allows to run containers from storage in writeable mode, using overlayfs. `writeFake` requires unprivileged `overlayfs` (Linux kernel >= 5.11). For full support, tempfs with xattrs in the user namespace (Linux kernel >= 6.6) is required, see [charliecloud documentation](https://hpc.github.io/charliecloud/ch-run.html#ch-run-overlay) for details.
+
+`charliecloud.cacheDir`
+: The directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
 
 `charliecloud.envWhitelist`
 : Comma separated list of environment variable names to be included in the container environment.
@@ -454,15 +460,6 @@ The following settings are available:
 
 `charliecloud.registry`
 : The registry from where images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
-
-`charliecloud.writeFake`
-: Enable `writeFake` with charliecloud. This allows to run containers from storage in writeable mode, using overlayfs, see [charliecloud documentation](https://hpc.github.io/charliecloud/ch-run.html#ch-run-overlay) for details.
-: :::{note}
-  If `charliecloud.writeFake` is unset or `false`, charliecloud will create a copy of the container in the process working directory.
-  :::
-
-`charliecloud.useSquash`
-: Create a temporary squashFS container image in the process work directory instead of a folder.
 
 Read the {ref}`container-charliecloud` page to learn more about how to use Charliecloud containers with Nextflow.
 
@@ -758,7 +755,7 @@ The following settings are available:
 : The maximum size of the local cache used by the Fusion client.
 
 `fusion.containerConfigUrl`
-: The URL from where the container layer provisioning the Fusion client is downloaded.
+: The URL from where the container layer provisioning the Fusion client is downloaded. This option is useful to specify a development Fusion version for debugging purposes. 
 
 `fusion.exportStorageCredentials`
 : :::{versionadded} 23.05.0-edge
@@ -823,6 +820,11 @@ The following settings are available for Google Cloud Batch:
   :::
 : Defines the list of exit codes that will be automatically retried by Google Batch when `google.batch.maxSpotAttempts` is greater than 0 (default `[50001]`). Refer to the [Google Batch documentation](https://cloud.google.com/batch/docs/troubleshooting#reserved-exit-codes) for the list of retryable exit codes.
 
+`google.batch.bootDiskImage`
+: :::{versionadded} 24.08.0-edge
+  :::
+: Set the image URI of the virtual machine boot disk, e.g `batch-debian`. See [Google documentation](https://cloud.google.com/batch/docs/vm-os-environment-overview#vm-os-image-options) for details (default: none).
+
 `google.batch.bootDiskSize`
 : Set the size of the virtual machine boot disk, e.g `50.GB` (default: none).
 
@@ -832,7 +834,10 @@ The following settings are available for Google Cloud Batch:
 `google.batch.maxSpotAttempts`
 : :::{versionadded} 23.11.0-edge
   :::
-: Max number of execution attempts of a job interrupted by a Compute Engine spot reclaim event (default: `5`).
+: :::{versionchanged} 24.08.0-edge
+  The default value was changed from `5` to `0`.
+  :::
+: Max number of execution attempts of a job interrupted by a Compute Engine spot reclaim event (default: `0`).
 : See also: `google.batch.autoRetryExitCodes`
 
 `google.batch.network`
@@ -1147,14 +1152,26 @@ The following settings are available:
 `manifest.description`
 : Free text describing the workflow project.
 
+`manifest.docsUrl`
+: Project documentation URL.
+
 `manifest.doi`
 : Project related publication DOI identifier.
 
 `manifest.homePage`
 : Project home page URL.
 
+`manifest.icon`
+: Project related icon location (Relative path or URL).
+
+`manifest.license`
+: Project license.
+
 `manifest.mainScript`
 : Project main script (default: `main.nf`).
+
+`manifest.maintainer`
+: Project maintainer name (use a comma to separate multiple names).
 
 `manifest.name`
 : Project short name.
@@ -1171,6 +1188,9 @@ The following settings are available:
   manifest.nextflowVersion = '>=1.2, <=1.5' // any version in the 1.2 .. 1.5 range
   manifest.nextflowVersion = '!>=1.2'       // with ! prefix, stop execution if current version does not match required version.
   ```
+
+`manifest.organisation`
+: Project organisation
 
 `manifest.recurseSubmodules`
 : Pull submodules recursively from the Git repository.

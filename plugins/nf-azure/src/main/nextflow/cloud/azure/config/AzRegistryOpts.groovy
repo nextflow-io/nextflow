@@ -16,8 +16,8 @@
 
 package nextflow.cloud.azure.config
 
-
 import groovy.transform.CompileStatic
+import nextflow.SysEnv
 
 /**
  * Model Azure Batch registry config settings from nextflow config file
@@ -27,8 +27,6 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class AzRegistryOpts {
 
-    private Map<String,String> sysEnv
-
     String server
     String userName
     String password
@@ -37,12 +35,11 @@ class AzRegistryOpts {
         this(Collections.emptyMap())
     }
 
-    AzRegistryOpts(Map config, Map<String,String> env=null) {
+    AzRegistryOpts(Map config, Map<String,String> env=SysEnv.get()) {
         assert config!=null
-        this.sysEnv = env==null ? new HashMap<String,String>(System.getenv()) : env
         this.server = config.server ?: 'docker.io'
-        this.userName = config.userName ?: sysEnv.get('AZURE_REGISTRY_USER_NAME')
-        this.password = config.password ?: sysEnv.get('AZURE_REGISTRY_PASSWORD')
+        this.userName = config.userName ?: env.get('AZURE_REGISTRY_USER_NAME')
+        this.password = config.password ?: env.get('AZURE_REGISTRY_PASSWORD')
     }
 
     boolean isConfigured() {
