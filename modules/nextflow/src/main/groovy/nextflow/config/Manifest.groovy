@@ -16,9 +16,13 @@
 
 package nextflow.config
 
+import java.util.stream.Collectors
 
 import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
 import groovy.util.logging.Slf4j
+import nextflow.exception.AbortOperationException
+
 import static nextflow.Const.DEFAULT_BRANCH
 import static nextflow.Const.DEFAULT_MAIN_FILE_NAME
 /**
@@ -102,20 +106,31 @@ class Manifest {
         target.docsUrl
     }
 
-    String getIcon(){
+    String getIcon() {
         target.icon
     }
 
-    String getMaintainer(){
-        target.maintainer
-    }
-
-    String getOrganisation(){
+    String getOrganisation() {
         target.organisation
     }
 
-    String getLicense(){
+    String getLicense() {
         target.license
+    }
+
+    List<Contributor> getContributors() {
+        if( !target.contributors )
+            return Collections.emptyList()
+
+        try {
+            final contributors = target.contributors as List<Map>
+            return contributors.stream()
+                .map(opts -> new Contributor(opts))
+                .collect(Collectors.toList())
+        }
+        catch( ClassCastException | IllegalArgumentException e ){
+            throw new AbortOperationException("Invalid config option `manifest.contributors` -- should be a list of maps")
+        }
     }
 
     Map toMap() {
@@ -131,9 +146,35 @@ class Manifest {
         result.doi = getDoi()
         result.docsUrl = getDocsUrl()
         result.icon = getIcon()
-        result.maintainer = getMaintainer()
         result.organisation = getOrganisation()
         result.license = getLicense()
+        result.contributors = getContributors()
         return result
+    }
+
+    @EqualsAndHashCode
+    static class Contributor {
+        String name
+        String affiliation
+        String email
+        String github
+        Set<Contribution> contribution
+        String orcid
+
+        Contributor(Map opts) {
+            name = opts.name as String
+            affiliation = opts.affiliation as String
+            email = opts.email as String
+            github = opts.github as String
+            contribution = (opts.contribution as List<String>).stream()
+                .map(c -> Contribution.valueOf(c.toUpperCase()))
+                .collect(Collectors.toSet())
+            orcid = opts.orcid as String
+        }
+    }
+
+    static enum Contribution {
+        AUTHOR,
+        MAINTAINER
     }
 }

@@ -1229,7 +1229,21 @@ The `manifest` scope allows you to define some meta-data information needed when
 The following settings are available:
 
 `manifest.author`
+: :::{deprecated} 24.09.0-edge
+  Use `manifest.contributors` instead.
+  :::
 : Project author name (use a comma to separate multiple names).
+
+`manifest.contributors`
+: :::{versionadded} 24.09.0-edge
+  :::
+: List of project contributors. Should be a list of maps. The following fields are supported in the contributor map:
+  - `name`: the contributor's name 
+  - `affiliation`: the contributor's affiliated organization
+  - `email`: the contributor's email address
+  - `github`: the contributor's GitHub URL
+  - `contribution`: list of contributions, can be any of `'author'`, `'maintainer'`
+  - `orcid`: the contributor's [ORCID](https://orcid.org/)
 
 `manifest.defaultBranch`
 : Git repository default branch (default: `master`).
@@ -1254,9 +1268,6 @@ The following settings are available:
 
 `manifest.mainScript`
 : Project main script (default: `main.nf`).
-
-`manifest.maintainer`
-: Project maintainer name (use a comma to separate multiple names).
 
 `manifest.name`
 : Project short name.
