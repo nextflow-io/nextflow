@@ -307,7 +307,7 @@ Nextflow currently supports job arrays for the following executors:
 
 A process using job arrays will collect tasks and submit each batch as a job array when it is ready. Any "leftover" tasks will be submitted as a partial job array.
 
-Once a job array is submitted, each "child" task is executed as an independent job. Any tasks that fail (and can be retried) will be retried without interfering with the tasks that succeeded. Retried tasks are submitted individually rather than through a job array, in order to allow for the use of [dynamic resources](#dynamic-computing-resources).
+Once a job array is submitted, each "child" task is executed as an independent job. Any tasks that fail (and can be retried) will be retried without interfering with the tasks that succeeded. Retried tasks are submitted individually rather than through a job array, in order to allow for the use of {ref}`dynamic resources <dynamic-task-resources>`.
 
 The following directives must be uniform across all tasks in a process that uses job arrays, because these directives are specified once for the entire job array:
 
@@ -599,7 +599,7 @@ The following error strategies are available:
 
 `ignore`
 : When a task fails, ignore it and continue the pipeline execution. If the `workflow.failOnIgnore` config option is set to `true`, the pipeline will report an error (i.e. return a non-zero exit code) upon completion. Otherwise, the pipeline will complete successfully.
-: See {ref}`metadata-workflow` for more information on `workflow.failOnIgnore`.
+: See {ref}`stdlib-constants` for more information on `workflow.failOnIgnore`.
 
 `retry`
 : When a task fails, retry it.
@@ -1382,7 +1382,7 @@ Resource limits can be defined for the following directives:
 - [memory](#memory)
 - [time](#time)
 
-Resource limits are a useful way to specify environment-specific limits alongside tasks with [dynamic resources](#dynamic-computing-resources). Normally, if a task requests more resources than can be provisioned (e.g. a task requests 32 cores but the largest node in the cluster has 24), the task will either fail or cause the pipeline to hang forever as it will never be scheduled. If the `resourceLimits` directive is defined with these limits, the task resources will be automatically reduced to comply with these limits before the job is submitted.
+Resource limits are a useful way to specify environment-specific limits alongside tasks with {ref}`dynamic resources <dynamic-task-resources>`. Normally, if a task requests more resources than can be provisioned (e.g. a task requests 32 cores but the largest node in the cluster has 24), the task will either fail or cause the pipeline to hang forever as it will never be scheduled. If the `resourceLimits` directive is defined with these limits, the task resources will be automatically reduced to comply with these limits before the job is submitted.
 
 (process-scratch)=
 
