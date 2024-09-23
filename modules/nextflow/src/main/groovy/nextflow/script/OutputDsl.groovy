@@ -43,10 +43,6 @@ class OutputDsl {
 
     private volatile List<PublishOp> ops = []
 
-    void directory(String directory) {
-        throw new ScriptRuntimeException('Output directory should be set using the `outputDir` config option or `-output-dir` command line option')
-    }
-
     void target(String name, Closure closure) {
         if( targetConfigs.containsKey(name) )
             throw new ScriptRuntimeException("Target '${name}' is defined more than once in the workflow output definition")
