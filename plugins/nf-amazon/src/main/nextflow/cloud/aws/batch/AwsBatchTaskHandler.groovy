@@ -679,6 +679,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             final hash = name.md5()
             result = result.substring(0,40) + '-' + hash
         }
+
         return "nf-" + result
     }
 
@@ -847,8 +848,6 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         def result = name.replaceAll(' ','_').replaceAll(/[^a-zA-Z0-9_]/,'')
         result.size()>128 ? result.substring(0,128) : result
     }
-
-
 
 
     protected CloudMachineInfo getMachineInfo() {

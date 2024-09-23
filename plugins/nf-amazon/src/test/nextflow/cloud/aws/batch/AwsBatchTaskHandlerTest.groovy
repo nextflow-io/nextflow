@@ -16,8 +16,6 @@
 
 package nextflow.cloud.aws.batch
 
-import org.bouncycastle.crypto.engines.EthereumIESEngine
-
 import java.time.Instant
 
 import com.amazonaws.services.batch.AWSBatch
@@ -1105,15 +1103,14 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     def 'should include tower workflow id in job name'() {
         given:
-        def handlerWithEnv = new AwsBatchTaskHandler(environment: [TOWER_WORKFLOW_ID: '1234'])
-        def handlerWithoutEnv = new AwsBatchTaskHandler()
+        def handlerWithEnv = new AwsBatchTaskHandler(environment: ENV)
         def name = 'job_1'
-        when:
-        def convertedName = handlerWithEnv.includeTowerPrefix(name)
-        def nonConvertedName = handlerWithoutEnv.includeTowerPrefix(name)
-        then:
-        convertedName == "tw-1234-job_1"
-        nonConvertedName == "job_1"
+        expect:
+        handlerWithEnv.includeTowerPrefix(name) == EXPECTED
+        where:
+        ENV                         | EXPECTED
+        [TOWER_WORKFLOW_ID: '1234'] | "tw-1234-job_1"
+        [:]                         | "job_1"
     }
 
 }
