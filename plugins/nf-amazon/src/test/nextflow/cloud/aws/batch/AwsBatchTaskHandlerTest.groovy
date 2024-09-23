@@ -1105,8 +1105,10 @@ class AwsBatchTaskHandlerTest extends Specification {
         given:
         def handlerWithEnv = new AwsBatchTaskHandler(environment: ENV)
         def name = 'job_1'
+
         expect:
         handlerWithEnv.includeTowerPrefix(name) == EXPECTED
+
         where:
         ENV                         | EXPECTED
         [TOWER_WORKFLOW_ID: '1234'] | "tw-1234-job_1"
