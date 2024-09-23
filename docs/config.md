@@ -1857,6 +1857,8 @@ There are additional variables that can be defined within a configuration file t
 : If `true`, dump task hash keys in the log file, for debugging purposes. Equivalent to the `-dump-hashes` option of the `run` command.
 
 `outputDir`
+: :::{versionadded} 24.10.0
+  :::
 : Defines the pipeline output directory. Equivalent to the `-output-dir` option of the `run` command.
 
 `resume`
@@ -2205,9 +2207,10 @@ Some features can be enabled using the `nextflow.enable` and `nextflow.preview` 
 
 `nextflow.preview.output`
 
-: :::{deprecated} 24.10.0
-  This feature was introduced as a preview in 24.04. It has now been finalized and no longer requires the preview flag.
+: :::{versionadded} 24.04.0
   :::
+
+: *Experimental: may change in a future release.*
 
 : When `true`, enables the use of the {ref}`workflow output definition <workflow-output-def>`.
 

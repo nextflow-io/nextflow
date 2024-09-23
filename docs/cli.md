@@ -1194,6 +1194,8 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Do not check for remote project updates.
 
 `-o, -output-dir` (`results`)
+: :::{versionadded} 24.10.0
+  :::
 : Directory where workflow outputs are stored.
 
 `-params-file`

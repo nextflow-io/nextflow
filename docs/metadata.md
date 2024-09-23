@@ -80,6 +80,11 @@ The following table lists the properties that can be accessed on the `workflow` 
 `workflow.manifest`
 : Entries of the workflow manifest.
 
+`workflow.outputDir`
+: :::{versionadded} 24.10.0
+  :::
+: Workflow output directory.
+
 `workflow.preview`
 : :::{versionadded} 24.04.0
   :::
