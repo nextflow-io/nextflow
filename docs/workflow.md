@@ -397,11 +397,15 @@ In the above snippet, the initial channel is piped to the {ref}`operator-map` op
 
 ## Publishing outputs
 
-:::{versionadded} 24.10.0
+:::{versionadded} 24.04.0
+:::
+
+:::{versionchanged} 24.10.0
+A second preview version has been introduced. Read below for details.
 :::
 
 :::{note}
-This feature was introduced in 24.04.0 as a preview. It can be enabled in that version using the `nextflow.preview.output` feature flag.
+This feature requires the `nextflow.preview.output` feature flag to be enabled.
 :::
 
 A workflow may define the set of outputs that should be published:
