@@ -92,7 +92,7 @@ class PublishOp {
     }
 
     protected void onComplete(nope) {
-        if( opts.enabled && indexOpts && indexRecords.size() > 0 ) {
+        if( indexOpts && indexRecords.size() > 0 ) {
             log.trace "Saving records to index file: ${indexRecords}"
             new CsvWriter(header: indexOpts.header, sep: indexOpts.sep).apply(indexRecords, indexOpts.path)
             session.notifyFilePublish(indexOpts.path)

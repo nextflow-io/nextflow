@@ -89,7 +89,8 @@ class OutputDsl {
             final overrides = targetConfigs[name] ?: Collections.emptyMap()
             final opts = publishOptions(name, defaults, overrides)
 
-            ops << new PublishOp(CH.getReadChannel(mixed), opts).apply()
+            if( opts.enabled == null || opts.enabled )
+                ops << new PublishOp(CH.getReadChannel(mixed), opts).apply()
         }
     }
 
