@@ -39,7 +39,7 @@ class OutputDsl {
 
     private Session session = Global.session as Session
 
-    private Map<String,Map> publishConfigs = [:]
+    private Map<String,Map> targetConfigs = [:]
 
     private volatile List<PublishOp> ops = []
 
@@ -48,7 +48,7 @@ class OutputDsl {
     }
 
     void target(String name, Closure closure) {
-        if( publishConfigs.containsKey(name) )
+        if( targetConfigs.containsKey(name) )
             throw new ScriptRuntimeException("Target '${name}' is defined more than once in the workflow output definition")
 
         final dsl = new TargetDsl()
@@ -57,7 +57,7 @@ class OutputDsl {
         cl.setDelegate(dsl)
         cl.call()
 
-        publishConfigs[name] = dsl.getOptions()
+        targetConfigs[name] = dsl.getOptions()
     }
 
     void build(Map<DataflowWriteChannel,String> targets) {
@@ -74,13 +74,19 @@ class OutputDsl {
             publishSources[name] << source
         }
 
+        // validate target configs
+        for( final name : targetConfigs.keySet() ) {
+            if( name !in publishSources )
+                log.warn "Publish target '${name}' was defined in the output block but not used by the workflow"
+        }
+
         // create publish op (and optional index op) for each target
         for( final name : publishSources.keySet() ) {
             final sources = publishSources[name]
             final mixed = sources.size() > 1
                 ? new MixOp(sources.collect( ch -> CH.getReadChannel(ch) )).apply()
                 : sources.first()
-            final overrides = publishConfigs[name] ?: Collections.emptyMap()
+            final overrides = targetConfigs[name] ?: Collections.emptyMap()
             final opts = publishOptions(name, defaults, overrides)
 
             ops << new PublishOp(CH.getReadChannel(mixed), opts).apply()
