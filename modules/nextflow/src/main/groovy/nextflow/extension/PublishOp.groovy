@@ -18,6 +18,7 @@ package nextflow.extension
 
 import java.nio.file.Path
 
+import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
@@ -94,7 +95,13 @@ class PublishOp {
     protected void onComplete(nope) {
         if( indexOpts && indexRecords.size() > 0 ) {
             log.trace "Saving records to index file: ${indexRecords}"
-            new CsvWriter(header: indexOpts.header, sep: indexOpts.sep).apply(indexRecords, indexOpts.path)
+            final ext = indexOpts.path.getExtension()
+            if( ext == 'csv' )
+                new CsvWriter(header: indexOpts.header, sep: indexOpts.sep).apply(indexRecords, indexOpts.path)
+            else if( ext == 'json' )
+                indexOpts.path.text = DumpHelper.prettyPrint(indexRecords)
+            else
+                log.warn "Invalid extension '${ext}' for index file '${indexOpts.path}' -- should be 'csv' or 'json'"
             session.notifyFilePublish(indexOpts.path)
         }
 
