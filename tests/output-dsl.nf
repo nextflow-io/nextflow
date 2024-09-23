@@ -78,7 +78,7 @@ workflow {
 
 output {
   'data' {
-    path { filename, val -> filename }
+    path { val -> { file -> file } }
     index {
       path 'index.csv'
       mapper { val -> [filename: val] }

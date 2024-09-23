@@ -73,10 +73,21 @@ class PublishOp {
 
     protected void onNext(value) {
         log.trace "Publish operator received: $value"
-        final publisher = PublishDir.create(opts)
-        if( pathAs )
-            publisher.saveAs = { target -> pathAs.call(target, value) }
 
+        // evaluate dynamic path
+        final path = pathAs != null
+            ? pathAs.call(value)
+            : targetDir
+        if( path == null )
+            return
+
+        // create publisher
+        final overrides = path instanceof Closure
+            ? [saveAs: path]
+            : [path: path]
+        final publisher = PublishDir.create(opts + overrides)
+
+        // publish files
         final result = collectFiles([:], value)
         for( final entry : result ) {
             final sourceDir = entry.key
@@ -84,6 +95,7 @@ class PublishOp {
             publisher.apply(files, sourceDir)
         }
 
+        // create record for index file
         if( indexOpts ) {
             final record = indexOpts.mapper != null ? indexOpts.mapper.call(value) : value
             final normalized = normalizePaths(record)
