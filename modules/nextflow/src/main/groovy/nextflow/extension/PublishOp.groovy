@@ -81,6 +81,9 @@ class PublishOp {
         if( path == null )
             return
 
+        // emit workflow publish event
+        session.notifyWorkflowPublish(value)
+
         // create publisher
         final overrides = path instanceof Closure
             ? [saveAs: path]

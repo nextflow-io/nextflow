@@ -1118,6 +1118,17 @@ class Session implements ISession {
         }
     }
 
+    void notifyWorkflowPublish(Object value) {
+        for( final observer : observers ) {
+            try {
+                observer.onWorkflowPublish(value)
+            }
+            catch( Exception e ) {
+                log.error "Failed to invoke observer on workflow publish: $observer", e
+            }
+        }
+    }
+
     void notifyFilePublish(Path destination, Path source=null) {
         def copy = new ArrayList<TraceObserver>(observers)
         for( TraceObserver observer : copy  ) {
