@@ -15,6 +15,19 @@
 #
 #
 
+# determine the running environment by the last commit comment
+# if it contains [platform prod] run the script `seqera-showcase-production.yml`
+# otherwise run `seqera-showcase-staging.yml`
+msg=$(git show -s --format='%s')
+if echo "$msg" | grep -q "\[e2e prod\]"; then
+  ENVIRONMENT="production"
+elif echo "$msg" | grep -q "\[e2e stage\]"; then
+  ENVIRONMENT="staging"
+else
+    echo "Skipping e2e test due to commit message: $msg"
+    exit 0
+fi
+
 # cleanup
 rm -rf .nextflow && mkdir .nextflow
 # copy nextflow dependencies
@@ -62,15 +75,6 @@ echo "Nextflow snapshots launcher image $image"
 #
 launcher=$(wave -i ${base} --include ${image} --config-env NXF_HOME=/.nextflow)
 echo "Running Platform tests using image launcher: $launcher"
-
-# determine the running environment by the last commit comment
-# if it contains [platform prod] run the script `seqera-showcase-production.yml`
-# otherwise run `seqera-showcase-staging.yml`
-if echo $(git show -s --format='%s') | grep -q "\[platform prod\]"; then
-  ENVIRONMENT="production"
-else
-  ENVIRONMENT="staging"
-fi
 
 #
 # Finally launch the showcase automation

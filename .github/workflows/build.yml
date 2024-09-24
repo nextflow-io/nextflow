@@ -177,7 +177,8 @@ jobs:
             integration-tests.tar
 
   test-platform:
-      if: ${{ contains(github.event.head_commit.message, '[platform prod]') || contains(github.event.head_commit.message, '[platform stage]') }}
+      # this is only executed if the commit message contains the tag "e2e stage" or "e2e prod"
+      # check test-platform/run.sh for details 
       needs: build
       runs-on: ubuntu-latest
       timeout-minutes: 10
