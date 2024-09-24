@@ -37,6 +37,23 @@ jobs:
           fetch-depth: 1
           submodules: true
 
+      - name: Get the commit message
+        id: get_commit_message
+        run: |
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+                echo "GitHub event=pull_request"
+                COMMIT_SHA=${{ github.event.pull_request.head.sha }}
+                COMMIT_MESSAGE=$(curl -s \
+                  -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                  https://api.github.com/repos/${{ github.repository }}/commits/$COMMIT_SHA | jq -r '.commit.message' | head -n 1)
+                echo "Commit message=$COMMIT_MESSAGE"
+                echo "commit_message=$COMMIT_MESSAGE" >> $GITHUB_OUTPUT
+            else
+               echo "GitHub event=${{ github.event_name }}"
+               echo "Commit message=${{ github.event.head_commit.message }}"
+               echo "commit_message=${{ github.event.head_commit.message }}" >> $GITHUB_OUTPUT
+            fi 
+
       - name: Get changed files
         id: changed-files
         uses: tj-actions/changed-files@v43
@@ -106,9 +123,10 @@ jobs:
 
     outputs:
       any_changed: ${{ steps.changed-files.outputs.any_changed }}
+      commit_message: ${{ steps.get_commit_message.outputs.commit_message }}
 
   test:
-    if: ${{ !contains(github.event.head_commit.message, '[ci fast]') && needs.build.outputs.any_changed == 'true' }}
+    if: ${{ !contains(needs.build.outputs.commit_message, '[ci fast]') && needs.build.outputs.any_changed == 'true' }}
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -177,8 +195,7 @@ jobs:
             integration-tests.tar
 
   e2e-tests:
-      # this is only executed if the commit message contains the tag "[e2e stage]" or "[e2e prod]"
-      # check test-platform/run.sh for details 
+      if: ${{ contains(needs.build.outputs.commit_message,'[e2e stage]') || contains(needs.build.outputs.commit_message,'[e2e prod]') }}
       needs: build
       runs-on: ubuntu-latest
       timeout-minutes: 10
@@ -186,19 +203,6 @@ jobs:
           actions: write  # Allow writing to actions
           contents: write # Allow writing to repository contents
       steps:
-          - name: Get the commit message via GitHub API
-            if: ${{ github.event_name == 'pull_request' && github.event.action == 'synchronize' }}
-            id: get_commit_message
-            run: |
-                COMMIT_SHA=${{ github.event.pull_request.head.sha }}
-                COMMIT_MESSAGE=$(curl -s \
-                  -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                  https://api.github.com/repos/${{ github.repository }}/commits/$COMMIT_SHA | jq -r '.commit.message' | head -n 1)
-                echo "Commit message: $COMMIT_MESSAGE"
-                echo "::set-output name=commit_message::$COMMIT_MESSAGE"
-                echo "COMMIT_SHA=\"$COMMIT_SHA\"" >> $GITHUB_ENV
-                echo "COMMIT_MESSAGE=\"$COMMIT_MESSAGE\"" >> $GITHUB_ENV
-
           - name: Checkout
             uses: actions/checkout@v4
             with:
@@ -218,6 +222,7 @@ jobs:
                 wget -O wave https://github.com/seqeralabs/wave-cli/releases/download/v1.4.1/wave-1.4.1-linux-x86_64
                 chmod +x wave
                 mv wave /usr/local/bin/
+                echo "COMMIT_MESSAGE=\"${{ needs.build.outputs.commit_message }}\"" >> $GITHUB_ENV
 
           - name : Docker Login to Seqera public CR
             uses : docker/login-action@v3
