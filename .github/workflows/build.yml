@@ -194,7 +194,7 @@ jobs:
             validation/**
             integration-tests.tar
 
-  e2e-tests:
+  test-e2e:
       if: ${{ contains(needs.build.outputs.commit_message,'[e2e stage]') || contains(needs.build.outputs.commit_message,'[e2e prod]') }}
       needs: build
       runs-on: ubuntu-latest
@@ -233,7 +233,7 @@ jobs:
 
           - name: Launch tests
             run: |
-                cd test-platform
+                cd test-e2e
                 bash run.sh
             env:
                 GITHUB_TOKEN: ${{ secrets.AUTOMATION_GITHUB_TOKEN }}
