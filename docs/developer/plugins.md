@@ -40,7 +40,7 @@ If you would like to implement something in a plugin that isn't covered by any o
 :::
 
 :::{note}
-Plugin extension points must be added to `extensions.idx` in the plugin repository to make them discoverable. See the `nf-hello` plugin for an example.
+Plugin extension points must be added to `extensions.idx` in the plugin repository to make them discoverable. See the [`nf-hello`](https://github.com/nextflow-io/nf-hello) plugin for an example.
 :::
 
 ### Commands
