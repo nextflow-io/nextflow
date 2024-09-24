@@ -63,10 +63,16 @@ echo "Nextflow snapshots launcher image $image"
 launcher=$(wave -i ${base} --include ${image} --config-env NXF_HOME=/.nextflow)
 echo "Running Platform tests using image launcher: $launcher"
 
-# determine the running environment by the last commit comment
-# if it contains [platform prod] run the script `seqera-showcase-production.yml`
-# otherwise run `seqera-showcase-staging.yml`
-if echo $(git show -s --format='%s') | grep -q "\[platform prod\]"; then
+# determining the e2e test environment checking the $COMMIT_MESSAGE
+# that is set by GitHub action workflow. If it does not exist fallback
+# to the commit message in the git rpeo
+if [ -z "$COMMIT_MESSAGE" ]; then
+  COMMIT_MESSAGE=$(git show -s --format='%s')
+  echo "Commit message [from git]: $COMMIT_MESSAGE"
+else
+  echo "Commit message [from gha]: $COMMIT_MESSAGE"
+fi
+if echo "$COMMIT_MESSAGE" | grep -q "\[e2e prod\]"; then
   ENVIRONMENT="production"
 else
   ENVIRONMENT="staging"
@@ -75,6 +81,7 @@ fi
 #
 # Finally launch the showcase automation
 # see https://github.com/seqeralabs/showcase-automation/
+echo "Launching seqera-showcase-${ENVIRONMENT}"
 gh workflow run \
   seqera-showcase-${ENVIRONMENT}.yml \
   --repo seqeralabs/showcase-automation \
