@@ -81,6 +81,7 @@ fi
 #
 # Finally launch the showcase automation
 # see https://github.com/seqeralabs/showcase-automation/
+echo "Launching seqera-showcase-${ENVIRONMENT}"
 gh workflow run \
   seqera-showcase-${ENVIRONMENT}.yml \
   --repo seqeralabs/showcase-automation \
