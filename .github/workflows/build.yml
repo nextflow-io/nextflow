@@ -176,8 +176,8 @@ jobs:
             validation/**
             integration-tests.tar
 
-  test-platform:
-      # this is only executed if the commit message contains the tag "e2e stage" or "e2e prod"
+  e2e-tests:
+      # this is only executed if the commit message contains the tag "[e2e stage]" or "[e2e prod]"
       # check test-platform/run.sh for details 
       needs: build
       runs-on: ubuntu-latest
@@ -196,8 +196,8 @@ jobs:
                   https://api.github.com/repos/${{ github.repository }}/commits/$COMMIT_SHA | jq -r '.commit.message')
                 echo "Commit message: $COMMIT_MESSAGE"
                 echo "::set-output name=commit_message::$COMMIT_MESSAGE"
-                echo "COMMIT_SHA=\"$COMMIT_SHA\"" >> gitenv.txt
-                echo "COMMIT_MESSAGE=\"$COMMIT_MESSAGE\"" >> gitenv.txt
+                echo "COMMIT_SHA=\"$COMMIT_SHA\"" >> $GITHUB_ENV
+                echo "COMMIT_MESSAGE=\"$COMMIT_MESSAGE\"" >> $GITHUB_ENV
 
           - name: Checkout
             uses: actions/checkout@v4

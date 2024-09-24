@@ -18,13 +18,12 @@
 # determining if the e2e should be by checking the commit message
 # when pushing to a pull request the GH workflow creates the file `gitenv.txt`
 # that contains the `COMMIT_MESSAGE` env variable,
-if [ -s "gitenv.txt" ]; then
-    echo "Sourcing 'gitenv.txt' file"
-    source gitenv.txt
-else
+if [ -z "$COMMIT_MESSAGE" ]; then
   COMMIT_MESSAGE=$(git show -s --format='%s')
+  echo "Commit message [from git]: $COMMIT_MESSAGE"
+else
+  echo "Commit message [from gha]: $COMMIT_MESSAGE"
 fi
-echo "Commit message: $COMMIT_MESSAGE"
 if echo "$COMMIT_MESSAGE" | grep -q "\[e2e prod\]"; then
   ENVIRONMENT="production"
 elif echo "$COMMIT_MESSAGE" | grep -q "\[e2e stage\]"; then
