@@ -85,7 +85,7 @@ See the {ref}`cli-plugin` CLI command for usage information.
 
 Plugins can access the resolved Nextflow configuration through the session object using `session.config.navigate()`. Several extension points provide the session object for this reason. This method allows you to query any configuration option in a safe manner -- if the option isn't defined, it will return `null`. A common practice is to define any configuration for your plugin in a custom config scope.
 
-Here is an example of querying a config option in a trace observer hook:
+For example, you can query a config option in a trace observer hook:
 
 ```groovy
 import nextflow.Session
