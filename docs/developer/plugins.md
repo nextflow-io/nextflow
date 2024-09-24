@@ -242,7 +242,7 @@ Plugins that implement a [custom executor](#executors) will likely need to acces
 
 Nextflow does not provide the ability to define custom process directives in a plugin. Instead, you can use the {ref}`process-ext` directive to provide custom process settings to your executor. Try to use specific names that are not likely to conflict with other plugins or existing pipelines.
 
-Here is an example of a custom executor that uses existing process directives as well as a custom setting through the `ext` directive:
+For example, a custom executor can use existing process directives as well as a custom setting through the `ext` directive:
 
 ```groovy
 class MyExecutor extends Executor {
