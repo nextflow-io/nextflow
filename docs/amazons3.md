@@ -35,11 +35,15 @@ The AWS access and secret keys can be specified by using the `aws` section in th
 
 ```groovy
 aws {
-    accessKey = '<Your AWS access key>'
-    secretKey = '<Your AWS secret key>'
+    accessKey = secrets.MY_ACCESS_KEY
+    secretKey = secrets.MY_SECRET_KEY
     region = '<AWS region identifier>'
 }
 ```
+
+:::{tip}
+Use {ref}`secrets-page` to avoid hardcoding sensitive credentials in configuration files.
+:::
 
 If the access credentials are not found in the above file, Nextflow looks for AWS credentials in the following order:
 
