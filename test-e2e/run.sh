@@ -15,24 +15,6 @@
 #
 #
 
-# determining if the e2e should be by checking the commit message
-# when pushing to a pull request the GH workflow creates the file `gitenv.txt`
-# that contains the `COMMIT_MESSAGE` env variable,
-if [ -z "$COMMIT_MESSAGE" ]; then
-  COMMIT_MESSAGE=$(git show -s --format='%s')
-  echo "Commit message [from git]: $COMMIT_MESSAGE"
-else
-  echo "Commit message [from gha]: $COMMIT_MESSAGE"
-fi
-if echo "$COMMIT_MESSAGE" | grep -q "\[e2e prod\]"; then
-  ENVIRONMENT="production"
-elif echo "$COMMIT_MESSAGE" | grep -q "\[e2e stage\]"; then
-  ENVIRONMENT="staging"
-else
-    echo "Skipping e2e tests"
-    exit 0
-fi
-
 # cleanup
 rm -rf .nextflow && mkdir .nextflow
 # copy nextflow dependencies
@@ -80,6 +62,21 @@ echo "Nextflow snapshots launcher image $image"
 #
 launcher=$(wave -i ${base} --include ${image} --config-env NXF_HOME=/.nextflow)
 echo "Running Platform tests using image launcher: $launcher"
+
+# determining the e2e test environment checking the $COMMIT_MESSAGE
+# that is set by GitHub action workflow. If it does not exist fallback
+# to the commit message in the git rpeo
+if [ -z "$COMMIT_MESSAGE" ]; then
+  COMMIT_MESSAGE=$(git show -s --format='%s')
+  echo "Commit message [from git]: $COMMIT_MESSAGE"
+else
+  echo "Commit message [from gha]: $COMMIT_MESSAGE"
+fi
+if echo "$COMMIT_MESSAGE" | grep -q "\[e2e prod\]"; then
+  ENVIRONMENT="production"
+else
+  ENVIRONMENT="staging"
+fi
 
 #
 # Finally launch the showcase automation
