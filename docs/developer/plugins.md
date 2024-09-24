@@ -339,7 +339,7 @@ Nextflow resolves plugins through a plugin registry, which stores metadata for e
 
 To publish a plugin, you must create the plugin release, publish it to GitHub, and make a pull request against the main plugin registry with the metadata for your plugin release.
 
-A plugin release is a ZIP archive containing the compiled plugin classes, the required dependencies, and a JSON file with the plugin metadata. Refer to the `nf-hello` example plugin to see how to create a plugin release.
+A plugin release is a ZIP archive containing the compiled plugin classes, the required dependencies, and a JSON file with the plugin metadata. See the [`nf-hello`](https://github.com/nextflow-io/nf-hello) example to see how to create a plugin release.
 
 Here is an example meta file for a plugin release:
 
