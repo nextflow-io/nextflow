@@ -16,6 +16,9 @@
 
 package nextflow.cli
 
+import static nextflow.scm.AssetManager.DEFAULT_REVISION_DIRNAME
+
+import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -33,6 +36,18 @@ class CmdList extends CmdBase {
 
     static final public NAME = 'list'
 
+    @Parameter(names=['-a','-all-revisions'], description = 'For each project, also list revisions')
+    Boolean allRevisions
+
+    @Parameter(names=['-all-commits'], description = 'For each project, also list all downloaded commits')
+    Boolean allCommits
+
+    @Parameter(names='-d',description = 'Show commit information for revisions', arity = 0)
+    boolean detailed
+
+    @Parameter(names='-dd', hidden = true, arity = 0)
+    boolean moreDetailed
+
     @Override
     final String getName() { NAME }
 
@@ -45,7 +60,39 @@ class CmdList extends CmdBase {
             return
         }
 
-        all.each { println it }
+    if( moreDetailed )
+        detailed = true
+    if( detailed && allRevisions ) {
+        all.each{
+            println(" $it")
+            def revManager = new AssetManager(it)
+            revManager.listRevisionsAndCommits().each{ k,v ->
+                if( k == DEFAULT_REVISION_DIRNAME )
+                    k = '(default)'
+                if( !moreDetailed )
+                    v = v.substring(0,10)
+                println("   $v $k") }
+        }
+    }
+    else if( allRevisions ) {
+        all.each{
+            println(" $it")
+            def revManager = new AssetManager(it)
+            revManager.listRevisions().each{
+                if( it == DEFAULT_REVISION_DIRNAME )
+                    it = '(default)'
+                println("   $it")
+            }
+        }
+    } else if( allCommits ) {
+        all.each{
+            println(" $it")
+            def revManager = new AssetManager(it)
+            revManager.listCommits().each{ println("   $it") }
+        }
+    } else {
+        all.each{ println(" $it") }
+    }
     }
 
 }

@@ -274,6 +274,7 @@ class K8sDriverLauncher {
             // -- check and parse project remote config
             Plugins.init()
             final pipelineConfig = new AssetManager(pipelineName, cmd) .getConfigFile()
+            pipelineConfig.setRevisionAndLocalPath(pipelineName, cmd.revision)
             builder.setUserConfigFiles(pipelineConfig)
         }
 
