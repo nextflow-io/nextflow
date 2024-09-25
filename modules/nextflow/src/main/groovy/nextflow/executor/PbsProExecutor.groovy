@@ -58,10 +58,8 @@ class PbsProExecutor extends PbsExecutor {
 
         result << '-N' << getJobNameFor(task)
 
-        if( task !instanceof TaskArrayRun ) {
-            result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
-            result << '-j' << 'oe'
-        }
+        result << '-o' << (task.isArray() ? '/dev/null' : quote(task.workDir.resolve(TaskRun.CMD_LOG)))
+        result << '-j' << 'oe'
 
         // the requested queue name
         if( task.config.queue ) {
@@ -129,6 +127,11 @@ class PbsProExecutor extends PbsExecutor {
     @Override
     protected QueueStatus decode(String status) {
         DECODE_STATUS.get(status)
+    }
+
+    @Override
+    String getArrayIndexName() {
+        return 'PBS_ARRAY_INDEX'
     }
 
 }

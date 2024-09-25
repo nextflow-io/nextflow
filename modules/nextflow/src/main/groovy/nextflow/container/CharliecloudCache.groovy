@@ -117,9 +117,10 @@ class CharliecloudCache {
     /**
      * Retrieve the directory where to store the charliecloud images once downloaded.
      * It tries these settings in the following order:
-     * 1) {@code charliecloud.cacheDir} setting in the nextflow config file
-     * 2) the {@code NXF_CHARLIECLOUD_CACHEDIR} environment variable
-     * 3) the {@code $workDir/charliecloud} path
+     * 1) If writeFake is enabled, the {@code CH_IMAGE_STORAGE} environment variable.
+     * 2) {@code charliecloud.cacheDir} setting in the nextflow config file
+     * 3) the {@code NXF_CHARLIECLOUD_CACHEDIR} environment variable
+     * 4) the {@code $workDir/charliecloud} path
      *
      * @return
      *      the {@code Path} where store the charliecloud images as flattened directories
@@ -130,19 +131,38 @@ class CharliecloudCache {
         if( config.pullTimeout )
             pullTimeout = config.pullTimeout as Duration
 
+        def writeFake = true
+
+        if( config.writeFake ) 
+            writeFake = config.writeFake?.toString() == 'true'
+
         def str = config.cacheDir as String
-        if( str )
+
+        def charliecloudImageStorage = env.get('CH_IMAGE_STORAGE')
+
+        if( charliecloudImageStorage && writeFake) {
+            return checkDir(charliecloudImageStorage)
+        }
+            
+        if( str ) {
+            // If charliecloudImageStorage exists and writeFake is true, we never get here
+            if( str.equals( charliecloudImageStorage ) ) {
+                throw new Exception("`charliecloud.cacheDir` configuration parameter must be different from env variable `CH_IMAGE_STORAGE`")
+            }
             return checkDir(str)
+        }
 
         str = env.get('NXF_CHARLIECLOUD_CACHEDIR')
-        if( str )
-            return checkDir(str)
 
-        str = env.get('CH_IMAGE_STORAGE')
-        if( str )
+        if( str ) {
+            if( str.equals( charliecloudImageStorage ) ) {
+                throw new Exception("`NXF_CHARLIECLOUD_CACHEDIR` env variable must be different from env variable `CH_IMAGE_STORAGE`")
+            }
             return checkDir(str)
+        }
 
         def workDir = Global.session.workDir
+
         if( workDir.fileSystem != FileSystems.default ) {
             throw new IOException("Charliecloud cannot store image in a remote work directory -- Use a POSIX compatible work directory or specify an alternative path with the `NXF_CHARLIECLOUD_CACHEDIR` env variable")
         }

@@ -1,3 +1,6 @@
+plugins {
+    id "com.github.johnrengelman.shadow" version "8.1.1"
+}
 apply plugin: 'groovy'
 apply plugin: 'application'
 
@@ -17,12 +20,12 @@ compileGroovy {
 dependencies {
     api(project(':nf-commons'))
     api(project(':nf-httpfs'))
-    api "org.apache.groovy:groovy:4.0.22"
-    api "org.apache.groovy:groovy-nio:4.0.22"
-    api "org.apache.groovy:groovy-xml:4.0.22"
-    api "org.apache.groovy:groovy-json:4.0.22"
-    api "org.apache.groovy:groovy-templates:4.0.22"
-    api "org.apache.groovy:groovy-yaml:4.0.22"
+    api "org.apache.groovy:groovy:4.0.23"
+    api "org.apache.groovy:groovy-nio:4.0.23"
+    api "org.apache.groovy:groovy-xml:4.0.23"
+    api "org.apache.groovy:groovy-json:4.0.23"
+    api "org.apache.groovy:groovy-templates:4.0.23"
+    api "org.apache.groovy:groovy-yaml:4.0.23"
     api "org.slf4j:jcl-over-slf4j:2.0.7"
     api "org.slf4j:jul-to-slf4j:2.0.7"
     api "org.slf4j:log4j-over-slf4j:2.0.7"
@@ -36,13 +39,13 @@ dependencies {
     api "com.beust:jcommander:1.35"
     api("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
     api('org.iq80.leveldb:leveldb:0.12')
-    api('org.eclipse.jgit:org.eclipse.jgit:6.6.1.202309021850-r')
+    api('org.eclipse.jgit:org.eclipse.jgit:6.10.0.202406032230-r')
     api ('javax.activation:activation:1.1.1')
     api ('javax.mail:mail:1.4.7')
     api ('org.yaml:snakeyaml:2.2')
     api ('org.jsoup:jsoup:1.15.4')
     api 'jline:jline:2.9'
-    api 'org.pf4j:pf4j:3.10.0'
+    api 'org.pf4j:pf4j:3.12.0'
     api 'dev.failsafe:failsafe:3.1.0'
     api 'org.bouncycastle:bcprov-ext-jdk15on:1.70'
     api 'org.bouncycastle:bcpkix-jdk15on:1.70'
@@ -50,7 +53,7 @@ dependencies {
     testImplementation 'org.subethamail:subethasmtp:3.1.7'
 
     // test configuration
-    testFixturesApi ("org.apache.groovy:groovy-test:4.0.22") { exclude group: 'org.apache.groovy' }
+    testFixturesApi ("org.apache.groovy:groovy-test:4.0.23") { exclude group: 'org.apache.groovy' }
     testFixturesApi ("cglib:cglib-nodep:3.3.0")
     testFixturesApi ("org.objenesis:objenesis:3.2")
     testFixturesApi ("org.spockframework:spock-core:2.3-groovy-4.0") { exclude group: 'org.apache.groovy'; exclude group: 'net.bytebuddy' }
@@ -71,4 +74,13 @@ application {
 
 run{
     args( (project.hasProperty("runCmd") ? project.findProperty("runCmd") : "set a cmd to run").split(' ') )
+}
+
+shadowJar {
+    archiveClassifier='one'
+    manifest {
+        attributes 'Main-Class': "$mainClassName"
+    }
+    mergeServiceFiles()
+    mergeGroovyExtensionModules()
 }
