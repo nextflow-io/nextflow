@@ -256,7 +256,7 @@ class TaskProcessor {
 
     private Boolean isFair0
 
-    private TaskArrayCollector arrayCollector
+    private TaskCollector submitCollector
 
     private CompilerConfiguration compilerConfig() {
         final config = new CompilerConfiguration()
@@ -313,8 +313,17 @@ class TaskProcessor {
         this.forksCount = maxForks ? new LongAdder() : null
         this.isFair0 = config.getFair()
         
-        final arraySize = config.getArray()
-        this.arrayCollector = arraySize > 0 ? new TaskArrayCollector(this, executor, arraySize) : null
+        if( scriptType == ScriptType.SCRIPTLET ) {
+            final arraySize = config.getArraySize()
+            final batchSize = config.getBatchSize()
+
+            if( arraySize > 0 && batchSize > 0 )
+                throw new IllegalArgumentException("Process directives `array` and `batch` cannot be used together")
+            else if( arraySize > 0 )
+                this.submitCollector = new TaskArrayCollector(this, executor, arraySize)
+            else if( batchSize > 0 )
+                this.submitCollector = new TaskBatchCollector(this, executor, batchSize, config.isBatchParallel())
+        }
     }
 
     /**
@@ -2336,8 +2345,8 @@ class TaskProcessor {
         makeTaskContextStage3(task, hash, folder)
 
         // add the task to the collection of running tasks
-        if( arrayCollector )
-            arrayCollector.collect(task)
+        if( submitCollector )
+            submitCollector.collect(task)
         else
             executor.submit(task)
 
@@ -2369,6 +2378,14 @@ class TaskProcessor {
      */
     @PackageScope
     final finalizeTask( TaskRun task ) {
+        // finalize each child if task is a batch
+        if( task instanceof TaskBatchRun ) {
+            task.finalize()
+            for( TaskHandler handler : task.children )
+                finalizeTask(handler.task)
+            return
+        }
+
         log.trace "finalizing process > ${safeTaskName(task)} -- $task"
 
         def fault = null
@@ -2434,7 +2451,7 @@ class TaskProcessor {
     }
 
     protected void closeProcess() {
-        arrayCollector?.close()
+        submitCollector?.close()
     }
 
     protected void terminateProcess() {

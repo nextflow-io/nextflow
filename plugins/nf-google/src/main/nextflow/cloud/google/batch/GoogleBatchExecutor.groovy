@@ -165,16 +165,16 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
     }
 
     @Override
-    String getArrayWorkDir(TaskHandler handler) {
+    String getChildWorkDir(TaskHandler handler) {
         return isFusionEnabled() || isWorkDirDefaultFS()
-            ? TaskArrayExecutor.super.getArrayWorkDir(handler)
+            ? super.getChildWorkDir(handler)
             : containerMountPath(handler.task.workDir as CloudStoragePath)
     }
 
     @Override
-    String getArrayLaunchCommand(String taskDir) {
+    String getChildLaunchCommand(String taskDir) {
         if( isFusionEnabled() || isWorkDirDefaultFS() ) {
-            return TaskArrayExecutor.super.getArrayLaunchCommand(taskDir)
+            return super.getChildLaunchCommand(taskDir)
         }
         else {
             final cmd = List.of('/bin/bash','-o','pipefail','-c', launchCommand(taskDir))
