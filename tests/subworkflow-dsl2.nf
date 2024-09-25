@@ -33,6 +33,7 @@ workflow flow2 {
 }
 
 workflow test1 {
+    main:
     flow1()
     flow2()
     ch1 = flow1.out.result
@@ -41,7 +42,9 @@ workflow test1 {
 }
 
 workflow test2 {
-    emit: ( flow1 & flow2 ) | mix | collectFile(name:"$PWD/test2.txt")
+    main:
+    result = ( flow1 & flow2 ) | mix | collectFile(name:"${System.getenv('PWD')}/test2.txt")
+    emit: result
 }
 
 workflow {

@@ -17,14 +17,14 @@
 
 process foo {
     output:
-    env FOO
+    env 'FOO'
     /FOO=Hello/
 }
 
 process bar {
     debug true
     input:
-    env FOO
+    env 'FOO'
     'echo "bar says $FOO"'
 }
 

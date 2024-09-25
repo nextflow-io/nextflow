@@ -23,30 +23,30 @@ workflow {
 
 process alpha {
     debug true
-    /
+    """
     echo alpha memry: ${task.memory}
     echo alpha queue: ${task.queue}
-    /
+    """
 }
 
 process beta {
     debug true
     label 'small'
 
-    /
+    """
     echo beta memry: ${task.memory}
     echo beta queue: ${task.queue}
-    /
+    """
 }
 
 process delta {
     debug true
     label 'big'
 
-    /
+    """
     echo delta memry: ${task.memory}
     echo delta queue: ${task.queue}
-    /
+    """
 }
 
 process gamma {
@@ -55,8 +55,8 @@ process gamma {
     memory 40.MB
     queue 'foo'
 
-    /
+    """
     echo gamma memry: ${task.memory}
     echo gamma queue: ${task.queue}
-    /
+    """
 }

@@ -584,7 +584,7 @@ The `env` qualifier allows you to define an environment variable in the process 
 ```groovy
 process printEnv {
     input:
-    env HELLO
+    env 'HELLO'
 
     '''
     echo $HELLO world!
@@ -619,7 +619,7 @@ process printAll {
 
 workflow {
   Channel.of('hello', 'hola', 'bonjour', 'ciao')
-    | map { it + '\n' }
+    | map { v -> v + '\n' }
     | printAll
 }
 ```
@@ -841,7 +841,7 @@ workflow {
   methods = ['prot', 'dna', 'rna']
 
   receiver = foo(methods)
-  receiver.view { "Received: $it" }
+  receiver.view { method -> "Received: $method" }
 }
 ```
 
@@ -868,9 +868,9 @@ workflow {
   ch_dummy = Channel.fromPath('*').first()
   (ch_var, ch_str, ch_exp) = foo(ch_dummy)
 
-  ch_var.view { "ch_var: $it" }
-  ch_str.view { "ch_str: $it" }
-  ch_exp.view { "ch_exp: $it" }
+  ch_var.view { var -> "ch_var: $var" }
+  ch_str.view { str -> "ch_str: $str" }
+  ch_exp.view { exp -> "ch_exp: $exp" }
 }
 ```
 
@@ -890,7 +890,7 @@ process randomNum {
 
 workflow {
   numbers = randomNum()
-  numbers.view { "Received: ${it.text}" }
+  numbers.view { v -> "Received: ${v.text}" }
 }
 ```
 
@@ -931,7 +931,7 @@ process splitLetters {
 workflow {
     splitLetters
         | flatten
-        | view { "File: ${it.name} => ${it.text}" }
+        | view { chunk -> "File: ${chunk.name} => ${chunk.text}" }
 }
 ```
 

@@ -371,46 +371,48 @@ def fib( x ) {
 
 ## Closures
 
-Briefly, a closure is a block of code that can be passed as an argument to a function. Thus, you can define a chunk of code and then pass it around as if it were a string or an integer.
+A closure is a function that can be used like a regular value. Typically, closures are passed as arguments to *higher-order functions* to express computations in a declarative manner.
 
-More formally, you can create functions that are defined as *first-class objects*.
+For example:
 
 ```groovy
-square = { it * it }
+square = { v -> v * v }
 ```
 
-The curly brackets around the expression `it * it` tells the script interpreter to treat this expression as code. The `it` identifier is an implicit variable that represents the value that is passed to the function when it is invoked.
+The above example defines a closure, which takes one parameter named `v` and returns the "square" of `v` (`v * v`), and assigns the closure to the variable `square`.
 
-Once compiled the function object is assigned to the variable `square` as any other variable assignments shown previously. Now we can do something like this:
+Now we can call `square` like a function:
 
 ```groovy
 println square(9)
 ```
 
-and get the value 81.
+which prints `81`.
 
-This is not very interesting until we find that we can pass the function `square` as an argument to other functions or methods. Some built-in functions take a function like this as an argument. One example is the `collect` method on lists:
+The main use case for a closure, however, is as an argument to a higher-order function:
 
 ```groovy
 [ 1, 2, 3, 4 ].collect(square)
 ```
 
-This expression says: Create an array with the values 1, 2, 3 and 4, then call its `collect` method, passing in the closure we defined above. The `collect` method runs through each item in the array, calls the closure on the item, then puts the result in a new array, resulting in:
+The `collect` method of a list applies a mapping function to each value in the list and produces a new list. The above example produces:
 
 ```groovy
 [ 1, 4, 9, 16 ]
 ```
 
-For more methods that you can call with closures as arguments, see the [Groovy GDK documentation](http://docs.groovy-lang.org/latest/html/groovy-jdk/).
-
-By default, closures take a single parameter called `it`, but you can also create closures with multiple, custom-named parameters. For example, the method `Map.each()` can take a closure with two arguments, to which it binds the `key` and the associated `value` for each key-value pair in the `Map`. Here, we use the obvious variable names `key` and `value` in our closure:
+The example can be expressed more concisely as:
 
 ```groovy
-printMapClosure = { key, value ->
+[ 1, 2, 3, 4 ].collect { v -> v * v }
+```
+
+Another example is the `each` method of a map, which takes a closure with two arguments corresponding to the key and value of each map entry:
+
+```groovy
+[ "Yue" : "Wu", "Mark" : "Williams", "Sudha" : "Kumari" ].each { key, value ->
     println "$key = $value"
 }
-
-[ "Yue" : "Wu", "Mark" : "Williams", "Sudha" : "Kumari" ].each(printMapClosure)
 ```
 
 Prints:
@@ -421,30 +423,40 @@ Mark = Williams
 Sudha = Kumari
 ```
 
-Closures can also access variables outside of their scope, and they can be used anonymously, that is without assigning them to a variable. Here is an example that demonstrates both of these things:
+Closures can access variables outside of their scope:
 
 ```groovy
-myMap = ["China": 1, "India": 2, "USA": 3]
+counts = ["China": 1, "India": 2, "USA": 3]
 
 result = 0
-myMap.keySet().each { result += myMap[it] }
+counts.keySet().each { v ->
+    result += counts[v]
+}
 
 println result
 ```
 
-A closure can also declare local variables that exist only for the lifetime of the closure:
+A closure can also declare local variables that exist only for the lifetime of each closure invocation:
 
 ```groovy
 result = 0
-myMap.keySet().each {
-  def count = myMap[it]
-  result += count
+myMap.keySet().each { v ->
+    def count = myMap[v]
+    result += count
 }
 ```
 
 :::{warning}
-Local variables should be declared using a qualifier such as `def` or a type name, otherwise they will be interpreted as global variables, which could lead to a {ref}`race condition <cache-global-var-race-condition>`.
+Local variables should be declared using `def`, otherwise they will be interpreted as global variables, which could lead to a {ref}`race condition <cache-global-var-race-condition>`.
 :::
+
+While the `each` method is a convenient way to iterate through a collection and build up some result, a more idiomatic way to do this is to use the `inject` method:
+
+```groovy
+result = counts.values().inject { sum, v -> sum + v }
+```
+
+This way, the closure is fully "self-contained" because it doesn't access or mutate any variables outside of its scope.
 
 Learn more about closures in the [Groovy documentation](http://groovy-lang.org/closures.html)
 
@@ -472,20 +484,20 @@ It is especially useful when calling a function with a closure parameter:
 
 ```groovy
 // full syntax
-[1, 2, 3].each({ println it })
+[1, 2, 3].each({ v -> println v })
 
 // shorthand
-[1, 2, 3].each { println it }
+[1, 2, 3].each { v -> println v }
 ```
 
 If the last argument is a closure, the closure can be written outside of the parentheses:
 
 ```groovy
 // full syntax
-[1, 2, 3].inject('result:', { accum, v -> accum + ' ' + v })
+[1, 2, 3].inject('result:', { acc, v -> acc + ' ' + v })
 
 // shorthand
-[1, 2, 3].inject('result:') { accum, v -> accum + ' ' + v }
+[1, 2, 3].inject('result:') { acc, v -> acc + ' ' + v }
 ```
 
 :::{note}

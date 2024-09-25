@@ -4,17 +4,16 @@ params.db = "$baseDir/blast-db/tiny"
 params.query = "$baseDir/data/sample.fa"
 params.chunkSize = 1
 
-DB = file(params.db)
-
 process blast {
     input:
     path 'seq.fa'
+    path db
 
     output:
     path 'out'
 
     """
-    blastp -db $DB -query seq.fa -outfmt 6 > out
+    blastp -db $db -query seq.fa -outfmt 6 > out
     """
 }
 
@@ -32,10 +31,11 @@ process sort {
 
 
 workflow {
-    Channel.fromPath(params.query) |
-            splitFasta( by: params.chunkSize, file:true ) |
-            blast |
-            collect |
-            sort |
-            subscribe { println it }
+    ch_fasta = Channel.fromPath(params.query)
+        | splitFasta( by: params.chunkSize, file:true )
+
+    blast(ch_fasta, file(params.db))
+        | collect
+        | sort
+        | subscribe { hits -> println hits }
 }

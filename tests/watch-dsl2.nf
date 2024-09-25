@@ -9,7 +9,7 @@ process align {
   path fasta
 
   output:
-  path aln
+  path 'aln'
 
   """
   t_coffee -in $fasta 1> aln
@@ -22,12 +22,10 @@ process align {
 
 workflow {
 
-    Channel
-        .watchPath(params.files, params.events) \
-        | align \
-        | subscribe {
-              println '------'
-              println it.text
-            }
-
+  Channel.watchPath(params.files, params.events)
+    | align
+    | subscribe {
+      println '------'
+      println it.text
+    }
 }

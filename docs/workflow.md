@@ -336,7 +336,7 @@ process foo {
 }
 
 workflow {
-   channel.from('Hello','Hola','Ciao') | foo | map { it.toUpperCase() } | view
+   channel.from('Hello','Hola','Ciao') | foo | map { v -> v.toUpperCase() } | view
 }
 ```
 
@@ -349,7 +349,7 @@ Statements can also be split across multiple lines for better readability:
 workflow {
     channel.from('Hello','Hola','Ciao')
       | foo
-      | map { it.toUpperCase() }
+      | map { v -> v.toUpperCase() }
       | view
 }
 ```
@@ -384,7 +384,7 @@ process bar {
 
 workflow {
     channel.from('Hello')
-      | map { it.reverse() }
+      | map { v -> v.reverse() }
       | (foo & bar)
       | mix
       | view

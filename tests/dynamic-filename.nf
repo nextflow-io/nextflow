@@ -17,9 +17,6 @@
 
 params.prefix = 'my'
 
-data = 'Hello\n'
-list = ['alpha', 'delta', 'gamma', 'omega']
-
 process foo {
 
   input:
@@ -36,5 +33,7 @@ process foo {
 }
 
 workflow {
+  data = 'Hello\n'
+  list = ['alpha', 'delta', 'gamma', 'omega']
   foo(list, data) | subscribe { println "~ Saving ${it.name}"; it.copyTo('.') }
 }

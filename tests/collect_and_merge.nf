@@ -44,7 +44,7 @@ process merge {
   debug true
 
   input:
-  tuple val(barcode), val(seq_id), file(bam: 'bam?'), file(bai: 'bai?')
+  tuple val(barcode), val(seq_id), path(bam), path(bai)
 
   """
   echo barcode: $barcode
