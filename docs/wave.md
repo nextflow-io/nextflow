@@ -9,20 +9,6 @@
 
 ## Getting started
 
-### Nextflow installation
-
-If you have already installed Nextflow, update to the latest version using this command:
-
-```bash
-nextflow -self-update
-```
-
-If you don't have Nextflow already installed, install it with the command below:
-
-```bash
-curl get.nextflow.io | bash
-```
-
 ### Wave configuration
 
 Wave can be used in any Nextflow pipeline by adding the following snippet to your `nextflow.config` file:
