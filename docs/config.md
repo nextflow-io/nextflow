@@ -1980,9 +1980,6 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_ENABLE_VIRTUAL_THREADS`
 : :::{versionadded} 23.05.0-edge
   :::
-: :::{versionchanged} 23.10.0
-  Enabled by default when using Java 21 or later.
-  :::
 : Enable the use of virtual threads in the Nextflow runtime (default: `false`)
 
 `NXF_EXECUTOR`

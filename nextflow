@@ -349,7 +349,7 @@ else
     version_check="^(1.7|1.8)"
     version_message="Java 7 or 8"
   else
-    version_check="^(1.8|9|10|11|12|13|14|15|16|17|18|19|20|21|22)"
+    version_check="^(1.8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23)"
     version_message="Java 8 or later (up to 22)"
   fi
   if [[ ! $JAVA_VER =~ $version_check ]]; then
@@ -361,8 +361,8 @@ else
       fi
       exit 1
   fi
-  if [[ ! $JAVA_VER =~ ^(11|12|13|14|15|16|17|18|19|20|21|22) ]]; then
-      echo_yellow "NOTE: Nextflow is not tested with Java $JAVA_VER -- It's recommended the use of version 11 up to 22\n"
+  if [[ ! $JAVA_VER =~ ^(11|12|13|14|15|16|17|18|19|20|21|22|23) ]]; then
+      echo_yellow "NOTE: Nextflow is not tested with Java $JAVA_VER -- It's recommended the use of version 11 up to 23\n"
   fi
   mkdir -p "$(dirname "$JAVA_KEY")"
   [[ -f $JAVA_VER ]] && echo $JAVA_VER > "$JAVA_KEY"
@@ -461,7 +461,7 @@ else
     [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
     [[ "$remote_debug" ]] && launcher+=(-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=$NXF_REMOTE_DEBUG_PORT)
 
-    if [[ "$JAVA_VER" =~ ^(9|10|11|12|13|14|15|16|17|18|19|20|21|22) ]]; then
+    if [[ "$JAVA_VER" =~ ^(9|10|11|12|13|14|15|16|17|18|19|20|21|22|23) ]]; then
       launcher+=(--add-opens=java.base/java.lang=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.io=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.nio=ALL-UNNAMED)
@@ -481,7 +481,7 @@ else
       launcher+=(--add-opens=java.base/java.util.regex=ALL-UNNAMED)
       if [[ "$NXF_ENABLE_VIRTUAL_THREADS" == 'true' ]]; then
         if [[ "$JAVA_VER" =~ ^(19|20) ]]; then launcher+=(--enable-preview)
-        elif [[ ! "$JAVA_VER" =~ ^(21|22) ]]; then die "Virtual threads require Java 19 or later - current version $JAVA_VER"
+        elif [[ ! "$JAVA_VER" =~ ^(21|22|23) ]]; then die "Virtual threads require Java 19 or later - current version $JAVA_VER"
         fi
       fi
       launcher+=("${cmd_tail[@]}")
