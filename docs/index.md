@@ -113,7 +113,7 @@ fusion
 
 reference/cli
 reference/config
-reference/environment-vars
+reference/env-vars
 reference/feature-flags
 reference/stdlib
 reference/process
