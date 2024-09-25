@@ -250,7 +250,7 @@ workflow {
 }
 ```
 
-See {ref}`process outputs <process-additional-options>` for more details.
+See {ref}`naming process outputs <process-naming-outputs>` for more details.
 
 #### Named stdout
 

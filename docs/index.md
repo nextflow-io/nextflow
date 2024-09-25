@@ -53,34 +53,32 @@ your-first-script
 
 ```{toctree}
 :hidden:
-:caption: Language
+:caption: Running pipelines
 :maxdepth: 1
 
-script
-process
-channel
-operator
-workflow
-module
+cli
 config
-dsl1
+executor
+cache-and-resume
+reports
+plugins
 ```
 
 ```{toctree}
 :hidden:
-:caption: Execution
+:caption: Developing pipelines
 :maxdepth: 1
 
-cli
-executor
-cache-and-resume
-tracing
-metrics
-sharing
-metadata
-mail
-plugins
+script
+working-with-files
+process
+channel
+workflow
+module
+notifications
 secrets
+sharing
+dsl1
 ```
 
 ```{toctree}
@@ -88,6 +86,7 @@ secrets
 :caption: Software dependencies
 :maxdepth: 1
 
+git
 container
 conda
 spack
@@ -96,23 +95,30 @@ wave
 
 ```{toctree}
 :hidden:
-:caption: Compute & storage platforms
+:caption: Compute & storage
 :maxdepth: 1
 
 aws
 amazons3
 azure
-fusion
 google
 kubernetes
+fusion
 ```
 
 ```{toctree}
 :hidden:
-:caption: Additional integrations
+:caption: Reference
 :maxdepth: 1
 
-flux
+reference/cli
+reference/config
+reference/env-vars
+reference/feature-flags
+reference/stdlib
+reference/process
+reference/channel
+reference/operator
 ```
 
 ```{toctree}
@@ -124,4 +130,13 @@ developer/index
 developer/diagram
 developer/packages
 developer/plugins
+```
+
+```{toctree}
+:hidden:
+:caption: Tutorials
+:maxdepth: 1
+
+flux
+metrics
 ```

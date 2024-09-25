@@ -1,6 +1,6 @@
 (flux-page)=
 
-# Flux Framework
+# Using Nextflow with Flux
 
 :::{versionadded} 22.11.0-edge
 :::

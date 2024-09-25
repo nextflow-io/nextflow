@@ -1,8 +1,45 @@
 (mail-page)=
 
-# Mail & Notifications
+# Notifications
 
-## Mail message
+This page documents how to handle workflow events and send notifications.
+
+(workflow-handlers)=
+
+## Workflow handlers
+
+(metadata-completion-handler)=
+
+### Completion handler
+
+Due to the asynchronous nature of Nextflow the termination of a script does not correspond to the termination of the running workflow. Thus some information, only available on execution completion, needs to be accessed by using an asynchronous handler.
+
+The `onComplete` event handler is invoked by the framework when the workflow execution is completed. It allows one to access the workflow termination status and other useful information. For example:
+
+```groovy
+workflow.onComplete {
+    println "Pipeline completed at: $workflow.complete"
+    println "Execution status: ${ workflow.success ? 'OK' : 'failed' }"
+}
+```
+
+(metadata-error-handler)=
+
+### Error handler
+
+The `onError` event handler is invoked by Nextflow when a runtime or process error caused the pipeline execution to stop. For example:
+
+```groovy
+workflow.onError {
+    println "Error: Pipeline execution stopped with the following message: ${workflow.errorMessage}"
+}
+```
+
+:::{note}
+Both the `onError` and `onComplete` handlers are invoked when an error condition is encountered. The first is called as soon as the error is raised, while the second is called just before the pipeline execution is about to terminate. When using the `finish` {ref}`process-error-strategy`, there may be a significant gap between the two, depending on the time required to complete any pending job.
+:::
+
+## Mail
 
 The built-in function `sendMail` allows you to send a mail message from a workflow script.
 

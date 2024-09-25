@@ -1,6 +1,6 @@
 (aws-page)=
 
-# AWS Cloud
+# Amazon Web Services
 
 :::{tip}
 This page describes how to manually set up and use Nextflow with AWS Cloud.

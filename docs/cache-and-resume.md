@@ -16,7 +16,7 @@ The task cache is used in conjunction with the [work directory](#work-directory)
 
 The task hash is computed from the following metadata:
 
-- Session ID (see `workflow.sessionId` in {ref}`metadata-workflow`)
+- Session ID (see `workflow.sessionId` in {ref}`stdlib-constants`)
 - Task name (see `name` in {ref}`trace-report`)
 - Task container image (if applicable)
 - Task {ref}`environment modules <process-module>` (if applicable)
