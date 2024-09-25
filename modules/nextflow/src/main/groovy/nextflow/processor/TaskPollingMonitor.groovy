@@ -118,7 +118,7 @@ class TaskPollingMonitor implements TaskMonitor {
     @Lazy
     private ExecutorService finalizerPool = { session.taskFinalizerExecutorService() }()
 
-    private boolean enableAsyncFinalizer = SysEnv.get('NXF_ENABLE_ASYNC_FINALIZER','false') as boolean
+    private boolean enableAsyncFinalizer = SysEnv.getBool('NXF_ENABLE_ASYNC_FINALIZER',true)
 
     /**
      * Create the task polling monitor with the provided named parameters object.
@@ -663,11 +663,21 @@ class TaskPollingMonitor implements TaskMonitor {
 
             // finalize the task asynchronously
             if( enableAsyncFinalizer ) {
-                finalizerPool.submit( ()-> finalizeTask(handler) )
+                finalizerPool.submit( ()-> safeFinalizeTask(handler) )
             }
             else {
                 finalizeTask(handler)
             }
+        }
+    }
+
+    protected void safeFinalizeTask(TaskHandler handler) {
+        try {
+            finalizeTask(handler)
+        }
+        catch (Throwable t) {
+            log.error "Unexpected error while finalizing task '${handler.task.name}' - cause: ${t.message}"
+            session.abort(t)
         }
     }
 

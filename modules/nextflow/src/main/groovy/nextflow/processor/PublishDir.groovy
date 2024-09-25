@@ -16,6 +16,8 @@
 
 package nextflow.processor
 
+import static nextflow.util.CacheHelper.*
+
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
@@ -26,7 +28,6 @@ import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.ExecutorService
-import java.util.regex.Pattern
 
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
@@ -35,17 +36,17 @@ import dev.failsafe.event.ExecutionAttemptedEvent
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
-import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.NF
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.TagAwareFile
-import nextflow.fusion.FusionHelper
+import nextflow.util.HashBuilder
 import nextflow.util.PathTrie
 /**
  * Implements the {@code publishDir} directory. It create links or copies the output
@@ -59,8 +60,6 @@ import nextflow.util.PathTrie
 @CompileStatic
 class PublishDir {
 
-    final static private Pattern FUSION_PATH_REGEX = ~/^\/fusion\/([^\/]+)\/(.*)/
-
     enum Mode { SYMLINK, LINK, COPY, MOVE, COPY_NO_FOLLOW, RELLINK }
 
     private Map<Path,Boolean> makeCache = new HashMap<>()
@@ -73,9 +72,9 @@ class PublishDir {
     Path path
 
     /**
-     * Whenever overwrite existing files
+     * Whether to overwrite existing files
      */
-    Boolean overwrite
+    def /* Boolean | String */ overwrite
 
     /**
      * The publish {@link Mode}
@@ -98,9 +97,9 @@ class PublishDir {
     boolean enabled = true
 
     /**
-     * Trow an exception in case publish fails
+     * Throw an exception in case publish fails
      */
-    boolean failOnError = true
+    boolean failOnError = SysEnv.getBool('NXF_PUBLISH_FAIL_ON_ERROR', true)
 
     /**
      * Tags to be associated to the target file
@@ -138,10 +137,6 @@ class PublishDir {
 
     protected String getTaskName() {
         return task?.getName()
-    }
-
-    protected Map<String,Path> getTaskInputs() {
-        return task ? task.getInputFilesMap() : Map.<String,Path>of()
     }
 
     void setPath( def value ) {
@@ -199,7 +194,7 @@ class PublishDir {
             result.pattern = params.pattern
 
         if( params.overwrite != null )
-            result.overwrite = Boolean.parseBoolean(params.overwrite.toString())
+            result.overwrite = params.overwrite
 
         if( params.saveAs )
             result.saveAs = (Closure) params.saveAs
@@ -404,13 +399,6 @@ class PublishDir {
 
     protected void processFile( Path source, Path destination ) {
 
-        // resolve Fusion symlink if applicable
-        if( FusionHelper.isFusionEnabled(session) ) {
-            final inputs = getTaskInputs()
-            if( source.name in inputs )
-                source = resolveFusionLink(inputs[source.name])
-        }
-
         // create target dirs if required
         makeDirs(destination.parent)
 
@@ -427,36 +415,13 @@ class PublishDir {
             if( !sameRealPath && checkSourcePathConflicts(destination))
                 return
             
-            if( !sameRealPath && overwrite ) {
+            if( !sameRealPath && shouldOverwrite(source, destination) ) {
                 FileHelper.deletePath(destination)
                 processFileImpl(source, destination)
             }
         }
 
         notifyFilePublish(destination, source)
-    }
-
-    /**
-     * Resolve a Fusion symlink by following the .fusion.symlinks
-     * file in the task directory until the original file is reached.
-     *
-     * @param file
-     */
-    protected Path resolveFusionLink(Path file) {
-        while( file.name in getFusionLinks(file.parent) )
-            file = file.text.replaceFirst(FUSION_PATH_REGEX) { _, scheme, path -> "${scheme}://${path}" } as Path
-        return file
-    }
-
-    @Memoized
-    protected List<String> getFusionLinks(Path workDir) {
-        try {
-            final file = workDir.resolve('.fusion.symlinks')
-            return file.text.tokenize('\n')
-        }
-        catch( NoSuchFileException e ) {
-            return List.of()
-        }
     }
 
     private String real0(Path p) {
@@ -509,6 +474,17 @@ class PublishDir {
 
     protected boolean isSymlinkMode() {
         return !mode || mode == Mode.SYMLINK || mode == Mode.RELLINK
+    }
+
+    protected boolean shouldOverwrite(Path source, Path target) {
+        if( overwrite instanceof Boolean )
+            return overwrite
+
+        final hashMode = HashMode.of(overwrite) ?: HashMode.DEFAULT()
+        final sourceHash = HashBuilder.hashPath(source, source.parent, hashMode)
+        final targetHash = HashBuilder.hashPath(target, target.parent, hashMode)
+        log.trace "comparing source and target with mode=${overwrite}, source=${sourceHash}, target=${targetHash}, should overwrite=${sourceHash != targetHash}"
+        return sourceHash != targetHash
     }
 
     protected void processFileImpl( Path source, Path destination ) {

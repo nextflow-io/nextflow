@@ -109,6 +109,7 @@ import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.Escape
+import nextflow.util.HashBuilder
 import nextflow.util.LockManager
 import nextflow.util.LoggerHelper
 import nextflow.util.TestOnly
@@ -803,7 +804,7 @@ class TaskProcessor {
 
         int tries = task.failCount +1
         while( true ) {
-            hash = CacheHelper.defaultHasher().newHasher().putBytes(hash.asBytes()).putInt(tries).hash()
+            hash = HashBuilder.defaultHasher().putBytes(hash.asBytes()).putInt(tries).hash()
 
             Path resumeDir = null
             boolean exists = false
@@ -1071,8 +1072,10 @@ class TaskProcessor {
                 errorStrategy = checkErrorStrategy(task, error, taskErrCount, procErrCount, submitRetries)
                 if( errorStrategy.soft ) {
                     def msg = "[$task.hashLog] NOTE: ${submitTimeout ? submitErrMsg : error.message}"
-                    if( errorStrategy == IGNORE ) msg += " -- Error is ignored"
-                    else if( errorStrategy == RETRY ) msg += " -- Execution is retried (${submitTimeout ? submitRetries : taskErrCount})"
+                    if( errorStrategy == IGNORE )
+                        msg += " -- Error is ignored"
+                    else if( errorStrategy == RETRY )
+                        msg += " -- Execution is retried (${submitTimeout ? submitRetries : taskErrCount})"
                     log.info msg
                     task.failed = true
                     task.errorAction = errorStrategy
@@ -1136,7 +1139,7 @@ class TaskProcessor {
         final action = task.config.getErrorStrategy()
 
         // retry is not allowed when the script cannot be compiled or similar errors
-        if( error instanceof ProcessUnrecoverableException ) {
+        if( error instanceof ProcessUnrecoverableException || error.cause instanceof ProcessUnrecoverableException ) {
             return !action.soft ? action : TERMINATE
         }
 
@@ -1281,6 +1284,9 @@ class TaskProcessor {
 
         if( task?.workDir )
             message << "\nWork dir:\n  ${task.workDirStr}"
+
+        if( task?.isContainerEnabled() )
+            message << "\nContainer:\n  ${task.container}".toString()
 
         message << suggestTip(message)
 

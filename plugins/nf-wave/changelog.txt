@@ -1,5 +1,29 @@
 nf-wave changelog
 ==================
+1.5.1 - 4 Sep 2024
+- Wave client logs improvement [5a37e617]
+
+1.5.0 - 5 Aug 2024
+- Await build completion for all Wave containers [2b8117e9]
+- Bump pf4j to version 3.12.0 [96117b9a]
+- Bump wave-api to 0.11.1 [96ec4ded]
+
+1.4.4 - 8 Jul 2024
+- Bump groovy 4.0.22 [284a6606]
+- Bump Fusion 2.4 (#5080) [0a8a484e]
+
+1.4.3 - 17 Jun 2024
+- Fix support for s5cmd 2.2.2 (#5069) [7e78bd4d]
+
+1.4.2-patch1 - 1 Aug 2024
+- Bump wave-api to 0.11.1 [87828afd]
+- Bump pf4j to version 3.12.0 [1a8f086a]
+
+1.4.2 - 20 May 2024
+- Bump Fusion 2.3 (#5005) [7176c113]
+- Remove `seqera` and `defaults` from Conda default channels (#5003) [ec5ebd0b]
+- Fix unexpected container resolution [a5ecf8a4]
+
 1.4.1 - 13 May 2024
 - Remove unused const [ci fast] [6e91285d]
 - Fix Wave container resolution with singularity and ociMode [54ad6241]
@@ -32,6 +56,12 @@ nf-wave changelog
 - Fix container hashing for Singularity + Wave containers [4c6f2e85]
 - Use consistently NXF_TASK_WORKDIR (#4484) [48ee3c64]
 - Fix Inspect command fails with Singularity [f5bb829f]
+
+1.0.1-patch1 - 28 May 2024
+- Bump dependency with Nextflow 23.10.2
+
+1.0.1 - 12 Jan 2024
+- Fix Inspect command fails with Singularity [25883df3]
 
 1.0.0 - 15 Oct 2023
 - Fix conda channels order [ci fast] [6672c6d7]

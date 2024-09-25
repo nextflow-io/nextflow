@@ -1,5 +1,29 @@
 nf-amazon changelog
 ===================
+2.8.0 - 4 Sep 2024
+- Disable AWS spot retry (#5215) [f28fcb25]
+
+2.7.0 - 5 Aug 2024
+- More robust parsing of shm-size containerOptions (#5177) [b56802a3]
+- Fix AWS Cloudwatch access when using custom log group name [30195838]
+- Fix Prevent AWS Batch retry the job execution when the container does not exist [4e218f22]
+- Fix Invalid AWS Fargate CPUs usage error reporting [d9c50e59]
+- Bump amazon sdk to version 1.12.766 [cc6ec314]
+- Bump pf4j to version 3.12.0 [96117b9a]
+
+2.6.0 - 17 Jun 2024
+- Allow requester pays for S3 buckets (#5027) [0070c1b0]
+- Fix support for s5cmd 2.2.2 (#5069) [7e78bd4d]
+- Bump aws-sdk 1.12.740 [acad2a1f]
+
+2.5.3 - 1 Aug 2024
+- More robust parsing of shm-size containerOptions (#5177) [98cf0068]
+- Bump amazon sdk to version 1.12.766 [5ce42b79]
+- Bump pf4j to version 3.12.0 [1a8f086a]
+
+2.5.2 - 20 May 2024
+- Fix nf-amazon plugin dependency [c234b09f]
+
 2.5.1 - 14 May 2024
 - Use protected visibility for updateStatus method [6871ba06]
 
@@ -31,6 +55,16 @@ nf-amazon changelog
 - Fix typos (#4519) [ci fast] [6b1ea726]
 - Fix Fusion symlinks when publishing files (#4348) [89f09fe0]
 - Bump javax.xml.bind:jaxb-api:2.4.0-b180830.0359
+
+2.1.4-patch3 - 30 Jul 2024
+- Bump amazon sdk to version 1.12.766 [189f58ed]
+- Bump pf4j to version 3.12.0 [8dfa4076]
+
+2.1.4-patch2 - 11 Jun 2024
+- Fix security vulnerabilities (#5057) [6d8765b8]
+
+2.1.4-patch1 - 28 May 2024
+- Bump dependency with Nextflow 23.10.2
 
 2.1.4 - 10 Oct 2023
 - Improve S3 endpoint validation [2b9ae6aa]

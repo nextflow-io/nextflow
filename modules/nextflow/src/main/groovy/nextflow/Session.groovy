@@ -31,6 +31,7 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
@@ -71,6 +72,7 @@ import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import nextflow.util.NameGenerator
+import nextflow.util.SysHelper
 import nextflow.util.ThreadPoolManager
 import nextflow.util.Threads
 import nextflow.util.VersionNumber
@@ -92,6 +94,8 @@ class Session implements ISession {
     final Collection<DataflowProcessor> allOperators = new ConcurrentLinkedQueue<>()
 
     final List<Closure> igniters = new ArrayList<>(20)
+
+    final Map<DataflowWriteChannel,String> publishTargets = [:]
 
     /**
      * Creates process executors
@@ -154,6 +158,11 @@ class Session implements ISession {
     boolean stubRun
 
     /**
+     * Enable preview mode
+     */
+    boolean preview
+
+    /**
      * Folder(s) containing libs and classes to be added to the classpath
      */
     List<Path> libDir
@@ -213,6 +222,8 @@ class Session implements ISession {
     private Barrier processesBarrier = new Barrier()
 
     private Barrier monitorsBarrier = new Barrier()
+
+    private volatile boolean failOnIgnore
 
     private volatile boolean cancelled
 
@@ -344,6 +355,9 @@ class Session implements ISession {
 
         // -- dry run
         this.stubRun = config.stubRun
+
+        // -- preview
+        this.preview = config.preview
 
         // -- normalize taskConfig object
         if( config.process == null ) config.process = [:]
@@ -774,6 +788,8 @@ class Session implements ISession {
             def status = dumpNetworkStatus()
             if( status )
                 log.debug(status)
+            // dump threads status
+            log.debug(SysHelper.dumpThreads())
             // force termination
             notifyError(null)
             ansiLogObserver?.forceTermination()
@@ -810,7 +826,7 @@ class Session implements ISession {
 
     boolean isCancelled() { cancelled }
 
-    boolean isSuccess() { !aborted && !cancelled }
+    boolean isSuccess() { !aborted && !cancelled && !failOnIgnore }
 
     void processRegister(TaskProcessor process) {
         log.trace ">>> barrier register (process: ${process.name})"
@@ -848,6 +864,10 @@ class Session implements ISession {
 
     boolean enableModuleBinaries() {
         config.navigate('nextflow.enable.moduleBinaries', false) as boolean
+    }
+
+    boolean failOnIgnore() {
+        config.navigate('workflow.failOnIgnore', false) as boolean
     }
 
     @PackageScope VersionNumber getCurrentVersion() {
@@ -1032,6 +1052,12 @@ class Session implements ISession {
         // save the completed task in the cache DB
         final trace = handler.safeTraceRecord()
         cache.putTaskAsync(handler, trace)
+
+        // set the pipeline to return non-exit code if specified
+        if( handler.task.errorAction == ErrorStrategy.IGNORE && failOnIgnore() ) {
+            log.debug "Setting fail-on-ignore flag due to ignored task '${handler.task.lazyName()}'"
+            failOnIgnore = true
+        }
 
         // notify the event to the observers
         for( int i=0; i<observers.size(); i++ ) {

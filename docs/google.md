@@ -156,7 +156,7 @@ process myTask {
 
 :::{note}
 Using an instance template will overwrite the `accelerator` and `disk` directives, as well as the following Google Batch
-config options: `cpuPlatform`, `preemptible`, and `spot`.
+config options: `bootDiskImage`, `cpuPlatform`, `preemptible`, and `spot`.
 :::
 
 To use an instance template with GPUs, you must also set the `google.batch.installGpuDrivers` config option to `true`.
@@ -250,7 +250,7 @@ The `disk` directive can be used to override the disk requested by Fusion. See t
 
 ### Supported directives
 
-The integration with Google Batch is a developer preview feature. Currently, the following Nextflow directives are supported:
+Currently, the following Nextflow directives are supported by the Google Batch executor:
 
 - {ref}`process-accelerator`
 - {ref}`process-container`
