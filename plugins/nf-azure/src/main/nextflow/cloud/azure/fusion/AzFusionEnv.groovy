@@ -54,7 +54,7 @@ class AzFusionEnv implements FusionEnv {
         }
 
         result.AZURE_STORAGE_ACCOUNT = cfg.storage().accountName
-        // TODO: In theory, generating an impromptu SAS token for authentication methods other than
+        // In theory, generating an impromptu SAS token for authentication methods other than
         // `azure.storage.sasToken` should not be necessary, because those methods should already allow sufficient
         // access for normal operation. Nevertheless, #5287 heavily implies that failing to do so causes the Azure
         // Storage plugin or Fusion to fail. In any case, it may be possible to remove this in the future.
