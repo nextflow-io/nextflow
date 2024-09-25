@@ -1,5 +1,18 @@
 nf-google changelog
 ===================
+1.15.0 - 4 Sep 2024
+- Add Google Batch warning when for conflicting disk image config (#5279) [ci fast] [96cb57cb]
+- Add support for Google Batch used specified boot images  (#5268) [0aaa6482]
+- Disable Google Batch automatic spot retries (#5223) [aad21533]
+
+1.14.0 - 5 Aug 2024
+- Bump pf4j to version 3.12.0 [96117b9a]
+- Make Google Batch auto retry codes configurable (#5148) [e562ce06]
+- Improve Google Batch 5000x error class handling (#5141) [61b2205f]
+
+1.13.2-patch1 - 9 Jul 2024
+- Fix normalization of consecutive slashes in uri path (#5114) [3f366b7e]
+
 1.13.4 - 8 Jul 2024
 - Fix normalization of consecutive slashes in uri path (#5114) [18ec484f]
 - Bump groovy 4.0.22 [284a6606]
@@ -40,6 +53,12 @@ nf-google changelog
 - Fix security vulnerabilities (#4513) [a310c777]
 - Fix Bypass Google Batch Price query if task cpus and memory are defined (#4521) [7f8f20d3]
 - Update logging filter for Google Batch provider. (#4488) [66a3ed19]
+
+1.8.3-patch2 - 11 Jun 2024
+- Fix security vulnerabilities (#5057) [6d8765b8]
+
+1.8.3-patch1 - 28 May 2024
+- Bump dependency with Nextflow 23.10.2
 
 1.8.3 - 10 Oct 2023
 - Add setting to enable the use of sync command [f0d5cc5c]

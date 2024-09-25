@@ -42,8 +42,11 @@ myst_enable_extensions = ['colon_fence', 'deflist', 'dollarmath']
 myst_heading_anchors = 3
 
 rediraffe_redirects = {
-    'basic.md': 'overview.md',
     'getstarted.md': 'install.md',
+    'basic.md': 'overview.md',
+    'tracing.md': 'reports.md',
+    'mail.md': 'notifications.md',
+    'operator.md': 'reference/operator.md',
     'dsl2.md': 'dsl1.md'
 }
 
@@ -79,7 +82,7 @@ version = release.replace("-edge", "")
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
-html_title = f"Nextflow v{release} documentation"
+html_title = f"Nextflow {release} documentation"
 
 # Get the current sha if not checked out at a specific version
 if len(release) == 0:

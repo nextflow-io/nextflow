@@ -1285,6 +1285,9 @@ class TaskProcessor {
         if( task?.workDir )
             message << "\nWork dir:\n  ${task.workDirStr}"
 
+        if( task?.isContainerEnabled() )
+            message << "\nContainer:\n  ${task.container}".toString()
+
         message << suggestTip(message)
 
         return message

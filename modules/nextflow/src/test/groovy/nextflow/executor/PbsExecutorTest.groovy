@@ -172,8 +172,10 @@ class PbsExecutorTest extends Specification {
         }
         then:
         executor.getHeaders(taskArray) == '''
-                #PBS -J 0-4
+                #PBS -t 0-4
                 #PBS -N nf-task_name
+                #PBS -o /dev/null
+                #PBS -j oe
                 '''
                 .stripIndent().leftTrim()
     }
@@ -319,7 +321,7 @@ class PbsExecutorTest extends Specification {
         given:
         def executor = Spy(PbsExecutor)
         expect:
-        executor.getArrayIndexName() == 'PBS_ARRAY_INDEX'
+        executor.getArrayIndexName() == 'PBS_ARRAYID'
         executor.getArrayIndexStart() == 0
     }
 
