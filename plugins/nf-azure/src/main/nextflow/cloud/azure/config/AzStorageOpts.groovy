@@ -62,10 +62,4 @@ class AzStorageOpts {
         }
         return result
     }
-
-    synchronized String getOrCreateSasToken() {
-        if( !sasToken )
-            sasToken = AzHelper.generateAccountSas(accountName, accountKey, tokenDuration)
-        return sasToken
-    }
 }
