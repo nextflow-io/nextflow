@@ -16,6 +16,9 @@
 
 package nextflow.cli
 
+import static nextflow.scm.AssetManager.REVISION_DELIM
+
+import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -33,6 +36,9 @@ class CmdList extends CmdBase {
 
     static final public NAME = 'list'
 
+    @Parameter(names=['-a','-all-revisions'], description = 'For each project, also list revisions')
+    Boolean revisions
+
     @Override
     final String getName() { NAME }
 
@@ -45,7 +51,15 @@ class CmdList extends CmdBase {
             return
         }
 
-        all.each { println it }
+    if (revisions) {
+        all.collect{ it.tokenize(REVISION_DELIM) }
+           .groupBy{ it[0] }
+           .each{ println ' ' + it.value[0][0] ; it.value.each{ y -> println ( y.size()==1 ? '   (default)' : '   ' + y[1] ) } }
+    } else {
+        all.collect{ it.replaceAll( /$REVISION_DELIM.*/, '' ) }
+           .unique()
+           .each{ println ' ' + it }
+    }
     }
 
 }

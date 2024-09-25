@@ -62,6 +62,8 @@ class AssetManager {
     @PackageScope
     static File root = DEFAULT_ROOT
 
+    static public final String REVISION_DELIM = ':'
+
     /**
      * The pipeline name. It must be in the form {@code username/repo} where 'username'
      * is a valid user name or organisation account, while 'repo' is the repository name
@@ -70,7 +72,15 @@ class AssetManager {
     private String project
 
     /**
+     * The name of the commit/branch/tag as requested via command line
+     * This is now a first class attribute of a pipeline
+     */
+    private String revision
+
+    /**
      * Directory where the pipeline is cloned (i.e. downloaded)
+     *
+     * Schema: $NXF_ASSETS/<org>/<repo>[:<revision>]
      */
     private File localPath
 
@@ -94,37 +104,49 @@ class AssetManager {
     /**
      * Create a new asset manager with the specified pipeline name
      *
-     * @param pipeline The pipeline to be managed by this manager e.g. {@code nextflow-io/hello}
+     * @param pipelineName The pipeline to be managed by this manager e.g. {@code nextflow-io/hello}
+     * @param revision Revision ID for the selected pipeline (git branch, tag or commit SHA number)
      */
-    AssetManager( String pipelineName, HubOptions cliOpts = null) {
+    AssetManager( String pipelineName, String revision = null, HubOptions cliOpts = null) {
         assert pipelineName
         // read the default config file (if available)
         def config = ProviderConfig.getDefault()
         // build the object
-        build(pipelineName, config, cliOpts)
+        build(pipelineName, revision, config, cliOpts)
     }
 
-    AssetManager( String pipelineName, Map config ) {
+    AssetManager( String pipelineName, String revision, Map config) {
         assert pipelineName
         // build the object
-        build(pipelineName, config)
+        build(pipelineName, revision, config)
     }
 
     /**
      * Build the asset manager internal data structure
      *
      * @param pipelineName A project name or a project repository Git URL
+     * @param revision Revision ID for the selected pipeline (git branch, tag or commit SHA number)
      * @param config A {@link Map} holding the configuration properties defined in the {@link ProviderConfig#DEFAULT_SCM_FILE} file
      * @param cliOpts User credentials provided on the command line. See {@link HubOptions} trait
      * @return The {@link AssetManager} object itself
      */
     @PackageScope
-    AssetManager build( String pipelineName, Map config = null, HubOptions cliOpts = null ) {
+    AssetManager build( String pipelineName, String revision = null, Map config = null, HubOptions cliOpts = null ) {
+
+        // if requested revision corresponds to the default branch, then unset it
+        // this avoids duplication of the default branch
+        if ( revision ) {
+            def referenceManager = new AssetManager(pipelineName, null, cliOpts)
+            if ( revision == referenceManager.getDefaultBranch() ) {
+                revision = null
+            }
+        }
 
         this.providerConfigs = ProviderConfig.createFromMap(config)
 
-        this.project = resolveName(pipelineName)
-        this.localPath = checkProjectDir(project)
+        this.revision = revision
+        this.project = resolveName(pipelineName, this.revision)
+        this.localPath = checkProjectDir(project, this.revision)
         this.hub = checkHubProvider(cliOpts)
         this.provider = createHubProvider(hub)
         setupCredentials(cliOpts)
@@ -173,16 +195,17 @@ class AssetManager {
      * and return the directory where the project is stored locally
      *
      * @param projectName A project name matching the pattern {@code owner/project}
+     * @param revision Revision ID for the selected pipeline (git branch, tag or commit SHA number)
      * @return The project dir {@link File}
      */
     @PackageScope
-    File checkProjectDir(String projectName) {
+    File checkProjectDir(String projectName, String revision) {
 
         if( !isValidProjectName(projectName)) {
             throw new IllegalArgumentException("Not a valid project name: $projectName")
         }
 
-        new File(root, project)
+        new File(root, project + (revision ? REVISION_DELIM + revision : ''))
     }
 
     /**
@@ -243,7 +266,7 @@ class AssetManager {
      * @return The fully qualified project name e.g. {@code cbcrg/foo}
      */
     @PackageScope
-    String resolveName( String name ) {
+    String resolveName( String name, String revision = null ) {
         assert name
 
         //
@@ -285,7 +308,7 @@ class AssetManager {
             name = parts[0]
         }
 
-        def qualifiedName = find(name)
+        def qualifiedName = find(name, revision)
         if( !qualifiedName ) {
             return "$DEFAULT_ORGANIZATION/$name".toString()
         }
@@ -299,6 +322,10 @@ class AssetManager {
     }
 
     String getProject() { project }
+
+    String getRevision() { revision }
+
+    String getProjectWithRevision() { project + ( revision ? REVISION_DELIM + revision : '' ) }
 
     String getHub() { hub }
 
@@ -363,7 +390,7 @@ class AssetManager {
         return this
     }
 
-    AssetManager checkValidRemoteRepo(String revision=null) {
+    AssetManager checkValidRemoteRepo() {
         // Configure the git provider to use the required revision as source for all needed remote resources:
         // - config if present in repo (nextflow.config by default)
         // - main script (main.nf by default)
@@ -478,10 +505,11 @@ class AssetManager {
     }
 
 
-    String getBaseName() {
+    String getBaseNameWithRevision() {
         def result = project.tokenize('/')
         if( result.size() > 2 ) throw new IllegalArgumentException("Not a valid project name: $project")
-        return result.size()==1 ? result[0] : result[1]
+        result = ( result.size()==1 ? result[0] : result[1] )
+        return result + ( revision ? REVISION_DELIM + revision : '' )
     }
 
     boolean isLocal() {
@@ -538,16 +566,48 @@ class AssetManager {
         return result
     }
 
-    static protected def find( String name ) {
+    /**
+     * @return The list of available revisions for a given project name
+     */
+    List<String> listRevisions( String projectName = project ) {
+        log.debug "Listing revisions for project: $projectName"
+
+        def result = new LinkedList()
+        if( !root.exists() )
+            return result
+
+        list().each {
+            if( it.tokenize(REVISION_DELIM)[0] == projectName ) {
+                result << it
+            }
+        }
+
+        return result
+    }
+
+    // Updated for new localPath schema (see localPath declaration at top of this class file)
+    static protected def find( String name, String revision = null ) {
         def exact = []
         def partial = []
 
         list().each {
             def items = it.split('/')
-            if( items[1] == name )
-                exact << it
-            else if( items[1].startsWith(name ) )
-                partial << it
+            /**
+             * itemsRev[0] is the name of each list'ed project
+             * itemsRev[1] is the revision
+             */
+            def itemsRev = items[1].tokenize(REVISION_DELIM)
+            // Check on matching revision: either null or same revision string
+            if( (!revision && !itemsRev[1]) || (revision && itemsRev[1] == revision) ) {
+                // Exact name match
+                if( itemsRev[0] == name )
+                    // Return item without revision
+                    exact << it.tokenize(REVISION_DELIM)[0]
+                // Partial name match
+                else if( itemsRev[0].startsWith(name ) )
+                    // Return item without revision
+                    partial << it.tokenize(REVISION_DELIM)[0]
+            }
         }
 
         def list = exact ?: partial
@@ -565,19 +625,18 @@ class AssetManager {
     /**
      * Download a pipeline from a remote Github repository
      *
-     * @param revision The revision to download
      * @result A message representing the operation result
      */
-    String download(String revision=null, Integer deep=null) {
+    String download(Integer deep=null) {
         assert project
 
         /*
-         * if the pipeline already exists locally pull it from the remote repo
+         * if the pipeline does not exists locally pull it from the remote repo
          */
         if( !localPath.exists() ) {
             localPath.parentFile.mkdirs()
             // make sure it contains a valid repository
-            checkValidRemoteRepo(revision)
+            checkValidRemoteRepo()
 
             final cloneURL = getGitRepositoryUrl()
             log.debug "Pulling $project -- Using remote clone url: ${cloneURL}"
@@ -599,14 +658,14 @@ class AssetManager {
                 // use an explicit checkout command *after* the clone instead of cloning a specific branch
                 // because the clone command does not allow the use of SHA commit id (only branch and tag names)
                 try { git.checkout() .setName(revision) .call() }
-                catch ( RefNotFoundException e ) { checkoutRemoteBranch(revision) }
+                catch ( RefNotFoundException e ) { checkoutRemoteBranch() }
             }
 
             // return status message
             return "downloaded from ${cloneURL}"
         }
 
-        log.debug "Pull pipeline $project  -- Using local path: $localPath"
+        log.debug "Pulling $project  -- Using local path: $localPath"
 
         // verify that is clean
         if( !isClean() )
@@ -624,7 +683,7 @@ class AssetManager {
              * Try to checkout it from a remote branch and return
              */
             catch ( RefNotFoundException e ) {
-                final ref = checkoutRemoteBranch(revision)
+                final ref = checkoutRemoteBranch()
                 final commitId = ref?.getObjectId()
                 return commitId
                     ? "checked out at ${commitId.name()}"
@@ -662,13 +721,12 @@ class AssetManager {
      * Clone a pipeline from a remote pipeline repository to the specified folder
      *
      * @param directory The folder when the pipeline will be cloned
-     * @param revision The revision to be cloned. It can be a branch, tag, or git revision number
      */
-    void clone(File directory, String revision = null, Integer deep=null) {
+    void clone(File directory, Integer deep=null) {
 
         def clone = Git.cloneRepository()
         def uri = getGitRepositoryUrl()
-        log.debug "Clone project `$project` -- Using remote URI: ${uri} into: $directory"
+        log.debug "Cloning `${project}` from ${uri} into ${directory}"
 
         if( !uri )
             throw new AbortOperationException("Cannot find the specified project: $project")
@@ -706,6 +764,18 @@ class AssetManager {
         names.get( head.objectId ) ?: head.objectId.name()
     }
 
+    /**
+     * @return The names of all locally pulled revisions for a given project
+     * 
+     * If revision is null, default is assumed
+     */
+    List<String> getPulledRevisions() {
+        return listRevisions().collect{
+            it -> String y = it.tokenize(REVISION_DELIM)[1]
+            it = ( y != null ? y : getDefaultBranch() )
+        }
+    }
+
     RevisionInfo getCurrentRevisionAndName() {
         Ref head = git.getRepository().findRef(Constants.HEAD);
         if( !head )
@@ -733,30 +803,31 @@ class AssetManager {
     /**
      * @return A list of existing branches and tags names. For example
      * <pre>
-     *     * master (default)
-     *       patch-x
-     *       v1.0 (t)
-     *       v1.1 (t)
+     *     * P master (default)
+     *         patch-x
+     *         v1.0 (t)
+     *         v1.1 (t)
      * </pre>
      *
-     * The star character on the left highlight the current revision, the string {@code (default)}
-     *  ticks that it is the default working branch (usually the master branch), while the string {@code (t)}
-     *  shows that the revision is a git tag (instead of a branch)
+     * The character {@code P} on the left indicates the revision is pulled locally,
+     *  the string {@code (default)} ticks that it is the default working branch,
+     *  while the string {@code (t)} shows that the revision is a git tag (instead of a branch)
      */
     @Deprecated
     List<String> getRevisions(int level) {
 
         def current = getCurrentRevision()
         def master = getDefaultBranch()
+        def pulled = getPulledRevisions()
 
         List<String> branches = getBranchList()
             .findAll { it.name.startsWith('refs/heads/') || it.name.startsWith('refs/remotes/origin/') }
             .unique { shortenRefName(it.name) }
-            .collect { Ref it -> refToString(it,current,master,false,level) }
+            .collect { Ref it -> refToString(it,current,master,pulled,false,level) }
 
         List<String> tags = getTagList()
                 .findAll  { it.name.startsWith('refs/tags/') }
-                .collect { refToString(it,current,master,true,level) }
+                .collect { refToString(it,current,master,pulled,true,level) }
 
         def result = new ArrayList<String>(branches.size() + tags.size())
         result.addAll(branches)
@@ -777,7 +848,6 @@ class AssetManager {
 
     Map getBranchesAndTags(boolean checkForUpdates) {
         final result = [:]
-        final current = getCurrentRevision()
         final master = getDefaultBranch()
 
         final branches = []
@@ -794,8 +864,8 @@ class AssetManager {
                 .findAll  { it.name.startsWith('refs/tags/') }
                 .each { Ref it -> tags << refToMap(it,remote) }
 
-        result.current = current    // current branch name
         result.master = master      // master branch name
+        result.pulled = getPulledRevisions() // list of pulled revisions
         result.branches = branches  // collection of branches
         result.tags = tags          // collect of tags
         return result
@@ -830,11 +900,11 @@ class AssetManager {
         return human ? obj.name.substring(0,10) : obj.name
     }
 
-    protected String refToString(Ref ref, String current, String master, boolean tag, int level ) {
+    protected String refToString(Ref ref, String current, String master, List<String> pulled, boolean tag, int level ) {
 
         def result = new StringBuilder()
         def name = shortenRefName(ref.name)
-        result << (name == current ? '*' : ' ')
+        result << (name in pulled ? 'P' : ' ')
 
         if( level ) {
             def peel = git.getRepository().peel(ref)
@@ -899,39 +969,7 @@ class AssetManager {
         return result
     }
 
-    /**
-     * Checkout a specific revision
-     * @param revision The revision to be checked out
-     */
-    void checkout( String revision = null ) {
-        assert localPath
-
-        def current = getCurrentRevision()
-        if( current != defaultBranch ) {
-            if( !revision ) {
-                throw new AbortOperationException("Project `$project` is currently stuck on revision: $current -- you need to explicitly specify a revision with the option `-r` in order to use it")
-            }
-        }
-        if( !revision || revision == current ) {
-            // nothing to do
-            return
-        }
-
-        // verify that is clean
-        if( !isClean() )
-            throw new AbortOperationException("Project `$project` contains uncommitted changes -- Cannot switch to revision: $revision")
-
-        try {
-            git.checkout().setName(revision) .call()
-        }
-        catch( RefNotFoundException e ) {
-            checkoutRemoteBranch(revision)
-        }
-
-    }
-
-
-    protected Ref checkoutRemoteBranch( String revision ) {
+    protected Ref checkoutRemoteBranch() {
 
         try {
             def fetch = git.fetch()
@@ -997,7 +1035,7 @@ class AssetManager {
         if( provider.hasCredentials() )
             update.setCredentialsProvider( provider.getGitCredentials() )
         def updatedList = update.call()
-        log.debug "Update submodules $updatedList"
+        log.debug "Updating submodules $updatedList"
     }
 
     protected String getRemoteCommitId(RevisionInfo rev) {
