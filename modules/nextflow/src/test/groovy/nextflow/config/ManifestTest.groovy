@@ -26,8 +26,9 @@ class ManifestTest extends Specification {
     def 'should check manifest object' () {
 
         given:
-        def MAN = [author: 'pablo', nextflowVersion: '1.2.3', name: 'foo']
-
+        def MAN = [author: 'pablo', nextflowVersion: '1.2.3', name: 'foo',
+                   maintainer: 'john', organisation: 'My Organisation', icon: 'icon.png',
+                   docsUrl: 'https://docs.io', license: 'Apache v2']
         when:
         def manifest = new Manifest(MAN)
         then:
@@ -35,6 +36,11 @@ class ManifestTest extends Specification {
             author == 'pablo'
             nextflowVersion == '1.2.3'
             name == 'foo'
+            maintainer == 'john'
+            organisation == 'My Organisation'
+            icon == 'icon.png'
+            docsUrl == 'https://docs.io'
+            license == 'Apache v2'
         }
 
     }
@@ -55,6 +61,11 @@ class ManifestTest extends Specification {
             nextflowVersion == null
             version == null
             name == null
+            maintainer == null
+            docsUrl == null
+            organisation == null
+            icon == null
+            license == null
         }
 
     }
