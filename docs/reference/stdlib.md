@@ -201,7 +201,7 @@ The following functions are available in Nextflow scripts:
   :::
 : Stop the pipeline execution and return an exit code and optional error message.
 
-`file( filePattern, options = [:] )`
+`file( filePattern, [options] )`
 : Get one or more files from a path or glob pattern. Returns a [Path](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/Path.html) or list of Paths if there are multiple files.
 
 : The following options are available:
@@ -226,7 +226,7 @@ The following functions are available in Nextflow scripts:
 
 : See also: {ref}`Channel.fromPath <channel-path>`.
 
-`files( filePattern, options = [:] )`
+`files( filePattern, [options] )`
 : Convenience method for `file()` that always returns a list.
 
 `groupKey( key, size )`
@@ -593,7 +593,7 @@ The following methods are available for manipulating files and directories in a 
   file('any/path').mkdirs()
   ```
 
-`mklink( linkName, options = [:] )`
+`mklink( linkName, [options] )`
 : Creates a *filesystem link* to a given path:
 
   ```groovy
