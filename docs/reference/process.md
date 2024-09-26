@@ -614,7 +614,7 @@ process ignoreAnyError {
 }
 ```
 
-In this case, the workflow will complete successfully and return an exit status of 0. However, if you set `workflow.failOnIgnore = true` in your Nextflow configuration, the workflow will return non-zero exit status and report the failed tasks as an error.
+In this case, the workflow will complete successfully and return an exit status of 0. However, if you set `workflow.failOnIgnore = true` in your Nextflow configuration, the workflow will return a non-zero exit status and report the failed tasks as an error.
 
 The `retry` error strategy allows you to re-submit for execution a process returning an error condition. For example:
 
