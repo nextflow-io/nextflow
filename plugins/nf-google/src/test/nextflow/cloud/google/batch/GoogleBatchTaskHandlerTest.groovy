@@ -581,5 +581,4 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         0 * client.deleteJob('job1') >> null
     }
-
 }

@@ -16,8 +16,6 @@
 
 package nextflow.cloud.azure.batch
 
-import nextflow.SysEnv
-
 import java.math.RoundingMode
 import java.nio.file.Path
 import java.time.Duration
@@ -80,6 +78,7 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzFileShareOpts
 import nextflow.cloud.azure.config.AzPoolOpts

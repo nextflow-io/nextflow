@@ -17,8 +17,6 @@
 
 package nextflow.cloud.google.batch
 
-import nextflow.SysEnv
-
 import java.nio.file.Path
 import java.util.regex.Pattern
 
@@ -37,6 +35,7 @@ import com.google.protobuf.Duration
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel

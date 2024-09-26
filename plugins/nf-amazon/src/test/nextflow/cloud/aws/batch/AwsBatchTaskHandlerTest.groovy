@@ -1100,6 +1100,4 @@ class AwsBatchTaskHandlerTest extends Specification {
         'job1'       | 'job1'
         'job1:task2' | 'job1'
     }
-
-
 }
