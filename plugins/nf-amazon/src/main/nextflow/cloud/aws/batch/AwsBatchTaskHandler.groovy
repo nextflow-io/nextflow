@@ -76,6 +76,7 @@ import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
+import nextflow.util.TaskUtils
 /**
  * Implements a task handler for AWS Batch jobs
  */
@@ -712,7 +713,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final opts = getAwsOptions()
         final labels = task.config.getResourceLabels()
         final result = new SubmitJobRequest()
-        result.setJobName(includeTowerPrefix(normalizeJobName(task.name)))
+        result.setJobName(TaskUtils.includeTowerPrefix(normalizeJobName(task.name), this.environment))
         result.setJobQueue(getJobQueue(task))
         result.setJobDefinition(getJobDefinition(task))
         if( labels ) {
@@ -798,13 +799,6 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         }
 
         return result
-    }
-
-    protected String includeTowerPrefix(String name) {
-        if ( this.environment?.containsKey('TOWER_WORKFLOW_ID') )
-            return "tw-"+this.environment['TOWER_WORKFLOW_ID'] + "-" + name
-        else
-            return name
     }
 
     /**

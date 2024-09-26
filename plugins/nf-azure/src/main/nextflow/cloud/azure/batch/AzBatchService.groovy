@@ -16,6 +16,8 @@
 
 package nextflow.cloud.azure.batch
 
+import nextflow.SysEnv
+
 import java.math.RoundingMode
 import java.nio.file.Path
 import java.time.Duration
@@ -94,6 +96,7 @@ import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
 import nextflow.util.MustacheTemplateEngine
 import nextflow.util.Rnd
+import nextflow.util.TaskUtils
 /**
  * Implements Azure Batch operations for Nextflow executor
  *
@@ -375,17 +378,11 @@ class AzBatchService implements Closeable {
                 .trim()
                 .replaceAll(/[^a-zA-Z0-9-_]+/,'_')
 
-        final String key = includeTowerPrefix("job-${Rnd.hex()}-${name}", System.getenv())
+        final String key = TaskUtils.includeTowerPrefix("job-${Rnd.hex()}-${name}", SysEnv.get())
         // Azure batch job max len is 64 characters, however we keep it a bit shorter
         // because the jobId + taskId composition must be less then 100
         final MAX_LEN = 62i
         return key.size()>MAX_LEN ? key.substring(0,MAX_LEN) : key
-    }
-    protected static String includeTowerPrefix(String name, Map<String,String> environment) {
-        if ( environment?.containsKey('TOWER_WORKFLOW_ID') )
-            return "tw-"+environment['TOWER_WORKFLOW_ID'] + "-" + name
-        else
-            return name
     }
 
     protected BatchTaskCreateContent createTask(String poolId, String jobId, TaskRun task) {

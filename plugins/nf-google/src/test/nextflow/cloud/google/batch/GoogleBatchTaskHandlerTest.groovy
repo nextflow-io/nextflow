@@ -582,16 +582,4 @@ class GoogleBatchTaskHandlerTest extends Specification {
         0 * client.deleteJob('job1') >> null
     }
 
-    def 'should include the tower prefix'() {
-        given:
-        def name = 'job_1'
-
-        expect:
-        GoogleBatchTaskHandler.includeTowerPrefix(name, ENV) == EXPECTED
-
-        where:
-        ENV                         | EXPECTED
-        [TOWER_WORKFLOW_ID: '1234'] | "tw-1234-job_1"
-        [:]                         | "job_1"
-    }
 }

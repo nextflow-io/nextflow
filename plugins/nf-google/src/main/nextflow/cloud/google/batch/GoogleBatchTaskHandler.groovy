@@ -17,6 +17,8 @@
 
 package nextflow.cloud.google.batch
 
+import nextflow.SysEnv
+
 import java.nio.file.Path
 import java.util.regex.Pattern
 
@@ -51,6 +53,7 @@ import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
+import nextflow.util.TaskUtils
 /**
  * Implements a task handler for Google Batch executor
  * 
@@ -103,18 +106,11 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         this.client = executor.getClient()
         this.executor = executor
         this.jobId = customJobName(task) ?: "nf-${task.hashLog.replace('/','')}-${System.currentTimeMillis()}"
-        this.jobId = includeTowerPrefix(this.jobId, System.getenv())
+        this.jobId = TaskUtils.includeTowerPrefix(this.jobId, SysEnv.get())
         // those files are access via NF runtime, keep based on CloudStoragePath
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
-    }
-
-    protected static String includeTowerPrefix(String name, Map<String,String> environment) {
-        if ( environment?.containsKey('TOWER_WORKFLOW_ID') )
-            return "tw-"+environment['TOWER_WORKFLOW_ID'] + "-" + name
-        else
-            return name
     }
 
     /**
