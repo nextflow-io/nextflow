@@ -41,12 +41,12 @@ The `main:` label can be omitted if there are no `take:` or `emit:` blocks.
 Workflows were introduced in DSL2. If you are still using DSL1, see the {ref}`dsl1-page` page to learn how to migrate your Nextflow pipelines to DSL2.
 :::
 
-## Implicit workflow
+## Entry workflow
 
-A script can define a single workflow without a name (also known as the *implicit workflow*), which is the default entrypoint of the script. The `-entry` command line option can be used to execute a different workflow as the entrypoint at runtime.
+A script can define a single workflow without a name (also known as the *entry workflow*), which is the default entrypoint of the script. The `-entry` command line option can be used to execute a different workflow as the entrypoint at runtime.
 
 :::{note}
-Implicit workflow definitions are ignored when a script is included as a module. This way, a script can be written such that it can be either imported as a module or executed as a pipeline.
+Entry workflow definitions are ignored when a script is included as a module. This way, a script can be written such that it can be either imported as a module or executed as a pipeline.
 :::
 
 ## Named workflows
@@ -82,7 +82,7 @@ workflow {
 ```
 
 :::{tip}
-The use of global variables and params in named workflows is discouraged because it breaks the modularity of the workflow. As a best practice, every workflow input should be explicitly defined as such in the `take:` block, and params should only be used in the implicit workflow.
+The use of global variables and params in named workflows is discouraged because it breaks the modularity of the workflow. As a best practice, every workflow input should be explicitly defined as such in the `take:` block, and params should only be used in the entry workflow.
 :::
 
 ## Workflow inputs (`take`)
@@ -404,7 +404,7 @@ In the above snippet, the initial channel is piped to the {ref}`operator-map` op
 This feature requires the `nextflow.preview.output` feature flag to be enabled.
 :::
 
-A script may define the set of outputs that should be published by the implicit workflow, known as the workflow output definition:
+A script may define the set of outputs that should be published by the entry workflow, known as the workflow output definition:
 
 ```groovy
 workflow {
@@ -416,7 +416,7 @@ output {
 }
 ```
 
-The output definition must be defined after the implicit workflow.
+The output definition must be defined after the entry workflow.
 
 ### Publishing channels
 
