@@ -45,6 +45,8 @@ class XPath implements Path {
 
     private String query
 
+    XPath(){}
+
     XPath(XFileSystem fs, String path) {
         this(fs, path, EMPTY)
     }
