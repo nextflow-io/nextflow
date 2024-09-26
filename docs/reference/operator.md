@@ -225,7 +225,7 @@ The `collectFile` operator collects the items from a source channel and saves th
 
 This operator has multiple variants:
 
-`collectFile( name: '...', options = [:] )`
+`collectFile( name: '...', [options] )`
 
 : Collects the items and saves them to a single file specified by the `name` option:
 
@@ -233,7 +233,7 @@ This operator has multiple variants:
   :language: groovy
   ```
 
-`collectFile( closure, options = [:] )`
+`collectFile( closure, [options] )`
 
 : Collects the items into groups and saves each group to a file, using a grouping criteria. The grouping criteria is a {ref}`closure <script-closure>` that maps each item to a pair, where the first element is the file name for the group and the second element is the content to be appended to that file. For example:
 
