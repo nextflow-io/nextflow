@@ -584,7 +584,7 @@ Use `debug` instead
 
 ### errorStrategy
 
-The `errorStrategy` directive allows you to define how an error condition is managed by the process. By default when an error status is returned by the executed script (i.e. when it ends with a non-zero exit status), the process stops immediately. This in turn forces the entire pipeline to terminate.
+The `errorStrategy` directive allows you to define how the process manages an error condition. By default, when an error status is returned by the executed script (i.e. when it ends with a non-zero exit status), the process stops immediately, forcing the entire pipeline to terminate.
 
 The following error strategies are available:
 
