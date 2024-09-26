@@ -2,13 +2,9 @@
 
 # Scripts
 
-Nextflow is a domain-specific language (DSL) based on Groovy, a general-purpose programming language for the Java virtual machine. Nextflow extends the Groovy syntax with features that ease the writing of computational pipelines in a declarative manner.
+Nextflow is a workflow language that runs on the Java virtual machine (JVM). Nextflow's syntax is very similar to [Groovy](https://groovy-lang.org/), a scripting language for the JVM, but Nextflow is specialized for writing computational pipelines in a declarative manner.
 
-For more background on Groovy, refer to these resources:
-
-- [Groovy User Guide](http://groovy-lang.org/documentation.html)
-- [Groovy Cheat sheet](http://www.cheat-sheets.org/saved-copy/rc015-groovy_online.pdf)
-- [Groovy in Action](http://www.manning.com/koenig2/)
+Nextflow scripts can also make full use of the Java and Groovy standard libraries; see the {ref}`stdlib-page` page for more information.
 
 :::{warning}
 Nextflow uses UTF-8 as the default character encoding for source files. Make sure to use UTF-8 encoding when editing Nextflow scripts with your preferred text editor.
@@ -218,7 +214,7 @@ result = myLongCmdline.execute().text
 In the preceding example, `blastp` and its `-in`, `-out`, `-db` and `-html` switches and their arguments are effectively a single line.
 
 :::{warning}
-When using backslashes to continue a multi-line command, make sure to not put any spaces after the backslash, otherwise it will be interpreted by the Groovy lexer as an escaped space instead of a backslash, which will make your script incorrect. It will also print this warning:
+When using backslashes to continue a multi-line command, make sure to not put any spaces after the backslash, otherwise it will be interpreted as an escaped space instead of a backslash, which will make your script incorrect. It will also print this warning:
 
 ```
 unknown recognition error type: groovyjarjarantlr4.v4.runtime.LexerNoViableAltException
@@ -277,6 +273,14 @@ println y
 // prints: nicenice
 ```
 
+To remove part of a string, simply replace it with a blank string:
+
+```groovy
+z = 'Hello World!'.replaceFirst(/(?i)\s+Wo\w+/, '')
+println z
+// prints: Hello!
+```
+
 ### Capturing groups
 
 You can match a pattern that includes groups. First create a matcher object with the `=~` operator. Then, you can index the matcher object to find the matches: `matcher[0]` returns a list representing the first match of the regular expression in the string. The first list element is the string that matches the entire regular expression, and the remaining elements are the strings that match each group.
@@ -307,30 +311,7 @@ println patch   // 3
 println flavor  // beta
 ```
 
-### Removing part of a string
-
-You can remove part of a `String` value using a regular expression pattern. The first match found is replaced with an empty String:
-
-```groovy
-// define the regexp pattern
-wordStartsWithGr = ~/(?i)\s+Gr\w+/
-
-// apply and verify the result
-('Hello Groovy world!' - wordStartsWithGr) == 'Hello world!'
-('Hi Grails users' - wordStartsWithGr) == 'Hi users'
-```
-
-Remove the first 5-character word from a string:
-
-```groovy
-assert ('Remove first match of 5 letter word' - ~/\b\w{5}\b/) == 'Remove match of 5 letter word'
-```
-
-Remove the first number with its trailing whitespace from a string:
-
-```groovy
-assert ('Line contains 20 characters' - ~/\d+\s+/) == 'Line contains characters'
-```
+(script-functions)=
 
 ## Functions
 
@@ -462,9 +443,9 @@ Learn more about closures in the [Groovy documentation](http://groovy-lang.org/c
 
 ## Syntax sugar
 
-Groovy provides several forms of "syntax sugar", or shorthands that can make your code easier to read.
+Nextflow provides several forms of "syntax sugar", or shorthands that can make your code easier to read.
 
-Some programming languages require every statement to be terminated by a semi-colon. In Groovy, semi-colons are optional, but they can still be used to write multiple statements on the same line:
+Some programming languages require every statement to be terminated by a semi-colon. In Nextflow, semi-colons are optional, but they can still be used to write multiple statements on the same line:
 
 ```groovy
 println 'Hello!' ; println 'Hello again!'
@@ -499,7 +480,3 @@ If the last argument is a closure, the closure can be written outside of the par
 // shorthand
 [1, 2, 3].inject('result:') { acc, v -> acc + ' ' + v }
 ```
-
-:::{note}
-In some cases, you might not be able to omit the parentheses because it would be syntactically ambiguous. You can use the `groovysh` REPL console to play around with Groovy and figure out what works.
-:::

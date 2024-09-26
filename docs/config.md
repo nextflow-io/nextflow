@@ -48,7 +48,15 @@ The same mechanism allows you to access environment variables defined in the hos
 
 ### Comments
 
-Configuration files use the same conventions for comments used by the Groovy or Java programming languages. Thus, use `//` to comment a single line, or `/*` .. `*/` to comment a block on multiple lines.
+You can use `//` to comment a single line, or `/* ... */` to comment a block on multiple lines:
+
+```groovy
+// single line comment
+
+/*
+ * multi-line comment
+ */
+```
 
 ### Includes
 

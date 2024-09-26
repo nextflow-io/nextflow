@@ -151,7 +151,7 @@ Refer to the source code of Nextflow's built-in executors to see how to implemen
 :::{versionadded} 22.09.0-edge
 :::
 
-Plugins can define custom Groovy functions, which can then be included into Nextflow pipelines.
+Plugins can define custom functions, which can then be included into Nextflow pipelines.
 
 To implement a custom function, create a class in your plugin that extends the `PluginExtensionPoint` class, and implement your function with the `Function` annotation:
 

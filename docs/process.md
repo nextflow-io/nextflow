@@ -139,9 +139,9 @@ Since the actual location of the interpreter binary file can differ across platf
 
 ### Conditional scripts
 
-So far, our `script` block has always been a simple string expression, but in reality, the `script` block is just Groovy code that returns a string. This means that you can write arbitrary Groovy code to determine the script to execute, as long as the final statement is a string (remember that the `return` keyword is optional in Groovy).
+So far, the `script` block has just been a string, but in reality, the `script` block is like a function that returns a string. This means that you can write arbitrary code to determine the script, as long as the final statement is a string (remember that the `return` keyword is optional).
 
-For example, you can use flow control statements (`if`, `switch`, etc) to execute a different script based on the process inputs. The only difference here is that you must explicitly declare the `script` guard, whereas before it was not required. Here is an example:
+For example, you can use if-else statements to produce a different script based on the task inputs. The only difference here is that you must explicitly declare the `script` guard, whereas before it was not required. Here is an example:
 
 ```groovy
 mode = 'tcoffee'
@@ -171,7 +171,7 @@ process align {
 }
 ```
 
-In the above example, the process will execute one of the script fragments depending on the value of the `mode` parameter. By default it will execute the `tcoffee` command, but changing the `mode` variable will cause a different branch to be executed.
+In the above example, the process will execute one of several scripts depending on the value of the `mode` parameter. By default it will execute the `tcoffee` command.
 
 (process-template)=
 
@@ -250,7 +250,7 @@ In the above example, `$USER` is treated as a Bash variable, while `!{str}` is t
 
 ### Native execution
 
-Nextflow processes can also execute native Groovy code as the task itself, using the `exec` block. Whereas the `script` block defines a script to be executed, the `exec` block defines Groovy code to be executed directly.
+Whereas the `script` block defines a script that is executed as a separate job, the `exec` block simply executes the code that it is given.
 
 For example:
 
@@ -275,6 +275,8 @@ Hello Mr. b
 Hello Mr. a
 Hello Mr. c
 ```
+
+A native process is very similar to a {ref}`function <script-functions>`, but provides additional capabilities such as parallelism, caching, and progress logging.
 
 (process-stub)=
 
@@ -492,7 +494,7 @@ In this case, `x.name` returns the file name with the parent directory (e.g. `my
 
 ### Multiple input files
 
-A `path` input can also accept a collection of files instead of a single value. In this case, the input variable will be a Groovy list, and you can use it as such.
+A `path` input can also accept a collection of files instead of a single value. In this case, the input variable will be a list, and you can use it as such.
 
 When the input has a fixed file name and a collection of files is received by the process, the file name will be appended with a numerical suffix representing its ordinal position in the list. For example:
 
