@@ -1584,3 +1584,20 @@ The following settings are available:
 
 `wave.strategy`
 : The strategy to be used when resolving ambiguous Wave container requirements (default: `'container,dockerfile,conda,spack'`).
+
+(config-workflow)=
+
+## `workflow`
+
+The `workflow` scope provides workflow execution options.
+
+`workflow.failOnIgnore`
+: :::{versionadded} 24.05.0-edge
+  :::
+: When `true`, the pipeline will exit with a non-zero exit code if any failed tasks are ignored using the `ignore` {ref}`error strategy <process-error-strategy>`.
+
+`workflow.onComplete`
+: Specify a closure that will be invoked at the end of a workflow run (including failed runs). See {ref}`workflow-handlers` for more information.
+
+`workflow.onError`
+: Specify a closure that will be invoked if a workflow run is terminated. See {ref}`workflow-handlers` for more information.
