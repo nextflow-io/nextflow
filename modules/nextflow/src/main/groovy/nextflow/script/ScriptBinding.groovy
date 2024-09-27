@@ -268,7 +268,7 @@ class ScriptBinding extends WorkflowBinding {
         }
 
         @Override
-        void putAll(Map<String,Object> other) {
+        void putAll(Map<? extends String,? extends Object> other) {
             for( def entry : other.entrySet() ) {
                 put0(entry.getKey(), entry.getValue())
             }

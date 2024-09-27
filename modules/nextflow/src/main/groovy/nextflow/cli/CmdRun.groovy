@@ -43,11 +43,10 @@ import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
-import nextflow.secret.SecretsLoader
-import nextflow.util.AliasMap
 import nextflow.util.CustomPoolFactory
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
+import org.apache.commons.lang.StringUtils
 import org.fusesource.jansi.AnsiConsole
 import org.yaml.snakeyaml.Yaml
 /**
@@ -621,7 +620,7 @@ class CmdRun extends CmdBase implements HubOptions {
     @Memoized  // <-- avoid parse multiple times the same file and params
     Map parsedParams(Map configVars) {
 
-        final result = new AliasMap()
+        final result = [:]
         final file = getParamsFile()
         if( file ) {
             def path = validateParamsFile(file)
@@ -636,7 +635,7 @@ class CmdRun extends CmdBase implements HubOptions {
         if( !params )
             return result
 
-        for( def entry : params ) {
+        for( Map.Entry<String,String> entry : params ) {
             addParam( result, entry.key, entry.value )
         }
         return result
@@ -672,6 +671,19 @@ class CmdRun extends CmdBase implements HubOptions {
         }
     }
 
+    static protected void addParam0(Map params, String key, Object value) {
+        if( key.contains('-') )
+            key = kebabToCamelCase(key)
+        params.put(key, value)
+    }
+
+    static protected String kebabToCamelCase(String str) {
+        final result = new StringBuilder()
+        str.split('-').eachWithIndex { String entry, int i ->
+            result << (i>0 ? StringUtils.capitalize(entry) : entry )
+        }
+        return result.toString()
+    }
 
     static protected parseParamValue(String str) {
         if ( SysEnv.get('NXF_DISABLE_PARAMS_TYPE_DETECTION') )
