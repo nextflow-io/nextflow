@@ -22,45 +22,63 @@ You can use the `-C <config-file>` option to use a single configuration file and
 
 ## Syntax
 
-A Nextflow configuration file is a simple text file containing a set of properties defined using the syntax:
+The Nextflow configuration syntax is based on the Nextflow script syntax. It is designed for setting configuration options in a declarative manner while also allowing for dynamic expressions where appropriate. Refer to {ref}`syntax-page`, particularly the sections on comments and expressions, for a full description of the available syntax.
+
+A Nextflow config file consists of any number of *assignments*, *blocks*, and *includes*. Config files may also contain comments in the same manner as scripts.
+
+### Assignments
+
+A config assignment consists of a config option and an expression separated by an equals sign:
 
 ```groovy
-name = value
+workDir = 'work'
+docker.enabled = true
+process.maxErrors = 10
 ```
 
-Please note, string values need to be wrapped in quotation characters while numbers and boolean values (`true`, `false`) do not. Also note that values are typed. This means that, for example, `1` is different from `'1'` — the former is interpreted as the number one, while the latter is interpreted as a string value.
+A config option consists of one or more names separated by dots. The names other than the last one are known as *config scopes*. See {ref}`config-options` for the full set of config options organized by scope.
 
-### Variables
-
-Configuration properties can be used as variables in the configuration file by using the usual `$propertyName` or `${expression}` syntax.
-
-For example:
+The right-hand side is typically a literal value such as a number, boolean, or string, but can be any expression, such as a dynamic string:
 
 ```groovy
-propertyOne = 'world'
-anotherProp = "Hello $propertyOne"
-customPath = "$PATH:/my/app/folder"
+params.helper_file = "${projectDir}/assets/helper.txt"
 ```
 
-Please note, the usual rules for {ref}`string-interpolation` are applied, thus a string containing a variable reference must be wrapped in double-quote chars instead of single-quote chars.
+### Blocks
 
-The same mechanism allows you to access environment variables defined in the hosting system. Any variable name not defined in the Nextflow configuration file(s) is interpreted to be a reference to an environment variable with that name. So, in the above example, the property `customPath` is defined as the current system `PATH` to which the string `/my/app/folder` is appended.
-
-### Comments
-
-You can use `//` to comment a single line, or `/* ... */` to comment a block on multiple lines:
+A config scope can also be specified as a block, in which case any number of config options within that scope can be assigned:
 
 ```groovy
-// single line comment
+// dot syntax
+docker.enabled = true
+docker.runOptions = '-u $(id -u):$(id -g)'
 
-/*
- * multi-line comment
- */
+// block syntax
+docker {
+    enabled = true
+    runOptions = '-u $(id -u):$(id -g)'
+}
+```
+
+As a result, deeply nested config options can be assigned in a variety of ways. For example, the following three assignments are equivalent:
+
+```groovy
+executor.retry.maxAttempt = 5
+
+executor {
+    retry.maxAttempt = 5
+}
+
+executor {
+    retry {
+        maxAttempt = 5
+    }
+}
 ```
 
 ### Includes
 
-A configuration file can include one or more configuration files using the keyword `includeConfig`. For example:
+A config file can include any number of other config files using the `includeConfig` keyword:
 
 ```groovy
 process.executor = 'sge'
@@ -70,7 +88,11 @@ process.memory = '10G'
 includeConfig 'path/foo.config'
 ```
 
-When a relative path is used, it is resolved against the actual location of the including file.
+When a relative path is used, it is resolved against the location of the including file.
+
+:::{note}
+Config includes can also be specified within config blocks. However, config files should only be included either at the top-level or in a [profile](#config-profiles), so that the included config file is valid both on its own and in the context in which it is included.
+:::
 
 ## Constants
 
@@ -86,22 +108,6 @@ The following constants are globally available in a Nextflow configuration file:
 
 `projectDir`
 : The directory where the main script is located.
-
-## Config scopes
-
-Configuration settings can be organized in different scopes by dot prefixing the property names with a scope identifier, or grouping the properties in the same scope using the curly brackets notation. For example:
-
-```groovy
-alpha.x = 1
-alpha.y = 'string value..'
-
-beta {
-     p = 2
-     q = 'another string ..'
-}
-```
-
-See {ref}`config-options` for the full list of config settings.
 
 (config-params)=
 
