@@ -58,7 +58,7 @@ assert path.parent == '/some/path'
 ```
 
 :::{tip}
-When accessing an object property, any method that looks like `get*()` can also be accessed as a field. For example, `path.getName()` is equivalent to `path.name`, `path.getBaseName()` is equivalent to `path.baseName`, and so on.
+When calling an object method, any method that looks like `get*()` can also be accessed as a field. For example, `path.getName()` is equivalent to `path.name`, `path.getBaseName()` is equivalent to `path.baseName`, and so on.
 :::
 
 See the {ref}`stdlib-types-path` reference for the list of available methods.

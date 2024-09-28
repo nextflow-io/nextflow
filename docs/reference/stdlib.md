@@ -56,9 +56,6 @@ The following constants are globally available in a Nextflow script:
 
 `params`
 : Map of workflow parameters specified in the config file or as command line options.
-: :::{note}
-  As a best practice, parameters should only be used in the entry workflow.
-  :::
 
 `projectDir`
 : Alias of `workflow.projectDir`.
@@ -329,18 +326,6 @@ The following methods are available for a `Duration` object:
 
 `getSeconds()`, `toSeconds()`
 : Get the duration value in seconds (rounded down).
-
-(stdlib-list)=
-
-## List
-
-TODO
-
-(stdlib-map)=
-
-## Map
-
-TODO
 
 (stdlib-types-memoryunit)=
 
@@ -700,15 +685,3 @@ The following methods are available for splitting and counting the records in fi
 
 `splitText()`
 : Splits a text file into a list of lines. See the {ref}`operator-splittext` operator for available options.
-
-(stdlib-set)=
-
-## Set
-
-TODO
-
-(stdlib-string)=
-
-## String
-
-TODO

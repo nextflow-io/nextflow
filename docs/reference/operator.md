@@ -256,7 +256,7 @@ Channel
     .collectFile( name: 'result.fa', sort: { v -> v.size() } ) {
         v -> v.sequence
     }
-    .view { v -> v.text }
+    .view { fa -> fa.text }
 ```
 
 :::{warning}
@@ -748,10 +748,10 @@ Available options:
 : The zero-based index of each item to use as the matching key. Can also be a list of indices, e.g. `by: [0, 2]` (default: `[0]`).
 
 `failOnDuplicate`
-: When `true`, an error is reported when the operator receives multiple items from the same channel with the same key (default: `false`). Value is set to `true` if {ref}`strict mode <feature-flags>` is enabled.
+: When `true`, an error is reported when the operator receives multiple items from the same channel with the same key (default: `false`). Value is set to `true` if {ref}`strict mode <config-feature-flags>` is enabled.
 
 `failOnMismatch`
-: When `true`, an error is reported when the operator receives an item from one channel for which there no matching item from the other channel (default: `false`). Value is set to `true` if {ref}`strict mode <feature-flags>` is enabled. This option cannot be used with `remainder`.
+: When `true`, an error is reported when the operator receives an item from one channel for which there no matching item from the other channel (default: `false`). Value is set to `true` if {ref}`strict mode <config-feature-flags>` is enabled. This option cannot be used with `remainder`.
 
 `remainder`
 : When `true`, unmatched items are emitted at the end, otherwise they are discarded (default: `false`). 

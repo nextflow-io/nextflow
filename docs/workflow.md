@@ -307,13 +307,15 @@ workflow {
 }
 ```
 
-The pipe chain shown above is equivalent to the following:
+The above snippet defines a process named `foo` and invokes it with the input channel. The result is then piped to the {ref}`operator-map` operator, which converts each string to uppercase, and finally to the {ref}`operator-view` operator which prints it.
+
+The same code can also be written as:
 
 ```groovy
 workflow {
-    foo( Channel.of('Hello','Hola','Ciao') )
-        .map { v -> v.toUpperCase() }
-        .view()
+    ch1 = Channel.of('Hello','Hola','Ciao')
+    ch2 = foo( ch1 )
+    ch2.map { v -> v.toUpperCase() }.view()
 }
 ```
 
@@ -353,7 +355,9 @@ workflow {
 }
 ```
 
-The above example is equivalent to the following:
+In the above snippet, the initial channel is piped to the {ref}`operator-map` operator, which reverses the string value. Then, the result is passed to the processes `foo` and `bar`, which are executed in parallel. Each process outputs a channel, and the two channels are combined using the {ref}`operator-mix` operator. Finally, the result is printed using the {ref}`operator-view` operator.
+
+The same code can also be written as:
 
 ```groovy
 workflow {

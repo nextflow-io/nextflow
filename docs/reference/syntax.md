@@ -63,7 +63,7 @@ The first line of a script can be a [shebang](https://en.wikipedia.org/wiki/Sheb
 
 ### Feature flag
 
-A feature flag declaration is an assignment, where the target should be a valid {ref}`feature flag <feature-flags>` and the source should be a literal (e.g. number, string, boolean):
+A feature flag declaration is an assignment, where the target should be a valid {ref}`feature flag <config-feature-flags>` and the source should be a literal (e.g. number, string, boolean):
 
 ```groovy
 nextflow.preview.topic = true
@@ -629,8 +629,6 @@ Logic unconfined.
 
 Note that a slashy string cannot be empty because it would become a line comment.
 
-Refer to {ref}`stdlib-string` for the set of available string operations.
-
 ### Dynamic string
 
 Double-quoted strings can be interpolated using the `${}` placeholder, which can contain any expression:
@@ -669,8 +667,6 @@ A list literal consists of square brackets with a comma-separated list of zero o
 [1, 2, 3]
 ```
 
-Refer to {ref}`stdlib-list` for the set of available list operations.
-
 ### Map
 
 A map literal consists of square brackets with a comma-separated list of one or more key-value pairs, with the key and value separated by a colon:
@@ -692,8 +688,6 @@ def x = 'foo'
 [(x): 1]
 // -> ['foo': 1]
 ```
-
-Refer to {ref}`stdlib-map` for the set of available map operations.
 
 ### Closure
 

@@ -7,6 +7,8 @@ This page describes how to create, test, and publish third-party plugins.
 
 The best way to get started with your own plugin is to refer to the [nf-hello](https://github.com/nextflow-io/nf-hello) repository. This repository provides a minimal plugin implementation with several examples of different extension points and instructions for building, testing, and publishing.
 
+Plugins can be written in Java or Groovy.
+
 The minimal dependencies are as follows:
 
 ```groovy
