@@ -23,12 +23,12 @@ def rule( file ) {
     return null
 
   if( file == 'file_3.txt' )
-     return "${System.getenv('PWD')}/results/gamma/$file"
+     return "$PWD/results/gamma/$file"
 
 }
 
 process foo {
-  publishDir path: 'results', saveAs: { file -> rule(file) }
+  publishDir path: 'results', saveAs: this.&rule
 
   input: each x
   output: path '*.txt'

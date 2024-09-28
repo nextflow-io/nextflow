@@ -1,9 +1,8 @@
 
 process foo1 {
     debug true
-    input:
-    path x
-    path y
+    input: path x
+    input: path y
     """
     echo "FOO1: ${x}; ${y}"
     """
@@ -11,9 +10,8 @@ process foo1 {
 
 process foo2 {
     debug true
-    input:
-    path x
-    path y
+    input: path x
+    input: path y
     script:
     """
     echo "FOO2: ${x}; ${y}"
@@ -22,9 +20,8 @@ process foo2 {
 
 process foo3 {
     debug true
-    input:
-    path x
-    path y
+    input: path x
+    input: path y
     shell:
     '''
      echo "FOO3: !{x}; !{y}"
@@ -33,9 +30,8 @@ process foo3 {
 
 process foo4 {
     debug true
-    input:
-    path x
-    path y
+    input: path x
+    input: path y
     script:
     template("$baseDir/task-escape-path-dsl2.sh")
 }

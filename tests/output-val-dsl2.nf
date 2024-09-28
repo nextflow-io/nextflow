@@ -1,5 +1,8 @@
 #!/usr/bin/env nextflow
 
+x = 100
+y = 200
+
 process foo {
   input:
   path fastq
@@ -11,7 +14,6 @@ process foo {
   val y
 
   script:
-  x = 100
   y = 'two hundred'
   """
   echo bar

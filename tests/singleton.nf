@@ -17,7 +17,7 @@
 
 process foo {
   output:
-  file 'x'
+  file x
 
   '''
   echo -n Hello > x

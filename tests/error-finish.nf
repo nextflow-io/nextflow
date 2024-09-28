@@ -42,11 +42,12 @@ process bar {
   '''
 }
 
+
+workflow.onError {
+  println "success: $workflow.success"
+  println "exitStatus: $workflow.exitStatus"
+}
+
 workflow {
   foo([1,2,3]) | bar
-
-  workflow.onError {
-    println "success: $workflow.success"
-    println "exitStatus: $workflow.exitStatus"
-  }
 }

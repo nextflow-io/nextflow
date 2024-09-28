@@ -21,10 +21,10 @@ process touch {
   output:
     tuple val(id), path('file*')
 
-  """
+  /
   echo Creating $id
   touch $fileName
-  """
+  /
 }
 
 process makeFiles {
@@ -34,10 +34,10 @@ process makeFiles {
   output:
     tuple val(id), path('*')
 
-  """
-  cp file_x copy_$id
-  touch beta_$id
-  """
+  /
+   cp file_x copy_$id
+   touch beta_$id
+  /
 }
 
 

@@ -61,9 +61,12 @@ process makeTranscript {
 /*
  * main flow
  */
-workflow {
-    read_pairs = Channel.fromFilePairs( params.reads, checkIfExists: true )
+read_pairs = Channel.fromFilePairs( params.reads, checkIfExists: true )
 
+/*
+ * main flow
+ */
+workflow {
     buildIndex(params.genome)
     mapping(params.genome, buildIndex.out, read_pairs)
     makeTranscript(mapping.out)

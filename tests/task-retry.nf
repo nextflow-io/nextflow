@@ -29,13 +29,13 @@ process foo {
 
     script:
     """
-    if [[ -f marker ]]; then
+    if [[ -f $PWD/marker ]]; then
     	echo DONE - mem: $task.memory - time: $task.time
     	exit 0
     else
     	echo FAIL
-    	touch marker
-    	exit 5
+    	touch $PWD/marker
+    	exit 5;
     fi
     """
 

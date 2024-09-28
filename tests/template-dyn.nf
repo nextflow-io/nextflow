@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-workflow {
-  list = 'alpha,delta,gamma'.tokenize(',')
+list = 'alpha,delta,gamma'.tokenize(',')
 
+workflow {
   foo(list)
   bar(list)
 }

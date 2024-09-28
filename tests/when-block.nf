@@ -15,20 +15,17 @@
  * limitations under the License.
  */
 
-def decode(i) {
-  ['zero','one','two','three','fourth'][i]
-}
+items = [0,1,2,3,4]
+decode = ['zero','one','two','three','fourth']
 
 workflow {
-  items = [0,1,2,3,4]
-
   channel.fromList(items) | foo
   channel.fromList(items) | bar
 }
 
 process foo {
     debug true
-    tag "${decode(x)}"
+    tag "${decode[x]}"
 
     input:
     val x
@@ -44,7 +41,7 @@ process foo {
 
 process bar {
     debug true
-    tag "${decode(x)}"
+    tag "${decode[x]}"
 
     input:
     val x
