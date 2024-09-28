@@ -2,7 +2,7 @@
 
 # Scripts
 
-Nextflow is a workflow language that runs on the Java virtual machine (JVM). Nextflow's syntax is very similar to [Groovy](https://groovy-lang.org/), a scripting language for the JVM, but Nextflow is specialized for writing computational pipelines in a declarative manner.
+Nextflow is a workflow language that runs on the Java virtual machine (JVM). Nextflow's syntax is very similar to [Groovy](https://groovy-lang.org/), a scripting language for the JVM, but Nextflow is specialized for writing computational pipelines in a declarative manner. Refer to the {ref}`syntax-page` page for a full description of the Nextflow language.
 
 Nextflow scripts can also make full use of the Java and Groovy standard libraries; see the {ref}`stdlib-page` page for more information.
 
@@ -311,43 +311,6 @@ println patch   // 3
 println flavor  // beta
 ```
 
-(script-functions)=
-
-## Functions
-
-Functions can be defined using the following syntax:
-
-```groovy
-def <function name> ( arg1, arg, .. ) {
-    <function body>
-}
-```
-
-For example:
-
-```groovy
-def foo() {
-    'Hello world'
-}
-
-def bar(alpha, omega) {
-    alpha + omega
-}
-```
-
-The above snippet defines two simple functions, that can be invoked in the workflow script as `foo()`, which returns `'Hello world'`, and `bar(10, 20)`, which returns the sum of two parameters (`30` in this case).
-
-Functions implicitly return the result of the last statement. Additionally, the `return` keyword can be used to explicitly exit from a function and return the specified value. For example:
-
-```groovy
-def fib( x ) {
-    if( x <= 1 )
-        return x
-
-    fib(x-1) + fib(x-2)
-}
-```
-
 (script-closure)=
 
 ## Closures
@@ -438,45 +401,3 @@ result = counts.values().inject { sum, v -> sum + v }
 ```
 
 This way, the closure is fully "self-contained" because it doesn't access or mutate any variables outside of its scope.
-
-Learn more about closures in the [Groovy documentation](http://groovy-lang.org/closures.html)
-
-## Syntax sugar
-
-Nextflow provides several forms of "syntax sugar", or shorthands that can make your code easier to read.
-
-Some programming languages require every statement to be terminated by a semi-colon. In Nextflow, semi-colons are optional, but they can still be used to write multiple statements on the same line:
-
-```groovy
-println 'Hello!' ; println 'Hello again!'
-```
-
-When calling a function, the parentheses around the function arguments are optional:
-
-```groovy
-// full syntax
-printf('Hello %s!\n', 'World')
-
-// shorthand
-printf 'Hello %s!\n', 'World'
-```
-
-It is especially useful when calling a function with a closure parameter:
-
-```groovy
-// full syntax
-[1, 2, 3].each({ v -> println v })
-
-// shorthand
-[1, 2, 3].each { v -> println v }
-```
-
-If the last argument is a closure, the closure can be written outside of the parentheses:
-
-```groovy
-// full syntax
-[1, 2, 3].inject('result:', { acc, v -> acc + ' ' + v })
-
-// shorthand
-[1, 2, 3].inject('result:') { acc, v -> acc + ' ' + v }
-```

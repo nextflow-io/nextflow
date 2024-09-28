@@ -2,39 +2,23 @@
 
 # Processes
 
-In Nextflow, a **process** is the basic processing primitive to execute a user script.
+In Nextflow, a **process** is a function that is specialized for executing scripts in a scalable and portable manner.
 
-The process definition starts with the keyword `process`, followed by process name and finally the process body delimited by curly braces. The process body must contain a string which represents the command or, more generally, a script that is executed by it. A basic process looks like the following example:
+Here is an example process definition:
 
 ```groovy
 process sayHello {
+    output:
+    path 'hello.txt'
+
+    script:
     """
-    echo 'Hello world!' > file
+    echo 'Hello world!' > hello.txt
     """
 }
 ```
 
-A process may contain any of the following definition blocks: directives, inputs, outputs, when clause, and the process script. The syntax is defined as follows:
-
-```
-process < name > {
-
-  [ directives ]
-
-  input:
-    < process inputs >
-
-  output:
-    < process outputs >
-
-  when:
-    < condition >
-
-  [script|shell|exec]:
-    < user script to be executed >
-
-}
-```
+Refer to {ref}`syntax-process` in the syntax reference for a full description of the process syntax.
 
 (process-script)=
 
@@ -276,7 +260,7 @@ Hello Mr. a
 Hello Mr. c
 ```
 
-A native process is very similar to a {ref}`function <script-functions>`, but provides additional capabilities such as parallelism, caching, and progress logging.
+A native process is very similar to a {ref}`function <syntax-function>`, but provides additional capabilities such as parallelism, caching, and progress logging.
 
 (process-stub)=
 
@@ -1134,7 +1118,13 @@ In this example, the process is normally expected to produce an `output.txt` fil
 While this option can be used with any process output, it cannot be applied to individual elements of a [tuple](#output-tuples-tuple) output. The entire tuple must be optional or not optional.
 :::
 
+(process-when)=
+
 ## When
+
+:::{deprecated} 24.10.0
+Use conditional logic (e.g. `if` statement, {ref}`operator-filter` operator) in the calling workflow instead.
+:::
 
 The `when` block allows you to define a condition that must be satisfied in order to execute the process. The condition can be any expression that returns a boolean value.
 
@@ -1156,31 +1146,11 @@ process find {
 }
 ```
 
-:::{tip}
-As a best practice, it is better to define such control flow logic in the workflow block, i.e. with an `if` statement or with channel operators, to make the process more portable.
-:::
-
 (process-directives)=
 
 ## Directives
 
 Directives are optional settings that affect the execution of the current process.
-
-They must be entered at the top of the process body, before any other declaration blocks (`input`, `output`, etc), and have the following syntax:
-
-```groovy
-// directive with simple value
-name value
-
-// directive with list value
-name arg1, arg2, arg3
-
-// directive with map value
-name key1: val1, key2: val2
-
-// directive with value and options
-name arg, opt1: val1, opt2: val2
-```
 
 By default, directives are evaluated when the process is defined. However, if the value is a dynamic string or closure, it will be evaluated separately for each task, which allows task-specific variables like `task` and `val` inputs to be used.
 

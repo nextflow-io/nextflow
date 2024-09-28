@@ -96,6 +96,8 @@ workflow {
 }
 ```
 
+(module-params)=
+
 ## Module parameters
 
 :::{deprecated} 24.07.0-edge

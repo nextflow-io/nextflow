@@ -1,4 +1,4 @@
-(config-feature-flags)=
+(feature-flags)=
 
 # Feature flags
 
