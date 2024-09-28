@@ -16,13 +16,13 @@ Nextflow scripts have a maximum size of 64 KiB. To avoid this limit for large pi
 
 ## Hello world
 
-To print something is as easy as using one of the `print` or `println` methods.
+To print something is as easy as using the `print` or `println` method:
 
 ```groovy
 println 'Hello, World!'
 ```
 
-The only difference between the two is that the `println` method implicitly appends a newline character to the printed string.
+The only difference between the two is that `println` prints an extra newline.
 
 ## Variables
 
@@ -46,7 +46,7 @@ println str
 ```
 
 :::{warning}
-In some cases, variables can be declared without `def`, but this practice is discouraged because it can lead to a {ref}`race condition <cache-global-var-race-condition>`.
+Variables can also be declared without `def` in many cases, but this practice is discouraged outside of simple code snippets because it can lead to a {ref}`race condition <cache-global-var-race-condition>`.
 :::
 
 ## Lists
@@ -141,7 +141,7 @@ print "hello " + a + "\n"
 
 (string-interpolation)=
 
-## String interpolation
+### String interpolation
 
 There is an important difference between single-quoted and double-quoted strings: Double-quoted strings support variable interpolations, while single-quoted strings do not.
 
@@ -163,7 +163,7 @@ The quick brown fox
 $x + $y
 ```
 
-## Multi-line strings
+### Multi-line strings
 
 A block of text that span multiple lines can be defined by delimiting it with triple single or double quotes:
 
@@ -376,3 +376,38 @@ def result = counts.values().inject { sum, v -> sum + v }
 ```
 
 This way, the closure is fully "self-contained" because it doesn't access or mutate any variables outside of its scope.
+
+## Script definitions
+
+So far, we have been focusing on the basic building blocks of Nextflow code, like variables, lists, strings, and closures.
+
+In practice, however, Nextflow scripts are composed of *workflows*, *processes*, and *functions* (collectively known as *definitions*), and they can *include*  definitions from other scripts.
+
+To transition a code snippet into a proper workflow script, simply wrap it in a `workflow` block:
+
+```groovy
+workflow {
+    println 'Hello!'
+}
+```
+
+This block is called the *entry workflow*. A script can only have one entry workflow, and it serves as the entrypoint when the script is executed. In fact, whenever a script contains only simple statements like `println 'Hello!'`, Nextflow simply treats it as an entry workflow!
+
+You can also break up code into functions, for example:
+
+```groovy
+def sayHello() {
+    println 'Hello!'
+}
+
+def add(a, b) {
+    a + b
+}
+
+workflow {
+    sayHello()
+    println "2 + 2 = ${add(2, 2)}!"
+}
+```
+
+Refer to {ref}`workflow-page`, {ref}`process-page`, and {ref}`module-page`  to learn how to use these features in your Nextflow scripts.
