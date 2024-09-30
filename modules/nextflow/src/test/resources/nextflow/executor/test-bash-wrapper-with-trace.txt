@@ -270,7 +270,9 @@ nxf_fs_fcp() {
 }
 
 on_exit() {
-    exit_status=${nxf_main_ret:=$?}
+    local last_err=$?
+    exit_status=${nxf_main_ret:=$nxf_unstage_ret}
+    [[ $exit_status -eq 0 && $last_err -ne 0 ]] && exit_status=$last_err
     printf -- $exit_status > {{folder}}/.exitcode
     set +u
     exit $exit_status
@@ -294,6 +296,10 @@ nxf_unstage() {
     [[ ${nxf_main_ret:=0} != 0 ]] && return
 }
 
+nxf_unstage_std_files(){
+    true
+}
+
 nxf_main() {
     trap on_exit EXIT
     trap on_term TERM INT USR2
@@ -313,7 +319,10 @@ nxf_main() {
     (set -o pipefail; (nxf_launch | tee .command.out) 3>&1 1>&2 2>&3 | tee .command.err) &
     pid=$!
     wait $pid || nxf_main_ret=$?
-    nxf_unstage
+
+    (set -e -o pipefail; (nxf_unstage | tee -a .command.out) 3>&1 1>&2 2>&3 | tee -a .command.err)
+    nxf_unstage_ret=$?
+    nxf_unstage_std_files
 }
 
 $NXF_ENTRY

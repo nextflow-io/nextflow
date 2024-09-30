@@ -99,7 +99,13 @@ nxf_fs_fcp() {
 }
 
 on_exit() {
-    exit_status=${nxf_main_ret:=$?}
+    ## Capture possible errors.
+    ## Can be caused either by the task script, unstage script or after script if defined
+    local last_err=$?
+    ## capture the task error first or fallback to unstage error
+    exit_status=${nxf_main_ret:=$nxf_unstage_ret}
+    ## Check if an error happened in after script
+    [[ $exit_status -eq 0 && $last_err -ne 0 ]] && exit_status=$last_err
     printf -- $exit_status {{exit_file}}
     set +u
     {{cleanup_cmd}}
@@ -123,9 +129,13 @@ nxf_stage() {
 
 nxf_unstage() {
     true
-    {{unstage_controls}}
     [[ ${nxf_main_ret:=0} != 0 ]] && return
     {{unstage_outputs}}
+}
+
+nxf_unstage_std_files(){
+    true
+    {{unstage_controls}}
 }
 
 nxf_main() {
@@ -150,11 +160,16 @@ nxf_main() {
     export NXF_TASK_WORKDIR="$PWD"
     {{stage_cmd}}
 
+    ## Deactivate fast failure to allow uploading stdout and stderr files later
     set +e
     (set -o pipefail; (nxf_launch | tee {{stdout_file}}) 3>&1 1>&2 2>&3 | tee {{stderr_file}}) &
     pid=$!
     wait $pid || nxf_main_ret=$?
-    {{unstage_cmd}}
+
+    ## Data unstaging redirecting stdout and stderr with append mode
+    (set -e -o pipefail; ({{unstage_cmd}} | tee -a {{stdout_file}}) 3>&1 1>&2 2>&3 | tee -a {{stderr_file}})
+    nxf_unstage_ret=$?
+    nxf_unstage_std_files
     {{after_script}}
 }
 
