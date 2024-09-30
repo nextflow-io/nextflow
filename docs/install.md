@@ -72,7 +72,7 @@ Nextflow is distributed as a self-installing package, in order to make the insta
     :::
 
     :::{warning}
-    Nextflow will update its executable during the self update process and it should not be placed in a directory with restricted permissions.
+    Nextflow will update its executable during the self update process, therefore the update can fail if the executable is placed in a directory with restricted permissions.
     :::
 
 4. Confirm that Nextflow is installed correctly:
