@@ -64,7 +64,10 @@ class GoogleLifeSciencesScriptLauncher extends BashWrapperBuilder {
     protected String getStageCommand() { null }
 
     @Override
-    protected String getUnstageCommand() { null }
+    protected String getUnstageCommand() { 'true' }
+
+    @Override
+    protected String getUnstageControlsCommand() { null }
 
     @Override
     String touchFile(Path file) {

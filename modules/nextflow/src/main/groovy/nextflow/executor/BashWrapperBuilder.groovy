@@ -372,6 +372,7 @@ class BashWrapperBuilder {
         binding.launch_cmd = getLaunchCommand(interpreter,env)
         binding.stage_cmd = getStageCommand()
         binding.unstage_cmd = getUnstageCommand()
+        binding.unstage_controls_cmd = getUnstageControlsCommand()
         binding.unstage_controls = changeDir || shouldUnstageOutputs() ? getUnstageControls() : null
 
         if( changeDir || shouldUnstageOutputs() ) {
@@ -751,6 +752,9 @@ class BashWrapperBuilder {
     protected String getStageCommand() { 'nxf_stage' }
 
     protected String getUnstageCommand() { 'nxf_unstage' }
+
+    protected String getUnstageControlsCommand() { 'nxf_unstage_std_files' }
+
 
     protected String getUnstageControls() {
         def result = copyFileToWorkDir(TaskRun.CMD_OUTFILE) + ' || true' + ENDL

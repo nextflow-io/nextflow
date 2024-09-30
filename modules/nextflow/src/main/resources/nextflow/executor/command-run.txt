@@ -103,9 +103,9 @@ on_exit() {
     ## Can be caused either by the task script, unstage script or after script if defined
     local last_err=$?
     ## capture the task error first or fallback to unstage error
-    exit_status=${nxf_main_ret:=$nxf_unstage_ret}
-    ## Check if an error happened in after script
-    [[ $exit_status -eq 0 && $last_err -ne 0 ]] && exit_status=$last_err
+    exit_status=${nxf_main_ret:=0}
+    [[ ${exit_status} -eq 0 && ${nxf_unstage_ret:0} -ne 0 ]] && exit_status=${nxf_unstage_ret}
+    [[ ${exit_status} -eq 0 && ${last_err} -ne 0 ]] && exit_status=${last_err}
     printf -- $exit_status {{exit_file}}
     set +u
     {{cleanup_cmd}}
@@ -129,11 +129,10 @@ nxf_stage() {
 
 nxf_unstage() {
     true
-    [[ ${nxf_main_ret:=0} != 0 ]] && return
     {{unstage_outputs}}
 }
 
-nxf_unstage_std_files(){
+nxf_unstage_std_files() {
     true
     {{unstage_controls}}
 }
@@ -165,11 +164,12 @@ nxf_main() {
     (set -o pipefail; (nxf_launch | tee {{stdout_file}}) 3>&1 1>&2 2>&3 | tee {{stderr_file}}) &
     pid=$!
     wait $pid || nxf_main_ret=$?
-
-    ## Data unstaging redirecting stdout and stderr with append mode
-    (set -e -o pipefail; ({{unstage_cmd}} | tee -a {{stdout_file}}) 3>&1 1>&2 2>&3 | tee -a {{stderr_file}})
-    nxf_unstage_ret=$?
-    nxf_unstage_std_files
+    if [[ ${nxf_main_ret:=0} == 0 ]]; then
+        ## Data unstaging redirecting stdout and stderr with append mode
+        (set -e -o pipefail; ({{unstage_cmd}} | tee -a {{stdout_file}}) 3>&1 1>&2 2>&3 | tee -a {{stderr_file}})
+        nxf_unstage_ret=$?
+    fi
+    {{unstage_controls_cmd}}
     {{after_script}}
 }
 
