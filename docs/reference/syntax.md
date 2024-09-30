@@ -535,9 +535,11 @@ The try block will be executed, and if an error is raised and matches the expect
 
 ## Expressions
 
+An expression is a syntactic entity that produces a value.
+
 ### Variable
 
-A variable expression is a reference to a variable or other defined name:
+A variable expression is a reference to a variable or other named value:
 
 ```groovy
 def x = 42
@@ -548,7 +550,7 @@ x
 
 ### Number
 
-A number literal can be an integer or real (i.e. floating-point) number. Integers can specified in binary with `0b`, octal with `0`, or hexadecimal with `0x`. Real numbers can use scientific notation with the `e` or `E` prefix. Underscores can be used as thousands separators to make long numbers more readable.
+A number literal can be an integer or floating-point number, and can be positive or negative. Integers can specified in binary with `0b`, octal with `0`, or hexadecimal with `0x`. Floating-point numbers can use scientific notation with the `e` or `E` prefix. Underscores can be used as thousands separators to make long numbers more readable.
 
 ```groovy
 // integer
@@ -585,7 +587,7 @@ x = 42
 ```
 
 :::{note}
-Attempting to use a null value (e.g. index or property access) will cause a "null reference" error. It is best to avoid the use of `null` where possible.
+Using a null value in certain expressions (e.g. the object of a property expression or method call) will lead to a "null reference" error. It is best to avoid the use of `null` where possible.
 :::
 
 ### String
@@ -661,7 +663,7 @@ blastp \
 
 ### List
 
-A list literal consists of square brackets with a comma-separated list of zero or more expressions:
+A list literal consists of a comma-separated list of zero or more expressions, enclosed in square brackets:
 
 ```groovy
 [1, 2, 3]
@@ -669,19 +671,19 @@ A list literal consists of square brackets with a comma-separated list of zero o
 
 ### Map
 
-A map literal consists of square brackets with a comma-separated list of one or more key-value pairs, with the key and value separated by a colon:
+A map literal consists of a comma-separated list of one or more *map entries*, where each map entry consists of a *key expression* and *value expression* separated by a colon, enclosed in square brackets:
 
 ```groovy
 [foo: 1, bar: 2, baz: 3]
 ```
 
-The empty map contains a single colon to distinguish it from an empty list:
+An empty map is specified with a single colon to distinguish it from an empty list:
 
 ```groovy
 [:]
 ```
 
-Both the key and value can be any expression. Identifier keys are treated as string literals (i.e. the quotes can be omitted). To reference a variable as a key, simply wrap it in parentheses:
+Both the key and value can be any expression. Identifier keys are treated as string literals (i.e. the quotes can be omitted). A variable can be used as a key by enclosing it in parentheses:
 
 ```groovy
 def x = 'foo'
@@ -691,7 +693,7 @@ def x = 'foo'
 
 ### Closure
 
-A closure, also known as an anonymous function, consists of a parameter list followed by zero or more statements, wrapped in curly braces:
+A closure, also known as an anonymous function, consists of a parameter list followed by zero or more statements, enclosed in curly braces:
 
 ```groovy
 { a, b -> a + b }
@@ -731,7 +733,25 @@ println result
 // -> 14
 ```
 
-Refer to the {ref}`standard library <stdlib-page>` and {ref}`operator <operator-page>` reference pages for examples of closures being used in practice. 
+Refer to the {ref}`standard library <stdlib-page>` and {ref}`operator <operator-page>` reference pages for examples of closures being used in practice.
+
+### Index expression
+
+An index expression consists of a *left expression* and a *right expression*, with the right expression enclosed in square brackets:
+
+```groovy
+myList[0]
+```
+
+### Property expression
+
+A property expression consists of an *object expression* and a *property*, separated by a dot:
+
+```groovy
+file.text
+```
+
+The property must be an identifier or string literal.
 
 ### Function call
 
@@ -741,12 +761,34 @@ A function call consists of a name and argument list:
 printf('Hello %s!\n', 'World')
 ```
 
-TODO: object expression, named args
+A *method call* consists of an *object expression* and a function call separated by a dot:
+
+```groovy
+myList.size()
+```
+
+The argument list may contain any number of *positional arguments* and *named arguments*:
+
+```groovy
+file('hello.txt', checkIfExists: true)
+```
+
+The named arguments are collected into a map and provided as the first positional argument to the function. Thus the above function call can be rewritten as:
+
+```groovy
+file([checkIfExists: true], 'hello.txt')
+```
+
+The argument name must be an identifier or string literal.
 
 When the function call is also an [expression statement](#expression-statement) and there is at least one argument, the parentheses can be omitted:
 
 ```groovy
+// positional args
 printf 'Hello %s!\n', 'World'
+
+// positional and named args
+file 'hello.txt', checkIfExists: true
 ```
 
 If the last argument is a closure, it can be specified outside of the parentheses:
@@ -764,49 +806,90 @@ If the last argument is a closure, it can be specified outside of the parenthese
 
 ### Constructor call
 
-TODO
+A constructor call consists of the `new` keyword followed by a *type name* and an argument list enclosed in parentheses:
+
+```groovy
+new java.util.Date()
+```
+
+If the type is implicitly available in the script, the *fully-qualified type name* can be elided to the *simple type name*:
+
+```groovy
+new Date()
+```
+
+Refer to {ref}`stdlib-default-imports` for the set of types which are implicitly available in Nextflow scripts.
 
 ### Unary expressions
 
-TODO
+A unary expression consists of a *unary operator* followed by an expression:
+
+```groovy
+!(2 + 2 == 4)
+```
+
+The following unary operators are available:
+
+- `~`: bitwise NOT
+- `!`: logical NOT
+- `+`: unary plus
+- `-`: unary minus
 
 ### Binary expressions
 
-TODO
-
-**Regex finder**
-
-The `=~` operator checks whether a string contains a pattern:
+A binary expression consists of a *left expression* and a *right expression* separated by a *binary operator*:
 
 ```groovy
-assert 'foo' =~ /foo/       // true
-assert 'foobar' =~ /foo/    // true
+2 + 2
 ```
 
-**Regex matcher**
+The following binary operators are available:
 
-The `==~` operator checks whether a string matches a pattern exactly:
-
-```groovy
-assert 'foo' ==~ /foo/       // true
-assert 'foobar' ==~ /foo/    // false
-```
-
-**Index expression**
-
-TODO
-
-**Property expression**
-
-TODO
+- `**`: power (i.e. exponentiation)
+- `*`: multiplication
+- `/`: division
+- `%`: remainder (i.e. modulo)
+- `+`: addition
+- `-`: subtraction
+- `<<`: left shift
+- `>>`: right shift
+- `>>>`: unsigned right shift
+- `..`: inclusive range
+- `..<`: right-exclusive range
+- `as`: type cast
+- `instanceof`: type relation
+- `!instanceof`: negated type relation
+- `<`: less than
+- `>`: greater than
+- `<=`: less than or equals
+- `>=`: greater than or equals
+- `in`: membership
+- `!in`: negated membership
+- `==`: equals
+- `!=`: negated equals
+- `<=>`: spaceship (i.e. three-way comparison)
+- `=~`: regex find
+- `==~`: regex match
+- `&`: bitwise AND
+- `^`: bitwise XOR (exclusive or)
+- `|`: bitwise OR
+- `&&`: logical AND
+- `||`: logical OR
+- `?:` elvis (i.e. short ternary)
 
 ### Ternary expression
 
-TODO
+A ternary expression consists of a *test expression*, a *true expression*, and a *false expression*, separated by a question mark and a colon:
+
+```groovy
+x % 2 == 0 ? 'x is even!' : 'x is odd!'
+```
+
+If the test expression is true, the true expression is evaluated, otherwise the false expression is evaluated.
 
 ### Parentheses
 
-Any expression can be wrapped in a set of parentheses to enforce a particular order of operations:
+Any expression can be enclosed in parentheses:
 
 ```groovy
 1 + 2 * 3
@@ -815,6 +898,33 @@ Any expression can be wrapped in a set of parentheses to enforce a particular or
 (1 + 2) * 3
 // -> 3 * 3 -> 9
 ```
+
+### Precedence
+
+Compound expressions are evaluated in the following order:
+
+- parentheses
+- property expressions
+- function calls
+- index expressions
+- `~`,  `!`
+- `**`
+- `+`, `-` (unary)
+- `*`, `/`, `%`
+- `+`, `-` (binary)
+- `<<`, `>>>`, `>>`, `..`, `..<`
+- `as`
+- `instanceof`, `!instanceof`
+- `<`, `>`, `<=`, `>=`, `in`, `!in`
+- `==`, `!=`, `<=>`
+- `=~`, `==~`
+- `&`
+- `^`
+- `|`
+- `&&`
+- `||`
+- `?:` (ternary)
+- `?:` (elvis)
 
 ## Deprecations
 
