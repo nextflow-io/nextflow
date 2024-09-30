@@ -46,6 +46,7 @@ import nextflow.script.ScriptRunner
 import nextflow.util.CustomPoolFactory
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
+import org.apache.commons.lang.StringUtils
 import org.fusesource.jansi.AnsiConsole
 import org.yaml.snakeyaml.Yaml
 /**
@@ -670,6 +671,19 @@ class CmdRun extends CmdBase implements HubOptions {
         }
     }
 
+    static protected void addParam0(Map params, String key, Object value) {
+        if( key.contains('-') )
+            key = kebabToCamelCase(key)
+        params.put(key, value)
+    }
+
+    static protected String kebabToCamelCase(String str) {
+        final result = new StringBuilder()
+        str.split('-').eachWithIndex { String entry, int i ->
+            result << (i>0 ? StringUtils.capitalize(entry) : entry )
+        }
+        return result.toString()
+    }
 
     static protected parseParamValue(String str) {
         if ( SysEnv.get('NXF_DISABLE_PARAMS_TYPE_DETECTION') )

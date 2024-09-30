@@ -94,6 +94,36 @@ class CmdRunTest extends Specification {
         [:]             | /x.y\.z/  | 'Hola'    | ['x': ['y.z': 'Hola']]
     }
 
+    def 'should convert cli params from kebab case to camel case' () {
+
+        when:
+        def params = [:]
+        CmdRun.addParam0(params, 'alphaBeta', 1)
+        CmdRun.addParam0(params, 'alpha-beta', 10)
+        then:
+        params['alphaBeta'] == 10
+        !params.containsKey('alpha-beta')
+
+        when:
+        params = [:]
+        CmdRun.addParam0(params, 'aaa-bbb-ccc', 1)
+        CmdRun.addParam0(params, 'aaaBbbCcc', 10)
+        then:
+        params['aaaBbbCcc'] == 10
+        !params.containsKey('aaa-bbb-ccc')
+
+    }
+
+    def 'should convert kebab case to camel case' () {
+
+        expect:
+        CmdRun.kebabToCamelCase('a') == 'a'
+        CmdRun.kebabToCamelCase('A') == 'A'
+        CmdRun.kebabToCamelCase('a-b-c-') == 'aBC'
+        CmdRun.kebabToCamelCase('aa-bb-cc') == 'aaBbCc'
+        CmdRun.kebabToCamelCase('alpha-beta-delta') == 'alphaBetaDelta'
+        CmdRun.kebabToCamelCase('Alpha-Beta-delta') == 'AlphaBetaDelta'
+    }
 
     @Unroll
     def 'should check run name #STR' () {
