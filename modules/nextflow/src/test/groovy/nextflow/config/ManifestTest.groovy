@@ -18,6 +18,8 @@ package nextflow.config
 
 import nextflow.exception.AbortOperationException
 import spock.lang.Specification
+
+import static nextflow.config.Manifest.ContributionType
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -35,12 +37,13 @@ class ManifestTest extends Specification {
                     affiliation: 'University', 
                     email: 'alice@university.edu',
                     contribution: ['author', 'maintainer'],
+                    orcid: 'https://orcid.org/0000-0000-0000-0000'
                 ],
                 [
                     name: 'Bob', 
                     affiliation: 'Company', 
                     email: 'bob@company.com',
-                    contribution: ['maintainer'],
+                    contribution: ['contributor'],
                 ]
             ],
             nextflowVersion: '1.2.3',
@@ -54,20 +57,16 @@ class ManifestTest extends Specification {
         def manifest = new Manifest(MAN)
         then:
         manifest.author == 'pablo'
-        manifest.contributors == [
-            new Manifest.Contributor([
-                name: 'Alice', 
-                affiliation: 'University', 
-                email: 'alice@university.edu',
-                contribution: ['author', 'maintainer'],
-            ]),
-            new Manifest.Contributor([
-                name: 'Bob', 
-                affiliation: 'Company', 
-                email: 'bob@company.com',
-                contribution: ['maintainer'],
-            ])
-        ]
+        manifest.contributors.size() == 2
+        manifest.contributors[0].name == 'Alice'
+        manifest.contributors[0].affiliation == 'University'
+        manifest.contributors[0].email == 'alice@university.edu'
+        manifest.contributors[0].contribution == [ContributionType.AUTHOR, ContributionType.MAINTAINER] as Set
+        manifest.contributors[0].orcid == 'https://orcid.org/0000-0000-0000-0000'
+        manifest.contributors[1].name == 'Bob'
+        manifest.contributors[1].affiliation == 'Company'
+        manifest.contributors[1].email == 'bob@company.com'
+        manifest.contributors[1].contribution == [ContributionType.CONTRIBUTOR] as Set
         manifest.nextflowVersion == '1.2.3'
         manifest.name == 'foo'
         manifest.organisation == 'My Organisation'

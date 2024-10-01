@@ -1242,8 +1242,8 @@ The following settings are available:
   - `affiliation`: the contributor's affiliated organization
   - `email`: the contributor's email address
   - `github`: the contributor's GitHub URL
-  - `contribution`: list of contributions, can be any of `'author'`, `'maintainer'`
-  - `orcid`: the contributor's [ORCID](https://orcid.org/)
+  - `contribution`: list of contribution types, each element can be one of `'author'`, `'maintainer'`, or `'contributor'`
+  - `orcid`: the contributor's [ORCID](https://orcid.org/) URL
 
 `manifest.defaultBranch`
 : Git repository default branch (default: `master`).

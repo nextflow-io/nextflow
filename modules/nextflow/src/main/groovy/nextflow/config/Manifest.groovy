@@ -158,7 +158,7 @@ class Manifest {
         String affiliation
         String email
         String github
-        Set<Contribution> contribution
+        Set<ContributionType> contribution
         String orcid
 
         Contributor(Map opts) {
@@ -167,14 +167,15 @@ class Manifest {
             email = opts.email as String
             github = opts.github as String
             contribution = (opts.contribution as List<String>).stream()
-                .map(c -> Contribution.valueOf(c.toUpperCase()))
+                .map(c -> ContributionType.valueOf(c.toUpperCase()))
                 .collect(Collectors.toSet())
             orcid = opts.orcid as String
         }
     }
 
-    static enum Contribution {
+    static enum ContributionType {
         AUTHOR,
-        MAINTAINER
+        MAINTAINER,
+        CONTRIBUTOR
     }
 }
