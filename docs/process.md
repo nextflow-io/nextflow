@@ -2,7 +2,7 @@
 
 # Processes
 
-In Nextflow, a **process** is a function that is specialized for executing scripts in a scalable and portable manner.
+In Nextflow, a **process** is a specialized function for executing scripts in a scalable and portable manner.
 
 Here is an example process definition:
 
@@ -18,7 +18,7 @@ process sayHello {
 }
 ```
 
-Refer to {ref}`syntax-process` in the syntax reference for a full description of the process syntax.
+See {ref}`syntax-process` for a full description of the process syntax.
 
 (process-script)=
 
@@ -123,9 +123,9 @@ Since the actual location of the interpreter binary file can differ across platf
 
 ### Conditional scripts
 
-So far, the `script` block has just been a string, but in reality, the `script` block is like a function that returns a string. This means that you can write arbitrary code to determine the script, as long as the final statement is a string (remember that the `return` keyword is optional).
+The `script` block is like a function that returns a string. This means that you can write arbitrary code to determine the script, as long as the final statement is a string.
 
-For example, you can use if-else statements to produce a different script based on the task inputs. The only difference here is that you must explicitly declare the `script` guard, whereas before it was not required. Here is an example:
+If-else statements based on task inputs can be used to produce a different script. For example:
 
 ```groovy
 mode = 'tcoffee'

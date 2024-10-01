@@ -27,17 +27,17 @@ workflow {
 }
 ```
 
-The above example defines a workflow named `my_workflow`, that can be called from another workflow as `my_workflow()`, just like any other function or process. Both `foo` and `bar` could be any other process or workflow.
+The above example defines a workflow named `my_workflow` which can be called from another workflow as `my_workflow()`. Both `foo` and `bar` could be any other process or workflow.
 
-Refer to {ref}`syntax-workflow` in the syntax reference for a full description of the workflow syntax.
+See {ref}`syntax-workflow` for a full description of the workflow syntax.
 
 :::{note}
-Workflows were introduced in DSL2. If you are still using DSL1, see the {ref}`dsl1-page` page to learn how to migrate your Nextflow pipelines to DSL2.
+Workflows were introduced in DSL2. If you are still using DSL1, see {ref}`dsl1-page` for more information about how to migrate your Nextflow pipelines to DSL2.
 :::
 
 ## Using parameters
 
-Parameters can be defined in the script with a default value, which can be overridden by params from the CLI, params file, or config file. They can then be used by the entry workflow:
+Parameters can be defined in the script with a default value that can be overridden from the CLI, params file, or config file. Params should only be used by the entry workflow:
 
 ```groovy
 params.data = '/some/data/file'
@@ -111,7 +111,7 @@ workflow my_workflow {
 The result of the above workflow can be accessed using `my_workflow.out.my_data`.
 
 :::{note}
-When multiple output channels are declared, every output must be assigned to a name.
+Every output must be assigned to a name when multiple outputs are declared.
 :::
 
 (workflow-process-invocation)=
@@ -159,7 +159,7 @@ workflow {
 }
 ```
 
-Processes and workflows have a few extra rules around how they are called:
+Processes and workflows have a few extra rules for how they can be called:
 
 - Processes and workflows can only be called by workflows
 
@@ -230,11 +230,11 @@ workflow {
 ```
 
 :::{note}
-Process named outputs are defined using the `emit` option on a process output. See {ref}`naming process outputs <process-naming-outputs>` for more details.
+Process named outputs are defined using the `emit` option on a process output. See {ref}`naming process outputs <process-naming-outputs>` for more information.
 :::
 
 :::{note}
-Process and workflow outputs can also be accessed by index (e.g. `foo.out[0]`, `foo.out[1]`, etc), but this practice is deprecated and will not be supported in the future. Access multiple outputs by name instead.
+Process and workflow outputs can also be accessed by index (e.g., `foo.out[0]`, `foo.out[1]`, etc.). However, this practice is deprecated and will not be supported in the future. Multiple outputs should instead be accessed by name.
 :::
 
 Workflows can be composed in the same way:

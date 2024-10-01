@@ -22,9 +22,11 @@ You can use the `-C <config-file>` option to use a single configuration file and
 
 ## Syntax
 
-The Nextflow configuration syntax is based on the Nextflow script syntax. It is designed for setting configuration options in a declarative manner while also allowing for dynamic expressions where appropriate. Refer to {ref}`syntax-page`, particularly the sections on comments and expressions, for a full description of the available syntax.
+The Nextflow configuration syntax is based on the Nextflow script syntax. It is designed for setting configuration options in a declarative manner while also allowing for dynamic expressions where appropriate.
 
-A Nextflow config file consists of any number of *assignments*, *blocks*, and *includes*. Config files may also contain comments in the same manner as scripts.
+A Nextflow config file may consist of any number of *assignments*, *blocks*, and *includes*. Config files may also contain comments in the same manner as scripts.
+
+See {ref}`syntax-page` for more information about the Nextflow script syntax.
 
 ### Assignments
 
@@ -46,7 +48,7 @@ params.helper_file = "${projectDir}/assets/helper.txt"
 
 ### Blocks
 
-A config scope can also be specified as a block, in which case any number of config options within that scope can be assigned:
+A config scope can also be specified as a block, allowing multiple configuration options to be set within that block. For example:
 
 ```groovy
 // dot syntax
@@ -60,7 +62,7 @@ docker {
 }
 ```
 
-As a result, deeply nested config options can be assigned in a variety of ways. For example, the following three assignments are equivalent:
+As a result, deeply nested config options can be assigned in various ways. For example, the following three assignments are equivalent:
 
 ```groovy
 executor.retry.maxAttempt = 5
@@ -91,7 +93,7 @@ includeConfig 'path/foo.config'
 When a relative path is used, it is resolved against the location of the including file.
 
 :::{note}
-Config includes can also be specified within config blocks. However, config files should only be included either at the top-level or in a [profile](#config-profiles), so that the included config file is valid both on its own and in the context in which it is included.
+Config includes can also be specified within config blocks. However, config files should only be included at the top level or in a [profile](#config-profiles) so that the included config file is valid on its own and in the context in which it is included.
 :::
 
 ## Constants

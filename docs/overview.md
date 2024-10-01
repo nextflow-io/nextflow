@@ -95,9 +95,9 @@ Read the {ref}`executor-page` to learn more about the Nextflow executors.
 
 ## Scripting language
 
-Nextflow is a workflow language, based on [Java](https://en.wikipedia.org/wiki/Java_(programming_language)) and [Groovy](https://groovy-lang.org/), which is designed to make it as simple as possible to write scalable and reproducible pipelines. In most cases, users can leverage their existing programming skills to develop Nextflow pipelines, without the steep learning curve that usually comes with a new programming language.
+Nextflow is a workflow language based on [Java](https://en.wikipedia.org/wiki/Java_(programming_language)) and [Groovy](https://groovy-lang.org/). It is designed to simplify writing scalable and reproducible pipelines. In most cases, users can leverage their existing programming skills to develop Nextflow pipelines without the steep learning curve that usually comes with a new programming language.
 
-Read the {ref}`script-page` page to learn about the Nextflow scripting language.
+See {ref}`script-page` for more information about the Nextflow scripting language.
 
 ## Configuration options
 

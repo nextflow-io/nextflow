@@ -2,9 +2,9 @@
 
 # Scripts
 
-Nextflow is a workflow language that runs on the Java virtual machine (JVM). Nextflow's syntax is very similar to [Groovy](https://groovy-lang.org/), a scripting language for the JVM, but Nextflow is specialized for writing computational pipelines in a declarative manner. Refer to the {ref}`syntax-page` page for a full description of the Nextflow language.
+Nextflow is a workflow language that runs on the Java virtual machine (JVM). Nextflow's syntax is very similar to [Groovy](https://groovy-lang.org/), a scripting language for the JVM, but Nextflow is specialized for writing computational pipelines in a declarative manner. See {ref}`syntax-page` for a full description of the Nextflow language.
 
-Nextflow scripts can also make full use of the Java and Groovy standard libraries; see the {ref}`stdlib-page` page for more information.
+Nextflow scripts can also make full use of the Java and Groovy standard libraries. See {ref}`stdlib-page` for more information.
 
 :::{warning}
 Nextflow uses UTF-8 as the default character encoding for source files. Make sure to use UTF-8 encoding when editing Nextflow scripts with your preferred text editor.
@@ -106,7 +106,7 @@ When adding two maps, the first map is copied and then appended with the keys fr
 Copying a map with the `+` operator is a safer way to modify maps in Nextflow, specifically when passing maps through channels. This way, a new instance of the map will be created, and any references to the original map won't be affected.
 :::
 
-Refer to the [Java](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Map.html) and [Groovy](http://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/Map.html) standard libraries for the set of available map operations.
+See the [Java](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Map.html) and [Groovy](http://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/Map.html) standard libraries for the set of available map operations.
 
 ## Conditional execution
 
@@ -194,7 +194,7 @@ def result = myLongCmdline.execute().text
 In the preceding example, `blastp` and its `-in`, `-out`, `-db` and `-html` switches and their arguments are effectively a single line.
 
 :::{warning}
-When using backslashes to continue a multi-line command, make sure to not put any spaces after the backslash, otherwise it will be interpreted as an escaped space instead of a backslash, which will make your script incorrect. It will also print this warning:
+Do not put any spaces after the backslash when using backslashes to continue a multi-line command. Spaces after the backslash will be interpreted as an escaped space and will make your script incorrect. It will also print this warning:
 
 ```
 unknown recognition error type: groovyjarjarantlr4.v4.runtime.LexerNoViableAltException
@@ -235,7 +235,7 @@ println y.class
 // prints java.util.regex.Matcher
 ```
 
-Refer to the linked Java documentation for the available operations for these classes.
+See the linked Java documentation for the available operations for these classes.
 
 ### String replacement
 
@@ -301,15 +301,15 @@ For example:
 def square = { v -> v * v }
 ```
 
-The above example defines a closure, which takes one parameter named `v` and returns the "square" of `v` (`v * v`), and assigns the closure to the variable `square`.
+The above example defines a closure, which takes one parameter named `v` and returns the "square" of `v` (`v * v`). The closure is assigned to the variable `square`.
 
-Now we can call `square` like a function:
+`square` can now be called like a function:
 
 ```groovy
 println square(9)
 ```
 
-which prints `81`.
+The above example prints `81`.
 
 The main use case for a closure, however, is as an argument to a higher-order function:
 
@@ -409,4 +409,4 @@ workflow {
 }
 ```
 
-Refer to {ref}`workflow-page`, {ref}`process-page`, and {ref}`module-page`  to learn how to use these features in your Nextflow scripts.
+See {ref}`workflow-page`, {ref}`process-page`, and {ref}`module-page`  for more information about how to use these features in your Nextflow scripts.
