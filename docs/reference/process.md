@@ -740,7 +740,7 @@ process foo {
 }
 
 workflow {
-    channel.of('A','B','C','D') | foo | view
+    Channel.of('A','B','C','D') | foo | view
 }
 ```
 
