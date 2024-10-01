@@ -63,7 +63,7 @@ The first line of a script can be a [shebang](https://en.wikipedia.org/wiki/Sheb
 
 ### Feature flag
 
-A feature flag declaration is an assignment, where the target should be a valid {ref}`feature flag <config-feature-flags>` and the source should be a literal (e.g. number, string, boolean):
+A feature flag declaration is an assignment, where the target should be a valid {ref}`feature flag <config-feature-flags>` and the source should be a literal (i.e. number, string, boolean):
 
 ```groovy
 nextflow.preview.topic = true

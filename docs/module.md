@@ -10,7 +10,7 @@ Modules were introduced in DSL2. If you are still using DSL1, see the {ref}`dsl1
 
 ## Module inclusion
 
-Any definition in a module can be included into another Nextflow script using the `include` keyword.
+You can include any definition from a module into a Nextflow script using the `include` keyword.
 
 For example:
 
@@ -214,11 +214,11 @@ With the possibility to keep the template files inside the project L, A and B ca
 
 Beside promoting the sharing of modules across pipelines, there are several advantages to keeping the module template under the script path:
 
-1. modules are *self-contained*,
-2. modules can be tested independently from the pipeline(s) that import them,
-3. it is possible to create libraries of modules.
+1. Modules are self-contained
+2. Modules can be tested independently from the pipeline(s) that import them
+3. Modules can be made into libraries
 
-Ultimately, having multiple template locations allows a more structured organization within the same project. If a project has several modules, and all of them use templates, the project could group module scripts and their templates as needed. For example:
+Having multiple template locations enables a structured project organization. If a project has several modules, and they all use templates, the project could group module scripts and their templates as needed. For example:
 
 ```
 baseDir

@@ -234,7 +234,7 @@ In the above example, `$USER` is treated as a Bash variable, while `!{str}` is t
 
 ### Native execution
 
-Whereas the `script` block defines a script that is executed as a separate job, the `exec` block simply executes the code that it is given, without launching a job.
+The `exec` block executes the given code without launching a job.
 
 For example:
 
