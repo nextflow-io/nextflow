@@ -261,6 +261,10 @@ while [[ $# != 0 ]]; do
       exit 0
       fi
       ;;
+    lsp)
+      java -jar "$NXF_DIST/$NXF_VER/language-server-all.jar"
+      exit 0
+      ;;
     -self-update|self-update)
       if [[ ! "$cmd" ]]; then
       [[ -z $NXF_EDGE && $NXF_VER = *-edge ]] && NXF_EDGE=1
