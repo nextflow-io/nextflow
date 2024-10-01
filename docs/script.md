@@ -16,13 +16,12 @@ Nextflow scripts have a maximum size of 64 KiB. To avoid this limit for large pi
 
 ## Hello world
 
-To print something is as easy as using the `print` or `println` method:
+You can use the `println` function to print to the console:
 
 ```groovy
 println 'Hello, World!'
 ```
 
-The only difference between the two is that `println` prints an extra newline.
 
 ## Variables
 
