@@ -1,6 +1,6 @@
 Channel.of('alpha', 'beta', 'gamma')
     .collectFile(name: 'sample.txt', newLine: true)
-    .subscribe { txt ->
-        println "Entries are saved to file: $txt"
-        println "File content is: ${txt.text}"
+    .subscribe { file ->
+        println "Entries are saved to file: $file"
+        println "File content is: ${file.text}"
     }
