@@ -29,7 +29,7 @@ class ManifestTest extends Specification {
     def 'should check manifest object' () {
 
         given:
-        def MAN = [
+        def MAP = [
             author: 'pablo',
             contributors: [
                 [
@@ -54,7 +54,7 @@ class ManifestTest extends Specification {
             license: 'Apache v2'
         ]
         when:
-        def manifest = new Manifest(MAN)
+        def manifest = new Manifest(MAP)
         then:
         manifest.author == 'pablo'
         manifest.contributors.size() == 2
@@ -96,6 +96,27 @@ class ManifestTest extends Specification {
         manifest.icon == null
         manifest.license == null
 
+    }
+
+    def 'should convert manifest to map' () {
+
+        when:
+        def MAP = [
+            name: 'Alice', 
+            affiliation: 'University', 
+            email: 'alice@university.edu',
+            contribution: ['author', 'maintainer'],
+            orcid: 'https://orcid.org/0000-0000-0000-0000'
+        ]
+        then:
+        new Manifest.Contributor(MAP).toMap() == [
+            name: 'Alice', 
+            affiliation: 'University', 
+            email: 'alice@university.edu',
+            github: null,
+            contribution: ['author', 'maintainer'],
+            orcid: 'https://orcid.org/0000-0000-0000-0000'
+        ]
     }
 
     def 'should throw error on invalid manifest' () {

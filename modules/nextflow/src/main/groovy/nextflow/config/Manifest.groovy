@@ -67,6 +67,21 @@ class Manifest {
         target.author
     }
 
+    List<Contributor> getContributors() {
+        if( !target.contributors )
+            return Collections.emptyList()
+
+        try {
+            final contributors = target.contributors as List<Map>
+            return contributors.stream()
+                .map(opts -> new Contributor(opts))
+                .collect(Collectors.toList())
+        }
+        catch( ClassCastException | IllegalArgumentException e ){
+            throw new AbortOperationException("Invalid config option `manifest.contributors` -- should be a list of maps")
+        }
+    }
+
     String getMainScript() {
         target.mainScript ?: DEFAULT_MAIN_FILE_NAME
     }
@@ -118,24 +133,12 @@ class Manifest {
         target.license
     }
 
-    List<Contributor> getContributors() {
-        if( !target.contributors )
-            return Collections.emptyList()
-
-        try {
-            final contributors = target.contributors as List<Map>
-            return contributors.stream()
-                .map(opts -> new Contributor(opts))
-                .collect(Collectors.toList())
-        }
-        catch( ClassCastException | IllegalArgumentException e ){
-            throw new AbortOperationException("Invalid config option `manifest.contributors` -- should be a list of maps")
-        }
-    }
-
     Map toMap() {
         final result = new HashMap(15)
         result.author = getAuthor()
+        result.contributors = getContributors().stream()
+            .map(c -> c.toMap())
+            .collect(Collectors.toList())
         result.defaultBranch = getDefaultBranch()
         result.description = getDescription()
         result.homePage = homePage
@@ -148,7 +151,6 @@ class Manifest {
         result.icon = getIcon()
         result.organisation = getOrganisation()
         result.license = getLicense()
-        result.contributors = getContributors()
         return result
     }
 
@@ -170,6 +172,20 @@ class Manifest {
                 .map(c -> ContributionType.valueOf(c.toUpperCase()))
                 .collect(Collectors.toSet())
             orcid = opts.orcid as String
+        }
+
+        Map toMap() {
+            final result = new HashMap(6)
+            result.name = name
+            result.affiliation = affiliation
+            result.email = email
+            result.github = github
+            result.contribution = contribution.stream()
+                .map(c -> c.toString().toLowerCase())
+                .sorted()
+                .collect(Collectors.toList())
+            result.orcid = orcid
+            return result
         }
     }
 
