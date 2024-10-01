@@ -85,7 +85,7 @@ workflow {
 }
 ```
 
-You can even include the same definition multiple times under different names:
+You can also include the same definition multiple times under different names:
 
 ```groovy
 include { foo; foo as bar } from './some/module'
