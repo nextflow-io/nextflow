@@ -614,7 +614,7 @@ The following settings are available:
 : :::{versionadded} 24.04.0
   :::
 : *Used only by the {ref}`slurm-executor`, {ref}`lsf-executor`, {ref}`pbs-executor` and {ref}`pbspro-executor` executors.*
-: Allows specifying the project or organisation account that should be charged for running the pipeline jobs.
+: Allows specifying the project or organization account that should be charged for running the pipeline jobs.
 
 `executor.cpus`
 : The maximum number of CPUs made available by the underlying system. Used only by the `local` executor.
@@ -1200,8 +1200,8 @@ The following settings are available:
   manifest.nextflowVersion = '!>=1.2'       // with ! prefix, stop execution if current version does not match required version.
   ```
 
-`manifest.organisation`
-: Project organisation
+`manifest.organization`
+: Project organization
 
 `manifest.recurseSubmodules`
 : Pull submodules recursively from the Git repository.

@@ -48,7 +48,7 @@ class ManifestTest extends Specification {
             ],
             nextflowVersion: '1.2.3',
             name: 'foo',
-            organisation: 'My Organisation',
+            organization: 'My Organization',
             icon: 'icon.png',
             docsUrl: 'https://docs.io',
             license: 'Apache v2'
@@ -69,7 +69,7 @@ class ManifestTest extends Specification {
         manifest.contributors[1].contribution == [ContributionType.CONTRIBUTOR] as Set
         manifest.nextflowVersion == '1.2.3'
         manifest.name == 'foo'
-        manifest.organisation == 'My Organisation'
+        manifest.organization == 'My Organization'
         manifest.icon == 'icon.png'
         manifest.docsUrl == 'https://docs.io'
         manifest.license == 'Apache v2'
@@ -92,7 +92,7 @@ class ManifestTest extends Specification {
         manifest.version == null
         manifest.name == null
         manifest.docsUrl == null
-        manifest.organisation == null
+        manifest.organization == null
         manifest.icon == null
         manifest.license == null
 
