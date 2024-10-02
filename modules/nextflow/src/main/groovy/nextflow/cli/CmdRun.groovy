@@ -423,6 +423,13 @@ class CmdRun extends CmdBase implements HubOptions {
             log.debug "Enabling nextflow strict mode"
             NextflowMeta.instance.strictMode(true)
         }
+        final moduleBinaries = config.navigate('nextflow.enable.moduleBinaries', false)
+        if( moduleBinaries ) {
+            log.debug "Enabling nextflow moduleBinaries form configuration file."
+            log.warn "Definition of feature flags in the configuration file will be deprecated in future releases.\n" +
+                "It is recommended to move them to the script file."
+            NextflowMeta.instance.moduleBinaries(true)
+        }
         // -- determine dsl mode
         final dsl = detectDslMode(config, scriptFile.main.text, sysEnv)
         NextflowMeta.instance.enableDsl(dsl)
