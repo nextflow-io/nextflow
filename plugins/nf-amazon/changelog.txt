@@ -1,5 +1,10 @@
 nf-amazon changelog
 ===================
+2.9.0 - 2 Oct 2024
+- Add Platform workflow prefix in AWS Batch job names (#5318) [e2e test] [42dd4ba8]
+- Fix AWS spot attempts with zero value (#5331) [ci fast] [bac2da12]
+- Bump groovy 4.0.23 (#5303) [ci fast] [fe3e3ac7]
+
 2.8.0 - 4 Sep 2024
 - Disable AWS spot retry (#5215) [f28fcb25]
 
