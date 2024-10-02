@@ -60,6 +60,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
+import nextflow.SysEnv
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.container.ContainerNameValidator
 import nextflow.exception.ProcessException
@@ -76,7 +77,6 @@ import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
-import nextflow.util.TaskUtils
 /**
  * Implements a task handler for AWS Batch jobs
  */
@@ -112,7 +112,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     private CloudMachineInfo machineInfo
 
-    private Map<String,String> environment
+    private Map<String,String> environment = Map<String,String>.of()
 
     final static private Map<String,String> jobDefinitions = [:]
 
@@ -134,7 +134,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         super(task)
         this.executor = executor
         this.client = executor.client
-        this.environment = System.getenv()
+        this.environment = SysEnv.get()
         this.logFile = task.workDir.resolve(TaskRun.CMD_LOG)
         this.scriptFile = task.workDir.resolve(TaskRun.CMD_SCRIPT)
         this.inputFile =  task.workDir.resolve(TaskRun.CMD_INFILE)
@@ -699,6 +699,11 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return executor.awsOptions.maxSpotAttempts
     }
 
+    protected String getJobName(TaskRun task) {
+        final result = prependWorkflowPrefix(task.name, environment)
+        return normalizeJobName(result)
+    }
+
     /**
      * Create a new Batch job request for the given NF {@link TaskRun}
      *
@@ -713,7 +718,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final opts = getAwsOptions()
         final labels = task.config.getResourceLabels()
         final result = new SubmitJobRequest()
-        result.setJobName(TaskUtils.includeTowerPrefix(normalizeJobName(task.name), this.environment))
+        result.setJobName(getJobName(task))
         result.setJobQueue(getJobQueue(task))
         result.setJobDefinition(getJobDefinition(task))
         if( labels ) {
@@ -842,7 +847,6 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         def result = name.replaceAll(' ','_').replaceAll(/[^a-zA-Z0-9_]/,'')
         result.size()>128 ? result.substring(0,128) : result
     }
-
 
     protected CloudMachineInfo getMachineInfo() {
         if( machineInfo )

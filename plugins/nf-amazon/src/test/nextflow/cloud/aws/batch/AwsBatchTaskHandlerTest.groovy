@@ -1100,4 +1100,25 @@ class AwsBatchTaskHandlerTest extends Specification {
         'job1'       | 'job1'
         'job1:task2' | 'job1'
     }
+
+    def 'should get job name' () {
+        given:
+        def handler = Spy(new AwsBatchTaskHandler(environment: ENV))
+        def task = Mock(TaskRun)
+
+        when:
+        def result = handler.getJobName(task)
+        then:
+        task.getName() >> NAME
+        and:
+        result == EXPECTED
+        
+        where:
+        ENV                             | NAME      | EXPECTED
+        [:]                             | 'foo'     | 'foo'
+        [TOWER_WORKFLOW_ID: '12345']    | 'foo'     |'tw_12345_foo'
+        [TOWER_WORKFLOW_ID: '12345']    | 'foo'     | 'tw_12345_foo'
+        [TOWER_WORKFLOW_ID: '12345']    | 'foo---12'| 'tw_12345_foo12'  // <-- unexpected chars are removed
+
+    }
 }

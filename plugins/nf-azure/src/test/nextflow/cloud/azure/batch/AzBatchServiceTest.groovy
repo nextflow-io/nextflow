@@ -40,8 +40,11 @@ class AzBatchServiceTest extends Specification {
         SysEnv.pop()      // <-- restore the system host env
     }
 
+    @Unroll
     def 'should make job id'() {
         given:
+        SysEnv.push(ENV)
+        and:
         def task = Mock(TaskRun) {
             getProcessor() >> Mock(TaskProcessor) {
                 getName() >> NAME
@@ -55,12 +58,16 @@ class AzBatchServiceTest extends Specification {
         def svc = new AzBatchService(exec)
 
         expect:
-        svc.makeJobId(task) =~ EXPECTED
+        svc.getJobId(task) =~ EXPECTED
+
+        cleanup:
+        SysEnv.pop()
 
         where:
-        NAME        | EXPECTED
-        'foo'       | /job-\w+-foo/
-        'foo  bar'  | /job-\w+-foo_bar/
+        NAME        | ENV                       | EXPECTED
+        'foo'       | [:]                       | /job-\w+-foo/
+        'foo  bar'  | [:]                       | /job-\w+-foo_bar/
+        'foo'       | [TOWER_WORKFLOW_ID:'123'] | /tw_123_job-\w+-foo/
     }
 
     def 'should list locations' () {

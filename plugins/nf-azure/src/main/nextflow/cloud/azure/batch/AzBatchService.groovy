@@ -89,13 +89,13 @@ import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.fusion.FusionHelper
 import nextflow.fusion.FusionScriptLauncher
+import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
 import nextflow.util.MustacheTemplateEngine
 import nextflow.util.Rnd
-import nextflow.util.TaskUtils
 /**
  * Implements Azure Batch operations for Nextflow executor
  *
@@ -362,7 +362,7 @@ class AzBatchService implements Closeable {
             return allJobIds[mapKey]
         }
         // create a batch job
-        final jobId = makeJobId(task)
+        final jobId = getJobId(task)
         final content = new BatchJobCreateContent(jobId, new BatchPoolInfo(poolId: poolId))
         apply(() -> client.createJob(content))
         // add to the map
@@ -370,14 +370,14 @@ class AzBatchService implements Closeable {
         return jobId
     }
 
-    String makeJobId(TaskRun task) {
+    String getJobId(TaskRun task) {
         final name = task
                 .processor
                 .name
                 .trim()
                 .replaceAll(/[^a-zA-Z0-9-_]+/,'_')
 
-        final String key = TaskUtils.includeTowerPrefix("job-${Rnd.hex()}-${name}", SysEnv.get())
+        final key = TaskHandler.prependWorkflowPrefix("job-${Rnd.hex()}-${name}", SysEnv.get())
         // Azure batch job max len is 64 characters, however we keep it a bit shorter
         // because the jobId + taskId composition must be less then 100
         final MAX_LEN = 62i

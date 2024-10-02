@@ -41,6 +41,8 @@ import nextflow.script.ProcessConfig
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -275,6 +277,33 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         result == 'foo-abcd1234'
 
+    }
+
+    @Unroll
+    def 'should get job id' () {
+        given:
+        SysEnv.push(ENV)
+        def exec = Mock(GoogleBatchExecutor)
+        def handler = Spy(new GoogleBatchTaskHandler(executor: exec))
+        def task = Mock(TaskRun)
+        and:
+        task.getHashLog() >> HASH
+        handler.customJobName(task) >> CUSTOM_NAME
+
+        when:
+        def result = handler.getJobId(task)
+        then:
+        result =~ EXPECTED
+
+        cleanup:
+        SysEnv.pop()
+        
+        where:
+        HASH        | CUSTOM_NAME   | ENV                       | EXPECTED
+        'abc12345'  | null          | [:]                       |  /nf-abc12345-\d+/
+        'abc12345'  | null          | [TOWER_WORKFLOW_ID:'xyz'] |  /tw_xyz_nf-abc12345-\d+/
+        'abc12345'  | 'my-name'     | [:]                       |  /my-name/
+        'abc12345'  | 'my-name'     | [TOWER_WORKFLOW_ID:'xyz'] |  /tw_xyz_my-name/
     }
 
     def 'should use instance template' () {

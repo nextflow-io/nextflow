@@ -52,7 +52,6 @@ import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
-import nextflow.util.TaskUtils
 /**
  * Implements a task handler for Google Batch executor
  * 
@@ -104,12 +103,17 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         super(task)
         this.client = executor.getClient()
         this.executor = executor
-        this.jobId = customJobName(task) ?: "nf-${task.hashLog.replace('/','')}-${System.currentTimeMillis()}"
-        this.jobId = TaskUtils.includeTowerPrefix(this.jobId, SysEnv.get())
+        this.jobId = getJobId(task)
         // those files are access via NF runtime, keep based on CloudStoragePath
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
+    }
+
+    protected String getJobId(TaskRun task) {
+        final name = customJobName(task)
+                        ?: "nf-${task.hashLog.replace('/','')}-${System.currentTimeMillis()}".toString()
+        return prependWorkflowPrefix(name, SysEnv.get())
     }
 
     /**
