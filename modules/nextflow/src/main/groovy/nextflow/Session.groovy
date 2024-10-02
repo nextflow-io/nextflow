@@ -828,6 +828,12 @@ class Session implements ISession {
 
     boolean isSuccess() { !aborted && !cancelled && !failOnIgnore }
 
+    boolean canSubmitTasks() {
+        // tasks should be submitted even when 'failOnIgnore' is set to true
+        // https://github.com/nextflow-io/nextflow/issues/5291
+        return !aborted && !cancelled
+    }
+
     void processRegister(TaskProcessor process) {
         log.trace ">>> barrier register (process: ${process.name})"
         processesBarrier.register(process)

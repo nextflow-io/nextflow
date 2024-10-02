@@ -8,5 +8,6 @@ set -e
 
 [ $status -ne 0 ] || false
 
-[[ `< .nextflow.log grep -c 'Submitted process > foo'` == 1 ]] || false
+[[ `< .nextflow.log grep -c 'Submitted process > foo'` == 3 ]] || false
+[[ `< .nextflow.log grep -c 'Submitted process > bar'` == 1 ]] || false
 [[ `< .nextflow.log grep -c 'Error is ignored'` == 1 ]] || false
