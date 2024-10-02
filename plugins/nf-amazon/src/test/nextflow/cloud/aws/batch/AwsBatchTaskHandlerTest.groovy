@@ -65,6 +65,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         expect:
         handler.normalizeJobName('foo') == 'foo'
         handler.normalizeJobName('foo (12)') == 'foo_12'
+        handler.normalizeJobName('foo-12') == 'foo-12'
 
         when:
         def looong = '012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789'
@@ -97,7 +98,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> [VAR_FOO, VAR_BAR]
 
-        req.getJobName() == 'batchtask'
+        req.getJobName() == 'batch-task'
         req.getJobQueue() == 'queue1'
         req.getJobDefinition() == 'job-def:1'
         req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
@@ -118,7 +119,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> [VAR_FOO, VAR_BAR]
 
-        req.getJobName() == 'batchtask'
+        req.getJobName() == 'batch-task'
         req.getJobQueue() == 'queue1'
         req.getJobDefinition() == 'job-def:1'
         req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
@@ -148,7 +149,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> []
 
-        req.getJobName() == 'batchtask'
+        req.getJobName() == 'batch-task'
         req.getJobQueue() == 'queue1'
         req.getJobDefinition() == 'job-def:1'
         req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
@@ -165,7 +166,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> []
 
-        req2.getJobName() == 'batchtask'
+        req2.getJobName() == 'batch-task'
         req2.getJobQueue() == 'queue1'
         req2.getJobDefinition() == 'job-def:1'
         req2.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
@@ -232,7 +233,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         and:
-        req.getJobName() == 'batchtask'
+        req.getJobName() == 'batch-task'
         req.getJobQueue() == 'queue1'
         req.getJobDefinition() == 'job-def:1'
         req.getTimeout() == null
@@ -249,7 +250,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getJobQueue(task) >> 'queue2'
         1 * handler.getJobDefinition(task) >> 'job-def:2'
         and:
-        req.getJobName() == 'batchtask'
+        req.getJobName() == 'batch-task'
         req.getJobQueue() == 'queue2'
         req.getJobDefinition() == 'job-def:2'
         // minimal allowed timeout is 60 seconds
@@ -268,7 +269,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getJobQueue(task) >> 'queue3'
         1 * handler.getJobDefinition(task) >> 'job-def:3'
         and:
-        req.getJobName() == 'batchtask'
+        req.getJobName() == 'batch-task'
         req.getJobQueue() == 'queue3'
         req.getJobDefinition() == 'job-def:3'
         // minimal allowed timeout is 60 seconds
@@ -299,7 +300,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         and:
-        req.getJobName() == 'batchtask'
+        req.getJobName() == 'batch-task'
         req.getJobQueue() == 'queue1'
         req.getJobDefinition() == 'job-def:1'
         // no error `retry` error strategy is defined by NF, use `maxRetries` to se Batch attempts
@@ -1013,7 +1014,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> [VAR_FOO, VAR_BAR]
 
-        req.getJobName() == 'batchtask'
+        req.getJobName() == 'batch-task'
         req.getJobQueue() == 'queue1'
         req.getJobDefinition() == 'job-def:1'
         req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
@@ -1099,5 +1100,26 @@ class AwsBatchTaskHandlerTest extends Specification {
         null         | null
         'job1'       | 'job1'
         'job1:task2' | 'job1'
+    }
+
+    def 'should get job name' () {
+        given:
+        def handler = Spy(new AwsBatchTaskHandler(environment: ENV))
+        def task = Mock(TaskRun)
+
+        when:
+        def result = handler.getJobName(task)
+        then:
+        task.getName() >> NAME
+        and:
+        result == EXPECTED
+        
+        where:
+        ENV                             | NAME      | EXPECTED
+        [:]                             | 'foo'     | 'foo'
+        [TOWER_WORKFLOW_ID: '12345']    | 'foo'     | 'tw-12345-foo'
+        [TOWER_WORKFLOW_ID: '12345']    | 'foo'     | 'tw-12345-foo'
+        [TOWER_WORKFLOW_ID: '12345']    | 'foo(12)' | 'tw-12345-foo12'
+
     }
 }
