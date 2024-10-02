@@ -869,7 +869,8 @@ class Session implements ISession {
     }
 
     boolean enableModuleBinaries() {
-        NF.isModuleBinariesEnabled()
+        final moduleBinaries = config.navigate('nextflow.enable.moduleBinaries', false) as boolean
+        moduleBinaries ?: NF.isModuleBinariesEnabled()
     }
 
     boolean failOnIgnore() {
