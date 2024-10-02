@@ -1,5 +1,28 @@
 NEXTFLOW CHANGE-LOG
 ===================
+24.09.0-edge - 2 Oct 2024
+- Add Fusion version pinning info to Fusion config scope (#5294) [be1cac37]
+- Add container tip in the task error report (#5299) [62e26043]
+- Add support for Java 23 (#5329) [6e10c372]
+- Add Platform workflow prefix in AWS Batch job names (#5318) [42dd4ba8]
+- Fix AWS spot attempts with zero value (#5331) [bac2da12]
+- Fix Azure Fusion env misses credentials when no key or SAS provided (#5328) [e11382c8]
+- Fix CI build taking only the commit msg header [9e702c4d]
+- Fix Inconsistency with camelCase and kebab-case config params #4702 (solve #4033) [349f4f6f]
+- Fix XPath default de-serializer issue (#5339) [290f2d07]
+- Fix failOnIgnore causes task monitor to stop submitting tasks (#5293) [d6870335]
+- Fix large mermaid diagrams (#5302) [a46edfa0]
+- Improve Wave build timeout handling (#5304) [05bef7e4]
+- Include additional fields to manifest (#5314) [33fab52d]
+- Remove `mini` from Flux submit command (#5229) [a0f69025]
+- Update container handling with charliecloud (#5300) [8e6068db]
+- Update Documentation structure (#4766) [25e5eba0]
+- Update nextflow install docs (#5198) [7c453815]
+- Bump groovy 4.0.23 (#5303) [fe3e3ac7]
+- Bump nf-wave@1.6.0 [179093dc]
+- Bump nf-azure@1.10.0 [41d37fa8]
+- Bump nf-amazon@2.9.0 [e38980fb]
+
 24.08.0-edge - 4 Sep 2024
 - Add Google Batch warning when for conflicting disk image config (#5279) [96cb57cb]
 - Add support for Google Batch used specified boot images  (#5268) [0aaa6482]
