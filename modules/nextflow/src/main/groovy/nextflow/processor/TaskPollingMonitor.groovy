@@ -587,7 +587,7 @@ class TaskPollingMonitor implements TaskMonitor {
 
         int count = 0
         def itr = pendingQueue.iterator()
-        while( itr.hasNext() && (session.isSuccess() || session.isFailOnIgnore()) ) {
+        while( itr.hasNext() && session.canSubmitTasks() ) {
             final handler = itr.next()
             submitRateLimit?.acquire()
             try {
