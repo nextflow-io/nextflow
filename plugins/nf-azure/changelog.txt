@@ -1,5 +1,9 @@
 nf-azure changelog
 ===================
+1.10.0 - 2 Oct 2024
+- Fix Azure Fusion env misses credentials when no key or SAS provided (#5328) [e11382c8]
+- Bump groovy 4.0.23 (#5303) [ci fast] [fe3e3ac7]
+
 1.9.0 - 4 Sep 2024
 - Support Azure Managed Identities in Fusion configuration logic (#5278) [a0bf8b40]
 
