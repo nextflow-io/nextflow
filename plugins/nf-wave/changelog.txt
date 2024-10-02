@@ -1,5 +1,9 @@
 nf-wave changelog
 ==================
+1.6.0 - 2 Oct 2024
+- Improve Wave build timeout handling (#5304) [05bef7e4]
+- Bump groovy 4.0.23 (#5303) [ci fast] [fe3e3ac7]
+
 1.5.1 - 4 Sep 2024
 - Wave client logs improvement [5a37e617]
 
