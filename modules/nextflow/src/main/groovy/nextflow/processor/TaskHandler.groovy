@@ -273,4 +273,21 @@ abstract class TaskHandler {
             return true
         return false
     }
+
+    /**
+     * Prepend the workflow Id to the job/task name. The workflow id is defined
+     * by the environment variable {@code TOWER_WORKFLOW_ID}
+     *
+     * @param name
+     *      The desired job name
+     * @param env
+     *      A map representing the variables in the host environment
+     * @return
+     *  The job having the prefix {@code tw-<ID>} when the variable {@code TOWER_WORKFLOW_ID}
+     *  is defined in the host environment or just {@code name} otherwise
+     */
+    static String prependWorkflowPrefix(String name, Map<String,String> env) {
+        final workflowId = env.get("TOWER_WORKFLOW_ID")
+        return workflowId ? "tw-${workflowId}-${name}" : name
+    }
 }
