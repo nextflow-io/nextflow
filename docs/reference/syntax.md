@@ -661,6 +661,13 @@ blastp \
 """
 ```
 
+Single-quoted strings are not interpolated:
+
+```groovy
+println 'Hello, ${names.join(" and ")}!'
+// -> Hello, ${names.join(" and ")}!
+```
+
 ### List
 
 A list literal consists of a comma-separated list of zero or more expressions, enclosed in square brackets:
@@ -882,7 +889,7 @@ The following binary operators are available:
 A ternary expression consists of a *test expression*, a *true expression*, and a *false expression*, separated by a question mark and a colon:
 
 ```groovy
-x % 2 == 0 ? 'x is even!' : 'x is odd!'
+println x % 2 == 0 ? 'x is even!' : 'x is odd!'
 ```
 
 If the test expression is true, the true expression is evaluated, otherwise the false expression is evaluated.
