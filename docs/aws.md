@@ -439,7 +439,7 @@ Then launch the pipeline with the -bucket-dir option to specify an AWS S3 path f
 nextflow run <script or project name> -bucket-dir s3://my-bucket/some/path
 ```
 
-:::warning
+:::{warning}
 The AWS S3 path needs to contain at least one sub-directory (e.g. `s3://my-bucket/work` rather than `s3://my-bucket`).
 :::
 

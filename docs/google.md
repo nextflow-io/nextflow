@@ -423,7 +423,7 @@ Then launch the pipeline with the `-bucket-dir` option to specify a Google Stora
 nextflow run <script or project name> -bucket-dir gs://my-bucket/some/path
 ```
 
-:::warning
+:::{warning}
 The Google Storage path needs to contain at least one sub-directory (e.g. `gs://my-bucket/work` rather than `gs://my-bucket`).
 :::
 
