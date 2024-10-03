@@ -1160,7 +1160,13 @@ class TaskProcessor {
                         taskCopy.config.attempt = taskErrCount+1
                         taskCopy.config.submitAttempt = submitRetries+1
                         taskCopy.runType = RunType.RETRY
-                        taskCopy.resolve(taskBody)
+                        TaskClosure block
+                        if( session.stubRun && (block=taskCopy.config.getStubBlock()) ) {
+                            taskCopy.resolve(block)
+                        }
+                        else {
+                            taskCopy.resolve(taskBody)
+                        }
                         checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false )
                     }
                     catch( Throwable e ) {
