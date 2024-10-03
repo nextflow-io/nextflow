@@ -425,9 +425,7 @@ class CmdRun extends CmdBase implements HubOptions {
         }
         final moduleBinaries = config.navigate('nextflow.enable.moduleBinaries', false)
         if( moduleBinaries ) {
-            log.debug "Enabling nextflow moduleBinaries form configuration file."
-            log.warn "Definition of feature flags in the configuration file will be deprecated in future releases.\n" +
-                "It is recommended to move them to the script file."
+            log.warn "Setting feature flags in the configuration file will not be supported in the future -- set them in the pipeline script instead"
             NextflowMeta.instance.moduleBinaries(true)
         }
         // -- determine dsl mode
