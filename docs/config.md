@@ -38,9 +38,9 @@ docker.enabled = true
 process.maxErrors = 10
 ```
 
-A config option consists of one or more names separated by dots. The names other than the last one are known as *config scopes*. See {ref}`config-options` for the full set of config options organized by scope.
+A config option consists of an *option name* prefixed by any number of *scopes* separated by dots. Config scopes are used to group related config options. See {ref}`config-options` for the full set of config options.
 
-The right-hand side is typically a literal value such as a number, boolean, or string, but can be any expression, such as a dynamic string:
+The expression is typically a literal value such as a number, boolean, or string. However, any expression can be used:
 
 ```groovy
 params.helper_file = "${projectDir}/assets/helper.txt"

@@ -478,7 +478,7 @@ In this case, `x.name` returns the file name with the parent directory (e.g. `my
 
 ### Multiple input files
 
-A `path` input can also accept a collection of files instead of a single value. In this case, the input variable will be a list, and you can use it as such.
+A `path` input can also accept a collection of files instead of a single value. In this case, the input variable will be a list.
 
 When the input has a fixed file name and a collection of files is received by the process, the file name will be appended with a numerical suffix representing its ordinal position in the list. For example:
 

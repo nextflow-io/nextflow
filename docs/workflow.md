@@ -4,7 +4,7 @@
 
 In Nextflow, a **workflow** is a function that is specialized for composing processes and dataflow logic (i.e. channels and operators).
 
-A script can define a workflow without a name, known as the *entry workflow*, which is the entrypoint of the script:
+A script can define up to one *entry workflow*, which does not have a name and serves as the entrypoint of the script:
 
 ```groovy
 workflow {
