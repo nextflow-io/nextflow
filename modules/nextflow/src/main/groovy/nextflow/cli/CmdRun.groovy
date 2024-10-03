@@ -417,17 +417,9 @@ class CmdRun extends CmdBase implements HubOptions {
 
     protected void launchInfo(ConfigMap config, ScriptFile scriptFile) {
         // -- determine strict mode
-        final defStrict = sysEnv.get('NXF_ENABLE_STRICT') ?: false
-        final strictMode = config.navigate('nextflow.enable.strict', defStrict)
-        if( strictMode ) {
-            log.debug "Enabling nextflow strict mode"
-            NextflowMeta.instance.strictMode(true)
-        }
-        final moduleBinaries = config.navigate('nextflow.enable.moduleBinaries', false)
-        if( moduleBinaries ) {
-            log.warn "Setting feature flags in the configuration file will not be supported in the future -- set them in the pipeline script instead"
-            NextflowMeta.instance.moduleBinaries(true)
-        }
+        detectStrictFeature(config, sysEnv)
+        // -- determine moduleBinary
+        detectModuleBinaryFeature(config)
         // -- determine dsl mode
         final dsl = detectDslMode(config, scriptFile.main.text, sysEnv)
         NextflowMeta.instance.enableDsl(dsl)
@@ -439,6 +431,25 @@ class CmdRun extends CmdBase implements HubOptions {
             ? scriptFile.revisionInfo.toString()
             : scriptFile.getScriptId()?.substring(0,10)
         printLaunchInfo(ver, repo, head, revision)
+    }
+
+    static void detectModuleBinaryFeature(ConfigMap config) {
+        final moduleBinaries = config.navigate('nextflow.enable.moduleBinaries', false)
+        if( moduleBinaries ) {
+            log.warn "Setting feature flags in the configuration file will not be supported in the future -- set them in the pipeline script instead"
+            NextflowMeta.instance.moduleBinaries(true)
+        }
+    }
+
+    static void detectStrictFeature(ConfigMap config, Map sysEnv) {
+        final defStrict = sysEnv.get('NXF_ENABLE_STRICT') ?: false
+        log
+        final strictMode = config.navigate('nextflow.enable.strict', defStrict)
+        if( strictMode ) {
+            log.debug "Enabling nextflow strict mode"
+            log.warn "Setting feature flags in the configuration file will not be supported in the future -- set them in the pipeline script instead"
+            NextflowMeta.instance.strictMode(true)
+        }
     }
 
     protected void printLaunchInfo(String ver, String repo, String head, String revision) {
