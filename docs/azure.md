@@ -405,6 +405,47 @@ The value of the setting must be the identifier of a subnet available in the vir
 Batch Authentication with Shared Keys does not allow to link external resources (like Virtual Networks) to the pool. Therefore, Active Directory Authentication must be used in conjunction with the `virtualNetwork` setting.
 :::
 
+### Hybrid workloads
+
+Nextflow allows the use of multiple executors in the same workflow application. This feature enables the deployment of hybrid workloads in which some jobs are executed in the local computer or local computing cluster and some jobs are offloaded to Azure Batch.
+
+To enable this feature, use one or more {ref}`config-process-selectors` in your Nextflow configuration to apply the Azure Batch configuration to the subset of processes that you want to offload. For example:
+
+```groovy
+process {
+    withLabel: bigTask {
+        executor = 'azurebatch'
+        queue = 'my-batch-pool'
+        container = 'my/image:tag'
+    }
+}
+
+azure {
+    storage {
+        accountName = '<YOUR STORAGE ACCOUNT NAME>'
+        accountKey = '<YOUR STORAGE ACCOUNT KEY>'
+    }
+    batch {
+        location = '<YOUR LOCATION>'
+        accountName = '<YOUR BATCH ACCOUNT NAME>'
+        accountKey = '<YOUR BATCH ACCOUNT KEY>'
+    }
+}
+```
+
+With the above configuration, processes with the `bigTask` {ref}`process-label` will run on Azure Batch, while the remaining processes will run in the local computer.
+
+Then launch the pipeline with the `-bucket-dir` option to specify an Azure Blob Storage path for the jobs computed with Azure Batch and, optionally, the `-work-dir` to specify the local storage for the jobs computed locally:
+
+```bash
+nextflow run <script or project name> -bucket-dir az://my-container/some/path
+```
+
+:::{warning}
+The Azure Blob Storage path needs to contain at least one sub-directory (e.g. `az://my-container/work` rather than `az://my-container`).
+:::
+
+
 ## Microsoft Entra
 
 Using Microsoft Entra for role-based access control is more secure than using access keys and should be used wherever possible. You can authenticate to Azure Entra using a Managed Identity when running on resources within the Azure environment, or by authenticating as an Azure Service Principal when running on external resources.
