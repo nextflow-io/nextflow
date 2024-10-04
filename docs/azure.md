@@ -409,7 +409,7 @@ Batch Authentication with Shared Keys does not allow to link external resources 
 
 Nextflow allows the use of multiple executors in the same workflow application. This feature lets you deploy hybrid workloads, where some jobs run on the local computer or local computing cluster, while others are offloaded to Azure Batch.
 
-To enable this feature, you configure one or more {ref}`config-process-selectors` in your Nextflow configuration to apply the Azure Batch settings to the processes you want to offload. For example:
+To enable this feature, configure one or more {ref}`config-process-selectors` in your Nextflow configuration to apply the Azure Batch settings to the processes you want to offload. For example:
 
 ```groovy
 process {
