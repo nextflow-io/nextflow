@@ -407,9 +407,9 @@ Batch Authentication with Shared Keys does not allow to link external resources 
 
 ### Hybrid workloads
 
-Nextflow allows the use of multiple executors in the same workflow application. This feature enables the deployment of hybrid workloads in which some jobs are executed in the local computer or local computing cluster and some jobs are offloaded to Azure Batch.
+Nextflow allows the use of multiple executors in the same workflow application. This feature lets you deploy hybrid workloads, where some jobs run on the local computer or local computing cluster, while others are offloaded to Azure Batch.
 
-To enable this feature, use one or more {ref}`config-process-selectors` in your Nextflow configuration to apply the Azure Batch configuration to the subset of processes that you want to offload. For example:
+To enable this feature, you configure one or more {ref}`config-process-selectors` in your Nextflow configuration to apply the Azure Batch settings to the processes you want to offload. For example:
 
 ```groovy
 process {
@@ -433,9 +433,9 @@ azure {
 }
 ```
 
-With the above configuration, processes with the `bigTask` {ref}`process-label` will run on Azure Batch, while the remaining processes will run in the local computer.
+With the above configuration, processes with the bigTask {ref}`process-label` run on Azure Batch, while the remaining processes run on the local computer.
 
-Then launch the pipeline with the `-bucket-dir` option to specify an Azure Blob Storage path for the jobs computed with Azure Batch and, optionally, the `-work-dir` to specify the local storage for the jobs computed locally:
+Next, launch the pipeline with the `-bucket-dir` option to specify an Azure Blob Storage path for the jobs running on Azure Batch, and optionally, use the `-work-dir` option to specify local storage for the jobs running locally:
 
 ```bash
 nextflow run <script or project name> -bucket-dir az://my-container/some/path
