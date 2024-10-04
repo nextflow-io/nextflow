@@ -303,12 +303,7 @@ class WorkflowMetadata {
      * @param action The action handler
      */
     void onComplete( Closure action ) {
-
-        final clone = (Closure)action.clone()
-        clone.delegate = NF.binding.variables
-        clone.resolveStrategy = Closure.DELEGATE_FIRST
-
-        onCompleteActions.add(clone)
+        onCompleteActions.add(action)
     }
 
     /**
@@ -335,12 +330,7 @@ class WorkflowMetadata {
      * @param action
      */
     void onError( Closure action ) {
-
-        final clone = (Closure)action.clone()
-        clone.delegate = NF.binding.variables
-        clone.resolveStrategy = Closure.DELEGATE_FIRST
-
-        onErrorActions.add(clone)
+        onErrorActions.add(action)
     }
 
     /**
