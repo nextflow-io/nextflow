@@ -82,8 +82,6 @@ class WaveClient {
 
     public static final List<String> DEFAULT_CONDA_CHANNELS = ['conda-forge','bioconda']
 
-    private static final String DEFAULT_SPACK_ARCH = 'x86_64'
-
     private static final String DEFAULT_DOCKER_PLATFORM = 'linux/amd64'
 
     final private HttpClient httpClient
@@ -352,12 +350,6 @@ class WaveClient {
         if( attrs.container && attrs.conda ) {
             throw new IllegalArgumentException("Process '${name}' declares both 'container' and 'conda' directives that conflict each other")
         }
-        if( attrs.container && attrs.spack ) {
-            throw new IllegalArgumentException("Process '${name}' declares both 'container' and 'spack' directives that conflict each other")
-        }
-        if( attrs.spack && attrs.conda ) {
-            throw new IllegalArgumentException("Process '${name}' declares both 'spack' and 'conda' directives that conflict each other")
-        }
         checkConflicts0(attrs, name, 'dockerfile')
         checkConflicts0(attrs, name, 'singularityfile')
     }
@@ -368,9 +360,6 @@ class WaveClient {
         }
         if( attrs.container && attrs.get(fileType) ) {
             throw new IllegalArgumentException("Process '${name}' declares both a 'container' directive and a module bundle $fileType that conflict each other")
-        }
-        if( attrs.get(fileType) && attrs.spack ) {
-            throw new IllegalArgumentException("Process '${name}' declares both a 'spack' directive and a module bundle $fileType that conflict each other")
         }
     }
 
@@ -413,15 +402,13 @@ class WaveClient {
     WaveAssets resolveAssets(TaskRun task, String containerImage, boolean singularity) {
         // get the bundle
         final bundle = task.getModuleBundle()
-        // get the Spack architecture
+        // get the architecture
         final arch = task.config.getArchitecture()
-        final spackArch = arch ? arch.spackArch : DEFAULT_SPACK_ARCH
         final dockerArch = arch? arch.dockerArch : DEFAULT_DOCKER_PLATFORM
         // compose the request attributes
         def attrs = new HashMap<String,String>()
         attrs.container = containerImage
         attrs.conda = task.config.conda as String
-        attrs.spack = task.config.spack as String
         if( bundle!=null && bundle.dockerfile ) {
             attrs.dockerfile = bundle.dockerfile.text
         }
@@ -437,10 +424,10 @@ class WaveClient {
             checkConflicts(attrs, task.lazyName())
 
         //  resolve the wave assets
-        return resolveAssets0(attrs, bundle, singularity, dockerArch, spackArch)
+        return resolveAssets0(attrs, bundle, singularity, dockerArch)
     }
 
-    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, boolean singularity, String dockerArch, String spackArch) {
+    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, boolean singularity, String dockerArch) {
 
         final scriptType = singularity ? 'singularityfile' : 'dockerfile'
         String containerScript = attrs.get(scriptType)
@@ -482,33 +469,6 @@ class WaveClient {
                         .withEntries(condaPackagesToList(attrs.conda))
                 }
 
-            }
-        }
-
-        /*
-         * If 'spack' directive is specified use it to create a container file
-         * to assemble the target container
-         */
-        if( attrs.spack ) {
-            if( containerScript )
-                throw new IllegalArgumentException("Unexpected spack and dockerfile conflict while resolving wave container")
-
-            if( isSpackFile(attrs.spack) ) {
-                // create a minimal spack file with package spec from user input
-                final spackFile = Path.of(attrs.spack)
-                final spackEnv = addPackagesToSpackYaml(spackFile.text, config.spackOpts())
-                packagesSpec = new PackagesSpec()
-                    .withType(PackagesSpec.Type.SPACK)
-                    .withSpackOpts(config.spackOpts())
-                    .withEnvironment(spackEnv.bytes.encodeBase64().toString())
-            }
-            else {
-                // create a minimal spack file with package spec from user input
-                final spackEnv = spackPackagesToSpackYaml(attrs.spack, config.spackOpts())
-                packagesSpec = new PackagesSpec()
-                    .withType(PackagesSpec.Type.SPACK)
-                    .withSpackOpts(config.spackOpts())
-                    .withEnvironment(spackEnv.bytes.encodeBase64().toString())
             }
         }
 
@@ -642,12 +602,6 @@ class WaveClient {
 
     static protected boolean isCondaRemoteFile(String value) {
         value.startsWith('http://') || value.startsWith('https://')
-    }
-
-    protected boolean isSpackFile(String value) {
-        if( value.contains('\n') )
-            return false
-        return value.endsWith('.yaml') || value.endsWith('.yml')
     }
 
     protected boolean refreshJwtToken0(String refresh) {

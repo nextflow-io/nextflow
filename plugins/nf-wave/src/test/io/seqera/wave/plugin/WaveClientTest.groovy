@@ -18,7 +18,6 @@
 package io.seqera.wave.plugin
 
 import static java.nio.file.StandardOpenOption.*
-import static test.TestHelper.*
 
 import java.net.http.HttpRequest
 import java.nio.file.Files
@@ -571,33 +570,6 @@ class WaveClientTest extends Specification {
         assets.packagesSpec.channels == WaveClient.DEFAULT_CONDA_CHANNELS
     }
 
-    def 'should create asset with spack recipe' () {
-        given:
-        def session = Mock(Session) { getConfig() >> [:]}
-        and:
-        def task = Mock(TaskRun) {getConfig() >> [spack:"rseqc@3.0.1 'rbase@3.5'", arch:"amd64"] }
-        and:
-        def client = new WaveClient(session)
-
-        when:
-        def assets = client.resolveAssets(task, null, false)
-        then:
-        !assets.containerFile
-        !assets.moduleResources
-        !assets.containerImage
-        !assets.containerConfig
-        !assets.projectResources
-        and:
-        assets.packagesSpec.type == PackagesSpec.Type.SPACK
-        assets.packagesSpec.entries == null
-        and:
-        new String(assets.packagesSpec.environment.decodeBase64()) == '''\
-                spack:
-                  specs: [rseqc@3.0.1, rbase@3.5]
-                  concretizer: {unify: true, reuse: false}
-                '''.stripIndent(true)
-    }
-
     def 'should create asset with conda file' () {
         given:
         def folder = Files.createTempDirectory('test')
@@ -625,32 +597,6 @@ class WaveClientTest extends Specification {
         folder?.deleteDir()
     }
 
-    def 'should create asset with spack file' () {
-        given:
-        def folder = Files.createTempDirectory('test')
-        def spackFile = folder.resolve('spack.yaml'); spackFile.text = 'the-spack-recipe-here'
-        and:
-        def session = Mock(Session) { getConfig() >> [:]}
-        def task = Mock(TaskRun) {getConfig() >> [spack:spackFile.toString(), arch: 'amd64'] }
-        and:
-        def client = new WaveClient(session)
-
-        when:
-        def assets = client.resolveAssets(task, null, false)
-        then:
-        !assets.containerFile
-        !assets.moduleResources
-        !assets.containerImage
-        !assets.containerConfig
-        !assets.projectResources
-        and:
-        assets.packagesSpec.type == PackagesSpec.Type.SPACK
-        new String(assets.packagesSpec.environment.decodeBase64()) == 'the-spack-recipe-here'
-        !assets.packagesSpec.entries
-
-        cleanup:
-        folder?.deleteDir()
-    }
 
     // ==== singularity native build + conda ====
 
@@ -729,70 +675,6 @@ class WaveClientTest extends Specification {
         folder?.deleteDir()
     }
 
-    def 'should create assets with spack recipe for singularity' () {
-        given:
-        def session = Mock(Session) { getConfig() >> [wave:[build:[spack:[commands: ['cmd-foo','cmd-bar']]]]]}
-        and:
-        def task = Mock(TaskRun) {getConfig() >> [spack:"rseqc@3.0.1 'rbase@3.5'", arch:"amd64"] }
-        and:
-        def client = new WaveClient(session)
-
-        when:
-        def assets = client.resolveAssets(task, null, true)
-        then:
-        !assets.containerFile
-        !assets.moduleResources
-        !assets.containerImage
-        !assets.containerConfig
-        !assets.projectResources
-        and:
-        assets.packagesSpec.type == PackagesSpec.Type.SPACK
-        assets.packagesSpec.entries == null
-        assets.packagesSpec.spackOpts.commands == ['cmd-foo','cmd-bar']
-        decodeBase64(assets.packagesSpec.environment) == '''\
-                spack:
-                  specs: [rseqc@3.0.1, rbase@3.5]
-                  concretizer: {unify: true, reuse: false}
-                '''.stripIndent(true)
-    }
-
-    def 'should create asset with spack file for singularity' () {
-        given:
-        def folder = Files.createTempDirectory('test')
-        def spackFile = folder.resolve('spack.yml');
-        spackFile.text = '''\
-                spack:
-                  specs: [rseqc@3.0.1, rbase@3.5]
-                  concretizer: {unify: true, reuse: false}
-                '''.stripIndent(true)
-        and:
-        def session = Mock(Session) { getConfig() >> [wave:[build:[spack:[basePackages: 'nano@1.2.3']]]]}
-        def task = Mock(TaskRun) {getConfig() >> [spack:spackFile.toString()] }
-        and:
-        def client = new WaveClient(session)
-
-        when:
-        def assets = client.resolveAssets(task, null, true)
-        then:
-        assets.singularity
-        and:
-        !assets.containerFile
-        !assets.moduleResources
-        !assets.containerImage
-        !assets.containerConfig
-        !assets.projectResources
-        and:
-        assets.packagesSpec.type == PackagesSpec.Type.SPACK
-        assets.packagesSpec.spackOpts.basePackages == 'nano@1.2.3'
-        decodeBase64(assets.packagesSpec.environment) == '''\
-                spack:
-                  specs: [rseqc@3.0.1, rbase@3.5, nano@1.2.3]
-                  concretizer: {unify: true, reuse: false}
-                '''.stripIndent(true)
-
-        cleanup:
-        folder?.deleteDir()
-    }
 
     def 'should create assets with project resources' () {
         given:
@@ -901,24 +783,6 @@ class WaveClientTest extends Specification {
         e = thrown(IllegalArgumentException)
         e.message == "Process 'foo' declares both a 'container' directive and a module bundle dockerfile that conflict each other"
 
-        when:
-        client.checkConflicts([spack:'this', dockerfile:'that'], 'foo')
-        then:
-        e = thrown(IllegalArgumentException)
-        e.message == "Process 'foo' declares both a 'spack' directive and a module bundle dockerfile that conflict each other"
-
-        when:
-        client.checkConflicts([spack:'this', container:'that'], 'foo')
-        then:
-        e = thrown(IllegalArgumentException)
-        e.message == "Process 'foo' declares both 'container' and 'spack' directives that conflict each other"
-
-        when:
-        client.checkConflicts([conda:'this', spack:'that'], 'foo')
-        then:
-        e = thrown(IllegalArgumentException)
-        e.message == "Process 'foo' declares both 'spack' and 'conda' directives that conflict each other"
-
         // singularity file checks
         when:
         client.checkConflicts([conda:'this', singularityfile:'that'], 'foo')
@@ -931,12 +795,6 @@ class WaveClientTest extends Specification {
         then:
         e = thrown(IllegalArgumentException)
         e.message == "Process 'foo' declares both a 'container' directive and a module bundle singularityfile that conflict each other"
-
-        when:
-        client.checkConflicts([spack:'this', singularityfile:'that'], 'foo')
-        then:
-        e = thrown(IllegalArgumentException)
-        e.message == "Process 'foo' declares both a 'spack' directive and a module bundle singularityfile that conflict each other"
 
     }
 
