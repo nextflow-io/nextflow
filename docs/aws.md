@@ -412,7 +412,7 @@ process.container = 'job-definition://your-job-definition-name'
 
 Nextflow allows the use of multiple executors in the same workflow application. This feature enables the deployment of hybrid workloads in which some jobs are executed in the local computer or local computing cluster and some jobs are offloaded to AWS Batch.
 
-To enable this feature, use one or more `config-process-selectors` in your Nextflow configuration to apply the AWS Batch configuration to the subset of processes that you want to offload. For example:
+To enable this feature, use one or more {ref}`config-process-selectors` in your Nextflow configuration to apply the AWS Batch configuration to the subset of processes that you want to offload. For example:
 
 ```groovy
 process {
@@ -443,7 +443,9 @@ nextflow run <script or project name> -bucket-dir s3://my-bucket/some/path
 The AWS S3 path needs to contain at least one sub-directory (e.g. `s3://my-bucket/work` rather than `s3://my-bucket`).
 :::
 
-Note that when using hybrid workloads, Nextflow will automatically manage the transfer of input and output files between the local and cloud environments as needed.
+:::{note}
+Nextflow will automatically manage the transfer of input and output files between the local and cloud environments when using hybrid workloads.
+:::
 
 ### Volume mounts
 

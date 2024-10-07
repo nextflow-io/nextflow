@@ -400,7 +400,7 @@ For an exhaustive list of error codes, refer to the official Google Life Science
 
 Nextflow allows the use of multiple executors in the same workflow. This feature enables the deployment of hybrid workloads, in which some jobs are executed in the local computer or local computing cluster, and some jobs are offloaded to Google Cloud (either Google Batch or Google Life Sciences).
 
-To enable this feature, use one or more `config-process-selectors` in your Nextflow configuration file to apply the Google Cloud executor to the subset of processes that you want to offload. For example:
+To enable this feature, use one or more {ref}`config-process-selectors` in your Nextflow configuration file to apply the Google Cloud executor to the subset of processes that you want to offload. For example:
 
 ```groovy
 process {
@@ -427,7 +427,9 @@ nextflow run <script or project name> -bucket-dir gs://my-bucket/some/path
 The Google Storage path needs to contain at least one sub-directory (e.g. `gs://my-bucket/work` rather than `gs://my-bucket`).
 :::
 
-Note that when using hybrid workloads, Nextflow will automatically manage the transfer of input and output files between the local and cloud environments as needed.
+:::{note}
+Nextflow will automatically manage the transfer of input and output files between the local and cloud environments when using hybrid workloads.
+:::
 
 ### Limitations
 
