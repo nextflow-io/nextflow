@@ -242,4 +242,29 @@ class SraExplorerTest extends Specification {
         result == '1bc'
     }
 
+    def 'should use rate limiter' () {
+        given:
+        def searchUrl = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=sra&usehistory=y&retmode=json&api_key=123&term=xxx'
+        def result = new SraExplorer.SearchRecord()
+        result.count = 1
+        result.retmax = 1
+        result.retstart = 0
+        result.webenv = 'foo'
+        result.querykey ='bar'
+        result.term ='term'
+        def slurper = Spy(SraExplorer, constructorArgs: [null, [ rateLimit: '1sec']])
+        slurper.getConfigApiKey() >> '123'
+        slurper.setQuery('xxx')
+        slurper.makeSearch(_) >> result
+        slurper.makeDataRequest(_) >> [result: [uids:[]]]
+        when:
+        def init = new Date().getTime()
+        def target = slurper.apply()
+        def diff = new Date().getTime() - init
+        then:
+        // It should take about 1 secs
+        diff > 990
+        diff < 1100
+    }
+
 }

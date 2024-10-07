@@ -318,6 +318,9 @@ Available options:
 `protocol`
 : Allow choosing the protocol for the resulting remote URLs. Available choices: `ftp`, `http`, `https` (default: `ftp`).
 
+`rateLimit`
+: Determines the maximum rate of NCBI SRA request per time unit, for example `'10sec'` (10 request per second) or `'50/2min'` (50 requests every 2 minutes) (default: unlimited).
+
 (channel-interval)=
 
 ## interval

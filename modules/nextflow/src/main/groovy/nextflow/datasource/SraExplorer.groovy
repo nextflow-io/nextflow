@@ -16,6 +16,9 @@
 
 package nextflow.datasource
 
+import com.google.common.util.concurrent.RateLimiter
+import nextflow.util.RateLimiterHelper
+
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -67,6 +70,7 @@ class SraExplorer {
     private List<String> missing = new ArrayList<>()
     private Path cacheFolder
     private String protocol = 'ftp'
+    private RateLimiter requestRateLimit
 
     String apiKey
     boolean useCache = true
@@ -94,6 +98,10 @@ class SraExplorer {
             maxResults = opts.max as int
         if( opts.protocol )
             protocol = opts.protocol as String
+        if( opts.rateLimit ) {
+            def limit = opts.rateLimit as String
+            requestRateLimit = RateLimiterHelper.createRateLimit(limit)
+        }
     }
 
     DataflowWriteChannel apply() {
@@ -157,11 +165,12 @@ class SraExplorer {
     protected void query1(String query) {
 
         def url = getSearchUrl(query)
+        requestRateLimit?.acquire()
         def result = makeSearch(url)
         int index = result.retstart ?: 0
-
         while( index < result.count && emitCount<maxResults ) {
             url = getFetchUrl(result.querykey, result.webenv, index, entriesPerChunk)
+            requestRateLimit?.acquire()
             def data = makeDataRequest(url)
             if( data.error )
                 throw new IllegalArgumentException("Invalid request: $url -- Error: $data.error")

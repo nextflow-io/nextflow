@@ -16,6 +16,8 @@
 
 package nextflow.processor
 
+import nextflow.util.RateLimiterHelper
+
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -45,8 +47,6 @@ import static nextflow.util.SysHelper.dumpThreads
 @Slf4j
 @CompileStatic
 class TaskPollingMonitor implements TaskMonitor {
-
-    private static String RATE_FORMAT = ~/^(\d+\.?\d*)\s*([a-zA-Z]*)/
     
     /**
      * The current session object
@@ -331,52 +331,10 @@ class TaskPollingMonitor implements TaskMonitor {
     }
 
     protected RateLimiter createSubmitRateLimit() {
-        def limit = session.getExecConfigProp(name,'submitRateLimit',null) as String
-        if( !limit )
+        def limit = session.getExecConfigProp(name, 'submitRateLimit', null) as String
+        if (!limit)
             return null
-
-        def tokens = limit.tokenize('/')
-        if( tokens.size() == 2 ) {
-            /*
-             * the rate limit is provide num of task over a duration
-             * - eg. 100 / 5 min
-             * - ie. max 100 task per 5 minutes
-             */
-
-            final X = tokens[0].trim()
-            final Y = tokens[1].trim()
-
-            return newRateLimiter(X, Y, limit)
-        }
-
-        /*
-         * the rate limit is provide as a duration
-         * - eg. 200 min
-         * - ie. max 200 task per minutes
-         */
-
-        final matcher = (limit =~ RATE_FORMAT)
-        if( !matcher.matches() )
-            throw new IllegalArgumentException("Invalid submit-rate-limit value: $limit -- It must be provide using the following format `num request sec|min|hour` eg. 10 sec ie. max 10 tasks per second")
-
-        final num = matcher.group(1) ?: '_'
-        final unit = matcher.group(2) ?: 'sec'
-
-        return newRateLimiter(num, "1 $unit", limit)
-    }
-
-    private RateLimiter newRateLimiter( String X, String Y, String limit ) {
-        if( !X.isInteger() )
-            throw new IllegalArgumentException("Invalid submit-rate-limit value: $limit -- It must be provided using the following format `num request / duration` eg. 10/1s")
-
-        final num = Integer.parseInt(X)
-        final duration = Y.isInteger() ? Duration.of( Y+'sec' ) : ( Y[0].isInteger() ? Duration.of(Y) : Duration.of('1'+Y) )
-        long seconds = duration.toSeconds()
-        if( !seconds )
-            throw new IllegalArgumentException("Invalid submit-rate-limit value: $limit -- The interval must be at least 1 second")
-
-        log.debug "Creating submit rate limit of $num submissions per $seconds seconds"
-        return RateLimiter.create( num / seconds as double )
+        RateLimiterHelper.createRateLimit(limit)
     }
 
     private void awaitTasks() {
