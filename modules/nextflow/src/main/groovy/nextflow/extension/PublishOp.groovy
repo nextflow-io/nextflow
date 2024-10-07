@@ -180,7 +180,7 @@ class PublishOp {
 
     private Path normalizePath(Path path) {
         final sourceDir = getTaskDir(path)
-        return targetDir.resolve(sourceDir.relativize(path))
+        return targetDir.resolve(sourceDir.relativize(path)).normalize()
     }
 
     /**

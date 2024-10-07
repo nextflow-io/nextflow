@@ -317,7 +317,7 @@ class PublishDir {
             return
         }
 
-        final destination = resolveDestination(target)
+        final destination = resolveDestination(target).normalize()
 
         // apply tags
         if( this.tags!=null && destination instanceof TagAwareFile ) {
