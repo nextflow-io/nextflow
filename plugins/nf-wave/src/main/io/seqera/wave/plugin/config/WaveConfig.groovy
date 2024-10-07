@@ -45,7 +45,6 @@ class WaveConfig {
     final private Boolean bundleProjectResources
     final private String buildRepository
     final private String cacheRepository
-    final private ReportOpts reportOpts
     final private RetryOpts retryOpts
     final private HttpOpts httpClientOpts
     final private Boolean freezeMode
@@ -65,7 +64,6 @@ class WaveConfig {
         this.cacheRepository = opts.navigate('build.cacheRepository') as String
         this.strategy = parseStrategy(opts.strategy)
         this.bundleProjectResources = opts.bundleProjectResources
-        this.reportOpts = new ReportOpts(opts.report as Map ?: Map.of())
         this.retryOpts = retryOpts0(opts)
         this.httpClientOpts = new HttpOpts(opts.httpClient as Map ?: Map.of())
         this.buildMaxDuration = opts.navigate('build.maxDuration', '40m') as Duration
@@ -168,6 +166,4 @@ class WaveConfig {
         return tokensCacheMaxDuration 
     }
 
-    @Deprecated
-    ReportOpts reportOpts() { reportOpts }
 }
