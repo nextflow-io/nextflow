@@ -17,6 +17,7 @@
 
 package io.seqera.wave.plugin.config
 
+import io.seqera.wave.api.ScanMode
 import nextflow.util.Duration
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -245,6 +246,17 @@ class WaveConfigTest extends Specification {
         !new WaveConfig([:]).mirrorMode()
         and:
         new WaveConfig([mirror:true]).mirrorMode()
+    }
+
+    def 'should validate scan mode' () {
+        expect:
+        new WaveConfig(scan: [mode: MODE]).scanMode() == EXPECTED
+        where:
+        MODE        | EXPECTED
+        null        | null
+        'none'      | ScanMode.none
+        'async'     | ScanMode.async
+        'required'  | ScanMode.required
     }
 
 }

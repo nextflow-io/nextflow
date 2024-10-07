@@ -20,6 +20,8 @@ package io.seqera.wave.plugin.config
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
+import io.seqera.wave.api.ScanLevel
+import io.seqera.wave.api.ScanMode
 import io.seqera.wave.config.CondaOpts
 import io.seqera.wave.config.SpackOpts
 import nextflow.file.FileHelper
@@ -52,6 +54,8 @@ class WaveConfig {
     final private Boolean preserveFileTimestamp
     final private Duration buildMaxDuration
     final private Boolean mirrorMode
+    final private ScanMode scanMode
+    final private List<ScanLevel> scanLevels
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
@@ -71,6 +75,7 @@ class WaveConfig {
         this.retryOpts = retryOpts0(opts)
         this.httpClientOpts = new HttpOpts(opts.httpClient as Map ?: Map.of())
         this.buildMaxDuration = opts.navigate('build.maxDuration', '40m') as Duration
+        this.scanMode = opts.navigate('scan.mode') as ScanMode
         // some validation
         validateConfig()
     }
@@ -174,4 +179,8 @@ class WaveConfig {
 
     @Deprecated
     ReportOpts reportOpts() { reportOpts }
+
+    ScanMode scanMode() {
+        return scanMode
+    }
 }
