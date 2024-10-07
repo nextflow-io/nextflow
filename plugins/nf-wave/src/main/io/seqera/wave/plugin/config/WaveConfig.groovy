@@ -51,11 +51,13 @@ class WaveConfig {
     final private Boolean freezeMode
     final private Boolean preserveFileTimestamp
     final private Duration buildMaxDuration
+    final private Boolean mirrorMode
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
         this.endpoint = (opts.endpoint?.toString() ?: env.get('WAVE_API_ENDPOINT') ?: DEF_ENDPOINT)?.stripEnd('/')
-        this.freezeMode = opts.freeze as Boolean
+        this.freezeMode = opts.freeze
+        this.mirrorMode = opts.mirror
         this.preserveFileTimestamp = opts.preserveFileTimestamp as Boolean
         this.containerConfigUrl = parseConfig(opts, env)
         this.tokensCacheMaxDuration = opts.navigate('tokens.cache.maxDuration', '30m') as Duration
@@ -88,6 +90,8 @@ class WaveConfig {
     List<String> strategy() { this.strategy }
 
     boolean freezeMode() { return this.freezeMode }
+
+    boolean mirrorMode() { return this.mirrorMode }
 
     boolean preserveFileTimestamp() { return this.preserveFileTimestamp }
 
