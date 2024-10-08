@@ -535,7 +535,9 @@ The try block will be executed, and if an error is raised and matches the expect
 
 ## Expressions
 
-An expression is a syntactic entity that produces a value.
+An expression represents a value. A *literal* value is an expression whose value is known at compile-time, such as a number, string, or boolean. All other expressions must be evaluated at run-time.
+
+Every expression has a *type*, which may be resolved at compile-time or run-time.
 
 ### Variable
 
