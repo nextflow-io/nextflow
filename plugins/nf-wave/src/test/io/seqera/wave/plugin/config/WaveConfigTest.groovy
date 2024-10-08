@@ -17,6 +17,7 @@
 
 package io.seqera.wave.plugin.config
 
+import io.seqera.wave.api.ScanLevel
 import io.seqera.wave.api.ScanMode
 import nextflow.util.Duration
 import spock.lang.Specification
@@ -200,10 +201,10 @@ class WaveConfigTest extends Specification {
         given:
         def config = new WaveConfig([enabled: true])
         expect:
-        config.toString() == 'WaveConfig(enabled:true, endpoint:https://wave.seqera.io, containerConfigUrl:[], tokensCacheMaxDuration:30m, condaOpts:CondaOpts(mambaImage=mambaorg/micromamba:1.5.10-noble; basePackages=conda-forge::procps-ng, commands=null), spackOpts:SpackOpts(basePackages=null, commands=null), strategy:[container, dockerfile, conda, spack], bundleProjectResources:null, buildRepository:null, cacheRepository:null, retryOpts:RetryOpts(delay:450ms, maxDelay:1m 30s, maxAttempts:10, jitter:0.25), httpClientOpts:HttpOpts(), freezeMode:null, preserveFileTimestamp:null, buildMaxDuration:40m, mirrorMode:null)'
+        config.toString() == 'WaveConfig(enabled:true, endpoint:https://wave.seqera.io, containerConfigUrl:[], tokensCacheMaxDuration:30m, condaOpts:CondaOpts(mambaImage=mambaorg/micromamba:1.5.10-noble; basePackages=conda-forge::procps-ng, commands=null), spackOpts:SpackOpts(basePackages=null, commands=null), strategy:[container, dockerfile, conda, spack], bundleProjectResources:null, buildRepository:null, cacheRepository:null, retryOpts:RetryOpts(delay:450ms, maxDelay:1m 30s, maxAttempts:10, jitter:0.25), httpClientOpts:HttpOpts(), freezeMode:null, preserveFileTimestamp:null, buildMaxDuration:40m, mirrorMode:null, scanMode:null, scanLevels:null)'
     }
 
-    def 'should not allow invalid settinga' () {
+    def 'should not allow invalid setting' () {
         when:
         new WaveConfig(endpoint: 'foo')
         then:
@@ -248,6 +249,7 @@ class WaveConfigTest extends Specification {
         new WaveConfig([mirror:true]).mirrorMode()
     }
 
+    @Unroll
     def 'should validate scan mode' () {
         expect:
         new WaveConfig(scan: [mode: MODE]).scanMode() == EXPECTED
@@ -257,6 +259,21 @@ class WaveConfigTest extends Specification {
         'none'      | ScanMode.none
         'async'     | ScanMode.async
         'required'  | ScanMode.required
+    }
+
+    @Unroll
+    def 'should validate scan levels' () {
+        expect:
+        new WaveConfig(scan: [levels: LEVEL]).scanLevels() == EXPECTED
+        where:
+        LEVEL               | EXPECTED
+        null                | null
+        'low'               | List.of(ScanLevel.LOW)
+        'LOW'               | List.of(ScanLevel.LOW)
+        'low,high'          | List.of(ScanLevel.LOW,ScanLevel.HIGH)
+        'LOW, HIGH'         | List.of(ScanLevel.LOW,ScanLevel.HIGH)
+        ['medium','high']   | List.of(ScanLevel.MEDIUM,ScanLevel.HIGH)
+
     }
 
 }

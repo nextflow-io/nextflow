@@ -76,6 +76,7 @@ class WaveConfig {
         this.httpClientOpts = new HttpOpts(opts.httpClient as Map ?: Map.of())
         this.buildMaxDuration = opts.navigate('build.maxDuration', '40m') as Duration
         this.scanMode = opts.navigate('scan.mode') as ScanMode
+        this.scanLevels = parseScanLevels(opts.navigate('scan.levels'))
         // some validation
         validateConfig()
     }
@@ -182,5 +183,22 @@ class WaveConfig {
 
     ScanMode scanMode() {
         return scanMode
+    }
+
+    List<ScanLevel> scanLevels() {
+        return scanLevels
+    }
+
+    protected List<ScanLevel> parseScanLevels(value) {
+        if( !value )
+            return null
+        if( value instanceof CharSequence ) {
+            final str = value.toString()
+            value = str.tokenize(',').collect(it->it.trim())
+        }
+        if( value instanceof List ) {
+            return (value as List).collect(it-> ScanLevel.valueOf(it.toString().toUpperCase()))
+        }
+        throw new IllegalArgumentException("Invalid value for 'wave.scan.levels' setting - offending value: $value; type: ${value.getClass().getName()}")
     }
 }
