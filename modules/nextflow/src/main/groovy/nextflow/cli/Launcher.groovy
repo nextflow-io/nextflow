@@ -654,6 +654,7 @@ class Launcher {
      * @param args The program options as specified by the user on the CLI
      */
     static void main(String... args)  {
+        LoggerHelper.bootstrapLogger()
         final status = new Launcher() .command(args) .run()
         if( status )
             System.exit(status)

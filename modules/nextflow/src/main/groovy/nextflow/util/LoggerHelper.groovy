@@ -367,6 +367,36 @@ class LoggerHelper {
         INSTANCE.setQuiet0(quiet)
     }
 
+    /**
+     * Setup a minimal logger that redirect log events to stderr only used during app bootstrap
+     */
+    static void bootstrapLogger() {
+        LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+
+        // Reset the logger context (this clears any existing loggers)
+        context.reset();
+
+        // Create a console appender that writes to stderr
+        final consoleAppender = new ConsoleAppender<ILoggingEvent>();
+        consoleAppender.setContext(context);
+        consoleAppender.setTarget("System.err");
+
+        // Set a simple pattern for the log output
+        final encoder = new PatternLayoutEncoder();
+        encoder.setContext(context);
+        encoder.setPattern("%d{HH:mm:ss.SSS} %-5level - %msg%n");
+        encoder.start();
+
+        // Attach the encoder to the appender
+        consoleAppender.setEncoder(encoder);
+        consoleAppender.start();
+
+        // Get the root logger and set its level to DEBUG
+        Logger rootLogger = context.getLogger(Logger.ROOT_LOGGER_NAME);
+        rootLogger.addAppender(consoleAppender)
+        rootLogger.setLevel(Level.DEBUG)
+    }
+
     /*
      * Filters the logging event based on the level assigned to a specific 'package'
      */
