@@ -145,6 +145,9 @@ class WaveClient {
         this.httpClient = newHttpClient()
     }
 
+    /* only for testing */
+    protected WaveClient() { }
+
     protected HttpClient newHttpClient() {
         final builder = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
@@ -617,8 +620,11 @@ class WaveClient {
         if( !handle )
             throw new IllegalStateException("Unable to find any container with key: $key")
         final resp = handle.response
-        if( resp.requestId && resp.status != ContainerStatus.DONE )
-            return checkContainerCompletion(handle)
+        if( resp.requestId ) {
+            return resp.status != ContainerStatus.DONE
+                ? checkContainerCompletion(handle)
+                : true
+        }
         if( resp.buildId && !resp.cached )
             return checkBuildCompletion(handle)
         else

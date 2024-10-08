@@ -70,16 +70,16 @@ class SubmitContainerTokenResponse {
     /**
      * When the result is a mirror container. Version v1alpha2 as later.
      */
-    public Boolean mirror
+    Boolean mirror
 
     /**
      * The id of the security scan associated with this container
      */
-    public String scanId
+    String scanId
 
     /**
      * The status of the container for this request
      */
-    public ContainerStatus status
+    ContainerStatus status
 
 }

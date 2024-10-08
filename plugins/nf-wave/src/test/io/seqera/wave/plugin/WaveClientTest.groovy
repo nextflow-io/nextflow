@@ -27,6 +27,7 @@ import java.nio.file.attribute.FileTime
 import java.time.Duration
 import java.time.Instant
 
+import com.google.common.cache.Cache
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
@@ -1272,5 +1273,103 @@ class WaveClientTest extends Specification {
         then:
         def err = thrown(ProcessUnrecoverableException)
         err.message == "Wave provisioning for container 'my/container:latest' is exceeding max allowed duration (500ms) - check details here: https://wave.seqera.io/view/containers/123"
+    }
+
+    def 'should validate isContainerReady' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [wave: [build:[maxDuration: '500ms']]] }
+        def cache = Mock(Cache)
+        and:
+        def resp = Mock(SubmitContainerTokenResponse)
+        def handle = new WaveClient.Handle(resp,Instant.now())
+        def wave = Spy(new WaveClient(session:sess, cache: cache))
+        boolean ready
+
+        // container is READY
+        when:
+        ready = wave.isContainerReady('xyz')
+        then:
+        cache.getIfPresent('xyz') >> handle
+        and:
+        resp.requestId >> '12345'
+        resp.status >> ContainerStatus.DONE
+        and:
+        0 * wave.checkContainerCompletion(handle) >> null
+        0 * wave.checkBuildCompletion(_) >> null
+        and:
+        ready
+
+        // container is pending
+        when:
+        ready = wave.isContainerReady('xyz')
+        then:
+        cache.getIfPresent('xyz') >> handle
+        and:
+        resp.requestId >> '12345'
+        resp.status >> ContainerStatus.PENDING
+        and:
+        1 * wave.checkContainerCompletion(handle) >> false
+        0 * wave.checkBuildCompletion(_) >> null
+        and:
+        !ready
+
+        // container succeeded
+        when:
+        ready = wave.isContainerReady('xyz')
+        then:
+        cache.getIfPresent('xyz') >> handle
+        and:
+        resp.requestId >> '12345'
+        resp.status >> ContainerStatus.PENDING
+        and:
+        1 * wave.checkContainerCompletion(handle) >> true
+        0 * wave.checkBuildCompletion(_) >> null
+        and:
+        ready
+
+
+        // build is READY
+        when:
+        ready = wave.isContainerReady('xyz')
+        then:
+        cache.getIfPresent('xyz') >> handle
+        and:
+        resp.buildId >> 'bd-5678'
+        resp.cached >> false
+        and:
+        0 * wave.checkContainerCompletion(_) >> null
+        1 * wave.checkBuildCompletion(handle) >> true
+        and:
+        ready
+
+        // build is not ready
+        when:
+        ready = wave.isContainerReady('xyz')
+        then:
+        cache.getIfPresent('xyz') >> handle
+        and:
+        resp.requestId >> null
+        resp.buildId >> 'bd-5678'
+        resp.cached >> false
+        and:
+        0 * wave.checkContainerCompletion(_) >> null
+        1 * wave.checkBuildCompletion(handle) >> false
+        and:
+        !ready
+
+        // build is cached
+        when:
+        ready = wave.isContainerReady('xyz')
+        then:
+        cache.getIfPresent('xyz') >> handle
+        and:
+        resp.requestId >> null
+        resp.buildId >> 'bd-5678'
+        resp.cached >> true
+        and:
+        0 * wave.checkContainerCompletion(_) >> null
+        0 * wave.checkBuildCompletion(handle) >> null
+        and:
+        ready
     }
 }
