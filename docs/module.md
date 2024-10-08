@@ -18,7 +18,7 @@ For example:
 include { foo } from './some/module'
 
 workflow {
-    data = channel.fromPath('/some/data/*.txt')
+    data = Channel.fromPath('/some/data/*.txt')
     foo(data)
 }
 ```
@@ -63,7 +63,7 @@ A Nextflow script can include any number of modules, and an `include` statement 
 include { foo; bar } from './some/module'
 
 workflow {
-    data = channel.fromPath('/some/data/*.txt')
+    data = Channel.fromPath('/some/data/*.txt')
     foo(data)
     bar(data)
 }
