@@ -32,6 +32,8 @@ class ContainerInfo {
     final String source
     final String target
     final String hashKey
+    final String requestId
+    final String buildId // legacy
 
     boolean asBoolean() {
         source || target || hashKey

@@ -548,21 +548,17 @@ class WaveClient {
             log.trace "Wave fingerprint: $key; assets: $assets"
             // get from cache or submit a new request
             final resp = cache.get(key, { sendRequest(assets) } as Callable )
-            if( config.scanMode() ) {
-                // requires new container status api
-                if( resp.status!=null && resp.status != ContainerStatus.DONE ) {
-                    awaitContainerCompletion(resp.requestId, resp.targetImage)
-                }
+            // requires new container status api
+            if( resp.requestId && resp.status != ContainerStatus.DONE ) {
+                return new ContainerInfo(assets.containerImage, resp.targetImage, key, resp.requestId)
+            }
+            else if( resp.buildId && !resp.cached ) {
+                return new ContainerInfo(assets.containerImage, resp.targetImage, key, resp.requestId, resp.buildId)
             }
             else {
-                // use classic build status api
-                if( resp.buildId && !resp.cached && !ContainerInspectMode.active() ) {
-                    // await the image to be available when a new image is being built
-                    awaitBuildCompletion(resp.buildId, resp.targetImage)
-                }
+                // assemble the container info resp
+                return new ContainerInfo(assets.containerImage, resp.targetImage, key)
             }
-            // assemble the container info resp
-            return new ContainerInfo(assets.containerImage, resp.targetImage, key)
         }
         catch ( UncheckedExecutionException e ) {
             throw e.cause

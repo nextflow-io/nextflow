@@ -97,7 +97,7 @@ class WaveContainerResolver implements ContainerResolver {
             if( image.target.startsWith("oras://") )
                 return image
             // otherwise adapt it to singularity format using the target containerInfo to avoid the cache invalidation
-            return defaultResolver.resolveImage(task, image.target, image.hashKey)
+            return defaultResolver.resolveImage(task, image)
         }
         else
             throw new IllegalArgumentException("Wave does not support '$engine' container engine")

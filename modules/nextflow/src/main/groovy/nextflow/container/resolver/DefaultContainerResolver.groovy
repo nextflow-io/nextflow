@@ -49,10 +49,17 @@ class DefaultContainerResolver implements ContainerResolver {
         return handler.normalizeImageName(imageName)
     }
 
+    @Deprecated
     ContainerInfo resolveImage(TaskRun task, String imageName, String hashKey) {
         assert imageName
         final ret = resolveImage0(task, imageName)
         return new ContainerInfo(imageName, ret, hashKey)
+    }
+
+    ContainerInfo resolveImage(TaskRun task, ContainerInfo info) {
+        assert info
+        final ret = resolveImage0(task, info.target)
+        return new ContainerInfo(info.target, ret, info.hashKey, info.requestId, info.buildId)
     }
 
 }
