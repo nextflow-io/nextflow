@@ -242,6 +242,10 @@ abstract class TaskHandler {
         return !max ? true : task.processor.forksCount < max
     }
 
+    boolean isReady() {
+        task.isContainerReady()
+    }
+
     /**
      * Increment the number of current forked processes
      */

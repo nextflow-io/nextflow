@@ -1126,35 +1126,30 @@ class WaveClientTest extends Specification {
         100 .times { assert WaveClient.randomRange(0, 10) >= 0 }
     }
 
-    def 'should print info message' () {
+    def 'should report true on build completion' () {
         given:
         def sess = Mock(Session) {getConfig() >> [:] }
         and:
         def wave = Spy(new WaveClient(sess))
         def BUILD_ID = 'build-123'
         def PENDING = new BuildStatusResponse('123', BuildStatusResponse.Status.PENDING, Instant.now(), null, null)
-        def SUCCEEDED = new BuildStatusResponse('123', BuildStatusResponse.Status.COMPLETED, Instant.now(), Duration.ofMillis(1), true)
+        def COMPLETED = new BuildStatusResponse('123', BuildStatusResponse.Status.COMPLETED, Instant.now(), Duration.ofMillis(1), true)
+        and:
+        def response = new SubmitContainerTokenResponse(buildId: BUILD_ID, targetImage: 'my/container:latest')
 
         when:
-        wave.awaitBuildCompletion(BUILD_ID, 'wave.com/foo')
-
+        def done = wave.checkBuildCompletion(new WaveClient.Handle(response,Instant.now()))
         then:
         1 * wave.buildStatus(BUILD_ID) >> PENDING
         and:
-        wave.awaitSleep0(_) >> { sleep 50 }
-        and:
-        1 * wave.buildStatus(BUILD_ID) >> PENDING
-        and:
-        wave.awaitSleep0(_) >> { sleep 50 }
-        and:
-        1 * wave.buildStatus(BUILD_ID) >> SUCCEEDED
-        and:
-        wave.awaitSleep0(_) >> { sleep 50 }
-        and:
-        capture.toString().count('Awaiting provisioning for container') == 1
+        !done
 
+        when:
+        done = wave.checkBuildCompletion(new WaveClient.Handle(response,Instant.now()))
         then:
-        noExceptionThrown()
+        1 * wave.buildStatus(BUILD_ID) >> COMPLETED
+        and:
+        done
     }
 
     def 'should report an exception on build failure' () {
@@ -1165,43 +1160,117 @@ class WaveClientTest extends Specification {
         def BUILD_ID = 'build-123'
         def PENDING = new BuildStatusResponse('123', BuildStatusResponse.Status.PENDING, Instant.now(), null, null)
         def FAILED = new BuildStatusResponse('123', BuildStatusResponse.Status.COMPLETED, Instant.now(), Duration.ofMillis(1), false)
+        and:
+        def response = new SubmitContainerTokenResponse(buildId: BUILD_ID, targetImage: 'my/container:latest')
 
         when:
-        wave.awaitBuildCompletion(BUILD_ID, 'wave.com/foo')
-
+        def done = wave.checkBuildCompletion(new WaveClient.Handle(response,Instant.now()))
         then:
         1 * wave.buildStatus(BUILD_ID) >> PENDING
         and:
-        wave.awaitSleep0(_) >> { sleep 50 }
-        and:
+        !done
+
+        when:
+        wave.checkBuildCompletion(new WaveClient.Handle(response,Instant.now()))
+        then:
         1 * wave.buildStatus(BUILD_ID) >> FAILED
         and:
-        wave.awaitSleep0(_) >> { sleep 50 }
-
-        then:
         def err = thrown(ProcessUnrecoverableException)
-        err.message == "Wave provisioning for container 'wave.com/foo' did not complete successfully - check details here: https://wave.seqera.io/view/builds/build-123"
+        err.message == "Wave provisioning for container 'my/container:latest' did not complete successfully - check details here: https://wave.seqera.io/view/builds/build-123"
     }
 
-    def 'should fail on timeout' () {
+    def 'should fail on build timeout' () {
         given:
         def sess = Mock(Session) {getConfig() >> [wave: [build:[maxDuration: '500ms']]] }
         and:
         def wave = Spy(new WaveClient(sess))
         def BUILD_ID = 'build-123'
         def PENDING = new BuildStatusResponse('123', BuildStatusResponse.Status.PENDING, Instant.now(), null, null)
+        and:
+        def response = new SubmitContainerTokenResponse(buildId: BUILD_ID, targetImage: 'my/container:latest')
 
         when:
-        wave.awaitBuildCompletion(BUILD_ID, 'wave.com/foo')
-
+        wave.checkBuildCompletion(new WaveClient.Handle(response,Instant.now().minusSeconds(10)))
         then:
-        wave.buildStatus(BUILD_ID) >> PENDING
-        and:
-        wave.awaitSleep0(_) >> { sleep 50 }
-        and:
-        sleep 500
+        1 * wave.buildStatus(BUILD_ID) >> PENDING
+        
         then:
         def err = thrown(ProcessUnrecoverableException)
-        err.message == "Wave provisioning for container 'wave.com/foo' is exceeding max allowed duration (500ms) - check details here: https://wave.seqera.io/view/builds/build-123"
+        err.message == "Wave provisioning for container 'my/container:latest' is exceeding max allowed duration (500ms) - check details here: https://wave.seqera.io/view/builds/build-123"
+    }
+
+    // == new api
+
+    def 'should report true on container completion' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [:] }
+        and:
+        def wave = Spy(new WaveClient(sess))
+        def ID = '123'
+        def PENDING = new ContainerStatusResponse('123', ContainerStatus.PENDING, 'bd-123', null, 'sc-123', [:], null, null, null, Instant.now(), null )
+        def COMPLETED = new ContainerStatusResponse('123', ContainerStatus.DONE, 'bd-123', null, 'sc-123', [:], true, null, null, Instant.now(), Duration.ofMinutes(1))
+        and:
+        def response = new SubmitContainerTokenResponse(requestId: ID, buildId: 'bd-123', targetImage: 'my/container:latest')
+
+        when:
+        def done = wave.checkContainerCompletion(new WaveClient.Handle(response,Instant.now()))
+        then:
+        1 * wave.containerStatus(ID) >> PENDING
+        and:
+        !done
+
+        when:
+        done = wave.checkContainerCompletion(new WaveClient.Handle(response,Instant.now()))
+        then:
+        1 * wave.containerStatus(ID) >> COMPLETED
+        and:
+        done
+    }
+
+    def 'should report an exception on build failure' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [:] }
+        and:
+        def wave = Spy(new WaveClient(sess))
+        def ID = '123'
+        def PENDING = new ContainerStatusResponse('123', ContainerStatus.PENDING, 'bd-123', null, 'sc-123', [:], null, null, null, Instant.now(), null )
+        def FAILED = new ContainerStatusResponse('123', ContainerStatus.DONE, 'bd-123', null, 'sc-123', [:], false, null, 'https://wave.seqera.io/view/builds/build-123', Instant.now(), Duration.ofMinutes(1))
+        and:
+        def response = new SubmitContainerTokenResponse(requestId: ID, buildId: 'bd-123', targetImage: 'my/container:latest')
+
+        when:
+        def done = wave.checkContainerCompletion(new WaveClient.Handle(response,Instant.now()))
+        then:
+        1 * wave.containerStatus(ID) >> PENDING
+        and:
+        !done
+
+        when:
+        wave.checkContainerCompletion(new WaveClient.Handle(response,Instant.now()))
+        then:
+        1 * wave.containerStatus(ID) >> FAILED
+        and:
+        def err = thrown(ProcessUnrecoverableException)
+        err.message == "Wave provisioning for container 'my/container:latest' did not complete successfully\n- Find out more here: https://wave.seqera.io/view/builds/build-123"
+    }
+
+    def 'should fail on build timeout' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [wave: [build:[maxDuration: '500ms']]] }
+        and:
+        def wave = Spy(new WaveClient(sess))
+        def ID = '123'
+        def PENDING = new ContainerStatusResponse('123', ContainerStatus.PENDING, 'bd-123', null, 'sc-123', [:], null, null, null, Instant.now(), null )
+        and:
+        def response = new SubmitContainerTokenResponse(requestId: ID, buildId: 'bd-123', targetImage: 'my/container:latest')
+
+        when:
+        wave.checkContainerCompletion(new WaveClient.Handle(response,Instant.now().minusSeconds(10)))
+        then:
+        1 * wave.containerStatus(ID) >> PENDING
+
+        then:
+        def err = thrown(ProcessUnrecoverableException)
+        err.message == "Wave provisioning for container 'my/container:latest' is exceeding max allowed duration (500ms) - check details here: https://wave.seqera.io/view/containers/123"
     }
 }

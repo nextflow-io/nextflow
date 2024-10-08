@@ -326,6 +326,11 @@ class TaskRun implements Cloneable {
      */
     volatile ErrorStrategy errorAction
 
+    /**
+     * Unique key for the container used by this task
+     */
+    volatile String containerKey
+
     TaskConfig config
 
     TaskContext context
@@ -683,6 +688,9 @@ class TaskRun implements Cloneable {
 
         final res = ContainerResolverProvider.load()
         final info = res.resolveImage(this, configImage as String)
+        // track the key of the container used
+        this.containerKey = info.hashKey
+        // return the info
         return info
     }
 
@@ -697,6 +705,12 @@ class TaskRun implements Cloneable {
     String getContainerFingerprint() {
         final info = containerInfo()
         return info?.hashKey
+    }
+
+    boolean isContainerReady() {
+       return containerKey
+            ? ContainerResolverProvider.load().isContainerReady(containerKey)
+            : true
     }
 
     ResourcesBundle getModuleBundle() {
