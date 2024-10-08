@@ -32,7 +32,7 @@ import nextflow.util.Duration
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@ToString(includeNames = true, includePackage = false, includeFields = true, excludes = 'reportOpts')
+@ToString(includeNames = true, includePackage = false, includeFields = true)
 @CompileStatic
 class WaveConfig {
     final private static String DEF_ENDPOINT = 'https://wave.seqera.io'
@@ -47,7 +47,6 @@ class WaveConfig {
     final private Boolean bundleProjectResources
     final private String buildRepository
     final private String cacheRepository
-    final private ReportOpts reportOpts
     final private RetryOpts retryOpts
     final private HttpOpts httpClientOpts
     final private Boolean freezeMode
@@ -71,7 +70,6 @@ class WaveConfig {
         this.cacheRepository = opts.navigate('build.cacheRepository') as String
         this.strategy = parseStrategy(opts.strategy)
         this.bundleProjectResources = opts.bundleProjectResources
-        this.reportOpts = new ReportOpts(opts.report as Map ?: Map.of())
         this.retryOpts = retryOpts0(opts)
         this.httpClientOpts = new HttpOpts(opts.httpClient as Map ?: Map.of())
         this.buildMaxDuration = opts.navigate('build.maxDuration', '40m') as Duration
@@ -177,9 +175,6 @@ class WaveConfig {
     Duration tokensCacheMaxDuration() { 
         return tokensCacheMaxDuration 
     }
-
-    @Deprecated
-    ReportOpts reportOpts() { reportOpts }
 
     ScanMode scanMode() {
         return scanMode
