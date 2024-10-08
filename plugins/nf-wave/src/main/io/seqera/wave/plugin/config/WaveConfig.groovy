@@ -30,7 +30,7 @@ import nextflow.util.Duration
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@ToString(includeNames = true, includePackage = false, includeFields = true, excludes = 'reportOpts')
+@ToString(includeNames = true, includePackage = false, includeFields = true)
 @CompileStatic
 class WaveConfig {
     final private static String DEF_ENDPOINT = 'https://wave.seqera.io'
