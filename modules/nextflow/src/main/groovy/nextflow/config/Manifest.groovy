@@ -125,7 +125,7 @@ class Manifest {
         target.icon
     }
 
-    String getOrganisation() {
+    String getOrganization() {
         target.organization
     }
 
@@ -149,7 +149,7 @@ class Manifest {
         result.doi = getDoi()
         result.docsUrl = getDocsUrl()
         result.icon = getIcon()
-        result.organization = getOrganisation()
+        result.organization = getOrganization()
         result.license = getLicense()
         return result
     }
