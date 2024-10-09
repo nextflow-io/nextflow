@@ -229,8 +229,33 @@ class WaveClientTest extends Specification {
         !req.condaFile
         !req.spackFile
         !req.containerConfig.layers
+        !req.mirror
         and:
         req.freeze
+        and:
+        req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
+        req.timestamp instanceof String
+    }
+
+    def 'should create request object with mirror mode' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [wave:[mirror:true, build: [repository: 'quay.io']]]}
+        def IMAGE =  'foo:latest'
+        def wave = new WaveClient(session)
+
+        when:
+        def req = wave.makeRequest(WaveAssets.fromImage(IMAGE))
+        then:
+        req.containerImage == IMAGE
+        !req.containerPlatform
+        !req.containerFile
+        !req.condaFile
+        !req.spackFile
+        !req.containerConfig.layers
+        !req.freeze
+        and:
+        req.mirror
+        req.buildRepository == 'quay.io'
         and:
         req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
         req.timestamp instanceof String

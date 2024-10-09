@@ -192,7 +192,16 @@ class WaveClient {
 
         if( assets.containerFile && assets.packagesSpec )
             throw new IllegalArgumentException("Wave containerFile file and packages spec cannot be specified in the same request")
-        
+
+        if( config.mirrorMode() && config.freezeMode() )
+            throw new IllegalArgumentException("Wave configuration setting 'wave.mirror' and 'wave.freeze' conflicts each other")
+
+        if( config.mirrorMode() && !config.buildRepository() )
+            throw new IllegalArgumentException("Wave configuration setting 'wave.mirror' requires the use of 'wave.build.repository' to define the target registry")
+
+        if( config.mirrorMode() && !assets.containerImage )
+            throw new IllegalArgumentException("Invalid container mirror operation - missing source container")
+
         return new SubmitContainerTokenRequest(
                 containerImage: assets.containerImage,
                 containerPlatform: assets.containerPlatform,
@@ -206,6 +215,7 @@ class WaveClient {
                 freeze: config.freezeMode(),
                 format: assets.singularity ? 'sif' : null,
                 dryRun: ContainerInspectMode.active(),
+                mirror: config.mirrorMode(),
                 scanMode: config.scanMode(),
                 scanLevels: config.scanLevels()
         )
@@ -232,6 +242,7 @@ class WaveClient {
                 workflowId: tower.workflowId,
                 freeze: config.freezeMode(),
                 dryRun: ContainerInspectMode.active(),
+                mirror: config.mirrorMode(),
                 scanMode: config.scanMode(),
                 scanLevels: config.scanLevels()
         )

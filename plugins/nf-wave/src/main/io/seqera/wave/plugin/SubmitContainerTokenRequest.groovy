@@ -145,9 +145,9 @@ class SubmitContainerTokenRequest {
     ImageNameStrategy nameStrategy;
 
     /**
-     * The target registry to push the container when using the "mirror" mode
+     * Whenever use container "mirror" mode
      */
-    String mirrorRegistry;
+    public boolean mirror;
 
     /**
      * The request security scan mode
