@@ -55,6 +55,8 @@ import org.eclipse.jgit.merge.MergeStrategy
 @Slf4j
 @CompileStatic
 class AssetManager {
+    private static final String REMOTE_REFS_ROOT = "refs/remotes/origin/"
+    private static final String REMOTE_DEFAULT_HEAD = REMOTE_REFS_ROOT + "HEAD"
 
     /**
      * The folder all pipelines scripts are installed
@@ -422,7 +424,16 @@ class AssetManager {
     }
 
     String getDefaultBranch() {
-        getManifest().getDefaultBranch()
+        // if specified in manifest, that takes priority
+        // otherwise look for a symbolic ref (refs/remotes/origin/HEAD)
+        return getManifest().getDefaultBranch()
+                ?: getRemoteBranch()
+                ?: DEFAULT_BRANCH
+    }
+
+    protected String getRemoteBranch() {
+        Ref remoteHead = git.getRepository().findRef(REMOTE_DEFAULT_HEAD)
+        return remoteHead?.getTarget()?.getName()?.substring(REMOTE_REFS_ROOT.length())
     }
 
     @Memoized
@@ -582,7 +593,7 @@ class AssetManager {
             final cloneURL = getGitRepositoryUrl()
             log.debug "Pulling $project -- Using remote clone url: ${cloneURL}"
 
-            // clone it
+            // clone it, but don't specify a revision - jgit will checkout the default branch
             def clone = Git.cloneRepository()
             if( provider.hasCredentials() )
                 clone.setCredentialsProvider( provider.getGitCredentials() )
@@ -595,9 +606,25 @@ class AssetManager {
                 clone.setDepth(deep)
             clone.call()
 
+            // git cli would automatically create a 'refs/remotes/origin/HEAD' symbolic ref pointing at the remote's
+            // default branch. jgit doesn't do this, but since it automatically checked out the default branch on clone
+            // we can create the symbolic ref ourselves using the current head
+            def head = git.getRepository().findRef(Constants.HEAD)
+            if( head ) {
+                def headName = head.isSymbolic()
+                    ? Repository.shortenRefName(head.getTarget().getName())
+                    : head.getName()
+
+                git.repository.getRefDatabase()
+                    .newUpdate(REMOTE_DEFAULT_HEAD, true)
+                    .link(REMOTE_REFS_ROOT + headName)
+            } else {
+                log.debug "Unable to determine default branch of repo ${cloneURL}, symbolic ref not created"
+            }
+
+            // now the default branch is recorded in the repo, explicitly checkout the revision (if specified).
+            // this also allows 'revision' to be a SHA commit id, which isn't supported by the clone command
             if( revision ) {
-                // use an explicit checkout command *after* the clone instead of cloning a specific branch
-                // because the clone command does not allow the use of SHA commit id (only branch and tag names)
                 try { git.checkout() .setName(revision) .call() }
                 catch ( RefNotFoundException e ) { checkoutRemoteBranch(revision) }
             }
@@ -729,6 +756,9 @@ class AssetManager {
         }
     }
 
+    static boolean isRemoteBranch(Ref ref) {
+        return ref.name.startsWith(REMOTE_REFS_ROOT) && ref.name != REMOTE_DEFAULT_HEAD
+    }
 
     /**
      * @return A list of existing branches and tags names. For example
@@ -750,7 +780,7 @@ class AssetManager {
         def master = getDefaultBranch()
 
         List<String> branches = getBranchList()
-            .findAll { it.name.startsWith('refs/heads/') || it.name.startsWith('refs/remotes/origin/') }
+            .findAll { it.name.startsWith('refs/heads/') || isRemoteBranch(it) }
             .unique { shortenRefName(it.name) }
             .collect { Ref it -> refToString(it,current,master,false,level) }
 
@@ -785,7 +815,7 @@ class AssetManager {
 
         Map<String, Ref> remote = checkForUpdates ? git.lsRemote().callAsMap() : null
         getBranchList()
-                .findAll { it.name.startsWith('refs/heads/') || it.name.startsWith('refs/remotes/origin/') }
+                .findAll { it.name.startsWith('refs/heads/') || isRemoteBranch(it) }
                 .unique { shortenRefName(it.name) }
                 .each { Ref it -> branches << refToMap(it,remote)  }
 
@@ -882,7 +912,7 @@ class AssetManager {
 
         def remote = git.lsRemote().callAsMap()
         List<String> branches = getBranchList()
-                .findAll { it.name.startsWith('refs/heads/') || it.name.startsWith('refs/remotes/origin/') }
+                .findAll { it.name.startsWith('refs/heads/') || isRemoteBranch(it) }
                 .unique { shortenRefName(it.name) }
                 .findAll { Ref ref -> hasRemoteChange(ref,remote) }
                 .collect { Ref ref -> formatUpdate(remote.get(ref.name),level) }
