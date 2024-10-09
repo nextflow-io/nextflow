@@ -987,6 +987,9 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Add the specified variable to execution environment.
 
 `-entry`
+: :::{deprecated} 24.10.0
+  Use params in the entry workflow to call different workflows from the command line.
+  :::
 : Entry workflow to be executed.
 
 `-h, -help`

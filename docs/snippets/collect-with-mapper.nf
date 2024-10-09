@@ -1,3 +1,3 @@
 Channel.of( 'hello', 'ciao', 'bonjour' )
-    .collect { it.length() }
+    .collect { v -> v.length() }
     .view()
