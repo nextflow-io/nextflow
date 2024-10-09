@@ -64,6 +64,10 @@ class NF {
         NextflowMeta.instance.isStrictModeEnabled()
     }
 
+    static boolean isModuleBinariesEnabled() {
+        NextflowMeta.instance.isModuleBinariesEnabled()
+    }
+
     static boolean isOutputDefinitionEnabled() {
         NextflowMeta.instance.preview.output
     }
