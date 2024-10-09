@@ -559,7 +559,7 @@ class BashWrapperBuilderTest extends Specification {
         binding.unstage_outputs == '''\
                 IFS=$'\\n'
                 for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
-                    nxf_fs_copy "$name" /work/dir || true
+                    nxf_fs_copy "$name" /work/dir
                 done
                 unset IFS
                 '''.stripIndent().rightTrim()
@@ -576,7 +576,7 @@ class BashWrapperBuilderTest extends Specification {
         binding.unstage_outputs == '''\
                 IFS=$'\\n'
                 for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
-                    nxf_fs_move "$name" /another/dir || true
+                    nxf_fs_move "$name" /another/dir
                 done
                 unset IFS
                 '''.stripIndent().rightTrim()
@@ -1311,12 +1311,14 @@ class BashWrapperBuilderTest extends Specification {
         then:
         builder.getStageCommand() == 'nxf_stage'
         builder.getUnstageCommand() == 'nxf_unstage'
+        builder.getUnstageControlsCommand() == 'nxf_unstage_std_files'
 
         when:
         def binding = builder.makeBinding()
         then:
         binding.stage_cmd == 'nxf_stage'
         binding.unstage_cmd == 'nxf_unstage'
+        binding.unstage_controls_cmd == 'nxf_unstage_std_files'
         
     }
 
