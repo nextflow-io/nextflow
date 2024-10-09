@@ -425,13 +425,15 @@ class AssetManager {
 
     String getDefaultBranch() {
         // if specified in manifest, that takes priority
-        String branch = getManifest().getDefaultBranch()
-        if( !branch ) {
-            // otherwise look for a symbolic ref (refs/remotes/origin/HEAD)
-            Ref remoteHead = git.getRepository().findRef(REMOTE_DEFAULT_HEAD)
-            branch = remoteHead?.getTarget()?.getName()?.substring(REMOTE_REFS_ROOT.length())
-        }
-        return branch ?: DEFAULT_BRANCH
+        // otherwise look for a symbolic ref (refs/remotes/origin/HEAD)
+        return getManifest().getDefaultBranch()
+                ?: getRemoteBranch()
+                ?: DEFAULT_BRANCH
+    }
+
+    protected String getRemoteBranch() {
+        Ref remoteHead = git.getRepository().findRef(REMOTE_DEFAULT_HEAD)
+        return remoteHead?.getTarget()?.getName()?.substring(REMOTE_REFS_ROOT.length())
     }
 
     @Memoized
