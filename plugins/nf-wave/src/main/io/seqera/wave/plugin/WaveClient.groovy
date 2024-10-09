@@ -584,8 +584,9 @@ class WaveClient {
             final msg = "Wave provisioning for container '${containerImage}' is exceeding max allowed duration (${config.buildMaxDuration()}) - check details here: ${endpoint}/view/containers/${requestId}"
             throw new ProcessUnrecoverableException(msg)
         }
-        // report a log info first 10 secs, then every 2 mins
-        if( ((handle.iteration++)-5) % 120 == 0 ) {
+        // this is expected to be invoked ~ every seconds, therefore
+        // print an info message after 10 seconds or every 200 seconds
+        if( ((handle.iteration++)-10) % 200 == 0 ) {
             log.info "Awaiting container provisioning: $containerImage"
         }
         return false
@@ -608,8 +609,9 @@ class WaveClient {
             final msg = "Wave provisioning for container '${containerImage}' is exceeding max allowed duration (${config.buildMaxDuration()}) - check details here: ${endpoint}/view/builds/${buildId}"
             throw new ProcessUnrecoverableException(msg)
         }
-        // report a log info first 10 secs, then every 2 mins
-        if( ((handle.iteration++)-5) % 120 == 0 ) {
+        // this is expected to be invoked ~ every seconds, therefore
+        // print an info message after 10 seconds or every 200 seconds
+        if( ((handle.iteration++)-10) % 200 == 0 ) {
             log.info "Awaiting container provisioning: $containerImage"
         }
         return false
