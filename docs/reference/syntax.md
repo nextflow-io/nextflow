@@ -73,24 +73,13 @@ nextflow.preview.topic = true
 
 An include declaration consists of an *include source* and one or more *include clauses*:
 
-The include source should be a string literal and should refer to either a local path (e.g. `./module.nf`) or a plugin (e.g. `plugin/nf-hello`):
-
 ```groovy
-include { foo } from './some/module'
-```
-
-Each include clause should specify a name, and may also specify an *alias*:
-
-```groovy
-include { bar as baz } from './some/module'
-```
-
-Include clauses may include multiple names:
-
-```groovy
-// together
 include { foo ; bar as baz } from './some/module'
 ```
+
+The include source should be a string literal and should refer to either a local path (e.g. `./module.nf`) or a plugin (e.g. `plugin/nf-hello`).
+
+Each include clause should specify a name, and may also specify an *alias*. In the example above, `bar` is included under the alias `baz`.
 
 Include clauses can be separated by newlines or semi-colons, or they can be specified as separate includes:
 
