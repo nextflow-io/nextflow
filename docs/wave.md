@@ -145,6 +145,67 @@ The first repository is used to store the built container images. The second one
 The repository access keys must be provided as Seqera Platform credentials (see
 [Authenticate private repositories](#authenticate-private-repositories) above).
 
+### Mirroring containers
+
+Wave allows mirroring i.e. copying containers used by your pipeline into a container registry of your choice, so that
+containers are pulled by the pipeline from the target registry instead of the original registry.
+
+This is useful to create on-demand cache of containers images that are co-located in the same region where the pipeline
+is executed, and therefore optimising cost and network efficiency.
+
+To enable this capability include those settings in your Nextflow configuration:
+
+```groovy
+wave.enabled = true
+wave.mirror = true
+wave.build.repository = '<YOUR REGISTRY>'
+tower.accessToken = '<YOUR ACCESS TOKEN>'
+```
+
+In the above snippet replace `<YOUR REGISTRY>` with a container registry of your choice e.g. `quay.io` (no prefix or suffix is needed)
+The container will be copied with the same name, tag and checksum in the specified registry. For example, if the source
+container is `quay.io/biocontainers/bwa:0.7.13--1` and the build repository setting is `foo.com`, the resulting container
+name will be `foo.com/biocontainers/bwa:0.7.13--1`.
+
+:::{tip}
+When using a path prefix in target registry name, it will be pre-pended to the resulting container name. For example
+having `quay.io/biocontainers/bwa:0.7.13--1` as source container and `foo.com/bar` as build repository, the resulting
+container will be named `foo.com/bar/biocontainers/bwa:0.7.13--1`.
+:::
+
+The credentials to allow the push of  containers in the target repository needs to be provided via Seqera Platform
+credentials manager, whose account is specified in the `tower.accessToken` in the above configuration.
+
+### Container security scanning
+
+Wave allows scanning containers used in your pipelines for security vulnerabilities, and report an execution error
+when one or more security issues are found.
+
+To enable this capability adds the following settings in your Nextflow configuration file:
+
+```groovy
+wave.enabled = true
+wave.scan.mode = 'required'
+tower.accessToken = '<YOUR ACCESS TOKEN>'
+```
+
+When using these setting will only allows the use of the container in your Nextflow pipeline only if has no security
+vulnerabilities. You can define the level of accepted vulnerabilities by using the `wave.scan.levels`. For example:
+
+```
+wave.scan.levels = 'low,medium'
+```
+
+The above setting will allow the use of containers having vulnerabilities with *low* and *medium*
+levels [common vulnerabilities scoring system](https://en.wikipedia.org/wiki/Common_Vulnerability_Scoring_System).
+Accepted values are `low`, `medium`, `high` and `critical`.
+
+:::{note}
+Wave security scanning applies to any container used in your pipeline, irrespective it was built by Wave or accessed
+through it. The container scan automatically expires after one week, if containers is accessed again after 7 days or
+more the security scan is executed one more time.
+:::
+
 ### Run pipelines using Fusion file system
 
 Wave containers allows you to run your containerised workflow with the {ref}`fusion-page`.
