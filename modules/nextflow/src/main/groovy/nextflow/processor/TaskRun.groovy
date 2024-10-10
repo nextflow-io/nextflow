@@ -23,12 +23,14 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Function
 
 import com.google.common.hash.HashCode
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.conda.CondaCache
 import nextflow.container.ContainerConfig
 import nextflow.container.resolver.ContainerInfo
+import nextflow.container.resolver.ContainerResolver
 import nextflow.container.resolver.ContainerResolverProvider
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessTemplateException
@@ -676,6 +678,11 @@ class TaskRun implements Cloneable {
             }})
     }
 
+    @Memoized
+    private ContainerResolver containerResolver() {
+        ContainerResolverProvider.load()
+    }
+
     private ContainerInfo containerInfo0() {
         // fetch the container image from the config
         def configImage = config.getContainer()
@@ -686,8 +693,7 @@ class TaskRun implements Cloneable {
         if( !configImage )
             configImage = null
 
-        final res = ContainerResolverProvider.load()
-        final info = res.resolveImage(this, configImage as String)
+        final info = containerResolver().resolveImage(this, configImage as String)
         // track the key of the container used
         this.containerKey = info.hashKey
         // return the info
@@ -709,7 +715,7 @@ class TaskRun implements Cloneable {
 
     boolean isContainerReady() {
        return containerKey
-            ? ContainerResolverProvider.load().isContainerReady(containerKey)
+            ? containerResolver().isContainerReady(containerKey)
             : true
     }
 
