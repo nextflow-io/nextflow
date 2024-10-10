@@ -95,7 +95,7 @@ class GoogleBatchExecutorTest extends Specification {
     }
 
     @Unroll
-    def 'should get array task id' () {
+    def 'should get array work dir' () {
         given:
         def executor = Spy(GoogleBatchExecutor) {
             isFusionEnabled()>>FUSION
