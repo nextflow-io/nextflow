@@ -156,7 +156,7 @@ class SubmitContainerTokenRequest {
 
     /**
      * Define the allows security vulnerabilities in the container request.
-     * Emtpy or null means no vulnerabilities are allowed.
+     * Empty or null means no vulnerabilities are allowed.
      */
     List<ScanLevel> scanLevels
 
