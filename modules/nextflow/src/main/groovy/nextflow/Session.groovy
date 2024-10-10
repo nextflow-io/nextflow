@@ -39,6 +39,7 @@ import nextflow.conda.CondaConfig
 import nextflow.config.Manifest
 import nextflow.container.ContainerConfig
 import nextflow.dag.DAG
+import nextflow.dag.TaskDAG
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortSignalException
 import nextflow.exception.IllegalConfigException
@@ -217,6 +218,8 @@ class Session implements ISession {
 
     private DAG dag
 
+    private TaskDAG taskDag
+
     private CacheDB cache
 
     private Barrier processesBarrier = new Barrier()
@@ -374,6 +377,7 @@ class Session implements ISession {
 
         // -- DAG object
         this.dag = new DAG()
+        this.taskDag = new TaskDAG()
 
         // -- init work dir
         this.workDir = ((config.workDir ?: 'work') as Path).complete()
@@ -846,6 +850,8 @@ class Session implements ISession {
 
     DAG getDag() { this.dag }
 
+    TaskDAG getTaskDag() { this.taskDag }
+
     ExecutorService getExecService() { execService }
 
     /**
@@ -1018,6 +1024,8 @@ class Session implements ISession {
     void notifyTaskSubmit( TaskHandler handler ) {
         final task = handler.task
         log.info "[${task.hashLog}] ${task.runType.message} > ${task.name}"
+        // -- update task graph
+        taskDag.addTask(task)
         // -- save a record in the cache index
         cache.putIndexAsync(handler)
 
@@ -1055,8 +1063,12 @@ class Session implements ISession {
      * @param handler
      */
     void notifyTaskComplete( TaskHandler handler ) {
+        // update task graph
+        taskDag.addTaskOutputs(handler.task)
+
         // save the completed task in the cache DB
         final trace = handler.safeTraceRecord()
+        taskDag.saveToRecord(handler.task, trace)
         cache.putTaskAsync(handler, trace)
 
         // set the pipeline to return non-exit code if specified
@@ -1078,6 +1090,10 @@ class Session implements ISession {
     }
 
     void notifyTaskCached( TaskHandler handler ) {
+        // update task graph
+        taskDag.addTask(handler.task)
+        taskDag.addTaskOutputs(handler.task)
+
         final trace = handler.getTraceRecord()
         // save a record in the cache index only the when the trace record is available
         // otherwise it means that the event is trigger by a `stored dir` driven task
