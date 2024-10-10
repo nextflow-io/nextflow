@@ -191,7 +191,7 @@ class TaskPollingMonitor implements TaskMonitor {
      *      by the polling monitor
      */
     protected boolean canSubmit(TaskHandler handler) {
-        (capacity>0 ? runningQueue.size() < capacity : true) && handler.canForkProcess()
+        (capacity>0 ? runningQueue.size() < capacity : true) && handler.canForkProcess() && handler.isReady()
     }
 
     /**

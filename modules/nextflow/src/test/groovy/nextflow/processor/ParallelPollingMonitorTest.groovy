@@ -104,6 +104,7 @@ class ParallelPollingMonitorTest extends Specification {
         def result = mon.canSubmit(handler)
         then:
         handler.canForkProcess() >> FORK
+        handler.isReady() >> true
         and:
         result == EXPECTED
 

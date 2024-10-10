@@ -44,6 +44,14 @@ interface ContainerResolver extends ExtensionPoint {
      * @return
      *      The resolved container image name
      */
-    abstract ContainerInfo resolveImage(TaskRun task, String imageName)
+    ContainerInfo resolveImage(TaskRun task, String imageName)
+
+    /**
+     * Check the availability of the specified container reference
+     *
+     * @param key The container reference
+     * @return {@code true} when the container is available for use, {@code false} otherwise
+     */
+    boolean isContainerReady(String key)
 
 }

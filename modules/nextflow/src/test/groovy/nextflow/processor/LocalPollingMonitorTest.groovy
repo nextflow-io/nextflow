@@ -96,6 +96,7 @@ class LocalPollingMonitorTest extends Specification {
         def handler = Mock(TaskHandler)
         handler.getTask() >> { task }
         handler.canForkProcess() >> true
+        handler.isReady() >> true
 
         expect:
         monitor.canSubmit(handler) == true
@@ -141,6 +142,7 @@ class LocalPollingMonitorTest extends Specification {
         def handler = Mock(TaskHandler)
         handler.getTask() >> { task }
         handler.canForkProcess() >> true
+        handler.isReady() >> true
         
         expect:
         monitor.canSubmit(handler) == true
