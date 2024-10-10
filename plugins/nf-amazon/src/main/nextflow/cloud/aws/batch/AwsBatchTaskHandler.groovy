@@ -16,6 +16,7 @@
 
 package nextflow.cloud.aws.batch
 
+import static nextflow.cloud.aws.batch.AwsBatchHelper.*
 import static nextflow.cloud.aws.batch.AwsContainerOptionsMapper.*
 
 import java.nio.file.Path
@@ -28,12 +29,13 @@ import com.amazonaws.services.batch.model.ArrayProperties
 import com.amazonaws.services.batch.model.AssignPublicIp
 import com.amazonaws.services.batch.model.AttemptContainerDetail
 import com.amazonaws.services.batch.model.ClientException
-import com.amazonaws.services.batch.model.ContainerOverrides
-import com.amazonaws.services.batch.model.ContainerProperties
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsRequest
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsResult
 import com.amazonaws.services.batch.model.DescribeJobsRequest
 import com.amazonaws.services.batch.model.DescribeJobsResult
+import com.amazonaws.services.batch.model.EcsProperties
+import com.amazonaws.services.batch.model.EcsPropertiesOverride
+import com.amazonaws.services.batch.model.EcsTaskProperties
 import com.amazonaws.services.batch.model.EphemeralStorage
 import com.amazonaws.services.batch.model.EvaluateOnExit
 import com.amazonaws.services.batch.model.Host
@@ -53,6 +55,8 @@ import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.RuntimePlatform
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.SubmitJobResult
+import com.amazonaws.services.batch.model.TaskContainerOverrides
+import com.amazonaws.services.batch.model.TaskPropertiesOverride
 import com.amazonaws.services.batch.model.TerminateJobRequest
 import com.amazonaws.services.batch.model.Volume
 import groovy.transform.Canonical
@@ -234,7 +238,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             this.status = TaskStatus.RUNNING
         // fetch the task arn
         if( !taskArn )
-            taskArn = job?.getContainer()?.getTaskArn()
+            taskArn = getTaskProperties(job)?.getTaskRoleArn()
+                    ?: job?.getContainer()?.getTaskArn()
         return result
     }
 
@@ -265,7 +270,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             // take the exit code from the `.exitcode` file create by nextflow
             // the rationale of this is that, in case of error, the exit code return
             // by the batch API is more reliable.
-            task.exitStatus = job.container.exitCode ?: readExitFile()
+            task.exitStatus =  getTaskContainer(job)?.exitCode
+                ?: job.container?.exitCode
+                ?: readExitFile()
             // finalize the task
             task.stdout = outputFile
             if( job?.status == 'FAILED' || task.exitStatus==Integer.MAX_VALUE ) {
@@ -519,6 +526,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // create the container opts based on task config
         final containerOpts = task.getConfig().getContainerOptionsMap()
         final container = createContainerProperties(containerOpts)
+        final taskProps = new EcsTaskProperties().withContainers(container)
+        final ecsProps = new EcsProperties().withTaskProperties(taskProps)
 
         // container definition
         // https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html
@@ -532,10 +541,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
         final jobRole = opts.getJobRole()
         if( jobRole )
-            container.setJobRoleArn(jobRole)
+            taskProps.setTaskRoleArn(jobRole)
 
         if( opts.executionRole )
-            container.setExecutionRoleArn(opts.executionRole)
+            taskProps.setExecutionRoleArn(opts.executionRole)
         
         final logsGroup = opts.getLogsGroup()
         if( logsGroup )
@@ -558,22 +567,22 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         }
 
         if( mountsMap )
-            addVolumeMountsToContainer(mountsMap, container)
+            addVolumeMountsToContainer(mountsMap, taskProps)
 
         // Fargate specific settings
         if( opts.isFargateMode() ) {
             result.setPlatformCapabilities(List.of('FARGATE'))
-            container.withNetworkConfiguration( new NetworkConfiguration().withAssignPublicIp(AssignPublicIp.ENABLED) )
+            taskProps.withNetworkConfiguration( new NetworkConfiguration().withAssignPublicIp(AssignPublicIp.ENABLED) )
             // use at least 50 GB as disk local storage
             final diskGb = task.config.getDisk()?.toGiga()?.toInteger() ?: 50
-            container.withEphemeralStorage( new EphemeralStorage().withSizeInGiB(diskGb) )
+            taskProps.withEphemeralStorage( new EphemeralStorage().withSizeInGiB(diskGb) )
             // check for arm64 cpu architecture
             if( task.config.getArchitecture()?.arch == 'arm64' )
-                container.withRuntimePlatform(new RuntimePlatform().withCpuArchitecture('ARM64'))
+                taskProps.withRuntimePlatform(new RuntimePlatform().withCpuArchitecture('ARM64'))
         }
 
         // finally set the container options
-        result.setContainerProperties(container)
+        result.setEcsProperties(ecsProps)
 
         // add to this list all values that has to contribute to the
         // job definition unique name creation
@@ -595,7 +604,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             ])
     }
 
-    protected void addVolumeMountsToContainer(Map<String,String> mountsMap, ContainerProperties container) {
+    protected void addVolumeMountsToContainer(Map<String,String> mountsMap, EcsTaskProperties task) {
         final mounts = new ArrayList<MountPoint>(mountsMap.size())
         final volumes = new  ArrayList<Volume>(mountsMap.size())
         for( Map.Entry<String,String> entry : mountsMap.entrySet() ) {
@@ -621,8 +630,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         }
 
         if( mountsMap ) {
-            container.setMountPoints(mounts)
-            container.setVolumes(volumes)
+            task.containers.each { it.setMountPoints(mounts) }
+            task.setVolumes(volumes)
         }
     }
 
@@ -760,7 +769,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
         // set the actual command
         final resources = new ArrayList<ResourceRequirement>(5)
-        final container = new ContainerOverrides()
+        final container = new TaskContainerOverrides()
         container.command = getSubmitCommand()
         // set the task memory
         final cpus = task.config.getCpus()
@@ -791,7 +800,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         if( vars )
             container.setEnvironment(vars)
 
-        result.setContainerOverrides(container)
+        result.setEcsPropertiesOverride(new EcsPropertiesOverride()
+            .withTaskProperties(new TaskPropertiesOverride().withContainers(container)))
 
         // set the array properties
         if( task instanceof TaskArrayRun ) {

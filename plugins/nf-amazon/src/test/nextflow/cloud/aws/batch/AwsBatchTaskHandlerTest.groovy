@@ -16,10 +16,12 @@
 
 package nextflow.cloud.aws.batch
 
+import com.amazonaws.services.batch.model.EcsTaskProperties
+import com.amazonaws.services.batch.model.TaskContainerProperties
+
 import java.time.Instant
 
 import com.amazonaws.services.batch.AWSBatch
-import com.amazonaws.services.batch.model.ContainerProperties
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsRequest
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsResult
 import com.amazonaws.services.batch.model.DescribeJobsRequest
@@ -90,6 +92,7 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         when:
         def req = handler.newSubmitRequest(task)
+        def overrides = req.ecsPropertiesOverride.taskProperties[0].containers[0]
         then:
         1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
         1 * handler.maxSpotAttempts() >> 5
@@ -101,16 +104,17 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getJobName() == 'batch-task'
         req.getJobQueue() == 'queue1'
         req.getJobDefinition() == 'job-def:1'
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
-        req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
-        req.getContainerOverrides().getCommand() == ['bash', '-c', 'something']
+        overrides.getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
+        overrides.getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
+        overrides.getEnvironment() == [VAR_FOO, VAR_BAR]
+        overrides.getCommand() == ['bash', '-c', 'something']
         req.getRetryStrategy() == new RetryStrategy()
                 .withAttempts(5)
                 .withEvaluateOnExit( new EvaluateOnExit().withAction('RETRY').withOnStatusReason('Host EC2*'), new EvaluateOnExit().withOnReason('*').withAction('EXIT') )
 
         when:
         req = handler.newSubmitRequest(task)
+        overrides = req.ecsPropertiesOverride.taskProperties[0].containers[0]
         then:
         1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
         1 * handler.maxSpotAttempts() >> 0
@@ -122,10 +126,10 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getJobName() == 'batch-task'
         req.getJobQueue() == 'queue1'
         req.getJobDefinition() == 'job-def:1'
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
-        req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
-        req.getContainerOverrides().getCommand() == ['bash', '-c', 'something']
+        overrides.getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
+        overrides.getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
+        overrides.getEnvironment() == [VAR_FOO, VAR_BAR]
+        overrides.getCommand() == ['bash', '-c', 'something']
         req.getRetryStrategy() == null  // <-- retry is managed by NF, hence this must be null
 
     }
@@ -141,6 +145,7 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         when:
         def req = handler.newSubmitRequest(task)
+        def overrides = req.ecsPropertiesOverride.taskProperties[0].containers[0]
         then:
         1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
         1 * handler.maxSpotAttempts() >> 5
@@ -152,12 +157,13 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getJobName() == 'batch-task'
         req.getJobQueue() == 'queue1'
         req.getJobDefinition() == 'job-def:1'
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
-        req.getContainerOverrides().getCommand() == ['bash', '-c', 'something']
+        overrides.getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
+        overrides.getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
+        overrides.getCommand() == ['bash', '-c', 'something']
 
         when:
         def req2 = handler.newSubmitRequest(task)
+        def overrides2 = req.ecsPropertiesOverride.taskProperties[0].containers[0]
         then:
         1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
         1 * handler.maxSpotAttempts() >> 5
@@ -169,9 +175,9 @@ class AwsBatchTaskHandlerTest extends Specification {
         req2.getJobName() == 'batch-task'
         req2.getJobQueue() == 'queue1'
         req2.getJobDefinition() == 'job-def:1'
-        req2.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
-        req2.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
-        req2.getContainerOverrides().getCommand() ==['bash', '-c', 'something']
+        overrides2.getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
+        overrides2.getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
+        overrides2.getCommand() ==['bash', '-c', 'something']
         req2.getShareIdentifier() == 'priority/high'
         req2.getSchedulingPriorityOverride() == 9999
 
@@ -191,6 +197,7 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         when:
         def req = handler.newSubmitRequest(task)
+        def overrides = req.ecsPropertiesOverride.taskProperties[0].containers[0]
         then:
         handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch:[cliPath: '/bin/aws'],region: 'eu-west-1')) }
         and:
@@ -200,12 +207,11 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         and:
-        def res = req.getContainerOverrides().getResourceRequirements()
-        res.size()==3
+        overrides.getResourceRequirements().size() == 3
         and:
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '2048'
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='GPU'}.getValue() == '2'
+        overrides.getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
+        overrides.getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '2048'
+        overrides.getResourceRequirements().find { it.type=='GPU'}.getValue() == '2'
     }
 
 
@@ -291,6 +297,7 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         when:
         def req = handler.newSubmitRequest(task)
+        def overrides = req.ecsPropertiesOverride.taskProperties[0].containers[0]
         then:
         handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/bin/aws', retryMode: 'adaptive', maxTransferAttempts: 10])) }
         and:
@@ -307,7 +314,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getRetryStrategy() == new RetryStrategy()
                 .withAttempts(3)
                 .withEvaluateOnExit( new EvaluateOnExit().withAction('RETRY').withOnStatusReason('Host EC2*'), new EvaluateOnExit().withOnReason('*').withAction('EXIT') )
-        req.getContainerOverrides().getEnvironment() == [VAR_RETRY_MODE, VAR_MAX_ATTEMPTS, VAR_METADATA_ATTEMPTS]
+        overrides.getEnvironment() == [VAR_RETRY_MODE, VAR_MAX_ATTEMPTS, VAR_METADATA_ATTEMPTS]
     }
 
     def 'should return job queue'() {
@@ -519,7 +526,8 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     def 'should add container mounts' () {
         given:
-        def container = new ContainerProperties()
+        def container = new TaskContainerProperties()
+        def task = new EcsTaskProperties().withContainers(container)
         def handler = Spy(AwsBatchTaskHandler)
         def mounts = [
                 vol0: '/foo',
@@ -529,31 +537,31 @@ class AwsBatchTaskHandlerTest extends Specification {
         ]
         
         when:
-        handler.addVolumeMountsToContainer(mounts, container)
+        handler.addVolumeMountsToContainer(mounts, task)
         then:
-        container.volumes.size() == 4
+        task.volumes.size() == 4
         container.mountPoints.size() == 4
 
-        container.volumes[0].name == 'vol0'
-        container.volumes[0].host.sourcePath == '/foo'
+        task.volumes[0].name == 'vol0'
+        task.volumes[0].host.sourcePath == '/foo'
         container.mountPoints[0].sourceVolume == 'vol0'
         container.mountPoints[0].containerPath == '/foo'
         !container.mountPoints[0].readOnly
 
-        container.volumes[1].name == 'vol1'
-        container.volumes[1].host.sourcePath == '/foo'
+        task.volumes[1].name == 'vol1'
+        task.volumes[1].host.sourcePath == '/foo'
         container.mountPoints[1].sourceVolume == 'vol1'
         container.mountPoints[1].containerPath == '/bar'
         !container.mountPoints[1].readOnly
 
-        container.volumes[2].name == 'vol2'
-        container.volumes[2].host.sourcePath == '/here'
+        task.volumes[2].name == 'vol2'
+        task.volumes[2].host.sourcePath == '/here'
         container.mountPoints[2].sourceVolume == 'vol2'
         container.mountPoints[2].containerPath == '/there'
         container.mountPoints[2].readOnly
 
-        container.volumes[3].name == 'vol3'
-        container.volumes[3].host.sourcePath == '/this'
+        task.volumes[3].name == 'vol3'
+        task.volumes[3].host.sourcePath == '/this'
         container.mountPoints[3].sourceVolume == 'vol3'
         container.mountPoints[3].containerPath == '/that'
         !container.mountPoints[3].readOnly
@@ -573,32 +581,36 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         when:
         def result = handler.makeJobDefRequest(task)
+        def taskProps = result.ecsProperties.taskProperties[0]
+        def containerProps = taskProps.containers[0]
         then:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> new AwsOptions()
         result.jobDefinitionName == JOB_NAME
         result.type == 'container'
-        result.parameters.'nf-token' == 'bfd3cc19ee9bdaea5b7edee94adf04bc'
-        !result.containerProperties.logConfiguration
-        !result.containerProperties.mountPoints
-        !result.containerProperties.privileged
+        result.parameters.'nf-token' == '80a2c190788919a0d5a10c0d18f1e400'
+        !containerProps.logConfiguration
+        !containerProps.mountPoints
+        !containerProps.privileged
         
         when:
         result = handler.makeJobDefRequest(task)
+        taskProps = result.ecsProperties.taskProperties[0]
+        containerProps = taskProps.containers[0]
         then:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/home/conda/bin/aws', logsGroup: '/aws/batch'], region: 'us-east-1'))
         result.jobDefinitionName == JOB_NAME
         result.type == 'container'
-        result.parameters.'nf-token' == 'af124f8899bcfc8a02037599f59a969a'
-        result.containerProperties.logConfiguration.'LogDriver' == 'awslogs'
-        result.containerProperties.logConfiguration.'Options'.'awslogs-region' == 'us-east-1'
-        result.containerProperties.logConfiguration.'Options'.'awslogs-group' == '/aws/batch'
-        result.containerProperties.mountPoints[0].sourceVolume == 'aws-cli'
-        result.containerProperties.mountPoints[0].containerPath == '/home/conda'
-        result.containerProperties.mountPoints[0].readOnly
-        result.containerProperties.volumes[0].host.sourcePath == '/home/conda'
-        result.containerProperties.volumes[0].name == 'aws-cli'
+        result.parameters.'nf-token' == '1499f1cd3557fab6a2b35cb194ccab3e'
+        containerProps.logConfiguration.'LogDriver' == 'awslogs'
+        containerProps.logConfiguration.'Options'.'awslogs-region' == 'us-east-1'
+        containerProps.logConfiguration.'Options'.'awslogs-group' == '/aws/batch'
+        containerProps.mountPoints[0].sourceVolume == 'aws-cli'
+        containerProps.mountPoints[0].containerPath == '/home/conda'
+        containerProps.mountPoints[0].readOnly
+        taskProps.volumes[0].host.sourcePath == '/home/conda'
+        taskProps.volumes[0].name == 'aws-cli'
 
     }
 
@@ -622,6 +634,8 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         when:
         def result = handler.makeJobDefRequest(task)
+        def taskProps = result.ecsProperties.taskProperties[0]
+        def containerProps = taskProps.containers[0]
         then:
         task.getConfig() >> Mock(TaskConfig)
         and:
@@ -631,16 +645,18 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.jobDefinitionName == JOB_NAME
         result.type == 'container'
         result.getPlatformCapabilities() == ['FARGATE']
-        result.containerProperties.getJobRoleArn() == 'the-job-role'
-        result.containerProperties.getExecutionRoleArn() == 'the-exec-role'
-        result.containerProperties.getResourceRequirements().find { it.type=='VCPU'}.getValue() == '1'
-        result.containerProperties.getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '2048'
+        taskProps.getTaskRoleArn() == 'the-job-role'
+        taskProps.getExecutionRoleArn() == 'the-exec-role'
+        containerProps.getResourceRequirements().find { it.type=='VCPU'}.getValue() == '1'
+        containerProps.getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '2048'
         and:
-        result.containerProperties.getEphemeralStorage().sizeInGiB == 50
-        result.containerProperties.getRuntimePlatform() == null
+        taskProps.getEphemeralStorage().sizeInGiB == 50
+        taskProps.getRuntimePlatform() == null
 
         when:
         result = handler.makeJobDefRequest(task)
+        taskProps = result.ecsProperties.taskProperties[0]
+        containerProps = taskProps.containers[0]
         then:
         task.getConfig() >> Mock(TaskConfig) { getDisk()>>_100GB ; getArchitecture()>>ARM64 }
         and:
@@ -650,13 +666,13 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.jobDefinitionName == JOB_NAME
         result.type == 'container'
         result.getPlatformCapabilities() == ['FARGATE']
-        result.containerProperties.getJobRoleArn() == 'the-job-role'
-        result.containerProperties.getExecutionRoleArn() == 'the-exec-role'
-        result.containerProperties.getResourceRequirements().find { it.type=='VCPU'}.getValue() == '1'
-        result.containerProperties.getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '2048'
+        taskProps.getTaskRoleArn() == 'the-job-role'
+        taskProps.getExecutionRoleArn() == 'the-exec-role'
+        containerProps.getResourceRequirements().find { it.type=='VCPU'}.getValue() == '1'
+        containerProps.getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '2048'
         and:
-        result.containerProperties.getEphemeralStorage().sizeInGiB == 100
-        result.containerProperties.getRuntimePlatform().getCpuArchitecture() == 'ARM64'
+        taskProps.getEphemeralStorage().sizeInGiB == 100
+        taskProps.getRuntimePlatform().getCpuArchitecture() == 'ARM64'
     }
 
     def 'should create a job definition request object for fusion' () {
@@ -673,13 +689,15 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         when:
         def result = handler.makeJobDefRequest(task)
+        def taskProps = result.ecsProperties.taskProperties[0]
+        def containerProps = taskProps.containers[0]
         then:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> new AwsOptions()
         result.jobDefinitionName == JOB_NAME
         result.type == 'container'
-        result.parameters.'nf-token' == '9da434654d8c698f87da973625f57489'
-        result.containerProperties.privileged
+        result.parameters.'nf-token' == '72be1a993e42d3b313508b57ef8e94fb'
+        containerProps.privileged
 
     }
 
@@ -699,21 +717,23 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         when:
         def result = handler.makeJobDefRequest(task)
+        def taskProps = result.ecsProperties.taskProperties[0]
+        def containerProps = taskProps.containers[0]
         then:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> opts
         1 * opts.getVolumes() >> ['/tmp', '/here:/there:ro']
         then:
-        result.containerProperties.mountPoints.size() == 2
-        result.containerProperties.volumes.size() == 2
+        containerProps.mountPoints.size() == 2
+        taskProps.volumes.size() == 2
 
-        result.containerProperties.volumes[0].host.sourcePath == '/tmp'
-        result.containerProperties.mountPoints[0].containerPath == '/tmp'
-        !result.containerProperties.mountPoints[0].readOnly
+        taskProps.volumes[0].host.sourcePath == '/tmp'
+        containerProps.mountPoints[0].containerPath == '/tmp'
+        !containerProps.mountPoints[0].readOnly
 
-        result.containerProperties.volumes[1].host.sourcePath == '/here'
-        result.containerProperties.mountPoints[1].containerPath == '/there'
-        result.containerProperties.mountPoints[1].readOnly
+        taskProps.volumes[1].host.sourcePath == '/here'
+        containerProps.mountPoints[1].containerPath == '/there'
+        containerProps.mountPoints[1].readOnly
     }
 
     def 'should set job role arn'  () {
@@ -733,13 +753,14 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         when:
         def result = handler.makeJobDefRequest(task)
+        def taskProps = result.ecsProperties.taskProperties[0]
         then:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> opts
         1 * opts.getJobRole() >> ROLE
 
         then:
-        result.getContainerProperties().getJobRoleArn() == ROLE
+        taskProps.getTaskRoleArn() == ROLE
     }
 
     def 'should set container linux properties'  () {
@@ -760,13 +781,15 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         when:
         def result = handler.makeJobDefRequest(task)
+        def taskProps = result.ecsProperties.taskProperties[0]
+        def containerProps = taskProps.containers[0]
         then:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> opts
 
         then:
-        result.getContainerProperties().getUser() == 'foo'
-        result.getContainerProperties().getPrivileged() == true
+        containerProps.getUser() == 'foo'
+        containerProps.getPrivileged() == true
 
     }
 
@@ -1006,6 +1029,7 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         when:
         def req = handler.newSubmitRequest(task)
+        def overrides = req.ecsPropertiesOverride.taskProperties[0].containers[0]
         then:
         1 * handler.getSubmitCommand() >> ['sh', '-c', 'hello']
         1 * handler.maxSpotAttempts() >> 5
@@ -1017,10 +1041,10 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getJobName() == 'batch-task'
         req.getJobQueue() == 'queue1'
         req.getJobDefinition() == 'job-def:1'
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
-        req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
-        req.getContainerOverrides().getCommand() == ['sh', '-c','hello']
+        overrides.getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
+        overrides.getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
+        overrides.getEnvironment() == [VAR_FOO, VAR_BAR]
+        overrides.getCommand() == ['sh', '-c','hello']
         req.getRetryStrategy() == new RetryStrategy()
                 .withAttempts(5)
                 .withEvaluateOnExit( new EvaluateOnExit().withAction('RETRY').withOnStatusReason('Host EC2*'), new EvaluateOnExit().withOnReason('*').withAction('EXIT') )
