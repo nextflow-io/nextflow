@@ -37,6 +37,7 @@ import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import com.google.common.util.concurrent.UncheckedExecutionException
 import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
@@ -48,7 +49,10 @@ import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import io.seqera.wave.api.BuildStatusResponse
+import io.seqera.wave.api.ContainerInspectRequest
+import io.seqera.wave.api.ContainerInspectResponse
 import io.seqera.wave.api.PackagesSpec
+import io.seqera.wave.plugin.adapter.InstantAdapter
 import io.seqera.wave.plugin.config.TowerConfig
 import io.seqera.wave.plugin.config.WaveConfig
 import io.seqera.wave.plugin.exception.BadResponseException
@@ -194,7 +198,7 @@ class WaveClient {
                 fingerprint: assets.fingerprint(),
                 freeze: config.freezeMode(),
                 format: assets.singularity ? 'sif' : null,
-                dryRun: ContainerInspectMode.active()
+                dryRun: ( ContainerInspectMode.active() && ContainerInspectMode.waveDryRun() )
         )
     }
 
@@ -218,7 +222,7 @@ class WaveClient {
                 towerEndpoint: tower.endpoint,
                 workflowId: tower.workflowId,
                 freeze: config.freezeMode(),
-                dryRun: ContainerInspectMode.active(),
+                dryRun: ( ContainerInspectMode.active() && ContainerInspectMode.waveDryRun() )
         )
         return sendRequest(request)
     }
@@ -272,6 +276,44 @@ class WaveClient {
         }
     }
 
+    protected ContainerInspectResponse inspectRequest(String imageUri) {
+        final request = new ContainerInspectRequest(
+            containerImage: imageUri,
+            towerAccessToken: tower.accessToken,
+            towerWorkspaceId: tower.workspaceId,
+            towerEndpoint: tower.endpoint
+        )
+        return inspectRequest(request)
+    }
+
+    protected ContainerInspectResponse inspectRequest(ContainerInspectRequest request) {
+        final body = JsonOutput.toJson(request)
+        final uri = URI.create("${endpoint}/v1alpha1/inspect")
+        log.debug "Wave request: $uri; request: $request"
+        final req = HttpRequest.newBuilder()
+            .uri(uri)
+            .headers('Content-Type','application/json')
+            .POST(HttpRequest.BodyPublishers.ofString(body))
+            .build()
+
+        try {
+            final resp = httpSend(req)
+            log.debug "Wave response: statusCode=${resp.statusCode()}; body=${resp.body()}"
+            if( resp.statusCode()==200 )
+                return jsonToInspectResponse(resp.body())
+            else if( resp.statusCode()==404 ) {
+                log.warn "The following image was not found (was it built yet?): $request.containerImage"
+                return null
+            }
+            else
+                throw new BadResponseException("Wave invalid response: [${resp.statusCode()}] ${resp.body()}")
+        }
+        catch (IOException e) {
+            throw new IllegalStateException("Unable to connect Wave service: $endpoint")
+        }
+    }
+
+
     protected BuildStatusResponse jsonToBuildStatusResponse(String body) {
         final obj = new JsonSlurper().parseText(body) as Map
         new BuildStatusResponse(
@@ -286,6 +328,14 @@ class WaveClient {
     protected SubmitContainerTokenResponse jsonToSubmitResponse(String body) {
         final type = new TypeToken<SubmitContainerTokenResponse>(){}.getType()
         return new Gson().fromJson(body, type)
+    }
+
+    protected ContainerInspectResponse jsonToInspectResponse(String body) {
+        final type = new TypeToken<ContainerInspectResponse>(){}.getType()
+        return new GsonBuilder()
+            .registerTypeAdapter(Instant.class, new InstantAdapter())
+            .create()
+            .fromJson(body, type)
     }
 
     protected ContainerConfig jsonToContainerConfig(String json) {
@@ -324,6 +374,31 @@ class WaveClient {
             // append each config to the other - the last has priority
             result += fetchContainerConfig(it)
         }
+        return result
+    }
+
+    @Memoized
+    synchronized String singularityOrasToHttp(String imageUri) {
+        final resp = inspectRequest(imageUri)
+        if ( resp==null )
+            return "NOT AVAILABLE"
+        final spec = resp.container
+        if( spec.manifest.layers.size()!=1 )
+            throw new BadResponseException("Unexpected Singularity image structure - offending image: ${imageUri}")
+        final it = spec.manifest.layers[0]
+        if( it.mediaType != 'application/vnd.sylabs.sif.layer.v1.sif' )
+            throw new BadResponseException("Unexpected Singularity image mediaType - offending value: ${it.mediaType}")
+
+        final String result
+        // Workaround in the case of Seqera Containers
+        if( spec.getHostName() == "https://community.wave.seqera.io" ) {
+          def digestWithoutPrefix = it.digest.replace("sha256:","")
+          result = "https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/" + digestWithoutPrefix.substring(0,2) + "/" + digestWithoutPrefix + "/data"
+        }
+        else {
+          result = spec.getHostName() + "/v2/" + spec.getImageName() + "/blobs/" + it.digest
+        }
+
         return result
     }
 

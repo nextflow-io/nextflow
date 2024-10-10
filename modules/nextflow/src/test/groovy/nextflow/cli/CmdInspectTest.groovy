@@ -17,7 +17,7 @@
 
 package nextflow.cli
 
-
+import nextflow.container.inspect.ContainerInspectMode
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -34,20 +34,23 @@ class CmdInspectTest extends Specification {
 
         when:
         wave = WAVE
-        cmd.checkWaveConfig(wave)
+        cmd.setupInspectMode()
+        cmd.checkWaveDryRun(wave)
+        def expectedDryRun = ContainerInspectMode.waveDryRun()
+        cmd.disableInspectMode()
         then:
-        wave == EXPECTED
+        expectedDryRun == EXPECTED_DRYRUN
 
         where:
-        WAVE                            | CONCRETIZE    | EXPECTED
-        [:]                             | false         | [:]
-        [:]                             | true          | [:]
+        WAVE                            | CONCRETIZE    | EXPECTED_DRYRUN
+        [:]                             | false         | true
+        [:]                             | true          | true
         and:
-        [enabled:true]                  | false         | [enabled:true]
-        [enabled:true]                  | true          | [enabled:true]
+        [enabled:true]                  | false         | true
+        [enabled:true]                  | true          | true
         and:
-        [enabled:true, freeze: true]    | false         | [enabled:true, freeze:true, dryRun: true]
-        [enabled:true, freeze: true]    | true          | [enabled:true, freeze:true, dryRun: false]
+        [enabled:true, freeze: true]    | false         | true
+        [enabled:true, freeze: true]    | true          | false
 
     }
 
