@@ -242,6 +242,12 @@ abstract class TaskHandler {
         return !max ? true : task.processor.forksCount < max
     }
 
+    /**
+     * Determine if a task is ready for execution or it depends on resources
+     * e.g. container that needs to be provisionied
+     *
+     * @return {@code true} when the task is ready for execution, {@code false} otherwise
+     */
     boolean isReady() {
         task.isContainerReady()
     }
