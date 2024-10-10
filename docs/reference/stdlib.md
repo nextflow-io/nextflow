@@ -128,6 +128,11 @@ The following constants are globally available in a Nextflow script:
   `workflow.manifest`
   : Entries of the workflow manifest.
 
+  `workflow.outputDir`
+  : :::{versionadded} 24.10.0
+    :::
+  : Workflow output directory.
+
   `workflow.preview`
   : :::{versionadded} 24.04.0
     :::
