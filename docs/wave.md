@@ -90,34 +90,6 @@ conda.channels = 'conda-forge,bioconda'
 ```
 :::
 
-### Build Spack based containers
-
-:::{warning}
-Spack based Wave containers are currently in beta testing. Functionality is still sub-optimal, due to long build times that may result in backend time-out and subsequent task failure.
-:::
-
-Wave allows the provisioning of containers based on the {ref}`process-spack` directive used by the processes in your
-pipeline. This is an alternative to building Spack packages in the local computer.
-Moreover, this enables to run optimised builds with almost no user intervention.
-
-Having Wave enabled in your pipeline, there's nothing else to do other than define the `spack` requirements in
-the pipeline processes provided the same process does not also specify a `container` or `conda` directive or a Dockerfile.
-
-In the latter case, add the following setting to your pipeline configuration:
-
-```groovy
-wave.strategy = ['spack']
-```
-
-The above setting instructs Wave to only use the `spack` directive to provision the pipeline containers, ignoring the use of
-the `container` directive and any Dockerfile(s).
-
-In order to request the build of containers that are optimised for a specific CPU microarchitecture, the latter can be specified by means of the {ref}`process-arch` directive. The architecture must always be specified for processes that run on an ARM system. Otherwise, by default, Wave will build containers for the generic `x86_64` architecture family.
-
-:::{note}
-If using a Spack YAML file to provide the required packages, you should avoid editing the following sections, which are already configured by the Wave plugin: `packages`, `config`, `view` and `concretizer` (your edits may be ignored), and `compilers` (your edits will be considered, and may interfere with the setup by the Wave plugin).
-:::
-
 (wave-singularity)=
 
 ### Build Singularity native images
