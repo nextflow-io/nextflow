@@ -181,7 +181,8 @@ class AwsBatchHelper {
         final response = batchClient.describeJobs(request)
         if( response.jobs ) {
             final detail = response.jobs[0]
-            return detail.container.logStreamName
+            return detail.ecsProperties?.taskProperties[0].containers[0].logStreamName
+                ?: detail.container.logStreamName
         }
         else {
             log.debug "Unable to find info for batch job id=$jobId"
