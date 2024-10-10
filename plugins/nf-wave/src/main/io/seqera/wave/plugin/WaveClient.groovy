@@ -27,10 +27,8 @@ import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
-import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 
 import com.google.common.cache.Cache
@@ -45,9 +43,12 @@ import dev.failsafe.event.ExecutionAttemptedEvent
 import dev.failsafe.function.CheckedSupplier
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
+import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import io.seqera.wave.api.BuildStatusResponse
+import io.seqera.wave.api.ContainerStatus
+import io.seqera.wave.api.ContainerStatusResponse
 import io.seqera.wave.api.PackagesSpec
 import io.seqera.wave.plugin.config.TowerConfig
 import io.seqera.wave.plugin.config.WaveConfig
@@ -75,6 +76,13 @@ import org.slf4j.LoggerFactory
 @CompileStatic
 class WaveClient {
 
+    @Canonical
+    static class Handle {
+        final SubmitContainerTokenResponse response
+        final Instant createdAt
+        int iteration
+    }
+
     final static public String DEFAULT_S5CMD_AMD64_URL = 'https://nf-xpack.seqera.io/s5cmd/linux_amd64_2.2.2.json'
     final static public String DEFAULT_S5CMD_ARM64_URL = 'https://nf-xpack.seqera.io/s5cmd/linux_arm64_2.2.2.json'
 
@@ -96,7 +104,7 @@ class WaveClient {
 
     final private String endpoint
 
-    private Cache<String, SubmitContainerTokenResponse> cache
+    private Cache<String, Handle> cache
 
     private Session session
 
@@ -127,7 +135,7 @@ class WaveClient {
         this.packer = new Packer().withPreserveTimestamp(config.preserveFileTimestamp())
         this.waveRegistry = new URI(endpoint).getAuthority()
         // create cache
-        cache = CacheBuilder<String, SubmitContainerTokenResponse>
+        cache = CacheBuilder<String, Handle>
             .newBuilder()
             .expireAfterWrite(config.tokensCacheMaxDuration().toSeconds(), TimeUnit.SECONDS)
             .build()
@@ -136,6 +144,9 @@ class WaveClient {
         // create http client
         this.httpClient = newHttpClient()
     }
+
+    /* only for testing */
+    protected WaveClient() { }
 
     protected HttpClient newHttpClient() {
         final builder = HttpClient.newBuilder()
@@ -181,7 +192,16 @@ class WaveClient {
 
         if( assets.containerFile && assets.packagesSpec )
             throw new IllegalArgumentException("Wave containerFile file and packages spec cannot be specified in the same request")
-        
+
+        if( config.mirrorMode() && config.freezeMode() )
+            throw new IllegalArgumentException("Wave configuration setting 'wave.mirror' and 'wave.freeze' conflicts each other")
+
+        if( config.mirrorMode() && !config.buildRepository() )
+            throw new IllegalArgumentException("Wave configuration setting 'wave.mirror' requires the use of 'wave.build.repository' to define the target registry")
+
+        if( config.mirrorMode() && !assets.containerImage )
+            throw new IllegalArgumentException("Invalid container mirror operation - missing source container")
+
         return new SubmitContainerTokenRequest(
                 containerImage: assets.containerImage,
                 containerPlatform: assets.containerPlatform,
@@ -194,7 +214,10 @@ class WaveClient {
                 fingerprint: assets.fingerprint(),
                 freeze: config.freezeMode(),
                 format: assets.singularity ? 'sif' : null,
-                dryRun: ContainerInspectMode.active()
+                dryRun: ContainerInspectMode.active(),
+                mirror: config.mirrorMode(),
+                scanMode: config.scanMode(),
+                scanLevels: config.scanLevels()
         )
     }
 
@@ -219,6 +242,9 @@ class WaveClient {
                 workflowId: tower.workflowId,
                 freeze: config.freezeMode(),
                 dryRun: ContainerInspectMode.active(),
+                mirror: config.mirrorMode(),
+                scanMode: config.scanMode(),
+                scanLevels: config.scanLevels()
         )
         return sendRequest(request)
     }
@@ -270,6 +296,23 @@ class WaveClient {
         catch (IOException e) {
             throw new IllegalStateException("Unable to connect Wave service: $endpoint")
         }
+    }
+
+    protected ContainerStatusResponse jsonToContainerStatusResponse(String body) {
+        final obj = new JsonSlurper().parseText(body) as Map
+        return new ContainerStatusResponse(
+            obj.id as String,
+            obj.status as ContainerStatus,
+            obj.buildId as String,
+            obj.mirrorId as String,
+            obj.scanId as String,
+            obj.vulnerabilities as Map<String,Integer>,
+            obj.succeeded as Boolean,
+            obj.reason as String,
+            obj.detailsUri as String,
+            Instant.parse(obj.creationTime as String),
+            null
+        )
     }
 
     protected BuildStatusResponse jsonToBuildStatusResponse(String body) {
@@ -524,45 +567,81 @@ class WaveClient {
             final key = assets.fingerprint()
             log.trace "Wave fingerprint: $key; assets: $assets"
             // get from cache or submit a new request
-            final response = cache.get(key, { sendRequest(assets) } as Callable )
-            if( response.buildId && !response.cached && !ContainerInspectMode.active() ) {
-                // await the image to be available when a new image is being built
-                awaitCompletion(response.buildId, response.targetImage)
-            }
-            // assemble the container info response
-            return new ContainerInfo(assets.containerImage, response.targetImage, key)
+            final handle = cache.get(key, () -> new Handle(sendRequest(assets),Instant.now()) )
+            return new ContainerInfo(assets.containerImage, handle.response.targetImage, key)
         }
         catch ( UncheckedExecutionException e ) {
             throw e.cause
         }
     }
 
-    protected void awaitCompletion(String buildId, String containerImage) throws TimeoutException {
+    protected boolean checkContainerCompletion(Handle handle) {
         final long maxAwait = config.buildMaxDuration().toMillis()
-        final long startTime = Instant.now().toEpochMilli()
-        int count=0
-        while( !Thread.currentThread().isInterrupted() ) {
-            final resp = buildStatus(buildId)
-            if( resp.status==BuildStatusResponse.Status.COMPLETED ) {
-                if( resp.succeeded )
-                    return
-                final msg = "Wave provisioning for container '${containerImage}' did not complete successfully - check details here: ${endpoint}/view/builds/${buildId}"
-                throw new ProcessUnrecoverableException(msg)
-            }
-            if( System.currentTimeMillis()-startTime > maxAwait ) {
-                final msg = "Wave provisioning for container '${containerImage}' is exceeding max allowed duration (${config.buildMaxDuration()}) - check details here: ${endpoint}/view/builds/${buildId}"
-                throw new ProcessUnrecoverableException(msg)
-            }
-            // report a log info first 10 secs, then every 2 mins
-            if( ((count++)-1) % 12 == 0 ) {
-                log.info "Awaiting provisioning for container $containerImage"
-            }
-            awaitSleep0(randomRange(10,15) * 1_000)
+        final startTime = handle.createdAt.toEpochMilli()
+        final containerImage = handle.response.targetImage
+        final requestId = handle.response.requestId
+        final resp = containerStatus(requestId)
+        if( resp.status==ContainerStatus.DONE ) {
+            if( resp.succeeded )
+                return true
+            def msg = "Wave provisioning for container '${containerImage}' did not complete successfully"
+            if( resp.reason )
+                msg += "\n- Reason: ${resp.reason}"
+            if( resp.detailsUri )
+                msg += "\n- Find out more here: ${resp.detailsUri}"
+            throw new ProcessUnrecoverableException(msg)
         }
+        if( System.currentTimeMillis()-startTime > maxAwait ) {
+            final msg = "Wave provisioning for container '${containerImage}' is exceeding max allowed duration (${config.buildMaxDuration()}) - check details here: ${endpoint}/view/containers/${requestId}"
+            throw new ProcessUnrecoverableException(msg)
+        }
+        // this is expected to be invoked ~ every seconds, therefore
+        // print an info message after 10 seconds or every 200 seconds
+        if( ((handle.iteration++)-10) % 200 == 0 ) {
+            log.info "Awaiting container provisioning: $containerImage"
+        }
+        return false
     }
 
-    protected void awaitSleep0(long period) {
-        Thread.sleep(period)
+    @Deprecated
+    protected boolean checkBuildCompletion(Handle handle) {
+        final long maxAwait = config.buildMaxDuration().toMillis()
+        final startTime = handle.createdAt.toEpochMilli()
+        final containerImage = handle.response.targetImage
+        final buildId = handle.response.buildId
+        final resp = buildStatus(buildId)
+        if( resp.status==BuildStatusResponse.Status.COMPLETED ) {
+            if( resp.succeeded )
+                return true
+            final msg = "Wave provisioning for container '${containerImage}' did not complete successfully - check details here: ${endpoint}/view/builds/${buildId}"
+            throw new ProcessUnrecoverableException(msg)
+        }
+        if( System.currentTimeMillis()-startTime > maxAwait ) {
+            final msg = "Wave provisioning for container '${containerImage}' is exceeding max allowed duration (${config.buildMaxDuration()}) - check details here: ${endpoint}/view/builds/${buildId}"
+            throw new ProcessUnrecoverableException(msg)
+        }
+        // this is expected to be invoked ~ every seconds, therefore
+        // print an info message after 10 seconds or every 200 seconds
+        if( ((handle.iteration++)-10) % 200 == 0 ) {
+            log.info "Awaiting container provisioning: $containerImage"
+        }
+        return false
+    }
+
+    boolean isContainerReady(String key) {
+        final handle = cache.getIfPresent(key)
+        if( !handle )
+            throw new IllegalStateException("Unable to find any container with key: $key")
+        final resp = handle.response
+        if( resp.requestId ) {
+            return resp.status != ContainerStatus.DONE
+                ? checkContainerCompletion(handle)
+                : true
+        }
+        if( resp.buildId && !resp.cached )
+            return checkBuildCompletion(handle)
+        else
+            return true
     }
 
     protected static int randomRange(int min, int max) {
@@ -571,8 +650,28 @@ class WaveClient {
         return rand.nextInt((max - min) + 1) + min;
     }
 
+    protected ContainerStatusResponse containerStatus(String requestId) {
+        final String statusEndpoint = endpoint + "/v1alpha2/container/${requestId}/status";
+        final HttpRequest req = HttpRequest.newBuilder()
+            .uri(URI.create(statusEndpoint))
+            .headers("Content-Type","application/json")
+            .GET()
+            .build();
+
+        final HttpResponse<String> resp = httpSend(req);
+        log.debug("Wave container status response: statusCode={}; body={}", resp.statusCode(), resp.body())
+        if( resp.statusCode()==200 ) {
+            return jsonToContainerStatusResponse(resp.body())
+        }
+        else {
+            String msg = String.format("Wave invalid response: GET %s [%s] %s", statusEndpoint, resp.statusCode(), resp.body());
+            throw new BadResponseException(msg)
+        }
+    }
+
+    @Deprecated
     protected BuildStatusResponse buildStatus(String buildId) {
-        final String statusEndpoint = endpoint + "/v1alpha1/builds/"+buildId+"/status";
+        final String statusEndpoint = endpoint + "/v1alpha1/builds/${buildId}/status";
         final HttpRequest req = HttpRequest.newBuilder()
             .uri(URI.create(statusEndpoint))
             .headers("Content-Type","application/json")
@@ -656,7 +755,7 @@ class WaveClient {
         final cfg = config.retryOpts()
         final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
             @Override
-            void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
+            void accept(ExecutionAttemptedEvent event) throws Throwable {
                 def msg = "Wave connection failure - attempt: ${event.attemptCount}"
                 if( event.lastResult!=null )
                     msg += "; response: ${event.lastResult}"
