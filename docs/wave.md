@@ -152,7 +152,7 @@ Wave allows mirroring, i.e., copying containers used by your pipeline into a con
 This is useful to create on-demand cache of containers images that are co-located in the same region where the pipeline
 is executed, and therefore optimising cost and network efficiency.
 
-To enable this capability include those settings in your Nextflow configuration:
+Include the following settings in your Nextflow configuration to enable this capability:
 
 ```groovy
 wave.enabled = true
