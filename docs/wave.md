@@ -177,10 +177,10 @@ credentials manager. The account used for this is specified by the `tower.access
 
 ### Container security scanning
 
-Wave allows scanning containers used in your pipelines for security vulnerabilities, and report an execution error
-when one or more security issues are found.
+Wave enables the scanning of containers used in your pipelines for security vulnerabilities.
+If any issues are detected, it will trigger an execution error and provide a report.
 
-To enable this capability adds the following settings in your Nextflow configuration file:
+To enable this capability add the following settings to your Nextflow configuration file:
 
 ```groovy
 wave.enabled = true
