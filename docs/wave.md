@@ -164,7 +164,7 @@ tower.accessToken = '<YOUR ACCESS TOKEN>'
 In the above snippet, replace `<YOUR REGISTRY>` with a container registry of your choice. For example, `quay.io` (no prefix or suffix is needed).
 The container will be copied with the same name, tag, and checksum in the specified registry. For example, if the source
 container is `quay.io/biocontainers/bwa:0.7.13--1` and the build repository setting is `foo.com`, the resulting container
-name will be `foo.com/biocontainers/bwa:0.7.13--1`.
+name is `foo.com/biocontainers/bwa:0.7.13--1`.
 
 :::{tip}
 When using a path prefix in target registry name, it will be pre-pended to the resulting container name. For example
