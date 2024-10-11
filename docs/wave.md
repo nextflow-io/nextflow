@@ -147,8 +147,7 @@ The repository access keys must be provided as Seqera Platform credentials (see
 
 ### Mirroring containers
 
-Wave allows mirroring i.e. copying containers used by your pipeline into a container registry of your choice, so that
-containers are pulled by the pipeline from the target registry instead of the original registry.
+Wave allows mirroring, i.e., copying containers used by your pipeline into a container registry of your choice. This allows the pipeline to pull containers from the target registry rather than the original registry.
 
 This is useful to create on-demand cache of containers images that are co-located in the same region where the pipeline
 is executed, and therefore optimising cost and network efficiency.
