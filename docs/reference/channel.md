@@ -319,7 +319,7 @@ Available options:
 : Allow choosing the protocol for the resulting remote URLs. Available choices: `ftp`, `http`, `https` (default: `ftp`).
 
 `retryPolicy`
-: Set a retry policy in case of the SRA request fail with a retriable error.
+: Set a retry policy in case the SRA request fails with a retriable error.
 The retry policy is set as a Map specifying the different policy properties.
 
 Available retry policy properties:
