@@ -188,8 +188,8 @@ wave.scan.mode = 'required'
 tower.accessToken = '<YOUR ACCESS TOKEN>'
 ```
 
-When using these setting will only allows the use of the container in your Nextflow pipeline only if has no security
-vulnerabilities. You can define the level of accepted vulnerabilities by using the `wave.scan.levels`. For example:
+Nextflow will only allow the use of containers with no security
+vulnerabilities when using these settings. You can define the level of accepted vulnerabilities using `wave.scan.levels`. For example:
 
 ```
 wave.scan.levels = 'low,medium'
