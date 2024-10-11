@@ -275,5 +275,4 @@ class SraExplorerTest extends Specification {
         retries == 2
     }
 
-
 }
