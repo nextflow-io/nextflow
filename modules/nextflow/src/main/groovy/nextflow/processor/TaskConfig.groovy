@@ -103,7 +103,7 @@ class TaskConfig extends LazyMap implements Cloneable {
         return eval0(this, path.tokenize('.'), path)
     }
 
-    private Object eval0(Object object, List<String> path, String key ) {
+    private Object eval0(Object object, List<String> path, String key) {
         assert path, "Missing task attribute name"
         def result = null
         if( object instanceof LazyMap ) {
