@@ -16,6 +16,8 @@
 
 package nextflow.datasource
 
+import dev.failsafe.FailsafeException
+
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -240,6 +242,37 @@ class SraExplorerTest extends Specification {
         1 * slurper.env() >> [NCBI_API_KEY: '1bc']
         then:
         result == '1bc'
+    }
+
+    def 'should detect retry errors' () {
+        given:
+            def ex = new IOException("Server returned HTTP response code: " + ERROR +" for URL: https://dummy.url")
+
+        expect:
+            SraExplorer.containsErrorCodes(ex.getLocalizedMessage(), SraExplorer.RETRY_CODES) == EXPECTED
+
+        where:
+            ERROR | EXPECTED
+            '404'   | false
+            '429'   | true
+
+    }
+    def 'should retry on errors' () {
+        given:
+        def ex = new IOException("Server returned HTTP response code: 429 for URL: https://dummy.url")
+        def slurper = new SraExplorer(null, [retryPolicy: [maxAttempts: 2]])
+        def retries = 0
+
+        when:
+        slurper.runWithRetry{
+                retries ++
+                throw ex
+        }
+
+        then:
+        def e = thrown(FailsafeException)
+        e.cause.message == ex.message
+        retries == 2
     }
 
 }
