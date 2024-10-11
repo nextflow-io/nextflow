@@ -198,9 +198,7 @@ wave.scan.levels = 'low,medium'
 The above setting will allow the use of containers with *low* and *medium* vulnerabilities. Accepted values are `low`, `medium`, `high`, and `critical`. See [common vulnerabilities scoring system](https://en.wikipedia.org/wiki/Common_Vulnerability_Scoring_System) for more information about these levels.
 
 :::{note}
-Wave security scanning applies to any container used in your pipeline, irrespective it was built by Wave or accessed
-through it. The container scan automatically expires after one week, if containers is accessed again after 7 days or
-more the security scan is executed one more time.
+Wave's security scanning applies to any container used in your pipeline, whether it was built by Wave or simply accessed through it. The security scan automatically expires after one week. If a container is accessed again after 7 days or more, the scan will be re-executed.
 :::
 
 ### Run pipelines using Fusion file system
