@@ -408,7 +408,6 @@ class SraExplorer {
         def matcher = (message =~ pattern)
         def httpCode = matcher ? matcher[0][1] as Integer : null
         return httpCode != null && codes.contains(httpCode)
-
     }
 
 }
