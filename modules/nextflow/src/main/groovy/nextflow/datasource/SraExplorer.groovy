@@ -43,6 +43,7 @@ import nextflow.util.Duration
 
 import java.time.temporal.ChronoUnit
 import java.util.function.Predicate
+import java.util.regex.Pattern
 
 /**
  * Query NCBI SRA database and returns the retrieved FASTQs to the specified
@@ -55,6 +56,7 @@ class SraExplorer {
 
     static public Map PARAMS = [apiKey:[String,GString], cache: Boolean, max: Integer, protocol: ['ftp','http','https'], retryPolicy: Map]
     final static public List<Integer> RETRY_CODES = List.of(408, 429, 500, 502, 503, 504)
+    final static private Pattern ERROR_PATTERN = ~/Server returned HTTP response code: (\d+) for URL.*/
 
     @ToString
     static class SearchRecord {
@@ -403,8 +405,7 @@ class SraExplorer {
     }
 
     static boolean containsErrorCodes(String message, List<Integer> codes){
-        def pattern = /Server returned HTTP response code: (\d+) for URL.*/
-        def matcher = (message =~ pattern)
+        def matcher = (message =~ ERROR_PATTERN)
         def httpCode = matcher ? matcher[0][1] as Integer : null
         return httpCode != null && codes.contains(httpCode)
     }
