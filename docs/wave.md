@@ -167,7 +167,7 @@ container is `quay.io/biocontainers/bwa:0.7.13--1` and the build repository sett
 name is `foo.com/biocontainers/bwa:0.7.13--1`.
 
 :::{tip}
-When using a path prefix in target registry name, it will be pre-pended to the resulting container name. For example
+When using a path prefix in the target registry name, it will be prepended to the resulting container name. For example,
 having `quay.io/biocontainers/bwa:0.7.13--1` as source container and `foo.com/bar` as build repository, the resulting
 container will be named `foo.com/bar/biocontainers/bwa:0.7.13--1`.
 :::
