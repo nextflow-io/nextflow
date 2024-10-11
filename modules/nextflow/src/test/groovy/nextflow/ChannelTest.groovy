@@ -1009,5 +1009,4 @@ class ChannelTest extends Specification {
         thrown(IllegalArgumentException)
     }
 
-
 }
