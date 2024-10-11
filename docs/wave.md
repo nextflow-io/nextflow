@@ -195,9 +195,7 @@ vulnerabilities when using these settings. You can define the level of accepted 
 wave.scan.levels = 'low,medium'
 ```
 
-The above setting will allow the use of containers having vulnerabilities with *low* and *medium*
-levels [common vulnerabilities scoring system](https://en.wikipedia.org/wiki/Common_Vulnerability_Scoring_System).
-Accepted values are `low`, `medium`, `high` and `critical`.
+The above setting will allow the use of containers with *low* and *medium* vulnerabilities. Accepted values are `low`, `medium`, `high`, and `critical`. See [common vulnerabilities scoring system](https://en.wikipedia.org/wiki/Common_Vulnerability_Scoring_System) for more information about these levels.
 
 :::{note}
 Wave security scanning applies to any container used in your pipeline, irrespective it was built by Wave or accessed
