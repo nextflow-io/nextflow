@@ -55,7 +55,7 @@ class SraExplorer {
 
     static public Map PARAMS = [apiKey:[String,GString], cache: Boolean, max: Integer, protocol: ['ftp','http','https'],
                                 retryPolicy: Map]
-    final static List<Integer> RETRY_CODES = List.of(408, 429, 500, 502, 503, 504)
+    final static public List<Integer> RETRY_CODES = List.of(408, 429, 500, 502, 503, 504)
 
     @ToString
     static class SearchRecord {
