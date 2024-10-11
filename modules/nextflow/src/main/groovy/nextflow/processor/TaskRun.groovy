@@ -24,7 +24,6 @@ import java.util.function.Function
 
 import com.google.common.hash.HashCode
 import groovy.transform.Memoized
-import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.conda.CondaCache
@@ -787,7 +786,13 @@ class TaskRun implements Cloneable {
      *
      * @param body A {@code BodyDef} object instance
      */
-    @PackageScope void resolve(BodyDef body) {
+    void resolve(BodyDef body)  {
+        processor.session.stubRun
+            ? resolveStub(config.getStubBlock())
+            : resolveBody(body)
+    }
+
+    protected void resolveBody(BodyDef body) {
 
         // -- initialize the task code to be executed
         this.code = body.closure.clone() as Closure
@@ -829,7 +834,7 @@ class TaskRun implements Cloneable {
             throw new ProcessUnrecoverableException("Process `${getName()}` script is empty")
     }
 
-    @PackageScope void resolve(TaskClosure block) {
+    protected void resolveStub(TaskClosure block) {
         this.code = block.clone() as Closure
         this.code.delegate = this.context
         this.code.setResolveStrategy(Closure.DELEGATE_ONLY)
