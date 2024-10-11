@@ -172,8 +172,8 @@ having `quay.io/biocontainers/bwa:0.7.13--1` as source container and `foo.com/ba
 container will be named `foo.com/bar/biocontainers/bwa:0.7.13--1`.
 :::
 
-The credentials to allow the push of  containers in the target repository needs to be provided via Seqera Platform
-credentials manager, whose account is specified in the `tower.accessToken` in the above configuration.
+The credentials to allow the push of  containers in the target repository need to be provided via the Seqera Platform
+credentials manager. The account used for this is specified by the `tower.accessToken` in the configuration above.
 
 ### Container security scanning
 
