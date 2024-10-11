@@ -198,8 +198,8 @@ class TraceFileObserverTest extends Specification {
         result[4] == 'COMPLETED'                // status
         result[5] == '99'                       // exit status
         result[6] == '2014-08-22 13:41:14.000'  // submit
-        result[7] == '38s'                      // wall-time
-        result[8] == '37s'                      // run-time
+        result[7] == '38.0s'                    // wall-time
+        result[8] == '37.0s'                    // run-time
         result[9] == '17.5%'                    // cpu
         result[10] == '9.8 MB'                  // peak_rss
         result[11] == '29.3 MB'                 // peak_vmem

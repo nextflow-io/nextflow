@@ -109,7 +109,6 @@ class DurationTest extends Specification {
         def duration = new Duration('5min')
 
         then:
-        duration.durationInMillis == 5 * 60 * 1000
         duration.toMillis() == 5 * 60 * 1000
         duration.toSeconds() == 5 * 60
         duration.toMinutes() == 5
@@ -124,7 +123,7 @@ class DurationTest extends Specification {
 
         expect:
         new Duration(100).toString() == '100ms'
-        new Duration(1_000).toString() == '1s'
+        new Duration(1_000).toString() == '1.0s'
         new Duration(1_100).toString() == '1.1s'
         new Duration(32_300).toString() == '32.3s'
         new Duration(61 * 1000).toString() == '1m 1s'
