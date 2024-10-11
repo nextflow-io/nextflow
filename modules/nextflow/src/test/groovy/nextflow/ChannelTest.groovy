@@ -990,4 +990,23 @@ class ChannelTest extends Specification {
 
     }
 
+    def 'should not fail when setting SRA correct properties' () {
+        given:
+        def id = 'SRR389222'
+        def retryPolicy = [maxAttempts: 2]
+
+        when:
+        def result = Channel.fromSRA(id, apiKey: '1234', retryPolicy: retryPolicy, cache: false, max: 10, protocol: 'http')
+        then:
+        result != null
+
+    }
+
+    def 'should fail when SRA incorrect property' () {
+        when:
+        def result = Channel.fromSRA('SRR389222', incorrectKey: '1234')
+        then:
+        thrown(IllegalArgumentException)
+    }
+
 }

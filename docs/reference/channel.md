@@ -318,6 +318,25 @@ Available options:
 `protocol`
 : Allow choosing the protocol for the resulting remote URLs. Available choices: `ftp`, `http`, `https` (default: `ftp`).
 
+`retryPolicy`
+: Set a retry policy in case the SRA request fails with a retriable error.
+The retry policy is set as a Map specifying the different policy properties.
+
+Available retry policy properties:
+
+| Property      | Description                                     | Default |
+| ------------- |-------------------------------------------------| ------- |
+| `delay`       | Delay when retrying failed SRA requests.        | `500ms` |
+| `jitter`      | Jitter value when retrying failed SRA requests. | `0.25`  |
+| `maxAttempts` | Max attempts when retrying failed SRA requests. | `3`     |
+| `maxDelay`    | Max delay when retrying failed SRA requests.    | `30s`   |
+
+The following code snippet shows an example for using the `Channel.fromSRA` factory method with a custom `retryPolicy`.
+
+  ```groovy
+  channel.fromSRA(ids, retryPolicy: [delay: '250ms', maxAttempts: 5])
+  ```
+
 (channel-interval)=
 
 ## interval
