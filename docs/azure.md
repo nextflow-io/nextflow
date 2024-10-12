@@ -445,6 +445,9 @@ nextflow run <script or project name> -bucket-dir az://my-container/some/path
 The Azure Blob Storage path needs to contain at least one sub-directory (e.g. `az://my-container/work` rather than `az://my-container`).
 :::
 
+:::{note}
+When using [Fusion](./fusion.md), the `-bucket-dir` option is not required. Fusion implements a distributed virtual file system that allows seamless access to Azure Blob Storage using a standard POSIX interface, enabling direct mounting of remote blob storage as if it were a local file system. This simplifies and speeds up most operations, bridging the gap between cloud-native storage and data analysis workflows.
+:::
 
 ## Microsoft Entra
 
