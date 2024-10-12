@@ -634,9 +634,9 @@ class WaveClient {
             throw new IllegalStateException("Unable to find any container with key: $key")
         final resp = handle.response
         if( resp.requestId ) {
-            return resp.status != ContainerStatus.DONE
-                ? checkContainerCompletion(handle)
-                : true
+            return resp.succeeded
+                    ? true
+                    : checkContainerCompletion(handle)
         }
         if( resp.buildId && !resp.cached )
             return checkBuildCompletion(handle)
