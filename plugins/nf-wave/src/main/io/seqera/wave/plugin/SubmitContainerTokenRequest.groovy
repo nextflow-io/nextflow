@@ -147,7 +147,7 @@ class SubmitContainerTokenRequest {
     /**
      * Whenever use container "mirror" mode
      */
-    public boolean mirror;
+    boolean mirror;
 
     /**
      * The request security scan mode

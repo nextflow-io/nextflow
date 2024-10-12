@@ -20,8 +20,6 @@ package io.seqera.wave.plugin
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
-import io.seqera.wave.api.ContainerStatus
-
 /**
  * Model a response for an augmented container
  *
@@ -78,8 +76,9 @@ class SubmitContainerTokenResponse {
     String scanId
 
     /**
-     * The status of the container for this request
+     * Whenever the container has been provisioned successfully or not. If false
+     * the current status needs the be check via container status API
      */
-    ContainerStatus status
+    Boolean succeeded
 
 }

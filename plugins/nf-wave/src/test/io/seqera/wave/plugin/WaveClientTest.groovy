@@ -1310,14 +1310,14 @@ class WaveClientTest extends Specification {
         def wave = Spy(new WaveClient(session:sess, cache: cache))
         boolean ready
 
-        // container is READY
+        // container succeeded
         when:
         ready = wave.isContainerReady('xyz')
         then:
         cache.getIfPresent('xyz') >> handle
         and:
         resp.requestId >> '12345'
-        resp.status >> ContainerStatus.DONE
+        resp.succeeded >> true
         and:
         0 * wave.checkContainerCompletion(handle) >> null
         0 * wave.checkBuildCompletion(_) >> null
@@ -1331,26 +1331,26 @@ class WaveClientTest extends Specification {
         cache.getIfPresent('xyz') >> handle
         and:
         resp.requestId >> '12345'
-        resp.status >> ContainerStatus.PENDING
+        resp.succeeded >> null
         and:
-        1 * wave.checkContainerCompletion(handle) >> false
+        1 * wave.checkContainerCompletion(handle) >> true
         0 * wave.checkBuildCompletion(_) >> null
         and:
-        !ready
+        ready
 
-        // container succeeded
+        // container failed
         when:
         ready = wave.isContainerReady('xyz')
         then:
         cache.getIfPresent('xyz') >> handle
         and:
         resp.requestId >> '12345'
-        resp.status >> ContainerStatus.PENDING
+        resp.succeeded >> false
         and:
-        1 * wave.checkContainerCompletion(handle) >> true
+        1 * wave.checkContainerCompletion(handle) >> false
         0 * wave.checkBuildCompletion(_) >> null
         and:
-        ready
+        !ready
 
 
         // build is READY
