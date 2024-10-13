@@ -1,5 +1,18 @@
 NEXTFLOW CHANGE-LOG
 ===================
+24.09.1-edge 13 Oct 2024
+- Add retry policy in Channel.fromSRA factory (#5389) [fb1c8b2e]
+- Add retry policy to Google batch describe task (#5356) [64bb5a92]
+- Add support for Wave  container status API  (#5384) [873703ad] [9ed18a88]
+- Fix Identify default git branch when downloading pipelines (#3593) (#5375) [4f74fc37]
+- Fix issue when retrying with stub (#5359) [324b611f]
+- Fix include aborted in the ProgressRecord total count (#5365) [8eb0c393]
+- Redirect logs to stderr during app bootstrap (#5206) [94918105]
+- Remove unused reportsOpts (#5379) [e794e868]
+- Sunsetting Spack support in Wave [3a54cb3b] [7bbba67b]
+- Bump nf-google@1.15.1 [4204435e]
+- Bump nf-wave@1.7.0 [cdecb3f5]
+
 24.09.0-edge - 2 Oct 2024
 - Add Fusion version pinning info to Fusion config scope (#5294) [be1cac37]
 - Add container tip in the task error report (#5299) [62e26043]
