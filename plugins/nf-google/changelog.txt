@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.15.1 - 13 Oct 2024
+- Add retry policy to google batch describe task (#5356) [64bb5a92]
+
 1.15.0 - 4 Sep 2024
 - Add Google Batch warning when for conflicting disk image config (#5279) [ci fast] [96cb57cb]
 - Add support for Google Batch used specified boot images  (#5268) [0aaa6482]
