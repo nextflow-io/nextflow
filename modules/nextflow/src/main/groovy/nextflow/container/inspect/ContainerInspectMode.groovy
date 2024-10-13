@@ -26,10 +26,10 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class ContainerInspectMode {
 
-    private static boolean active
+    private static Boolean active
 
-    static boolean active() { return active }
+    static boolean active() { return active==true }
 
-    static void activate(boolean value) { active=value }
+    static void activate(boolean value) { active = value }
 
 }
