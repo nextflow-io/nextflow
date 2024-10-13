@@ -603,7 +603,6 @@ class WaveClient {
         return false
     }
 
-    @Deprecated
     protected boolean checkBuildCompletion(Handle handle) {
         final long maxAwait = config.buildMaxDuration().toMillis()
         final startTime = handle.createdAt.toEpochMilli()
