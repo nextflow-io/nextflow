@@ -263,7 +263,7 @@ class WaveClientTest extends Specification {
 
     def 'should create request object with scan mode and levels' () {
         given:
-        def session = Mock(Session) { getConfig() >> [wave:[scan:[mode: 'required', levels: 'low,medium']]]}
+        def session = Mock(Session) { getConfig() >> [wave:[scan:[mode: 'required', allowedLevels: 'low,medium']]]}
         def IMAGE =  'foo:latest'
         def wave = new WaveClient(session)
 

@@ -54,7 +54,7 @@ class WaveConfig {
     final private Duration buildMaxDuration
     final private Boolean mirrorMode
     final private ScanMode scanMode
-    final private List<ScanLevel> scanLevels
+    final private List<ScanLevel> scanAllowedLevels
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
@@ -74,7 +74,7 @@ class WaveConfig {
         this.httpClientOpts = new HttpOpts(opts.httpClient as Map ?: Map.of())
         this.buildMaxDuration = opts.navigate('build.maxDuration', '40m') as Duration
         this.scanMode = opts.navigate('scan.mode') as ScanMode
-        this.scanLevels = parseScanLevels(opts.navigate('scan.levels'))
+        this.scanAllowedLevels = parseScanLevels(opts.navigate('scan.allowedLevels'))
         // some validation
         validateConfig()
     }
@@ -180,8 +180,8 @@ class WaveConfig {
         return scanMode
     }
 
-    List<ScanLevel> scanLevels() {
-        return scanLevels
+    List<ScanLevel> scanAllowedLevels() {
+        return scanAllowedLevels
     }
 
     protected List<ScanLevel> parseScanLevels(value) {
