@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.15.2 - 14 Oct 2024
+- Add Google LS deprecation notice (#5400) [0ee1d9bc]
+
 1.15.1 - 13 Oct 2024
 - Add retry policy to google batch describe task (#5356) [64bb5a92]
 
