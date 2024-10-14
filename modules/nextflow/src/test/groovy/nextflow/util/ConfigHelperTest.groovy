@@ -245,6 +245,94 @@ class ConfigHelperTest extends Specification {
 
     }
 
+    def 'should render config as json' () {
+        given:
+        def config = new ConfigObject()
+        config.process.queue = 'long'
+        config.process.executor = 'slurm'
+        config.docker.enabled = true
+        config.zeta.'quoted-attribute'.foo = 1
+
+        when:
+        def result = ConfigHelper.toJsonString(config, true)
+        then:
+        result == '''
+            {
+                "docker": {
+                    "enabled": true
+                },
+                "process": {
+                    "executor": "slurm",
+                    "queue": "long"
+                },
+                "zeta": {
+                    "quoted-attribute": {
+                        "foo": 1
+                    }
+                }
+            }
+            '''.stripIndent().trim()
+
+
+        when:
+        result = ConfigHelper.toJsonString(config, false)
+        then:
+        result == '''
+            {
+                "process": {
+                    "queue": "long",
+                    "executor": "slurm"
+                },
+                "docker": {
+                    "enabled": true
+                },
+                "zeta": {
+                    "quoted-attribute": {
+                        "foo": 1
+                    }
+                }
+            }
+            '''.stripIndent().trim()
+    }
+
+    def 'should render config as yaml' () {
+        given:
+        def config = new ConfigObject()
+        config.process.queue = 'long'
+        config.process.executor = 'slurm'
+        config.docker.enabled = true
+        config.zeta.'quoted-attribute'.foo = 1
+
+        when:
+        def result = ConfigHelper.toYamlString(config, true)
+        then:
+        result == '''\
+            docker:
+              enabled: true
+            process:
+              executor: slurm
+              queue: long
+            zeta:
+              quoted-attribute:
+                foo: 1
+            '''.stripIndent()
+
+
+        when:
+        result = ConfigHelper.toYamlString(config, false)
+        then:
+        result == '''\
+            process:
+              queue: long
+              executor: slurm
+            docker:
+              enabled: true
+            zeta:
+              quoted-attribute:
+                foo: 1
+            '''.stripIndent()
+    }
+
     def 'should verify valid identifiers' () {
 
         expect:
