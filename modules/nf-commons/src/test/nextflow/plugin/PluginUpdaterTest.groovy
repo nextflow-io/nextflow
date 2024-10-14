@@ -1,5 +1,7 @@
 package nextflow.plugin
 
+import com.github.zafarkhaja.semver.Version
+
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
@@ -166,6 +168,26 @@ class PluginUpdaterTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
+    }
+
+
+    def 'versions with ~ should behave like +' () {
+        // this test checks our understanding on ~ semver rules is correct
+        when:
+        def condition = "~1.2"
+        then:
+        Version.parse("1.2.0").satisfies(condition)
+        Version.parse("1.2.1").satisfies(condition)
+        Version.parse("1.2.2").satisfies(condition)
+        !Version.parse("1.3.0").satisfies(condition)
+
+        when:
+        condition = "~1.2.1"
+        then:
+        !Version.parse("1.2.0").satisfies(condition)
+        Version.parse("1.2.1").satisfies(condition)
+        Version.parse("1.2.2").satisfies(condition)
+        !Version.parse("1.3.0").satisfies(condition)
     }
 
 

@@ -314,19 +314,29 @@ class PluginUpdater extends UpdateManager {
         new File(tmp, "nextflow-plugin-${id}-${version}.lock")
     }
 
-    private boolean load0(String id, String version) {
+    private boolean load0(String id, String requestedVersion) {
         assert id, "Missing plugin Id"
 
-        if( version == null )
-            version = getLastPluginRelease(id)?.version
-
         final offline = SysEnv.get('NXF_OFFLINE')=='true'
+        if( offline && !requestedVersion )
+            throw new IllegalStateException("Cannot find version for $id plugin -- plugin versions MUST be specified in offline mode")
+
+        def version = requestedVersion
+        if( !version )
+            version = getLastPluginRelease(id)?.version
+        else if( !Version.isValid(version) )
+            // a version is 'valid' if it's an exact semver version "major.minor.patch" so
+            // if it's not that, treat it as a version constraint and look for matches
+            version = findNewestMatchingRelease(id, version)?.version
+
         if( !version ) {
-            final msg = offline
-                ? "Cannot find version for $id plugin -- plugin versions MUST be specified in offline mode"
+            final msg = requestedVersion
+                ? "Cannot find version of $id plugin matching $requestedVersion"
                 : "Cannot find latest version of $id plugin"
             throw new IllegalStateException(msg)
         }
+        if( version != requestedVersion )
+            log.debug "Plugin $id version $requestedVersion resolved to: $version"
 
         def pluginPath = pluginsStore.resolve("$id-$version")
         if( !FilesEx.exists(pluginPath) ) {
@@ -446,7 +456,7 @@ class PluginUpdater extends UpdateManager {
             throw new IllegalArgumentException("Unknown plugin id: $id")
 
         // note: order releases list by descending version numbers ie. latest version comes first
-        def releases = pluginInfo.releases.sort(false) { a,b -> Version.valueOf(b.version) <=> Version.valueOf(a.version) }
+        def releases = pluginInfo.releases.sort(false) { a,b -> Version.parse(b.version) <=> Version.parse(a.version) }
         for (PluginInfo.PluginRelease rel : releases ) {
             if( !versionManager.checkVersionConstraint(rel.version, verConstraint) || !rel.url )
                 continue
