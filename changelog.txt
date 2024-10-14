@@ -1,6 +1,16 @@
 NEXTFLOW CHANGE-LOG
 ===================
-24.09.1-edge 13 Oct 2024
+24.09.2-edge - 14 Oct 2024
+- Add Google LS deprecation notice (#5400) [0ee1d9bc]
+- Add hybrid workflow documentation for Azure (#5361) [f81f27de]
+- Add more out formats to config command (#5399) [8acdb6e8]
+- Change to scan.levels to scan.allowedLevels (#5401) [88a1b1b5]
+- Fix inspect concretize option [0ee29a87]
+- Manage moduleBinaries feature flag in the pipeline script (#5348) [dd5fd20f]
+- Bump nf-wave@1.7.1 [94273967]
+- Bump nf-google@1.15.2 [fab01d58]
+
+24.09.1-edge - 13 Oct 2024
 - Add retry policy in Channel.fromSRA factory (#5389) [fb1c8b2e]
 - Add retry policy to Google batch describe task (#5356) [64bb5a92]
 - Add support for Wave  container status API  (#5384) [873703ad] [9ed18a88]
