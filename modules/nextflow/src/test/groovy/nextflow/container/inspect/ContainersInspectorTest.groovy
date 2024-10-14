@@ -50,7 +50,7 @@ class ContainersInspectorTest extends Specification {
         ]
 
         when:
-        def observer = new ContainersInspector(dag)
+        def observer = new ContainersInspector(dag, false)
         then:
         observer.getContainers() == [
             'proc1': 'container1',
@@ -67,7 +67,7 @@ class ContainersInspectorTest extends Specification {
         ]
 
         when:
-        def result = new ContainersInspector(dag)
+        def result = new ContainersInspector(dag, false)
                 .withFormat('json')
                 .renderContainers()
         then:
@@ -96,7 +96,7 @@ class ContainersInspectorTest extends Specification {
         ]
 
         when:
-        def result = new ContainersInspector(dag)
+        def result = new ContainersInspector(dag,false)
                 .withFormat('config')
                 .renderContainers()
         then:

@@ -85,7 +85,6 @@ import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
-import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
 import nextflow.script.params.BaseOutParam
 import nextflow.script.params.CmdEvalParam
@@ -642,14 +641,8 @@ class TaskProcessor {
         if( !checkWhenGuard(task) )
             return
 
-        TaskClosure block
-        if( session.stubRun && (block=task.config.getStubBlock()) ) {
-            task.resolve(block)
-        }
-        else {
-            // -- resolve the task command script
-            task.resolve(taskBody)
-        }
+        // -- resolve the task command script
+        task.resolve(taskBody)
 
         // -- verify if exists a stored result for this case,
         //    if true skip the execution and return the stored data
