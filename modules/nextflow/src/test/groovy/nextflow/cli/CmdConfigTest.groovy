@@ -90,6 +90,7 @@ class CmdConfigTest extends Specification {
                 .stripIndent().leftTrim()
 
     }
+
     def 'should canonical notation' () {
 
         given:
@@ -194,6 +195,86 @@ class CmdConfigTest extends Specification {
         def e = thrown(AbortOperationException)
         e.message == "Configuration option 'does.not.exist' not found"
 
+    }
+
+    def 'should print config using json' () {
+        given:
+        ByteArrayOutputStream buffer
+        ConfigObject config
+        def cmd = new CmdConfig(sort: true)
+
+        when:
+        buffer = new ByteArrayOutputStream()
+
+        config = new ConfigObject()
+        config.process.executor = 'slurm'
+        config.process.queue = 'long'
+        config.docker.enabled = true
+        config.dummy = new ConfigObject() // <-- empty config object should not be print
+        config.mail.from = 'yo@mail.com'
+        config.mail.smtp.host = 'mail.com'
+        config.mail.smtp.port = 25
+        config.mail.smtp.user = 'yo'
+
+        cmd.printJson0(config, buffer)
+        then:
+        buffer.toString() == '''\
+                    {
+                        "docker": {
+                            "enabled": true
+                        },
+                        "mail": {
+                            "from": "yo@mail.com",
+                            "smtp": {
+                                "host": "mail.com",
+                                "port": 25,
+                                "user": "yo"
+                            }
+                        },
+                        "process": {
+                            "executor": "slurm",
+                            "queue": "long"
+                        }
+                    }
+                    '''
+                    .stripIndent()
+    }
+
+    def 'should print config using yaml' () {
+        given:
+        ByteArrayOutputStream buffer
+        ConfigObject config
+        def cmd = new CmdConfig(sort: true)
+
+        when:
+        buffer = new ByteArrayOutputStream()
+
+        config = new ConfigObject()
+        config.process.executor = 'slurm'
+        config.process.queue = 'long'
+        config.docker.enabled = true
+        config.dummy = new ConfigObject() // <-- empty config object should not be print
+        config.mail.from = 'yo@mail.com'
+        config.mail.smtp.host = 'mail.com'
+        config.mail.smtp.port = 25
+        config.mail.smtp.user = 'yo'
+
+        cmd.printYaml0(config, buffer)
+        then:
+        buffer.toString() == '''\
+                    docker:
+                      enabled: true
+                    mail:
+                      from: yo@mail.com
+                      smtp:
+                        host: mail.com
+                        port: 25
+                        user: yo
+                    process:
+                      executor: slurm
+                      queue: long
+                    '''
+                    .stripIndent()
     }
 
     def 'should parse config file' () {
