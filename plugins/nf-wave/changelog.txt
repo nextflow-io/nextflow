@@ -1,5 +1,9 @@
 nf-wave changelog
 ==================
+1.7.1 - 14 Oct 2024
+- Change to scan.levels to scan.allowedLevels (#5401) [88a1b1b5]
+- Fix inspect concretize option [0ee29a87]
+
 1.7.0 - 13 Oct 2024
 - Add support for Wave  container status API  (#5384) [873703ad] [9ed18a88]
 - Remove unused reportsOpts (#5379) [e794e868]
