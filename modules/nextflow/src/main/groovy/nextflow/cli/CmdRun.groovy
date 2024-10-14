@@ -436,7 +436,7 @@ class CmdRun extends CmdBase implements HubOptions {
     static void detectModuleBinaryFeature(ConfigMap config) {
         final moduleBinaries = config.navigate('nextflow.enable.moduleBinaries', false)
         if( moduleBinaries ) {
-            log.warn "Setting feature flags in the configuration file will not be supported in the future -- set them in the pipeline script instead"
+            log.debug "Enabling module binaries"
             NextflowMeta.instance.moduleBinaries(true)
         }
     }
@@ -447,7 +447,6 @@ class CmdRun extends CmdBase implements HubOptions {
         final strictMode = config.navigate('nextflow.enable.strict', defStrict)
         if( strictMode ) {
             log.debug "Enabling nextflow strict mode"
-            log.warn "Setting feature flags in the configuration file will not be supported in the future -- set them in the pipeline script instead"
             NextflowMeta.instance.strictMode(true)
         }
     }
