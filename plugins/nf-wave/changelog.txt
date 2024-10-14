@@ -1,5 +1,10 @@
 nf-wave changelog
 ==================
+1.7.0 - 13 Oct 2024
+- Add support for Wave  container status API  (#5384) [873703ad] [9ed18a88]
+- Remove unused reportsOpts (#5379) [e794e868]
+- Sunsetting Spack support in Wave [3a54cb3b]
+
 1.6.0 - 2 Oct 2024
 - Improve Wave build timeout handling (#5304) [05bef7e4]
 - Bump groovy 4.0.23 (#5303) [ci fast] [fe3e3ac7]
