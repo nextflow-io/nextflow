@@ -398,25 +398,26 @@ For an exhaustive list of error codes, refer to the official Google Life Science
 
 ### Hybrid execution
 
-Nextflow allows the use of multiple executors in the same workflow. This feature enables the deployment of hybrid workloads, in which some jobs are executed in the local computer or local computing cluster, and some jobs are offloaded to Google Life Sciences.
+Nextflow allows the use of multiple executors in the same workflow. This feature enables the deployment of hybrid workloads, in which some jobs are executed in the local computer or local computing cluster, and some jobs are offloaded to Google Cloud (either Google Batch or Google Life Sciences).
 
-To enable this feature, use one or more {ref}`config-process-selectors` in your Nextflow configuration file to apply the Google Life Sciences executor to the subset of processes that you want to offload. For example:
+To enable this feature, use one or more {ref}`config-process-selectors` in your Nextflow configuration file to apply the Google Cloud executor to the subset of processes that you want to offload. For example:
 
 ```groovy
 process {
     withLabel: bigTask {
-        executor = 'google-lifesciences'
+        executor = 'google-batch' // or 'google-lifesciences'
         container = 'my/image:tag'
     }
 }
 
 google {
     project = 'your-project-id'
-    zone = 'europe-west1-b'
+    location = 'us-central1' // for Google Batch
+    // zone = 'us-central1-a' // for Google Life Sciences
 }
 ```
 
-Then launch the pipeline with the `-bucket-dir` option to specify a Google Storage path for the jobs computed with Google Life Sciences and, optionally, the `-work-dir` to specify the local storage for the jobs computed locally:
+Then launch the pipeline with the `-bucket-dir` option to specify a Google Storage path for the jobs computed with Google Cloud and, optionally, the `-work-dir` to specify the local storage for the jobs computed locally:
 
 ```bash
 nextflow run <script or project name> -bucket-dir gs://my-bucket/some/path
@@ -424,6 +425,10 @@ nextflow run <script or project name> -bucket-dir gs://my-bucket/some/path
 
 :::{warning}
 The Google Storage path needs to contain at least one sub-directory (e.g. `gs://my-bucket/work` rather than `gs://my-bucket`).
+:::
+
+:::{note}
+Nextflow will automatically manage the transfer of input and output files between the local and cloud environments when using hybrid workloads.
 :::
 
 ### Limitations
