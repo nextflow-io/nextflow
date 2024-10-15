@@ -243,6 +243,16 @@ abstract class TaskHandler {
     }
 
     /**
+     * Determine if a task is ready for execution or it depends on resources
+     * e.g. container that needs to be provisionied
+     *
+     * @return {@code true} when the task is ready for execution, {@code false} otherwise
+     */
+    boolean isReady() {
+        task.isContainerReady()
+    }
+
+    /**
      * Increment the number of current forked processes
      */
     final void incProcessForks() {
@@ -272,5 +282,22 @@ abstract class TaskHandler {
         if( isSubmitted() && now-submitTimeMillis>maxAwait.millis )
             return true
         return false
+    }
+
+    /**
+     * Prepend the workflow Id to the job/task name. The workflow id is defined
+     * by the environment variable {@code TOWER_WORKFLOW_ID}
+     *
+     * @param name
+     *      The desired job name
+     * @param env
+     *      A map representing the variables in the host environment
+     * @return
+     *  The job having the prefix {@code tw-<ID>} when the variable {@code TOWER_WORKFLOW_ID}
+     *  is defined in the host environment or just {@code name} otherwise
+     */
+    static String prependWorkflowPrefix(String name, Map<String,String> env) {
+        final workflowId = env.get("TOWER_WORKFLOW_ID")
+        return workflowId ? "tw-${workflowId}-${name}" : name
     }
 }

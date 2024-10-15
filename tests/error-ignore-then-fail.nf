@@ -15,15 +15,39 @@
  * limitations under the License.
  */
 
+workflow {
+    input_channel = channel.of("SAMP1", "SAMP2", "SAMP3")
+    foo(input_channel)
+    bar(foo.out.sample_ids.collect())
+}
+
 process foo {
-    errorStrategy 'ignore'
+    input:
+    val sample_id
+
+    output:
+    val sample_id, emit: sample_ids
 
     script:
-    '''
-    exit 1
-    '''
+    """
+    if [[ $sample_id == "SAMP1" ]]; then
+        exit 2
+    fi
+    ls -lah .*
+    """
 }
 
-workflow {
-    foo()
+process bar {
+    input:
+    val ready
+
+    output:
+    stdout
+
+    script:
+    """
+    ls -lah .*
+    """
+
 }
+
