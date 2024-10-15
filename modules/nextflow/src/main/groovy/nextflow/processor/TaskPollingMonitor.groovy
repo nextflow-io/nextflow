@@ -683,7 +683,7 @@ class TaskPollingMonitor implements TaskMonitor {
 
     protected void finalizeTask( TaskHandler handler ) {
         // finalize the task execution
-        final fault = handler.task.processor.finalizeTask(handler.task)
+        final fault = handler.task.processor.finalizeTask(handler)
 
         // notify task completion
         session.notifyTaskComplete(handler)

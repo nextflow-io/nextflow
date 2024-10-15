@@ -15,6 +15,8 @@
  */
 package nextflow.processor
 
+import nextflow.trace.TraceRecord
+
 import static nextflow.processor.ErrorStrategy.*
 
 import java.lang.reflect.InvocationTargetException
@@ -1036,6 +1038,7 @@ class TaskProcessor {
                 session.getExecService().submit {
                     try {
                         taskCopy.runType = RunType.RETRY
+
                         checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false )
                     }
                     catch( Throwable e ) {
@@ -2361,7 +2364,8 @@ class TaskProcessor {
      * @param task The {@code TaskRun} instance to finalize
      */
     @PackageScope
-    final finalizeTask( TaskRun task ) {
+    final finalizeTask( TaskHandler handler) {
+        def task = handler.task
         log.trace "finalizing process > ${safeTaskName(task)} -- $task"
 
         def fault = null
@@ -2384,6 +2388,8 @@ class TaskProcessor {
             collectOutputs(task)
         }
         catch ( Throwable error ) {
+            def trace = handler.getTraceRecord()
+            task.context.put('trace', trace)
             fault = resumeOrDie(task, error)
             log.trace "Task fault (3): $fault"
         }
