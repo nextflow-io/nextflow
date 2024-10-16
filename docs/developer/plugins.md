@@ -178,7 +178,7 @@ You can then use this function in your pipeline:
 ```groovy
 include { reverseString } from 'plugin/my-plugin'
 
-channel.of( reverseString('hi') )
+Channel.of( reverseString('hi') )
 ```
 
 You can also use an alias:

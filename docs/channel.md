@@ -71,10 +71,6 @@ For example, the `Channel.of()` factory can be used to create a channel from an 
 Channel.of(1, 2, 3).view()
 ```
 
-:::{versionadded} 20.07.0
-`channel` was introduced as an alias of `Channel`, allowing factory methods to be specified as `channel.of()` or `Channel.of()`, and so on.
-:::
-
 See {ref}`channel-factory` for the full list of channel factories.
 
 ## Operators
