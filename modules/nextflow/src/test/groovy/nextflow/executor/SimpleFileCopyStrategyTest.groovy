@@ -270,7 +270,7 @@ class SimpleFileCopyStrategyTest extends Specification {
         script == '''
                 IFS=$'\\n'
                 for name in $(eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
-                    nxf_fs_copy "$name" /target/work\\ dir || true
+                    nxf_fs_copy "$name" /target/work\\ dir
                 done
                 unset IFS
                 '''
@@ -293,7 +293,7 @@ class SimpleFileCopyStrategyTest extends Specification {
         script == '''
                 IFS=$'\\n'
                 for name in $(eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
-                    nxf_fs_move "$name" /target/store || true
+                    nxf_fs_move "$name" /target/store
                 done
                 unset IFS
                 '''
@@ -315,7 +315,7 @@ class SimpleFileCopyStrategyTest extends Specification {
         script == '''
                 IFS=$'\\n'
                 for name in $(eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
-                    nxf_fs_rsync "$name" /target/work\\'s || true
+                    nxf_fs_rsync "$name" /target/work\\'s
                 done
                 unset IFS
                 '''
