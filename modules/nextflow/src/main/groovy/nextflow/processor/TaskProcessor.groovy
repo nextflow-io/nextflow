@@ -137,6 +137,8 @@ class TaskProcessor {
 
     static final public String TRACE_PROPERTY_NAME = 'previousTrace'
 
+    static final public String ERROR_PROPERTY_NAME = 'previousError'
+
     final private static Pattern ENV_VAR_NAME = ~/[a-zA-Z_]+[a-zA-Z0-9_]*/
 
     final private static Pattern QUESTION_MARK = ~/(\?+)/
@@ -2390,8 +2392,9 @@ class TaskProcessor {
             collectOutputs(task)
         }
         catch ( Throwable error ) {
-            //Add trace of the previous execution in the task context for next execution
+            //Add trace and error message of the previous execution in the task context for next execution
             task.config.put(TRACE_PROPERTY_NAME, handler.getTraceRecord())
+            task.config.put(ERROR_PROPERTY_NAME, error.getMessage())
             fault = resumeOrDie(task, error)
             log.trace "Task fault (3): $fault"
         }

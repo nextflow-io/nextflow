@@ -16,7 +16,7 @@
 
 package nextflow.processor
 
-import static nextflow.processor.TaskProcessor.TRACE_PROPERTY_NAME
+import static nextflow.processor.TaskProcessor.*
 
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
@@ -621,6 +621,7 @@ class TaskPollingMonitor implements TaskMonitor {
             }
             //Add trace of the previous execution in the task context for next execution
             handler.task.config.put(TRACE_PROPERTY_NAME, handler.getTraceRecord())
+            handler.task.config.put(ERROR_PROPERTY_NAME, error.getMessage())
             fault = handler.task.processor.resumeOrDie(handler?.task, error)
             log.trace "Task fault (1): $fault"
         }
