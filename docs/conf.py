@@ -353,7 +353,7 @@ class NextflowLexer(RegexLexer):
 
     name = 'Nextflow'
     url = 'https://nextflow.io/'
-    aliases = ['nextflow']
+    aliases = ['nextflow', 'nf']
     filenames = ['*.nf']
     mimetypes = ['text/x-nextflow']
     # version_added = '1.5'
