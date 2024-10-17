@@ -44,6 +44,9 @@ class XFileSystem extends FileSystem {
 
     private URI base
 
+    /*
+    * Only needed to prevent serialization issues - see https://github.com/nextflow-io/nextflow/issues/5208
+    */
     protected XFileSystem(){}
 
     XFileSystem(XFileSystemProvider provider, URI base) {
