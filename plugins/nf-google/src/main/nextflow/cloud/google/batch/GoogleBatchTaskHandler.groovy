@@ -224,19 +224,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             .addAllCommands( cmd )
             .addAllVolumes( launcher.getContainerMounts() )
 
-        final accel = task.config.getAccelerator()
-        // add nvidia specific driver paths
-        // see https://cloud.google.com/batch/docs/create-run-job#create-job-gpu
-        if( accel && accel.type.toLowerCase().startsWith('nvidia-') ) {
-            container
-                .addVolumes('/var/lib/nvidia/lib64:/usr/local/nvidia/lib64')
-                .addVolumes('/var/lib/nvidia/bin:/usr/local/nvidia/bin')
-        }
-
         def containerOptions = task.config.getContainerOptions() ?: ''
-        // accelerator requires privileged option
-        // https://cloud.google.com/batch/docs/create-run-job#create-job-gpu
-        if( task.config.getAccelerator() || fusionEnabled() ) {
+        if( fusionEnabled() ) {
             if( containerOptions ) containerOptions += ' '
             containerOptions += '--privileged'
         }
@@ -324,17 +313,6 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         else {
             final instancePolicy = AllocationPolicy.InstancePolicy.newBuilder()
 
-            if( task.config.getAccelerator() ) {
-                final accelerator = AllocationPolicy.Accelerator.newBuilder()
-                    .setCount( task.config.getAccelerator().getRequest() )
-
-                if( task.config.getAccelerator().getType() )
-                    accelerator.setType( task.config.getAccelerator().getType() )
-
-                instancePolicy.addAccelerators(accelerator)
-                instancePolicyOrTemplate.setInstallGpuDrivers(true)
-            }
-
             if( executor.config.getBootDiskImage() )
                 instancePolicy.setBootDisk( AllocationPolicy.Disk.newBuilder().setImage( executor.config.getBootDiskImage() ) )
 
@@ -347,11 +325,25 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
             if( machineType ) {
                 instancePolicy.setMachineType(machineType.type)
+                instancePolicyOrTemplate.setInstallGpuDrivers(
+                        GoogleBatchMachineTypeSelector.INSTANCE.installGpuDrivers(machineType)
+                )
                 machineInfo = new CloudMachineInfo(
                         type: machineType.type,
                         zone: machineType.location,
                         priceModel: machineType.priceModel
                 )
+            }
+
+            if( task.config.getAccelerator() ) {
+                final accelerator = AllocationPolicy.Accelerator.newBuilder()
+                    .setCount( task.config.getAccelerator().getRequest() )
+
+                if( task.config.getAccelerator().getType() )
+                    accelerator.setType( task.config.getAccelerator().getType() )
+
+                instancePolicy.addAccelerators(accelerator)
+                instancePolicyOrTemplate.setInstallGpuDrivers(true)
             }
 
             // When using local SSD not all the disk sizes are valid and depends on the machine type

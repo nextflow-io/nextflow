@@ -100,6 +100,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         !instancePolicyOrTemplate.getInstanceTemplate()
         and:
+        !instancePolicyOrTemplate.getInstallGpuDrivers()
         instancePolicy.getAcceleratorsCount() == 0
         instancePolicy.getDisksCount() == 0
         !instancePolicy.getMachineType()
@@ -196,11 +197,9 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c bash .command.run'
         runnable.getContainer().getImageUri() == CONTAINER_IMAGE
-        runnable.getContainer().getOptions() == '--this --that --privileged'
+        runnable.getContainer().getOptions() == '--this --that'
         runnable.getContainer().getVolumesList() == [
             '/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw',
-            '/var/lib/nvidia/lib64:/usr/local/nvidia/lib64',
-            '/var/lib/nvidia/bin:/usr/local/nvidia/bin'
         ]
         and:
         runnable.getEnvironment().getVariablesMap() == [:]
