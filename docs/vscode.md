@@ -27,6 +27,10 @@ Include declarations in both scripts and config files act as links, and ctrl-cli
 
 To view the definition of a symbol (e.g., a workflow, process, function, or variable), right-click on the symbol and select "Go to Definition." You can also view all references to a symbol, and the call hierarchy of a function call.
 
+:::{note}
+Symbols also act as links -- ctrl-clicking on them opens the definition, and ctrl-clicking on a definition shows all references.
+:::
+
 ### Code completion
 
 The VS Code extension suggests auto-completions for variable names, function names, config settings, and other symbols as you type.
@@ -57,11 +61,11 @@ The "Preview DAG" CodeLens is only available when the script does not contain an
 
 ## Syntax guide
 
-The language server parses scripts and config files according to the [Nextflow language specification](https://deploy-preview-5336--nextflow-docs-staging.netlify.app/reference/syntax). It enforces a stricter syntax compared to the Nextflow CLI. As a result, the language server is able to perform more extensive error checking and provide more specific error messages. However, unlike the Nextflow CLI, which allows all Groovy syntax, the Nextflow language specification is not a superset of Groovy. You may need to adjust your code to adhere to the strict syntax, especially if you use more advanced Groovy syntax.
+The language server parses scripts and config files according to the {ref}`Nextflow language specification <syntax-page>`. It enforces a stricter syntax compared to the Nextflow CLI. As a result, the language server is able to perform more extensive error checking and provide more specific error messages. However, unlike the Nextflow CLI, which allows all Groovy syntax, the Nextflow language specification is not a superset of Groovy. You may need to adjust your code to adhere to the strict syntax, especially if you use more advanced Groovy syntax.
 
 This section describes some of the most common unsupported features and how to address them. For a full description of the strict syntax, refer to the Nextflow language specification.
 
-As a fallback, you can move any unsupported code into the lib directory or into a plugin, both of which support the full Groovy language.
+As a fallback, unsupported code can be moved into the lib directory or into a plugin, both of which support the full Groovy language.
 
 :::{note}
 The "Nextflow language specification" is a strict specification of DSL2, but it is not a new DSL version. Moving forward, the Nextflow language will be defined by this specification rather than new DSL versions.
@@ -79,7 +83,7 @@ import groovy.json.JsonSlurper
 def json = new JsonSlurper().parseText(json_file.text)
 ```
 
-Instead, you can use the fully qualified name directly:
+Instead, use the fully qualified name directly:
 
 ```nextflow
 def json = new groovy.json.JsonSlurper().parseText(json_file.text)
@@ -87,7 +91,7 @@ def json = new groovy.json.JsonSlurper().parseText(json_file.text)
 
 **Class declarations**
 
-Some users use custom classes in Nextflow to define helper functions or custom record types. Instead, you can define helper functions as standalone functions in a script. Custom record classes must be moved to the `lib` directory.
+Some users use custom classes in Nextflow to define helper functions or custom record types. Instead, helper functions can be defined as standalone functions in a script. Custom record classes must be moved to the `lib` directory.
 
 :::{note}
 Record types will be addressed in a future version of the Nextflow language specification.
@@ -123,7 +127,7 @@ workflow {
 }
 ```
 
-However, you cannot mix script declarations and statements at the same level. This practice was necessary in DSL1 and allowed in DSL2, but the Nextflow language specification does not support it. Unless the script is a code snippet, all statements must reside within script declarations. Such statements should be placed in the entry workflow: 
+However, script declarations and statements cannot be mixed at the same level. This practice was necessary in DSL1 and allowed in DSL2, but the Nextflow language specification does not support it. Unless the script is a code snippet, all statements must reside within script declarations. Such statements should be placed in the entry workflow: 
 
 ```nextflow
 process foo {
@@ -366,7 +370,7 @@ The process `when` section is deprecated. Use conditional logic, such as an `if`
 
 ### Configuration syntax
 
-See [Configuration](https://deploy-preview-5336--nextflow-docs-staging.netlify.app/config#syntax) for a comprehensive description of the configuration language.
+See {ref}`config-syntax` for a comprehensive description of the configuration language.
 
 Currently, Nextflow parses config files as Groovy scripts, allowing the use of scripting constructs like variables, helper functions, and conditional logic for dynamic configuration. For example:
 
