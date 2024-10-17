@@ -44,6 +44,8 @@ class XFileSystem extends FileSystem {
 
     private URI base
 
+    protected XFileSystem(){}
+
     XFileSystem(XFileSystemProvider provider, URI base) {
         this.provider = provider
         this.base = base
