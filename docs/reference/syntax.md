@@ -6,11 +6,15 @@ This page provides a comprehensive description of the Nextflow language.
 
 ## Comments
 
-Nextflow uses Java-style comments: `//` for a line comment, and `/* ... */` for a block comment:
+A line comment starts with `//` and includes the rest of the line.
 
 ```groovy
 println 'Hello world!' // line comment
+```
 
+A block comment starts with `/*` and includes all subsequent characters up to the first `*/`.
+
+```groovy
 /*
  * block comment
  */
@@ -31,11 +35,9 @@ A Nextflow script may contain the following top-level declarations:
 - Enum types
 - Output block
 
-These declarations are in turn composed of statements and expressions.
+Script declarations are in turn composed of statements and expressions.
 
-Alternatively, a script may contain one or more [statements](#statements), as long as there are no top-level declarations. In this case, the entire script will be treated as an entry workflow.
-
-For example, the following script:
+A script may contain one or more [statements](#statements), if there are no top-level declarations. In this case, the entire script will be treated as an entry workflow. For example:
 
 ```groovy
 println 'Hello world!'
@@ -50,7 +52,7 @@ workflow {
 ```
 
 :::{warning}
-Top-level declarations and statements can not be mixed at the same level. If your script has top-level declarations, all statements must be contained within top-level declarations such as the entry workflow.
+Statements and top-level declarations can not be mixed at the same level. If your script has top-level declarations, all statements must be contained within top-level declarations such as the entry workflow.
 :::
 
 ### Shebang
@@ -74,23 +76,27 @@ nextflow.preview.topic = true
 An include declaration consists of an *include source* and one or more *include clauses*:
 
 ```groovy
-include { foo ; bar as baz } from './some/module'
+include { foo as bar } from './some/module'
 ```
 
-The include source should be a string literal and should refer to either a local path (e.g. `./module.nf`) or a plugin (e.g. `plugin/nf-hello`).
+The include source should be a string literal and should refer to either a local path (e.g. `./module.nf`) or a plugin (e.g. `plugin/nf-hello`). Each include clause should specify a name, and may also specify an *alias*. In the example above, `foo` is included under the alias `bar`.
 
-Each include clause should specify a name, and may also specify an *alias*. In the example above, `bar` is included under the alias `baz`.
-
-Include clauses can be separated by newlines or semi-colons, or they can be specified as separate includes:
+Include clauses can be separated by semi-colons or newlines:
 
 ```groovy
+// semi-colons
+include { foo ; bar as baz } from './some/module'
+
 // newlines
 include {
     foo
     bar as baz
 } from './some/module'
+```
 
-// separate includes
+Include clauses can also be specified as separate includes:
+
+```groovy
 include { foo } from './some/module'
 include { bar as baz } from './some/module'
 ```
@@ -115,7 +121,9 @@ Parameters supplied via command line options, params files, and config files tak
 
 ### Workflow
 
-A workflow consists of a name and a body. The workflow body consists of a *main* section, with additional sections for *takes*, *emits*, and *publishers* (shown later):
+A workflow can be a *named workflow* or an *entry workflow*.
+
+A *named workflow* consists of a name and a body, and may consist of a *take*, *main*, *emit*, and *publish* section:
 
 ```groovy
 workflow greet {
@@ -130,7 +138,7 @@ workflow greet {
 }
 ```
 
-- The take, emit, and publish sections are optional. If they are not specified, the `main:` section label can be omitted.
+- The take, emit, and publish sections are optional. The `main:` section label can be omitted if they are not specified.
 
 - The take section consists of one or more parameters.
 
@@ -138,7 +146,10 @@ workflow greet {
 
 - The emit section consists of one or more *emit statements*. An emit statement can be a [variable name](#variable), an [assignment](#assignment), or an [expression statement](#expression-statement). If an emit statement is an expression statement, it must be the only emit.
 
-An alternative workflow form, known as an *entry workflow*, has no name and may only define a main and publish section:
+- The publish section can be specified but is intended to be used in the entry workflow (see below).
+
+
+An *entry workflow* has no name and may consist of a *main* and *publish* section:
 
 ```groovy
 workflow {
@@ -157,8 +168,6 @@ workflow {
 - The `main:` section label can be omitted if the publish section is not specified.
 
 - The publish section consists of one or more *publish statements*. A publish statement is a [right-shift expression](#binary-expressions), where the left-hand side is an expression that refers to a value in the workflow body, and the right-hand side is an expression that returns a string.
-
-- The publish section can also be specified in named workflows as a convenience, but is intended mainly to be used in the entry workflow.
 
 In order for a script to be executable, it must either define an entry workflow or use the implicit workflow syntax described [above](#top-level-declarations).
 
@@ -205,13 +214,13 @@ process greet {
 }
 ```
 
-- Each of these additional sections are optional. Directives do not have an explicit section label, but are simply defined first.
+- A process must define a script, shell, or exec section (see below). All other sections are optional. Directives do not have an explicit section label, but must be defined first.
 
 - The `script:` section label can be omitted only when there are no other sections in the body.
 
-- Sections must be defined in the order shown above, with the exception of the output section, which can alternatively be specified after the script and stub.
+- Sections must be defined in the order shown above, with the exception of the output section, which can also be specified after the script and stub.
 
-Each section may contain one or more statements. For directives, inputs, and outputs, these statements must be [function calls](#function-call). Refer to {ref}`process-reference` for the set of available input qualifiers, output qualifiers, and directives.
+Each section may contain one or more statements. For directives, inputs, and outputs, these statements must be [function calls](#function-call). See {ref}`process-reference` for the set of available input qualifiers, output qualifiers, and directives.
 
 The script section can be substituted with a shell or exec section:
 
@@ -241,7 +250,7 @@ process greetExec {
 
 The script, shell, and stub sections must return a string in the same manner as a [function](#function).
 
-Refer to {ref}`process-page` for more information on the semantics of each process section.
+See {ref}`process-page` for more information on the semantics of each process section.
 
 (syntax-function)=
 
@@ -277,7 +286,7 @@ def fib(x) {
 
 ### Enum type
 
-An enum type declaration consists of a name and a body, which consists of a comma-separated list of identifiers:
+An enum type declaration consists of a name and a body. The body consists of a comma-separated list of identifiers:
 
 ```groovy
 enum Day {
@@ -291,7 +300,7 @@ enum Day {
 }
 ```
 
-Enum values can be accessed as `Day.MONDAY`, `Day.TUESDAY`, and so on.
+Enum values in the above example can be accessed as `Day.MONDAY`, `Day.TUESDAY`, and so on.
 
 :::{note}
 Enum types cannot be included across modules at this time.
@@ -312,11 +321,11 @@ output {
 }
 ```
 
-Only one output block may be defined in a script. Refer to {ref}`workflow-output-def` for the set of available target directives.
+Only one output block may be defined in a script. See {ref}`workflow-output-def` for the set of available target directives.
 
 ## Statements
 
-Statements should be separated by a newline or semi-colon:
+Statements can be separated by either a newline or a semi-colon:
 
 ```groovy
 // newline
@@ -335,19 +344,19 @@ Variables can be declared with the `def` keyword:
 def x = 42
 ```
 
-Multiple variables can be declared in a single statement as long as the initializer is a [list literal](#list) with as many elements as declared variables:
+Multiple variables can be declared in a single statement if the initializer is a [list literal](#list) with the same number of elements and declared variables:
 
 ```groovy
 def (x, y) = [ 1, 2 ]
 ```
 
-Every variable has a *scope*, which determines the region of code in which the variable is defined.
+Each variable has a *scope*, which is the region of code in which the variable can be used.
 
 Variables declared in a function, as well as the parameters of that function, exist for the duration of that function call. The same applies to closures.
 
 Workflow inputs exist for the entire workflow body. Variables declared in the main section exist for the main, emit, and publish sections. Named outputs are not considered variable declarations and therefore do not have any scope.
 
-Process input variables exist for the entire process body. Variables declared in the process script, shell, exec, and stub sections exist only in their respective section, with one exception -- in these sections, a variable can be declared with the `def` keyword, in which case it will also exist in the output section.
+Process input variables exist for the entire process body. Variables declared in the process script, shell, exec, and stub sections exist only in their respective section, with one exception -- variables declared without the `def` keyword also exist in the output section.
 
 Variables declared in an if or else branch exist only within that branch:
 
@@ -363,7 +372,7 @@ if( true )
 println x
 ```
 
-A variable cannot be declared with the same name as another variable in the same scope or any enclosing scope:
+A variable cannot be declared with the same name as another variable in the same scope or an enclosing scope:
 
 ```groovy
 def clash(x) {
@@ -385,7 +394,7 @@ map.key = 'value'
 
 The target expression must be a [variable](#variable), [index](#binary-expressions), or [property](#binary-expressions) expression. The source expression can be any expression.
 
-Multiple variables can be assigned in a single statement as long as the source expression is a [list literal](#list) with as many elements as assigned variables:
+Multiple variables can be assigned in a single statement as long as the source expression is a [list literal](#list) with the same number of elements and assigned variables:
 
 ```groovy
 (x, y) = [ 1, 2 ]
@@ -393,7 +402,7 @@ Multiple variables can be assigned in a single statement as long as the source e
 
 ### Expression statement
 
-Any [expression](#expressions) can also be a statement.
+Any [expression](#expressions) can be a statement.
 
 In general, the only expressions that can have any effect as expression statements are function calls that have side effects (e.g. `println`) or an implicit return statement (e.g. in a function or closure).
 
@@ -407,9 +416,9 @@ assert 2 + 2 == 4 : 'The math broke!'
 
 If the condition is false, an error will be raised with the given error message.
 
-### if / else
+### if/else
 
-An if/else statement consists of an *if branch* and an optional *else branch*. Each branch consists of a boolean expression in parentheses, followed by either a single statement or a *block statement* (one or more statements in curly braces).
+An if/else statement consists of an *if branch* and an optional *else branch*. Each branch consists of a boolean expression in parentheses, followed by either a single statement or a *block statement* (one or more statements in curly braces). For example:
 
 ```groovy
 def x = Math.random()
@@ -423,7 +432,7 @@ else {
 
 If the condition is true, the if branch will be executed, otherwise the else branch will be executed.
 
-If / else statements can be chained any number of times by making the else branch another if / else statement:
+If/else statements can be chained any number of times by making the else branch another if/else statement:
 
 ```groovy
 def grade = 89
@@ -439,7 +448,7 @@ else
     println 'You failed.'
 ```
 
-A more verbose way to write the same code would be:
+A more verbose way to write the same code is:
 
 ```groovy
 def grade = 89
@@ -500,7 +509,9 @@ def isEven2(n) {
 }
 ```
 
-Note that if the last statement is not a return or expression statement (implicit return), it is equivalent to appending an empty return.
+:::{note}
+If the last statement is not a return or expression statement (implicit return), it is equivalent to appending an empty return.
+:::
 
 ### throw
 
@@ -517,9 +528,9 @@ error 'something failed!'
 ```
 :::
 
-### try / catch
+### try/catch
 
-A try / catch statement consists of a *try block* followed by any number of *catch clauses*:
+A try/catch statement consists of a *try block* followed by any number of *catch clauses*:
 
 ```groovy
 def text = null
@@ -531,7 +542,7 @@ catch( IOException e ) {
 }
 ```
 
-The try block will be executed, and if an error is raised and matches the expected error type of a catch clause, the code in that catch clause will be executed. If no catch clause is matched, the error will be raised to the next enclosing try / catch statement, or to the Nextflow runtime.
+The try block will be executed, and if an error is raised and matches the expected error type of a catch clause, the code in that catch clause will be executed. If no catch clause is matched, the error will be raised to the next enclosing try/catch statement, or to the Nextflow runtime.
 
 ## Expressions
 
@@ -631,11 +642,13 @@ Logic unconfined.
 /
 ```
 
-Note that a slashy string cannot be empty because it would become a line comment.
+:::{note}
+A slashy string cannot be empty because it would become a line comment.
+:::
 
 ### Dynamic string
 
-Double-quoted strings can be interpolated using the `${}` placeholder, which can contain any expression:
+Double-quoted strings can be interpolated using the `${}` placeholder with an expression:
 
 ```groovy
 def names = ['Thing 1', 'Thing 2']
@@ -729,7 +742,7 @@ println [1, 2, 3].collect { v -> factor * v }
 // -> [2, 4, 6]
 ```
 
-And they can declare local variables that exist only for the lifetime of each closure invocation:
+Closures can declare local variables that exist only for the lifetime of each closure invocation:
 
 ```groovy
 def result = 0
@@ -742,7 +755,7 @@ println result
 // -> 14
 ```
 
-Refer to the {ref}`standard library <stdlib-page>` and {ref}`operator <operator-page>` reference pages for examples of closures being used in practice.
+See {ref}`standard library <stdlib-page>` and {ref}`operator <operator-page>` for more examples of how closures are used in practice.
 
 ### Index expression
 
@@ -782,7 +795,7 @@ The argument list may contain any number of *positional arguments* and *named ar
 file('hello.txt', checkIfExists: true)
 ```
 
-The named arguments are collected into a map and provided as the first positional argument to the function. Thus the above function call can be rewritten as:
+The named arguments are collected into a map and provided as the first positional argument to the function. The above function call can be rewritten as:
 
 ```groovy
 file([checkIfExists: true], 'hello.txt')
@@ -790,7 +803,7 @@ file([checkIfExists: true], 'hello.txt')
 
 The argument name must be an identifier or string literal.
 
-When the function call is also an [expression statement](#expression-statement) and there is at least one argument, the parentheses can be omitted:
+The parentheses can be omitted when the function call is also an [expression statement](#expression-statement) and there is at least one argument:
 
 ```groovy
 // positional args
@@ -827,7 +840,7 @@ If the type is implicitly available in the script, the *fully-qualified type nam
 new Date()
 ```
 
-Refer to {ref}`stdlib-default-imports` for the set of types which are implicitly available in Nextflow scripts.
+See {ref}`stdlib-default-imports` for the set of types which are implicitly available in Nextflow scripts.
 
 ### Unary expressions
 
