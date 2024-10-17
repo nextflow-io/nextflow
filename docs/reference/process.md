@@ -26,6 +26,12 @@ The following task properties are defined in the process body:
 : *Available only in `exec:` blocks*
 : The current task name.
 
+`task.previousTrace`
+:::{versionadded} 24.09.2-edge
+:::
+: The trace record of the task execution. 
+: Since the trace record is only available after the task has been executed, it can only be used when `task.attempt` is bigger than 1. 
+
 `task.process`
 : The current process name.
 

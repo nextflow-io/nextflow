@@ -1284,13 +1284,13 @@ If the task execution fail reporting an exit status in the range between 137 and
 The directive {ref}`process-maxretries` set the maximum number of time the same task can be re-executed.
 
 ### Dynamic task resources with previous execution trace
-:::{versionadded} 24.09.1-edge
+:::{versionadded} 24.09.2-edge
 :::
-Similarly to the previous scenario, task resources can be also updated according to the metrics included in the {ref}`trace record <trace-report>` of the previous task attempt. The metrics can be accessed through the `trace` variable. For example:
+Similarly to the previous scenario, task resources can be also updated according to the metrics included in the {ref}`trace record <trace-report>` of the previous task attempt. The metrics can be accessed through the `task.previousTrace` variable. For example:
 
 ```groovy
 process foo {
-    memory { task.attempt > 1 ? trace.memory * 2 : (1.GB) }
+    memory { task.attempt > 1 ? task.previousTrace.memory * 2 : (1.GB) }
     errorStrategy { task.exitStatus in 137..140 ? 'retry' : 'terminate' }
     maxRetries 3
 

@@ -1,5 +1,5 @@
 process foo {
-  memory { (trace != null) ? trace.memory * 2 : (1.GB) }
+  memory { (task.attempt > 1) ? task.previousTrace.memory * 2 : (1.GB) }
   errorStrategy 'retry'
   maxRetries 3
   input:
@@ -9,12 +9,11 @@ process foo {
   script:
   if( task.attempt <= 3 ){
   """
-  echo mem: $task.memory
   exit 137
   """
   } else {
   """
-  echo mem: $task.memory
+  echo mem: $task.memory (previous: $task.previousTrace.memory)
   exit 0
   """
   }
