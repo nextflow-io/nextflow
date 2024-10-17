@@ -158,11 +158,11 @@ class KryoHelperTest extends  Specification {
 
     def 'should serialise xpath' () {
         when:
-        def file = FileHelper.asPath('https://host.com/foo.txt')
+        def file = FileHelper.asPath('http://host.com/foo.txt')
         def buffer = KryoHelper.serialize(file)
         then:
         KryoHelper.deserialize(buffer).getClass().getName() == 'nextflow.file.http.XPath'
-        KryoHelper.deserialize(buffer).toUri() == new URI('https://host.com/foo.txt')
+        KryoHelper.deserialize(buffer).toUri() == new URI('http://host.com/foo.txt')
     }
 
     def 'should serialise xfilesystem' () {
