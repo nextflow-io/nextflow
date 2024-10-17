@@ -1290,7 +1290,7 @@ Similarly to the previous scenario, task resources can be also updated according
 
 ```groovy
 process foo {
-    memory { (trace != null) ? trace.memory * 2 : (1.GB) }
+    memory { task.attempt > 1 ? trace.memory * 2 : (1.GB) }
     errorStrategy { task.exitStatus in 137..140 ? 'retry' : 'terminate' }
     maxRetries 3
 
