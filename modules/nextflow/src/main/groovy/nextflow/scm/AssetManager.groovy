@@ -66,7 +66,7 @@ class AssetManager {
 
     /**
      * The pipeline name. It must be in the form {@code username/repo} where 'username'
-     * is a valid user name or organisation account, while 'repo' is the repository name
+     * is a valid user name or organization account, while 'repo' is the repository name
      * containing the pipeline code
      */
     private String project
