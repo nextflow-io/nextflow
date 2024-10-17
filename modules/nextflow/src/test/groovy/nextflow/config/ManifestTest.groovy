@@ -82,7 +82,7 @@ class ManifestTest extends Specification {
         def manifest = new Manifest(new ConfigObject())
         then:
         manifest.homePage == null
-        manifest.defaultBranch == 'master'
+        manifest.defaultBranch == null
         manifest.description == null
         manifest.author == null
         manifest.contributors == []
