@@ -1,3 +1,3 @@
 Channel.of('a', 'c', 'c', 'q', 'b')
-    .count { it <= 'c' }
+    .count { v -> v <= 'c' }
     .view()

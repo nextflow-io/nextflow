@@ -250,6 +250,8 @@ The following functions are available in Nextflow scripts:
 `workflow.onError( closure )`
 : Define an action to take if the workflow is terminated due to a runtime error or task failure. Refer to the `workflow` implicit variable to see which additional properties are available in the error handler.
 
+(stdlib-default-imports)=
+
 ## Default imports
 
 The following classes are imported by default in Nextflow scripts:
