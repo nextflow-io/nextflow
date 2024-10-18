@@ -23,6 +23,8 @@ import groovy.json.StringEscapeUtils
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
+import groovy.transform.ToString
+import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.extension.Bolts
@@ -607,6 +609,38 @@ class TraceRecord implements Serializable {
 
     void setMachineInfo(CloudMachineInfo value) {
         this.machineInfo = value
+    }
+
+    List<Input> getInputs() {
+        return store.inputs as List<Input>
+    }
+
+    void setInputs(List<Input> inputs) {
+        store.inputs = inputs
+    }
+
+    List<Output> getOutputs() {
+        return store.outputs as List<Output>
+    }
+
+    void setOutputs(List<Output> outputs) {
+        store.outputs = outputs
+    }
+
+    @TupleConstructor
+    @ToString
+    static class Input {
+        String stageName
+        Path storePath
+        String source
+    }
+
+    @TupleConstructor
+    @ToString
+    static class Output {
+        Path path
+        long size
+        String checksum
     }
 
 }
