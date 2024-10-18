@@ -614,7 +614,7 @@ The following settings are available:
 : :::{versionadded} 24.04.0
   :::
 : *Used only by the {ref}`slurm-executor`, {ref}`lsf-executor`, {ref}`pbs-executor` and {ref}`pbspro-executor` executors.*
-: Allows specifying the project or organisation account that should be charged for running the pipeline jobs.
+: Allows specifying the project or organization account that should be charged for running the pipeline jobs.
 
 `executor.cpus`
 : The maximum number of CPUs made available by the underlying system. Used only by the `local` executor.
@@ -1144,7 +1144,21 @@ The `manifest` scope allows you to define some meta-data information needed when
 The following settings are available:
 
 `manifest.author`
+: :::{deprecated} 24.09.0-edge
+  Use `manifest.contributors` instead.
+  :::
 : Project author name (use a comma to separate multiple names).
+
+`manifest.contributors`
+: :::{versionadded} 24.09.0-edge
+  :::
+: List of project contributors. Should be a list of maps. The following fields are supported in the contributor map:
+  - `name`: the contributor's name 
+  - `affiliation`: the contributor's affiliated organization
+  - `email`: the contributor's email address
+  - `github`: the contributor's GitHub URL
+  - `contribution`: list of contribution types, each element can be one of `'author'`, `'maintainer'`, or `'contributor'`
+  - `orcid`: the contributor's [ORCID](https://orcid.org/) URL
 
 `manifest.defaultBranch`
 : Git repository default branch (default: `master`).
@@ -1170,9 +1184,6 @@ The following settings are available:
 `manifest.mainScript`
 : Project main script (default: `main.nf`).
 
-`manifest.maintainer`
-: Project maintainer name (use a comma to separate multiple names).
-
 `manifest.name`
 : Project short name.
 
@@ -1189,8 +1200,8 @@ The following settings are available:
   manifest.nextflowVersion = '!>=1.2'       // with ! prefix, stop execution if current version does not match required version.
   ```
 
-`manifest.organisation`
-: Project organisation
+`manifest.organization`
+: Project organization
 
 `manifest.recurseSubmodules`
 : Pull submodules recursively from the Git repository.
