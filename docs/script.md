@@ -2,7 +2,7 @@
 
 # Scripts
 
-Nextflow is a workflow language that runs on the Java virtual machine (JVM). Nextflow's syntax is very similar to [Groovy](https://groovy-lang.org/), a scripting language for the JVM, but Nextflow is specialized for writing computational pipelines in a declarative manner. See {ref}`syntax-page` for a full description of the Nextflow language.
+Nextflow is a workflow language that runs on the Java virtual machine (JVM). Nextflow's syntax is very similar to [Groovy](https://groovy-lang.org/), a scripting language for the JVM. However, Nextflow is specialized for writing computational pipelines in a declarative manner. See {ref}`syntax-page` for a full description of the Nextflow language.
 
 Nextflow scripts can also make full use of the Java and Groovy standard libraries. See {ref}`stdlib-page` for more information.
 
@@ -45,7 +45,7 @@ println str
 ```
 
 :::{warning}
-Variables can also be declared without `def` in many cases, but this practice is discouraged outside of simple code snippets because it can lead to a {ref}`race condition <cache-global-var-race-condition>`.
+Variables can also be declared without `def` in some cases. However, this practice is discouraged outside of simple code snippets because it can lead to a {ref}`race condition <cache-global-var-race-condition>`.
 :::
 
 ## Lists
@@ -311,7 +311,7 @@ println square(9)
 
 The above example prints `81`.
 
-The main use case for a closure, however, is as an argument to a higher-order function:
+The main use case for a closure is as an argument to a higher-order function:
 
 ```groovy
 [ 1, 2, 3, 4 ].collect(square)
@@ -380,7 +380,7 @@ This way, the closure is fully "self-contained" because it doesn't access or mut
 
 So far, we have been focusing on the basic building blocks of Nextflow code, like variables, lists, strings, and closures.
 
-In practice, however, Nextflow scripts are composed of *workflows*, *processes*, and *functions* (collectively known as *definitions*), and they can *include*  definitions from other scripts.
+In practice, however, Nextflow scripts are composed of *workflows*, *processes*, and *functions* (collectively known as *definitions*), and can *include*  definitions from other scripts.
 
 To transition a code snippet into a proper workflow script, simply wrap it in a `workflow` block:
 
@@ -390,7 +390,7 @@ workflow {
 }
 ```
 
-This block is called the *entry workflow*. A script can only have one entry workflow, and it serves as the entrypoint when the script is executed. In fact, whenever a script contains only simple statements like `println 'Hello!'`, Nextflow simply treats it as an entry workflow!
+This block is called the *entry workflow*. It serves as the entrypoint when the script is executed. A script can only have one entry workflow. Whenever a script contains only simple statements like `println 'Hello!'`, Nextflow simply treats it as an entry workflow.
 
 You can also break up code into functions, for example:
 

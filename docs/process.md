@@ -260,7 +260,7 @@ Hello Mr. a
 Hello Mr. c
 ```
 
-A native process is very similar to a {ref}`function <syntax-function>`, but provides additional capabilities such as parallelism, caching, and progress logging.
+A native process is very similar to a {ref}`function <syntax-function>`. However, it provides additional capabilities such as parallelism, caching, and progress logging.
 
 (process-stub)=
 

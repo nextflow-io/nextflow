@@ -37,7 +37,7 @@ A Nextflow script may contain the following top-level declarations:
 
 Script declarations are in turn composed of statements and expressions.
 
-A script may contain one or more [statements](#statements), if there are no top-level declarations. In this case, the entire script will be treated as an entry workflow. For example:
+If there are no top-level declarations, a script may contain one or more [statements](#statements), in which case the entire script is treated as an entry workflow. For example:
 
 ```groovy
 println 'Hello world!'
@@ -65,7 +65,7 @@ The first line of a script can be a [shebang](https://en.wikipedia.org/wiki/Sheb
 
 ### Feature flag
 
-A feature flag declaration is an assignment, where the target should be a valid {ref}`feature flag <config-feature-flags>` and the source should be a literal (i.e. number, string, boolean):
+A feature flag declaration is an assignment. The target should be a valid {ref}`feature flag <config-feature-flags>` and the source should be a literal (i.e. number, string, boolean):
 
 ```groovy
 nextflow.preview.topic = true
@@ -79,7 +79,7 @@ An include declaration consists of an *include source* and one or more *include 
 include { foo as bar } from './some/module'
 ```
 
-The include source should be a string literal and should refer to either a local path (e.g. `./module.nf`) or a plugin (e.g. `plugin/nf-hello`). Each include clause should specify a name, and may also specify an *alias*. In the example above, `foo` is included under the alias `bar`.
+The include source should be a string literal and should refer to either a local path (e.g. `./module.nf`) or a plugin (e.g. `plugin/nf-hello`). Each include clause should specify a name, and may also specify an *alias*. In the above example, `foo` is included under the alias `bar`.
 
 Include clauses can be separated by semi-colons or newlines:
 
@@ -109,7 +109,7 @@ The following definitions can be included:
 
 ### Parameter
 
-A parameter declaration is an assignment, where the target should be a pipeline parameter and the source should be an expression:
+A parameter declaration is an assignment. The target should be a pipeline parameter and the source should be an expression:
 
 ```groovy
 params.message = 'Hello world!'
@@ -404,7 +404,7 @@ Multiple variables can be assigned in a single statement as long as the source e
 
 Any [expression](#expressions) can be a statement.
 
-In general, the only expressions that can have any effect as expression statements are function calls that have side effects (e.g. `println`) or an implicit return statement (e.g. in a function or closure).
+In general, the only expressions that can have any effect as expression statements are function calls that have side effects (e.g. `println`) or an implicit return statement in a [function](#function) or [closure](#closure).
 
 ### assert
 
@@ -693,7 +693,7 @@ A list literal consists of a comma-separated list of zero or more expressions, e
 
 ### Map
 
-A map literal consists of a comma-separated list of one or more *map entries*, where each map entry consists of a *key expression* and *value expression* separated by a colon, enclosed in square brackets:
+A map literal consists of a comma-separated list of one or more *map entries*, enclosed in square brackets. Each map entry consists of a *key expression* and *value expression* separated by a colon:
 
 ```groovy
 [foo: 1, bar: 2, baz: 3]
@@ -952,6 +952,6 @@ Compound expressions are evaluated in the following order:
 
 The following legacy features were excluded from this page because they are deprecated:
 
-- The `addParams` and `params` clauses of include declarations (see {ref}`module-params`)
-- The `when:` section of a process definition (see {ref}`process-when`)
+- The `addParams` and `params` clauses of include declarations. See {ref}`module-params` for more information.
+- The `when:` section of a process definition. See {ref}`process-when` for more information.
 - The implicit `it` closure parameter

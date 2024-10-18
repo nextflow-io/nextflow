@@ -48,7 +48,7 @@ params.helper_file = "${projectDir}/assets/helper.txt"
 
 ### Blocks
 
-A config scope can also be specified as a block, allowing multiple configuration options to be set within that block. For example:
+A config scope can also be specified as a block, which may contain multiple configuration options. For example:
 
 ```groovy
 // dot syntax
