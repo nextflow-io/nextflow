@@ -15,6 +15,8 @@
  */
 package nextflow.processor
 
+import nextflow.trace.TraceRecord
+
 import static nextflow.processor.ErrorStrategy.*
 
 import java.lang.reflect.InvocationTargetException
@@ -132,6 +134,10 @@ class TaskProcessor {
     }
 
     static final public String TASK_CONTEXT_PROPERTY_NAME = 'task'
+
+    static final public String TRACE_PROPERTY_NAME = 'previousTrace'
+
+    static final public String ERROR_PROPERTY_NAME = 'previousError'
 
     final private static Pattern ENV_VAR_NAME = ~/[a-zA-Z_]+[a-zA-Z0-9_]*/
 
@@ -1036,6 +1042,7 @@ class TaskProcessor {
                 session.getExecService().submit {
                     try {
                         taskCopy.runType = RunType.RETRY
+
                         checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false )
                     }
                     catch( Throwable e ) {
@@ -2361,7 +2368,8 @@ class TaskProcessor {
      * @param task The {@code TaskRun} instance to finalize
      */
     @PackageScope
-    final finalizeTask( TaskRun task ) {
+    final finalizeTask( TaskHandler handler) {
+        def task = handler.task
         log.trace "finalizing process > ${safeTaskName(task)} -- $task"
 
         def fault = null
@@ -2384,6 +2392,9 @@ class TaskProcessor {
             collectOutputs(task)
         }
         catch ( Throwable error ) {
+            //Add trace and error message of the previous execution in the task context for next execution
+            task.config.put(TRACE_PROPERTY_NAME, handler.getTraceRecord())
+            task.config.put(ERROR_PROPERTY_NAME, error.getMessage())
             fault = resumeOrDie(task, error)
             log.trace "Task fault (3): $fault"
         }
