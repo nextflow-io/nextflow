@@ -1286,6 +1286,7 @@ The directive {ref}`process-maxretries` set the maximum number of time the same 
 ### Dynamic task resources with previous execution trace
 :::{versionadded} 24.09.2-edge
 :::
+
 Similarly to the previous scenario, task resources can be also updated according to the metrics included in the {ref}`trace record <trace-report>` of the previous task attempt. The metrics can be accessed through the `task.previousTrace` variable. For example:
 
 ```groovy

@@ -27,13 +27,13 @@ The following task properties are defined in the process body:
 : The current task name.
 
 `task.previousError`
-:::{versionadded} 24.09.2-edge
+: :::{versionadded} 24.09.2-edge
 :::
 : The error message of the task execution.
 : Since the error message is only available after the task has been executed, it can only be used when `task.attempt` is bigger than 1.
 
 `task.previousTrace`
-:::{versionadded} 24.09.2-edge
+: :::{versionadded} 24.09.2-edge
 :::
 : The trace record of the task execution.
 : Since the trace record is only available after the task has been executed, it can only be used when `task.attempt` is bigger than 1. 
