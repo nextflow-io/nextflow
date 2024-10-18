@@ -90,7 +90,7 @@ process.memory = '10G'
 includeConfig 'path/foo.config'
 ```
 
-When a relative path is used, it is resolved against the location of the including file.
+Relative paths are resolved against the location of the including file.
 
 :::{note}
 Config includes can also be specified within config blocks. However, config files should only be included at the top level or in a [profile](#config-profiles) so that the included config file is valid on its own and in the context in which it is included.
