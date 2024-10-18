@@ -433,9 +433,9 @@ azure {
 }
 ```
 
-With the above configuration, processes with the bigTask {ref}`process-label` run on Azure Batch, while the remaining processes run on the local computer.
+With the above configuration, processes with the bigTask {ref}`process-label` will run on Azure Batch, while the remaining processes will run on the local computer.
 
-Next, launch the pipeline with the `-bucket-dir` option to specify an Azure Blob Storage path for the jobs running on Azure Batch, and optionally, use the `-work-dir` option to specify local storage for the jobs running locally:
+Then launch the pipeline with the `-bucket-dir` option to specify an Azure Blob Storage path for the jobs computed with Azure Batch, and optionally, use the `-work-dir` option to specify the local storage for the jobs computed locally:
 
 ```bash
 nextflow run <script or project name> -bucket-dir az://my-container/some/path
