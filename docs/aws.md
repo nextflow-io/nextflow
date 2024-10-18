@@ -408,20 +408,6 @@ To do that, first create a **Job Definition** in the AWS Console (or by other me
 process.container = 'job-definition://your-job-definition-name'
 ```
 
-### Pipeline execution
-
-The pipeline can be launched either in a local computer or an EC2 instance. The latter is suggested for heavy or long-running workloads.
-
-Pipeline input data can be stored either locally or in an [S3](https://aws.amazon.com/s3/) bucket. The pipeline execution must specify an S3 bucket to store intermediate results with the `-bucket-dir` (`-b`) command line option. For example:
-
-```bash
-nextflow run my-pipeline -bucket-dir s3://my-bucket/some/path
-```
-
-:::{warning}
-The bucket path should include at least a top level directory name, e.g. `s3://my-bucket/work` rather than `s3://my-bucket`.
-:::
-
 ### Hybrid workloads
 
 Nextflow allows the use of multiple executors in the same workflow application. This feature enables the deployment of hybrid workloads in which some jobs are executed in the local computer or local computing cluster and some jobs are offloaded to AWS Batch.
@@ -429,13 +415,6 @@ Nextflow allows the use of multiple executors in the same workflow application. 
 To enable this feature, use one or more {ref}`config-process-selectors` in your Nextflow configuration to apply the AWS Batch configuration to the subset of processes that you want to offload. For example:
 
 ```groovy
-aws {
-    region = 'eu-west-1'
-    batch {
-        cliPath = '/home/ec2-user/miniconda/bin/aws'
-    }
-}
-
 process {
     withLabel: bigTask {
         executor = 'awsbatch'
@@ -443,9 +422,27 @@ process {
         container = 'my/image:tag'
     }
 }
+
+aws {
+    region = 'eu-west-1'
+}
 ```
 
-With the above configuration, processes with the `bigTask` {ref}`process-label` will run on AWS Batch, while the remaining processes with run in the local computer.
+With the above configuration, processes with the `bigTask` {ref}`process-label` will run on AWS Batch, while the remaining processes will run in the local computer.
+
+Then launch the pipeline with the -bucket-dir option to specify an AWS S3 path for the jobs computed with AWS Batch and, optionally, the -work-dir to specify the local storage for the jobs computed locally:
+
+```bash
+nextflow run <script or project name> -bucket-dir s3://my-bucket/some/path
+```
+
+:::{warning}
+The AWS S3 path needs to contain at least one sub-directory (e.g. `s3://my-bucket/work` rather than `s3://my-bucket`).
+:::
+
+:::{note}
+Nextflow will automatically manage the transfer of input and output files between the local and cloud environments when using hybrid workloads.
+:::
 
 ### Volume mounts
 
