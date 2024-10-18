@@ -88,7 +88,7 @@ In DSL1, the entire Nextflow pipeline must be defined in a single file (e.g. `ma
 DSL2 introduces the concept of "module scripts" (or "modules" for short), which are Nextflow scripts that can be "included" by other scripts. While modules are not essential to migrating to DSL2, nor are they mandatory in DSL2 by any means, modules can help you organize a large pipeline into multiple smaller files, and take advantage of modules created by others. Check out the {ref}`module-page` to get started.
 
 :::{note}
-With DSL2, the Groovy shell used by Nextflow also imposes a 64KB size limit on pipeline scripts, so if your DSL1 script is very large, you may need to split your script into modules anyway to avoid this limit.
+DSL2 scripts cannot exceed 64 KB in size. Large DSL1 scripts may need to be split into modules to avoid this limit.
 :::
 
 ## Deprecations
