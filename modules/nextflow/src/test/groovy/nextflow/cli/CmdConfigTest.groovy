@@ -490,4 +490,101 @@ class CmdConfigTest extends Specification {
         folder?.deleteDir()
         SysEnv.pop()
     }
+
+    def 'should render json config output' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def CONFIG = folder.resolve('nextflow.config')
+
+        CONFIG.text = '''
+        manifest {
+            author = 'me'
+            mainScript = 'foo.nf'
+        }
+        
+        process {
+          cpus = 4 
+          queue = 'cn-el7'
+          memory = { 10.GB }   
+          ext.other = { 10.GB * task.attempt }
+        }
+        '''
+        def buffer = new ByteArrayOutputStream()
+        // command definition
+        def cmd = new CmdConfig(outputFormat: 'json')
+        cmd.launcher = new Launcher(options: new CliOptions(config: [CONFIG.toString()]))
+        cmd.stdout = buffer
+        cmd.args = [ '.' ]
+
+        when:
+        cmd.run()
+
+        then:
+        buffer.toString() == '''
+        {
+            "manifest": {
+                "author": "me",
+                "mainScript": "foo.nf"
+            },
+            "process": {
+                "cpus": 4,
+                "queue": "cn-el7",
+                "memory": "{ 10.GB }",
+                "ext": {
+                    "other": "{ 10.GB * task.attempt }"
+                }
+            }
+        }
+        '''
+            .stripIndent().leftTrim()
+
+        cleanup:
+        folder.deleteDir()
+    }
+
+    def 'should render yaml config output' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def CONFIG = folder.resolve('nextflow.config')
+
+        CONFIG.text = '''
+        manifest {
+            author = 'me'
+            mainScript = 'foo.nf'
+        }
+        
+        process {
+          cpus = 4 
+          queue = 'cn-el7'
+          memory = { 10.GB }   
+          ext.other = { 10.GB * task.attempt }
+        }
+        '''
+        def buffer = new ByteArrayOutputStream()
+        // command definition
+        def cmd = new CmdConfig(outputFormat: 'yaml')
+        cmd.launcher = new Launcher(options: new CliOptions(config: [CONFIG.toString()]))
+        cmd.stdout = buffer
+        cmd.args = [ '.' ]
+
+        when:
+        cmd.run()
+
+        then:
+        buffer.toString() == '''
+            manifest:
+              author: me
+              mainScript: foo.nf
+            process:
+              cpus: 4
+              queue: cn-el7
+              memory: '{ 10.GB }'
+              ext:
+                other: '{ 10.GB * task.attempt }'
+            '''
+                .stripIndent().leftTrim()
+
+        cleanup:
+        folder.deleteDir()
+    }
 }
