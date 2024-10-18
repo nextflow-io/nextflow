@@ -19,6 +19,7 @@ package nextflow.util
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import nextflow.config.ConfigClosurePlaceholder
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -250,6 +251,7 @@ class ConfigHelperTest extends Specification {
         def config = new ConfigObject()
         config.process.queue = 'long'
         config.process.executor = 'slurm'
+        config.process.memory = new ConfigClosurePlaceholder('{ 1.GB }')
         config.docker.enabled = true
         config.zeta.'quoted-attribute'.foo = 1
 
@@ -263,6 +265,7 @@ class ConfigHelperTest extends Specification {
                 },
                 "process": {
                     "executor": "slurm",
+                    "memory": "{ 1.GB }",
                     "queue": "long"
                 },
                 "zeta": {
@@ -281,7 +284,8 @@ class ConfigHelperTest extends Specification {
             {
                 "process": {
                     "queue": "long",
-                    "executor": "slurm"
+                    "executor": "slurm",
+                    "memory": "{ 1.GB }"
                 },
                 "docker": {
                     "enabled": true
@@ -300,6 +304,7 @@ class ConfigHelperTest extends Specification {
         def config = new ConfigObject()
         config.process.queue = 'long'
         config.process.executor = 'slurm'
+        config.process.memory = new ConfigClosurePlaceholder('{ 1.GB }')
         config.docker.enabled = true
         config.zeta.'quoted-attribute'.foo = 1
 
@@ -311,6 +316,7 @@ class ConfigHelperTest extends Specification {
               enabled: true
             process:
               executor: slurm
+              memory: '{ 1.GB }'
               queue: long
             zeta:
               quoted-attribute:
@@ -325,6 +331,7 @@ class ConfigHelperTest extends Specification {
             process:
               queue: long
               executor: slurm
+              memory: '{ 1.GB }'
             docker:
               enabled: true
             zeta:

@@ -22,10 +22,10 @@ import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.config.ConfigClosurePlaceholder
 import org.codehaus.groovy.runtime.InvokerHelper
 import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.Yaml
-
 /**
  * Helper method to handle configuration object
  *
@@ -356,9 +356,32 @@ class ConfigHelper {
         for( Map.Entry it : config ) {
             if( it.value instanceof Map && !it.value )
                 continue
-            result.put(it.key, it.value)
+            result.put(it.key, normaliseObject0(it.value))
         }
         return result
+    }
+
+    private static Object normaliseObject0(Object value) {
+        if( value instanceof Map ) {
+            final map = value as Map
+            final ret = new LinkedHashMap(map.size())
+            for( Map.Entry entry : map.entrySet() ) {
+                ret.put(entry.key, normaliseObject0(entry.value))
+            }
+            return ret
+        }
+        if( value instanceof Collection ) {
+            final lis = value as List
+            final ret = new ArrayList(lis.size())
+            for( Object it : lis )
+                ret.add(normaliseObject0(it))
+            return ret
+        }
+        else if( value instanceof ConfigClosurePlaceholder ) {
+            return value.toString()
+        }
+        else
+            return value
     }
 }
 
