@@ -16,6 +16,8 @@
 
 package nextflow.file.http
 
+import nextflow.file.CopyMoveHelper
+
 import static nextflow.file.http.XFileSystemConfig.*
 
 import java.nio.ByteBuffer
@@ -352,7 +354,8 @@ abstract class XFileSystemProvider extends FileSystemProvider {
 
         final conn = toConnection(path)
         final length = conn.getContentLengthLong()
-        return length>0
+        // only apply the FixedInputStream check if staging files
+        return length>0 && CopyMoveHelper.IN_FOREIGN_COPY.get()
             ? new FixedInputStream(conn.getInputStream(), length)
             : conn.getInputStream()
     }

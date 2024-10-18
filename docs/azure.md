@@ -433,9 +433,9 @@ azure {
 }
 ```
 
-With the above configuration, processes with the bigTask process-label will run on Azure Batch, while the remaining processes will run in the local computer.
+With the above configuration, processes with the bigTask {ref}`process-label` run on Azure Batch, while the remaining processes run on the local computer.
 
-Then launch the pipeline with the `-bucket-dir` option to specify an Azure Blob Storage path for the jobs computed with Azure Batch and, optionally, the `-work-dir` to specify the local storage for the jobs computed locally:
+Next, launch the pipeline with the `-bucket-dir` option to specify an Azure Blob Storage path for the jobs running on Azure Batch, and optionally, use the `-work-dir` option to specify local storage for the jobs running locally:
 
 ```bash
 nextflow run <script or project name> -bucket-dir az://my-container/some/path
@@ -447,6 +447,9 @@ The Azure Blob Storage path needs to contain at least one sub-directory (e.g. `a
 
 :::{note}
 Nextflow will automatically manage the transfer of input and output files between the local and cloud environments when using hybrid workloads.
+
+:::{tip}
+When using [Fusion](./fusion.md), the `-bucket-dir` option is not required. Fusion implements a distributed virtual file system that allows seamless access to Azure Blob Storage using a standard POSIX interface, enabling direct mounting of remote blob storage as if it were a local file system. This simplifies and speeds up most operations, bridging the gap between cloud-native storage and data analysis workflows.
 :::
 
 ## Microsoft Entra
