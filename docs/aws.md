@@ -425,9 +425,6 @@ process {
 
 aws {
     region = 'eu-west-1'
-    batch {
-        cliPath = '/home/ec2-user/miniconda/bin/aws'
-    }
 }
 ```
 
