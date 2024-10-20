@@ -45,6 +45,7 @@ class NextflowMeta {
         boolean output
         boolean recursion
         boolean topic
+        boolean moduleBinaries
 
         @Deprecated
         void setDsl( float num ) {
