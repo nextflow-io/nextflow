@@ -171,7 +171,7 @@ class WaveClient {
     }
 
     SubmitContainerTokenRequest makeRequest(WaveAssets assets) {
-        final containerConfig = assets.containerConfig ?: new ContainerConfig()
+        ContainerConfig containerConfig = assets.containerConfig ?: new ContainerConfig()
         // prepend the bundle layer
         if( assets.moduleResources!=null && assets.moduleResources.hasEntries() ) {
             containerConfig.prependLayer(makeLayer(assets.moduleResources))
@@ -201,6 +201,11 @@ class WaveClient {
 
         if( config.mirrorMode() && !assets.containerImage )
             throw new IllegalArgumentException("Invalid container mirror operation - missing source container")
+
+        if( config.mirrorMode() && containerConfig ) {
+            log.warn1("Wave configuration setting 'wave.mirror' conflicts with the use of module bundles - ignoring custom config for container: $assets.containerImage")
+            containerConfig = null
+        }
 
         return new SubmitContainerTokenRequest(
                 containerImage: assets.containerImage,
