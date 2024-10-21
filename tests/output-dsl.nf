@@ -26,6 +26,7 @@ process align {
   path("*.bam")
   path("${x}.bai")
 
+  script:
   """
   echo ${x} > ${x}.bam
   echo ${x} | rev > ${x}.bai
@@ -40,6 +41,7 @@ process my_combine {
   output:
   path 'result.txt'
 
+  script:
   """
   cat $bamfile > result.txt
   cat $baifile >> result.txt
@@ -50,6 +52,7 @@ process foo {
   output:
   path 'xxx'
 
+  script:
   '''
   mkdir xxx
   touch xxx/A
@@ -59,13 +62,14 @@ process foo {
 }
 
 workflow {
-  def input = Channel.of('alpha','beta','delta')
+  main:
+  input = Channel.of('alpha','beta','delta')
   align(input)
 
-  def bam = align.out[0].toSortedList { it.name }
-  def bai = align.out[1].toSortedList { it.name }
-  my_combine( bam, bai )
-  my_combine.out.view{ it.text }
+  bams = align.out[0].toSortedList { bam -> bam.name }
+  bais = align.out[1].toSortedList { bai -> bai.name }
+  my_combine( bams, bais )
+  my_combine.out.view { it -> it.text }
 
   foo()
 
@@ -76,10 +80,8 @@ workflow {
 }
 
 output {
-  directory 'results'
-  mode 'copy'
-
   'data' {
+    path { val -> { file -> file } }
     index {
       path 'index.csv'
       mapper { val -> [filename: val] }
