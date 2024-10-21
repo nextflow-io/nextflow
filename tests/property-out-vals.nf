@@ -29,6 +29,6 @@ process foo {
 
 workflow {
    foo()
-   foo.out[0].view { "exit_status=$it" }
-   foo.out[1].view { "record=${it[0]}_${it[1]}" }
+   foo.out[0].view { exit_status -> "exit_status=$exit_status" }
+   foo.out[1].view { v1, v2 -> "record=${v1}_${v2}" }
 }

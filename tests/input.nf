@@ -26,9 +26,10 @@ process foo {
     output:
     val y 
 
+    script:
     "echo $x - $y"
 }
 
 workflow {
-  foo(1, channel.of('a','b')) | view { "foo out: $it" }
+  foo(1, Channel.of('a','b')) | view { file -> "foo out: $file" }
 }

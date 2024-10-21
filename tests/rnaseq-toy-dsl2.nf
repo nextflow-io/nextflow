@@ -18,6 +18,7 @@ process buildIndex {
     output:
     path 'genome.index*'
 
+    script:
     """
     bowtie2-build ${genome} genome.index
     """
@@ -35,6 +36,7 @@ process mapping {
     output:
     tuple val(pair_id), path("tophat_out/accepted_hits.bam")
  
+    script:
     """
     tophat2 genome.index ${reads}
     """
@@ -53,6 +55,7 @@ process makeTranscript {
     output:
     tuple val(pair_id), path('transcripts.gtf')
 
+    script:
     """
     cufflinks ${bam_file}
     """
@@ -61,12 +64,9 @@ process makeTranscript {
 /*
  * main flow
  */
-read_pairs = Channel.fromFilePairs( params.reads, checkIfExists: true )
-
-/*
- * main flow
- */
 workflow {
+    read_pairs = Channel.fromFilePairs( params.reads, checkIfExists: true )
+
     buildIndex(params.genome)
     mapping(params.genome, buildIndex.out, read_pairs)
     makeTranscript(mapping.out)

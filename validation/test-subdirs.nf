@@ -13,6 +13,7 @@ process foo {
     path 'test7.txt'
     path 'gsfolder5/sub'
 
+    script:
     """
     mkdir -p gsfolder/sub
     touch gsfolder/test1.txt
@@ -47,6 +48,7 @@ process bar {
     path 'test7/foo/*'
     path 'test8/*'
 
+    script:
     """
     set -x
     [[ -f $test_folder/test1.txt ]] || false

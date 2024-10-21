@@ -10,6 +10,7 @@ process foo {
   path 'file-\\*.txt'
   path 'file-?.txt', glob: false
 
+  script:
   '''
   touch file-\\*.txt
   touch file-\\?.txt
@@ -20,8 +21,8 @@ process foo {
 workflow {
     Channel.fromPath("$baseDir/data/file\\[a-b\\].txt") | foo
 
-    foo.out[0].view { "match: ${it.name}" }
-    foo.out[1].view { "match: ${it.name}" }
-    foo.out[2].view { "match: ${it.name}" }
+    foo.out[0].view { file -> "match: ${file.name}" }
+    foo.out[1].view { file -> "match: ${file.name}" }
+    foo.out[2].view { file -> "match: ${file.name}" }
 }
 

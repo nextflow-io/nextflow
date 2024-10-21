@@ -19,6 +19,7 @@ process foo {
   output:
   file 'link.txt'
 
+  script:
   '''
   echo Hello > file.txt
   ln -s file.txt link.txt
