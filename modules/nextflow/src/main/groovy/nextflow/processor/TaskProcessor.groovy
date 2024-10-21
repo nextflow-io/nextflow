@@ -1042,7 +1042,6 @@ class TaskProcessor {
                 session.getExecService().submit {
                     try {
                         taskCopy.runType = RunType.RETRY
-
                         checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false )
                     }
                     catch( Throwable e ) {
