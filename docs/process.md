@@ -2,39 +2,23 @@
 
 # Processes
 
-In Nextflow, a **process** is the basic processing primitive to execute a user script.
+In Nextflow, a **process** is a specialized function for executing scripts in a scalable and portable manner.
 
-The process definition starts with the keyword `process`, followed by process name and finally the process body delimited by curly braces. The process body must contain a string which represents the command or, more generally, a script that is executed by it. A basic process looks like the following example:
+Here is an example process definition:
 
 ```groovy
 process sayHello {
+    output:
+    path 'hello.txt'
+
+    script:
     """
-    echo 'Hello world!' > file
+    echo 'Hello world!' > hello.txt
     """
 }
 ```
 
-A process may contain any of the following definition blocks: directives, inputs, outputs, when clause, and the process script. The syntax is defined as follows:
-
-```
-process < name > {
-
-  [ directives ]
-
-  input:
-    < process inputs >
-
-  output:
-    < process outputs >
-
-  when:
-    < condition >
-
-  [script|shell|exec]:
-    < user script to be executed >
-
-}
-```
+See {ref}`syntax-process` for a full description of the process syntax.
 
 (process-script)=
 
@@ -139,9 +123,9 @@ Since the actual location of the interpreter binary file can differ across platf
 
 ### Conditional scripts
 
-So far, our `script` block has always been a simple string expression, but in reality, the `script` block is just Groovy code that returns a string. This means that you can write arbitrary Groovy code to determine the script to execute, as long as the final statement is a string (remember that the `return` keyword is optional in Groovy).
+The `script` block is like a function that returns a string. This means that you can write arbitrary code to determine the script, as long as the final statement is a string.
 
-For example, you can use flow control statements (`if`, `switch`, etc) to execute a different script based on the process inputs. The only difference here is that you must explicitly declare the `script` guard, whereas before it was not required. Here is an example:
+If-else statements based on task inputs can be used to produce a different script. For example:
 
 ```groovy
 mode = 'tcoffee'
@@ -171,7 +155,7 @@ process align {
 }
 ```
 
-In the above example, the process will execute one of the script fragments depending on the value of the `mode` parameter. By default it will execute the `tcoffee` command, but changing the `mode` variable will cause a different branch to be executed.
+In the above example, the process will execute one of several scripts depending on the value of the `mode` parameter. By default it will execute the `tcoffee` command.
 
 (process-template)=
 
@@ -250,7 +234,7 @@ In the above example, `$USER` is treated as a Bash variable, while `!{str}` is t
 
 ### Native execution
 
-Nextflow processes can also execute native Groovy code as the task itself, using the `exec` block. Whereas the `script` block defines a script to be executed, the `exec` block defines Groovy code to be executed directly.
+The `exec` block executes the given code without launching a job.
 
 For example:
 
@@ -275,6 +259,8 @@ Hello Mr. b
 Hello Mr. a
 Hello Mr. c
 ```
+
+A native process is very similar to a {ref}`function <syntax-function>`. However, it provides additional capabilities such as parallelism, caching, and progress logging.
 
 (process-stub)=
 
@@ -492,7 +478,7 @@ In this case, `x.name` returns the file name with the parent directory (e.g. `my
 
 ### Multiple input files
 
-A `path` input can also accept a collection of files instead of a single value. In this case, the input variable will be a Groovy list, and you can use it as such.
+A `path` input can also accept a collection of files instead of a single value. In this case, the input variable will be a list.
 
 When the input has a fixed file name and a collection of files is received by the process, the file name will be appended with a numerical suffix representing its ordinal position in the list. For example:
 
@@ -584,7 +570,7 @@ The `env` qualifier allows you to define an environment variable in the process 
 ```groovy
 process printEnv {
     input:
-    env HELLO
+    env 'HELLO'
 
     '''
     echo $HELLO world!
@@ -619,7 +605,7 @@ process printAll {
 
 workflow {
   Channel.of('hello', 'hola', 'bonjour', 'ciao')
-    | map { it + '\n' }
+    | map { v -> v + '\n' }
     | printAll
 }
 ```
@@ -841,7 +827,7 @@ workflow {
   methods = ['prot', 'dna', 'rna']
 
   receiver = foo(methods)
-  receiver.view { "Received: $it" }
+  receiver.view { method -> "Received: $method" }
 }
 ```
 
@@ -868,9 +854,9 @@ workflow {
   ch_dummy = Channel.fromPath('*').first()
   (ch_var, ch_str, ch_exp) = foo(ch_dummy)
 
-  ch_var.view { "ch_var: $it" }
-  ch_str.view { "ch_str: $it" }
-  ch_exp.view { "ch_exp: $it" }
+  ch_var.view { var -> "ch_var: $var" }
+  ch_str.view { str -> "ch_str: $str" }
+  ch_exp.view { exp -> "ch_exp: $exp" }
 }
 ```
 
@@ -890,7 +876,7 @@ process randomNum {
 
 workflow {
   numbers = randomNum()
-  numbers.view { "Received: ${it.text}" }
+  numbers.view { file -> "Received: ${file.text}" }
 }
 ```
 
@@ -931,7 +917,7 @@ process splitLetters {
 workflow {
     splitLetters
         | flatten
-        | view { "File: ${it.name} => ${it.text}" }
+        | view { chunk -> "File: ${chunk.name} => ${chunk.text}" }
 }
 ```
 
@@ -1132,7 +1118,13 @@ In this example, the process is normally expected to produce an `output.txt` fil
 While this option can be used with any process output, it cannot be applied to individual elements of a [tuple](#output-tuples-tuple) output. The entire tuple must be optional or not optional.
 :::
 
+(process-when)=
+
 ## When
+
+:::{deprecated} 24.10.0
+Use conditional logic (e.g. `if` statement, {ref}`operator-filter` operator) in the calling workflow instead.
+:::
 
 The `when` block allows you to define a condition that must be satisfied in order to execute the process. The condition can be any expression that returns a boolean value.
 
@@ -1154,31 +1146,11 @@ process find {
 }
 ```
 
-:::{tip}
-As a best practice, it is better to define such control flow logic in the workflow block, i.e. with an `if` statement or with channel operators, to make the process more portable.
-:::
-
 (process-directives)=
 
 ## Directives
 
 Directives are optional settings that affect the execution of the current process.
-
-They must be entered at the top of the process body, before any other declaration blocks (`input`, `output`, etc), and have the following syntax:
-
-```groovy
-// directive with simple value
-name value
-
-// directive with list value
-name arg1, arg2, arg3
-
-// directive with map value
-name key1: val1, key2: val2
-
-// directive with value and options
-name arg, opt1: val1, opt2: val2
-```
 
 By default, directives are evaluated when the process is defined. However, if the value is a dynamic string or closure, it will be evaluated separately for each task, which allows task-specific variables like `task` and `val` inputs to be used.
 

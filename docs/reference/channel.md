@@ -22,7 +22,7 @@ The `channel.from` method allows you to create a channel emitting any sequence o
 
 ```groovy
 ch = channel.from( 1, 3, 5, 7 )
-ch.subscribe { println "value: $it" }
+ch.subscribe { v -> println "value: $v" }
 ```
 
 The first line in this example creates a variable `ch` which holds a channel object. This channel emits the values specified as a parameter in the `from` method. Thus the second line will print the following:
@@ -70,7 +70,7 @@ The `channel.fromList` method allows you to create a channel emitting the values
 ```groovy
 channel
     .fromList( ['a', 'b', 'c', 'd'] )
-    .view { "value: $it" }
+    .view { v -> "value: $v" }
 ```
 
 Prints:
@@ -369,7 +369,7 @@ The `channel.of` method allows you to create a channel that emits the arguments 
 
 ```groovy
 ch = channel.of( 1, 3, 5, 7 )
-ch.view { "value: $it" }
+ch.view { v -> "value: $v" }
 ```
 
 The first line in this example creates a variable `ch` which holds a channel object. This channel emits the arguments
@@ -480,7 +480,7 @@ For example:
 ```groovy
 channel
     .watchPath( '/path/*.fa' )
-    .subscribe { println "Fasta file: $it" }
+    .subscribe { fa -> println "Fasta file: $fa" }
 ```
 
 By default it watches only for new files created in the specified folder. Optionally, it is possible to provide a second
@@ -495,7 +495,7 @@ You can specify more than one of these events by using a comma separated string 
 ```groovy
 channel
     .watchPath( '/path/*.fa', 'create,modify' )
-    .subscribe { println "File created or modified: $it" }
+    .subscribe { fa -> println "File created or modified: $fa" }
 ```
 
 :::{warning}

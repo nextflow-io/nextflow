@@ -7,6 +7,8 @@ This page describes how to create, test, and publish third-party plugins.
 
 The best way to get started with your own plugin is to refer to the [nf-hello](https://github.com/nextflow-io/nf-hello) repository. This repository provides a minimal plugin implementation with several examples of different extension points and instructions for building, testing, and publishing.
 
+Plugins can be written in Java or Groovy.
+
 The minimal dependencies are as follows:
 
 ```groovy
@@ -151,7 +153,7 @@ Refer to the source code of Nextflow's built-in executors to see how to implemen
 :::{versionadded} 22.09.0-edge
 :::
 
-Plugins can define custom Groovy functions, which can then be included into Nextflow pipelines.
+Plugins can define custom functions, which can then be included in Nextflow pipelines.
 
 To implement a custom function, create a class in your plugin that extends the `PluginExtensionPoint` class, and implement your function with the `Function` annotation:
 

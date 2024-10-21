@@ -1,4 +1,4 @@
 // mapping function
 Channel.of( "hello", "hi", "hey" )
-    .min { it.size() }
+    .min { v -> v.length() }
     .view()
