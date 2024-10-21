@@ -80,7 +80,7 @@ executor {
 
 ### Includes
 
-A config file can include any number of other config files using the `includeConfig` keyword:
+A configuration file can include any number of other configuration files using the `includeConfig` keyword:
 
 ```groovy
 process.executor = 'sge'
