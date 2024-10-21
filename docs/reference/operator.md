@@ -1405,16 +1405,6 @@ The `subscribe` operator invokes a custom function for each item from a source c
 :language: console
 ```
 
-The closure parameter can be defined explicitly if needed, using a name other than `it` and, optionally, the expected type:
-
-```{literalinclude} ../snippets/subscribe-with-param.nf
-:language: groovy
-```
-
-```{literalinclude} ../snippets/subscribe-with-param.out
-:language: console
-```
-
 The `subscribe` operator supports multiple types of event handlers:
 
 ```{literalinclude} ../snippets/subscribe-with-on-complete.nf
