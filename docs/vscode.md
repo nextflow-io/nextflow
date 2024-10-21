@@ -143,53 +143,7 @@ workflow {
 }
 ```
 
-**Variable declarations**
-
-In Groovy, you can declare variables in many different ways, including multi-declarations and optional type annotations:
-
-```groovy
-def a = 1
-final b = 2
-def c = 3, d = 4
-def (e, f) = [5, 6]
-String str = 'foo'
-def Map meta = [:]
-```
-
-In Nextflow, you should declare variables with `def` and should not specify a type:
-
-```nextflow
-def a = 1
-def b = 2
-def (c, d) = [3, 4]
-def (e, f) = [5, 6]
-def str = 'foo'
-def meta = [:]
-```
-
-Similarly, you should declare functions with `def` and should not specify a return type or parameter types:
-
-```nextflow
-/**
- * You can use comments to denote types, for example:
- *
- * @param x: Map
- * @param y: String
- * @param z: Integer
- * @return List
- */
-def foo(x, y, z) {
-    // ...
-}
-```
-
-To ease the migration of existing scripts, the language server only reports warnings for Groovy-style type annotations and implicit variable declarations (in processes and workflows). These warnings will become errors in the future.
-
-:::{note}
-Type annotations and static type checking will be addressed in a future version of the Nextflow language specification.
-:::
-
-**Variable assignments**
+**Assignment expressions**
 
 In Groovy, you can assign a variable as part of an expression:
 
@@ -317,6 +271,113 @@ The Nextflow language specification does not support implicit environment variab
 
 ```nextflow
 println "PWD = ${System.getenv('PWD')}"
+```
+
+### Restricted syntax
+
+The following patterns are still supported but have been restricted, i.e. some syntax variants have been removed.
+
+**Variable declarations**
+
+In Groovy, variables can be declared in many different ways, including multi-declarations and optional type annotations:
+
+```groovy
+def a = 1
+final b = 2
+def c = 3, d = 4
+def (e, f) = [5, 6]
+String str = 'foo'
+def Map meta = [:]
+```
+
+In Nextflow, variables should be declared with `def` and should not specify a type:
+
+```nextflow
+def a = 1
+def b = 2
+def (c, d) = [3, 4]
+def (e, f) = [5, 6]
+def str = 'foo'
+def meta = [:]
+```
+
+Similarly, functions should be declared with `def` and should not specify a return type or parameter types:
+
+```nextflow
+/**
+ * You can use comments to denote types, for example:
+ *
+ * @param x: Map
+ * @param y: String
+ * @param z: Integer
+ * @return List
+ */
+def foo(x, y, z) {
+    // ...
+}
+```
+
+To ease the migration of existing scripts, the language server only reports warnings for Groovy-style type annotations and implicit variable declarations (in processes and workflows). These warnings will become errors in the future.
+
+:::{note}
+Type annotations and static type checking will be addressed in a future version of the Nextflow language specification.
+:::
+
+**Process env inputs/outputs**
+
+In Nextflow DSL1 and DSL2, the name of a process `env` input/output can be specified with or without quotes:
+
+```nextflow
+process PROC {
+    input:
+    env FOO
+    env 'BAR'
+}
+```
+
+The Nextflow language specification requires the name to be specified with quotes:
+
+```nextflow
+process PROC {
+    input:
+    env 'FOO'
+    env 'BAR'
+}
+```
+
+**Implicit process script section**
+
+In Nextflow DSL1 and DSL2, the process `script:` section label can almost always be omitted:
+
+```nextflow
+process greet {
+    input: 
+    val greeting
+
+    """
+    echo '${greeting}!'
+    """
+}
+```
+
+The Nextflow language specification allows the `script:` label to be omitted only if there are no other sections:
+
+```nextflow
+process sayHello {
+    """
+    echo 'Hello world!'
+    """
+}
+
+process greet {
+    input: 
+    val greeting
+
+    script:
+    """
+    echo '${greeting}!'
+    """
+}
 ```
 
 ### Deprecated syntax
