@@ -101,7 +101,7 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         // note, include complete status otherwise it hangs if the task
         // completes before reaching this check
         final running = state==BatchTaskState.RUNNING || state==BatchTaskState.COMPLETED
-        log.debug "[AZURE BATCH] Task status $task.name taskId=$taskKey; running=$running"
+        log.trace "[AZURE BATCH] Task status $task.name taskId=$taskKey; running=$running"
         if( running )
             this.status = TaskStatus.RUNNING
         return running
