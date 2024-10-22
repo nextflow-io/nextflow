@@ -1287,7 +1287,7 @@ The directive {ref}`process-maxretries` set the maximum number of time the same 
 :::{versionadded} 24.10.0
 :::
 
-Similarly to the previous scenario, task resources can be also updated according to the metrics included in the {ref}`trace record <trace-report>` of the previous task attempt. The metrics can be accessed through the `task.previousTrace` variable. For example:
+Task resource requests can be updated relative to the {ref}`trace record <trace-report>` metrics of the previous task attempt. The metrics can be accessed through the `task.previousTrace` variable. For example:
 
 ```groovy
 process foo {
