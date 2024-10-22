@@ -63,7 +63,11 @@ class BashWrapperBuilder {
 
     static final private ENDL = '\n'
 
+    static final private String LOCAL_BASH_BINARY = "which bash".execute().text.strip()
+
     static final public List<String> BASH
+
+    static final public List<String> HOST_BASH
 
     static private int level
 
@@ -85,6 +89,7 @@ class BashWrapperBuilder {
             log.warn "Invalid value for `NXF_DEBUG` variable: $str -- See http://www.nextflow.io/docs/latest/config.html#environment-variables"
         }
         BASH = Collections.unmodifiableList( level > 0 ? ['/bin/bash','-uex'] : ['/bin/bash','-ue'] )
+        HOST_BASH = Collections.unmodifiableList([LOCAL_BASH_BINARY, BASH[1]])
 
     }
 
@@ -292,7 +297,8 @@ class BashWrapperBuilder {
         /*
          * fetch the script interpreter i.e. BASH, Perl, Python, etc
          */
-        final interpreter = TaskProcessor.fetchInterpreter(script)
+        String interpreter = TaskProcessor.fetchInterpreter(script)
+        interpreter = containerBuilder ? interpreter : interpreter.replace('/bin/bash', LOCAL_BASH_BINARY)
 
         /*
          * append to the command script a prolog to capture the declared
@@ -571,7 +577,7 @@ class BashWrapperBuilder {
         final traceWrapper = isTraceRequired()
         if( traceWrapper ) {
             // executes the stub which in turn executes the target command
-            launcher = "/bin/bash ${fileStr(wrapperFile)} nxf_trace"
+            launcher = "${interpreter} ${fileStr(wrapperFile)} nxf_trace"
         }
         else {
             launcher = "${interpreter} ${fileStr(scriptFile)}"
