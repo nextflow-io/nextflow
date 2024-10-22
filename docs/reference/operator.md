@@ -1393,7 +1393,7 @@ See also: [countLines](#countlines)
 
 ## subscribe
 
-*Returns: the source channel*
+*Returns: nothing*
 
 The `subscribe` operator invokes a custom function for each item from a source channel:
 
@@ -1424,6 +1424,10 @@ The `subscribe` operator supports multiple types of event handlers:
 ```{literalinclude} ../snippets/subscribe-with-on-complete.out
 :language: console
 ```
+
+:::{note}
+Unlike most operators, `subscribe` is a *terminal operator* and does not emit any values. It should only be used for *side effects*, such as printing to the console, writing to a file, or making HTTP requests.
+:::
 
 Available options:
 
