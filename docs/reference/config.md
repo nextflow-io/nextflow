@@ -1231,27 +1231,9 @@ Read the {ref}`sharing-page` page to learn how to publish your pipeline to GitHu
 
 ## `nextflow`
 
-The `nextflow` scope provides configuration options for the Nextflow runtime.
-
-`nextflow.publish.retryPolicy.delay`
-: :::{versionadded} 24.03.0-edge
-  :::
-: Delay when retrying a failed publish operation (default: `350ms`).
-
-`nextflow.publish.retryPolicy.jitter`
-: :::{versionadded} 24.03.0-edge
-  :::
-: Jitter value when retrying a failed publish operation (default: `0.25`).
-
-`nextflow.publish.retryPolicy.maxAttempt`
-: :::{versionadded} 24.03.0-edge
-  :::
-: Max attempts when retrying a failed publish operation (default: `5`).
-
-`nextflow.publish.retryPolicy.maxDelay`
-: :::{versionadded} 24.03.0-edge
-  :::
-: Max delay when retrying a failed publish operation (default: `90s`).
+:::{deprecated} 24.10.0
+The `nextflow.publish` scope has been renamed to `workflow.output`. See {ref}`config-workflow` for more information.
+:::
 
 (config-notification)=
 

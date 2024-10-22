@@ -222,7 +222,11 @@ class PublishDir {
     protected void apply0(Set<Path> files) {
         assert path
 
-        final retryOpts = session.config.navigate('workflow.output.retryPolicy') as Map ?: Collections.emptyMap()
+        def retryOpts = session.config.navigate('nextflow.publish.retryPolicy') as Map
+        if( retryOpts != null )
+            log.warn 'The `nextflow.publish` config scope has been renamed to `workflow.output`'
+        else
+            retryOpts = session.config.navigate('workflow.output.retryPolicy') as Map ?: Collections.emptyMap()
         this.retryConfig = new PublishRetryConfig(retryOpts)
 
         createPublishDir()
