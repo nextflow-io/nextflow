@@ -1299,7 +1299,7 @@ process foo {
     <your job here>
 }
 ```
-In the above example the {ref}`process-memory` is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to one GB, while in the other attempts it is doubling the previously allocated memory. The available metrics in the trace record can be found in the {ref}`Trace Report section <trace-report>`.
+In the above example, the {ref}`process-memory` is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to one GB. In the subsequent attempts, it doubles the previously allocated memory. See {ref}`trace-report` for more information about trace records.
 
 
 ### Dynamic retry with backoff
