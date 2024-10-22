@@ -33,7 +33,7 @@ The following task properties are defined in the process body:
 : Since the error message is only available after the task has been executed, it can only be used when `task.attempt` is bigger than 1.
 
 `task.previousTrace`
-: :::{versionadded} 24.09.2-edge
+: :::{versionadded} 24.10.0
   :::
 : The trace record of the task execution.
 : Since the trace record is only available after the task has been executed, it can only be used when `task.attempt` is bigger than 1. 
