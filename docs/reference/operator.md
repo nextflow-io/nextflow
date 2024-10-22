@@ -1426,7 +1426,7 @@ The `subscribe` operator supports multiple types of event handlers:
 ```
 
 :::{note}
-Unlike most operators, `subscribe` does not emit any values -- it is a *terminal operator*. Instead, `subscribe` should be used only for *side effects* such as printing to the console, writing to a file, or making HTTP requests.
+Unlike most operators, `subscribe` is a *terminal operator* and does not emit any values. It should only be used for *side effects*, such as printing to the console, writing to a file, or making HTTP requests.
 :::
 
 Available options:
