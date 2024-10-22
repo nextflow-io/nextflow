@@ -13,7 +13,7 @@ process foo {
   """
   } else {
   """
-  echo 'mem: $task.memory (previous: $task.previousTrace.memory) (error: $task.previousError)'
+  echo 'mem: $task.memory (previous: $task.previousTrace.memory) (error: $task.previousException)'
   exit 0
   """
   }

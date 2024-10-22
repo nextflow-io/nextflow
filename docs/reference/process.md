@@ -26,11 +26,11 @@ The following task properties are defined in the process body:
 : *Available only in `exec:` blocks*
 : The current task name.
 
-`task.previousError`
+`task.previousException`
 : :::{versionadded} 24.10.0
   :::
-: The error message of the task execution.
-: Since the error message is only available after the task has been executed, it can only be used when `task.attempt` is bigger than 1.
+: The task execution of previous execution.
+: Since the exception is only available after the task has been executed, it can only be used when `task.attempt` is bigger than 1.
 
 `task.previousTrace`
 : :::{versionadded} 24.10.0
