@@ -16,7 +16,9 @@
  */
 
 workflow {
-  channel.of( 'PF00389', 'PF03061', 'PF02826') | foo | view { it.text }
+  Channel.of( 'PF00389', 'PF03061', 'PF02826')
+    | foo
+    | view { file -> file.text }
 }
 
 process foo {

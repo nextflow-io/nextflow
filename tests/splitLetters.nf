@@ -19,11 +19,15 @@ params.str = 'Hello world!'
 
 process splitLetters {
 
+    input:
+    val str
+
     output:
     file 'chunk_*'
 
+    script:
     """
-    printf '${params.str}' | split -b 6 - chunk_
+    printf '${str}' | split -b 6 - chunk_
     """
 }
 
@@ -35,15 +39,16 @@ process massage {
     output:
     stdout
 
+    script:
     """
     cat $x | tr '[a-z]' '[A-Z]'
     """
 }
 
 workflow {
-  splitLetters \
-  | flatten \
-  | massage \
-  | view { it.trim() }
+  splitLetters(params.str)
+    | flatten
+    | massage
+    | view { v -> v.trim() }
 }
 

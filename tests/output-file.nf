@@ -16,16 +16,17 @@
  */
 
  process foo {
-   input:
-   file x
+  input:
+  file x
 
-   output:
-   file x
+  output:
+  file x
 
-   'echo foo'
+  script:
+  'echo foo'
  }
 
 
 workflow {
-  foo('dummy') | view { it.text }
+  foo('dummy') | view { file -> file.text }
 }

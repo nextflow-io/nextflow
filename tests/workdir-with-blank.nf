@@ -20,13 +20,14 @@ process foo {
     each x
 
     output:
-    file result_data
+    file 'result_data'
 
+    script:
     """
     echo Hello $x > result_data
     """
 }
 
 workflow {
-  channel.of(1,2,3) | foo
+  Channel.of(1,2,3) | foo
 }

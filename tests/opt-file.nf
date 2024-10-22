@@ -19,6 +19,7 @@ process foo {
   output: 
   path 'missing.txt', optional: true
 
+  script:
   '''
   echo miao
   '''
@@ -28,6 +29,7 @@ process bar {
   input: 
   file x
 
+  script:
   '''
   echo bau
   '''

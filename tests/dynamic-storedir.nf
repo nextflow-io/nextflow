@@ -27,6 +27,7 @@ process foo {
   output:
   tuple val(x), file('result.txt')
 
+  script:
   """
   echo World >> result.txt
   """

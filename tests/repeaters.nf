@@ -17,34 +17,36 @@
 
 
 process hola {
-    debug true
-    input:
-    val x
-    each y
-    each z
+  debug true
 
-    """
-    echo 'x: $x; y: $y; z: $z'
-    """
+  input:
+  val x
+  each y
+  each z
 
+  script:
+  """
+  echo 'x: $x; y: $y; z: $z'
+  """
 }
 
 process foo {
-    debug true
+  debug true
 
-    input:
-    each v
+  input:
+  each v
 
-    """
-    echo foo $v
-    """
+  script:
+  """
+  echo foo $v
+  """
 }
 
 workflow {
-  def list1 = channel.of(1,2)
-  def list2 = channel.of('Hola', 'Ciao')
-  def list3 = channel.of('alpha','beta','delta')
-  def list4 = channel.of(["a","b"],["c","d"])
+  def list1 = Channel.of(1,2)
+  def list2 = Channel.of('Hola', 'Ciao')
+  def list3 = Channel.of('alpha','beta','delta')
+  def list4 = Channel.of(["a","b"],["c","d"])
 
   hola(list1, list2, list3)
 

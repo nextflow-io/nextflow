@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 workflow {
-  channel.of(1,2,3) | printVars
+  Channel.of(1,2,3) | printVars
 }
 
 process printVars {
@@ -29,6 +29,7 @@ process printVars {
     input:
     each x
 
+    script:
     """
     echo indx: ${task.index}
     echo proc: ${task.process}

@@ -16,7 +16,7 @@
  */
 
 workflow {
-    input_channel = channel.of("SAMP1", "SAMP2", "SAMP3")
+    input_channel = Channel.of("SAMP1", "SAMP2", "SAMP3")
     foo(input_channel)
     bar(foo.out.sample_ids.collect())
 }

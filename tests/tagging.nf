@@ -22,11 +22,12 @@ process foo {
   input:
   each barcode
 
+  script:
   """
   echo $barcode
   """
 }
 
 workflow {
-  channel.of('alpha', 'delta', 'gamma', 'omega') | foo
+  Channel.of('alpha', 'delta', 'gamma', 'omega') | foo
 }

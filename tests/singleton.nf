@@ -17,8 +17,9 @@
 
 process foo {
   output:
-  file x
+  file 'x'
 
+  script:
   '''
   echo -n Hello > x
   '''
@@ -29,6 +30,7 @@ process bar {
   file x
   val y
 
+  script:
   """
   cat $x
   echo $y
@@ -38,5 +40,5 @@ process bar {
 
 workflow {
   foo()
-  bar(foo.out, channel.of(1,2,3))
+  bar(foo.out, Channel.of(1,2,3))
 }
