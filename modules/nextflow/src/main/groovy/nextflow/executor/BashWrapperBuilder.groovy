@@ -63,11 +63,9 @@ class BashWrapperBuilder {
 
     static final private ENDL = '\n'
 
-    static final private String LOCAL_BASH_BINARY = "which bash".execute().text.strip()
-
     static final public List<String> BASH
 
-    static final public List<String> HOST_BASH
+    static final public List<String> ENV_BASH
 
     static private int level
 
@@ -89,7 +87,7 @@ class BashWrapperBuilder {
             log.warn "Invalid value for `NXF_DEBUG` variable: $str -- See http://www.nextflow.io/docs/latest/config.html#environment-variables"
         }
         BASH = Collections.unmodifiableList( level > 0 ? ['/bin/bash','-uex'] : ['/bin/bash','-ue'] )
-        HOST_BASH = Collections.unmodifiableList([LOCAL_BASH_BINARY, BASH[1]])
+        ENV_BASH = Collections.unmodifiableList(['/usr/bin/env', '-S', 'bash', BASH[1]])
 
     }
 
@@ -297,8 +295,8 @@ class BashWrapperBuilder {
         /*
          * fetch the script interpreter i.e. BASH, Perl, Python, etc
          */
-        String interpreter = TaskProcessor.fetchInterpreter(script)
-        interpreter = containerBuilder ? interpreter : interpreter.replace('/bin/bash', LOCAL_BASH_BINARY)
+        String fetchedInterpreter = TaskProcessor.fetchInterpreter(script)
+        final interpreter = containerBuilder ? fetchedInterpreter : fetchedInterpreter.replace('/bin/bash', '/usr/bin/env -S bash')
 
         /*
          * append to the command script a prolog to capture the declared
@@ -577,7 +575,7 @@ class BashWrapperBuilder {
         final traceWrapper = isTraceRequired()
         if( traceWrapper ) {
             // executes the stub which in turn executes the target command
-            launcher = "${interpreter} ${fileStr(wrapperFile)} nxf_trace"
+            launcher = "/usr/bin/env -S bash ${fileStr(wrapperFile)} nxf_trace"
         }
         else {
             launcher = "${interpreter} ${fileStr(scriptFile)}"
