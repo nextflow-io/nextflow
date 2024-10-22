@@ -135,10 +135,6 @@ class TaskProcessor {
 
     static final public String TASK_CONTEXT_PROPERTY_NAME = 'task'
 
-    static final public String TRACE_PROPERTY_NAME = 'previousTrace'
-
-    static final public String ERROR_PROPERTY_NAME = 'previousError'
-
     final private static Pattern ENV_VAR_NAME = ~/[a-zA-Z_]+[a-zA-Z0-9_]*/
 
     final private static Pattern QUESTION_MARK = ~/(\?+)/
@@ -1022,7 +1018,7 @@ class TaskProcessor {
      *      a {@link ErrorStrategy#TERMINATE})
      */
     @PackageScope
-    final synchronized resumeOrDie( TaskRun task, Throwable error ) {
+    final synchronized resumeOrDie( TaskRun task, Throwable error, TraceRecord traceRecord = null) {
         log.debug "Handling unexpected condition for\n  task: name=${safeTaskName(task)}; work-dir=${task?.workDirStr}\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
         ErrorStrategy errorStrategy = TERMINATE
@@ -1067,6 +1063,10 @@ class TaskProcessor {
                 task.config.exitStatus = task.exitStatus
                 task.config.errorCount = procErrCount
                 task.config.retryCount = taskErrCount
+                //Add trace of the previous execution in the task context for next execution
+                if ( traceRecord )
+                    task.config.previousTrace = traceRecord
+                task.config.previousError = error.getMessage()
 
                 errorStrategy = checkErrorStrategy(task, error, taskErrCount, procErrCount, submitRetries)
                 if( errorStrategy.soft ) {
@@ -2391,10 +2391,7 @@ class TaskProcessor {
             collectOutputs(task)
         }
         catch ( Throwable error ) {
-            //Add trace and error message of the previous execution in the task context for next execution
-            task.config.put(TRACE_PROPERTY_NAME, handler.getTraceRecord())
-            task.config.put(ERROR_PROPERTY_NAME, error.getMessage())
-            fault = resumeOrDie(task, error)
+            fault = resumeOrDie(task, error, handler.getTraceRecord())
             log.trace "Task fault (3): $fault"
         }
 

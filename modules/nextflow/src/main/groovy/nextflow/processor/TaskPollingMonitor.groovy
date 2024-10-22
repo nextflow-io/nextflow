@@ -619,10 +619,7 @@ class TaskPollingMonitor implements TaskMonitor {
             if (evict(handler)) { 
                 handler.decProcessForks()
             }
-            //Add trace of the previous execution in the task context for next execution
-            handler.task.config.put(TRACE_PROPERTY_NAME, handler.getTraceRecord())
-            handler.task.config.put(ERROR_PROPERTY_NAME, error.getMessage())
-            fault = handler.task.processor.resumeOrDie(handler?.task, error)
+            fault = handler.task.processor.resumeOrDie(handler?.task, error, handler.getTraceRecord())
             log.trace "Task fault (1): $fault"
         }
         finally {
