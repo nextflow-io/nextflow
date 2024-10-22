@@ -109,7 +109,7 @@ Inputs can be specified like arguments when invoking the workflow:
 
 ```groovy
 workflow {
-    my_pipeline( channel.from('/some/data') )
+    my_pipeline( Channel.from('/some/data') )
 }
 ```
 
@@ -178,7 +178,7 @@ process bar {
 }
 
 workflow {
-    data = channel.fromPath('/some/path/*.txt')
+    data = Channel.fromPath('/some/path/*.txt')
     foo()
     bar(data)
 }
@@ -272,7 +272,7 @@ process sayHello {
 }
 
 workflow {
-    things = channel.of('Hello world!', 'Yo, dude!', 'Duck!')
+    things = Channel.of('Hello world!', 'Yo, dude!', 'Duck!')
     sayHello(things)
     sayHello.out.verbiage.view()
 }
@@ -336,7 +336,7 @@ process foo {
 }
 
 workflow {
-   channel.from('Hello','Hola','Ciao') | foo | map { it.toUpperCase() } | view
+   Channel.from('Hello','Hola','Ciao') | foo | map { it.toUpperCase() } | view
 }
 ```
 
@@ -347,7 +347,7 @@ Statements can also be split across multiple lines for better readability:
 
 ```groovy
 workflow {
-    channel.from('Hello','Hola','Ciao')
+    Channel.from('Hello','Hola','Ciao')
       | foo
       | map { it.toUpperCase() }
       | view
@@ -383,7 +383,7 @@ process bar {
 }
 
 workflow {
-    channel.from('Hello')
+    Channel.from('Hello')
       | map { it.reverse() }
       | (foo & bar)
       | mix
