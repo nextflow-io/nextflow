@@ -1066,7 +1066,7 @@ class TaskProcessor {
                 //Add trace of the previous execution in the task context for next execution
                 if ( traceRecord )
                     task.config.previousTrace = traceRecord
-                task.config.previousError = error.getMessage()
+                task.config.previousException = error
 
                 errorStrategy = checkErrorStrategy(task, error, taskErrCount, procErrCount, submitRetries)
                 if( errorStrategy.soft ) {
