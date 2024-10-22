@@ -269,7 +269,7 @@ class GoogleBatchMachineTypeSelector {
         }
         // Cloud Info service currently does not currently return gpusPerVm values (or the user
         // could have disabled use of the service) so also check against a known set of families.
-        return ACCELERATOR_OPTIMIZED_FAMILIES.find { matchType(it, machineType.type) }
+        return ACCELERATOR_OPTIMIZED_FAMILIES.any { matchType(it, machineType.type) }
     }
 
 }
