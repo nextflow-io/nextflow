@@ -954,4 +954,4 @@ The following legacy features were excluded from this page because they are depr
 
 - The `addParams` and `params` clauses of include declarations. See {ref}`module-params` for more information.
 - The `when:` section of a process definition. See {ref}`process-when` for more information.
-- The implicit `it` closure parameter
+- The implicit `it` closure parameter. See {ref}`script-closure` for more information.

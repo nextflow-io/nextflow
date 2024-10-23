@@ -376,6 +376,16 @@ def result = counts.values().inject { sum, v -> sum + v }
 
 This way, the closure is fully "self-contained" because it doesn't access or mutate any variables outside of its scope.
 
+:::{note}
+When a closure takes a single parameter, the parameter can be omitted, in which case the implicit `it` parameter will be used:
+
+```groovy
+[1, 2, 3].each { println it }
+```
+
+However, this practice is deprecated and will not be supported in the future.
+:::
+
 ## Script definitions
 
 So far, we have been focusing on the basic building blocks of Nextflow code, like variables, lists, strings, and closures.
