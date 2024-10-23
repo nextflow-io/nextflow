@@ -2,13 +2,9 @@
 
 # Scripts
 
-Nextflow is a domain-specific language (DSL) based on Groovy, a general-purpose programming language for the Java virtual machine. Nextflow extends the Groovy syntax with features that ease the writing of computational pipelines in a declarative manner.
+Nextflow is a workflow language that runs on the Java virtual machine (JVM). Nextflow's syntax is very similar to [Groovy](https://groovy-lang.org/), a scripting language for the JVM. However, Nextflow is specialized for writing computational pipelines in a declarative manner. See {ref}`syntax-page` for a full description of the Nextflow language.
 
-For more background on Groovy, refer to these resources:
-
-- [Groovy User Guide](http://groovy-lang.org/documentation.html)
-- [Groovy Cheat sheet](http://www.cheat-sheets.org/saved-copy/rc015-groovy_online.pdf)
-- [Groovy in Action](http://www.manning.com/koenig2/)
+Nextflow scripts can also make full use of the Java and Groovy standard libraries. See {ref}`stdlib-page` for more information.
 
 :::{warning}
 Nextflow uses UTF-8 as the default character encoding for source files. Make sure to use UTF-8 encoding when editing Nextflow scripts with your preferred text editor.
@@ -20,41 +16,44 @@ Nextflow scripts have a maximum size of 64 KiB. To avoid this limit for large pi
 
 ## Hello world
 
-To print something is as easy as using one of the `print` or `println` methods.
+You can use the `println` function to print to the console:
 
 ```groovy
-println "Hello, World!"
+println 'Hello, World!'
 ```
 
-The only difference between the two is that the `println` method implicitly appends a newline character to the printed string.
 
 ## Variables
 
-To define a variable, simply assign a value to it:
+Variables are declared using the `def` keyword:
 
 ```groovy
-x = 1
+def num = 1
+println num
+
+def date = new java.util.Date()
+println date
+
+def x = -3.1499392
 println x
 
-x = new java.util.Date()
-println x
+def flag = false
+println flag
 
-x = -3.1499392
-println x
-
-x = false
-println x
-
-x = "Hi"
-println x
+def str = "Hi"
+println str
 ```
+
+:::{warning}
+Variables can also be declared without `def` in some cases. However, this practice is discouraged outside of simple code snippets because it can lead to a {ref}`race condition <cache-global-var-race-condition>`.
+:::
 
 ## Lists
 
-A List object can be defined by placing the list items in square brackets:
+Lists are defined using square brackets:
 
 ```groovy
-myList = [1776, -1, 33, 99, 0, 928734928763]
+def myList = [1776, -1, 33, 99, 0, 928734928763]
 ```
 
 You can access a given item in the list with square-bracket notation (indexes start at 0):
@@ -69,18 +68,14 @@ In order to get the length of the list use the `size` method:
 println myList.size()
 ```
 
-Learn more about lists:
-
-- [Groovy Lists tutorial](http://groovy-lang.org/groovy-dev-kit.html#Collections-Lists)
-- [Groovy List API](http://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/List.html)
-- [Java List API](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/List.html)
+Refer to the [Java](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/List.html) and [Groovy](http://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/List.html) standard libraries for the set of available list operations.
 
 ## Maps
 
 Maps are used to store *associative arrays* (also known as *dictionaries*). They are unordered collections of heterogeneous, named data:
 
 ```groovy
-scores = ["Brett": 100, "Pete": "Did not finish", "Andrew": 86.87934]
+def scores = ["Brett": 100, "Pete": "Did not finish", "Andrew": 86.87934]
 ```
 
 Note that each of the values stored in the map can be of a different type. `Brett` is an integer, `Pete` is a string, and `Andrew` is a floating-point number.
@@ -102,7 +97,7 @@ scores["Cedric"] = 120
 You can also use the `+` operator to add two maps together:
 
 ```groovy
-new_scores = scores + ["Pete": 3, "Cedric": 120]
+def new_scores = scores + ["Pete": 3, "Cedric": 120]
 ```
 
 When adding two maps, the first map is copied and then appended with the keys from the second map. Any conflicting keys are overwritten by the second map.
@@ -111,33 +106,14 @@ When adding two maps, the first map is copied and then appended with the keys fr
 Copying a map with the `+` operator is a safer way to modify maps in Nextflow, specifically when passing maps through channels. This way, a new instance of the map will be created, and any references to the original map won't be affected.
 :::
 
-Learn more about maps:
-
-- [Groovy Maps tutorial](http://groovy-lang.org/groovy-dev-kit.html#Collections-Maps)
-- [Groovy Map API](http://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/Map.html)
-- [Java Map API](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Map.html)
-
-(script-multiple-assignment)=
-
-## Multiple assignment
-
-An array or a list object can used to assign to multiple variables at once:
-
-```groovy
-(a, b, c) = [10, 20, 'foo']
-assert a == 10 && b == 20 && c == 'foo'
-```
-
-The three variables on the left of the assignment operator are initialized by the corresponding item in the list.
-
-Read more about [Multiple assignment](http://www.groovy-lang.org/semantics.html#_multiple_assignment) in the Groovy documentation.
+See the [Java](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Map.html) and [Groovy](http://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/Map.html) standard libraries for the set of available map operations.
 
 ## Conditional execution
 
 One of the most important features of any programming language is the ability to execute different code under different conditions. The simplest way to do this is to use the `if` construct:
 
 ```groovy
-x = Math.random()
+def x = Math.random()
 if( x < 0.5 ) {
     println "You lost."
 }
@@ -158,24 +134,24 @@ println 'he said "cheese!" again'
 Strings can be concatenated with `+`:
 
 ```groovy
-a = "world"
+def a = "world"
 print "hello " + a + "\n"
 ```
 
 (string-interpolation)=
 
-## String interpolation
+### String interpolation
 
 There is an important difference between single-quoted and double-quoted strings: Double-quoted strings support variable interpolations, while single-quoted strings do not.
 
 In practice, double-quoted strings can contain the value of an arbitrary variable by prefixing its name with the `$` character, or the value of any expression by using the `${expression}` syntax, similar to Bash/shell scripts:
 
 ```groovy
-foxtype = 'quick'
-foxcolor = ['b', 'r', 'o', 'w', 'n']
+def foxtype = 'quick'
+def foxcolor = ['b', 'r', 'o', 'w', 'n']
 println "The $foxtype ${foxcolor.join()} fox"
 
-x = 'Hello'
+def x = 'Hello'
 println '$x + $y'
 ```
 
@@ -186,12 +162,12 @@ The quick brown fox
 $x + $y
 ```
 
-## Multi-line strings
+### Multi-line strings
 
 A block of text that span multiple lines can be defined by delimiting it with triple single or double quotes:
 
 ```groovy
-text = """
+def text = """
     hello there James
     how are you today?
     """
@@ -204,7 +180,7 @@ Like before, multi-line strings inside double quotes support variable interpolat
 As in Bash/shell scripts, terminating a line in a multi-line string with a `\` character prevents a newline character from separating that line from the one that follows:
 
 ```groovy
-myLongCmdline = """
+def myLongCmdline = """
     blastp \
     -in $input_query \
     -out $output_file \
@@ -212,13 +188,13 @@ myLongCmdline = """
     -html
     """
 
-result = myLongCmdline.execute().text
+def result = myLongCmdline.execute().text
 ```
 
 In the preceding example, `blastp` and its `-in`, `-out`, `-db` and `-html` switches and their arguments are effectively a single line.
 
 :::{warning}
-When using backslashes to continue a multi-line command, make sure to not put any spaces after the backslash, otherwise it will be interpreted by the Groovy lexer as an escaped space instead of a backslash, which will make your script incorrect. It will also print this warning:
+Do not put any spaces after the backslash when using backslashes to continue a multi-line command. Spaces after the backslash will be interpreted as an escaped space and will make your script incorrect. It will also print this warning:
 
 ```
 unknown recognition error type: groovyjarjarantlr4.v4.runtime.LexerNoViableAltException
@@ -247,7 +223,7 @@ assert 'foo' ==~ /foo/       // return TRUE
 assert 'foobar' ==~ /foo/    // return FALSE
 ```
 
-It is worth noting that the `~` operator creates a Java `Pattern` object from the given string, while the `=~` operator creates a Java `Matcher` object.
+The `~` operator creates a [Pattern](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/regex/Pattern.html) from the given string, while the `=~` operator creates a [Matcher](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/regex/Matcher.html):
 
 ```groovy
 x = ~/abc/
@@ -259,22 +235,28 @@ println y.class
 // prints java.util.regex.Matcher
 ```
 
-Regular expression support is imported from Java. Java's regular expression language and API is documented in the [Pattern](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/regex/Pattern.html) class.
-
-You may also be interested in this post: [Groovy: Don't Fear the RegExp](https://web.archive.org/web/20170621185113/http://www.naleid.com/blog/2008/05/19/dont-fear-the-regexp).
+See the linked Java documentation for the available operations for these classes.
 
 ### String replacement
 
 To replace pattern occurrences in a given string, use the `replaceFirst` and `replaceAll` methods:
 
 ```groovy
-x = "colour".replaceFirst(/ou/, "o")
+def x = "colour".replaceFirst(/ou/, "o")
 println x
 // prints: color
 
-y = "cheesecheese".replaceAll(/cheese/, "nice")
+def y = "cheesecheese".replaceAll(/cheese/, "nice")
 println y
 // prints: nicenice
+```
+
+To remove part of a string, simply replace it with a blank string:
+
+```groovy
+def z = 'Hello World!'.replaceFirst(/(?i)\s+Wo\w+/, '')
+println z
+// prints: Hello!
 ```
 
 ### Capturing groups
@@ -284,8 +266,8 @@ You can match a pattern that includes groups. First create a matcher object with
 Here's how it works:
 
 ```groovy
-programVersion = '2.7.3-beta'
-m = programVersion =~ /(\d+)\.(\d+)\.(\d+)-?(.+)/
+def programVersion = '2.7.3-beta'
+def m = programVersion =~ /(\d+)\.(\d+)\.(\d+)-?(.+)/
 
 assert m[0] == ['2.7.3-beta', '2', '7', '3', 'beta']
 assert m[0][1] == '2'
@@ -297,8 +279,8 @@ assert m[0][4] == 'beta'
 Applying some syntactic sugar, you can do the same in just one line of code:
 
 ```groovy
-programVersion = '2.7.3-beta'
-(full, major, minor, patch, flavor) = (programVersion =~ /(\d+)\.(\d+)\.(\d+)-?(.+)/)[0]
+def programVersion = '2.7.3-beta'
+def (full, major, minor, patch, flavor) = (programVersion =~ /(\d+)\.(\d+)\.(\d+)-?(.+)/)[0]
 
 println full    // 2.7.3-beta
 println major   // 2
@@ -307,110 +289,52 @@ println patch   // 3
 println flavor  // beta
 ```
 
-### Removing part of a string
-
-You can remove part of a `String` value using a regular expression pattern. The first match found is replaced with an empty String:
-
-```groovy
-// define the regexp pattern
-wordStartsWithGr = ~/(?i)\s+Gr\w+/
-
-// apply and verify the result
-('Hello Groovy world!' - wordStartsWithGr) == 'Hello world!'
-('Hi Grails users' - wordStartsWithGr) == 'Hi users'
-```
-
-Remove the first 5-character word from a string:
-
-```groovy
-assert ('Remove first match of 5 letter word' - ~/\b\w{5}\b/) == 'Remove match of 5 letter word'
-```
-
-Remove the first number with its trailing whitespace from a string:
-
-```groovy
-assert ('Line contains 20 characters' - ~/\d+\s+/) == 'Line contains characters'
-```
-
-## Functions
-
-Functions can be defined using the following syntax:
-
-```groovy
-def <function name> ( arg1, arg, .. ) {
-    <function body>
-}
-```
-
-For example:
-
-```groovy
-def foo() {
-    'Hello world'
-}
-
-def bar(alpha, omega) {
-    alpha + omega
-}
-```
-
-The above snippet defines two simple functions, that can be invoked in the workflow script as `foo()`, which returns `'Hello world'`, and `bar(10, 20)`, which returns the sum of two parameters (`30` in this case).
-
-Functions implicitly return the result of the last statement. Additionally, the `return` keyword can be used to explicitly exit from a function and return the specified value. For example:
-
-```groovy
-def fib( x ) {
-    if( x <= 1 )
-        return x
-
-    fib(x-1) + fib(x-2)
-}
-```
-
 (script-closure)=
 
 ## Closures
 
-Briefly, a closure is a block of code that can be passed as an argument to a function. Thus, you can define a chunk of code and then pass it around as if it were a string or an integer.
+A closure is a function that can be used like a regular value. Typically, closures are passed as arguments to *higher-order functions* to express computations in a declarative manner.
 
-More formally, you can create functions that are defined as *first-class objects*.
+For example:
 
 ```groovy
-square = { it * it }
+def square = { v -> v * v }
 ```
 
-The curly brackets around the expression `it * it` tells the script interpreter to treat this expression as code. The `it` identifier is an implicit variable that represents the value that is passed to the function when it is invoked.
+The above example defines a closure, which takes one parameter named `v` and returns the "square" of `v` (`v * v`). The closure is assigned to the variable `square`.
 
-Once compiled the function object is assigned to the variable `square` as any other variable assignments shown previously. Now we can do something like this:
+`square` can now be called like a function:
 
 ```groovy
 println square(9)
 ```
 
-and get the value 81.
+The above example prints `81`.
 
-This is not very interesting until we find that we can pass the function `square` as an argument to other functions or methods. Some built-in functions take a function like this as an argument. One example is the `collect` method on lists:
+The main use case for a closure is as an argument to a higher-order function:
 
 ```groovy
 [ 1, 2, 3, 4 ].collect(square)
 ```
 
-This expression says: Create an array with the values 1, 2, 3 and 4, then call its `collect` method, passing in the closure we defined above. The `collect` method runs through each item in the array, calls the closure on the item, then puts the result in a new array, resulting in:
+The `collect` method of a list applies a mapping function to each value in the list and produces a new list. The above example produces:
 
 ```groovy
 [ 1, 4, 9, 16 ]
 ```
 
-For more methods that you can call with closures as arguments, see the [Groovy GDK documentation](http://docs.groovy-lang.org/latest/html/groovy-jdk/).
-
-By default, closures take a single parameter called `it`, but you can also create closures with multiple, custom-named parameters. For example, the method `Map.each()` can take a closure with two arguments, to which it binds the `key` and the associated `value` for each key-value pair in the `Map`. Here, we use the obvious variable names `key` and `value` in our closure:
+The example can be expressed more concisely as:
 
 ```groovy
-printMapClosure = { key, value ->
+[ 1, 2, 3, 4 ].collect { v -> v * v }
+```
+
+Another example is the `each` method of a map, which takes a closure with two arguments corresponding to the key and value of each map entry:
+
+```groovy
+[ "Yue" : "Wu", "Mark" : "Williams", "Sudha" : "Kumari" ].each { key, value ->
     println "$key = $value"
 }
-
-[ "Yue" : "Wu", "Mark" : "Williams", "Sudha" : "Kumari" ].each(printMapClosure)
 ```
 
 Prints:
@@ -421,73 +345,76 @@ Mark = Williams
 Sudha = Kumari
 ```
 
-Closures can also access variables outside of their scope, and they can be used anonymously, that is without assigning them to a variable. Here is an example that demonstrates both of these things:
+Closures can access variables outside of their scope:
 
 ```groovy
-myMap = ["China": 1, "India": 2, "USA": 3]
+def counts = ["China": 1, "India": 2, "USA": 3]
 
-result = 0
-myMap.keySet().each { result += myMap[it] }
+def result = 0
+counts.keySet().each { v ->
+    result += counts[v]
+}
 
 println result
 ```
 
-A closure can also declare local variables that exist only for the lifetime of the closure:
+A closure can also declare local variables that exist only for the lifetime of each closure invocation:
 
 ```groovy
-result = 0
-myMap.keySet().each {
-  def count = myMap[it]
-  result += count
+def result = 0
+myMap.keySet().each { v ->
+    def count = myMap[v]
+    result += count
 }
 ```
 
-:::{warning}
-Local variables should be declared using a qualifier such as `def` or a type name, otherwise they will be interpreted as global variables, which could lead to a {ref}`race condition <cache-global-var-race-condition>`.
-:::
-
-Learn more about closures in the [Groovy documentation](http://groovy-lang.org/closures.html)
-
-## Syntax sugar
-
-Groovy provides several forms of "syntax sugar", or shorthands that can make your code easier to read.
-
-Some programming languages require every statement to be terminated by a semi-colon. In Groovy, semi-colons are optional, but they can still be used to write multiple statements on the same line:
+While the `each` method is a convenient way to iterate through a collection and build up some result, a more idiomatic way to do this is to use the `inject` method:
 
 ```groovy
-println 'Hello!' ; println 'Hello again!'
+def result = counts.values().inject { sum, v -> sum + v }
 ```
 
-When calling a function, the parentheses around the function arguments are optional:
-
-```groovy
-// full syntax
-printf('Hello %s!\n', 'World')
-
-// shorthand
-printf 'Hello %s!\n', 'World'
-```
-
-It is especially useful when calling a function with a closure parameter:
-
-```groovy
-// full syntax
-[1, 2, 3].each({ println it })
-
-// shorthand
-[1, 2, 3].each { println it }
-```
-
-If the last argument is a closure, the closure can be written outside of the parentheses:
-
-```groovy
-// full syntax
-[1, 2, 3].inject('result:', { accum, v -> accum + ' ' + v })
-
-// shorthand
-[1, 2, 3].inject('result:') { accum, v -> accum + ' ' + v }
-```
+This way, the closure is fully "self-contained" because it doesn't access or mutate any variables outside of its scope.
 
 :::{note}
-In some cases, you might not be able to omit the parentheses because it would be syntactically ambiguous. You can use the `groovysh` REPL console to play around with Groovy and figure out what works.
+When a closure takes a single parameter, the parameter can be omitted, in which case the implicit `it` parameter will be used:
+
+```groovy
+[1, 2, 3].each { println it }
+```
 :::
+
+## Script definitions
+
+So far, we have been focusing on the basic building blocks of Nextflow code, like variables, lists, strings, and closures.
+
+In practice, however, Nextflow scripts are composed of *workflows*, *processes*, and *functions* (collectively known as *definitions*), and can *include*  definitions from other scripts.
+
+To transition a code snippet into a proper workflow script, simply wrap it in a `workflow` block:
+
+```groovy
+workflow {
+    println 'Hello!'
+}
+```
+
+This block is called the *entry workflow*. It serves as the entrypoint when the script is executed. A script can only have one entry workflow. Whenever a script contains only simple statements like `println 'Hello!'`, Nextflow simply treats it as an entry workflow.
+
+You can also break up code into functions, for example:
+
+```groovy
+def sayHello() {
+    println 'Hello!'
+}
+
+def add(a, b) {
+    a + b
+}
+
+workflow {
+    sayHello()
+    println "2 + 2 = ${add(2, 2)}!"
+}
+```
+
+See {ref}`workflow-page`, {ref}`process-page`, and {ref}`module-page`  for more information about how to use these features in your Nextflow scripts.

@@ -2,73 +2,42 @@
 
 # Workflows
 
-In Nextflow, a **workflow** is a composition of processes and dataflow logic (i.e. channels and operators).
+In Nextflow, a **workflow** is a function that is specialized for composing processes and dataflow logic (i.e. channels and operators).
 
-The workflow definition starts with the keyword `workflow`, followed by an optional name, and finally the workflow body delimited by curly braces. A basic workflow looks like the following example:
+A script can define up to one *entry workflow*, which does not have a name and serves as the entrypoint of the script:
 
 ```groovy
 workflow {
-    foo()
+    Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola')
+        | map { v -> "$v world!" }
+        | view
 }
 ```
 
-Where `foo` could be a function, a process, or another workflow.
-
-Workflows are *lazily executed*, which means that Nextflow parses the entire workflow structure first, and then executes the entire workflow at once. The order in which a task is executed is determined only by its dependencies, so a task will be executed as soon as all of its required inputs are available.
-
-The syntax of a workflow is defined as follows:
+A *named workflow*, on the other hand, is a workflow that can be called from other workflows:
 
 ```groovy
-workflow [ name ] {
-
-    take:
-    < workflow inputs >
-
-    main:
-    < dataflow statements >
-
-    emit:
-    < workflow outputs >
-
-}
-```
-
-:::{tip}
-The `main:` label can be omitted if there are no `take:` or `emit:` blocks.
-:::
-
-:::{note}
-Workflows were introduced in DSL2. If you are still using DSL1, see the {ref}`dsl1-page` page to learn how to migrate your Nextflow pipelines to DSL2.
-:::
-
-## Implicit workflow
-
-A script can define a single workflow without a name (also known as the *implicit workflow*), which is the default entrypoint of the script. The `-entry` command line option can be used to execute a different workflow as the entrypoint at runtime.
-
-:::{note}
-Implicit workflow definitions are ignored when a script is included as a module. This way, a script can be written such that it can be either imported as a module or executed as a pipeline.
-:::
-
-## Named workflows
-
-A named workflow is a workflow that can be invoked from other workflows. For example:
-
-```groovy
-workflow my_pipeline {
+workflow my_workflow {
     foo()
     bar( foo.out.collect() )
 }
 
 workflow {
-    my_pipeline()
+    my_workflow()
 }
 ```
 
-The above snippet defines a workflow named `my_pipeline`, that can be invoked from another workflow as `my_pipeline()`, just like any other function or process.
+The above example defines a workflow named `my_workflow` which can be called from another workflow as `my_workflow()`. Both `foo` and `bar` could be any other process or workflow.
 
-## Using variables and params
+See {ref}`syntax-workflow` for a full description of the workflow syntax.
 
-A workflow can access any variable or parameter defined in the global scope:
+:::{note}
+Workflows were introduced in DSL2. If you are still using DSL1, see {ref}`dsl1-page` for more information about how to migrate your Nextflow pipelines to DSL2.
+:::
+
+## Using parameters
+
+Parameters can be defined in the script with a default value that can be overridden from the CLI, params file, or config file. Params should only be used by the entry workflow:
 
 ```groovy
 params.data = '/some/data/file'
@@ -81,16 +50,16 @@ workflow {
 }
 ```
 
-:::{tip}
-The use of global variables and params in named workflows is discouraged because it breaks the modularity of the workflow. As a best practice, every workflow input should be explicitly defined as such in the `take:` block, and params should only be used in the implicit workflow.
+:::{note}
+While params can also be used by named workflows, this practice is discouraged. Named workflows should receive their inputs explicitly through the `take:` section.
 :::
 
 ## Workflow inputs (`take`)
 
-A workflow can declare one or more input channels using the `take` keyword. For example:
+The `take:` section is used to declare workflow inputs:
 
 ```groovy
-workflow my_pipeline {
+workflow my_workflow {
     take:
     data1
     data2
@@ -101,24 +70,20 @@ workflow my_pipeline {
 }
 ```
 
-:::{warning}
-When the `take` keyword is used, the beginning of the workflow body must be defined with the `main` keyword.
-:::
-
-Inputs can be specified like arguments when invoking the workflow:
+Inputs can be specified like arguments when calling the workflow:
 
 ```groovy
 workflow {
-    my_pipeline( channel.from('/some/data') )
+    my_workflow( Channel.of('/some/data') )
 }
 ```
 
 ## Workflow outputs (`emit`)
 
-A workflow can declare one or more output channels using the `emit` keyword. For example:
+The `emit:` section is used to declare workflow outputs:
 
 ```groovy
-workflow my_pipeline {
+workflow my_workflow {
     main:
     foo(data)
     bar(foo.out)
@@ -128,14 +93,12 @@ workflow my_pipeline {
 }
 ```
 
-When invoking the workflow, the output channel(s) can be accessed using the `out` property, i.e. `my_pipeline.out`. When multiple output channels are declared, use the array bracket notation or the assignment syntax to access each output channel as described for [process outputs](#process-outputs).
+When calling the workflow, the output can be accessed using the `out` property, i.e. `my_workflow.out`.
 
-### Named outputs
-
-If an output channel is assigned to an identifier in the `emit` block, the identifier can be used to reference the channel from the calling workflow. For example:
+If an output is assigned to a name, the name can be used to reference the output from the calling workflow. For example:
 
 ```groovy
-workflow my_pipeline {
+workflow my_workflow {
     main:
     foo(data)
     bar(foo.out)
@@ -145,18 +108,22 @@ workflow my_pipeline {
 }
 ```
 
-The result of the above workflow can be accessed using `my_pipeline.out.my_data`.
+The result of the above workflow can be accessed using `my_workflow.out.my_data`.
+
+:::{note}
+Every output must be assigned to a name when multiple outputs are declared.
+:::
 
 (workflow-process-invocation)=
 
-## Invoking processes
+## Calling processes and workflows
 
-A process can be invoked like a function in a workflow definition, passing the expected input channels like function arguments. For example:
+Processes and workflows are called like functions, passing their inputs as arguments:
 
 ```groovy
 process foo {
     output:
-    path 'foo.txt'
+    path 'foo.txt', emit: txt
 
     script:
     """
@@ -169,7 +136,7 @@ process bar {
     path x
 
     output:
-    path 'bar.txt'
+    path 'bar.txt', emit: txt
 
     script:
     """
@@ -177,140 +144,135 @@ process bar {
     """
 }
 
-workflow {
-    data = channel.fromPath('/some/path/*.txt')
+workflow flow {
+    take:
+    data
+
+    main:
     foo()
     bar(data)
 }
-```
 
-:::{warning}
-A process can be only be invoked once in a single workflow, however you can get around this restriction by using {ref}`module-aliases`.
-:::
-
-### Process composition
-
-Processes with matching input/output declarations can be composed so that the output of the first process is passed as input to the second process. The previous example can be rewritten as follows:
-
-```groovy
 workflow {
-    bar(foo())
+    data = Channel.fromPath('/some/path/*.txt')
+    flow(data)
 }
 ```
 
-### Process outputs
+Processes and workflows have a few extra rules for how they can be called:
 
-A process output can be accessed using the `out` attribute on the corresponding process object. For example:
+- Processes and workflows can only be called by workflows
+
+- A given process or workflow can only be called once in a given workflow. To use a process or workflow multiple times in the same workflow, use {ref}`module-aliases`.
+
+The "return value" of a process or workflow call is the process outputs or workflow emits, respectively. The return value can be assigned to a variable or passed into another call:
 
 ```groovy
+workflow flow {
+    take:
+    data
+
+    main:
+    bar_out = bar(foo(data))
+
+    emit:
+    bar_out
+}
+
 workflow {
-    foo()
+    data = Channel.fromPath('/some/path/*.txt')
+    flow_out = flow(data)
+}
+```
+
+Named outputs can be accessed as properties of the return value:
+
+```groovy
+workflow flow {
+    take:
+    data
+
+    main:
+    foo_out = foo(data)
+    bar_out = bar(foo_out.txt)
+
+    emit:
+    bar = bar_out.txt
+}
+
+workflow {
+    data = Channel.fromPath('/some/path/*.txt')
+    flow_out = flow(data)
+    bar_out = flow_out.bar
+}
+```
+
+As a convenience, process and workflow outputs can also be accessed without first assigning to a variable, by using the `.out` property of the process or workflow name:
+
+```groovy
+workflow flow {
+    take:
+    data
+
+    main:
+    foo(data)
     bar(foo.out)
-    bar.out.view()
-}
-```
 
-When a process defines multiple output channels, each output can be accessed by index (`out[0]`, `out[1]`, etc.) or by name (see below).
-
-The process output(s) can also be accessed like the return value of a function:
-
-```groovy
-workflow {
-    f_out = foo()
-    (b1, b2) = bar(f_out)
-    b1.view()
-}
-```
-
-#### Named outputs
-
-The `emit` option can be added to the process output definition to assign a name identifier. This name can be used to reference the channel from the calling workflow. For example:
-
-```groovy
-process foo {
-    output:
-    path '*.bam', emit: samples_bam
-
-    '''
-    your_command --here
-    '''
-}
-
-workflow {
-    foo()
-    foo.out.samples_bam.view()
-}
-```
-
-When referencing a named output directly from the process invocation, you can use a more concise syntax:
-
-```groovy
-workflow {
-    ch_samples = foo().samples_bam
-}
-```
-
-See {ref}`naming process outputs <process-naming-outputs>` for more details.
-
-#### Named stdout
-
-The `emit` option can also be used to name a `stdout` output. However, while process output options are usually prefixed with a comma, this is not the case for `stdout`. This is because `stdout` does not have an argument like other types.
-
-
-```groovy
-process sayHello {
-    input:
-    val cheers
-
-    output:
-    stdout emit: verbiage
-
-    script:
-    """
-    echo -n $cheers
-    """
-}
-
-workflow {
-    things = channel.of('Hello world!', 'Yo, dude!', 'Duck!')
-    sayHello(things)
-    sayHello.out.verbiage.view()
-}
-```
-
-## Invoking workflows
-
-Named workflows can be invoked and composed just like any other process or function.
-
-```groovy
-workflow flow1 {
-    take: data
-    main:
-        foo(data)
-        bar(foo.out)
     emit:
-        bar.out
-}
-
-workflow flow2 {
-    take: data
-    main:
-        foo(data)
-        baz(foo.out)
-    emit:
-        baz.out
+    bar = bar.out
 }
 
 workflow {
-    take: data
-    main:
-        flow1(data)
-        flow2(flow1.out)
+    data = Channel.fromPath('/some/path/*.txt')
+    flow(data)
+    flow.out.bar.view()
 }
 ```
 
 :::{note}
-Each workflow invocation has its own scope. As a result, the same process can be invoked in two different workflow scopes, like `foo` in the above snippet, which is used in both `flow1` and `flow2`. The workflow execution path, along with the process names, determines the *fully qualified process name* that is used to distinguish the different process invocations, i.e. `flow1:foo` and `flow2:foo` in the above example.
+Process named outputs are defined using the `emit` option on a process output. See {ref}`naming process outputs <process-naming-outputs>` for more information.
+:::
+
+:::{note}
+Process and workflow outputs can also be accessed by index (e.g., `foo.out[0]`, `foo.out[1]`, etc.). Multiple outputs should instead be accessed by name.
+:::
+
+Workflows can be composed in the same way:
+
+```groovy
+workflow flow1 {
+    take:
+    data
+
+    main:
+    foo(data)
+    bar(foo.out)
+
+    emit:
+    bar.out
+}
+
+workflow flow2 {
+    take:
+    data
+
+    main:
+    foo(data)
+    baz(foo.out)
+
+    emit:
+    baz.out
+}
+
+workflow {
+    data = Channel.fromPath('/some/path/*.txt')
+    flow1(data)
+    flow2(flow1.out)
+}
+```
+
+:::{note}
+The same process can be called in different workflows without using an alias, like `foo` in the above example, which is used in both `flow1` and `flow2`. The workflow call stack determines the *fully qualified process name*, which is used to distinguish the different process calls, i.e. `flow1:foo` and `flow2:foo` in the above example.
 :::
 
 :::{tip}
@@ -319,9 +281,11 @@ The fully qualified process name can be used as a {ref}`process selector <config
 
 ## Special operators
 
+The following operators have a special meaning when used in a workflow with process and workflow calls.
+
 ### Pipe `|`
 
-The `|` *pipe* operator can be used to compose Nextflow processes and operators. For example:
+The `|` *pipe* operator can be used to chain processes, operators, and workflows:
 
 ```groovy
 process foo {
@@ -336,28 +300,28 @@ process foo {
 }
 
 workflow {
-   channel.from('Hello','Hola','Ciao') | foo | map { it.toUpperCase() } | view
+    Channel.of('Hello','Hola','Ciao')
+        | foo
+        | map { v -> v.toUpperCase() }
+        | view
 }
 ```
 
-The above snippet defines a process named `foo` and invokes it with the `data` channel. The result is then piped to the {ref}`operator-map` operator, which converts each string to uppercase, and finally to the {ref}`operator-view` operator which prints it.
+The above snippet defines a process named `foo` and invokes it with the input channel. The result is then piped to the {ref}`operator-map` operator, which converts each string to uppercase, and finally to the {ref}`operator-view` operator which prints it.
 
-:::{tip}
-Statements can also be split across multiple lines for better readability:
+The same code can also be written as:
 
 ```groovy
 workflow {
-    channel.from('Hello','Hola','Ciao')
-      | foo
-      | map { it.toUpperCase() }
-      | view
+    ch1 = Channel.of('Hello','Hola','Ciao')
+    ch2 = foo( ch1 )
+    ch2.map { v -> v.toUpperCase() }.view()
 }
 ```
-:::
 
 ### And `&`
 
-The `&` *and* operator can be used to feed multiple processes with the same channel(s). For example:
+The `&` *and* operator can be used to call multiple processes in parallel with the same channel(s):
 
 ```groovy
 process foo {
@@ -383,15 +347,26 @@ process bar {
 }
 
 workflow {
-    channel.from('Hello')
-      | map { it.reverse() }
-      | (foo & bar)
-      | mix
-      | view
+    Channel.of('Hello')
+        | map { v -> v.reverse() }
+        | (foo & bar)
+        | mix
+        | view
 }
 ```
 
 In the above snippet, the initial channel is piped to the {ref}`operator-map` operator, which reverses the string value. Then, the result is passed to the processes `foo` and `bar`, which are executed in parallel. Each process outputs a channel, and the two channels are combined using the {ref}`operator-mix` operator. Finally, the result is printed using the {ref}`operator-view` operator.
+
+The same code can also be written as:
+
+```groovy
+workflow {
+    ch = Channel.of('Hello').map { v -> v.reverse() }
+    ch_foo = foo(ch)
+    ch_bar = bar(ch)
+    ch_foo.mix(ch_bar).view()
+}
+```
 
 (workflow-output-def)=
 
@@ -404,7 +379,7 @@ In the above snippet, the initial channel is piped to the {ref}`operator-map` op
 This feature requires the `nextflow.preview.output` feature flag to be enabled.
 :::
 
-A script may define the set of outputs that should be published by the implicit workflow, known as the workflow output definition:
+A script may define the set of outputs that should be published by the entry workflow, known as the workflow output definition:
 
 ```groovy
 workflow {
@@ -416,7 +391,7 @@ output {
 }
 ```
 
-The output definition must be defined after the implicit workflow.
+The output definition must be defined after the entry workflow.
 
 ### Publishing channels
 

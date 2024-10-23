@@ -1,9 +1,9 @@
 Channel.of( 'a', 'b', 'c' )
     .tap { log1 }
-    .map { it * 2 }
+    .map { v -> v * 2 }
     .tap { log2 }
-    .map { it.toUpperCase() }
-    .view { "Result: $it" }
+    .map { v -> v.toUpperCase() }
+    .view { result -> "Result: $result" }
 
-log1.view { "Log 1: $it" }
-log2.view { "Log 2: $it" }
+log1.view { v -> "Log 1: $v" }
+log2.view { v -> "Log 2: $v" }

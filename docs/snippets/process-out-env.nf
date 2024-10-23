@@ -1,6 +1,6 @@
 process myTask {
     output:
-    env FOO
+    env 'FOO'
 
     script:
     '''
