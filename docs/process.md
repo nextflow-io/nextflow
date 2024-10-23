@@ -1283,6 +1283,25 @@ If the task execution fail reporting an exit status in the range between 137 and
 
 The directive {ref}`process-maxretries` set the maximum number of time the same task can be re-executed.
 
+### Dynamic task resources with previous execution trace
+:::{versionadded} 24.10.0
+:::
+
+Task resource requests can be updated relative to the {ref}`trace record <trace-report>` metrics of the previous task attempt. The metrics can be accessed through the `task.previousTrace` variable. For example:
+
+```groovy
+process foo {
+    memory { task.attempt > 1 ? task.previousTrace.memory * 2 : (1.GB) }
+    errorStrategy { task.exitStatus in 137..140 ? 'retry' : 'terminate' }
+    maxRetries 3
+
+    script:
+    <your job here>
+}
+```
+In the above example, the {ref}`process-memory` is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to one GB. In the subsequent attempts, it doubles the previously allocated memory. See {ref}`trace-report` for more information about trace records.
+
+
 ### Dynamic retry with backoff
 
 There are cases in which the required execution resources may be temporary unavailable e.g. network congestion. In these cases immediately re-executing the task will likely result in the identical error. A retry with an exponential backoff delay can better recover these error conditions:
