@@ -141,6 +141,11 @@ class FluxExecutor extends AbstractGridExecutor {
     protected List<String> getKillCommand() { ['flux', 'job', 'cancel'] }
 
     @Override
+    List<String> queueJobStatusReportCommand(Object jobId, Object queue) {
+        ['flux', 'job', 'info', jobId.toString()]
+    }
+
+    @Override
     protected List<String> queueStatusCommand(Object queue) {
 
         // Look at jobs from last 15 minutes

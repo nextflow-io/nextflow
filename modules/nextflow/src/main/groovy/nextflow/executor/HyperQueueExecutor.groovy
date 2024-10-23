@@ -99,6 +99,11 @@ class HyperQueueExecutor extends AbstractGridExecutor {
     }
 
     @Override
+    List<String> queueJobStatusReportCommand(Object jobId, Object queue) {
+        return ['hq', 'job', 'info', jobId.toString() ]
+    }
+
+    @Override
     protected List<String> killTaskCommand(def jobId) {
         final result = getKillCommand()
         if( jobId instanceof Collection ) {

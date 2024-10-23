@@ -141,6 +141,11 @@ class OarExecutor extends AbstractGridExecutor {
     protected List<String> getKillCommand() { ['oardel'] }
 
     @Override
+    List<String> queueJobStatusReportCommand(Object jobId, Object queue) {
+        return ['oarstat', '-j', jobId.toString(), '-f']
+    }
+
+    @Override
     protected List<String> queueStatusCommand(Object queue) {
         // To have a parsable list of jobs in queue by user
         // see page 21 http://oar.imag.fr/docs/2.5/OAR-Documentation.pdf

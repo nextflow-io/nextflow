@@ -155,6 +155,23 @@ class SlurmExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
     protected List<String> getKillCommand() { ['scancel'] }
 
     @Override
+    List<String> queueJobStatusReportCommand(jobId, queue) {
+
+        // Report id status nodelist and reason
+        final result = ['squeue', '-o', '%i %T %N %R', '-j', jobId.toString()]
+        if (queue)
+            result << '-p' << queue.toString()
+
+        final user = System.getProperty('user.name')
+        if (user)
+            result << '-u' << user
+        else
+            log.debug "Cannot retrieve current user"
+
+        return result
+    }
+
+    @Override
     protected List<String> queueStatusCommand(Object queue) {
 
         final result = ['squeue','--noheader','-o','%i %t', '-t', 'all']

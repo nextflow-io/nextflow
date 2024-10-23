@@ -126,6 +126,11 @@ class MoabExecutor extends AbstractGridExecutor {
     protected List<String> getKillCommand() { ['mjobctl', '-c'] }
 
     @Override
+    List<String> queueJobStatusReportCommand(Object jobId, Object queue) {
+        return ['checkjob', '-v', jobId.toString()]
+    }
+
+    @Override
     protected List<String> queueStatusCommand(Object queue) {
         return ['showq', '--xml', '-w', "user="+System.getProperty('user.name')]
     }

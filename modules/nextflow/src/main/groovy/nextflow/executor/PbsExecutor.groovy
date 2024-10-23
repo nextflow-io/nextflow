@@ -137,6 +137,11 @@ class PbsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
     protected List<String> getKillCommand() { ['qdel'] }
 
     @Override
+    List<String> queueJobStatusReportCommand(Object jobId, Object queue) {
+        return ['tracejob', jobId.toString()]
+    }
+
+    @Override
     protected List<String> queueStatusCommand(Object queue) {
         String cmd = 'qstat -f -1'
         if( queue ) cmd += ' ' + queue
