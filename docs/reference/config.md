@@ -492,7 +492,7 @@ The following settings are available:
 `conda.useMicromamba`
 : :::{versionadded} 22.05.0-edge
   :::
-: Uses the `micromamba` binary instead of `conda` to create Conda environments (default: `false`). See the [Micromamba documentation](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html) for more information.
+: Uses the `micromamba` binary instead of `conda` to create Conda environments. See the [Micromamba documentation](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html) for more information.
 
 See {ref}`conda-page` for more information about using Conda environments with Nextflow.
 
