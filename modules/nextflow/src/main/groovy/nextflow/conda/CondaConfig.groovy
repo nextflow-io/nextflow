@@ -49,7 +49,7 @@ class CondaConfig extends LinkedHashMap {
     List<String> getChannels() {
         final value = get('channels')
         if( !value ) {
-            return Collections.<String>emptyList()
+            return ['conda-forge','bioconda']
         }
         if( value instanceof List ) {
             return value
