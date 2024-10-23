@@ -393,8 +393,8 @@ In Groovy, a closure with no parameters is assumed to have a single parameter na
 
 ```nextflow
 ch | map { it * 2 }       // deprecated
-ch | map { it -> it * 2 } // correct
-ch | map { v -> v * 2 }   // also correct
+ch | map { v -> v * 2 }   // correct
+ch | map { it -> it * 2 } // also correct
 ```
 
 **Using params outside the entry workflow**
