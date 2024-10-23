@@ -487,7 +487,7 @@ The following settings are available:
 : Defines the amount of time the Conda environment creation can last. The creation process is terminated when the timeout is exceeded (default: `20 min`).
 
 `conda.useMamba`
-: Uses the `mamba` binary instead of `conda` to create the Conda environments. See the [Mamba documentation](https://github.com/mamba-org/mamba) for more information (default: `false`).
+: Uses the `mamba` binary instead of `conda` to create the Conda environments. See the [Mamba documentation](https://github.com/mamba-org/mamba) for more information.
 
 `conda.useMicromamba`
 : :::{versionadded} 22.05.0-edge
