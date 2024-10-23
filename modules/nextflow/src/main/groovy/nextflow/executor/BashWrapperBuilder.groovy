@@ -534,10 +534,9 @@ class BashWrapperBuilder {
         if( !condaEnv )
             return null
         final condaCmd = 'conda info --json | awk \'/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }\''
-        final micromambaCmd = 'micromamba info | grep "env location :" | cut -d : -f 2'
         return """\
             # conda environment
-            source \$(command -v conda && (${condaCmd}) || (${micromambaCmd}))/bin/activate ${Escape.path(condaEnv)}
+            command -v conda && source \$(${condaCmd})/bin/activate ${Escape.path(condaEnv)} || eval "\$(micromamba shell hook --shell bash)" && micromamba activate ${Escape.path(condaEnv)}
             """.stripIndent()
     }
 
