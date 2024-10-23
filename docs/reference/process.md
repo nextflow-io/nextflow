@@ -26,6 +26,21 @@ The following task properties are defined in the process body:
 : *Available only in `exec:` blocks*
 : The current task name.
 
+`task.previousException`
+: :::{versionadded} 24.10.0
+  :::
+: The exception reported by the previous task attempt.
+: Since the exception is available after a failed task attempt,
+  it can only be accessed when retrying a failed task execution, and therefore when `task.attempt` is greater than 1.
+
+`task.previousTrace`
+: :::{versionadded} 24.10.0
+  :::
+: The trace record associated with the previous task attempt.
+: Since the trace record is available after a failed task attempt,
+  it can only be accessed when retrying a failed task execution, and therefore when `task.attempt` is greater than 1.
+: This is useful when retrying a task execution to access the previous task attempt runtime metrics e.g. used memory and CPUs.
+
 `task.process`
 : The current process name.
 
@@ -584,12 +599,9 @@ Use `debug` instead
 
 ### errorStrategy
 
-The `errorStrategy` directive allows you to define how an error condition is managed by the process. By default when an error status is returned by the executed script, the process stops immediately. This in turn forces the entire pipeline to terminate.
+The `errorStrategy` directive allows you to define how the process manages an error condition. By default, when an error status is returned by the executed script (i.e. when it ends with a non-zero exit status), the process stops immediately, forcing the entire pipeline to terminate.
 
 The following error strategies are available:
-
-- **errorStrategy `ignore`**: Nextflow will continue submitting tasks for the remaining 95 samples, complete the workflow, and report a successful pipeline completion.
-- **errorStrategy `ignore` and `workflow.failOnIgnore` set to `true` in configuration**: The same behavior as setting the errorStrategy alone, except the pipeline will return an exit status of -1 and report an error.
 
 `terminate` (default)
 : When a task fails, terminate the pipeline immediately and report an error. Pending and running jobs are killed.
@@ -617,9 +629,7 @@ process ignoreAnyError {
 }
 ```
 
-:::{note}
-By definition, a command script fails when it ends with a non-zero exit status.
-:::
+In this case, the workflow will complete successfully and return an exit status of 0. However, if you set `workflow.failOnIgnore = true` in your Nextflow configuration, the workflow will return a non-zero exit status and report the failed tasks as an error.
 
 The `retry` error strategy allows you to re-submit for execution a process returning an error condition. For example:
 
