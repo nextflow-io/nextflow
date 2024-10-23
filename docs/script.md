@@ -382,8 +382,6 @@ When a closure takes a single parameter, the parameter can be omitted, in which 
 ```groovy
 [1, 2, 3].each { println it }
 ```
-
-However, this practice is deprecated and will not be supported in the future.
 :::
 
 ## Script definitions

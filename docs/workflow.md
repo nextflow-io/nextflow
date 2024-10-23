@@ -51,7 +51,7 @@ workflow {
 ```
 
 :::{note}
-While params can also be used by named workflows, this practice is deprecated and will not be supported in the future. Named workflows should receive their inputs explicitly through the `take:` section.
+While params can also be used by named workflows, this practice is discouraged. Named workflows should receive their inputs explicitly through the `take:` section.
 :::
 
 ## Workflow inputs (`take`)
@@ -234,7 +234,7 @@ Process named outputs are defined using the `emit` option on a process output. S
 :::
 
 :::{note}
-Process and workflow outputs can also be accessed by index (e.g., `foo.out[0]`, `foo.out[1]`, etc.). However, this practice is deprecated and will not be supported in the future. Multiple outputs should instead be accessed by name.
+Process and workflow outputs can also be accessed by index (e.g., `foo.out[0]`, `foo.out[1]`, etc.). Multiple outputs should instead be accessed by name.
 :::
 
 Workflows can be composed in the same way:
