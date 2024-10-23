@@ -138,7 +138,7 @@ class MyExecutor extends Executor implements ExtensionPoint {
 
 You can then use this executor in your pipeline:
 
-```groovy
+```nextflow
 process foo {
     executor 'my-executor'
 }
@@ -177,7 +177,7 @@ class MyExtension extends PluginExtensionPoint {
 
 You can then use this function in your pipeline:
 
-```groovy
+```nextflow
 include { reverseString } from 'plugin/my-plugin'
 
 channel.of( reverseString('hi') )
@@ -185,7 +185,7 @@ channel.of( reverseString('hi') )
 
 You can also use an alias:
 
-```groovy
+```nextflow
 include { reverseString as anotherReverseMethod } from 'plugin/my-plugin'
 ```
 
@@ -226,7 +226,7 @@ class MyExtension extends PluginExtensionPoint {
 
 You can then use them in your pipeline:
 
-```groovy
+```nextflow
 include { sqlInsert; fromQuery as fromTable } from 'plugin/nf-sqldb'
 
 def sql = 'select * from FOO'

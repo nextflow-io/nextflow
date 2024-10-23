@@ -8,13 +8,13 @@ This page provides a comprehensive description of the Nextflow language.
 
 A line comment starts with `//` and includes the rest of the line.
 
-```groovy
+```nextflow
 println 'Hello world!' // line comment
 ```
 
 A block comment starts with `/*` and includes all subsequent characters up to the first `*/`.
 
-```groovy
+```nextflow
 /*
  * block comment
  */
@@ -39,13 +39,13 @@ Script declarations are in turn composed of statements and expressions.
 
 If there are no top-level declarations, a script may contain one or more [statements](#statements), in which case the entire script is treated as an entry workflow. For example:
 
-```groovy
+```nextflow
 println 'Hello world!'
 ```
 
 Is equivalent to:
 
-```groovy
+```nextflow
 workflow {
     println 'Hello world!'
 }
@@ -67,7 +67,7 @@ The first line of a script can be a [shebang](https://en.wikipedia.org/wiki/Sheb
 
 A feature flag declaration is an assignment. The target should be a valid {ref}`feature flag <config-feature-flags>` and the source should be a literal (i.e. number, string, boolean):
 
-```groovy
+```nextflow
 nextflow.preview.topic = true
 ```
 
@@ -75,7 +75,7 @@ nextflow.preview.topic = true
 
 An include declaration consists of an *include source* and one or more *include clauses*:
 
-```groovy
+```nextflow
 include { foo as bar } from './some/module'
 ```
 
@@ -83,7 +83,7 @@ The include source should be a string literal and should refer to either a local
 
 Include clauses can be separated by semi-colons or newlines:
 
-```groovy
+```nextflow
 // semi-colons
 include { foo ; bar as baz } from './some/module'
 
@@ -96,7 +96,7 @@ include {
 
 Include clauses can also be specified as separate includes:
 
-```groovy
+```nextflow
 include { foo } from './some/module'
 include { bar as baz } from './some/module'
 ```
@@ -111,7 +111,7 @@ The following definitions can be included:
 
 A parameter declaration is an assignment. The target should be a pipeline parameter and the source should be an expression:
 
-```groovy
+```nextflow
 params.message = 'Hello world!'
 ```
 
@@ -125,7 +125,7 @@ A workflow can be a *named workflow* or an *entry workflow*.
 
 A *named workflow* consists of a name and a body, and may consist of a *take*, *main*, *emit*, and *publish* section:
 
-```groovy
+```nextflow
 workflow greet {
     take:
     greetings
@@ -151,7 +151,7 @@ workflow greet {
 
 An *entry workflow* has no name and may consist of a *main* and *publish* section:
 
-```groovy
+```nextflow
 workflow {
     main:
     greetings = Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola')
@@ -179,7 +179,7 @@ Entry workflow definitions are ignored when a script is included as a module. Th
 
 A process consists of a name and a body. The process body consists of one or more [statements](#statements). A minimal process definition must return a string:
 
-```groovy
+```nextflow
 process sayHello {
     """
     echo 'Hello world!'
@@ -189,7 +189,7 @@ process sayHello {
 
 A process may define additional sections for *directives*, *inputs*, *outputs*, *script*, *shell*, *exec*, and *stub*:
 
-```groovy
+```nextflow
 process greet {
     // directives
     errorStrategy 'retry'
@@ -224,7 +224,7 @@ Each section may contain one or more statements. For directives, inputs, and out
 
 The script section can be substituted with a shell or exec section:
 
-```groovy
+```nextflow
 process greetShell {
     input: 
     val greeting
@@ -258,7 +258,7 @@ See {ref}`process-page` for more information on the semantics of each process se
 
 A function consists of a name, parameter list, and a body:
 
-```groovy
+```nextflow
 def greet(greeting, name) {
     println "${greeting}, ${name}!"
 }
@@ -268,7 +268,7 @@ The function body consists of one or more [statements](#statements). The last st
 
 The [return statement](#return) can be used to explicitly return from a function:
 
-```groovy
+```nextflow
 // return with no value
 def greet(greeting, name) {
     if( !greeting || !name )
@@ -288,7 +288,7 @@ def fib(x) {
 
 An enum type declaration consists of a name and a body. The body consists of a comma-separated list of identifiers:
 
-```groovy
+```nextflow
 enum Day {
     MONDAY,
     TUESDAY,
@@ -310,7 +310,7 @@ Enum types cannot be included across modules at this time.
 
 The output block consists of one or more *target blocks*. A target block consists of a *target name* and one or more *target directives* for configuring the corresponding publish target:
 
-```groovy
+```nextflow
 output {
     'fastq' {
         path 'samples'
@@ -327,7 +327,7 @@ Only one output block may be defined in a script. See {ref}`workflow-output-def`
 
 Statements can be separated by either a newline or a semi-colon:
 
-```groovy
+```nextflow
 // newline
 println 'Hello!'
 println 'Hello again!'
@@ -340,13 +340,13 @@ println 'Hello!' ; println 'Hello again!'
 
 Variables can be declared with the `def` keyword:
 
-```groovy
+```nextflow
 def x = 42
 ```
 
 Multiple variables can be declared in a single statement if the initializer is a [list literal](#list) with the same number of elements and declared variables:
 
-```groovy
+```nextflow
 def (x, y) = [ 1, 2 ]
 ```
 
@@ -360,7 +360,7 @@ Process input variables exist for the entire process body. Variables declared in
 
 Variables declared in an if or else branch exist only within that branch:
 
-```groovy
+```nextflow
 if( true )
     def x = 'foo'
 println x           // error: `x` is undefined
@@ -374,7 +374,7 @@ println x
 
 A variable cannot be declared with the same name as another variable in the same scope or an enclosing scope:
 
-```groovy
+```nextflow
 def clash(x) {
     def x           // error: `x` is already declared
     if( true )
@@ -386,7 +386,7 @@ def clash(x) {
 
 An assignment statement consists of a *target* expression and a *source* expression separated by an equals sign:
 
-```groovy
+```nextflow
 v = 42
 list[0] = 'first'
 map.key = 'value'
@@ -396,7 +396,7 @@ The target expression must be a [variable](#variable), [index](#binary-expressio
 
 Multiple variables can be assigned in a single statement as long as the source expression is a [list literal](#list) with the same number of elements and assigned variables:
 
-```groovy
+```nextflow
 (x, y) = [ 1, 2 ]
 ```
 
@@ -410,7 +410,7 @@ In general, the only expressions that can have any effect as expression statemen
 
 An assert statement consists of the `assert` keyword followed by a boolean expression, with an optional error message separated by a colon:
 
-```groovy
+```nextflow
 assert 2 + 2 == 4 : 'The math broke!'
 ```
 
@@ -420,7 +420,7 @@ If the condition is false, an error will be raised with the given error message.
 
 An if/else statement consists of an *if branch* and an optional *else branch*. Each branch consists of a boolean expression in parentheses, followed by either a single statement or a *block statement* (one or more statements in curly braces). For example:
 
-```groovy
+```nextflow
 def x = Math.random()
 if( x < 0.5 ) {
     println 'You lost.'
@@ -434,7 +434,7 @@ If the condition is true, the if branch will be executed, otherwise the else bra
 
 If/else statements can be chained any number of times by making the else branch another if/else statement:
 
-```groovy
+```nextflow
 def grade = 89
 if( grade >= 90 )
     println 'You get an A!'
@@ -450,7 +450,7 @@ else
 
 A more verbose way to write the same code is:
 
-```groovy
+```nextflow
 def grade = 89
 if( grade >= 90 ) {
     println 'You get an A!'
@@ -479,7 +479,7 @@ else {
 
 A return statement consists of the `return` keyword with an optional expression:
 
-```groovy
+```nextflow
 def add(a, b) {
     return a + b
 }
@@ -495,7 +495,7 @@ Return statements can only be used in functions and closures. In the case of a n
 
 If a function or closure has multiple return statements (including implicit returns), all of the return statements should either return a value or return nothing. If a function or closure does return a value, it should do so for every conditional branch.
 
-```groovy
+```nextflow
 def isEven1(n) {
     if( n % 2 == 1 )
         return          // error: return value is required here
@@ -517,13 +517,13 @@ If the last statement is not a return or expression statement (implicit return),
 
 A throw statement consists of the `throw` keyword followed by an expression that returns an error type:
 
-```groovy
+```nextflow
 throw new Exception('something failed!')
 ```
 
 :::{note}
 In general, the appropriate way to raise an error is to use the {ref}`error <stdlib-functions>` function:
-```groovy
+```nextflow
 error 'something failed!'
 ```
 :::
@@ -532,7 +532,7 @@ error 'something failed!'
 
 A try/catch statement consists of a *try block* followed by any number of *catch clauses*:
 
-```groovy
+```nextflow
 def text = null
 try {
     text = file('foo.txt').text
@@ -554,7 +554,7 @@ Every expression has a *type*, which may be resolved at compile-time or run-time
 
 A variable expression is a reference to a variable or other named value:
 
-```groovy
+```nextflow
 def x = 42
 
 x
@@ -565,7 +565,7 @@ x
 
 A number literal can be an integer or floating-point number, and can be positive or negative. Integers can specified in binary with `0b`, octal with `0`, or hexadecimal with `0x`. Floating-point numbers can use scientific notation with the `e` or `E` prefix. Underscores can be used as thousands separators to make long numbers more readable.
 
-```groovy
+```nextflow
 // integer
 42
 -1
@@ -584,7 +584,7 @@ A number literal can be an integer or floating-point number, and can be positive
 
 A boolean literal can be `true` or `false`:
 
-```groovy
+```nextflow
 assert true != false
 assert !true == false
 assert true == !false
@@ -594,7 +594,7 @@ assert true == !false
 
 The null literal is specified as `null`. It can be used to represent an "empty" value:
 
-```groovy
+```nextflow
 def x = null
 x = 42
 ```
@@ -607,14 +607,14 @@ Using a null value in certain expressions (e.g. the object of a property express
 
 A string literal consists of arbitrary text enclosed by single or double quotes:
 
-```groovy
+```nextflow
 println "I said 'hello'"
 println 'I said "hello" again!'
 ```
 
 A triple-quoted string can span multiple lines:
 
-```groovy
+```nextflow
 println '''
     Hello,
     How are you today?
@@ -628,13 +628,13 @@ println """
 
 A *slashy string* is enclosed by slashes instead of quotes:
 
-```groovy
+```nextflow
 /no escape!/
 ```
 
 Slashy strings can also span multiple lines:
 
-```groovy
+```nextflow
 /
 Patterns in the code,
 Symbols dance to match and find,
@@ -650,7 +650,7 @@ A slashy string cannot be empty because it would become a line comment.
 
 Double-quoted strings can be interpolated using the `${}` placeholder with an expression:
 
-```groovy
+```nextflow
 def names = ['Thing 1', 'Thing 2']
 println "Hello, ${names.join(' and ')}!"
 // -> Hello, Thing 1 and Thing 2!
@@ -658,7 +658,7 @@ println "Hello, ${names.join(' and ')}!"
 
 If the expression is a name or simple property expression (one or more identifiers separated by dots), the curly braces can be omitted:
 
-```groovy
+```nextflow
 def name = [first: '<FIRST_NAME>', last: '<LAST_NAME>']
 println "Hello, ${name.first} ${name.last}!"
 // -> Hello, <FIRST_NAME> <LAST_NAME>!
@@ -666,7 +666,7 @@ println "Hello, ${name.first} ${name.last}!"
 
 Multi-line double-quoted strings can also be interpolated:
 
-```groovy
+```nextflow
 """
 blastp \
     -in $input \
@@ -678,7 +678,7 @@ blastp \
 
 Single-quoted strings are not interpolated:
 
-```groovy
+```nextflow
 println 'Hello, ${names.join(" and ")}!'
 // -> Hello, ${names.join(" and ")}!
 ```
@@ -687,7 +687,7 @@ println 'Hello, ${names.join(" and ")}!'
 
 A list literal consists of a comma-separated list of zero or more expressions, enclosed in square brackets:
 
-```groovy
+```nextflow
 [1, 2, 3]
 ```
 
@@ -695,19 +695,19 @@ A list literal consists of a comma-separated list of zero or more expressions, e
 
 A map literal consists of a comma-separated list of one or more *map entries*, enclosed in square brackets. Each map entry consists of a *key expression* and *value expression* separated by a colon:
 
-```groovy
+```nextflow
 [foo: 1, bar: 2, baz: 3]
 ```
 
 An empty map is specified with a single colon to distinguish it from an empty list:
 
-```groovy
+```nextflow
 [:]
 ```
 
 Both the key and value can be any expression. Identifier keys are treated as string literals (i.e. the quotes can be omitted). A variable can be used as a key by enclosing it in parentheses:
 
-```groovy
+```nextflow
 def x = 'foo'
 [(x): 1]
 // -> ['foo': 1]
@@ -717,7 +717,7 @@ def x = 'foo'
 
 A closure, also known as an anonymous function, consists of a parameter list followed by zero or more statements, enclosed in curly braces:
 
-```groovy
+```nextflow
 { a, b -> a + b }
 ```
 
@@ -725,7 +725,7 @@ The above closure takes two arguments and returns their sum.
 
 The closure body is identical to that of a [function](#function). Statements should be separated by newlines or semi-colons, and the last statement is implicitly treated as a [return statement](#return):
 
-```groovy
+```nextflow
 { v ->
     println 'Hello!'
     println "We're in a closure!"
@@ -736,7 +736,7 @@ The closure body is identical to that of a [function](#function). Statements sho
 
 Closures can access variables outside of their scope:
 
-```groovy
+```nextflow
 def factor = 2
 println [1, 2, 3].collect { v -> factor * v }
 // -> [2, 4, 6]
@@ -744,7 +744,7 @@ println [1, 2, 3].collect { v -> factor * v }
 
 Closures can declare local variables that exist only for the lifetime of each closure invocation:
 
-```groovy
+```nextflow
 def result = 0
 [1, 2, 3].each { v ->
     def squared = v * v
@@ -761,7 +761,7 @@ See {ref}`standard library <stdlib-page>` and {ref}`operator <operator-page>` fo
 
 An index expression consists of a *left expression* and a *right expression*, with the right expression enclosed in square brackets:
 
-```groovy
+```nextflow
 myList[0]
 ```
 
@@ -769,7 +769,7 @@ myList[0]
 
 A property expression consists of an *object expression* and a *property*, separated by a dot:
 
-```groovy
+```nextflow
 file.text
 ```
 
@@ -779,25 +779,25 @@ The property must be an identifier or string literal.
 
 A function call consists of a name and argument list:
 
-```groovy
+```nextflow
 printf('Hello %s!\n', 'World')
 ```
 
 A *method call* consists of an *object expression* and a function call separated by a dot:
 
-```groovy
+```nextflow
 myList.size()
 ```
 
 The argument list may contain any number of *positional arguments* and *named arguments*:
 
-```groovy
+```nextflow
 file('hello.txt', checkIfExists: true)
 ```
 
 The named arguments are collected into a map and provided as the first positional argument to the function. The above function call can be rewritten as:
 
-```groovy
+```nextflow
 file([checkIfExists: true], 'hello.txt')
 ```
 
@@ -805,7 +805,7 @@ The argument name must be an identifier or string literal.
 
 The parentheses can be omitted when the function call is also an [expression statement](#expression-statement) and there is at least one argument:
 
-```groovy
+```nextflow
 // positional args
 printf 'Hello %s!\n', 'World'
 
@@ -815,7 +815,7 @@ file 'hello.txt', checkIfExists: true
 
 If the last argument is a closure, it can be specified outside of the parentheses:
 
-```groovy
+```nextflow
 // closure arg with additional args
 [1, 2, 3].inject('result:') { acc, v -> acc + ' ' + v }
 
@@ -830,13 +830,13 @@ If the last argument is a closure, it can be specified outside of the parenthese
 
 A constructor call consists of the `new` keyword followed by a *type name* and an argument list enclosed in parentheses:
 
-```groovy
+```nextflow
 new java.util.Date()
 ```
 
 If the type is implicitly available in the script, the *fully-qualified type name* can be elided to the *simple type name*:
 
-```groovy
+```nextflow
 new Date()
 ```
 
@@ -846,7 +846,7 @@ See {ref}`stdlib-default-imports` for the set of types which are implicitly avai
 
 A unary expression consists of a *unary operator* followed by an expression:
 
-```groovy
+```nextflow
 !(2 + 2 == 4)
 ```
 
@@ -861,7 +861,7 @@ The following unary operators are available:
 
 A binary expression consists of a *left expression* and a *right expression* separated by a *binary operator*:
 
-```groovy
+```nextflow
 2 + 2
 ```
 
@@ -903,7 +903,7 @@ The following binary operators are available:
 
 A ternary expression consists of a *test expression*, a *true expression*, and a *false expression*, separated by a question mark and a colon:
 
-```groovy
+```nextflow
 println x % 2 == 0 ? 'x is even!' : 'x is odd!'
 ```
 
@@ -913,7 +913,7 @@ If the test expression is true, the true expression is evaluated, otherwise the 
 
 Any expression can be enclosed in parentheses:
 
-```groovy
+```nextflow
 1 + 2 * 3
 // -> 1 + 6 -> 7
 

@@ -215,7 +215,7 @@ The following options are available for all process outputs:
 
 The `accelerator` directive allows you to request hardware accelerators (e.g. GPUs) for the task execution. For example:
 
-```groovy
+```nextflow
 process foo {
     accelerator 4, type: 'nvidia-tesla-k80'
 
@@ -257,7 +257,7 @@ When combined with the {ref}`container directive <process-container>`, the `afte
 
 The `arch` directive allows you to define the CPU architecture to build the software in use by the process' task. For example:
 
-```groovy
+```nextflow
 process cpu_task {
     spack 'blast-plus@2.13.0'
     arch 'linux/x86_64', target: 'cascadelake'
@@ -299,7 +299,7 @@ A job array is a collection of jobs with the same resource requirements and the 
 
 The directive should be specified with a given array size, along with an executor that supports job arrays. For example:
 
-```groovy
+```nextflow
 process cpu_task {
     executor 'slurm'
     array 100
@@ -350,7 +350,7 @@ The `beforeScript` directive allows you to execute a custom (Bash) snippet *befo
 
 For example:
 
-```groovy
+```nextflow
 process foo {
   beforeScript 'source /cluster/bin/setup'
 
@@ -370,7 +370,7 @@ The `cache` directive allows you to store the process results to a local cache. 
 
 The cache is enabled by default, but you can disable it for a specific process by setting the `cache` directive to `false`. For example:
 
-```groovy
+```nextflow
 process noCacheThis {
   cache false
 
@@ -402,7 +402,7 @@ The `clusterOptions` directive allows the usage of any native configuration opti
 
 The cluster options can be a string:
 
-```groovy
+```nextflow
 process foo {
   clusterOptions '-x 1 -y 2'
   // ...
@@ -415,7 +415,7 @@ Prior to this version, grid executors that require each option to be on a separa
 
 The cluster options can also be a string list:
 
-```groovy
+```nextflow
 process foo {
   clusterOptions '-x 1', '-y 2', '--flag'
   // ...
@@ -440,7 +440,7 @@ The `conda` directive allows for the definition of the process dependencies usin
 
 Nextflow automatically sets up an environment for the given package names listed by in the `conda` directive. For example:
 
-```groovy
+```nextflow
 process foo {
   conda 'bwa=0.7.15'
 
@@ -464,7 +464,7 @@ It requires the Docker daemon to be running in machine where the pipeline is exe
 
 For example:
 
-```groovy
+```nextflow
 process runThisInDocker {
   container 'dockerbox:tag'
 
@@ -490,7 +490,7 @@ This directive is ignored for processes that are {ref}`executed natively <proces
 
 The `containerOptions` directive allows you to specify any container execution option supported by the underlying container engine (ie. Docker, Singularity, etc). This can be useful to provide container settings only for a specific process e.g. mount a custom path:
 
-```groovy
+```nextflow
 process runThisWithDocker {
     container 'busybox:latest'
     containerOptions '--volume /data/db:/db'
@@ -514,7 +514,7 @@ This feature is not supported by the {ref}`k8s-executor` and {ref}`google-lifesc
 
 The `cpus` directive allows you to define the number of (logical) CPU required by the process' task. For example:
 
-```groovy
+```nextflow
 process big_job {
   cpus 8
   executor 'sge'
@@ -537,7 +537,7 @@ By default the `stdout` produced by the commands executed in all processes is ig
 
 For example:
 
-```groovy
+```nextflow
 process sayHello {
   debug true
 
@@ -558,7 +558,7 @@ Without specifying `debug true`, you won't see the `Hello` string printed out wh
 
 The `disk` directive allows you to define how much local disk storage the process is allowed to use. For example:
 
-```groovy
+```nextflow
 process big_job {
     disk '2 GB'
     executor 'cirrus'
@@ -620,7 +620,7 @@ When setting the `errorStrategy` directive to `ignore` the process doesn't stop 
 
 For example:
 
-```groovy
+```nextflow
 process ignoreAnyError {
   errorStrategy 'ignore'
 
@@ -633,7 +633,7 @@ In this case, the workflow will complete successfully and return an exit status 
 
 The `retry` error strategy allows you to re-submit for execution a process returning an error condition. For example:
 
-```groovy
+```nextflow
 process retryIfFail {
   errorStrategy 'retry'
 
@@ -680,7 +680,7 @@ The following executors are available:
 
 The following example shows how to set the process's executor:
 
-```groovy
+```nextflow
 process doSomething {
   executor 'sge'
 
@@ -699,7 +699,7 @@ Each executor supports additional directives and `executor` configuration option
 
 The `ext` is a special directive used as *namespace* for user custom process directives. This can be useful for advanced configuration options. For example:
 
-```groovy
+```nextflow
 process mapping {
   container "biocontainers/star:${task.ext.version}"
 
@@ -717,7 +717,7 @@ In the above example, the process container version is controlled by `ext.versio
 
 The `ext` directive can be set in the process definition:
 
-```groovy
+```nextflow
 process mapping {
   ext version: '2.5.3', args: '--foo --bar'
 }
@@ -739,7 +739,7 @@ process.ext.args = '--foo --bar'
 
 The `fair` directive, when enabled, guarantees that process outputs will be emitted in the order in which they were received. For example:
 
-```groovy
+```nextflow
 process foo {
     fair true
 
@@ -774,7 +774,7 @@ The above example produces:
 
 The `label` directive allows the annotation of processes with mnemonic identifier of your choice. For example:
 
-```groovy
+```nextflow
 process bigTask {
   label 'big_mem'
 
@@ -805,7 +805,7 @@ The `machineType` can be used to specify a predefined Google Compute Platform [m
 
 This directive is optional and if specified overrides the cpus and memory directives:
 
-```groovy
+```nextflow
 process foo {
   machineType 'n1-highmem-8'
 
@@ -827,7 +827,7 @@ Elapsed this time the task execution will fail.
 When used along with `retry` error strategy, it can be useful to re-schedule the task to a difference queue or
 resource requirement. For example:
 
-```groovy
+```nextflow
 process foo {
   errorStrategy 'retry'
   maxSubmitAwait '10 mins'
@@ -850,7 +850,7 @@ queue named `on-demand-compute`.
 
 The `maxErrors` directive allows you to specify the maximum number of times a process can fail when using the `retry` error strategy. By default this directive is disabled, you can set it as shown in the example below:
 
-```groovy
+```nextflow
 process retryIfFail {
   errorStrategy 'retry'
   maxErrors 5
@@ -875,7 +875,7 @@ The `maxForks` directive allows you to define the maximum number of process inst
 
 If you want to execute a process in a sequential manner, set this directive to one. For example:
 
-```groovy
+```nextflow
 process doNotParallelizeIt {
   maxForks 1
 
@@ -891,7 +891,7 @@ process doNotParallelizeIt {
 
 The `maxRetries` directive allows you to define the maximum number of times a process instance can be re-submitted in case of failure. This value is applied only when using the `retry` error strategy. By default only one retry is allowed, you can increase this value as shown below:
 
-```groovy
+```nextflow
 process retryIfFail {
     errorStrategy 'retry'
     maxRetries 3
@@ -914,7 +914,7 @@ See also: [errorStrategy](#errorstrategy) and [maxErrors](#maxerrors).
 
 The `memory` directive allows you to define how much memory the process is allowed to use. For example:
 
-```groovy
+```nextflow
 process big_job {
     memory '2 GB'
     executor 'sge'
@@ -949,7 +949,7 @@ If it is available in your system you can use it with Nextflow in order to confi
 
 In a process definition you can use the `module` directive to load a specific module version to be used in the process execution environment. For example:
 
-```groovy
+```nextflow
 process basicExample {
   module 'ncbi-blast/2.2.27'
 
@@ -961,14 +961,13 @@ process basicExample {
 
 You can repeat the `module` directive for each module you need to load. Alternatively multiple modules can be specified in a single `module` directive by separating all the module names by using a `:` (colon) character as shown below:
 
-```groovy
- process manyModules {
+```nextflow
+process manyModules {
+  module 'ncbi-blast/2.2.27:t_coffee/10.0:clustalw/2.1'
 
-   module 'ncbi-blast/2.2.27:t_coffee/10.0:clustalw/2.1'
-
-   """
-   blastp -query <etc..>
-   """
+  """
+  blastp -query <etc..>
+  """
 }
 ```
 
@@ -978,7 +977,7 @@ You can repeat the `module` directive for each module you need to load. Alternat
 
 The `penv` directive allows you to define the parallel environment to be used when submitting a parallel task to the {ref}`SGE <sge-executor>` resource manager. For example:
 
-```groovy
+```nextflow
 process big_job {
   cpus 4
   penv 'smp'
@@ -1002,7 +1001,7 @@ The `pod` directive allows the definition of pod specific settings, such as envi
 
 For example:
 
-```groovy
+```nextflow
 process your_task {
   pod env: 'FOO', value: 'bar'
 
@@ -1196,7 +1195,7 @@ The following options are available:
 
 The `publishDir` directive allows you to publish the process output files to a specified folder. For example:
 
-```groovy
+```nextflow
 process foo {
     publishDir '/data/chunks'
 
@@ -1221,7 +1220,7 @@ The `publishDir` directive can be specified more than once in order to publish o
 
 By default files are published to the target folder creating a *symbolic link* for each process output that links the file produced into the process working directory. This behavior can be modified using the `mode` option, for example:
 
-```groovy
+```nextflow
 process foo {
     publishDir '/data/chunks', mode: 'copy', overwrite: false
 
@@ -1295,7 +1294,7 @@ Available options:
 
 The `queue` directive allows you to set the `queue` where jobs are scheduled when using a grid based executor in your pipeline. For example:
 
-```groovy
+```nextflow
 process grid_job {
     queue 'long'
     executor 'sge'
@@ -1309,7 +1308,7 @@ process grid_job {
 :::{tip}
 Some grid executors support multiple queue names as a comma-separated list:
 
-```groovy
+```nextflow
 queue 'short,long,cn-el6'
 ```
 
@@ -1329,7 +1328,7 @@ This directive is only used by certain executors. Refer to the {ref}`executor-pa
 
 The `resourceLabels` directive allows you to specify custom name-value pairs that Nextflow applies to the computing resource used to carry out the process execution. Resource labels can be specified using the syntax shown below:
 
-```groovy
+```nextflow
 process my_task {
     resourceLabels region: 'some-region', user: 'some-username'
 
@@ -1366,7 +1365,7 @@ See also: [label](#label)
 
 The `resourceLimits` directive allows you to specify environment-specific limits for task resource requests. Resource limits can be specified in a process as follows:
 
-```groovy
+```nextflow
 process my_task {
   resourceLimits cpus: 24, memory: 768.GB, time: 72.h
 
@@ -1379,7 +1378,7 @@ process my_task {
 
 Or in the Nextflow configuration:
 
-```groovy
+```nextflow
 process {
     resourceLimits = [ cpus: 24, memory: 768.GB, time: 72.h ]
 }
@@ -1404,7 +1403,7 @@ This is useful when your pipeline is launched by using a grid executor, because 
 
 In its basic form simply specify `true` at the directive value, as shown below:
 
-```groovy
+```nextflow
 process simpleTask {
   scratch true
 
@@ -1446,7 +1445,7 @@ The following values are supported:
 
 The `shell` directive allows you to define a custom shell command for process scripts. By default, script blocks are executed with `/bin/bash -ue`.
 
-```groovy
+```nextflow
 process doMoreThings {
     shell '/bin/bash', '-euo', 'pipefail'
 
@@ -1470,7 +1469,7 @@ The `spack` directive allows for the definition of the process dependencies usin
 
 Nextflow automatically sets up an environment for the given package names listed by in the `spack` directive. For example:
 
-```groovy
+```nextflow
 process foo {
     spack 'bwa@0.7.15'
 
@@ -1542,7 +1541,7 @@ In more detail, it affects the process execution in two main ways:
 
 The following example shows how to use the `storeDir` directive to create a directory containing a BLAST database for each species specified by an input parameter:
 
-```groovy
+```nextflow
 process formatBlastDatabases {
   storeDir '/db/genomes'
 
@@ -1574,7 +1573,7 @@ The use of AWS S3 paths is supported, however it requires the installation of th
 
 The `tag` directive allows you to associate each process execution with a custom label, so that it will be easier to identify them in the log file or in the trace execution report. For example:
 
-```groovy
+```nextflow
 process foo {
   tag "$code"
 
@@ -1607,7 +1606,7 @@ See also {ref}`Trace execution report <trace-report>`
 
 The `time` directive allows you to define how long a process is allowed to run. For example:
 
-```groovy
+```nextflow
 process big_job {
     time '1h'
 

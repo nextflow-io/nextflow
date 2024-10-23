@@ -6,7 +6,7 @@
 
 ## empty
 
-The `channel.empty` factory method, by definition, creates a channel that doesn't emit any value.
+The `Channel.empty` factory method, by definition, creates a channel that doesn't emit any value.
 
 See also: {ref}`operator-ifempty`.
 
@@ -15,13 +15,13 @@ See also: {ref}`operator-ifempty`.
 ## from
 
 :::{deprecated} 19.09.0-edge
-Use [channel.of](#of) or [channel.fromList](#fromlist) instead.
+Use [Channel.of](#of) or [Channel.fromList](#fromlist) instead.
 :::
 
-The `channel.from` method allows you to create a channel emitting any sequence of values that are specified as the method argument, for example:
+The `Channel.from` method allows you to create a channel emitting any sequence of values that are specified as the method argument, for example:
 
-```groovy
-ch = channel.from( 1, 3, 5, 7 )
+```nextflow
+ch = Channel.from( 1, 3, 5, 7 )
 ch.subscribe { v -> println "value: $v" }
 ```
 
@@ -36,26 +36,26 @@ value: 7
 
 The following example shows how to create a channel from a *range* of numbers or strings:
 
-```groovy
-zeroToNine = channel.from( 0..9 )
-strings = channel.from( 'A'..'Z' )
+```nextflow
+zeroToNine = Channel.from( 0..9 )
+strings = Channel.from( 'A'..'Z' )
 ```
 
 :::{note}
-When the `channel.from` argument is an object implementing the (Java) [Collection](http://docs.oracle.com/javase/7/docs/api/java/util/Collection.html) interface, the resulting channel emits the collection entries as individual items.
+When the `Channel.from` argument is an object implementing the (Java) [Collection](http://docs.oracle.com/javase/7/docs/api/java/util/Collection.html) interface, the resulting channel emits the collection entries as individual items.
 :::
 
 Thus the following two declarations produce an identical result even though in the first case the items are specified as multiple arguments while in the second case as a single list object argument:
 
-```groovy
-channel.from( 1, 3, 5, 7, 9 )
-channel.from( [1, 3, 5, 7, 9] )
+```nextflow
+Channel.from( 1, 3, 5, 7, 9 )
+Channel.from( [1, 3, 5, 7, 9] )
 ```
 
 But when more than one argument is provided, they are always managed as *single* emissions. Thus, the following example creates a channel emitting three entries each of which is a list containing two elements:
 
-```groovy
-channel.from( [1, 2], [5,6], [7,9] )
+```nextflow
+Channel.from( [1, 2], [5,6], [7,9] )
 ```
 
 (channel-fromlist)=
@@ -65,10 +65,10 @@ channel.from( [1, 2], [5,6], [7,9] )
 :::{versionadded} 19.10.0
 :::
 
-The `channel.fromList` method allows you to create a channel emitting the values provided as a list of elements, for example:
+The `Channel.fromList` method allows you to create a channel emitting the values provided as a list of elements, for example:
 
-```groovy
-channel
+```nextflow
+Channel
     .fromList( ['a', 'b', 'c', 'd'] )
     .view { v -> "value: $v" }
 ```
@@ -82,31 +82,31 @@ value: c
 value: d
 ```
 
-See also: [channel.of](#of) factory method.
+See also: [Channel.of](#of) factory method.
 
 (channel-path)=
 
 ## fromPath
 
-You can create a channel emitting one or more file paths by using the `channel.fromPath` method and specifying a path
+You can create a channel emitting one or more file paths by using the `Channel.fromPath` method and specifying a path
 string as an argument. For example:
 
-```groovy
-myFileChannel = channel.fromPath( '/data/some/bigfile.txt' )
+```nextflow
+myFileChannel = Channel.fromPath( '/data/some/bigfile.txt' )
 ```
 
 The above line creates a channel and binds it to a [Path](http://docs.oracle.com/javase/7/docs/api/java/nio/file/Path.html)
 object for the specified file.
 
 :::{note}
-`channel.fromPath` does not check whether the file exists.
+`Channel.fromPath` does not check whether the file exists.
 :::
 
-Whenever the `channel.fromPath` argument contains a `*` or `?` wildcard character it is interpreted as a [glob][glob] path matcher.
+Whenever the `Channel.fromPath` argument contains a `*` or `?` wildcard character it is interpreted as a [glob][glob] path matcher.
 For example:
 
-```groovy
-myFileChannel = channel.fromPath( '/data/big/*.txt' )
+```nextflow
+myFileChannel = Channel.fromPath( '/data/big/*.txt' )
 ```
 
 This example creates a channel and emits as many `Path` items as there are files with `txt` extension in the `/data/big` folder.
@@ -117,10 +117,10 @@ Two asterisks, i.e. `**`, works like `*` but crosses directory boundaries. This 
 
 For example:
 
-```groovy
-files = channel.fromPath( 'data/**.fa' )
-moreFiles = channel.fromPath( 'data/**/*.fa' )
-pairFiles = channel.fromPath( 'data/file_{1,2}.fq' )
+```nextflow
+files = Channel.fromPath( 'data/**.fa' )
+moreFiles = Channel.fromPath( 'data/**/*.fa' )
+pairFiles = Channel.fromPath( 'data/file_{1,2}.fq' )
 ```
 
 The first line returns a channel emitting the files ending with the suffix `.fa` in the `data` folder *and* recursively in all its sub-folders. While the second one only emits the files which have the same suffix in *any* sub-folder in the `data` path. Finally the last example emits two files: `data/file_1.fq` and `data/file_2.fq`.
@@ -131,16 +131,16 @@ As in Linux Bash, the `*` wildcard does not catch hidden files (i.e. files whose
 
 Multiple paths or glob patterns can be specified using a list:
 
-```groovy
-channel.fromPath( ['/some/path/*.fq', '/other/path/*.fastq'] )
+```nextflow
+Channel.fromPath( ['/some/path/*.fq', '/other/path/*.fastq'] )
 ```
 
 In order to include hidden files, you need to start your pattern with a period character or specify the `hidden: true` option. For example:
 
-```groovy
-expl1 = channel.fromPath( '/path/.*' )
-expl2 = channel.fromPath( '/path/.*.fa' )
-expl3 = channel.fromPath( '/path/*', hidden: true )
+```nextflow
+expl1 = Channel.fromPath( '/path/.*' )
+expl2 = Channel.fromPath( '/path/.*.fa' )
+expl3 = Channel.fromPath( '/path/*', hidden: true )
 ```
 
 The first example returns all hidden files in the specified path. The second one returns all hidden files ending with the `.fa` suffix. Finally the last example returns all files (hidden and non-hidden) in that path.
@@ -149,9 +149,9 @@ By default a [glob][glob] pattern only looks for regular file paths that match t
 
 You can use the `type` option specifying the value `file`, `dir` or `any` in order to define what kind of paths you want. For example:
 
-```groovy
-myFileChannel = channel.fromPath( '/path/*b', type: 'dir' )
-myFileChannel = channel.fromPath( '/path/a*', type: 'any' )
+```nextflow
+myFileChannel = Channel.fromPath( '/path/*b', type: 'dir' )
+myFileChannel = Channel.fromPath( '/path/a*', type: 'any' )
 ```
 
 The first example will return all *directory* paths ending with the `b` suffix, while the second will return any file or directory starting with a `a` prefix.
@@ -183,11 +183,11 @@ Available options:
 
 ## fromFilePairs
 
-The `channel.fromFilePairs` method creates a channel emitting the file pairs matching a [glob][glob] pattern provided
+The `Channel.fromFilePairs` method creates a channel emitting the file pairs matching a [glob][glob] pattern provided
 by the user. The matching files are emitted as tuples in which the first element is the grouping key of the matching pair and the second element is the list of files (sorted in lexicographical order). For example:
 
-```groovy
-channel
+```nextflow
+Channel
     .fromFilePairs('/my/data/SRR*_{1,2}.fastq')
     .view()
 ```
@@ -209,14 +209,14 @@ The glob pattern must contain at least one `*` wildcard character.
 
 Multiple glob patterns can be specified using a list:
 
-```groovy
-channel.fromFilePairs( ['/some/data/SRR*_{1,2}.fastq', '/other/data/QFF*_{1,2}.fastq'] )
+```nextflow
+Channel.fromFilePairs( ['/some/data/SRR*_{1,2}.fastq', '/other/data/QFF*_{1,2}.fastq'] )
 ```
 
 Alternatively, it is possible to implement a custom file pair grouping strategy providing a closure which, given the current file as parameter, returns the grouping key. For example:
 
-```groovy
-channel
+```nextflow
+Channel
     .fromFilePairs('/some/data/*', size: -1) { file -> file.extension }
     .view { ext, files -> "Files with the extension $ext are $files" }
 ```
@@ -251,10 +251,10 @@ Available options:
 :::{versionadded} 19.04.0
 :::
 
-The `channel.fromSRA` method queries the [NCBI SRA](https://www.ncbi.nlm.nih.gov/sra) database and returns a channel emitting the FASTQ files matching the specified criteria i.e project or accession number(s). For example:
+The `Channel.fromSRA` method queries the [NCBI SRA](https://www.ncbi.nlm.nih.gov/sra) database and returns a channel emitting the FASTQ files matching the specified criteria i.e project or accession number(s). For example:
 
-```groovy
-channel
+```nextflow
+Channel
     .fromSRA('SRP043510')
     .view()
 ```
@@ -273,9 +273,9 @@ It returns:
 
 Multiple accession IDs can be specified using a list object:
 
-```groovy
+```nextflow
 ids = ['ERR908507', 'ERR908506', 'ERR908505']
-channel
+Channel
     .fromSRA(ids)
     .view()
 ```
@@ -295,8 +295,8 @@ This method uses the NCBI [ESearch](https://www.ncbi.nlm.nih.gov/books/NBK25499/
 To access the ESearch API, you must provide your [NCBI API keys](https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities) through one of the following ways:
 
 - The `apiKey` option:
-  ```groovy
-  channel.fromSRA(ids, apiKey:'0123456789abcdef')
+  ```nextflow
+  Channel.fromSRA(ids, apiKey:'0123456789abcdef')
   ```
 
 - The `NCBI_API_KEY` variable in your environment:
@@ -333,8 +333,8 @@ Available retry policy properties:
 
 The following code snippet shows an example for using the `Channel.fromSRA` factory method with a custom `retryPolicy`.
 
-  ```groovy
-  channel.fromSRA(ids, retryPolicy: [delay: '250ms', maxAttempts: 5])
+  ```nextflow
+  Channel.fromSRA(ids, retryPolicy: [delay: '250ms', maxAttempts: 5])
   ```
 
 (channel-interval)=
@@ -343,7 +343,7 @@ The following code snippet shows an example for using the `Channel.fromSRA` fact
 
 The `interval` method emits an incrementing index (starting from zero) at a periodic interval. For example:
 
-```groovy
+```nextflow
 Channel.interval('1s').view()
 ```
 
@@ -351,7 +351,7 @@ The above snippet will emit 0, 1, 2, and so on, every second, forever. You can u
 
 An optional closure can be used to transform the index. Additionally, returning `Channel.STOP` will close the channel. For example:
 
-```groovy
+```nextflow
 ch = Channel.interval('1s') { i ->
     i == 10 ? Channel.STOP : i
 }
@@ -365,10 +365,10 @@ ch.view()
 :::{versionadded} 19.10.0
 :::
 
-The `channel.of` method allows you to create a channel that emits the arguments provided to it, for example:
+The `Channel.of` method allows you to create a channel that emits the arguments provided to it, for example:
 
-```groovy
-ch = channel.of( 1, 3, 5, 7 )
+```nextflow
+ch = Channel.of( 1, 3, 5, 7 )
 ch.view { v -> "value: $v" }
 ```
 
@@ -384,8 +384,8 @@ value: 7
 
 Ranges of values are expanded accordingly:
 
-```groovy
-channel
+```nextflow
+Channel
     .of(1..23, 'X', 'Y')
     .view()
 ```
@@ -403,7 +403,7 @@ X
 Y
 ```
 
-See also: [channel.fromList](#fromlist) factory method.
+See also: [Channel.fromList](#fromlist) factory method.
 
 (channel-topic)=
 
@@ -424,7 +424,7 @@ You can think of it as a channel that is shared across many different processes 
 
 A process output can be assigned to a topic using the `topic` option on an output, for example:
 
-```groovy
+```nextflow
 process foo {
   output:
   val('foo'), topic: my_topic
@@ -436,11 +436,11 @@ process bar {
 }
 ```
 
-The `channel.topic` method allows referencing the topic channel with the specified name, which can be used as a process
+The `Channel.topic` method allows referencing the topic channel with the specified name, which can be used as a process
 input or operator composition as any other Nextflow channel:
 
-```groovy
-channel.topic('my-topic').view()
+```nextflow
+Channel.topic('my-topic').view()
 ```
 
 This approach is a convenient way to collect related items from many different sources without explicitly connecting them (e.g. using the `mix` operator).
@@ -455,13 +455,13 @@ See also: {ref}`process-additional-options` for process outputs.
 
 ## value
 
-The `channel.value` method is used to create a value channel. An optional (not `null`) argument can be specified to bind
+The `Channel.value` method is used to create a value channel. An optional (not `null`) argument can be specified to bind
 the channel to a specific value. For example:
 
-```groovy
-expl1 = channel.value()
-expl2 = channel.value( 'Hello there' )
-expl3 = channel.value( [1,2,3,4,5] )
+```nextflow
+expl1 = Channel.value()
+expl2 = Channel.value( 'Hello there' )
+expl3 = Channel.value( [1,2,3,4,5] )
 ```
 
 The first line in the example creates an 'empty' variable. The second line creates a channel and binds a string to it.
@@ -471,14 +471,14 @@ The third line creates a channel and binds a list object to it that will be emit
 
 ## watchPath
 
-The `channel.watchPath` method watches a folder for one or more files matching a specified pattern. As soon as there
+The `Channel.watchPath` method watches a folder for one or more files matching a specified pattern. As soon as there
 is a file that meets the specified condition, it is emitted over the channel that is returned by the `watchPath` method.
 The condition on files to watch can be specified by using `*` or `?` wildcard characters i.e. by specifying a [glob][glob] path matching criteria.
 
 For example:
 
-```groovy
-channel
+```nextflow
+Channel
     .watchPath( '/path/*.fa' )
     .subscribe { fa -> println "Fasta file: $fa" }
 ```
@@ -492,18 +492,18 @@ argument that specifies what event(s) to watch. The supported events are:
 
 You can specify more than one of these events by using a comma separated string as shown below:
 
-```groovy
-channel
+```nextflow
+Channel
     .watchPath( '/path/*.fa', 'create,modify' )
     .subscribe { fa -> println "File created or modified: $fa" }
 ```
 
 :::{warning}
-The `channel.watchPath` factory waits endlessly for files that match the specified pattern and event(s), which means
+The `Channel.watchPath` factory waits endlessly for files that match the specified pattern and event(s), which means
 that it will cause your pipeline to run forever. Consider using the `take` or `until` operator to close the channel when
 a certain condition is met (e.g. after receiving 10 files, receiving a file named `DONE`).
 :::
 
-See also: [channel.fromPath](#frompath) factory method.
+See also: [Channel.fromPath](#frompath) factory method.
 
 [glob]: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
