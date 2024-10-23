@@ -13,7 +13,7 @@ The VS Code extension highlights Nextflow scripts and config files for better re
 
 The extension highlights source code in red for errors and yellow for warnings.
 
-To view all diagnostics for the workspace, open the "Problems" tab. Here, you can search for diagnostics by diagnostic message, filename, and more.
+To view all diagnostics for the workspace, open the **Problems** tab. Here, you can search for diagnostics by diagnostic message, filename, and more.
 
 ### Hover hints
 
@@ -21,31 +21,26 @@ When you hover over certain source code elements, such as variable names and fun
 
 ### Code navigation
 
-The "Outline" section in the Explorer panel lists the top-level definitions, including workflows, processes, and functions, when you view a script.
+The **Outline** section in the Explorer panel lists top-level definitions when you view a script. Include declarations in scripts and config files act as links, and ctrl-clicking them opens the corresponding script or config file.
 
-Include declarations in both scripts and config files act as links, and ctrl-clicking on them opens the corresponding script or config file.
-
-To view the definition of a symbol (e.g., a workflow, process, function, or variable), right-click on the symbol and select "Go to Definition." You can also view all references to a symbol, and the call hierarchy of a function call.
-
-:::{note}
-Symbols also act as links -- ctrl-clicking on them opens the definition, and ctrl-clicking on a definition shows all references.
-:::
+To view the definition of a symbol (e.g., a workflow, process, function, or variable), right-click the symbol and select **Go to Definition**. Ctrl-click the symbol to view the definition. Ctrl-click the definition to show all references.
 
 ### Code completion
 
-The VS Code extension suggests auto-completions for variable names, function names, config settings, and other symbols as you type.
+The extension suggests auto-completions for variable names, function names, config settings, and other symbols as you type. The extension also provides several snippets for common script declarations, such as processes and workflows.
 
-Additionally, the extension provides several snippets for common script declarations, such as processes and workflows.
 
 ### Formatting
 
-The "Format Document" command formats the current script or config file based on a standard set of whitespace rules.
+The extension can format your scripts and config files based on a standard set of formatting rules. Rules can be customized using the **Nextflow > Formatting** [extension settings](#settings).
 
-You can customize the formatting using the "Nextflow > Formatting" [extension settings](#settings).
+Use the **Format Document** command in the command palette to format the current file.
 
 ### Renaming symbols
 
-Rename a symbol by right-clicking on the symbol, selecting "Rename Symbol," and entering a new name. The extension automatically renames the symbol definition and all references throughout the code.
+The extension can rename all references of a symbol (e.g., a workflow, process, function, or variable) throughout the code.
+
+To rename a symbol, right-click the symbol, select **Rename Symbol**, and enter a new name.
 
 ### Parameter schema
 
@@ -53,22 +48,26 @@ If a `nextflow_schema.json` file exists in the same directory as a script with a
 
 ### DAG preview for workflows
 
-To preview the DAG of a workflow, select the "Preview DAG" CodeLens above the workflow definition. The workflow DAG is displayed in a new panel to the side. The DAG includes the workflow inputs, workflow outputs, and any processes or workflows that are called in the selected workflow.
+The extension can generate a workflow DAG that includes the workflow inputs, outputs, and any processes or workflows that are called by the selected workflow. The workflow DAG is displayed in a new panel to the side.
+
+To preview the DAG of a workflow, select the **Preview DAG** CodeLens above the workflow definition.
 
 :::{note}
-The "Preview DAG" CodeLens is only available when the script does not contain any errors.
+The **Preview DAG** CodeLens is only available when the script does not contain any errors.
 :::
 
 ## Syntax guide
 
-The language server parses scripts and config files according to the {ref}`Nextflow language specification <syntax-page>`. It enforces a stricter syntax compared to the Nextflow CLI. As a result, the language server is able to perform more extensive error checking and provide more specific error messages. However, unlike the Nextflow CLI, which allows all Groovy syntax, the Nextflow language specification is not a superset of Groovy. You may need to adjust your code to adhere to the strict syntax, especially if you use more advanced Groovy syntax.
+The language server parses scripts and config files according to the {ref}`Nextflow language specification <syntax-page>`. It enforces a stricter syntax compared to the Nextflow CLI. As a result, the language server is able to perform more extensive error checking and provide more specific error messages. However, unlike the Nextflow CLI which allows all Groovy syntax, the Nextflow language specification is not a superset of Groovy. You may need to adjust your code to adhere to the strict syntax, especially if you use more advanced Groovy syntax.
 
 This section describes some of the most common unsupported features and how to address them. For a full description of the strict syntax, refer to the Nextflow language specification.
 
-As a fallback, unsupported code can be moved into the lib directory or into a plugin, both of which support the full Groovy language.
+:::{note}
+The "Nextflow language specification" is a strict specification of DSL2, not a new DSL version. The Nextflow language will be defined by this specification moving forward, rather than new DSL versions.
+:::
 
 :::{note}
-The "Nextflow language specification" is a strict specification of DSL2, but it is not a new DSL version. Moving forward, the Nextflow language will be defined by this specification rather than new DSL versions.
+You can move unsupported code into the `lib` directory or a plugin, both of which support the full Groovy language.
 :::
 
 ### Excluded syntax
@@ -103,23 +102,23 @@ Enums, a special type of class, are supported, but cannot be included across mod
 
 **Mixing script declarations and statements**
 
-A script may contain any of the following "top-level" declarations:
+A script may contain any of the following top-level declarations:
 
-- feature flags
-- includes
-- parameter declarations
-- workflows
-- processes
-- functions
-- output block
+- Feature flags
+- Includes
+- Parameter declarations
+- Workflows
+- Processes
+- Functions
+- Output block
 
-Alternatively, a script may contain only statements, such as a code snippet:  
+Alternatively, a script may contain only statements, also known as a "code snippet":
 
 ```nextflow
 println 'Hello world!'
 ```
 
-Code snippets are treated as an "implicit" entry workflow:
+Code snippets are treated as an implicit entry workflow:
 
 ```nextflow
 workflow {
@@ -127,7 +126,7 @@ workflow {
 }
 ```
 
-However, script declarations and statements cannot be mixed at the same level. This practice was necessary in DSL1 and allowed in DSL2, but the Nextflow language specification does not support it. Unless the script is a code snippet, all statements must reside within script declarations. Such statements should be placed in the entry workflow: 
+Script declarations and statements cannot be mixed at the same level. All statements must reside within script declarations unless the script is a code snippet:
 
 ```nextflow
 process foo {
@@ -142,6 +141,10 @@ workflow {
     println 'Hello world!'
 }
 ```
+
+:::{note}
+Mixing statements and script declarations was necessary in DSL1 and allowed in DSL2. However, it is no longer supported in the Nextflow language specification in order to simplify the language and to ensure that top-level statements are only executed when the script is executed directly and not when it is included as a module.
+:::
 
 **Assignment expressions**
 
@@ -186,7 +189,7 @@ The Nextflow language specification does not support loop statements. Use higher
 }
 ```
 
-Lists, maps, and sets provide several functions (e.g., `collect`, `find`, `findAll`, `inject`) for iteration. Refer to the [Groovy standard library](https://docs.groovy-lang.org/latest/html/groovy-jdk/overview-summary.html) for more information.
+Lists, maps, and sets provide several functions (e.g., `collect`, `find`, `findAll`, `inject`) for iteration. See [Groovy standard library](https://docs.groovy-lang.org/latest/html/groovy-jdk/overview-summary.html) for more information.
 
 **Switch statements**
 
@@ -279,7 +282,7 @@ The following patterns are still supported but have been restricted, i.e. some s
 
 **Variable declarations**
 
-In Groovy, variables can be declared in many different ways, including multi-declarations and optional type annotations:
+In Groovy, variables can be declared in many different ways:
 
 ```groovy
 def a = 1
@@ -317,7 +320,7 @@ def foo(x, y, z) {
 }
 ```
 
-To ease the migration of existing scripts, the language server only reports warnings for Groovy-style type annotations and implicit variable declarations (in processes and workflows). These warnings will become errors in the future.
+To ease the migration of existing scripts, the language server only reports warnings for Groovy-style type annotations and implicit variable declarations. These warnings will become errors in the future.
 
 :::{note}
 Type annotations and static type checking will be addressed in a future version of the Nextflow language specification.
@@ -351,7 +354,7 @@ In Nextflow DSL1 and DSL2, the process `script:` section label can almost always
 
 ```nextflow
 process greet {
-    input: 
+    input:
     val greeting
 
     """
@@ -370,7 +373,7 @@ process sayHello {
 }
 
 process greet {
-    input: 
+    input:
     val greeting
 
     script:
@@ -382,7 +385,7 @@ process greet {
 
 ### Deprecated syntax
 
-The following patterns are deprecated. The language server reports "future warnings" for these patterns, which means that they will become errors in the future. Future warnings are disabled by default, but you can enable them by deselecting "Nextflow > Suppress Future Warnings" in the[extension settings](#settings).
+The following patterns are deprecated. The language server reports "future warnings" for these patterns. Future warnings are disabled by default. Enable them by deselecting **Nextflow > Suppress Future Warnings** in the [extension settings](#settings). These warnings may become errors in the future.
 
 **Implicit closure parameter**
 
@@ -451,7 +454,7 @@ else if (hostname == 'large') {
 }
 ```
 
-The strict config syntax does not support functions, and only allows statements like variables and if statements within closures. You can achieve the same dynamic configuration by using a dynamic include:
+The strict config syntax does not support functions, and only allows statements (e.g., variables and if statements) within closures. You can achieve the same dynamic configuration by using a dynamic include:
 
 ```groovy
 includeConfig ({
@@ -465,7 +468,7 @@ includeConfig ({
 })()
 ```
 
-The include source is a closure that is immediately invoked. It includes a different config file based on the return value of the closure. Including `/dev/null` is equivalent to including nothing.  
+The include source is a closure that is immediately invoked. It includes a different config file based on the return value of the closure. Including `/dev/null` is equivalent to including nothing.
 
 Each conditional configuration is defined in a separate config file:
 
@@ -483,13 +486,13 @@ params.max_cpus = 32
 
 In the event of an error, you can stop or restart the language server from the command palette. See [Commands](#commands) for the set of available commands.
 
-Report issues at [nextflow-io/vscode-language-nextflow](https://github.com/nextflow-io/vscode-language-nextflow) or [nextflow-io/language-server](https://github.com/nextflow-io/language-server). When reporting, include a minimal code snippet that reproduces the issue and any error logs from the server. To view logs, open the "Output" tab and select "Nextflow Language Server" from the dropdown. Enable "Nextflow > Debug" in the [extension settings](#settings) to show additional log messages while debugging.
+Report issues at [nextflow-io/vscode-language-nextflow](https://github.com/nextflow-io/vscode-language-nextflow) or [nextflow-io/language-server](https://github.com/nextflow-io/language-server). When reporting, include a minimal code snippet that reproduces the issue and any error logs from the server. To view logs, open the **Output** tab and select **Nextflow Language Server** from the dropdown. Enable **Nextflow > Debug** in the [extension settings](#settings) to show additional log messages while debugging.
 
 ## Limitations
 
-- The language server does not detect certain filesystem changes, like switching Git branches. Restart the language server from the command palette to sync it with your workspace.  
+- The language server does not detect certain filesystem changes, such as changing the current Git branch. Restart the language server from the command palette to sync it with your workspace.
 
-- THe language server does not support configuration options from third-party plugins, so it will report "Unrecognized config option" warnings for those settings.  
+- The language server does not recognize configuration options from third-party plugins and will report "Unrecognized config option" warnings for them.
 
 - The language server provides limited support for Groovy scripts in the `lib` directory. Errors in Groovy scripts are not reported as diagnostics, and changing a Groovy script does not automatically re-compile the Nextflow scripts that reference it. Edit the Nextflow script or close and re-open it to refresh the diagnostics.
 
@@ -523,4 +526,4 @@ The following settings are available:
 
 Most of the functionality of the VS Code extension is provided by the [Nextflow language server](https://github.com/nextflow-io/language-server), which implements the [Language Server Protocol (LSP)](https://microsoft.github.io/language-server-protocol/) for Nextflow scripts and config files.
 
-The language server is distributed as a standalone Java application. It can be integrated with any editor that functions as an LSP client. Currently only the VS Code integration is officially supported, but we welcome community contributions for other editors.
+The language server is distributed as a standalone Java application. It can be integrated with any editor that functions as an LSP client. Currently, only the VS Code integration is officially supported, but community contributions for other editors are welcome.
