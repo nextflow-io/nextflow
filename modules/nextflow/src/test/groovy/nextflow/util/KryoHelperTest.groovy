@@ -165,6 +165,16 @@ class KryoHelperTest extends  Specification {
         KryoHelper.deserialize(buffer).toUri() == new URI('http://host.com/foo.txt')
     }
 
+    def 'should serialise xfilesystem' () {
+        when:
+        def uri = new URI('https://host.com/path/foo.txt')
+        def fs = FileHelper.getOrCreateFileSystemFor(new URI('https://host.com/path/foo.txt'))
+        def fsBuffer = KryoHelper.serialize(fs)
+        then:
+        KryoHelper.deserialize(fsBuffer).getClass().getName() == 'nextflow.file.http.XFileSystem'
+        KryoHelper.deserialize(fsBuffer).getPath("/path/foo.txt").toUri() == uri
+    }
+
     @EqualsAndHashCode
     static class Foo implements SerializableMarker {
         String foo

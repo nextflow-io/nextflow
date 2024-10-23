@@ -110,7 +110,7 @@ class BatchClient {
 
     Task describeTask(String jobId, String taskId) {
         final name = TaskName.of(projectId, location, jobId, 'group0', taskId)
-        return batchServiceClient.getTask(name)
+        return apply(()-> batchServiceClient.getTask(name))
     }
 
     void deleteJob(String jobId) {

@@ -35,6 +35,7 @@ class NextflowMeta {
     static trait Flags {
         abstract float dsl
         abstract boolean strict
+        abstract boolean moduleBinaries
     }
 
     @Slf4j
@@ -44,6 +45,7 @@ class NextflowMeta {
         boolean output
         boolean recursion
         boolean topic
+        boolean moduleBinaries
 
         @Deprecated
         void setDsl( float num ) {
@@ -78,6 +80,7 @@ class NextflowMeta {
     static class Features implements Flags {
         volatile float dsl
         boolean strict
+        boolean moduleBinaries
     }
 
     final VersionNumber version
@@ -110,6 +113,8 @@ class NextflowMeta {
             result.dsl = 2i
         if( isStrictModeEnabled() )
             result.strict = true
+        if( isModuleBinariesEnabled() )
+            result.moduleBinaries = true
         return result
     }
 
@@ -161,6 +166,14 @@ class NextflowMeta {
 
     void strictMode(boolean mode) {
         enable.strict = mode
+    }
+
+    boolean isModuleBinariesEnabled() {
+        return enable.moduleBinaries
+    }
+
+    void moduleBinaries(boolean mode) {
+        enable.moduleBinaries = mode
     }
 
     static String checkDslMode(String script) {

@@ -1,6 +1,6 @@
 Channel.of( 1, 2, 3 )
-    .multiMap { it -> foo: bar: it }
+    .multiMap { v -> foo: bar: v }
     .set { result }
 
-result.foo.view { "foo $it" }
-result.bar.view { "bar $it" }
+result.foo.view { v -> "foo $v" }
+result.bar.view { v -> "bar $v" }
