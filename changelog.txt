@@ -1,5 +1,51 @@
 NEXTFLOW CHANGE-LOG
 ===================
+24.09.2-edge - 14 Oct 2024
+- Add Google LS deprecation notice (#5400) [0ee1d9bc]
+- Add hybrid workflow documentation for Azure (#5361) [f81f27de]
+- Add more out formats to config command (#5399) [8acdb6e8]
+- Change to scan.levels to scan.allowedLevels (#5401) [88a1b1b5]
+- Fix inspect concretize option [0ee29a87]
+- Manage moduleBinaries feature flag in the pipeline script (#5348) [dd5fd20f]
+- Bump nf-wave@1.7.1 [94273967]
+- Bump nf-google@1.15.2 [fab01d58]
+
+24.09.1-edge - 13 Oct 2024
+- Add retry policy in Channel.fromSRA factory (#5389) [fb1c8b2e]
+- Add retry policy to Google batch describe task (#5356) [64bb5a92]
+- Add support for Wave  container status API  (#5384) [873703ad] [9ed18a88]
+- Fix Identify default git branch when downloading pipelines (#3593) (#5375) [4f74fc37]
+- Fix issue when retrying with stub (#5359) [324b611f]
+- Fix include aborted in the ProgressRecord total count (#5365) [8eb0c393]
+- Redirect logs to stderr during app bootstrap (#5206) [94918105]
+- Remove unused reportsOpts (#5379) [e794e868]
+- Sunsetting Spack support in Wave [3a54cb3b] [7bbba67b]
+- Bump nf-google@1.15.1 [4204435e]
+- Bump nf-wave@1.7.0 [cdecb3f5]
+
+24.09.0-edge - 2 Oct 2024
+- Add Fusion version pinning info to Fusion config scope (#5294) [be1cac37]
+- Add container tip in the task error report (#5299) [62e26043]
+- Add support for Java 23 (#5329) [6e10c372]
+- Add Platform workflow prefix in AWS Batch job names (#5318) [42dd4ba8]
+- Fix AWS spot attempts with zero value (#5331) [bac2da12]
+- Fix Azure Fusion env misses credentials when no key or SAS provided (#5328) [e11382c8]
+- Fix CI build taking only the commit msg header [9e702c4d]
+- Fix Inconsistency with camelCase and kebab-case config params #4702 (solve #4033) [349f4f6f]
+- Fix XPath default de-serializer issue (#5339) [290f2d07]
+- Fix failOnIgnore causes task monitor to stop submitting tasks (#5293) [d6870335]
+- Fix large mermaid diagrams (#5302) [a46edfa0]
+- Improve Wave build timeout handling (#5304) [05bef7e4]
+- Include additional fields to manifest (#5314) [33fab52d]
+- Remove `mini` from Flux submit command (#5229) [a0f69025]
+- Update container handling with charliecloud (#5300) [8e6068db]
+- Update Documentation structure (#4766) [25e5eba0]
+- Update nextflow install docs (#5198) [7c453815]
+- Bump groovy 4.0.23 (#5303) [fe3e3ac7]
+- Bump nf-wave@1.6.0 [179093dc]
+- Bump nf-azure@1.10.0 [41d37fa8]
+- Bump nf-amazon@2.9.0 [e38980fb]
+
 24.08.0-edge - 4 Sep 2024
 - Add Google Batch warning when for conflicting disk image config (#5279) [96cb57cb]
 - Add support for Google Batch used specified boot images  (#5268) [0aaa6482]

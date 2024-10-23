@@ -191,7 +191,7 @@ class TaskPollingMonitor implements TaskMonitor {
      *      by the polling monitor
      */
     protected boolean canSubmit(TaskHandler handler) {
-        (capacity>0 ? runningQueue.size() < capacity : true) && handler.canForkProcess()
+        (capacity>0 ? runningQueue.size() < capacity : true) && handler.canForkProcess() && handler.isReady()
     }
 
     /**
@@ -587,7 +587,7 @@ class TaskPollingMonitor implements TaskMonitor {
 
         int count = 0
         def itr = pendingQueue.iterator()
-        while( itr.hasNext() && session.isSuccess() ) {
+        while( itr.hasNext() && session.canSubmitTasks() ) {
             final handler = itr.next()
             submitRateLimit?.acquire()
             try {

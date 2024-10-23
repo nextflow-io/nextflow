@@ -29,7 +29,7 @@ import nextflow.util.CacheHelper
  */
 @Canonical
 @CompileStatic
-@ToString(includePackage = false, includeNames = true)
+@ToString(includePackage = false, includeNames = true, ignoreNulls = true)
 class ContainerConfig {
 
     List<String> entrypoint
@@ -107,5 +107,17 @@ class ContainerConfig {
                 allMeta.add(it.fingerprint())
         }
         return CacheHelper.hasher(allMeta).hash().toString()
+    }
+
+    boolean asBoolean() {
+        return !empty()
+    }
+
+    boolean empty() {
+        return !entrypoint &&
+            !cmd &&
+            !env &&
+            !workingDir &&
+            !layers
     }
 }
