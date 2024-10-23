@@ -15,6 +15,8 @@
  */
 package nextflow.processor
 
+import nextflow.trace.TraceRecord
+
 import static nextflow.processor.ErrorStrategy.*
 
 import java.lang.reflect.InvocationTargetException
@@ -1016,7 +1018,7 @@ class TaskProcessor {
      *      a {@link ErrorStrategy#TERMINATE})
      */
     @PackageScope
-    final synchronized resumeOrDie( TaskRun task, Throwable error ) {
+    final synchronized resumeOrDie( TaskRun task, Throwable error, TraceRecord traceRecord = null) {
         log.debug "Handling unexpected condition for\n  task: name=${safeTaskName(task)}; work-dir=${task?.workDirStr}\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
         ErrorStrategy errorStrategy = TERMINATE
@@ -1061,6 +1063,10 @@ class TaskProcessor {
                 task.config.exitStatus = task.exitStatus
                 task.config.errorCount = procErrCount
                 task.config.retryCount = taskErrCount
+                //Add trace of the previous execution in the task context for next execution
+                if ( traceRecord )
+                    task.config.previousTrace = traceRecord
+                task.config.previousException = error
 
                 errorStrategy = checkErrorStrategy(task, error, taskErrCount, procErrCount, submitRetries)
                 if( errorStrategy.soft ) {
@@ -2361,7 +2367,8 @@ class TaskProcessor {
      * @param task The {@code TaskRun} instance to finalize
      */
     @PackageScope
-    final finalizeTask( TaskRun task ) {
+    final finalizeTask( TaskHandler handler) {
+        def task = handler.task
         log.trace "finalizing process > ${safeTaskName(task)} -- $task"
 
         def fault = null
@@ -2384,7 +2391,7 @@ class TaskProcessor {
             collectOutputs(task)
         }
         catch ( Throwable error ) {
-            fault = resumeOrDie(task, error)
+            fault = resumeOrDie(task, error, handler.getTraceRecord())
             log.trace "Task fault (3): $fault"
         }
 
