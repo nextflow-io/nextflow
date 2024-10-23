@@ -29,14 +29,16 @@ The following task properties are defined in the process body:
 `task.previousException`
 : :::{versionadded} 24.10.0
   :::
-: The task execution of previous execution.
-: Since the exception is only available after the task has been executed, it can only be used when `task.attempt` is bigger than 1.
+: The exception reported by the previous task attempt.
+: Since the exception is only available after a failed task execution, it can only be used when `task.attempt` is greater than 1.
 
 `task.previousTrace`
 : :::{versionadded} 24.10.0
   :::
-: The trace record of the task execution.
-: Since the trace record is only available after the task has been executed, it can only be used when `task.attempt` is bigger than 1. 
+: The trace record associated with the previous task attempt. Since the trace record is only available after the task
+  has been executed, it can only be accessed when retrying a failed task execution, and therefore when `task.attempt`
+  is greater than 1.
+: This is useful when retrying a task execution to access the previous task attempt runtime metrics e.g. used memory and CPUs.
 
 `task.process`
 : The current process name.
