@@ -478,7 +478,7 @@ The following settings are available:
 : Defines the path where Conda environments are stored. Ensure the path is accessible from all compute nodes when using a shared file system.
 
 `conda.channels`
-: Defines the Conda channels that can be used to resolve Conda packages. Channels can be defined as a list (e.g., `['bioconda','conda-forge']`) or a comma separated list string (e.g., `'bioconda,conda-forge'`).
+: Defines the Conda channels that can be used to resolve Conda packages. Channels can be defined as a list (e.g., `['bioconda','conda-forge']`) or a comma separated list string (e.g., `'bioconda,conda-forge'`). Channel priority decreases from left to right.
 
 `conda.createOptions`
 : Defines extra command line options supported by the `conda create` command. See the [Conda documentation](https://docs.conda.io/projects/conda/en/latest/commands/create.html) for more information.
