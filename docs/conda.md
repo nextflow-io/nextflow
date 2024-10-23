@@ -41,6 +41,10 @@ conda.enabled = true
 
 Alternatively, it can be specified by setting the variable `NXF_CONDA_ENABLED=true` in your environment or by using the `-with-conda` command line option.
 
+### Conda channels
+
+Conda channels 
+
 ### Use Conda package names
 
 Conda package names can specified using the `conda` directive. Multiple package names can be specified by separating them with a blank space. For example:
