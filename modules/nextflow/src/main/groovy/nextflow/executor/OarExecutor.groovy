@@ -20,6 +20,7 @@ import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
 /**
  * Processor for OAR resource manager
@@ -80,14 +81,25 @@ class OarExecutor extends AbstractGridExecutor {
         }
 
         // -- at the end append the command script wrapped file name
-        // Options need to be semicolon ";" separated, if several are needed
-        if( task.config.clusterOptions ) {
-          for (String item : task.config.clusterOptions.toString().tokenize(';')) {
-            result << item << ''
-          }
-        }
+        addClusterOptionsDirective(task.config, result)
 
         return result
+    }
+
+    @Override
+    void addClusterOptionsDirective(TaskConfig config, List result) {
+        final opts = config.getClusterOptions()
+        if( opts instanceof Collection ) {
+            for( String it in opts ) {
+                result << it << ''
+            }
+        }
+        // Options need to be semicolon ";" separated, if several are needed
+        else if( opts instanceof CharSequence ) {
+            for (String item : opts.toString().tokenize(';')) {
+                result << item << ''
+            }
+        }
     }
 
     String getHeaderToken() { '#OAR' }

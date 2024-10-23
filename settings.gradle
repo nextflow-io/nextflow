@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,13 @@
  * limitations under the License.
  */
 
+plugins {
+    // required to download the toolchain (jdk) from a remote repository
+    // https://github.com/gradle/foojay-toolchains
+    // https://docs.gradle.org/current/userguide/toolchains.html#sub:download_repositories
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.7.0"
+}
+
 rootProject.name = 'nextflow-prj'
 
 include 'nextflow'
@@ -27,7 +34,6 @@ rootProject.children.each { prj ->
 include 'plugins'
 include 'plugins:nf-amazon'
 include 'plugins:nf-google'
-include 'plugins:nf-ga4gh'
 include 'plugins:nf-tower'
 include 'plugins:nf-console'
 include 'plugins:nf-azure'

@@ -38,12 +38,9 @@ import java.nio.file.attribute.FileAttribute
 import java.nio.file.attribute.FileAttributeView
 import java.nio.file.spi.FileSystemProvider
 
-import com.azure.identity.ClientSecretCredentialBuilder
 import com.azure.storage.blob.BlobServiceClient
-import com.azure.storage.blob.BlobServiceClientBuilder
 import com.azure.storage.blob.models.BlobStorageException
 import groovy.transform.CompileStatic
-import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.cloud.azure.batch.AzHelper
 /**
@@ -62,6 +59,9 @@ class AzFileSystemProvider extends FileSystemProvider {
     public static final String AZURE_CLIENT_ID = 'AZURE_CLIENT_ID'
     public static final String AZURE_CLIENT_SECRET = 'AZURE_CLIENT_SECRET'
     public static final String AZURE_TENANT_ID = 'AZURE_TENANT_ID'
+
+    public static final String AZURE_MANAGED_IDENTITY_USER = 'AZURE_MANAGED_IDENTITY_USER'
+    public static final String AZURE_MANAGED_IDENTITY_SYSTEM = 'AZURE_MANAGED_IDENTITY_SYSTEM'
 
     public static final String SCHEME = 'az'
 
@@ -118,23 +118,12 @@ class AzFileSystemProvider extends FileSystemProvider {
         AzHelper.getOrCreateBlobServiceWithToken(accountName, sasToken)
     }
 
-    @Memoized
     protected BlobServiceClient createBlobServiceWithServicePrincipal(String accountName, String clientId, String clientSecret, String tenantId) {
-        log.debug "Creating Azure Blob storage client using Service Principal credentials"
+        AzHelper.getOrCreateBlobServiceWithServicePrincipal(accountName, clientId, clientSecret, tenantId)
+    }
 
-        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName);
-
-        def servicePrincipalBasedCred = new ClientSecretCredentialBuilder()
-                .clientId(clientId)
-                .clientSecret(clientSecret)
-                .tenantId(tenantId)
-                .build()
-
-        return new BlobServiceClientBuilder()
-                .credential(servicePrincipalBasedCred)
-                .endpoint(endpoint)
-                .buildClient()
-
+    protected BlobServiceClient createBlobServiceWithManagedIdentity(String accountName, String clientId) {
+        AzHelper.getOrCreateBlobServiceWithManagedIdentity(accountName, clientId)
     }
 
     /**
@@ -207,35 +196,34 @@ class AzFileSystemProvider extends FileSystemProvider {
         final servicePrincipalSecret = config.get(AZURE_CLIENT_SECRET) as String
         final tenantId = config.get(AZURE_TENANT_ID) as String
 
+        final managedIdentityUser = config.get(AZURE_MANAGED_IDENTITY_USER) as String
+        final managedIdentitySystem = config.get(AZURE_MANAGED_IDENTITY_SYSTEM) as Boolean
 
         if( !accountName )
             throw new IllegalArgumentException("Missing AZURE_STORAGE_ACCOUNT_NAME")
 
-        def client
+        BlobServiceClient client
 
-        if (servicePrincipalSecret && servicePrincipalId && tenantId) {
-
+        if( managedIdentityUser || managedIdentitySystem ) {
+            client = createBlobServiceWithManagedIdentity(accountName, managedIdentityUser)
+        }
+        else if( servicePrincipalSecret && servicePrincipalId && tenantId ) {
             client = createBlobServiceWithServicePrincipal(accountName, servicePrincipalId, servicePrincipalSecret, tenantId)
-
-        } else {
-
-            if (!accountKey && !sasToken)
-                throw new IllegalArgumentException("Missing AZURE_STORAGE_ACCOUNT_KEY or AZURE_STORAGE_SAS_TOKEN")
-
-            client = sasToken
-                    ? createBlobServiceWithToken(accountName, sasToken)
-                    : createBlobServiceWithKey(accountName, accountKey)
+        }
+        else if( sasToken ) {
+            client = createBlobServiceWithToken(accountName, sasToken)
+            this.sasToken = sasToken
+        }
+        else if( accountKey ) {
+            client = createBlobServiceWithKey(accountName, accountKey)
+            this.accountKey = accountKey
+        }
+        else {
+            throw new IllegalArgumentException("Missing Azure storage credentials: please specify a managed identity, service principal, or storage account key")
         }
 
         final result = createFileSystem(client, bucket, config)
         fileSystems[bucket] = result
-
-        if (sasToken) {
-            this.sasToken = sasToken
-        }
-        if (accountKey) {
-            this.accountKey = accountKey
-        }
         return result
     }
 

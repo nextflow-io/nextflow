@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ class ContainersInspectorTest extends Specification {
         ]
 
         when:
-        def observer = new ContainersInspector(dag)
+        def observer = new ContainersInspector(dag, false)
         then:
         observer.getContainers() == [
             'proc1': 'container1',
@@ -67,7 +67,7 @@ class ContainersInspectorTest extends Specification {
         ]
 
         when:
-        def result = new ContainersInspector(dag)
+        def result = new ContainersInspector(dag, false)
                 .withFormat('json')
                 .renderContainers()
         then:
@@ -96,7 +96,7 @@ class ContainersInspectorTest extends Specification {
         ]
 
         when:
-        def result = new ContainersInspector(dag)
+        def result = new ContainersInspector(dag,false)
                 .withFormat('config')
                 .renderContainers()
         then:

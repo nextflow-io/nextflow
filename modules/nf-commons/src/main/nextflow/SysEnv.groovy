@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@
 package nextflow
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 
 /**
  * Helper class that holds a reference system environment and
@@ -27,12 +28,6 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class SysEnv {
-
-    static final class Holder implements Map<String,String> {
-        @Delegate Map<String,String> target
-        Holder(Map<String,String> target) { this.target = target }
-        void setTarget(Map<String,String> target) { this.target=target }
-    }
 
     private static Holder holder = new Holder(System.getenv())
 
@@ -54,6 +49,11 @@ class SysEnv {
         return holder.containsKey(name) ? holder.get(name) : defValue
     }
 
+    static boolean getBool(String name, boolean defValue) {
+        final result = get(name,String.valueOf(defValue))
+        return Boolean.parseBoolean(result)
+    }
+
     static void push(Map<String,String> env) {
         history.push(holder.getTarget())
         holder.setTarget(env)
@@ -64,3 +64,11 @@ class SysEnv {
     }
 
 }
+
+@PackageScope
+class Holder implements Map<String,String> {
+    @Delegate Map<String,String> target
+    Holder(Map<String,String> target) { this.target = target }
+    void setTarget(Map<String,String> target) { this.target=target }
+}
+

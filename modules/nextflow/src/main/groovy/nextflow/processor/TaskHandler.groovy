@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,6 +89,14 @@ abstract class TaskHandler {
     abstract void submit()
 
     /**
+     * Prepare the launcher script.
+     *
+     * This method is optional. If it is not implemented, the launcher script should
+     * be prepared in the submit() method.
+     */
+    void prepareLauncher() {}
+
+    /**
      * Task status attribute setter.
      *
      * @param status The sask status as defined by {@link TaskStatus}
@@ -116,6 +124,8 @@ abstract class TaskHandler {
     boolean isRunning() { return status == RUNNING }
 
     boolean isCompleted()  { return status == COMPLETED  }
+
+    boolean isActive() { status == SUBMITTED || status == RUNNING }
 
     protected StringBuilder toStringBuilder(StringBuilder builder) {
         builder << "id: ${task.id}; name: ${task.name}; status: $status; exit: ${task.exitStatus != Integer.MAX_VALUE ? task.exitStatus : '-'}; error: ${task.error ?: '-'}; workDir: ${task.workDir?.toUriString()}"
@@ -233,6 +243,16 @@ abstract class TaskHandler {
     }
 
     /**
+     * Determine if a task is ready for execution or it depends on resources
+     * e.g. container that needs to be provisionied
+     *
+     * @return {@code true} when the task is ready for execution, {@code false} otherwise
+     */
+    boolean isReady() {
+        task.isContainerReady()
+    }
+
+    /**
      * Increment the number of current forked processes
      */
     final void incProcessForks() {
@@ -262,5 +282,22 @@ abstract class TaskHandler {
         if( isSubmitted() && now-submitTimeMillis>maxAwait.millis )
             return true
         return false
+    }
+
+    /**
+     * Prepend the workflow Id to the job/task name. The workflow id is defined
+     * by the environment variable {@code TOWER_WORKFLOW_ID}
+     *
+     * @param name
+     *      The desired job name
+     * @param env
+     *      A map representing the variables in the host environment
+     * @return
+     *  The job having the prefix {@code tw-<ID>} when the variable {@code TOWER_WORKFLOW_ID}
+     *  is defined in the host environment or just {@code name} otherwise
+     */
+    static String prependWorkflowPrefix(String name, Map<String,String> env) {
+        final workflowId = env.get("TOWER_WORKFLOW_ID")
+        return workflowId ? "tw-${workflowId}-${name}" : name
     }
 }

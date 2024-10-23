@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,7 +67,7 @@ class LogsCheckpoint implements TraceObserver {
     protected void run() {
         log.debug "Starting logs checkpoint thread - interval: ${interval}"
         try {
-            while( !terminated && !thread.isInterrupted() ) {
+            while( !terminated && !Thread.currentThread().isInterrupted() ) {
                 // just wait the declared delay
                 await(interval)
                 // checkpoint the logs

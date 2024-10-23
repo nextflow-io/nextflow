@@ -475,26 +475,6 @@ class ScriptDslTest extends Dsl2Spec {
         err.message == "Access to 'flow1.out' is undefined since the workflow 'flow1' has not been invoked before accessing the output attribute"
     }
 
-    def 'should report unsupported error' () {
-        when:
-        dsl_eval('''
-        process foo {
-          /echo foo/
-        }
-        
-        workflow {
-          get: 
-            x
-          main: 
-          flow()
-        }
-        ''')
-
-        then:
-        def err = thrown(ScriptCompilationException)
-        err.message.contains "Workflow 'get' is not supported anymore use 'take' instead"
-    }
-
     def 'should fail with wrong scope'() {
         when:
         dsl_eval('''\
@@ -622,6 +602,28 @@ class ScriptDslTest extends Dsl2Spec {
 
         then:
         result.val == 'Hello'
+    }
+
+
+    def 'should throw an exception on missing method' () {
+
+        when:
+        dsl_eval '''
+           Channel.doesNotExist()
+        '''
+        then:
+        def e1 = thrown(MissingMethodException)
+        e1.message == 'No signature of method: java.lang.Object.Channel.doesNotExist() is applicable for argument types: () values: []'
+
+        when:
+        dsl_eval '''
+        workflow {
+           Channel.doesNotExist()
+        }
+        '''
+        then:
+        def e2 = thrown(MissingProcessException)
+        e2.message == 'Missing process or function Channel.doesNotExist()'
     }
 
 }

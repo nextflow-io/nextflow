@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,9 @@ class CmdPlugin extends CmdBase {
         if( !args )
             throw new AbortOperationException("Missing plugin command - usage: nextflow plugin install <pluginId,..>")
         // setup plugins system
-        Plugins.setup()
+        Plugins.init()
+        Runtime.addShutdownHook((it)-> Plugins.stop())
+        
         // check for the plugins install
         if( args[0] == 'install' ) {
             if( args.size()!=2 )

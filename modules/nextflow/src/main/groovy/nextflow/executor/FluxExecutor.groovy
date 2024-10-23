@@ -20,6 +20,7 @@ import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
 /**
  * Processor for Flux Framework executor
@@ -60,7 +61,7 @@ class FluxExecutor extends AbstractGridExecutor {
     @Override
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
 
-        List<String> result = ['flux', 'mini', 'submit']
+        List<String> result = ['flux', 'submit']
         result << '--setattr=cwd=' + quote(task.workDir)
         result << '--job-name="' + getJobNameFor(task) + '"'
 
@@ -90,18 +91,25 @@ class FluxExecutor extends AbstractGridExecutor {
         }
 
         // Any extra cluster options the user wants!
-        // Options tokenized with ; akin to OarExecutor
-        if( task.config.clusterOptions ) {
+        addClusterOptionsDirective(task.config, result)
 
+        result << '/bin/bash' << scriptFile.getName()
+        return result
+    }
+
+    @Override
+    protected void addClusterOptionsDirective(TaskConfig config, List<String> result) {
+        final opts = config.getClusterOptions()
+        final str = opts instanceof Collection ? opts.join(' ') : opts?.toString()
+
+        if( str ) {
             // Split by space
-            for (String item : task.config.clusterOptions.toString().tokenize(' ')) {
+            for (String item : str.tokenize(' ')) {
                 if ( item ) {
                     result << item.stripIndent(true).trim()
                 }
             }
         }
-        result << '/bin/bash' << scriptFile.getName()
-        return result
     }
 
     /**

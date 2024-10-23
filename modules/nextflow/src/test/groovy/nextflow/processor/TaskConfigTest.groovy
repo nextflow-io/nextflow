@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package nextflow.processor
 import java.nio.file.Paths
 
 import nextflow.exception.FailedGuardException
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.k8s.model.PodOptions
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
@@ -219,6 +220,7 @@ class TaskConfigTest extends Specification {
         when:
         def config = new TaskConfig().setContext(ten: 10)
         config.time = value
+        config.resourceLimits = [time: '24h']
 
         then:
         config.time == expected
@@ -230,6 +232,7 @@ class TaskConfigTest extends Specification {
         new Duration('1s')  || 1000
         new Duration('2h')  || '2h'
         new Duration('10h') || { "$ten hours" }
+        new Duration('24h') || '48h'
 
     }
 
@@ -256,6 +259,7 @@ class TaskConfigTest extends Specification {
         when:
         def config = new TaskConfig().setContext(ten: 10)
         config.memory = value
+        config.resourceLimits = [memory: '16G']
 
         then:
         config.memory == expected
@@ -267,6 +271,7 @@ class TaskConfigTest extends Specification {
         new MemoryUnit('1K')    || 1024
         new MemoryUnit('2M')    || '2M'
         new MemoryUnit('10G')   || { "$ten G" }
+        new MemoryUnit('16G')   || '32G'
 
     }
 
@@ -275,6 +280,7 @@ class TaskConfigTest extends Specification {
         when:
         def config = new TaskConfig().setContext(x: 20)
         config.disk = value
+        config.resourceLimits = [disk: '100G']
 
         then:
         config.disk == expected
@@ -288,6 +294,7 @@ class TaskConfigTest extends Specification {
         new MemoryUnit('5M')    || '5M'
         new MemoryUnit('20G')   || { "$x G" }
         new MemoryUnit('30G')   || MemoryUnit.of('30G')
+        new MemoryUnit('100G')  || '200G'
 
     }
 
@@ -296,6 +303,7 @@ class TaskConfigTest extends Specification {
         when:
         def config = new TaskConfig().setContext(ten: 10)
         config.cpus = value
+        config.resourceLimits = [cpus: 24]
 
         then:
         config.cpus == expected
@@ -308,6 +316,7 @@ class TaskConfigTest extends Specification {
         1            | true     | 1
         8            | true     | 8
         10           | true     | { ten ?: 0  }
+        24           | true     | 32
 
     }
 
@@ -329,6 +338,21 @@ class TaskConfigTest extends Specification {
 
     }
 
+    def testClusterOptionsAsString() {
+        when:
+        def config = new TaskConfig()
+        config.clusterOptions = VALUE
+
+        then:
+        config.getClusterOptionsAsString() == EXPECTED
+
+        where:
+        EXPECTED                            || VALUE
+        null                                || null
+        '-queue alpha'                      || ['-queue','alpha']
+        '-queue alpha'                      || '-queue alpha'
+        "-queue 'alpha and beta'"           || ['-queue', 'alpha and beta']
+    }
 
     def testGetClusterOptionsAsList() {
 
@@ -626,5 +650,25 @@ class TaskConfigTest extends Specification {
         then:
         config.getResourceLabels() == [region: 'eu-west-1', organization: 'A', user: 'this', team: 'that']
         config.getResourceLabelsAsString() == 'region=eu-west-1,organization=A,user=this,team=that'
+    }
+
+    def 'should report error on negative cpus' () {
+        when:
+        def config = new TaskConfig([cpus:-1])
+        and:
+        config.getCpus()
+        then:
+        def e = thrown(ProcessUnrecoverableException)
+        e.message == "Directive 'cpus' cannot be a negative value - offending value: -1"
+    }
+
+    def 'should report error on negative resourceLimits cpus' () {
+        when:
+        def config = new TaskConfig([cpus:4, resourceLimits:[cpus:-1]])
+        and:
+        config.getCpus()
+        then:
+        def e = thrown(ProcessUnrecoverableException)
+        e.message == "Directive 'resourceLimits.cpus' cannot be a negative value - offending value: -1"
     }
 }

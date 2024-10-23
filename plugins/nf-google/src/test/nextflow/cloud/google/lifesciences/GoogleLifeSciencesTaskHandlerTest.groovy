@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -198,19 +198,19 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         given:
         def workDir = mockGsPath('gs://my-bucket/work/dir')
         and:
+        def config = new GoogleLifeSciencesConfig(
+            project: 'my-project',
+            zones: ['my-zone'],
+            regions: ['my-region'],
+            preemptible: true,
+            bootDiskSize: MemoryUnit.of('20 GB'),
+            usePrivateAddress: true,
+            cpuPlatform: 'Intel Skylake'
+        )
+        and:
         def executor = Mock(GoogleLifeSciencesExecutor) {
             getHelper() >> Mock(GoogleLifeSciencesHelper)
-            getConfig() >> {
-                Mock(GoogleLifeSciencesConfig) {
-                    getProject() >> 'my-project'
-                    getZones() >> ['my-zone']
-                    getRegions() >> ['my-region']
-                    getPreemptible() >> true
-                    getBootDiskSize() >> MemoryUnit.of('20 GB')
-                    getUsePrivateAddress() >> true
-                    getCpuPlatform() >> 'Intel Skylake'
-                }
-            }
+            getConfig() >> config
         }
         and:
         def task = Mock(TaskRun)
@@ -283,7 +283,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         1 * handler.isSubmitted() >> false
         0 * handler.executor.helper.checkOperationStatus(_)
         handler.status == TaskStatus.NEW
-        result == false
+        !result
 
         when:
         result = handler.checkIfRunning()

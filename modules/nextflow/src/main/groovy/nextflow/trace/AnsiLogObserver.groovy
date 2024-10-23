@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 
 package nextflow.trace
+
+import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import jline.TerminalFactory
@@ -85,6 +87,8 @@ class AnsiLogObserver implements TraceObserver {
 
     private volatile int cols = 80
 
+    private volatile int rows = 24
+
     private long startTimestamp
 
     private long endTimestamp
@@ -116,12 +120,14 @@ class AnsiLogObserver implements TraceObserver {
     }
 
     synchronized void appendInfo(String message) {
-        if( message==null )
+        if( message==null || message.isEmpty() )
             return
         boolean warn
         if( isHashLogPrefix(message) && !(warn=message.indexOf('NOTE:')>0) )
             return
-        
+        if( message.startsWith('[skipping]') )
+            return
+
         if( !started || !statsObserver.hasProgressRecords() ) {
             println message
         }
@@ -179,7 +185,7 @@ class AnsiLogObserver implements TraceObserver {
                 wait(200)
             }
         }
-        // 
+        //
         final stats = statsObserver.getStats()
         renderProgress(stats)
         renderSummary(stats)
@@ -225,7 +231,7 @@ class AnsiLogObserver implements TraceObserver {
     protected String getExecutorName(String key) {
         session.getExecutorFactory().getDisplayName(key)
     }
-    
+
     protected void renderExecutors(Ansi term) {
         int count=0
         def line = ''
@@ -235,7 +241,7 @@ class AnsiLogObserver implements TraceObserver {
         }
 
         if( count ) {
-            term.a("executor > " + line)
+            term.a(Attribute.INTENSITY_FAINT).a("executor > " + line).reset()
             term.newline()
         }
     }
@@ -249,6 +255,7 @@ class AnsiLogObserver implements TraceObserver {
         }
 
         cols = TerminalFactory.get().getWidth()
+        rows = TerminalFactory.get().getHeight()
 
         // calc max width
         final now = System.currentTimeMillis()
@@ -263,9 +270,25 @@ class AnsiLogObserver implements TraceObserver {
             lastWidthReset = now
 
         // render line
+        def renderedLines = 0
+        def skippedLines = 0
         for( ProgressRecord entry : processes ) {
-            term.a(line(entry))
-            term.newline()
+            // Only show line if we have space in the visible terminal area
+            // or if the process has some submitted tasks
+            if( renderedLines <= rows - 5 || entry.getTotalCount() > 0 ) {
+                term.a(line(entry))
+                term.newline()
+                renderedLines += 1
+            }
+            // Process with no active tasks and we're out of screen space, skip
+            else {
+                skippedLines += 1
+            }
+        }
+        // Tell the user how many processes without active tasks were hidden
+        if( skippedLines > 0 ){
+            term.a(Attribute.ITALIC).a(Attribute.INTENSITY_FAINT).a("Plus ").bold().a(skippedLines).reset()
+            term.a(Attribute.ITALIC).a(Attribute.INTENSITY_FAINT).a(" more processes waiting for tasks…").reset().newline()
         }
         rendered = true
     }
@@ -320,7 +343,7 @@ class AnsiLogObserver implements TraceObserver {
             return
         if( enableSummary == null && delta <= 60*1_000 )
             return
-        
+
         if( session.isSuccess() && stats.progressLength>0 ) {
             def report = ""
             report += "Completed at: ${new Date(endTimestamp).format('dd-MMM-yyyy HH:mm:ss')}\n"
@@ -348,13 +371,13 @@ class AnsiLogObserver implements TraceObserver {
         if( color ) fmt = fmt.fg(Color.DEFAULT)
         AnsiConsole.out.println(fmt.eraseLine())
     }
-    
+
     protected void printAnsiLines(String lines) {
         final text = lines
                 .replace('\r','')
                 .replace(NEWLINE, ansi().eraseLine().toString() + NEWLINE)
         AnsiConsole.out.print(text)
-    } 
+    }
 
     protected String fmtWidth(String name, int width, int cols) {
         assert name.size() <= width
@@ -367,36 +390,103 @@ class AnsiLogObserver implements TraceObserver {
     }
 
     protected String fmtChop(String str, int cols) {
+        // Truncate the process name to fit the terminal width
         if( str.size() <= cols )
             return str
-        return cols>3 ? str[0..(cols-3-1)] + '...' : str[0..cols-1]
+        // Take the first 3 characters and the final chunk of text
+        //   eg. for: NFCORE_RNASEQ:RNASEQ:FASTQ_SUBSAMPLE_FQ_SALMON:FQ_SUBSAMPLE
+        //   truncate to: NFC…_SALMON:FQ_SUBSAMPLE
+        return cols>5 ? str.take(3) + '…' + str.takeRight(cols-1-3) : str[0..cols-1]
     }
 
-    protected String line(ProgressRecord stats) {
+    private final static Pattern TAG_REGEX = ~/ \((.+)\)( *)$/
+    private final static Pattern LBL_REPLACE = ~/ \(.+\) *$/
+
+    protected Ansi line(ProgressRecord stats) {
+        final term = ansi()
         final float tot = stats.getTotalCount()
         final float com = stats.getCompletedCount()
+        // Truncate or pad the label to the correct width
         final label = fmtWidth(stats.taskName, labelWidth, Math.max(cols-50, 5))
+        // Break up the process label into components for styling. eg:
+        //   NFCORE_RNASEQ:RNASEQ:PREPARE_GENOME:GUNZIP_GTF (genes.gtf.gz)
+        //     labelTag = genes.gtf.gz
+        //     labelSpaces = whitespace padding after process name
+        //     labelFinalProcess = GUNZIP_GTF
+        //     labelNoFinalProcess = NFCORE_RNASEQ:RNASEQ:PREPARE_GENOME:
+        final tagMatch = TAG_REGEX.matcher(label)
+        final labelTag = tagMatch ? tagMatch.group(1) : ''
+        final labelSpaces = tagMatch ? tagMatch.group(2) : ''
+        final labelNoTag = LBL_REPLACE.matcher(label).replaceFirst("")
+        final labelFinalProcess = labelNoTag.tokenize(':')[-1]
+        final labelNoFinalProcess = labelNoTag.dropRight(labelFinalProcess.length())
         final hh = (stats.hash && tot>0 ? stats.hash : '-').padRight(9)
 
-        if( tot == 0  )
-            return "[$hh] process > $label -"
-
         final x = tot ? Math.floor(com / tot * 100f).toInteger() : 0
-        final pct = "[${String.valueOf(x).padLeft(3)}%]".toString()
+        // eg. 100% (whitespace padded for alignment)
+        final pct = "${String.valueOf(x).padLeft(3)}%".toString()
+        // eg. 1 of 1
+        final numbs = " ${(int)com} of ${(int)tot}".toString()
 
-        final numbs = "${(int)com} of ${(int)tot}".toString()
-        def result = "[${hh}] process > $label $pct $numbs"
+        // Task hash, eg: [fa/71091a]
+        term.a(Attribute.INTENSITY_FAINT).a('[').reset()
+        term.fg(Color.BLUE).a(hh).reset()
+        term.a(Attribute.INTENSITY_FAINT).a('] ').reset()
+
+        // Only show 'process > ' if the terminal has lots of width
+        if( cols > 180 )
+            term.a(Attribute.INTENSITY_FAINT).a('process > ').reset()
+        // Stem of process name, dim text
+        term.a(Attribute.INTENSITY_FAINT).a(labelNoFinalProcess).reset()
+        // Final process name, regular text
+        term.a(labelFinalProcess)
+        // Active process with a tag, eg: (genes.gtf.gz)
+        if( labelTag ){
+            // Tag in yellow, () dim but tag text regular
+            term.fg(Color.YELLOW).a(Attribute.INTENSITY_FAINT).a(' (').reset()
+            term.fg(Color.YELLOW).a(labelTag)
+            term.a(Attribute.INTENSITY_FAINT).a(')').reset().a(labelSpaces)
+        }
+
+        // No tasks
+        if( tot == 0 ) {
+            term.a(' -')
+            return term
+        }
+
+        // Progress percentage, eg: [ 80%]
+        if( cols > 120 ) {
+            // Only show the percentage if we have lots of width
+            // Percentage text in green if 100%, otherwise blue
+            term.a(Attribute.INTENSITY_FAINT).a(' [').reset()
+                .fg(pct == '100%' ? Color.GREEN : Color.BLUE).a(pct).reset()
+                .a(Attribute.INTENSITY_FAINT).a(']').reset()
+        }
+        else {
+            // If narrow terminal, show single pipe char instead of percentage to save space
+            term.a(Attribute.INTENSITY_FAINT).a(' |').reset()
+        }
+        // Progress active task count, eg: 8 of 10
+        term.a(numbs)
+
+        // Completed task counts and status
+        // Dim text for cached, otherwise regular
         if( stats.cached )
-            result += ", cached: $stats.cached"
+            term.a(Attribute.INTENSITY_FAINT).a(", cached: $stats.cached").reset()
         if( stats.stored )
-            result += ", stored: $stats.stored"
+            term.a(", stored: $stats.stored")
         if( stats.failed )
-            result += ", failed: $stats.failed"
+            term.a(", failed: $stats.failed")
         if( stats.retries )
-            result += ", retries: $stats.retries"
-        if( stats.terminated && tot )
-            result += stats.errored ? ' \u2718' : ' \u2714'
-        return fmtChop(result, cols)
+            term.a(", retries: $stats.retries")
+        // Show red cross ('✘') or green tick ('✔') according to status
+        if( stats.terminated && tot ) {
+            if( stats.errored )
+                term.fg(Color.RED).a(' \u2718').reset()
+            else
+                term.fg(Color.GREEN).a(' \u2714').reset()
+        }
+        return term
     }
 
     @Override

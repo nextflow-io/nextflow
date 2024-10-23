@@ -18,6 +18,7 @@ package nextflow.cloud.google.util
 
 import java.nio.file.Path
 
+import com.google.api.gax.retrying.RetrySettings
 import com.google.cloud.storage.StorageOptions
 import com.google.cloud.storage.contrib.nio.CloudStorageConfiguration
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
@@ -57,15 +58,25 @@ class GsPathFactory extends FileSystemPathFactory {
         return builder.build()
     }
 
-    static protected StorageOptions getCloudStorageOptions(GoogleOpts googleOpts) {
+    static protected StorageOptions getCloudStorageOptions(GoogleOpts opts) {
         final transportOptions = StorageOptions.getDefaultHttpTransportOptions().toBuilder()
-        if( googleOpts.httpConnectTimeout )
-            transportOptions.setConnectTimeout( (int)googleOpts.httpConnectTimeout.toMillis() )
-        if( googleOpts.httpReadTimeout )
-            transportOptions.setReadTimeout( (int)googleOpts.httpReadTimeout.toMillis() )
+        if( opts.httpConnectTimeout )
+            transportOptions.setConnectTimeout( (int)opts.httpConnectTimeout.toMillis() )
+        if( opts.httpReadTimeout )
+            transportOptions.setReadTimeout( (int)opts.httpReadTimeout.toMillis() )
 
-        return StorageOptions.getDefaultInstance().toBuilder()
+        RetrySettings retrySettings =
+            StorageOptions.getDefaultRetrySettings()
+                .toBuilder()
+                .setMaxAttempts(opts.storageOpts.retryPolicy.maxAttempts)
+                .setRetryDelayMultiplier(opts.storageOpts.retryPolicy.multiplier)
+                .setTotalTimeout(org.threeten.bp.Duration.ofSeconds(opts.storageOpts.retryPolicy.maxDelaySecs()))
+                .build()
+
+        return StorageOptions.getDefaultInstance()
+            .toBuilder()
             .setTransportOptions(transportOptions.build())
+            .setRetrySettings(retrySettings)
             .build()
     }
 
@@ -86,9 +97,10 @@ class GsPathFactory extends FileSystemPathFactory {
         init()
         final str = uri.substring(5)
         final p = str.indexOf('/')
-        return p == -1
+        final ret = p == -1
             ? CloudStorageFileSystem.forBucket(str, storageConfig, storageOptions).getPath('')
             : CloudStorageFileSystem.forBucket(str.substring(0,p), storageConfig, storageOptions).getPath(str.substring(p))
+        return ret.normalize()
     }
 
     @Override

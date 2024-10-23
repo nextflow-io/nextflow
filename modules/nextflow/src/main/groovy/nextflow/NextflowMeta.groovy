@@ -1,5 +1,7 @@
 package nextflow
 
+import static nextflow.extension.Bolts.*
+
 import java.text.SimpleDateFormat
 import java.util.regex.Pattern
 
@@ -9,8 +11,6 @@ import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.util.VersionNumber
-import static nextflow.extension.Bolts.DATETIME_FORMAT
-
 /**
  * Models nextflow script properties and metadata
  * 
@@ -35,15 +35,19 @@ class NextflowMeta {
     static trait Flags {
         abstract float dsl
         abstract boolean strict
+        abstract boolean moduleBinaries
     }
 
-    @Deprecated
     @Slf4j
     static class Preview implements Flags {
-        volatile float dsl
-        boolean strict
+        @Deprecated volatile float dsl
+        @Deprecated boolean strict
+        boolean output
         boolean recursion
+        boolean topic
+        boolean moduleBinaries
 
+        @Deprecated
         void setDsl( float num ) {
             if( num == 1 )
                 throw new IllegalArgumentException(DSL1_EOL_MESSAGE)
@@ -54,16 +58,29 @@ class NextflowMeta {
             dsl = num
         }
 
-        void setRecursion(Boolean recurse) {
-            if( recurse )
+        void setOutput(Boolean output) {
+            if( output )
+                log.warn "WORKFLOW OUTPUT DSL IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
+            this.output = output
+        }
+
+        void setRecursion(Boolean recursion) {
+            if( recursion )
                 log.warn "NEXTFLOW RECURSION IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
-            this.recursion = recurse
+            this.recursion = recursion
+        }
+
+        void setTopic(Boolean topic) {
+            if( topic )
+                log.warn "CHANNEL TOPICS ARE A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
+            this.topic = topic
         }
     }
 
     static class Features implements Flags {
         volatile float dsl
         boolean strict
+        boolean moduleBinaries
     }
 
     final VersionNumber version
@@ -74,15 +91,14 @@ class NextflowMeta {
      */
     final String timestamp
 
-    @Deprecated
     final Preview preview = new Preview()
 
     final Features enable = new Features()
 
     private NextflowMeta() {
-        version = new VersionNumber(Const.APP_VER)
-        build = Const.APP_BUILDNUM
-        timestamp = Const.APP_TIMESTAMP_UTC
+        version = new VersionNumber(BuildInfo.version)
+        build = BuildInfo.buildNum as int
+        timestamp = BuildInfo.timestampUTC
     }
 
     protected NextflowMeta(String ver, int build, String timestamp ) {
@@ -97,6 +113,8 @@ class NextflowMeta {
             result.dsl = 2i
         if( isStrictModeEnabled() )
             result.strict = true
+        if( isModuleBinariesEnabled() )
+            result.moduleBinaries = true
         return result
     }
 
@@ -105,11 +123,8 @@ class NextflowMeta {
         result.version = version.toString()
         result.build = build
         result.timestamp = parseDateStr(timestamp)
-        if( isDsl2Final() ) {
+        if( isDsl2() ) {
             result.enable = featuresMap()
-        }
-        else if( isDsl2() ) {
-            result.preview = featuresMap()
         }
         return result
     }
@@ -125,17 +140,6 @@ class NextflowMeta {
      * {@code true} when the workflow script uses DSL2 syntax, {@code false} otherwise.
      */
     boolean isDsl2() {
-        enable.dsl == 2f
-    }
-
-    /**
-     * As of the removal of DSL2 preview mode, the semantic of this method
-     * is identical to {@link #isDsl2()}.
-     * @return
-     *  {@code true} when the workflow script uses DSL2 syntax, {@code false} otherwise.
-     */
-    @Deprecated
-    boolean isDsl2Final() {
         enable.dsl == 2f
     }
 
@@ -162,6 +166,14 @@ class NextflowMeta {
 
     void strictMode(boolean mode) {
         enable.strict = mode
+    }
+
+    boolean isModuleBinariesEnabled() {
+        return enable.moduleBinaries
+    }
+
+    void moduleBinaries(boolean mode) {
+        enable.moduleBinaries = mode
     }
 
     static String checkDslMode(String script) {

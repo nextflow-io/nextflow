@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,13 @@
 package nextflow.executor
 import java.nio.file.Paths
 
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -51,10 +54,7 @@ class SgeExecutorTest extends Specification {
     def 'test qsub headers' () {
 
         given:
-        def config
-        // mock process
         def proc = Mock(TaskProcessor)
-
         def executor = [:] as SgeExecutor
         def task = new TaskRun()
         task.processor = proc
@@ -62,11 +62,9 @@ class SgeExecutorTest extends Specification {
         task.name = 'the task name'
 
         when:
-
-        // config
-        config = task.config = new TaskConfig()
-        config.queue = 'my-queue'
-        config.name = 'task'
+        task.config = new TaskConfig()
+        task.config.queue = 'my-queue'
+        task.config.name = 'task'
 
         then:
         executor.getHeaders(task) == '''
@@ -80,9 +78,9 @@ class SgeExecutorTest extends Specification {
                 .stripIndent().leftTrim()
 
         when:
-        config = task.config = new TaskConfig()
-        config.queue = 'my-queue'
-        config.name = 'task'
+        task.config = new TaskConfig()
+        task.config.queue = 'my-queue'
+        task.config.name = 'task'
         then:
         executor.getHeaders(task) == '''
                 #$ -N nf-the_task_name
@@ -94,13 +92,12 @@ class SgeExecutorTest extends Specification {
                 '''
                 .stripIndent().leftTrim()
 
-
         when:
-        config = task.config = new TaskConfig()
-        config.queue = 'my-queue'
-        config.name = 'task'
-        config.time = '10s '
-        config.clusterOptions = '-hard -alpha -beta'
+        task.config = new TaskConfig()
+        task.config.queue = 'my-queue'
+        task.config.name = 'task'
+        task.config.time = '10s '
+        task.config.clusterOptions = '-hard -alpha -beta'
         then:
         executor.getHeaders(task) == '''
                 #$ -N nf-the_task_name
@@ -114,15 +111,12 @@ class SgeExecutorTest extends Specification {
                 '''
                 .stripIndent().leftTrim()
 
-
-
         when:
-        config = task.config = new TaskConfig()
-        config.queue = 'my-queue'
-        config.name = 'task'
-        config.time = '10m'
-        config.memory = '1M'
-        config.remove('clusterOptions')
+        task.config = new TaskConfig()
+        task.config.queue = 'my-queue'
+        task.config.name = 'task'
+        task.config.time = '10m'
+        task.config.memory = '1M'
         then:
         executor.getHeaders(task) == '''
                 #$ -N nf-the_task_name
@@ -136,16 +130,14 @@ class SgeExecutorTest extends Specification {
                 '''
                 .stripIndent().leftTrim()
 
-
-
         when:
-        config = task.config = new TaskConfig()
-        config.queue = 'my-queue'
-        config.name = 'task'
-        config.cpus = 1
-        config.penv = 'smp'
-        config.time = '2 m'
-        config.memory = '2 M'
+        task.config = new TaskConfig()
+        task.config.queue = 'my-queue'
+        task.config.name = 'task'
+        task.config.cpus = 1
+        task.config.penv = 'smp'
+        task.config.time = '2 m'
+        task.config.memory = '2 M'
         then:
         executor.getHeaders(task) == '''
                 #$ -N nf-the_task_name
@@ -161,13 +153,13 @@ class SgeExecutorTest extends Specification {
                 .stripIndent().leftTrim()
 
         when:
-        config = task.config = new TaskConfig()
-        config.queue = 'my-queue'
-        config.name = 'task'
-        config.cpus = 2
-        config.penv = 'mpi'
-        config.time = '3 d'
-        config.memory = '3 g'
+        task.config = new TaskConfig()
+        task.config.queue = 'my-queue'
+        task.config.name = 'task'
+        task.config.cpus = 2
+        task.config.penv = 'mpi'
+        task.config.time = '3 d'
+        task.config.memory = '3 g'
         then:
         executor.getHeaders(task) == '''
                 #$ -N nf-the_task_name
@@ -183,13 +175,13 @@ class SgeExecutorTest extends Specification {
                 .stripIndent().leftTrim()
 
         when:
-        config = task.config = new TaskConfig()
-        config.queue = 'my-queue'
-        config.name = 'task'
-        config.cpus = 4
-        config.penv = 'orte'
-        config.time = '1d3h'
-        config.memory = '4 GB '
+        task.config = new TaskConfig()
+        task.config.queue = 'my-queue'
+        task.config.name = 'task'
+        task.config.cpus = 4
+        task.config.penv = 'orte'
+        task.config.time = '1d3h'
+        task.config.memory = '4 GB '
         then:
         executor.getHeaders(task) == '''
                 #$ -N nf-the_task_name
@@ -204,15 +196,30 @@ class SgeExecutorTest extends Specification {
                 '''
                 .stripIndent().leftTrim()
 
+        when: 'with job array'
+        def taskArray = Mock(TaskArrayRun) {
+            config >> new TaskConfig()
+            name >> task.name
+            workDir >> task.workDir
+            getArraySize() >> 5
+        }
+        then:
+        executor.getHeaders(taskArray) == '''
+                #$ -t 1-5
+                #$ -N nf-the_task_name
+                #$ -o /dev/null
+                #$ -j y
+                #$ -terse
+                #$ -notify
+                '''
+                .stripIndent().leftTrim()
+
     }
 
     def testWorkDirWithBlanks() {
 
         given:
-        def config
-        // mock process
         def proc = Mock(TaskProcessor)
-
         def executor = [:] as SgeExecutor
         def task = new TaskRun()
         task.processor = proc
@@ -220,11 +227,9 @@ class SgeExecutorTest extends Specification {
         task.name = 'the task name'
 
         when:
-
-        // config
-        config = task.config = new TaskConfig()
-        config.queue = 'my-queue'
-        config.name = 'task'
+        task.config = new TaskConfig()
+        task.config.queue = 'my-queue'
+        task.config.name = 'task'
 
         then:
         executor.getHeaders(task) == '''
@@ -382,4 +387,24 @@ class SgeExecutorTest extends Specification {
 
     }
 
+    def 'should get array index name and start' () {
+        given:
+        def executor = Spy(SgeExecutor)
+        expect:
+        executor.getArrayIndexName() == 'SGE_TASK_ID'
+        executor.getArrayIndexStart() == 1
+    }
+
+    @Unroll
+    def 'should get array task id' () {
+        given:
+        def executor = Spy(SgeExecutor)
+        expect:
+        executor.getArrayTaskId(JOB_ID, TASK_INDEX) == EXPECTED
+
+        where:
+        JOB_ID      | TASK_INDEX    | EXPECTED
+        'foo'       | 1             | 'foo.1'
+        'bar'       | 2             | 'bar.2'
+    }
 }

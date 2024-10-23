@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,6 +43,11 @@ class XFileSystem extends FileSystem {
     private XFileSystemProvider provider
 
     private URI base
+
+    /*
+    * Only needed to prevent serialization issues - see https://github.com/nextflow-io/nextflow/issues/5208
+    */
+    protected XFileSystem(){}
 
     XFileSystem(XFileSystemProvider provider, URI base) {
         this.provider = provider

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import com.amazonaws.services.batch.model.Tmpfs
 import com.amazonaws.services.batch.model.Ulimit
 import groovy.transform.CompileStatic
 import nextflow.util.CmdLineOptionMap
+import nextflow.util.MemoryUnit
 
 /**
  * Maps task container options to AWS container properties
@@ -106,7 +107,8 @@ class AwsContainerOptionsMapper {
         // shared Memory Size
         def value = findOptionWithSingleValue(options, 'shm-size')
         if ( value ) {
-            params.setSharedMemorySize(value as Integer)
+            final sharedMemorySize = MemoryUnit.of(value)
+            params.setSharedMemorySize(sharedMemorySize.mega as Integer)
             atLeastOneSet = true
         }
 

@@ -47,7 +47,7 @@ The above snippet access the secrets `MY_ACCESS_KEY` and `MY_SECRET_KEY` previou
 Secrets **cannot** be assigned to pipeline parameters.
 :::
 
-## Process secrets
+## Process directive
 
 Secrets can be access by pipeline processes by using the `secret` directive. For example:
 
@@ -69,5 +69,22 @@ The secrets are made available in the process context running the command script
 :::
 
 :::{note}
-This feature is only available when using the local or grid executors (Slurm, Grid Engine, etc). The AWS Batch executor allows the use of secrets when deploying the pipeline execution via [Nextflow Tower](https://seqera.io/blog/pipeline-secrets-secure-handling-of-sensitive-information-in-tower/).
+This feature is only available when using the local or grid executors (Slurm, Grid Engine, etc). The AWS Batch executor allows the use of secrets when deploying the pipeline execution via [Seqera Platform](https://seqera.io/blog/pipeline-secrets-secure-handling-of-sensitive-information-in-tower/).
+:::
+
+## Pipeline script
+
+:::{versionadded} 24.03.0-edge
+:::
+
+Secrets can be accessed in the pipeline script using the `secrets` variable. For example:
+
+```groovy
+workflow.onComplete {
+    println("The secret is: ${secrets.MY_SECRET}")
+}
+```
+
+:::{note}
+This feature is only available when using the local or grid executors (Slurm, Grid Engine, etc). The AWS Batch executor allows the use of secrets when deploying the pipeline execution via [Seqera Platform](https://seqera.io/blog/pipeline-secrets-secure-handling-of-sensitive-information-in-tower/).
 :::

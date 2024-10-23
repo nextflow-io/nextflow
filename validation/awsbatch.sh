@@ -53,3 +53,24 @@ $NXF_CMD run nextflow-io/rnaseq-nf \
     -resume
 [[ `grep -c 'Using Nextflow cache factory: nextflow.cache.CloudCacheFactory' .nextflow.log` == 1 ]] || false
 [[ `grep -c 'Cached process > ' .nextflow.log` == 4 ]] || false
+
+## run with fargate + wave
+NXF_CLOUDCACHE_PATH=s3://nextflow-ci/cache \
+$NXF_CMD run nextflow-io/rnaseq-nf \
+    -profile batch \
+    -plugins nf-cloudcache,nf-wave \
+    -c awsfargate.config
+
+## Test use of job array
+NXF_CLOUDCACHE_PATH=s3://nextflow-ci/cache \
+$NXF_CMD run nextflow-io/hello \
+    -process.array 10 \
+    -plugins nf-cloudcache \
+    -c awsbatch.config
+
+## Test use of job array using Fusion
+$NXF_CMD run nextflow-io/hello \
+    -process.array 10 \
+    -with-wave \
+    -with-fusion \
+    -c awsbatch.config

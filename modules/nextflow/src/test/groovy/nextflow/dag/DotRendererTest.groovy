@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,17 +59,17 @@ class DotRendererTest extends Specification {
         file.text ==
             '''
             digraph "TheGraph" {
-            p0 [shape=point,label="",fixedsize=true,width=0.1];
-            p1 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="Op1"];
-            p0 -> p1;
+            v0 [shape=point,label="",fixedsize=true,width=0.1];
+            v1 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="Op1"];
+            v0 -> v1;
 
-            p1 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="Op1"];
-            p2 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="Op2"];
-            p1 -> p2;
+            v1 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="Op1"];
+            v2 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="Op2"];
+            v1 -> v2;
 
-            p2 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="Op2"];
-            p3 [shape=point];
-            p2 -> p3;
+            v2 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="Op2"];
+            v3 [shape=point];
+            v2 -> v3;
 
             }
             '''

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,9 @@ import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
 import nextflow.exception.AbortOperationException
+import nextflow.util.ArrayBag
 import spock.lang.Specification
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -207,6 +209,35 @@ class JoinOpTest extends Specification {
 
     }
 
+    def 'should be able to use identical ArrayBags join key' () {
+        given:
+        def key1 = new ArrayBag(["key"])
+        def key2 = new ArrayBag(["key"])
+        def ch1 = Channel.of([key1, "foo"])
+        def ch2 = Channel.of([key2, "bar"])
+
+        when:
+        def op = new JoinOp(ch1 as DataflowReadChannel, ch2 as DataflowReadChannel)
+        List result = op.apply().toList().getVal()
+
+        then:
+        !result.isEmpty()
+    }
+
+    def 'should differentiate nonidentical ArrayBags join key' () {
+        given:
+        def key1 = new ArrayBag(["key", "key", "quay"])
+        def key2 = new ArrayBag(["quay", "quay", "key"])
+        def ch1 = Channel.of([key1, "foo"])
+        def ch2 = Channel.of([key2, "bar"])
+
+        when:
+        def op = new JoinOp(ch1 as DataflowReadChannel, ch2 as DataflowReadChannel)
+        List result = op.apply().toList().getVal()
+
+        then:
+        result.isEmpty()
+    }
 
     def 'should not fail on mismatches' () {
         given:

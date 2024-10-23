@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -98,8 +98,8 @@ class TraceRecord implements Serializable {
             time:       'time',
             env:        'str',
             error_action:'str',
-            vol_ctxt: 'num',
-            inv_ctxt: 'num',
+            vol_ctxt: 'num',        // -- /proc/$pid/status field 'voluntary_ctxt_switches'
+            inv_ctxt: 'num',        // -- /proc/$pid/status field 'nonvoluntary_ctxt_switches'
             hostname: 'str',
             cpu_model:  'str'
     ]
@@ -176,7 +176,7 @@ class TraceRecord implements Serializable {
     }
 
     /**
-     * Coverts the value to a duration string.
+     * Converts the value to a duration string.
      *
      * See {@link Duration}
      * @param value
@@ -587,6 +587,10 @@ class TraceRecord implements Serializable {
 
     boolean isCached() {
         store.status == 'CACHED'
+    }
+
+    boolean isCompleted() {
+        store.status == 'COMPLETED'
     }
 
     String getExecutorName() {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,6 +47,29 @@ class FileHelperTest extends Specification {
         Files.createTempDirectory(tmp, 'test')
     }
 
+    def 'should match invalid url prefix' (){
+        expect:
+        FileHelper.INVALID_URL_PREFIX.matcher(STR).matches() == EXPECTED
+
+        where:
+        EXPECTED| STR
+        true    | 's3:/foo'
+        true    | 'az:/foo'
+        true    | 'gs:/foo'
+        true    | 'xyz:/foo'
+        and:
+        false   | 'file:/foo'   // <- this is ok
+        and:
+        false   | 's3://foo'
+        false   | 'az://foo'
+        false   | 'gs://foo'
+        false   | 'http://foo'
+        false   | 'https://foo'
+        false   | 'ftp://foo'
+        false   | 'xyz://foo'
+
+    }
+
     def 'should return a Path object' () {
 
         expect:
@@ -79,6 +102,12 @@ class FileHelperTest extends Specification {
         then:
         e = thrown(IllegalArgumentException)
         e.message == "Path string cannot ends with a blank or special characters -- Offending path: '/some/file.txt\\n'"
+
+        when:
+        FileHelper.asPath('s3:/some/broken/url')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "File path is prefixed with an invalid URL scheme - Offending path: 's3:/some/broken/url'"
     }
 
     def 'should strip query params from http files' () {
@@ -88,6 +117,17 @@ class FileHelperTest extends Specification {
         path.toString() == '/some/path/file.txt'
         path.getFileName().toString() == 'file.txt'
         path.toUri() == new URI('http://host.com/some/path/file.txt?x=1')
+    }
+
+    @Unroll
+    def 'should remove consecutive slashes in the path' () {
+        expect:
+        FileHelper.asPath(STR).toUri() == EXPECTED
+        where:
+        STR                         | EXPECTED
+        'http://foo//this///that'   | new URI('http://foo/this/that')
+        'http://foo/this//that?x'   | new URI('http://foo/this/that?x')
+        'http://foo/this//that?x//' | new URI('http://foo/this/that?x//') // <-- ignore slashes in the params
     }
 
     def 'should create a valid uri' () {
@@ -1059,6 +1099,7 @@ class FileHelperTest extends Specification {
         Paths.get('/file.txt')      | Paths.get('/file.txt')
         and:
         'http://foo/file.txt'       | Paths.get(new URI('http://foo/file.txt'))
+        'http://foo/some///file.txt'| Paths.get(new URI('http://foo/some/file.txt'))
         Paths.get(new URI('http://foo/file.txt'))      | Paths.get(new URI('http://foo/file.txt'))
 
     }
@@ -1088,5 +1129,29 @@ class FileHelperTest extends Specification {
         '/file.txt'                 | Paths.get('/file.txt')
         Paths.get('/file.txt')      | Paths.get('/file.txt')
 
+    }
+
+    @Unroll
+    def 'should remove invalid double slashed'  () {
+        expect:
+        FileHelper.normalisePathSlashes0(PATH) == EXPECTED
+        where:
+        PATH                                            | EXPECTED
+        null                                            | null
+        'foo'                                           | 'foo'
+        'http://foo/bar'                                | 'http://foo/bar'
+        '/some/file'                                    | '/some/file'
+        '//some/file'                                   | '//some/file'             // <-- by design ignore multi-slash at root
+        'file:/some/file'                               | 'file:/some/file'
+        'file://some/file'                              | 'file://some/file'
+        'file:///some/file'                             | 'file:///some/file'
+        'http://example.com//path//to//resource'            | 'http://example.com/path/to/resource'
+        'https://example.com////another///path/'            | 'https://example.com/another/path/'
+        'https://example.com////another///path//'           | 'https://example.com/another/path/'
+        'https://example.com////another///path/?and////'    | 'https://example.com/another/path/?and////'
+        'https://example.com////another///path//?and////'   | 'https://example.com/another/path/?and////'
+        's3://example.com////another///path//?and////'      | 's3://example.com/another/path/?and////'
+        's3:///example.com////another///path'               | 's3:///example.com/another/path'
+        'ftp://example.com//file//path'                     | 'ftp://example.com/file/path'
     }
 }

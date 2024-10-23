@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ import java.nio.file.Path
 
 import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
-import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.extension.FilesEx
 import nextflow.util.CacheHelper
@@ -58,21 +57,16 @@ class CloudCacheStore implements CacheStore {
     /** Index file output stream */
     private OutputStream indexWriter
 
-    CloudCacheStore(UUID uniqueId, String runName, Path basePath=null) {
+    CloudCacheStore(UUID uniqueId, String runName, Path basePath) {
+        assert uniqueId, "Missing cloudcache 'uniqueId' argument"
+        assert runName, "Missing cloudcache 'runName' argument"
+        assert basePath, "Missing cloudcache 'basePath' argument"
         this.KEY_SIZE = CacheHelper.hasher('x').hash().asBytes().size()
         this.uniqueId = uniqueId
         this.runName = runName
-        this.basePath = basePath ?: defaultBasePath()
+        this.basePath = basePath
         this.dataPath = this.basePath.resolve("$uniqueId")
         this.indexPath = dataPath.resolve("index.$runName")
-    }
-
-    private Path defaultBasePath() {
-        final basePath = SysEnv.get('NXF_CLOUDCACHE_PATH')
-        if( !basePath )
-            throw new IllegalArgumentException("NXF_CLOUDCACHE_PATH must be defined when using the cloud cache store")
-
-        return basePath as Path
     }
 
     @Override

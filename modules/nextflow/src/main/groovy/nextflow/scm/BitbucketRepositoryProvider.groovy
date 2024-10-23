@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
 
     @Override
     String getContentUrl( String path ) {
-        final ref = revision ?: getMainBranch()
+        final ref = revision ? getRefForRevision(revision) : getMainBranch()
         return "${config.endpoint}/api/2.0/repositories/$project/src/$ref/$path"
     }
 
@@ -60,6 +60,35 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
 
     String getMainBranch() {
         invokeAndParseResponse(getMainBranchUrl()) ?. mainbranch ?. name
+    }
+
+    private String getRefForRevision(String revision){
+        // when the revision does not contain a slash just use as it is
+        if( !revision.contains('/') ) {
+            return revision
+        }
+        // when the revision contains a slash, it's needed to find the corresponding branch or tag name
+        // see
+        // https://github.com/nextflow-io/nextflow/issues/4599
+        // https://jira.atlassian.com/browse/BCLOUD-20223
+        try {
+            return getRefForRevision0(revision, 'branches')
+        }
+        catch (Exception e1) {
+            // if an error is reported it may be a tag name instead of a branch
+            try {
+                return getRefForRevision0(revision, 'tags')
+            }
+            // still failing, raise the previous error
+            catch (Exception e2) {
+                throw e1
+            }
+        }
+    }
+
+    private String getRefForRevision0(String revision, String type){
+        final resp = invokeAndParseResponse("${config.endpoint}/api/2.0/repositories/$project/refs/$type/$revision")
+        return resp?.target?.hash
     }
 
     @Memoized

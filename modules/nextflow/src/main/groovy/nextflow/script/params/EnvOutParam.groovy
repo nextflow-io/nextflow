@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,6 +40,12 @@ class EnvOutParam extends BaseOutParam implements OptionalParam {
         // retrieve the variable name to be used to fetch the value
         if( obj instanceof TokenVar ) {
             this.nameObj = obj.name
+        }
+        else if( obj instanceof CharSequence ) {
+            this.nameObj = obj.toString()
+        }
+        else {
+            throw new IllegalArgumentException("Unexpected environment output definition - it should be either a string or a variable identifier - offending value: ${obj?.getClass()?.getName()}")
         }
 
         return this

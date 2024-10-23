@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -79,7 +79,7 @@ class LoggerHelperTest extends Specification {
         def message =
                 """
                 startup failed:
-                _nf_script_c9a99616: 3: Unknown process block definition: `outpu` @ line 3, column 4.
+                _nf_script_c9a99616: 3: Unknown process block definition: `output` @ line 3, column 4.
                 stdout() into (A,B,C)
                 """
                 .stripIndent().leftTrim()
@@ -88,7 +88,7 @@ class LoggerHelperTest extends Specification {
         expect:
         LoggerHelper.formatStartupErrorMessage(message) ==
                 """
-                Unknown process block definition: `outpu` @ line 3, column 4.
+                Unknown process block definition: `output` @ line 3, column 4.
                 stdout() into (A,B,C)
                 """
                 .stripIndent().leftTrim()

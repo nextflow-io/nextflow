@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -179,7 +179,7 @@ class ProcessConfigTest extends Specification {
 
         when:
         config._in_file([infile:'filename.fa'])
-        config._in_val('x') .from(1)
+        config._in_val('x').setFrom(1)
         config._in_stdin()
 
         then:
@@ -208,9 +208,9 @@ class ProcessConfigTest extends Specification {
 
         when:
         config._out_stdout()
-        config._out_file(new TokenVar('file1')).into('ch1')
-        config._out_file(new TokenVar('file2')).into('ch2')
-        config._out_file(new TokenVar('file3')).into('ch3')
+        config._out_file(new TokenVar('file1')).setInto('ch1')
+        config._out_file(new TokenVar('file2')).setInto('ch2')
+        config._out_file(new TokenVar('file3')).setInto('ch3')
 
         then:
         config.outputs.size() == 4
@@ -718,6 +718,16 @@ class ProcessConfigTest extends Specification {
         process.arch name: 'linux/x86_64', target: 'zen3'
         then:
         process.arch == [name: 'linux/x86_64', target: 'zen3']
+    }
+
+    def 'should apply resourceLimits' () {
+        given:
+        def process = new ProcessConfig(Mock(BaseScript))
+
+        when:
+        process.resourceLimits time:'1h', memory: '2GB'
+        then:
+        process.resourceLimits == [time:'1h', memory: '2GB']
     }
 
 
