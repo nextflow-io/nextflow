@@ -87,9 +87,9 @@ Additionally, the [directive values](#directives) for the given task can be acce
   `stageAs`
   : Alias of `name`.
 
-`env( identifier )`
+`env( name )`
 
-: Declare an environment variable input. The received value should be a string, and it will be exported to the task environment as an environment variable given by `identifier`.
+: Declare an environment variable input. The received value should be a string, and it will be exported to the task environment as an environment variable given by `name`.
 
 `stdin`
 
@@ -154,9 +154,9 @@ Additionally, the [directive values](#directives) for the given task can be acce
   `type`
   : Type of paths returned, either `file`, `dir` or `any` (default: `any`, or `file` if the specified file name pattern contains a double star (`**`)).
 
-`env( identifier )`
+`env( name )`
 
-: Declare an environment variable output. It receives the value of the environment variable (given by the identifier) from the task environment.
+: Declare an environment variable output. It receives the value of the environment variable (given by `name`) from the task environment.
 
 : :::{versionchanged} 23.12.0-edge
   Prior to this version, if the environment variable contained multiple lines of output, the output would be compressed to a single line by converting newlines to spaces.
