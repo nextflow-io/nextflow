@@ -253,10 +253,10 @@ The following example shows how to use a closure to collect and sort all sequenc
 Channel
     .fromPath('/data/sequences.fa')
     .splitFasta( record: [id: true, sequence: true] )
-    .collectFile( name: 'result.fa', sort: { it.size() } ) {
-        it.sequence
+    .collectFile( name: 'result.fa', sort: { v -> v.size() } ) {
+        v -> v.sequence
     }
-    .view { it.text }
+    .view { fa -> fa.text }
 ```
 
 :::{warning}
@@ -1342,8 +1342,8 @@ The `by` option can be used to emit chunks of *N* lines:
 Channel
     .fromPath('/some/path/*.txt')
     .splitText( by: 10 )
-    .subscribe {
-        print it;
+    .subscribe { chunk ->
+        print chunk
         print "--- end of the chunk ---\n"
     }
 ```
@@ -1353,7 +1353,7 @@ An optional {ref}`closure <script-closure>` can be used to transform each text c
 ```groovy
 Channel
     .fromPath('/some/path/*.txt')
-    .splitText( by: 10 ) { it.toUpperCase() }
+    .splitText( by: 10 ) { v -> v.toUpperCase() }
     .view()
 ```
 
@@ -1402,16 +1402,6 @@ The `subscribe` operator invokes a custom function for each item from a source c
 ```
 
 ```{literalinclude} ../snippets/subscribe.out
-:language: console
-```
-
-The closure parameter can be defined explicitly if needed, using a name other than `it` and, optionally, the expected type:
-
-```{literalinclude} ../snippets/subscribe-with-param.nf
-:language: groovy
-```
-
-```{literalinclude} ../snippets/subscribe-with-param.out
 :language: console
 ```
 
@@ -1522,7 +1512,7 @@ The `toInteger` operator converts string values from a source channel to integer
 `toInteger` is equivalent to:
 
 ```groovy
-map { it -> it as Integer }
+map { v -> v as Integer }
 ```
 :::
 
