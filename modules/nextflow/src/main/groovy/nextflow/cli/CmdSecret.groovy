@@ -17,10 +17,14 @@
 
 package nextflow.cli
 
+import java.nio.file.Paths
+
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.Session
+import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.secret.SecretsLoader
@@ -96,6 +100,16 @@ class CmdSecret extends CmdBase implements UsageAware {
         println result.join('\n').toString()
     }
 
+    private Session createSession() {
+        // create the config
+        final config = new ConfigBuilder()
+            .setOptions(getLauncher().getOptions())
+            .setBaseDir(Paths.get('.'))
+            .build()
+
+        return new Session(config)
+    }
+
     /**
      * Main command entry point
      */
@@ -108,6 +122,8 @@ class CmdSecret extends CmdBase implements UsageAware {
 
         // setup the plugins system and load the secrets provider
         Plugins.init()
+//        createSession()
+        Plugins.load(Map.of())
         provider = SecretsLoader.instance.load()
 
         // run the command
