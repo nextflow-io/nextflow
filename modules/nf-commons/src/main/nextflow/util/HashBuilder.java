@@ -18,6 +18,7 @@ package nextflow.util;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -44,6 +45,7 @@ import nextflow.Global;
 import nextflow.ISession;
 import nextflow.extension.Bolts;
 import nextflow.extension.FilesEx;
+import nextflow.file.ETagAwareFile;
 import nextflow.file.FileHolder;
 import nextflow.io.SerializableMarker;
 import org.slf4j.Logger;
@@ -413,6 +415,11 @@ public class HashBuilder {
      */
     static private Hasher hashFileContent( Hasher hasher, Path path ) {
 
+        // use etag if available
+        if( path instanceof ETagAwareFile )
+            hasher.putBytes(((ETagAwareFile)path).getETag().getBytes(StandardCharsets.UTF_8));
+
+        // otherwise compute checksum manually
         OutputStream output = Funnels.asOutputStream(hasher);
         try {
             Files.copy(path, output);
