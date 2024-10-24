@@ -533,10 +533,13 @@ class BashWrapperBuilder {
     private String getCondaActivateSnippet() {
         if( !condaEnv )
             return null
-        def result = "# conda environment\n"
-        result += 'source $(conda info --json | awk \'/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }\')'
-        result += "/bin/activate ${Escape.path(condaEnv)}\n"
-        return result
+        def command = 'source $(conda info --json | awk \'/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }\')/bin/activate'
+        if( condaConfig && condaConfig.useMicromamba() )
+            command = 'eval "$(micromamba shell hook --shell bash)" && micromamba activate'
+        return """\
+            # conda environment
+            ${command} ${Escape.path(condaEnv)}
+            """.stripIndent()
     }
 
     private String getSpackActivateSnippet() {
