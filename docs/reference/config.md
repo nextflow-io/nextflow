@@ -472,31 +472,34 @@ Read the {ref}`container-charliecloud` page to learn more about how to use Charl
 
 ## `conda`
 
-The `conda` scope controls the creation of a Conda environment by the Conda package manager.
+The `conda` scope controls the creation of Conda environments by the Conda package manager.
 
 The following settings are available:
 
 `conda.enabled`
-: Enable Conda execution (default: `false`).
+: Enables Conda execution (default: `false`).
 
 `conda.cacheDir`
-: Defines the path where Conda environments are stored. When using a compute cluster make sure to provide a shared file system path accessible from all compute nodes.
+: Defines the path where Conda environments are stored. Ensure the path is accessible from all compute nodes when using a shared file system.
+
+`conda.channels`
+: Defines the Conda channels that can be used to resolve Conda packages. Channels can be defined as a list (e.g., `['bioconda','conda-forge']`) or a comma separated list string (e.g., `'bioconda,conda-forge'`). Channel priority decreases from left to right.
 
 `conda.createOptions`
-: Defines any extra command line options supported by the `conda create` command. For details see the [Conda documentation](https://docs.conda.io/projects/conda/en/latest/commands/create.html).
+: Defines extra command line options supported by the `conda create` command. See the [Conda documentation](https://docs.conda.io/projects/conda/en/latest/commands/create.html) for more information.
 
 `conda.createTimeout`
 : Defines the amount of time the Conda environment creation can last. The creation process is terminated when the timeout is exceeded (default: `20 min`).
 
 `conda.useMamba`
-: Uses the `mamba` binary instead of `conda` to create the Conda environments. For details see the [Mamba documentation](https://github.com/mamba-org/mamba).
+: Uses the `mamba` binary instead of `conda` to create the Conda environments. See the [Mamba documentation](https://github.com/mamba-org/mamba) for more information about Mamba.
 
 `conda.useMicromamba`
 : :::{versionadded} 22.05.0-edge
   :::
-: uses the `micromamba` binary instead of `conda` to create the Conda environments. For details see the [Micromamba documentation](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html).
+: Uses the `micromamba` binary instead of `conda` to create Conda environments. See the [Micromamba documentation](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html) for more information about Micromamba.
 
-Read the {ref}`conda-page` page to learn more about how to use Conda environments with Nextflow.
+See {ref}`conda-page` for more information about using Conda environments with Nextflow.
 
 (config-dag)=
 
