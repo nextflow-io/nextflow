@@ -230,7 +230,38 @@ class GoogleBatchMachineTypeSelector {
             return findFirstValidSize(requested, [4,8])
         }
 
-        // other special families the user must provide a valid size
+        if( machineType.family == "a2" ) {
+            if ( machineType.type == 'a2-highgpu-1g' )
+                return findFirstValidSize(requested, [1, 2, 4, 8])
+            if ( machineType.type == 'a2-highgpu-2g' )
+                return findFirstValidSize(requested, [2, 4, 8])
+            if ( machineType.type == 'a2-highgpu-4g' )
+                return findFirstValidSize(requested, [4, 8])
+            if ( machineType.type == 'a2-highgpu-8g' || machineType.type == 'a2-megagpu-16g' )
+                return findFirstValidSize(requested, [8])
+        }
+
+        if( machineType.family == "g2" ) {
+            if( machineType.type == 'g2-standard-4' || machineType.type == 'g2-standard-8' ||
+                machineType.type == 'g2-standard-12' || machineType.type == 'g2-standard-16' ||
+                machineType.type == 'g2-standard-32' )
+                return findFirstValidSize(requested, [1])
+            if( machineType.type == 'g2-standard-24' )
+                return findFirstValidSize(requested, [2])
+            if( machineType.type == 'g2-standard-48' )
+                return findFirstValidSize(requested, [4])
+            if( machineType.type == 'g2-standard-96' )
+                return findFirstValidSize(requested, [8])
+        }
+
+        // These families have a local SSD already attached and is not configurable.
+        if( ((machineType.family == "c3" || machineType.family == "c3d") && machineType.type.endsWith("-lssd")) ||
+            machineType.family == "a3" ||
+            machineType.type.startsWith("a2-ultragpu-") )
+            return new MemoryUnit( 0 )
+
+        // For other special families, the user must provide a valid size. If a family does not
+        // support local disks, then Google Batch shall return an appropriate error.
         return requested
     }
 

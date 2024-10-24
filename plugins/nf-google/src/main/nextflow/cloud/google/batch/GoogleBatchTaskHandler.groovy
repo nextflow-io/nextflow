@@ -349,6 +349,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             // When using local SSD not all the disk sizes are valid and depends on the machine type
             if( disk?.type == 'local-ssd' && machineType ) {
                 final validSize = GoogleBatchMachineTypeSelector.INSTANCE.findValidLocalSSDSize(disk.request, machineType)
+                if( validSize.toBytes() == 0 ) {
+                    disk = new DiskResource(request: 0)
+                    log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - ${machineType.type} does not allow configuring local disks"
+                }
                 if( validSize != disk.request ) {
                     disk = new DiskResource(request: validSize, type: 'local-ssd')
                     log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - adjusting local disk size to: $validSize"
