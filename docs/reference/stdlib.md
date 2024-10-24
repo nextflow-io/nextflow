@@ -12,175 +12,168 @@ This page describes the built-in constants, functions, and types provided by Nex
 
 The following constants are globally available in a Nextflow script:
 
-`baseDir`
+`baseDir: Path`
 : :::{deprecated} 20.04.0
   :::
 : Alias of `workflow.projectDir`.
 
-`launchDir`
+`launchDir: Path`
 : Alias of `workflow.launchDir`.
 
-`moduleDir`
+`moduleDir: Path`
 : The directory where a module script is located (equivalent to `projectDir` if used in the main script).
 
 `nextflow`
-: Map of Nextflow runtime information.
+: Map of Nextflow runtime information. The following properties are available:
 
-  `nextflow.build`
+  `build: int`
   : Nextflow runtime build number.
 
-  `nextflow.timestamp`
+  `timestamp: String`
   : Nextflow runtime compile timestamp.
 
-  `nextflow.version`
-  : Nextflow runtime version number.
-
-  `nextflow.version.matches()`
-  : Check whether the Nextflow runtime satisfies a version requirement.
-
-  : The version requirement string can be prefixed with the usual comparison operators:
-    - `=` or `==`: equal to
-    - `<` (`<=`): less than (or equal to)
-    - `>` (`>=`): greater than (or equal to)
-    - `!=` or `<>`: not equal
-
-    For example:
-
-    ```groovy
-    if( !nextflow.version.matches('>=23.10') ) {
-        error "This workflow requires Nextflow version 23.10 or greater -- You are running version $nextflow.version"
-    }
-    ```
-
-  : Alternatively, the version can be postfixed with `+`, which is similar to `==` but also allows the last version part to be greater. For example, `23.10.1+` is satisfied by `23.10.1` and `23.10.2`, but not `23.11.x` or `23.09.x`. Additionally, `23.10.+` is equivalent to `23.10.0+`. This operator is a useful way to enforce a specific version while allowing for newer patch releases.
+  `version: VersionNumber`
+  : Nextflow runtime version number. See {ref}`VersionNumber <stdlib-types-versionnumber>` for more information.
 
 `params`
 : Map of workflow parameters specified in the config file or as command line options.
 
-`projectDir`
+`projectDir: Path`
 : Alias of `workflow.projectDir`.
 
-`secrets`
+`secrets: Map`
 : :::{versionadded} 24.02.0-edge
   :::
-: Dictionary like object holding workflow secrets. Read the {ref}`secrets-page` page for more information.
+: Map of pipeline secrets. See {ref}`secrets-page` for more information.
 
-`workDir`
+`workDir: Path`
 : Alias of `workflow.workDir`.
 
 `workflow`
-: Map of workflow runtime information.
+: Map of workflow runtime information. The following properties are available:
 
-  `workflow.commandLine`
+  `commandLine: String`
   : Command line as entered by the user to launch the workflow execution.
 
-  `workflow.commitId`
+  `commitId: String`
   : Git commit ID of the executed workflow repository.
   : When providing a Git tag, branch name, or commit hash using the `-r` CLI option, the associated `workflow.commitId` is also populated.
 
-  `workflow.complete`
+  `complete: OffsetDateTime`
   : *Available only in the `workflow.onComplete` handler*
   : Timestamp of workflow when execution is completed.
 
-  `workflow.configFiles`
+  `configFiles: List<Path>`
   : Configuration files used for the workflow execution.
 
-  `workflow.container`
-  : Docker image used to run workflow tasks. When more than one image is used it returns a map object containing `[process name, image name]` pair entries.
+  `container: String | Map<String,String>`
+  : Docker image used to run workflow tasks, or a map of process names to process containers when multiple images are used.
 
-  `workflow.containerEngine`
+  `containerEngine: String`
   : Returns the name of the container engine (e.g. docker or singularity) or null if no container engine is enabled.
 
-  `workflow.duration`
+  `duration: Duration`
   : *Available only in the `workflow.onComplete` handler*
   : Time elapsed to complete workflow execution.
 
-  `workflow.errorMessage`
+  `errorMessage: String`
   : *Available only in the `workflow.onComplete` and `workflow.onError` handlers*
   : Error message of the task that caused the workflow execution to fail.
 
-  `workflow.errorReport`
+  `errorReport: String`
   : *Available only in the `workflow.onComplete` and `workflow.onError` handlers*
   : Detailed error of the task that caused the workflow execution to fail.
 
-  `workflow.exitStatus`
+  `exitStatus: int`
   : *Available only in the `workflow.onComplete` and `workflow.onError` handlers*
   : Exit status of the task that caused the workflow execution to fail.
 
-  `workflow.failOnIgnore`
+  `failOnIgnore: boolean`
   : :::{versionadded} 24.05.0-edge
     :::
   : Whether the `workflow.failOnIgnore` config option was enabled.
   : See also: {ref}`process-error-strategy`
 
-  `workflow.fusion.enabled`
-  : Whether Fusion is enabled.
+  `fusion`
+  : Map of Fusion runtime information. The following properties are available:
 
-  `workflow.fusion.version`
-  : Fusion version in use.
+  : `enabled: boolean`
+    : Whether Fusion is enabled.
 
-  `workflow.homeDir`
+  : `version: String`
+    : The Fusion version being used.
+
+  `homeDir: Path`
   : User system home directory.
 
-  `workflow.launchDir`
+  `launchDir: Path`
   : Directory where the workflow was launched.
 
-  `workflow.manifest`
-  : Entries of the workflow manifest.
+  `manifest`
+  : Map of properties corresponding to the {ref}`config-manifest` config scope.
 
-  `workflow.preview`
+  `onComplete( action: Closure )`
+  : Define an action to take when the workflow completes (whether successful or not).
+
+  `onError( action: Closure )`
+  : Define an action to take if the workflow is terminated due to a runtime error or task failure.
+
+  `preview: boolean`
   : :::{versionadded} 24.04.0
     :::
   : Whether the current workflow run is a preview run.
 
-  `workflow.profile`
-  : Used configuration profile.
+  `profile: String`
+  : Comma-separated list of active configuration profiles.
 
-  `workflow.projectDir`
+  `projectDir: Path`
   : Directory where the workflow project is located.
 
-  `workflow.repository`
+  `repository: String`
   : Project repository Git remote URL.
 
-  `workflow.resume`
+  `resume: boolean`
   : Returns `true` whenever the current instance is resumed from a previous execution.
 
-  `workflow.revision`
+  `revision: String`
   : Git branch/tag of the executed workflow repository.
   : When providing a Git tag or branch name using the `-r` CLI option, the `workflow.revision` is also populated.
 
-  `workflow.runName`
+  `runName: String`
   : Mnemonic name assigned to this execution instance.
 
-  `workflow.scriptFile`
+  `scriptFile: Path`
   : Project main script file path.
 
-  `workflow.scriptId`
+  `scriptId: String`
   : Project main script unique hash ID.
 
-  `workflow.scriptName`
+  `scriptName: String`
   : Project main script file name.
 
-  `workflow.sessionId`
+  `sessionId: UUID`
   : Unique identifier (UUID) associated to current execution.
 
-  `workflow.start`
+  `start: OffsetDateTime`
   : Timestamp of workflow at execution start.
 
-  `workflow.stubRun`
+  `stubRun: boolean`
   : Returns `true` whenever the current instance is a stub-run execution .
 
-  `workflow.success`
+  `success: boolean`
   : *Available only in the `workflow.onComplete` and `workflow.onError` handlers*
   : Reports if the execution completed successfully.
 
-  `workflow.userName`
+  `userName: String`
   : User system account name.
 
-  `workflow.wave.enabled`
-  : Whether Wave is enabled.
+  `wave`
+  : Map of Wave runtime information. The following properties are available:
 
-  `workflow.workDir`
+  : `enabled: boolean`
+    : Whether Wave is enabled.
+
+  `workDir: Path`
   : The directory where task temporary files are stored.
 
 (stdlib-functions)=
@@ -189,106 +182,113 @@ The following constants are globally available in a Nextflow script:
 
 The following functions are available in Nextflow scripts:
 
-`branchCriteria( closure )`
+`branchCriteria( criteria: Closure ) -> Closure`
 : Create a branch criteria to use with the {ref}`operator-branch` operator.
 
-`error( message = null )`
+`error( message: String = null )`
 : Throw a script runtime error with an optional error message.
 
-`exit( exitCode = 0, message = null )`
+`exit( exitCode: int = 0, message: String = null )`
 : :::{deprecated} 22.06.0-edge
   Use `error()` instead
   :::
 : Stop the pipeline execution and return an exit code and optional error message.
 
-`file( filePattern, [options] )`
-: Get one or more files from a path or glob pattern. Returns a [Path](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/Path.html) or list of Paths if there are multiple files.
+`file( filePattern: String, [options] ) -> Path | List<Path>`
+: Get one or more files from a path or glob pattern. Returns a [Path](#path) or list of Paths if there are multiple files.
 
 : The following options are available:
 
-  `checkIfExists`
+  `checkIfExists: boolean`
   : When `true`, throws an exception if the specified path does not exist in the file system (default: `false`)
 
-  `followLinks`
+  `followLinks: boolean`
   : When `true`, follows symbolic links when traversing a directory tree, otherwise treats them as files (default: `true`)
 
-  `glob`
+  `glob: boolean`
   : When `true`, interprets characters `*`, `?`, `[]` and `{}` as glob wildcards, otherwise handles them as normal characters (default: `true`)
 
-  `hidden`
+  `hidden: boolean`
   : When `true`, includes hidden files in the resulting paths (default: `false`)
 
-  `maxDepth`
+  `maxDepth: int`
   : Maximum number of directory levels to visit (default: *no limit*)
 
-  `type`
+  `type: String`
   : Type of paths returned, can be `'file'`, `'dir'` or `'any'` (default: `'file'`)
 
 : See also: {ref}`Channel.fromPath <channel-path>`.
 
-`files( filePattern, [options] )`
-: Convenience method for `file()` that always returns a list.
+`files( filePattern: String, [options] ) -> List<Path>`
+: Convenience function for `file()` that always returns a list.
 
-`groupKey( key, size )`
+`groupKey( key, size: int ) -> GroupKey`
 : Create a grouping key to use with the {ref}`operator-grouptuple` operator.
 
-`multiMapCriteria( closure )`
+`multiMapCriteria( criteria: Closure ) -> Closure`
 : Create a multi-map criteria to use with the {ref}`operator-multiMap` operator.
 
-`sendMail( params )`
-: Send an email. See {ref}`mail-page`.
+`sendMail( [options] )`
+: Send an email. See {ref}`mail-page` for more information.
 
-`tuple( collection )`
+`tuple( collection: List ) -> ArrayTuple`
 : Create a tuple object from the given collection.
 
-`tuple( ... args )`
+`tuple( args... ) -> ArrayTuple`
 : Create a tuple object from the given arguments.
 
-`workflow.onComplete( closure )`
-: Define an action to take when the workflow completes (whether successful or not). Refer to the `workflow` implicit variable to see which additional properties are available in the completion handler.
+## Groovy and Java classes
 
-`workflow.onError( closure )`
-: Define an action to take if the workflow is terminated due to a runtime error or task failure. Refer to the `workflow` implicit variable to see which additional properties are available in the error handler.
+Any Groovy or Java class can be used in a Nextflow script. The following classes are imported by default:
 
-(stdlib-default-imports)=
-
-## Default imports
-
-The following classes are imported by default in Nextflow scripts:
-
+- `groovy.lang.*`
+- `groovy.util.*`
 - `java.io.*`
 - `java.lang.*`
 - `java.math.BigDecimal`
 - `java.math.BigInteger`
 - `java.net.*`
-- `java.nio.file.Path`
 - `java.util.*`
-- `groovy.lang.*`
-- `groovy.util.*`
+
+All other classes must be referenced by their fully-qualified name:
+
+```groovy
+def vals = [1, 2, 3]
+println groovy.json.JsonOutput.toJson(vals)
+```
+
+The following sections describe the standard types provided by Nextflow.
+
+## Bag
+
+A bag is an unordered collection.
+
+The following operators are supported for bags:
+
+`+ : (Bag, Bag) -> Bag`
+: Concatenates two bags.
+
+`in, !in : (?, Bag) -> boolean`
+: Given a value and a bag, returns `true` if the bag contains the value (or not).
+
+See also: [Iterable](#iterable)
 
 ## Channel
 
-The `Channel` class provides the channel factory methods. See {ref}`channel-factory` for more information.
+See {ref}`channel-page` for an overview of channels. See {ref}`channel-factory` and {ref}`operator-page` for the available functions for creating and manipulating channels.
 
 (stdlib-types-duration)=
 
 ## Duration
 
-A `Duration` represents some duration of time.
+A Duration represents a duration of time with millisecond precision.
 
-You can create a duration by adding a time unit suffix to an integer, e.g. `1.h`. The following suffixes are available:
-
-| Unit                            | Description  |
-| ------------------------------- | ------------ |
-| `ms`, `milli`, `millis`         | Milliseconds |
-| `s`, `sec`, `second`, `seconds` | Seconds      |
-| `m`, `min`, `minute`, `minutes` | Minutes      |
-| `h`, `hour`, `hours`            | Hours        |
-| `d`, `day`, `days`              | Days         |
-
-You can also create a duration with `Duration.of()`:
+A Duration can be created by adding a unit suffix to an integer (e.g. `1.h`), or more explicitly with `Duration.of()`:
 
 ```groovy
+// integer with suffix
+oneDay = 24.h
+
 // integer value (milliseconds)
 oneSecond = Duration.of(1000)
 
@@ -298,6 +298,16 @@ oneHour = Duration.of('1h')
 // complex string value
 complexDuration = Duration.of('1day 6hours 3minutes 30seconds')
 ```
+
+The following suffixes are available:
+
+| Unit                            | Description  |
+| ------------------------------- | ------------ |
+| `ms`, `milli`, `millis`         | Milliseconds |
+| `s`, `sec`, `second`, `seconds` | Seconds      |
+| `m`, `min`, `minute`, `minutes` | Minutes      |
+| `h`, `hour`, `hours`            | Hours        |
+| `d`, `day`, `days`              | Days         |
 
 Durations can be compared like numbers, and they support basic arithmetic operations:
 
@@ -312,30 +322,280 @@ assert a * 2 == b
 assert b / 2 == a
 ```
 
-The following methods are available for a `Duration` object:
+The following methods are available for a Duration:
 
-`getDays()`, `toDays()`
+`toDays() -> long`
 : Get the duration value in days (rounded down).
 
-`getHours()`, `toHours()`
+`toHours() -> long`
 : Get the duration value in hours (rounded down).
 
-`getMillis()`, `toMillis()`
+`toMillis() -> long`
 : Get the duration value in milliseconds.
 
-`getMinutes()`, `toMinutes()`
+`toMinutes() -> long`
 : Get the duration value in minutes (rounded down).
 
-`getSeconds()`, `toSeconds()`
+`toSeconds() -> long`
 : Get the duration value in seconds (rounded down).
+
+## Iterable
+
+An iterable is a common interface for collections that support iteration. The following types are iterables:
+
+- [Bag](#bag)
+- [List](#list)
+- [Set](#set)
+
+Values of these types can be passed to any parameter of type `Iterable`, and they can use all of the methods described below.
+
+The following methods are available for iterables:
+
+`any( condition: Closure ) -> boolean`
+: Returns `true` if any value in the iterable satisfies the given condition.
+
+`collect( transform: Closure ) -> List`
+: Transforms each value in the iterable with the given closure and collects the values into a list.
+
+`collectMany( transform: Closure ) -> List`
+: Transforms each value in the iterable into a collection with the given closure and concatenates the resulting collections into a list.
+
+`contains( value ) -> boolean`
+: Returns `true` if the iterable contains the given value.
+
+`each( action: Closure )`
+: Invoke the given closure for each value in the iterable.
+
+`every( condition: Closure ) -> boolean`
+: Returns `true` if every value in the iterable satisfies the given condition.
+
+`findAll( condition: Closure ) -> Iterable`
+: Returns the values in the iterable that satisfy the given condition.
+
+`groupBy( transform: Closure ) -> Map`
+: Collect the values of an iterable into groups based on a matching key. The closure should return the key for a given value.
+
+`inject( accumulator: Closure ) -> ?`
+: Apply the given accumulator to each value in the iterable and return the final accumulated value. The closure should accept two parameters, corresponding to the current accumulated value and the current iterable value, and return the next accumulated value.
+: The first value from the iterable is used as the initial accumulated value.
+
+`inject( initialValue: ?, accumulator: Closure ) -> ?`
+: Apply the given accumulator to each value in the iterable and return the final accumulated value. The closure should accept two parameters, corresponding to the current accumulated value and the current iterable value, and return the next accumulated value.
+
+`isEmpty() -> boolean`
+: Returns `true` if the iterable is empty.
+
+`join( separator: String = '' ) -> String`
+: Concatenates the string representation of each value in the iterable, with the given string as the separator between each value.
+
+`max() -> ?`
+: Returns the maximum value in the iterable.
+
+`max( comparator: Closure ) -> ?`
+: Returns the maximum value in the iterable according to the given closure.
+: The closure should follow the same semantics as the closure parameter of `sort()`.
+
+`min() -> ?`
+: Returns the maximum value in the iterable.
+
+`min( comparator: Closure ) -> ?`
+: Returns the maximum value in the iterable according to the given closure.
+: The closure should follow the same semantics as the closure parameter of `sort()`.
+
+`size() -> int`
+: Returns the number of values in the iterable.
+
+`sort() -> List`
+: Returns a sorted list of the iterable's values.
+
+`sort( comparator: Closure ) -> List`
+: Returns a list of the iterable's values, sorted according to the given closure.
+: The closure should either accept one parameter and transform each value into the value that will be used for comparisons, or accept two parameters and define how to compare two values.
+
+`sum() -> ?`
+: Returns the sum of the values in the iterable. The values should support the `+` operator.
+
+`toList() -> List`
+: Converts the iterable to a list.
+: :::{danger}
+  Converting an unordered collection to a list can lead to non-deterministic behavior. See {ref}`cache-nondeterministic-inputs` for more information.
+  :::
+
+`toSet() -> Set`
+: Converts the iterable to a set. Duplicate values are excluded.
+
+`unique() -> Iterable`
+: Returns a shallow copy of the iterable with duplicate values excluded.
+
+`unique( comparator: Closure ) -> Iterable`
+: Returns a shallow copy of the iterable with duplicate values excluded.
+: The closure should follow the same semantics as the closure parameter of `sort()`.
+
+:::{note}
+Iterables in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Iterable.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/lang/Iterable.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
+:::
+
+(stdlib-types-list)=
+
+## List
+
+A list is an unordered collection of elements. See {ref}`script-list` for an overview of lists.
+
+The following operators are supported for lists:
+
+`+ : (List, List) -> List`
+: Concatenates two lists.
+
+`* : (List, int) -> List`
+: Given a list and an integer *n*, repeats the list *n* times.
+
+`[] : (List, int) -> char`
+: Given a list and an index, returns the element at the given index in the list, or `null` if the index is out of range.
+
+`in, !in : (?, List) -> boolean`
+: Given a value and a list, returns `true` if the list contains the value (or not).
+
+The following methods are available for a list:
+
+`collate( size: int, keepRemainder: boolean = true ) -> List`
+: Collates the list into a list of sub-lists of length `size`. If `keepRemainder` is `true`, any remaining elements are included as a partial sub-list, otherwise they are excluded.
+
+: For example:
+  ```groovy
+  assert [1, 2, 3, 4, 5, 6, 7].collate(3)        == [[1, 2, 3], [4, 5, 6], [7]]
+  assert [1, 2, 3, 4, 5, 6, 7].collate(3, false) == [[1, 2, 3], [4, 5, 6]]
+  ```
+
+`collate( size: int, step: int, keepRemainder: boolean = true ) -> List`
+: Collates the list into a list of sub-lists of length `size`, stepping through the list `step` elements for each sub-list. If `keepRemainder` is `true`, any remaining elements are included as a partial sub-list, otherwise they are excluded.
+
+: For example:
+  ```groovy
+  assert [1, 2, 3, 4].collate(3, 1)        == [[1, 2, 3], [2, 3, 4], [3, 4], [4]]
+  assert [1, 2, 3, 4].collate(3, 1, false) == [[1, 2, 3], [2, 3, 4]]
+  ```
+
+`find( condition: Closure ) -> ?`
+: Returns the first value in the list that satisfies the given condition.
+
+`first() -> ?`
+: Returns the first element in the list. Raises an error if the list is empty.
+
+`getIndices() -> List`
+: Returns the list of integers from 0 to *n - 1*, where *n* is the number of elements in the list.
+
+`head() -> ?`
+: Equivalent to `first()`.
+
+`indexOf( value ) -> int`
+: Returns the index of the first occurrence of the given value in the list, or -1 if the list does not contain the value.
+
+`init() -> List`
+: Returns a shallow copy of the list with the last element excluded.
+
+`last() -> ?`
+: Returns the last element in the list. Raises an error if the list is empty.
+
+`reverse() -> List`
+: Returns a shallow copy of the list with the elements reversed.
+
+`subList( fromIndex: int, toIndex: int ) -> List`
+: Returns the portion of the list between the given `fromIndex` (inclusive) and `toIndex` (exclusive).
+
+`tail() -> List`
+: Returns a shallow copy of the list with the first element excluded.
+
+`take( n: int ) -> List`
+: Returns the first *n* elements of the list.
+
+`takeWhile( condition: Closure ) -> List`
+: Returns the longest prefix of the list where each element satisfies the given condition.
+
+`withIndex() -> List`
+: Returns a list of 2-tuples corresponding to the value and index of each element in the list.
+
+See also: [Iterable](#iterable)
+
+:::{note}
+Lists in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/List.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/List.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
+:::
+
+(stdlib-types-map)=
+
+## Map
+
+A map "maps" keys to values. Each key can map to at most one value -- a map cannot contain duplicate keys. See {ref}`script-map` for an overview of maps.
+
+The following operators are supported for maps:
+
+`+ : (Map, Map) -> Map`
+: Concatenates two maps. If a key exists in both maps, the mapping from the right-hand side is used.
+
+`[] : (Map, ?) -> ?`
+: Given a map and a key, returns the value for the given key in the map, or `null` if the key is not in the map.
+
+`in, !in : (?, Map) -> boolean`
+: Given a key and a map, returns `true` if the map contains the key (or not).
+
+The following methods are available for a map:
+
+`any( condition: Closure ) -> boolean`
+: Returns `true` if any key-value pair in the map satisfies the given condition. The closure should accept two parameters corresponding to the key and value of an entry.
+
+`containsKey( key ) -> boolean`
+: Returns `true` if the map contains a mapping for the given key.
+
+`containsValue( value ) -> boolean`
+: Returns `true` if the map maps one or more keys to the given value.
+
+`each( action: Closure )`
+: Invoke the given closure for each key-value pair in the map. The closure should accept two parameters corresponding to the key and value of an entry.
+
+`entrySet() -> Set`
+: Returns a set of the key-value pairs in the map.
+
+`every( condition: Closure ) -> boolean`
+: Returns `true` if every key-value pair in the map satisfies the given condition. The closure should accept two parameters corresponding to the key and value of an entry.
+
+`isEmpty() -> boolean`
+: Returns `true` if the map is empty.
+
+`keySet() -> Set`
+: Returns a set of the keys in the map.
+
+`size() -> int`
+: Returns the number of key-value pairs in the map.
+
+`subMap( keys: Iterable ) -> Map`
+: Returns a sub-map containing the given keys.
+
+`values() -> Bag`
+: Returns a collection of the values in the map.
+
+:::{note}
+Maps in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Map.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/Map.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
+:::
 
 (stdlib-types-memoryunit)=
 
 ## MemoryUnit
 
-A `MemoryUnit` represents a quantity of bytes.
+A MemoryUnit represents a quantity of bytes.
 
-You can create a memory unit by adding a unit suffix to an integer, e.g. `1.GB`. The following suffixes are available:
+A MemoryUnit can be created by adding a unit suffix to an integer (e.g. `1.GB`), or more explicitly with `MemoryUnit.of()`:
+
+```groovy
+// integer with suffix
+oneMegabyte = 1.MB
+
+// integer value (bytes)
+oneKilobyte = MemoryUnit.of(1024)
+
+// string value
+oneGigabyte = MemoryUnit.of('1 GB')
+```
+
+The following suffixes are available:
 
 | Unit | Description |
 | ---- | ----------- |
@@ -352,16 +612,6 @@ You can create a memory unit by adding a unit suffix to an integer, e.g. `1.GB`.
 Technically speaking, a kilobyte is equal to 1000 bytes, whereas 1024 bytes is called a "kibibyte" and abbreviated as "KiB", and so on for the other units. In practice, however, kilobyte is commonly understood to mean 1024 bytes, and Nextflow follows this convention in its implementation as well as this documentation.
 :::
 
-You can also create a memory unit with `MemoryUnit.of()`:
-
-```groovy
-// integer value (bytes)
-oneKilobyte = MemoryUnit.of(1024)
-
-// string value
-oneGigabyte = MemoryUnit.of('1 GB')
-```
-
 Memory units can be compared like numbers, and they support basic arithmetic operations:
 
 ```groovy
@@ -377,74 +627,97 @@ assert b / 2 == a
 
 The following methods are available for a `MemoryUnit` object:
 
-`getBytes()`, `toBytes()`
+`toBytes() -> long`
 : Get the memory value in bytes (B).
 
-`getGiga()`, `toGiga()`
+`toGiga() -> long`
 : Get the memory value in gigabytes (rounded down), where 1 GB = 1024 MB.
 
-`getKilo()`, `toKilo()`
+`toKilo() -> long`
 : Get the memory value in kilobytes (rounded down), where 1 KB = 1024 B.
 
-`getMega()`, `toMega()`
+`toMega() -> long`
 : Get the memory value in megabytes (rounded down), where 1 MB = 1024 KB.
 
-`toUnit( unit )`
+`toUnit( unit: String ) -> long`
 : Get the memory value in terms of a given unit (rounded down). The unit can be one of: `'B'`, `'KB'`, `'MB'`, `'GB'`, `'TB'`, `'PB'`, `'EB'`, `'ZB'`.
 
 (stdlib-types-path)=
 
 ## Path
 
-The `file()` method returns a [Path](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/Path.html), so any method defined for Path can also be used in a Nextflow script.
+A Path is a handle for hierarchichal paths such as local files and directories, HTTP/FTP URLs, and object storage paths (e.g. Amazon S3).
+
+The `file()` function can be used to get a Path for a given filename or URL:
+
+```groovy
+def hello = file('hello.txt')
+println hello.text
+```
+
+The following sections describe the methods that are available for paths.
+
+:::{note}
+Paths in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/Path.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/nio/file/Path.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
+:::
+
+### Operators
+
+The following operators are supported for paths:
+
+`/ : (Path, String) -> Path`
+: Resolve a relative file name against a directory path.
+
+`<< : (Path, String)`
+: Appends a string value to a file without replacing existing content. Equivalent to `append()`.
 
 ### Getting attributes
 
 The following methods are useful for getting attributes of a file:
 
-`exists()`
+`exists() -> boolean`
 : Returns `true` if the file exists.
 
-`getBaseName()`
+`getBaseName() -> String`
 : Gets the file name without its extension, e.g. `/some/path/file.tar.gz` -> `file.tar`.
 
-`getExtension()`
+`getExtension() -> String`
 : Gets the file extension, e.g. `/some/path/file.txt` -> `txt`.
 
-`getName()`
+`getName() -> String`
 : Gets the file name, e.g. `/some/path/file.txt` -> `file.txt`.
 
-`getSimpleName()`
+`getSimpleName() -> String`
 : Gets the file name without any extension, e.g. `/some/path/file.tar.gz` -> `file`.
 
-`getParent()`
+`getParent() -> Path`
 : Gets the file parent path, e.g. `/some/path/file.txt` -> `/some/path`.
 
-`getScheme()`
+`getScheme() -> String`
 : Gets the file URI scheme, e.g. `s3://some-bucket/foo.txt` -> `s3`.
 
-`isDirectory()`
+`isDirectory() -> boolean`
 : Returns `true` if the file is a directory.
 
-`isEmpty()`
+`isEmpty() -> boolean`
 : Returns `true` if the file is empty or does not exist.
 
-`isFile()`
+`isFile() -> boolean`
 : Returns `true` if it is a regular file (i.e. not a directory).
 
-`isHidden()`
+`isHidden() -> boolean`
 : Returns `true` if the file is hidden.
 
-`isLink()`
+`isLink() -> boolean`
 : Returns `true` if the file is a symbolic link.
 
-`lastModified()`
+`lastModified() -> long`
 : Returns the file last modified timestamp in Unix time (i.e. milliseconds since January 1, 1970).
 
-`size()`
+`size() -> long`
 : Gets the file size in bytes.
 
-`toUriString()`
+`toUriString() -> String`
 : Gets the file path along with the protocol scheme:
   ```groovy
   def ref = file('s3://some-bucket/foo.txt')
@@ -458,72 +731,72 @@ The following methods are useful for getting attributes of a file:
 
 The following methods are available for reading files:
 
-`eachByte( closure )`
+`eachByte( action: Closure )`
 : Iterates over the file byte by byte, applying the specified {ref}`closure <script-closure>`.
 
-`eachLine( closure )`
+`eachLine( action: Closure )`
 : Iterates over the file line by line, applying the specified {ref}`closure <script-closure>`.
 
-`getBytes()`
+`getBytes() -> byte[]`
 : Returns the file content as a byte array.
 
-`getText()`
+`getText() -> String`
 : Returns the file content as a string value.
 
-`newInputStream()`
+`newInputStream() -> InputStream`
 : Returns an [InputStream](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/InputStream.html) object to read a binary file.
 
-`newReader()`
+`newReader() -> Reader`
 : Returns a [Reader](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/Reader.html) object to read a text file.
 
-`readLines()`
+`readLines() -> List<String>`
 : Reads the file line by line and returns the content as a list of strings.
 
-`withInputStream( closure )`
+`withInputStream( action: Closure )`
 : Opens a file for reading and lets you access it with an [InputStream](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/InputStream.html) object.
 
-`withReader( closure )`
+`withReader( action: Closure )`
 : Opens a file for reading and lets you access it with a [Reader](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/Reader.html) object.
 
 ### Writing
 
 The following methods are available for writing to files:
 
-`append( text )`
+`append( text: String )`
 : Appends a string value to a file without replacing existing content.
 
-`newOutputStream()`
+`newOutputStream() -> OutputStream`
 : Creates an [OutputStream](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/OutputStream.html) object that allows you to write binary data to a file.
 
-`newPrintWriter()`
+`newPrintWriter() -> PrintWriter`
 : Creates a [PrintWriter](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/PrintWriter.html) object that allows you to write formatted text to a file.
 
-`newWriter()`
+`newWriter() -> Writer`
 : Creates a [Writer](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/Writer.html) object that allows you to save text data to a file.
 
-`setBytes( bytes )`
+`setBytes( bytes: byte[] )`
 : Writes a byte array to a file. Equivalent to setting the `bytes` property.
 
-`setText( text )`
+`setText( text: String )`
 : Writes a string value to a file. Equivalent to setting the `text` property.
 
-`withOutputStream( closure )`
+`withOutputStream( action: Closure )`
 : Applies the specified closure to an [OutputStream](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/OutputStream.html) object, closing it when finished.
 
-`withPrintWriter( closure )`
+`withPrintWriter( action: Closure )`
 : Applies the specified closure to a [PrintWriter](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/PrintWriter.html) object, closing it when finished.
 
-`withWriter( closure )`
+`withWriter( action: Closure )`
 : Applies the specified closure to a [Writer](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/Writer.html) object, closing it when finished.
 
-`write( text )`
+`write( text: String )`
 : Writes a string to a file, replacing any existing content.
 
 ### Filesystem operations
 
 The following methods are available for manipulating files and directories in a filesystem:
 
-`copyTo( target )`
+`copyTo( target: Path )`
 : Copies a source file or directory to a target file or directory.
 
 : *When copying a file to another file:* if the target file already exists, it will be replaced.
@@ -547,10 +820,10 @@ The following methods are available for manipulating files and directories in a 
   The result of the above example depends on the existence of the target directory. If the target directory exists, the source is moved into the target directory, resulting in the path `/any/dir_b/dir_a`. If the target directory does not exist, the source is just renamed to the target name, resulting in the path `/any/dir_b`.
 
 : :::{note}
-  The `copyTo()` method follows the semantics of the Linux command `cp -r <source> <target>`, with the following caveat: while Linux tools often treat paths ending with a slash (e.g. `/some/path/name/`) as directories, and those not (e.g. `/some/path/name`) as regular files, Nextflow (due to its use of the Java files API) views both of these paths as the same file system object. If the path exists, it is handled according to its actual type (i.e. as a regular file or as a directory). If the path does not exist, it is treated as a regular file, with any missing parent directories created automatically.
+  The `copyTo()` function follows the semantics of the Linux command `cp -r <source> <target>`, with the following caveat: while Linux tools often treat paths ending with a slash (e.g. `/some/path/name/`) as directories, and those not (e.g. `/some/path/name`) as regular files, Nextflow (due to its use of the Java files API) views both of these paths as the same file system object. If the path exists, it is handled according to its actual type (i.e. as a regular file or as a directory). If the path does not exist, it is treated as a regular file, with any missing parent directories created automatically.
   :::
 
-`delete()`
+`delete() -> boolean`
 : Deletes the file or directory at the given path, returning `true` if the operation succeeds, and `false` otherwise:
 
   ```groovy
@@ -561,23 +834,23 @@ The following methods are available for manipulating files and directories in a 
 
   If a directory is not empty, it will not be deleted and `delete()` will return `false`.
 
-`deleteDir()`
+`deleteDir() -> boolean`
 : Deletes a directory and all of its contents.
 
   ```groovy
   file('any/path').deleteDir()
   ```
 
-`getPermissions()`
+`getPermissions() -> String`
 : Returns a file's permissions using the [symbolic notation](http://en.wikipedia.org/wiki/File_system_permissions#Symbolic_notation), e.g. `'rw-rw-r--'`.
 
-`list()`
+`list() -> List<String>`
 : Returns the first-level elements (files and directories) of a directory as a list of strings.
 
-`listFiles()`
+`listFiles() -> List<Path>`
 : Returns the first-level elements (files and directories) of a directory as a list of Paths.
 
-`mkdir()`
+`mkdir() -> boolean`
 : Creates a directory at the given path, returning `true` if the directory is created successfully, and `false` otherwise:
 
   ```groovy
@@ -588,14 +861,14 @@ The following methods are available for manipulating files and directories in a 
 
   If the parent directories do not exist, the directory will not be created and `mkdir()` will return `false`.
 
-`mkdirs()`
+`mkdirs() -> boolean`
 : Creates a directory at the given path, including any nonexistent parent directories:
 
   ```groovy
   file('any/path').mkdirs()
   ```
 
-`mklink( linkName, [options] )`
+`mklink( linkName: String, [options] ) -> Path`
 : Creates a *filesystem link* to a given path:
 
   ```groovy
@@ -603,32 +876,34 @@ The following methods are available for manipulating files and directories in a 
   myFile.mklink('/user/name/link-to-file.txt')
   ```
 
+  Returns the Path of the link to create.
+
   Available options:
 
-  `hard`
+  `hard: boolean`
   : When `true`, creates a *hard* link, otherwise creates a *soft* (aka *symbolic*) link (default: `false`).
 
-  `overwrite`
+  `overwrite: boolean`
   : When `true`, overwrites any existing file with the same name, otherwise throws a [FileAlreadyExistsException](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/FileAlreadyExistsException.html) (default: `false`).
 
-`moveTo( target )`
+`moveTo( target: Path )`
 : Moves a source file or directory to a target file or directory. Follows the same semantics as `copyTo()`.
 
-`renameTo( target )`
+`renameTo( target: String ) -> boolean`
 : Rename a file or directory:
 
   ```groovy
   file('my_file.txt').renameTo('new_file_name.txt')
   ```
 
-`setPermissions( permissions )`
+`setPermissions( permissions: String ) -> boolean`
 : Sets a file's permissions using the [symbolic notation](http://en.wikipedia.org/wiki/File_system_permissions#Symbolic_notation):
 
   ```groovy
   myFile.setPermissions('rwxr-xr-x')
   ```
 
-`setPermissions( owner, group, other )`
+`setPermissions( owner: int, group: int, other: int ) -> boolean`
 : Sets a file's permissions using the [numeric notation](http://en.wikipedia.org/wiki/File_system_permissions#Numeric_notation), i.e. as three digits representing the **owner**, **group**, and **other** permissions:
 
   ```groovy
@@ -637,53 +912,222 @@ The following methods are available for manipulating files and directories in a 
 
 The following methods are available for listing and traversing directories:
 
-`eachDir( closure )`
+`eachDir( action: Closure )`
 : Iterates through first-level directories only.
 
-`eachDirMatch( nameFilter, closure )`
+`eachDirMatch( nameFilter: String, action: Closure )`
 : Iterates through directories whose names match the given filter.
 
-`eachDirRecurse( closure )`
+`eachDirRecurse( action: Closure )`
 : Iterates through directories depth-first (regular files are ignored).
 
-`eachFile( closure )`
+`eachFile( action: Closure )`
 : Iterates through first-level files and directories.
 
-`eachFileMatch( nameFilter, closure )`
+`eachFileMatch( nameFilter: String, action: Closure )`
 : Iterates through files and directories whose names match the given filter.
 
-`eachFileRecurse( closure )`
+`eachFileRecurse( action: Closure )`
 : Iterates through files and directories depth-first.
-
-Refer to the [Groovy documentation](http://docs.groovy-lang.org/latest/html/groovy-jdk/java/io/File.html) for more details.
 
 ### Splitting files
 
 The following methods are available for splitting and counting the records in files:
 
-`countFasta()`
+`countFasta() -> long`
 : Counts the number of records in a [FASTA](https://en.wikipedia.org/wiki/FASTA_format) file. See the {ref}`operator-splitfasta` operator for available options.
 
-`countFastq()`
+`countFastq() -> long`
 : Counts the number of records in a [FASTQ](https://en.wikipedia.org/wiki/FASTQ_format) file. See the {ref}`operator-splitfastq` operator for available options.
 
-`countJson()`
+`countJson() -> long`
 : Counts the number of records in a JSON file. See the {ref}`operator-splitjson` operator for available options.
 
-`countLines()`
+`countLines() -> long`
 : Counts the number of lines in a text file. See the {ref}`operator-splittext` operator for available options.
 
-`splitCsv()`
+`splitCsv() -> List`
 : Splits a CSV file into a list of records. See the {ref}`operator-splitcsv` operator for available options.
 
-`splitFasta()`
+`splitFasta() -> List`
 : Splits a [FASTA](https://en.wikipedia.org/wiki/FASTA_format) file into a list of records. See the {ref}`operator-splitfasta` operator for available options.
 
-`splitFastq()`
+`splitFastq() -> List`
 : Splits a [FASTQ](https://en.wikipedia.org/wiki/FASTQ_format) file into a list of records. See the {ref}`operator-splitfastq` operator for available options.
 
-`splitJson()`
+`splitJson() -> List`
 : Splits a JSON file into a list of records. See the {ref}`operator-splitjson` operator for available options.
 
-`splitText()`
+`splitText() -> List<String>`
 : Splits a text file into a list of lines. See the {ref}`operator-splittext` operator for available options.
+
+(stdlib-types-set)=
+
+## Set
+
+A set is an unordered collection that cannot contain duplicate elements.
+
+As set literal can be created from a list:
+
+```groovy
+[1, 2, 2, 3].toSet()
+// -> [1, 2, 3]
+```
+
+The following operators are supported for sets:
+
+`+ : (Set, Iterable) -> Set`
+: Returns the union of a set and an iterable.
+
+`- : (Set, Iterable) -> Set`
+: Given a set and an iterable, returns a new set with the elements of the first set minus the elements of the iterable.
+
+`in, !in : (?, Set) -> boolean`
+: Given a value and a set, returns `true` if the set contains the value (or not).
+
+The following methods are available for a set:
+
+`intersect( right: Iterable ) -> Set`
+: Returns the intersection of the set and the given iterable.
+
+See also: [Iterable](#iterable)
+
+:::{note}
+Sets in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Set.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/Set.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
+:::
+
+(stdlib-types-string)=
+
+## String
+
+A string is an immutable array of characters. See {ref}`script-string` for an overview of strings.
+
+The following operators are supported for strings:
+
+`+ : (String, String) -> String`
+: Concatenates two strings.
+
+`* : (String, int) -> String`
+: Given a string and an integer *n*, repeats the string *n* times.
+
+`[] : (String, int) -> char`
+: Given a string and an index, returns the character at the given index in the string.
+
+`in, !in : (String, String) -> boolean`
+: Given a substring and a string, returns `true` if the substring occurs anywhere in the string (or not).
+
+`~ : (String) -> Pattern`
+: Creates a regular expression from a string.
+: See [Pattern](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/regex/Pattern.html) in the Java standard library for more information.
+
+`=~ : (String, String) -> Matcher`
+: Given a string and a pattern, creates a matcher that is truthy if the pattern occurs anywhere in the string.
+: See [Matcher](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/regex/Matcher.html) in the Java standard library for more information.
+
+`==~ : (String, String) -> boolean`
+: Given a string and a pattern, returns `true` if the string matches the pattern exactly.
+
+The following methods are available for a string:
+
+`endsWith( suffix: String ) -> boolean`
+: Returns `true` if the string ends with the given suffix.
+
+`execute() -> Process`
+: Execute the string as a command. Returns a [Process](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/lang/Process.html) which provides the exit status and standard input/output/error of the executed command.
+
+`indexOf( str: String ) -> int`
+: Returns the index within the string of the first occurrence of the given substring. Returns -1 if the string does not contain the substring.
+
+`indexOf( str: String, fromIndex: int ) -> int`
+: Returns the index within the string of the first occurrence of the given substring, starting the search at the given index. Returns -1 if the string does not contain the substring.
+
+`isBlank() -> boolean`
+: Returns `true` if the string is empty or contains only whitespace characters.
+
+`isEmpty() -> boolean`
+: Returns `true` if the string is empty (i.e. `length()` is 0).
+
+`lastIndexOf( str: String ) -> int`
+: Returns the index within the string of the last occurrence of the given substring. Returns -1 if the string does not contain the substring.
+
+`lastIndexOf( str: String, fromIndex: int ) -> int`
+: Returns the index within the string of the last occurrence of the given substring, searching backwards starting at the given index. Returns -1 if the string does not contain the substring.
+
+`length() -> int`
+: Returns the length of the string.
+
+`replace( target: String, replacement: String ) -> String`
+: Returns a new string in which each occurrence of the target string is replaced with the given replacement string.
+
+`replaceAll( regex: String, replacement: String ) -> String`
+: Returns a new string in which each occurrence of the given regular expression is replaced with the given replacement string.
+
+`replaceFirst( regex: String, replacement: String ) -> String`
+: Returns a new string in which the first occurrence of the given regular expression is replaced with the given replacement string.
+
+`startsWith( prefix: String ) -> boolean`
+: Returns `true` if the string ends with the given prefix.
+
+`strip() -> String`
+: Returns a copy of the string with all leading and trailing whitespace removed.
+
+`stripLeading() -> String`
+: Returns a copy of the string with all leading whitespace removed.
+
+`stripTrailing() -> String`
+: Returns a copy of the string with all trailing whitespace removed.
+
+`substring​( beginIndex: int ) -> String`
+: Returns a substring of this string.
+
+`substring​( beginIndex: int, endIndex: int ) -> String`
+: Returns a substring of this string.
+
+`toLowerCase() -> String`
+: Returns a copy of this string with all characters converted to lower case.
+
+`toUpperCase() -> String`
+: Returns a copy of this string with all characters converted to upper case.
+
+`tokenize( delimiters: String ) -> List<String>`
+: Splits the string into a list of substrings using the given delimiters. Each character in the delimiter string is treated as a separate delimiter.
+
+:::{note}
+Strings in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/lang/String.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
+:::
+
+(stdlib-types-versionnumber)=
+
+## VersionNumber
+
+A VersionNumber represents a semantic version number.
+
+The following methods are available for a VersionNumber:
+
+`getMajor() -> String`
+: Get the major version number, i.e. the first version component.
+
+`getMinor() -> String`
+: Get the minor version number, i.e. the second version component.
+
+`getPatch() -> String`
+: Get the patch version number, i.e. the third version component.
+
+`matches( condition: String ) -> boolean`
+: Check whether the version satisfies a version requirement.
+
+: The version requirement string can be prefixed with the usual comparison operators:
+  - `=` or `==`: equal to
+  - `<` (`<=`): less than (or equal to)
+  - `>` (`>=`): greater than (or equal to)
+  - `!=` or `<>`: not equal
+
+  For example:
+
+  ```groovy
+  if( !nextflow.version.matches('>=23.10') ) {
+      error "This workflow requires Nextflow version 23.10 or greater -- You are running version $nextflow.version"
+  }
+  ```
+
+: Alternatively, the version can be postfixed with `+`, which is similar to `==` but also allows the last version part to be greater. For example, `23.10.1+` is satisfied by `23.10.1` and `23.10.2`, but not `23.11.x` or `23.09.x`. Additionally, `23.10.+` is equivalent to `23.10.0+`. This operator is a useful way to enforce a specific version while allowing for newer patch releases.
