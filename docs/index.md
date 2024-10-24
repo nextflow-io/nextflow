@@ -111,6 +111,7 @@ fusion
 :caption: Reference
 :maxdepth: 1
 
+reference/syntax
 reference/cli
 reference/config
 reference/env-vars

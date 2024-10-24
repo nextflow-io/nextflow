@@ -52,7 +52,7 @@ process foo {
 
 workflow {
   result = foo(1)
-  result.view { "Result: ${it}" }
+  result.view { file -> "Result: ${file}" }
 }
 ```
 

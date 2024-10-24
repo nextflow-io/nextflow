@@ -26,6 +26,21 @@ The following task properties are defined in the process body:
 : *Available only in `exec:` blocks*
 : The current task name.
 
+`task.previousException`
+: :::{versionadded} 24.10.0
+  :::
+: The exception reported by the previous task attempt.
+: Since the exception is available after a failed task attempt,
+  it can only be accessed when retrying a failed task execution, and therefore when `task.attempt` is greater than 1.
+
+`task.previousTrace`
+: :::{versionadded} 24.10.0
+  :::
+: The trace record associated with the previous task attempt.
+: Since the trace record is available after a failed task attempt,
+  it can only be accessed when retrying a failed task execution, and therefore when `task.attempt` is greater than 1.
+: This is useful when retrying a task execution to access the previous task attempt runtime metrics e.g. used memory and CPUs.
+
 `task.process`
 : The current process name.
 
@@ -72,9 +87,9 @@ Additionally, the [directive values](#directives) for the given task can be acce
   `stageAs`
   : Alias of `name`.
 
-`env( identifier )`
+`env( name )`
 
-: Declare an environment variable input. The received value should be a string, and it will be exported to the task environment as an environment variable given by `identifier`.
+: Declare an environment variable input. The received value should be a string, and it will be exported to the task environment as an environment variable given by `name`.
 
 `stdin`
 
@@ -139,9 +154,9 @@ Additionally, the [directive values](#directives) for the given task can be acce
   `type`
   : Type of paths returned, either `file`, `dir` or `any` (default: `any`, or `file` if the specified file name pattern contains a double star (`**`)).
 
-`env( identifier )`
+`env( name )`
 
-: Declare an environment variable output. It receives the value of the environment variable (given by the identifier) from the task environment.
+: Declare an environment variable output. It receives the value of the environment variable (given by `name`) from the task environment.
 
 : :::{versionchanged} 23.12.0-edge
   Prior to this version, if the environment variable contained multiple lines of output, the output would be compressed to a single line by converting newlines to spaces.
