@@ -17,6 +17,8 @@
 
 package nextflow.plugin
 
+import org.pf4j.InvalidPluginDescriptorException
+
 import static java.nio.file.StandardCopyOption.*
 
 import java.nio.file.Files
@@ -75,15 +77,19 @@ class PluginUpdater extends UpdateManager {
     }
 
     PluginUpdater(CustomPluginManager pluginManager, Path pluginsRoot, URL repo) {
-        super(pluginManager, wrap(repo))
+        super(pluginManager, wrap(repo, pluginsRoot))
         this.pluginsStore = pluginsRoot
         this.pluginManager = pluginManager
     }
 
-    static private List<UpdateRepository> wrap(URL repo) {
+    static private List<UpdateRepository> wrap(URL remote, Path local) {
         List<UpdateRepository> result = new ArrayList<>(1)
-        result << new DefaultUpdateRepository('nextflow.io', repo)
-        result.addAll(customRepos())
+        if( offline ) {
+            result.add(new LocalUpdateRepository('downloaded', local))
+        } else {
+            result.add(new DefaultUpdateRepository('nextflow.io', remote))
+            result.addAll(customRepos())
+        }
         return result
     }
 
@@ -199,19 +205,18 @@ class PluginUpdater extends UpdateManager {
     }
 
     private Path download0(String id, String version) {
+        // 0. check version is specified
+        if( !version )
+            throw new InvalidPluginDescriptorException("Missing version for plugin $id")
+        log.info "Downloading plugin ${id}@${version}"
 
-        // 0. check if already exists
+        // 1. check if already exists
         final pluginPath = pluginsStore.resolve("$id-$version")
         if( FilesEx.exists(pluginPath) ) {
             return pluginPath
         }
 
-        // 1. determine the version
-        if( !version )
-            version = getLastPluginRelease(id)
-        log.info "Downloading plugin ${id}@${version}"
-
-        // 2. Download to temporary location
+        // 2. download to temporary location
         Path downloaded = safeDownloadPlugin(id, version);
 
         // 3. unzip the content and delete downloaded file
@@ -314,10 +319,13 @@ class PluginUpdater extends UpdateManager {
         new File(tmp, "nextflow-plugin-${id}-${version}.lock")
     }
 
+    private static boolean isOffline() {
+        SysEnv.get('NXF_OFFLINE') == 'true'
+    }
+
     private boolean load0(String id, String requestedVersion) {
         assert id, "Missing plugin Id"
 
-        final offline = SysEnv.get('NXF_OFFLINE')=='true'
         if( offline && !requestedVersion )
             throw new IllegalStateException("Cannot find version for $id plugin -- plugin versions MUST be specified in offline mode")
 
