@@ -16,6 +16,8 @@
 
 package nextflow.processor
 
+import nextflow.conda.CondaConfig
+
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -47,6 +49,8 @@ class TaskBean implements Serializable, Cloneable {
     String containerImage
 
     Path condaEnv
+
+    CondaConfig condaConfig
 
     Path spackEnv
 
@@ -131,6 +135,7 @@ class TaskBean implements Serializable, Cloneable {
         this.environment = task.getEnvironment()
 
         this.condaEnv = task.getCondaEnv()
+        this.condaConfig = task.getCondaConfig()
         this.spackEnv = task.getSpackEnv()
         this.moduleNames = task.config.getModule()
         this.shell = task.config.getShell() ?: BashWrapperBuilder.BASH

@@ -16,6 +16,8 @@
 
 package nextflow.executor
 
+import nextflow.conda.CondaConfig
+
 import java.nio.file.FileSystemException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -775,13 +777,20 @@ class BashWrapperBuilderTest extends Specification {
 
         when:
         def CONDA = Paths.get('/some/conda/env/foo')
-        binding = newBashWrapperBuilder(condaEnv: CONDA).makeBinding()
+        def config = new CondaConfig(['useMicromamba': MICROMAMBA])
+        binding = newBashWrapperBuilder(condaEnv: CONDA, condaConfig: config).makeBinding()
         then:
-        binding.conda_activate == '''\
+        binding.conda_activate == RESULT
+        where:
+        MICROMAMBA | RESULT
+        false      | '''\
                 # conda environment
-                source $(command -v conda && (conda info --json | awk \'/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }\') || (micromamba info | grep "env location :" | cut -d : -f 2))/bin/activate /some/conda/env/foo
+                source $(conda info --json | awk \'/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }\')/bin/activate /some/conda/env/foo
                 '''.stripIndent()
-
+        true       | '''\
+                # conda environment
+                eval "$(micromamba shell hook --shell bash)" && micromamba activate /some/conda/env/foo
+                '''.stripIndent()
     }
 
     def 'should create spack activate snippet' () {

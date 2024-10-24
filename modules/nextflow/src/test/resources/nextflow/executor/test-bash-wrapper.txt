@@ -118,7 +118,7 @@ nxf_main() {
     # beforeScript directive
     echo Before
     # conda environment
-    command -v conda && source $(conda info --json | awk '/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }')/bin/activate /conda/env/path || eval "$(micromamba shell hook --shell bash)" && micromamba activate /conda/env/path
+    source $(conda info --json | awk '/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }')/bin/activate /conda/env/path
     # spack environment
     spack env activate -d /spack/env/path
     set -u
