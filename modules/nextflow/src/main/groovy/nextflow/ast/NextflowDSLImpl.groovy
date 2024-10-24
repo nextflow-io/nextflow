@@ -550,23 +550,23 @@ class NextflowDSLImpl implements ASTTransformation {
             for( Statement stmt : block.statements ) {
                 if( stmt !instanceof ExpressionStatement ) {
                     syntaxError(stmt, "Invalid publish target definition")
-                    return     
+                    return
                 }
 
                 final stmtExpr = (ExpressionStatement)stmt
                 if( stmtExpr.expression !instanceof MethodCallExpression ) {
                     syntaxError(stmt, "Invalid publish target definition")
-                    return     
+                    return
                 }
 
                 final call = (MethodCallExpression)stmtExpr.expression
                 assert call.arguments instanceof ArgumentListExpression
 
-                // HACK: target definition is a method call with single closure argument
-                //       custom parser will be able to detect more elegantly
                 final targetArgs = (ArgumentListExpression)call.arguments
-                if( targetArgs.size() != 1 || targetArgs[0] !instanceof ClosureExpression )
-                    continue
+                if( targetArgs.size() != 1 || targetArgs[0] !instanceof ClosureExpression ) {
+                    syntaxError(stmt, "Invalid publish target definition")
+                    return
+                }
 
                 final targetName = call.method
                 final targetBody = (ClosureExpression)targetArgs[0]
@@ -631,11 +631,6 @@ class NextflowDSLImpl implements ASTTransformation {
                                 fixStdinStdout( stm )
                                 convertOutputMethod( stm.getExpression() )
                             }
-                            break
-
-                        case 'publish':
-                            if( stm instanceof ExpressionStatement )
-                                convertPublishMethod( stm )
                             break
 
                         case 'exec':
@@ -1297,27 +1292,6 @@ class NextflowDSLImpl implements ASTTransformation {
             }
 
             return false
-        }
-
-        protected void convertPublishMethod(ExpressionStatement stmt) {
-            if( stmt.expression !instanceof BinaryExpression ) {
-                syntaxError(stmt, "Invalid process publish statement")
-                return
-            }
-
-            final binaryX = (BinaryExpression)stmt.expression
-            if( binaryX.operation.type != Types.RIGHT_SHIFT ) {
-                syntaxError(stmt, "Invalid process publish statement")
-                return
-            }
-
-            final left = binaryX.leftExpression
-            if( left !instanceof VariableExpression ) {
-                syntaxError(stmt, "Invalid process publish statement")
-                return
-            }
-
-            stmt.expression = callThisX('_publish_target', args(constX(((VariableExpression)left).name), binaryX.rightExpression))
         }
 
         protected boolean isIllegalName(String name, ASTNode node) {

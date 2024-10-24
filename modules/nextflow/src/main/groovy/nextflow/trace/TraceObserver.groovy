@@ -123,6 +123,13 @@ trait TraceObserver {
     void onFlowError(TaskHandler handler, TraceRecord trace){}
 
     /**
+     * Method that is invoked when a value is published from a channel.
+     *
+     * @param value
+     */
+    void onWorkflowPublish(Object value){}
+
+    /**
      * Method that is invoke when an output file is published
      * into a `publishDir` folder.
      *
