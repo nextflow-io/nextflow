@@ -13,7 +13,7 @@ The VS Code extension highlights Nextflow scripts and config files for better re
 
 The extension highlights source code in red for errors and yellow for warnings.
 
-To view all diagnostics for the workspace, open the **Problems** tab. Here, you can search for diagnostics by diagnostic message, filename, and more.
+To view all diagnostics for the workspace, open the **Problems** tab. Here, you can search for diagnostics by diagnostic message, filename, and so on.
 
 ### Hover hints
 
@@ -28,7 +28,6 @@ To view the definition of a symbol (e.g., a workflow, process, function, or vari
 ### Code completion
 
 The extension suggests auto-completions for variable names, function names, config settings, and other symbols as you type. The extension also provides several snippets for common script declarations, such as processes and workflows.
-
 
 ### Formatting
 
