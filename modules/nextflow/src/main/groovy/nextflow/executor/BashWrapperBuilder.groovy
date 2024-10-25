@@ -575,7 +575,8 @@ class BashWrapperBuilder {
         final traceWrapper = isTraceRequired()
         if( traceWrapper ) {
             // executes the stub which in turn executes the target command
-            launcher = "/usr/bin/env -S bash ${fileStr(wrapperFile)} nxf_trace"
+            String traceInterpreter = runWithContainer ? "/bin/bash" : "/usr/bin/env bash"
+            launcher = "${traceInterpreter} ${fileStr(wrapperFile)} nxf_trace"
         }
         else {
             launcher = "${interpreter} ${fileStr(scriptFile)}"
