@@ -108,6 +108,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-test'], description = 'Test a script function with the name specified')
     String test
 
+    @Parameter(names=['-o', '-output-dir'], description = 'Directory where workflow outputs are stored')
+    String outputDir
+
     @Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate result files are stored')
     String workDir
 
