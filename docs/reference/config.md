@@ -18,6 +18,11 @@ This page lists all of the available settings in the {ref}`Nextflow configuratio
 `dumpHashes`
 : If `true`, dump task hash keys in the log file, for debugging purposes. Equivalent to the `-dump-hashes` option of the `run` command.
 
+`outputDir`
+: :::{versionadded} 24.10.0
+  :::
+: Defines the pipeline output directory. Equivalent to the `-output-dir` option of the `run` command.
+
 `resume`
 : If `true`, enable the use of previously cached task executions. Equivalent to the `-resume` option of the `run` command.
 
@@ -1226,27 +1231,9 @@ Read the {ref}`sharing-page` page to learn how to publish your pipeline to GitHu
 
 ## `nextflow`
 
-The `nextflow` scope provides configuration options for the Nextflow runtime.
-
-`nextflow.publish.retryPolicy.delay`
-: :::{versionadded} 24.03.0-edge
-  :::
-: Delay when retrying a failed publish operation (default: `350ms`).
-
-`nextflow.publish.retryPolicy.jitter`
-: :::{versionadded} 24.03.0-edge
-  :::
-: Jitter value when retrying a failed publish operation (default: `0.25`).
-
-`nextflow.publish.retryPolicy.maxAttempt`
-: :::{versionadded} 24.03.0-edge
-  :::
-: Max attempts when retrying a failed publish operation (default: `5`).
-
-`nextflow.publish.retryPolicy.maxDelay`
-: :::{versionadded} 24.03.0-edge
-  :::
-: Max delay when retrying a failed publish operation (default: `90s`).
+:::{deprecated} 24.10.0
+The `nextflow.publish` scope has been renamed to `workflow.output`. See {ref}`config-workflow` for more information.
+:::
 
 (config-notification)=
 
@@ -1600,6 +1587,9 @@ The following settings are available:
 
 ## `workflow`
 
+:::{versionadded} 24.10.0
+:::
+
 The `workflow` scope provides workflow execution options.
 
 `workflow.failOnIgnore`
@@ -1612,3 +1602,76 @@ The `workflow` scope provides workflow execution options.
 
 `workflow.onError`
 : Specify a closure that will be invoked if a workflow run is terminated. See {ref}`workflow-handlers` for more information.
+
+`workflow.output.contentType`
+: *Currently only supported for S3.*
+: Specify the media type, also known as [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/MIME_types), of published files (default: `false`). Can be a string (e.g. `'text/html'`), or `true` to infer the content type from the file extension.
+
+`workflow.output.enabled`
+: Enable or disable publishing (default: `true`).
+
+`workflow.output.ignoreErrors`
+: When `true`, the workflow will not fail if a file can't be published for some reason (default: `false`).
+
+`workflow.output.mode`
+: The file publishing method (default: `'symlink'`). The following options are available:
+
+  `'copy'`
+  : Copy each file into the output directory.
+
+  `'copyNoFollow'`
+  : Copy each file into the output directory without following symlinks, i.e. only the link is copied.
+
+  `'link'`
+  : Create a hard link in the output directory for each file.
+
+  `'move'`
+  : Move each file into the output directory.
+  : Should only be used for files which are not used by downstream processes in the workflow.
+
+  `'rellink'`
+  : Create a relative symbolic link in the output directory for each file.
+
+  `'symlink'`
+  : Create an absolute symbolic link in the output directory for each output file.
+
+`workflow.output.overwrite`
+: When `true` any existing file in the specified folder will be overwritten (default: `'standard'`). The following options are available:
+
+  `false`
+  : Never overwrite existing files.
+
+  `true`
+  : Always overwrite existing files.
+
+  `'deep'`
+  : Overwrite existing files when the file content is different.
+
+  `'lenient'`
+  : Overwrite existing files when the file size is different.
+
+  `'standard'`
+  : Overwrite existing files when the file size or last modified timestamp is different.
+
+`workflow.output.retryPolicy.delay`
+: Delay when retrying a failed publish operation (default: `350ms`).
+
+`workflow.output.retryPolicy.jitter`
+: Jitter value when retrying a failed publish operation (default: `0.25`).
+
+`workflow.output.retryPolicy.maxAttempt`
+: Max attempts when retrying a failed publish operation (default: `5`).
+
+`workflow.output.retryPolicy.maxDelay`
+: Max delay when retrying a failed publish operation (default: `90s`).
+
+`workflow.output.storageClass`
+: *Currently only supported for S3.*
+: Specify the storage class for published files.
+
+`workflow.output.tags`
+: *Currently only supported for S3.*
+: Specify arbitrary tags for published files. For example:
+  ```groovy
+  tags FOO: 'hello', BAR: 'world'
+  ```
