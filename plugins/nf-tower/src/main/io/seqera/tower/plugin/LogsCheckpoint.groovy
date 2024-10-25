@@ -21,7 +21,9 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.processor.TaskHandler
 import nextflow.trace.TraceObserver
+import nextflow.trace.TraceRecord
 import nextflow.util.Duration
 import nextflow.util.Threads
 /**
@@ -47,6 +49,7 @@ class LogsCheckpoint implements TraceObserver {
         this.config = session.config
         this.handler = new LogsHandler(session, SysEnv.get())
         this.interval = config.navigate('tower.logs.checkpoint.interval', defaultInterval()) as Duration
+        thread = Threads.start('tower-logs-checkpoint', this.&run)
     }
 
     private String defaultInterval() {
@@ -54,12 +57,12 @@ class LogsCheckpoint implements TraceObserver {
     }
 
     @Override
-    void onFlowBegin() {
-        thread = Threads.start('tower-logs-checkpoint', this.&run)
-    }
-
-    @Override
     void onFlowComplete() {
+        this.terminated = true
+        thread.join()
+    }
+    @Override
+    void onFlowError(TaskHandler handler, TraceRecord trace){
         this.terminated = true
         thread.join()
     }
