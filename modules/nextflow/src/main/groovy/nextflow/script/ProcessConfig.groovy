@@ -125,7 +125,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     static final Map<String,Object> DEFAULT_CONFIG = [
             debug: false,
             cacheable: true,
-            shell: BashWrapperBuilder.BASH,
             maxRetries: 0,
             maxErrors: -1,
             errorStrategy: ErrorStrategy.TERMINATE
@@ -174,14 +173,15 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      *
      * @param script The owner {@code BaseScript} configuration object
      */
-    protected ProcessConfig( BaseScript script ) {
+    protected ProcessConfig( BaseScript script, boolean isContainerEnabled = true) {
         ownerScript = script
         configProperties = new LinkedHashMap()
         configProperties.putAll( DEFAULT_CONFIG )
+        configProperties.put('shell', isContainerEnabled ? BashWrapperBuilder.BASH : BashWrapperBuilder.ENV_BASH)
     }
 
-    ProcessConfig( BaseScript script, String name ) {
-        this(script)
+    ProcessConfig( BaseScript script, String name, boolean isContainerEnabled = true) {
+        this(script, isContainerEnabled)
         this.processName = name
     }
 
