@@ -296,7 +296,7 @@ class BashWrapperBuilder {
          * fetch the script interpreter i.e. BASH, Perl, Python, etc
          */
         String fetchedInterpreter = TaskProcessor.fetchInterpreter(script)
-        final interpreter = containerBuilder ? fetchedInterpreter : fetchedInterpreter.replace('/bin/bash', '/usr/bin/env -S bash')
+        final interpreter = runWithContainer ? fetchedInterpreter : fetchedInterpreter.replace('/bin/bash', '/usr/bin/env -S bash')
 
         /*
          * append to the command script a prolog to capture the declared
