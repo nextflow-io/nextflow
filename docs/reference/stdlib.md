@@ -118,6 +118,11 @@ The following constants are globally available in a Nextflow script:
   `onError( action: Closure )`
   : Define an action to take if the workflow is terminated due to a runtime error or task failure.
 
+  `outputDir: Path`
+  : :::{versionadded} 24.10.0
+    :::
+  : Workflow output directory.
+
   `preview: boolean`
   : :::{versionadded} 24.04.0
     :::
