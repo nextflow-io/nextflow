@@ -16,8 +16,6 @@
 
 package nextflow.executor
 
-import nextflow.conda.CondaConfig
-
 import java.nio.file.FileSystemException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -795,8 +793,7 @@ class BashWrapperBuilderTest extends Specification {
 
         when:
         def CONDA = Paths.get('/some/conda/env/foo')
-        def config = new CondaConfig(['useMicromamba': true])
-        binding = newBashWrapperBuilder(condaEnv: CONDA, condaConfig: config).makeBinding()
+        binding = newBashWrapperBuilder([condaEnv: CONDA, 'useMicromamba': true]).makeBinding()
         then:
         binding.conda_activate == '''\
                 # conda environment
