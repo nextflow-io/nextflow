@@ -777,17 +777,28 @@ class BashWrapperBuilderTest extends Specification {
 
         when:
         def CONDA = Paths.get('/some/conda/env/foo')
-        def config = new CondaConfig(['useMicromamba': MICROMAMBA])
+        binding = newBashWrapperBuilder(condaEnv: CONDA).makeBinding()
+        then:
+        binding.conda_activate == '''\
+                # conda environment
+                source $(conda info --json | awk '/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }')/bin/activate /some/conda/env/foo
+                '''.stripIndent()
+    }
+
+    def 'should create micromamba activate snippet' () {
+
+        when:
+        def binding = newBashWrapperBuilder().makeBinding()
+        then:
+        binding.conda_activate == null
+        binding.containsKey('conda_activate')
+
+        when:
+        def CONDA = Paths.get('/some/conda/env/foo')
+        def config = new CondaConfig(['useMicromamba': true])
         binding = newBashWrapperBuilder(condaEnv: CONDA, condaConfig: config).makeBinding()
         then:
-        binding.conda_activate == RESULT
-        where:
-        MICROMAMBA | RESULT
-        false      | '''\
-                # conda environment
-                source $(conda info --json | awk \'/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }\')/bin/activate /some/conda/env/foo
-                '''.stripIndent()
-        true       | '''\
+        binding.conda_activate == '''\
                 # conda environment
                 eval "$(micromamba shell hook --shell bash)" && micromamba activate /some/conda/env/foo
                 '''.stripIndent()
