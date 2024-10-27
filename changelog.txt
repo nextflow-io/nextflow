@@ -1,5 +1,27 @@
 NEXTFLOW CHANGE-LOG
 ===================
+24.10.0 - 27 Oct 2024
+- Add `manifest.contributors` config option (#5322) [cf0f9690]
+- Add wave mirror and scan config [92e69776]
+- Add wave mirror vs module bundles conflicst warning [b37a8a5b]
+- Add Workflow output definition (second preview) (#5185) [ea128463]
+- Demote azure batch task status log level to trace (#5416) [d6c684bb]
+- Document formal script syntax (#5336) [a48ac589]
+- Add Expose trace record meta info in the task context (#5402) [ffdd3819]
+- Fix NextflowMeta compilation error [500f49c0]
+- Fix XFileSystem serialization issue (#5411) [711864fd]
+- Fix closure rendering in yaml and json config (#5408) [d3a85ceb]
+- Fix failing docs snippet (#5430) [a818f4b8]
+- Fix http files stream  (#5405) [e2e stage] [718dcbe6]
+- Fix nf-tower plugin to upload logs when early failures  (#5434) [4222442a]
+- Fix support for micromamba (#4302) [12431302]
+- Harmonise documentation for hybrid cloud execution (#5362) [a69407d2]
+- Prevent NPE when containerInfo is null [368a266a]
+- Remove invalid equals char (#5414) [7f39e6ed]
+- Bump nf-azure@1.10.1 [f67e157a]
+- Bump nf-tower@1.9.3 [7a572a12]
+- Bump nf-wave@1.7.2 [6524d8dc]
+
 24.09.2-edge - 14 Oct 2024
 - Add Google LS deprecation notice (#5400) [0ee1d9bc]
 - Add hybrid workflow documentation for Azure (#5361) [f81f27de]
