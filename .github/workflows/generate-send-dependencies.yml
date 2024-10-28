@@ -1,7 +1,7 @@
 name: Generate and submit dependency graph for nextflow
 on:
-    # for testing purposes, to be removed later
-    pull_request:
+    push:
+      branches: ['master']
 
 permissions:
   contents: write
