@@ -1560,6 +1560,21 @@ The following settings are available:
   :::
 : Sets the connection timeout duration for the HTTP client connecting to the Wave service (default: `30s`).
 
+`wave.mirror`
+: :::{versionadded} 24.09.1-edge
+  :::
+: Enables Wave container mirroring.
+: This feature allow mirroring (i.e. copying) the containers defined in your pipeline
+  configuration to a container registry of your choice, so that pipeline tasks will pull the copied containers from the
+  target registry instead of the original one.
+: The resulting copied containers will maintain the name, digest and metadata.
+: The target registry is expected to be specified by using the `wave.build.repository` option.
+: :::{note}
+  * This feature is only compatible with `wave.strategy = 'container'` option.
+  * This feature cannot be used with Wave *freeze* mode.
+  * The authentication of the resulting container images must be managed by the underlying infrastructure.
+  :::
+
 `wave.retryPolicy.delay`
 : :::{versionadded} 22.06.0-edge
   :::
@@ -1580,8 +1595,28 @@ The following settings are available:
   :::
 : The max delay when a failing HTTP request is retried (default: `90 seconds`).
 
+`wave.scan.mode`
+: :::{versionadded} 24.09.1-edge
+  :::
+: Determines the container security scanning execution modality.
+
+: This feature allows scanning for security vulnerability the container used in your pipeline. The following options can be specified:
+
+  * `none`: No security scan is performed on the containers used by your pipeline.
+  * `async`: The containers used by your pipeline are scanned for security vulnerability. The task execution is carried out independently of the security scan result.
+  * `required`: The containers used by your pipeline are scanned for security vulnerability. The task is only executed if the corresponding container is not affected by a security vulnerability.
+
+`wave.scan.allowedLevels`
+: :::{versionadded} 24.09.1-edge
+  :::
+: Determines the allowed security levels when scanning containers for security vulnerabilities.
+
+: Allowed values are: `low`, `medium`, `high`, `critical`. For example: `wave.scan.allowedLevels = 'low,medium'`.
+
+: This option requires the use of `wave.scan.mode = 'required'`.
+
 `wave.strategy`
-: The strategy to be used when resolving ambiguous Wave container requirements (default: `'container,dockerfile,conda,spack'`).
+: The strategy to be used when resolving ambiguous Wave container requirements (default: `'container,dockerfile,conda'`).
 
 (config-workflow)=
 

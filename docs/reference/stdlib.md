@@ -257,7 +257,7 @@ Any Groovy or Java class can be used in a Nextflow script. The following classes
 
 All other classes must be referenced by their fully-qualified name:
 
-```groovy
+```nextflow
 def vals = [1, 2, 3]
 println groovy.json.JsonOutput.toJson(vals)
 ```
@@ -290,7 +290,7 @@ A Duration represents a duration of time with millisecond precision.
 
 A Duration can be created by adding a unit suffix to an integer (e.g. `1.h`), or more explicitly with `Duration.of()`:
 
-```groovy
+```nextflow
 // integer with suffix
 oneDay = 24.h
 
@@ -316,7 +316,7 @@ The following suffixes are available:
 
 Durations can be compared like numbers, and they support basic arithmetic operations:
 
-```groovy
+```nextflow
 a = 1.h
 b = 2.h
 
@@ -466,7 +466,7 @@ The following methods are available for a list:
 : Collates the list into a list of sub-lists of length `size`. If `keepRemainder` is `true`, any remaining elements are included as a partial sub-list, otherwise they are excluded.
 
 : For example:
-  ```groovy
+  ```nextflow
   assert [1, 2, 3, 4, 5, 6, 7].collate(3)        == [[1, 2, 3], [4, 5, 6], [7]]
   assert [1, 2, 3, 4, 5, 6, 7].collate(3, false) == [[1, 2, 3], [4, 5, 6]]
   ```
@@ -475,7 +475,7 @@ The following methods are available for a list:
 : Collates the list into a list of sub-lists of length `size`, stepping through the list `step` elements for each sub-list. If `keepRemainder` is `true`, any remaining elements are included as a partial sub-list, otherwise they are excluded.
 
 : For example:
-  ```groovy
+  ```nextflow
   assert [1, 2, 3, 4].collate(3, 1)        == [[1, 2, 3], [2, 3, 4], [3, 4], [4]]
   assert [1, 2, 3, 4].collate(3, 1, false) == [[1, 2, 3], [2, 3, 4]]
   ```
@@ -589,7 +589,7 @@ A MemoryUnit represents a quantity of bytes.
 
 A MemoryUnit can be created by adding a unit suffix to an integer (e.g. `1.GB`), or more explicitly with `MemoryUnit.of()`:
 
-```groovy
+```nextflow
 // integer with suffix
 oneMegabyte = 1.MB
 
@@ -619,7 +619,7 @@ Technically speaking, a kilobyte is equal to 1000 bytes, whereas 1024 bytes is c
 
 Memory units can be compared like numbers, and they support basic arithmetic operations:
 
-```groovy
+```nextflow
 a = 1.GB
 b = 2.GB
 
@@ -655,7 +655,7 @@ A Path is a handle for hierarchichal paths such as local files and directories, 
 
 The `file()` function can be used to get a Path for a given filename or URL:
 
-```groovy
+```nextflow
 def hello = file('hello.txt')
 println hello.text
 ```
@@ -724,7 +724,7 @@ The following methods are useful for getting attributes of a file:
 
 `toUriString() -> String`
 : Gets the file path along with the protocol scheme:
-  ```groovy
+  ```nextflow
   def ref = file('s3://some-bucket/foo.txt')
 
   assert ref.toString() == '/some-bucket/foo.txt'
@@ -806,19 +806,19 @@ The following methods are available for manipulating files and directories in a 
 
 : *When copying a file to another file:* if the target file already exists, it will be replaced.
 
-  ```groovy
+  ```nextflow
   file('/some/path/my_file.txt').copyTo('/another/path/new_file.txt')
   ```
 
 : *When copying a file to a directory:* the file will be copied into the directory, replacing any file with the same name.
 
-  ```groovy
+  ```nextflow
   file('/some/path/my_file.txt').copyTo('/another/path')
   ```
 
 : *When copying a directory to another directory:* if the target directory already exists, the source directory will be copied into the target directory, replacing any sub-directory with the same name. If the target path does not exist, it will be created automatically.
 
-  ```groovy
+  ```nextflow
   file('/any/dir_a').moveTo('/any/dir_b')
   ```
 
@@ -831,7 +831,7 @@ The following methods are available for manipulating files and directories in a 
 `delete() -> boolean`
 : Deletes the file or directory at the given path, returning `true` if the operation succeeds, and `false` otherwise:
 
-  ```groovy
+  ```nextflow
   myFile = file('some/file.txt')
   result = myFile.delete()
   println result ? "OK" : "Cannot delete: $myFile"
@@ -842,7 +842,7 @@ The following methods are available for manipulating files and directories in a 
 `deleteDir() -> boolean`
 : Deletes a directory and all of its contents.
 
-  ```groovy
+  ```nextflow
   file('any/path').deleteDir()
   ```
 
@@ -858,7 +858,7 @@ The following methods are available for manipulating files and directories in a 
 `mkdir() -> boolean`
 : Creates a directory at the given path, returning `true` if the directory is created successfully, and `false` otherwise:
 
-  ```groovy
+  ```nextflow
   myDir = file('any/path')
   result = myDir.mkdir()
   println result ? "OK" : "Cannot create directory: $myDir"
@@ -869,14 +869,14 @@ The following methods are available for manipulating files and directories in a 
 `mkdirs() -> boolean`
 : Creates a directory at the given path, including any nonexistent parent directories:
 
-  ```groovy
+  ```nextflow
   file('any/path').mkdirs()
   ```
 
 `mklink( linkName: String, [options] ) -> Path`
 : Creates a *filesystem link* to a given path:
 
-  ```groovy
+  ```nextflow
   myFile = file('/some/path/file.txt')
   myFile.mklink('/user/name/link-to-file.txt')
   ```
@@ -897,21 +897,21 @@ The following methods are available for manipulating files and directories in a 
 `renameTo( target: String ) -> boolean`
 : Rename a file or directory:
 
-  ```groovy
+  ```nextflow
   file('my_file.txt').renameTo('new_file_name.txt')
   ```
 
 `setPermissions( permissions: String ) -> boolean`
 : Sets a file's permissions using the [symbolic notation](http://en.wikipedia.org/wiki/File_system_permissions#Symbolic_notation):
 
-  ```groovy
+  ```nextflow
   myFile.setPermissions('rwxr-xr-x')
   ```
 
 `setPermissions( owner: int, group: int, other: int ) -> boolean`
 : Sets a file's permissions using the [numeric notation](http://en.wikipedia.org/wiki/File_system_permissions#Numeric_notation), i.e. as three digits representing the **owner**, **group**, and **other** permissions:
 
-  ```groovy
+  ```nextflow
   myFile.setPermissions(7,5,5)
   ```
 
@@ -974,7 +974,7 @@ A set is an unordered collection that cannot contain duplicate elements.
 
 As set literal can be created from a list:
 
-```groovy
+```nextflow
 [1, 2, 2, 3].toSet()
 // -> [1, 2, 3]
 ```
@@ -1129,7 +1129,7 @@ The following methods are available for a VersionNumber:
 
   For example:
 
-  ```groovy
+  ```nextflow
   if( !nextflow.version.matches('>=23.10') ) {
       error "This workflow requires Nextflow version 23.10 or greater -- You are running version $nextflow.version"
   }

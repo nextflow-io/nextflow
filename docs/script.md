@@ -18,7 +18,7 @@ Nextflow scripts have a maximum size of 64 KiB. To avoid this limit for large pi
 
 You can use the `println` function to print to the console:
 
-```groovy
+```nextflow
 println 'Hello, World!'
 ```
 
@@ -26,7 +26,7 @@ println 'Hello, World!'
 
 Variables are declared using the `def` keyword:
 
-```groovy
+```nextflow
 def num = 1
 println num
 
@@ -53,19 +53,19 @@ Variables can also be declared without `def` in some cases. However, this practi
 
 Lists are defined using square brackets:
 
-```groovy
+```nextflow
 def myList = [1776, -1, 33, 99, 0, 928734928763]
 ```
 
 You can access a given item in the list with square-bracket notation (indexes start at 0):
 
-```groovy
+```nextflow
 println myList[0]
 ```
 
 In order to get the length of the list use the `size` method:
 
-```groovy
+```nextflow
 println myList.size()
 ```
 
@@ -77,7 +77,7 @@ See {ref}`stdlib-types-list` for the set of available list operations.
 
 Maps are used to store *associative arrays* (also known as *dictionaries*). They are unordered collections of heterogeneous, named data:
 
-```groovy
+```nextflow
 def scores = ["Brett": 100, "Pete": "Did not finish", "Andrew": 86.87934]
 ```
 
@@ -85,21 +85,21 @@ Note that each of the values stored in the map can be of a different type. `Bret
 
 We can access the values in a map in two main ways:
 
-```groovy
+```nextflow
 println scores["Pete"]
 println scores.Pete
 ```
 
 To add data to or modify a map, the syntax is similar to adding values to list:
 
-```groovy
+```nextflow
 scores["Pete"] = 3
 scores["Cedric"] = 120
 ```
 
 You can also use the `+` operator to add two maps together:
 
-```groovy
+```nextflow
 def new_scores = scores + ["Pete": 3, "Cedric": 120]
 ```
 
@@ -123,7 +123,7 @@ Operators in this context are different from *channel operators*, which are spec
 
 The `==` and `!=` operators can be used to test whether any two values are equal (or not equal):
 
-```groovy
+```nextflow
 assert 2 + 2 == 4
 assert [2, 2] != [4]
 assert 'two plus two' != 'four'
@@ -135,7 +135,7 @@ The `assert` keyword simply tests a condition and raises an error if the conditi
 
 Comparison operators can be used to compare two values:
 
-```groovy
+```nextflow
 assert 3 < 3.14         // numbers are compared as, well, numbers
 assert 3 <= 3
 assert 'foo' > 'bar'    // strings are compared alphabetically
@@ -143,7 +143,7 @@ assert 'foo' > 'bar'    // strings are compared alphabetically
 
 Logical operators can be used to perform Boolean logic:
 
-```groovy
+```nextflow
 assert true && false == false   // logical AND
 assert true || false == true    // logical OR
 assert !true == false           // logical NOT
@@ -151,14 +151,14 @@ assert !true == false           // logical NOT
 
 The `in` and `!in` operators can be used to test *membership*, i.e. whether a collection contains a value:
 
-```groovy
+```nextflow
 assert 'lo wo' in 'Hello world!'
 assert 2 in [1, 2, 3]
 ```
 
 Arithmetic operators can be used to do math:
 
-```groovy
+```nextflow
 assert 2 + 2 == 4
 assert 2 - 2 == 0
 assert 2 * 2 == 4
@@ -169,7 +169,7 @@ assert 2 % 2 == 0   // modulo (division remainder)
 
 Some arithmetic operators can be used with other types of values. For example, `+` can be used to concatenate lists, maps, and strings:
 
-```groovy
+```nextflow
 assert [1, 2, 3] + [4] == [1, 2, 3, 4]
 ```
 
@@ -177,7 +177,7 @@ assert [1, 2, 3] + [4] == [1, 2, 3, 4]
 
 One of the most important features of any programming language is the ability to execute different code under different conditions. This can be done with an if-else statement:
 
-```groovy
+```nextflow
 def x = Math.random()
 if( x < 0.5 ) {
     println 'You lost.'
@@ -189,7 +189,7 @@ else {
 
 In some cases, conditional statements can be expressed more concisely as a conditional expression (also known as a *ternary expression*):
 
-```groovy
+```nextflow
 def message = Math.random() < 0.5
     ? 'You lost.'
     : 'You won!'
@@ -198,7 +198,7 @@ println message
 
 A shortened version of the conditional expression can be used to return a value if it is "truthy", or fallback to a second value otherwise:
 
-```groovy
+```nextflow
 def counts = ['A': 1, 'B', 2]
 assert counts['C'] ?: 0 == 0    // x is "truthy" if !!x == true
 ```
@@ -213,14 +213,14 @@ The `?:` operator is also known as the [elvis operator](https://en.wikipedia.org
 
 Strings can be defined by enclosing text in single or double quotes (`'` or `"` characters):
 
-```groovy
+```nextflow
 println "he said 'cheese' once"
 println 'he said "cheese!" again'
 ```
 
 Strings can be concatenated with `+`:
 
-```groovy
+```nextflow
 def a = "world"
 print "hello " + a + "\n"
 ```
@@ -233,7 +233,7 @@ There is an important difference between single-quoted and double-quoted strings
 
 In practice, double-quoted strings can contain the value of an arbitrary variable by prefixing its name with the `$` character, or the value of any expression by using the `${expression}` syntax, similar to Bash/shell scripts:
 
-```groovy
+```nextflow
 def foxtype = 'quick'
 def foxcolor = ['b', 'r', 'o', 'w', 'n']
 println "The $foxtype ${foxcolor.join()} fox"
@@ -253,7 +253,7 @@ $x + $y
 
 A block of text that span multiple lines can be defined by delimiting it with triple single or double quotes:
 
-```groovy
+```nextflow
 def text = """
     hello there James
     how are you today?
@@ -266,7 +266,7 @@ Like before, multi-line strings inside double quotes support variable interpolat
 
 As in Bash/shell scripts, terminating a line in a multi-line string with a `\` character prevents a newline character from separating that line from the one that follows:
 
-```groovy
+```nextflow
 def myLongCmdline = """
     blastp \
     -in $input_query \
@@ -296,14 +296,14 @@ Regular expressions are the Swiss Army knife of text processing. They provide th
 
 Use `=~` to check whether a given pattern occurs anywhere in a string:
 
-```groovy
+```nextflow
 assert 'foo' =~ /foo/
 assert 'foobar' =~ /foo/
 ```
 
 Use `==~` to check whether a string matches a given regular expression pattern exactly.
 
-```groovy
+```nextflow
 assert 'foo' ==~ /foo/
 assert !('foobar' ==~ /foo/)
 ```
@@ -312,7 +312,7 @@ assert !('foobar' ==~ /foo/)
 
 To replace pattern occurrences in a given string, use the `replaceFirst` and `replaceAll` methods:
 
-```groovy
+```nextflow
 def x = "colour".replaceFirst(/ou/, "o")
 println x
 // prints: color
@@ -324,7 +324,7 @@ println y
 
 To remove part of a string, simply replace it with a blank string:
 
-```groovy
+```nextflow
 def z = 'Hello World!'.replaceFirst(/(?i)\s+Wo\w+/, '')
 println z
 // prints: Hello!
@@ -336,7 +336,7 @@ You can match a pattern that includes groups. First create a matcher object with
 
 Here's how it works:
 
-```groovy
+```nextflow
 def programVersion = '2.7.3-beta'
 def m = programVersion =~ /(\d+)\.(\d+)\.(\d+)-?(.+)/
 
@@ -349,7 +349,7 @@ assert m[0][4] == 'beta'
 
 Applying some syntactic sugar, you can do the same in just one line of code:
 
-```groovy
+```nextflow
 def programVersion = '2.7.3-beta'
 def (full, major, minor, patch, flavor) = (programVersion =~ /(\d+)\.(\d+)\.(\d+)-?(.+)/)[0]
 
@@ -368,7 +368,7 @@ A closure is a function that can be used like a regular value. Typically, closur
 
 For example:
 
-```groovy
+```nextflow
 def square = { v -> v * v }
 ```
 
@@ -376,7 +376,7 @@ The above example defines a closure, which takes one parameter named `v` and ret
 
 `square` can now be called like a function:
 
-```groovy
+```nextflow
 println square(9)
 ```
 
@@ -384,25 +384,25 @@ The above example prints `81`.
 
 The main use case for a closure is as an argument to a higher-order function:
 
-```groovy
+```nextflow
 [ 1, 2, 3, 4 ].collect(square)
 ```
 
 The `collect` method of a list applies a mapping function to each value in the list and produces a new list. The above example produces:
 
-```groovy
+```nextflow
 [ 1, 4, 9, 16 ]
 ```
 
 The example can be expressed more concisely as:
 
-```groovy
+```nextflow
 [ 1, 2, 3, 4 ].collect { v -> v * v }
 ```
 
 Another example is the `each` method of a map, which takes a closure with two arguments corresponding to the key and value of each map entry:
 
-```groovy
+```nextflow
 [ "Yue" : "Wu", "Mark" : "Williams", "Sudha" : "Kumari" ].each { key, value ->
     println "$key = $value"
 }
@@ -418,7 +418,7 @@ Sudha = Kumari
 
 Closures can access variables outside of their scope:
 
-```groovy
+```nextflow
 def counts = ["China": 1, "India": 2, "USA": 3]
 
 def result = 0
@@ -431,7 +431,7 @@ println result
 
 A closure can also declare local variables that exist only for the lifetime of each closure invocation:
 
-```groovy
+```nextflow
 def result = 0
 myMap.keySet().each { v ->
     def count = myMap[v]
@@ -441,7 +441,7 @@ myMap.keySet().each { v ->
 
 While the `each` method is a convenient way to iterate through a collection and build up some result, a more idiomatic way to do this is to use the `inject` method:
 
-```groovy
+```nextflow
 def result = counts.values().inject { sum, v -> sum + v }
 ```
 
@@ -450,7 +450,7 @@ This way, the closure is fully "self-contained" because it doesn't access or mut
 :::{note}
 When a closure takes a single parameter, the parameter can be omitted, in which case the implicit `it` parameter will be used:
 
-```groovy
+```nextflow
 [1, 2, 3].each { println it }
 ```
 :::
@@ -463,7 +463,7 @@ In practice, however, Nextflow scripts are composed of *workflows*, *processes*,
 
 To transition a code snippet into a proper workflow script, simply wrap it in a `workflow` block:
 
-```groovy
+```nextflow
 workflow {
     println 'Hello!'
 }
@@ -473,7 +473,7 @@ This block is called the *entry workflow*. It serves as the entrypoint when the 
 
 You can also break up code into functions, for example:
 
-```groovy
+```nextflow
 def sayHello() {
     println 'Hello!'
 }

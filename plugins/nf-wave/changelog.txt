@@ -1,5 +1,8 @@
 nf-wave changelog
 ==================
+1.7.2 - 27 Oct 2024
+- Add wave mirror vs module bundles conflicts warning [b37a8a5b]
+
 1.7.1 - 14 Oct 2024
 - Change to scan.levels to scan.allowedLevels (#5401) [88a1b1b5]
 - Fix inspect concretize option [0ee29a87]
