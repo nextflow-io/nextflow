@@ -142,7 +142,7 @@ When a pipeline requires some small data that rarely changes, it may be easier t
 
 The following example references the file `dataset/sequences.fa` in the pipeline repository:
 
-```groovy
+```nextflow
 sequences = file("$projectDir/dataset/sequences.fa")
 sequences.splitFasta {
     println it

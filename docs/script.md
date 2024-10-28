@@ -18,7 +18,7 @@ Nextflow scripts have a maximum size of 64 KiB. To avoid this limit for large pi
 
 You can use the `println` function to print to the console:
 
-```groovy
+```nextflow
 println 'Hello, World!'
 ```
 
@@ -27,7 +27,7 @@ println 'Hello, World!'
 
 Variables are declared using the `def` keyword:
 
-```groovy
+```nextflow
 def num = 1
 println num
 
@@ -52,19 +52,19 @@ Variables can also be declared without `def` in some cases. However, this practi
 
 Lists are defined using square brackets:
 
-```groovy
+```nextflow
 def myList = [1776, -1, 33, 99, 0, 928734928763]
 ```
 
 You can access a given item in the list with square-bracket notation (indexes start at 0):
 
-```groovy
+```nextflow
 println myList[0]
 ```
 
 In order to get the length of the list use the `size` method:
 
-```groovy
+```nextflow
 println myList.size()
 ```
 
@@ -74,7 +74,7 @@ Refer to the [Java](https://docs.oracle.com/en/java/javase/11/docs/api/java.base
 
 Maps are used to store *associative arrays* (also known as *dictionaries*). They are unordered collections of heterogeneous, named data:
 
-```groovy
+```nextflow
 def scores = ["Brett": 100, "Pete": "Did not finish", "Andrew": 86.87934]
 ```
 
@@ -82,21 +82,21 @@ Note that each of the values stored in the map can be of a different type. `Bret
 
 We can access the values in a map in two main ways:
 
-```groovy
+```nextflow
 println scores["Pete"]
 println scores.Pete
 ```
 
 To add data to or modify a map, the syntax is similar to adding values to list:
 
-```groovy
+```nextflow
 scores["Pete"] = 3
 scores["Cedric"] = 120
 ```
 
 You can also use the `+` operator to add two maps together:
 
-```groovy
+```nextflow
 def new_scores = scores + ["Pete": 3, "Cedric": 120]
 ```
 
@@ -112,7 +112,7 @@ See the [Java](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java
 
 One of the most important features of any programming language is the ability to execute different code under different conditions. The simplest way to do this is to use the `if` construct:
 
-```groovy
+```nextflow
 def x = Math.random()
 if( x < 0.5 ) {
     println "You lost."
@@ -126,14 +126,14 @@ else {
 
 Strings can be defined by enclosing text in single or double quotes (`'` or `"` characters):
 
-```groovy
+```nextflow
 println "he said 'cheese' once"
 println 'he said "cheese!" again'
 ```
 
 Strings can be concatenated with `+`:
 
-```groovy
+```nextflow
 def a = "world"
 print "hello " + a + "\n"
 ```
@@ -146,7 +146,7 @@ There is an important difference between single-quoted and double-quoted strings
 
 In practice, double-quoted strings can contain the value of an arbitrary variable by prefixing its name with the `$` character, or the value of any expression by using the `${expression}` syntax, similar to Bash/shell scripts:
 
-```groovy
+```nextflow
 def foxtype = 'quick'
 def foxcolor = ['b', 'r', 'o', 'w', 'n']
 println "The $foxtype ${foxcolor.join()} fox"
@@ -166,7 +166,7 @@ $x + $y
 
 A block of text that span multiple lines can be defined by delimiting it with triple single or double quotes:
 
-```groovy
+```nextflow
 def text = """
     hello there James
     how are you today?
@@ -179,7 +179,7 @@ Like before, multi-line strings inside double quotes support variable interpolat
 
 As in Bash/shell scripts, terminating a line in a multi-line string with a `\` character prevents a newline character from separating that line from the one that follows:
 
-```groovy
+```nextflow
 def myLongCmdline = """
     blastp \
     -in $input_query \
@@ -211,21 +211,21 @@ Regular expressions are available via the `~/pattern/` syntax and the `=~` and `
 
 Use `=~` to check whether a given pattern occurs anywhere in a string:
 
-```groovy
+```nextflow
 assert 'foo' =~ /foo/       // return TRUE
 assert 'foobar' =~ /foo/    // return TRUE
 ```
 
 Use `==~` to check whether a string matches a given regular expression pattern exactly.
 
-```groovy
+```nextflow
 assert 'foo' ==~ /foo/       // return TRUE
 assert 'foobar' ==~ /foo/    // return FALSE
 ```
 
 The `~` operator creates a [Pattern](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/regex/Pattern.html) from the given string, while the `=~` operator creates a [Matcher](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/regex/Matcher.html):
 
-```groovy
+```nextflow
 x = ~/abc/
 println x.class
 // prints java.util.regex.Pattern
@@ -241,7 +241,7 @@ See the linked Java documentation for the available operations for these classes
 
 To replace pattern occurrences in a given string, use the `replaceFirst` and `replaceAll` methods:
 
-```groovy
+```nextflow
 def x = "colour".replaceFirst(/ou/, "o")
 println x
 // prints: color
@@ -253,7 +253,7 @@ println y
 
 To remove part of a string, simply replace it with a blank string:
 
-```groovy
+```nextflow
 def z = 'Hello World!'.replaceFirst(/(?i)\s+Wo\w+/, '')
 println z
 // prints: Hello!
@@ -265,7 +265,7 @@ You can match a pattern that includes groups. First create a matcher object with
 
 Here's how it works:
 
-```groovy
+```nextflow
 def programVersion = '2.7.3-beta'
 def m = programVersion =~ /(\d+)\.(\d+)\.(\d+)-?(.+)/
 
@@ -278,7 +278,7 @@ assert m[0][4] == 'beta'
 
 Applying some syntactic sugar, you can do the same in just one line of code:
 
-```groovy
+```nextflow
 def programVersion = '2.7.3-beta'
 def (full, major, minor, patch, flavor) = (programVersion =~ /(\d+)\.(\d+)\.(\d+)-?(.+)/)[0]
 
@@ -297,7 +297,7 @@ A closure is a function that can be used like a regular value. Typically, closur
 
 For example:
 
-```groovy
+```nextflow
 def square = { v -> v * v }
 ```
 
@@ -305,7 +305,7 @@ The above example defines a closure, which takes one parameter named `v` and ret
 
 `square` can now be called like a function:
 
-```groovy
+```nextflow
 println square(9)
 ```
 
@@ -313,25 +313,25 @@ The above example prints `81`.
 
 The main use case for a closure is as an argument to a higher-order function:
 
-```groovy
+```nextflow
 [ 1, 2, 3, 4 ].collect(square)
 ```
 
 The `collect` method of a list applies a mapping function to each value in the list and produces a new list. The above example produces:
 
-```groovy
+```nextflow
 [ 1, 4, 9, 16 ]
 ```
 
 The example can be expressed more concisely as:
 
-```groovy
+```nextflow
 [ 1, 2, 3, 4 ].collect { v -> v * v }
 ```
 
 Another example is the `each` method of a map, which takes a closure with two arguments corresponding to the key and value of each map entry:
 
-```groovy
+```nextflow
 [ "Yue" : "Wu", "Mark" : "Williams", "Sudha" : "Kumari" ].each { key, value ->
     println "$key = $value"
 }
@@ -347,7 +347,7 @@ Sudha = Kumari
 
 Closures can access variables outside of their scope:
 
-```groovy
+```nextflow
 def counts = ["China": 1, "India": 2, "USA": 3]
 
 def result = 0
@@ -360,7 +360,7 @@ println result
 
 A closure can also declare local variables that exist only for the lifetime of each closure invocation:
 
-```groovy
+```nextflow
 def result = 0
 myMap.keySet().each { v ->
     def count = myMap[v]
@@ -370,7 +370,7 @@ myMap.keySet().each { v ->
 
 While the `each` method is a convenient way to iterate through a collection and build up some result, a more idiomatic way to do this is to use the `inject` method:
 
-```groovy
+```nextflow
 def result = counts.values().inject { sum, v -> sum + v }
 ```
 
@@ -379,7 +379,7 @@ This way, the closure is fully "self-contained" because it doesn't access or mut
 :::{note}
 When a closure takes a single parameter, the parameter can be omitted, in which case the implicit `it` parameter will be used:
 
-```groovy
+```nextflow
 [1, 2, 3].each { println it }
 ```
 :::
@@ -392,7 +392,7 @@ In practice, however, Nextflow scripts are composed of *workflows*, *processes*,
 
 To transition a code snippet into a proper workflow script, simply wrap it in a `workflow` block:
 
-```groovy
+```nextflow
 workflow {
     println 'Hello!'
 }
@@ -402,7 +402,7 @@ This block is called the *entry workflow*. It serves as the entrypoint when the 
 
 You can also break up code into functions, for example:
 
-```groovy
+```nextflow
 def sayHello() {
     println 'Hello!'
 }
