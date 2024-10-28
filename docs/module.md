@@ -14,7 +14,7 @@ You can include any definition from a module into a Nextflow script using the `i
 
 For example:
 
-```groovy
+```nextflow
 include { foo } from './some/module'
 
 workflow {
@@ -49,7 +49,7 @@ some
 
 When defined as a directory, the module must be included by specifying the module directory path:
 
-```groovy
+```nextflow
 include { foo } from './some/module'
 ```
 
@@ -59,7 +59,7 @@ Module directories allow the use of module scoped binaries scripts. See [Module 
 
 A Nextflow script can include any number of modules, and an `include` statement can import any number of definitions from a module. Multiple definitions can be included from the same module by using the syntax shown below:
 
-```groovy
+```nextflow
 include { foo; bar } from './some/module'
 
 workflow {
@@ -75,7 +75,7 @@ workflow {
 
 When including definition from a module, it's possible to specify an *alias* with the `as` keyword. Aliasing allows you to avoid module name clashes, by assigning them different names in the including context. For example:
 
-```groovy
+```nextflow
 include { foo } from './some/module'
 include { foo as bar } from './other/module'
 
@@ -87,7 +87,7 @@ workflow {
 
 You can also include the same definition multiple times under different names:
 
-```groovy
+```nextflow
 include { foo; foo as bar } from './some/module'
 
 workflow {
@@ -106,7 +106,7 @@ As a best practice, parameters should be used in the entry workflow and passed t
 
 A module can define parameters using the same syntax as a Nextflow workflow script:
 
-```groovy
+```nextflow
 params.foo = 'Hello'
 params.bar = 'world!'
 
@@ -117,7 +117,7 @@ def sayHello() {
 
 When including a module, the module will first use parameters from the including context. For example:
 
-```groovy
+```nextflow
 params.foo = 'Hola'
 params.bar = 'Mundo'
 
@@ -144,7 +144,7 @@ It is best to define all pipeline parameters *before* any `include` statements.
 
 The `addParams` option can be used to pass parameters to the module without adding them to the including scope.
 
-```groovy
+```nextflow
 params.foo = 'Hola'
 params.bar = 'Mundo'
 
@@ -163,7 +163,7 @@ Ciao Mundo
 
 Alternatively, the `params` option can be used to pass parameters to module without adding them to the including scope, *and* without inheriting any parameters from the including scope.
 
-```groovy
+```nextflow
 params.foo = 'Hola'
 params.bar = 'Mundo'
 
@@ -255,7 +255,7 @@ Modules can define binary scripts that are locally scoped to the processes defin
 
 To enable this feature, set the following flag in your pipeline script or configuration file:
 
-```groovy
+```nextflow
 nextflow.enable.moduleBinaries = true
 ```
 

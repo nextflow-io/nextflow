@@ -46,7 +46,7 @@ The following constants are globally available in a Nextflow script:
 
     For example:
 
-    ```groovy
+    ```nextflow
     if( !nextflow.version.matches('>=23.10') ) {
         error "This workflow requires Nextflow version 23.10 or greater -- You are running version $nextflow.version"
     }
@@ -293,7 +293,7 @@ You can create a duration by adding a time unit suffix to an integer, e.g. `1.h`
 
 You can also create a duration with `Duration.of()`:
 
-```groovy
+```nextflow
 // integer value (milliseconds)
 oneSecond = Duration.of(1000)
 
@@ -306,7 +306,7 @@ complexDuration = Duration.of('1day 6hours 3minutes 30seconds')
 
 Durations can be compared like numbers, and they support basic arithmetic operations:
 
-```groovy
+```nextflow
 a = 1.h
 b = 2.h
 
@@ -359,7 +359,7 @@ Technically speaking, a kilobyte is equal to 1000 bytes, whereas 1024 bytes is c
 
 You can also create a memory unit with `MemoryUnit.of()`:
 
-```groovy
+```nextflow
 // integer value (bytes)
 oneKilobyte = MemoryUnit.of(1024)
 
@@ -369,7 +369,7 @@ oneGigabyte = MemoryUnit.of('1 GB')
 
 Memory units can be compared like numbers, and they support basic arithmetic operations:
 
-```groovy
+```nextflow
 a = 1.GB
 b = 2.GB
 
@@ -451,7 +451,7 @@ The following methods are useful for getting attributes of a file:
 
 `toUriString()`
 : Gets the file path along with the protocol scheme:
-  ```groovy
+  ```nextflow
   def ref = file('s3://some-bucket/foo.txt')
 
   assert ref.toString() == '/some-bucket/foo.txt'
@@ -533,19 +533,19 @@ The following methods are available for manipulating files and directories in a 
 
 : *When copying a file to another file:* if the target file already exists, it will be replaced.
 
-  ```groovy
+  ```nextflow
   file('/some/path/my_file.txt').copyTo('/another/path/new_file.txt')
   ```
 
 : *When copying a file to a directory:* the file will be copied into the directory, replacing any file with the same name.
 
-  ```groovy
+  ```nextflow
   file('/some/path/my_file.txt').copyTo('/another/path')
   ```
 
 : *When copying a directory to another directory:* if the target directory already exists, the source directory will be copied into the target directory, replacing any sub-directory with the same name. If the target path does not exist, it will be created automatically.
 
-  ```groovy
+  ```nextflow
   file('/any/dir_a').moveTo('/any/dir_b')
   ```
 
@@ -558,7 +558,7 @@ The following methods are available for manipulating files and directories in a 
 `delete()`
 : Deletes the file or directory at the given path, returning `true` if the operation succeeds, and `false` otherwise:
 
-  ```groovy
+  ```nextflow
   myFile = file('some/file.txt')
   result = myFile.delete()
   println result ? "OK" : "Cannot delete: $myFile"
@@ -569,7 +569,7 @@ The following methods are available for manipulating files and directories in a 
 `deleteDir()`
 : Deletes a directory and all of its contents.
 
-  ```groovy
+  ```nextflow
   file('any/path').deleteDir()
   ```
 
@@ -585,7 +585,7 @@ The following methods are available for manipulating files and directories in a 
 `mkdir()`
 : Creates a directory at the given path, returning `true` if the directory is created successfully, and `false` otherwise:
 
-  ```groovy
+  ```nextflow
   myDir = file('any/path')
   result = myDir.mkdir()
   println result ? "OK" : "Cannot create directory: $myDir"
@@ -596,14 +596,14 @@ The following methods are available for manipulating files and directories in a 
 `mkdirs()`
 : Creates a directory at the given path, including any nonexistent parent directories:
 
-  ```groovy
+  ```nextflow
   file('any/path').mkdirs()
   ```
 
 `mklink( linkName, [options] )`
 : Creates a *filesystem link* to a given path:
 
-  ```groovy
+  ```nextflow
   myFile = file('/some/path/file.txt')
   myFile.mklink('/user/name/link-to-file.txt')
   ```
@@ -622,21 +622,21 @@ The following methods are available for manipulating files and directories in a 
 `renameTo( target )`
 : Rename a file or directory:
 
-  ```groovy
+  ```nextflow
   file('my_file.txt').renameTo('new_file_name.txt')
   ```
 
 `setPermissions( permissions )`
 : Sets a file's permissions using the [symbolic notation](http://en.wikipedia.org/wiki/File_system_permissions#Symbolic_notation):
 
-  ```groovy
+  ```nextflow
   myFile.setPermissions('rwxr-xr-x')
   ```
 
 `setPermissions( owner, group, other )`
 : Sets a file's permissions using the [numeric notation](http://en.wikipedia.org/wiki/File_system_permissions#Numeric_notation), i.e. as three digits representing the **owner**, **group**, and **other** permissions:
 
-  ```groovy
+  ```nextflow
   myFile.setPermissions(7,5,5)
   ```
 

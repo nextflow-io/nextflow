@@ -20,7 +20,7 @@ Any process can define one or more channels as *input* and *output*. The interac
 
 A Nextflow script looks like this:
 
-```groovy
+```nextflow
 // Script parameters
 params.query = "/some/data/sample.fa"
 params.db = "/some/path/pdb"

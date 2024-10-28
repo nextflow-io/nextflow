@@ -163,7 +163,7 @@ By default, the `cpus` and `memory` directives are used to find the smallest mac
 
 To specify multiple Azure machine families, use a comma separated list with glob (`*`) values in the `machineType` directive. For example, the following will select any machine size from D or E v5 machines, with additional data disk, denoted by the `d` suffix:
 
-```config
+```groovy
 process.machineType = "Standard_D*d_v5,Standard_E*d_v5"
 ```
 

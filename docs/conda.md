@@ -45,7 +45,7 @@ Alternatively, it can be specified by setting the variable `NXF_CONDA_ENABLED=tr
 
 Conda package names can specified using the `conda` directive. Multiple package names can be specified by separating them with a blank space. For example:
 
-```groovy
+```nextflow
 process foo {
   conda 'bwa samtools multiqc'
 
@@ -94,7 +94,7 @@ Read the Conda documentation for more details about how to create [environment f
 
 The path of an environment file can be specified using the `conda` directive:
 
-```groovy
+```nextflow
 process foo {
   conda '/some/path/my-env.yaml'
 
@@ -124,7 +124,7 @@ Like before, the extension matters. Make sure the dependencies file has a `.txt`
 
 If you already have a local Conda environment, you can use it in your workflow specifying the installation directory of such environment by using the `conda` directive:
 
-```groovy
+```nextflow
 process foo {
   conda '/path/to/an/existing/env/directory'
 

@@ -16,7 +16,7 @@ Due to the asynchronous nature of Nextflow the termination of a script does not 
 
 The `onComplete` event handler is invoked by the framework when the workflow execution is completed. It allows one to access the workflow termination status and other useful information. For example:
 
-```groovy
+```nextflow
 workflow.onComplete {
     println "Pipeline completed at: $workflow.complete"
     println "Execution status: ${ workflow.success ? 'OK' : 'failed' }"
@@ -29,7 +29,7 @@ workflow.onComplete {
 
 The `onError` event handler is invoked by Nextflow when a runtime or process error caused the pipeline execution to stop. For example:
 
-```groovy
+```nextflow
 workflow.onError {
     println "Error: Pipeline execution stopped with the following message: ${workflow.errorMessage}"
 }
@@ -49,7 +49,7 @@ The built-in function `sendMail` allows you to send a mail message from a workfl
 
 The mail attributes are specified as named parameters or an equivalent map. For example:
 
-```groovy
+```nextflow
 sendMail(
     to: 'you@gmail.com',
     subject: 'Catch up',
@@ -60,7 +60,7 @@ sendMail(
 
 which is equivalent to:
 
-```groovy
+```nextflow
 mail = [
     to: 'you@gmail.com',
     subject: 'Catch up',
@@ -113,7 +113,7 @@ The following parameters can be specified:
 
 Another version of `sendMail` allows a more idiomatic syntax:
 
-```groovy
+```nextflow
 sendMail {
     to 'you@gmail.com'
     from 'me@gmail.com'
@@ -161,7 +161,7 @@ Moreover for each attachment it's possible to specify any of the following optio
 
 For example:
 
-```groovy
+```nextflow
 sendMail {
     to 'you@dot.com'
     attach '/some/file.txt', fileName: 'manuscript.txt'
@@ -215,7 +215,7 @@ ses:SendRawEmail
 
 You can use the `sendMail` function with a {ref}`workflow completion handler <metadata-completion-handler>` to notify the completion of a workflow completion. For example:
 
-```groovy
+```nextflow
 workflow.onComplete {
 
     def msg = """\

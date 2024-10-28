@@ -6,7 +6,7 @@
 
 To access and work with files, use the `file()` method, which returns a file system object given a file path string:
 
-```groovy
+```nextflow
 myFile = file('some/path/to/my_file.file')
 ```
 
@@ -14,7 +14,7 @@ The `file()` method can reference both files and directories, depending on what 
 
 When using the wildcard characters `*`, `?`, `[]` and `{}`, the argument is interpreted as a [glob](http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob) path matcher and the `file()` method returns a list object holding the paths of files whose names match the specified pattern, or an empty list if no match is found:
 
-```groovy
+```nextflow
 listOfFiles = file('some/path/*.fa')
 ```
 
@@ -28,14 +28,14 @@ A double asterisk (`**`) in a glob pattern works like `*` but also searches thro
 
 By default, wildcard characters do not match directories or hidden files. For example, if you want to include hidden files in the result list, enable the `hidden` option:
 
-```groovy
+```nextflow
 listWithHidden = file('some/path/*.fa', hidden: true)
 ```
 
 :::{note}
 To compose paths, instead of string interpolation, use the `resolve()` method or the `/` operator:
 
-```groovy
+```nextflow
 def dir = file('s3://bucket/some/data/path')
 def sample1 = dir.resolve('sample.bam')         // correct
 def sample2 = dir / 'sample.bam'
@@ -48,7 +48,7 @@ def sample4 = "$dir/sample.bam"                 // incorrect
 
 The `file()` method returns a [Path](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/Path.html), which has several methods for retrieving metadata about the file:
 
-```groovy
+```nextflow
 def path = file('/some/path/file.txt')
 
 assert path.baseName == 'file'
@@ -69,25 +69,25 @@ See the {ref}`stdlib-types-path` reference for the list of available methods.
 
 Given a file variable, created with the `file()` method as shown previously, reading a file is as easy as getting the file's `text` property, which returns the file content as a string:
 
-```groovy
+```nextflow
 print myFile.text
 ```
 
 Similarly, you can save a string to a file by assigning it to the file's `text` property:
 
-```groovy
+```nextflow
 myFile.text = 'Hello world!'
 ```
 
 Binary data can managed in the same way, just using the file property `bytes` instead of `text`. Thus, the following example reads the file and returns its content as a byte array:
 
-```groovy
+```nextflow
 binaryContent = myFile.bytes
 ```
 
 Or you can save a byte array to a file:
 
-```groovy
+```nextflow
 myFile.bytes = binaryContent
 ```
 
@@ -103,13 +103,13 @@ The above methods read and write the **entire** file contents at once, in a sing
 
 In order to append a string value to a file without erasing existing content, you can use the `append()` method:
 
-```groovy
+```nextflow
 myFile.append('Add this line\n')
 ```
 
 Or use the left shift operator, a more idiomatic way to append text content to a file:
 
-```groovy
+```nextflow
 myFile << 'Add a line more\n'
 ```
 
@@ -117,7 +117,7 @@ myFile << 'Add a line more\n'
 
 In order to read a text file line by line you can use the method `readLines()` provided by the file object, which returns the file content as a list of strings:
 
-```groovy
+```nextflow
 myFile = file('some/my_file.txt')
 allLines = myFile.readLines()
 for( line : allLines ) {
@@ -127,7 +127,7 @@ for( line : allLines ) {
 
 This can also be written in a more idiomatic syntax:
 
-```groovy
+```nextflow
 file('some/my_file.txt')
     .readLines()
     .each { println it }
@@ -139,7 +139,7 @@ The method `readLines()` reads the **entire** file at once and returns a list co
 
 To process a big file, use the method `eachLine()`, which reads only a single line at a time into memory:
 
-```groovy
+```nextflow
 count = 0
 myFile.eachLine { str ->
     println "line ${count++}: $str"
@@ -152,7 +152,7 @@ The classes `Reader` and `InputStream` provide fine-grained control for reading 
 
 The method `newReader()` creates a [Reader](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/Reader.html) object for the given file that allows you to read the content as single characters, lines or arrays of characters:
 
-```groovy
+```nextflow
 myReader = myFile.newReader()
 String line
 while( line = myReader.readLine() ) {
@@ -163,7 +163,7 @@ myReader.close()
 
 The method `withReader()` works similarly, but automatically calls the `close()` method for you when you have finished processing the file. So, the previous example can be written more simply as:
 
-```groovy
+```nextflow
 myFile.withReader {
     String line
     while( line = it.readLine() ) {
@@ -182,7 +182,7 @@ The `Writer` and `OutputStream` classes provide fine-grained control for writing
 
 For example, given two file objects `sourceFile` and `targetFile`, the following code copies the first file's content into the second file, replacing all `U` characters with `X`:
 
-```groovy
+```nextflow
 sourceFile.withReader { source ->
     targetFile.withWriter { target ->
         String line
@@ -203,7 +203,7 @@ Methods for performing filesystem operations such as copying, deleting, and dire
 
 The simplest way to list a directory is to use `list()` or `listFiles()`, which return a collection of first-level elements (files and directories) of a directory:
 
-```groovy
+```nextflow
 for( def file : file('any/path').list() ) {
     println file
 }
@@ -211,7 +211,7 @@ for( def file : file('any/path').list() ) {
 
 Additionally, the `eachFile()` method allows you to iterate through the first-level elements only (just like `listFiles()`). As with other `each*()` methods, `eachFile()` takes a closure as a parameter:
 
-```groovy
+```nextflow
 myDir.eachFile { item ->
     if( item.isFile() ) {
         println "${item.getName()} - size: ${item.size()}"
@@ -237,13 +237,13 @@ Nextflow can work with many kinds of remote files and objects using the same int
 
 To reference a remote file, simple specify the URL when opening the file:
 
-```groovy
+```nextflow
 pdb = file('http://files.rcsb.org/header/5FID.pdb')
 ```
 
 You can then access it as a local file as described previously:
 
-```groovy
+```nextflow
 println pdb.text
 ```
 

@@ -20,6 +20,8 @@ When more than one of these options for specifying configurations are used, they
 You can use the `-C <config-file>` option to use a single configuration file and ignore all other files.
 :::
 
+(config-syntax)=
+
 ## Syntax
 
 The Nextflow configuration syntax is based on the Nextflow script syntax. It is designed for setting configuration options in a declarative manner while also allowing for dynamic expressions where appropriate.

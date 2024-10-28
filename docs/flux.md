@@ -36,9 +36,9 @@ For additional Flux settings, see the {ref}`flux-executor` section.
 
 Here is an example pipeline that we will use:
 
-```groovy
+```nextflow
 workflow {
-    breakfast = Channel.from '🥞️', '🥑️', '🥧️', '🍵️', '🍞️'
+    breakfast = Channel.of '🥞️', '🥑️', '🥧️', '🍵️', '🍞️'
     haveMeal(breakfast)
 }
 

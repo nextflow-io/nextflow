@@ -37,7 +37,7 @@ channels if it is invoked with all value channels, including simple values which
 
 For example:
 
-```groovy
+```nextflow
 process foo {
   input:
   val x
@@ -67,7 +67,7 @@ Channel factories are functions that can create channels.
 
 For example, the `Channel.of()` factory can be used to create a channel from an arbitrary list of arguments:
 
-```groovy
+```nextflow
 Channel.of(1, 2, 3).view()
 ```
 

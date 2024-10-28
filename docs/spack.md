@@ -45,7 +45,7 @@ Alternatively, it can be specified by setting the variable `NXF_SPACK_ENABLED=tr
 
 Spack package names can specified using the `spack` directive. Multiple package names can be specified by separating them with a blank space. For example:
 
-```groovy
+```nextflow
 process foo {
   spack 'bwa samtools py-multiqc'
 
@@ -89,7 +89,7 @@ Read the Spack documentation for more details about how to create [environment f
 
 The path of an environment file can be specified using the `spack` directive:
 
-```groovy
+```nextflow
 process foo {
   spack '/some/path/my-env.yaml'
 
@@ -107,7 +107,7 @@ The environment file name **must** have a `.yaml` extension or else it won't be 
 
 If you already have a local Spack environment, you can use it in your workflow specifying the installation directory of such environment by using the `spack` directive:
 
-```groovy
+```nextflow
 process foo {
   spack '/path/to/an/existing/env/directory'
 
