@@ -20,7 +20,7 @@ Use [channel.of](#of) or [channel.fromList](#fromlist) instead.
 
 The `channel.from` method allows you to create a channel emitting any sequence of values that are specified as the method argument, for example:
 
-```groovy
+```nextflow
 ch = channel.from( 1, 3, 5, 7 )
 ch.subscribe { v -> println "value: $v" }
 ```
@@ -36,7 +36,7 @@ value: 7
 
 The following example shows how to create a channel from a *range* of numbers or strings:
 
-```groovy
+```nextflow
 zeroToNine = channel.from( 0..9 )
 strings = channel.from( 'A'..'Z' )
 ```
@@ -47,14 +47,14 @@ When the `channel.from` argument is an object implementing the (Java) [Collectio
 
 Thus the following two declarations produce an identical result even though in the first case the items are specified as multiple arguments while in the second case as a single list object argument:
 
-```groovy
+```nextflow
 channel.from( 1, 3, 5, 7, 9 )
 channel.from( [1, 3, 5, 7, 9] )
 ```
 
 But when more than one argument is provided, they are always managed as *single* emissions. Thus, the following example creates a channel emitting three entries each of which is a list containing two elements:
 
-```groovy
+```nextflow
 channel.from( [1, 2], [5,6], [7,9] )
 ```
 
@@ -67,7 +67,7 @@ channel.from( [1, 2], [5,6], [7,9] )
 
 The `channel.fromList` method allows you to create a channel emitting the values provided as a list of elements, for example:
 
-```groovy
+```nextflow
 channel
     .fromList( ['a', 'b', 'c', 'd'] )
     .view { v -> "value: $v" }
@@ -91,7 +91,7 @@ See also: [channel.of](#of) factory method.
 You can create a channel emitting one or more file paths by using the `channel.fromPath` method and specifying a path
 string as an argument. For example:
 
-```groovy
+```nextflow
 myFileChannel = channel.fromPath( '/data/some/bigfile.txt' )
 ```
 
@@ -105,7 +105,7 @@ object for the specified file.
 Whenever the `channel.fromPath` argument contains a `*` or `?` wildcard character it is interpreted as a [glob][glob] path matcher.
 For example:
 
-```groovy
+```nextflow
 myFileChannel = channel.fromPath( '/data/big/*.txt' )
 ```
 
@@ -117,7 +117,7 @@ Two asterisks, i.e. `**`, works like `*` but crosses directory boundaries. This 
 
 For example:
 
-```groovy
+```nextflow
 files = channel.fromPath( 'data/**.fa' )
 moreFiles = channel.fromPath( 'data/**/*.fa' )
 pairFiles = channel.fromPath( 'data/file_{1,2}.fq' )
@@ -131,13 +131,13 @@ As in Linux Bash, the `*` wildcard does not catch hidden files (i.e. files whose
 
 Multiple paths or glob patterns can be specified using a list:
 
-```groovy
+```nextflow
 channel.fromPath( ['/some/path/*.fq', '/other/path/*.fastq'] )
 ```
 
 In order to include hidden files, you need to start your pattern with a period character or specify the `hidden: true` option. For example:
 
-```groovy
+```nextflow
 expl1 = channel.fromPath( '/path/.*' )
 expl2 = channel.fromPath( '/path/.*.fa' )
 expl3 = channel.fromPath( '/path/*', hidden: true )
@@ -149,7 +149,7 @@ By default a [glob][glob] pattern only looks for regular file paths that match t
 
 You can use the `type` option specifying the value `file`, `dir` or `any` in order to define what kind of paths you want. For example:
 
-```groovy
+```nextflow
 myFileChannel = channel.fromPath( '/path/*b', type: 'dir' )
 myFileChannel = channel.fromPath( '/path/a*', type: 'any' )
 ```
@@ -186,7 +186,7 @@ Available options:
 The `channel.fromFilePairs` method creates a channel emitting the file pairs matching a [glob][glob] pattern provided
 by the user. The matching files are emitted as tuples in which the first element is the grouping key of the matching pair and the second element is the list of files (sorted in lexicographical order). For example:
 
-```groovy
+```nextflow
 channel
     .fromFilePairs('/my/data/SRR*_{1,2}.fastq')
     .view()
@@ -209,13 +209,13 @@ The glob pattern must contain at least one `*` wildcard character.
 
 Multiple glob patterns can be specified using a list:
 
-```groovy
+```nextflow
 channel.fromFilePairs( ['/some/data/SRR*_{1,2}.fastq', '/other/data/QFF*_{1,2}.fastq'] )
 ```
 
 Alternatively, it is possible to implement a custom file pair grouping strategy providing a closure which, given the current file as parameter, returns the grouping key. For example:
 
-```groovy
+```nextflow
 channel
     .fromFilePairs('/some/data/*', size: -1) { file -> file.extension }
     .view { ext, files -> "Files with the extension $ext are $files" }
@@ -253,7 +253,7 @@ Available options:
 
 The `channel.fromSRA` method queries the [NCBI SRA](https://www.ncbi.nlm.nih.gov/sra) database and returns a channel emitting the FASTQ files matching the specified criteria i.e project or accession number(s). For example:
 
-```groovy
+```nextflow
 channel
     .fromSRA('SRP043510')
     .view()
@@ -273,7 +273,7 @@ It returns:
 
 Multiple accession IDs can be specified using a list object:
 
-```groovy
+```nextflow
 ids = ['ERR908507', 'ERR908506', 'ERR908505']
 channel
     .fromSRA(ids)
@@ -295,7 +295,7 @@ This method uses the NCBI [ESearch](https://www.ncbi.nlm.nih.gov/books/NBK25499/
 To access the ESearch API, you must provide your [NCBI API keys](https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities) through one of the following ways:
 
 - The `apiKey` option:
-  ```groovy
+  ```nextflow
   channel.fromSRA(ids, apiKey:'0123456789abcdef')
   ```
 
@@ -333,7 +333,7 @@ Available retry policy properties:
 
 The following code snippet shows an example for using the `Channel.fromSRA` factory method with a custom `retryPolicy`.
 
-  ```groovy
+  ```nextflow
   channel.fromSRA(ids, retryPolicy: [delay: '250ms', maxAttempts: 5])
   ```
 
@@ -343,7 +343,7 @@ The following code snippet shows an example for using the `Channel.fromSRA` fact
 
 The `interval` method emits an incrementing index (starting from zero) at a periodic interval. For example:
 
-```groovy
+```nextflow
 Channel.interval('1s').view()
 ```
 
@@ -351,7 +351,7 @@ The above snippet will emit 0, 1, 2, and so on, every second, forever. You can u
 
 An optional closure can be used to transform the index. Additionally, returning `Channel.STOP` will close the channel. For example:
 
-```groovy
+```nextflow
 ch = Channel.interval('1s') { i ->
     i == 10 ? Channel.STOP : i
 }
@@ -367,7 +367,7 @@ ch.view()
 
 The `channel.of` method allows you to create a channel that emits the arguments provided to it, for example:
 
-```groovy
+```nextflow
 ch = channel.of( 1, 3, 5, 7 )
 ch.view { v -> "value: $v" }
 ```
@@ -384,7 +384,7 @@ value: 7
 
 Ranges of values are expanded accordingly:
 
-```groovy
+```nextflow
 channel
     .of(1..23, 'X', 'Y')
     .view()
@@ -424,7 +424,7 @@ You can think of it as a channel that is shared across many different processes 
 
 A process output can be assigned to a topic using the `topic` option on an output, for example:
 
-```groovy
+```nextflow
 process foo {
   output:
   val('foo'), topic: my_topic
@@ -439,7 +439,7 @@ process bar {
 The `channel.topic` method allows referencing the topic channel with the specified name, which can be used as a process
 input or operator composition as any other Nextflow channel:
 
-```groovy
+```nextflow
 channel.topic('my-topic').view()
 ```
 
@@ -458,7 +458,7 @@ See also: {ref}`process-additional-options` for process outputs.
 The `channel.value` method is used to create a value channel. An optional (not `null`) argument can be specified to bind
 the channel to a specific value. For example:
 
-```groovy
+```nextflow
 expl1 = channel.value()
 expl2 = channel.value( 'Hello there' )
 expl3 = channel.value( [1,2,3,4,5] )
@@ -477,7 +477,7 @@ The condition on files to watch can be specified by using `*` or `?` wildcard ch
 
 For example:
 
-```groovy
+```nextflow
 channel
     .watchPath( '/path/*.fa' )
     .subscribe { fa -> println "Fasta file: $fa" }
@@ -492,7 +492,7 @@ argument that specifies what event(s) to watch. The supported events are:
 
 You can specify more than one of these events by using a comma separated string as shown below:
 
-```groovy
+```nextflow
 channel
     .watchPath( '/path/*.fa', 'create,modify' )
     .subscribe { fa -> println "File created or modified: $fa" }

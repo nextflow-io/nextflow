@@ -6,7 +6,7 @@ In Nextflow, a **workflow** is a function that is specialized for composing proc
 
 A script can define up to one *entry workflow*, which does not have a name and serves as the entrypoint of the script:
 
-```groovy
+```nextflow
 workflow {
     Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola')
         | map { v -> "$v world!" }
@@ -16,7 +16,7 @@ workflow {
 
 A *named workflow*, on the other hand, is a workflow that can be called from other workflows:
 
-```groovy
+```nextflow
 workflow my_workflow {
     foo()
     bar( foo.out.collect() )
@@ -39,7 +39,7 @@ Workflows were introduced in DSL2. If you are still using DSL1, see {ref}`dsl1-p
 
 Parameters can be defined in the script with a default value that can be overridden from the CLI, params file, or config file. Params should only be used by the entry workflow:
 
-```groovy
+```nextflow
 params.data = '/some/data/file'
 
 workflow {
@@ -58,7 +58,7 @@ While params can also be used by named workflows, this practice is discouraged. 
 
 The `take:` section is used to declare workflow inputs:
 
-```groovy
+```nextflow
 workflow my_workflow {
     take:
     data1
@@ -72,7 +72,7 @@ workflow my_workflow {
 
 Inputs can be specified like arguments when calling the workflow:
 
-```groovy
+```nextflow
 workflow {
     my_workflow( Channel.of('/some/data') )
 }
@@ -82,7 +82,7 @@ workflow {
 
 The `emit:` section is used to declare workflow outputs:
 
-```groovy
+```nextflow
 workflow my_workflow {
     main:
     foo(data)
@@ -97,7 +97,7 @@ When calling the workflow, the output can be accessed using the `out` property, 
 
 If an output is assigned to a name, the name can be used to reference the output from the calling workflow. For example:
 
-```groovy
+```nextflow
 workflow my_workflow {
     main:
     foo(data)
@@ -120,7 +120,7 @@ Every output must be assigned to a name when multiple outputs are declared.
 
 Processes and workflows are called like functions, passing their inputs as arguments:
 
-```groovy
+```nextflow
 process foo {
     output:
     path 'foo.txt', emit: txt
@@ -167,7 +167,7 @@ Processes and workflows have a few extra rules for how they can be called:
 
 The "return value" of a process or workflow call is the process outputs or workflow emits, respectively. The return value can be assigned to a variable or passed into another call:
 
-```groovy
+```nextflow
 workflow flow {
     take:
     data
@@ -187,7 +187,7 @@ workflow {
 
 Named outputs can be accessed as properties of the return value:
 
-```groovy
+```nextflow
 workflow flow {
     take:
     data
@@ -209,7 +209,7 @@ workflow {
 
 As a convenience, process and workflow outputs can also be accessed without first assigning to a variable, by using the `.out` property of the process or workflow name:
 
-```groovy
+```nextflow
 workflow flow {
     take:
     data
@@ -239,7 +239,7 @@ Process and workflow outputs can also be accessed by index (e.g., `foo.out[0]`, 
 
 Workflows can be composed in the same way:
 
-```groovy
+```nextflow
 workflow flow1 {
     take:
     data
@@ -287,7 +287,7 @@ The following operators have a special meaning when used in a workflow with proc
 
 The `|` *pipe* operator can be used to chain processes, operators, and workflows:
 
-```groovy
+```nextflow
 process foo {
     input:
     val data
@@ -311,7 +311,7 @@ The above snippet defines a process named `foo` and invokes it with the input ch
 
 The same code can also be written as:
 
-```groovy
+```nextflow
 workflow {
     ch1 = Channel.of('Hello','Hola','Ciao')
     ch2 = foo( ch1 )
@@ -323,7 +323,7 @@ workflow {
 
 The `&` *and* operator can be used to call multiple processes in parallel with the same channel(s):
 
-```groovy
+```nextflow
 process foo {
     input:
     val data
@@ -359,7 +359,7 @@ In the above snippet, the initial channel is piped to the {ref}`operator-map` op
 
 The same code can also be written as:
 
-```groovy
+```nextflow
 workflow {
     ch = Channel.of('Hello').map { v -> v.reverse() }
     ch_foo = foo(ch)
@@ -387,7 +387,7 @@ A workflow can publish outputs by sending channels to "publish targets" in the w
 
 Here is a basic example:
 
-```groovy
+```nextflow
 process foo {
     // ...
 
@@ -439,7 +439,7 @@ Each publish target is saved into a subdirectory of the output directory. By def
 
 For example, given the following publish targets:
 
-```groovy
+```nextflow
 workflow {
     main:
     ch_foo = foo()
@@ -467,7 +467,7 @@ Target names cannot begin or end with a slash (`/`).
 
 By default, all files emitted by a published channel will be published into the specified directory. If a channel emits list values, each file in the list (including nested lists) will be published. For example:
 
-```groovy
+```nextflow
 workflow {
     main:
     ch_samples = Channel.of(
@@ -481,7 +481,7 @@ workflow {
 
 A workflow can also disable publishing for a specific channel by redirecting it to `null`:
 
-```groovy
+```nextflow
 workflow {
     main:
     ch_foo = foo()
@@ -497,7 +497,7 @@ The output directory structure can be customized further in the "output block", 
 
 For example:
 
-```groovy
+```nextflow
 workflow {
     // ...
 }
@@ -530,7 +530,7 @@ The output block is only needed if you want to customize the behavior of specifi
 
 The `path` directive in a target block can also be a closure which defines a custom publish path for each channel value:
 
-```groovy
+```nextflow
 workflow {
     main:
     ch_fastq = Channel.of( [ [id: 'SAMP1'], file('1.fastq'), file('2.fastq') ] )
@@ -550,7 +550,7 @@ The above example will publish each channel value to a different subdirectory. I
 
 The closure can even define a different path for each individual file by returning an inner closure, similar to the `saveAs` option of the {ref}`publishDir <process-publishdir>` directive:
 
-```groovy
+```nextflow
 output {
     'fastq' {
         path { meta, fastq_1, fastq_2 ->
@@ -572,7 +572,7 @@ A publish target can create an index file of the values that were published. An 
 
 For example:
 
-```groovy
+```nextflow
 workflow {
     main:
     ch_fastq = Channel.of(
@@ -605,7 +605,7 @@ The above example will write the following CSV file to `results/fastq/index.csv`
 
 You can customize the index file with additional directives, for example:
 
-```groovy
+```nextflow
 index {
     path 'index.csv'
     header ['id', 'fastq_1', 'fastq_1']
