@@ -15,5 +15,5 @@ Channel.of( 1, 2, 'a', 'b', 3 )
 
 // emits the first item for which the predicate evaluates to true: 4
 Channel.of( 1, 2, 3, 4, 5 )
-    .first { it > 3 }
+    .first { v -> v > 3 }
     .view()

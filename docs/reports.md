@@ -13,7 +13,7 @@ nextflow log <run name> [options]
 ```
 
 :::{note}
-Both the {ref}`execution report <execution-report>` and the {ref}`trace report <trace-report>` must be specified when the pipeline is first called. By contrast, the `log` option is useful after a pipeline has already run and is available for every executed pipeline.
+Both the [execution report](#execution-report) and the [trace file](#trace-file) must be specified when the pipeline is first called. By contrast, the `log` option is useful after a pipeline has already run and is available for every executed pipeline.
 :::
 
 By default, `log` prints the list of executed pipelines:
@@ -121,7 +121,7 @@ Plots are shown for CPU, memory, job duration and disk I/O. They have two (or th
 ```{image} _static/report-resource-cpu.png
 ```
 
-Learn more about how resource usage is computed in the {ref}`Metrics documentation <metrics-page>`.
+Learn more about how resource usage is computed in {ref}`this tutorial <metrics-page>`.
 
 (execution-report-tasks)=
 
@@ -133,7 +133,7 @@ The `Tasks` section lists all executed tasks, reporting for each of them the sta
 ```
 
 :::{note}
-Nextflow collects these metrics through a background process for each job in the target environment. Make sure the following tools are available in the environment where tasks are executed: `awk`, `date`, `grep`, `ps`, `sed`, `tail`, `tee`. Moreover, some of these metrics are not reported when running on Mac OS X. See the note about that in the [Trace report](#trace-report) below.
+Nextflow collects these metrics through a background process for each job in the target environment. Make sure the following tools are available in the environment where tasks are executed: `awk`, `date`, `grep`, `ps`, `sed`, `tail`, `tee`. Moreover, some of these metrics are not reported when running on Mac OS X. See the corresponding note in the [trace file](#trace-file) section.
 :::
 
 :::{warning}
@@ -144,7 +144,7 @@ Please read {ref}`Report scope <config-report>` section to learn more about the 
 
 (trace-report)=
 
-## Trace report
+## Trace file
 
 Nextflow creates an execution tracing file that contains some useful information about each process executed in your pipeline script, including: submission time, start time, completion time, cpu and memory used.
 
@@ -179,6 +179,8 @@ It will create a file named `trace.txt` in the current directory. The content lo
 | 98      | de/d6c0a6 | 2099      | matrix (1)     | COMPLETED | 0    | 2014-10-23 17:14:27.139 | 30s      | 1s       | 0.0%   | 4.8 MB   | 42 MB    | 240.6 MB | 79 KB    |
 
 (trace-fields)=
+
+### Trace fields
 
 The following table shows the fields that can be included in the execution report:
 
@@ -322,9 +324,9 @@ Please read {ref}`Trace scope <config-trace>` section to learn more about it.
 
 (timeline-report)=
 
-## Timeline report
+## Execution timeline
 
-Nextflow can render an HTML timeline for all processes executed in your pipeline. An example of the timeline report is shown below:
+Nextflow can render an HTML timeline for all processes executed in your pipeline. An example of the execution timeline is shown below:
 
 ```{image} _static/timeline-min.png
 ```
@@ -335,7 +337,7 @@ Each bar displays two numbers: the task duration time and the virtual memory siz
 
 As each process can spawn many tasks, colors are used to identify those tasks belonging to the same process.
 
-To enable the creation of the timeline report add the `-with-timeline` command line option when launching the pipeline execution. For example:
+To enable the creation of the execution timeline add the `-with-timeline` command line option when launching the pipeline execution. For example:
 
 ```bash
 nextflow run <pipeline> -with-timeline [file name]
@@ -343,9 +345,9 @@ nextflow run <pipeline> -with-timeline [file name]
 
 The report file name can be specified as an optional parameter following the timeline option.
 
-(dag-visualisation)=
+(workflow-diagram)=
 
-## DAG visualisation
+## Workflow diagram
 
 A Nextflow pipeline can be represented as a direct acyclic graph (DAG). The vertices in the graph represent the pipeline's processes and operators, while the edges represent the data dependencies (i.e. channels) between them.
 

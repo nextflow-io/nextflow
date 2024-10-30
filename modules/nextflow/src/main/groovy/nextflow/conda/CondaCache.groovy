@@ -285,7 +285,8 @@ class CondaCache {
         def cmd
         if( isYamlFilePath(condaEnv) ) {
             final target = isYamlUriPath(condaEnv) ? condaEnv : Escape.path(makeAbsolute(condaEnv))
-            cmd = "${binaryName} env create --prefix ${Escape.path(prefixPath)} --file ${target}"
+            final yesOpt = binaryName == 'micromamba' ? '--yes ' : ''
+            cmd = "${binaryName} env create ${yesOpt}--prefix ${Escape.path(prefixPath)} --file ${target}"
         }
         else if( isTextFilePath(condaEnv) ) {
             cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"

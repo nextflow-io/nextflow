@@ -21,6 +21,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
 import nextflow.executor.SupportedScriptTypes
@@ -120,6 +121,8 @@ class GoogleLifeSciencesExecutor extends Executor implements ExtensionPoint {
 
     @Override
     protected void register() {
+        if( !SysEnv.getBool('NXF_DISABLE_GLS_DEPRECATION_NOTICE', false) )
+            log.warn "Google Cloud Life Sciences API Cloud Life Sciences is deprecated and will no longer be available on Google Cloud after July 8, 2025. Consider migrating to Google Cloud Batch instead. Read more at this link: https://cloud.google.com/life-sciences/docs/deprecations"
         super.register()
         validateWorkDir()
         createConfig()

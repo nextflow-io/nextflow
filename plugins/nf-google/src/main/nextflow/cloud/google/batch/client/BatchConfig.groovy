@@ -16,13 +16,11 @@
 
 package nextflow.cloud.google.batch.client
 
-
 import com.google.auth.oauth2.GoogleCredentials
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.cloud.google.GoogleOpts
-import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.MemoryUnit
 /**
  * Model Google Batch config settings
@@ -33,11 +31,14 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class BatchConfig {
 
-    static private List<Integer> DEFAULT_RETRY_LIST = List.of(50001)
+    static final private int DEFAULT_MAX_SPOT_ATTEMPTS = 0
+    
+    static final private List<Integer> DEFAULT_RETRY_LIST = List.of(50001)
 
     private GoogleOpts googleOpts
     private GoogleCredentials credentials
     private List<String> allowedLocations
+    private String bootDiskImage
     private MemoryUnit bootDiskSize
     private String cpuPlatform
     private int maxSpotAttempts
@@ -54,6 +55,7 @@ class BatchConfig {
     GoogleOpts getGoogleOpts() { return googleOpts }
     GoogleCredentials getCredentials() { return credentials }
     List<String> getAllowedLocations() { allowedLocations }
+    String getBootDiskImage() { bootDiskImage }
     MemoryUnit getBootDiskSize() { bootDiskSize }
     String getCpuPlatform() { cpuPlatform }
     int getMaxSpotAttempts() { maxSpotAttempts }
@@ -72,9 +74,10 @@ class BatchConfig {
         result.googleOpts = GoogleOpts.create(session)
         result.credentials = result.googleOpts.credentials
         result.allowedLocations = session.config.navigate('google.batch.allowedLocations', List.of()) as List<String>
+        result.bootDiskImage = session.config.navigate('google.batch.bootDiskImage')
         result.bootDiskSize = session.config.navigate('google.batch.bootDiskSize') as MemoryUnit
         result.cpuPlatform = session.config.navigate('google.batch.cpuPlatform')
-        result.maxSpotAttempts = session.config.navigate('google.batch.maxSpotAttempts',5) as int
+        result.maxSpotAttempts = session.config.navigate('google.batch.maxSpotAttempts', DEFAULT_MAX_SPOT_ATTEMPTS) as int
         result.installGpuDrivers = session.config.navigate('google.batch.installGpuDrivers',false)
         result.preemptible = session.config.navigate('google.batch.preemptible',false)
         result.spot = session.config.navigate('google.batch.spot',false)
@@ -83,7 +86,7 @@ class BatchConfig {
         result.subnetwork = session.config.navigate('google.batch.subnetwork')
         result.serviceAccountEmail = session.config.navigate('google.batch.serviceAccountEmail')
         result.retryConfig = new BatchRetryConfig( session.config.navigate('google.batch.retryPolicy') as Map ?: Map.of() )
-        result.autoRetryExitCodes = session.config.navigate('google.batch.autoRetryExitCodes',DEFAULT_RETRY_LIST) as List<Integer>
+        result.autoRetryExitCodes = session.config.navigate('google.batch.autoRetryExitCodes', DEFAULT_RETRY_LIST) as List<Integer>
         return result
     }
 
