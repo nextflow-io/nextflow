@@ -136,6 +136,27 @@ nxf_write_trace() {
     echo "write_bytes=${io_stat1[5]}"  >> $trace_file
 }
 
+nxf_files_size() {
+    local sizes_file={{sizes_file}}
+    local inputs="{{inputs_list}}"
+    local outputs="{{outputs_list}}"
+    if [ ! -z "$outputs" ]; then
+        echo "outputs: " >> $sizes_file
+        for f in $outputs ; do
+            echo -e "- name: $f " >> $sizes_file
+            echo -e "  size: $( du -s -b $f | awk '{print $1}')" >> $sizes_file
+        done
+    fi
+    if [ ! -z "$inputs" ]; then
+        echo "inputs: " >> $sizes_file
+        for f in $inputs ; do
+            echo -e "- name: $f " >> $sizes_file
+            echo -e "  size: $( du -s -L -b $f | awk '{print $1}')" >> $sizes_file
+        done
+    fi
+}
+
+
 nxf_trace_mac() {
     local start_millis=$(nxf_date)
 
@@ -227,4 +248,5 @@ nxf_trace() {
     else
         nxf_trace_linux
     fi
+    nxf_files_size
 }

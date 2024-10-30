@@ -219,6 +219,14 @@ abstract class TaskHandler {
             catch( NoSuchFileException e ) {
                 // ignore it
             }
+            def sizesFile = task.workDir?.resolve(TaskRun.CMD_SIZES)
+            try {
+                if(sizesFile) record.parseSizesFile(sizesFile)
+            }
+            catch( NoSuchFileException e ) {
+                // ignore it
+            }
+
             catch( IOException e ) {
                 log.debug "[WARN] Cannot read trace file: $file -- Cause: ${e.message}"
             }

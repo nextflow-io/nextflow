@@ -16,6 +16,8 @@
 
 package nextflow.trace
 
+import groovy.yaml.YamlSlurper
+
 import java.nio.file.Path
 import java.util.regex.Pattern
 
@@ -101,7 +103,9 @@ class TraceRecord implements Serializable {
             vol_ctxt: 'num',        // -- /proc/$pid/status field 'voluntary_ctxt_switches'
             inv_ctxt: 'num',        // -- /proc/$pid/status field 'nonvoluntary_ctxt_switches'
             hostname: 'str',
-            cpu_model:  'str'
+            cpu_model:  'str',
+            inputs: 'str',
+            outputs: 'str'
     ]
 
     static public Map<String,Closure<String>> FORMATTER = [
@@ -463,6 +467,16 @@ class TraceRecord implements Serializable {
         }
 
         return this
+    }
+
+    TraceRecord parseSizesFile(Path file){
+        def yaml = new YamlSlurper().parse(file)
+        if( yaml.getAt('inputs') != null ) {
+            this.put('inputs', yaml.getAt('inputs'))
+        }
+        if( yaml.getAt('outputs') != null ) {
+            this.put('outputs', yaml.getAt('outputs'))
+        }
     }
 
     private TraceRecord parseLegacy( Path file, List<String> lines) {
