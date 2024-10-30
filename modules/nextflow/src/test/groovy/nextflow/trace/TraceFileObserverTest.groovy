@@ -186,11 +186,14 @@ class TraceFileObserverTest extends Specification {
         record.peak_vmem = 30_000 * 1024
         record.rchar = 30_000 * 1024
         record.wchar = 10_000 * 1024
+        record.inputs = [ [name: "in_file_1", size: 123456], [name: "in_file_2", size: 654321] ]
+        record.outputs = [ [name: "out_file_1", size: 123456] ]
 
         when:
         def trace = [:] as TraceFileObserver
         def result = trace.render(record).split('\t')
         then:
+        result.size() == 16
         result[0] == '30'                       // task id
         result[1] == '43d7ef'                   // hash
         result[2] == '2000'                     // native id
@@ -205,6 +208,8 @@ class TraceFileObserverTest extends Specification {
         result[11] == '29.3 MB'                 // peak_vmem
         result[12] == '29.3 MB'                 // rchar
         result[13] == '9.8 MB'                  // wchar
+        result[14] == '[[name:in_file_1, size:123456], [name:in_file_2, size:654321]]' // inputs
+        result[15] == '[[name:out_file_1, size:123456]]' // outputs
 
     }
 
