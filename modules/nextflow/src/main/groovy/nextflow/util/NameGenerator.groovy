@@ -412,6 +412,9 @@ class NameGenerator {
             // David Hilbert - German mathematician, recognized as one of the most influential and universal mathematicians of the 19th and early 20th centuries. he is known as one of the founders of proof theory and mathematical logic, as well as for being among the first to distinguish between mathematics and metamathematics. https://en.wikipedia.org/wiki/David_Hilbert
             "hilbert",
 
+            // Rahel Hirsch - German physician, the first woman in the Kingdom of Prussia to be appointed a professor of medicine. https://en.wikipedia.org/wiki/Rahel_Hirsch
+            "hirsch",
+
             // Dorothy Hodgkin was a British biochemist, credited with the development of protein crystallography. She was awarded the Nobel Prize in Chemistry in 1964. https://en.wikipedia.org/wiki/Dorothy_Hodgkin
             "hodgkin",
 
