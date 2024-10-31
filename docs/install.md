@@ -12,7 +12,7 @@ Nextflow can be used on any POSIX-compatible system (Linux, macOS, etc), and on 
 java -version
 ```
 
-:::{versionchanged} 24.08.0-edge
+:::{versionchanged} 24.11.0-edge
 Support for Java versions prior to 17 was dropped.
 :::
 
