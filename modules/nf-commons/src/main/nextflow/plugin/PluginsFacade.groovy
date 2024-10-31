@@ -51,18 +51,21 @@ class PluginsFacade implements PluginStateListener {
     private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
     private String indexUrl = Plugins.DEFAULT_PLUGINS_REPO
     private boolean embedded
+    private boolean offline
 
     PluginsFacade() {
         mode = getPluginsMode()
         root = getPluginsDir()
+        offline = env.get('NXF_OFFLINE') == 'true'
         if( mode==DEV_MODE && root.toString()=='plugins' && !isRunningFromDistArchive() )
             root = detectPluginsDevRoot()
         System.setProperty('pf4j.mode', mode)
     }
 
-    PluginsFacade(Path root, String mode=PROD_MODE) {
+    PluginsFacade(Path root, String mode=PROD_MODE, boolean offline=false) {
         this.mode = mode
         this.root = root
+        this.offline = offline
         System.setProperty('pf4j.mode', mode)
     }
 
@@ -182,7 +185,7 @@ class PluginsFacade implements PluginStateListener {
 
     protected PluginUpdater createUpdater(Path root, CustomPluginManager manager) {
         return ( mode!=DEV_MODE
-                ? new PluginUpdater(manager, root, new URL(indexUrl))
+                ? new PluginUpdater(manager, root, new URL(indexUrl), offline)
                 : new DevPluginUpdater(manager) )
     }
 

@@ -69,6 +69,8 @@ class PluginUpdater extends UpdateManager {
 
     private boolean pullOnly
 
+    private boolean offline
+
     private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
 
     protected PluginUpdater(CustomPluginManager pluginManager) {
@@ -76,13 +78,14 @@ class PluginUpdater extends UpdateManager {
         this.pluginManager = pluginManager
     }
 
-    PluginUpdater(CustomPluginManager pluginManager, Path pluginsRoot, URL repo) {
-        super(pluginManager, wrap(repo, pluginsRoot))
+    PluginUpdater(CustomPluginManager pluginManager, Path pluginsRoot, URL repo, boolean offline) {
+        super(pluginManager, wrap(repo, pluginsRoot, offline))
+        this.offline = offline
         this.pluginsStore = pluginsRoot
         this.pluginManager = pluginManager
     }
 
-    static private List<UpdateRepository> wrap(URL remote, Path local) {
+    static private List<UpdateRepository> wrap(URL remote, Path local, boolean offline) {
         List<UpdateRepository> result = new ArrayList<>(1)
         if( offline ) {
             result.add(new LocalUpdateRepository('downloaded', local))
@@ -319,10 +322,6 @@ class PluginUpdater extends UpdateManager {
         new File(tmp, "nextflow-plugin-${id}-${version}.lock")
     }
 
-    private static boolean isOffline() {
-        SysEnv.get('NXF_OFFLINE') == 'true'
-    }
-
     private boolean load0(String id, String requestedVersion) {
         assert id, "Missing plugin Id"
 
@@ -421,6 +420,10 @@ class PluginUpdater extends UpdateManager {
     protected boolean shouldUpdate(String pluginId, String version, PluginWrapper current) {
         if( pluginManager.runtimeMode == RuntimeMode.DEVELOPMENT ) {
             log.debug "Update not supported during development mode"
+            return false
+        }
+        if( offline ) {
+            log.debug("Update not supported in offline mode")
             return false
         }
 
