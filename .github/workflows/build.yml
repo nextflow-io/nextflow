@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java_version: [11, 17, 23]
+        java_version: [17, 23]
 
     steps:
       - name: Environment
@@ -133,7 +133,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java_version: [11, 23]
+        java_version: [17, 23]
         test_mode: ["test_integration", "test_docs", "test_aws", "test_azure", "test_google", "test_wave"]
     steps:
       - name: Checkout
