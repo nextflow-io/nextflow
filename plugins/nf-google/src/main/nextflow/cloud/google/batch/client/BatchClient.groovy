@@ -22,6 +22,7 @@ import java.util.function.Predicate
 
 import com.google.api.gax.core.CredentialsProvider
 import com.google.api.gax.rpc.FixedHeaderProvider
+import com.google.api.gax.rpc.NotFoundException
 import com.google.api.gax.rpc.UnavailableException
 import com.google.auth.Credentials
 import com.google.cloud.batch.v1.BatchServiceClient
@@ -177,6 +178,8 @@ class BatchClient {
                 if( t instanceof IOException || t.cause instanceof IOException )
                     return true
                 if( t instanceof TimeoutException || t.cause instanceof TimeoutException )
+                    return true
+                if( t instanceof NotFoundException || t.cause instanceof NotFoundException )
                     return true
                 return false
             }
