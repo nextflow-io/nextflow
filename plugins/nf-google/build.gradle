@@ -44,6 +44,8 @@ dependencies {
     api 'com.google.cloud:google-cloud-nio:0.124.8'
     api 'com.google.cloud:google-cloud-storage:2.9.3'
     api 'com.google.code.gson:gson:2.10.1'
+    // include protobuf to address vulnerability issues
+    runtimeOnly 'com.google.protobuf:protobuf-java:3.25.5'
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation "org.apache.groovy:groovy:4.0.23"
