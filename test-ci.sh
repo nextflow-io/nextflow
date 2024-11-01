@@ -15,7 +15,6 @@ export NXF_CMD=$PWD/nextflow;
 export TEST_JDK
 export TEST_MODE
 
-unset JAVA_TOOL_OPTIONS # this variable mess-up Capsule loader Java version parsing
 (
  $NXF_CMD info
  cd validation
