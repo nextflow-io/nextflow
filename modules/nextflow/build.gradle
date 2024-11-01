@@ -35,7 +35,7 @@ dependencies {
     api("ch.artecat.grengine:grengine:3.0.2") { exclude group: 'org.codehaus.groovy' }
     api "commons-lang:commons-lang:2.6"
     api "commons-codec:commons-codec:1.15"
-    api "commons-io:commons-io:2.11.0"
+    api "commons-io:commons-io:2.15.1"
     api "com.beust:jcommander:1.35"
     api("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
     api('org.iq80.leveldb:leveldb:0.12')
