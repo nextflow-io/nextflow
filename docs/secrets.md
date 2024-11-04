@@ -51,7 +51,7 @@ Secrets **cannot** be assigned to pipeline parameters.
 
 Secrets can be access by pipeline processes by using the `secret` directive. For example:
 
-```groovy
+```nextflow
 process someJob {
     secret 'MY_ACCESS_KEY'
     secret 'MY_SECRET_KEY'
@@ -79,7 +79,7 @@ This feature is only available when using the local or grid executors (Slurm, Gr
 
 Secrets can be accessed in the pipeline script using the `secrets` variable. For example:
 
-```groovy
+```nextflow
 workflow.onComplete {
     println("The secret is: ${secrets.MY_SECRET}")
 }

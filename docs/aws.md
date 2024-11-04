@@ -252,7 +252,7 @@ Container options may be passed in long form (e.g `--option value`) or short for
 
 Few examples:
 
-```groovy
+```nextflow
 containerOptions '--tmpfs /run:rw,noexec,nosuid,size=128 --tmpfs /app:ro,size=64'
 
 containerOptions '-e MYVAR1 --env MYVAR2=foo2 --env MYVAR3=foo3 --memory-swap 3240000 --memory-swappiness 20 --shm-size 16000000'

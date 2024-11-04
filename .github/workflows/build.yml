@@ -25,12 +25,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java_version: [11, 17, 23]
+        java_version: [17, 23]
 
     steps:
-      - name: Environment
-        run: env | sort
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -133,7 +130,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java_version: [11, 23]
+        java_version: [17, 23]
         test_mode: ["test_integration", "test_docs", "test_aws", "test_azure", "test_google", "test_wave"]
     steps:
       - name: Checkout
@@ -160,6 +157,7 @@ jobs:
 
       - name: Run tests
         run: |
+          env | sort
           cat $HOME/.nextflow/scm
           make clean assemble install
           bash test-ci.sh
@@ -191,7 +189,8 @@ jobs:
         with:
           name: report-${{ matrix.test_mode }}-jdk-${{ matrix.java_version }}
           path: |
-            validation/**
+            validation/**/*
+            validation/**/.*
             integration-tests.tar
 
   test-e2e:
