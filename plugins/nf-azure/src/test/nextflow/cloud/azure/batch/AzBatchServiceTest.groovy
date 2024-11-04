@@ -628,8 +628,8 @@ class AzBatchServiceTest extends Specification {
         and:
         result.commandLine == "sh -c 'bash .command.run 2>&1 | tee .command.log'"
         and:
-        result.containerSettings().imageName() == 'ubuntu:latest'
-        result.containerSettings().containerRunOptions == ''
+        result.containerSettings.imageName == 'ubuntu:latest'
+        result.containerSettings.containerRunOptions == ''
     }
 
     def 'should create task for submit with extra options' () {
@@ -671,8 +671,8 @@ class AzBatchServiceTest extends Specification {
         and:
         result.commandLine == "sh -c 'bash .command.run 2>&1 | tee .command.log'"
         and:
-        result.containerSettings().imageName() == 'ubuntu:latest'
-        result.containerSettings().containerRunOptions == '-v /mnt/batch/tasks/fsmounts/file1:mountPath1:rw -v /foo:/foo '
+        result.containerSettings.imageName == 'ubuntu:latest'
+        result.containerSettings.containerRunOptions == '-v /mnt/batch/tasks/fsmounts/file1:mountPath1:rw -v /foo:/foo '
         and:
         Duration.of(result.constraints.maxWallClockTime.toMillis()) == TASK.config.time
     }
@@ -714,8 +714,8 @@ class AzBatchServiceTest extends Specification {
         and:
         result.commandLine == "/usr/bin/fusion bash /fusion/az/foo/work/dir/.command.run"
         and:
-        result.containerSettings().imageName() == 'ubuntu:latest'
-        result.containerSettings().containerRunOptions == '--privileged -e FUSION_WORK=/fusion/az/foo/work/dir -e FUSION_TAGS=[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true) -e AZURE_STORAGE_ACCOUNT=my-account -e AZURE_STORAGE_SAS_TOKEN=1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890 '
+        result.containerSettings.imageName == 'ubuntu:latest'
+        result.containerSettings.containerRunOptions == '--privileged -e FUSION_WORK=/fusion/az/foo/work/dir -e FUSION_TAGS=[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true) -e AZURE_STORAGE_ACCOUNT=my-account -e AZURE_STORAGE_SAS_TOKEN=1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890 '
     }
 
     @Unroll
