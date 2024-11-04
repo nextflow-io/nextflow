@@ -46,6 +46,7 @@ import nextflow.script.ScriptRunner
 import nextflow.util.CustomPoolFactory
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
+import org.apache.commons.lang.StringUtils
 import org.fusesource.jansi.AnsiConsole
 import org.yaml.snakeyaml.Yaml
 /**
@@ -106,6 +107,9 @@ class CmdRun extends CmdBase implements HubOptions {
 
     @Parameter(names=['-test'], description = 'Test a script function with the name specified')
     String test
+
+    @Parameter(names=['-o', '-output-dir'], description = 'Directory where workflow outputs are stored')
+    String outputDir
 
     @Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate result files are stored')
     String workDir
@@ -416,12 +420,9 @@ class CmdRun extends CmdBase implements HubOptions {
 
     protected void launchInfo(ConfigMap config, ScriptFile scriptFile) {
         // -- determine strict mode
-        final defStrict = sysEnv.get('NXF_ENABLE_STRICT') ?: false
-        final strictMode = config.navigate('nextflow.enable.strict', defStrict)
-        if( strictMode ) {
-            log.debug "Enabling nextflow strict mode"
-            NextflowMeta.instance.strictMode(true)
-        }
+        detectStrictFeature(config, sysEnv)
+        // -- determine moduleBinary
+        detectModuleBinaryFeature(config)
         // -- determine dsl mode
         final dsl = detectDslMode(config, scriptFile.main.text, sysEnv)
         NextflowMeta.instance.enableDsl(dsl)
@@ -433,6 +434,24 @@ class CmdRun extends CmdBase implements HubOptions {
             ? scriptFile.revisionInfo.toString()
             : scriptFile.getScriptId()?.substring(0,10)
         printLaunchInfo(ver, repo, head, revision)
+    }
+
+    static void detectModuleBinaryFeature(ConfigMap config) {
+        final moduleBinaries = config.navigate('nextflow.enable.moduleBinaries', false)
+        if( moduleBinaries ) {
+            log.debug "Enabling module binaries"
+            NextflowMeta.instance.moduleBinaries(true)
+        }
+    }
+
+    static void detectStrictFeature(ConfigMap config, Map sysEnv) {
+        final defStrict = sysEnv.get('NXF_ENABLE_STRICT') ?: false
+        log
+        final strictMode = config.navigate('nextflow.enable.strict', defStrict)
+        if( strictMode ) {
+            log.debug "Enabling nextflow strict mode"
+            NextflowMeta.instance.strictMode(true)
+        }
     }
 
     protected void printLaunchInfo(String ver, String repo, String head, String revision) {
@@ -670,6 +689,19 @@ class CmdRun extends CmdBase implements HubOptions {
         }
     }
 
+    static protected void addParam0(Map params, String key, Object value) {
+        if( key.contains('-') )
+            key = kebabToCamelCase(key)
+        params.put(key, value)
+    }
+
+    static protected String kebabToCamelCase(String str) {
+        final result = new StringBuilder()
+        str.split('-').eachWithIndex { String entry, int i ->
+            result << (i>0 ? StringUtils.capitalize(entry) : entry )
+        }
+        return result.toString()
+    }
 
     static protected parseParamValue(String str) {
         if ( SysEnv.get('NXF_DISABLE_PARAMS_TYPE_DETECTION') )

@@ -72,6 +72,7 @@ import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import nextflow.util.NameGenerator
+import nextflow.util.SysHelper
 import nextflow.util.ThreadPoolManager
 import nextflow.util.Threads
 import nextflow.util.VersionNumber
@@ -120,6 +121,11 @@ class Session implements ISession {
      * whenever it has been launched in resume mode
      */
     boolean resumeMode
+
+    /**
+     * The folder where workflow outputs are stored
+     */
+    Path outputDir
 
     /**
      * The folder where tasks temporary files are stored
@@ -221,6 +227,8 @@ class Session implements ISession {
     private Barrier processesBarrier = new Barrier()
 
     private Barrier monitorsBarrier = new Barrier()
+
+    private volatile boolean failOnIgnore
 
     private volatile boolean cancelled
 
@@ -372,8 +380,11 @@ class Session implements ISession {
         // -- DAG object
         this.dag = new DAG()
 
+        // -- init output dir
+        this.outputDir = FileHelper.toCanonicalPath(config.outputDir ?: 'results')
+
         // -- init work dir
-        this.workDir = ((config.workDir ?: 'work') as Path).complete()
+        this.workDir = FileHelper.toCanonicalPath(config.workDir ?: 'work')
         this.setLibDir( config.libDir as String )
 
         // -- init cloud cache path
@@ -785,6 +796,8 @@ class Session implements ISession {
             def status = dumpNetworkStatus()
             if( status )
                 log.debug(status)
+            // dump threads status
+            log.debug(SysHelper.dumpThreads())
             // force termination
             notifyError(null)
             ansiLogObserver?.forceTermination()
@@ -821,7 +834,13 @@ class Session implements ISession {
 
     boolean isCancelled() { cancelled }
 
-    boolean isSuccess() { !aborted && !cancelled }
+    boolean isSuccess() { !aborted && !cancelled && !failOnIgnore }
+
+    boolean canSubmitTasks() {
+        // tasks should be submitted even when 'failOnIgnore' is set to true
+        // https://github.com/nextflow-io/nextflow/issues/5291
+        return !aborted && !cancelled
+    }
 
     void processRegister(TaskProcessor process) {
         log.trace ">>> barrier register (process: ${process.name})"
@@ -858,7 +877,11 @@ class Session implements ISession {
     }
 
     boolean enableModuleBinaries() {
-        config.navigate('nextflow.enable.moduleBinaries', false) as boolean
+        NF.isModuleBinariesEnabled()
+    }
+
+    boolean failOnIgnore() {
+        config.navigate('workflow.failOnIgnore', false) as boolean
     }
 
     @PackageScope VersionNumber getCurrentVersion() {
@@ -1044,6 +1067,12 @@ class Session implements ISession {
         final trace = handler.safeTraceRecord()
         cache.putTaskAsync(handler, trace)
 
+        // set the pipeline to return non-exit code if specified
+        if( handler.task.errorAction == ErrorStrategy.IGNORE && failOnIgnore() ) {
+            log.debug "Setting fail-on-ignore flag due to ignored task '${handler.task.lazyName()}'"
+            failOnIgnore = true
+        }
+
         // notify the event to the observers
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)
@@ -1092,6 +1121,17 @@ class Session implements ISession {
     void notifyFlowCreate() {
         for( TraceObserver trace : observers ) {
             trace.onFlowCreate(this)
+        }
+    }
+
+    void notifyWorkflowPublish(Object value) {
+        for( final observer : observers ) {
+            try {
+                observer.onWorkflowPublish(value)
+            }
+            catch( Exception e ) {
+                log.error "Failed to invoke observer on workflow publish: $observer", e
+            }
         }
     }
 

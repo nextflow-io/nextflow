@@ -1,6 +1,6 @@
 (flux-page)=
 
-# Flux Framework
+# Using Nextflow with Flux
 
 :::{versionadded} 22.11.0-edge
 :::
@@ -36,9 +36,9 @@ For additional Flux settings, see the {ref}`flux-executor` section.
 
 Here is an example pipeline that we will use:
 
-```groovy
+```nextflow
 workflow {
-    breakfast = Channel.from '🥞️', '🥑️', '🥧️', '🍵️', '🍞️'
+    breakfast = Channel.of '🥞️', '🥑️', '🥧️', '🍵️', '🍞️'
     haveMeal(breakfast)
 }
 
@@ -100,7 +100,7 @@ Here is an example of submitting a job and getting the log for it.
 First submit the job:
 
 ```console
-$ flux mini submit echo "HELLO MOTO"
+$ flux submit echo "HELLO MOTO"
 ƒEzWqspb
 ```
 
@@ -114,7 +114,7 @@ HELLO MOTO
 Try submitting a longer job:
 
 ```console
-$ flux mini submit sleep 60
+$ flux submit sleep 60
 ```
 
 And then seeing it in the jobs listing.

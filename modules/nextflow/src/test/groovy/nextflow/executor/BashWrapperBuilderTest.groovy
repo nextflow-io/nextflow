@@ -16,6 +16,7 @@
 
 package nextflow.executor
 
+import java.nio.file.FileSystemException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -780,7 +781,24 @@ class BashWrapperBuilderTest extends Specification {
                 # conda environment
                 source $(conda info --json | awk '/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }')/bin/activate /some/conda/env/foo
                 '''.stripIndent()
+    }
 
+    def 'should create micromamba activate snippet' () {
+
+        when:
+        def binding = newBashWrapperBuilder().makeBinding()
+        then:
+        binding.conda_activate == null
+        binding.containsKey('conda_activate')
+
+        when:
+        def CONDA = Paths.get('/some/conda/env/foo')
+        binding = newBashWrapperBuilder([condaEnv: CONDA, 'useMicromamba': true]).makeBinding()
+        then:
+        binding.conda_activate == '''\
+                # conda environment
+                eval "$(micromamba shell hook --shell bash)" && micromamba activate /some/conda/env/foo
+                '''.stripIndent()
     }
 
     def 'should create spack activate snippet' () {
@@ -1319,6 +1337,46 @@ class BashWrapperBuilderTest extends Specification {
         
     }
 
+    def 'should get unstage control script'(){
+        given:
+        BashWrapperBuilder builder
+        when:
+        builder = newBashWrapperBuilder()
+        then:
+        builder.getUnstageControls() == '''\
+                cp .command.out /work/dir/.command.out || true
+                cp .command.err /work/dir/.command.err || true
+                '''.stripIndent()
+
+
+        when:
+        builder = newBashWrapperBuilder(statsEnabled: true)
+        then:
+        builder.getUnstageControls() == '''\
+                cp .command.out /work/dir/.command.out || true
+                cp .command.err /work/dir/.command.err || true
+                cp .command.trace /work/dir/.command.trace || true
+                '''.stripIndent()
+
+        when:
+        builder = newBashWrapperBuilder(outputEnvNames: ['some-data'])
+        then:
+        builder.getUnstageControls() == '''\
+                cp .command.out /work/dir/.command.out || true
+                cp .command.err /work/dir/.command.err || true
+                cp .command.env /work/dir/.command.env || true
+                '''.stripIndent()
+
+        when:
+        builder = newBashWrapperBuilder(outputEvals: [some:'data'])
+        then:
+        builder.getUnstageControls() == '''\
+                cp .command.out /work/dir/.command.out || true
+                cp .command.err /work/dir/.command.err || true
+                cp .command.env /work/dir/.command.env || true
+                '''.stripIndent()
+    }
+
 
     def 'should create wrapper with podman' () {
         when:
@@ -1358,5 +1416,18 @@ class BashWrapperBuilderTest extends Specification {
         binding.launch_cmd == 'podman run -i -e "NXF_TASK_WORKDIR" -v /work/dir:/work/dir -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
         binding.cleanup_cmd == 'rm -rf $NXF_SCRATCH || true\npodman rm $NXF_BOXID &>/dev/null || true\n'
         binding.kill_cmd == 'podman stop $NXF_BOXID'
+    }
+
+    @Unroll
+    def 'should check retryable errors' () {
+        expect:
+        BashWrapperBuilder.isRetryable0(ERROR) == EXPECTED
+        where:
+        ERROR                           | EXPECTED
+        new RuntimeException()          | true
+        new SocketException()           | true
+        new FileSystemException('foo')  | true
+        new IOException()               | false
+        new Exception()                 | false
     }
 }

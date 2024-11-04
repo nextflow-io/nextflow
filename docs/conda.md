@@ -16,16 +16,16 @@ This feature requires the Conda or [Miniconda](https://conda.io/miniconda.html) 
 
 Nextflow automatically creates and activates the Conda environment(s) given the dependencies specified by each process.
 
-Dependencies are specified by using the {ref}`process-conda` directive, providing either the names of the required Conda packages, the path of a Conda environment yaml file or the path of an existing Conda environment directory.
+Dependencies are specified by using the {ref}`process-conda` directive, providing either the names of the required Conda packages, the path of a Conda environment yaml file, or the path of an existing Conda environment directory.
 
 :::{note}
-Conda environments are stored on the file system. By default Nextflow instructs Conda to save the required environments in the pipeline work directory. Therefore the same environment can be created/saved multiple times across multiple executions when using a different work directory.
+Conda environments are stored on the file system. By default, Nextflow instructs Conda to save the required environments in the pipeline work directory. The same environment may be created/saved multiple times across multiple executions when using different work directories.
 :::
 
-You can specify the directory where the Conda environments are stored using the `conda.cacheDir` configuration property (see the {ref}`configuration page <config-conda>` for details). When using a computing cluster, make sure to use a shared file system path accessible from all compute nodes.
+You can specify the directory where the Conda environments are stored using the `conda.cacheDir` configuration property. When using a computing cluster, make sure to use a shared file system path accessible from all compute nodes. See the {ref}`configuration page <config-conda>` for details about Conda configuration. 
 
 :::{warning}
-The Conda environment feature is not supported by executors that use remote object storage as a work directory e.g. AWS Batch.
+The Conda environment feature is not supported by executors that use remote object storage as a work directory. For example, AWS Batch.
 :::
 
 ### Enabling Conda environment
@@ -33,7 +33,7 @@ The Conda environment feature is not supported by executors that use remote obje
 :::{versionadded} 22.08.0-edge
 :::
 
-The use of Conda recipes specified using the {ref}`process-conda` directive needs to be enabled explicitly by setting the option shown below in the pipeline configuration file (i.e. `nextflow.config`):
+The use of Conda recipes specified using the {ref}`process-conda` directive needs to be enabled explicitly in the pipeline configuration file (i.e. `nextflow.config`):
 
 ```groovy
 conda.enabled = true
@@ -45,7 +45,7 @@ Alternatively, it can be specified by setting the variable `NXF_CONDA_ENABLED=tr
 
 Conda package names can specified using the `conda` directive. Multiple package names can be specified by separating them with a blank space. For example:
 
-```groovy
+```nextflow
 process foo {
   conda 'bwa samtools multiqc'
 
@@ -94,7 +94,7 @@ Read the Conda documentation for more details about how to create [environment f
 
 The path of an environment file can be specified using the `conda` directive:
 
-```groovy
+```nextflow
 process foo {
   conda '/some/path/my-env.yaml'
 
@@ -124,7 +124,7 @@ Like before, the extension matters. Make sure the dependencies file has a `.txt`
 
 If you already have a local Conda environment, you can use it in your workflow specifying the installation directory of such environment by using the `conda` directive:
 
-```groovy
+```nextflow
 process foo {
   conda '/path/to/an/existing/env/directory'
 

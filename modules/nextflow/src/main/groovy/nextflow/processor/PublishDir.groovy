@@ -16,6 +16,8 @@
 
 package nextflow.processor
 
+import static nextflow.util.CacheHelper.*
+
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
@@ -40,15 +42,12 @@ import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.NF
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.TagAwareFile
-import nextflow.fusion.FusionHelper
 import nextflow.util.HashBuilder
 import nextflow.util.PathTrie
-
-import static nextflow.util.CacheHelper.HashMode
-
 /**
  * Implements the {@code publishDir} directory. It create links or copies the output
  * files of a given task to a user specified directory.
@@ -98,9 +97,9 @@ class PublishDir {
     boolean enabled = true
 
     /**
-     * Trow an exception in case publish fails
+     * Throw an exception in case publish fails
      */
-    boolean failOnError = true
+    boolean failOnError = SysEnv.getBool('NXF_PUBLISH_FAIL_ON_ERROR', true)
 
     /**
      * Tags to be associated to the target file
@@ -220,11 +219,19 @@ class PublishDir {
         return result
     }
 
+    protected Map getRetryOpts() {
+        def result = session.config.navigate('nextflow.publish.retryPolicy') as Map
+        if( result != null )
+            log.warn 'The `nextflow.publish` config scope has been renamed to `workflow.output`'
+        else
+            result = session.config.navigate('workflow.output.retryPolicy') as Map ?: Collections.emptyMap()
+        return result
+    }
+
     protected void apply0(Set<Path> files) {
         assert path
-
-        final retryOpts = session.config.navigate('nextflow.publish.retryPolicy') as Map ?: Collections.emptyMap()
-        this.retryConfig = new PublishRetryConfig(retryOpts)
+        // setup the retry policy config to be used
+        this.retryConfig = new PublishRetryConfig(getRetryOpts())
 
         createPublishDir()
         validatePublishMode()
@@ -318,7 +325,7 @@ class PublishDir {
             return
         }
 
-        final destination = resolveDestination(target)
+        final destination = resolveDestination(target).normalize()
 
         // apply tags
         if( this.tags!=null && destination instanceof TagAwareFile ) {

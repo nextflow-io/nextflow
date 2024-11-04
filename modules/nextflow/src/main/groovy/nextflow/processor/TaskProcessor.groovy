@@ -15,6 +15,8 @@
  */
 package nextflow.processor
 
+import nextflow.trace.TraceRecord
+
 import static nextflow.processor.ErrorStrategy.*
 
 import java.lang.reflect.InvocationTargetException
@@ -85,7 +87,6 @@ import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
-import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
 import nextflow.script.params.BaseOutParam
 import nextflow.script.params.CmdEvalParam
@@ -642,14 +643,8 @@ class TaskProcessor {
         if( !checkWhenGuard(task) )
             return
 
-        TaskClosure block
-        if( session.stubRun && (block=task.config.getStubBlock()) ) {
-            task.resolve(block)
-        }
-        else {
-            // -- resolve the task command script
-            task.resolve(taskBody)
-        }
+        // -- resolve the task command script
+        task.resolve(taskBody)
 
         // -- verify if exists a stored result for this case,
         //    if true skip the execution and return the stored data
@@ -1023,7 +1018,7 @@ class TaskProcessor {
      *      a {@link ErrorStrategy#TERMINATE})
      */
     @PackageScope
-    final synchronized resumeOrDie( TaskRun task, Throwable error ) {
+    final synchronized resumeOrDie( TaskRun task, Throwable error, TraceRecord traceRecord = null) {
         log.debug "Handling unexpected condition for\n  task: name=${safeTaskName(task)}; work-dir=${task?.workDirStr}\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
         ErrorStrategy errorStrategy = TERMINATE
@@ -1068,12 +1063,18 @@ class TaskProcessor {
                 task.config.exitStatus = task.exitStatus
                 task.config.errorCount = procErrCount
                 task.config.retryCount = taskErrCount
+                //Add trace of the previous execution in the task context for next execution
+                if ( traceRecord )
+                    task.config.previousTrace = traceRecord
+                task.config.previousException = error
 
                 errorStrategy = checkErrorStrategy(task, error, taskErrCount, procErrCount, submitRetries)
                 if( errorStrategy.soft ) {
                     def msg = "[$task.hashLog] NOTE: ${submitTimeout ? submitErrMsg : error.message}"
-                    if( errorStrategy == IGNORE ) msg += " -- Error is ignored"
-                    else if( errorStrategy == RETRY ) msg += " -- Execution is retried (${submitTimeout ? submitRetries : taskErrCount})"
+                    if( errorStrategy == IGNORE )
+                        msg += " -- Error is ignored"
+                    else if( errorStrategy == RETRY )
+                        msg += " -- Execution is retried (${submitTimeout ? submitRetries : taskErrCount})"
                     log.info msg
                     task.failed = true
                     task.errorAction = errorStrategy
@@ -1137,7 +1138,7 @@ class TaskProcessor {
         final action = task.config.getErrorStrategy()
 
         // retry is not allowed when the script cannot be compiled or similar errors
-        if( error instanceof ProcessUnrecoverableException ) {
+        if( error instanceof ProcessUnrecoverableException || error.cause instanceof ProcessUnrecoverableException ) {
             return !action.soft ? action : TERMINATE
         }
 
@@ -1282,6 +1283,9 @@ class TaskProcessor {
 
         if( task?.workDir )
             message << "\nWork dir:\n  ${task.workDirStr}"
+
+        if( task?.isContainerEnabled() )
+            message << "\nContainer:\n  ${task.container}".toString()
 
         message << suggestTip(message)
 
@@ -2363,7 +2367,8 @@ class TaskProcessor {
      * @param task The {@code TaskRun} instance to finalize
      */
     @PackageScope
-    final finalizeTask( TaskRun task ) {
+    final finalizeTask( TaskHandler handler) {
+        def task = handler.task
         log.trace "finalizing process > ${safeTaskName(task)} -- $task"
 
         def fault = null
@@ -2386,7 +2391,7 @@ class TaskProcessor {
             collectOutputs(task)
         }
         catch ( Throwable error ) {
-            fault = resumeOrDie(task, error)
+            fault = resumeOrDie(task, error, handler.getTraceRecord())
             log.trace "Task fault (3): $fault"
         }
 

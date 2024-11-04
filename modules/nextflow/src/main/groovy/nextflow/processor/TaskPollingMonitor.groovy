@@ -16,6 +16,8 @@
 
 package nextflow.processor
 
+import static nextflow.processor.TaskProcessor.*
+
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -191,7 +193,7 @@ class TaskPollingMonitor implements TaskMonitor {
      *      by the polling monitor
      */
     protected boolean canSubmit(TaskHandler handler) {
-        (capacity>0 ? runningQueue.size() < capacity : true) && handler.canForkProcess()
+        (capacity>0 ? runningQueue.size() < capacity : true) && handler.canForkProcess() && handler.isReady()
     }
 
     /**
@@ -587,7 +589,7 @@ class TaskPollingMonitor implements TaskMonitor {
 
         int count = 0
         def itr = pendingQueue.iterator()
-        while( itr.hasNext() && session.isSuccess() ) {
+        while( itr.hasNext() && session.canSubmitTasks() ) {
             final handler = itr.next()
             submitRateLimit?.acquire()
             try {
@@ -617,7 +619,7 @@ class TaskPollingMonitor implements TaskMonitor {
             if (evict(handler)) { 
                 handler.decProcessForks()
             }
-            fault = handler.task.processor.resumeOrDie(handler?.task, error)
+            fault = handler.task.processor.resumeOrDie(handler?.task, error, handler.getTraceRecord())
             log.trace "Task fault (1): $fault"
         }
         finally {
@@ -663,7 +665,7 @@ class TaskPollingMonitor implements TaskMonitor {
 
             // finalize the task asynchronously
             if( enableAsyncFinalizer ) {
-                finalizerPool.submit( ()-> finalizeTask(handler) )
+                finalizerPool.submit( ()-> safeFinalizeTask(handler) )
             }
             else {
                 finalizeTask(handler)
@@ -671,9 +673,19 @@ class TaskPollingMonitor implements TaskMonitor {
         }
     }
 
+    protected void safeFinalizeTask(TaskHandler handler) {
+        try {
+            finalizeTask(handler)
+        }
+        catch (Throwable t) {
+            log.error "Unexpected error while finalizing task '${handler.task.name}' - cause: ${t.message}"
+            session.abort(t)
+        }
+    }
+
     protected void finalizeTask( TaskHandler handler ) {
         // finalize the task execution
-        final fault = handler.task.processor.finalizeTask(handler.task)
+        final fault = handler.task.processor.finalizeTask(handler)
 
         // notify task completion
         session.notifyTaskComplete(handler)

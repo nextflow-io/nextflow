@@ -601,16 +601,22 @@ class SessionTest extends Specification {
 
     }
 
+    @Unroll
     def 'should get module binaries status'() {
         given:
-        def session = new Session(CONFIG)
+        def session = new Session()
+        NextflowMeta.instance.moduleBinaries(MODE)
 
         expect:
         session.enableModuleBinaries() == EXPECTED
-        
+
+        cleanup:
+        NextflowMeta.instance.moduleBinaries(false)
+
         where:
-        CONFIG                                      | EXPECTED
-        [:]                                         | false
-        [nextflow:[enable:[moduleBinaries: true]]]  | true
+        MODE  | EXPECTED
+        false | false
+        true  | true
+
     }
 }

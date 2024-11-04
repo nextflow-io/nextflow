@@ -6,29 +6,35 @@
 
 ## Requirements
 
-Nextflow can be used on any POSIX-compatible system (Linux, macOS, etc), and on Windows through [WSL](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux). It requires Bash 3.2 (or later) and [Java 11 (or later, up to 22)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed. You can see which version you have using the following command:
+Nextflow can be used on any POSIX-compatible system (Linux, macOS, etc), and on Windows through [WSL](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux). It requires Bash 3.2 (or later) and [Java 17 (or later, up to 23)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed. You can see which version you have using the following command:
 
 ```bash
 java -version
 ```
 
+:::{versionchanged} 24.11.0-edge
+Support for Java versions prior to 17 was dropped.
+:::
+
 If you don't have a compatible version of Java installed in your computer, it is recommended that you install it through [SDKMAN!](https://sdkman.io/), and that you use the latest LTS version of Temurin. See [this website](https://whichjdk.com/) for more information.
 
 To install Java with SDKMAN:
 
-1. Install SDKMAN:
+1. [Install SDKMAN](https://sdkman.io/install):
 
     ```bash
     curl -s https://get.sdkman.io | bash
     ```
 
-2. Open a new terminal and install Java:
+2. Open a new terminal.
+
+3. Install Java:
 
     ```bash
     sdk install java 17.0.10-tem
     ```
 
-3. Confirm that Java is installed correctly:
+4. Confirm that Java is installed correctly:
 
     ```bash
     java -version
@@ -58,11 +64,20 @@ Nextflow is distributed as a self-installing package, in order to make the insta
     chmod +x nextflow
     ```
 
-3. Move Nextflow into an executable path:
+3. Move Nextflow into an executable path. For example:
 
     ```bash
-    sudo mv nextflow /usr/local/bin
+    mkdir -p $HOME/.local/bin/
+    mv nextflow $HOME/.local/bin/
     ```
+
+    :::{tip}
+    Ensure the directory `$HOME/.local/bin/` is included in your `PATH` variable. Temporarily add this directory to `PATH` by setting `export PATH="$PATH:$HOME/.local/bin"`. Add the directory to `PATH` permanently by adding the export command to your shell configuration file, such as `~/.bashrc` or `~/.zshrc`. Alternatively, move the `nextflow` executable to a directory already in your `PATH`.
+    :::
+
+    :::{warning}
+    Nextflow will update its executable during the self update process, therefore the update can fail if the executable is placed in a directory with restricted permissions.
+    :::
 
 4. Confirm that Nextflow is installed correctly:
 
@@ -81,7 +96,7 @@ nextflow self-update
 You can also temporarily switch to a specific version of Nextflow with the `NXF_VER` environment variable. For example:
 
 ```bash
-NXF_VER=23.10.0 nextflow run hello
+NXF_VER=23.10.0 nextflow info
 ```
 
 ## Stable and edge releases
@@ -96,10 +111,10 @@ To use the latest edge release, set `NXF_EDGE=1` when updating:
 NXF_EDGE=1 nextflow self-update
 ```
 
-You can also use `NXF_VER` to switch to any edge release:
+You can also use `NXF_VER` to temporarily switch to any edge release. For example:
 
 ```bash
-$ nextflow info
+NXF_VER=24.06.0-edge nextflow info
 ```
 
 ## Standalone distribution

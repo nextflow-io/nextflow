@@ -140,6 +140,11 @@ class WorkflowMetadata {
     Path launchDir
 
     /**
+     * Workflow output directory
+     */
+    Path outputDir
+
+    /**
      * Workflow working directory
      */
     Path workDir
@@ -227,6 +232,11 @@ class WorkflowMetadata {
      */
     Manifest manifest
 
+    /**
+     * whenever it should terminate with a failure when one or more task execution failed in an error strategy
+     */
+    boolean failOnIgnore
+
     private Session session
 
     final private List<Closure> onCompleteActions = []
@@ -252,6 +262,7 @@ class WorkflowMetadata {
         this.container = session.fetchContainers()
         this.commandLine = session.commandLine
         this.nextflow = NextflowMeta.instance
+        this.outputDir = session.outputDir
         this.workDir = session.workDir
         this.launchDir = Paths.get('.').complete()
         this.profile = session.profile ?: ConfigBuilder.DEFAULT_PROFILE
@@ -268,6 +279,7 @@ class WorkflowMetadata {
         this.manifest = session.getManifest()
         this.wave = new WaveMetadata(session)
         this.fusion = new FusionMetadata(session)
+        this.failOnIgnore = session.failOnIgnore()
 
         // check if there's a onComplete action in the config file
         registerConfigAction(session.config.workflow as Map)

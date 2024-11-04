@@ -95,16 +95,7 @@ upload:
 # Create self-contained distribution package
 #
 pack:
-	BUILD_PACK=1 ./gradlew packAll
-
-packCore:
-	BUILD_PACK=1 ./gradlew packCore
-
-#
-# Create self-contained distribution package, including GA4GH support and associated dependencies
-#
-packGA4GH:
-	BUILD_PACK=1 ./gradlew -PGA4GH packAll
+	BUILD_PACK=1 ./gradlew pack
 
 #
 # Upload NF launcher to nextflow.io web site
