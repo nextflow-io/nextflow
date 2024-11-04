@@ -16,7 +16,7 @@ The task cache is used in conjunction with the [work directory](#work-directory)
 
 The task hash is computed from the following metadata:
 
-- Session ID (see `workflow.sessionId` in {ref}`metadata-workflow`)
+- Session ID (see `workflow.sessionId` in {ref}`stdlib-constants`)
 - Task name (see `name` in {ref}`trace-report`)
 - Task container image (if applicable)
 - Task {ref}`environment modules <process-module>` (if applicable)
@@ -112,9 +112,9 @@ While Nextflow tries to make it easy to write safe concurrent code, it is still 
 
 Consider the following example:
 
-```groovy
-Channel.of(1,2,3) | map { it -> X=it; X+=2 } | view { "ch1 = $it" }
-Channel.of(1,2,3) | map { it -> X=it; X*=2 } | view { "ch2 = $it" }
+```nextflow
+Channel.of(1,2,3) | map { v -> X=v; X+=2 } | view { v -> "ch1 = $v" }
+Channel.of(1,2,3) | map { v -> X=v; X*=2 } | view { v -> "ch2 = $v" }
 ```
 
 The problem here is that `X` is declared in each `map` closure without the `def` keyword (or other type qualifier). Using the `def` keyword makes the variable local to the enclosing scope; omitting the `def` keyword makes the variable global to the entire script.
@@ -123,12 +123,12 @@ Because `X` is global, and operators are executed concurrently, there is a *race
 
 The solution is to not use a global variable where a local variable is enough (or in this simple example, avoid the variable altogether):
 
-```groovy
+```nextflow
 // local variable
-Channel.of(1,2,3) | map { it -> def X=it; X+=2 } | view { "ch1 = $it" }
+Channel.of(1,2,3) | map { v -> def X=v; X+=2 } | view { v -> "ch1 = $v" }
 
 // no variable
-Channel.of(1,2,3) | map { it -> it * 2 } | view { "ch2 = $it" }
+Channel.of(1,2,3) | map { v -> v * 2 } | view { v -> "ch2 = $v" }
 ```
 
 (cache-nondeterministic-inputs)=
@@ -137,7 +137,7 @@ Channel.of(1,2,3) | map { it -> it * 2 } | view { "ch2 = $it" }
 
 Sometimes a process needs to merge inputs from different sources. Consider the following example:
 
-```groovy
+```nextflow
 workflow {
     ch_foo = Channel.of( ['1', '1.foo'], ['2', '2.foo'] )
     ch_bar = Channel.of( ['2', '2.bar'], ['1', '1.bar'] )
@@ -158,7 +158,7 @@ It is tempting to assume that the process inputs will be matched by `id` like th
 
 The solution is to explicitly join the two channels before the process invocation:
 
-```groovy
+```nextflow
 workflow {
     ch_foo = Channel.of( ['1', '1.foo'], ['2', '2.foo'] )
     ch_bar = Channel.of( ['2', '2.bar'], ['1', '1.bar'] )

@@ -1,5 +1,11 @@
 nf-tower changelog
 ===================
+1.9.3 - 27 Oct 2024
+- Fix nf-tower plugin to upload logs when early failures  (#5434) [4222442a]
+
+1.9.2 - 5 Aug 2024
+- Bump pf4j to version 3.12.0 [96117b9a]
+
 1.9.1 - 13 May 2024
 - Fix NPE in LogsCheckpoint class [deb3076d]
 
@@ -20,6 +26,9 @@ nf-tower changelog
 1.7.0 - 24 Nov 2023
 - Fix security vulnerabilities (#4513) [a310c777]
 - Remove deprecated TowerArchiver feature [ff8e06a3]
+
+1.6.3-patch1 - 28 May 2024
+- Bump dependency with Nextflow 23.10.2
 
 1.6.3 - 10 Oct 2023
 - Add -cloudcache CLI option (#4385) [73fda582]

@@ -20,7 +20,6 @@ package io.seqera.wave.plugin
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
-
 /**
  * Model a response for an augmented container
  *
@@ -30,6 +29,12 @@ import groovy.transform.ToString
 @ToString(includeNames = true, includePackage = false)
 @CompileStatic
 class SubmitContainerTokenResponse {
+
+    /**
+     * Unique Id for this request
+     */
+    String requestId
+
     /**
      * A unique authorization token assigned to this request
      */
@@ -59,5 +64,21 @@ class SubmitContainerTokenResponse {
      * When the result is a freeze container. Version v1alpha2 as later.
      */
     Boolean freeze;
+
+    /**
+     * When the result is a mirror container. Version v1alpha2 as later.
+     */
+    Boolean mirror
+
+    /**
+     * The id of the security scan associated with this container
+     */
+    String scanId
+
+    /**
+     * Whenever the container has been provisioned successfully or not. If false
+     * the current status needs the be check via container status API
+     */
+    Boolean succeeded
 
 }

@@ -22,6 +22,7 @@ import java.util.function.Predicate
 
 import com.google.api.gax.core.CredentialsProvider
 import com.google.api.gax.rpc.FixedHeaderProvider
+import com.google.api.gax.rpc.NotFoundException
 import com.google.api.gax.rpc.UnavailableException
 import com.google.auth.Credentials
 import com.google.cloud.batch.v1.BatchServiceClient
@@ -110,7 +111,7 @@ class BatchClient {
 
     Task describeTask(String jobId, String taskId) {
         final name = TaskName.of(projectId, location, jobId, 'group0', taskId)
-        return batchServiceClient.getTask(name)
+        return apply(()-> batchServiceClient.getTask(name))
     }
 
     void deleteJob(String jobId) {
@@ -177,6 +178,8 @@ class BatchClient {
                 if( t instanceof IOException || t.cause instanceof IOException )
                     return true
                 if( t instanceof TimeoutException || t.cause instanceof TimeoutException )
+                    return true
+                if( t instanceof NotFoundException || t.cause instanceof NotFoundException )
                     return true
                 return false
             }

@@ -21,7 +21,10 @@ package io.seqera.wave.plugin
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+import io.seqera.wave.api.ImageNameStrategy
 import io.seqera.wave.api.PackagesSpec
+import io.seqera.wave.api.ScanLevel
+import io.seqera.wave.api.ScanMode
 
 /**
  * Model a request for an augmented container
@@ -134,5 +137,27 @@ class SubmitContainerTokenRequest {
      * Defines the packages to be included in this container request
      */
     PackagesSpec packages
+
+    /**
+     * The strategy applied to name a container build by wave when using
+     * the freeze option.
+     */
+    ImageNameStrategy nameStrategy;
+
+    /**
+     * Whenever use container "mirror" mode
+     */
+    boolean mirror;
+
+    /**
+     * The request security scan mode
+     */
+    ScanMode scanMode;
+
+    /**
+     * Define the allows security vulnerabilities in the container request.
+     * Empty or null means no vulnerabilities are allowed.
+     */
+    List<ScanLevel> scanLevels
 
 }

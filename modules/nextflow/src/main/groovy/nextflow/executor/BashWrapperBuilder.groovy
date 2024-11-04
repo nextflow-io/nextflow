@@ -533,10 +533,13 @@ class BashWrapperBuilder {
     private String getCondaActivateSnippet() {
         if( !condaEnv )
             return null
-        def result = "# conda environment\n"
-        result += 'source $(conda info --json | awk \'/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }\')'
-        result += "/bin/activate ${Escape.path(condaEnv)}\n"
-        return result
+        final command = useMicromamba
+            ? 'eval "$(micromamba shell hook --shell bash)" && micromamba activate'
+            : 'source $(conda info --json | awk \'/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }\')/bin/activate'
+        return """\
+            # conda environment
+            ${command} ${Escape.path(condaEnv)}
+            """.stripIndent()
     }
 
     private String getSpackActivateSnippet() {
@@ -757,7 +760,7 @@ class BashWrapperBuilder {
         result += copyFileToWorkDir(TaskRun.CMD_ERRFILE) + ' || true' + ENDL
         if( statsEnabled )
             result += copyFileToWorkDir(TaskRun.CMD_TRACE) + ' || true' + ENDL
-        if(  outputEnvNames )
+        if( outputEnvNames || outputEvals )
             result += copyFileToWorkDir(TaskRun.CMD_ENV) + ' || true' + ENDL
         return result
     }

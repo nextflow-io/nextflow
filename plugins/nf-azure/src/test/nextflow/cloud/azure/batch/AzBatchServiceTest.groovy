@@ -10,6 +10,7 @@ import com.azure.identity.ManagedIdentityCredential
 import com.google.common.hash.HashCode
 import nextflow.Global
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzManagedIdentityOpts
 import nextflow.cloud.azure.config.AzPoolOpts
@@ -30,6 +31,14 @@ import spock.lang.Unroll
 class AzBatchServiceTest extends Specification {
 
     static long _1GB = 1024 * 1024 * 1024
+
+    def setup() {
+        SysEnv.push([:])  // <-- clear the system host env
+    }
+
+    def cleanup() {
+        SysEnv.pop()      // <-- restore the system host env
+    }
 
     def 'should make job id'() {
         given:

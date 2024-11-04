@@ -46,15 +46,13 @@ class PbsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
         if( task instanceof TaskArrayRun ) {
             final arraySize = task.getArraySize()
-            result << '-J' << "0-${arraySize - 1}".toString()
+            result << '-t' << "0-${arraySize - 1}".toString()
         }
 
         result << '-N' << getJobNameFor(task)
 
-        if( task !instanceof TaskArrayRun ) {
-            result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
-            result << '-j' << 'oe'
-        }
+        result << '-o' << (task.isArray() ? '/dev/null' : quote(task.workDir.resolve(TaskRun.CMD_LOG)))
+        result << '-j' << 'oe'
 
         // the requested queue name
         if( task.config.queue ) {
@@ -190,7 +188,7 @@ class PbsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
     @Override
     String getArrayIndexName() {
-        return 'PBS_ARRAY_INDEX'
+        return 'PBS_ARRAYID'
     }
 
     @Override

@@ -123,6 +123,11 @@ class Session implements ISession {
     boolean resumeMode
 
     /**
+     * The folder where workflow outputs are stored
+     */
+    Path outputDir
+
+    /**
      * The folder where tasks temporary files are stored
      */
     Path workDir
@@ -375,8 +380,11 @@ class Session implements ISession {
         // -- DAG object
         this.dag = new DAG()
 
+        // -- init output dir
+        this.outputDir = FileHelper.toCanonicalPath(config.outputDir ?: 'results')
+
         // -- init work dir
-        this.workDir = ((config.workDir ?: 'work') as Path).complete()
+        this.workDir = FileHelper.toCanonicalPath(config.workDir ?: 'work')
         this.setLibDir( config.libDir as String )
 
         // -- init cloud cache path
@@ -828,6 +836,12 @@ class Session implements ISession {
 
     boolean isSuccess() { !aborted && !cancelled && !failOnIgnore }
 
+    boolean canSubmitTasks() {
+        // tasks should be submitted even when 'failOnIgnore' is set to true
+        // https://github.com/nextflow-io/nextflow/issues/5291
+        return !aborted && !cancelled
+    }
+
     void processRegister(TaskProcessor process) {
         log.trace ">>> barrier register (process: ${process.name})"
         processesBarrier.register(process)
@@ -863,7 +877,7 @@ class Session implements ISession {
     }
 
     boolean enableModuleBinaries() {
-        config.navigate('nextflow.enable.moduleBinaries', false) as boolean
+        NF.isModuleBinariesEnabled()
     }
 
     boolean failOnIgnore() {
@@ -1107,6 +1121,17 @@ class Session implements ISession {
     void notifyFlowCreate() {
         for( TraceObserver trace : observers ) {
             trace.onFlowCreate(this)
+        }
+    }
+
+    void notifyWorkflowPublish(Object value) {
+        for( final observer : observers ) {
+            try {
+                observer.onWorkflowPublish(value)
+            }
+            catch( Exception e ) {
+                log.error "Failed to invoke observer on workflow publish: $observer", e
+            }
         }
     }
 

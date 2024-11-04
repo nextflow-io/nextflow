@@ -42,8 +42,11 @@ myst_enable_extensions = ['colon_fence', 'deflist', 'dollarmath']
 myst_heading_anchors = 3
 
 rediraffe_redirects = {
-    'basic.md': 'overview.md',
     'getstarted.md': 'install.md',
+    'basic.md': 'overview.md',
+    'tracing.md': 'reports.md',
+    'mail.md': 'notifications.md',
+    'operator.md': 'reference/operator.md',
     'dsl2.md': 'dsl1.md'
 }
 
@@ -79,7 +82,7 @@ version = release.replace("-edge", "")
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
-html_title = f"Nextflow v{release} documentation"
+html_title = f"Nextflow {release} documentation"
 
 # Get the current sha if not checked out at a specific version
 if len(release) == 0:
@@ -333,3 +336,77 @@ epub_copyright = u'Copyright 2013-2024, Seqera Labs'
 
 # Allow duplicate toc entries.
 #epub_tocdup = True
+
+# see also: https://github.com/pygments/pygments/blob/master/pygments/lexers/jvm.py
+from pygments.lexer import RegexLexer
+from sphinx.highlighting import lexers
+
+class NextflowLexer(RegexLexer):
+    """
+    For Nextflow source code.
+    """
+
+    import re
+    from pygments.lexer import bygroups, using, this, default
+    from pygments.token import Comment, Operator, Keyword, Name, String, Number, Whitespace
+    from pygments.util import shebang_matches
+
+    name = 'Nextflow'
+    url = 'https://nextflow.io/'
+    aliases = ['nextflow', 'nf']
+    filenames = ['*.nf']
+    mimetypes = ['text/x-nextflow']
+    # version_added = '1.5'
+
+    flags = re.MULTILINE | re.DOTALL
+
+    tokens = {
+        'root': [
+            # Nextflow allows a file to start with a shebang
+            (r'#!(.*?)$', Comment.Preproc, 'base'),
+            default('base'),
+        ],
+        'base': [
+            (r'[^\S\n]+', Whitespace),
+            (r'(//.*?)(\n)', bygroups(Comment.Single, Whitespace)),
+            (r'/\*.*?\*/', Comment.Multiline),
+            # keywords: go before method names to avoid lexing "throw new XYZ"
+            # as a method signature
+            (r'(assert|catch|else|'
+             r'if|instanceof|new|return|throw|try|in|as)\b',
+             Keyword),
+            # method names
+            (r'^(\s*(?:[a-zA-Z_][\w.\[\]]*\s+)+?)'  # return arguments
+             r'('
+             r'[a-zA-Z_]\w*'                        # method name
+             r'|"(?:\\\\|\\[^\\]|[^"\\])*"'         # or double-quoted method name
+             r"|'(?:\\\\|\\[^\\]|[^'\\])*'"         # or single-quoted method name
+             r')'
+             r'(\s*)(\()',                          # signature start
+             bygroups(using(this), Name.Function, Whitespace, Operator)),
+            (r'@[a-zA-Z_][\w.]*', Name.Decorator),
+            (r'(def|enum|include|from|output|process|workflow)\b', Keyword.Declaration),
+            (r'(boolean|byte|char|double|float|int|long|short|void)\b',
+             Keyword.Type),
+            (r'(true|false|null)\b', Keyword.Constant),
+            (r'""".*?"""', String.Double),
+            (r"'''.*?'''", String.Single),
+            (r'"(\\\\|\\[^\\]|[^"\\])*"', String.Double),
+            (r"'(\\\\|\\[^\\]|[^'\\])*'", String.Single),
+            (r'/(\\\\|\\[^\\]|[^/\\])*/', String),
+            (r"'\\.'|'[^\\]'|'\\u[0-9a-fA-F]{4}'", String.Char),
+            (r'(\.)([a-zA-Z_]\w*)', bygroups(Operator, Name.Attribute)),
+            (r'[a-zA-Z_]\w*:', Name.Label),
+            (r'[a-zA-Z_$]\w*', Name),
+            (r'[~^*!%&\[\](){}<>|+=:;,./?-]', Operator),
+            (r'[0-9][0-9]*\.[0-9]+([eE][0-9]+)?[fd]?', Number.Float),
+            (r'0x[0-9a-fA-F]+', Number.Hex),
+            (r'[0-9]+L?', Number.Integer),
+            (r'\n', Whitespace)
+        ],
+    }
+
+    def analyse_text(text):
+        return shebang_matches(text, r'nextflow')
+
+lexers['nextflow'] = NextflowLexer()
