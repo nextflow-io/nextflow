@@ -161,7 +161,7 @@ In the above example, the process will execute one of several scripts depending 
 
 ### Template
 
-Process scripts can be externalised to **template** files, which allows them to be reused across different processes and tested independently from the pipeline execution.
+Process scripts can be externalized to **template** files, which allows them to be reused across different processes and tested independently from the pipeline execution.
 
 A template can be used in place of an embedded script using the `template` function in the script section:
 
@@ -179,9 +179,9 @@ workflow {
 }
 ```
 
-By default, Nextflow looks for `my_script.sh` in the `templates` directory located alongside the Nextflow script in which the process is defined. An absolute path can be used to specify a different location, but this practice is discouraged because it hinders pipeline portability.
+By default, Nextflow looks for the template script in the `templates` directory located alongside the Nextflow script in which the process is defined. An absolute path can be used to specify a different location. However, this practice is discouraged because it hinders pipeline portability.
 
-Here is an example of a script template:
+Here is an example of a template script:
 
 ```bash
 #!/bin/bash
@@ -196,13 +196,13 @@ Variables prefixed with the dollar character (`$`) are interpreted as Nextflow v
 STR='foo' bash templates/my_script.sh
 ```
 
-The following caveats should be kept in mind:
+The following caveats should be considered:
 
-- In practice, templates should be used only for Bash scripts. Languages like Python and R do not prefix variables with `$`, so templates written in these languages can't be executed separately from the pipeline.
+- Template scripts are recommended only for Bash scripts. Languages that do not prefix variables with `$` (e.g. Python and R) can't be executed directly as a template script.
 
-- Variables escaped with `\$` will be interpreted as Bash variables when executed by Nextflow, but will not be interpreted as variables at all when executed from the command line. As a result, this practice should be avoided to ensure that the template script behaves consistently in both cases.
+- Variables escaped with `\$` will be interpreted as Bash variables when executed by Nextflow, but will not be interpreted as variables when executed from the command line. This practice should be avoided to ensure that the template script behaves consistently.
 
-- If a Nextflow variable is missing when the template is executed by Nextflow, the pipeline will fail, even if the missing variable is "commented out" in the template. This happens because the template rendering is not aware of the language in which the template is written.
+- Template variables are evaluated even if they are commented out in the template script. If a template variable is missing, it will cause the pipeline to fail regardless of where it occurs in the template.
 
 :::{tip}
 Due to the caveats listed above, template scripts are generally discouraged. The best practice for using a custom script is to embed it in the process definition at first, and move it to a separate file with its own command line interface once as the code matures.
@@ -237,7 +237,7 @@ In the above example, `$USER` is treated as a Bash variable, while `!{str}` is t
 :::{note}
 - Shell script definitions require the use of single-quote `'` delimited strings. When using double-quote `"` delimited strings, dollar variables are interpreted as Nextflow variables as usual. See {ref}`string-interpolation`.
 - Variables prefixed with `!` must always be enclosed in curly brackets, i.e. `!{str}` is a valid variable whereas `!str` is ignored.
-- Shell scripts support the use of the {ref}`process-template` mechanism. The same rules are applied to the variables defined in the script template.
+- Shell scripts support the use of the {ref}`process-template` mechanism. The same rules are applied to the variables defined in the template script.
 :::
 
 (process-native)=
