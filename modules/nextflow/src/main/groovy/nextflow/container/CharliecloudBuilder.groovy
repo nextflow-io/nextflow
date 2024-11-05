@@ -19,6 +19,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.Global
 /**
  * Implements a builder for Charliecloud containerisation
  *
@@ -33,10 +34,8 @@ import groovy.util.logging.Slf4j
 @Slf4j
 class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
     
-    protected boolean useSquash
+    private boolean writeFake = true
 
-    protected boolean writeFake
-    
     CharliecloudBuilder(String name) {
         this.image = name
     }
@@ -52,16 +51,13 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
 
         if( params.containsKey('runOptions') )
             addRunOptions(params.runOptions.toString())
-
-        if ( params.containsKey('useSquash') )
-            this.useSquash = params.useSquash?.toString() == 'true'
-
+                
         if ( params.containsKey('writeFake') )
-            this.writeFake = params.writeFake?.toString() == 'true'
+            this.writeFake = params.writeFake?.toString() != 'false'
 
         if( params.containsKey('readOnlyInputs') )
             this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
-
+        
         return this
     }
 
@@ -72,40 +68,22 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
 
     @Override
     CharliecloudBuilder build(StringBuilder result) {
+        
         assert image
         def imageStorage = Paths.get(image).parent.parent
-        def imageToRun = String
-
-        if (!writeFake) {
-            // define image to run, if --write-fake is not used this is a copy of the image in the current workDir
-            imageToRun = '"$NXF_TASK_WORKDIR"/container_' + image.split('/')[-1]
-
-            // optional squash
-            if (useSquash) {
-                imageToRun = imageToRun + '.squashfs'
-            }
-
-            result << 'ch-convert -i ch-image --storage '
-            // handle storage to deal with cases where CH_IMAGE_STORAGE is not set
-            result << imageStorage
-            result << ' '
-            result << image.split('/')[-1]
-            result << ' '
-            result << imageToRun
-            result << ' && '
-        }
+        def imageName = image.split('/')[-1]
 
         result << 'ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env '
-        
-        if (writeFake) {
-            result << '--write-fake ' 
-            // if we are using writeFake we do not need to create a temporary imagae
-            // image is run by name from the storage directory
-            imageToRun = image.split('/')[-1]
-        }
 
-        if (!readOnlyInputs)
+        if ( writeFake  )
+            result << '--write-fake '
+
+        if ( !writeFake && !readOnlyInputs ) {
+            // -w and CH_IMAGE_STORAGE are incompatible.
+            if(System.getenv('CH_IMAGE_STORAGE') == imageStorage)
+                throw new Exception('It is not possible to run writeable images from `$CH_IMAGE_STORAGE`')
             result << '-w '
+        }
 
         appendEnv(result)
 
@@ -116,8 +94,15 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
 
         if( runOptions )
             result << runOptions.join(' ') << ' '
+
+        if( writeFake && System.getenv('CH_IMAGE_STORAGE') ) {
+            // Run by name if writeFake is true and CH_IMAGE_STORAGE is set
+            result << imageName
+        } else {
+            // Otherwise run by path
+            result << image
+        }
         
-        result << imageToRun
         result << ' --'
 
         runCommand = result.toString()

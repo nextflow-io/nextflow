@@ -25,7 +25,7 @@ You can see the effect of Nextflow's AST transforms by using the Nextflow consol
 
 Here is the example from {ref}`your-first-script`:
 
-```groovy
+```nextflow
 params.str = 'Hello world!'
 
 process splitLetters {
