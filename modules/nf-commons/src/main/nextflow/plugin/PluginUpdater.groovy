@@ -34,7 +34,6 @@ import dev.failsafe.function.CheckedSupplier
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
-import nextflow.Const
 import nextflow.SysEnv
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
