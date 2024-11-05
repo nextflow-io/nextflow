@@ -423,7 +423,7 @@ The following methods are available for iterables:
 `toList() -> List`
 : Converts the iterable to a list.
 : :::{danger}
-  Converting an unordered collection to a list can lead to non-deterministic behavior. See {ref}`cache-nondeterministic-inputs` for more information.
+  Converting an unordered collection to a list can lead to non-deterministic behavior. Consider using `sort()` instead to ensure a deterministic ordering. See {ref}`cache-nondeterministic-inputs` for more information.
   :::
 
 `toSet() -> Set`
