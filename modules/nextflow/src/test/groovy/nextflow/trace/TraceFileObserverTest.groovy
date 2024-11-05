@@ -15,6 +15,9 @@
  */
 
 package nextflow.trace
+
+import groovy.json.JsonSlurper
+
 import java.nio.file.Files
 
 import nextflow.Session
@@ -165,6 +168,81 @@ class TraceFileObserverTest extends Specification {
 
     }
 
+    def 'test file trace json'() {
+
+        given:
+        def testFolder = Files.createTempDirectory('trace-dir')
+        def file = testFolder.resolve('trace.json')
+
+        // the handler
+        def task = new TaskRun(id:TaskId.of(111), name:'simple_task', hash: CacheHelper.hasher(1).hash(), config: new TaskConfig())
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> new Session()
+        task.processor.getName() >> 'x'
+        task.processor.getExecutor() >> Mock(Executor)
+        task.processor.getProcessEnvironment() >> [:]
+
+        def handler = new NopeTaskHandler(task)
+        def now = System.currentTimeMillis()
+
+        // the observer class under test
+        def observer = new TraceFileObserver(file)
+
+        when:
+        observer.onFlowCreate(null)
+        then:
+        observer.current.isEmpty()
+
+        when:
+        handler.status = TaskStatus.SUBMITTED
+        observer.onProcessSubmit( handler, handler.getTraceRecord() )
+        def record = observer.current.get(TaskId.of(111))
+        then:
+        observer.separator == '\t'
+        record.taskId == 111L
+        record.name == 'simple_task'
+        record.submit >= now
+        record.start == 0
+        observer.current.containsKey(TaskId.of(111))
+
+        when:
+        sleep 50
+        handler.status = TaskStatus.RUNNING
+        observer.onProcessStart( handler, handler.getTraceRecord() )
+        record = observer.current.get(TaskId.of(111))
+        then:
+        record.start >= record.submit
+        observer.current.containsKey(TaskId.of(111))
+
+        when:
+        sleep 50
+        handler.status = TaskStatus.COMPLETED
+        handler.task.exitStatus = 127
+        observer.onProcessComplete(handler, handler.getTraceRecord())
+        then:
+        !(observer.current.containsKey(TaskId.of(111)))
+
+        when:
+        record = handler.getTraceRecord()
+        observer.onFlowComplete()
+        def result = new JsonSlurper().parse(file) as List
+
+        then:
+        result[0].task_id == '111'                           // task-id
+        result[0].hash == 'fe/ca28af'                     // hash
+        result[0].native_id == '-'                             // native-id
+        result[0].name == 'simple_task'                   // process name
+        result[0].status == TaskStatus.COMPLETED.toString()
+        result[0].exit == '127'                           // exist-status
+        result[0].submit == TraceRecord.fmtDate(record.submit,null) // submit time
+        result[0].duration == new Duration(record.complete -record.submit).toString()         // wall-time
+        result[0].realtime == new Duration(record.complete -record.start).toString()         // run-time
+
+        cleanup:
+        testFolder.deleteDir()
+
+    }
+
 
     def 'test render'() {
 
@@ -191,7 +269,9 @@ class TraceFileObserverTest extends Specification {
 
         when:
         def trace = [:] as TraceFileObserver
-        def result = trace.render(record).split('\t')
+        StringWriter out = new StringWriter()
+        trace.render(new PrintWriter(out), record)
+        def result = out.toString().split('\t')
         then:
         result.size() == 16
         result[0] == '30'                       // task id
@@ -213,6 +293,60 @@ class TraceFileObserverTest extends Specification {
 
     }
 
+    def 'test render json'() {
+
+        given:
+        def record = new TraceRecord()
+        record.task_id = 30
+        record.hash = '43d7ef'
+        record.native_id = '2000'
+        record.name = 'hello'
+        record.status = TaskStatus.COMPLETED
+        record.exit = 99
+        record.start = 1408714875000
+        record.submit = 1408714874000
+        record.complete = 1408714912000
+        record.duration = 1408714912000 - 1408714874000
+        record.realtime = 1408714912000 - 1408714875000
+        record.'%cpu' = 17.50f
+        record.peak_rss = 10_000 * 1024
+        record.peak_vmem = 30_000 * 1024
+        record.rchar = 30_000 * 1024
+        record.wchar = 10_000 * 1024
+        record.inputs = [ [name: "in_file_1", size: 123456], [name: "in_file_2", size: 654321] ]
+        record.outputs = [ [name: "out_file_1", size: 123456] ]
+
+        when:
+        def trace = [renderer: TraceFileObserver.RENDERER.JSON] as TraceFileObserver
+        StringWriter out = new StringWriter()
+        trace.render(new PrintWriter(out), record)
+        Map result = new JsonSlurper().parseText(out.toString()) as Map
+        then:
+        result.task_id == '30'                       // task id
+        result.hash == '43d7ef'                   // hash
+        result.native_id == '2000'                     // native id
+        result.name == 'hello'                    // name
+        result.status == 'COMPLETED'                // status
+        result.exit == '99'                       // exit status
+        result.submit == '2014-08-22 13:41:14.000'  // submit
+        result.duration == '38s'                      // wall-time
+        result.realtime == '37s'                      // run-time
+        result['%cpu'] == '17.5%'                    // cpu
+        result.peak_rss == '9.8 MB'                  // peak_rss
+        result.peak_vmem == '29.3 MB'                 // peak_vmem
+        result.rchar == '29.3 MB'                 // rchar
+        result.wchar == '9.8 MB'                  // wchar
+        result.inputs.size() == 2
+        result.inputs[0].name == 'in_file_1'
+        result.inputs[0].size == 123456
+        result.inputs[1].name == 'in_file_2'
+        result.inputs[1].size == 654321
+        result.outputs.size() == 1
+        result.outputs[0].name == 'out_file_1'
+        result.outputs[0].size == 123456
+
+    }
+
     def 'test custom render' () {
 
 
@@ -226,7 +360,9 @@ class TraceFileObserverTest extends Specification {
         when:
         def trace = [:] as TraceFileObserver
         trace.setFieldsAndFormats( 'task_id,syscr,syscw,rss,rss:num' )
-        def result = trace.render(record).split('\t')
+        StringWriter out = new StringWriter()
+        trace.render(new PrintWriter(out), record)
+        def result = out.toString().split('\t')
         then:
         result[0] == '5'
         result[1] == '10'
@@ -266,7 +402,9 @@ class TraceFileObserverTest extends Specification {
 
         def trace = [:] as TraceFileObserver
         trace.setFieldsAndFormats('task_id,hash,native_id,name,status,exit,submit,duration,realtime,%cpu,rss,vmem,peak_rss,peak_vmem,rchar,wchar,syscr,syscw,duration:num,realtime:num,rss:num,vmem:num,peak_rss:num,peak_vmem:num,rchar:num,wchar:num,queue')
-        def result = trace.render(record).split('\t')
+        StringWriter out = new StringWriter()
+        trace.render(new PrintWriter(out), record)
+        def result = out.toString().split('\t')
 
         then:
         result[0] == '3'

@@ -38,6 +38,8 @@ import nextflow.processor.TaskProcessor
 @CompileStatic
 class TraceFileObserver implements TraceObserver {
 
+    enum RENDERER {TEXT, JSON}
+
     public static final String DEF_FILE_NAME = "trace-${TraceHelper.launchTimestampFmt()}.txt"
 
     /**
@@ -93,6 +95,10 @@ class TraceFileObserver implements TraceObserver {
     private Agent<PrintWriter> writer
 
     private boolean useRawNumber
+
+    private RENDERER renderer = RENDERER.TEXT
+
+    private int numRecords = 0
 
     void setFields( List<String> entries ) {
 
@@ -186,6 +192,9 @@ class TraceFileObserver implements TraceObserver {
      */
     TraceFileObserver( Path traceFile ) {
         this.tracePath = traceFile
+        if( tracePath.extension.toUpperCase() == RENDERER.JSON.toString() ){
+            this.renderer = RENDERER.JSON
+        }
     }
 
     /** ONLY FOR TESTING PURPOSE */
@@ -209,7 +218,8 @@ class TraceFileObserver implements TraceObserver {
 
         // launch the agent
         writer = new Agent<PrintWriter>(traceFile)
-        writer.send { traceFile.println(fields.join(separator)); traceFile.flush() }
+        initTraceFile()
+
     }
 
     /**
@@ -223,11 +233,26 @@ class TraceFileObserver implements TraceObserver {
         writer.await()
 
         // write the remaining records
-        current.values().each { record -> traceFile.println(render(record)) }
+        current.values().each { record -> render(traceFile, record) }
+        finishTraceFile()
         traceFile.flush()
         traceFile.close()
     }
 
+    private void initTraceFile(){
+        if(renderer == RENDERER.JSON) {
+            writer.send{ traceFile.print("[")}
+        } else {
+            // When renderer is TEXT we need to write the header line with the fields
+            writer.send { traceFile.println(fields.join(separator)); traceFile.flush() }
+        }
+    }
+
+    private void finishTraceFile(){
+        if (renderer == RENDERER.JSON){
+            traceFile.print("]")
+        }
+    }
 
     @Override
     void onProcessCreate(TaskProcessor process) {
@@ -269,7 +294,7 @@ class TraceFileObserver implements TraceObserver {
         current.remove(taskId)
 
         // save to the file
-        writer.send { PrintWriter it -> it.println(render(trace)); it.flush() }
+        writer.send { PrintWriter it -> render(it, trace); it.flush() }
     }
 
     @Override
@@ -280,7 +305,7 @@ class TraceFileObserver implements TraceObserver {
         }
 
         // save to the file
-        writer.send { PrintWriter it -> it.println(render( trace )); it.flush() }
+        writer.send { PrintWriter it -> render(it, trace); it.flush() }
     }
 
     /**
@@ -289,13 +314,27 @@ class TraceFileObserver implements TraceObserver {
      * @param trace
      * @return
      */
-    String render(TraceRecord trace) {
+    void render(PrintWriter it, TraceRecord trace) {
         assert trace
-        trace.renderText(fields, formats, separator)
+        if ( this.renderer == RENDERER.JSON) {
+            StringBuilder sb = new StringBuilder()
+            if (numRecords > 0){
+                it.println(",")
+            }
+            it.print(trace.renderJson(sb, fields, formats))
+        } else {
+            if (numRecords > 0){
+                it.println("")
+            }
+            it.print(trace.renderText(fields, formats, separator))
+        }
+
     }
 
     @Override
     boolean enableMetrics() {
         return true
     }
+
+
 }
