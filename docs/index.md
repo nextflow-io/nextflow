@@ -48,6 +48,7 @@ P. Di Tommaso, et al. Nextflow enables reproducible computational workflows. Nat
 
 overview
 install
+developer-env
 your-first-script
 ```
 
