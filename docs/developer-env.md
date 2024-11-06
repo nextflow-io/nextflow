@@ -136,7 +136,7 @@ To install Git on macOS with [Homebrew](https://docs.brew.sh/):
 
 1. When the installation finishes, run `git version` to verify Git was installed.
 
-To install Git on macOS with Xcode:
+To install Git on macOS with [Xcode](https://developer.apple.com/xcode/):
 
 1. Open the App Store on your Mac.
 1. Sign in to your Apple Account.
@@ -159,15 +159,15 @@ See [git-scm documentation](https://git-scm.com/downloads/linux) for more inform
 
 ````
 
-## Container engines
+## Docker
 
 Containerization enables the creation of self-contained and fully reproducible computational pipelines by bundling a script's binary dependencies into a standardized and portable format. Containers can be executed on any platform that supports a container runtime and ensures consistency across different environments.
 
-Nextflow supports multiple container technologies (e.g., Docker, Singularity, and Podman) allowing you to choose the one that best fits your needs.
+Docker is an open-source platform that simplifies application development, deployment, and execution by packaging applications and their dependencies into containers. Docker Desktop provides a GUI for managing Docker containers. Installing Docker Desktop is a straightforward process that allows you to create, deploy, and manage applications within containers.
 
+<!---
 Configure your environment to support the container technologies you want to use. 
-
-### Docker
+--->
 
 ````{tabs}
 
@@ -177,7 +177,9 @@ Configure your environment to support the container technologies you want to use
 
 ```{group-tab} macOS
 
-1. Visit the [Install Docker on Mac](https://docs.docker.com/desktop/install/mac-install/) page.
+To install Docker Desktop on macOS:
+
+1. Visit the [Install Docker Desktop on Mac](https://docs.docker.com/desktop/install/mac-install/) page.
 1. Download the installer for your chip type using the download buttons at the top of the page.
 1. Double-click `Docker.dmg` to open the installer.
 1. Drag the Docker icon to the **Applications** folder.
@@ -208,19 +210,23 @@ To install Docker Desktop on Linux Debian/Ubuntu distributions:
 1. Review the Docker Subscription Service Agreement and, if you agree, select **Accept** to continue.
 1. From the installation window, select **Use recommended settings (Requires password)**. Docker Desktop starts after you accept the terms.
 
-:::{note}
-Docker Desktop won't run if you do not agree to the terms. You can choose to accept the terms at a later date by opening Docker Desktop.
-:::
+    :::{note}
+    Docker Desktop won't run if you do not agree to the terms. You can choose to accept the terms at a later date by opening Docker Desktop.
+    :::
 
 ```
 
 ````
 
-See {ref}`container-page` for more information about supported container engines.
+Nextflow supports multiple container technologies (e.g., Singularity and Podman) allowing you to choose the one that best fits your needs. See {ref}`container-page` for more information about other supported container engines.
 
 ## Conda
 
 Conda is an open-source package and environment manager that simplifies installing and configuring complex software across platforms. Nextflow supports Conda, enabling the use of Conda recipes and environment files to configure workflow dependencies.
+
+:::{note}
+Conda environments can lead to inconsistencies across systems due to dependency resolution and OS variations.
+:::
 
 The preferred method for installing Conda is through Miniconda, a lightweight version of Anaconda that includes Conda and its dependencies.
 
@@ -260,11 +266,11 @@ To install Conda on Linux Debian/Ubuntu distributions:
 
 (wsl)=
 
-# Windows Subsystem for Linux
+## Windows Subsystem for Linux
 
 Developers can access the power of both Windows and Linux on a Windows machine. The Windows Subsystem for Linux (WSL) lets developers install a Linux distribution and use Linux applications, utilities, and Bash command-line tools directly on Windows without the overhead of a virtual machine or dualboot setup. The steps below outline the recommended setup.
 
-## Enable WSL
+### Enable WSL
 
 Windows Subsystem for Linux (WSL) is an optional feature on Windows 10 version 2004 and higher (Build 19041 and higher) or Windows 11.
 
@@ -285,5 +291,5 @@ To enable WSL on Windows using Powershell:
 
 1. Open PowerShell or Windows Command Prompt in administrator mode by right-clicking and selecting **Run as administrator**.
 1. Run `wsl --install`.
-1. When prompted, restart Windows when prompted.
-1. After restarting Windows, check that you have WSL enabled by opening a Command Prompt and typing 'wsl'.
+1. When prompted, restart Windows.
+1. After restarting Windows, open a PowerShell or Windows Command Prompt and run `wsl` to verify WSL was enabled.
