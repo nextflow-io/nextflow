@@ -387,9 +387,9 @@ To install Ubuntu on WSL:
 1. Select **Get** and wait for Windows to download and install Ubuntu.
 1. When it’s finished, select **Launch**.
 1. A terminal window will appear. Wait for Ubuntu to finish installing, then create a new Linux username and password when prompted.
---->
 
 ### PowerShell or Windows Command Prompt
+--->
 
 To enable WSL on Windows using Powershell or Windows Command Prompt:
 
