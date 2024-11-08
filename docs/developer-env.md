@@ -4,6 +4,8 @@
 
 Setting up a Nextflow development environment is a prerequisite for creating, testing, and optimizing data analysis pipelines. The steps below outline recommended tools for setting up an optimal Nextflow development environment.
 
+Nextflow must be installed separately. See {ref}`install-page` for Nextflow installation instructions.
+
 :::{note}
 If you are using a Windows computer, you first need to install and configure the Windows Subsystem for Linux (WSL). See {ref}`wsl` for installation instructions.
 :::
@@ -58,7 +60,7 @@ See [Linux installation](https://code.visualstudio.com/docs/setup/linux#_install
 
 ````
 
-## Extensions
+## VS Code Extensions
 
 Extensions are a key feature of IDE's and allow you to customize your development environment by adding support for various programming languages, tools, and features. The [VS Code Marketplace](https://marketplace.visualstudio.com/vscode) offers thousands of extensions that can enhance your productivity and tailor the editor to your specific needs.
 
@@ -86,7 +88,7 @@ To install the Nextflow VS Code extension on Windows:
 
 1. Open VS Code.
 1. Open the VS Code Extensions view in the left-hand menu.
-1. Search for Nextflow.
+1. Search for **Nextflow**.
 1. Select **Install**.
 
 ```
@@ -97,7 +99,7 @@ To install the Nextflow VS Code extension on macOS:
 
 1. Open VS Code.
 1. Open the VS Code Extensions view in the left-hand menu.
-1. Search for Nextflow.
+1. Search for **Nextflow**.
 1. Select **Install**.
 
 ```
@@ -108,7 +110,65 @@ To install the Nextflow VS Code extension on Linux Debian/Ubuntu distributions:
 
 1. Open VS Code.
 1. Open the VS Code Extensions view in the left-hand menu.
-1. Search for Nextflow.
+1. Search for **Nextflow**.
+1. Select **Install**.
+
+```
+
+````
+
+
+
+### nf-core
+
+The [nf-core extensionpack](https://marketplace.visualstudio.com/items?itemName=nf-core.nf-core-extensionpack) adds a selection of tools that help develop with nf-core, a community effort to collect a curated set of analysis pipelines built using Nextflow.
+
+The nf-core extension pack includes 12 extensions:
+
+- [Apptainer/Singularity](https://marketplace.visualstudio.com/items?itemName=onnovalkering.vscode-singularity) - Provides syntax highlighting for Apptainer/Singularity definition files
+- [Code Spell Checker](https://marketplace.visualstudio.com/items?itemName=streetsidesoftware.code-spell-checker) - A basic spell checker that works well with camelCase code.
+- [Docker](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker) - Makes it easy to create, manage, and debug containerized applications
+- [EditorConfig](https://marketplace.visualstudio.com/items?itemName=EditorConfig.EditorConfig) - Support for EditorConfig project files for code standardisation.
+- [indent-rainbow](https://marketplace.visualstudio.com/items?itemName=oderwat.indent-rainbow) - Highlight indentation level, especially if inconsistent
+- [Nextflow](https://marketplace.visualstudio.com/items?itemName=nextflow.nextflow) - Nextflow language support
+- [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) - Code formatter using prettier
+- [Rainbow CSV](https://marketplace.visualstudio.com/items?itemName=mechatroner.rainbow-csv) - Highlight columns in csv files in different colors
+- [Ruff](https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff) - An extremely fast Python linter and code formatter, written in Rust.
+- [Todo Tree](https://marketplace.visualstudio.com/items?itemName=Gruntfuggly.todo-tree) - Show TODO, FIXME, etc. comment tags in a tree view
+- [YAML](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) - YAML Language Support by Red Hat, with built-in Kubernetes syntax support
+- [Markdown Extended](https://marketplace.visualstudio.com/items?itemName=jebbs.markdown-extended) - Gives nice markdown previews, including admonitions
+
+````{tabs}
+
+```{group-tab} Windows
+
+To install the nf-core extension pack on Windows:
+
+1. Open VS Code.
+1. Open the VS Code Extensions view in the left-hand menu.
+1. Search for **nf-core-extensionpack**.
+1. Select **Install**.
+
+```
+
+```{group-tab} macOS
+
+To install the nf-core extension pack on macOS:
+
+1. Open VS Code.
+1. Open the VS Code Extensions view in the left-hand menu.
+1. Search for **nf-core-extensionpack**.
+1. Select **Install**.
+
+```
+
+```{group-tab} Linux
+
+To install the nf-core extension pack on Linux Debian/Ubuntu distributions:
+
+1. Open VS Code.
+1. Open the VS Code Extensions view in the left-hand menu.
+1. Search for **nf-core-extensionpack**.
 1. Select **Install**.
 
 ```
@@ -132,7 +192,6 @@ The Remote Development extension pack includes four extensions:
 The VS Code Remote Development extension pack is required if you are developing using remote servers, Windows Subsystem for Linux, or Development Containers.
 :::
 
-
 ````{tabs}
 
 ```{group-tab} Windows
@@ -141,7 +200,7 @@ To install the Remote Development extension pack on Windows:
 
 1. Open VS Code.
 1. Open the VS Code Extensions view in the left-hand menu.
-1. Search for Nextflow.
+1. Search for **Remote Development**.
 1. Select **Install**.
 
 ```
@@ -152,7 +211,7 @@ To install the Remote Development extension pack on macOS:
 
 1. Open VS Code.
 1. Open the VS Code Extensions view in the left-hand menu.
-1. Search for Nextflow.
+1. Search for **Remote Development**.
 1. Select **Install**.
 
 ```
@@ -163,7 +222,7 @@ To install the Remote Development extension pack on Linux Debian/Ubuntu distribu
 
 1. Open VS Code.
 1. Open the VS Code Extensions view in the left-hand menu.
-1. Search for Nextflow.
+1. Search for **Remote Development**.
 1. Select **Install**.
 
 ```
@@ -324,8 +383,6 @@ See [git-scm documentation](https://git-scm.com/downloads/linux) for more inform
 
 ```{group-tab} macOS
 
-Git installed is already installed on new versions of macOS. You can activate it through the terminal running `git version`. If Git is not installed, you can install the latest version of Git using several methods:
-
 To install Git on macOS with [Homebrew](https://docs.brew.sh/):
 
 1. Open a terminal window and run `brew install git`.
@@ -409,9 +466,10 @@ To enable WSL on Windows using Powershell or Windows Command Prompt:
 
 See [Set up a WSL development environment](https://learn.microsoft.com/en-us/windows/wsl/setup/environment) for more information.
 
+<!---
 ## Development Containers
 
-Development Containers (Dev Containers), are Docker containers that are specifically configured to provide a fully featured development environment. They can be used to run an application, to separate tools, libraries, or runtimes needed for working with a codebase. Dev Containers can be run locally or remotely, in a private or public cloud, and in a variety of supporting tools and editors.
+[Development Containers](https://containers.dev/) (Dev Containers), are Docker containers that are specifically configured to provide a fully featured development environment. They can be used to run an application, to separate tools, libraries, or runtimes needed for working with a codebase. Dev Containers can be run locally or remotely, in a private or public cloud, and in a variety of supporting tools and editors.
 
 VS code and Docker are required to create and manage your Dev Containers. See {ref}`vscode-install` and {ref}`docker-desktop` for installation instructions.
 
@@ -471,3 +529,4 @@ To create a dev container with an existing image:
 :::{note}
 Dev Containers can also be used by GitHub Codespaces in VS Code or the browser. See [GitHub Codespaces](https://code.visualstudio.com/docs/remote/codespaces) for more information.
 :::
+--->
