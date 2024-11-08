@@ -34,7 +34,7 @@ To install VS Code on macOS:
 
 1. Visit the [VS Code](https://code.visualstudio.com/download) website.
 1. Download VS Code for macOS.
-1. Locate the `Visual Studio Code.app` application and move to the Applications folder to make it available in the macOS Launchpad.
+1. Drag the `Visual Studio Code.app` application to the Applications folder to make it available in the macOS Launchpad.
 
 ```
 
@@ -58,9 +58,9 @@ See [Linux installation](https://code.visualstudio.com/docs/setup/linux#_install
 
 ````
 
-## Extension
+## Extensions
 
-Extensions are a key feature of IDEs and allow you to customize your development environment by adding support for various programming languages, tools, and features. The [VS Code Marketplace](https://marketplace.visualstudio.com/vscode) offers thousands of extensions that can enhance your productivity and tailor the editor to your specific needs.
+Extensions are a key feature of IDE's and allow you to customize your development environment by adding support for various programming languages, tools, and features. The [VS Code Marketplace](https://marketplace.visualstudio.com/vscode) offers thousands of extensions that can enhance your productivity and tailor the editor to your specific needs.
 
 
 ### Nextflow
@@ -76,7 +76,7 @@ The VS Code [Nextflow extension](https://marketplace.visualstudio.com/items?item
 - Parameter schemas
 - DAG previews
 
-See {ref}`vs-code-integration-page` for more information about the Nextflow extension.
+See {ref}`vs-code-page` for more information about the Nextflow extension.
 
 ````{tabs}
 
@@ -117,7 +117,7 @@ To install the Nextflow VS Code extension on Linux Debian/Ubuntu distributions:
 
 (remote-development-ext)=
 
-### Remote Development extension pack
+### Remote Development
 
 The [Remote Development extension pack](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack) enables you to run WSL, SSH, or a development container for editing and debugging with the full set of VS Code features.
 
@@ -129,7 +129,7 @@ The Remote Development extension pack includes four extensions:
 [WSL](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl) - Get a Linux-powered development experience from the comfort of Windows by opening any folder in the Windows Subsystem for Linux.
 
 :::{note}
-The VS Code Remote Development extension pack is required if you are developing using remote servers, Windows Subsystem for Linux, Development Containers.
+The VS Code Remote Development extension pack is required if you are developing using remote servers, Windows Subsystem for Linux, or Development Containers.
 :::
 
 
@@ -185,6 +185,28 @@ Configure your environment to support the container technologies you want to use
 ````{tabs}
 
 ```{group-tab} Windows
+
+To install Docker Desktop on Windows:
+
+1. Visit the [Install Docker Desktop on Windows](https://docs.docker.com/desktop/setup/install/windows-install/) page.
+1. Download the installer using the download button at the top of the page, or from the release notes.
+1. Double-click Docker Desktop `Installer.exe` to run the installer. By default, Docker Desktop is installed at `C:\Program Files\Docker\Docker`.
+1. When prompted, ensure the Use WSL 2 instead of Hyper-V option on the Configuration page is selected, or not, depending on your choice of backend.
+
+    :::{note}
+    You won't be able to select which backend to use if your system only supports one of the two options.
+    :::
+
+1. Follow the instructions on the installation wizard to authorize the installer and proceed with the install.
+1. When the installation is complete, select **Close**.
+1. Start Docker Desktop.
+1. Review the Docker Subscription Service Agreement and, if you agree, select **Accept** to continue.
+
+    :::{note}
+    Docker Desktop won't run if you do not agree to the terms. You can choose to accept the terms at a later date by opening Docker Desktop.
+    :::
+
+1. Docker Desktop starts after you accept the terms.
 
 ```
 
@@ -347,7 +369,7 @@ Developers can access the power of both Windows and Linux on a Windows machine. 
 
 WSL is an optional feature on Windows 10 version 2004 and higher (Build 19041 and higher) or Windows 11. You can enable it through PowerShell or Windows Command Prompt. The steps below outline the recommended setup.
 
-<!--->
+<!---
 ### Windows Features dialog
 
 To enable WSL on Windows using Windows Features dialog:
@@ -385,25 +407,66 @@ To enable WSL on Windows using Powershell or Windows Command Prompt:
     The **User Name** and **Password** is specific to each Linux distribution that you install and has no bearing on your Windows user name.
     :::
 
-See [Set up a WSL development environment](https://learn.microsoft.com/en-us/windows/wsl/setup/environment) for additional instructions for setting up a WSL development environment.
+See [Set up a WSL development environment](https://learn.microsoft.com/en-us/windows/wsl/setup/environment) for more information.
 
 ## Development Containers
 
-Development Containers (Dev Containers), are Docker containers that are specifically configured to provide a fully featured development environment. It can be used to run an application, to separate tools, libraries, or runtimes needed for working with a codebase. Dev Containers can be run locally or remotely, in a private or public cloud, in a variety of supporting tools and editors.
+Development Containers (Dev Containers), are Docker containers that are specifically configured to provide a fully featured development environment. They can be used to run an application, to separate tools, libraries, or runtimes needed for working with a codebase. Dev Containers can be run locally or remotely, in a private or public cloud, and in a variety of supporting tools and editors.
 
 VS code and Docker are required to create and manage your Dev Containers. See {ref}`vscode-install` and {ref}`docker-desktop` for installation instructions.
 
-### Development Containers Extension
+### Development Containers extension
 
-The VS Code Dev Containers extension lets you use a container as a full-featured development environment. It allows you to open any folder inside (or mounted into) a container and take advantage of VS Code's full feature set. A `devcontainer.json` file in your project tells VS Code how to access or create a development container with a defined tool and runtime stack and can be used to run an application or to separate tools, libraries, or runtimes.
+The VS Code Dev Containers extension lets you use a container as a full-featured development environment. It allows you to open any folder inside (or mounted into) a container and take advantage of VS Code's full feature set.
 
-The Dev Containers extension is included as a part of the [Remote Development extension pack](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack). See {ref}`remote-development-ext`) for installation instructions.
+The Dev Containers extension is included as a part of the [Remote Development extension pack](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack). See {ref}`remote-development-ext` for installation instructions.
 
-### Create a Dev Container
+### Create and run a dev container
 
+A `devcontainer.json` file in your project directory tells VS Code how to access, create, and configure a development container. It can be used to run an application or to separate tools, libraries, or runtimes.
 
+You can alter your configuration to do things such as:
 
-See [Create a Dev Container](https://code.visualstudio.com/docs/devcontainers/create-dev-container) for more information.
+- Install additional tools in the container.
+- Automatically install extensions.
+- Forward or publish additional ports.
+- Set runtime arguments.
+- Reuse or extend your existing Docker Compose setup.
+- Add more Advanced container configuration.
+
+To create a dev container with an existing image:
+
+1. Create a Dev Container `.json` under `.devcontainer/devcontainer.json` in the root of your project.
+1. Add an image with the required tooling, and customizations, to the `.json` file. For example:
+
+    ```json
+    {
+        "name": "Nextflow Dev Container",
+        "image": "nfcore/gitpod:latest",
+        "remoteUser": "vscode",
+        "runArgs": ["--privileged"],
+
+        // Configure tool-specific properties.
+        "customizations": {
+            // Configure properties specific to VS Code.
+            "vscode": {
+                // Set *default* container specific settings.json values on container create.
+                "settings": {
+                    "python.defaultInterpreterPath": "/opt/conda/bin/python"
+                },
+
+                // Add the IDs of extensions you want installed when the container is created.
+                "extensions": ["ms-python.python", "ms-python.vscode-pylance", "nf-core.nf-core-extensionpack", "nextflow.nextflow"]
+            }
+        }
+    }
+    ```
+
+    :::{note}
+    A Dockerfile may also live in the `.devcontainer` folder. You can replace the image property in `devcontainer.json` with dockerfile and create a custom container image. See [Create a Dev Container](https://code.visualstudio.com/docs/devcontainers/create-dev-container) for more information.
+    :::
+
+1. Enter **Dev Containers: Reopen in Container** in the VS Code Command Palette and reopen your project. You should now see the name of the container ("Nextflow Dev Container" in the above example) in the bottom left corner of VS Code.
 
 :::{note}
 Dev Containers can also be used by GitHub Codespaces in VS Code or the browser. See [GitHub Codespaces](https://code.visualstudio.com/docs/remote/codespaces) for more information.
