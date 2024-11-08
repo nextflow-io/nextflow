@@ -437,7 +437,7 @@ The `devcontainer.json` can be used to:
 To create a dev container with an existing image:
 
 1. Create `.devcontainer/devcontainer.json` in the root of your project.
-1. Add an image with the Nextflow tooling and VS Code customizations to the `.json` file. For example:
+1. Add an image with the Nextflow tooling and VS Code customizations to the `devcontainer.json`. For example:
 
     ```json
     {
