@@ -20,7 +20,7 @@ compileGroovy {
 dependencies {
     api(project(':nf-commons'))
     api(project(':nf-httpfs'))
-    api "org.apache.groovy:groovy:4.0.23"
+    api "org.apache.groovy:groovy:4.0.24"
     api "org.apache.groovy:groovy-nio:4.0.23"
     api "org.apache.groovy:groovy-xml:4.0.23"
     api "org.apache.groovy:groovy-json:4.0.23"
