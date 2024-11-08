@@ -75,12 +75,12 @@ class ContainersInspectorTest extends Specification {
             {
                 "processes": [
                     {
-                        "name": "proc2",
-                        "container": "container2"
-                    },
-                    {
                         "name": "proc1",
                         "container": "container1"
+                    },
+                    {
+                        "name": "proc2",
+                        "container": "container2"
                     }
                 ]
             }
@@ -101,8 +101,8 @@ class ContainersInspectorTest extends Specification {
                 .renderContainers()
         then:
         result == '''\
-            process { withName: 'proc2' { container = 'container2' } }
             process { withName: 'proc1' { container = 'container1' } }
+            process { withName: 'proc2' { container = 'container2' } }
             '''.stripIndent(true)
     }
 
