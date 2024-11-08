@@ -265,8 +265,8 @@ While the `local` executor limits the number of concurrent tasks based on reques
 :::
 
 The local executor supports two types of tasks:
-- Script tasks (processes with a `script` or `shell` block) - executed via a bash wrapper
-- Native tasks (processes with an `exec` block) - executed directly in the JVM
+- Script tasks (processes with a `script` or `shell` block) - executed via a Bash wrapper
+- Native tasks (processes with an `exec` block) - executed directly in the JVM.
 
 (lsf-executor)=
 
