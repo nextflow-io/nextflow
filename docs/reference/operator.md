@@ -472,6 +472,26 @@ There are two important caveats when using the `cross` operator:
 
 See also: [combine](#combine)
 
+## cycle
+
+The `cycle` operator pairs each item in a channel with cycling indices from a provided range.
+
+```{literalinclude} ../snippets/cycle.nf
+:language: nextflow
+```
+
+```{literalinclude} ../snippets/cycle.out
+:language: console
+```
+
+The operator takes a range or list of indices and cycles through them, pairing each channel item with the current index. When it reaches the end of the indices, it starts over from the beginning.
+
+This is useful when you need to:
+
+- Assign repeating indices or tags to channel items
+- Create cyclic patterns in your data flow
+- Implement round-robin distribution of items
+
 ## distinct
 
 *Returns: queue channel or value channel, matching the source type*

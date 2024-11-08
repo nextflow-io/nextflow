@@ -21,6 +21,7 @@ import static nextflow.splitter.SplitterFactory.*
 import static nextflow.util.CheckHelper.*
 
 import groovy.transform.PackageScope
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowReadChannel
@@ -1244,6 +1245,18 @@ class OperatorImpl {
         new MultiMapOp(source, action)
                 .apply()
                 .getOutput()
+    }
+
+    /**
+     * Creates a channel that pairs each item with a cycling index from the provided range
+     *
+     * @param source The source channel
+     * @param range The range or list of indices to cycle through
+     * @return A channel emitting pairs of [index, item]
+     */
+    @CompileStatic
+    DataflowWriteChannel cycle(final DataflowReadChannel source, range) {
+        new CycleOp(source, range).apply()
     }
 
 }
