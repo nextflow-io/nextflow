@@ -192,7 +192,8 @@ class CondaCache {
                 if( yaml.name )
                     name = yaml.name
                 else
-                    name = path.baseName
+                    name = 'env-' + CacheHelper.hasher(path.toString()).hash().toString()
+
             }
             catch( NoSuchFileException e ) {
                 throw new IllegalArgumentException("Conda environment file does not exist: $condaEnv")
@@ -205,7 +206,7 @@ class CondaCache {
             try {
                 final path = condaEnv as Path
                 content = path.text
-                name = path.baseName
+                name = 'env-'+ CacheHelper.hasher(path.toString()).hash().toString()
             }
             catch( NoSuchFileException e ) {
                 throw new IllegalArgumentException("Conda environment file does not exist: $condaEnv")
