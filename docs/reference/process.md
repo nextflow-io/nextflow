@@ -233,6 +233,10 @@ This directive is only used by certain executors. Refer to the {ref}`executor-pa
 :::
 
 :::{note}
+Additional options may be required to fully enable the use of accelerators. When using containers with GPUs, you must pass the GPU drivers through to the container. For Docker, this requires the option `--gpus all` in the docker run command. For Apptainer/Singularity, this requires the option `--nv`. The specific implementation details depend on the accelerator and container type being used.
+:::
+
+:::{note}
 The accelerator `type` option depends on the target execution platform. Refer to the platform-specific documentation for details on the available accelerators:
 
 - [Google Cloud](https://cloud.google.com/compute/docs/gpus/)
