@@ -437,15 +437,18 @@ class AzBatchService implements Closeable {
 
         log.trace "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
 
-        return new BatchTaskCreateContent(taskId, cmd)
+        final batchTask = new BatchTaskCreateContent(taskId, cmd)
                 .setUserIdentity(userIdentity(pool.opts.privileged, pool.opts.runAs, AutoUserScope.TASK))
-                .setContainerSettings(containerOpts)
                 .setResourceFiles(resourceFileUrls(task, sas))
                 .setOutputFiles(outputFileUrls(task, sas))
                 .setRequiredSlots(slots)
                 .setConstraints(constraints)
-                
 
+        if (containerOpts) {
+            batchTask.setContainerSettings(containerOpts)
+        }
+
+        return batchTask
     }
 
     AzTaskKey runTask(String poolId, String jobId, TaskRun task) {
