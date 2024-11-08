@@ -466,7 +466,7 @@ To create a dev container with an existing image:
     A Dockerfile may also live in the `.devcontainer` folder. You can replace the image property in `devcontainer.json` with dockerfile and create a custom container image. See [Create a Dev Container](https://code.visualstudio.com/docs/devcontainers/create-dev-container) for more information.
     :::
 
-1. Enter **Dev Containers: Reopen in Container** in the VS Code Command Palette and reopen your project. You should now see the name of the container ("Nextflow Dev Container" in the above example) in the bottom left corner of VS Code.
+1. Enter **Dev Containers: Reopen in Container** in the VS Code Command Palette and reopen your project. You should now see the name of the container ("Nextflow Dev Container" if using the above example) in the bottom left corner of VS Code.
 
 :::{note}
 Dev Containers can also be used by GitHub Codespaces in VS Code or the browser. See [GitHub Codespaces](https://code.visualstudio.com/docs/remote/codespaces) for more information.
