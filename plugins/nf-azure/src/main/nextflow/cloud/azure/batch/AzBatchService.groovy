@@ -393,7 +393,7 @@ class AzBatchService implements Closeable {
 
         final container = task.getContainer()
         if( !container )
-            throw new IllegalArgumentException("Missing container image for process: $task.name")
+            log.warn "Missing container image for process: $task.name"
         final taskId = "nf-${task.hash.toString()}"
         // get the pool config
         final pool = getPoolSpec(poolId)
@@ -419,8 +419,11 @@ class AzBatchService implements Closeable {
             }
         }
         // config overall container settings
-        final containerOpts = new BatchTaskContainerSettings(container)
+        BatchTaskContainerSettings containerOpts = null
+        if (container) {
+            containerOpts = new BatchTaskContainerSettings(container)
                 .setContainerRunOptions(opts)
+        }
         // submit command line
         final String cmd = fusionEnabled
                 ? launcher.fusionSubmitCli(task).join(' ')
