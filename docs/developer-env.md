@@ -423,9 +423,9 @@ The Dev Containers extension is included as a part of the [Remote Development ex
 
 ### Create and run a dev container
 
-A `devcontainer.json` file in your project directory tells VS Code how to access, create, and configure a development container. It can be used to run an application or to separate tools, libraries, or runtimes.
+A `devcontainer.json` file in your project directory instructs VS Code how to access, create, and configure a development container. It can be used to run an application or to separate tools, libraries, or runtimes.
 
-You can alter your configuration to do things such as:
+The `devcontainer.json` can be used to:
 
 - Install additional tools in the container.
 - Automatically install extensions.
@@ -437,7 +437,7 @@ You can alter your configuration to do things such as:
 To create a dev container with an existing image:
 
 1. Create a Dev Container `.json` under `.devcontainer/devcontainer.json` in the root of your project.
-1. Add an image with the required tooling, and customizations, to the `.json` file. For example:
+1. Add an image with the Nextflow tooling, and VS Code customizations, to the `.json` file. For example:
 
     ```json
     {
@@ -463,7 +463,7 @@ To create a dev container with an existing image:
     ```
 
     :::{note}
-    A Dockerfile may also live in the `.devcontainer` folder. You can replace the image property in `devcontainer.json` with dockerfile and create a custom container image. See [Create a Dev Container](https://code.visualstudio.com/docs/devcontainers/create-dev-container) for more information.
+    Instead of using a prebuilt image, a custom Dockerfile may also live in the `.devcontainer` folder. You can replace the image property in `devcontainer.json` with dockerfile and utilize the custom container. See [Create a Dev Container](https://code.visualstudio.com/docs/devcontainers/create-dev-container) for more information.
     :::
 
 1. Enter **Dev Containers: Reopen in Container** in the VS Code Command Palette and reopen your project. You should now see the name of the container ("Nextflow Dev Container" if using the above example) in the bottom left corner of VS Code.
