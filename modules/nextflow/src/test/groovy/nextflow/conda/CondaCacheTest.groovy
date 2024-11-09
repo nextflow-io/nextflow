@@ -91,7 +91,7 @@ class CondaCacheTest extends Specification {
         def cache = Spy(CondaCache)
         def BASE = Paths.get('/conda/envs')
         def ENV = folder.resolve('foo.yml')
-        def hash =  CacheHelper.hasher(ENV).hash().toString()
+        def hash = CacheHelper.hasher(ENV.toString()).hash().toString()
         ENV.text = '''
             channels:
               - bioconda
@@ -120,6 +120,7 @@ class CondaCacheTest extends Specification {
         def cache = Spy(CondaCache)
         def BASE = Paths.get('/conda/envs')
         def ENV = Files.createTempFile('test','.yml')
+        def hash = CacheHelper.hasher(ENV.toString()).hash().toString()
         ENV.text = '''  
             name: my-env-1.1
             channels:
@@ -137,7 +138,7 @@ class CondaCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV.toString())
         1 * cache.getCacheDir() >> BASE
-        prefix.toString() == '/conda/envs/my-env-1.1-e7fafe40ca966397a2c0d9bed7181aa7'
+        prefix.toString() == "/conda/envs/env-$hash-e7fafe40ca966397a2c0d9bed7181aa7"
 
     }
 
@@ -148,7 +149,7 @@ class CondaCacheTest extends Specification {
         def cache = Spy(CondaCache)
         def BASE = Paths.get('/conda/envs')
         def ENV = folder.resolve('bar.txt')
-        def hash =  CacheHelper.hasher(ENV).hash().toString()
+        def hash = CacheHelper.hasher(ENV.toString()).hash().toString()
         ENV.text = '''
                 star=2.5.4a
                 bwa=0.7.15   

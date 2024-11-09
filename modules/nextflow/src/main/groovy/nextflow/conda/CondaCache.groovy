@@ -188,11 +188,7 @@ class CondaCache {
             try {
                 final path = condaEnv as Path
                 content = path.text
-                final yaml = (Map)new Yaml().load(content)
-                if( yaml.name )
-                    name = yaml.name
-                else
-                    name = 'env-' + CacheHelper.hasher(path.toString()).hash().toString()
+                name = 'env-' + CacheHelper.hasher(path.toString()).hash().toString()
 
             }
             catch( NoSuchFileException e ) {
