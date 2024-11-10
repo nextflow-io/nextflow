@@ -6,9 +6,6 @@ get_abs_filename() {
 
 export NXF_CMD=${NXF_CMD:-$(get_abs_filename ../launch.sh)}
 
-echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
-export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
-
 [[ $TOWER_ACCESS_TOKEN ]] && OPTS='-with-tower' || OPTS=''
 set -x
 
