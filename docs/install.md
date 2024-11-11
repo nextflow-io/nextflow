@@ -127,7 +127,3 @@ The installer for the `dist` distribution can be found on the [GitHub releases p
 export NXF_VER=24.10.0
 curl -s https://github.com/nextflow-io/nextflow/releases/download/v$NXF_VER/nextflow-$NXF_VER-dist
 ```
-
-:::{warning}
-The `dist` distribution does not support third-party plugins. Only the {ref}`core plugins <plugins-core>` are supported.
-:::
