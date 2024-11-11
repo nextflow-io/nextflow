@@ -470,7 +470,7 @@ See [Set up a WSL development environment](https://learn.microsoft.com/en-us/win
 
 [Development Containers](https://containers.dev/) (Dev Containers), are Docker containers that are specifically configured to provide a fully featured development environment. They can be used to run an application, to separate tools, libraries, or runtimes needed for working with a codebase. Dev Containers can be run locally or remotely, in a private or public cloud, and in a variety of supporting tools and editors.
 
-VS code and Docker are required to create and manage your Dev Containers. See {ref}`vscode-install` and {ref}`docker-desktop` for installation instructions.
+VS Code and Docker are required to create and manage your Dev Containers. See {ref}`vscode-install` and {ref}`docker-desktop` for installation instructions.
 
 ### Development Containers extension
 
