@@ -405,7 +405,7 @@ To install Git on macOS with [Xcode](https://developer.apple.com/xcode/):
 
 ```{group-tab} Linux
 
-Git is already installed on most on most Linux Debian/Ubuntu distributions.
+Git is already installed on most Linux Debian/Ubuntu distributions.
 
 To install the latest stable Git version on Linux Debian/Ubuntu distributions:
 
