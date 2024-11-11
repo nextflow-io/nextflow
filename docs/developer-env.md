@@ -233,9 +233,9 @@ To install the Remote Development extension pack on Linux Debian/Ubuntu distribu
 
 ## Docker
 
-Containerization enables the creation of self-contained and fully reproducible computational pipelines by bundling a script's binary dependencies into a standardized and portable format. Containers can be executed on any platform that supports a container runtime and ensures consistency across different environments.
+Docker is an open-source platform that simplifies application development, deployment, and execution by packaging applications and their dependencies into containers. Containerization enables the creation of self-contained and fully reproducible computational pipelines by bundling a script's binary dependencies into a standardized and portable format. Containers can be executed on any platform that supports a container runtime and ensures consistency across different environments.
 
-Docker is an open-source platform that simplifies application development, deployment, and execution by packaging applications and their dependencies into containers. Docker Desktop provides a Graphical User Interface (GUI) for managing Docker containers. Installing Docker Desktop is a straightforward process that allows you to create, deploy, and manage applications within containers.
+Docker Desktop provides a Graphical User Interface (GUI) for managing Docker containers. Installing Docker Desktop is a straightforward process that allows you to create, deploy, and manage applications within containers.
 
 <!---
 Configure your environment to support the container technologies you want to use. 
@@ -278,7 +278,12 @@ To install Docker Desktop on macOS:
 1. Double-click `Docker.dmg` to open the installer.
 1. Drag the Docker icon to the **Applications** folder to add it to the macOS Launchpad.
 1. Double-click **Docker.app** in the **Applications** folder to start Docker.
-1. Review the Docker Subscription Service Agreement and, if you agree, select **Accept** to continue.
+1. Review the Docker Subscription Service Agreement and select **Accept** to continue.
+
+    :::{note}
+    Docker Desktop won't run if you do not agree to the terms. You can choose to accept the terms at a later date by opening Docker Desktop.
+    :::
+    
 1. From the installation window, select **Use recommended settings (Requires password)**.
 
     :::{note} The **recommended settings** allow Docker Desktop to automatically set the necessary configuration settings. Advanced settings allow you to set the location of the Docker CLI tools either in the system or user directory, enable the default Docker socket, and enable privileged port mapping. See [Settings](https://docs.docker.com/desktop/settings/#advanced), for more information and how to set the location of the Docker CLI tools.
@@ -396,7 +401,6 @@ To install Git on macOS with [Homebrew](https://docs.brew.sh/):
 To install Git on macOS with [Xcode](https://developer.apple.com/xcode/):
 
 1. Open the App Store on your Mac.
-1. Sign in to your Apple Account.
 1. Search for Xcode.
 1. Select **Install**.
 1. Once complete, open a new terminal window and run `git version` to verify Git was installed.
