@@ -89,6 +89,7 @@ class CondaCacheTest extends Specification {
         def cache = Spy(CondaCache)
         def BASE = Paths.get('/conda/envs')
         def ENV = folder.resolve('foo.yml')
+        def hash = CondaCache.sipHash(ENV)
         ENV.text = '''
             channels:
               - bioconda
@@ -99,13 +100,12 @@ class CondaCacheTest extends Specification {
               - bwa=0.7.15        
             '''
             .stripIndent(true)  // https://issues.apache.org/jira/browse/GROOVY-9423
-
         when:
         def prefix = cache.condaPrefixPath(ENV.toString())
         then:
         1 * cache.isYamlFilePath(ENV.toString())
         1 * cache.getCacheDir() >> BASE
-        prefix.toString() == '/conda/envs/foo-9416240708c49c4e627414b46a743664'
+        prefix.toString() == "/conda/envs/env-${hash}-9416240708c49c4e627414b46a743664"
 
         cleanup:
         folder?.deleteDir()
@@ -118,6 +118,7 @@ class CondaCacheTest extends Specification {
         def cache = Spy(CondaCache)
         def BASE = Paths.get('/conda/envs')
         def ENV = Files.createTempFile('test','.yml')
+        def hash = CondaCache.sipHash(ENV)
         ENV.text = '''  
             name: my-env-1.1
             channels:
@@ -135,7 +136,7 @@ class CondaCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV.toString())
         1 * cache.getCacheDir() >> BASE
-        prefix.toString() == '/conda/envs/my-env-1.1-e7fafe40ca966397a2c0d9bed7181aa7'
+        prefix.toString() == "/conda/envs/env-${hash}-e7fafe40ca966397a2c0d9bed7181aa7"
 
     }
 
@@ -146,6 +147,7 @@ class CondaCacheTest extends Specification {
         def cache = Spy(CondaCache)
         def BASE = Paths.get('/conda/envs')
         def ENV = folder.resolve('bar.txt')
+        def hash = CondaCache.sipHash(ENV)
         ENV.text = '''
                 star=2.5.4a
                 bwa=0.7.15   
@@ -159,7 +161,7 @@ class CondaCacheTest extends Specification {
         1 * cache.isYamlFilePath(ENV.toString())
         1 * cache.isTextFilePath(ENV.toString())
         1 * cache.getCacheDir() >> BASE
-        prefix.toString() == '/conda/envs/bar-8a4aa7db8ddb8ce4eb4d450d4814a437'
+        prefix.toString() == "/conda/envs/env-${hash}-8a4aa7db8ddb8ce4eb4d450d4814a437"
 
         cleanup:
         folder?.deleteDir()
