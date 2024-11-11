@@ -907,6 +907,23 @@ class TaskRunTest extends Specification {
         0 * task.resolveStub(_) >> null
     }
 
+    def 'should resolve task body when no stub' () {
+        given:
+        def task = Spy(TaskRun)
+        task.processor = Mock(TaskProcessor) {
+            getSession()>>Mock(Session) { getStubRun() >> true}
+        }
+        task.config = Mock(TaskConfig) { getStubBlock()>> null }
+        and:
+        def body = Mock(BodyDef)
+
+        when:
+        task.resolve(body)
+        then:
+        1 * task.resolveBody(body) >> null
+        0 * task.resolveStub(_) >> null
+    }
+
     def 'should resolve task stub' () {
         given:
         def body = Mock(BodyDef)
