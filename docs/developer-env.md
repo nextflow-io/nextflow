@@ -87,7 +87,7 @@ See {ref}`vs-code-page` for more information about the Nextflow extension.
 To install the Nextflow VS Code extension on Windows:
 
 1. Open VS Code.
-1. Open the VS Code Extensions view in the left-hand menu.
+1. Open the **Extensions** view in the left-hand menu.
 1. Search for **Nextflow**.
 1. Select **Install**.
 
