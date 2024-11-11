@@ -62,7 +62,7 @@ See [Linux installation](https://code.visualstudio.com/docs/setup/linux#_install
 
 ## VS Code Extensions
 
-Extensions are a key feature of IDE's and allow you to customize your development environment by adding support for various programming languages, tools, and features. The [VS Code Marketplace](https://marketplace.visualstudio.com/vscode) offers thousands of extensions that can enhance your productivity and tailor the editor to your specific needs.
+Extensions are a key feature of IDEs and allow you to customize your development environment by adding support for various programming languages, tools, and features. The [VS Code Marketplace](https://marketplace.visualstudio.com/vscode) offers thousands of extensions that can enhance your productivity and tailor the editor to your specific needs.
 
 
 ### Nextflow
