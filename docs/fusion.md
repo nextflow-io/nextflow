@@ -274,6 +274,50 @@ The option `fusion.exportStorageCredentials` leaks the AWS credentials on the ta
 This option should only be used for development purposes.
 :::
 
+### Local execution with Oracle Object Storage
+
+Fusion file system and Nextflow can be used with [Oracle Object Storage](https://www.oracle.com/es/cloud/storage/object-storage/)
+relying on the S3-like API compatibility provided by Oracle storage.
+
+This configuration requires the use of Docker (or similar container engine) for the execution of your pipeline tasks.
+
+The following configuration should be added in your Nextflow configuration file:
+
+```groovy
+aws.region = 'ca-toronto-1'
+aws.accessKey = '<YOUR_ACCESS_KEY>'
+aws.secretKey = '<YOUR_SECRET_KEY>'
+aws.client.endpoint = 'https://yz9o8ju9eifn.compat.objectstorage.ca-toronto-1.oraclecloud.com'
+aws.client.s3PathStyleAccess = true
+aws.client.protocol = 'https'
+aws.client.signerOverride = 'AWSS3V4SignerType'
+docker.enabled = true
+docker.containerOptions = '-e FUSION_AWS_REGION=ca-toronto-1'
+fusion.enabled = true
+fusion.exportStorageCredentials = true
+wave.enabled = true
+tower.accessToken = '<your platform access token>' // optional
+```
+
+Then you can run your pipeline using the following command:
+
+```bash
+nextflow run <YOUR PIPELINE> -work-dir s3://<YOUR BUCKET>/scratch
+```
+
+Replace `<YOUR PIPELINE>` and `<YOUR BUCKET>` with a pipeline script and bucket or your choice, for example:
+
+```bash
+nextflow run https://github.com/nextflow-io/rnaseq-nf -work-dir s3://nextflow-ci/scratch
+```
+
+Also, replace the region `ca-toronto-1` with the one matching your Oracle deployment.
+
+:::{warning}
+The option `fusion.exportStorageCredentials` leaks the Oracle credentials on the task launcher script created by Nextflow.
+This option should only be used for development purposes.
+:::
+
 ## Advanced settings
 
 Fusion advanced configuration settings are described in the {ref}`Fusion <config-fusion>` section on the Nextflow configuration page.
