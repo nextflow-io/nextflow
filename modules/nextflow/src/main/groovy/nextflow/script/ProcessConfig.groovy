@@ -319,7 +319,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     BaseScript getOwnerScript() { ownerScript }
 
     TaskConfig createTaskConfig() {
-
         return new TaskConfig(configProperties)
     }
 
