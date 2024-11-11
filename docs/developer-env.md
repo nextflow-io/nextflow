@@ -450,7 +450,7 @@ To install Ubuntu on WSL:
 
 To enable WSL on Windows using Powershell or Windows Command Prompt:
 
-1. Open PowerShell or Windows Command Prompt in administrator mode by right-clicking and selecting **Run as administrator**.
+1. Right-click and select **Run as administrator** to use PowerShell or Windows Command Prompt in administrator mode.
 1. Run `wsl --install`.
 
     :::{note}
