@@ -16,7 +16,7 @@ If you are using a Windows computer, first install and configure the Windows Sub
 
 An Integrated Development Environment (IDE) provides a user-friendly interface for writing, editing, and managing code. Installing one is an essential step for setting up your environment. 
 
-Visual Studio Code (VS Code) is a popular lightweight IDE that is known for its versatility and extensibility. It offers features like syntax highlighting, intelligent code completion, and integrated debugging tools for various programming languages. VS Code supports Windows, macOS, and Linux, and is a good choice for both new and experienced Nextflow developers.
+Visual Studio Code (VS Code) is a popular lightweight IDE known for its versatility and extensibility. It offers features like syntax highlighting, intelligent code completion, and integrated debugging tools for various programming languages. VS Code supports Windows, macOS, and Linux, and is a good choice for both new and experienced Nextflow developers.
 
 ````{tabs}
 
