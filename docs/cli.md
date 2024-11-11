@@ -62,6 +62,16 @@ The `-bg` option is used to invoke the nextflow execution in the background and 
   $ nextflow -bg run nextflow-io/hello
   ```
 
+### Custom `lib` directory
+
+Set a custom library extension path:
+
+```console
+$ nextflow -lib /custom/library COMMAND [arg...]
+```
+
+The `-lib` option is used to add a directory to the classpath. All Groovy classes defined in this directory instead of the default `lib/` directory in the Nextflow project root will be available inside the Nextflow workflow.
+
 ### Soft configuration override
 
 Add the specified file to configuration set.
