@@ -434,7 +434,7 @@ To enable WSL on Windows using Windows Features dialog:
 1. In the Windows search bar, enter 'features' to bring up the **Turn Windows Features on and off** dialog.
 1. Scroll down and check **Windows Subsystem for Linux**.
 1. Select **OK** and restart Windows.
-1. After restarting Windows, check that you have WSL enabled by opening a Command Prompt or PowerShell and typing `wsl`.
+1. After restarting Windows, open a PowerShell or Command Prompt and type `wsl` to confirm that you have WSL enabled.
 
 To install Ubuntu on WSL:
 
