@@ -466,7 +466,6 @@ To enable WSL on Windows using Powershell or Windows Command Prompt:
 
 See [Set up a WSL development environment](https://learn.microsoft.com/en-us/windows/wsl/setup/environment) for more information.
 
-<!---
 ## Development Containers
 
 [Development Containers](https://containers.dev/) (Dev Containers), are Docker containers that are specifically configured to provide a fully featured development environment. They can be used to run an application, to separate tools, libraries, or runtimes needed for working with a codebase. Dev Containers can be run locally or remotely, in a private or public cloud, and in a variety of supporting tools and editors.
@@ -527,6 +526,5 @@ To create a dev container with an existing image:
 1. Enter **Dev Containers: Reopen in Container** in the VS Code Command Palette and reopen your project. You should now see the name of the container ("Nextflow Dev Container" if using the above example) in the bottom left corner of VS Code.
 
 :::{note}
-Dev Containers can also be used by GitHub Codespaces in VS Code or the browser. See [GitHub Codespaces](https://code.visualstudio.com/docs/remote/codespaces) for more information.
+Dev Containers can also be used by GitHub Codespaces or Gitpod in VS Code or the browser. See [GitHub Codespaces](https://code.visualstudio.com/docs/remote/codespaces) and [Gitpod](https://gitpod.io/) for more information.
 :::
---->
