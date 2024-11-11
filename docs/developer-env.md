@@ -25,7 +25,7 @@ Visual Studio Code (VS Code) is a popular lightweight IDE known for its versatil
 To install VS Code on Windows:
 
 1. Visit the [VS Code](https://code.visualstudio.com/download) website.
-1. Download VS Code installer for Windows.
+1. Download VS Code for Windows.
 1. Double-click the installer executable (`.exe`) file and follow the set up steps.
 
 ```
