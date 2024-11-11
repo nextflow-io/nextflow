@@ -7,7 +7,7 @@ Setting up a Nextflow development environment is a prerequisite for creating, te
 Nextflow must be installed separately. See {ref}`install-page` for Nextflow installation instructions.
 
 :::{note}
-If you are using a Windows computer, you first need to install and configure the Windows Subsystem for Linux (WSL). See {ref}`wsl` for installation instructions.
+If you are using a Windows computer, first install and configure the Windows Subsystem for Linux (WSL). See {ref}`wsl` for installation instructions.
 :::
 
 (vscode-install)=
