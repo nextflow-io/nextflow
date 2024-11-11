@@ -458,7 +458,7 @@ To enable WSL on Windows using Powershell or Windows Command Prompt:
     :::
 
 1. When prompted, restart Windows.
-1. After restarting Windows, open the Ubuntu distribution using the **Start** menu and create a new Linux **User Name** and **Password** when prompted.
+1. After restarting Windows, open the Ubuntu distribution and create a new Linux **User Name** and **Password** when prompted.
 
     :::{note}
     The **User Name** and **Password** is specific to each Linux distribution that you install and has no bearing on your Windows user name.
