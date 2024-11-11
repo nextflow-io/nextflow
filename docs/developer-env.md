@@ -45,7 +45,7 @@ To install VS Code on macOS:
 To install VS Code on Linux Debian/Ubuntu distributions:
 
 1. Visit the [VS Code](https://code.visualstudio.com/download) website.
-1. Download VS Code Linux Debian/Ubuntu (`.deb`) distribution.
+1. Download the VS Code Linux Debian/Ubuntu (`.deb`) distribution.
 1. Open a new terminal window.
 1. Navigate to the folder containing your VS Code download.
 1. Run `sudo apt install ./<file>.deb`, replacing `<file>` with the full file name.
