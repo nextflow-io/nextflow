@@ -109,7 +109,7 @@ To install the Nextflow VS Code extension on macOS:
 To install the Nextflow VS Code extension on Linux Debian/Ubuntu distributions:
 
 1. Open VS Code.
-1. Open the VS Code Extensions view in the left-hand menu.
+1. Open the **Extensions** view in the left-hand menu.
 1. Search for **Nextflow**.
 1. Select **Install**.
 
@@ -125,18 +125,18 @@ The [nf-core extensionpack](https://marketplace.visualstudio.com/items?itemName=
 
 The nf-core extension pack includes 12 extensions:
 
-- [Apptainer/Singularity](https://marketplace.visualstudio.com/items?itemName=onnovalkering.vscode-singularity) - Provides syntax highlighting for Apptainer/Singularity definition files
+- [Apptainer/Singularity](https://marketplace.visualstudio.com/items?itemName=onnovalkering.vscode-singularity) - Provides syntax highlighting for Apptainer/Singularity definition files.
 - [Code Spell Checker](https://marketplace.visualstudio.com/items?itemName=streetsidesoftware.code-spell-checker) - A basic spell checker that works well with camelCase code.
-- [Docker](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker) - Makes it easy to create, manage, and debug containerized applications
+- [Docker](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker) - Makes it easy to create, manage, and debug containerized applications.
 - [EditorConfig](https://marketplace.visualstudio.com/items?itemName=EditorConfig.EditorConfig) - Support for EditorConfig project files for code standardisation.
-- [indent-rainbow](https://marketplace.visualstudio.com/items?itemName=oderwat.indent-rainbow) - Highlight indentation level, especially if inconsistent
-- [Nextflow](https://marketplace.visualstudio.com/items?itemName=nextflow.nextflow) - Nextflow language support
-- [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) - Code formatter using prettier
-- [Rainbow CSV](https://marketplace.visualstudio.com/items?itemName=mechatroner.rainbow-csv) - Highlight columns in csv files in different colors
+- [indent-rainbow](https://marketplace.visualstudio.com/items?itemName=oderwat.indent-rainbow) - Highlight indentation levels, especially if they're inconsistent.
+- [Nextflow](https://marketplace.visualstudio.com/items?itemName=nextflow.nextflow) - Nextflow language support.
+- [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) - Code formatter using Prettier.
+- [Rainbow CSV](https://marketplace.visualstudio.com/items?itemName=mechatroner.rainbow-csv) - Highlight columns in .CSV files in different colors.
 - [Ruff](https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff) - An extremely fast Python linter and code formatter, written in Rust.
-- [Todo Tree](https://marketplace.visualstudio.com/items?itemName=Gruntfuggly.todo-tree) - Show TODO, FIXME, etc. comment tags in a tree view
-- [YAML](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) - YAML Language Support by Red Hat, with built-in Kubernetes syntax support
-- [Markdown Extended](https://marketplace.visualstudio.com/items?itemName=jebbs.markdown-extended) - Gives nice markdown previews, including admonitions
+- [Todo Tree](https://marketplace.visualstudio.com/items?itemName=Gruntfuggly.todo-tree) - Show TODO, FIXME, etc. comment tags in a tree view.
+- [YAML](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) - YAML Language Support by Red Hat, with built-in Kubernetes syntax support.
+- [Markdown Extended](https://marketplace.visualstudio.com/items?itemName=jebbs.markdown-extended) - Gives Markdown previews, including admonitions.
 
 ````{tabs}
 
@@ -145,7 +145,7 @@ The nf-core extension pack includes 12 extensions:
 To install the nf-core extension pack on Windows:
 
 1. Open VS Code.
-1. Open the VS Code Extensions view in the left-hand menu.
+1. Open the **Extensions** view in the left-hand menu.
 1. Search for **nf-core-extensionpack**.
 1. Select **Install**.
 
@@ -156,7 +156,7 @@ To install the nf-core extension pack on Windows:
 To install the nf-core extension pack on macOS:
 
 1. Open VS Code.
-1. Open the VS Code Extensions view in the left-hand menu.
+1. Open the **Extensions** view in the left-hand menu.
 1. Search for **nf-core-extensionpack**.
 1. Select **Install**.
 
@@ -167,7 +167,7 @@ To install the nf-core extension pack on macOS:
 To install the nf-core extension pack on Linux Debian/Ubuntu distributions:
 
 1. Open VS Code.
-1. Open the VS Code Extensions view in the left-hand menu.
+1. Open the **Extensions** view in the left-hand menu.
 1. Search for **nf-core-extensionpack**.
 1. Select **Install**.
 
@@ -181,7 +181,7 @@ To install the nf-core extension pack on Linux Debian/Ubuntu distributions:
 
 The [Remote Development extension pack](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack) enables you to run WSL, SSH, or a development container for editing and debugging with the full set of VS Code features.
 
-The Remote Development extension pack includes four extensions:
+The Remote Development extension pack contains 4 extensions:
 
 - [Remote - SSH](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-ssh) - Work with source code in any location by opening folders on a remote machine/VM using SSH.
 - [Remote - Tunnels](https://marketplace.visualstudio.com/items?itemName=ms-vscode.remote-server) - Work with source code in any location by opening folders on a remote machine/VM using a VS Code Tunnel (rather than SSH).
@@ -199,7 +199,7 @@ The VS Code Remote Development extension pack is required if you are developing 
 To install the Remote Development extension pack on Windows:
 
 1. Open VS Code.
-1. Open the VS Code Extensions view in the left-hand menu.
+1. Open the **Extensions** view in the left-hand menu.
 1. Search for **Remote Development**.
 1. Select **Install**.
 
@@ -210,7 +210,7 @@ To install the Remote Development extension pack on Windows:
 To install the Remote Development extension pack on macOS:
 
 1. Open VS Code.
-1. Open the VS Code Extensions view in the left-hand menu.
+1. Open the **Extensions** view in the left-hand menu.
 1. Search for **Remote Development**.
 1. Select **Install**.
 
@@ -221,7 +221,7 @@ To install the Remote Development extension pack on macOS:
 To install the Remote Development extension pack on Linux Debian/Ubuntu distributions:
 
 1. Open VS Code.
-1. Open the VS Code Extensions view in the left-hand menu.
+1. Open the **Extensions** view in the left-hand menu.
 1. Search for **Remote Development**.
 1. Select **Install**.
 
@@ -247,10 +247,10 @@ Configure your environment to support the container technologies you want to use
 
 To install Docker Desktop on Windows:
 
-1. Visit the [Install Docker Desktop on Windows](https://docs.docker.com/desktop/setup/install/windows-install/) page.
-1. Download the installer using the download button at the top of the page, or from the release notes.
+1. Go to [Install Docker Desktop on Windows](https://docs.docker.com/desktop/setup/install/windows-install/).
+1. Download the installer.
 1. Double-click Docker Desktop `Installer.exe` to run the installer. By default, Docker Desktop is installed at `C:\Program Files\Docker\Docker`.
-1. When prompted, ensure the Use WSL 2 instead of Hyper-V option on the Configuration page is selected, or not, depending on your choice of backend.
+1. Depending on your choice of backend, select the **Use WSL 2 instead of Hyper-V** option on the Configuration page.
 
     :::{note}
     You won't be able to select which backend to use if your system only supports one of the two options.
@@ -259,7 +259,7 @@ To install Docker Desktop on Windows:
 1. Follow the instructions on the installation wizard to authorize the installer and proceed with the install.
 1. When the installation is complete, select **Close**.
 1. Start Docker Desktop.
-1. Review the Docker Subscription Service Agreement and, if you agree, select **Accept** to continue.
+1. Review the Docker Subscription Service Agreement and select **Accept** to continue.
 
     :::{note}
     Docker Desktop won't run if you do not agree to the terms. You can choose to accept the terms at a later date by opening Docker Desktop.
@@ -273,15 +273,15 @@ To install Docker Desktop on Windows:
 
 To install Docker Desktop on macOS:
 
-1. Visit the [Install Docker Desktop on Mac](https://docs.docker.com/desktop/install/mac-install/) page.
-1. Download the installer for your chip type using the download buttons at the top of the page.
+1. Go to [Install Docker Desktop on Mac](https://docs.docker.com/desktop/install/mac-install/).
+1. Download the installer for your chip type.
 1. Double-click `Docker.dmg` to open the installer.
-1. Drag the Docker icon to the **Applications** folder to make it available in the macOS Launchpad.
+1. Drag the Docker icon to the **Applications** folder to add it to the macOS Launchpad.
 1. Double-click **Docker.app** in the **Applications** folder to start Docker.
 1. Review the Docker Subscription Service Agreement and, if you agree, select **Accept** to continue.
 1. From the installation window, select **Use recommended settings (Requires password)**.
 
-    :::{note} Recommended settings lets Docker Desktop automatically set the necessary configuration settings. Advanced settings allow you to set the location of the Docker CLI tools either in the system or user directory, enable the default Docker socket, and enable privileged port mapping. See [Settings](https://docs.docker.com/desktop/settings/#advanced), for more information and how to set the location of the Docker CLI tools.
+    :::{note} The **recommended settings** allow Docker Desktop to automatically set the necessary configuration settings. Advanced settings allow you to set the location of the Docker CLI tools either in the system or user directory, enable the default Docker socket, and enable privileged port mapping. See [Settings](https://docs.docker.com/desktop/settings/#advanced), for more information and how to set the location of the Docker CLI tools.
     :::
 
 1. Select **Finish**. If you have applied any of the previous configurations that require a password, enter your password to confirm your choice.
@@ -301,7 +301,7 @@ To install Docker Desktop on Linux Debian/Ubuntu distributions:
     :::
 
 1. Double-click **Docker Desktop** in your Applications menu to start Docker.
-1. Review the Docker Subscription Service Agreement and, if you agree, select **Accept** to continue.
+1. Review the Docker Subscription Service Agreement and select **Accept** to continue.
 1. From the installation window, select **Use recommended settings (Requires password)**. Docker Desktop starts after you accept the terms.
 
     :::{note}
@@ -312,12 +312,12 @@ To install Docker Desktop on Linux Debian/Ubuntu distributions:
 
 ````
 
-Nextflow supports multiple container technologies (e.g., Singularity and Podman) allowing you to choose the one that best fits your needs. See {ref}`container-page` for more information about other supported container engines.
+Nextflow supports multiple container technologies (e.g., Singularity and Podman) so you can choose the one that best fits your needs. See {ref}`container-page` for more information about other supported container engines.
 
 <!---
 ## Conda
 
-Conda is an open-source package and environment manager that simplifies installing and configuring complex software across platforms. Nextflow supports Conda, enabling the use of Conda recipes and environment files to configure workflow dependencies.
+Conda is an open source package and environment manager that simplifies installing and configuring complex software across platforms. Nextflow supports Conda, enabling the use of Conda recipes and environment files to configure workflow dependencies.
 
 :::{note}
 Conda environments can lead to inconsistencies across systems due to dependency resolution and OS variations.
@@ -338,7 +338,7 @@ To install Conda on macOS:
 1. Visit the [Miniconda](https://docs.anaconda.com/miniconda/#miniconda) website.
 1. Download the latest version of the `.pkg` Miniconda installer. 
 1. Double-click the `.pkg` file.
-1. Follow the step-by-step setup installation instructions.
+1. Follow the installation instructions.
 1. When the installation finishes, open a new terminal window and run `conda list` to verify Conda was installed correctly.
 
 See [Quick command line install](https://docs.anaconda.com/miniconda/#quick-command-line-install) for command line installation instructions.
@@ -352,7 +352,7 @@ To install Conda on Linux Debian/Ubuntu distributions:
 1. Visit the [Miniconda](https://docs.anaconda.com/miniconda/#miniconda) website.
 1. Download the latest version of the `.sh` Miniconda installer.
 1. In your terminal, run `bash <file name>.sh`, replacing `<file name>` with the installer file name.
-1. Follow the step-by-step setup installation prompts.
+1. Follow the installation instructions.
 1. When the installation finishes, open a new terminal window and run `conda list` to verify Conda was installed correctly.
 
 ```
@@ -433,7 +433,7 @@ To enable WSL on Windows using Windows Features dialog:
 
 1. In the Windows search bar, enter 'features' to bring up the **Turn Windows Features on and off** dialog.
 1. Scroll down and check **Windows Subsystem for Linux**.
-1. Select **OK** and restart Windows.
+1. Select **OK**.
 1. After restarting Windows, open a PowerShell or Command Prompt and type `wsl` to confirm that you have WSL enabled.
 
 To install Ubuntu on WSL:
