@@ -277,7 +277,7 @@ This option should only be used for development purposes.
 ### Local execution with Oracle Object Storage
 
 Fusion file system and Nextflow are compatible with [Oracle Object Storage](https://www.oracle.com/cloud/storage/object-storage/).
-relying on the S3-like API compatibility provided by Oracle storage.
+They rely on the S3-like API compatibility provided by Oracle storage.
 
 This configuration requires the use of Docker (or similar container engine) for the execution of your pipeline tasks.
 
