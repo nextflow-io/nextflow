@@ -287,7 +287,7 @@ The following should be included in your Nextflow configuration file:
 aws.region = 'ca-toronto-1'
 aws.accessKey = '<YOUR_ACCESS_KEY>'
 aws.secretKey = '<YOUR_SECRET_KEY>'
-aws.client.endpoint = 'https://yz9o8ju9eifn.compat.objectstorage.ca-toronto-1.oraclecloud.com'
+aws.client.endpoint = 'https://<YOUR_BUCKET_NAMESPACE>.compat.objectstorage.<YOUR_REGION>.oraclecloud.com'
 aws.client.s3PathStyleAccess = true
 aws.client.protocol = 'https'
 aws.client.signerOverride = 'AWSS3V4SignerType'
