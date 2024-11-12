@@ -305,7 +305,7 @@ Then you can run your pipeline using the following command:
 nextflow run <YOUR_PIPELINE> -work-dir s3://<YOUR_BUCKET>/scratch
 ```
 
-Replace `<YOUR PIPELINE>` and `<YOUR BUCKET>` with a pipeline script and bucket or your choice, for example:
+Replace `<YOUR_PIPELINE>` and `<YOUR_BUCKET>` with a pipeline script and bucket or your choice, for example:
 
 ```bash
 nextflow run https://github.com/nextflow-io/rnaseq-nf -work-dir s3://nextflow-ci/scratch
