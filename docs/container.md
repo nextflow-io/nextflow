@@ -123,7 +123,7 @@ This feature requires the `apptainer` tool to be installed where the workflow ex
 Nextflow caches those images in the `apptainer` directory in the pipeline work directory by default. However it is suggested to provide a centralised cache directory by using either the `NXF_APPTAINER_CACHEDIR` environment variable or the `apptainer.cacheDir` setting in the Nextflow config file.
 
 :::{versionadded} 21.09.0-edge
-When looking for a Apptainer image file, Nextflow first checks the *library* directory, and if the image file is not found, the *cache* directory is used s usual. The library directory can be defined either using the `NXF_APPTAINER_LIBRARYDIR` environment variable or the `apptainer.libraryDir` configuration setting (the latter overrides the former).
+When looking for a Apptainer image file, Nextflow first checks the *library* directory, and if the image file is not found, the *cache* directory is used as usual. The library directory can be defined either using the `NXF_APPTAINER_LIBRARYDIR` environment variable or the `apptainer.libraryDir` configuration setting (the latter overrides the former).
 :::
 
 :::{warning}
