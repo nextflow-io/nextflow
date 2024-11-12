@@ -279,7 +279,7 @@ This option should only be used for development purposes.
 Fusion file system and Nextflow are compatible with [Oracle Object Storage](https://www.oracle.com/cloud/storage/object-storage/).
 They rely on the S3-like API compatibility provided by Oracle storage.
 
-This configuration requires the use of Docker (or similar container engine) for the execution of your pipeline tasks.
+This configuration requires the execution of your pipeline tasks using Docker or a similar container engine.
 
 The following configuration should be added in your Nextflow configuration file:
 
