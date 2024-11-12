@@ -296,7 +296,7 @@ docker.containerOptions = '-e FUSION_AWS_REGION=<YOUR_REGION>'
 fusion.enabled = true
 fusion.exportStorageCredentials = true
 wave.enabled = true
-tower.accessToken = '<your platform access token>' // optional
+tower.accessToken = '<YOUR_PLATFORM_ACCESS_TOKEN>' // optional
 ```
 
 Then you can run your pipeline using the following command:
