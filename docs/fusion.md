@@ -315,7 +315,6 @@ Also, replace the region `ca-toronto-1` with the one matching your Oracle deploy
 
 :::{warning}
 The `fusion.exportStorageCredentials` option leaks the Oracle credentials to the Nextflow task launcher script and should only be used for development purposes.
-:::
 
 ## Advanced settings
 
