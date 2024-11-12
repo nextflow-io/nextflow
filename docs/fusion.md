@@ -284,7 +284,7 @@ This configuration requires the execution of your pipeline tasks using Docker or
 The following should be included in your Nextflow configuration file:
 
 ```groovy
-aws.region = 'ca-toronto-1'
+aws.region = '<YOUR_REGION>'
 aws.accessKey = '<YOUR_ACCESS_KEY>'
 aws.secretKey = '<YOUR_SECRET_KEY>'
 aws.client.endpoint = 'https://<YOUR_BUCKET_NAMESPACE>.compat.objectstorage.<YOUR_REGION>.oraclecloud.com'
