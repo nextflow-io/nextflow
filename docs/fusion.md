@@ -292,7 +292,7 @@ aws.client.s3PathStyleAccess = true
 aws.client.protocol = 'https'
 aws.client.signerOverride = 'AWSS3V4SignerType'
 docker.enabled = true
-docker.containerOptions = '-e FUSION_AWS_REGION=ca-toronto-1'
+docker.containerOptions = '-e FUSION_AWS_REGION=<YOUR_REGION>'
 fusion.enabled = true
 fusion.exportStorageCredentials = true
 wave.enabled = true
