@@ -52,6 +52,13 @@ The following settings are available:
 `apptainer.envWhitelist`
 : Comma separated list of environment variable names to be included in the container environment.
 
+`apptainer.libraryDir`
+: Directory where remote Apptainer images are retrieved. When using a computing cluster it must be a shared folder accessible to all compute nodes.
+
+  :::{versionadded} 21.09.0-edge
+  Nextflow first checks the library directory when retrieving Apptainer images. The cache directory is used if the image file is not found. The library directory can also be defined using the `NXF_APPTAINER_LIBRARYDIR` environment variable. The `apptainer.libraryDir` configuration option overrides `NXF_APPTAINER_LIBRARYDIR` environment variable if both are set.
+  :::
+
 `apptainer.noHttps`
 : Pull the Apptainer image with http protocol (default: `false`).
 
@@ -1377,6 +1384,10 @@ The following settings are available:
 
 `singularity.libraryDir`
 : Directory where remote Singularity images are retrieved. When using a computing cluster it must be a shared folder accessible to all compute nodes.
+
+  :::{versionadded} 21.09.0-edge
+  Nextflow first checks the library directory when retrieving Singularity images. The cache directory is used if the image file is not found. The library directory can also be defined using the `NXF_SINGULARITY_LIBRARYDIR` environment variable. The `singularity.libraryDir` configuration option overrides `NXF_SINGULARITY_LIBRARYDIR` environment variable if both are set.
+  :::
 
 `singularity.noHttps`
 : Pull the Singularity image with http protocol (default: `false`).

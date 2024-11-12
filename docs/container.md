@@ -123,7 +123,7 @@ This feature requires the `apptainer` tool to be installed where the workflow ex
 Nextflow caches those images in the `apptainer` directory in the pipeline work directory by default. However it is suggested to provide a centralised cache directory by using either the `NXF_APPTAINER_CACHEDIR` environment variable or the `apptainer.cacheDir` setting in the Nextflow config file.
 
 :::{versionadded} 21.09.0-edge
-When looking for a Apptainer image file, Nextflow first checks the *library* directory, and if the image file is not found, the *cache* directory is used s usual. The library directory can be defined either using the `NXF_APPTAINER_LIBRARYDIR` environment variable or the `apptainer.libraryDir` configuration setting (the latter overrides the former).
+Nextflow first checks the library directory when retrieving Apptainer images. The cache directory is used if the image file is not found. The library directory can also be defined using the `NXF_APPTAINER_LIBRARYDIR` environment variable. The `apptainer.libraryDir` configuration option overrides `NXF_APPTAINER_LIBRARYDIR` environment variable if both are set.
 :::
 
 :::{warning}
@@ -652,7 +652,7 @@ The `library://` pseudo-protocol allows you to import Singularity images from a 
 Nextflow caches the images in `${NXF_WORK}/singularity` by default. However, it is recommended to define a centralised cache directory using either the `NXF_SINGULARITY_CACHEDIR` environment variable or the `singularity.cacheDir` setting in the Nextflow config file.
 
 :::{versionadded} 21.09.0-edge
-When looking for a Singularity image file, Nextflow first checks the *library* directory, and if the image file is not found, the *cache* directory is used as usual. The library directory can be defined either using the `NXF_SINGULARITY_LIBRARYDIR` environment variable or the `singularity.libraryDir` configuration setting (the latter overrides the former).
+Nextflow first checks the library directory when retrieving Singularity images. The cache directory is used if the image file is not found. The library directory can also be defined using the `NXF_SINGULARITY_LIBRARYDIR` environment variable. The `singularity.libraryDir` configuration option overrides `NXF_SINGULARITY_LIBRARYDIR` environment variable if both are set.
 :::
 
 :::{warning}
