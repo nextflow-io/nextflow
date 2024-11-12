@@ -119,12 +119,6 @@ For example, shebang definitions `#!/usr/bin/python` and `#!/usr/local/bin/pytho
 
 The `lib` directory is a useful way to add utility code or external libraries without cluttering the pipeline scripts. Any Groovy scripts or JAR files in the `lib` directory in the project directory root will be available inside the Nextflow workflow automatically.
 
-The library extension path can be customized using the `-lib` option in your run command:
-
-```bash
-nextflow run <your pipeline> -lib /path/to/custom/lib/directory
-```
-
 ### Data
 
 In general, input data should be provided by external sources using parameters which can be controlled by the user. This way, a pipeline can be easily reused to process different datasets which are appropriate for the pipeline.
