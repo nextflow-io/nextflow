@@ -281,7 +281,7 @@ They rely on the S3-like API compatibility provided by Oracle storage.
 
 This configuration requires the execution of your pipeline tasks using Docker or a similar container engine.
 
-The following configuration should be added in your Nextflow configuration file:
+The following should be included in your Nextflow configuration file:
 
 ```groovy
 aws.region = 'ca-toronto-1'
