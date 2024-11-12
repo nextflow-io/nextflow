@@ -117,7 +117,58 @@ For example, shebang definitions `#!/usr/bin/python` and `#!/usr/local/bin/pytho
 
 #### The `lib` directory
 
-The `lib` directory is a useful way to add utility code or external libraries without cluttering the pipeline scripts. Any Groovy scripts or JAR files in the `lib` directory in the project directory root will be available inside the Nextflow workflow automatically.
+The `lib` directory can be used to add utility code or external libraries without cluttering the pipeline scripts. The `lib` directory in the Nextflow project root is added to the classpath by default. Classes or packages defined in the `lib` directory will be available in the execution context. Scripts or functions defined outside of classes will not be available in the execution context.
+
+For example, `lib/DNASequence.groovy` defines the `DNASequence` class:
+
+```groovy
+// lib/DNASequence.groovy
+class DNASequence {
+    String sequence
+
+    // Constructor
+    DNASequence(String sequence) {
+        this.sequence = sequence.toUpperCase() // Ensure sequence is in uppercase for consistency
+    }
+
+    // Method to calculate melting temperature using the Wallace rule
+    double getMeltingTemperature() {
+        int gCount = sequence.count('G')
+        int cCount = sequence.count('C')
+        int aCount = sequence.count('A')
+        int tCount = sequence.count('T')
+
+        // Wallace rule calculation
+        double tm = 4 * (gCount + cCount) + 2 * (aCount + tCount)
+        return tm
+    }
+
+    String toString() {
+        return "DNA[$sequence]"
+    }
+}
+```
+
+The `DNASequence` class is available in the execution context:
+
+```nextflow
+// main.nf
+workflow {
+    Channel.of('ACGTTGCAATGCCGTA', 'GCGTACGGTACGTTAC')
+    .map { seq -> new DNASequence(seq) }
+    .view { dna -> 
+        def meltTemp = dna.getMeltingTemperature()
+        "Found sequence '$dna' with melting temperaure ${meltTemp}°C" 
+    }
+}
+```
+
+It returns:
+
+```
+Found sequence 'DNA[ACGTTGCAATGCCGTA]' with melting temperaure 48.0°C
+Found sequence 'DNA[GCGTACGGTACGTTAC]' with melting temperaure 50.0°C
+```
 
 ### Data
 
