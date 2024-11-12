@@ -108,4 +108,15 @@ class RepositoryProviderTest extends Specification {
         and:
         1 * conn.setRequestProperty('Authorization', "Basic ${'foo:bar'.bytes.encodeBase64()}")
     }
+
+    def 'should have public revision property' () {
+        given:
+        def provider = Spy(RepositoryProvider)
+        when:
+        provider.revision = 'branch_or_tag'
+        then:
+        provider.revision == 'branch_or_tag'
+        provider.hasProperty('revision') ? true : false
+    }
+
 }
