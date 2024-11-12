@@ -311,7 +311,7 @@ Replace `<YOUR_PIPELINE>` and `<YOUR_BUCKET>` with a pipeline script and bucket 
 nextflow run https://github.com/nextflow-io/rnaseq-nf -work-dir s3://nextflow-ci/scratch
 ```
 
-Also, replace the region `ca-toronto-1` with the one matching your Oracle deployment.
+Replace `YOUR_ACCESS_KEY` / `YOUR_SECRET_KEY` with your [Customer Secret Key](https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/managingcredentials.htm#Working2) and `YOUR_BUCKET_NAMESPACE` / `YOUR_REGION` with the namespace and region of your bucket.
 
 :::{warning}
 The `fusion.exportStorageCredentials` option leaks the Oracle credentials to the Nextflow task launcher script and should only be used for development purposes.
