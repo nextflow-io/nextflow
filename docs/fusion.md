@@ -302,7 +302,7 @@ tower.accessToken = '<YOUR_PLATFORM_ACCESS_TOKEN>' // optional
 Then you can run your pipeline using the following command:
 
 ```bash
-nextflow run <YOUR PIPELINE> -work-dir s3://<YOUR BUCKET>/scratch
+nextflow run <YOUR_PIPELINE> -work-dir s3://<YOUR_BUCKET>/scratch
 ```
 
 Replace `<YOUR PIPELINE>` and `<YOUR BUCKET>` with a pipeline script and bucket or your choice, for example:
