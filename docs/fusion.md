@@ -314,8 +314,7 @@ nextflow run https://github.com/nextflow-io/rnaseq-nf -work-dir s3://nextflow-ci
 Also, replace the region `ca-toronto-1` with the one matching your Oracle deployment.
 
 :::{warning}
-The option `fusion.exportStorageCredentials` leaks the Oracle credentials on the task launcher script created by Nextflow.
-This option should only be used for development purposes.
+The `fusion.exportStorageCredentials` option leaks the Oracle credentials to the Nextflow task launcher script and should only be used for development purposes.
 :::
 
 ## Advanced settings
