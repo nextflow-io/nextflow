@@ -214,7 +214,7 @@ Then you can run your pipeline using the following command:
 nextflow run <YOUR PIPELINE> -work-dir s3://<YOUR BUCKET>/scratch
 ```
 
-Replace `<YOUR PIPELINE>` and `<YOUR BUCKET>` with a pipeline script and bucket or your choice, for example:
+Replace `<YOUR PIPELINE>` and `<YOUR BUCKET>` with a pipeline script and bucket of your choice, for example:
 
 ```bash
 nextflow run https://github.com/nextflow-io/rnaseq-nf -work-dir s3://nextflow-ci/scratch
@@ -267,7 +267,7 @@ Then you can run your pipeline using the following command:
 nextflow run <YOUR PIPELINE> -work-dir s3://foobar/scratch
 ```
 
-Replace `<YOUR PIPELINE>` with a pipeline script and bucket or your choice:
+Replace `<YOUR PIPELINE>` with a pipeline script and bucket of your choice:
 
 :::{warning}
 The option `fusion.exportStorageCredentials` leaks the AWS credentials on the task launcher script created by Nextflow.
@@ -305,13 +305,8 @@ Then you can run your pipeline using the following command:
 nextflow run <YOUR_PIPELINE> -work-dir s3://<YOUR_BUCKET>/scratch
 ```
 
-Replace `<YOUR_PIPELINE>` and `<YOUR_BUCKET>` with a pipeline script and bucket or your choice, for example:
 
-```bash
-nextflow run https://github.com/nextflow-io/rnaseq-nf -work-dir s3://nextflow-ci/scratch
-```
-
-Replace `YOUR_ACCESS_KEY` / `YOUR_SECRET_KEY` with your [Customer Secret Key](https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/managingcredentials.htm#Working2) and `YOUR_BUCKET_NAMESPACE` / `YOUR_REGION` with the namespace and region of your bucket.
+In the above snippet replace `<YOUR_ACCESS_KEY>` / `<YOUR_SECRET_KEY>` with your [Customer Secret Key](https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/managingcredentials.htm#Working2) and `<YOUR_BUCKET_NAMESPACE>` / `<YOUR_REGION>` with the namespace and region of your bucket.
 
 :::{warning}
 The `fusion.exportStorageCredentials` option leaks the Oracle credentials to the Nextflow task launcher script and should only be used for development purposes.
