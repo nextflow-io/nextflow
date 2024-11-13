@@ -310,6 +310,7 @@ In the above snippet replace `<YOUR_ACCESS_KEY>` / `<YOUR_SECRET_KEY>` with your
 
 :::{warning}
 The `fusion.exportStorageCredentials` option leaks the Oracle credentials to the Nextflow task launcher script and should only be used for development purposes.
+:::
 
 ## Advanced settings
 
