@@ -1052,6 +1052,12 @@ The following methods are available for a string:
 `isEmpty() -> boolean`
 : Returns `true` if the string is empty (i.e. `length()` is 0).
 
+`isFloat() -> boolean`
+: Returns `true` if the string can be parsed as a floating-point number.
+
+`isInteger() -> boolean`
+: Returns `true` if the string can be parsed as an integer.
+
 `lastIndexOf( str: String ) -> int`
 : Returns the index within the string of the last occurrence of the given substring. Returns -1 if the string does not contain the substring.
 
@@ -1076,6 +1082,10 @@ The following methods are available for a string:
 `strip() -> String`
 : Returns a copy of the string with all leading and trailing whitespace removed.
 
+`stripIndent() -> String`
+: Returns a copy of the string with leading spaces on each line removed.
+: The number of spaces to remove is determined by the line with the least number of leading spaces, excluding lines with only whitespace.
+
 `stripLeading() -> String`
 : Returns a copy of the string with all leading whitespace removed.
 
@@ -1087,6 +1097,15 @@ The following methods are available for a string:
 
 `substring​( beginIndex: int, endIndex: int ) -> String`
 : Returns a substring of this string.
+
+`toBoolean() -> Boolean`
+: Returns `true` if the trimmed string is "true", "y", or "1" (ignoring case).
+
+`toFloat() -> Float`
+: Parses the string into a floating-point number.
+
+`toInteger() -> Integer`
+: Parses the string into an integer.
 
 `toLowerCase() -> String`
 : Returns a copy of this string with all characters converted to lower case.
