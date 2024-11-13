@@ -418,48 +418,47 @@ class TraceRecord implements Serializable {
      */
 
     TraceRecord parseTraceFile( Path file ) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(file.toFile()))) {
 
-        final text = file.text
+            if( reader.readLine() != 'nextflow.trace/v2' )
+                return parseLegacy(file, file.readLines())
 
-        final lines = text.readLines()
-        if( !lines )
-            return this
-        if( lines[0] != 'nextflow.trace/v2' )
-            return parseLegacy(file, lines)
+            String line
+            while(( line = reader.readLine() ) != null ) {
+                final pair = line.tokenize('=')
+                final name = pair[0]
+                final value = pair[1]
+                if( value == null )
+                    continue
 
-        for( int i=0; i<lines.size(); i++ ) {
-            final pair = lines[i].tokenize('=')
-            final name = pair[0]
-            final value = pair[1]
-            if( value == null )
-                continue
+                switch (name) {
+                    case '%cpu':
+                    case '%mem':
+                        // fields '%cpu' and '%mem' are expressed as percent value
+                        this.put(name, parseInt(value, file, name) / 10F)
+                        break
 
-            switch (name) {
-                case '%cpu':
-                case '%mem':
-                    // fields '%cpu' and '%mem' are expressed as percent value
-                    this.put(name, parseInt(value, file, name) / 10F)
-                    break
+                    case 'rss':
+                    case 'vmem':
+                    case 'peak_rss':
+                    case 'peak_vmem':
+                        // these fields are provided in KB, so they are normalized to bytes
+                        def val = parseLong(value, file, name) * 1024
+                        this.put(name, val)
+                        break
 
-                case 'rss':
-                case 'vmem':
-                case 'peak_rss':
-                case 'peak_vmem':
-                    // these fields are provided in KB, so they are normalized to bytes
-                    def val = parseLong(value, file, name) * 1024
-                    this.put(name, val)
-                    break
+                    case 'cpu_model':
+                        this.put(name, value)
+                        break
 
-                case 'cpu_model':
-                    this.put(name, value)
-                    break
-
-                default:
-                    def val = parseLong(value, file, name)
-                    this.put(name, val)
-                    break
+                    default:
+                        def val = parseLong(value, file, name)
+                        this.put(name, val)
+                        break
+                }
             }
-
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
         return this
