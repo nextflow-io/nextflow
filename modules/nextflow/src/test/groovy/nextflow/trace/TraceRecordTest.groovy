@@ -18,8 +18,12 @@ package nextflow.trace
 
 import groovy.json.JsonSlurper
 import spock.lang.Specification
+import spock.lang.TempDir
 import spock.lang.Unroll
 import test.TestHelper
+
+import java.nio.file.Files
+import java.nio.file.Path
 
 /**
  *
@@ -32,6 +36,9 @@ class TraceRecordTest extends Specification {
     def setupSpec() {
         TraceRecord.TIMEZONE = TimeZone.getTimeZone('UTC') // note: set the timezone to be sure the time string does not change on CI test servers
     }
+
+    @TempDir
+    Path tempDir
 
     def 'test get field'() {
 
@@ -153,7 +160,7 @@ class TraceRecordTest extends Specification {
     def 'should parse a trace file and return a TraceRecord object'() {
 
         given:
-        def file = TestHelper.createInMemTempFile('trace')
+        def file = Files.createTempFile(tempDir,'trace', '.txt')
         file.text = '''\
             nextflow.trace/v2
             realtime=12021
@@ -200,7 +207,7 @@ class TraceRecordTest extends Specification {
     def 'should parse a legacy trace file and return a TraceRecord object'() {
 
         given:
-        def file = TestHelper.createInMemTempFile('trace')
+        def file = Files.createTempFile(tempDir,'trace', '.txt')
         file.text =  '''
         pid state %cpu %mem vmem rss peak_vmem peak_rss rchar wchar syscr syscw read_bytes write_bytes
         1 0 10 20 11084 1220 21084 2220 4790 12 11 1 20 30
