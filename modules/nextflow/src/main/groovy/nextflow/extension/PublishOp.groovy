@@ -76,7 +76,7 @@ class PublishOp {
 
         // evaluate dynamic path
         final path = pathAs != null
-            ? pathAs.call(value)
+            ? targetDir.resolve(pathAs.call(value))
             : targetDir
         if( path == null )
             return
