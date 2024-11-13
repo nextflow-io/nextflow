@@ -420,10 +420,13 @@ class TraceRecord implements Serializable {
     TraceRecord parseTraceFile( Path file ) {
         try (BufferedReader reader = new BufferedReader(new FileReader(file.toFile()))) {
 
-            if( reader.readLine() != 'nextflow.trace/v2' )
-                return parseLegacy(file, file.readLines())
-
             String line
+            if( ( line = reader.readLine() ) == null ) {
+                return this
+            } else if ( line != 'nextflow.trace/v2' ) {
+                return parseLegacy(file, file.readLines())
+            }
+
             while(( line = reader.readLine() ) != null ) {
                 final pair = line.tokenize('=')
                 final name = pair[0]
