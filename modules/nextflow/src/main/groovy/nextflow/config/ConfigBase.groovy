@@ -78,6 +78,9 @@ abstract class ConfigBase extends Script {
      * Get the value of an environment variable from the launch environment.
      *
      * @param name
+     *      The environment variable name to be referenced
+     * @return
+     *      The value associate with the specified variable name or {@code null} if the variable does not exist.
      */
     String env(String name) {
         return SysEnv.get(name)
