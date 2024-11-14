@@ -20,7 +20,7 @@ The following task properties are defined in the process body:
 : The task unique hash ID.
 
 `task.id`
-: The pipeline-level task index (corresponds to `task_id` in the {ref}`execution trace <trace-report>`).
+: The pipeline-level task index. Corresponds to `task_id` in the {ref}`execution trace <trace-report>`.
 
 `task.index`
 : The process-level task index.
