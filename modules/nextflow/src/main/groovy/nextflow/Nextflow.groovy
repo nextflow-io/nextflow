@@ -57,6 +57,11 @@ class Nextflow {
 
     private static final Random random = new Random()
 
+    /**
+     * Get the value of an environment variable from the launch environment.
+     *
+     * @param name
+     */
     static String env(String name) {
         return SysEnv.get(name)
     }
