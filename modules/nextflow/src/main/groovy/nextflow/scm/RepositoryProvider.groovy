@@ -78,6 +78,14 @@ abstract class RepositoryProvider {
         return this
     }
 
+    String getProject() {
+        return this.project
+    }
+
+    ProviderConfig getConfig() {
+        return this.config
+    }
+
     boolean hasCredentials() {
         getUser() && getPassword()
     }
