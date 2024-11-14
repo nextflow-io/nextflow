@@ -1,3 +1,4 @@
+(vscode-page)=
 
 # VS Code integration
 
