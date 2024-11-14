@@ -640,8 +640,9 @@ class NextflowDSLImpl implements ASTTransformation {
                             readSource(stm,source,unit)
                             break
 
-                        case 'script':
                         case 'shell':
+                            log.warn "The `shell` block is deprecated, use `script` instead"
+                        case 'script':
                             bodyLabel = currentLabel
                             iterator.remove()
                             execStatements << stm
