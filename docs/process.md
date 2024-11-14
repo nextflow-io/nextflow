@@ -181,7 +181,7 @@ workflow {
 
 By default, Nextflow looks for the template script in the `templates` directory located alongside the Nextflow script in which the process is defined. An absolute path can be used to specify a different location. However, this practice is discouraged because it hinders pipeline portability.
 
-Here is an example of a template script:
+An example template script is provided below:
 
 ```bash
 #!/bin/bash
@@ -190,7 +190,7 @@ echo $STR
 echo "process completed"
 ```
 
-Variables prefixed with the dollar character (`$`) are interpreted as Nextflow variables when the template script is executed by Nextflow, and Bash variables when executed directly. For example, the above script can be executed from the command line by providing each input as an environment variable:
+Variables prefixed with the dollar character (`$`) are interpreted as Nextflow variables when the template script is executed by Nextflow and Bash variables when executed directly. For example, the above script can be executed from the command line by providing each input as an environment variable:
 
 ```bash
 STR='foo' bash templates/my_script.sh
@@ -205,7 +205,7 @@ The following caveats should be considered:
 - Template variables are evaluated even if they are commented out in the template script. If a template variable is missing, it will cause the pipeline to fail regardless of where it occurs in the template.
 
 :::{tip}
-Due to the caveats listed above, template scripts are generally discouraged. The best practice for using a custom script is to embed it in the process definition at first, and move it to a separate file with its own command line interface once as the code matures.
+Template scripts are generally discouraged due to the caveats described above. The best practice for using a custom script is to embed it in the process definition at first and move it to a separate file with its own command line interface once the code matures.
 :::
 
 (process-shell)=
