@@ -19,8 +19,11 @@ The following task properties are defined in the process body:
 : *Available only in `exec:` blocks*
 : The task unique hash ID.
 
+`task.id`
+: The pipeline-level task index. Corresponds to `task_id` in the {ref}`execution trace <trace-report>`.
+
 `task.index`
-: The task index (corresponds to `task_id` in the {ref}`execution trace <trace-report>`).
+: The process-level task index.
 
 `task.name`
 : *Available only in `exec:` blocks*
