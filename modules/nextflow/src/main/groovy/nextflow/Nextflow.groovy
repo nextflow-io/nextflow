@@ -57,6 +57,9 @@ class Nextflow {
 
     private static final Random random = new Random()
 
+    static String env(String name) {
+        return SysEnv.get(name)
+    }
 
     static private fileNamePattern( FilePatternSplitter splitter, Map opts ) {
 
