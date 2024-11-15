@@ -223,7 +223,9 @@ class Nextflow {
      * @param message An optional error message
      */
     static void error( String message = null ) {
-        throw message ? new WorkflowScriptErrorException(message) : new WorkflowScriptErrorException()
+        def err = message ? new WorkflowScriptErrorException(message) : new WorkflowScriptErrorException()
+        log.error("@Unknown", err)
+        throw err
     }
 
     /**
