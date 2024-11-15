@@ -65,12 +65,16 @@ abstract class RepositoryProvider {
     /**
      * The name of the commit/branch/tag
      */
-    String revision
+    protected String revision
 
     RepositoryProvider setCredentials(String userName, String password) {
         config.user = userName
         config.password = password
         return this
+    }
+
+    String getRevision() {
+        return this.revision
     }
 
     RepositoryProvider setRevision(String revision) {
