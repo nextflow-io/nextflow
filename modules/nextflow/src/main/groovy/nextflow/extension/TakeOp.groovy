@@ -67,7 +67,7 @@ class TakeOp {
             }
 
             boolean onException(final DataflowProcessor processor, final Throwable e) {
-                TakeOp.log.error("@unknown", e)
+                TakeOp.log.debug("@unknown", e)
                 (Global.session as Session).abort(e)
                 return true;
             }

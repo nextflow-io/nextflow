@@ -95,7 +95,7 @@ class DataflowHelper {
         @Override
         boolean onException(final DataflowProcessor processor, final Throwable t) {
             final e = t instanceof InvocationTargetException ? t.cause : t
-            OperatorImpl.log.error("@unknown", e)
+            OperatorImpl.log.debug("@unknown", e)
             session?.abort(e)
             return true;
         }
@@ -116,7 +116,7 @@ class DataflowHelper {
 
             @Override
             boolean onException(final DataflowProcessor processor, final Throwable e) {
-                DataflowHelper.log.error("@unknown", e)
+                DataflowHelper.log.debug("@unknown", e)
                 session.abort(e)
                 return true
             }
@@ -257,7 +257,7 @@ class DataflowHelper {
                     events.onComplete.call(processor)
                 }
                 catch( Exception e ) {
-                    OperatorImpl.log.error("@unknown", e)
+                    OperatorImpl.log.debug("@unknown", e)
                     session.abort(e)
                 }
             }
@@ -266,7 +266,7 @@ class DataflowHelper {
             boolean onException(final DataflowProcessor processor, final Throwable e) {
                 error = true
                 if( !events.onError ) {
-                    log.error("@unknown", e)
+                    log.debug("@unknown", e)
                     session.abort(e)
                 }
                 else {
@@ -343,7 +343,7 @@ class DataflowHelper {
             }
 
             boolean onException(final DataflowProcessor processor, final Throwable e) {
-                log.error("@unknown", e)
+                log.debug("@unknown", e)
                 session.abort(e)
                 return true;
             }

@@ -748,7 +748,7 @@ class OperatorImpl {
             }
 
             boolean onException(final DataflowProcessor processor, final Throwable e) {
-                OperatorImpl.log.error("@unknown", e)
+                OperatorImpl.log.debug("@unknown", e)
                 session.abort(e)
                 return true;
             }
@@ -859,7 +859,7 @@ class OperatorImpl {
 
             @Override
             boolean onException(DataflowProcessor processor, Throwable e) {
-                OperatorImpl.log.error("@unknown", e)
+                OperatorImpl.log.debug("@unknown", e)
                 session.abort(e)
                 return true
             }

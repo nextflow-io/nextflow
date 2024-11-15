@@ -798,8 +798,15 @@ class Session implements ISession {
                 log.debug(status)
             // dump threads status
             log.debug(SysHelper.dumpThreads())
+
+            // Do not duplicate error notifications if session has been previously cancelled
+            if (cancelled) {
+                log.debug("Session aborted, but was previously cancelled")
+            } else {
+                notifyError(null)
+            }
+
             // force termination
-            notifyError(null)
             ansiLogObserver?.forceTermination()
             executorFactory?.signalExecutors()
             processesBarrier.forceTermination()
