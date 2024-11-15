@@ -24,35 +24,35 @@ import spock.lang.Specification
  */
 class RepositoryProviderTest extends Specification {
 
-    def 'should create repository provider object'() {
+    def 'should create repository provider object' () {
 
         def provider
 
         when:
-        provider = RepositoryFactory.newRepositoryProvider(new ProviderConfig('github'), 'project/x')
+        provider = RepositoryFactory.newRepositoryProvider(new ProviderConfig('github'),'project/x')
         then:
         provider instanceof GithubRepositoryProvider
         provider.endpointUrl == 'https://api.github.com/repos/project/x'
 
         when:
-        provider = RepositoryFactory.newRepositoryProvider(new ProviderConfig('gitlab'), 'project/y')
+        provider = RepositoryFactory.newRepositoryProvider(new ProviderConfig('gitlab'),'project/y')
         then:
         provider instanceof GitlabRepositoryProvider
         provider.endpointUrl == 'https://gitlab.com/api/v4/projects/project%2Fy'
 
         when:
-        provider = RepositoryFactory.newRepositoryProvider(new ProviderConfig('bitbucket'), 'project/z')
+        provider = RepositoryFactory.newRepositoryProvider(new ProviderConfig('bitbucket'),'project/z')
         then:
         provider instanceof BitbucketRepositoryProvider
         provider.endpointUrl == 'https://bitbucket.org/api/2.0/repositories/project/z'
 
         when:
-        provider = RepositoryFactory.newRepositoryProvider(new ProviderConfig('local', [path: '/user/data']), 'local/w')
+        provider = RepositoryFactory.newRepositoryProvider(new ProviderConfig('local', [path:'/user/data']),'local/w')
         then:
         provider.endpointUrl == 'file:/user/data/w'
     }
 
-    def 'should set credentials'() {
+    def 'should set credentials' () {
 
         given:
         def config = Mock(ProviderConfig)
@@ -67,7 +67,7 @@ class RepositoryProviderTest extends Specification {
 
     }
 
-    def 'should hide creds'() {
+    def 'should hide creds' () {
         given:
         def provider = Spy(RepositoryProvider)
 
@@ -86,7 +86,7 @@ class RepositoryProviderTest extends Specification {
 
     }
 
-    def 'should auth using credentials'() {
+    def 'should auth using credentials' () {
         given:
         def provider = Spy(RepositoryProvider)
         and:
