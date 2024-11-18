@@ -131,7 +131,7 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected ProcessBuilder localProcessBuilder() {
-        final cmd = new ArrayList<String>(BashWrapperBuilder.BASH) << wrapperFile.getName()
+        final cmd = new ArrayList<String>(BashWrapperBuilder.ENV_BASH) << wrapperFile.getName()
         log.debug "Launch cmd line: ${cmd.join(' ')}"
         // make sure it's a posix file system
         if( task.workDir.fileSystem != FileSystems.default )
