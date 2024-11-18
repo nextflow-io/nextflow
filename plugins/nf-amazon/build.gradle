@@ -53,6 +53,9 @@ dependencies {
     constraints {
         api 'com.fasterxml.jackson.core:jackson-databind:2.12.7.1'
     }
+
+    // address security vulnerabilities
+    runtimeOnly 'io.netty:netty-common:4.1.115.Final'
         
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
