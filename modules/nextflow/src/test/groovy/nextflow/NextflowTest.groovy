@@ -74,13 +74,13 @@ class NextflowTest extends Specification {
         Nextflow.file(null)
         then:
         e = thrown(IllegalArgumentException)
-        e.message == 'Argument of `file` function cannot be null'
+        e.message == 'Argument of `file()` function cannot be null'
 
         when:
         Nextflow.file('')
         then:
         e = thrown(IllegalArgumentException)
-        e.message == 'Argument of `file` function cannot be empty'
+        e.message == 'Argument of `file()` function cannot be empty'
     }
 
     def 'should return http path' () {

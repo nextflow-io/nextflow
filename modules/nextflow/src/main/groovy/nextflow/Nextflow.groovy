@@ -57,9 +57,7 @@ class Nextflow {
 
     private static final Random random = new Random()
 
-
-    static private fileNamePattern( FilePatternSplitter splitter, Map opts ) {
-
+    private static List<Path> fileNamePattern( FilePatternSplitter splitter, Map opts ) {
         final scheme = splitter.scheme
         final target = scheme ? "$scheme://$splitter.parent" : splitter.parent
         final folder = toCanonicalPath(target)
@@ -68,7 +66,7 @@ class Nextflow {
         if( opts == null ) opts = [:]
         if( !opts.type ) opts.type = 'file'
 
-        def result = new LinkedList()
+        def result = new LinkedList<Path>()
         try {
             FileHelper.visitFiles(opts, folder, pattern) { Path it -> result.add(it) }
         }
@@ -76,7 +74,6 @@ class Nextflow {
             log.debug "No such file or directory: $folder -- Skipping visit"
         }
         return result
-
     }
 
     static private String str0(value) {
@@ -104,11 +101,16 @@ class Nextflow {
      * @param path A file path eventually including a glob pattern e.g. /some/path/file*.txt
      * @return An instance of {@link Path} when a single file is matched or a list of {@link Path}s
      */
-    static file( Map options = null, def filePattern ) {
-
+    static file(Map options = null, def filePattern) {
         if( !filePattern )
-            throw new IllegalArgumentException("Argument of `file` function cannot be ${filePattern==null?'null':'empty'}")
+            throw new IllegalArgumentException("Argument of `file()` function cannot be ${filePattern==null?'null':'empty'}")
+        final result = file0(options, filePattern)
+        if( result instanceof Collection && result.size() != 1 )
+            log.warn "The `file()` function was called with a glob pattern that matched a collection of files -- use `files()` instead. The `file()` function should only be used to retrieve a single file. This warning will become an error in the future."
+        return result
+    }
 
+    private static file0( Map options = null, def filePattern ) {
         final path = filePattern as Path
         final glob = options?.containsKey('glob') ? options.glob as boolean : isGlobAllowed(path)
         if( !glob ) {
@@ -127,9 +129,11 @@ class Nextflow {
         return fileNamePattern(splitter, options)
     }
 
-    static files( Map options=null, def path ) {
-        def result = file(options, path)
-        return result instanceof List ? result : [result]
+    static Collection<Path> files(Map options=null, def filePattern) {
+        if( !filePattern )
+            throw new IllegalArgumentException("Argument of `files()` function cannot be ${filePattern==null?'null':'empty'}")
+        final result = file0(options, filePattern)
+        return result instanceof Collection ? result : [result]
     }
 
 

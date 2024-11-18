@@ -207,7 +207,10 @@ The following functions are available in Nextflow scripts:
 : Stop the pipeline execution and return an exit code and optional error message.
 
 `file( filePattern, [options] )`
-: Get one or more files from a path or glob pattern. Returns a [Path](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/Path.html) or list of Paths if there are multiple files.
+: :::{versionchanged} 24.11.0-edge
+  The `file()` function should be used only to match a single file. Use `files()` to match a collection of files. In the future, `file()` will raise an error if it does not match exactly one file.
+  :::
+: Get one or more files from a file name or glob pattern. Returns a [Path](#path) if there is one file, or a collection of Paths if there are multiple files.
 
 : The following options are available:
 
@@ -232,7 +235,7 @@ The following functions are available in Nextflow scripts:
 : See also: {ref}`Channel.fromPath <channel-path>`.
 
 `files( filePattern, [options] )`
-: Convenience method for `file()` that always returns a list.
+: Get a collection of files from a file name or glob pattern. Always returns a collection of files. Supports the same options as `file()`.
 
 `groupKey( key, size )`
 : Create a grouping key to use with the {ref}`operator-grouptuple` operator.
