@@ -1,5 +1,8 @@
 nf-amazon changelog
 ===================
+2.9.1 - 18 Nov 2024
+- Bump netty-common to version 4.1.115.Final [90623c1e]
+
 2.9.0 - 2 Oct 2024
 - Add Platform workflow prefix in AWS Batch job names (#5318) [e2e test] [42dd4ba8]
 - Fix AWS spot attempts with zero value (#5331) [ci fast] [bac2da12]
