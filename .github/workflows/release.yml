@@ -1,0 +1,176 @@
+name: Release
+run-name: Release ${{ github.ref_name }}
+
+# TODO:tom real workflow trigger
+on:
+  workflow_dispatch:
+
+env:
+  JAVA_VERSION: 17
+
+jobs:
+  # --------------------------------------------------
+  # job: assemble
+  # --------------------------------------------------
+  assemble:
+    name: Assemble
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # setup steps
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: true
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          architecture: x64
+          cache: gradle
+
+      # build steps
+      - name: Compile
+        run: make distribution
+
+      # upload steps
+      - name: Upload artifacts (libs)
+        uses: actions/upload-artifact@v4
+        with:
+          retention-days: 3
+          name: libs
+          path: modules/*/build/libs/
+
+      - name: Upload artifacts (distribution)
+        uses: actions/upload-artifact@v4
+        with:
+          retention-days: 3
+          name: distribution
+          path: build/releases/
+
+      - name: Upload artifacts (plugins)
+        uses: actions/upload-artifact@v4
+        with:
+          retention-days: 3
+          compression-level: 0
+          name: plugins
+          path: |
+            plugins/build/libs/
+            plugins/*/build/libs/
+
+  # --------------------------------------------------
+  # job: deploy-maven
+  # --------------------------------------------------
+  deploy-maven:
+    name: Deploy to Maven
+    runs-on: ubuntu-latest
+    needs: assemble
+    timeout-minutes: 15
+    steps:
+      # setup steps
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: true
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          architecture: x64
+          cache: gradle
+
+      - name: Download artifacts (libs)
+        uses: actions/download-artifact@v4
+        with:
+          name: libs
+          path: modules
+
+      # deploy step
+      - name: Deploy to maven
+        run: bash .github/scripts/deploy-to-maven.sh
+
+  # --------------------------------------------------
+  # job: deploy-s3
+  # --------------------------------------------------
+  deploy-s3:
+    name: Deploy to S3
+    runs-on: ubuntu-latest
+    needs: assemble
+    timeout-minutes: 15
+    steps:
+      # setup steps
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: true
+
+      - name: Download artifacts (distribution)
+        uses: actions/download-artifact@v4
+        with:
+          name: distribution
+          path: build/releases
+
+      # deploy step
+      - name: Deploy to S3
+        run: bash .github/scripts/deploy-to-s3.sh
+
+  # --------------------------------------------------
+  # job: deploy-docker
+  # --------------------------------------------------
+  deploy-docker:
+    name: Deploy to Docker
+    runs-on: ubuntu-latest
+    needs: assemble
+    timeout-minutes: 15
+    steps:
+      # setup steps
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: true
+
+      # deploy step
+      - name: Deploy to docker
+        run: bash .github/scripts/deploy-to-docker.sh
+
+  # --------------------------------------------------
+  # job: deploy-plugins
+  # --------------------------------------------------
+  deploy-plugins:
+    name: Deploy Plugins
+    runs-on: ubuntu-latest
+    needs: assemble
+    timeout-minutes: 15
+    steps:
+      # setup steps
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: true
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          architecture: x64
+          cache: gradle
+
+      - name: Download artifacts (plugins)
+        uses: actions/download-artifact@v4
+        with:
+          name: plugins
+          path: plugins
+
+      # deploy step
+      - name: Deploy plugins
+        run: bash .github/scripts/deploy-plugins.sh

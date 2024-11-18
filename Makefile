@@ -86,6 +86,12 @@ smoke:
 	NXF_SMOKE=1 ./gradlew ${mm}test
 
 #
+# Generate all the jars required to create a release
+#
+distribution:
+	BUILD_PACK=1 ./gradlew buildInfo compile assemble pack javadocJar sourcesJar testFixturesJar
+
+#
 # Upload JAR artifacts to Maven Central
 #
 upload:
