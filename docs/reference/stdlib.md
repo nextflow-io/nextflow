@@ -200,7 +200,7 @@ The following functions are available in Nextflow scripts:
 `env( name )`
 : :::{versionadded} 24.11.0-edge
   :::
-: Get the value of an environment variable in the launch environment.
+: Get the value of the environment variable with the specified name in the Nextflow launch environment.
 
 `error( message = null )`
 : Throw a script runtime error with an optional error message.

@@ -120,7 +120,7 @@ The following functions are globally available in a Nextflow configuration file:
 `env( name )`
 : :::{versionadded} 24.11.0-edge
   :::
-: Get the value of an environment variable in the launch environment.
+: Get the value of the environment variable with the specified name in the Nextflow launch environment.
 
 (config-params)=
 
