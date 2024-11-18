@@ -1,5 +1,8 @@
 nf-wave changelog
 ==================
+1.7.3 - 18 Nov 2024
+- Fix isContainerReady when wave is disabled (#5509) [c69e3711]
+
 1.7.2 - 27 Oct 2024
 - Add wave mirror vs module bundles conflicts warning [b37a8a5b]
 
