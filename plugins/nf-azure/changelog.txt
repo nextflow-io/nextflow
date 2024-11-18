@@ -1,5 +1,8 @@
 nf-azure changelog
 ===================
+1.10.2 - 18 Nov 2024
+- Bump netty-common to version 4.1.115.Final [90623c1e]
+
 1.10.1 - 27 Oct 2024
 - Demote azure batch task status log level to trace (#5416) [ci skip] [d6c684bb]
 
