@@ -1,5 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
+24.10.1 - 18 Nov 2024
+- Fix overlapping file lock exception (#5489) [a2566d54]
+- Fix isContainerReady when wave is disabled (#5509) [c69e3711]
+- Bump nf-wave@1.7.3 [e7709a0f]
+- Bump nf-azure@1.10.2 [54496ac4]
+- Bump nf-amazon@2.9.1 [fa227933]
+- Bump netty-common to version 4.1.115.Final [90623c1e]
+
 24.10.0 - 27 Oct 2024
 - Add `manifest.contributors` config option (#5322) [cf0f9690]
 - Add wave mirror and scan config [92e69776]
