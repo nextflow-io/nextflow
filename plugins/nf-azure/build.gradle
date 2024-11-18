@@ -47,6 +47,9 @@ dependencies {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
 
+    // address security vulnerabilities
+    runtimeOnly 'io.netty:netty-common:4.1.115.Final'
+
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
     testImplementation "org.apache.groovy:groovy:4.0.24"
