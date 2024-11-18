@@ -197,6 +197,11 @@ The following functions are available in Nextflow scripts:
 `branchCriteria( closure )`
 : Create a branch criteria to use with the {ref}`operator-branch` operator.
 
+`env( name )`
+: :::{versionadded} 24.11.0-edge
+  :::
+: Get the value of the environment variable with the specified name in the Nextflow launch environment.
+
 `error( message = null )`
 : Throw a script runtime error with an optional error message.
 

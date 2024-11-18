@@ -16,8 +16,6 @@
 
 package nextflow.config
 
-import spock.lang.Ignore
-
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -26,17 +24,35 @@ import com.sun.net.httpserver.Headers
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
+import nextflow.SysEnv
 import nextflow.exception.ConfigParseException
-import spock.lang.Specification
-
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
+import spock.lang.Ignore
+import spock.lang.Specification
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class ConfigParserTest extends Specification {
+
+    def 'should get an environment variable' () {
+        given:
+        SysEnv.push(MAX_CPUS: '1')
+
+        when:
+        def CONFIG = '''
+        process.cpus = env('MAX_CPUS')
+        '''
+        def config = new ConfigParser().parse(CONFIG)
+
+        then:
+        config.process.cpus == '1'
+
+        cleanup:
+        SysEnv.pop()
+    }
 
     def 'should parse plugins id' () {
         given:

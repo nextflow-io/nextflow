@@ -275,6 +275,14 @@ The Nextflow language specification does not support implicit environment variab
 println "PWD = ${System.getenv('PWD')}"
 ```
 
+:::{versionadded} 24.11.0-edge
+The `env()` function can be used instead of `System.getenv()`:
+
+```nextflow
+println "PWD = ${env('PWD')}"
+```
+:::
+
 ### Restricted syntax
 
 The following patterns are still supported but have been restricted, i.e. some syntax variants have been removed.
