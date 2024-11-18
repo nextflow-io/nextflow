@@ -85,6 +85,8 @@ import org.slf4j.MarkerFactory
 @CompileStatic
 class LoggerHelper {
 
+    static volatile boolean skipConsole
+
     static private Logger log = LoggerFactory.getLogger(LoggerHelper)
 
     static public Marker STICKY = MarkerFactory.getMarker('sticky')
@@ -418,6 +420,9 @@ class LoggerHelper {
             if (!isStarted()) {
                 return FilterReply.NEUTRAL;
             }
+
+            if( skipConsole )
+                return FilterReply.DENY;
 
             def logger = event.getLoggerName()
             def level = event.getLevel()
