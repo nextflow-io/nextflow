@@ -23,7 +23,7 @@ def rule( file ) {
     return null
 
   if( file == 'file_3.txt' )
-     return "${System.getenv('PWD')}/results/gamma/$file"
+     return "${env('PWD')}/results/gamma/$file"
 
 }
 
