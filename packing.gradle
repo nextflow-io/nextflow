@@ -31,21 +31,6 @@ ext.nextflowDir = "$homeDir/.nextflow/framework/$version"
 ext.releaseDir = "$buildDir/releases"
 ext.s3CmdOpts="--acl public-read --storage-class STANDARD --region eu-west-1"
 
-protected error(String message) {
-    logger.error message
-    throw new StopExecutionException(message)
-}
-
-protected checkVersionExits(String version) {
-    if(version.endsWith('-SNAPSHOT'))
-        return
-
-    def cmd = "AWS_ACCESS_KEY_ID=${System.env.NXF_AWS_ACCESS} AWS_SECRET_ACCESS_KEY=${System.env.NXF_AWS_SECRET} aws s3 ls s3://www2.nextflow.io/releases/v$version/nextflow"
-    def status=['bash','-c', cmd].execute().waitFor()
-    if( status == 0 )
-        error("STOP!! Version $version already deployed!")
-}
-
 protected resolveDeps( String configName, String... x ) {
 
     final deps = [] as Set
@@ -123,42 +108,6 @@ task packDist( dependsOn: [compile, ":nextflow:shadowJar"]) {
  */
 task pack( dependsOn: [packOne, packDist]) {
 
-}
-
-task deploy( type: Exec, dependsOn: [clean, compile, pack]) {
-
-    def temp = File.createTempFile('upload',null)
-    temp.deleteOnExit()
-    def files = []
-
-    doFirst {
-        checkVersionExits(version)
-        
-        def path = new File(releaseDir)
-        if( !path.exists() ) error("Releases path does not exist: $path")
-        path.eachFile {
-            if( it.name.startsWith("nextflow-$version"))
-                files << it
-        }
-
-        if( !files ) error("Can't find any file to upload -- Check path: $path")
-        files << file('nextflow').absoluteFile
-        files << file('nextflow.sha1').absoluteFile
-        files << file('nextflow.sha256').absoluteFile
-        files << file('nextflow.md5').absoluteFile
-
-        println "Uploading artifacts: "
-        files.each { println "- $it"}
-
-        def script = []
-        script << "export AWS_ACCESS_KEY_ID=${System.env.NXF_AWS_ACCESS}"
-        script << "export AWS_SECRET_ACCESS_KEY=${System.env.NXF_AWS_SECRET}"
-        script.addAll( files.collect { "aws s3 cp ${it} s3://www2.nextflow.io/releases/v${version}/${it.name} ${s3CmdOpts}"})
-
-        temp.text = script.join('\n')
-    }
-
-    commandLine 'bash', '-e', temp.absolutePath
 }
 
 task installLauncher(type: Copy, dependsOn: ['pack']) {

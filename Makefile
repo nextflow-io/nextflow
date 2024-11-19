@@ -104,12 +104,6 @@ pack:
 	BUILD_PACK=1 ./gradlew pack
 
 #
-# Upload NF launcher to nextflow.io web site
-#
-deploy:
-	BUILD_PACK=1 ./gradlew deploy
-
-#
 # Close artifacts uploaded to Maven central
 #
 close:
