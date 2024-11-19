@@ -428,11 +428,15 @@ A process output can be assigned to a topic using the `topic` option on an outpu
 process foo {
   output:
   val('foo'), topic: my_topic
+
+  // ...
 }
 
 process bar {
   output:
   val('bar'), topic: my_topic
+
+  // ...
 }
 ```
 

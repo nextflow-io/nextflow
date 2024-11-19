@@ -345,6 +345,7 @@ process basicExample {
   input:
   val x
 
+  script:
   "echo process job $x"
 }
 
@@ -374,6 +375,7 @@ process basicExample {
   input:
   val x
 
+  script:
   "echo process job $x"
 }
 
@@ -394,6 +396,7 @@ process blastThemAll {
   input:
   path query_file
 
+  script:
   "blastp -query ${query_file} -db nr"
 }
 
@@ -428,6 +431,7 @@ process blastThemAll {
   input:
   path 'query.fa'
 
+  script:
   "blastp -query query.fa -db nr"
 }
 
@@ -450,6 +454,7 @@ process foo {
   input:
   path x
 
+  script:
   """
   your_command --in $x
   """
@@ -497,6 +502,7 @@ process blastThemAll {
     input:
     path 'seq'
 
+    script:
     "echo seq*"
 }
 
@@ -536,6 +542,7 @@ process blastThemAll {
     input:
     path 'seq?.fa'
 
+    script:
     "cat seq1.fa seq2.fa seq3.fa"
 }
 
@@ -559,6 +566,7 @@ process simpleCount {
   val x
   path "${x}.fa"
 
+  script:
   """
   cat ${x}.fa | grep '>'
   """
@@ -582,6 +590,7 @@ process printEnv {
     input:
     env 'HELLO'
 
+    script:
     '''
     echo $HELLO world!
     '''
@@ -608,6 +617,7 @@ process printAll {
   input:
   stdin
 
+  script:
   """
   cat -
   """
@@ -640,6 +650,7 @@ process tupleExample {
     input:
     tuple val(x), path('input.txt')
 
+    script:
     """
     echo "Processing $x"
     cat input.txt > copy
@@ -665,6 +676,7 @@ process alignSequences {
   path seq
   each mode
 
+  script:
   """
   t_coffee -in $seq -mode $mode > result
   """
@@ -689,6 +701,7 @@ process alignSequences {
   each mode
   each path(lib)
 
+  script:
   """
   t_coffee -in $seq -mode $mode -lib $lib > result
   """
@@ -828,6 +841,7 @@ process foo {
   output:
   val x
 
+  script:
   """
   echo $x > file
   """
@@ -879,6 +893,7 @@ process randomNum {
   output:
   path 'result.txt'
 
+  script:
   '''
   echo $RANDOM > result.txt
   '''
@@ -919,6 +934,7 @@ process splitLetters {
     output:
     path 'chunk_*'
 
+    script:
     '''
     printf 'Hola' | split -b 1 - chunk_
     '''
@@ -966,6 +982,7 @@ process align {
   output:
   path "${species}.aln"
 
+  script:
   """
   t_coffee -in $seq > ${species}.aln
   """
@@ -1066,6 +1083,7 @@ process foo {
     output:
     path 'result.txt', hidden: true
 
+    script:
     '''
     echo 'another new line' >> result.txt
     '''
@@ -1079,6 +1097,7 @@ process foo {
     output:
     tuple path('last_result.txt'), path('result.txt', hidden: true)
 
+    script:
     '''
     echo 'another new line' >> result.txt
     echo 'another new line' > last_result.txt
@@ -1099,6 +1118,7 @@ process FOO {
     path 'hello.txt', emit: hello
     path 'bye.txt', emit: bye
 
+    script:
     """
     echo "hello" > hello.txt
     echo "bye" > bye.txt
