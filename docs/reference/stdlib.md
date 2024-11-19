@@ -1067,6 +1067,9 @@ The following methods are available for a string:
 `length() -> int`
 : Returns the length of the string.
 
+`md5() -> String`
+: Returns the MD5 checksum of the string.
+
 `replace( target: String, replacement: String ) -> String`
 : Returns a new string in which each occurrence of the target string is replaced with the given replacement string.
 
@@ -1075,6 +1078,9 @@ The following methods are available for a string:
 
 `replaceFirst( regex: String, replacement: String ) -> String`
 : Returns a new string in which the first occurrence of the given regular expression is replaced with the given replacement string.
+
+`sha256() -> String`
+: Returns the SHA-256 checksum of the string.
 
 `startsWith( prefix: String ) -> boolean`
 : Returns `true` if the string ends with the given prefix.
