@@ -41,7 +41,7 @@ The following constants are globally available in a Nextflow script:
 `projectDir: Path`
 : Alias of `workflow.projectDir`.
 
-`secrets: Map`
+`secrets: Map<String,String>`
 : :::{versionadded} 24.02.0-edge
   :::
 : Map of pipeline secrets. See {ref}`secrets-page` for more information.

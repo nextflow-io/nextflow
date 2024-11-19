@@ -102,15 +102,15 @@ Config includes can also be specified within config blocks. However, config file
 
 The following constants are globally available in a Nextflow configuration file:
 
-`baseDir`
+`baseDir: Path`
 : :::{deprecated} 20.04.0
   :::
 : Alias for `projectDir`.
 
-`launchDir`
+`launchDir: Path`
 : The directory where the workflow was launched.
 
-`projectDir`
+`projectDir: Path`
 : The directory where the main script is located.
 
 (config-params)=
