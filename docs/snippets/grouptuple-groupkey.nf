@@ -10,4 +10,4 @@ Channel.of(
     .view { v -> "scattered: ${v}" }
     .groupTuple()
     .map { key, vcfs -> tuple(key.getGroupTarget(), vcfs) }     // unwrap group key
-    .view { v -> "gathered: ${v}"}
+    .view { v -> "gathered: ${v}" }
