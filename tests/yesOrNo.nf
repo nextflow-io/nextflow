@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 workflow {
-  Channel.of(1,2) | yesOrNo
+  channel.of(1,2) | yesOrNo
 }
 
 process yesOrNo {

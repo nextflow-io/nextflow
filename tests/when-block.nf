@@ -22,8 +22,8 @@ def decode(i) {
 workflow {
   items = [0,1,2,3,4]
 
-  Channel.fromList(items) | foo
-  Channel.fromList(items) | bar
+  channel.fromList(items) | foo
+  channel.fromList(items) | bar
 }
 
 process foo {

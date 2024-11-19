@@ -27,7 +27,7 @@ process align {
   each seq_id
 
   output:
-  tuple val(barcode), val(seq_id), path('bam'), path('bai')
+  tuple val(barcode), val(seq_id), file('bam'), file('bai')
 
   script:
   """
@@ -56,8 +56,8 @@ process merge {
 }
 
 workflow {
-  def ch1 = Channel.of('alpha', 'gamma')
-  def ch2 = Channel.of('one', 'two', 'three')
+  def ch1 = channel.of('alpha', 'gamma')
+  def ch2 = channel.of('one', 'two', 'three')
 
   aggregation = align(ch1, ch2)
 

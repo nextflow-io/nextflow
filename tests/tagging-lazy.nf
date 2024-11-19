@@ -31,5 +31,5 @@ process foo {
 }
 
 workflow {
-  Channel.of('alpha', 'delta', 'gamma', 'omega') | foo
+  channel.of('alpha', 'delta', 'gamma', 'omega') | foo
 }

@@ -16,7 +16,7 @@
  */
 
 workflow {
-  seqs = Channel.fromList(file("$baseDir/data/seqs/*.fastq"))
+  seqs = Channel.fromList(files("$baseDir/data/seqs/*.fastq"))
 
   seqs | proc1
   seqs | proc2

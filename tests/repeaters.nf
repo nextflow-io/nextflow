@@ -43,10 +43,10 @@ process foo {
 }
 
 workflow {
-  def list1 = Channel.of(1,2)
-  def list2 = Channel.of('Hola', 'Ciao')
-  def list3 = Channel.of('alpha','beta','delta')
-  def list4 = Channel.of(["a","b"],["c","d"])
+  def list1 = channel.of(1,2)
+  def list2 = channel.of('Hola', 'Ciao')
+  def list3 = channel.of('alpha','beta','delta')
+  def list4 = channel.of(["a","b"],["c","d"])
 
   hola(list1, list2, list3)
 

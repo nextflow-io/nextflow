@@ -31,5 +31,5 @@ process foo {
 }
 
 workflow {
-  foo(1, Channel.of('a','b')) | view { file -> "foo out: $file" }
+  foo(1, channel.of('a','b')) | view { file -> "foo out: $file" }
 }

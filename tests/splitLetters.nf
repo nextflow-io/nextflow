@@ -18,7 +18,6 @@
 params.str = 'Hello world!'
 
 process splitLetters {
-
     input:
     val str
 

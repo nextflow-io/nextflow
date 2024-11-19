@@ -40,5 +40,5 @@ process bar {
 
 workflow {
   foo()
-  bar(foo.out, Channel.of(1,2,3))
+  bar(foo.out, channel.of(1,2,3))
 }

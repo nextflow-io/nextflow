@@ -37,6 +37,6 @@ process task2 {
  }
 
 workflow {
-  Channel.of(1,2,3) | task1
-  Channel.of(4,5,6) | task2
+  channel.of(1,2,3) | task1
+  channel.of(4,5,6) | task2
 }

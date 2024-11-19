@@ -29,5 +29,5 @@ process foo {
 }
 
 workflow {
-  Channel.of(1,2,3) | foo
+  channel.of(1,2,3) | foo
 }

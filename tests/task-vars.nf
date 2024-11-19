@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 workflow {
-  Channel.of(1,2,3) | printVars
+  channel.of(1,2,3) | printVars
 }
 
 process printVars {

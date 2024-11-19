@@ -19,7 +19,7 @@ process sayhello {
   debug true
   script:
   """
-    echo 'Hello world!'
+  echo 'Hello world!'
   """
 }
 

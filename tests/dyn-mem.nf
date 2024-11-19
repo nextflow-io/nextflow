@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 workflow {
-  Channel.fromPath(['.small.txt','.big.txt']) | foo
+  channel.fromPath(['.small.txt','.big.txt']) | foo
 }
 
 process foo {
