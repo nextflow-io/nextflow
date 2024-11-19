@@ -9,5 +9,5 @@ process sayHello {
 }
 
 workflow {
-    sayHello | view { "I say... $it" }
+    sayHello | view { message -> "I say... $message" }
 }

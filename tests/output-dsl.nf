@@ -63,13 +63,13 @@ process foo {
 
 workflow {
   main:
-  def input = Channel.of('alpha','beta','delta')
+  input = Channel.of('alpha','beta','delta')
   align(input)
 
-  def bam = align.out[0].toSortedList { file -> file.name }
-  def bai = align.out[1].toSortedList { file -> file.name }
-  my_combine( bam, bai )
-  my_combine.out.view { file -> file.text }
+  bams = align.out[0].toSortedList { bam -> bam.name }
+  bais = align.out[1].toSortedList { bai -> bai.name }
+  my_combine( bams, bais )
+  my_combine.out.view { it -> it.text }
 
   foo()
 
@@ -80,10 +80,8 @@ workflow {
 }
 
 output {
-  directory 'results'
-  mode 'copy'
-
   'data' {
+    path { val -> { file -> file } }
     index {
       path 'index.csv'
       mapper { val -> [filename: val] }
