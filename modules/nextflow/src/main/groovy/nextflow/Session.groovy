@@ -792,7 +792,7 @@ class Session implements ISession {
             log.debug "Session aborted -- Cause: ${cause?.message ?: cause ?: '-'}"
         aborted = true
         error = cause
-        LoggerHelper.skipConsole = true
+        LoggerHelper.aborted = true
         try {
             // log the dataflow network status
             def status = dumpNetworkStatus()
