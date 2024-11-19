@@ -55,6 +55,7 @@ Minimal permissions policies to be attached to the AWS account used by Nextflow 
   "batch:DescribeJobs"
   "batch:RegisterJobDefinition"
   "batch:DescribeJobDefinitions"
+  "batch:TagResource"
   ```
 
 - To view [EC2](https://aws.amazon.com/ec2/) instances:
