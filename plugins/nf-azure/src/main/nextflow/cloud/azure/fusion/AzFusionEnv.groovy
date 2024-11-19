@@ -49,17 +49,26 @@ class AzFusionEnv implements FusionEnv {
             throw new IllegalArgumentException("Missing Azure Storage account name")
         }
 
-        if (cfg.storage().accountKey && cfg.storage().sasToken) {
-            throw new IllegalArgumentException("Azure Storage Access key and SAS token detected. Only one is allowed")
+        result.AZURE_STORAGE_ACCOUNT = cfg.storage().accountName
+
+        if (cfg.activeDirectory().isConfigured()) {
+            result.AZURE_TENANT_ID = cfg.activeDirectory().tenantId
+            result.AZURE_CLIENT_ID = cfg.activeDirectory().servicePrincipalId
+            result.AZURE_CLIENT_SECRET = cfg.activeDirectory().servicePrincipalSecret
+            return result
         }
 
-        result.AZURE_STORAGE_ACCOUNT = cfg.storage().accountName
-        // In theory, generating an impromptu SAS token for authentication methods other than
-        // `azure.storage.sasToken` should not be necessary, because those methods should already allow sufficient
-        // access for normal operation. Nevertheless, #5287 heavily implies that failing to do so causes the Azure
-        // Storage plugin or Fusion to fail. In any case, it may be possible to remove this in the future.
-        result.AZURE_STORAGE_SAS_TOKEN = getOrCreateSasToken()
+        if (cfg.managedIdentity().isConfigured()) {
+            // User-assigned Managed Identity
+            if (cfg.managedIdentity().clientId) {
+                result.AZURE_CLIENT_ID = cfg.managedIdentity().clientId
+            }
+            // System Managed Identity
+            return result
+        }
 
+        // Shared Key authentication or Account SAS token
+        result.AZURE_STORAGE_SAS_TOKEN = getOrCreateSasToken()
         return result
     }
 
@@ -74,12 +83,6 @@ class AzFusionEnv implements FusionEnv {
         // If a SAS token is already defined in the configuration, just return it
         if (cfg.storage().sasToken) {
             return cfg.storage().sasToken
-        }
-
-        // For Active Directory and Managed Identity, we cannot generate an *account* SAS token, but we can generate
-        // a *container* SAS token for the work directory.
-        if (cfg.activeDirectory().isConfigured() || cfg.managedIdentity().isConfigured()) {
-            return AzHelper.generateContainerSasWithActiveDirectory(Global.session.workDir, cfg.storage().tokenDuration)
         }
 
         // Shared Key authentication can use an account SAS token
