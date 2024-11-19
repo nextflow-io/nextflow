@@ -228,29 +228,47 @@ In general, you should not need to manually copy files, because Nextflow will au
 
 ## Remote files
 
-Nextflow can work with many kinds of remote files and objects using the same interface as for local files. The following protocols are supported:
+Nextflow works with many types of remote files and objects using the same interface as for local files. The following protocols are supported:
 
-- HTTP(S) / FTP (`http://`, `https://`, `ftp://`)
+- HTTP(S)/FTP (`http://`, `https://`, `ftp://`)
 - Amazon S3 (`s3://`)
 - Azure Blob Storage (`az://`)
 - Google Cloud Storage (`gs://`)
 
-To reference a remote file, simple specify the URL when opening the file:
+Nextflow downloads remote files when tasks that reference them are created and they do not exist on the same filesystem as the work directory. When possible, standard libraries are used to download files. For example, HttpURLConnection is used for HTTP, and AWS Java SDK is used for S3. Implementations can be viewed under FileSystemProvider in the Nextflow codebase.
+
+To reference a remote file, simply specify the URL when opening the file:
 
 ```nextflow
 pdb = file('http://files.rcsb.org/header/5FID.pdb')
 ```
 
-You can then access it as a local file as described previously:
+It can then be accessed as a local file:
 
 ```nextflow
 println pdb.text
 ```
 
+By default, downloaded files are staged in a subdirectory of the work directory. The subdirectory is named using the prefix `stage-`, followed by a hash. For example, `stage-XXXXXXXX`.
+
+<!---
+Details of hash generation.
+--->
+
+Remote files are cached using the aforementioned hash. If multiple tasks request the same remote file at the same time, Nextflow will likely download a separate copy to separate folders.
+
+<!---
+Details of caching behavior.
+--->
+
 :::{note}
-Not all operations are supported for all protocols. In particular, writing and directory listing are not supported for HTTP(S) and FTP paths.
+Not all operations are supported for all protocols. For example, writing and directory listing is not supported for HTTP(S) and FTP paths.
 :::
 
 :::{note}
-Additional configuration may be required to work with cloud object storage (e.g. to authenticate with a private bucket). Refer to the respective page for each cloud storage provider for more information.
+A custom process can be used to download a file into a task directory instead of using built-in remote file staging. To be staged by Nextflow, the file name must be provided to the process as a val input instead of a path input.
+:::
+
+:::{note}
+Additional configuration may be required to work with cloud object storage. For example, to authenticate with a private bucket. Refer to the respective page for each cloud storage provider for more information.
 :::
