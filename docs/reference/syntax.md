@@ -767,10 +767,12 @@ myList[0]
 
 ### Property expression
 
-A property expression consists of an *object expression* and a *property*, separated by a dot:
+A property expression consists of an *object expression* and a *property*, separated by a *dot*, *spread dot*, or *safe dot*:
 
 ```nextflow
-file.text
+myFile.text       // dot
+myFiles*.text     // spread dot:  myFiles.collect { myFile -> myFile.text }
+myFile?.text      // safe dot:    myFile != null ? myFile.text : null
 ```
 
 The property must be an identifier or string literal.
@@ -783,10 +785,12 @@ A function call consists of a name and argument list:
 printf('Hello %s!\n', 'World')
 ```
 
-A *method call* consists of an *object expression* and a function call separated by a dot:
+A *method call* consists of an *object expression* and a function call separated by a *dot*, *spread dot*, or *safe dot*:
 
 ```nextflow
-myList.size()
+myFile.getText()    // dot
+myFiles*.getText()  // spread dot:  myFiles.collect { myFile -> myFile.getText() }
+myFile?.getText()   // safe dot:    myFile != null ? myFile.getText() : null
 ```
 
 The argument list may contain any number of *positional arguments* and *named arguments*:
