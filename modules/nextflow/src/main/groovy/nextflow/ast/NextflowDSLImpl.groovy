@@ -577,11 +577,10 @@ class NextflowDSLImpl implements ASTTransformation {
         /**
          * Transform a DSL `process` definition into a proper method invocation
          *
-         * @param name
          * @param methodCall
          * @param unit
          */
-        protected void convertProcessBlock( String name, MethodCallExpression methodCall, SourceUnit unit ) {
+        protected void convertProcessBlock( MethodCallExpression methodCall, SourceUnit unit ) {
             log.trace "Apply task closure transformation to method call: $methodCall"
 
             final args = methodCall.arguments as ArgumentListExpression
@@ -641,9 +640,8 @@ class NextflowDSLImpl implements ASTTransformation {
                             readSource(stm,source,unit)
                             break
 
-                        case 'shell':
-                            log.warn1 "Process $name > the `shell` block is deprecated, use `script` instead"
                         case 'script':
+                        case 'shell':
                             bodyLabel = currentLabel
                             iterator.remove()
                             execStatements << stm
@@ -1365,7 +1363,7 @@ class NextflowDSLImpl implements ASTTransformation {
             methodCall.setArguments( args )
 
             // now continue as before !
-            convertProcessBlock(name, methodCall, unit)
+            convertProcessBlock(methodCall, unit)
         }
 
         /**
