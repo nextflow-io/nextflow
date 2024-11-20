@@ -310,7 +310,7 @@ class TaskProcessor {
         this.config = config
         this.taskBody = taskBody
         if( taskBody.isShell )
-            log.warn1 "Process ${name} > the `shell` block is deprecated, use `script` instead"
+            log.warn "Process ${name} > the `shell` block is deprecated, use `script` instead"
         this.name = name
         this.maxForks = config.maxForks && config.maxForks>0 ? config.maxForks as int : 0
         this.forksCount = maxForks ? new LongAdder() : null
