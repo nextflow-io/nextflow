@@ -31,7 +31,7 @@ dependencies {
     api "org.slf4j:log4j-over-slf4j:2.0.7"
     api "ch.qos.logback:logback-classic:1.4.14"
     api "ch.qos.logback:logback-core:1.4.14"
-    api "org.gpars:gpars:2.0-SNAPSHOT"
+    api "org.codehaus.gpars:gpars:1.2.2"
     api("ch.artecat.grengine:grengine:3.0.2") { exclude group: 'org.codehaus.groovy' }
     api "commons-lang:commons-lang:2.6"
     api "commons-codec:commons-codec:1.15"
