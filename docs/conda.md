@@ -50,9 +50,9 @@ process foo {
   conda 'bwa samtools multiqc'
 
   script:
-  '''
+  """
   your_command --here
-  '''
+  """
 }
 ```
 
@@ -100,9 +100,9 @@ process foo {
   conda '/some/path/my-env.yaml'
 
   script:
-  '''
+  """
   your_command --here
-  '''
+  """
 }
 ```
 
@@ -131,9 +131,9 @@ process foo {
   conda '/path/to/an/existing/env/directory'
 
   script:
-  '''
+  """
   your_command --here
-  '''
+  """
 }
 ```
 

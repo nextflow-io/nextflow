@@ -313,9 +313,9 @@ process cpu_task {
     array 100
 
     script:
-    '''
+    """
     your_command --here
-    '''
+    """
 }
 ```
 
@@ -453,9 +453,9 @@ process foo {
   conda 'bwa=0.7.15'
 
   script:
-  '''
+  """
   your_command --here
-  '''
+  """
 }
 ```
 
@@ -479,7 +479,7 @@ process runThisInDocker {
 
   script:
   """
-  <your holy script here>
+  your_command --here
   """
 }
 ```
@@ -509,9 +509,9 @@ process runThisWithDocker {
     path 'output.txt'
 
     script:
-    '''
+    """
     your_command --data /db > output.txt
-    '''
+    """
 }
 ```
 
@@ -554,7 +554,9 @@ process sayHello {
   debug true
 
   script:
-  "echo Hello"
+  """
+  echo Hello
+  """
 }
 ```
 
@@ -577,7 +579,7 @@ process big_job {
 
     script:
     """
-    your task script here
+    your_command --here
     """
 }
 ```
@@ -792,9 +794,9 @@ process bigTask {
   label 'big_mem'
 
   script:
-  '''
-  <task script>
-  '''
+  """
+  your_command --here
+  """
 }
 ```
 
@@ -825,7 +827,7 @@ process foo {
 
   script:
   """
-  <your script here>
+  your_command --here
   """
 }
 ```
@@ -850,9 +852,9 @@ process foo {
   queue "${task.submitAttempt==1 : 'spot-compute' : 'on-demand-compute'}"
 
   script:
-  '''
-  your_job --here
-  '''
+  """
+  your_command --here
+  """
 }
 ```
 
@@ -897,9 +899,9 @@ process doNotParallelizeIt {
   maxForks 1
 
   script:
-  '''
-  <your script here>
-  '''
+  """
+  your_command --here
+  """
 }
 ```
 
@@ -940,7 +942,7 @@ process big_job {
 
     script:
     """
-    your task script here
+    your_command --here
     """
 }
 ```
@@ -1029,9 +1031,9 @@ process your_task {
   pod env: 'FOO', value: 'bar'
 
   script:
-  '''
+  """
   echo $FOO
-  '''
+  """
 }
 ```
 
@@ -1227,9 +1229,9 @@ process foo {
     path 'chunk_*'
 
     script:
-    '''
+    """
     printf 'Hola' | split -b 1 - chunk_
-    '''
+    """
 }
 ```
 
@@ -1253,9 +1255,9 @@ process foo {
     path 'chunk_*'
 
     script:
-    '''
+    """
     printf 'Hola' | split -b 1 - chunk_
-    '''
+    """
 }
 ```
 
@@ -1327,7 +1329,7 @@ process grid_job {
 
     script:
     """
-    your task script here
+    your_command --here
     """
 }
 ```
@@ -1360,9 +1362,9 @@ process my_task {
     resourceLabels region: 'some-region', user: 'some-username'
 
     script:
-    '''
-    <task script>
-    '''
+    """
+    your_command --here
+    """
 }
 ```
 
@@ -1398,9 +1400,9 @@ process my_task {
   resourceLimits cpus: 24, memory: 768.GB, time: 72.h
 
   script:
-  '''
+  """
   your_command --here
-  '''
+  """
 }
 ```
 
@@ -1439,9 +1441,9 @@ process simpleTask {
   path 'data_out'
 
   script:
-  '''
-  <task script>
-  '''
+  """
+  your_command --here
+  """
 }
 ```
 
@@ -1479,9 +1481,9 @@ process doMoreThings {
     shell '/bin/bash', '-euo', 'pipefail'
 
     script:
-    '''
-    your_command_here
-    '''
+    """
+    your_command --here
+    """
 }
 ```
 
@@ -1504,9 +1506,9 @@ process foo {
     spack 'bwa@0.7.15'
 
     script:
-    '''
+    """
     your_command --here
-    '''
+    """
 }
 ```
 
@@ -1644,7 +1646,7 @@ process big_job {
 
     script:
     """
-    your task script here
+    your_command --here
     """
 }
 ```

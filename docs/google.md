@@ -347,7 +347,7 @@ process custom_resources_task {
 
     script:
     """
-    <Your script here>
+    your_command --here
     """
 }
 
@@ -356,7 +356,7 @@ process predefined_resources_task {
 
     script:
     """
-    <Your script here>
+    your_command --here
     """
 }
 ```

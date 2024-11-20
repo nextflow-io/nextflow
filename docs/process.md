@@ -346,7 +346,9 @@ process basicExample {
   val x
 
   script:
-  "echo process job $x"
+  """
+  echo process job $x
+  """
 }
 
 workflow {
@@ -376,7 +378,9 @@ process basicExample {
   val x
 
   script:
-  "echo process job $x"
+  """
+  echo process job $x
+  """
 }
 
 workflow {
@@ -397,7 +401,9 @@ process blastThemAll {
   path query_file
 
   script:
-  "blastp -query ${query_file} -db nr"
+  """
+  blastp -query ${query_file} -db nr
+  """
 }
 
 workflow {
@@ -432,7 +438,9 @@ process blastThemAll {
   path 'query.fa'
 
   script:
-  "blastp -query query.fa -db nr"
+  """
+  blastp -query query.fa -db nr
+  """
 }
 
 workflow {
@@ -503,7 +511,9 @@ process blastThemAll {
     path 'seq'
 
     script:
-    "echo seq*"
+    """
+    echo seq*
+    """
 }
 
 workflow {
@@ -543,7 +553,9 @@ process blastThemAll {
     path 'seq?.fa'
 
     script:
-    "cat seq1.fa seq2.fa seq3.fa"
+    """
+    cat seq1.fa seq2.fa seq3.fa
+    """
 }
 
 workflow {
@@ -935,9 +947,9 @@ process splitLetters {
     path 'chunk_*'
 
     script:
-    '''
+    """
     printf 'Hola' | split -b 1 - chunk_
-    '''
+    """
 }
 
 workflow {
@@ -1084,9 +1096,9 @@ process foo {
     path 'result.txt', hidden: true
 
     script:
-    '''
+    """
     echo 'another new line' >> result.txt
-    '''
+    """
 }
 ```
 
@@ -1098,10 +1110,10 @@ process foo {
     tuple path('last_result.txt'), path('result.txt', hidden: true)
 
     script:
-    '''
+    """
     echo 'another new line' >> result.txt
     echo 'another new line' > last_result.txt
-    '''
+    """
 }
 ```
 :::
@@ -1235,7 +1247,7 @@ process foo {
 
   script:
   """
-  < your job here >
+  your_command --here
   """
 }
 ```
@@ -1275,7 +1287,9 @@ process foo {
     maxRetries 3
 
     script:
-    <your job here>
+    """
+    your_command --here
+    """
 }
 ```
 
@@ -1298,7 +1312,9 @@ process foo {
     maxRetries 3
 
     script:
-    <your job here>
+    """
+    your_command --here
+    """
 }
 ```
 In the above example, the {ref}`process-memory` is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to one GB. In the subsequent attempts, it doubles the previously allocated memory. See {ref}`trace-report` for more information about trace records.
@@ -1314,9 +1330,9 @@ process foo {
   maxRetries 5
 
   script:
-  '''
+  """
   your_command --here
-  '''
+  """
 }
 ```
 

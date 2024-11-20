@@ -294,18 +294,18 @@ process foo {
   container 'image_name_1'
 
   script:
-  '''
+  """
   do this
-  '''
+  """
 }
 
 process bar {
   container 'image_name_2'
 
   script:
-  '''
+  """
   do that
-  '''
+  """
 }
 ```
 
@@ -383,18 +383,18 @@ process foo {
   container 'image_name_1'
 
   script:
-  '''
+  """
   do this
-  '''
+  """
 }
 
 process bar {
   container 'image_name_2'
 
   script:
-  '''
+  """
   do that
-  '''
+  """
 }
 ```
 
