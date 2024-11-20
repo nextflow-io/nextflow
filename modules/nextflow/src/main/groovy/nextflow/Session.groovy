@@ -71,6 +71,7 @@ import nextflow.util.Barrier
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
+import nextflow.util.LoggerHelper
 import nextflow.util.NameGenerator
 import nextflow.util.SysHelper
 import nextflow.util.ThreadPoolManager
@@ -787,10 +788,11 @@ class Session implements ISession {
      */
     void abort(Throwable cause = null) {
         if( aborted ) return
-        if( !(cause instanceof ScriptCompilationException) )
+        if( cause !instanceof ScriptCompilationException )
             log.debug "Session aborted -- Cause: ${cause?.message ?: cause ?: '-'}"
         aborted = true
         error = cause
+        LoggerHelper.aborted = true
         try {
             // log the dataflow network status
             def status = dumpNetworkStatus()
