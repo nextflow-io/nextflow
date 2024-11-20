@@ -146,9 +146,24 @@ jobs:
           fetch-depth: 1
           submodules: true
 
+      - name: Login to Docker hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_ID }}
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+
+      - name: Login to Seqera registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.SEQERA_PUBLIC_CR_URL }}
+          username: ${{ secrets.SEQERA_PUBLIC_CR_USER }}
+          password: ${{ secrets.SEQERA_PUBLIC_CR_PASSWORD }}
+
       # deploy step
       - name: Deploy to docker
         run: bash .github/scripts/deploy-to-docker.sh
+        env:
+          SEQERA_REGISTRY: ${{ vars.SEQERA_PUBLIC_CR_URL }}
 
   # --------------------------------------------------
   # job: deploy-plugins

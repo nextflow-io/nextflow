@@ -116,12 +116,6 @@ release:
 	BUILD_PACK=1 ./gradlew release
 
 #
-# Create and upload docker image distribution
-#
-dockerImage:
-	BUILD_PACK=1 ./gradlew dockerImage
-
-#
 # Create local docker image
 #
 dockerPack:

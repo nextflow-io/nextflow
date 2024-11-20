@@ -121,23 +121,6 @@ task installScratch(type: Copy, dependsOn: ['pack']) {
 }
 
 /*
- * build, tag and publish a and new docker packaged nextflow release
- */
-task dockerImage(type: Exec) {
-
-    def temp = File.createTempFile('upload',null)
-    temp.deleteOnExit()
-    temp.text =  """\
-    grep $version nextflow
-    cp nextflow docker/nextflow
-    cd docker
-    make release version=$version
-    """.stripIndent()
-
-    commandLine 'bash', '-e', temp.absolutePath
-}
-
-/*
  * Build a docker container image with the current snapshot
  * DO NOT CALL IT DIRECTLY! Use the `make dockerPack` command instead
  */
@@ -184,7 +167,7 @@ task dockerPack(type: Exec, dependsOn: ['packOne']) {
  * 
  * https://github.com/aktau/github-release/
  */
-task release(type: Exec, dependsOn: [pack, dockerImage]) {
+task release(type: Exec, dependsOn: [pack]) {
 
     def launcherFile = file('nextflow').absoluteFile
     def launcherSha1 = file('nextflow.sha1').absoluteFile
