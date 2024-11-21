@@ -345,8 +345,7 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     int getMaxRetries() {
         def result = get('maxRetries')
-        def defResult = getErrorStrategy() == ErrorStrategy.RETRY ? 1 : 0
-        result ? result as int : defResult
+        result ? result as int : 1
     }
 
     int getMaxErrors() {

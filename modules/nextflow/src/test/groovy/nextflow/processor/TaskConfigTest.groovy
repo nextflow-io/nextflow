@@ -157,8 +157,8 @@ class TaskConfigTest extends Specification {
 
         where:
         value   | expected
-        null    | 0
-        0       | 0
+        null    | 1
+        0       | 1
         1       | 1
         '3'     | 3
         10      | 10
@@ -171,8 +171,8 @@ class TaskConfigTest extends Specification {
         when:
         config = new TaskConfig()
         then:
-        config.maxRetries == 0
-        config.getMaxRetries() == 0
+        config.maxRetries == 1
+        config.getMaxRetries() == 1
         config.getErrorStrategy() == ErrorStrategy.TERMINATE
 
         when:
