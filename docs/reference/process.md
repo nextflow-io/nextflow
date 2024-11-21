@@ -269,6 +269,7 @@ process cpu_task {
     spack 'blast-plus@2.13.0'
     arch 'linux/x86_64', target: 'cascadelake'
 
+    script:
     """
     blastp -query input_sequence -num_threads ${task.cpus}
     """
@@ -311,9 +312,10 @@ process cpu_task {
     executor 'slurm'
     array 100
 
-    '''
+    script:
+    """
     your_command --here
-    '''
+    """
 }
 ```
 
@@ -361,6 +363,7 @@ For example:
 process foo {
   beforeScript 'source /cluster/bin/setup'
 
+  script:
   """
   echo bar
   """
@@ -380,9 +383,7 @@ The cache is enabled by default, but you can disable it for a specific process b
 ```nextflow
 process noCacheThis {
   cache false
-
-  script:
-  <your command string here>
+  // ...
 }
 ```
 
@@ -451,9 +452,10 @@ Nextflow automatically sets up an environment for the given package names listed
 process foo {
   conda 'bwa=0.7.15'
 
-  '''
+  script:
+  """
   your_command --here
-  '''
+  """
 }
 ```
 
@@ -475,8 +477,9 @@ For example:
 process runThisInDocker {
   container 'dockerbox:tag'
 
+  script:
   """
-  <your holy script here>
+  your_command --here
   """
 }
 ```
@@ -505,9 +508,10 @@ process runThisWithDocker {
     output:
     path 'output.txt'
 
-    '''
+    script:
+    """
     your_command --data /db > output.txt
-    '''
+    """
 }
 ```
 
@@ -526,6 +530,7 @@ process big_job {
   cpus 8
   executor 'sge'
 
+  script:
   """
   blastp -query input_sequence -num_threads ${task.cpus}
   """
@@ -549,7 +554,9 @@ process sayHello {
   debug true
 
   script:
-  "echo Hello"
+  """
+  echo Hello
+  """
 }
 ```
 
@@ -570,8 +577,9 @@ process big_job {
     disk '2 GB'
     executor 'cirrus'
 
+    script:
     """
-    your task script here
+    your_command --here
     """
 }
 ```
@@ -631,8 +639,7 @@ For example:
 process ignoreAnyError {
   errorStrategy 'ignore'
 
-  script:
-  <your command string here>
+  // ...
 }
 ```
 
@@ -644,8 +651,7 @@ The `retry` error strategy allows you to re-submit for execution a process retur
 process retryIfFail {
   errorStrategy 'retry'
 
-  script:
-  <your command string here>
+  // ...
 }
 ```
 
@@ -691,8 +697,7 @@ The following example shows how to set the process's executor:
 process doSomething {
   executor 'sge'
 
-  script:
-  <your script here>
+  // ...
 }
 ```
 
@@ -714,6 +719,7 @@ process mapping {
   path genome
   tuple val(sampleId), path(reads)
 
+  script:
   """
   STAR --genomeDir $genome --readFilesIn $reads ${task.ext.args ?: ''}
   """
@@ -727,6 +733,8 @@ The `ext` directive can be set in the process definition:
 ```nextflow
 process mapping {
   ext version: '2.5.3', args: '--foo --bar'
+
+  // ...
 }
 ```
 
@@ -785,9 +793,10 @@ The `label` directive allows the annotation of processes with mnemonic identifie
 process bigTask {
   label 'big_mem'
 
-  '''
-  <task script>
-  '''
+  script:
+  """
+  your_command --here
+  """
 }
 ```
 
@@ -816,8 +825,9 @@ This directive is optional and if specified overrides the cpus and memory direct
 process foo {
   machineType 'n1-highmem-8'
 
+  script:
   """
-  <your script here>
+  your_command --here
   """
 }
 ```
@@ -840,10 +850,11 @@ process foo {
   maxSubmitAwait '10 mins'
   maxRetries 3
   queue "${task.submitAttempt==1 : 'spot-compute' : 'on-demand-compute'}"
+
   script:
-  '''
-  your_job --here
-  '''
+  """
+  your_command --here
+  """
 }
 ```
 
@@ -862,6 +873,7 @@ process retryIfFail {
   errorStrategy 'retry'
   maxErrors 5
 
+  script:
   """
   echo 'do this as that .. '
   """
@@ -886,9 +898,10 @@ If you want to execute a process in a sequential manner, set this directive to o
 process doNotParallelizeIt {
   maxForks 1
 
-  '''
-  <your script here>
-  '''
+  script:
+  """
+  your_command --here
+  """
 }
 ```
 
@@ -903,6 +916,7 @@ process retryIfFail {
     errorStrategy 'retry'
     maxRetries 3
 
+    script:
     """
     echo 'do this as that .. '
     """
@@ -926,8 +940,9 @@ process big_job {
     memory '2 GB'
     executor 'sge'
 
+    script:
     """
-    your task script here
+    your_command --here
     """
 }
 ```
@@ -960,6 +975,7 @@ In a process definition you can use the `module` directive to load a specific mo
 process basicExample {
   module 'ncbi-blast/2.2.27'
 
+  script:
   """
   blastp -query <etc..>
   """
@@ -972,6 +988,7 @@ You can repeat the `module` directive for each module you need to load. Alternat
 process manyModules {
   module 'ncbi-blast/2.2.27:t_coffee/10.0:clustalw/2.1'
 
+  script:
   """
   blastp -query <etc..>
   """
@@ -990,6 +1007,7 @@ process big_job {
   penv 'smp'
   executor 'sge'
 
+  script:
   """
   blastp -query input_sequence -num_threads ${task.cpus}
   """
@@ -1012,9 +1030,10 @@ For example:
 process your_task {
   pod env: 'FOO', value: 'bar'
 
-  '''
+  script:
+  """
   echo $FOO
-  '''
+  """
 }
 ```
 
@@ -1209,9 +1228,10 @@ process foo {
     output:
     path 'chunk_*'
 
-    '''
+    script:
+    """
     printf 'Hola' | split -b 1 - chunk_
-    '''
+    """
 }
 ```
 
@@ -1234,9 +1254,10 @@ process foo {
     output:
     path 'chunk_*'
 
-    '''
+    script:
+    """
     printf 'Hola' | split -b 1 - chunk_
-    '''
+    """
 }
 ```
 
@@ -1306,8 +1327,9 @@ process grid_job {
     queue 'long'
     executor 'sge'
 
+    script:
     """
-    your task script here
+    your_command --here
     """
 }
 ```
@@ -1339,9 +1361,10 @@ The `resourceLabels` directive allows you to specify custom name-value pairs tha
 process my_task {
     resourceLabels region: 'some-region', user: 'some-username'
 
-    '''
-    <task script>
-    '''
+    script:
+    """
+    your_command --here
+    """
 }
 ```
 
@@ -1377,9 +1400,9 @@ process my_task {
   resourceLimits cpus: 24, memory: 768.GB, time: 72.h
 
   script:
-  '''
+  """
   your_command --here
-  '''
+  """
 }
 ```
 
@@ -1417,9 +1440,10 @@ process simpleTask {
   output:
   path 'data_out'
 
-  '''
-  <task script>
-  '''
+  script:
+  """
+  your_command --here
+  """
 }
 ```
 
@@ -1456,9 +1480,10 @@ The `shell` directive allows you to define a custom shell command for process sc
 process doMoreThings {
     shell '/bin/bash', '-euo', 'pipefail'
 
-    '''
-    your_command_here
-    '''
+    script:
+    """
+    your_command --here
+    """
 }
 ```
 
@@ -1480,9 +1505,10 @@ Nextflow automatically sets up an environment for the given package names listed
 process foo {
     spack 'bwa@0.7.15'
 
-    '''
+    script:
+    """
     your_command --here
-    '''
+    """
 }
 ```
 
@@ -1587,6 +1613,7 @@ process foo {
   input:
   val code
 
+  script:
   """
   echo $code
   """
@@ -1617,8 +1644,9 @@ The `time` directive allows you to define how long a process is allowed to run. 
 process big_job {
     time '1h'
 
+    script:
     """
-    your task script here
+    your_command --here
     """
 }
 ```

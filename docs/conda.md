@@ -49,9 +49,10 @@ Conda package names can specified using the `conda` directive. Multiple package 
 process foo {
   conda 'bwa samtools multiqc'
 
-  '''
+  script:
+  """
   your_command --here
-  '''
+  """
 }
 ```
 
@@ -98,9 +99,10 @@ The path of an environment file can be specified using the `conda` directive:
 process foo {
   conda '/some/path/my-env.yaml'
 
-  '''
+  script:
+  """
   your_command --here
-  '''
+  """
 }
 ```
 
@@ -128,9 +130,10 @@ If you already have a local Conda environment, you can use it in your workflow s
 process foo {
   conda '/path/to/an/existing/env/directory'
 
-  '''
+  script:
+  """
   your_command --here
-  '''
+  """
 }
 ```
 
