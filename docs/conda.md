@@ -62,6 +62,7 @@ The usual Conda package syntax and naming conventions can be used. The version o
 
 The name of the channel where a package is located can be specified prefixing the package with the channel name as shown here `bioconda::bwa=0.7.15`.
 
+(conda-env-files)=
 ### Use Conda environment files
 
 Conda environments can also be defined using one or more Conda environment files. This is a file that lists the required packages and channels structured using the YAML format. For example:
@@ -96,6 +97,7 @@ process foo {
 The environment file name **must** have a `.yml` or `.yaml` extension or else it won't be properly recognised.
 :::
 
+(conda-pypi)=
 ### Python Packages from PyPI
 
 Conda environment files can also be used to install Python packages from the [PyPI repository](https://pypi.org/)), through the `pip` package manager (which must also be explicitly listed as a required package):
