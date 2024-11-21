@@ -19,8 +19,11 @@ The following task properties are defined in the process body:
 : *Available only in `exec:` blocks*
 : The task unique hash ID.
 
+`task.id`
+: The pipeline-level task index. Corresponds to `task_id` in the {ref}`execution trace <trace-report>`.
+
 `task.index`
-: The task index (corresponds to `task_id` in the {ref}`execution trace <trace-report>`).
+: The process-level task index.
 
 `task.name`
 : *Available only in `exec:` blocks*
@@ -230,6 +233,10 @@ The above examples will request 4 GPUs of type `nvidia-tesla-k80`.
 
 :::{note}
 This directive is only used by certain executors. Refer to the {ref}`executor-page` page to see which executors support this directive.
+:::
+
+:::{note}
+Additional options may be required to fully enable the use of accelerators. When using containers with GPUs, you must pass the GPU drivers through to the container. For Docker, this requires the option `--gpus all` in the docker run command. For Apptainer/Singularity, this requires the option `--nv`. The specific implementation details depend on the accelerator and container type being used.
 :::
 
 :::{note}

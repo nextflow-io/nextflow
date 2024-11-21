@@ -119,15 +119,16 @@ NXF_VER=24.06.0-edge nextflow info
 
 ## Standalone distribution
 
-Nextflow has a set of {ref}`core plugins <plugins-core>` which are downloaded at runtime by default. There is also a standalone distribution (i.e. the `all` distribution) which comes pre-packaged with all core plugins. This distribution is mainly useful for offline environments.
+The Nextflow standalone distribution (i.e. the `dist` distribution) consists of self-contained `nextflow` executable file
+that includes all the application dependencies for core functionalities, and it can run without downloading third parties
+libraries. This distribution is mainly useful for offline environments.
 
-The installer for the `all` distribution can be found on the [GitHub releases page](https://github.com/nextflow-io/nextflow/releases), under the "Assets" section for a specific release. The installation procedure is the same as for the standard distribution, only using this URL instead of `https://get.nextflow.io`:
+Note however the support for cloud services e.g. AWS, Seqera Platform, Wave, etc. still require the download
+of the corresponding Nextflow plugins.
+
+The installer for the `dist` distribution can be found on the [GitHub releases page](https://github.com/nextflow-io/nextflow/releases), under the "Assets" section for a specific release. The installation procedure is the same as for the standard distribution, only using this URL instead of `https://get.nextflow.io`:
 
 ```bash
-export NXF_VER=23.10.0
-curl -s https://github.com/nextflow-io/nextflow/releases/download/v$NXF_VER/nextflow-$NXF_VER-all
+export NXF_VER=24.10.0
+curl -s https://github.com/nextflow-io/nextflow/releases/download/v$NXF_VER/nextflow-$NXF_VER-dist
 ```
-
-:::{warning}
-The `all` distribution does not support third-party plugins. Only the {ref}`core plugins <plugins-core>` are supported.
-:::
