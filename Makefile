@@ -92,22 +92,10 @@ distribution:
 	BUILD_PACK=1 ./gradlew buildInfo compile assemble pack javadocJar sourcesJar testFixturesJar
 
 #
-# Upload JAR artifacts to Maven Central
-#
-upload:
-	./gradlew upload
-
-#
 # Create self-contained distribution package
 #
 pack:
 	BUILD_PACK=1 ./gradlew pack
-
-#
-# Close artifacts uploaded to Maven central
-#
-close:
-	./gradlew closeAndReleaseRepository
 
 #
 # Upload final package to GitHub

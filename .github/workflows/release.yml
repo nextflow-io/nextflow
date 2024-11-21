@@ -94,6 +94,10 @@ jobs:
       # deploy step
       - name: Deploy to maven
         run: bash .github/scripts/deploy-to-maven.sh
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_DEPLOY_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_DEPLOY_SECRET_ACCESS_KEY }}
+          MAVEN_PUBLISH_URL: ${{ vars.MAVEN_PUBLISH_URL }}
 
   # --------------------------------------------------
   # job: deploy-s3
