@@ -1,3 +1,4 @@
+(vscode-page)=
 
 # VS Code integration
 
@@ -442,6 +443,10 @@ The `each` process input is deprecated. Use the `combine` or `cross` operator to
 **Process when section**
 
 The process `when` section is deprecated. Use conditional logic, such as an `if` statement or the `filter` operator, to control the process invocation in the calling workflow.
+
+**Process shell section**
+
+The process `shell` section is deprecated. Use the `script` block instead. The VS Code extension provides syntax highlighting and error checking to help distinguish between Nextflow variables and Bash variables.
 
 ### Configuration syntax
 
