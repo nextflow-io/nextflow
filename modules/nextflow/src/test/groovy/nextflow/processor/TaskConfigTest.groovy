@@ -158,7 +158,7 @@ class TaskConfigTest extends Specification {
         where:
         value   | expected
         null    | 1
-        0       | 0
+        0       | 1
         1       | 1
         '3'     | 3
         10      | 10
