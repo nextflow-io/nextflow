@@ -55,6 +55,7 @@ process convertToUpper {
   output:
     stdout
 
+  script:
   """
   rev $x
   """

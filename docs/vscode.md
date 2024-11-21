@@ -342,6 +342,8 @@ process PROC {
     input:
     env FOO
     env 'BAR'
+
+    // ...
 }
 ```
 
@@ -352,6 +354,8 @@ process PROC {
     input:
     env 'FOO'
     env 'BAR'
+
+    // ...
 }
 ```
 

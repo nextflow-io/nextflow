@@ -29,6 +29,7 @@ process splitLetters {
     output:
     file 'chunk_*' into letters
 
+    script:
     """
     printf '${params.str}' | split -b 6 - chunk_
     """
@@ -41,6 +42,7 @@ process convertToUpper {
     output:
     stdout result
 
+    script:
     """
     cat $x | tr '[a-z]' '[A-Z]'
     """

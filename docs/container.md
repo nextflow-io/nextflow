@@ -293,17 +293,19 @@ It is possible to specify a different Docker image for each process definition i
 process foo {
   container 'image_name_1'
 
-  '''
+  script:
+  """
   do this
-  '''
+  """
 }
 
 process bar {
   container 'image_name_2'
 
-  '''
+  script:
+  """
   do that
-  '''
+  """
 }
 ```
 
@@ -380,17 +382,19 @@ It is possible to specify a different container image for each process definitio
 process foo {
   container 'image_name_1'
 
-  '''
+  script:
+  """
   do this
-  '''
+  """
 }
 
 process bar {
   container 'image_name_2'
 
-  '''
+  script:
+  """
   do that
-  '''
+  """
 }
 ```
 

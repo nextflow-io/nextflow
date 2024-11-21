@@ -49,6 +49,7 @@ Spack package names can specified using the `spack` directive. Multiple package 
 process foo {
   spack 'bwa samtools py-multiqc'
 
+  script:
   '''
   your_command --here
   '''
@@ -93,6 +94,7 @@ The path of an environment file can be specified using the `spack` directive:
 process foo {
   spack '/some/path/my-env.yaml'
 
+  script:
   '''
   your_command --here
   '''
@@ -111,6 +113,7 @@ If you already have a local Spack environment, you can use it in your workflow s
 process foo {
   spack '/path/to/an/existing/env/directory'
 
+  script:
   '''
   your_command --here
   '''

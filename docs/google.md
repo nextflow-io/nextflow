@@ -104,6 +104,7 @@ process myTask {
     cpus 8
     memory '40 GB'
 
+    script:
     """
     your_command --here
     """
@@ -112,6 +113,7 @@ process myTask {
 process anotherTask {
     machineType 'n1-highmem-8'
 
+    script:
     """
     your_command --here
     """
@@ -130,6 +132,7 @@ process myTask {
     memory '20 GB'
     machineType 'n2-*,c2-*,m3-*'
 
+    script:
     """
     your_command --here
     """
@@ -148,6 +151,7 @@ process myTask {
     memory '20 GB'
     machineType 'template://my-template'
 
+    script:
     """
     your_command --here
     """
@@ -341,16 +345,18 @@ process custom_resources_task {
     memory '40 GB'
     disk '200 GB'
 
+    script:
     """
-    <Your script here>
+    your_command --here
     """
 }
 
 process predefined_resources_task {
     machineType 'n1-highmem-8'
 
+    script:
     """
-    <Your script here>
+    your_command --here
     """
 }
 ```

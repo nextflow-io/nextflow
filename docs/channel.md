@@ -45,6 +45,7 @@ process foo {
   output:
   path 'x.txt'
 
+  script:
   """
   echo $x > x.txt
   """
