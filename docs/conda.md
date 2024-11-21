@@ -116,7 +116,7 @@ dependencies:
 
 ### Conda text files
 
-It is possible to provide the dependencies using a plain text file, just listing each package name as a separate line. For example:
+It is possible to provide dependencies by listing each package name as a separate line in a plain text file. For example:
 
 ```
 bioconda::star=2.5.4a
@@ -132,7 +132,7 @@ Like before, the extension matters. Make sure the dependencies file has a `.txt`
 
 The final way to provide packages to Conda is with [Conda lock files](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#identical-conda-envs).
 
-These are generated from existing conda environements using the following command:
+These are generated from existing Conda environments using the following command:
 
 ```bash
 conda list --explicit > spec-file.txt
@@ -144,11 +144,11 @@ or if using Mamba / Micromamba:
 micromamba env export --explicit > spec-file.txt
 ```
 
-They can also be downloaded from Wave build pages.
+Conda lock files can also be downloaded from Wave build pages.
 
-These files include the every package, including dependencies. As such, no conda environment resolution step is needed. This is faster and also better for reproducibility between runs.
+These files include every package and their dependencies. As such, no Conda environment resolution step is needed. This is faster and more reproducible.
 
-The files contain package URLs and optionally also a md5hash for each download to confirm identity:
+The files contain package URLs and an optional md5hash for each download to confirm identity:
 
 ```
 # micromamba env export --explicit
