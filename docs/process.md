@@ -345,7 +345,10 @@ process basicExample {
   input:
   val x
 
-  "echo process job $x"
+  script:
+  """
+  echo process job $x
+  """
 }
 
 workflow {
@@ -374,7 +377,10 @@ process basicExample {
   input:
   val x
 
-  "echo process job $x"
+  script:
+  """
+  echo process job $x
+  """
 }
 
 workflow {
@@ -394,7 +400,10 @@ process blastThemAll {
   input:
   path query_file
 
-  "blastp -query ${query_file} -db nr"
+  script:
+  """
+  blastp -query ${query_file} -db nr
+  """
 }
 
 workflow {
@@ -428,7 +437,10 @@ process blastThemAll {
   input:
   path 'query.fa'
 
-  "blastp -query query.fa -db nr"
+  script:
+  """
+  blastp -query query.fa -db nr
+  """
 }
 
 workflow {
@@ -450,6 +462,7 @@ process foo {
   input:
   path x
 
+  script:
   """
   your_command --in $x
   """
@@ -497,7 +510,10 @@ process blastThemAll {
     input:
     path 'seq'
 
-    "echo seq*"
+    script:
+    """
+    echo seq*
+    """
 }
 
 workflow {
@@ -536,7 +552,10 @@ process blastThemAll {
     input:
     path 'seq?.fa'
 
-    "cat seq1.fa seq2.fa seq3.fa"
+    script:
+    """
+    cat seq1.fa seq2.fa seq3.fa
+    """
 }
 
 workflow {
@@ -559,6 +578,7 @@ process simpleCount {
   val x
   path "${x}.fa"
 
+  script:
   """
   cat ${x}.fa | grep '>'
   """
@@ -582,6 +602,7 @@ process printEnv {
     input:
     env 'HELLO'
 
+    script:
     '''
     echo $HELLO world!
     '''
@@ -608,6 +629,7 @@ process printAll {
   input:
   stdin
 
+  script:
   """
   cat -
   """
@@ -640,6 +662,7 @@ process tupleExample {
     input:
     tuple val(x), path('input.txt')
 
+    script:
     """
     echo "Processing $x"
     cat input.txt > copy
@@ -665,6 +688,7 @@ process alignSequences {
   path seq
   each mode
 
+  script:
   """
   t_coffee -in $seq -mode $mode > result
   """
@@ -689,6 +713,7 @@ process alignSequences {
   each mode
   each path(lib)
 
+  script:
   """
   t_coffee -in $seq -mode $mode -lib $lib > result
   """
@@ -828,6 +853,7 @@ process foo {
   output:
   val x
 
+  script:
   """
   echo $x > file
   """
@@ -879,6 +905,7 @@ process randomNum {
   output:
   path 'result.txt'
 
+  script:
   '''
   echo $RANDOM > result.txt
   '''
@@ -919,9 +946,10 @@ process splitLetters {
     output:
     path 'chunk_*'
 
-    '''
+    script:
+    """
     printf 'Hola' | split -b 1 - chunk_
-    '''
+    """
 }
 
 workflow {
@@ -966,6 +994,7 @@ process align {
   output:
   path "${species}.aln"
 
+  script:
   """
   t_coffee -in $seq > ${species}.aln
   """
@@ -1066,9 +1095,10 @@ process foo {
     output:
     path 'result.txt', hidden: true
 
-    '''
+    script:
+    """
     echo 'another new line' >> result.txt
-    '''
+    """
 }
 ```
 
@@ -1079,10 +1109,11 @@ process foo {
     output:
     tuple path('last_result.txt'), path('result.txt', hidden: true)
 
-    '''
+    script:
+    """
     echo 'another new line' >> result.txt
     echo 'another new line' > last_result.txt
-    '''
+    """
 }
 ```
 :::
@@ -1099,6 +1130,7 @@ process FOO {
     path 'hello.txt', emit: hello
     path 'bye.txt', emit: bye
 
+    script:
     """
     echo "hello" > hello.txt
     echo "bye" > bye.txt
@@ -1215,7 +1247,7 @@ process foo {
 
   script:
   """
-  < your job here >
+  your_command --here
   """
 }
 ```
@@ -1255,7 +1287,9 @@ process foo {
     maxRetries 3
 
     script:
-    <your job here>
+    """
+    your_command --here
+    """
 }
 ```
 
@@ -1278,7 +1312,9 @@ process foo {
     maxRetries 3
 
     script:
-    <your job here>
+    """
+    your_command --here
+    """
 }
 ```
 In the above example, the {ref}`process-memory` is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to one GB. In the subsequent attempts, it doubles the previously allocated memory. See {ref}`trace-report` for more information about trace records.
@@ -1294,9 +1330,9 @@ process foo {
   maxRetries 5
 
   script:
-  '''
+  """
   your_command --here
-  '''
+  """
 }
 ```
 
