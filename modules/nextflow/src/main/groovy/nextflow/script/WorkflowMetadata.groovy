@@ -306,6 +306,14 @@ class WorkflowMetadata {
         onCompleteActions.add(action)
     }
 
+    void setOnCompleteFormConfig( Closure action ) {
+        final clone = (Closure)action.clone()
+        clone.delegate = NF.binding.variables
+        clone.resolveStrategy = Closure.DELEGATE_FIRST
+
+        onCompleteActions.add(clone)
+    }
+
     /**
      * Implements the following idiom in the pipeline script:
      * <pre>
@@ -331,6 +339,14 @@ class WorkflowMetadata {
      */
     void onError( Closure action ) {
         onErrorActions.add(action)
+    }
+
+    void setOnErrorFromConfig(Closure action ) {
+        final clone = (Closure)action.clone()
+        clone.delegate = NF.binding.variables
+        clone.resolveStrategy = Closure.DELEGATE_FIRST
+
+        onErrorActions.add(clone)
     }
 
     /**
@@ -366,11 +382,11 @@ class WorkflowMetadata {
         if( !workflowConfig ) return
         // -- register `onComplete`
         if( workflowConfig.onComplete instanceof Closure ) {
-            onComplete( (Closure)workflowConfig.onComplete )
+            setOnCompleteFormConfig( (Closure)workflowConfig.onComplete )
         }
         // -- register `onError`
         if( workflowConfig.onError instanceof Closure ) {
-            onError( (Closure)workflowConfig.onError )
+            setOnErrorFromConfig( (Closure)workflowConfig.onError )
         }
     }
 

@@ -1,0 +1,21 @@
+set -e
+
+#
+# run normal mode
+#
+echo ''
+$NXF_RUN | tee stdout
+
+[[ `grep -c 'Workflow Failed!' stdout` == 1 ]] || false
+[[ `grep -c 'local variable: local' stdout` == 1 ]] || false
+[[ `grep -c 'param output dir: results' stdout` == 1 ]] || false
+[[ `grep -c 'Method executed!' stdout` == 1 ]] || false
+[[ `grep 'Executed script' stdout | grep -c 'script-vars-onerror.nf'` == 1 ]] || false
+[[ `grep -c "Can't access to a global variable" stdout` == 1 ]] || false
+[[ `grep -c "Can't access to a private workflow property" stdout` == 1 ]] || false
+[[ `grep -c 'Failure!' stdout` == 1 ]] || false
+
+
+
+
+

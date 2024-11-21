@@ -166,7 +166,7 @@ class WorkflowMetadataTest extends Specification {
         }
 
         when:
-        metadata.onComplete(handler)
+        metadata.setOnCompleteFormConfig(handler)
         metadata.invokeOnComplete()
 
         then:
@@ -190,7 +190,7 @@ class WorkflowMetadataTest extends Specification {
         def metadata = new WorkflowMetadata(session, null)
 
         when:
-        metadata.onComplete {
+        metadata.setOnCompleteFormConfig {
             throw new WorkflowScriptErrorException('You failed!')
         }
         metadata.invokeOnComplete()
@@ -236,7 +236,7 @@ class WorkflowMetadataTest extends Specification {
         }
 
         when:
-        metadata.onError(handler)
+        metadata.setOnErrorFromConfig(handler)
         metadata.invokeOnError(Mock(TraceRecord))
 
         then:
