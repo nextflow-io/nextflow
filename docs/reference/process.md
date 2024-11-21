@@ -817,7 +817,7 @@ See also: [resourceLabels](#resourcelabels)
 :::{versionadded} 19.07.0
 :::
 
-The `machineType` can be used to specify a predefined Google Compute Platform [machine type](https://cloud.google.com/compute/docs/machine-types) when running using the {ref}`Google Life Sciences <google-lifesciences-executor>` executor.
+The `machineType` can be used to specify a predefined Google Compute Platform [machine type](https://cloud.google.com/compute/docs/machine-types) when running using the {ref}`Google Batch <google-batch-executor>` or {ref}`Google Life Sciences <google-lifesciences-executor>` executor, or when using the autopools feature of the {ref}`Azure Batch executor<azurebatch-executor>`.
 
 This directive is optional and if specified overrides the cpus and memory directives:
 
