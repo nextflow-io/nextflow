@@ -332,6 +332,8 @@ workflow.onError = {
 
 See {ref}`workflow-handlers` for more information.
 
+(config-params-file)=
+
 ## Params file
 
 Parameters specified on the command line can be specified in a params file using the `-params-file` option.
