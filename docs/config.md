@@ -342,20 +342,20 @@ Parameters specified on the command line can be specified in a params file using
 nextflow run main.nf -params-file pipeline_params.yml
 ```
 
-The `-params-file` option loads parameters for your Nextflow pipeline from a JSON or YAML file. Parameters defined in the file are equivalent to specifying them directly on the command line. For example:
+The `-params-file` option loads parameters for your Nextflow pipeline from a JSON or YAML file. Parameters defined in the file are equivalent to specifying them directly on the command line. For example, instead of specifying parameters on the command line:
 
 ```bash
 nextflow run main.nf --alpha 1 --beta foo
 ```
 
-The above parameters can be represented in YAML format:
+Parameters can be represented in YAML format:
 
 ```yaml
 alpha: 1
 beta: 'foo'
 ```
 
-The same parameters can be represented in JSON format:
+Or in JSON format:
 
 ```json
 {
