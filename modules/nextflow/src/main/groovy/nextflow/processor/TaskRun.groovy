@@ -790,7 +790,7 @@ class TaskRun implements Cloneable {
      * @param body A {@code BodyDef} object instance
      */
     void resolve(BodyDef body)  {
-        processor.session.stubRun
+        processor.session.stubRun && config.getStubBlock()
             ? resolveStub(config.getStubBlock())
             : resolveBody(body)
     }
