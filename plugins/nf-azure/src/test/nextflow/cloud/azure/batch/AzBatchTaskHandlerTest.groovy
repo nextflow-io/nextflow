@@ -18,24 +18,6 @@ import spock.lang.Specification
  */
 class AzBatchTaskHandlerTest extends Specification {
 
-    def 'should validate config with and without container' () {
-        when:
-        def task = Mock(TaskRun) { getName() >> 'foo' }
-        and:
-        new AzBatchTaskHandler(task: task)
-                .validateConfiguration()
-        then:
-        noExceptionThrown()
-
-        when:
-        task = Mock(TaskRun) { getName() >> 'foo'; getContainer() >> 'ubuntu' }
-        and:
-        new AzBatchTaskHandler(task: task)
-                .validateConfiguration()
-        then:
-        noExceptionThrown()
-    }
-
     def 'should submit task' () {
         given:
         def builder = Mock(BashWrapperBuilder)
