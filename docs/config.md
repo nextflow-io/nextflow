@@ -138,6 +138,8 @@ params {
 }
 ```
 
+See {ref}`cli-params` for information about how to modify these on the command line.
+
 (config-process)=
 
 ## Process configuration
