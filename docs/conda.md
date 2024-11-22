@@ -100,7 +100,7 @@ The environment file name **must** have a `.yml` or `.yaml` extension or else it
 (conda-pypi)=
 ### Python Packages from PyPI
 
-Conda environment files can also be used to install Python packages from the [PyPI repository](https://pypi.org/)), through the `pip` package manager (which must also be explicitly listed as a required package):
+Conda environment files can also be used to install Python packages from the [PyPI repository](https://pypi.org/), through the `pip` package manager (which must also be explicitly listed as a required package):
 
 ```yaml
 name: my-env-2
@@ -144,7 +144,7 @@ or if using Mamba / Micromamba:
 micromamba env export --explicit > spec-file.txt
 ```
 
-Conda lock files can also be downloaded from Wave build pages.
+Conda lock files can also be downloaded from [Wave](https://seqera.io/wave/) build pages.
 
 These files include every package and their dependencies. As such, no Conda environment resolution step is needed. This is faster and more reproducible.
 
