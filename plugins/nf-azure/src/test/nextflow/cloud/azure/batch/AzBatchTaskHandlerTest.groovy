@@ -18,16 +18,14 @@ import spock.lang.Specification
  */
 class AzBatchTaskHandlerTest extends Specification {
 
-    def 'should validate config' () {
+    def 'should validate config with and without container' () {
         when:
-        def task = Mock(TaskRun) { getName() >> 'foo'; }
+        def task = Mock(TaskRun) { getName() >> 'foo' }
         and:
         new AzBatchTaskHandler(task: task)
                 .validateConfiguration()
         then:
-        def e = thrown(ProcessUnrecoverableException)
-        e.message.startsWith('No container image specified for process foo')
-
+        noExceptionThrown()
 
         when:
         task = Mock(TaskRun) { getName() >> 'foo'; getContainer() >> 'ubuntu' }

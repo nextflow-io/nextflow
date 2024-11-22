@@ -739,4 +739,80 @@ class AzBatchServiceTest extends Specification {
         [managedIdentity: [clientId: 'client-123']]     | 'client-123'
     }
 
+    def 'should create task for submit without container' () {
+        given:
+        Global.session = Mock(Session) { getConfig()>>[:] }
+        and:
+        def POOL_ID = 'my-pool'
+        def SAS = '123'
+        def CONFIG = [storage: [sasToken: SAS]]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        AzBatchService azure = Spy(new AzBatchService(exec))
+        and:
+        def TASK = Mock(TaskRun) {
+            getHash() >> HashCode.fromInt(1)
+            getContainer() >> null
+            getConfig() >> Mock(TaskConfig)
+        }
+        and:
+        def SPEC = new AzVmPoolSpec(poolId: POOL_ID, vmType: Mock(AzVmType), opts: new AzPoolOpts([:]))
+
+        when:
+        def result = azure.createTask(POOL_ID, 'salmon', TASK)
+        then:
+        1 * azure.getPoolSpec(POOL_ID) >> SPEC
+        1 * azure.computeSlots(TASK, SPEC) >> 4
+        1 * azure.resourceFileUrls(TASK, SAS) >> []
+        1 * azure.outputFileUrls(TASK, SAS) >> []
+        and:
+        result.id == 'nf-01000000'
+        result.requiredSlots == 4
+        and:
+        result.commandLine == "sh -c 'bash .command.run 2>&1 | tee .command.log'"
+        and:
+        result.containerSettings == null
+    }
+
+    def 'should create task for submit with container and fusion' () {
+        given:
+        def SAS = '1234567890' * 10
+        def AZURE = [storage: [sasToken: SAS, accountName: 'my-account']]
+        Global.session = Mock(Session) { getConfig()>>[fusion:[enabled:true], azure: AZURE] }
+        def WORKDIR = FileSystemPathFactory.parse('az://foo/work/dir')
+        and:
+        def POOL_ID = 'my-pool'
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(AZURE) }
+        AzBatchService azure = Spy(new AzBatchService(exec))
+        and:
+        def TASK = Mock(TaskRun) {
+            getHash() >> HashCode.fromInt(1)
+            getContainer() >> 'ubuntu:latest'
+            getConfig() >> Mock(TaskConfig)
+            getWorkDir() >> WORKDIR
+            toTaskBean() >> Mock(TaskBean) {
+                getWorkDir() >> WORKDIR
+                getInputFiles() >> [:]
+            }
+        }
+        and:
+        def SPEC = new AzVmPoolSpec(poolId: POOL_ID, vmType: Mock(AzVmType), opts: new AzPoolOpts([:]))
+
+        when:
+        def result = azure.createTask(POOL_ID, 'salmon', TASK)
+        then:
+        1 * azure.getPoolSpec(POOL_ID) >> SPEC
+        1 * azure.computeSlots(TASK, SPEC) >> 1
+        1 * azure.resourceFileUrls(TASK, SAS) >> []
+        1 * azure.outputFileUrls(TASK, SAS) >> []
+        and:
+        result.id == 'nf-01000000'
+        result.requiredSlots == 1
+        and:
+        result.commandLine == "/usr/bin/fusion bash /fusion/az/foo/work/dir/.command.run"
+        and:
+        result.containerSettings.imageName == 'ubuntu:latest'
+        result.containerSettings.containerRunOptions.contains('--privileged')
+        result.containerSettings.containerRunOptions.contains('-e FUSION_WORK=/fusion/az/foo/work/dir')
+    }
+
 }
