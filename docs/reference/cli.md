@@ -1172,7 +1172,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
   $ nextflow run main.nf -params-file pipeline_params.yml
   ```
 
-  See {ref}`config-params-file` for more information about writing custom parameters files.
+  See {ref}`cli-params` for more information about writing custom parameters files.
 
 ### `self-update`
 

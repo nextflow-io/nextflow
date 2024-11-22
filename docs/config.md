@@ -138,6 +138,8 @@ params {
 }
 ```
 
+See {ref}`cli-params` for information about how to modify these on the command line.
+
 (config-process)=
 
 ## Process configuration
@@ -331,37 +333,3 @@ workflow.onError = {
 ```
 
 See {ref}`workflow-handlers` for more information.
-
-(config-params-file)=
-
-## Params file
-
-Parameters specified on the command line can be specified in a params file using the `-params-file` option.
-
-```bash
-nextflow run main.nf -params-file pipeline_params.yml
-```
-
-The `-params-file` option loads parameters for your Nextflow pipeline from a JSON or YAML file. Parameters defined in the file are equivalent to specifying them directly on the command line. For example, instead of specifying parameters on the command line:
-
-```bash
-nextflow run main.nf --alpha 1 --beta foo
-```
-
-Parameters can be represented in YAML format:
-
-```yaml
-alpha: 1
-beta: 'foo'
-```
-
-Or in JSON format:
-
-```json
-{
-  "alpha": 1,
-  "beta": "foo"
-}
-```
-
-The parameters specified in a params file are merged with the resolved configuration. The values provided via a params file overwrite those of the same name in the Nextflow configuration file, but not those specified on the command line.
