@@ -569,4 +569,21 @@ class CondaCacheTest extends Specification {
         cleanup:
         folder?.deleteDir()
     }
+
+    def 'should normalize paths' () {
+
+        given:
+        def cache = new CondaCache()
+
+        expect:
+            cache.normalizeCondaEnv(RAW_CONDA_ENV) == EXPECTED
+
+        where:
+        RAW_CONDA_ENV                   | EXPECTED
+        'bwa=1.1.1'                     | 'bwa=1.1.1'
+        'http://url.com/path/env.yml'   | 'http://url.com/path/env.yml'
+        '/path/to/../directory'         | '/path/directory'
+        '/path/./to/file.txt'           | '/path/to/file.txt'
+        '/path/./to/file.yml'           | '/path/to/file.yml'
+    }
 }

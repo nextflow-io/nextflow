@@ -359,8 +359,8 @@ class CondaCache {
      *      The {@link DataflowVariable} which hold (and pull) the local image file
      */
     @PackageScope
-    DataflowVariable<Path> getLazyImagePath(String condaEnv) {
-
+    DataflowVariable<Path> getLazyImagePath(String rawCondaEnv) {
+        def condaEnv = normalizeCondaEnv(rawCondaEnv)
         if( condaEnv in condaPrefixPaths ) {
             log.trace "${binaryName} found local environment `$condaEnv`"
             return condaPrefixPaths[condaEnv]
@@ -399,4 +399,12 @@ class CondaCache {
         return result
     }
 
+    String normalizeCondaEnv(String rawCondaEnv) {
+        // Check if it's a path (as in getPrefixPath)
+        if( !isYamlUriPath(rawCondaEnv) && ( isYamlFilePath(rawCondaEnv) || isTextFilePath(rawCondaEnv) || rawCondaEnv.contains('/') ) ) {
+            final path = rawCondaEnv as Path
+            return path.toAbsolutePath().normalize().toString()
+        }
+        return rawCondaEnv
+    }
 }
