@@ -16,7 +16,7 @@ s3://my-bucket/data/sequences.fa
 
 The usual file operations can be applied to a path handle with the above notation. For example, the content of an S3 file can be printed as follows:
 
-```groovy
+```nextflow
 println file('s3://my-bucket/data/sequences.fa').text
 ```
 

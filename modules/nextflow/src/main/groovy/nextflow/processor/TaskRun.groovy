@@ -16,6 +16,8 @@
 
 package nextflow.processor
 
+import nextflow.conda.CondaConfig
+
 import java.nio.file.FileSystems
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -788,7 +790,7 @@ class TaskRun implements Cloneable {
      * @param body A {@code BodyDef} object instance
      */
     void resolve(BodyDef body)  {
-        processor.session.stubRun
+        processor.session.stubRun && config.getStubBlock()
             ? resolveStub(config.getStubBlock())
             : resolveBody(body)
     }
@@ -966,6 +968,10 @@ class TaskRun implements Cloneable {
 
     TaskBean toTaskBean() {
         return new TaskBean(this)
+    }
+
+    CondaConfig getCondaConfig() {
+        return processor.session.getCondaConfig()
     }
 }
 

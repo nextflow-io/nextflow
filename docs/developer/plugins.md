@@ -18,7 +18,7 @@ dependencies {
     compileOnly 'org.pf4j:pf4j:3.4.1'
 
     testImplementation project(':nextflow')
-    testImplementation "org.codehaus.groovy:groovy:4.0.23"
+    testImplementation "org.codehaus.groovy:groovy:4.0.24"
     testImplementation "org.codehaus.groovy:groovy-nio:4.0.23"
 }
 ```
@@ -138,9 +138,11 @@ class MyExecutor extends Executor implements ExtensionPoint {
 
 You can then use this executor in your pipeline:
 
-```groovy
+```nextflow
 process foo {
     executor 'my-executor'
+
+    // ...
 }
 ```
 
@@ -177,7 +179,7 @@ class MyExtension extends PluginExtensionPoint {
 
 You can then use this function in your pipeline:
 
-```groovy
+```nextflow
 include { reverseString } from 'plugin/my-plugin'
 
 channel.of( reverseString('hi') )
@@ -185,7 +187,7 @@ channel.of( reverseString('hi') )
 
 You can also use an alias:
 
-```groovy
+```nextflow
 include { reverseString as anotherReverseMethod } from 'plugin/my-plugin'
 ```
 
@@ -226,7 +228,7 @@ class MyExtension extends PluginExtensionPoint {
 
 You can then use them in your pipeline:
 
-```groovy
+```nextflow
 include { sqlInsert; fromQuery as fromTable } from 'plugin/nf-sqldb'
 
 def sql = 'select * from FOO'

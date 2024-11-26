@@ -1015,6 +1015,11 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-offline`
 : Do not check for remote project updates.
 
+`-o, -output-dir` (`results`)
+: :::{versionadded} 24.10.0
+  :::
+: Directory where workflow outputs are stored.
+
 `-params-file`
 : Load script parameters from a JSON/YAML file.
 
@@ -1167,29 +1172,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
   $ nextflow run main.nf -params-file pipeline_params.yml
   ```
 
-  For example, the following params file in YAML format:
-
-  ```yaml
-  alpha: 1
-  beta: 'foo'
-  ```
-
-  Or in JSON format:
-
-  ```json
-  {
-    "alpha": 1,
-    "beta": "foo"
-  }
-  ```
-
-  Is equivalent to the following command line:
-
-  ```console
-  $ nextflow run main.nf --alpha 1 --beta foo
-  ```
-
-  The parameters specified with this mechanism are merged with the resolved configuration (base configuration and profiles). The values provided via a params file overwrite those of the same name in the Nextflow configuration file.
+  See {ref}`cli-params` for more information about writing custom parameters files.
 
 ### `self-update`
 

@@ -6,7 +6,7 @@ In Nextflow, a **workflow** is a function that is specialized for composing proc
 
 A script can define up to one *entry workflow*, which does not have a name and serves as the entrypoint of the script:
 
-```groovy
+```nextflow
 workflow {
     Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola')
         | map { v -> "$v world!" }
@@ -16,7 +16,7 @@ workflow {
 
 A *named workflow*, on the other hand, is a workflow that can be called from other workflows:
 
-```groovy
+```nextflow
 workflow my_workflow {
     foo()
     bar( foo.out.collect() )
@@ -39,7 +39,7 @@ Workflows were introduced in DSL2. If you are still using DSL1, see {ref}`dsl1-p
 
 Parameters can be defined in the script with a default value that can be overridden from the CLI, params file, or config file. Params should only be used by the entry workflow:
 
-```groovy
+```nextflow
 params.data = '/some/data/file'
 
 workflow {
@@ -58,7 +58,7 @@ While params can also be used by named workflows, this practice is discouraged. 
 
 The `take:` section is used to declare workflow inputs:
 
-```groovy
+```nextflow
 workflow my_workflow {
     take:
     data1
@@ -72,7 +72,7 @@ workflow my_workflow {
 
 Inputs can be specified like arguments when calling the workflow:
 
-```groovy
+```nextflow
 workflow {
     my_workflow( Channel.of('/some/data') )
 }
@@ -82,7 +82,7 @@ workflow {
 
 The `emit:` section is used to declare workflow outputs:
 
-```groovy
+```nextflow
 workflow my_workflow {
     main:
     foo(data)
@@ -97,7 +97,7 @@ When calling the workflow, the output can be accessed using the `out` property, 
 
 If an output is assigned to a name, the name can be used to reference the output from the calling workflow. For example:
 
-```groovy
+```nextflow
 workflow my_workflow {
     main:
     foo(data)
@@ -120,7 +120,7 @@ Every output must be assigned to a name when multiple outputs are declared.
 
 Processes and workflows are called like functions, passing their inputs as arguments:
 
-```groovy
+```nextflow
 process foo {
     output:
     path 'foo.txt', emit: txt
@@ -167,7 +167,7 @@ Processes and workflows have a few extra rules for how they can be called:
 
 The "return value" of a process or workflow call is the process outputs or workflow emits, respectively. The return value can be assigned to a variable or passed into another call:
 
-```groovy
+```nextflow
 workflow flow {
     take:
     data
@@ -187,7 +187,7 @@ workflow {
 
 Named outputs can be accessed as properties of the return value:
 
-```groovy
+```nextflow
 workflow flow {
     take:
     data
@@ -209,7 +209,7 @@ workflow {
 
 As a convenience, process and workflow outputs can also be accessed without first assigning to a variable, by using the `.out` property of the process or workflow name:
 
-```groovy
+```nextflow
 workflow flow {
     take:
     data
@@ -239,7 +239,7 @@ Process and workflow outputs can also be accessed by index (e.g., `foo.out[0]`, 
 
 Workflows can be composed in the same way:
 
-```groovy
+```nextflow
 workflow flow1 {
     take:
     data
@@ -287,7 +287,7 @@ The following operators have a special meaning when used in a workflow with proc
 
 The `|` *pipe* operator can be used to chain processes, operators, and workflows:
 
-```groovy
+```nextflow
 process foo {
     input:
     val data
@@ -311,7 +311,7 @@ The above snippet defines a process named `foo` and invokes it with the input ch
 
 The same code can also be written as:
 
-```groovy
+```nextflow
 workflow {
     ch1 = Channel.of('Hello','Hola','Ciao')
     ch2 = foo( ch1 )
@@ -323,7 +323,7 @@ workflow {
 
 The `&` *and* operator can be used to call multiple processes in parallel with the same channel(s):
 
-```groovy
+```nextflow
 process foo {
     input:
     val data
@@ -359,7 +359,7 @@ In the above snippet, the initial channel is piped to the {ref}`operator-map` op
 
 The same code can also be written as:
 
-```groovy
+```nextflow
 workflow {
     ch = Channel.of('Hello').map { v -> v.reverse() }
     ch_foo = foo(ch)
@@ -375,109 +375,79 @@ workflow {
 :::{versionadded} 24.04.0
 :::
 
+:::{versionchanged} 24.10.0
+A second preview version has been introduced. Read the [migration notes](#migrating-from-first-preview) for details.
+:::
+
 :::{note}
 This feature requires the `nextflow.preview.output` feature flag to be enabled.
 :::
 
-A script may define the set of outputs that should be published by the entry workflow, known as the workflow output definition:
+A workflow can publish outputs by sending channels to "publish targets" in the workflow `publish` section. Any channel in the workflow can be published, including process and subworkflow outputs. This approach is intended to replace the {ref}`publishDir <process-publishdir>` directive.
 
-```groovy
-workflow {
-    foo(bar())
-}
+Here is a basic example:
 
-output {
-    directory 'results'
-}
-```
-
-The output definition must be defined after the entry workflow.
-
-### Publishing channels
-
-Processes and workflows can each define a `publish` section which maps channels to publish targets. For example:
-
-```groovy
+```nextflow
 process foo {
     // ...
 
     output:
     path 'result.txt', emit: results
 
-    publish:
-    results >> 'foo'
-
     // ...
 }
 
-workflow foobar {
+process bar {
+    // ...
+}
+
+workflow {
     main:
     foo(data)
     bar(foo.out)
 
     publish:
-    foo.out >> 'foobar/foo'
-
-    emit:
-    bar.out
+    foo.out.results >> 'foo'
+    bar.out >> 'bar'
 }
 ```
 
-In the above example, the output `results` of process `foo` is published to the target `foo/` by default. However, when the workflow `foobar` invokes process `foo`, it publishes `foo.out` (i.e. `foo.out.results`) to the target `foobar/foo/`, overriding the default target defined by `foo`.
+In the above example, the `results` output of process `foo` is published to the target `foo`, and all outputs of process `bar` are published to the target `bar`.
 
-In a process, any output with an `emit` name can be published. In a workflow, any channel defined in the workflow, including process and subworkflow outputs, can be published.
+A "publish target" is simply a name that identifies a group of related outputs. How these targets are saved into a directory structure is described in the next section.
 
-:::{note}
-If the publish source is a process/workflow output (e.g. `foo.out`) with multiple channels, each channel will be published. Individual output channels can also be published by index or name (e.g. `foo.out[0]` or `foo.out.results`).
+:::{tip}
+A workflow can override the publish targets of a subworkflow by "re-publishing" the same channels to a different target. However, the best practice is to define all publish targets in the entry workflow, so that all publish targets are defined in one place at the top-level.
 :::
 
-As shown in the example, workflows can override the publish targets of process and subworkflow outputs. This way, each process and workflow can define some sensible defaults for publishing, which can be overridden by calling workflows as needed.
+### Output directory
 
-By default, all files emitted by the channel will be published into the specified directory. If a channel emits list values, any files in the list (including nested lists) will also be published. For example:
+The top-level output directory of a workflow run can be set using the `-output-dir` command-line option or the `outputDir` config option:
 
-```groovy
-workflow {
-    ch_samples = Channel.of(
-        [ [id: 'sample1'], file('sample1.txt') ]
-    )
-
-    publish:
-    ch_samples >> 'samples' // sample1.txt will be published
-}
+```bash
+nextflow run main.nf -output-dir 'my-results'
 ```
 
-### Publish directory
-
-The `directory` statement is used to set the top-level publish directory of the workflow:
-
 ```groovy
-output {
-    directory 'results'
-
-    // ...
-}
+// nextflow.config
+outputDir = 'my-results'
 ```
 
-It is optional, and it defaults to the launch directory (`workflow.launchDir`). Published files will be saved within this directory.
+It defaults to `results` in the launch directory. All published outputs will be saved into this directory.
 
-### Publish targets
+Each publish target is saved into a subdirectory of the output directory. By default, the target name is used as the directory name.
 
-A publish target is a name with a specific publish configuration. By default, when a channel is published to a target in the `publish:` section of a process or workflow, the target name is used as the publish path.
+For example, given the following publish targets:
 
-For example, given the following output definition:
-
-```groovy
+```nextflow
 workflow {
+    main:
     ch_foo = foo()
     ch_bar = bar(ch_foo)
 
     publish:
     ch_foo >> 'foo'
     ch_bar >> 'bar'
-}
-
-output {
-    directory 'results'
 }
 ```
 
@@ -491,18 +461,29 @@ results/
     └── ...
 ```
 
-:::{note}
-The trailing slash in the target name is not required; it is only used to denote that the target name is intended to be used as the publish path.
-:::
-
 :::{warning}
-The target name must not begin with a slash (`/`), it should be a relative path name.
+Target names cannot begin or end with a slash (`/`).
 :::
 
-Workflows can also disable publishing for specific channels by redirecting them to `null`:
+By default, all files emitted by a published channel will be published into the specified directory. If a channel emits list values, each file in the list (including nested lists) will be published. For example:
 
-```groovy
+```nextflow
 workflow {
+    main:
+    ch_samples = Channel.of(
+        [ [id: 'foo'], [ file('1.txt'), file('2.txt') ] ]
+    )
+
+    publish:
+    ch_samples >> 'samples' // 1.txt and 2.txt will be published
+}
+```
+
+A workflow can also disable publishing for a specific channel by redirecting it to `null`:
+
+```nextflow
+workflow {
+    main:
     ch_foo = foo()
 
     publish:
@@ -510,111 +491,102 @@ workflow {
 }
 ```
 
-Publish targets can be customized in the output definition using a set of options similar to the {ref}`process-publishdir` directive.
+### Customizing outputs
+
+The output directory structure can be customized further in the "output block", which can be defined alongside an entry workflow. The output block consists of "target" blocks, which can be used to customize specific targets.
 
 For example:
 
-```groovy
-output {
-    directory 'results'
-    mode 'copy'
+```nextflow
+workflow {
+    // ...
+}
 
+output {
     'foo' {
-        mode 'link'
+        enabled params.save_foo
+        path 'intermediates/foo'
+    }
+
+    'bar' {
+        mode 'copy'
     }
 }
 ```
 
-In this example, all files will be copied by default, and files published to `foo/` will be hard-linked, overriding the default option.
+This output block has the following effect:
 
-Available options:
+- The target `foo` will be published only if `params.save_foo` is enabled, and it will be published to a different path within the output directory.
 
-`contentType`
-: *Currently only supported for S3.*
-: Specify the media type a.k.a. [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types) of published files (default: `false`). Can be a string (e.g. `'text/html'`), or `true` to infer the content type from the file extension.
+- The target `bar` will publish files via copy instead of symlink.
 
-`enabled`
-: Enable or disable publishing (default: `true`).
+See [Reference](#reference) for all available directives in the output block.
 
-`ignoreErrors`
-: When `true`, the workflow will not fail if a file can't be published for some reason (default: `false`).
+:::{tip}
+The output block is only needed if you want to customize the behavior of specific targets. If you are satisfied with the default behavior and don't need to customize anything, the output block can be omitted.
+:::
 
-`mode`
-: The file publishing method (default: `'symlink'`). The following options are available:
+### Dynamic publish path
 
-  `'copy'`
-  : Copy each file into the output directory.
+The `path` directive in a target block can also be a closure which defines a custom publish path for each channel value:
 
-  `'copyNoFollow'`
-  : Copy each file into the output directory without following symlinks, i.e. only the link is copied.
-
-  `'link'`
-  : Create a hard link in the output directory for each file.
-
-  `'move'`
-  : Move each file into the output directory.
-  : Should only be used for files which are not used by downstream processes in the workflow.
-
-  `'rellink'`
-  : Create a relative symbolic link in the output directory for each file.
-
-  `'symlink'`
-  : Create an absolute symbolic link in the output directory for each output file.
-
-`overwrite`
-: When `true` any existing file in the specified folder will be overwritten (default: `'standard'`). The following options are available:
-
-  `false`
-  : Never overwrite existing files.
-
-  `true`
-  : Always overwrite existing files.
-
-  `'deep'`
-  : Overwrite existing files when the file content is different.
-
-  `'lenient'`
-  : Overwrite existing files when the file size is different.
-
-  `'standard'`
-  : Overwrite existing files when the file size or last modified timestamp is different.
-
-`path`
-: Specify the publish path relative to the output directory (default: the target name). Can only be specified within a target definition.
-
-`storageClass`
-: *Currently only supported for S3.*
-: Specify the storage class for published files.
-
-`tags`
-: *Currently only supported for S3.*
-: Specify arbitrary tags for published files. For example:
-  ```groovy
-  tags FOO: 'hello', BAR: 'world'
-  ```
-
-### Index files
-
-A publish target can create an index file of the values that were published. An index file is a useful way to save the metadata associated with files, and is more flexible than encoding metadata in the file path. Currently only CSV files are supported.
-
-For example:
-
-```groovy
+```nextflow
 workflow {
-    ch_foo = Channel.of(
-        [id: 1, name: 'foo 1'],
-        [id: 2, name: 'foo 2'],
-        [id: 3, name: 'foo 3']
-    )
+    main:
+    ch_fastq = Channel.of( [ [id: 'SAMP1'], file('1.fastq'), file('2.fastq') ] )
 
     publish:
-    ch_foo >> 'foo'
+    ch_fastq >> 'fastq'
 }
 
 output {
-    directory 'results'
+    'fastq' {
+        path { meta, fastq_1, fastq_2 -> "fastq/${meta.id}" }
+    }
+}
+```
 
-    'foo' {
+The above example will publish each channel value to a different subdirectory. In this case, each pair of FASTQ files will be published to a subdirectory based on the sample ID.
+
+The closure can even define a different path for each individual file by returning an inner closure, similar to the `saveAs` option of the {ref}`publishDir <process-publishdir>` directive:
+
+```nextflow
+output {
+    'fastq' {
+        path { meta, fastq_1, fastq_2 ->
+            { file -> "fastq/${meta.id}/${file.baseName}" }
+        }
+    }
+}
+```
+
+The inner closure will be applied to each file in the channel value, in this case `fastq_1` and `fastq_2`.
+
+:::{tip}
+A mapping closure should usually have only one parameter. However, if the incoming values are tuples, the closure can specify a parameter for each tuple element for more convenient access, also known as "destructuring" or "unpacking".
+:::
+
+### Index files
+
+A publish target can create an index file of the values that were published. An index file preserves the structure of channel values, including metadata, which is simpler than encoding this information with directories and file names. The index file can be CSV (`.csv`) or JSON (`.json`).
+
+For example:
+
+```nextflow
+workflow {
+    main:
+    ch_fastq = Channel.of(
+        [ [id: 1, name: 'sample 1'], '1a.fastq', '1b.fastq' ],
+        [ [id: 2, name: 'sample 2'], '2a.fastq', '2b.fastq' ],
+        [ [id: 3, name: 'sample 3'], '3a.fastq', '3b.fastq' ]
+    )
+
+    publish:
+    ch_fastq >> 'fastq'
+}
+
+output {
+    'fastq' {
         index {
             path 'index.csv'
         }
@@ -622,36 +594,75 @@ output {
 }
 ```
 
-The above example will write the following CSV file to `results/foo/index.csv`:
+The above example will write the following CSV file to `results/fastq/index.csv`:
 
 ```csv
-"id","name"
-"1","foo 1"
-"2","foo 2"
-"3","foo 3"
+"id","name","fastq_1","fastq_2"
+"1","sample 1","results/fastq/1a.fastq","results/fastq/1b.fastq"
+"2","sample 2","results/fastq/2a.fastq","results/fastq/2b.fastq"
+"3","sample 3","results/fastq/3a.fastq","results/fastq/3b.fastq"
 ```
 
-You can customize the index file by specifying options in a block, for example:
+You can customize the index file with additional directives, for example:
 
-```groovy
+```nextflow
 index {
     path 'index.csv'
-    header ['name', 'extra_option']
+    header ['id', 'fastq_1', 'fastq_1']
     sep '\t'
-    mapper { val -> val + [extra_option: 'bar'] }
+    mapper { meta, fq_1, fq_2 -> meta + [fastq_1: fq_1, fastq_2: fq_2] }
 }
 ```
 
-The following options are available:
+This example will produce the same index file as above, but with the `name` column removed and with tabs instead of commas.
 
-`header`
-: When `true`, the keys of the first record are used as the column names (default: `false`). Can also be a list of column names.
+See [Reference](#reference) for the list of available index directives.
 
-`mapper`
-: Closure which defines how to transform each published value into a CSV record. The closure should return a list or map. By default, no transformation is applied.
+### Migrating from first preview
+
+The first preview of workflow publishing was introduced in 24.04. The second preview, introduced in 24.10, made the following breaking changes:
+
+- The process `publish:` section has been removed. Channels should be published only in workflows, ideally the entry workflow.
+
+- The `directory` output directive has been replaced with the `outputDir` config option and `-output-dir` command line option, which is `results` by default. The other directives such as `mode` have been replaced with config options under `workflow.output.*`.
+
+  In other words, only target blocks can be specified in the output block, but target blocks can still specify directives such as `mode`.
+
+- Target names cannot begin or end with a slash (`/`);
+
+### Reference
+
+The following directives are available in a target block:
+
+`index`
+: Create an index file which will contain a record of each published value.
+
+  The following directives are available in an index definition:
+
+  `header`
+  : When `true`, the keys of the first record are used as the column names (default: `false`). Can also be a list of column names. Only used for `csv` files.
+
+  `mapper`
+  : Closure which defines how to transform each published value into a record. The closure should return a list or map. By default, no transformation is applied.
+
+  `path`
+  : The name of the index file relative to the target path (required). Can be a `csv` or `json` file.
+
+  `sep`
+  : The character used to separate values (default: `','`). Only used for `csv` files.
 
 `path`
-: The name of the index file relative to the target path (required).
+: Specify the publish path relative to the output directory (default: the target name). Can be a path, a closure that defines a custom directory for each published value, or a closure that defines a custom path for each individual file.
 
-`sep`
-: The character used to separate values (default: `','`).
+Additionally, the following options from the {ref}`workflow <config-workflow>` config scope can be specified as directives:
+- `contentType`
+- `enabled`
+- `ignoreErrors`
+- `mode`
+- `overwrite`
+- `storageClass`
+- `tags`
+
+:::{note}
+Similarly to process directives vs {ref}`process <config-process>` config options, directives in the `output` block are specified without an equals sign (`=`).
+:::

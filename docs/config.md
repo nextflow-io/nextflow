@@ -20,6 +20,8 @@ When more than one of these options for specifying configurations are used, they
 You can use the `-C <config-file>` option to use a single configuration file and ignore all other files.
 :::
 
+(config-syntax)=
+
 ## Syntax
 
 The Nextflow configuration syntax is based on the Nextflow script syntax. It is designed for setting configuration options in a declarative manner while also allowing for dynamic expressions where appropriate.
@@ -111,6 +113,15 @@ The following constants are globally available in a Nextflow configuration file:
 `projectDir`
 : The directory where the main script is located.
 
+## Functions
+
+The following functions are globally available in a Nextflow configuration file:
+
+`env( name )`
+: :::{versionadded} 24.11.0-edge
+  :::
+: Get the value of the environment variable with the specified name in the Nextflow launch environment.
+
 (config-params)=
 
 ## Parameters
@@ -126,6 +137,8 @@ params {
     beta_2 = 'another string ..'
 }
 ```
+
+See {ref}`cli-params` for information about how to modify these on the command line.
 
 (config-process)=
 

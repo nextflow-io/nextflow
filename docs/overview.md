@@ -20,7 +20,7 @@ Any process can define one or more channels as *input* and *output*. The interac
 
 A Nextflow script looks like this:
 
-```groovy
+```nextflow
 // Script parameters
 params.query = "/some/data/sample.fa"
 params.db = "/some/path/pdb"
@@ -33,6 +33,7 @@ process blastSearch {
   output:
   path "top_hits.txt"
 
+  script:
   """
   blastp -db $db -query $query -outfmt 6 > blast_result
   cat blast_result | head -n 10 | cut -f 2 > top_hits.txt
@@ -47,6 +48,7 @@ process extractTopHits {
   output:
   path "sequences.txt"
 
+  script:
   """
   blastdbcmd -db $db -entry_batch $top_hits > sequences.txt
   """
