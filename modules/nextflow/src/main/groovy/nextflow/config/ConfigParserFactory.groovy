@@ -31,7 +31,7 @@ import nextflow.config.v2.ConfigParserV2
 class ConfigParserFactory {
 
     static ConfigParser create() {
-        return SysEnv.get('NXF_ENABLE_STRICT_CONFIG')=='true'
+        return SysEnv.get('NXF_ENABLE_STRICT_PARSER')=='true'
             ? new ConfigParserV2()
             : new ConfigParserV1()
     }
