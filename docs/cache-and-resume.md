@@ -148,6 +148,8 @@ process gather {
     input:
     tuple val(id), file(foo)
     tuple val(id), file(bar)
+
+    script:
     """
     merge_command $foo $bar
     """
@@ -168,6 +170,8 @@ workflow {
 process gather {
     input:
     tuple val(id), file(foo), file(bar)
+
+    script:
     """
     merge_command $foo $bar
     """
