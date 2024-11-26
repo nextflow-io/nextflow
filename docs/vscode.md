@@ -230,38 +230,6 @@ if (aligner == 'bowtie2') {
 }
 ```
 
-**Slashy dollar strings**
-
-Groovy supports a wide variety of strings, including multi-line strings, dynamic strings, slashy strings, multi-line dynamic slashy strings, and more.
-
-The Nextflow language specification supports single- and double-quoted strings, multi-line strings, and slashy strings. Dynamic slashy strings are not supported:
-
-```groovy
-def logo = /--cl-config 'custom_logo: "${multiqc_logo}"'/
-```
-
-Use a double-quoted string instead:
-
-```nextflow
-def logo = "--cl-config 'custom_logo: \"${multiqc_logo}\"'"
-```
-
-Slashy dollar strings are not supported:
-
-```groovy
-$/
-echo "Hello world!"
-/$
-```
-
-Use a multi-line string instead:
-
-```nextflow
-"""
-echo "Hello world!"
-"""
-```
-
 **Implicit environment variables**
 
 In Nextflow DSL1 and DSL2, you can reference environment variables directly in strings:
@@ -333,6 +301,62 @@ To ease the migration of existing scripts, the language server only reports warn
 :::{note}
 Type annotations and static type checking will be addressed in a future version of the Nextflow language specification.
 :::
+
+**Strings**
+
+Groovy supports a wide variety of strings, including multi-line strings, dynamic strings, slashy strings, multi-line dynamic slashy strings, and more.
+
+The Nextflow language specification supports single- and double-quoted strings, multi-line strings, and slashy strings.
+
+Slashy strings cannot be interpolated:
+
+```nextflow
+def id = 'SRA001'
+assert 'SRA001.fastq' ~= /${id}\.f(?:ast)?q/
+```
+
+Use a double-quoted string instead:
+
+```nextflow
+def id = 'SRA001'
+assert 'SRA001.fastq' ~= "${id}\\.f(?:ast)?q"
+```
+
+Slashy strings cannot span multiple lines:
+
+```groovy
+/
+Patterns in the code,
+Symbols dance to match and find,
+Logic unconfined.
+/
+```
+
+Use a multi-line string instead:
+
+```nextflow
+"""
+Patterns in the code,
+Symbols dance to match and find,
+Logic unconfined.
+"""
+```
+
+Dollar slashy strings are not supported:
+
+```groovy
+$/
+echo "Hello world!"
+/$
+```
+
+Use a multi-line string instead:
+
+```nextflow
+"""
+echo "Hello world!"
+"""
+```
 
 **Process env inputs/outputs**
 
@@ -481,7 +505,7 @@ includeConfig ({
         return 'large.config'
     else
         return '/dev/null'
-})()
+}())
 ```
 
 The include source is a closure that is immediately invoked. It includes a different config file based on the return value of the closure. Including `/dev/null` is equivalent to including nothing.

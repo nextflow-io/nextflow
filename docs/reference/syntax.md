@@ -622,16 +622,6 @@ A *slashy string* is enclosed by slashes instead of quotes:
 /no escape!/
 ```
 
-Slashy strings can also span multiple lines:
-
-```nextflow
-/
-Patterns in the code,
-Symbols dance to match and find,
-Logic unconfined.
-/
-```
-
 :::{note}
 A slashy string cannot be empty because it would become a line comment.
 :::
