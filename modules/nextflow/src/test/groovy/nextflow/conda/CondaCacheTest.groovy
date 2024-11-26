@@ -197,9 +197,8 @@ class CondaCacheTest extends Specification {
 
         when:
         // the prefix directory exists ==> no conda command is executed
-        def result = cache.createLocalCondaEnv(ENV)
+        def result = cache.createLocalCondaEnv(ENV, PREFIX)
         then:
-        1 * cache.condaPrefixPath(ENV) >> PREFIX
         0 * cache.isYamlFilePath(ENV)
         0 * cache.runCommand(_)
         result == PREFIX
@@ -224,9 +223,8 @@ class CondaCacheTest extends Specification {
 
         when:
         // the prefix directory exists ==> no mamba command is executed
-        def result = cache.createLocalCondaEnv(ENV)
+        def result = cache.createLocalCondaEnv(ENV, PREFIX)
         then:
-        1 * cache.condaPrefixPath(ENV) >> PREFIX
         0 * cache.isYamlFilePath(ENV)
         0 * cache.runCommand(_)
         result == PREFIX
@@ -251,9 +249,8 @@ class CondaCacheTest extends Specification {
 
         when:
         // the prefix directory exists ==> no mamba command is executed
-        def result = cache.createLocalCondaEnv(ENV)
+        def result = cache.createLocalCondaEnv(ENV, PREFIX)
         then:
-        1 * cache.condaPrefixPath(ENV) >> PREFIX
         0 * cache.isYamlFilePath(ENV)
         0 * cache.runCommand(_)
         result == PREFIX
@@ -278,9 +275,8 @@ class CondaCacheTest extends Specification {
 
         when:
         // the prefix directory exists ==> no mamba command is executed
-        def result = cache.createLocalCondaEnv(ENV)
+        def result = cache.createLocalCondaEnv(ENV, PREFIX)
         then:
-        1 * cache.condaPrefixPath(ENV) >> PREFIX
         0 * cache.isYamlFilePath(ENV)
         0 * cache.runCommand(_)
         result == PREFIX
@@ -304,9 +300,8 @@ class CondaCacheTest extends Specification {
 
         when:
         // the prefix directory exists ==> no mamba command is executed
-        def result = cache.createLocalCondaEnv(ENV)
+        def result = cache.createLocalCondaEnv(ENV, PREFIX)
         then:
-        1 * cache.condaPrefixPath(ENV) >> PREFIX
         0 * cache.isYamlFilePath(ENV)
         0 * cache.runCommand(_)
         result == PREFIX
