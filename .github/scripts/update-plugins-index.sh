@@ -4,5 +4,8 @@ set -e
 # change to the project root
 cd "$(dirname "$0")/../.."
 
-# stub deployment
-echo "Deploying plugins"
+echo "Updating plugins index"
+
+./gradlew plugins:publishIndex
+
+echo "Done"

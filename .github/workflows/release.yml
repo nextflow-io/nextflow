@@ -199,6 +199,25 @@ jobs:
           name: plugins
           path: plugins
 
-      # deploy step
-      - name: Deploy plugins
-        run: bash .github/scripts/deploy-plugins.sh
+      # deploy steps
+      - name: Deploy plugins to maven
+        run: bash .github/scripts/deploy-plugins-to-maven.sh
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_DEPLOY_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_DEPLOY_SECRET_ACCESS_KEY }}
+          MAVEN_PUBLISH_URL: ${{ vars.MAVEN_PLUGINS_PUBLISH_URL }}
+
+      - name: Deploy plugins to github
+        run: bash .github/scripts/deploy-plugins-to-github.sh
+        env:
+          GH_TOKEN: ${{ secrets.DEPLOY_GITHUB_TOKEN }}
+          GH_ORG: ${{ vars.PLUGINS_GITHUB_ORG }}
+
+      - name: Update plugins index
+        run: bash .github/scripts/update-plugins-index.sh
+        env:
+          GH_ORG: ${{ vars.PLUGINS_GITHUB_ORG }}
+          GH_USER: ${{ vars.DEPLOY_GITHUB_USER }}
+          GH_USER_EMAIL: ${{ vars.DEPLOY_GITHUB_EMAIL }}
+          GH_TOKEN: ${{ secrets.DEPLOY_GITHUB_TOKEN }}
+          PLUGINS_INDEX_JSON: ${{ vars.PLUGINS_INDEX_JSON }}

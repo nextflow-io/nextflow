@@ -343,15 +343,12 @@ configure(coreProjects) {
 
         repositories {
             maven {
-                // TOMDO
-                def releasesRepoUrl = "s3://tom-test-aws/maven/releases"
-                def snapshotsRepoUrl = "s3://tom-test-aws/maven/snapshots"
-//                def releasesRepoUrl = "s3://.amazonaws.com/maven.seqera.io/releases"
-//                def snapshotsRepoUrl = "https://s3-eu-west-1.amazonaws.com/maven.seqera.io/snapshots"
-                url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+                url = System.getenv('MAVEN_PUBLISH_URL')
+                    ?: ( version.endsWith('-SNAPSHOT') ? "s3://maven.seqera.io/snapshots" : "s3://maven.seqera.io/releases" )
+
                 credentials(AwsCredentials) {
-                    accessKey = System.env.AWS_ACCESS_KEY_ID ?: findProperty('aws_access_key_id')
-                    secretKey = System.env.AWS_SECRET_ACCESS_KEY ?: findProperty('aws_secret_access_key')
+                    accessKey = System.getenv('AWS_ACCESS_KEY_ID') ?: findProperty('aws_access_key_id')
+                    secretKey = System.getenv('AWS_SECRET_ACCESS_KEY') ?: findProperty('aws_secret_access_key')
                 }
             }
         }
@@ -361,13 +358,11 @@ configure(coreProjects) {
         required { enableSignArchives }
         sign publishing.publications.mavenJava
     }
-
 }
 
 task publishToMaven {
     dependsOn coreProjects.publish
 }
-
 
 task makeDigest { doLast {
     byte[] digest

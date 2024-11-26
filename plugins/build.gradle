@@ -1,17 +1,8 @@
-import io.nextflow.gradle.tasks.GithubUploader
 import io.nextflow.gradle.tasks.GithubRepositoryPublisher
 import org.apache.commons.codec.digest.DigestUtils
 
 apply plugin: 'java'
 apply plugin: "io.nextflow.nf-build-plugin"
-
-ext.github_organization = 'nextflow-io'
-ext.github_username = project.findProperty('github_username') ?: 'pditommaso'
-ext.github_access_token = project.findProperty('github_access_token') ?: System.getenv('GITHUB_TOKEN')
-ext.github_commit_email = project.findProperty('github_commit_email') ?: 'paolo.ditommaso@gmail.com'
-ext.aws_access_key_id = project.findProperty('aws_access_key_id') ?: System.getenv('AWS_ACCESS_KEY_ID')
-ext.aws_secret_access_key = project.findProperty('aws_secret_access_key') ?: System.getenv('AWS_SECRET_ACCESS_KEY')
-ext.publishRepoUrl = project.findProperty('publish_repo_url') ?: System.getenv('PUBLISH_REPO_URL') ?: ( version.endsWith('-SNAPSHOT') ? "s3://maven.seqera.io/snapshots" : "s3://maven.seqera.io/releases" )
 
 jar.enabled = false
 
@@ -120,24 +111,6 @@ subprojects {
     */
     project.parent.tasks.getByName("assemble").dependsOn << copyPluginZip
 
-
-    /*
-     * Upload the plugin zip & json meta file to the corresponding GitHub repo
-     */
-    task uploadPlugin(type: GithubUploader, dependsOn: makeZip) {
-        group 'nextflow'
-        assets = providers.provider {["$buildDir/libs/${project.name}-${project.version}.zip",
-                                      "$buildDir/libs/${project.name}-${project.version}-meta.json" ]}
-        release = providers.provider { project.version }
-        unstable = providers.provider { project.version.endsWith('-SNAPSHOT') }
-        repo = providers.provider { project.name }
-        owner = github_organization
-        userName = github_username
-        authToken = github_access_token
-        skipExisting = true
-        ignore = true
-    }
-
     jar {
         from sourceSets.main.allSource
         doLast {
@@ -162,23 +135,25 @@ subprojects {
         }
         repositories {
             maven {
-                url = publishRepoUrl
+                url = System.getenv('MAVEN_PUBLISH_URL')
+                    ?: ( version.endsWith('-SNAPSHOT') ? "s3://maven.seqera.io/snapshots" : "s3://maven.seqera.io/releases" )
+
                 credentials(AwsCredentials) {
-                    // keys are defined in the `gradle.properties` file
-                    accessKey aws_access_key_id
-                    secretKey aws_secret_access_key
+                    accessKey = System.getenv('AWS_ACCESS_KEY_ID') ?: findProperty('aws_access_key_id')
+                    secretKey = System.getenv('AWS_SECRET_ACCESS_KEY') ?: findProperty('aws_secret_access_key')
                 }
             }
         }
     }
 
-
 }
 
-/*
- * Upload all plugins to the corresponding GitHub repos
+/**
+ * Publish jars to maven repositories
  */
-task upload(dependsOn: [subprojects.uploadPlugin, subprojects.publish]) { }
+task publishPluginsToMaven {
+    dependsOn subprojects.publish
+}
 
 /*
  * Copies the plugins required dependencies in the corresponding lib directory
@@ -194,10 +169,10 @@ project.parent.tasks.getByName("assemble").dependsOn << assemble
  * Merge and publish the plugins index file
  */
 task publishIndex( type: GithubRepositoryPublisher ) {
-    indexUrl = 'https://github.com/nextflow-io/plugins/main/plugins.json'
+    indexUrl = System.getenv('PLUGINS_INDEX_JSON') ?: 'https://github.com/nextflow-io/plugins/main/plugins.json'
     repos = allPlugins()
-    owner = github_organization
-    githubUser = github_username
-    githubEmail = github_commit_email
-    githubToken = github_access_token
+    owner = System.getenv('GH_ORG') ?: 'nextflow-io'
+    githubUser = System.getenv('GH_USER') ?: project.findProperty('github_username')
+    githubEmail = System.getenv('GH_USER_EMAIL') ?: project.findProperty('github_commit_email')
+    githubToken = System.getenv('GH_TOKEN') ?: project.findProperty('github_access_token')
 }
