@@ -76,9 +76,7 @@ class BridgeExecutor extends AbstractGridExecutor {
         }
 
         // other cluster options 
-        if( task.config.clusterOptions ) {
-            result << task.config.clusterOptions.toString() << ''
-        }
+        addClusterOptionsDirective(task.config, result)
 
         return result
     }

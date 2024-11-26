@@ -1,7 +1,9 @@
 #!/bin/bash
 #BSUB -x 1
 #BSUB -y 2
-# NEXTFLOW TASK: Hello 1
+### ---
+### name: 'Hello 1'
+### ...
 set -e
 set -u
 NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 1 ]] && set -x

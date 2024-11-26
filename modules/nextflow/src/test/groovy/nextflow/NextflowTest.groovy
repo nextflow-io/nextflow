@@ -35,6 +35,17 @@ class NextflowTest extends Specification {
         System.getenv('CI_GROOVY_VERSION') == GroovySystem.getVersion()
     }
 
+    def 'should get an environment variable' () {
+        given:
+        SysEnv.push(FOO: 'FOO_VALUE')
+
+        expect:
+        Nextflow.env('FOO') == 'FOO_VALUE'
+
+        cleanup:
+        SysEnv.pop()
+    }
+
     def testFile() {
         expect:
         Nextflow.file('file.log').toFile() == new File('file.log').canonicalFile

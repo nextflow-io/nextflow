@@ -75,10 +75,10 @@ class CondorExecutor extends AbstractGridExecutor {
             result << "periodic_remove = (RemoteWallClockTime - CumulativeSuspensionTime) > ${task.config.getTime().toSeconds()}".toString()
         }
 
-        if( task.config.clusterOptions ) {
-            def opts = task.config.clusterOptions
+        if( task.config.getClusterOptions() ) {
+            def opts = task.config.getClusterOptions()
             if( opts instanceof Collection ) {
-                result.addAll(opts)
+                result.addAll(opts as Collection)
             }
             else {
                 result.addAll( opts.toString().tokenize(';\n').collect{ it.trim() })

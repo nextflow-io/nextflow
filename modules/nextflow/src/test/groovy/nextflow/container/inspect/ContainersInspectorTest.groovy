@@ -50,7 +50,7 @@ class ContainersInspectorTest extends Specification {
         ]
 
         when:
-        def observer = new ContainersInspector(dag)
+        def observer = new ContainersInspector(dag, false)
         then:
         observer.getContainers() == [
             'proc1': 'container1',
@@ -67,7 +67,7 @@ class ContainersInspectorTest extends Specification {
         ]
 
         when:
-        def result = new ContainersInspector(dag)
+        def result = new ContainersInspector(dag, false)
                 .withFormat('json')
                 .renderContainers()
         then:
@@ -75,12 +75,12 @@ class ContainersInspectorTest extends Specification {
             {
                 "processes": [
                     {
-                        "name": "proc2",
-                        "container": "container2"
-                    },
-                    {
                         "name": "proc1",
                         "container": "container1"
+                    },
+                    {
+                        "name": "proc2",
+                        "container": "container2"
                     }
                 ]
             }
@@ -96,13 +96,13 @@ class ContainersInspectorTest extends Specification {
         ]
 
         when:
-        def result = new ContainersInspector(dag)
+        def result = new ContainersInspector(dag,false)
                 .withFormat('config')
                 .renderContainers()
         then:
         result == '''\
-            process { withName: 'proc2' { container = 'container2' } }
             process { withName: 'proc1' { container = 'container1' } }
+            process { withName: 'proc2' { container = 'container2' } }
             '''.stripIndent(true)
     }
 

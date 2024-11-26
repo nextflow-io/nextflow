@@ -16,6 +16,8 @@
 
 package nextflow.file.http
 
+import nextflow.file.CopyMoveHelper
+
 import static nextflow.file.http.XFileSystemConfig.*
 
 import java.nio.ByteBuffer
@@ -245,7 +247,11 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         }
 
         final conn = toConnection(path)
-        final stream = new BufferedInputStream(conn.getInputStream())
+        final length = conn.getContentLengthLong()
+        final target = length>0
+                ? new FixedInputStream(conn.getInputStream(),length)
+                : conn.getInputStream()
+        final stream = new BufferedInputStream(target)
 
         new SeekableByteChannel() {
 
@@ -255,7 +261,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
             int read(ByteBuffer buffer) throws IOException {
                 def data=0
                 int len=0
-                while( len<buffer.capacity() && (data=stream.read())!=-1 ) {
+                while( buffer.hasRemaining() && (data=stream.read())!=-1 ) {
                     buffer.put((byte)data)
                     len++
                 }
@@ -346,7 +352,12 @@ abstract class XFileSystemProvider extends FileSystemProvider {
             }
         }
 
-        return toConnection(path).getInputStream()
+        final conn = toConnection(path)
+        final length = conn.getContentLengthLong()
+        // only apply the FixedInputStream check if staging files
+        return length>0 && CopyMoveHelper.IN_FOREIGN_COPY.get()
+            ? new FixedInputStream(conn.getInputStream(), length)
+            : conn.getInputStream()
     }
 
     /**

@@ -206,7 +206,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         }
 
         // make a copy of the output list because execution can change it
-        final copyOuts = declaredOutputs.clone()
+        output = new ChannelOut(declaredOutputs.clone())
 
         // create the executor
         final executor = session
@@ -221,7 +221,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
 
         // the result channels
         assert declaredOutputs.size()>0, "Process output should contains at least one channel"
-        return output = new ChannelOut(copyOuts)
+        return output
     }
 
 }

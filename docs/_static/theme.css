@@ -224,3 +224,23 @@ div.versionchanged                       { border-color: #BC6437; background-col
 div.versionchanged p:first-child::before { color: #BC6437; }
 div.deprecated                           { border-color: #C3514D; background-color: #FEEDEC; }
 div.deprecated p:first-child::before     { color: #C3514D; }
+
+/* Version in sidebar */
+.sidebar_version {
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    color: #160F26;
+}
+.sidebar_version samp {
+    font-size: 0.6rem;
+}
+.sidebar_version select {
+    background-color: #0DC09D;
+    box-shadow: none;
+    color: #160F26;
+    border: 1px solid #160f26a3;
+    border-radius: 1rem;
+    padding: 0.15rem 0.2rem;
+    font-size: 0.7rem;
+    margin-left: 0.5rem;
+}

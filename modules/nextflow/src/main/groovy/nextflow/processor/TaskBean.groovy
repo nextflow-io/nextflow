@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.container.ContainerConfig
 import nextflow.executor.BashWrapperBuilder
+import nextflow.executor.TaskArrayExecutor
 import nextflow.util.MemoryUnit
 
 /**
@@ -46,6 +47,8 @@ class TaskBean implements Serializable, Cloneable {
     String containerImage
 
     Path condaEnv
+
+    Boolean useMicromamba
 
     Path spackEnv
 
@@ -103,6 +106,12 @@ class TaskBean implements Serializable, Cloneable {
 
     Map<String,String> resourceLabels
 
+    String arrayIndexName
+
+    Integer arrayIndexStart
+
+    List<Path> arrayWorkDirs
+
     @PackageScope
     TaskBean() {
         shell = BashWrapperBuilder.BASH
@@ -124,6 +133,7 @@ class TaskBean implements Serializable, Cloneable {
         this.environment = task.getEnvironment()
 
         this.condaEnv = task.getCondaEnv()
+        this.useMicromamba = task.getCondaConfig()?.useMicromamba()
         this.spackEnv = task.getSpackEnv()
         this.moduleNames = task.config.getModule()
         this.shell = task.config.getShell() ?: BashWrapperBuilder.BASH
@@ -156,6 +166,14 @@ class TaskBean implements Serializable, Cloneable {
         this.stageOutMode = task.config.getStageOutMode()
 
         this.resourceLabels = task.config.getResourceLabels()
+
+        // job array
+        if( task instanceof TaskArrayRun ) {
+            final executor = (TaskArrayExecutor)task.getProcessor().getExecutor()
+            this.arrayIndexName = executor.getArrayIndexName()
+            this.arrayIndexStart = executor.getArrayIndexStart()
+            this.arrayWorkDirs = task.children.collect( h -> h.task.workDir )
+        }
     }
 
     @Override

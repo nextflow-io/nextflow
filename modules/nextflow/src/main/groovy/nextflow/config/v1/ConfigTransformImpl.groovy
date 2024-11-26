@@ -16,6 +16,7 @@
 
 package nextflow.config.v1
 
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.config.ConfigClosurePlaceholder
@@ -204,5 +205,4 @@ class ConfigTransformImpl implements ASTTransformation {
         }
 
     }
-
 }
