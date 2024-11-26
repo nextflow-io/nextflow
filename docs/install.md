@@ -126,9 +126,18 @@ libraries. This distribution is mainly useful for offline environments.
 Note however the support for cloud services e.g. AWS, Seqera Platform, Wave, etc. still require the download
 of the corresponding Nextflow plugins.
 
-The installer for the `dist` distribution can be found on the [GitHub releases page](https://github.com/nextflow-io/nextflow/releases), under the "Assets" section for a specific release. The installation procedure is the same as for the standard distribution, only using this URL instead of `https://get.nextflow.io`:
+To use the standalone distribution:
 
-```bash
-export NXF_VER=24.10.0
-curl -s https://github.com/nextflow-io/nextflow/releases/download/v$NXF_VER/nextflow-$NXF_VER-dist
-```
+1. Download it from the [GitHub releases page](https://github.com/nextflow-io/nextflow/releases), under the "Assets" section for a specific
+
+2. Grant execution permissions to the downloaded file e.g.
+
+    ```
+    chmod -x nextflow-24.10.1-dist
+    ```
+
+3. Then you can use it as a drop-in replacement for `nextflow` command. For example:
+
+    ```
+    ./nextflow-24.10.1-dist run hello
+    ```
