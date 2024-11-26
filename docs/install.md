@@ -136,7 +136,7 @@ To use the standalone distribution:
     chmod -x nextflow-24.10.1-dist
     ```
 
-3. Then you can use it as a drop-in replacement for `nextflow` command, e.g.
+3. Then you can use it as a drop-in replacement for `nextflow` command. For example:
 
     ```
     ./nextflow-24.10.1-dist run hello
