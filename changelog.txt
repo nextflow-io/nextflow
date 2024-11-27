@@ -1,5 +1,11 @@
 NEXTFLOW CHANGE-LOG
 ===================
+24.10.2 - 27 Nov 2024
+- Prevent NPE with null AWS Batch response [3d491934]
+- Fix overlapping conda lock file (#5540) [df66deaa]
+- Fix missing wave response (#5547) [eb85cda8]
+- Update wave deps [b211a987]
+
 24.10.1 - 18 Nov 2024
 - Fix overlapping file lock exception (#5489) [a2566d54]
 - Fix isContainerReady when wave is disabled (#5509) [c69e3711]
