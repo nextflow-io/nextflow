@@ -27,6 +27,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.function.Predicate
@@ -104,7 +105,9 @@ class WaveClient {
 
     final private String endpoint
 
-    private Cache<String, Handle> cache
+    private Cache<String, SubmitContainerTokenResponse> cache
+
+    private Map<String,Handle> responses = new ConcurrentHashMap<>()
 
     private Session session
 
@@ -135,7 +138,7 @@ class WaveClient {
         this.packer = new Packer().withPreserveTimestamp(config.preserveFileTimestamp())
         this.waveRegistry = new URI(endpoint).getAuthority()
         // create cache
-        cache = CacheBuilder<String, Handle>
+        this.cache = CacheBuilder<String, Handle>
             .newBuilder()
             .expireAfterWrite(config.tokensCacheMaxDuration().toSeconds(), TimeUnit.SECONDS)
             .build()
@@ -572,8 +575,12 @@ class WaveClient {
             final key = assets.fingerprint()
             log.trace "Wave fingerprint: $key; assets: $assets"
             // get from cache or submit a new request
-            final handle = cache.get(key, () -> new Handle(sendRequest(assets),Instant.now()) )
-            return new ContainerInfo(assets.containerImage, handle.response.targetImage, key)
+            final resp = cache.get(key, () -> {
+                final ret = sendRequest(assets);
+                responses.put(key,new Handle(ret,Instant.now()));
+                return ret
+            })
+            return new ContainerInfo(assets.containerImage, resp.targetImage, key)
         }
         catch ( UncheckedExecutionException e ) {
             throw e.cause
@@ -633,7 +640,7 @@ class WaveClient {
     }
 
     boolean isContainerReady(String key) {
-        final handle = cache.getIfPresent(key)
+        final handle = responses.get(key)
         if( !handle )
             throw new IllegalStateException("Unable to find any container with key: $key")
         final resp = handle.response
