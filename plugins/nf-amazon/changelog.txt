@@ -1,5 +1,8 @@
 nf-amazon changelog
 ===================
+2.9.2 - 27 Nov 2024
+- Prevent NPE with null AWS Batch response [3d491934]
+
 2.9.1 - 18 Nov 2024
 - Bump netty-common to version 4.1.115.Final [90623c1e]
 
