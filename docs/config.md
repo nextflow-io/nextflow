@@ -113,6 +113,15 @@ The following constants are globally available in a Nextflow configuration file:
 `projectDir`
 : The directory where the main script is located.
 
+## Functions
+
+The following functions are globally available in a Nextflow configuration file:
+
+`env( name )`
+: :::{versionadded} 24.11.0-edge
+  :::
+: Get the value of the environment variable with the specified name in the Nextflow launch environment.
+
 (config-params)=
 
 ## Parameters
@@ -128,6 +137,8 @@ params {
     beta_2 = 'another string ..'
 }
 ```
+
+See {ref}`cli-params` for information about how to modify these on the command line.
 
 (config-process)=
 

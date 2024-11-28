@@ -52,6 +52,9 @@ The following settings are available:
 `apptainer.envWhitelist`
 : Comma separated list of environment variable names to be included in the container environment.
 
+`apptainer.libraryDir`
+: Directory where remote Apptainer images are retrieved. When using a computing cluster it must be a shared folder accessible to all compute nodes.
+
 `apptainer.noHttps`
 : Pull the Apptainer image with http protocol (default: `false`).
 
@@ -1374,6 +1377,9 @@ The following settings are available:
 
 `singularity.envWhitelist`
 : Comma separated list of environment variable names to be included in the container environment.
+
+`singularity.libraryDir`
+: Directory where remote Singularity images are retrieved. When using a computing cluster it must be a shared folder accessible to all compute nodes.
 
 `singularity.noHttps`
 : Pull the Singularity image with http protocol (default: `false`).
