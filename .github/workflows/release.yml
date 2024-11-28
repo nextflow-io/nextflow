@@ -1,7 +1,5 @@
 name: Release
-run-name: Release ${{ github.ref_name }}
 
-# TODO:tom real workflow trigger
 on:
   workflow_dispatch:
 
@@ -62,12 +60,34 @@ jobs:
             plugins/*/build/libs/
 
   # --------------------------------------------------
+  # job: tag
+  # --------------------------------------------------
+  tag:
+    name: Tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: assemble
+    permissions:
+      contents: write
+    steps:
+      # setup steps
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: true
+
+      # execute steps
+      - name: Tag
+        run: bash .github/scripts/tag-release.sh
+
+  # --------------------------------------------------
   # job: deploy-maven
   # --------------------------------------------------
   deploy-maven:
     name: Deploy to Maven
     runs-on: ubuntu-latest
-    needs: assemble
+    needs: tag
     timeout-minutes: 15
     steps:
       # setup steps
@@ -105,7 +125,7 @@ jobs:
   deploy-s3:
     name: Deploy to S3
     runs-on: ubuntu-latest
-    needs: assemble
+    needs: tag
     timeout-minutes: 15
     steps:
       # setup steps
@@ -140,7 +160,9 @@ jobs:
   deploy-docker:
     name: Deploy to Docker
     runs-on: ubuntu-latest
-    needs: assemble
+    needs:
+      - tag
+      - deploy-s3
     timeout-minutes: 15
     steps:
       # setup steps
@@ -170,12 +192,40 @@ jobs:
           SEQERA_REGISTRY: ${{ vars.SEQERA_PUBLIC_CR_URL }}
 
   # --------------------------------------------------
+  # job: deploy-github
+  # --------------------------------------------------
+  deploy-github:
+    name: Deploy to Github
+    runs-on: ubuntu-latest
+    needs: tag
+    timeout-minutes: 15
+    steps:
+      # setup steps
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: true
+
+      - name: Download artifacts (distribution)
+        uses: actions/download-artifact@v4
+        with:
+          name: distribution
+          path: build/releases
+
+        # deploy steps
+      - name: Create github release
+        run: bash .github/scripts/deploy-to-github.sh
+        env:
+          GH_TOKEN: ${{ secrets.DEPLOY_GITHUB_TOKEN }}
+
+  # --------------------------------------------------
   # job: deploy-plugins
   # --------------------------------------------------
   deploy-plugins:
     name: Deploy Plugins
     runs-on: ubuntu-latest
-    needs: assemble
+    needs: tag
     timeout-minutes: 15
     steps:
       # setup steps
@@ -221,3 +271,37 @@ jobs:
           GH_USER_EMAIL: ${{ vars.DEPLOY_GITHUB_EMAIL }}
           GH_TOKEN: ${{ secrets.DEPLOY_GITHUB_TOKEN }}
           PLUGINS_INDEX_JSON: ${{ vars.PLUGINS_INDEX_JSON }}
+
+
+  # --------------------------------------------------
+  # job: publish
+  # --------------------------------------------------
+  publish:
+    name: Publish release
+    runs-on: ubuntu-latest
+    needs:
+      - deploy-s3
+      - deploy-docker
+      - deploy-maven
+      - deploy-github
+    timeout-minutes: 15
+    steps:
+      # setup steps
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: true
+
+      - name: Setup AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: eu-west-1
+          aws-access-key-id: ${{ secrets.AWS_DEPLOY_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_DEPLOY_SECRET_ACCESS_KEY }}
+
+      # deploy steps
+      - name: Publish release
+        run: bash .github/scripts/publish-release.sh
+        env:
+          S3_RELEASE_BUCKET: ${{ vars.S3_RELEASE_BUCKET }}

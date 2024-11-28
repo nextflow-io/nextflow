@@ -29,7 +29,6 @@ ext.mainClassName = 'nextflow.cli.Launcher'
 ext.homeDir = System.properties['user.home']
 ext.nextflowDir = "$homeDir/.nextflow/framework/$version"
 ext.releaseDir = "$buildDir/releases"
-ext.s3CmdOpts="--acl public-read --storage-class STANDARD --region eu-west-1"
 
 protected resolveDeps( String configName, String... x ) {
 
@@ -161,61 +160,3 @@ task dockerPack(type: Exec, dependsOn: ['packOne']) {
 
     commandLine 'bash', '-e', temp.absolutePath
 }
-
-/*
- * Tag and upload the release
- * 
- * https://github.com/aktau/github-release/
- */
-task release(type: Exec, dependsOn: [pack]) {
-
-    def launcherFile = file('nextflow').absoluteFile
-    def launcherSha1 = file('nextflow.sha1').absoluteFile
-    def launcherSha256 = file('nextflow.sha256').absoluteFile
-    def nextflowAllFile = file("$releaseDir/nextflow-${version}-dist")
-    def versionFile = file('VERSION').absoluteFile
-
-    def snapshot = version ==~ /^.+(-RC\d+|-SNAPSHOT)$/
-    def edge = version ==~ /^.+(-edge|-EDGE)$/
-    def isLatest = !snapshot && !edge
-    def cmd =  """\
-    # tag the release
-    git push || exit \$?
-    (git tag -a v$version -m 'Tagging version $version [release]' -f && git push origin v$version -f) || exit \$?
-    sleep 1
-    gh release create --repo nextflow-io/nextflow --prerelease --title "Version $version" v$version 
-    sleep 1
-    gh release upload --repo nextflow-io/nextflow v$version ${launcherFile} ${nextflowAllFile}        
-    """.stripIndent()
-
-    if( edge )
-        cmd += """
-        # publish the script as the latest
-        export AWS_ACCESS_KEY_ID=${System.env.NXF_AWS_ACCESS}
-        export AWS_SECRET_ACCESS_KEY=${System.env.NXF_AWS_SECRET}
-        aws s3 cp $launcherFile s3://www2.nextflow.io/releases/edge/nextflow $s3CmdOpts
-        aws s3 cp $launcherSha1 s3://www2.nextflow.io/releases/edge/nextflow.sha1 $s3CmdOpts
-        aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/edge/nextflow.sha256 $s3CmdOpts
-        aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/edge/nextflow.md5 $s3CmdOpts
-        aws s3 cp $versionFile s3://www2.nextflow.io/releases/edge/version $s3CmdOpts
-        """.stripIndent()
-        
-    else if( isLatest )
-        cmd += """
-        # publish the script as the latest
-        export AWS_ACCESS_KEY_ID=${System.env.NXF_AWS_ACCESS}
-        export AWS_SECRET_ACCESS_KEY=${System.env.NXF_AWS_SECRET}
-        aws s3 cp $launcherFile s3://www2.nextflow.io/releases/latest/nextflow $s3CmdOpts
-        aws s3 cp $launcherSha1 s3://www2.nextflow.io/releases/latest/nextflow.sha1 $s3CmdOpts
-        aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/latest/nextflow.sha256 $s3CmdOpts
-        aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/latest/nextflow.md5 $s3CmdOpts
-        aws s3 cp $versionFile s3://www2.nextflow.io/releases/latest/version $s3CmdOpts
-        """.stripIndent()
-
-    def temp = File.createTempFile('upload',null)
-    temp.deleteOnExit()
-    temp.text = cmd
-    commandLine 'bash', '-e', temp.absolutePath
-}
-
-

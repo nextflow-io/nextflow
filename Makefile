@@ -101,7 +101,7 @@ pack:
 # Upload final package to GitHub
 #
 release:
-	BUILD_PACK=1 ./gradlew release
+	./make-release.sh
 
 #
 # Create local docker image
