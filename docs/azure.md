@@ -167,12 +167,12 @@ To specify multiple Azure machine families, use a comma separated list with glob
 process.machineType = "Standard_D*d_v5,Standard_E*d_v5"
 ```
 
-For example, the following process will create a pool of `Standard_E4d_v5` machines based when using `autoPoolMode`:
+For example, the following process will create a pool of `Standard_E8d_v5` machines based when using `autoPoolMode`:
 
 ```nextflow
 process EXAMPLE_PROCESS {
     machineType "Standard_E*d_v5"
-    cpus 16
+    cpus 8
     memory 8.GB
 
     script:
