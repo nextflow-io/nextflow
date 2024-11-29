@@ -2243,7 +2243,7 @@ class TaskProcessor {
             keys.add('stub-run')
         }
 
-        final mode = config.getHashMode()
+        final mode = task.getConfig().getHashMode()
         final hash = computeHash(keys, mode)
         if( session.dumpHashes ) {
             session.dumpHashes=='json'
