@@ -219,11 +219,19 @@ class PublishDir {
         return result
     }
 
+    protected Map getRetryOpts() {
+        def result = session.config.navigate('nextflow.publish.retryPolicy') as Map
+        if( result != null )
+            log.warn 'The `nextflow.publish` config scope has been renamed to `workflow.output`'
+        else
+            result = session.config.navigate('workflow.output.retryPolicy') as Map ?: Collections.emptyMap()
+        return result
+    }
+
     protected void apply0(Set<Path> files) {
         assert path
-
-        final retryOpts = session.config.navigate('nextflow.publish.retryPolicy') as Map ?: Collections.emptyMap()
-        this.retryConfig = new PublishRetryConfig(retryOpts)
+        // setup the retry policy config to be used
+        this.retryConfig = new PublishRetryConfig(getRetryOpts())
 
         createPublishDir()
         validatePublishMode()
@@ -317,7 +325,7 @@ class PublishDir {
             return
         }
 
-        final destination = resolveDestination(target)
+        final destination = resolveDestination(target).normalize()
 
         // apply tags
         if( this.tags!=null && destination instanceof TagAwareFile ) {

@@ -25,13 +25,14 @@ You can see the effect of Nextflow's AST transforms by using the Nextflow consol
 
 Here is the example from {ref}`your-first-script`:
 
-```groovy
+```nextflow
 params.str = 'Hello world!'
 
 process splitLetters {
   output:
     path 'chunk_*'
 
+  script:
   """
   printf '${params.str}' | split -b 6 - chunk_
   """
@@ -43,6 +44,7 @@ process convertToUpper {
   output:
     stdout
 
+  script:
   """
   cat $x | tr '[a-z]' '[A-Z]'
   """
@@ -62,6 +64,7 @@ process( splitLetters( {
   output:
     path('chunk_*')
 
+  script:
   """
   printf '${params.str}' | split -b 6 - chunk_
   """
@@ -73,6 +76,7 @@ process( convertToUpper( {
   output:
     stdout
 
+  script:
   """
   cat $x | tr '[a-z]' '[A-Z]'
   """

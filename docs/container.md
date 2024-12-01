@@ -94,7 +94,7 @@ Read the {ref}`Process scope <config-process>` section to learn more about proce
 
 Nextflow is able to transparently pull remote container images stored in any Docker compatible registry.
 
-By default when a container name is specified, Nextflow checks if an image file with that name exists in the local file system. If that image file exists, it's used to execute the container. If a matching file does not exist, Nextflow automatically tries to pull an image with the specified name from the container registry.
+By default, when a container name is specified, Nextflow checks if an image file with that name exists in the local file system. If that image file exists, it's used to execute the container. If a matching file does not exist, Nextflow automatically tries to pull an image with the specified name from the container registry.
 
 If you want Nextflow to check only for local file images, prefix the container name with the `file://` pseudo-protocol. For example:
 
@@ -107,7 +107,7 @@ apptainer.enabled = true
 Use three `/` slashes to specify an **absolute** file path, otherwise the path will be interpreted as relative to the workflow launch directory.
 :::
 
-To pull images from Apptainer Hub or a third party Docker registry, simply prefix the image name with the `shub://`, `docker://` or `docker-daemon://` pseudo-protocol as required by Apptainer. For example:
+To pull images from Apptainer Hub or a third party Docker registry, prefix the image name with the `shub://`, `docker://` or `docker-daemon://` pseudo-protocol as required by Apptainer. For example:
 
 ```groovy
 process.container = 'docker://quay.io/biocontainers/multiqc:1.3--py35_2'
@@ -120,11 +120,11 @@ You do not need to specify `docker://` to pull from a Docker repository. Nextflo
 This feature requires the `apptainer` tool to be installed where the workflow execution is launched (as opposed to the compute nodes).
 :::
 
-Nextflow caches those images in the `apptainer` directory in the pipeline work directory by default. However it is suggested to provide a centralised cache directory by using either the `NXF_APPTAINER_CACHEDIR` environment variable or the `apptainer.cacheDir` setting in the Nextflow config file.
+Nextflow caches Apptainer images in the `apptainer` directory, in the pipeline work directory, by default. However, it is recommended to provide a centralized cache directory using the `NXF_APPTAINER_CACHEDIR` environment variable or the `apptainer.cacheDir` setting in the Nextflow config file.
 
-:::{versionadded} 21.09.0-edge
-When looking for a Apptainer image file, Nextflow first checks the *library* directory, and if the image file is not found, the *cache* directory is used s usual. The library directory can be defined either using the `NXF_APPTAINER_LIBRARYDIR` environment variable or the `apptainer.libraryDir` configuration setting (the latter overrides the former).
-:::
+Nextflow uses the library directory to determine the location of Apptainer containers. The library directory can be defined using the `apptainer.libraryDir` configuration setting or the `NXF_APPTAINER_LIBRARYDIR` environment variable. The configuration file option overrides the environment variable if both are set.
+
+Nextflow first checks the library directory when searching for the image. If the image is not found it then checks the cache directory. The main difference between the library directory and the cache directory is that the first is assumed to be a read-only container repository, while the latter is expected to be writable path where container images can added for caching purposes.
 
 :::{warning}
 When using a compute cluster, the Apptainer cache directory must reside in a shared filesystem accessible to all compute nodes.
@@ -293,17 +293,19 @@ It is possible to specify a different Docker image for each process definition i
 process foo {
   container 'image_name_1'
 
-  '''
+  script:
+  """
   do this
-  '''
+  """
 }
 
 process bar {
   container 'image_name_2'
 
-  '''
+  script:
+  """
   do that
-  '''
+  """
 }
 ```
 
@@ -380,17 +382,19 @@ It is possible to specify a different container image for each process definitio
 process foo {
   container 'image_name_1'
 
-  '''
+  script:
+  """
   do this
-  '''
+  """
 }
 
 process bar {
   container 'image_name_2'
 
-  '''
+  script:
+  """
   do that
-  '''
+  """
 }
 ```
 
@@ -649,11 +653,11 @@ process.container = 'library://library/default/alpine:3.8'
 
 The `library://` pseudo-protocol allows you to import Singularity images from a local Docker installation instead of downloading them from a Docker registry. This feature requires the `singularity` tool to be installed where the workflow execution is launched (as opposed to the compute nodes).
 
-Nextflow caches the images in `${NXF_WORK}/singularity` by default. However, it is recommended to define a centralised cache directory using either the `NXF_SINGULARITY_CACHEDIR` environment variable or the `singularity.cacheDir` setting in the Nextflow config file.
+Nextflow caches Singularity images in the `singularity` directory, in the pipeline work directory, by default. However, it is recommended to provide a centralized cache directory using the `NXF_SINGULARITY_CACHEDIR` environment variable or the `singularity.cacheDir` setting in the Nextflow config file.
 
-:::{versionadded} 21.09.0-edge
-When looking for a Singularity image file, Nextflow first checks the *library* directory, and if the image file is not found, the *cache* directory is used as usual. The library directory can be defined either using the `NXF_SINGULARITY_LIBRARYDIR` environment variable or the `singularity.libraryDir` configuration setting (the latter overrides the former).
-:::
+Nextflow uses the library directory to determine the location of Singularity images. The library directory can be defined using the `singularity.libraryDir` configuration setting or the `NXF_SINGULARITY_LIBRARYDIR` environment variable. The configuration file option overrides the environment variable if both are set.
+
+Nextflow first checks the library directory when searching for the image. If the image is not found it then checks the cache directory. The main difference between the library directory and the cache directory is that the first is assumed to be a read-only container repository, while the latter is expected to be writable path where container images can added for caching purposes.
 
 :::{warning}
 When using a compute cluster, the Singularity cache directory must reside in a shared filesystem accessible to all compute nodes.

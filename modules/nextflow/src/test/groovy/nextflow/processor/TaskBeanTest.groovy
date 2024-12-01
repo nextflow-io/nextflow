@@ -19,6 +19,7 @@ package nextflow.processor
 import java.nio.file.Paths
 
 import nextflow.Session
+import nextflow.conda.CondaConfig
 import nextflow.container.ContainerConfig
 import nextflow.executor.Executor
 import nextflow.script.ProcessConfig
@@ -69,6 +70,7 @@ class TaskBeanTest extends Specification {
         task.getEnvironment() >> [alpha: 'one', beta: 'xxx', gamma: 'yyy']
         task.getContainer() >> 'busybox:latest'
         task.getContainerConfig() >> [docker: true, registry: 'x']
+        task.getCondaConfig() >> new CondaConfig([useMicromamba:true], [:])
 
         when:
         def bean = new TaskBean(task)
@@ -98,6 +100,8 @@ class TaskBeanTest extends Specification {
         bean.binDirs == [Paths.get('/bin/dir')]
         bean.stageInMode == 'link'
         bean.stageOutMode == 'rsync'
+
+        bean.useMicromamba == true
 
     }
 

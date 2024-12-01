@@ -412,6 +412,9 @@ class NameGenerator {
             // David Hilbert - German mathematician, recognized as one of the most influential and universal mathematicians of the 19th and early 20th centuries. he is known as one of the founders of proof theory and mathematical logic, as well as for being among the first to distinguish between mathematics and metamathematics. https://en.wikipedia.org/wiki/David_Hilbert
             "hilbert",
 
+            // Rahel Hirsch - German physician, the first woman in the Kingdom of Prussia to be appointed a professor of medicine. https://en.wikipedia.org/wiki/Rahel_Hirsch
+            "hirsch",
+
             // Dorothy Hodgkin was a British biochemist, credited with the development of protein crystallography. She was awarded the Nobel Prize in Chemistry in 1964. https://en.wikipedia.org/wiki/Dorothy_Hodgkin
             "hodgkin",
 
@@ -628,6 +631,9 @@ class NameGenerator {
             // Robert Noyce invented silicone integrated circuits and gave Silicon Valley its name. https://en.wikipedia.org/wiki/Robert_Noyce
             "noyce",
 
+            // Severo Ochoa was a Spanish physician and biochemist, best known for being the winner of the 1959 Nobel Prize in Physiology or Medicine together with Arthur Kornberg for their discovery of the mechanisms in the biological synthesis of RNA and DNA. https://en.wikipedia.org/wiki/Severo_Ochoa
+            "ochoa",
+
             // Pāṇini - Ancient Indian linguist and grammarian from 4th century CE who worked on the world's first formal system. https://en.wikipedia.org/wiki/P%C4%81%E1%B9%87ini#Comparison_with_modern_formal_systems
             "panini",
 
@@ -699,6 +705,9 @@ class NameGenerator {
 
             // Meghnad Saha - Indian astrophysicist best known for his development of the Saha equation, used to describe chemical and physical conditions in stars. https://en.wikipedia.org/wiki/Meghnad_Saha
             "saha",
+
+            // Margarita Salas - Spanish biochemist and molecular biologist, best known for her discovery and characterisation of the Φ29 phage DNA polymerase. https://en.wikipedia.org/wiki/Margarita_Salas
+            "salas",
 
             // Jean E. Sammet developed FORMAC, the first widely used computer language for symbolic manipulation of mathematical formulas. https://en.wikipedia.org/wiki/Jean_E._Sammet
             "sammet",

@@ -20,7 +20,7 @@ Any process can define one or more channels as *input* and *output*. The interac
 
 A Nextflow script looks like this:
 
-```groovy
+```nextflow
 // Script parameters
 params.query = "/some/data/sample.fa"
 params.db = "/some/path/pdb"
@@ -33,6 +33,7 @@ process blastSearch {
   output:
   path "top_hits.txt"
 
+  script:
   """
   blastp -db $db -query $query -outfmt 6 > blast_result
   cat blast_result | head -n 10 | cut -f 2 > top_hits.txt
@@ -47,6 +48,7 @@ process extractTopHits {
   output:
   path "sequences.txt"
 
+  script:
   """
   blastdbcmd -db $db -entry_batch $top_hits > sequences.txt
   """
@@ -95,11 +97,9 @@ Read the {ref}`executor-page` to learn more about the Nextflow executors.
 
 ## Scripting language
 
-Nextflow is designed to have a minimal learning curve, without having to pick up a new programming language. In most cases, users can utilise their current skills to develop Nextflow workflows. However, it also provides a powerful scripting DSL.
+Nextflow is a workflow language based on [Java](https://en.wikipedia.org/wiki/Java_(programming_language)) and [Groovy](https://groovy-lang.org/). It is designed to simplify writing scalable and reproducible pipelines. In most cases, users can leverage their existing programming skills to develop Nextflow pipelines without the steep learning curve that usually comes with a new programming language.
 
-Nextflow scripting is an extension of the [Groovy programming language](<http://en.wikipedia.org/wiki/Groovy_(programming_language)>), which in turn is a super-set of the Java programming language. Groovy can be considered as Python for Java in that it simplifies the writing of code and is more approachable.
-
-Read the {ref}`script-page` section to learn about the Nextflow scripting language.
+See {ref}`script-page` for more information about the Nextflow scripting language.
 
 ## Configuration options
 

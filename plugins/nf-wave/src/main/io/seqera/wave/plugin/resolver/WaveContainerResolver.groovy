@@ -127,4 +127,11 @@ class WaveContainerResolver implements ContainerResolver {
         return null
     }
 
+    @Override
+    boolean isContainerReady(String key) {
+        final c=client()
+        return c.enabled()
+            ? c.isContainerReady(key)
+            : defaultResolver.isContainerReady(key)
+    }
 }
