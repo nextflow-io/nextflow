@@ -127,7 +127,7 @@ nxf_stage() {
     {{stage_inputs}}
 }
 
-nxf_unstage() {
+nxf_unstage_outputs() {
     true
     {{unstage_outputs}}
 }
@@ -135,6 +135,16 @@ nxf_unstage() {
 nxf_unstage_std_files() {
     true
     {{unstage_controls}}
+}
+
+nxf_unstage() {
+    ## Deactivate fast failure to allow uploading stdout and stderr files later
+    if [[ ${nxf_main_ret:=0} == 0 ]]; then
+        ## Data unstaging redirecting stdout and stderr with append mode
+        (set -e -o pipefail; (nxf_unstage_outputs | tee -a {{stdout_file}}) 3>&1 1>&2 2>&3 | tee -a {{stderr_file}})
+        nxf_unstage_ret=$?
+    fi
+    nxf_unstage_std_files
 }
 
 nxf_main() {
@@ -159,17 +169,11 @@ nxf_main() {
     export NXF_TASK_WORKDIR="$PWD"
     {{stage_cmd}}
 
-    ## Deactivate fast failure to allow uploading stdout and stderr files later
     set +e
     (set -o pipefail; (nxf_launch | tee {{stdout_file}}) 3>&1 1>&2 2>&3 | tee {{stderr_file}}) &
     pid=$!
     wait $pid || nxf_main_ret=$?
-    if [[ ${nxf_main_ret:=0} == 0 ]]; then
-        ## Data unstaging redirecting stdout and stderr with append mode
-        (set -e -o pipefail; ({{unstage_cmd}} | tee -a {{stdout_file}}) 3>&1 1>&2 2>&3 | tee -a {{stderr_file}})
-        nxf_unstage_ret=$?
-    fi
-    {{unstage_controls_cmd}}
+    {{unstage_cmd}}
     {{after_script}}
 }
 
