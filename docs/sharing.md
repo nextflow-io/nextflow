@@ -97,23 +97,27 @@ For maximal reproducibility, make sure to define a specific version for each too
 
 #### The `bin` directory
 
-As for custom scripts, you can include executable scripts in the `bin` directory of your pipeline repository. When configured correctly, these scripts can be executed like a regular command from any process script (i.e. without modifying the `PATH` environment variable or using an absolute path), and changing the script will cause the task to be re-executed on a resumed run (i.e. just like changing the process script itself).
+Executable scripts can be included in the pipeline `bin` directory located at the root of your pipeline directory. This allows you to create and organize custom scripts that can be invoked like regular commands from any process in your pipeline without modifying the `PATH` environment variable or using an absolute path. For example:
 
-To configure a custom script:
-
-1. Save the script in the `bin` directory (relative to the pipeline repository root).
-2. Specify a portable shebang (see note below for details).
-3. Make the script executable. For example: `chmod a+x bin/my_script.py`
-
-:::{tip}
-To maximize the portability of your bundled script, use `env` to dynamically resolve the location of the interpreter instead of hard-coding it in the shebang line.
-
-For example, shebang definitions `#!/usr/bin/python` and `#!/usr/local/bin/python` both hard-code specific paths to the Python interpreter. Instead, the following approach is more portable:
-
-```bash
-#!/usr/bin/env python
 ```
-:::
+├── bin
+│   └── custom_script.py
+└── main.nf
+```
+
+Each script should include a shebang line to specify the interpreter for the script. To maximize portability, use `env` to dynamically resolve the interpreter's location instead of hard-coding the interpreter path.
+
+For example, the shebang definitions `#!/usr/bin/python` and `#!/usr/local/bin/python` hard-code specific paths to the Python interpreter. Use `#!/usr/bin/env python` instead.
+
+Scripts placed in the `bin` directory must have executable permissions. Use the `chmod` command to grant the required permissions. For example:
+
+```
+chmod a+x bin/custom_script.py
+```
+
+After setting the executable permission, the script can be run directly within your pipeline processes.
+
+Executable scripts can also be stored as scripts that are locally scoped to the processes defined by the tasks. See {ref}`module-binaries` for more information.
 
 #### The `lib` directory
 
