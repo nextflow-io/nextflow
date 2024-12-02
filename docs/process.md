@@ -89,7 +89,7 @@ To use a language other than Bash, start your process script with the correspond
 ```nextflow
 process perlTask {
     """
-    #!/usr/bin/perl
+    #!/usr/bin/env perl
 
     print 'Hi there!' . '\n';
     """
@@ -97,7 +97,7 @@ process perlTask {
 
 process pythonTask {
     """
-    #!/usr/bin/python
+    #!/usr/bin/env python
 
     x = 'Hello'
     y = 'world!'
@@ -112,10 +112,10 @@ workflow {
 ```
 
 :::{tip}
-As the location of the interpreter binary file can differ across platforms. Use the `env` command followed by the interpreter name to make your script more portable. For example:
+As the location of the interpreter binary file can differ across platforms. Use `env` to resolve the interpreter's location instead of hard-coding the interpreter path. For example:
 
-```nextflow
-#!/usr/bin/env perl
+```
+#!/usr/bin/env python
 ```
 
 :::

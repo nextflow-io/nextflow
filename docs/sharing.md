@@ -105,9 +105,16 @@ Executable scripts can be included in the pipeline `bin` directory located at th
 └── main.nf
 ```
 
-Each script should include a shebang line to specify the interpreter for the script. To maximize portability, use `env` to dynamically resolve the interpreter's location instead of hard-coding the interpreter path.
+Each script should include a shebang line to specify the interpreter for the script.
 
-For example, the shebang definitions `#!/usr/bin/python` and `#!/usr/local/bin/python` hard-code specific paths to the Python interpreter. Use `#!/usr/bin/env python` instead.
+:::{tip}
+As the location of the interpreter binary file can differ across platforms. Use `env` to resolve the interpreter's location instead of hard-coding the interpreter path. For example:
+
+```
+#!/usr/bin/env python
+```
+
+:::
 
 Scripts placed in the `bin` directory must have executable permissions. Use the `chmod` command to grant the required permissions. For example:
 
