@@ -25,17 +25,31 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java_version: [11, 17, 22]
+        java_version: [17, 23]
 
     steps:
-      - name: Environment
-        run: env | sort
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
           submodules: true
+
+      - name: Get the commit message
+        id: get_commit_message
+        run: |
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+                echo "GitHub event=pull_request"
+                COMMIT_SHA=${{ github.event.pull_request.head.sha }}
+                COMMIT_MESSAGE=$(curl -s \
+                  -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                  https://api.github.com/repos/${{ github.repository }}/commits/$COMMIT_SHA | jq -r '.commit.message')
+                echo "Commit message=$COMMIT_MESSAGE" | head -n 1
+                echo "commit_message=$COMMIT_MESSAGE" | head -n 1 >> $GITHUB_OUTPUT
+            else
+               echo "GitHub event=${{ github.event_name }}"
+               echo "Commit message=${{ github.event.head_commit.message }}" | head -n 1
+               echo "commit_message=${{ github.event.head_commit.message }}" | head -n 1 >> $GITHUB_OUTPUT
+            fi 
 
       - name: Get changed files
         id: changed-files
@@ -76,6 +90,7 @@ jobs:
       - name: Test
         if: steps.changed-files.outputs.any_changed == 'true'
         run: |
+            env | sort
             # configure test env
             if [[ "$GOOGLE_SECRET" ]]; then
             echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
@@ -106,16 +121,17 @@ jobs:
 
     outputs:
       any_changed: ${{ steps.changed-files.outputs.any_changed }}
+      commit_message: ${{ steps.get_commit_message.outputs.commit_message }}
 
   test:
-    if: ${{ !contains(github.event.head_commit.message, '[ci fast]') && needs.build.outputs.any_changed == 'true' }}
+    if: ${{ !contains(needs.build.outputs.commit_message, '[ci fast]') && needs.build.outputs.any_changed == 'true' }}
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        java_version: [11, 21]
+        java_version: [17, 23]
         test_mode: ["test_integration", "test_docs", "test_aws", "test_azure", "test_google", "test_wave"]
     steps:
       - name: Checkout
@@ -142,8 +158,14 @@ jobs:
 
       - name: Run tests
         run: |
+          env | sort
+          # configure test env
+          if [[ "$GOOGLE_SECRET" ]]; then
+          echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
+          export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
+          fi
           cat $HOME/.nextflow/scm
-          make assemble install
+          make clean assemble install
           bash test-ci.sh
         env:
           TEST_JDK: ${{ matrix.java_version }}
@@ -173,5 +195,51 @@ jobs:
         with:
           name: report-${{ matrix.test_mode }}-jdk-${{ matrix.java_version }}
           path: |
-            validation/**
+            validation/**/*
+            validation/**/.*
             integration-tests.tar
+
+  test-e2e:
+      if: ${{ contains(needs.build.outputs.commit_message,'[e2e stage]') || contains(needs.build.outputs.commit_message,'[e2e prod]') }}
+      needs: build
+      runs-on: ubuntu-latest
+      timeout-minutes: 10
+      permissions:
+          actions: write  # Allow writing to actions
+          contents: write # Allow writing to repository contents
+      steps:
+          - name: Checkout
+            uses: actions/checkout@v4
+            with:
+                fetch-depth: 1
+                submodules: true
+                
+          - name: Setup Java 17
+            uses: actions/setup-java@v4
+            with:
+                java-version: 17
+                distribution: 'temurin'
+                architecture: x64
+                cache: gradle
+
+          - name: Setup env
+            run: |
+                wget -q -O wave https://github.com/seqeralabs/wave-cli/releases/download/v1.4.1/wave-1.4.1-linux-x86_64
+                chmod +x wave
+                mv wave /usr/local/bin/
+                echo "COMMIT_MESSAGE=\"${{ needs.build.outputs.commit_message }}\"" >> $GITHUB_ENV
+
+          - name : Docker Login to Seqera public CR
+            uses : docker/login-action@v3
+            with :
+                registry : "public.cr.seqera.io"
+                username : "public-cr-admin"
+                password : ${{ secrets.SEQERA_PUBLIC_CR_PASSWORD }}
+
+          - name: Launch tests
+            run: |
+                cd test-e2e
+                bash run.sh
+            env:
+                GITHUB_TOKEN: ${{ secrets.AUTOMATION_GITHUB_TOKEN }}
+                GRADLE_OPTS: '-Dorg.gradle.daemon=false'

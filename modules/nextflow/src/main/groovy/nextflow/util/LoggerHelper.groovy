@@ -16,10 +16,6 @@
 
 package nextflow.util
 
-import ch.qos.logback.core.encoder.Encoder
-import ch.qos.logback.core.spi.FilterAttachable
-import ch.qos.logback.core.spi.LifeCycle
-
 import static nextflow.Const.*
 
 import java.lang.reflect.Field
@@ -28,6 +24,7 @@ import java.nio.file.FileAlreadyExistsException
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.regex.Pattern
 
 import ch.qos.logback.classic.Level
@@ -42,13 +39,16 @@ import ch.qos.logback.core.ConsoleAppender
 import ch.qos.logback.core.CoreConstants
 import ch.qos.logback.core.FileAppender
 import ch.qos.logback.core.LayoutBase
+import ch.qos.logback.core.encoder.Encoder
 import ch.qos.logback.core.encoder.LayoutWrappingEncoder
 import ch.qos.logback.core.filter.Filter
 import ch.qos.logback.core.joran.spi.NoAutoStart
 import ch.qos.logback.core.rolling.FixedWindowRollingPolicy
 import ch.qos.logback.core.rolling.RollingFileAppender
 import ch.qos.logback.core.rolling.TriggeringPolicyBase
+import ch.qos.logback.core.spi.FilterAttachable
 import ch.qos.logback.core.spi.FilterReply
+import ch.qos.logback.core.spi.LifeCycle
 import ch.qos.logback.core.util.FileSize
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -84,6 +84,10 @@ import org.slf4j.MarkerFactory
  */
 @CompileStatic
 class LoggerHelper {
+
+    static volatile boolean aborted
+
+    static final AtomicInteger errCount = new AtomicInteger()
 
     static private Logger log = LoggerFactory.getLogger(LoggerHelper)
 
@@ -367,6 +371,36 @@ class LoggerHelper {
         INSTANCE.setQuiet0(quiet)
     }
 
+    /**
+     * Setup a minimal logger that redirect log events to stderr only used during app bootstrap
+     */
+    static void bootstrapLogger() {
+        LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+
+        // Reset the logger context (this clears any existing loggers)
+        context.reset();
+
+        // Create a console appender that writes to stderr
+        final consoleAppender = new ConsoleAppender<ILoggingEvent>();
+        consoleAppender.setContext(context);
+        consoleAppender.setTarget("System.err");
+
+        // Set a simple pattern for the log output
+        final encoder = new PatternLayoutEncoder();
+        encoder.setContext(context);
+        encoder.setPattern("%d{HH:mm:ss.SSS} %-5level - %msg%n");
+        encoder.start();
+
+        // Attach the encoder to the appender
+        consoleAppender.setEncoder(encoder);
+        consoleAppender.start();
+
+        // Get the root logger and set its level to DEBUG
+        Logger rootLogger = context.getLogger(Logger.ROOT_LOGGER_NAME);
+        rootLogger.addAppender(consoleAppender)
+        rootLogger.setLevel(Level.DEBUG)
+    }
+
     /*
      * Filters the logging event based on the level assigned to a specific 'package'
      */
@@ -388,6 +422,10 @@ class LoggerHelper {
             if (!isStarted()) {
                 return FilterReply.NEUTRAL;
             }
+
+            // print to console only the very first error log and ignore the others
+            if( aborted && event.level==Level.ERROR && errCount.getAndIncrement()>0 )
+                return FilterReply.DENY;
 
             def logger = event.getLoggerName()
             def level = event.getLevel()

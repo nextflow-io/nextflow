@@ -16,6 +16,8 @@
 
 package nextflow.processor
 
+import nextflow.conda.CondaConfig
+
 import java.nio.file.FileSystems
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -23,12 +25,13 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Function
 
 import com.google.common.hash.HashCode
-import groovy.transform.PackageScope
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.conda.CondaCache
 import nextflow.container.ContainerConfig
 import nextflow.container.resolver.ContainerInfo
+import nextflow.container.resolver.ContainerResolver
 import nextflow.container.resolver.ContainerResolverProvider
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessTemplateException
@@ -325,6 +328,11 @@ class TaskRun implements Cloneable {
      * The action {@link ErrorStrategy} action applied if task has failed
      */
     volatile ErrorStrategy errorAction
+
+    /**
+     * Unique key for the container used by this task
+     */
+    volatile String containerKey
 
     TaskConfig config
 
@@ -671,6 +679,11 @@ class TaskRun implements Cloneable {
             }})
     }
 
+    @Memoized
+    private ContainerResolver containerResolver() {
+        ContainerResolverProvider.load()
+    }
+
     private ContainerInfo containerInfo0() {
         // fetch the container image from the config
         def configImage = config.getContainer()
@@ -681,8 +694,11 @@ class TaskRun implements Cloneable {
         if( !configImage )
             configImage = null
 
-        final res = ContainerResolverProvider.load()
-        final info = res.resolveImage(this, configImage as String)
+        final info = containerResolver().resolveImage(this, configImage as String)
+        // track the key of the container used
+        if( info!=null )
+            this.containerKey = info.hashKey
+        // return the info
         return info
     }
 
@@ -697,6 +713,12 @@ class TaskRun implements Cloneable {
     String getContainerFingerprint() {
         final info = containerInfo()
         return info?.hashKey
+    }
+
+    boolean isContainerReady() {
+       return containerKey
+            ? containerResolver().isContainerReady(containerKey)
+            : true
     }
 
     ResourcesBundle getModuleBundle() {
@@ -734,6 +756,10 @@ class TaskRun implements Cloneable {
         return processor.executor?.isContainerNative() ?: false
     }
 
+    boolean isArray() {
+        return false
+    }
+
     boolean isContainerEnabled() {
         return getContainerConfig().isEnabled() && getContainer()!=null
     }
@@ -763,7 +789,13 @@ class TaskRun implements Cloneable {
      *
      * @param body A {@code BodyDef} object instance
      */
-    @PackageScope void resolve(BodyDef body) {
+    void resolve(BodyDef body)  {
+        processor.session.stubRun && config.getStubBlock()
+            ? resolveStub(config.getStubBlock())
+            : resolveBody(body)
+    }
+
+    protected void resolveBody(BodyDef body) {
 
         // -- initialize the task code to be executed
         this.code = body.closure.clone() as Closure
@@ -805,7 +837,7 @@ class TaskRun implements Cloneable {
             throw new ProcessUnrecoverableException("Process `${getName()}` script is empty")
     }
 
-    @PackageScope void resolve(TaskClosure block) {
+    protected void resolveStub(TaskClosure block) {
         this.code = block.clone() as Closure
         this.code.delegate = this.context
         this.code.setResolveStrategy(Closure.DELEGATE_ONLY)
@@ -936,6 +968,10 @@ class TaskRun implements Cloneable {
 
     TaskBean toTaskBean() {
         return new TaskBean(this)
+    }
+
+    CondaConfig getCondaConfig() {
+        return processor.session.getCondaConfig()
     }
 }
 

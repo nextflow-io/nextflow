@@ -6,11 +6,15 @@
 
 ## Requirements
 
-Nextflow can be used on any POSIX-compatible system (Linux, macOS, etc), and on Windows through [WSL](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux). It requires Bash 3.2 (or later) and [Java 11 (or later, up to 22)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed. You can see which version you have using the following command:
+Nextflow can be used on any POSIX-compatible system (Linux, macOS, etc), and on Windows through [WSL](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux). It requires Bash 3.2 (or later) and [Java 17 (or later, up to 23)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed. You can see which version you have using the following command:
 
 ```bash
 java -version
 ```
+
+:::{versionchanged} 24.11.0-edge
+Support for Java versions prior to 17 was dropped.
+:::
 
 If you don't have a compatible version of Java installed in your computer, it is recommended that you install it through [SDKMAN!](https://sdkman.io/), and that you use the latest LTS version of Temurin. See [this website](https://whichjdk.com/) for more information.
 
@@ -60,11 +64,20 @@ Nextflow is distributed as a self-installing package, in order to make the insta
     chmod +x nextflow
     ```
 
-3. Move Nextflow into an executable path:
+3. Move Nextflow into an executable path. For example:
 
     ```bash
-    sudo mv nextflow /usr/local/bin
+    mkdir -p $HOME/.local/bin/
+    mv nextflow $HOME/.local/bin/
     ```
+
+    :::{tip}
+    Ensure the directory `$HOME/.local/bin/` is included in your `PATH` variable. Temporarily add this directory to `PATH` by setting `export PATH="$PATH:$HOME/.local/bin"`. Add the directory to `PATH` permanently by adding the export command to your shell configuration file, such as `~/.bashrc` or `~/.zshrc`. Alternatively, move the `nextflow` executable to a directory already in your `PATH`.
+    :::
+
+    :::{warning}
+    Nextflow will update its executable during the self update process, therefore the update can fail if the executable is placed in a directory with restricted permissions.
+    :::
 
 4. Confirm that Nextflow is installed correctly:
 
@@ -83,7 +96,7 @@ nextflow self-update
 You can also temporarily switch to a specific version of Nextflow with the `NXF_VER` environment variable. For example:
 
 ```bash
-NXF_VER=23.10.0 nextflow run hello
+NXF_VER=23.10.0 nextflow info
 ```
 
 ## Stable and edge releases
@@ -98,23 +111,33 @@ To use the latest edge release, set `NXF_EDGE=1` when updating:
 NXF_EDGE=1 nextflow self-update
 ```
 
-You can also use `NXF_VER` to switch to any edge release:
+You can also use `NXF_VER` to temporarily switch to any edge release. For example:
 
 ```bash
-$ nextflow info
+NXF_VER=24.06.0-edge nextflow info
 ```
 
 ## Standalone distribution
 
-Nextflow has a set of {ref}`core plugins <plugins-core>` which are downloaded at runtime by default. There is also a standalone distribution (i.e. the `all` distribution) which comes pre-packaged with all core plugins. This distribution is mainly useful for offline environments.
+The Nextflow standalone distribution (i.e. the `dist` distribution) consists of self-contained `nextflow` executable file
+that includes all the application dependencies for core functionalities, and it can run without downloading third parties
+libraries. This distribution is mainly useful for offline environments.
 
-The installer for the `all` distribution can be found on the [GitHub releases page](https://github.com/nextflow-io/nextflow/releases), under the "Assets" section for a specific release. The installation procedure is the same as for the standard distribution, only using this URL instead of `https://get.nextflow.io`:
+Note however the support for cloud services e.g. AWS, Seqera Platform, Wave, etc. still require the download
+of the corresponding Nextflow plugins.
 
-```bash
-export NXF_VER=23.10.0
-curl -s https://github.com/nextflow-io/nextflow/releases/download/v$NXF_VER/nextflow-$NXF_VER-all
-```
+To use the standalone distribution:
 
-:::{warning}
-The `all` distribution does not support third-party plugins. Only the {ref}`core plugins <plugins-core>` are supported.
-:::
+1. Download it from the [GitHub releases page](https://github.com/nextflow-io/nextflow/releases), under the "Assets" section for a specific
+
+2. Grant execution permissions to the downloaded file e.g.
+
+    ```
+    chmod -x nextflow-24.10.1-dist
+    ```
+
+3. Then you can use it as a drop-in replacement for `nextflow` command. For example:
+
+    ```
+    ./nextflow-24.10.1-dist run hello
+    ```

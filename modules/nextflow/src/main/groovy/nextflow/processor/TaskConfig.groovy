@@ -25,6 +25,7 @@ import nextflow.Const
 import nextflow.ast.NextflowDSLImpl
 import nextflow.exception.AbortOperationException
 import nextflow.exception.FailedGuardException
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.AcceleratorResource
 import nextflow.executor.res.DiskResource
@@ -102,7 +103,7 @@ class TaskConfig extends LazyMap implements Cloneable {
         return eval0(this, path.tokenize('.'), path)
     }
 
-    private Object eval0(Object object, List<String> path, String key ) {
+    private Object eval0(Object object, List<String> path, String key) {
         assert path, "Missing task attribute name"
         def result = null
         if( object instanceof LazyMap ) {
@@ -256,7 +257,7 @@ class TaskConfig extends LazyMap implements Cloneable {
             new MemoryUnit(value.toString().trim())
         }
         catch( Exception e ) {
-            throw new AbortOperationException("Not a valid 'memory' value in process definition: $value")
+            throw new ProcessUnrecoverableException("Not a valid 'memory' value in process definition: $value")
         }
     }
 
@@ -334,14 +335,17 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     int getCpus() {
         final val = getCpus0()
+        if( val<0 )
+            throw new ProcessUnrecoverableException("Directive 'cpus' cannot be a negative value - offending value: $val")
         final lim = getResourceLimit('cpus') as Integer
+        if( lim!=null && lim<1 )
+            throw new ProcessUnrecoverableException("Directive 'resourceLimits.cpus' cannot be a negative value - offending value: $lim")
         return val && lim && val > lim ? lim : val
     }
 
     int getMaxRetries() {
         def result = get('maxRetries')
-        def defResult = getErrorStrategy() == ErrorStrategy.RETRY ? 1 : 0
-        result ? result as int : defResult
+        result ? result as int : 1
     }
 
     int getMaxErrors() {

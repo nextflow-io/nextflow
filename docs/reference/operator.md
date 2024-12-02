@@ -2,18 +2,6 @@
 
 # Operators
 
-Nextflow **operators** are methods that allow you to manipulate channels. Every operator, with the exception of [set](#set) and [subscribe](#subscribe), produces one or more new channels, allowing you to chain operators to fit your needs.
-
-This page is a comprehensive reference for all Nextflow operators. However, if you are new to Nextflow, here are some suggested operators to learn for common use cases:
-
-- Filtering: [filter](#filter), [randomSample](#randomsample), [take](#take), [unique](#unique)
-- Reduction: [collect](#collect), [groupTuple](#grouptuple), [reduce](#reduce)
-- Text processing: [splitCsv](#splitcsv), [splitJson](#splitjson), [splitText](#splittext)
-- Combining channels: [combine](#combine), [concat](#concat), [join](#join), [mix](#mix)
-- Forking channels: [branch](#branch), [multiMap](#multimap)
-- Maths: [count](#count), [max](#max), [min](#min), [sum](#sum)
-- Other: [ifEmpty](#ifempty), [map](#map), [set](#set), [view](#view)
-
 (operator-branch)=
 
 ## branch
@@ -27,11 +15,11 @@ The `branch` operator forwards each item from a source channel to one of multipl
 
 The selection criteria is a {ref}`closure <script-closure>` that defines, for each output channel, a unique label followed by a boolean expression. When an item is received, it is routed to the first output channel whose expression evaluates to `true`. For example:
 
-```{literalinclude} snippets/branch.nf
-:language: groovy
+```{literalinclude} ../snippets/branch.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/branch.out
+```{literalinclude} ../snippets/branch.out
 :language: console
 ```
 
@@ -41,21 +29,21 @@ The above output may be printed in any order since the two `view` operations are
 
 A fallback condition can be specified using `true` as the last branch condition:
 
-```{literalinclude} snippets/branch-with-fallback.nf
-:language: groovy
+```{literalinclude} ../snippets/branch-with-fallback.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/branch-with-fallback.out
+```{literalinclude} ../snippets/branch-with-fallback.out
 :language: console
 ```
 
 The value emitted to each branch can be customized with an expression statement (or statements) after the branch condition:
 
-```{literalinclude} snippets/branch-with-mapper.nf
-:language: groovy
+```{literalinclude} ../snippets/branch-with-mapper.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/branch-with-mapper.out
+```{literalinclude} ../snippets/branch-with-mapper.out
 :language: console
 ```
 
@@ -65,11 +53,11 @@ When the `return` keyword is omitted, the value of the last expression statement
 
 The `branchCriteria()` method can be used to create a branch criteria as a variable that can be passed as an argument to any number of `branch` operations, as shown below:
 
-```{literalinclude} snippets/branch-criteria.nf
-:language: groovy
+```{literalinclude} ../snippets/branch-criteria.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/branch-criteria.out
+```{literalinclude} ../snippets/branch-criteria.out
 :language: console
 ```
 
@@ -85,11 +73,11 @@ This operator has multiple variants:
 
 : Emits each subset when `closingCondition` is satisfied. The closing condition can be a literal value, a {ref}`regular expression <script-regexp>`, a type qualifier (i.e. Java class), or a boolean predicate. For example:
 
-  ```{literalinclude} snippets/buffer-with-closing.nf
-  :language: groovy
+  ```{literalinclude} ../snippets/buffer-with-closing.nf
+  :language: nextflow
   ```
 
-  ```{literalinclude} snippets/buffer-with-closing.out
+  ```{literalinclude} ../snippets/buffer-with-closing.out
   :language: console
   ```
 
@@ -97,11 +85,11 @@ This operator has multiple variants:
 
 : Creates a new subset when `openingCondition` is satisfied and emits the subset when is `closingCondition` is satisfied. The opening and closing conditions can each be a literal value, a {ref}`regular expression <script-regexp>`, a type qualifier (i.e. Java class), or a boolean predicate. For example:
 
-  ```{literalinclude} snippets/buffer-with-opening-closing.nf
-  :language: groovy
+  ```{literalinclude} ../snippets/buffer-with-opening-closing.nf
+  :language: nextflow
   ```
 
-  ```{literalinclude} snippets/buffer-with-opening-closing.out
+  ```{literalinclude} ../snippets/buffer-with-opening-closing.out
   :language: console
   ```
 
@@ -109,21 +97,21 @@ This operator has multiple variants:
 
 : Emits a new subset for every `n` items. Remaining items are discarded. For example:
 
-  ```{literalinclude} snippets/buffer-with-size.nf
-  :language: groovy
+  ```{literalinclude} ../snippets/buffer-with-size.nf
+  :language: nextflow
   ```
 
-  ```{literalinclude} snippets/buffer-with-size.out
+  ```{literalinclude} ../snippets/buffer-with-size.out
   :language: console
   ```
 
   The `remainder` option can be used to emit any remaining items as a partial subset:
 
-  ```{literalinclude} snippets/buffer-with-size-remainder.nf
-  :language: groovy
+  ```{literalinclude} ../snippets/buffer-with-size-remainder.nf
+  :language: nextflow
   ```
 
-  ```{literalinclude} snippets/buffer-with-size-remainder.out
+  ```{literalinclude} ../snippets/buffer-with-size-remainder.out
   :language: console
   ```
 
@@ -131,11 +119,11 @@ This operator has multiple variants:
 
 : Emits a new subset for every `n` items, skipping `m` items before collecting each subset. For example:
 
-  ```{literalinclude} snippets/buffer-with-size-skip.nf
-  :language: groovy
+  ```{literalinclude} ../snippets/buffer-with-size-skip.nf
+  :language: nextflow
   ```
 
-  ```{literalinclude} snippets/buffer-with-size-skip.out
+  ```{literalinclude} ../snippets/buffer-with-size-skip.out
   :language: console
   ```
 
@@ -155,21 +143,21 @@ This operator has multiple variants:
 
 : Collects items into groups of `size` items:
 
-  ```{literalinclude} snippets/collate.nf
-  :language: groovy
+  ```{literalinclude} ../snippets/collate.nf
+  :language: nextflow
   ```
 
-  ```{literalinclude} snippets/collate.out
+  ```{literalinclude} ../snippets/collate.out
   :language: console
   ```
 
   By default, any remaining items are emitted as a partial group. You can specify `false` as the second parameter to discard them instead:
 
-  ```{literalinclude} snippets/collate-with-no-remainder.nf
-  :language: groovy
+  ```{literalinclude} ../snippets/collate-with-no-remainder.nf
+  :language: nextflow
   ```
 
-  ```{literalinclude} snippets/collate-with-no-remainder.out
+  ```{literalinclude} ../snippets/collate-with-no-remainder.out
   :language: console
   ```
 
@@ -181,11 +169,11 @@ This operator has multiple variants:
 
 : Collects items into groups of `size` items using a *sliding window* that moves by `step` items at a time:
 
-  ```{literalinclude} snippets/collate-with-step.nf
-  :language: groovy
+  ```{literalinclude} ../snippets/collate-with-step.nf
+  :language: nextflow
   ```
 
-  ```{literalinclude} snippets/collate-with-step.out
+  ```{literalinclude} ../snippets/collate-with-step.out
   :language: console
   ```
 
@@ -201,21 +189,21 @@ See also: [buffer](#buffer)
 
 The `collect` operator collects all items from a source channel into a list and emits it as a single item:
 
-```{literalinclude} snippets/collect.nf
-:language: groovy
+```{literalinclude} ../snippets/collect.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/collect.out
+```{literalinclude} ../snippets/collect.out
 :language: console
 ```
 
 An optional {ref}`closure <script-closure>` can be used to transform each item before it is collected:
 
-```{literalinclude} snippets/collect-with-mapper.nf
-:language: groovy
+```{literalinclude} ../snippets/collect-with-mapper.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/collect-with-mapper.out
+```{literalinclude} ../snippets/collect-with-mapper.out
 :language: console
 ```
 
@@ -237,23 +225,23 @@ The `collectFile` operator collects the items from a source channel and saves th
 
 This operator has multiple variants:
 
-`collectFile( name: '...', options = [:] )`
+`collectFile( name: '...', [options] )`
 
 : Collects the items and saves them to a single file specified by the `name` option:
 
-  ```{literalinclude} snippets/collectfile.nf
-  :language: groovy
+  ```{literalinclude} ../snippets/collectfile.nf
+  :language: nextflow
   ```
 
-`collectFile( closure, options = [:] )`
+`collectFile( closure, [options] )`
 
 : Collects the items into groups and saves each group to a file, using a grouping criteria. The grouping criteria is a {ref}`closure <script-closure>` that maps each item to a pair, where the first element is the file name for the group and the second element is the content to be appended to that file. For example:
 
-  ```{literalinclude} snippets/collectfile-closure.nf
-  :language: groovy
+  ```{literalinclude} ../snippets/collectfile-closure.nf
+  :language: nextflow
   ```
 
-  ```{literalinclude} snippets/collectfile-closure.out
+  ```{literalinclude} ../snippets/collectfile-closure.out
   :language: console
   ```
 
@@ -261,14 +249,14 @@ This operator has multiple variants:
 
 The following example shows how to use a closure to collect and sort all sequences in a FASTA file from shortest to longest:
 
-```groovy
+```nextflow
 Channel
     .fromPath('/data/sequences.fa')
     .splitFasta( record: [id: true, sequence: true] )
-    .collectFile( name: 'result.fa', sort: { it.size() } ) {
-        it.sequence
+    .collectFile( name: 'result.fa', sort: { v -> v.size() } ) {
+        v -> v.sequence
     }
-    .view { it.text }
+    .view { fa -> fa.text }
 ```
 
 :::{warning}
@@ -323,21 +311,21 @@ The `combine` operator produces the combinations (i.e. cross product, "Cartesian
 
 For example:
 
-```{literalinclude} snippets/combine.nf
-:language: groovy
+```{literalinclude} ../snippets/combine.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/combine.out
+```{literalinclude} ../snippets/combine.out
 :language: console
 ```
 
 The `by` option can be used to combine items that share a matching key. The value should be the zero-based index of the tuple, or a list of indices. For example:
 
-```{literalinclude} snippets/combine-by.nf
-:language: groovy
+```{literalinclude} ../snippets/combine-by.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/combine-by.out
+```{literalinclude} ../snippets/combine-by.out
 :language: console
 ```
 
@@ -365,11 +353,11 @@ In other words, given *N* channels, the items from the *i+1*-th channel are emit
 
 For example:
 
-```{literalinclude} snippets/concat.nf
-:language: groovy
+```{literalinclude} ../snippets/concat.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/concat.out
+```{literalinclude} ../snippets/concat.out
 :language: console
 ```
 
@@ -383,37 +371,37 @@ See also: [mix](#mix)
 
 The `count` operator computes the total number of items in a source channel and emits it:
 
-```{literalinclude} snippets/count.nf
-:language: groovy
+```{literalinclude} ../snippets/count.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/count.out
+```{literalinclude} ../snippets/count.out
 :language: console
 ```
 
 An optional filter can be provided to select which items to count. The selection criteria can be a literal value, a {ref}`regular expression <script-regexp>`, a type qualifier (i.e. Java class), or a boolean predicate. For example:
 
-```{literalinclude} snippets/count-with-filter-number.nf
-:language: groovy
+```{literalinclude} ../snippets/count-with-filter-number.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/count-with-filter-number.out
+```{literalinclude} ../snippets/count-with-filter-number.out
 :language: console
 ```
 
-```{literalinclude} snippets/count-with-filter-regex.nf
-:language: groovy
+```{literalinclude} ../snippets/count-with-filter-regex.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/count-with-filter-regex.out
+```{literalinclude} ../snippets/count-with-filter-regex.out
 :language: console
 ```
 
-```{literalinclude} snippets/count-with-filter-closure.nf
-:language: groovy
+```{literalinclude} ../snippets/count-with-filter-closure.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/count-with-filter-closure.out
+```{literalinclude} ../snippets/count-with-filter-closure.out
 :language: console
 ```
 
@@ -459,21 +447,21 @@ The `cross` operator emits every pairwise combination of two channels for which 
 
 By default, the key is defined as the first entry in a list or map, or the value itself for any other data type. For example:
 
-```{literalinclude} snippets/cross.nf
-:language: groovy
+```{literalinclude} ../snippets/cross.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/cross.out
+```{literalinclude} ../snippets/cross.out
 :language: console
 ```
 
 An optional closure can be used to define the matching key for each item:
 
-```{literalinclude} snippets/cross-with-mapper.nf
-:language: groovy
+```{literalinclude} ../snippets/cross-with-mapper.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/cross-with-mapper.out
+```{literalinclude} ../snippets/cross-with-mapper.out
 :language: console
 ```
 
@@ -490,21 +478,21 @@ See also: [combine](#combine)
 
 The `distinct` operator forwards a source channel with *consecutively* repeated items removed, such that each emitted item is different from the preceding one:
 
-```{literalinclude} snippets/distinct.nf
-:language: groovy
+```{literalinclude} ../snippets/distinct.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/distinct.out
+```{literalinclude} ../snippets/distinct.out
 :language: console
 ```
 
 An optional {ref}`closure <script-closure>` can be used to transform each value before it is evaluated for distinct-ness:
 
-```{literalinclude} snippets/distinct-with-mapper.nf
-:language: groovy
+```{literalinclude} ../snippets/distinct-with-mapper.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/distinct-with-mapper.out
+```{literalinclude} ../snippets/distinct-with-mapper.out
 :language: console
 ```
 
@@ -520,8 +508,8 @@ The `dump` operator prints each item in a source channel when the pipeline is ex
 
 The `tag` option can be used to select which channels to dump:
 
-```{literalinclude} snippets/dump.nf
-:language: groovy
+```{literalinclude} ../snippets/dump.nf
+:language: nextflow
 ```
 
 Then, you can run your pipeline with `-dump-channels foo` or `-dump-channels bar` to dump the content of either channel. Multiple tag names can be specified as a comma-separated list.
@@ -536,6 +524,8 @@ Available options:
 `tag`
 : Associate the channel with a tag that can be specified with the `-dump-channels` option to select which channels to dump.
 
+(operator-filter)=
+
 ## filter
 
 *Returns: queue channel or value channel, matching the source type*
@@ -544,31 +534,31 @@ The `filter` operator emits the items from a source channel that satisfy a condi
 
 The following example filters a channel with a regular expression that only matches strings beginning with `a`:
 
-```{literalinclude} snippets/filter-regex.nf
-:language: groovy
+```{literalinclude} ../snippets/filter-regex.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/filter-regex.out
+```{literalinclude} ../snippets/filter-regex.out
 :language: console
 ```
 
 The following example filters a channel with the `Number` type qualifier so that only numbers are emitted:
 
-```{literalinclude} snippets/filter-type.nf
-:language: groovy
+```{literalinclude} ../snippets/filter-type.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/filter-type.out
+```{literalinclude} ../snippets/filter-type.out
 :language: console
 ```
 
 The following example filters a channel using a boolean predicate, which is a {ref}`closure <script-closure>` that returns a boolean value. In this case, the predicate is used to select only odd numbers:
 
-```{literalinclude} snippets/filter-closure.nf
-:language: groovy
+```{literalinclude} ../snippets/filter-closure.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/filter-closure.out
+```{literalinclude} ../snippets/filter-closure.out
 :language: console
 ```
 
@@ -580,8 +570,8 @@ The following example filters a channel using a boolean predicate, which is a {r
 
 The `first` operator emits the first item in a source channel, or the first item that matches a condition. The condition can be a {ref}`regular expression<script-regexp>`, a type qualifier (i.e. Java class), or a boolean predicate. For example:
 
-```{literalinclude} snippets/first.nf
-:language: groovy
+```{literalinclude} ../snippets/first.nf
+:language: nextflow
 ```
 
 (operator-flatmap)=
@@ -594,21 +584,21 @@ The `flatMap` operator applies a *mapping function* to each item from a source c
 
 When the mapping function returns a list, each element in the list is emitted separately:
 
-```{literalinclude} snippets/flatmap-list.nf
-:language: groovy
+```{literalinclude} ../snippets/flatmap-list.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/flatmap-list.out
+```{literalinclude} ../snippets/flatmap-list.out
 :language: console
 ```
 
 When the mapping function returns a map, each key-value pair in the map is emitted separately:
 
-```{literalinclude} snippets/flatmap-map.nf
-:language: groovy
+```{literalinclude} ../snippets/flatmap-map.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/flatmap-map.out
+```{literalinclude} ../snippets/flatmap-map.out
 :language: console
 ```
 
@@ -620,11 +610,11 @@ When the mapping function returns a map, each key-value pair in the map is emitt
 
 The `flatten` operator flattens each item from a source channel that is a list or other collection, such that each element in each collection is emitted separately:
 
-```{literalinclude} snippets/flatten.nf
-:language: groovy
+```{literalinclude} ../snippets/flatten.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/flatten.out
+```{literalinclude} ../snippets/flatten.out
 :language: console
 ```
 
@@ -644,31 +634,31 @@ To be more precise, the operator transforms a sequence of tuples like *(K, V, W,
 
 For example:
 
-```{literalinclude} snippets/grouptuple.nf
-:language: groovy
+```{literalinclude} ../snippets/grouptuple.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/grouptuple.out
+```{literalinclude} ../snippets/grouptuple.out
 :language: console
 ```
 
 By default, the first element of each tuple is used as the grouping key. The `by` option can be used to specify a different index, or list of indices. For example, to group by the second element of each tuple:
 
-```{literalinclude} snippets/grouptuple-by.nf
-:language: groovy
+```{literalinclude} ../snippets/grouptuple-by.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/grouptuple-by.out
+```{literalinclude} ../snippets/grouptuple-by.out
 :language: console
 ```
 
 By default, if you don't specify a size, the `groupTuple` operator will not emit any groups until *all* inputs have been received. If possible, you should always try to specify the number of expected elements in each group using the `size` option, so that each group can be emitted as soon as it's ready. In cases where the size of each group varies based on the grouping key, you can use the built-in `groupKey()` function, which allows you to define a different expected size for each group:
 
-```{literalinclude} snippets/grouptuple-groupkey.nf
-:language: groovy
+```{literalinclude} ../snippets/grouptuple-groupkey.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/grouptuple-groupkey.out
+```{literalinclude} ../snippets/grouptuple-groupkey.out
 :language: console
 ```
 
@@ -700,19 +690,19 @@ Available options:
 
 The `ifEmpty` operator emits a source channel, or a default value if the source channel is *empty* (doesn't emit any value):
 
-```{literalinclude} snippets/ifempty-1.nf
-:language: groovy
+```{literalinclude} ../snippets/ifempty-1.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/ifempty-1.out
+```{literalinclude} ../snippets/ifempty-1.out
 :language: console
 ```
 
-```{literalinclude} snippets/ifempty-2.nf
-:language: groovy
+```{literalinclude} ../snippets/ifempty-2.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/ifempty-2.out
+```{literalinclude} ../snippets/ifempty-2.out
 :language: console
 ```
 
@@ -732,11 +722,11 @@ To be more precise, the operator transforms a sequence of tuples like *(K, V1, V
 
 For example:
 
-```{literalinclude} snippets/join.nf
-:language: groovy
+```{literalinclude} ../snippets/join.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/join.out
+```{literalinclude} ../snippets/join.out
 :language: console
 ```
 
@@ -744,11 +734,11 @@ By default, the first element of each item is used as the key. The `by` option c
 
 By default, unmatched items are discarded. The `remainder` option can be used to emit them at the end:
 
-```{literalinclude} snippets/join-with-remainder.nf
-:language: groovy
+```{literalinclude} ../snippets/join-with-remainder.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/join-with-remainder.out
+```{literalinclude} ../snippets/join-with-remainder.out
 :language: console
 ```
 
@@ -776,11 +766,11 @@ See also: [combine](#combine), [cross](#cross)
 
 The `last` operator emits the last item from a source channel:
 
-```{literalinclude} snippets/last.nf
-:language: groovy
+```{literalinclude} ../snippets/last.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/last.out
+```{literalinclude} ../snippets/last.out
 :language: console
 ```
 
@@ -792,11 +782,11 @@ The `last` operator emits the last item from a source channel:
 
 The `map` operator applies a *mapping function* to each item from a source channel:
 
-```{literalinclude} snippets/map.nf
-:language: groovy
+```{literalinclude} ../snippets/map.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/map.out
+```{literalinclude} ../snippets/map.out
 :language: console
 ```
 
@@ -808,11 +798,11 @@ The `map` operator applies a *mapping function* to each item from a source chann
 
 The `max` operator emits the item with the greatest value from a source channel:
 
-```{literalinclude} snippets/max.nf
-:language: groovy
+```{literalinclude} ../snippets/max.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/max.out
+```{literalinclude} ../snippets/max.out
 :language: console
 ```
 
@@ -820,19 +810,19 @@ An optional {ref}`closure <script-closure>` can be used to control how the items
 
 The following examples show how to find the longest string in a channel:
 
-```{literalinclude} snippets/max-with-mapper.nf
-:language: groovy
+```{literalinclude} ../snippets/max-with-mapper.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/max-with-mapper.out
+```{literalinclude} ../snippets/max-with-mapper.out
 :language: console
 ```
 
-```{literalinclude} snippets/max-with-comparator.nf
-:language: groovy
+```{literalinclude} ../snippets/max-with-comparator.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/max-with-comparator.out
+```{literalinclude} ../snippets/max-with-comparator.out
 :language: console
 ```
 
@@ -844,21 +834,21 @@ The following examples show how to find the longest string in a channel:
 
 The `merge` operator joins the items from two or more channels into a new channel:
 
-```{literalinclude} snippets/merge.nf
-:language: groovy
+```{literalinclude} ../snippets/merge.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/merge.out
+```{literalinclude} ../snippets/merge.out
 :language: console
 ```
 
 An optional closure can be used to control how two items are merged:
 
-```{literalinclude} snippets/merge-with-mapper.nf
-:language: groovy
+```{literalinclude} ../snippets/merge-with-mapper.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/merge-with-mapper.out
+```{literalinclude} ../snippets/merge-with-mapper.out
 :language: console
 ```
 
@@ -882,11 +872,11 @@ You should always use a matching key (e.g. sample ID) to merge multiple channels
 
 The `min` operator emits the item with the lowest value from a source channel:
 
-```{literalinclude} snippets/min.nf
-:language: groovy
+```{literalinclude} ../snippets/min.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/min.out
+```{literalinclude} ../snippets/min.out
 :language: console
 ```
 
@@ -894,19 +884,19 @@ An optional {ref}`closure <script-closure>` can be used to control how the items
 
 The following examples show how to find the shortest string in a channel:
 
-```{literalinclude} snippets/min-with-mapper.nf
-:language: groovy
+```{literalinclude} ../snippets/min-with-mapper.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/min-with-mapper.out
+```{literalinclude} ../snippets/min-with-mapper.out
 :language: console
 ```
 
-```{literalinclude} snippets/min-with-comparator.nf
-:language: groovy
+```{literalinclude} ../snippets/min-with-comparator.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/min-with-comparator.out
+```{literalinclude} ../snippets/min-with-comparator.out
 :language: console
 ```
 
@@ -918,11 +908,11 @@ The following examples show how to find the shortest string in a channel:
 
 The `mix` operator emits the items from two or more source channels into a single output channel:
 
-```{literalinclude} snippets/mix.nf
-:language: groovy
+```{literalinclude} ../snippets/mix.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/mix.out
+```{literalinclude} ../snippets/mix.out
 :language: console
 ```
 
@@ -954,21 +944,21 @@ The multi-map criteria is a {ref}`closure <script-closure>` that defines, for ea
 
 For example:
 
-```{literalinclude} snippets/multimap.nf
-:language: groovy
+```{literalinclude} ../snippets/multimap.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/multimap.out
+```{literalinclude} ../snippets/multimap.out
 :language: console
 ```
 
 Multiple labels can share the same mapping expression using the following shorthand:
 
-```{literalinclude} snippets/multimap-shared.nf
-:language: groovy
+```{literalinclude} ../snippets/multimap-shared.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/multimap-shared.out
+```{literalinclude} ../snippets/multimap-shared.out
 :language: console
 ```
 
@@ -976,8 +966,8 @@ The above example creates two channels as before, but now they both receive the 
 
 You can use the `multiMapCriteria()` method to create a multi-map criteria as a variable that can be passed as an argument to any number of `multiMap` operations, as shown below:
 
-```{literalinclude} snippets/multimap-criteria.nf
-:language: groovy
+```{literalinclude} ../snippets/multimap-criteria.nf
+:language: nextflow
 ```
 
 :::{note}
@@ -992,16 +982,16 @@ If you use `multiMap` to split a tuple or map into multiple channels, it is reco
 
 The `randomSample` operator emits a randomly-selected subset of items from a source channel:
 
-```{literalinclude} snippets/random-sample.nf
-:language: groovy
+```{literalinclude} ../snippets/random-sample.nf
+:language: nextflow
 ```
 
 The above snippet will print 10 randomly-selected numbers between 1 and 100 (without replacement).
 
 An optional second parameter can be used to set the initial *seed* for the random number generator, which ensures that the `randomSample` operator produces the same pseudo-random sequence across runs:
 
-```{literalinclude} snippets/random-sample-with-seed.nf
-:language: groovy
+```{literalinclude} ../snippets/random-sample-with-seed.nf
+:language: nextflow
 ```
 
 The above example will print 10 randomly-selected numbers between 1 and 100 (without replacement). Each subsequent script execution will produce the same sequence.
@@ -1016,21 +1006,21 @@ The `reduce` operator applies an *accumulator function* sequentially to each ite
 
 For example:
 
-```{literalinclude} snippets/reduce.nf
-:language: groovy
+```{literalinclude} ../snippets/reduce.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/reduce.out
+```{literalinclude} ../snippets/reduce.out
 :language: console
 ```
 
 By default, the first item is used as the initial accumulated value. You can optionally specify a different initial value as shown below:
 
-```{literalinclude} snippets/reduce-with-initial-value.nf
-:language: groovy
+```{literalinclude} ../snippets/reduce-with-initial-value.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/reduce-with-initial-value.out
+```{literalinclude} ../snippets/reduce-with-initial-value.out
 :language: console
 ```
 
@@ -1042,13 +1032,13 @@ By default, the first item is used as the initial accumulated value. You can opt
 
 The `set` operator assigns a source channel to a variable, whose name is specified as a closure parameter:
 
-```groovy
+```nextflow
 Channel.of(10, 20, 30).set { my_channel }
 ```
 
 Using `set` is semantically equivalent to assigning a variable:
 
-```groovy
+```nextflow
 my_channel = Channel.of(10, 20, 30)
 ```
 
@@ -1064,11 +1054,11 @@ The `splitCsv` operator parses and splits [CSV-formatted](http://en.wikipedia.or
 
 For example:
 
-```{literalinclude} snippets/splitcsv.nf
-:language: groovy
+```{literalinclude} ../snippets/splitcsv.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/splitcsv.out
+```{literalinclude} ../snippets/splitcsv.out
 :language: console
 ```
 
@@ -1076,21 +1066,21 @@ The above example shows hows CSV text is parsed and split into individual rows, 
 
 When the CSV begins with a header line defining the column names, and the `header` option is `true`, each row is returned as a map instead:
 
-```{literalinclude} snippets/splitcsv-with-header.nf
-:language: groovy
+```{literalinclude} ../snippets/splitcsv-with-header.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/splitcsv-with-header.out
+```{literalinclude} ../snippets/splitcsv-with-header.out
 :language: console
 ```
 
 The `header` option can also just be a list of columns:
 
-```{literalinclude} snippets/splitcsv-with-columns.nf
-:language: groovy
+```{literalinclude} ../snippets/splitcsv-with-columns.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/splitcsv-with-columns.out
+```{literalinclude} ../snippets/splitcsv-with-columns.out
 :language: console
 ```
 
@@ -1136,7 +1126,7 @@ The `splitFasta` operator splits [FASTA-formatted](http://en.wikipedia.org/wiki/
 
 The `by` option can be used to group sequences into chunks of a given size. The following example shows how to read a FASTA file and split it into chunks of 10 sequences each:
 
-```groovy
+```nextflow
 Channel
      .fromPath('misc/sample.fa')
      .splitFasta( by: 10 )
@@ -1149,7 +1139,7 @@ Chunks are stored in memory by default. When splitting large files, specify `fil
 
 The `record` option can be used to split FASTA content into *records* instead of text chunks. Each record is a map that allows you to access the FASTA sequence data with ease. For example:
 
-```groovy
+```nextflow
 Channel
      .fromPath('misc/sample.fa')
      .splitFasta( record: [id: true, seqString: true] )
@@ -1208,7 +1198,7 @@ The `splitFasta` operator splits [FASTQ formatted](http://en.wikipedia.org/wiki/
 
 The `by` option can be used to group sequences into chunks of a given size. The following example shows how to read a FASTQ file and split it into chunks of 10 sequences each:
 
-```groovy
+```nextflow
 Channel
     .fromPath('misc/sample.fastq')
     .splitFastq( by: 10 )
@@ -1221,7 +1211,7 @@ Chunks are stored in memory by default. When splitting large files, specify `fil
 
 The `record` option can be used to split FASTQ content into *records* instead of text chunks. Each record is a map that allows you to access the FASTQ sequence data with ease. For example:
 
-```groovy
+```nextflow
 Channel
     .fromPath('misc/sample.fastq')
     .splitFastq( record: true )
@@ -1230,7 +1220,7 @@ Channel
 
 The `pe` option can be used to split paired-end FASTQ files. The source channel must emit tuples containing the file pairs. For example:
 
-```groovy
+```nextflow
 Channel
     .fromFilePairs('/my/data/SRR*_{1,2}.fastq', flat: true)
     .splitFastq(by: 100_000, pe: true, file: true)
@@ -1291,31 +1281,31 @@ The `splitJson` operator splits [JSON formatted](https://en.wikipedia.org/wiki/J
 
 If the source item is a JSON array, each element of the array will be emitted:
 
-```{literalinclude} snippets/splitjson-array.nf
-:language: groovy
+```{literalinclude} ../snippets/splitjson-array.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/splitjson-array.out
+```{literalinclude} ../snippets/splitjson-array.out
 :language: console
 ```
 
 If the source item is a JSON object, each key-value pair will be emitted as a map with the properties `key`  and `value`:
 
-```{literalinclude} snippets/splitjson-object.nf
-:language: groovy
+```{literalinclude} ../snippets/splitjson-object.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/splitjson-object.out
+```{literalinclude} ../snippets/splitjson-object.out
 :language: console
 ```
 
 The `path` option can be used to query a section of the JSON document to parse and split:
 
-```{literalinclude} snippets/splitjson-with-path.nf
-:language: groovy
+```{literalinclude} ../snippets/splitjson-with-path.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/splitjson-with-path.out
+```{literalinclude} ../snippets/splitjson-with-path.out
 :language: console
 ```
 
@@ -1337,7 +1327,7 @@ See also: [countJson](#countjson)
 
 The `splitText` operator splits multi-line text content from a source channel into chunks of *N* lines:
 
-```groovy
+```nextflow
 Channel
     .fromPath('/some/path/*.txt')
     .splitText()
@@ -1348,22 +1338,22 @@ The above example loads a collection of text files, splits the content of each f
 
 The `by` option can be used to emit chunks of *N* lines:
 
-```groovy
+```nextflow
 Channel
     .fromPath('/some/path/*.txt')
     .splitText( by: 10 )
-    .subscribe {
-        print it;
+    .subscribe { chunk ->
+        print chunk
         print "--- end of the chunk ---\n"
     }
 ```
 
 An optional {ref}`closure <script-closure>` can be used to transform each text chunk produced by the operator. The following example shows how to split text files into chunks of 10 lines and transform them to uppercase letters:
 
-```groovy
+```nextflow
 Channel
     .fromPath('/some/path/*.txt')
-    .splitText( by: 10 ) { it.toUpperCase() }
+    .splitText( by: 10 ) { v -> v.toUpperCase() }
     .view()
 ```
 
@@ -1403,37 +1393,31 @@ See also: [countLines](#countlines)
 
 ## subscribe
 
-*Returns: the source channel*
+*Returns: nothing*
 
 The `subscribe` operator invokes a custom function for each item from a source channel:
 
-```{literalinclude} snippets/subscribe.nf
-:language: groovy
+```{literalinclude} ../snippets/subscribe.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/subscribe.out
-:language: console
-```
-
-The closure parameter can be defined explicitly if needed, using a name other than `it` and, optionally, the expected type:
-
-```{literalinclude} snippets/subscribe-with-param.nf
-:language: groovy
-```
-
-```{literalinclude} snippets/subscribe-with-param.out
+```{literalinclude} ../snippets/subscribe.out
 :language: console
 ```
 
 The `subscribe` operator supports multiple types of event handlers:
 
-```{literalinclude} snippets/subscribe-with-on-complete.nf
-:language: groovy
+```{literalinclude} ../snippets/subscribe-with-on-complete.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/subscribe-with-on-complete.out
+```{literalinclude} ../snippets/subscribe-with-on-complete.out
 :language: console
 ```
+
+:::{note}
+Unlike most operators, `subscribe` is a *terminal operator* and does not emit any values. It should only be used for *side effects*, such as printing to the console, writing to a file, or making HTTP requests.
+:::
 
 Available options:
 
@@ -1454,21 +1438,21 @@ Available options:
 
 The `sum` operator emits the sum of all items in a source channel:
 
-```{literalinclude} snippets/sum.nf
-:language: groovy
+```{literalinclude} ../snippets/sum.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/sum.out
+```{literalinclude} ../snippets/sum.out
 :language: console
 ```
 
 An optional {ref}`closure <script-closure>` can be used to transform each item before it is added to the sum:
 
-```{literalinclude} snippets/sum-with-mapper.nf
-:language: groovy
+```{literalinclude} ../snippets/sum-with-mapper.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/sum-with-mapper.out
+```{literalinclude} ../snippets/sum-with-mapper.out
 :language: console
 ```
 
@@ -1480,11 +1464,11 @@ An optional {ref}`closure <script-closure>` can be used to transform each item b
 
 The `take` operator takes the first *N* items from a source channel:
 
-```{literalinclude} snippets/take.nf
-:language: groovy
+```{literalinclude} ../snippets/take.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/take.out
+```{literalinclude} ../snippets/take.out
 :language: console
 ```
 
@@ -1500,11 +1484,11 @@ See also: [until](#until)
 
 The `tap` operator assigns a source channel to a variable, and emits the source channel. It is a useful way to extract intermediate output channels from a chain of operators. For example:
 
-```{literalinclude} snippets/tap.nf
-:language: groovy
+```{literalinclude} ../snippets/tap.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/tap.out
+```{literalinclude} ../snippets/tap.out
 :language: console
 ```
 
@@ -1516,19 +1500,19 @@ See also: [set](#set)
 
 The `toInteger` operator converts string values from a source channel to integer values:
 
-```{literalinclude} snippets/tointeger.nf
-:language: groovy
+```{literalinclude} ../snippets/tointeger.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/tointeger.out
+```{literalinclude} ../snippets/tointeger.out
 :language: console
 ```
 
 :::{note}
 `toInteger` is equivalent to:
 
-```groovy
-map { it -> it as Integer }
+```nextflow
+map { v -> v as Integer }
 ```
 :::
 
@@ -1542,11 +1526,11 @@ You can also use `toLong`, `toFloat`, and `toDouble` to convert to other numeric
 
 The `toList` operator collects all the items from a source channel into a list and emits the list as a single item:
 
-```{literalinclude} snippets/tolist.nf
-:language: groovy
+```{literalinclude} ../snippets/tolist.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/tolist.out
+```{literalinclude} ../snippets/tolist.out
 :language: console
 ```
 
@@ -1558,7 +1542,7 @@ There are two main differences between `toList` and `collect`:
 
 In other words, `toList` is equivalent to:
 
-```groovy
+```nextflow
 collect(flat: false).ifEmpty([])
 ```
 :::
@@ -1571,28 +1555,28 @@ See also: [collect](#collect)
 
 The `toSortedList` operator collects all the items from a source channel into a sorted list and emits the list as a single item:
 
-```{literalinclude} snippets/tosortedlist.nf
-:language: groovy
+```{literalinclude} ../snippets/tosortedlist.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/tosortedlist.out
+```{literalinclude} ../snippets/tosortedlist.out
 :language: console
 ```
 
 An optional closure can be used to control how items are compared when sorting. For example, to sort tuples by their second element in descending order:
 
-```{literalinclude} snippets/tosortedlist-with-comparator.nf
-:language: groovy
+```{literalinclude} ../snippets/tosortedlist-with-comparator.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/tosortedlist-with-comparator.out
+```{literalinclude} ../snippets/tosortedlist-with-comparator.out
 :language: console
 ```
 
 :::{note}
 `toSortedList` is equivalent to:
 
-```groovy
+```nextflow
 collect(flat: false, sort: true).ifEmpty([])
 ```
 :::
@@ -1609,31 +1593,31 @@ To be more precise, the operator transforms a sequence of tuples like *(K, list(
 
 For example:
 
-```{literalinclude} snippets/transpose-1.nf
-:language: groovy
+```{literalinclude} ../snippets/transpose-1.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/transpose-1.out
+```{literalinclude} ../snippets/transpose-1.out
 :language: console
 ```
 
 If each source item has more than two elements, these will be flattened by the first element in the item, and a new item will be emitted only when it is complete:
 
-```{literalinclude} snippets/transpose-2.nf
-:language: groovy
+```{literalinclude} ../snippets/transpose-2.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/transpose-2.out
+```{literalinclude} ../snippets/transpose-2.out
 :language: console
 ```
 
 The `remainder` option can be used to emit any incomplete items:
 
-```{literalinclude} snippets/transpose-2-with-remainder.nf
-:language: groovy
+```{literalinclude} ../snippets/transpose-2-with-remainder.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/transpose-2-with-remainder.out
+```{literalinclude} ../snippets/transpose-2-with-remainder.out
 :language: console
 ```
 
@@ -1647,27 +1631,29 @@ Available options:
 
 See also: [groupTuple](#grouptuple)
 
+(operator-unique)=
+
 ## unique
 
 *Returns: queue channel or value channel, matching the source type*
 
 The `unique` operator emits the unique items from a source channel:
 
-```{literalinclude} snippets/unique.nf
-:language: groovy
+```{literalinclude} ../snippets/unique.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/unique.out
+```{literalinclude} ../snippets/unique.out
 :language: console
 ```
 
 An optional {ref}`closure <script-closure>` can be used to transform each item before it is evaluated for uniqueness:
 
-```{literalinclude} snippets/unique-with-mapper.nf
-:language: groovy
+```{literalinclude} ../snippets/unique-with-mapper.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/unique-with-mapper.out
+```{literalinclude} ../snippets/unique-with-mapper.out
 :language: console
 ```
 
@@ -1685,11 +1671,11 @@ See also: [distinct](#distinct)
 
 The `until` operator emits each item from a source channel until a stopping condition is satisfied:
 
-```{literalinclude} snippets/until.nf
-:language: groovy
+```{literalinclude} ../snippets/until.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/until.out
+```{literalinclude} ../snippets/until.out
 :language: console
 ```
 
@@ -1703,21 +1689,21 @@ See also: [take](#take)
 
 The `view` operator prints each item from a source channel to standard output:
 
-```{literalinclude} snippets/view.nf
-:language: groovy
+```{literalinclude} ../snippets/view.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/view.out
+```{literalinclude} ../snippets/view.out
 :language: console
 ```
 
 An optional closure can be used to transform each item before it is printed:
 
-```{literalinclude} snippets/view-with-mapper.nf
-:language: groovy
+```{literalinclude} ../snippets/view-with-mapper.nf
+:language: nextflow
 ```
 
-```{literalinclude} snippets/view-with-mapper.out
+```{literalinclude} ../snippets/view-with-mapper.out
 :language: console
 ```
 

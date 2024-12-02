@@ -52,4 +52,9 @@ class TaskArrayRun extends TaskRun {
         return false
     }
 
+    @Override
+    final boolean isArray() {
+        return true
+    }
+
 }

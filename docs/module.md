@@ -2,7 +2,7 @@
 
 # Modules
 
-In Nextflow, a **module** is a script that may contain functions, processes, and workflows (collectively referred to as *components*). A module can be included in other modules or pipeline scripts and even shared across workflows.
+Nextflow scripts can include **definitions** (workflows, processes, and functions) from other scripts. When a script is included in this way, it is referred to as a **module**. Modules can be included by other modules or pipeline scripts and can even be shared across workflows.
 
 :::{note}
 Modules were introduced in DSL2. If you are still using DSL1, see the {ref}`dsl1-page` page to learn how to migrate your Nextflow pipelines to DSL2.
@@ -10,11 +10,11 @@ Modules were introduced in DSL2. If you are still using DSL1, see the {ref}`dsl1
 
 ## Module inclusion
 
-A component defined in a module script can be imported into another Nextflow script using the `include` keyword.
+You can include any definition from a module into a Nextflow script using the `include` keyword.
 
 For example:
 
-```groovy
+```nextflow
 include { foo } from './some/module'
 
 workflow {
@@ -23,7 +23,7 @@ workflow {
 }
 ```
 
-The above snippet imports a process named `foo`, defined in the module script, into the main execution context. This way, `foo` can be invoked in the `workflow` scope.
+The above snippet imports a process named `foo`, defined in the module, into the main execution context. This way, `foo` can be invoked in the `workflow` scope.
 
 Nextflow implicitly looks for the script file `./some/module.nf`, resolving the path against the *including* script location.
 
@@ -49,7 +49,7 @@ some
 
 When defined as a directory, the module must be included by specifying the module directory path:
 
-```groovy
+```nextflow
 include { foo } from './some/module'
 ```
 
@@ -57,9 +57,9 @@ Module directories allow the use of module scoped binaries scripts. See [Module 
 
 ## Multiple inclusions
 
-A Nextflow script can include any number of modules, and an `include` statement can import any number of components from a module. Multiple components can be included from the same module by using the syntax shown below:
+A Nextflow script can include any number of modules, and an `include` statement can import any number of definitions from a module. Multiple definitions can be included from the same module by using the syntax shown below:
 
-```groovy
+```nextflow
 include { foo; bar } from './some/module'
 
 workflow {
@@ -73,9 +73,9 @@ workflow {
 
 ## Module aliases
 
-When including a module component, it's possible to specify an *alias* with the `as` keyword. Aliasing allows you to avoid module name clashes, by assigning them different names in the including context. For example:
+When including definition from a module, it's possible to specify an *alias* with the `as` keyword. Aliasing allows you to avoid module name clashes, by assigning them different names in the including context. For example:
 
-```groovy
+```nextflow
 include { foo } from './some/module'
 include { foo as bar } from './other/module'
 
@@ -85,9 +85,9 @@ workflow {
 }
 ```
 
-You can even include the same component multiple times under different names:
+You can also include the same definition multiple times under different names:
 
-```groovy
+```nextflow
 include { foo; foo as bar } from './some/module'
 
 workflow {
@@ -96,11 +96,17 @@ workflow {
 }
 ```
 
+(module-params)=
+
 ## Module parameters
 
-A module script can define parameters using the same syntax as a Nextflow workflow script:
+:::{deprecated} 24.07.0-edge
+As a best practice, parameters should be used in the entry workflow and passed to workflows, processes, and functions as explicit inputs.
+:::
 
-```groovy
+A module can define parameters using the same syntax as a Nextflow workflow script:
+
+```nextflow
 params.foo = 'Hello'
 params.bar = 'world!'
 
@@ -111,7 +117,7 @@ def sayHello() {
 
 When including a module, the module will first use parameters from the including context. For example:
 
-```groovy
+```nextflow
 params.foo = 'Hola'
 params.bar = 'Mundo'
 
@@ -138,7 +144,7 @@ It is best to define all pipeline parameters *before* any `include` statements.
 
 The `addParams` option can be used to pass parameters to the module without adding them to the including scope.
 
-```groovy
+```nextflow
 params.foo = 'Hola'
 params.bar = 'Mundo'
 
@@ -157,7 +163,7 @@ Ciao Mundo
 
 Alternatively, the `params` option can be used to pass parameters to module without adding them to the including scope, *and* without inheriting any parameters from the including scope.
 
-```groovy
+```nextflow
 params.foo = 'Hola'
 params.bar = 'Mundo'
 
@@ -178,9 +184,9 @@ Ciao world!
 
 ## Module templates
 
-The module script can be defined in an external {ref}`template <process-template>` file. The template file can be placed in the `templates` directory where the module script is located.
+Process script {ref}`templates <process-template>` can be included alongside a module in the `templates` directory.
 
-For example, suppose we have a project L with a module script that defines two processes, P1 and P2, both of which use templates. The template files can be made available in the local `templates` directory:
+For example, suppose we have a project L with a module that defines two processes, P1 and P2, both of which use templates. The template files can be made available in the local `templates` directory:
 
 ```
 Project L
@@ -204,15 +210,15 @@ Pipeline B
 └── main.nf
 ```
 
-With the possibility to keep the template files inside the project L, A and B can use the modules defined in L without any changes. A future project C would do the same, just cloning L (if not available on the system) and including its module script.
+With the possibility to keep the template files inside the project L, A and B can use the modules defined in L without any changes. A future project C would do the same, just cloning L (if not available on the system) and including its module.
 
 Beside promoting the sharing of modules across pipelines, there are several advantages to keeping the module template under the script path:
 
-1. module components are *self-contained*,
-2. module components can be tested independently from the pipeline(s) that import them,
-3. it is possible to create libraries of module components.
+1. Modules are self-contained
+2. Modules can be tested independently from the pipeline(s) that import them
+3. Modules can be made into libraries
 
-Ultimately, having multiple template locations allows a more structured organization within the same project. If a project has several module components, and all of them use templates, the project could group module scripts and their templates as needed. For example:
+Having multiple template locations enables a structured project organization. If a project has several modules, and they all use templates, the project could group module scripts and their templates as needed. For example:
 
 ```
 baseDir
@@ -247,9 +253,9 @@ baseDir
 
 Modules can define binary scripts that are locally scoped to the processes defined by the tasks.
 
-To enable this feature, enable the following flag in your pipeline script or configuration file:
+To enable this feature, set the following flag in your pipeline script or configuration file:
 
-```groovy
+```nextflow
 nextflow.enable.moduleBinaries = true
 ```
 

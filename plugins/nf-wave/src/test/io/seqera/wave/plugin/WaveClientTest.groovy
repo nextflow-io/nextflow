@@ -18,7 +18,6 @@
 package io.seqera.wave.plugin
 
 import static java.nio.file.StandardOpenOption.*
-import static test.TestHelper.*
 
 import java.net.http.HttpRequest
 import java.nio.file.Files
@@ -35,11 +34,16 @@ import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.wave.api.BuildStatusResponse
+import io.seqera.wave.api.ContainerStatus
+import io.seqera.wave.api.ContainerStatusResponse
 import io.seqera.wave.api.PackagesSpec
+import io.seqera.wave.api.ScanLevel
+import io.seqera.wave.api.ScanMode
 import io.seqera.wave.config.CondaOpts
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.container.inspect.ContainerInspectMode
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.processor.TaskRun
@@ -48,9 +52,11 @@ import org.apache.commons.compress.archivers.ArchiveStreamFactory
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
+import org.junit.Rule
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
+import test.OutputCapture
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -98,6 +104,9 @@ class WaveClientTest extends Specification {
             return buffer.toByteArray()
         }
     }
+
+    @Rule
+    OutputCapture capture = new OutputCapture()
 
     def 'should tar file' () {
         given:
@@ -219,8 +228,56 @@ class WaveClientTest extends Specification {
         !req.condaFile
         !req.spackFile
         !req.containerConfig.layers
+        !req.mirror
         and:
         req.freeze
+        and:
+        req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
+        req.timestamp instanceof String
+    }
+
+    def 'should create request object with mirror mode' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [wave:[mirror:true, build: [repository: 'quay.io']]]}
+        def IMAGE =  'foo:latest'
+        def wave = new WaveClient(session)
+
+        when:
+        def req = wave.makeRequest(WaveAssets.fromImage(IMAGE))
+        then:
+        req.containerImage == IMAGE
+        !req.containerPlatform
+        !req.containerFile
+        !req.condaFile
+        !req.spackFile
+        !req.containerConfig.layers
+        !req.freeze
+        and:
+        req.mirror
+        req.buildRepository == 'quay.io'
+        and:
+        req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
+        req.timestamp instanceof String
+    }
+
+    def 'should create request object with scan mode and levels' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [wave:[scan:[mode: 'required', allowedLevels: 'low,medium']]]}
+        def IMAGE =  'foo:latest'
+        def wave = new WaveClient(session)
+
+        when:
+        def req = wave.makeRequest(WaveAssets.fromImage(IMAGE))
+        then:
+        req.containerImage == IMAGE
+        !req.containerPlatform
+        !req.containerFile
+        !req.condaFile
+        !req.spackFile
+        !req.containerConfig.layers
+        and:
+        req.scanMode == ScanMode.required
+        req.scanLevels == List.of(ScanLevel.LOW, ScanLevel.MEDIUM)
         and:
         req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
         req.timestamp instanceof String
@@ -565,33 +622,6 @@ class WaveClientTest extends Specification {
         assets.packagesSpec.channels == WaveClient.DEFAULT_CONDA_CHANNELS
     }
 
-    def 'should create asset with spack recipe' () {
-        given:
-        def session = Mock(Session) { getConfig() >> [:]}
-        and:
-        def task = Mock(TaskRun) {getConfig() >> [spack:"rseqc@3.0.1 'rbase@3.5'", arch:"amd64"] }
-        and:
-        def client = new WaveClient(session)
-
-        when:
-        def assets = client.resolveAssets(task, null, false)
-        then:
-        !assets.containerFile
-        !assets.moduleResources
-        !assets.containerImage
-        !assets.containerConfig
-        !assets.projectResources
-        and:
-        assets.packagesSpec.type == PackagesSpec.Type.SPACK
-        assets.packagesSpec.entries == null
-        and:
-        new String(assets.packagesSpec.environment.decodeBase64()) == '''\
-                spack:
-                  specs: [rseqc@3.0.1, rbase@3.5]
-                  concretizer: {unify: true, reuse: false}
-                '''.stripIndent(true)
-    }
-
     def 'should create asset with conda file' () {
         given:
         def folder = Files.createTempDirectory('test')
@@ -619,32 +649,6 @@ class WaveClientTest extends Specification {
         folder?.deleteDir()
     }
 
-    def 'should create asset with spack file' () {
-        given:
-        def folder = Files.createTempDirectory('test')
-        def spackFile = folder.resolve('spack.yaml'); spackFile.text = 'the-spack-recipe-here'
-        and:
-        def session = Mock(Session) { getConfig() >> [:]}
-        def task = Mock(TaskRun) {getConfig() >> [spack:spackFile.toString(), arch: 'amd64'] }
-        and:
-        def client = new WaveClient(session)
-
-        when:
-        def assets = client.resolveAssets(task, null, false)
-        then:
-        !assets.containerFile
-        !assets.moduleResources
-        !assets.containerImage
-        !assets.containerConfig
-        !assets.projectResources
-        and:
-        assets.packagesSpec.type == PackagesSpec.Type.SPACK
-        new String(assets.packagesSpec.environment.decodeBase64()) == 'the-spack-recipe-here'
-        !assets.packagesSpec.entries
-
-        cleanup:
-        folder?.deleteDir()
-    }
 
     // ==== singularity native build + conda ====
 
@@ -723,70 +727,6 @@ class WaveClientTest extends Specification {
         folder?.deleteDir()
     }
 
-    def 'should create assets with spack recipe for singularity' () {
-        given:
-        def session = Mock(Session) { getConfig() >> [wave:[build:[spack:[commands: ['cmd-foo','cmd-bar']]]]]}
-        and:
-        def task = Mock(TaskRun) {getConfig() >> [spack:"rseqc@3.0.1 'rbase@3.5'", arch:"amd64"] }
-        and:
-        def client = new WaveClient(session)
-
-        when:
-        def assets = client.resolveAssets(task, null, true)
-        then:
-        !assets.containerFile
-        !assets.moduleResources
-        !assets.containerImage
-        !assets.containerConfig
-        !assets.projectResources
-        and:
-        assets.packagesSpec.type == PackagesSpec.Type.SPACK
-        assets.packagesSpec.entries == null
-        assets.packagesSpec.spackOpts.commands == ['cmd-foo','cmd-bar']
-        decodeBase64(assets.packagesSpec.environment) == '''\
-                spack:
-                  specs: [rseqc@3.0.1, rbase@3.5]
-                  concretizer: {unify: true, reuse: false}
-                '''.stripIndent(true)
-    }
-
-    def 'should create asset with spack file for singularity' () {
-        given:
-        def folder = Files.createTempDirectory('test')
-        def spackFile = folder.resolve('spack.yml');
-        spackFile.text = '''\
-                spack:
-                  specs: [rseqc@3.0.1, rbase@3.5]
-                  concretizer: {unify: true, reuse: false}
-                '''.stripIndent(true)
-        and:
-        def session = Mock(Session) { getConfig() >> [wave:[build:[spack:[basePackages: 'nano@1.2.3']]]]}
-        def task = Mock(TaskRun) {getConfig() >> [spack:spackFile.toString()] }
-        and:
-        def client = new WaveClient(session)
-
-        when:
-        def assets = client.resolveAssets(task, null, true)
-        then:
-        assets.singularity
-        and:
-        !assets.containerFile
-        !assets.moduleResources
-        !assets.containerImage
-        !assets.containerConfig
-        !assets.projectResources
-        and:
-        assets.packagesSpec.type == PackagesSpec.Type.SPACK
-        assets.packagesSpec.spackOpts.basePackages == 'nano@1.2.3'
-        decodeBase64(assets.packagesSpec.environment) == '''\
-                spack:
-                  specs: [rseqc@3.0.1, rbase@3.5, nano@1.2.3]
-                  concretizer: {unify: true, reuse: false}
-                '''.stripIndent(true)
-
-        cleanup:
-        folder?.deleteDir()
-    }
 
     def 'should create assets with project resources' () {
         given:
@@ -895,24 +835,6 @@ class WaveClientTest extends Specification {
         e = thrown(IllegalArgumentException)
         e.message == "Process 'foo' declares both a 'container' directive and a module bundle dockerfile that conflict each other"
 
-        when:
-        client.checkConflicts([spack:'this', dockerfile:'that'], 'foo')
-        then:
-        e = thrown(IllegalArgumentException)
-        e.message == "Process 'foo' declares both a 'spack' directive and a module bundle dockerfile that conflict each other"
-
-        when:
-        client.checkConflicts([spack:'this', container:'that'], 'foo')
-        then:
-        e = thrown(IllegalArgumentException)
-        e.message == "Process 'foo' declares both 'container' and 'spack' directives that conflict each other"
-
-        when:
-        client.checkConflicts([conda:'this', spack:'that'], 'foo')
-        then:
-        e = thrown(IllegalArgumentException)
-        e.message == "Process 'foo' declares both 'spack' and 'conda' directives that conflict each other"
-
         // singularity file checks
         when:
         client.checkConflicts([conda:'this', singularityfile:'that'], 'foo')
@@ -925,12 +847,6 @@ class WaveClientTest extends Specification {
         then:
         e = thrown(IllegalArgumentException)
         e.message == "Process 'foo' declares both a 'container' directive and a module bundle singularityfile that conflict each other"
-
-        when:
-        client.checkConflicts([spack:'this', singularityfile:'that'], 'foo')
-        then:
-        e = thrown(IllegalArgumentException)
-        e.message == "Process 'foo' declares both a 'spack' directive and a module bundle singularityfile that conflict each other"
 
     }
 
@@ -1178,27 +1094,53 @@ class WaveClientTest extends Specification {
 
     def 'should deserialize build status' () {
         given:
+        def timestamp = Instant.parse('2024-10-07T20:41:00.804699Z')
         def sess = Mock(Session) {getConfig() >> [:] }
         and:
         def wave = Spy(new WaveClient(sess))
         and:
-        def b1 = '{"id":"3449a9d02831c406_1","status":"PENDING","startTime":"2024-04-11T20:42:56.917524490Z"}'
-        def b2 = '{"id":"f76b765d2a9cec8b_1","status":"COMPLETED","startTime":"2024-04-11T21:46:55.960337916Z","duration":51.092386813,"succeeded":true}'
+        def json = '''
+            {
+               "id":"1234",
+               "buildId":"bd-12345",
+               "creationTime":"2024-10-07T20:41:00.804699Z",
+               "detailsUri":"http://foo.com/view/123",
+               "duration":"60000000000",
+               "mirrorId":"mr-12345",
+               "reason":"Some err message",
+               "scanId":"sc-12345",
+               "status":"DONE",
+               "succeeded":true,
+               "vulnerabilities":{
+                  "LOW":1,
+                  "MEDIUM":2
+               }
+            }
+            '''.stripIndent()
 
-        expect:
-        wave.jsonToBuildStatusResponse(b1) == new BuildStatusResponse(
-            '3449a9d02831c406_1',
-            BuildStatusResponse.Status.PENDING,
-            Instant.parse("2024-04-11T20:42:56.917524490Z"),
+        when:
+        def resp = wave.jsonToContainerStatusResponse(json)
+        then:
+        resp == new ContainerStatusResponse(
+            '1234',
+            ContainerStatus.DONE,
+            'bd-12345',
+            'mr-12345',
+            'sc-12345',
+            [LOW: 1, MEDIUM: 2],
+            true,
+            'Some err message',
+            'http://foo.com/view/123',
+            timestamp,
             null,
-            null)
+        )
+    }
+
+    def 'should deserialize container status' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [:] }
         and:
-        wave.jsonToBuildStatusResponse(b2) == new BuildStatusResponse(
-            'f76b765d2a9cec8b_1',
-            BuildStatusResponse.Status.COMPLETED,
-            Instant.parse("2024-04-11T21:46:55.960337916Z"),
-            Duration.ofMillis(51.092386813 * 1_000 as long),
-            true)
+        def wave = Spy(new WaveClient(sess))
     }
 
     def 'should test range' () {
@@ -1209,4 +1151,249 @@ class WaveClientTest extends Specification {
         100 .times { assert WaveClient.randomRange(0, 10) >= 0 }
     }
 
+    def 'should report true on build completion' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [:] }
+        and:
+        def wave = Spy(new WaveClient(sess))
+        def BUILD_ID = 'build-123'
+        def PENDING = new BuildStatusResponse('123', BuildStatusResponse.Status.PENDING, Instant.now(), null, null)
+        def COMPLETED = new BuildStatusResponse('123', BuildStatusResponse.Status.COMPLETED, Instant.now(), Duration.ofMillis(1), true)
+        and:
+        def response = new SubmitContainerTokenResponse(buildId: BUILD_ID, targetImage: 'my/container:latest')
+
+        when:
+        def done = wave.checkBuildCompletion(new WaveClient.Handle(response,Instant.now()))
+        then:
+        1 * wave.buildStatus(BUILD_ID) >> PENDING
+        and:
+        !done
+
+        when:
+        done = wave.checkBuildCompletion(new WaveClient.Handle(response,Instant.now()))
+        then:
+        1 * wave.buildStatus(BUILD_ID) >> COMPLETED
+        and:
+        done
+    }
+
+    def 'should report an exception on build failure' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [:] }
+        and:
+        def wave = Spy(new WaveClient(sess))
+        def BUILD_ID = 'build-123'
+        def PENDING = new BuildStatusResponse('123', BuildStatusResponse.Status.PENDING, Instant.now(), null, null)
+        def FAILED = new BuildStatusResponse('123', BuildStatusResponse.Status.COMPLETED, Instant.now(), Duration.ofMillis(1), false)
+        and:
+        def response = new SubmitContainerTokenResponse(buildId: BUILD_ID, targetImage: 'my/container:latest')
+
+        when:
+        def done = wave.checkBuildCompletion(new WaveClient.Handle(response,Instant.now()))
+        then:
+        1 * wave.buildStatus(BUILD_ID) >> PENDING
+        and:
+        !done
+
+        when:
+        wave.checkBuildCompletion(new WaveClient.Handle(response,Instant.now()))
+        then:
+        1 * wave.buildStatus(BUILD_ID) >> FAILED
+        and:
+        def err = thrown(ProcessUnrecoverableException)
+        err.message == "Wave provisioning for container 'my/container:latest' did not complete successfully - check details here: https://wave.seqera.io/view/builds/build-123"
+    }
+
+    def 'should fail on build timeout' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [wave: [build:[maxDuration: '500ms']]] }
+        and:
+        def wave = Spy(new WaveClient(sess))
+        def BUILD_ID = 'build-123'
+        def PENDING = new BuildStatusResponse('123', BuildStatusResponse.Status.PENDING, Instant.now(), null, null)
+        and:
+        def response = new SubmitContainerTokenResponse(buildId: BUILD_ID, targetImage: 'my/container:latest')
+
+        when:
+        wave.checkBuildCompletion(new WaveClient.Handle(response,Instant.now().minusSeconds(10)))
+        then:
+        1 * wave.buildStatus(BUILD_ID) >> PENDING
+        
+        then:
+        def err = thrown(ProcessUnrecoverableException)
+        err.message == "Wave provisioning for container 'my/container:latest' is exceeding max allowed duration (500ms) - check details here: https://wave.seqera.io/view/builds/build-123"
+    }
+
+    // == new api
+
+    def 'should report true on container completion' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [:] }
+        and:
+        def wave = Spy(new WaveClient(sess))
+        def ID = '123'
+        def PENDING = new ContainerStatusResponse('123', ContainerStatus.PENDING, 'bd-123', null, 'sc-123', [:], null, null, null, Instant.now(), null )
+        def COMPLETED = new ContainerStatusResponse('123', ContainerStatus.DONE, 'bd-123', null, 'sc-123', [:], true, null, null, Instant.now(), Duration.ofMinutes(1))
+        and:
+        def response = new SubmitContainerTokenResponse(requestId: ID, buildId: 'bd-123', targetImage: 'my/container:latest')
+
+        when:
+        def done = wave.checkContainerCompletion(new WaveClient.Handle(response,Instant.now()))
+        then:
+        1 * wave.containerStatus(ID) >> PENDING
+        and:
+        !done
+
+        when:
+        done = wave.checkContainerCompletion(new WaveClient.Handle(response,Instant.now()))
+        then:
+        1 * wave.containerStatus(ID) >> COMPLETED
+        and:
+        done
+    }
+
+    def 'should report an exception on build failure' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [:] }
+        and:
+        def wave = Spy(new WaveClient(sess))
+        def ID = '123'
+        def PENDING = new ContainerStatusResponse('123', ContainerStatus.PENDING, 'bd-123', null, 'sc-123', [:], null, null, null, Instant.now(), null )
+        def FAILED = new ContainerStatusResponse('123', ContainerStatus.DONE, 'bd-123', null, 'sc-123', [:], false, null, 'https://wave.seqera.io/view/builds/build-123', Instant.now(), Duration.ofMinutes(1))
+        and:
+        def response = new SubmitContainerTokenResponse(requestId: ID, buildId: 'bd-123', targetImage: 'my/container:latest')
+
+        when:
+        def done = wave.checkContainerCompletion(new WaveClient.Handle(response,Instant.now()))
+        then:
+        1 * wave.containerStatus(ID) >> PENDING
+        and:
+        !done
+
+        when:
+        wave.checkContainerCompletion(new WaveClient.Handle(response,Instant.now()))
+        then:
+        1 * wave.containerStatus(ID) >> FAILED
+        and:
+        def err = thrown(ProcessUnrecoverableException)
+        err.message == "Wave provisioning for container 'my/container:latest' did not complete successfully\n- Find out more here: https://wave.seqera.io/view/builds/build-123"
+    }
+
+    def 'should fail on build timeout' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [wave: [build:[maxDuration: '500ms']]] }
+        and:
+        def wave = Spy(new WaveClient(sess))
+        def ID = '123'
+        def PENDING = new ContainerStatusResponse('123', ContainerStatus.PENDING, 'bd-123', null, 'sc-123', [:], null, null, null, Instant.now(), null )
+        and:
+        def response = new SubmitContainerTokenResponse(requestId: ID, buildId: 'bd-123', targetImage: 'my/container:latest')
+
+        when:
+        wave.checkContainerCompletion(new WaveClient.Handle(response,Instant.now().minusSeconds(10)))
+        then:
+        1 * wave.containerStatus(ID) >> PENDING
+
+        then:
+        def err = thrown(ProcessUnrecoverableException)
+        err.message == "Wave provisioning for container 'my/container:latest' is exceeding max allowed duration (500ms) - check details here: https://wave.seqera.io/view/containers/123"
+    }
+
+    def 'should validate isContainerReady' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [wave: [build:[maxDuration: '500ms']]] }
+        def cache = Mock(Map)
+        and:
+        def resp = Mock(SubmitContainerTokenResponse)
+        def handle = new WaveClient.Handle(resp,Instant.now())
+        def wave = Spy(new WaveClient(session:sess, responses: cache))
+        boolean ready
+
+        // container succeeded
+        when:
+        ready = wave.isContainerReady('xyz')
+        then:
+        cache.get('xyz') >> handle
+        and:
+        resp.requestId >> '12345'
+        resp.succeeded >> true
+        and:
+        0 * wave.checkContainerCompletion(handle) >> null
+        0 * wave.checkBuildCompletion(_) >> null
+        and:
+        ready
+
+        // container is pending
+        when:
+        ready = wave.isContainerReady('xyz')
+        then:
+        cache.get('xyz') >> handle
+        and:
+        resp.requestId >> '12345'
+        resp.succeeded >> null
+        and:
+        1 * wave.checkContainerCompletion(handle) >> true
+        0 * wave.checkBuildCompletion(_) >> null
+        and:
+        ready
+
+        // container failed
+        when:
+        ready = wave.isContainerReady('xyz')
+        then:
+        cache.get('xyz') >> handle
+        and:
+        resp.requestId >> '12345'
+        resp.succeeded >> false
+        and:
+        1 * wave.checkContainerCompletion(handle) >> false
+        0 * wave.checkBuildCompletion(_) >> null
+        and:
+        !ready
+
+
+        // build is READY
+        when:
+        ready = wave.isContainerReady('xyz')
+        then:
+        cache.get('xyz') >> handle
+        and:
+        resp.buildId >> 'bd-5678'
+        resp.cached >> false
+        and:
+        0 * wave.checkContainerCompletion(_) >> null
+        1 * wave.checkBuildCompletion(handle) >> true
+        and:
+        ready
+
+        // build is not ready
+        when:
+        ready = wave.isContainerReady('xyz')
+        then:
+        cache.get('xyz') >> handle
+        and:
+        resp.requestId >> null
+        resp.buildId >> 'bd-5678'
+        resp.cached >> false
+        and:
+        0 * wave.checkContainerCompletion(_) >> null
+        1 * wave.checkBuildCompletion(handle) >> false
+        and:
+        !ready
+
+        // build is cached
+        when:
+        ready = wave.isContainerReady('xyz')
+        then:
+        cache.get('xyz') >> handle
+        and:
+        resp.requestId >> null
+        resp.buildId >> 'bd-5678'
+        resp.cached >> true
+        and:
+        0 * wave.checkContainerCompletion(_) >> null
+        0 * wave.checkBuildCompletion(handle) >> null
+        and:
+        ready
+    }
 }
