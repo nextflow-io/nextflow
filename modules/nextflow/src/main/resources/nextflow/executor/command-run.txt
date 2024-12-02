@@ -132,7 +132,7 @@ nxf_unstage_outputs() {
     {{unstage_outputs}}
 }
 
-nxf_unstage_std_files() {
+nxf_unstage_controls() {
     true
     {{unstage_controls}}
 }
@@ -144,7 +144,7 @@ nxf_unstage() {
         (set -e -o pipefail; (nxf_unstage_outputs | tee -a {{stdout_file}}) 3>&1 1>&2 2>&3 | tee -a {{stderr_file}})
         nxf_unstage_ret=$?
     fi
-    nxf_unstage_std_files
+    nxf_unstage_controls
 }
 
 nxf_main() {
