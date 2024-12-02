@@ -1328,14 +1328,12 @@ class BashWrapperBuilderTest extends Specification {
         then:
         builder.getStageCommand() == 'nxf_stage'
         builder.getUnstageCommand() == 'nxf_unstage'
-        builder.getUnstageControlsCommand() == 'nxf_unstage_std_files'
 
         when:
         def binding = builder.makeBinding()
         then:
         binding.stage_cmd == 'nxf_stage'
         binding.unstage_cmd == 'nxf_unstage'
-        binding.unstage_controls_cmd == 'nxf_unstage_std_files'
         
     }
 

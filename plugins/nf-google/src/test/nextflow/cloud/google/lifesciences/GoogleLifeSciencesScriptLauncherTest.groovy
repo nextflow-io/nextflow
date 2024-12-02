@@ -53,8 +53,7 @@ class GoogleLifeSciencesScriptLauncherTest extends GoogleSpecification {
         then:
         binding.touch_file == null
         binding.stage_cmd == null
-        binding.unstage_cmd == 'true'
-        binding.unstage_controls_cmd == null
+        binding.unstage_cmd == null
         binding.task_env == '''\
                 chmod +x /work/xx/yy/nextflow-bin/* || true
                 export PATH=/work/xx/yy/nextflow-bin:$PATH
