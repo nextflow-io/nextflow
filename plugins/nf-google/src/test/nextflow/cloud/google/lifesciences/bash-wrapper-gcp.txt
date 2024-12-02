@@ -168,7 +168,10 @@ nxf_fs_fcp() {
 }
 
 on_exit() {
-    exit_status=${nxf_main_ret:=$?}
+    local last_err=$?
+    local exit_status=${nxf_main_ret:=0}
+    [[ ${exit_status} -eq 0 && ${nxf_unstage_ret:=0} -ne 0 ]] && exit_status=${nxf_unstage_ret:=0}
+    [[ ${exit_status} -eq 0 && ${last_err} -ne 0 ]] && exit_status=${last_err}
     printf -- $exit_status > {{folder}}/.exitcode
     set +u
     exit $exit_status
@@ -192,12 +195,23 @@ nxf_stage() {
     nxf_parallel "${downloads[@]}"
 }
 
-nxf_unstage() {
+nxf_unstage_outputs() {
+    true
+}
+
+nxf_unstage_controls() {
     true
     gsutil -m -q cp -R .command.out gs://bucket/work/dir/.command.out || true
     gsutil -m -q cp -R .command.err gs://bucket/work/dir/.command.err || true
     gsutil -m -q cp -R .exitcode gs://bucket/work/dir/.exitcode || true
-    [[ ${nxf_main_ret:=0} != 0 ]] && return
+}
+
+nxf_unstage() {
+    if [[ ${nxf_main_ret:=0} == 0 ]]; then
+        (set -e -o pipefail; (nxf_unstage_outputs | tee -a .command.out) 3>&1 1>&2 2>&3 | tee -a .command.err)
+        nxf_unstage_ret=$?
+    fi
+    nxf_unstage_controls
 }
 
 nxf_main() {
