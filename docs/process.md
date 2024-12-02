@@ -24,11 +24,11 @@ See {ref}`syntax-process` for a full description of the process syntax.
 
 ## Script
 
-The `script` block defines, as a string expression, the script that is executed by the process.
+The `script` block defines the string expression that is executed by the process.
 
-A process may contain only one script, and if the `script` guard is not explicitly declared, the script must be the final statement in the process block.
+The process can contain only one script block. If the `script` guard is not explicitly declared it must be the final statement in the process block.
 
-The script string is executed as a [Bash](<http://en.wikipedia.org/wiki/Bash_(Unix_shell)>) script in the host environment. It can be any command or script that you would normally execute on the command line or in a Bash script. Naturally, the script may only use commands that are available in the host environment.
+The script string is executed as a [Bash](<http://en.wikipedia.org/wiki/Bash_(Unix_shell)>) script in the host environment. It can be any command or script that you would execute on the command line or in a Bash script and can only use commands that are available in the host environment.
 
 The script block can be a simple string or a multi-line string. The latter approach makes it easier to write scripts with multiple commands spanning multiple lines. For example:
 
@@ -42,19 +42,17 @@ process doMoreThings {
 }
 ```
 
-As explained in the script tutorial section, strings can be defined using single-quotes or double-quotes, and multi-line strings are defined by three single-quote or three double-quote characters.
+Strings can be defined using single-quotes or double-quotes. Multi-line strings are defined by three single-quote or three double-quote characters.
 
-There is a subtle but important difference between them. Like in Bash, strings delimited by a `"` character support variable substitutions, while strings delimited by `'` do not.
+There is a subtle but important difference between single-quote (`'`) or three double-quote (`"`) characters. Like in Bash, strings delimited by the `"` character support variable substitutions, while strings delimited by `'` do not.
 
-In the above code fragment, the `$db` variable is replaced by the actual value defined elsewhere in the pipeline script.
+For example, in the above code fragment, the `$db` variable is replaced by the actual value defined elsewhere in the pipeline script.
 
 :::{warning}
-Since Nextflow uses the same Bash syntax for variable substitutions in strings, you must manage them carefully depending on whether you want to evaluate a *Nextflow* variable or a *Bash* variable.
+Nextflow uses the same Bash syntax for variable substitutions in strings. You must manage them carefully depending on whether you want to evaluate a *Nextflow* variable or a *Bash* variable.
 :::
 
-When you need to access a system environment variable in your script, you have two options.
-
-If you don't need to access any Nextflow variables, you can define your script block with single-quotes:
+System environment variables and Nextflow variables can be accessed by your script. If you don't need to access any Nextflow variables, you can define your script block with single-quotes and use the dollar character (`$`) to access system environment variables. For example:
 
 ```nextflow
 process printPath {
@@ -64,7 +62,7 @@ process printPath {
 }
 ```
 
-Otherwise, you can define your script with double-quotes and escape the system environment variables by prefixing them with a back-slash `\` character, as shown in the following example:
+Otherwise, you can define your script with double-quotes and escape the system environment variables by prefixing them with a back-slash `\` character. For example:
 
 ```nextflow
 process doOtherThings {
@@ -76,21 +74,17 @@ process doOtherThings {
 }
 ```
 
-In this example, `$MAX` is a Nextflow variable that must be defined elsewhere in the pipeline script. Nextflow replaces it with the actual value before executing the script. Meanwhile, `$DB` is a Bash variable that must exist in the execution environment, and Bash will replace it with the actual value during execution.
-
-:::{tip}
-Alternatively, you can use the {ref}`process-shell` block definition, which allows a script to contain both Bash and Nextflow variables without having to escape the first.
-:::
+In this example, `$MAX` is a Nextflow variable that is defined elsewhere in the pipeline script. Nextflow replaces it with the actual value before executing the script. In contrast, `$DB` is a Bash variable that must exist in the execution environment. Bash will replace it with the actual value during execution.
 
 ### Scripts *à la carte*
 
-The process script is interpreted by Nextflow as a Bash script by default, but you are not limited to Bash.
+The process script is interpreted as Bash by default.
 
-You can use your favourite scripting language (Perl, Python, R, etc), or even mix them in the same pipeline.
+However, you can use your favorite scripting language (Perl, Python, R, etc) for each process. You can also mix languages in the same pipeline.
 
-A pipeline may be composed of processes that execute very different tasks. With Nextflow, you can choose the scripting language that best fits the task performed by a given process. For example, for some processes R might be more useful than Perl, whereas for others you may need to use Python because it provides better access to a library or an API, etc.
+A pipeline may be composed of processes that execute very different tasks. You can choose the scripting language that best fits the task performed by a given process. For example, R might be more useful than Perl for some processes, whereas for others you may need to use Python because it provides better access to a library or an API.
 
-To use a language other than Bash, simply start your process script with the corresponding [shebang](<http://en.wikipedia.org/wiki/Shebang_(Unix)>). For example:
+To use a language other than Bash, start your process script with the corresponding [shebang](<http://en.wikipedia.org/wiki/Shebang_(Unix)>). For example:
 
 ```nextflow
 process perlTask {
@@ -118,12 +112,17 @@ workflow {
 ```
 
 :::{tip}
-Since the actual location of the interpreter binary file can differ across platforms, it is wise to use the `env` command followed by the interpreter name, e.g. `#!/usr/bin/env perl`, instead of the absolute path, in order to make your script more portable.
+As the location of the interpreter binary file can differ across platforms. Use the `env` command followed by the interpreter name to make your script more portable. For example:
+
+```nextflow
+#!/usr/bin/env perl
+```
+
 :::
 
 ### Conditional scripts
 
-The `script` block is like a function that returns a string. This means that you can write arbitrary code to determine the script, as long as the final statement is a string.
+The `script` block is like a function that returns a string. You can write arbitrary code to determine the script as long as the final statement is a string.
 
 If-else statements based on task inputs can be used to produce a different script. For example:
 
@@ -155,15 +154,13 @@ process align {
 }
 ```
 
-In the above example, the process will execute one of several scripts depending on the value of the `mode` parameter. By default it will execute the `tcoffee` command.
+In the above example, the process will execute one of several scripts depending on the value of the `mode` parameter. By default, the process will execute the `tcoffee` command.
 
 (process-template)=
 
 ### Template
 
-Process scripts can be externalized to **template** files, which allows them to be reused across different processes and tested independently from the pipeline execution.
-
-A template can be used in place of an embedded script using the `template` function in the script section:
+Process scripts can be externalized to **template** files and accessed using the `template` function in the script section. For example:
 
 ```nextflow
 process templateExample {
@@ -179,9 +176,9 @@ workflow {
 }
 ```
 
-By default, Nextflow looks for the template script in the `templates` directory located alongside the Nextflow script in which the process is defined. An absolute path can be used to specify a different location. However, this practice is discouraged because it hinders pipeline portability.
+By default, Nextflow looks for template scripts in the `templates` directory, located alongside the Nextflow script that defines the process. A template can be reused across multiple processes. An absolute path can be used to specify a different template location. However, this practice is discouraged because it hinders pipeline portability. 
 
-An example template script is provided below:
+Templates can be tested independently of pipeline execution. Consider the following template script:
 
 ```bash
 #!/bin/bash
@@ -190,22 +187,28 @@ echo $STR
 echo "process completed"
 ```
 
-Variables prefixed with the dollar character (`$`) are interpreted as Nextflow variables when the template script is executed by Nextflow and Bash variables when executed directly. For example, the above script can be executed from the command line by providing each input as an environment variable:
+The above script can be executed from the command line by providing each input as an environment variable.
 
 ```bash
 STR='foo' bash templates/my_script.sh
 ```
 
-The following caveats should be considered:
+Variables prefixed with the dollar character (`$`) are interpreted as Nextflow variables when the template script is executed by Nextflow and Bash variables when executed directly.
 
-- Template scripts are recommended only for Bash scripts. Languages that do not prefix variables with `$` (e.g. Python and R) can't be executed directly as a template script.
+The following caveats should be considered when using templates:
 
-- Variables escaped with `\$` will be interpreted as Bash variables when executed by Nextflow, but will not be interpreted as variables when executed from the command line. This practice should be avoided to ensure that the template script behaves consistently.
+- Template scripts are only recommended for Bash scripts.
 
-- Template variables are evaluated even if they are commented out in the template script. If a template variable is missing, it will cause the pipeline to fail regardless of where it occurs in the template.
+- Languages that do not prefix variables with `$` (e.g. Python and R) can't be executed directly as a template script from the command line.
+
+- Template variables escaped with `\$` will be interpreted as Bash variables when executed by Nextflow but not the command line.
+
+- Template variables are evaluated even if they are commented out in the template script.
+
+- The pipeline to fail if a template variable is missing, regardless of where it occurs in the template.
 
 :::{tip}
-Template scripts are generally discouraged due to the caveats described above. The best practice for using a custom script is to embed it in the process definition at first and move it to a separate file with its own command line interface once the code matures.
+The best practice for using a custom script is to first embed it in the process definition and transfer it to a separate file with its own command line interface once the code matures.
 :::
 
 (process-shell)=

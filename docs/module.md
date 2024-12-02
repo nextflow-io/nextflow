@@ -186,7 +186,7 @@ Ciao world!
 
 Process script {ref}`templates <process-template>` can be included alongside a module in the `templates` directory.
 
-For example, suppose we have a project L with a module that defines two processes, P1 and P2, both of which use templates. The template files can be made available in the local `templates` directory:
+For example, Project L contains a module (`myModules.nf`) that defines two processes, P1 and P2. Both processes use templates that are available in the local `templates` directory:
 
 ```
 Project L
@@ -196,29 +196,29 @@ Project L
     └── P2-template.sh
 ```
 
-Then, we have a second project A with a workflow that includes P1 and P2:
+Projects A contains a workflow that includes processes P1 and P2:
 
 ```
-Pipeline A
+Project A
 └── main.nf
 ```
 
-Finally, we have a third project B with a workflow that also includes P1 and P2:
+Pipeline B contains a workflow that also includes process P1 and P2:
 
 ```
-Pipeline B
+Project B
 └── main.nf
 ```
 
-With the possibility to keep the template files inside the project L, A and B can use the modules defined in L without any changes. A future project C would do the same, just cloning L (if not available on the system) and including its module.
+As the template files are stored with the modules inside the Project L, Projects A and B can include them without any changing any code. Future projects would also be able to include these modules by cloning Project L and including its module (if they were not available on the system).
 
-Beside promoting the sharing of modules across pipelines, there are several advantages to keeping the module template under the script path:
+Keeping the module template within the script path has several advantages beyond facilitating module sharing across pipelines:
 
 1. Modules are self-contained
 2. Modules can be tested independently from the pipeline(s) that import them
 3. Modules can be made into libraries
 
-Having multiple template locations enables a structured project organization. If a project has several modules, and they all use templates, the project could group module scripts and their templates as needed. For example:
+Organizing templates locations allows for a well-structured project. In projects with multiple modules that rely on templates, you can organize module scripts and their corresponding templates into logical groups. For example:
 
 ```
 baseDir
@@ -240,9 +240,10 @@ baseDir
     |── mymodules6.nf
     └── templates
         |── P5-template.sh
-        |── P6-template.sh
-        └── P7-template.sh
+        └── P6-template.sh
 ```
+
+See {ref}`process-template` for more information about how to externalize process scripts to template files.
 
 (module-binaries)=
 
@@ -253,13 +254,13 @@ baseDir
 
 Modules can define binary scripts that are locally scoped to the processes defined by the tasks.
 
-To enable this feature, set the following flag in your pipeline script or configuration file:
+To use this feature, the module binaries must be enabled in your pipeline script or configuration file:
 
 ```nextflow
 nextflow.enable.moduleBinaries = true
 ```
 
-The binary scripts must be placed in the module directory names `<module-dir>/resources/usr/bin`:
+Binary scripts must be placed in the module directory named `<module-dir>/resources/usr/bin` and granted execution permissions:
 
 ```
 <module-dir>
@@ -271,10 +272,8 @@ The binary scripts must be placed in the module directory names `<module-dir>/re
             └── another-module-script2.py
 ```
 
-Those scripts will be made accessible like any other command in the task environment, provided they have been granted the Linux execute permissions.
-
 :::{note}
-This feature requires the use of a local or shared file system for the pipeline work directory, or {ref}`wave-page` when using cloud-based executors.
+Module binary scripts require a local or shared file system for the pipeline work directory, or {ref}`wave-page` when using cloud-based executors.
 :::
 
 ## Sharing modules
