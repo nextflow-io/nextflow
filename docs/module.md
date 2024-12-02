@@ -196,14 +196,14 @@ Project L
     └── P2-template.sh
 ```
 
-Projects A contains a workflow that includes processes P1 and P2:
+Project A contains a workflow that includes processes P1 and P2:
 
 ```
 Project A
 └── main.nf
 ```
 
-Pipeline B contains a workflow that also includes process P1 and P2:
+Project B contains a workflow that also includes process P1 and P2:
 
 ```
 Project B
@@ -212,11 +212,11 @@ Project B
 
 As the template files are stored with the modules inside the Project L, Projects A and B can include them without any changing any code. Future projects would also be able to include these modules by cloning Project L and including its module (if they were not available on the system).
 
-Keeping the module template within the script path has several advantages beyond facilitating module sharing across pipelines:
+Beyond facilitating module sharing across pipelines, keeping the module template within the script path has several advantages, including:
 
-1. Modules are self-contained
-2. Modules can be tested independently from the pipeline(s) that import them
-3. Modules can be made into libraries
+- Modules are self-contained.
+- Modules can be tested independently from the pipeline(s) that import them.
+- Modules can be made into libraries.
 
 Organizing templates locations allows for a well-structured project. In projects with multiple modules that rely on templates, you can organize module scripts and their corresponding templates into logical groups. For example:
 
@@ -276,7 +276,7 @@ Binary scripts must be placed in the module directory named `<module-dir>/resour
 Module binary scripts require a local or shared file system for the pipeline work directory, or {ref}`wave-page` when using cloud-based executors.
 :::
 
-Scripts can also be stored at the pipeline level using the `bin` directory. See {ref}`bin directory <bundling-executable>` for more information. 
+Scripts can also be stored at the pipeline level using the `bin` directory. See {ref}`bundling-executables` for more information. 
 
 ## Sharing modules
 

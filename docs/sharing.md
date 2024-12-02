@@ -108,7 +108,7 @@ Executable scripts can be included in the pipeline `bin` directory located at th
 Each script should include a shebang line to specify the interpreter for the script.
 
 :::{tip}
-As the location of the interpreter binary file can differ across platforms. Use `env` to resolve the interpreter's location instead of hard-coding the interpreter path. For example:
+Use `env` to resolve the interpreter's location instead of hard-coding the interpreter path. For example:
 
 ```
 #!/usr/bin/env python
@@ -116,7 +116,7 @@ As the location of the interpreter binary file can differ across platforms. Use 
 
 :::
 
-Scripts placed in the `bin` directory must have executable permissions. Use the `chmod` command to grant the required permissions. For example:
+Scripts placed in the `bin` directory must have executable permissions. Use `chmod` to grant the required permissions. For example:
 
 ```
 chmod a+x bin/custom_script.py
