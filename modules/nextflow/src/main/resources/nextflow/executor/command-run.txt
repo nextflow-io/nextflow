@@ -103,8 +103,8 @@ on_exit() {
     ## Can be caused either by the task script, unstage script or after script if defined
     local last_err=$?
     ## capture the task error first or fallback to unstage error
-    exit_status=${nxf_main_ret:=0}
-    [[ ${exit_status} -eq 0 && ${nxf_unstage_ret:0} -ne 0 ]] && exit_status=${nxf_unstage_ret}
+    local exit_status=${nxf_main_ret:=0}
+    [[ ${exit_status} -eq 0 && ${nxf_unstage_ret:=0} -ne 0 ]] && exit_status=${nxf_unstage_ret:=0}
     [[ ${exit_status} -eq 0 && ${last_err} -ne 0 ]] && exit_status=${last_err}
     printf -- $exit_status {{exit_file}}
     set +u
