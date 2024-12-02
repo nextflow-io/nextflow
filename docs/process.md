@@ -112,7 +112,7 @@ workflow {
 ```
 
 :::{tip}
-As the location of the interpreter binary file can differ across platforms. Use `env` to resolve the interpreter's location instead of hard-coding the interpreter path. For example:
+Use `env` to resolve the interpreter's location instead of hard-coding the interpreter path. For example:
 
 ```
 #!/usr/bin/env python
@@ -160,7 +160,7 @@ In the above example, the process will execute one of several scripts depending 
 
 ### Template
 
-Process scripts can be externalized to **template** files and accessed using the `template` function in the script section. For example:
+Process scripts can be externalized to **template** files and reused across multiple processes. Templates can be accessed using the `template` function in the script section. For example:
 
 ```nextflow
 process templateExample {
@@ -176,7 +176,7 @@ workflow {
 }
 ```
 
-By default, Nextflow looks for template scripts in the `templates` directory, located alongside the Nextflow script that defines the process. A template can be reused across multiple processes. An absolute path can be used to specify a different template location. However, this practice is discouraged because it hinders pipeline portability. 
+By default, Nextflow looks for template scripts in the `templates` directory, located alongside the Nextflow script that defines the process. An absolute path can be used to specify a different template location. However, this practice is discouraged because it hinders pipeline portability.
 
 Templates can be tested independently of pipeline execution. However, variables prefixed with the dollar character (`$`) are interpreted as Nextflow variables when the template script is executed by Nextflow and Bash variables when executed directly. Consider the following template script:
 
