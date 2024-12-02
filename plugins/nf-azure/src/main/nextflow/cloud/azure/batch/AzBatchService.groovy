@@ -191,7 +191,7 @@ class AzBatchService implements Closeable {
     AzVmType findBestVm(String location, int cpus, MemoryUnit mem, MemoryUnit disk, String allFamilies) {
         def all = listAllVms(location)
         def scores = new TreeMap<Double,String>()
-        def list = allFamilies ? allFamilies.tokenize(',') : ['']
+        def list = allFamilies ? allFamilies.tokenize(',') : ['basic_a*', 'standard_a*']
         for( String family : list ) {
             for( Map entry : all ) {
                 if( !matchType(family, entry.name as String) )
@@ -225,27 +225,42 @@ class AzBatchService implements Closeable {
         double vmMemGb = (entry.memoryInMB as int) /1024
         double vmDiskGb = (entry.resourceDiskSizeInMB as int) /1024
 
+        // If requested CPUs exceed available, disqualify
         if( cpus > vmCores )
             return null
 
-        int cpusDelta = cpus-vmCores
-        double score = cpusDelta * cpusDelta
+        // If disk is requested but VM has no resource disk, disqualify
+        if( disk && vmDiskGb == 0 )
+            return null
+
+        // Calculate weighted scores
+        double score = 0.0
+        
+        // CPU score - heavily weight exact matches
+        double cpuScore = Math.abs(cpus - vmCores)
+        score += cpuScore * 10  // Give more weight to CPU match
+
+        // Memory score if specified
         if( mem && vmMemGb ) {
             double memGb = mem.toMega()/1024
             if( memGb > vmMemGb )
                 return null
-            double memDelta = memGb - vmMemGb
-            score += memDelta*memDelta
+            double memScore = Math.abs(memGb - vmMemGb)
+            score += memScore
         }
+
+        // Disk score if specified  
         if( disk && vmDiskGb != MemoryUnit.ZERO) {
             double diskGb = disk.toMega()/1024
             if( diskGb > vmDiskGb )
                 return null
-            double diskDelta =  diskGb - vmDiskGb
-            score += diskDelta*diskDelta
+            double diskScore = Math.abs(diskGb - vmDiskGb) / 100  // Reduce disk impact
+            score += diskScore
         }
 
-        return Math.sqrt(score)
+        // Round to 3 decimal places
+        if (score == 0.0) return 0.0
+        return new BigDecimal(score).setScale(3, RoundingMode.HALF_UP).doubleValue()
     }
 
     @Memoized

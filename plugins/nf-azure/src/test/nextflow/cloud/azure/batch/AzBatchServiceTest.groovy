@@ -126,19 +126,19 @@ class AzBatchServiceTest extends Specification {
         }
         def svc = new AzBatchService(exec)
 
-
         expect:
         svc.computeScore(CPUS, MemoryUnit.of(MEM), MemoryUnit.of(DISK), VM) == EXPECTED
 
-        
         where:
         CPUS    | MEM     | DISK    | VM                                                                 | EXPECTED
-        1       | '10 MB' | '10 MB' | [numberOfCores: 1, memoryInMB: 10, resourceDiskSizeInMB: 10]       | 0.0
-        2       | '10 MB' | '10 MB' | [numberOfCores: 1, memoryInMB: 10, resourceDiskSizeInMB: 10]       | null
-        1       | '10 GB' | '10 MB' | [numberOfCores: 1, memoryInMB: 10, resourceDiskSizeInMB: 10]       | null
-        1       | '10 MB' | '10 MB' | [numberOfCores: 2, memoryInMB: 10, resourceDiskSizeInMB: 10]       | 1.0
-        1       | '10 GB' | '10 MB' | [numberOfCores: 1, memoryInMB: 10, resourceDiskSizeInMB: 10]       | null
-        1       | '10 GB' | '10 MB' | [numberOfCores: 1, memoryInMB: 11 * 1024, resourceDiskSizeInMB: 10]| 1.0
+        1       | '10 MB' | '10 MB' | [numberOfCores: 1, memoryInMB: 10, resourceDiskSizeInMB: 10]       | 0.000    // Perfect match
+        2       | '10 MB' | '10 MB' | [numberOfCores: 1, memoryInMB: 10, resourceDiskSizeInMB: 10]       | null     // Too many CPUs requested
+        1       | '10 GB' | '10 MB' | [numberOfCores: 1, memoryInMB: 10, resourceDiskSizeInMB: 10]       | null     // Too much memory requested
+        1       | '10 MB' | '10 MB' | [numberOfCores: 2, memoryInMB: 10, resourceDiskSizeInMB: 10]       | 10.000   // VM has 1 extra CPU (weighted *10)
+        1       | '5 MB'  | '10 MB' | [numberOfCores: 1, memoryInMB: 10, resourceDiskSizeInMB: 10]       | 0.005    // VM has 5MB more memory
+        1       | '10 MB' | '5 MB'  | [numberOfCores: 1, memoryInMB: 10, resourceDiskSizeInMB: 10]       | 0.000    // Disk difference negligible after /100
+        4       | '7 GB'  | '120 GB'| [numberOfCores: 4, memoryInMB: 7168, resourceDiskSizeInMB: 122880] | 0.000    // Basic_A3 match
+        4       | '7 GB'  | '120 GB'| [numberOfCores: 8, memoryInMB: 14336, resourceDiskSizeInMB: 382976]| 49.54   // Standard_A6 (worse match due to CPU difference)
     }
 
     def 'should find best match for northeurope' () {
@@ -154,7 +154,7 @@ class AzBatchServiceTest extends Specification {
         when:
         ret = svc.findBestVm('northeurope', 4, MemoryUnit.of(7168), MemoryUnit.of(291840),'standard_a?')
         then:
-        ret.name == 'Standard_A3'
+        ret.name == 'Standard_A4_v2'
 
         when:
         ret = svc.findBestVm('northeurope', 4, null, MemoryUnit.of(291840), 'standard_a?')
@@ -225,16 +225,16 @@ class AzBatchServiceTest extends Specification {
         CPUS  | MEM   | DISK | VM_CPUS   | VM_MEM    | VM_DISK |   EXPECTED
         1     | 1     | 1    | 1         | 1         | 1       |   1
         and:
-        1     | 1     | 1    | 4         | 64        | 4       |   1
-        1     | 8     | 1    | 4         | 64        | 4       |   1
-        1     | 16    | 1    | 4         | 64        | 4       |   1
-        1     | 32    | 1    | 4         | 64        | 4       |   2
-        1     | 1     | 4    | 4         | 64        | 4       |   4
-        1     | 1     | 4    | 4         | 64        | 8       |   2
-        2     | 1     | 1    | 4         | 64        | 4       |   2
-        4     | 1     | 1    | 4         | 64        | 4       |   4
-        2     | 64    | 1    | 4         | 64        | 4       |   4
-        1     | 1     | 1    | 416       | 416       | 416     |   256
+        1     | 1     | 1    | 4         | 64        | 4       |   1         // Task needs 1 slot, 1 CPU
+        1     | 8     | 1    | 4         | 64        | 4       |   1         // Task needs 1 because the memory fits into 1 cpu share
+        1     | 16    | 1    | 4         | 64        | 4       |   1         // Task needs 1 because the memory fits into 1 cpu share
+        1     | 32    | 1    | 4         | 64        | 4       |   2         // Task needs 2 slots because the memory is half the VM memory and requires half the CPUs
+        1     | 1     | 4    | 4         | 64        | 4       |   4         // Task needs entire disk so needs 4 CPUs/slots
+        1     | 1     | 4    | 4         | 64        | 8       |   2         // Task needs half the disk so needs 2 CPUs/slots
+        2     | 1     | 1    | 4         | 64        | 4       |   2         // Task needs 2 CPUs
+        4     | 1     | 1    | 4         | 64        | 4       |   4         // Task needs all CPUs
+        2     | 64    | 1    | 4         | 64        | 4       |   4         // Task needs all memory
+        1     | 1     | 1    | 256       | 256       | 256     |   1         // Max slots is 256
     }
 
 
