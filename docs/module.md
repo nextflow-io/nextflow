@@ -260,7 +260,7 @@ To use this feature, the module binaries must be enabled in your pipeline script
 nextflow.enable.moduleBinaries = true
 ```
 
-Binary scripts must be placed in the module directory named `<module-dir>/resources/usr/bin` and granted execution permissions:
+Binary scripts must be placed in the module directory named `<module-dir>/resources/usr/bin` and granted execution permissions. For example:
 
 ```
 <module-dir>
@@ -275,6 +275,8 @@ Binary scripts must be placed in the module directory named `<module-dir>/resour
 :::{note}
 Module binary scripts require a local or shared file system for the pipeline work directory, or {ref}`wave-page` when using cloud-based executors.
 :::
+
+Scripts can also be stored at the pipeline level using the `bin` directory. See {ref}`bin directory <bundling-executable>` for more information. 
 
 ## Sharing modules
 
