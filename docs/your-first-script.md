@@ -7,7 +7,7 @@
 This script defines two processes. The first splits a string into 6-character chunks, writing each one to a file with the prefix `chunk_`, and the second receives these files and transforms their contents to uppercase letters. The resulting strings are emitted on the `result` channel and the final output is printed by the `view` operator. Copy the following example into your favorite text editor and save it to a file named `tutorial.nf`:
 
 ```{literalinclude} snippets/your-first-script.nf
-:language: groovy
+:language: nextflow
 ```
 
 Execute the script by entering the following command in your terminal:
@@ -48,13 +48,14 @@ Nextflow keeps track of all the processes executed in your pipeline. If you modi
 
 For the sake of this tutorial, modify the `convertToUpper` process in the previous example, replacing the process script with the string `rev $x`, like so:
 
-```groovy
+```nextflow
 process convertToUpper {
   input:
     path x
   output:
     stdout
 
+  script:
   """
   rev $x
   """

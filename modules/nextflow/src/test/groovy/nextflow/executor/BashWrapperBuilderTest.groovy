@@ -559,7 +559,7 @@ class BashWrapperBuilderTest extends Specification {
         binding.unstage_outputs == '''\
                 IFS=$'\\n'
                 for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
-                    nxf_fs_copy "$name" /work/dir || true
+                    nxf_fs_copy "$name" /work/dir
                 done
                 unset IFS
                 '''.stripIndent().rightTrim()
@@ -576,7 +576,7 @@ class BashWrapperBuilderTest extends Specification {
         binding.unstage_outputs == '''\
                 IFS=$'\\n'
                 for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
-                    nxf_fs_move "$name" /another/dir || true
+                    nxf_fs_move "$name" /another/dir
                 done
                 unset IFS
                 '''.stripIndent().rightTrim()
@@ -781,7 +781,24 @@ class BashWrapperBuilderTest extends Specification {
                 # conda environment
                 source $(conda info --json | awk '/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }')/bin/activate /some/conda/env/foo
                 '''.stripIndent()
+    }
 
+    def 'should create micromamba activate snippet' () {
+
+        when:
+        def binding = newBashWrapperBuilder().makeBinding()
+        then:
+        binding.conda_activate == null
+        binding.containsKey('conda_activate')
+
+        when:
+        def CONDA = Paths.get('/some/conda/env/foo')
+        binding = newBashWrapperBuilder([condaEnv: CONDA, 'useMicromamba': true]).makeBinding()
+        then:
+        binding.conda_activate == '''\
+                # conda environment
+                eval "$(micromamba shell hook --shell bash)" && micromamba activate /some/conda/env/foo
+                '''.stripIndent()
     }
 
     def 'should create spack activate snippet' () {

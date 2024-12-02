@@ -90,6 +90,8 @@ conda.channels = 'conda-forge,bioconda'
 ```
 :::
 
+Packages from the [Python Package Index](https://pypi.org/) can also be added to a Conda `environment.yml` file. See {ref}`Conda and PyPI <conda-pypi>` for more information.
+
 (wave-singularity)=
 
 ### Build Singularity native images
@@ -189,10 +191,10 @@ tower.accessToken = '<YOUR ACCESS TOKEN>'
 ```
 
 Nextflow will only allow the use of containers with no security
-vulnerabilities when using these settings. You can define the level of accepted vulnerabilities using `wave.scan.levels`. For example:
+vulnerabilities when using these settings. You can define the level of accepted vulnerabilities using `wave.scan.allowedLevels`. For example:
 
 ```
-wave.scan.levels = 'low,medium'
+wave.scan.allowedLevels = 'low,medium'
 ```
 
 The above setting will allow the use of containers with *low* and *medium* vulnerabilities. Accepted values are `low`, `medium`, `high`, and `critical`. See [common vulnerabilities scoring system](https://en.wikipedia.org/wiki/Common_Vulnerability_Scoring_System) for more information about these levels.

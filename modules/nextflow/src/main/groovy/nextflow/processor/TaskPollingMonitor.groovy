@@ -16,6 +16,8 @@
 
 package nextflow.processor
 
+import static nextflow.processor.TaskProcessor.*
+
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -617,7 +619,7 @@ class TaskPollingMonitor implements TaskMonitor {
             if (evict(handler)) { 
                 handler.decProcessForks()
             }
-            fault = handler.task.processor.resumeOrDie(handler?.task, error)
+            fault = handler.task.processor.resumeOrDie(handler?.task, error, handler.getTraceRecord())
             log.trace "Task fault (1): $fault"
         }
         finally {
@@ -683,7 +685,7 @@ class TaskPollingMonitor implements TaskMonitor {
 
     protected void finalizeTask( TaskHandler handler ) {
         // finalize the task execution
-        final fault = handler.task.processor.finalizeTask(handler.task)
+        final fault = handler.task.processor.finalizeTask(handler)
 
         // notify task completion
         session.notifyTaskComplete(handler)
