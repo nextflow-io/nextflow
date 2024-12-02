@@ -82,8 +82,8 @@ nxf_fs_fcp() {
 
 on_exit() {
     local last_err=$?
-    exit_status=${nxf_main_ret:=0}
-    [[ ${exit_status} -eq 0 && ${nxf_unstage_ret:0} -ne 0 ]] && exit_status=${nxf_unstage_ret}
+    local exit_status=${nxf_main_ret:=0}
+    [[ ${exit_status} -eq 0 && ${nxf_unstage_ret:=0} -ne 0 ]] && exit_status=${nxf_unstage_ret:=0}
     [[ ${exit_status} -eq 0 && ${last_err} -ne 0 ]] && exit_status=${last_err}
     printf -- $exit_status > {{folder}}/.exitcode
     set +u
