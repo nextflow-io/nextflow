@@ -202,10 +202,6 @@ class AzBatchService implements Closeable {
             }
         }
 
-        if ( scores ) {
-            log.debug "[AZURE BATCH] Found VMs: ${scores}"
-        }
-
         return scores ? getVmType(location, scores.firstEntry().value) : null
     }
 
