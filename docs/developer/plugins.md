@@ -18,7 +18,7 @@ dependencies {
     compileOnly 'org.pf4j:pf4j:3.4.1'
 
     testImplementation project(':nextflow')
-    testImplementation "org.codehaus.groovy:groovy:4.0.23"
+    testImplementation "org.codehaus.groovy:groovy:4.0.24"
     testImplementation "org.codehaus.groovy:groovy-nio:4.0.23"
 }
 ```
@@ -141,6 +141,8 @@ You can then use this executor in your pipeline:
 ```nextflow
 process foo {
     executor 'my-executor'
+
+    // ...
 }
 ```
 

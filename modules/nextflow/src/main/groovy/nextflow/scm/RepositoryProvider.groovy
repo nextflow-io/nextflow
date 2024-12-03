@@ -73,9 +73,21 @@ abstract class RepositoryProvider {
         return this
     }
 
+    String getRevision() {
+        return this.revision
+    }
+
     RepositoryProvider setRevision(String revision) {
         this.revision = revision
         return this
+    }
+
+    String getProject() {
+        return this.project
+    }
+
+    ProviderConfig getConfig() {
+        return this.config
     }
 
     boolean hasCredentials() {
