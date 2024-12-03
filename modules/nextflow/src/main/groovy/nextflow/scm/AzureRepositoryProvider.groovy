@@ -35,6 +35,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
 
     private String user
     private String repo
+    private boolean includesRepo; //Flag to indicate if project already include the repo
     private String continuationToken
 
     AzureRepositoryProvider(String project, ProviderConfig config=null) {
@@ -44,10 +45,13 @@ final class AzureRepositoryProvider extends RepositoryProvider {
          */
         def tokens = project.tokenize('/')
         this.repo = tokens.removeLast()
+
         if( tokens.size() == 1){
             this.project = [tokens.first(), this.repo].join('/')
+            this.includesRepo = true
         }else{
             this.project = tokens.join('/')
+            this.includesRepo = false
         }
         this.config = config ?: new ProviderConfig('azurerepos')
         this.continuationToken = null
@@ -164,7 +168,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     String getRepositoryUrl() {
-        "${config.server}/$project"
+        includesRepo ? "${config.server}/$project" : "${config.server}/$project/$repo"
     }
 
     /** {@inheritDoc} */
