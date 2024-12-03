@@ -540,6 +540,7 @@ and the Batch Execution Role.
 
 :::{note}
 This feature requires the use {ref}`Wave <wave-page>` container provisioning service.
+This is because `s5cmd` is used to stage and unstage data which is augmented into the task container via wave.
 :::
 
 ## Advanced configuration
