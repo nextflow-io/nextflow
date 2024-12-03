@@ -1,5 +1,12 @@
 nf-azure changelog
 ===================
+1.11.0 - 3 Dec 2024
+- Detecting errors in data unstaging (#5345) [3c8e602d]
+- Bump netty-common to version 4.1.115.Final [d1bbd3d0]
+- Bump groovy 4.0.24 [dd71ad31]
+- Bump com.azure:azure-identity from 1.11.3 to 1.12.2 (#5449) [cb70f1df]
+- Target Java 17 as minimal Java version (#5045) [0140f954]
+
 1.10.1 - 27 Oct 2024
 - Demote azure batch task status log level to trace (#5416) [ci skip] [d6c684bb]
 
