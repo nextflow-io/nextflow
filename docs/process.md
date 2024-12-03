@@ -162,48 +162,10 @@ In the above example, the process will execute one of several scripts depending 
 
 Process scripts can be externalized to **template** files and reused across multiple processes. Templates can be accessed using the `template` function in the script section. For example:
 
-```nextflow
-process templateExample {
-    input:
-    val STR
-
-    script:
-    template 'my_script.sh'
-}
-
-workflow {
-    Channel.of('this', 'that') | templateExample
-}
-```
-
 By default, Nextflow looks for template scripts in the `templates` directory, located alongside the Nextflow script that defines the process. An absolute path can be used to specify a different template location. However, this practice is discouraged because it hinders pipeline portability.
 
 Templates can be tested independently of pipeline execution. However, variables prefixed with the dollar character (`$`) are interpreted as Nextflow variables when the template script is executed by Nextflow and Bash variables when executed directly. Consider the following template script:
 
-```bash
-#!/bin/bash
-echo "process started at `date`"
-echo $STR
-echo "process completed"
-```
-
-The above script can be executed from the command line by providing each input as an environment variable:
-
-```bash
-STR='foo' bash templates/my_script.sh
-```
-
-Several caveats should be considered when using templates:
-
-- Template scripts are only recommended for Bash scripts.
-- Languages that do not prefix variables with `$` (e.g. Python and R) can't be executed directly as a template script from the command line.
-- Template variables escaped with `\$` will be interpreted as Bash variables when executed by Nextflow but not the command line.
-- Template variables are evaluated even if they are commented out in the template script.
-- The pipeline to fail if a template variable is missing, regardless of where it occurs in the template.
-
-:::{tip}
-The best practice for using a custom script is to first embed it in the process definition and transfer it to a separate file with its own command line interface once the code matures.
-:::
 
 (process-shell)=
 
