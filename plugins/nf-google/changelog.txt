@@ -1,5 +1,12 @@
 nf-google changelog
 ===================
+1.16.0 - 3 Dec 2024
+- Detecting errors in data unstaging (#5345) [3c8e602d]
+- Bump bouncycastle to jdk18on:1.78.1  (#5467) [cd8c385f]
+- Bump groovy 4.0.24 [dd71ad31]
+- Bump protobuf-java:3.25.5 to nf-google [488b7906]
+- Add NotFoundException to retry condition for Google Batch [aa4d19cc]
+
 1.15.2 - 14 Oct 2024
 - Add Google LS deprecation notice (#5400) [0ee1d9bc]
 
