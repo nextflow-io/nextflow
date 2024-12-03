@@ -9,7 +9,7 @@ read -r NF_VERSION<VERSION
 
 # determine publish location
 S3_RELEASE_BUCKET=${S3_RELEASE_BUCKET:-'www2.nextflow.io'}
-if [[ "$NF_VERSION" =~ /^.+(-edge|-EDGE)$/ ]]; then
+if [[ "$NF_VERSION" =~ .+(-edge|-EDGE) ]]; then
   S3_RELEASE_DIR="releases/edge"
 else
   S3_RELEASE_DIR="releases/latest"

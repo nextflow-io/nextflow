@@ -70,7 +70,7 @@ echo "
 ------------------------------------------------------------
 Release commit pushed.
 This should trigger a github release workflow.
-Once the workflow is complete, you should add the changelog
-to the github release.
+Once the workflow is complete, you should check and publish
+the draft github release.
 ------------------------------------------------------------
 "
