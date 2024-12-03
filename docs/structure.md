@@ -2,9 +2,11 @@
 
 # Structure
 
+(structure-templates)=
+
 ## The `templates` directory
 
-The `templates` directory in the Nextflow project root can be used to store scripts.
+The `templates` directory in the Nextflow project root can be used to store template files.
 
 ```
 ├── templates
@@ -12,51 +14,9 @@ The `templates` directory in the Nextflow project root can be used to store scri
 └── main.nf
 ```
 
-It allows custom scripts to be invoked like regular scripts from any process in your pipeline using the `template` function:
+Template files can be invoked like regular scripts from any process in your pipeline using the `template` function. Variables prefixed with the dollar character (`$`) are interpreted as Nextflow variables when the template script is executed by Nextflow.
 
-```
-process sayHello {
-    
-    input:
-    val x
-
-    output:
-    stdout
-
-    script:
-    template 'sayhello.py'
-}
-
-workflow {
-    Channel.of("Foo") | sayHello | view
-}
-```
-
-Variables prefixed with the dollar character (`$`) are interpreted as Nextflow variables when the template script is executed by Nextflow:
-
-```
-#!/usr/bin/env python
-
-print("Hello ${x}!")
-```
-
-The pipeline will fail if a template variable is missing, regardless of where it occurs in the template.
-
-Templates can be tested independently of pipeline execution by providing each input as an environment variable. For example:
-
-```bash
-STR='foo' bash templates/my_script.sh
-```
-
-Template scripts are only recommended for Bash scripts. Languages that do not prefix variables with `$` (e.g. Python and R) can't be executed directly as a template script from the command line as variables prefixed with `$` are interpreted as Bash variables. Similarly, template variables escaped with `\$` will be interpreted as Bash variables when executed by Nextflow but not the command line.
-
-:::{warning}
-Template variables are evaluated even if they are commented out in the template script.
-:::
-
-:::{tip}
-The best practice for using a custom script is to first embed it in the process definition and transfer it to a separate file with its own command line interface once the code matures.
-:::
+See {ref}`process-template` for more information about utilizing template files.
 
 (bundling-executables)=
 
