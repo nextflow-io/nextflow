@@ -191,7 +191,7 @@ class AzBatchService implements Closeable {
     AzVmType findBestVm(String location, int cpus, MemoryUnit mem, MemoryUnit disk, String allFamilies) {
         def all = listAllVms(location)
         def scores = new TreeMap<Double,String>()
-        def list = allFamilies ? allFamilies.tokenize(',') : ['basic_a*', 'standard_a*']
+        def list = allFamilies ? allFamilies.tokenize(',') : ['']
         for( String family : list ) {
             for( Map entry : all ) {
                 if( !matchType(family, entry.name as String) )
