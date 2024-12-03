@@ -158,14 +158,59 @@ In the above example, the process will execute one of several scripts depending 
 
 (process-template)=
 
-### Template
+### Template files
 
-Process scripts can be externalized to **template** files and reused across multiple processes. Templates can be accessed using the `template` function in the script section. For example:
+Process scripts can be externalized to **template** files and reused across multiple processes.
 
-By default, Nextflow looks for template scripts in the `templates` directory, located alongside the Nextflow script that defines the process. An absolute path can be used to specify a different template location. However, this practice is discouraged because it hinders pipeline portability.
+Template files can be stored in the project or modules template directory. See {ref}`structure-templates` and {ref}`module-templates` for more information about directory structures.
 
-Templates can be tested independently of pipeline execution. However, variables prefixed with the dollar character (`$`) are interpreted as Nextflow variables when the template script is executed by Nextflow and Bash variables when executed directly. Consider the following template script:
+In template files, variables prefixed with the dollar character (`$`) are interpreted as Nextflow variables when the template script is executed by Nextflow.
 
+```
+#!/usr/bin/env python
+
+print("Hello ${x}!")
+```
+
+Template files can be invoked like regular scripts from any process in your pipeline using the `template` function.
+
+```
+process sayHello {
+    
+    input:
+    val x
+
+    output:
+    stdout
+
+    script:
+    template 'sayhello.py'
+}
+
+workflow {
+    Channel.of("Foo") | sayHello | view
+}
+```
+
+:::{note}
+All template variable must be defined. The pipeline will fail if a template variable is missing, regardless of where it occurs in the template.
+:::
+
+Templates can be tested independently of pipeline execution by providing each input as an environment variable. For example:
+
+```bash
+STR='foo' bash templates/myscript.sh
+```
+
+Template scripts are only recommended for Bash scripts. Languages that do not prefix variables with `$` (e.g. Python and R) can't be executed directly as a template script from the command line as variables prefixed with `$` are interpreted as Bash variables. Similarly, template variables escaped with `\$` will be interpreted as Bash variables when executed by Nextflow but not the command line.
+
+:::{warning}
+Template variables are evaluated even if they are commented out in the template script.
+:::
+
+:::{tip}
+The best practice for using a custom script is to first embed it in the process definition and transfer it to a separate file with its own command line interface once the code matures.
+:::
 
 (process-shell)=
 

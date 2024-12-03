@@ -184,41 +184,25 @@ Ciao world!
 
 ## Module templates
 
-Process script {ref}`templates <process-template>` can be included alongside a module in the `templates` directory.
-
-For example, Project L contains a module (`myModules.nf`) that defines two processes, P1 and P2. Both processes use templates that are available in the local `templates` directory:
-
-```
-Project L
-|── myModules.nf
-└── templates
-    |── P1-template.sh
-    └── P2-template.sh
-```
-
-Project A contains a workflow that includes processes P1 and P2:
+Template files can be stored in the `templates` directory alongside a module.
 
 ```
 Project A
-└── main.nf
+├── main.nf
+└── modules
+    └── sayhello
+        ├── sayhello.nf
+        └── templates
+            └── sayhello.py
 ```
 
-Project B contains a workflow that also includes process P1 and P2:
+Template files can be invoked like regular scripts from a process in your pipeline using the `template` function. Variables prefixed with the dollar character (`$`) are interpreted as Nextflow variables when the template script is executed by Nextflow.
 
-```
-Project B
-└── main.nf
-```
+See {ref}`process-template` for more information utilizing template files.
 
-As the template files are stored with the modules inside the Project L, Projects A and B can include them without any changing any code. Future projects would also be able to include these modules by cloning Project L and including its module (if they were not available on the system).
+Storing template files with the module that utilizes it encourages sharing of modules across pipelines. For example, future projects would be able to include the module from above by cloning the modules directory and including the module without needing to modify the process or template.
 
-Beyond facilitating module sharing across pipelines, keeping the module template within the script path has several advantages, including:
-
-- Modules are self-contained.
-- Modules can be tested independently from the pipeline(s) that import them.
-- Modules can be made into libraries.
-
-Organizing templates locations allows for a well-structured project. In projects with multiple modules that rely on templates, you can organize module scripts and their corresponding templates into logical groups. For example:
+Beyond facilitating module sharing across pipelines, organizing templates locations allows for a well-structured project. For example, complex projects with multiple modules that rely on templates can be organized into logical groups:
 
 ```
 baseDir
@@ -243,7 +227,7 @@ baseDir
         └── P6-template.sh
 ```
 
-See {ref}`process-template` for more information about how to externalize process scripts to template files.
+Template files can also be stored in a project `templates` directory. See {ref}`structure-template` for more information about the project directory structure.
 
 (module-binaries)=
 
