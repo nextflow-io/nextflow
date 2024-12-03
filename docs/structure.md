@@ -18,7 +18,7 @@ Template files can be invoked like regular scripts from any process in your pipe
 
 See {ref}`process-template` for more information about utilizing template files.
 
-(bundling-executables)=
+(structure-bin)=
 
 ## The `bin` directory
 
@@ -30,7 +30,7 @@ The `bin` directory in the Nextflow project root can be used to store executable
 └── main.nf
 ```
 
-It allows custom scripts to be invoked like regular commands from any process in your pipeline without modifying the `PATH` environment variable or using an absolute path. Each script should include a shebang to specify the interpreter. Inputs should be supplied as arguments.
+It allows custom scripts to be invoked like regular commands from any process in your pipeline without modifying the `PATH` environment variable or using an absolute path. Each script should include a shebang to specify the interpreter and inputs should be supplied as arguments.
 
 ```python
 #!/usr/bin/env python

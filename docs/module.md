@@ -227,7 +227,7 @@ baseDir
         └── P6-template.sh
 ```
 
-Template files can also be stored in a project `templates` directory. See {ref}`structure-template` for more information about the project directory structure.
+Template files can also be stored in the project `templates` directory. See {ref}`structure-template` for more information about the project directory structure.
 
 (module-binaries)=
 
@@ -238,12 +238,6 @@ Template files can also be stored in a project `templates` directory. See {ref}`
 
 Modules can define binary scripts that are locally scoped to the processes defined by the tasks.
 
-To use this feature, the module binaries must be enabled in your pipeline script or configuration file:
-
-```nextflow
-nextflow.enable.moduleBinaries = true
-```
-
 Binary scripts must be placed in the module directory named `<module-dir>/resources/usr/bin` and granted execution permissions. For example:
 
 ```
@@ -252,15 +246,22 @@ Binary scripts must be placed in the module directory named `<module-dir>/resour
 └── resources
     └── usr
         └── bin
-            |── your-module-script1.sh
-            └── another-module-script2.py
+            └── script.py
+```
+
+Binary scripts can be invoked like regular commands from the locally scoped module without modifying the `PATH` environment variable or using an absolute path. Each script should include a shebang to specify the interpreter and inputs should be supplied as arguments.
+
+To use this feature, the module binaries must be enabled in your pipeline script or configuration file:
+
+```nextflow
+nextflow.enable.moduleBinaries = true
 ```
 
 :::{note}
-Module binary scripts require a local or shared file system for the pipeline work directory, or {ref}`wave-page` when using cloud-based executors.
+Module binary scripts require a local or shared file system for the pipeline work directory or {ref}`wave-page` when using cloud-based executors.
 :::
 
-Scripts can also be stored at the pipeline level using the `bin` directory. See {ref}`bundling-executables` for more information. 
+Scripts can also be stored at the pipeline level using the `bin` directory. See {ref}`structure-bin` for more information.
 
 ## Sharing modules
 

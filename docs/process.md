@@ -112,12 +112,7 @@ workflow {
 ```
 
 :::{tip}
-Use `env` to resolve the interpreter's location instead of hard-coding the interpreter path. For example:
-
-```
-#!/usr/bin/env python
-```
-
+Use `env` to resolve the interpreter's location instead of hard-coding the interpreter path.
 :::
 
 ### Conditional scripts
@@ -160,9 +155,7 @@ In the above example, the process will execute one of several scripts depending 
 
 ### Template files
 
-Process scripts can be externalized to **template** files and reused across multiple processes.
-
-Template files can be stored in the project or modules template directory. See {ref}`structure-templates` and {ref}`module-templates` for more information about directory structures.
+Process scripts can be externalized to **template** files and reused across multiple processes. Template files can be stored in the project or modules template directory. See {ref}`structure-templates` and {ref}`module-templates` for more information about directory structures.
 
 In template files, variables prefixed with the dollar character (`$`) are interpreted as Nextflow variables when the template script is executed by Nextflow.
 
@@ -204,12 +197,12 @@ STR='foo' bash templates/myscript.sh
 
 Template scripts are only recommended for Bash scripts. Languages that do not prefix variables with `$` (e.g. Python and R) can't be executed directly as a template script from the command line as variables prefixed with `$` are interpreted as Bash variables. Similarly, template variables escaped with `\$` will be interpreted as Bash variables when executed by Nextflow but not the command line.
 
-:::{warning}
-Template variables are evaluated even if they are commented out in the template script.
-:::
-
 :::{tip}
 The best practice for using a custom script is to first embed it in the process definition and transfer it to a separate file with its own command line interface once the code matures.
+:::
+
+:::{warning}
+Template variables are evaluated even if they are commented out in the template script.
 :::
 
 (process-shell)=
