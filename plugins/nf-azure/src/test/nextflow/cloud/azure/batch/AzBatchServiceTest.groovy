@@ -154,7 +154,7 @@ class AzBatchServiceTest extends Specification {
         when:
         ret = svc.findBestVm('northeurope', 4, MemoryUnit.of(7168), MemoryUnit.of(291840),'standard_a?')
         then:
-        ret.name == 'Standard_A4_v2'
+        ret.name == 'Standard_A3'
 
         when:
         ret = svc.findBestVm('northeurope', 4, null, MemoryUnit.of(291840), 'standard_a?')
