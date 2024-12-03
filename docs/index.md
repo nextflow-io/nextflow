@@ -78,6 +78,7 @@ module
 notifications
 secrets
 sharing
+structure
 vscode
 dsl1
 ```

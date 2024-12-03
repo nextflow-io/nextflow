@@ -93,43 +93,6 @@ Read the {ref}`container-page` page to learn more about how to use containers wi
 For maximal reproducibility, make sure to define a specific version for each tool. Otherwise, your pipeline might use different versions across subsequent runs, which can introduce subtle differences to your results.
 :::
 
-(bundling-executables)=
-
-#### The `bin` directory
-
-Executable scripts can be included in the pipeline `bin` directory located at the root of your pipeline directory. This allows you to create and organize custom scripts that can be invoked like regular commands from any process in your pipeline without modifying the `PATH` environment variable or using an absolute path. For example:
-
-```
-├── bin
-│   └── custom_script.py
-└── main.nf
-```
-
-Each script should include a shebang line to specify the interpreter for the script.
-
-:::{tip}
-Use `env` to resolve the interpreter's location instead of hard-coding the interpreter path. For example:
-
-```
-#!/usr/bin/env python
-```
-
-:::
-
-Scripts placed in the `bin` directory must have executable permissions. Use `chmod` to grant the required permissions. For example:
-
-```
-chmod a+x bin/custom_script.py
-```
-
-After setting the executable permission, the script can be run directly within your pipeline processes.
-
-Executable scripts can also be stored as scripts that are locally scoped to the processes defined by the tasks. See {ref}`module-binaries` for more information.
-
-#### The `lib` directory
-
-Any Groovy scripts or JAR files in the `lib` directory will be automatically loaded and made available to your pipeline scripts. The `lib` directory is a useful way to provide utility code or external libraries without cluttering the pipeline scripts.
-
 ### Data
 
 In general, input data should be provided by external sources using parameters which can be controlled by the user. This way, a pipeline can be easily reused to process different datasets which are appropriate for the pipeline.
