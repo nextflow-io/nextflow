@@ -359,10 +359,10 @@ The following methods are available for iterables:
 `any( condition: Closure ) -> boolean`
 : Returns `true` if any value in the iterable satisfies the given condition.
 
-`collect( transform: Closure ) -> List`
-: Transforms each value in the iterable with the given closure and collects the values into a list.
+`collect( transform: Closure ) -> Iterable`
+: Returns a new iterable with each value transformed by the given closure.
 
-`collectMany( transform: Closure ) -> List`
+`collectMany( transform: Closure ) -> Iterable`
 : Transforms each value in the iterable into a collection with the given closure and concatenates the resulting collections into a list.
 
 `contains( value ) -> boolean`
@@ -419,6 +419,9 @@ The following methods are available for iterables:
 
 `sum() -> ?`
 : Returns the sum of the values in the iterable. The values should support the `+` operator.
+
+`sum( mapper: Closure ) -> ?`
+: Transforms each value in the iterable with the given closure and returns the sum. The values returned by the closure should support the `+` operator.
 
 `toList() -> List`
 : Converts the iterable to a list.
