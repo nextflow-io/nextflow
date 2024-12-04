@@ -1,6 +1,6 @@
 (structure-page)=
 
-# Structure
+# Project structure
 
 (structure-templates)=
 
