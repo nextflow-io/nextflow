@@ -10,11 +10,11 @@ The `templates` directory in the Nextflow project root can be used to store temp
 
 ```
 ├── templates
-│   └── sayhello.py
+│   └── sayhello.sh
 └── main.nf
 ```
 
-Template files can be invoked like regular scripts from any process in your pipeline using the `template` function. Variables prefixed with the dollar character (`$`) are interpreted as Nextflow variables when the template script is executed by Nextflow.
+Template files can be invoked like regular scripts from any process in your pipeline using the `template` function. Variables prefixed with the dollar character (`$`) are interpreted as Nextflow variables when the template file is executed by Nextflow.
 
 See {ref}`process-template` for more information about utilizing template files.
 
@@ -30,7 +30,7 @@ The `bin` directory in the Nextflow project root can be used to store executable
 └── main.nf
 ```
 
-It allows custom scripts to be invoked like regular commands from any process in your pipeline without modifying the `PATH` environment variable or using an absolute path. Each script should include a shebang to specify the interpreter and inputs should be supplied as arguments.
+The `bin` directory allows binary scripts to be invoked like regular commands from any process in your pipeline without using an absolute path of modifying the `PATH` environment variable. Each script should include a shebang to specify the interpreter and inputs should be supplied as arguments to the executable. For example:
 
 ```python
 #!/usr/bin/env python
@@ -52,13 +52,39 @@ if __name__ == "__main__":
 Use `env` to resolve the interpreter's location instead of hard-coding the interpreter path.
 :::
 
-Scripts placed in the `bin` directory must have executable permissions. Use `chmod` to grant the required permissions. For example:
+Binary scripts placed in the `bin` directory must have executable permissions. Use `chmod` to grant the required permissions. For example:
 
 ```
 chmod a+x bin/sayhello.py
 ```
 
-Like modifying a process script, changing the executable script will cause the task to be re-executed on a resumed run.
+Binary scripts in the `bin` directory can then be invoked like regular commands.
+
+```
+process sayHello {
+    
+    input:
+    val x
+
+    output:
+    stdout
+
+    script:
+    """
+    sayhello.py --name $x
+    """
+}
+
+workflow {
+    Channel.of("Foo") | sayHello | view
+}
+```
+
+Like modifying a process script, modifying the binary script will cause the task to be re-executed on a resumed run.
+
+:::{note}
+Binary scripts require a local or shared file system for the pipeline work directory or {ref}`wave-page` when using cloud-based executors.
+:::
 
 :::{warning}
 When using containers and the Wave service, Nextflow will send the project-level `bin` directory to the Wave service for inclusion as a layer in the container. Any changes to scripts in the `bin` directory will change the layer md5sum and the hash for the final container. The container identity is a component of the task hash calculation and will force re-calculation of all tasks in the workflow.

@@ -193,10 +193,10 @@ Project A
     └── sayhello
         ├── sayhello.nf
         └── templates
-            └── sayhello.py
+            └── sayhello.sh
 ```
 
-Template files can be invoked like regular scripts from a process in your pipeline using the `template` function. Variables prefixed with the dollar character (`$`) are interpreted as Nextflow variables when the template script is executed by Nextflow.
+Template files can be invoked like regular scripts from a process in your pipeline using the `template` function. Variables prefixed with the dollar character (`$`) are interpreted as Nextflow variables when the template file is executed by Nextflow.
 
 See {ref}`process-template` for more information utilizing template files.
 
@@ -236,9 +236,9 @@ Template files can also be stored in the project `templates` directory. See {ref
 :::{versionadded} 22.10.0
 :::
 
-Modules can define binary scripts that are locally scoped to the processes defined by the tasks.
+Modules can define binary scripts that are locally scoped to the processes.
 
-Binary scripts must be placed in the module directory named `<module-dir>/resources/usr/bin` and granted execution permissions. For example:
+Binary scripts must be placed in the module directory named `<module-dir>/resources/usr/bin`. For example:
 
 ```
 <module-dir>
@@ -249,7 +249,7 @@ Binary scripts must be placed in the module directory named `<module-dir>/resour
             └── script.py
 ```
 
-Binary scripts can be invoked like regular commands from the locally scoped module without modifying the `PATH` environment variable or using an absolute path. Each script should include a shebang to specify the interpreter and inputs should be supplied as arguments.
+Binary scripts can be invoked like regular commands from the locally scoped module without modifying the `PATH` environment variable or using an absolute path. Each script should include a shebang to specify the interpreter and inputs should be supplied as arguments. See {ref}`structure-bin` for more information about custom scripts in `bin` directories.
 
 To use this feature, the module binaries must be enabled in your pipeline script or configuration file:
 
@@ -261,7 +261,7 @@ nextflow.enable.moduleBinaries = true
 Module binary scripts require a local or shared file system for the pipeline work directory or {ref}`wave-page` when using cloud-based executors.
 :::
 
-Scripts can also be stored at the pipeline level using the `bin` directory. See {ref}`structure-bin` for more information.
+Scripts can also be stored in project level `bin` directory. See {ref}`structure-bin` for more information.
 
 ## Sharing modules
 
