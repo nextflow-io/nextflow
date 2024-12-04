@@ -444,11 +444,27 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      * @return Retrieve the submitted task state
      */
     protected String getTaskState() {
-        final tasks = client.listTasks(jobId)
-        if( !tasks.iterator().hasNext() )
-            return 'PENDING'
-
         final now = System.currentTimeMillis()
+        final tasks = client.listTasks(jobId)
+        if( !tasks.iterator().hasNext() ) {
+            // if there are no tasks checks the job status
+            final jobStatus = client.getJobStatus(jobId);
+            final newState = jobStatus?.state as String
+            if (newState) {
+                taskState = newState
+                timestamp = now
+                if (newState == "FAILED"){
+                    final eventsCount = jobStatus.getStatusEventsCount()
+                    final lastEvent = eventsCount > 0 ? jobStatus.getStatusEvents(eventsCount - 1) : null
+                    if (lastEvent){
+                        log.warn1 "Batch job failure: ${lastEvent.getDescription()}"
+                    }
+                }
+                return taskState
+            } else {
+                return "PENDING"
+            }
+        }
         final delta =  now - timestamp;
         if( !taskState || delta >= 1_000) {
             final status = client.getTaskStatus(jobId, taskId)
