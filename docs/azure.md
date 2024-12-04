@@ -155,7 +155,7 @@ Replacing `<PIPELINE NAME>` with a pipeline name e.g. `nextflow-io/rnaseq-nf` an
 
 See the [Batch documentation](https://docs.microsoft.com/en-us/azure/batch/quick-create-portal) for further details about the configuration for Azure Batch.
 
-### Pools configuration
+### Autopools
 
 When using the `autoPoolMode` option, Nextflow automatically creates a `pool` of compute nodes appropriate for your pipeline.
 
