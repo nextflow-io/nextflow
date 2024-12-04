@@ -615,8 +615,5 @@ class GoogleBatchTaskHandlerTest extends Specification {
         then:
         handler.getTaskState() == "PENDING"
         handler.getTaskState() == "FAILED"
-
-
-
     }
 }
