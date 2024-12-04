@@ -540,7 +540,7 @@ and the Batch Execution Role.
 
 :::{note}
 Nextflow uses [s5cmd](https://github.com/peak/s5cmd) to download the task input data and upload the task outputs.
-To enable this capability, you need to enable the Wave service in the Nextflow configuration, as shown in the above example. See {ref}Wave <wave-page> documentation for more details.
+To enable this capability, you need to enable the Wave service in the Nextflow configuration, as shown in the above example. See {ref}`Wave <wave-page>` documentation for more details.
 :::
 
 ## Advanced configuration
