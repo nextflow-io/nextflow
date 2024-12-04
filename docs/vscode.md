@@ -230,38 +230,6 @@ if (aligner == 'bowtie2') {
 }
 ```
 
-**Slashy dollar strings**
-
-Groovy supports a wide variety of strings, including multi-line strings, dynamic strings, slashy strings, multi-line dynamic slashy strings, and more.
-
-The Nextflow language specification supports single- and double-quoted strings, multi-line strings, and slashy strings. Dynamic slashy strings are not supported:
-
-```groovy
-def logo = /--cl-config 'custom_logo: "${multiqc_logo}"'/
-```
-
-Use a double-quoted string instead:
-
-```nextflow
-def logo = "--cl-config 'custom_logo: \"${multiqc_logo}\"'"
-```
-
-Slashy dollar strings are not supported:
-
-```groovy
-$/
-echo "Hello world!"
-/$
-```
-
-Use a multi-line string instead:
-
-```nextflow
-"""
-echo "Hello world!"
-"""
-```
-
 **Implicit environment variables**
 
 In Nextflow DSL1 and DSL2, you can reference environment variables directly in strings:
@@ -275,6 +243,14 @@ The Nextflow language specification does not support implicit environment variab
 ```nextflow
 println "PWD = ${System.getenv('PWD')}"
 ```
+
+:::{versionadded} 24.11.0-edge
+The `env()` function can be used instead of `System.getenv()`:
+
+```nextflow
+println "PWD = ${env('PWD')}"
+```
+:::
 
 ### Restricted syntax
 
@@ -326,6 +302,62 @@ To ease the migration of existing scripts, the language server only reports warn
 Type annotations and static type checking will be addressed in a future version of the Nextflow language specification.
 :::
 
+**Strings**
+
+Groovy supports a wide variety of strings, including multi-line strings, dynamic strings, slashy strings, multi-line dynamic slashy strings, and more.
+
+The Nextflow language specification supports single- and double-quoted strings, multi-line strings, and slashy strings.
+
+Slashy strings cannot be interpolated:
+
+```nextflow
+def id = 'SRA001'
+assert 'SRA001.fastq' ~= /${id}\.f(?:ast)?q/
+```
+
+Use a double-quoted string instead:
+
+```nextflow
+def id = 'SRA001'
+assert 'SRA001.fastq' ~= "${id}\\.f(?:ast)?q"
+```
+
+Slashy strings cannot span multiple lines:
+
+```groovy
+/
+Patterns in the code,
+Symbols dance to match and find,
+Logic unconfined.
+/
+```
+
+Use a multi-line string instead:
+
+```nextflow
+"""
+Patterns in the code,
+Symbols dance to match and find,
+Logic unconfined.
+"""
+```
+
+Dollar slashy strings are not supported:
+
+```groovy
+$/
+echo "Hello world!"
+/$
+```
+
+Use a multi-line string instead:
+
+```nextflow
+"""
+echo "Hello world!"
+"""
+```
+
 **Process env inputs/outputs**
 
 In Nextflow DSL1 and DSL2, the name of a process `env` input/output can be specified with or without quotes:
@@ -335,6 +367,8 @@ process PROC {
     input:
     env FOO
     env 'BAR'
+
+    // ...
 }
 ```
 
@@ -345,6 +379,8 @@ process PROC {
     input:
     env 'FOO'
     env 'BAR'
+
+    // ...
 }
 ```
 
@@ -432,6 +468,10 @@ The `each` process input is deprecated. Use the `combine` or `cross` operator to
 
 The process `when` section is deprecated. Use conditional logic, such as an `if` statement or the `filter` operator, to control the process invocation in the calling workflow.
 
+**Process shell section**
+
+The process `shell` section is deprecated. Use the `script` block instead. The VS Code extension provides syntax highlighting and error checking to help distinguish between Nextflow variables and Bash variables.
+
 ### Configuration syntax
 
 See {ref}`config-syntax` for a comprehensive description of the configuration language.
@@ -465,7 +505,7 @@ includeConfig ({
         return 'large.config'
     else
         return '/dev/null'
-})()
+}())
 ```
 
 The include source is a closure that is immediately invoked. It includes a different config file based on the return value of the closure. Including `/dev/null` is equivalent to including nothing.
