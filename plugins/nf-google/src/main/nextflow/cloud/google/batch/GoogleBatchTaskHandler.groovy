@@ -475,8 +475,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         return taskState
     }
 
-    String checkJobStatus() {
-        final jobStatus = client.getJobStatus(jobId);
+    protected String checkJobStatus() {
+        final jobStatus = client.getJobStatus(jobId)
         final newState = jobStatus?.state as String
         if (newState) {
             taskState = newState
@@ -533,11 +533,11 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     protected Throwable getJobError() {
         try {
             final events = noTaskJobfailure ? client.getJobStatus(jobId).getStatusEventsList() : client.getTaskStatus(jobId, taskId).getStatusEventsList()
-            final lastEvent = events?.get( events.size() -1 )
+            final lastEvent = events?.get(events.size() - 1)
             log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - last event: ${lastEvent}; exit code: ${lastEvent?.taskExecution?.exitCode}"
 
             final error = lastEvent?.description
-            if( error && (EXIT_CODE_REGEX.matcher(error).find() || BATCH_ERROR_REGEX.matcher(error).find())) {
+            if( error && (EXIT_CODE_REGEX.matcher(error).find() || BATCH_ERROR_REGEX.matcher(error).find()) ) {
                 return new ProcessException(error)
             }
         }
