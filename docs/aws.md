@@ -539,7 +539,8 @@ See the AWS documentation for details how to create the required AWS Batch queue
 and the Batch Execution Role.
 
 :::{note}
-This feature requires the use {ref}`Wave <wave-page>` container provisioning service.
+Nextflow uses [s5cmd](https://github.com/peak/s5cmd) to download the task input data and upload the task outputs.
+To enable this capability, you need to enable the Wave service in the Nextflow configuration, as shown in the above example. See {ref}Wave <wave-page> documentation for more details.
 :::
 
 ## Advanced configuration
