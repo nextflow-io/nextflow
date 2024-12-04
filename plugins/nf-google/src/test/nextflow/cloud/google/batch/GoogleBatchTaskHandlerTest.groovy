@@ -588,7 +588,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
     JobStatus makeJobStatus(JobStatus.State state, String desc = null) {
         final builder = JobStatus.newBuilder().setState(state)
         if (desc)
-            builder = builder.addStatusEvents(
+            builder.addStatusEvents(
                 StatusEvent.newBuilder()
                     .setDescription(desc)
             )
