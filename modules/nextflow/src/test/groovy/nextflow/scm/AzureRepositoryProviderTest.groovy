@@ -80,7 +80,7 @@ class AzureRepositoryProviderTest extends Specification {
         def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
 
         expect:
-        new AzureRepositoryProvider('ORGANIZATION/PROJECT/hello', obj).getRepositoryUrl() == 'https://dev.azure.com/ORGANIZATION/PROJECT'
+        new AzureRepositoryProvider('ORGANIZATION/PROJECT/hello', obj).getRepositoryUrl() == 'https://dev.azure.com/ORGANIZATION/PROJECT/hello'
 
     }
 
