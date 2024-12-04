@@ -100,7 +100,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private volatile long timestamp
     /**
-     * Flag to indicate job has failed without tasks
+     * A flag to indicate that the job has failed without launching any tasks
      */
     private volatile boolean noTaskJobfailure
 
