@@ -300,4 +300,13 @@ abstract class TaskHandler {
         final workflowId = env.get("TOWER_WORKFLOW_ID")
         return workflowId ? "tw-${workflowId}-${name}" : name
     }
+
+    private volatile boolean terminated
+
+    final void terminate() {
+        if (!terminated) {
+            terminated = true
+            kill()
+        }
+    }
 }

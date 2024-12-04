@@ -581,14 +581,7 @@ class TaskPollingMonitor implements TaskMonitor {
             catch (Throwable error) {
                 // At this point NF assumes job is not running, but there could be errors at monitoring that could leave a job running (#5516).
                 // In this case, NF needs to ensure the job is killed.
-                if( error !instanceof ProcessException && error !instanceof ProcessRetryableException && error !instanceof CloudSpotTerminationException
-                     && error !instanceof ProcessEvalException && error !instanceof FailedGuardException) {
-                    try {
-                        handler.kill()
-                    } catch( Throwable t ) {
-                        log.debug("Unable to cancel task ${handler.task.lazyName()} after error", t)
-                    }
-                }
+                handler.terminate()
                 handleException(handler, error)
             }
         }
