@@ -99,6 +99,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     private volatile CloudMachineInfo machineInfo
 
     private volatile long timestamp
+
     /**
      * A flag to indicate that the job has failed without launching any tasks
      */
@@ -532,7 +533,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     protected Throwable getJobError() {
         try {
-            final events = noTaskJobfailure ? client.getJobStatus(jobId).getStatusEventsList() : client.getTaskStatus(jobId, taskId).getStatusEventsList()
+            final events = noTaskJobfailure
+                ? client.getJobStatus(jobId).getStatusEventsList()
+                : client.getTaskStatus(jobId, taskId).getStatusEventsList()
             final lastEvent = events?.get(events.size() - 1)
             log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - last event: ${lastEvent}; exit code: ${lastEvent?.taskExecution?.exitCode}"
 

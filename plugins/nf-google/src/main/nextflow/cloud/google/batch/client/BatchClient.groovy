@@ -124,7 +124,7 @@ class BatchClient {
         return describeTask(jobId, taskId).getStatus()
     }
 
-    JobStatus getJobStatus(String jobId){
+    JobStatus getJobStatus(String jobId) {
         return describeJob(jobId).getStatus()
     }
 
