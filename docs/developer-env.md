@@ -1,4 +1,4 @@
-(developer-env)=
+(devenv-page)=
 
 # Environment setup
 
@@ -7,10 +7,10 @@ Setting up a Nextflow development environment is a prerequisite for creating, te
 Nextflow must be installed separately. See {ref}`install-page` for Nextflow installation instructions.
 
 :::{note}
-If you are using a Windows computer, first install and configure the Windows Subsystem for Linux (WSL). See {ref}`wsl` for installation instructions.
+If you are using a Windows computer, first install and configure the Windows Subsystem for Linux (WSL). See {ref}`devenv-wsl` for installation instructions.
 :::
 
-(vscode-install)=
+(devenv-vscode)=
 
 ## VS Code
 
@@ -60,12 +60,11 @@ See [Linux installation](https://code.visualstudio.com/docs/setup/linux#_install
 
 ````
 
-## VS Code Extensions
+## Extensions
 
-Extensions are a key feature of IDEs and allow you to customize your development environment by adding support for various programming languages, tools, and features. The [VS Code Marketplace](https://marketplace.visualstudio.com/vscode) offers thousands of extensions that can enhance your productivity and tailor the editor to your specific needs.
+Extensions are a key feature of IDEs and allow you to customize your development environment by adding support for various programming languages, tools, and features. The [VS Code Marketplace](https://marketplace.visualstudio.com/vscode) offers thousands of extensions that can enhance your productivity and tailor the editor to your specific needs. Popular VS Code extensions for Nextflow developers are listed below:
 
-
-### Nextflow
+**Nextflow**
 
 The VS Code [Nextflow extension](https://marketplace.visualstudio.com/items?itemName=nextflow.nextflow) adds Nextflow language support to the editor. The Nextflow extension enhances development with:
 
@@ -78,168 +77,72 @@ The VS Code [Nextflow extension](https://marketplace.visualstudio.com/items?item
 - Parameter schemas
 - DAG previews
 
-See {ref}`vs-code-page` for more information about the Nextflow extension.
+See {ref}`vscode-page` for more information about the Nextflow extension features and how it enforces the Nextflow syntax.
 
-````{tabs}
+**nf-core**
 
-```{group-tab} Windows
+The [nf-core extension pack](https://marketplace.visualstudio.com/items?itemName=nf-core.nf-core-extensionpack) adds a selection of tools that help develop with nf-core, a community effort to collect a curated set of analysis pipelines built using Nextflow.
 
-To install the Nextflow VS Code extension on Windows:
+The nf-core extension pack includes several useful extensions. For example, [Code Spell Checker](https://marketplace.visualstudio.com/items?itemName=streetsidesoftware.code-spell-checker), [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode), [Todo Tree](https://marketplace.visualstudio.com/items?itemName=Gruntfuggly.todo-tree), and [Markdown Extended](https://marketplace.visualstudio.com/items?itemName=jebbs.markdown-extended). See [nf-core extension pack](https://marketplace.visualstudio.com/items?itemName=nf-core.nf-core-extensionpack) for more information about the tools included in the nf-core extension pack.
 
-1. Open VS Code.
-1. Open the **Extensions** view in the left-hand menu.
-1. Search for **Nextflow**.
-1. Select **Install**.
+(devenv-remote)=
 
-```
-
-```{group-tab} macOS
-
-To install the Nextflow VS Code extension on macOS:
-
-1. Open VS Code.
-1. Open the **Extensions** view in the left-hand menu.
-1. Search for **Nextflow**.
-1. Select **Install**.
-
-```
-
-```{group-tab} Linux
-
-To install the Nextflow VS Code extension on Linux Debian/Ubuntu distributions:
-
-1. Open VS Code.
-1. Open the **Extensions** view in the left-hand menu.
-1. Search for **Nextflow**.
-1. Select **Install**.
-
-```
-
-````
-
-
-
-### nf-core
-
-The [nf-core extensionpack](https://marketplace.visualstudio.com/items?itemName=nf-core.nf-core-extensionpack) adds a selection of tools that help develop with nf-core, a community effort to collect a curated set of analysis pipelines built using Nextflow.
-
-The nf-core extension pack includes 12 extensions:
-
-- [Apptainer/Singularity](https://marketplace.visualstudio.com/items?itemName=onnovalkering.vscode-singularity) - Provides syntax highlighting for Apptainer/Singularity definition files.
-- [Code Spell Checker](https://marketplace.visualstudio.com/items?itemName=streetsidesoftware.code-spell-checker) - A basic spell checker that works well with camelCase code.
-- [Docker](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker) - Makes it easy to create, manage, and debug containerized applications.
-- [EditorConfig](https://marketplace.visualstudio.com/items?itemName=EditorConfig.EditorConfig) - Support for EditorConfig project files for code standardisation.
-- [indent-rainbow](https://marketplace.visualstudio.com/items?itemName=oderwat.indent-rainbow) - Highlight indentation levels, especially if they're inconsistent.
-- [Nextflow](https://marketplace.visualstudio.com/items?itemName=nextflow.nextflow) - Nextflow language support.
-- [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) - Code formatter using Prettier.
-- [Rainbow CSV](https://marketplace.visualstudio.com/items?itemName=mechatroner.rainbow-csv) - Highlight columns in .CSV files in different colors.
-- [Ruff](https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff) - An extremely fast Python linter and code formatter, written in Rust.
-- [Todo Tree](https://marketplace.visualstudio.com/items?itemName=Gruntfuggly.todo-tree) - Show TODO, FIXME, etc. comment tags in a tree view.
-- [YAML](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) - YAML Language Support by Red Hat, with built-in Kubernetes syntax support.
-- [Markdown Extended](https://marketplace.visualstudio.com/items?itemName=jebbs.markdown-extended) - Gives Markdown previews, including admonitions.
-
-````{tabs}
-
-```{group-tab} Windows
-
-To install the nf-core extension pack on Windows:
-
-1. Open VS Code.
-1. Open the **Extensions** view in the left-hand menu.
-1. Search for **nf-core-extensionpack**.
-1. Select **Install**.
-
-```
-
-```{group-tab} macOS
-
-To install the nf-core extension pack on macOS:
-
-1. Open VS Code.
-1. Open the **Extensions** view in the left-hand menu.
-1. Search for **nf-core-extensionpack**.
-1. Select **Install**.
-
-```
-
-```{group-tab} Linux
-
-To install the nf-core extension pack on Linux Debian/Ubuntu distributions:
-
-1. Open VS Code.
-1. Open the **Extensions** view in the left-hand menu.
-1. Search for **nf-core-extensionpack**.
-1. Select **Install**.
-
-```
-
-````
-
-(remote-development-ext)=
-
-### Remote Development
+**Remote development**
 
 The [Remote Development extension pack](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack) enables you to run WSL, SSH, or a development container for editing and debugging with the full set of VS Code features.
 
-The Remote Development extension pack contains 4 extensions:
-
-- [Remote - SSH](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-ssh) - Work with source code in any location by opening folders on a remote machine/VM using SSH.
-- [Remote - Tunnels](https://marketplace.visualstudio.com/items?itemName=ms-vscode.remote-server) - Work with source code in any location by opening folders on a remote machine/VM using a VS Code Tunnel (rather than SSH).
-- [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) - Work with a separate toolchain or container based application by opening any folder mounted into or inside a container.
-- [WSL](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl) - Get a Linux-powered development experience from the comfort of Windows by opening any folder in the Windows Subsystem for Linux.
+The pack includes the [Remote - SSH](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-ssh), [Remote - Tunnels](https://marketplace.visualstudio.com/items?itemName=ms-vscode.remote-server), [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers), and [WSL](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl) extensions. See [Remote Development](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack) for more information about the tools included in the remote development extension pack.
 
 :::{note}
-The VS Code Remote Development extension pack is required if you are developing using remote servers, Windows Subsystem for Linux, or Development Containers.
+The Remote Development extension pack is required if you are developing using remote servers, Windows Subsystem for Linux, or Development Containers.
 :::
+
+Installing VS Code extensions requires just a few clicks in the Extensions Marketplace. 
 
 ````{tabs}
 
 ```{group-tab} Windows
 
-To install the Remote Development extension pack on Windows:
+To install a VS Code extension on Windows:
 
 1. Open VS Code.
 1. Open the **Extensions** view in the left-hand menu.
-1. Search for **Remote Development**.
+1. Search for the extension.
 1. Select **Install**.
 
 ```
 
 ```{group-tab} macOS
 
-To install the Remote Development extension pack on macOS:
+To install a VS Code extension on macOS:
 
 1. Open VS Code.
 1. Open the **Extensions** view in the left-hand menu.
-1. Search for **Remote Development**.
+1. Search for the extension.
 1. Select **Install**.
 
 ```
 
 ```{group-tab} Linux
 
-To install the Remote Development extension pack on Linux Debian/Ubuntu distributions:
+To install a VS Code extension on Linux Debian/Ubuntu distributions:
 
 1. Open VS Code.
 1. Open the **Extensions** view in the left-hand menu.
-1. Search for **Remote Development**.
+1. Search for the extension.
 1. Select **Install**.
 
 ```
 
 ````
 
-(docker-desktop)=
+(devenv-docker)=
 
 ## Docker
 
 Docker is an open-source platform that simplifies application development, deployment, and execution by packaging applications and their dependencies into containers. Containerization enables the creation of self-contained and fully reproducible computational pipelines by bundling a script's binary dependencies into a standardized and portable format. Containers can be executed on any platform that supports a container runtime and ensures consistency across different environments.
 
 Docker Desktop provides a Graphical User Interface (GUI) for managing Docker containers. Installing Docker Desktop is a straightforward process that allows you to create, deploy, and manage applications within containers.
-
-<!---
-Configure your environment to support the container technologies you want to use. 
---->
 
 ````{tabs}
 
@@ -422,35 +325,13 @@ See [git-scm documentation](https://git-scm.com/downloads/linux) for more inform
 
 ````
 
-(wsl)=
+(devenv-wsl)=
 
 ## Windows Subsystem for Linux
 
 Developers can access the power of both Windows and Linux on a Windows machine. The Windows Subsystem for Linux (WSL) lets developers install a Linux distribution and use Linux applications, utilities, and Bash command-line tools directly on Windows without the overhead of a virtual machine or dual-boot setup.
 
 WSL is an optional feature on Windows 10 version 2004 and higher (Build 19041 and higher) or Windows 11. You can enable it through PowerShell or Windows Command Prompt. The steps below outline the recommended setup.
-
-<!---
-### Windows Features dialog
-
-To enable WSL on Windows using Windows Features dialog:
-
-1. In the Windows search bar, enter 'features' to bring up the **Turn Windows Features on and off** dialog.
-1. Scroll down and check **Windows Subsystem for Linux**.
-1. Select **OK**.
-1. After restarting Windows, open a PowerShell or Command Prompt and type `wsl` to confirm that you have WSL enabled.
-
-To install Ubuntu on WSL:
-
-1. Go to **Start Button > Microsoft Store**.
-1. Enter 'Linux' into the search field, then click **Run Linux on Windows**.
-1. Select the latest Ubuntu distribution.
-1. Select **Get** and wait for Windows to download and install Ubuntu.
-1. When it’s finished, select **Launch**.
-1. A terminal window will appear. Wait for Ubuntu to finish installing, then create a new Linux username and password when prompted.
-
-### PowerShell or Windows Command Prompt
---->
 
 To enable WSL on Windows using Powershell or Windows Command Prompt:
 
@@ -470,17 +351,18 @@ To enable WSL on Windows using Powershell or Windows Command Prompt:
 
 See [Set up a WSL development environment](https://learn.microsoft.com/en-us/windows/wsl/setup/environment) for more information.
 
+<!---
 ## Development Containers
 
 [Development Containers](https://containers.dev/) (Dev Containers), are Docker containers that are specifically configured to provide a full-featured development environment. They can be used to run an application, to separate tools, libraries, or runtimes needed for working with a codebase. Dev Containers can be run locally or remotely, in a private or public cloud, and in a variety of supporting tools and editors.
 
-VS Code and Docker are required to create and manage your Dev Containers. See {ref}`vscode-install` and {ref}`docker-desktop` for installation instructions.
+VS Code and Docker are required to create and manage your Dev Containers. See {ref}`devenv-vscode` and {ref}`devenv-docker` for installation instructions.
 
 ### Development Containers extension
 
-The VS Code Dev Containers extension lets you use a container as a full-featured development environment. It allows you to open any folder inside (or mounted into) a container and take advantage of VS Code's full feature set.
+The VS Code Dev Containers extension lets you use a container as a development environment. It allows you to open any folder inside (or mounted into) a container and take advantage of VS Code's full feature set.
 
-The Dev Containers extension is included as a part of the [Remote Development extension pack](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack). See {ref}`remote-development-ext` for installation instructions.
+The Dev Containers extension is included as a part of the [Remote Development extension pack](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack). See {ref}`devenv-remote` for installation instructions.
 
 ### Create and run a dev container
 
@@ -532,3 +414,4 @@ To create a dev container with an existing image:
 :::{note}
 Dev Containers can also be used by GitHub Codespaces or Gitpod in VS Code or the browser. See [GitHub Codespaces](https://code.visualstudio.com/docs/remote/codespaces) and [Gitpod](https://gitpod.io/) for more information.
 :::
+--->
