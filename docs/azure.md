@@ -163,16 +163,16 @@ By default, the `cpus` and `memory` directives are used to find the smallest mac
 
 To specify multiple Azure machine families, use a comma separated list with glob (`*`) values in the `machineType` directive. For example, the following will select any machine size from D or E v5 machines, with additional data disk, denoted by the `d` suffix:
 
-```config
+```groovy
 process.machineType = "Standard_D*d_v5,Standard_E*d_v5"
 ```
 
-For example, the following process will create a pool of `Standard_E4d_v5` machines based when using `autoPoolMode`:
+For example, the following process will create a pool of `Standard_E8d_v5` machines based when using `autoPoolMode`:
 
 ```nextflow
 process EXAMPLE_PROCESS {
     machineType "Standard_E*d_v5"
-    cpus 16
+    cpus 8
     memory 8.GB
 
     script:

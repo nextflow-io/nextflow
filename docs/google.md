@@ -99,11 +99,12 @@ location and that fits the requested resources. If `memory` is not specified, 1 
 The `machineType` directive can be used to request a specific VM instance type. It can be any predefined Google Compute
 Platform [machine type](https://cloud.google.com/compute/docs/machine-types) or [custom machine type](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type).
 
-```groovy
+```nextflow
 process myTask {
     cpus 8
     memory '40 GB'
 
+    script:
     """
     your_command --here
     """
@@ -112,6 +113,7 @@ process myTask {
 process anotherTask {
     machineType 'n1-highmem-8'
 
+    script:
     """
     your_command --here
     """
@@ -124,12 +126,13 @@ process anotherTask {
 The `machineType` directive can also be a comma-separated list of patterns. The pattern can contain a `*` to match any
 number of characters and `?` to match any single character. Examples of valid patterns: `c2-*`, `m?-standard*`, `n*`.
 
-```groovy
+```nextflow
 process myTask {
     cpus 8
     memory '20 GB'
     machineType 'n2-*,c2-*,m3-*'
 
+    script:
     """
     your_command --here
     """
@@ -142,12 +145,13 @@ process myTask {
 The `machineType` directive can also be an [Instance Template](https://cloud.google.com/compute/docs/instance-templates),
 specified as `template://<instance-template>`. For example:
 
-```groovy
+```nextflow
 process myTask {
     cpus 8
     memory '20 GB'
     machineType 'template://my-template'
 
+    script:
     """
     your_command --here
     """
@@ -172,7 +176,7 @@ The `disk` directive can be used to set the boot disk size or provision a disk f
 
 Examples:
 
-```groovy
+```nextflow
 // set the boot disk size
 disk 100.GB
 
@@ -335,22 +339,24 @@ The process `machineType` directive may optionally be used to specify a predefin
 
 Examples:
 
-```groovy
+```nextflow
 process custom_resources_task {
     cpus 8
     memory '40 GB'
     disk '200 GB'
 
+    script:
     """
-    <Your script here>
+    your_command --here
     """
 }
 
 process predefined_resources_task {
     machineType 'n1-highmem-8'
 
+    script:
     """
-    <Your script here>
+    your_command --here
     """
 }
 ```

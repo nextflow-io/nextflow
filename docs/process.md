@@ -2,39 +2,23 @@
 
 # Processes
 
-In Nextflow, a **process** is the basic processing primitive to execute a user script.
+In Nextflow, a **process** is a specialized function for executing scripts in a scalable and portable manner.
 
-The process definition starts with the keyword `process`, followed by process name and finally the process body delimited by curly braces. The process body must contain a string which represents the command or, more generally, a script that is executed by it. A basic process looks like the following example:
+Here is an example process definition:
 
-```groovy
+```nextflow
 process sayHello {
+    output:
+    path 'hello.txt'
+
+    script:
     """
-    echo 'Hello world!' > file
+    echo 'Hello world!' > hello.txt
     """
 }
 ```
 
-A process may contain any of the following definition blocks: directives, inputs, outputs, when clause, and the process script. The syntax is defined as follows:
-
-```
-process < name > {
-
-  [ directives ]
-
-  input:
-    < process inputs >
-
-  output:
-    < process outputs >
-
-  when:
-    < condition >
-
-  [script|shell|exec]:
-    < user script to be executed >
-
-}
-```
+See {ref}`syntax-process` for a full description of the process syntax.
 
 (process-script)=
 
@@ -48,7 +32,7 @@ The script string is executed as a [Bash](<http://en.wikipedia.org/wiki/Bash_(Un
 
 The script block can be a simple string or a multi-line string. The latter approach makes it easier to write scripts with multiple commands spanning multiple lines. For example:
 
-```groovy
+```nextflow
 process doMoreThings {
   """
   blastp -db $db -query query.fa -outfmt 6 > blast_result
@@ -72,7 +56,7 @@ When you need to access a system environment variable in your script, you have t
 
 If you don't need to access any Nextflow variables, you can define your script block with single-quotes:
 
-```groovy
+```nextflow
 process printPath {
   '''
   echo The path is: $PATH
@@ -82,7 +66,7 @@ process printPath {
 
 Otherwise, you can define your script with double-quotes and escape the system environment variables by prefixing them with a back-slash `\` character, as shown in the following example:
 
-```groovy
+```nextflow
 process doOtherThings {
   """
   blastp -db \$DB -query query.fa -outfmt 6 > blast_result
@@ -108,7 +92,7 @@ A pipeline may be composed of processes that execute very different tasks. With 
 
 To use a language other than Bash, simply start your process script with the corresponding [shebang](<http://en.wikipedia.org/wiki/Shebang_(Unix)>). For example:
 
-```groovy
+```nextflow
 process perlTask {
     """
     #!/usr/bin/perl
@@ -139,11 +123,11 @@ Since the actual location of the interpreter binary file can differ across platf
 
 ### Conditional scripts
 
-So far, our `script` block has always been a simple string expression, but in reality, the `script` block is just Groovy code that returns a string. This means that you can write arbitrary Groovy code to determine the script to execute, as long as the final statement is a string (remember that the `return` keyword is optional in Groovy).
+The `script` block is like a function that returns a string. This means that you can write arbitrary code to determine the script, as long as the final statement is a string.
 
-For example, you can use flow control statements (`if`, `switch`, etc) to execute a different script based on the process inputs. The only difference here is that you must explicitly declare the `script` guard, whereas before it was not required. Here is an example:
+If-else statements based on task inputs can be used to produce a different script. For example:
 
-```groovy
+```nextflow
 mode = 'tcoffee'
 
 process align {
@@ -171,17 +155,17 @@ process align {
 }
 ```
 
-In the above example, the process will execute one of the script fragments depending on the value of the `mode` parameter. By default it will execute the `tcoffee` command, but changing the `mode` variable will cause a different branch to be executed.
+In the above example, the process will execute one of several scripts depending on the value of the `mode` parameter. By default it will execute the `tcoffee` command.
 
 (process-template)=
 
 ### Template
 
-Process scripts can be externalised to **template** files, which can be reused across different processes and tested independently from the overall pipeline execution.
+Process scripts can be externalized to **template** files, which allows them to be reused across different processes and tested independently from the pipeline execution.
 
-A template is simply a shell script file that Nextflow is able to execute by using the `template` function as shown below:
+A template can be used in place of an embedded script using the `template` function in the script section:
 
-```groovy
+```nextflow
 process templateExample {
     input:
     val STR
@@ -195,9 +179,9 @@ workflow {
 }
 ```
 
-By default, Nextflow looks for the `my_script.sh` template file in the `templates` directory located alongside the Nextflow script and/or the module script in which the process is defined. Any other location can be specified by using an absolute template path.
+By default, Nextflow looks for the template script in the `templates` directory located alongside the Nextflow script in which the process is defined. An absolute path can be used to specify a different location. However, this practice is discouraged because it hinders pipeline portability.
 
-The template script may contain any code that can be executed by the underlying environment. For example:
+An example template script is provided below:
 
 ```bash
 #!/bin/bash
@@ -206,23 +190,37 @@ echo $STR
 echo "process completed"
 ```
 
-:::{tip}
-The dollar character (`$`) is interpreted as a Nextflow variable when the script is run as a Nextflow template, whereas it is evaluated as a Bash variable when run as a Bash script. This can be very useful for testing your script independently from Nextflow execution. You only need to provide a Bash environment variable for each of the Nextflow variables that are referenced in your script. For example, it would be possible to execute the above script with the following command in the terminal: `STR='foo' bash templates/my_script.sh`
-:::
+Variables prefixed with the dollar character (`$`) are interpreted as Nextflow variables when the template script is executed by Nextflow and Bash variables when executed directly. For example, the above script can be executed from the command line by providing each input as an environment variable:
+
+```bash
+STR='foo' bash templates/my_script.sh
+```
+
+The following caveats should be considered:
+
+- Template scripts are recommended only for Bash scripts. Languages that do not prefix variables with `$` (e.g. Python and R) can't be executed directly as a template script.
+
+- Variables escaped with `\$` will be interpreted as Bash variables when executed by Nextflow, but will not be interpreted as variables when executed from the command line. This practice should be avoided to ensure that the template script behaves consistently.
+
+- Template variables are evaluated even if they are commented out in the template script. If a template variable is missing, it will cause the pipeline to fail regardless of where it occurs in the template.
 
 :::{tip}
-As a best practice, the template script should not contain any `\$` escaped variables, because these variables will not be evaluated properly when the script is executed directly.
+Template scripts are generally discouraged due to the caveats described above. The best practice for using a custom script is to embed it in the process definition at first and move it to a separate file with its own command line interface once the code matures.
 :::
 
 (process-shell)=
 
 ### Shell
 
+:::{deprecated} 24.11.0-edge
+Use the `script` block instead. Consider using the {ref}`VS Code extension <vscode-page>`, which provides syntax highlighting and error checking to distinguish Nextflow variables from Bash variables in the process script.
+:::
+
 The `shell` block is a string expression that defines the script that is executed by the process. It is an alternative to the {ref}`process-script` definition with one important difference: it uses the exclamation mark `!` character, instead of the usual dollar `$` character, to denote Nextflow variables.
 
 This way, it is possible to use both Nextflow and Bash variables in the same script without having to escape the latter, which makes process scripts easier to read and maintain. For example:
 
-```groovy
+```nextflow
 process myTask {
     input:
     val str
@@ -243,18 +241,18 @@ In the above example, `$USER` is treated as a Bash variable, while `!{str}` is t
 :::{note}
 - Shell script definitions require the use of single-quote `'` delimited strings. When using double-quote `"` delimited strings, dollar variables are interpreted as Nextflow variables as usual. See {ref}`string-interpolation`.
 - Variables prefixed with `!` must always be enclosed in curly brackets, i.e. `!{str}` is a valid variable whereas `!str` is ignored.
-- Shell scripts support the use of the {ref}`process-template` mechanism. The same rules are applied to the variables defined in the script template.
+- Shell scripts support the use of the {ref}`process-template` mechanism. The same rules are applied to the variables defined in the template script.
 :::
 
 (process-native)=
 
 ### Native execution
 
-Nextflow processes can also execute native Groovy code as the task itself, using the `exec` block. Whereas the `script` block defines a script to be executed, the `exec` block defines Groovy code to be executed directly.
+The `exec` block executes the given code without launching a job.
 
 For example:
 
-```groovy
+```nextflow
 process simpleSum {
     input:
     val x
@@ -276,6 +274,8 @@ Hello Mr. a
 Hello Mr. c
 ```
 
+A native process is very similar to a {ref}`function <syntax-function>`. However, it provides additional capabilities such as parallelism, caching, and progress logging.
+
 (process-stub)=
 
 ## Stub
@@ -285,7 +285,7 @@ Hello Mr. c
 
 You can define a command *stub*, which replaces the actual process command when the `-stub-run` or `-stub` command-line option is enabled:
 
-```groovy
+```nextflow
 process INDEX {
   input:
     path transcriptome
@@ -344,12 +344,15 @@ See {ref}`process reference <process-reference-inputs>` for the full list of inp
 
 The `val` qualifier accepts any data type. It can be accessed in the process script by using the specified input name, as shown in the following example:
 
-```groovy
+```nextflow
 process basicExample {
   input:
   val x
 
-  "echo process job $x"
+  script:
+  """
+  echo process job $x
+  """
 }
 
 workflow {
@@ -373,12 +376,15 @@ While channels do emit items in the order that they are received, *processes* do
 :::{note}
 When the process declares exactly one input, the pipe `|` operator can be used to provide inputs to the process, instead of passing it as a parameter. Both methods have identical semantics:
 
-```groovy
+```nextflow
 process basicExample {
   input:
   val x
 
-  "echo process job $x"
+  script:
+  """
+  echo process job $x
+  """
 }
 
 workflow {
@@ -393,12 +399,15 @@ workflow {
 
 The `path` qualifier allows you to provide input files to the process execution context. Nextflow will stage the files into the process execution directory, and they can be accessed in the script by using the specified input name. For example:
 
-```groovy
+```nextflow
 process blastThemAll {
   input:
   path query_file
 
-  "blastp -query ${query_file} -db nr"
+  script:
+  """
+  blastp -query ${query_file} -db nr
+  """
 }
 
 workflow {
@@ -413,26 +422,29 @@ It's worth noting that in the above example, the name of the file in the file-sy
 
 There may be cases where your task needs to use a file whose name is fixed, i.e. it does not have to change along with the actual provided file. In this case, you can specify a fixed name with the `name` attribute in the input file parameter definition, as shown in the following example:
 
-```groovy
+```nextflow
 input:
 path query_file, name: 'query.fa'
 ```
 
 or, using a shorter syntax:
 
-```groovy
+```nextflow
 input:
 path 'query.fa'
 ```
 
 The previous example can be re-written as shown below:
 
-```groovy
+```nextflow
 process blastThemAll {
   input:
   path 'query.fa'
 
-  "blastp -query query.fa -db nr"
+  script:
+  """
+  blastp -query query.fa -db nr
+  """
 }
 
 workflow {
@@ -449,11 +461,12 @@ This feature allows you to execute the process command multiple times without wo
 
 Channel factories like `Channel.fromPath` produce file objects, but a `path` input can also accept a string literal path. The string value should be an absolute path, i.e. it must be prefixed with a `/` character or a supported URI protocol (`file://`, `http://`, `s3://`, etc), and it cannot contain special characters (`\n`, etc).
 
-```groovy
+```nextflow
 process foo {
   input:
   path x
 
+  script:
   """
   your_command --in $x
   """
@@ -471,7 +484,7 @@ By default, `path` inputs will accept any number of files and stage them accordi
 
 For example:
 
-```groovy
+```nextflow
 input:
     path('one.txt', arity: '1')         // exactly one file is expected
     path('pair_*.txt', arity: '2')      // exactly two files are expected
@@ -483,7 +496,7 @@ When a task is executed, Nextflow will check whether the received files for each
 :::{note}
 Process `path` inputs have nearly the same interface as described in {ref}`stdlib-types-path`, with one difference which is relevant when files are staged into a subdirectory. Given the following input:
 
-```groovy
+```nextflow
 path x, name: 'my-dir/*'
 ```
 
@@ -492,16 +505,19 @@ In this case, `x.name` returns the file name with the parent directory (e.g. `my
 
 ### Multiple input files
 
-A `path` input can also accept a collection of files instead of a single value. In this case, the input variable will be a Groovy list, and you can use it as such.
+A `path` input can also accept a collection of files instead of a single value. In this case, the input variable will be a list.
 
 When the input has a fixed file name and a collection of files is received by the process, the file name will be appended with a numerical suffix representing its ordinal position in the list. For example:
 
-```groovy
+```nextflow
 process blastThemAll {
     input:
     path 'seq'
 
-    "echo seq*"
+    script:
+    """
+    echo seq*
+    """
 }
 
 workflow {
@@ -535,12 +551,15 @@ The target input file name may contain the `*` and `?` wildcards, which can be u
 
 The following example shows how a wildcard can be used in the input file definition:
 
-```groovy
+```nextflow
 process blastThemAll {
     input:
     path 'seq?.fa'
 
-    "cat seq1.fa seq2.fa seq3.fa"
+    script:
+    """
+    cat seq1.fa seq2.fa seq3.fa
+    """
 }
 
 workflow {
@@ -557,12 +576,13 @@ Rewriting input file names according to a named pattern is an extra feature and 
 
 When the input file name is specified by using the `name` option or a string literal, you can also use other input values as variables in the file name string. For example:
 
-```groovy
+```nextflow
 process simpleCount {
   input:
   val x
   path "${x}.fa"
 
+  script:
   """
   cat ${x}.fa | grep '>'
   """
@@ -581,11 +601,12 @@ In most cases, you won't need to use dynamic file names, because each task is ex
 
 The `env` qualifier allows you to define an environment variable in the process execution context based on the input value. For example:
 
-```groovy
+```nextflow
 process printEnv {
     input:
-    env HELLO
+    env 'HELLO'
 
+    script:
     '''
     echo $HELLO world!
     '''
@@ -607,11 +628,12 @@ hola world!
 
 The `stdin` qualifier allows you to forward the input value to the [standard input](http://en.wikipedia.org/wiki/Standard_streams#Standard_input_.28stdin.29) of the process script. For example:
 
-```groovy
+```nextflow
 process printAll {
   input:
   stdin
 
+  script:
   """
   cat -
   """
@@ -619,7 +641,7 @@ process printAll {
 
 workflow {
   Channel.of('hello', 'hola', 'bonjour', 'ciao')
-    | map { it + '\n' }
+    | map { v -> v + '\n' }
     | printAll
 }
 ```
@@ -639,11 +661,12 @@ hello
 
 The `tuple` qualifier allows you to group multiple values into a single input definition. It can be useful when a channel emits tuples of values that need to be handled separately. Each element in the tuple is associated with a corresponding element in the `tuple` definition. For example:
 
-```groovy
+```nextflow
 process tupleExample {
     input:
     tuple val(x), path('input.txt')
 
+    script:
     """
     echo "Processing $x"
     cat input.txt > copy
@@ -663,12 +686,13 @@ A `tuple` definition may contain any of the following qualifiers, as previously 
 
 The `each` qualifier allows you to repeat the execution of a process for each item in a collection, each time a new value is received. For example:
 
-```groovy
+```nextflow
 process alignSequences {
   input:
   path seq
   each mode
 
+  script:
   """
   t_coffee -in $seq -mode $mode > result
   """
@@ -686,13 +710,14 @@ In the above example, each time a file of sequences is emitted from the `sequenc
 
 Input repeaters can be applied to files as well. For example:
 
-```groovy
+```nextflow
 process alignSequences {
   input:
   path seq
   each mode
   each path(lib)
 
+  script:
   """
   t_coffee -in $seq -mode $mode -lib $lib > result
   """
@@ -729,7 +754,7 @@ As a result, channel values are consumed sequentially and any empty channel will
 
 For example:
 
-```groovy
+```nextflow
 process foo {
   input:
   val x
@@ -759,7 +784,7 @@ A different semantic is applied when using a {ref}`value channel <channel-type-v
 
 To better understand this behavior, compare the previous example with the following one:
 
-```groovy
+```nextflow
 process bar {
   input:
   val x
@@ -824,7 +849,7 @@ Refer to the {ref}`process reference <process-reference-outputs>` for the full l
 
 The `val` qualifier allows you to output any Nextflow variable defined in the process. A common use case is to output a variable that was defined in the `input` block, as shown in the following example:
 
-```groovy
+```nextflow
 process foo {
   input:
   each x
@@ -832,6 +857,7 @@ process foo {
   output:
   val x
 
+  script:
   """
   echo $x > file
   """
@@ -841,13 +867,13 @@ workflow {
   methods = ['prot', 'dna', 'rna']
 
   receiver = foo(methods)
-  receiver.view { "Received: $it" }
+  receiver.view { method -> "Received: $method" }
 }
 ```
 
 The output value can be a value literal, an input variable, any other Nextflow variable in the process scope, or a value expression. For example:
 
-```groovy
+```nextflow
 process foo {
   input:
   path infile
@@ -868,9 +894,9 @@ workflow {
   ch_dummy = Channel.fromPath('*').first()
   (ch_var, ch_str, ch_exp) = foo(ch_dummy)
 
-  ch_var.view { "ch_var: $it" }
-  ch_str.view { "ch_str: $it" }
-  ch_exp.view { "ch_exp: $it" }
+  ch_var.view { var -> "ch_var: $var" }
+  ch_str.view { str -> "ch_str: $str" }
+  ch_exp.view { exp -> "ch_exp: $exp" }
 }
 ```
 
@@ -878,11 +904,12 @@ workflow {
 
 The `path` qualifier allows you to output one or more files produced by the process. For example:
 
-```groovy
+```nextflow
 process randomNum {
   output:
   path 'result.txt'
 
+  script:
   '''
   echo $RANDOM > result.txt
   '''
@@ -890,7 +917,7 @@ process randomNum {
 
 workflow {
   numbers = randomNum()
-  numbers.view { "Received: ${it.text}" }
+  numbers.view { file -> "Received: ${file.text}" }
 }
 ```
 
@@ -905,7 +932,7 @@ By default, `path` outputs will accept any number of matching files from the tas
 
 For example:
 
-```groovy
+```nextflow
 output:
 path('one.txt', arity: '1')         // exactly one file is expected
 path('pair_*.txt', arity: '2')      // exactly two files are expected
@@ -918,20 +945,21 @@ When a task completes, Nextflow will check whether the produced files for each p
 
 When an output file name contains a `*` or `?` wildcard character, it is interpreted as a [glob][glob] path matcher. This allows you to capture multiple files into a list and emit the list as a single value. For example:
 
-```groovy
+```nextflow
 process splitLetters {
     output:
     path 'chunk_*'
 
-    '''
+    script:
+    """
     printf 'Hola' | split -b 1 - chunk_
-    '''
+    """
 }
 
 workflow {
     splitLetters
         | flatten
-        | view { "File: ${it.name} => ${it.text}" }
+        | view { chunk -> "File: ${chunk.name} => ${chunk.text}" }
 }
 ```
 
@@ -961,7 +989,7 @@ Read more about glob syntax at the following link [What is a glob?][glob]
 
 When an output file name needs to be expressed dynamically, it is possible to define it using a dynamic string which references variables in the `input` block or in the script global context. For example:
 
-```groovy
+```nextflow
 process align {
   input:
   val species
@@ -970,6 +998,7 @@ process align {
   output:
   path "${species}.aln"
 
+  script:
   """
   t_coffee -in $seq > ${species}.aln
   """
@@ -997,7 +1026,7 @@ To sum up, the use of output files with static names over dynamic ones is prefer
 The `env` qualifier allows you to output a variable defined in the process execution environment:
 
 ```{literalinclude} snippets/process-out-env.nf
-:language: groovy
+:language: nextflow
 ```
 
 (process-stdout)=
@@ -1007,7 +1036,7 @@ The `env` qualifier allows you to output a variable defined in the process execu
 The `stdout` qualifier allows you to output the `stdout` of the executed process:
 
 ```{literalinclude} snippets/process-stdout.nf
-:language: groovy
+:language: nextflow
 ```
 
 (process-out-eval)=
@@ -1020,7 +1049,7 @@ The `stdout` qualifier allows you to output the `stdout` of the executed process
 The `eval` qualifier allows you to capture the standard output of an arbitrary command evaluated the task shell interpreter context:
 
 ```{literalinclude} snippets/process-out-eval.nf
-:language: groovy
+:language: nextflow
 ```
 
 Only one-line Bash commands are supported. You can use a semi-colon `;` to specify multiple Bash commands on a single line, and many interpreters can execute arbitrary code on the command line, e.g. `python -c 'print("Hello world!")'`.
@@ -1033,7 +1062,7 @@ If the command fails, the task will also fail. In Bash, you can append `|| true`
 
 The `tuple` qualifier allows you to output multiple values in a single channel. It is useful when you need to associate outputs with metadata, for example:
 
-```groovy
+```nextflow
 process blast {
   input:
     val species
@@ -1049,7 +1078,7 @@ process blast {
 }
 
 workflow {
-  ch_species = Channel.from('human', 'cow', 'horse')
+  ch_species = Channel.of('human', 'cow', 'horse')
   ch_query = Channel.fromPath('*.fa')
 
   blast(ch_species, ch_query)
@@ -1065,28 +1094,30 @@ While parentheses for input and output qualifiers are generally optional, they a
 
 Here's an example with a single path output (parentheses optional):
 
-```groovy
+```nextflow
 process foo {
     output:
     path 'result.txt', hidden: true
 
-    '''
+    script:
+    """
     echo 'another new line' >> result.txt
-    '''
+    """
 }
 ```
 
 And here's an example with a tuple output (parentheses required):
 
-```groovy
+```nextflow
 process foo {
     output:
     tuple path('last_result.txt'), path('result.txt', hidden: true)
 
-    '''
+    script:
+    """
     echo 'another new line' >> result.txt
     echo 'another new line' > last_result.txt
-    '''
+    """
 }
 ```
 :::
@@ -1097,12 +1128,13 @@ process foo {
 
 The `emit` option can be used on a process output to define a name for the corresponding output channel, which can be used to access the channel by name from the process output. For example:
 
-```groovy
+```nextflow
 process FOO {
     output:
     path 'hello.txt', emit: hello
     path 'bye.txt', emit: bye
 
+    script:
     """
     echo "hello" > hello.txt
     echo "bye" > bye.txt
@@ -1121,7 +1153,7 @@ See {ref}`workflow-process-invocation` for more details.
 
 Normally, if a specified output is not produced by the task, the task will fail. Setting `optional: true` will cause the task to not fail, and instead emit nothing to the given output channel.
 
-```groovy
+```nextflow
 output:
 path("output.txt"), optional: true
 ```
@@ -1132,13 +1164,19 @@ In this example, the process is normally expected to produce an `output.txt` fil
 While this option can be used with any process output, it cannot be applied to individual elements of a [tuple](#output-tuples-tuple) output. The entire tuple must be optional or not optional.
 :::
 
+(process-when)=
+
 ## When
+
+:::{deprecated} 24.10.0
+Use conditional logic (e.g. `if` statement, {ref}`operator-filter` operator) in the calling workflow instead.
+:::
 
 The `when` block allows you to define a condition that must be satisfied in order to execute the process. The condition can be any expression that returns a boolean value.
 
 It can be useful to enable/disable the process execution depending on the state of various inputs and parameters. For example:
 
-```groovy
+```nextflow
 process find {
   input:
   path proteins
@@ -1154,31 +1192,11 @@ process find {
 }
 ```
 
-:::{tip}
-As a best practice, it is better to define such control flow logic in the workflow block, i.e. with an `if` statement or with channel operators, to make the process more portable.
-:::
-
 (process-directives)=
 
 ## Directives
 
 Directives are optional settings that affect the execution of the current process.
-
-They must be entered at the top of the process body, before any other declaration blocks (`input`, `output`, etc), and have the following syntax:
-
-```groovy
-// directive with simple value
-name value
-
-// directive with list value
-name arg1, arg2, arg3
-
-// directive with map value
-name key1: val1, key2: val2
-
-// directive with value and options
-name arg, opt1: val1, opt2: val2
-```
 
 By default, directives are evaluated when the process is defined. However, if the value is a dynamic string or closure, it will be evaluated separately for each task, which allows task-specific variables like `task` and `val` inputs to be used.
 
@@ -1204,7 +1222,7 @@ Software dependencies:
 
 The `task` object also contains the values of all process directives for the given task, which allows you to access these settings at runtime. For examples:
 
-```groovy
+```nextflow
 process foo {
   script:
   """
@@ -1223,7 +1241,7 @@ A directive can be assigned *dynamically*, during the process execution, so that
 
 To be defined dynamically, the directive's value needs to be expressed using a {ref}`closure <script-closure>`. For example:
 
-```groovy
+```nextflow
 process foo {
   executor 'sge'
   queue { entries > 100 ? 'long' : 'short' }
@@ -1233,7 +1251,7 @@ process foo {
 
   script:
   """
-  < your job here >
+  your_command --here
   """
 }
 ```
@@ -1249,7 +1267,7 @@ All directives can be assigned a dynamic value except the following:
 :::{tip}
 Assigning a string value with one or more variables is always resolved in a dynamic manner, and therefore is equivalent to the above syntax. For example, the above directive can also be written as:
 
-```groovy
+```nextflow
 queue "${ entries > 100 ? 'long' : 'short' }"
 ```
 
@@ -1264,7 +1282,7 @@ It's a very common scenario that different instances of the same process may hav
 
 The [Dynamic directives](#dynamic-directives) evaluation feature can be used to modify the amount of computing resources requested in case of a process failure and try to re-execute it using a higher limit. For example:
 
-```groovy
+```nextflow
 process foo {
     memory { 2.GB * task.attempt }
     time { 1.hour * task.attempt }
@@ -1273,7 +1291,9 @@ process foo {
     maxRetries 3
 
     script:
-    <your job here>
+    """
+    your_command --here
+    """
 }
 ```
 
@@ -1283,19 +1303,40 @@ If the task execution fail reporting an exit status in the range between 137 and
 
 The directive {ref}`process-maxretries` set the maximum number of time the same task can be re-executed.
 
+### Dynamic task resources with previous execution trace
+:::{versionadded} 24.10.0
+:::
+
+Task resource requests can be updated relative to the {ref}`trace record <trace-report>` metrics of the previous task attempt. The metrics can be accessed through the `task.previousTrace` variable. For example:
+
+```nextflow
+process foo {
+    memory { task.attempt > 1 ? task.previousTrace.memory * 2 : (1.GB) }
+    errorStrategy { task.exitStatus in 137..140 ? 'retry' : 'terminate' }
+    maxRetries 3
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+In the above example, the {ref}`process-memory` is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to one GB. In the subsequent attempts, it doubles the previously allocated memory. See {ref}`trace-report` for more information about trace records.
+
+
 ### Dynamic retry with backoff
 
 There are cases in which the required execution resources may be temporary unavailable e.g. network congestion. In these cases immediately re-executing the task will likely result in the identical error. A retry with an exponential backoff delay can better recover these error conditions:
 
-```groovy
+```nextflow
 process foo {
   errorStrategy { sleep(Math.pow(2, task.attempt) * 200 as long); return 'retry' }
   maxRetries 5
 
   script:
-  '''
+  """
   your_command --here
-  '''
+  """
 }
 ```
 
