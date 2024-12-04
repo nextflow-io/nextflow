@@ -62,7 +62,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private static Pattern EXIT_CODE_REGEX = ~/exit code 500(\d\d)/
 
-    private static Pattern BATCH_ERROR_REGEX = ~/Batch Error: code/
+    private static final Pattern BATCH_ERROR_REGEX = ~/Batch Error: code/
 
     private GoogleBatchExecutor executor
 
