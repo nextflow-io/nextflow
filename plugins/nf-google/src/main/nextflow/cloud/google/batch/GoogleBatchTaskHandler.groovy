@@ -97,6 +97,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     private volatile CloudMachineInfo machineInfo
 
     private volatile long timestamp
+    /**
+     * Flag to indicate job has failed without tasks
+     */
+    private volatile boolean noTaskJobfailure
 
     GoogleBatchTaskHandler(TaskRun task, GoogleBatchExecutor executor) {
         super(task)
@@ -444,27 +448,12 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      * @return Retrieve the submitted task state
      */
     protected String getTaskState() {
-        final now = System.currentTimeMillis()
         final tasks = client.listTasks(jobId)
         if( !tasks.iterator().hasNext() ) {
             // if there are no tasks checks the job status
-            final jobStatus = client.getJobStatus(jobId);
-            final newState = jobStatus?.state as String
-            if (newState) {
-                taskState = newState
-                timestamp = now
-                if (newState == "FAILED"){
-                    final eventsCount = jobStatus.getStatusEventsCount()
-                    final lastEvent = eventsCount > 0 ? jobStatus.getStatusEvents(eventsCount - 1) : null
-                    if (lastEvent){
-                        log.warn1 "Batch job failure: ${lastEvent.getDescription()}"
-                    }
-                }
-                return taskState
-            } else {
-                return "PENDING"
-            }
+            return checkJobStatus()
         }
+        final now = System.currentTimeMillis()
         final delta =  now - timestamp;
         if( !taskState || delta >= 1_000) {
             final status = client.getTaskStatus(jobId, taskId)
@@ -482,6 +471,21 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             }
         }
         return taskState
+    }
+
+    String checkJobStatus() {
+        final jobStatus = client.getJobStatus(jobId);
+        final newState = jobStatus?.state as String
+        if (newState) {
+            taskState = newState
+            timestamp = System.currentTimeMillis()
+            if (newState == "FAILED") {
+                noTaskJobfailure = true
+            }
+            return taskState
+        } else {
+            return "PENDING"
+        }
     }
 
     static private final List<String> RUNNING_OR_COMPLETED = ['RUNNING', 'SUCCEEDED', 'FAILED']
@@ -526,9 +530,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     protected Throwable getJobError() {
         try {
-            final status = client.getTaskStatus(jobId, taskId)
-            final eventsCount = status.getStatusEventsCount()
-            final lastEvent = eventsCount > 0 ? status.getStatusEvents(eventsCount - 1) : null
+            final events = noTaskJobfailure ? client.getJobStatus(jobId).getStatusEventsList() : client.getTaskStatus(jobId, taskId).getStatusEventsList()
+            final lastEvent = events?.get( events.size() -1 )
             log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - last event: ${lastEvent}; exit code: ${lastEvent?.taskExecution?.exitCode}"
 
             final error = lastEvent?.description
