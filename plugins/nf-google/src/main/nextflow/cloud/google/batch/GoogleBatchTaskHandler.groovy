@@ -62,6 +62,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private static Pattern EXIT_CODE_REGEX = ~/exit code 500(\d\d)/
 
+    private static Pattern BATCH_ERROR_REGEX = ~/Batch Error: code/
+
     private GoogleBatchExecutor executor
 
     private Path exitFile
@@ -535,7 +537,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - last event: ${lastEvent}; exit code: ${lastEvent?.taskExecution?.exitCode}"
 
             final error = lastEvent?.description
-            if( error && EXIT_CODE_REGEX.matcher(error).find() ) {
+            if( error && (EXIT_CODE_REGEX.matcher(error).find() || BATCH_ERROR_REGEX.matcher(error).find())) {
                 return new ProcessException(error)
             }
         }
