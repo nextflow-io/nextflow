@@ -22,6 +22,7 @@ process foo {
   input:
   each path(x)
 
+  script:
   """
   grep '>' $x
   """

@@ -17,6 +17,7 @@
 
 process foo {
   debug true
+  script:
   """
 	echo cpus: ${task.cpus} memory: ${task.memory}
   """

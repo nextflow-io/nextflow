@@ -29,6 +29,7 @@ process printVars {
     input:
     each x
 
+    script:
     """
     echo indx: ${task.index}
     echo proc: ${task.process}
