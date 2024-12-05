@@ -660,18 +660,4 @@ public class S3Client {
 	String getObjectKmsKeyId(String bucketName, String key) {
 		return getObjectMetadata(bucketName,key).getSSEAwsKmsKeyId();
 	}
-
-	protected void showdownTransferPool(boolean hard) {
-		log.debug("Initiating transfer manager shutdown (hard={})", hard);
-		if( hard ) {
-			transferPool.shutdownNow();
-		}
-		else {
-			// await pool completion
-			transferPool.shutdown();
-			final String waitMsg = "[AWS S3] Waiting files transfer to complete (%d files)";
-			final String exitMsg = "[AWS S3] Exiting before FileTransfer thread pool complete -- Some files maybe lost";
-			ThreadPoolHelper.await(transferPool, Duration.of("1h"), waitMsg, exitMsg);
-		}
-	}
 }
