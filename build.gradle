@@ -15,7 +15,6 @@
  */
 
 plugins {
-    id "io.codearte.nexus-staging" version "0.30.0"
     id 'java'
     id 'idea'
 }
@@ -274,20 +273,10 @@ task exportClasspath {
     }
 }
 
-ext.nexusUsername = project.findProperty('nexusUsername')
-ext.nexusPassword = project.findProperty('nexusPassword')
-ext.nexusFullName = project.findProperty('nexusFullName')
-ext.nexusEmail = project.findProperty('nexusEmail')
-
 // `signing.keyId` property needs to be defined in the `gradle.properties` file
 ext.enableSignArchives = project.findProperty('signing.keyId')
 
 ext.coreProjects = projects( ':nextflow', ':nf-commons', ':nf-httpfs' )
-
-configure(coreProjects) {
-    group = 'io.nextflow'
-    version = rootProject.file('VERSION').text.trim()
-}
 
 /*
  * Maven central deployment
@@ -296,6 +285,9 @@ configure(coreProjects) {
 configure(coreProjects) {
     apply plugin: 'maven-publish'
     apply plugin: 'signing'
+
+    group = 'io.nextflow'
+    version = rootProject.file('VERSION').text.trim()
 
     task javadocJar(type: Jar) {
         archiveClassifier = 'javadoc'
@@ -333,9 +325,8 @@ configure(coreProjects) {
                     }
                     developers {
                         developer {
-                            id = nexusUsername
-                            name = nexusFullName
-                            email = nexusEmail
+                            name = 'Paolo Di Tommaso'
+                            email = 'paolo.ditommaso@gmail.com'
                         }
                     }
                     scm {
@@ -352,13 +343,12 @@ configure(coreProjects) {
 
         repositories {
             maven {
-                // change URLs to point to your repos, e.g. http://my.org/repo
-                def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
-                def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
-                url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-                credentials(PasswordCredentials) {
-                    username nexusUsername
-                    password nexusPassword
+                url = System.getenv('MAVEN_PUBLISH_URL')
+                    ?: ( version.endsWith('-SNAPSHOT') ? "s3://maven.seqera.io/snapshots" : "s3://maven.seqera.io/releases" )
+
+                credentials(AwsCredentials) {
+                    accessKey = System.getenv('AWS_ACCESS_KEY_ID') ?: findProperty('aws_access_key_id')
+                    secretKey = System.getenv('AWS_SECRET_ACCESS_KEY') ?: findProperty('aws_secret_access_key')
                 }
             }
         }
@@ -368,14 +358,10 @@ configure(coreProjects) {
         required { enableSignArchives }
         sign publishing.publications.mavenJava
     }
-
 }
 
-
-String bytesToHex(byte[] bytes) {
-    StringBuffer result = new StringBuffer();
-    for (byte byt : bytes) result.append(Integer.toString((byt & 0xff) + 0x100, 16).substring(1));
-    return result.toString();
+task publishToMaven {
+    dependsOn coreProjects.publish
 }
 
 task makeDigest { doLast {
@@ -383,33 +369,14 @@ task makeDigest { doLast {
     String  str = file('nextflow').text
     // create sha1
     digest = java.security.MessageDigest.getInstance("SHA1").digest(str.getBytes())
-    file('nextflow.sha1').text = new BigInteger(1, digest).toString(16) + '\n'
+    file('nextflow.sha1').text = digest.encodeHex().toString() + '\n'
     // create sha-256
     digest = java.security.MessageDigest.getInstance("SHA-256").digest(str.getBytes())
-    file('nextflow.sha256').text = bytesToHex(digest) + '\n'
+    file('nextflow.sha256').text = digest.encodeHex().toString() + '\n'
     // create md5
     digest = java.security.MessageDigest.getInstance("MD5").digest(str.getBytes())
-    file('nextflow.md5').text = bytesToHex(digest) + '\n'
+    file('nextflow.md5').text = digest.encodeHex().toString() + '\n'
 }}
-
-
-task upload {
-    dependsOn compile
-    dependsOn makeDigest
-    dependsOn coreProjects.publish
-}
-
-/*
- * Configure Nextflow staging plugin -- https://github.com/Codearte/gradle-nexus-staging-plugin
- * It adds the tasks
- * - closeRepository
- * - releaseRepository
- * - closeAndReleaseRepository
- */
-nexusStaging {
-    packageGroup = 'io.nextflow'
-    delayBetweenRetriesInMillis = 10_000
-}
 
 if( System.env.BUILD_PACK ) {
     apply from: 'packing.gradle'
