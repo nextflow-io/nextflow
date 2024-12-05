@@ -81,12 +81,9 @@ class ContainersInspector {
 
         List<TaskRun> tasks = new ArrayList<>()
         for( final process : ScriptMeta.allProcesses() ) {
-            // create task processor
-            final processor = process.getTaskProcessor()
-
             try {
                 // get container preview
-                final task = processor.createTaskPreview()
+                final task = process.getTaskProcessor().createTaskPreview()
                 final containerName = task.getContainer()
                 containers[process.name] = containerName
                 if( containerName )
