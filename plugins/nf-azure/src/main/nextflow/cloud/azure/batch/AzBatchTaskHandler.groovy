@@ -60,6 +60,7 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
+        validateConfiguration()
     }
 
     /** only for testing purpose - DO NOT USE */
@@ -67,6 +68,12 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     AzBatchService getBatchService() {
         return executor.batchService
+    }
+
+    void validateConfiguration() {
+        if (!task.container && config.batch().requireContainer ) {
+            throw new ProcessUnrecoverableException("No container image specified for process $task.name -- Either specify the container to use in the process definition or with 'process.container' value in your config. You can disable this behaviour setting `azure.batch.requireContainer=false` in the nextflow config file")
+        }
     }
 
     protected BashWrapperBuilder createBashWrapper() {

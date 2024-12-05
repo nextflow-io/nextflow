@@ -392,8 +392,8 @@ class AzBatchService implements Closeable {
             throw new IllegalArgumentException("Missing Azure Blob storage SAS token")
 
         final container = task.getContainer()
-        if( !container )
-            log.warn "Missing container image for process: $task.name"
+        if( !container && config.batch().requireContainer )
+            throw new IllegalArgumentException("Missing container image for process: $task.name\nYou can disable this behaviour setting `azure.batch.requireContainer=false` in the nextflow config file")
         final taskId = "nf-${task.hash.toString()}"
         // get the pool config
         final pool = getPoolSpec(poolId)
