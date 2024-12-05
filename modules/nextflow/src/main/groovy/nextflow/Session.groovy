@@ -682,15 +682,23 @@ class Session implements ISession {
         if( !aborted ) {
             joinAllOperators()
             log.trace "Session > all operators finished"
+            final finalizerComplete = finalizePoolManager?.shutdown(false)
+            final publisherComplete = publishPoolManager?.shutdown(false)
+            if( !finalizerComplete || !publisherComplete ) {
+                final failOnIncomplete = config.navigate('workflow.output.ignoreErrors')
+                if( failOnIncomplete )
+                    throw new AbortOperationException("Timed out while waiting to publish outputs")
+            }
+        }
+        else {
+            finalizePoolManager?.shutdown(true)
+            publishPoolManager?.shutdown(true)
         }
     }
 
     void destroy() {
         try {
             log.trace "Session > destroying"
-            // shutdown thread pools
-            finalizePoolManager?.shutdown(aborted)
-            publishPoolManager?.shutdown(aborted)
             // invoke shutdown callbacks
             shutdown0()
             log.trace "Session > after cleanup"

@@ -319,8 +319,9 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
         // start shutdown process
         reaper.shutdown()
         final waitMsg = "[AWS BATCH] Waiting jobs reaper to complete (%d jobs to be terminated)"
-        final exitMsg = "[AWS BATCH] Exiting before jobs reaper thread pool complete -- Some jobs may not be terminated"
-        ThreadPoolHelper.await(reaper, Duration.of('60min'), waitMsg, exitMsg)
+        final complete = ThreadPoolHelper.await(reaper, Duration.of('60min'), waitMsg)
+        if( !complete )
+            log.warn "[AWS BATCH] Exiting before jobs reaper thread pool complete -- Some jobs may not be terminated"
     }
 
     @Override
