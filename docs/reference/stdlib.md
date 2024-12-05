@@ -236,6 +236,9 @@ The following functions are available in Nextflow scripts:
 `sendMail( [options] )`
 : Send an email. See {ref}`mail-page` for more information.
 
+`sleep( milliseconds )`
+: Sleep for the given number of milliseconds.
+
 `tuple( collection: List ) -> ArrayTuple`
 : Create a tuple object from the given collection.
 
