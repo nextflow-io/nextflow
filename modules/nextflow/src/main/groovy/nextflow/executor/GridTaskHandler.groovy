@@ -83,6 +83,8 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
 
     BatchCleanup batch
 
+    private boolean failureDetected
+
     /** only for testing purpose */
     protected GridTaskHandler() {}
 
@@ -372,8 +374,8 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
             def errMessage = []
             errMessage << "Failed to get exit status for process ${this} -- exitStatusReadTimeoutMillis: $exitStatusReadTimeoutMillis; delta: $delta"
             // -- dump current queue stats
-            errMessage << "Current queue status:"
-            errMessage << executor.dumpQueueStatus()?.indent('> ')
+            errMessage << "Current $jobId status:"
+            errMessage << executor.dumpJobStatusReport(jobId, queue)?.indent('> ')
             // -- dump directory listing
             errMessage << "Content of workDir: ${task.workDir}"
             errMessage << workDirList?.indent('> ')

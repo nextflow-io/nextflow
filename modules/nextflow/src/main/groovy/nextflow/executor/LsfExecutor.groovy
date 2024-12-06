@@ -192,6 +192,16 @@ class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
     protected List<String> getKillCommand() { ['bkill'] }
 
     @Override
+    List<String> queueJobStatusReportCommand(Object jobId, Object queue) {
+        final result = ['bjobs', '-w']
+
+        if( queue )
+            result << '-q' << queue.toString()
+        result << jobId.toString()
+        return result
+    }
+
+    @Override
     protected List<String> queueStatusCommand( queue ) {
         // note: use the `-w` option to avoid that the printed jobid may be truncated when exceed 7 digits
         // see https://www.ibm.com/support/knowledgecenter/en/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsb_jobid_disp_length.5.html
