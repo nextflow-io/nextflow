@@ -34,12 +34,18 @@ class OutputDef {
         this.closure = closure
     }
 
+    OutputDef() {
+        this.closure = null
+    }
+
     void run(Map<DataflowWriteChannel,String> targets) {
         final dsl = new OutputDsl()
-        final cl = (Closure)closure.clone()
-        cl.setDelegate(dsl)
-        cl.setResolveStrategy(Closure.DELEGATE_FIRST)
-        cl.call()
+        if( closure ) {
+            final cl = (Closure)closure.clone()
+            cl.setDelegate(dsl)
+            cl.setResolveStrategy(Closure.DELEGATE_FIRST)
+            cl.call()
+        }
 
         dsl.build(targets)
     }
