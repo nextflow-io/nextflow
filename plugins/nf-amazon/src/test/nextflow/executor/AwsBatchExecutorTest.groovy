@@ -92,7 +92,7 @@ class AwsBatchExecutorTest extends Specification {
     }
 
     @Unroll
-    def 'should get array task id' () {
+    def 'should get array work dir' () {
         given:
         def executor = Spy(AwsBatchExecutor) {
             isFusionEnabled()>>FUSION
