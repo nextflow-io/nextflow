@@ -18,7 +18,6 @@ package nextflow.extension
 
 import java.nio.file.Path
 
-import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
@@ -27,8 +26,9 @@ import nextflow.Session
 import nextflow.processor.PublishDir
 import nextflow.util.CsvWriter
 /**
- * Publish files from a source channel.
+ * Publish a workflow output.
  *
+ * @author Ben Sherman <bentshermann@gmail.com>
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -39,9 +39,9 @@ class PublishOp {
 
     private Map opts
 
-    private Path targetDir
+    private String path
 
-    private Closure pathAs
+    private Closure dynamicPath
 
     private IndexOpts indexOpts
 
@@ -54,11 +54,11 @@ class PublishOp {
     PublishOp(DataflowReadChannel source, Map opts) {
         this.source = source
         this.opts = opts
-        this.targetDir = opts.path as Path
-        if( opts.pathAs instanceof Closure )
-            this.pathAs = opts.pathAs as Closure
+        this.path = opts.path as String
+        if( opts.dynamicPath instanceof Closure )
+            this.dynamicPath = opts.dynamicPath as Closure
         if( opts.index )
-            this.indexOpts = new IndexOpts(targetDir, opts.index as Map)
+            this.indexOpts = new IndexOpts(session.outputDir, opts.index as Map)
     }
 
     boolean getComplete() { complete }
@@ -71,23 +71,29 @@ class PublishOp {
         return this
     }
 
+    /**
+     * For each incoming value, perform the following:
+     *
+     * 1. Publish any files contained in the value
+     * 2. Append a record to the index file for the value (if enabled)
+     *
+     * @param value
+     */
     protected void onNext(value) {
         log.trace "Publish operator received: $value"
 
         // evaluate dynamic path
-        final path = pathAs != null
-            ? targetDir.resolve(pathAs.call(value))
-            : targetDir
-        if( path == null )
+        final targetDirOrClosure = getTargetDir(value)
+        if( targetDirOrClosure == null )
             return
 
         // emit workflow publish event
         session.notifyWorkflowPublish(value)
 
         // create publisher
-        final overrides = path instanceof Closure
-            ? [saveAs: path]
-            : [path: path]
+        final overrides = targetDirOrClosure instanceof Closure
+            ? [saveAs: targetDirOrClosure]
+            : [path: targetDirOrClosure]
         final publisher = PublishDir.create(opts + overrides)
 
         // publish files
@@ -98,26 +104,65 @@ class PublishOp {
             publisher.apply(files, sourceDir)
         }
 
-        // create record for index file
+        // append record to index file
         if( indexOpts ) {
             final record = indexOpts.mapper != null ? indexOpts.mapper.call(value) : value
-            final normalized = normalizePaths(record)
+            final normalized = normalizePaths(record, targetDirOrClosure)
             log.trace "Normalized record for index file: ${normalized}"
             indexRecords << normalized
         }
     }
 
+    /**
+     * Compute the target directory for a published value:
+     *
+     * - if the publish path is a string, resolve it against
+     *   the base output directory
+     *
+     * - if the publish path is a closure that returns a string,
+     *   invoke it on the published value and resolve the returned
+     *   string against the base output directory
+     *
+     * - if the publish path is a closure that returns a closure,
+     *   invoke it on the published value and wrap the returned
+     *   closure in a closure that resolves the relative path against
+     *   the base output directory
+     *
+     * @param value
+     * @return Path | Closure<Path>
+     */
+    protected Object getTargetDir(value) {
+        final outputDir = session.outputDir
+        if( dynamicPath == null )
+            return outputDir.resolve(path)
+        final relativePath = dynamicPath.call(value)
+        if( relativePath == null )
+            return null
+        return relativePath instanceof Closure
+            ? { file -> outputDir.resolve(relativePath.call(file) as String) }
+            : outputDir.resolve(relativePath as String)
+    }
+
+    /**
+     * Once all values have been published, write the
+     * index file (if enabled).
+     */
     protected void onComplete(nope) {
         if( indexOpts && indexRecords.size() > 0 ) {
             log.trace "Saving records to index file: ${indexRecords}"
-            final ext = indexOpts.path.getExtension()
-            if( ext == 'csv' )
-                new CsvWriter(header: indexOpts.header, sep: indexOpts.sep).apply(indexRecords, indexOpts.path)
-            else if( ext == 'json' )
-                indexOpts.path.text = DumpHelper.prettyPrint(indexRecords)
-            else
-                log.warn "Invalid extension '${ext}' for index file '${indexOpts.path}' -- should be 'csv' or 'json'"
-            session.notifyFilePublish(indexOpts.path)
+            final indexPath = indexOpts.path
+            final ext = indexPath.getExtension()
+            indexPath.parent.mkdirs()
+            if( ext == 'csv' ) {
+                new CsvWriter(header: indexOpts.header, sep: indexOpts.sep).apply(indexRecords, indexPath)
+            }
+            else if( ext == 'json' ) {
+                indexPath.text = DumpHelper.prettyPrint(indexRecords)
+            }
+            else {
+                log.warn "Invalid extension '${ext}' for index file '${indexPath}' -- should be 'csv' or 'json'"
+            }
+            session.notifyFilePublish(indexPath)
         }
 
         log.trace "Publish operator complete"
@@ -141,6 +186,10 @@ class PublishOp {
             for( final el : value )
                 collectFiles(result, el)
         }
+        else if( value instanceof Map ) {
+            for( final entry : value.entrySet() )
+                collectFiles(result, entry.value)
+        }
         return result
     }
 
@@ -149,37 +198,43 @@ class PublishOp {
      * work directory paths to publish paths.
      *
      * @param value
+     * @param targetDirOrClosure
      */
-    protected Object normalizePaths(value) {
+    protected Object normalizePaths(value, targetDirOrClosure) {
         if( value instanceof Path ) {
-            return List.of(value.getBaseName(), normalizePath(value))
+            return List.of(value.getBaseName(), normalizePath(value, targetDirOrClosure))
         }
 
         if( value instanceof Collection ) {
             return value.collect { el ->
                 if( el instanceof Path )
-                    return normalizePath(el)
+                    return normalizePath(el, targetDirOrClosure)
                 if( el instanceof Collection<Path> )
-                    return normalizePaths(el)
+                    return normalizePaths(el, targetDirOrClosure)
                 return el
             }
         }
 
         if( value instanceof Map ) {
-            return value.collectEntries { k, v ->
-                if( v instanceof Path )
-                    return List.of(k, normalizePath(v))
-                if( v instanceof Collection<Path> )
-                    return List.of(k, normalizePaths(v))
-                return List.of(k, v)
-            }
+            return value
+                .findAll { k, v -> v != null }
+                .collectEntries { k, v ->
+                    if( v instanceof Path )
+                        return List.of(k, normalizePath(v, targetDirOrClosure))
+                    if( v instanceof Collection<Path> )
+                        return List.of(k, normalizePaths(v, targetDirOrClosure))
+                    return List.of(k, v)
+                }
         }
 
         throw new IllegalArgumentException("Index file record must be a list, map, or file: ${value} [${value.class.simpleName}]")
     }
 
-    private Path normalizePath(Path path) {
+    private Path normalizePath(Path path, targetDirOrClosure) {
+        if( targetDirOrClosure instanceof Closure )
+            return (targetDirOrClosure.call(path.getName()) as Path).normalize()
         final sourceDir = getTaskDir(path)
+        final targetDir = targetDirOrClosure as Path
         return targetDir.resolve(sourceDir.relativize(path)).normalize()
     }
 

@@ -73,7 +73,7 @@ class OutputDsl {
         // validate target configs
         for( final name : targetConfigs.keySet() ) {
             if( name !in publishSources )
-                log.warn "Publish target '${name}' was defined in the output block but not used by the workflow"
+                log.warn "Workflow output '${name}' was declared in the output block but not assigned in the workflow"
         }
 
         // create publish op (and optional index op) for each target
@@ -99,11 +99,11 @@ class OutputDsl {
 
         final path = opts.path as String ?: name
         if( path.startsWith('/') || path.endsWith('/') )
-            throw new ScriptRuntimeException("Invalid publish target path '${path}' -- it should not contain a leading or trailing slash")
-        opts.path = session.outputDir.resolve(path)
+            throw new ScriptRuntimeException("Invalid path '${path}' for workflow output '${name}' -- it should not contain a leading or trailing slash")
+        opts.path = path
 
         if( opts.index && !(opts.index as Map).path )
-            throw new ScriptRuntimeException("Index file definition for publish target '${name}' is missing `path` option")
+            throw new ScriptRuntimeException("Index file definition for workflow output '${name}' is missing `path` option")
 
         return opts
     }
@@ -162,7 +162,7 @@ class OutputDsl {
 
         void path(Closure value) {
             setOption('path', '.')
-            setOption('pathAs', value)
+            setOption('dynamicPath', value)
         }
 
         void storageClass(String value) {
