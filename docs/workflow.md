@@ -523,7 +523,7 @@ This output block has the following effect:
 See [Reference](#reference) for all available directives in the output block.
 
 :::{tip}
-The output block is only needed if you want to customize the behavior of specific targets. If you are satisfied with the default behavior and don't need to customize anything, the output block can be omitted.
+The output block can be omitted if you are satisfied with the default behavior. However, as a best practice you should declare each output in the output block, even if you don't need to customize the publish path or create any index files.
 :::
 
 ### Dynamic publish path
