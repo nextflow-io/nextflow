@@ -1,5 +1,6 @@
 package nextflow.cloud.azure.batch
 
+import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.exception.ProcessUnrecoverableException
@@ -21,6 +22,9 @@ class AzBatchTaskHandlerTest extends Specification {
     def 'should validate config' () {
         when:
         def task = Mock(TaskRun) { getName() >> 'foo'; }
+        def CONFIG = [batch: [requireContainer: false]]
+        def exec = Mock(Executor) { getName() >> 'azurebatch' }
+        processor.getExecutor() >> exec
         and:
         new AzBatchTaskHandler(task: task)
                 .validateConfiguration()
@@ -41,8 +45,9 @@ class AzBatchTaskHandlerTest extends Specification {
     def 'should ignore missing container if disabled' () {
         when:
         def task = Mock(TaskRun) { getName() >> 'foo'; }
+        def CONFIG = [batch: [requireContainer: false]]
         and:
-        new AzBatchTaskHandler(task: task, config: new AzConfig([batch: [requireContainer: false]]))
+        new AzBatchTaskHandler(task: task, config: new AzConfig(CONFIG))
                 .validateConfiguration()
         then:
         noExceptionThrown()

@@ -71,7 +71,7 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     void validateConfiguration() {
-        if (!task.container && config.batch().requireContainer ) {
+        if (!task.container && executor.config.batch().requireContainer ) {
             throw new ProcessUnrecoverableException("No container image specified for process $task.name -- Either specify the container to use in the process definition or with 'process.container' value in your config. You can disable this behaviour setting `azure.batch.requireContainer=false` in the nextflow config file")
         }
     }
