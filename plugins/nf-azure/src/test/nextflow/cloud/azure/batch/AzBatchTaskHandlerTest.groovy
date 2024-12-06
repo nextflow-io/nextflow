@@ -21,43 +21,63 @@ class AzBatchTaskHandlerTest extends Specification {
 
     def 'should validate config' () {
         when:
-        def task = Mock(TaskRun) { getName() >> 'foo'; }
-        def CONFIG = [batch: [requireContainer: false]]
-        def exec = Mock(Executor) { getName() >> 'azurebatch' }
-        processor.getExecutor() >> exec
+        def task = Mock(TaskRun) { 
+            getName() >> 'foo'
+            getProcessor() >> Mock(TaskProcessor) {
+                getExecutor() >> Mock(Executor) { getName() >> 'azurebatch' }
+            }
+        }
+        def CONFIG = [batch: [requireContainer: true]]
         and:
-        new AzBatchTaskHandler(task: task)
-                .validateConfiguration()
+        new AzBatchTaskHandler(task: task, executor: Mock(AzBatchExecutor) {
+            getConfig() >> new AzConfig(CONFIG)
+        }).validateConfiguration()
         then:
         def e = thrown(ProcessUnrecoverableException)
         e.message.startsWith('No container image specified for process foo')
 
-
         when:
-        task = Mock(TaskRun) { getName() >> 'foo'; getContainer() >> 'ubuntu' }
+        task = Mock(TaskRun) { 
+            getName() >> 'foo'
+            getContainer() >> 'ubuntu'
+        }
         and:
-        new AzBatchTaskHandler(task: task)
-                .validateConfiguration()
+        new AzBatchTaskHandler(task: task, executor: Mock(AzBatchExecutor) {
+            getConfig() >> new AzConfig(CONFIG)
+        }).validateConfiguration()
         then:
         noExceptionThrown()
     }
 
     def 'should ignore missing container if disabled' () {
         when:
-        def task = Mock(TaskRun) { getName() >> 'foo'; }
-        def CONFIG = [batch: [requireContainer: false]]
+        def task = Mock(TaskRun) { 
+            getName() >> 'foo'
+            getContainer() >> null
+            getProcessor() >> Mock(TaskProcessor) {
+                getExecutor() >> Mock(Executor) { getName() >> 'azurebatch' }
+            }
+        }
+        def CONFIG = [requireContainer: false]
         and:
-        new AzBatchTaskHandler(task: task, config: new AzConfig(CONFIG))
-                .validateConfiguration()
+        new AzBatchTaskHandler(task: task, executor: Mock(AzBatchExecutor) {
+            getConfig() >> new AzConfig(CONFIG)
+        }).validateConfiguration()
         then:
         noExceptionThrown()
 
-
         when:
-        task = Mock(TaskRun) { getName() >> 'foo'; getContainer() >> 'ubuntu' }
+        task = Mock(TaskRun) { 
+            getName() >> 'foo'
+            getContainer() >> 'ubuntu'
+            getProcessor() >> Mock(TaskProcessor) {
+                getExecutor() >> Mock(Executor) { getName() >> 'azurebatch' }
+            }
+        }
         and:
-        new AzBatchTaskHandler(task: task)
-                .validateConfiguration()
+        new AzBatchTaskHandler(task: task, executor: Mock(AzBatchExecutor) {
+            getConfig() >> new AzConfig([:])
+        }).validateConfiguration()
         then:
         noExceptionThrown()
     }

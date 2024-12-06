@@ -745,7 +745,7 @@ class AzBatchServiceTest extends Specification {
         and:
         def POOL_ID = 'my-pool'
         def SAS = '123'
-        def CONFIG = [storage: [sasToken: SAS]]
+        def CONFIG = [storage: [sasToken: SAS], batch: [requireContainer: false]]
         def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
         AzBatchService azure = Spy(new AzBatchService(exec))
         and:
