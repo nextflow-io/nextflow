@@ -135,7 +135,11 @@ class Nextflow {
         }
 
         // revolve the glob pattern returning all matches
-        return fileNamePattern(splitter, options)
+        final result = fileNamePattern(splitter, options)
+        if( glob && options?.checkIfExists && result.isEmpty() )
+            throw new NoSuchFileException(path.toString())
+
+        return result
     }
 
     static files( Map options=null, def path ) {
