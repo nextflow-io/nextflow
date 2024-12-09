@@ -268,7 +268,7 @@ azure {
 
 ### Task packing on nodes
 
-Each node is given a number of task slots, which is the number of tasks that can be run concurrently on the node. The number of task slots is determined by the number of cores for the selected VM. Nextflow will assign each process a number of task slots equal to a percentage of the total resources avaiable on the node, based on the `cpus`, `memory` and `disk` directives.
+Each node is given a number of task slots, which is the number of tasks that can be run concurrently on the node. The number of task slots is determined by the number of cores for the selected VM. Nextflow will assign each process a number of task slots equal to a percentage of the total resources available on the node, based on the `cpus`, `memory` and `disk` directives.
 
 For example, if using a `Standard_D4d_v5` machine with 4 cores, 16GB of memory and a 150GB local disk. If a process has the directives `cpus 2`, `memory 8.GB` or `disk 75.GB`, it will be assigned 1 task slot and 2 tasks will concurrently run on the node. If the process has `cpus 4`, `memory 2.GB` or `disk 150.GB`, it will be assigned 2 task slots and only 1 task will concurrently run on the node.
 
