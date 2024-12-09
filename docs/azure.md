@@ -266,6 +266,18 @@ azure {
 ```
 :::
 
+### Task packing on nodes
+
+Each node is given a number of task slots, which is the number of tasks that can be run concurrently on the node. The number of task slots is determined by the number of cores for the selected VM. Nextflow will assign each process a number of task slots equal to a percentage of the total resources avaiable on the node, based on the `cpus`, `memory` and `disk` directives.
+
+For example, if using a `Standard_D4d_v5` machine with 4 cores, 16GB of memory and a 150GB local disk. If a process has the directives `cpus 2`, `memory 8.GB` or `disk 75.GB`, it will be assigned 1 task slot and 2 tasks will concurrently run on the node. If the process has `cpus 4`, `memory 2.GB` or `disk 150.GB`, it will be assigned 2 task slots and only 1 task will concurrently run on the node.
+
+A node may become overprovisioned if the tasks are using more than their fraction of total resources. For example, in the above example if a process has the `cpus` directive set to 2, it will be assigned 1 task slot and 2 tasks will concurrently run on the node. If the process uses more than 8GB of memory or 75GB of disk space, the node might become overprovisioned and performance might degrade or the task will fail.
+
+:::{warning}
+The `cpus` directive is used to determine the number of task slots, not the number of cores.
+:::
+
 ### Requirements on pre-existing named pools
 
 When Nextflow is configured to use a pool already available in the Batch account, the target pool must satisfy the following requirements:
@@ -327,7 +339,7 @@ When Nextflow creates a pool of compute nodes, it selects:
 
 Together, these settings determine the Operating System and version installed on each node.
 
-By default, Nextflow creates pool nodes based on CentOS 8, but this behavior can be customised in the pool configuration. Below are configurations for image reference/SKU combinations to select two popular systems.
+By default, Nextflow creates pool nodes based on Ubuntu 20.04, but this behavior can be customised in the pool configuration. Below are configurations for image reference/SKU combinations to select two popular systems.
 
 - Ubuntu 20.04 (default):
 
