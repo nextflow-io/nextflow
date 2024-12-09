@@ -219,7 +219,7 @@ class AzBatchService implements Closeable {
     protected Double computeScore(int cpus, MemoryUnit mem, MemoryUnit disk, Map entry) {
         def vmCores = entry.numberOfCores as int
         double vmMemGb = (entry.memoryInMB as int) /1024
-        double vmDiskGb = (entry.resourceDiskSizeInMB as int) /1024
+        double vmDiskGb = entry.resourceDiskSizeInMB ? (entry.resourceDiskSizeInMB as int) / 1024 :entry.osDiskSizeInMB ? (entry.osDiskSizeInMB as int) / 1024 : 0.001
 
         // If requested CPUs exceed available, disqualify
         if( cpus > vmCores )
