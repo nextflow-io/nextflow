@@ -137,6 +137,15 @@ class SgeExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
     protected List<String> getKillCommand() { ['qdel'] }
 
     @Override
+    List<String> queueJobStatusReportCommand(Object jobId, Object queue) {
+        def result = ['qstat', '-j', jobId.toString()]
+        if( queue )
+            result << '-q' << queue.toString()
+
+        return result
+    }
+
+    @Override
     protected List<String> queueStatusCommand(Object queue) {
         def result = ['qstat']
         if( queue )
