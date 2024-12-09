@@ -61,6 +61,7 @@ class GithubRepositoryPublisher extends DefaultTask {
 
 
     String mergeIndex(List<PluginMeta> mainIndex, Map<String,List<PluginRelease>> pluginsToPublish) {
+        boolean modified = false
 
         for( Map.Entry<String,List<PluginRelease>> item : pluginsToPublish ) {
             final pluginId = item.key
@@ -69,6 +70,7 @@ class GithubRepositoryPublisher extends DefaultTask {
 
             if (!indexEntry) {
                 mainIndex.add(new PluginMeta(id: pluginId, releases: pluginReleases))
+                modified = true
             }
             else {
                 for (PluginRelease rel : pluginReleases) {
@@ -79,11 +81,13 @@ class GithubRepositoryPublisher extends DefaultTask {
                     // if not, add to the index
                     if( !indexRel ) {
                         indexEntry.releases << rel
+                        modified = true
                     }
                     // otherwise, verify the checksum matches
                     else if( indexRel.sha512sum != rel.sha512sum ) {
                         if( overwrite ) {
                             indexEntry.releases[index] = rel
+                            modified = true
                         }
                         else {
                             def msg = "Plugin $pluginId@${rel.version} invalid checksum:\n"
@@ -97,11 +101,15 @@ class GithubRepositoryPublisher extends DefaultTask {
             }
         }
 
-        new GsonBuilder()
+        if ( modified ) {
+            new GsonBuilder()
                 .setPrettyPrinting()
                 .disableHtmlEscaping()
                 .create()
                 .toJson(mainIndex)
+        } else {
+            null
+        }
     }
 
     List<PluginMeta> parseMainIndex(GithubClient github, String path) {
@@ -188,10 +196,13 @@ class GithubRepositoryPublisher extends DefaultTask {
         logger.quiet("Merging index")
         final result = mergeIndex(mainIndex, pluginsToPublish)
 
-        // push to github
-        logger.quiet("Publish merged index to $indexUrl")
-
-        github.pushChange(targetFileName, result.toString() + '\n', "Nextflow plugins update")
+        if ( result ) {
+            // push to github
+            logger.quiet("Publish merged index to $indexUrl")
+            github.pushChange(targetFileName, result.toString() + '\n', "Nextflow plugins update")
+        } else {
+            logger.quiet("No changes to index")
+        }
     }
 
 }
