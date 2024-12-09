@@ -92,7 +92,7 @@ class CmdInspect extends CmdBase {
 
     protected void applyInspect(Session session) {
         // run the inspector
-        new ContainersInspector(session.dag, concretize)
+        new ContainersInspector(concretize)
                 .withFormat(format)
                 .withIgnoreErrors(ignoreErrors)
                 .printContainers()
