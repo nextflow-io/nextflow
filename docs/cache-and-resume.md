@@ -26,7 +26,7 @@ The task hash is computed from the following metadata:
 - Task {ref}`inputs <process-input>`
 - Task {ref}`script <process-script>`
 - Any global variables referenced in the task script
-- Any {ref}`bundled scripts <bundling-executables>` used in the task script
+- Any {ref}`bundled scripts <structure-bin>` used in the task script
 - Whether the task is a {ref}`stub run <process-stub>`
 - Task attempt
 

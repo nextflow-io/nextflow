@@ -77,6 +77,7 @@ workflow
 module
 notifications
 secrets
+structure
 sharing
 vscode
 dsl1
