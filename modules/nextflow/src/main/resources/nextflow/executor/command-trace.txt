@@ -174,7 +174,7 @@ nxf_trace_linux() {
     local start_millis=$(nxf_date)
     ## capture error and kill mem watcher
     trap 'kill $mem_proc' ERR
-
+    
     ## run task script
     {{trace_cmd}} &
     local task=$!
