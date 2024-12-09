@@ -16,6 +16,12 @@
 
 package nextflow.processor
 
+import nextflow.cloud.CloudSpotTerminationException
+import nextflow.exception.FailedGuardException
+import nextflow.exception.ProcessEvalException
+import nextflow.exception.ProcessException
+import nextflow.exception.ProcessRetryableException
+
 import static nextflow.processor.TaskProcessor.*
 
 import java.util.concurrent.ExecutorService
@@ -573,6 +579,9 @@ class TaskPollingMonitor implements TaskMonitor {
                 checkTaskStatus(handler)
             }
             catch (Throwable error) {
+                // At this point NF assumes job is not running, but there could be errors at monitoring that could leave a job running (#5516).
+                // In this case, NF needs to ensure the job is killed.
+                handler.terminate()
                 handleException(handler, error)
             }
         }
