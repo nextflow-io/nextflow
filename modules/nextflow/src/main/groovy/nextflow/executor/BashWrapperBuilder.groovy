@@ -367,6 +367,17 @@ class BashWrapperBuilder {
         binding.stdout_file = TaskRun.CMD_OUTFILE
         binding.stderr_file = TaskRun.CMD_ERRFILE
         binding.trace_file = TaskRun.CMD_TRACE
+        binding.sizes_file = TaskRun.CMD_SIZES
+        if( bean.inputFiles.size() > 0){
+            binding.inputs_list = bean.inputFiles.keySet().join(" ")
+        } else {
+            binding.inputs_list = ""
+        }
+        if( bean.outputFiles.size() > 0 ){
+            binding.outputs_list = bean.outputFiles.join(" ")
+        } else {
+            binding.outputs_list = ""
+        }
 
         binding.trace_cmd = getTraceCommand(interpreter)
         binding.launch_cmd = getLaunchCommand(interpreter,env)
@@ -754,6 +765,7 @@ class BashWrapperBuilder {
     protected String getStageCommand() { 'nxf_stage' }
 
     protected String getUnstageCommand() { 'nxf_unstage' }
+
 
     protected String getUnstageControls() {
         def result = copyFileToWorkDir(TaskRun.CMD_OUTFILE) + ' || true' + ENDL
