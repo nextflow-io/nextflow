@@ -45,7 +45,6 @@ final class AzureRepositoryProvider extends RepositoryProvider {
          */
         def tokens = project.tokenize('/')
         this.repo = tokens.removeLast()
-
         if( tokens.size() == 1){
             this.project = [tokens.first(), this.repo].join('/')
             this.includesRepo = true
