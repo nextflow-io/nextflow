@@ -225,8 +225,11 @@ class ScriptRunner {
 
     protected void parseScript( ScriptFile scriptFile, String entryName ) {
         scriptParser = new ScriptParser(session)
-                            .setEntryName(entryName)
-                            .parse(scriptFile.main)
+        scriptParser.setEntryName(entryName)
+        // don't execute entry workflow if preview action (i.e. inspect command) is specified
+        if( previewAction )
+            scriptParser.setModule(true)
+        scriptParser.parse(scriptFile.main)
         session.script = scriptParser.script
     }
 
