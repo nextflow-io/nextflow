@@ -29,6 +29,7 @@ import com.google.cloud.batch.v1.BatchServiceClient
 import com.google.cloud.batch.v1.BatchServiceSettings
 import com.google.cloud.batch.v1.Job
 import com.google.cloud.batch.v1.JobName
+import com.google.cloud.batch.v1.JobStatus
 import com.google.cloud.batch.v1.LocationName
 import com.google.cloud.batch.v1.Task
 import com.google.cloud.batch.v1.TaskGroupName
@@ -121,6 +122,10 @@ class BatchClient {
 
     TaskStatus getTaskStatus(String jobId, String taskId) {
         return describeTask(jobId, taskId).getStatus()
+    }
+
+    JobStatus getJobStatus(String jobId) {
+        return describeJob(jobId).getStatus()
     }
 
     String getTaskState(String jobId, String taskId) {
