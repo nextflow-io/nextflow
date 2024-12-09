@@ -18,6 +18,7 @@ compileGroovy {
 }
 
 dependencies {
+    implementation project('compiler')
     api(project(':nf-commons'))
     api(project(':nf-httpfs'))
     api "org.apache.groovy:groovy:4.0.24"
