@@ -54,6 +54,31 @@ class EnvOutParamTest extends Dsl2Spec {
 
     }
 
+    def 'should define env outputs with quotes' () {
+        setup:
+        def text = '''
+            process hola {
+              output:
+              env 'FOO'
+              env 'BAR'
+              
+              /echo command/ 
+            }
+            
+            workflow { hola() }
+            '''
+        def binding = [:]
+        def process = parseAndReturnProcess(text, binding)
+        when:
+        def outs = process.config.getOutputs() as List<EnvOutParam>
+        then:
+        outs.size() == 2
+        and:
+        outs[0].name == 'FOO'
+        and:
+        outs[1].name == 'BAR'
+    }
+
     def 'should define optional env outputs' () {
         setup:
         def text = '''

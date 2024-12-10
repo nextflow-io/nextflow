@@ -41,6 +41,12 @@ class EnvOutParam extends BaseOutParam implements OptionalParam {
         if( obj instanceof TokenVar ) {
             this.nameObj = obj.name
         }
+        else if( obj instanceof CharSequence ) {
+            this.nameObj = obj.toString()
+        }
+        else {
+            throw new IllegalArgumentException("Unexpected environment output definition - it should be either a string or a variable identifier - offending value: ${obj?.getClass()?.getName()}")
+        }
 
         return this
     }
