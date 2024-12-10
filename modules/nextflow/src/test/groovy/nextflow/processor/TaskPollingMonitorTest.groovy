@@ -120,7 +120,7 @@ class TaskPollingMonitorTest extends Specification {
         then:
         1 * session.disableJobsCancellation >> true
         and:
-        0 * handler.kill() >> null
+        0 * handler.killTask() >> null
         0 * session.notifyTaskComplete(handler) >> null
     }
 
