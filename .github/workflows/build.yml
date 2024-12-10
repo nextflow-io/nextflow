@@ -244,6 +244,9 @@ jobs:
                 GITHUB_TOKEN: ${{ secrets.AUTOMATION_GITHUB_TOKEN }}
                 GRADLE_OPTS: '-Dorg.gradle.daemon=false'
 
+  # --------------------------------------------------
+  # job: release
+  # --------------------------------------------------
   release:
     name: Release
     if: ${{ contains(needs.build.outputs.commit_message,'[release]') }}
@@ -251,13 +254,76 @@ jobs:
     needs: build
     timeout-minutes: 10
     steps:
+      # setup steps
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
           submodules: true
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: 'temurin'
+          architecture: x64
+
+      - name: Setup AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: eu-west-1
+          aws-access-key-id: ${{ secrets.AWS_DEPLOY_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_DEPLOY_SECRET_ACCESS_KEY }}
+
+      - name: Login to Docker hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_ID }}
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+
+      - name: Login to Seqera registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.SEQERA_PUBLIC_CR_URL }}
+          username: ${{ secrets.SEQERA_PUBLIC_CR_USER }}
+          password: ${{ secrets.SEQERA_PUBLIC_CR_PASSWORD }}
+
+      # release step
       - name: Release
-        run: gh workflow run release.yml --ref ${{ github.ref }}
+        run: bash .github/scripts/release.sh
         env:
-          GH_TOKEN: ${{ secrets.AUTOMATION_GITHUB_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_DEPLOY_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_DEPLOY_SECRET_ACCESS_KEY }}
+          GH_ORG: ${{ vars.PLUGINS_GITHUB_ORG }}
+          GH_USER: ${{ vars.DEPLOY_GITHUB_USER }}
+          GH_USER_EMAIL: ${{ vars.DEPLOY_GITHUB_EMAIL }}
+          GH_TOKEN: ${{ secrets.DEPLOY_GITHUB_TOKEN }}
+          MAVEN_PUBLISH_URL: ${{ vars.MAVEN_PLUGINS_PUBLISH_URL }}
+          PLUGINS_INDEX_JSON: ${{ vars.PLUGINS_INDEX_JSON }}
+          S3_RELEASE_BUCKET: ${{ vars.S3_RELEASE_BUCKET }}
+          SEQERA_REGISTRY: ${{ vars.SEQERA_PUBLIC_CR_URL }}
+
+      # upload steps
+      - name: Upload artifacts (libs)
+        uses: actions/upload-artifact@v4
+        with:
+          retention-days: 3
+          name: libs
+          path: modules/*/build/libs/
+
+      - name: Upload artifacts (distribution)
+        uses: actions/upload-artifact@v4
+        with:
+          retention-days: 3
+          name: distribution
+          path: build/releases/
+
+      - name: Upload artifacts (plugins)
+        uses: actions/upload-artifact@v4
+        with:
+          retention-days: 3
+          compression-level: 0
+          name: plugins
+          path: |
+            plugins/build/libs/
+            plugins/*/build/libs/
