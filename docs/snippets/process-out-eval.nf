@@ -2,6 +2,7 @@ process sayHello {
     output:
     eval('bash --version')
 
+    script:
     """
     echo Hello world!
     """

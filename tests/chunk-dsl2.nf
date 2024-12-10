@@ -8,11 +8,12 @@ process foo {
     input:
     stdin()
 
+    script:
     "cat -"
 }
 
 workflow {
-    Channel.from(stdin) \
+    Channel.of(stdin) \
             | splitFasta( by: params.chunkSize) \
             | foo
 }
