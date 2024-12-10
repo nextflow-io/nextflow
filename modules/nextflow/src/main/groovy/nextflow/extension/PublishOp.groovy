@@ -171,6 +171,7 @@ class PublishOp {
 
     /**
      * Extract files from a received value for publishing.
+     * Files external to the work directory are not published.
      *
      * @param result
      * @param value
@@ -178,9 +179,11 @@ class PublishOp {
     protected Map<Path,Set<Path>> collectFiles(Map<Path,Set<Path>> result, value) {
         if( value instanceof Path ) {
             final sourceDir = getTaskDir(value)
-            if( sourceDir !in result )
-                result[sourceDir] = new HashSet(10)
-            result[sourceDir] << value
+            if( sourceDir != null ) {
+                if( sourceDir !in result )
+                    result[sourceDir] = new HashSet(10)
+                result[sourceDir] << value
+            }
         }
         else if( value instanceof Collection ) {
             for( final el : value )
@@ -230,12 +233,14 @@ class PublishOp {
         throw new IllegalArgumentException("Index file record must be a list, map, or file: ${value} [${value.class.simpleName}]")
     }
 
-    private Path normalizePath(Path path, targetDirOrClosure) {
+    private String normalizePath(Path path, targetDirOrClosure) {
         if( targetDirOrClosure instanceof Closure )
-            return (targetDirOrClosure.call(path.getName()) as Path).normalize()
+            return (targetDirOrClosure.call(path.getName()) as Path).normalize().toUriString()
         final sourceDir = getTaskDir(path)
+        if( sourceDir == null )
+            return path.toUriString()
         final targetDir = targetDirOrClosure as Path
-        return targetDir.resolve(sourceDir.relativize(path)).normalize()
+        return targetDir.resolve(sourceDir.relativize(path)).normalize().toUriString()
     }
 
     /**
