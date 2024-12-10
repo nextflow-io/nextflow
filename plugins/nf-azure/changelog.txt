@@ -1,5 +1,22 @@
 nf-azure changelog
 ===================
+1.11.0 - 3 Dec 2024
+- Detecting errors in data unstaging (#5345) [3c8e602d]
+- Bump netty-common to version 4.1.115.Final [d1bbd3d0]
+- Bump groovy 4.0.24 [dd71ad31]
+- Bump com.azure:azure-identity from 1.11.3 to 1.12.2 (#5449) [cb70f1df]
+- Target Java 17 as minimal Java version (#5045) [0140f954]
+
+1.10.1 - 27 Oct 2024
+- Demote azure batch task status log level to trace (#5416) [ci skip] [d6c684bb]
+
+1.10.0 - 2 Oct 2024
+- Fix Azure Fusion env misses credentials when no key or SAS provided (#5328) [e11382c8]
+- Bump groovy 4.0.23 (#5303) [ci fast] [fe3e3ac7]
+
+1.9.0 - 4 Sep 2024
+- Support Azure Managed Identities in Fusion configuration logic (#5278) [a0bf8b40]
+
 1.8.1 - 5 Aug 2024
 - Bump pf4j to version 3.12.0 [96117b9a]
 

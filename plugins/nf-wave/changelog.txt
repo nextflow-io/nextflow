@@ -1,5 +1,30 @@
 nf-wave changelog
 ==================
+1.8.0 - 3 Dec 2024
+- Fix missing wave response (#5547) [ci fast] [ee252173]
+- Update wave deps [09ccd295]
+- Fix isContainerReady when wave is disabled (#5509) [ci fast] [3215afa8]
+- Bump groovy 4.0.24 [dd71ad31]
+
+1.7.2 - 27 Oct 2024
+- Add wave mirror vs module bundles conflicts warning [b37a8a5b]
+
+1.7.1 - 14 Oct 2024
+- Change to scan.levels to scan.allowedLevels (#5401) [88a1b1b5]
+- Fix inspect concretize option [0ee29a87]
+
+1.7.0 - 13 Oct 2024
+- Add support for Wave  container status API  (#5384) [873703ad] [9ed18a88]
+- Remove unused reportsOpts (#5379) [e794e868]
+- Sunsetting Spack support in Wave [3a54cb3b]
+
+1.6.0 - 2 Oct 2024
+- Improve Wave build timeout handling (#5304) [05bef7e4]
+- Bump groovy 4.0.23 (#5303) [ci fast] [fe3e3ac7]
+
+1.5.1 - 4 Sep 2024
+- Wave client logs improvement [5a37e617]
+
 1.5.0 - 5 Aug 2024
 - Await build completion for all Wave containers [2b8117e9]
 - Bump pf4j to version 3.12.0 [96117b9a]

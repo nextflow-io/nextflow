@@ -55,4 +55,8 @@ class DefaultContainerResolver implements ContainerResolver {
         return new ContainerInfo(imageName, ret, hashKey)
     }
 
+    @Override
+    boolean isContainerReady(String key) {
+        return true
+    }
 }

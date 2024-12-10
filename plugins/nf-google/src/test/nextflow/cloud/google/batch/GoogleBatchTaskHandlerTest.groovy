@@ -17,6 +17,9 @@
 
 package nextflow.cloud.google.batch
 
+import com.google.cloud.batch.v1.JobStatus
+import com.google.cloud.batch.v1.Task
+
 import java.nio.file.Path
 
 import com.google.cloud.batch.v1.GCS
@@ -105,6 +108,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         !instancePolicy.getMachineType()
         !instancePolicy.getMinCpuPlatform()
         instancePolicy.getProvisioningModel().toString() == 'PROVISIONING_MODEL_UNSPECIFIED'
+        !instancePolicy.getBootDisk().getImage()
         and:
         allocationPolicy.getLocation().getAllowedLocationsCount() == 0
         allocationPolicy.getNetwork().getNetworkInterfacesCount() == 0
@@ -121,6 +125,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         def ACCELERATOR = new AcceleratorResource(request: 1, type: 'nvidia-tesla-v100')
         def BOOT_DISK = MemoryUnit.of('10 GB')
+        def BOOT_IMAGE = 'batch-debian'
         def CONTAINER_IMAGE = 'ubuntu:22.1'
         def CONTAINER_OPTS = '--this --that'
         def CPU_PLATFORM = 'Intel Skylake'
@@ -134,6 +139,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getConfig() >> Mock(BatchConfig) {
                 getAllowedLocations() >> ['zones/us-central1-a', 'zones/us-central1-c']
                 getBootDiskSize() >> BOOT_DISK
+                getBootDiskImage() >> BOOT_IMAGE
                 getCpuPlatform() >> CPU_PLATFORM
                 getMaxSpotAttempts() >> 5
                 getSpot() >> true
@@ -211,6 +217,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         instancePolicy.getAccelerators(0).getCount() == 1
         instancePolicy.getAccelerators(0).getType() == ACCELERATOR.type
+        instancePolicy.getBootDisk().getImage() == BOOT_IMAGE
         instancePolicy.getDisks(0).getNewDisk().getSizeGb() == DISK.request.toGiga()
         instancePolicy.getDisks(0).getNewDisk().getType() == DISK.type
         instancePolicy.getMachineType() == MACHINE_TYPE
@@ -576,5 +583,40 @@ class GoogleBatchTaskHandlerTest extends Specification {
         1 * executor.shouldDeleteJob('job1') >> false
         and:
         0 * client.deleteJob('job1') >> null
+    }
+
+    JobStatus makeJobStatus(JobStatus.State state, String desc = null) {
+        final builder = JobStatus.newBuilder().setState(state)
+        if( desc ) {
+            builder.addStatusEvents(
+                StatusEvent.newBuilder()
+                    .setDescription(desc)
+            )
+        }
+        builder.build()
+    }
+
+    def 'should check job status when no tasks in job '() {
+
+        given:
+        def jobId = 'job-id'
+        def taskId = 'task-id'
+        def client = Mock(BatchClient)
+        def task = Mock(TaskRun) {
+            lazyName() >> 'foo (1)'
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task))
+        final message = 'Job failed when Batch tries to schedule it: Batch Error: code - CODE_MACHINE_TYPE_NOT_FOUND'
+        when:
+        client.listTasks(jobId) >>> [new LinkedList<Task>(), new LinkedList<Task>()]
+        client.getJobStatus(jobId) >>> [
+            null,
+            makeJobStatus(JobStatus.State.FAILED, 'Scheduling Failed'),
+            makeJobStatus(JobStatus.State.FAILED, message)
+        ]
+        then:
+        handler.getTaskState() == "PENDING"
+        handler.getTaskState() == "FAILED"
+        handler.getJobError().message == message
     }
 }

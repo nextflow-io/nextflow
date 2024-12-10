@@ -43,12 +43,15 @@ dependencies {
         exclude group: 'org.slf4j', module: 'slf4j-api'
         exclude group: 'com.google.guava', module: 'guava'
     }
-    api('com.azure:azure-identity:1.11.3') {
+    api('com.azure:azure-identity:1.12.2') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
 
+    // address security vulnerabilities
+    runtimeOnly 'io.netty:netty-common:4.1.115.Final'
+
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.apache.groovy:groovy:4.0.22"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.22"
+    testImplementation "org.apache.groovy:groovy:4.0.24"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.24"
 }

@@ -36,10 +36,10 @@ dependencies {
     api 'org.apache.commons:commons-lang3:3.12.0'
     api 'com.google.code.gson:gson:2.10.1'
     api 'org.yaml:snakeyaml:2.2'
-    api 'io.seqera:wave-api:0.11.1'
-    api 'io.seqera:wave-utils:0.12.1'
+    api 'io.seqera:wave-api:0.14.0'
+    api 'io.seqera:wave-utils:0.15.0'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.22"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.22"
+    testImplementation "org.apache.groovy:groovy:4.0.24"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.24"
 }

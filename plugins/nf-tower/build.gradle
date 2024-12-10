@@ -37,6 +37,6 @@ dependencies {
     api "com.fasterxml.jackson.core:jackson-databind:2.12.7.1"
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.22"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.22"
+    testImplementation "org.apache.groovy:groovy:4.0.24"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.24"
 }

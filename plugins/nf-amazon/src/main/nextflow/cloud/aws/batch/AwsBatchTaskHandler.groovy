@@ -60,6 +60,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
+import nextflow.SysEnv
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.container.ContainerNameValidator
 import nextflow.exception.ProcessException
@@ -112,7 +113,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     private CloudMachineInfo machineInfo
 
-    private Map<String,String> environment
+    private Map<String,String> environment = Map<String,String>.of()
 
     final static private Map<String,String> jobDefinitions = [:]
 
@@ -134,7 +135,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         super(task)
         this.executor = executor
         this.client = executor.client
-        this.environment = System.getenv()
+        this.environment = SysEnv.get()
         this.logFile = task.workDir.resolve(TaskRun.CMD_LOG)
         this.scriptFile = task.workDir.resolve(TaskRun.CMD_SCRIPT)
         this.inputFile =  task.workDir.resolve(TaskRun.CMD_INFILE)
@@ -198,7 +199,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // retrieve the status for the specified job and along with the next batch
         log.trace "[AWS BATCH] requesting describe jobs=${jobIdsToString(batchIds)}"
         DescribeJobsResult resp = client.describeJobs(new DescribeJobsRequest().withJobs(batchIds))
-        if( !resp.getJobs() ) {
+        if( !resp || !resp.getJobs() ) {
             log.debug "[AWS BATCH] cannot retrieve running status for job=$jobId"
             return null
         }
@@ -699,6 +700,11 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return executor.awsOptions.maxSpotAttempts
     }
 
+    protected String getJobName(TaskRun task) {
+        final result = prependWorkflowPrefix(task.name, environment)
+        return normalizeJobName(result)
+    }
+
     /**
      * Create a new Batch job request for the given NF {@link TaskRun}
      *
@@ -713,7 +719,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final opts = getAwsOptions()
         final labels = task.config.getResourceLabels()
         final result = new SubmitJobRequest()
-        result.setJobName(normalizeJobName(task.name))
+        result.setJobName(getJobName(task))
         result.setJobQueue(getJobQueue(task))
         result.setJobDefinition(getJobDefinition(task))
         if( labels ) {
@@ -839,10 +845,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @return A job name without invalid characters
      */
     protected String normalizeJobName(String name) {
-        def result = name.replaceAll(' ','_').replaceAll(/[^a-zA-Z0-9_]/,'')
+        def result = name.replaceAll(' ','_').replaceAll(/[^a-zA-Z0-9_-]/,'')
         result.size()>128 ? result.substring(0,128) : result
     }
-
 
     protected CloudMachineInfo getMachineInfo() {
         if( machineInfo )
@@ -927,7 +932,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final slot = FARGATE_MEM.get(cpus)
         if( slot==null )
             throw new ProcessUnrecoverableException("Requirement of $cpus CPUs is not allowed by Fargate -- Check process with name '${task.lazyName()}'")
-        if( mega <=slot.min ) {
+        if( mega <slot.min ) {
             log.warn "Process '${task.lazyName()}' memory requirement of ${mem} is below the minimum allowed by Fargate of ${MemoryUnit.of(mega+'MB')}"
             return slot.min
         }

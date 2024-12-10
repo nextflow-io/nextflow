@@ -1,6 +1,6 @@
 (aws-page)=
 
-# AWS Cloud
+# Amazon Web Services
 
 :::{tip}
 This page describes how to manually set up and use Nextflow with AWS Cloud.
@@ -46,53 +46,54 @@ Minimal permissions policies to be attached to the AWS account used by Nextflow 
 - To use AWS Batch:
 
   ```json
-  "batch:DescribeJobQueues"
   "batch:CancelJob"
-  "batch:SubmitJob"
-  "batch:ListJobs"
   "batch:DescribeComputeEnvironments"
-  "batch:TerminateJob"
-  "batch:DescribeJobs"
-  "batch:RegisterJobDefinition"
   "batch:DescribeJobDefinitions"
+  "batch:DescribeJobQueues"
+  "batch:DescribeJobs"
+  "batch:ListJobs"
+  "batch:RegisterJobDefinition"
+  "batch:SubmitJob"
+  "batch:TagResource"
+  "batch:TerminateJob"
   ```
 
 - To view [EC2](https://aws.amazon.com/ec2/) instances:
 
   ```json
-  "ecs:DescribeTasks"
-  "ec2:DescribeInstances"
-  "ec2:DescribeInstanceTypes"
   "ec2:DescribeInstanceAttribute"
-  "ecs:DescribeContainerInstances"
+  "ec2:DescribeInstances"
   "ec2:DescribeInstanceStatus"
+  "ec2:DescribeInstanceTypes"
+  "ecs:DescribeContainerInstances"
+  "ecs:DescribeTasks"
   ```
 
 - To pull container images from [ECR](https://aws.amazon.com/ecr/) repositories:
 
   ```json
-  "ecr:GetAuthorizationToken"
   "ecr:BatchCheckLayerAvailability"
-  "ecr:GetDownloadUrlForLayer"
-  "ecr:GetRepositoryPolicy"
-  "ecr:DescribeRepositories"
-  "ecr:ListImages"
-  "ecr:DescribeImages"
   "ecr:BatchGetImage"
+  "ecr:DescribeImages"
+  "ecr:DescribeImageScanFindings"
+  "ecr:DescribeRepositories"
+  "ecr:GetAuthorizationToken"
+  "ecr:GetDownloadUrlForLayer"
   "ecr:GetLifecyclePolicy"
   "ecr:GetLifecyclePolicyPreview"
+  "ecr:GetRepositoryPolicy"
+  "ecr:ListImages"
   "ecr:ListTagsForResource"
-  "ecr:DescribeImageScanFindings"
   ```
 
 :::{note}
 If you are running Fargate or Fargate Spot, you may need the following policies in addition to the listed above:
   ```json
+  "ec2:DescribeSubnets"
   "ecs:CreateCluster"
   "ecs:DeleteCluster"
   "ecs:DescribeClusters"
   "ecs:ListClusters"
-  "ec2:DescribeSubnets"
   ```
 :::
 
@@ -252,7 +253,7 @@ Container options may be passed in long form (e.g `--option value`) or short for
 
 Few examples:
 
-```groovy
+```nextflow
 containerOptions '--tmpfs /run:rw,noexec,nosuid,size=128 --tmpfs /app:ro,size=64'
 
 containerOptions '-e MYVAR1 --env MYVAR2=foo2 --env MYVAR3=foo3 --memory-swap 3240000 --memory-swappiness 20 --shm-size 16000000'
@@ -408,20 +409,6 @@ To do that, first create a **Job Definition** in the AWS Console (or by other me
 process.container = 'job-definition://your-job-definition-name'
 ```
 
-### Pipeline execution
-
-The pipeline can be launched either in a local computer or an EC2 instance. The latter is suggested for heavy or long-running workloads.
-
-Pipeline input data can be stored either locally or in an [S3](https://aws.amazon.com/s3/) bucket. The pipeline execution must specify an S3 bucket to store intermediate results with the `-bucket-dir` (`-b`) command line option. For example:
-
-```bash
-nextflow run my-pipeline -bucket-dir s3://my-bucket/some/path
-```
-
-:::{warning}
-The bucket path should include at least a top level directory name, e.g. `s3://my-bucket/work` rather than `s3://my-bucket`.
-:::
-
 ### Hybrid workloads
 
 Nextflow allows the use of multiple executors in the same workflow application. This feature enables the deployment of hybrid workloads in which some jobs are executed in the local computer or local computing cluster and some jobs are offloaded to AWS Batch.
@@ -429,13 +416,6 @@ Nextflow allows the use of multiple executors in the same workflow application. 
 To enable this feature, use one or more {ref}`config-process-selectors` in your Nextflow configuration to apply the AWS Batch configuration to the subset of processes that you want to offload. For example:
 
 ```groovy
-aws {
-    region = 'eu-west-1'
-    batch {
-        cliPath = '/home/ec2-user/miniconda/bin/aws'
-    }
-}
-
 process {
     withLabel: bigTask {
         executor = 'awsbatch'
@@ -443,9 +423,27 @@ process {
         container = 'my/image:tag'
     }
 }
+
+aws {
+    region = 'eu-west-1'
+}
 ```
 
-With the above configuration, processes with the `bigTask` {ref}`process-label` will run on AWS Batch, while the remaining processes with run in the local computer.
+With the above configuration, processes with the `bigTask` {ref}`process-label` will run on AWS Batch, while the remaining processes will run in the local computer.
+
+Then launch the pipeline with the -bucket-dir option to specify an AWS S3 path for the jobs computed with AWS Batch and, optionally, the -work-dir to specify the local storage for the jobs computed locally:
+
+```bash
+nextflow run <script or project name> -bucket-dir s3://my-bucket/some/path
+```
+
+:::{warning}
+The AWS S3 path needs to contain at least one sub-directory (e.g. `s3://my-bucket/work` rather than `s3://my-bucket`).
+:::
+
+:::{note}
+Nextflow will automatically manage the transfer of input and output files between the local and cloud environments when using hybrid workloads.
+:::
 
 ### Volume mounts
 
@@ -541,7 +539,8 @@ See the AWS documentation for details how to create the required AWS Batch queue
 and the Batch Execution Role.
 
 :::{note}
-This feature requires the use {ref}`Wave <wave-page>` container provisioning service.
+Nextflow uses [s5cmd](https://github.com/peak/s5cmd) to download the task input data and upload the task outputs.
+To enable this capability, you need to enable the Wave service in the Nextflow configuration, as shown in the above example. See {ref}`Wave <wave-page>` documentation for more details.
 :::
 
 ## Advanced configuration

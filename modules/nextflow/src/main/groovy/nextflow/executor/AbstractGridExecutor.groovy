@@ -41,7 +41,7 @@ abstract class AbstractGridExecutor extends Executor {
 
     protected Duration queueInterval
 
-    private final static List<String> INVALID_NAME_CHARS = [ " ", "/", ":", "@", "*", "?", "\\n", "\\t", "\\r" ]
+    private final static List<String> INVALID_NAME_CHARS = [ " ", "/", ":", "@", "*", "?", "\\n", "\\t", "\\r", "=" ]
 
     private Map lastQueueStatus
 

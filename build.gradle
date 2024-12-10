@@ -15,7 +15,7 @@
  */
 
 plugins {
-    id "io.codearte.nexus-staging" version "0.21.2"
+    id "io.codearte.nexus-staging" version "0.30.0"
     id 'java'
     id 'idea'
 }
@@ -73,12 +73,12 @@ allprojects {
     }
 
     compileJava {
-        options.release.set(11)
+        options.release.set(17)
     }
 
     tasks.withType(GroovyCompile) {
-        sourceCompatibility = '11'
-        targetCompatibility = '11'
+        sourceCompatibility = '17'
+        targetCompatibility = '17'
     }
 
     idea {
@@ -109,8 +109,8 @@ allprojects {
 
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:2.4.0'
-        groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.22"
-        groovyDoc "org.apache.groovy:groovy-ant:4.0.22"
+        groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.24"
+        groovyDoc "org.apache.groovy:groovy-ant:4.0.24"
     }
 
     test {
@@ -147,7 +147,6 @@ allprojects {
     // Required to run tests on Java 9 and higher in compatibility mode
     tasks.withType(Test) {
         jvmArgs ([
-            '-Dorg.spockframework.mock.ignoreByteBuddy=true',
             '--enable-preview',
             '--add-opens=java.base/java.lang=ALL-UNNAMED',
             '--add-opens=java.base/java.io=ALL-UNNAMED',

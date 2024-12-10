@@ -95,7 +95,7 @@ Resource requests and other job characteristics can be controlled via the follow
 
 The `flux` executor allows you to run your pipeline script using the [Flux Framework](https://flux-framework.org).
 
-Nextflow manages each process as a separate job that is submitted to the cluster by using the `flux mini submit` command.
+Nextflow submits each process to the cluster as a separate job using the `flux submit` command.
 
 To enable the Flux executor, set `process.executor = 'flux'` in the `nextflow.config` file.
 
@@ -252,9 +252,21 @@ The `local` executor is used by default. It runs the pipeline processes on the c
 
 The `local` executor is useful for developing and testing a pipeline script on your computer, before switching to a cluster or cloud environment with production data.
 
+Resource requests and other job characteristics can be controlled via the following process directives:
+
+- {ref}`process-cpus`
+- {ref}`process-memory`
+- {ref}`process-time`
+- {ref}`process-container`
+- {ref}`process-containerOptions`
+
 :::{note}
 While the `local` executor limits the number of concurrent tasks based on requested vs available resources, it does not enforce task resource requests. In other words, it is possible for a local task to use more CPUs and memory than it requested, in which case it may starve other tasks. An exception to this behavior is when using {ref}`container-docker` or {ref}`container-podman` containers, in which case the resource requests are enforced by the container runtime.
 :::
+
+The local executor supports two types of tasks:
+- Script tasks (processes with a `script` or `shell` block) - executed via a Bash wrapper
+- Native tasks (processes with an `exec` block) - executed directly in the JVM.
 
 (lsf-executor)=
 

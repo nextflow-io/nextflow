@@ -15,7 +15,7 @@
 #  limitations under the License.
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-NXF_VER=${NXF_VER:-'24.07.0-edge'}
+NXF_VER=${NXF_VER:-'24.11.0-edge'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
@@ -313,7 +313,7 @@ if [ ! -x "$JAVA_CMD" ] ; then
             JAVA_CMD="$JAVA_HOME/bin/java"
         fi
     elif [ -x /usr/libexec/java_home ]; then
-        JAVA_CMD="$(/usr/libexec/java_home -v 11+ 2>/dev/null)/bin/java" || JAVA_CMD=java
+        JAVA_CMD="$(/usr/libexec/java_home -v 17+ 2>/dev/null)/bin/java" || JAVA_CMD=java
     else
         JAVA_CMD="$(which java)" || JAVA_CMD=java
     fi
@@ -344,14 +344,8 @@ else
   fi
   major=${BASH_REMATCH[1]}
   minor=${BASH_REMATCH[2]}
-  # legacy version - Java 7/8 only
-  if [ $major -eq 0 ] && [ $minor -lt 26 ]; then
-    version_check="^(1.7|1.8)"
-    version_message="Java 7 or 8"
-  else
-    version_check="^(1.8|9|10|11|12|13|14|15|16|17|18|19|20|21|22)"
-    version_message="Java 8 or later (up to 22)"
-  fi
+  version_check="^(17|18|19|20|21|22|23)"
+  version_message="Java 17 or later (up to 23)"
   if [[ ! $JAVA_VER =~ $version_check ]]; then
       echo_red "ERROR: Cannot find Java or it's a wrong version -- please make sure that $version_message is installed"
       if [[ "$NXF_JAVA_HOME" ]]; then
@@ -360,9 +354,6 @@ else
       echo_yellow "NOTE: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n JAVA_HOME: $JAVA_HOME\n"
       fi
       exit 1
-  fi
-  if [[ ! $JAVA_VER =~ ^(11|12|13|14|15|16|17|18|19|20|21|22) ]]; then
-      echo_yellow "NOTE: Nextflow is not tested with Java $JAVA_VER -- It's recommended the use of version 11 up to 22\n"
   fi
   mkdir -p "$(dirname "$JAVA_KEY")"
   [[ -f $JAVA_VER ]] && echo $JAVA_VER > "$JAVA_KEY"
@@ -389,7 +380,6 @@ if [[ $NXF_LEGACY_LAUNCHER ]]; then
   [[ "$CAPSULE_LOG" ]] && JAVA_OPTS+=(-Dcapsule.log=$CAPSULE_LOG)
   [[ "$CAPSULE_RESET" ]] && JAVA_OPTS+=(-Dcapsule.reset=true)
 fi
-[[ "$JAVA_VER" =~ ^(21|22) ]] && [[ ! "$NXF_ENABLE_VIRTUAL_THREADS" ]] && NXF_ENABLE_VIRTUAL_THREADS=true
 [[ "$cmd" != "run" && "$cmd" != "node" ]] && JAVA_OPTS+=(-XX:+TieredCompilation -XX:TieredStopAtLevel=1)
 [[ "$NXF_OPTS" ]] && JAVA_OPTS+=($NXF_OPTS)
 [[ "$NXF_CLASSPATH" ]] && export NXF_CLASSPATH
@@ -462,33 +452,29 @@ else
     [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
     [[ "$remote_debug" ]] && launcher+=(-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=$NXF_REMOTE_DEBUG_PORT)
 
-    if [[ "$JAVA_VER" =~ ^(9|10|11|12|13|14|15|16|17|18|19|20|21|22) ]]; then
-      launcher+=(--add-opens=java.base/java.lang=ALL-UNNAMED)
-      launcher+=(--add-opens=java.base/java.io=ALL-UNNAMED)
-      launcher+=(--add-opens=java.base/java.nio=ALL-UNNAMED)
-      launcher+=(--add-opens=java.base/java.net=ALL-UNNAMED)
-      launcher+=(--add-opens=java.base/java.util=ALL-UNNAMED)
-      launcher+=(--add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED)
-      launcher+=(--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED)
-      launcher+=(--add-opens=java.base/java.nio.file.spi=ALL-UNNAMED)
-      launcher+=(--add-opens=java.base/sun.nio.ch=ALL-UNNAMED)
-      launcher+=(--add-opens=java.base/sun.nio.fs=ALL-UNNAMED)
-      launcher+=(--add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED)
-      launcher+=(--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED)
-      launcher+=(--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED)
-      launcher+=(--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED)
-      launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
-      launcher+=(--add-opens=java.base/jdk.internal.vm=ALL-UNNAMED)
-      launcher+=(--add-opens=java.base/java.util.regex=ALL-UNNAMED)
-      if [[ "$NXF_ENABLE_VIRTUAL_THREADS" == 'true' ]]; then
-        if [[ "$JAVA_VER" =~ ^(19|20) ]]; then launcher+=(--enable-preview)
-        elif [[ ! "$JAVA_VER" =~ ^(21|22) ]]; then die "Virtual threads require Java 19 or later - current version $JAVA_VER"
-        fi
+    launcher+=(--add-opens=java.base/java.lang=ALL-UNNAMED)
+    launcher+=(--add-opens=java.base/java.io=ALL-UNNAMED)
+    launcher+=(--add-opens=java.base/java.nio=ALL-UNNAMED)
+    launcher+=(--add-opens=java.base/java.net=ALL-UNNAMED)
+    launcher+=(--add-opens=java.base/java.util=ALL-UNNAMED)
+    launcher+=(--add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED)
+    launcher+=(--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED)
+    launcher+=(--add-opens=java.base/java.nio.file.spi=ALL-UNNAMED)
+    launcher+=(--add-opens=java.base/sun.nio.ch=ALL-UNNAMED)
+    launcher+=(--add-opens=java.base/sun.nio.fs=ALL-UNNAMED)
+    launcher+=(--add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED)
+    launcher+=(--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED)
+    launcher+=(--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED)
+    launcher+=(--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED)
+    launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
+    launcher+=(--add-opens=java.base/jdk.internal.vm=ALL-UNNAMED)
+    launcher+=(--add-opens=java.base/java.util.regex=ALL-UNNAMED)
+    if [[ "$NXF_ENABLE_VIRTUAL_THREADS" == 'true' ]]; then
+      if [[ "$JAVA_VER" =~ ^(19|20) ]]; then launcher+=(--enable-preview)
+      elif [[ ! "$JAVA_VER" =~ ^(21|22|23) ]]; then die "Virtual threads require Java 19 or later - current version $JAVA_VER"
       fi
-      launcher+=("${cmd_tail[@]}")
-    else
-      launcher+=("${cmd_tail[@]}")
     fi
+    launcher+=("${cmd_tail[@]}")
 
     # create the launch file only when using the legacy launcher (capsule)
     if [[ $NXF_LEGACY_LAUNCHER ]]; then

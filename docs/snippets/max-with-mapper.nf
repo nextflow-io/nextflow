@@ -1,4 +1,4 @@
 // mapping function
 Channel.of( "hello", "hi", "hey" )
-    .max { it.size() }
+    .max { v -> v.length() }
     .view()

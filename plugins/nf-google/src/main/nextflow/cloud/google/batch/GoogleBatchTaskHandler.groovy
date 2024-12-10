@@ -61,7 +61,9 @@ import nextflow.util.TestOnly
 @CompileStatic
 class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
-    private static Pattern EXIT_CODE_REGEX = ~/exit code 500(\d\d)/
+    private static final Pattern EXIT_CODE_REGEX = ~/exit code 500(\d\d)/
+
+    private static final Pattern BATCH_ERROR_REGEX = ~/Batch Error: code/
 
     private GoogleBatchExecutor executor
 
@@ -98,6 +100,11 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     private volatile CloudMachineInfo machineInfo
 
     private volatile long timestamp
+
+    /**
+     * A flag to indicate that the job has failed without launching any tasks
+     */
+    private volatile boolean noTaskJobfailure
 
     GoogleBatchTaskHandler(TaskRun task, GoogleBatchExecutor executor) {
         super(task)
@@ -302,6 +309,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             if( task.config.getDisk() )
                 log.warn1 'Process directive `disk` ignored because an instance template was specified'
 
+            if( executor.config.getBootDiskImage() )
+                log.warn1 'Config option `google.batch.bootDiskImage` ignored because an instance template was specified'
+
             if( executor.config.cpuPlatform )
                 log.warn1 'Config option `google.batch.cpuPlatform` ignored because an instance template was specified'
 
@@ -330,6 +340,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 instancePolicy.addAccelerators(accelerator)
                 instancePolicyOrTemplate.setInstallGpuDrivers(true)
             }
+
+            if( executor.config.getBootDiskImage() )
+                instancePolicy.setBootDisk( AllocationPolicy.Disk.newBuilder().setImage( executor.config.getBootDiskImage() ) )
 
             if( fusionEnabled() && !disk ) {
                 disk = new DiskResource(request: '375 GB', type: 'local-ssd')
@@ -438,9 +451,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      */
     protected String getTaskState() {
         final tasks = client.listTasks(jobId)
-        if( !tasks.iterator().hasNext() )
-            return 'PENDING'
-
+        if( !tasks.iterator().hasNext() ) {
+            // if there are no tasks checks the job status
+            return checkJobStatus()
+        }
         final now = System.currentTimeMillis()
         final delta =  now - timestamp;
         if( !taskState || delta >= 1_000) {
@@ -459,6 +473,21 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             }
         }
         return taskState
+    }
+
+    protected String checkJobStatus() {
+        final jobStatus = client.getJobStatus(jobId)
+        final newState = jobStatus?.state as String
+        if (newState) {
+            taskState = newState
+            timestamp = System.currentTimeMillis()
+            if (newState == "FAILED") {
+                noTaskJobfailure = true
+            }
+            return taskState
+        } else {
+            return "PENDING"
+        }
     }
 
     static private final List<String> RUNNING_OR_COMPLETED = ['RUNNING', 'SUCCEEDED', 'FAILED']
@@ -503,13 +532,14 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     protected Throwable getJobError() {
         try {
-            final status = client.getTaskStatus(jobId, taskId)
-            final eventsCount = status.getStatusEventsCount()
-            final lastEvent = eventsCount > 0 ? status.getStatusEvents(eventsCount - 1) : null
+            final events = noTaskJobfailure
+                ? client.getJobStatus(jobId).getStatusEventsList()
+                : client.getTaskStatus(jobId, taskId).getStatusEventsList()
+            final lastEvent = events?.get(events.size() - 1)
             log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - last event: ${lastEvent}; exit code: ${lastEvent?.taskExecution?.exitCode}"
 
             final error = lastEvent?.description
-            if( error && EXIT_CODE_REGEX.matcher(error).find() ) {
+            if( error && (EXIT_CODE_REGEX.matcher(error).find() || BATCH_ERROR_REGEX.matcher(error).find()) ) {
                 return new ProcessException(error)
             }
         }

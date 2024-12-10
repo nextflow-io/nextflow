@@ -44,7 +44,7 @@ configuration. For example:
 fusion.enabled = true
 wave.enabled = true
 process.executor = 'azure-batch'
-tower.accessToken = '<your platform access token>'
+tower.accessToken = '<your platform access token>' // optional
 ```
 
 Then run your pipeline using the usual command:
@@ -71,7 +71,7 @@ wave.enabled = true
 process.executor = 'awsbatch'
 process.queue = '<YOUR BATCH QUEUE>'
 aws.region = '<YOUR AWS REGION>'
-tower.accessToken = '<your platform access token>'
+tower.accessToken = '<your platform access token>' // optional
 ```
 
 Then you can run your pipeline using the following command:
@@ -146,7 +146,7 @@ configuration. For example:
 fusion.enabled = true
 wave.enabled = true
 process.executor = 'google-batch'
-tower.accessToken = '<your platform access token>'
+tower.accessToken = '<your platform access token>' // optional
 ```
 
 Then run your pipeline using the usual command:
@@ -172,10 +172,10 @@ process.executor = 'k8s'
 k8s.context = '<YOUR K8S CONFIGURATION CONTEXT>'
 k8s.namespace = '<YOUR K8S NAMESPACE>'
 k8s.serviceAccount = '<YOUR K8S SERVICE ACCOUNT>'
-tower.accessToken = '<your platform access token>'
+tower.accessToken = '<your platform access token>' // optional
 ```
 
-The `k8s.context` represents the Kubernetes configuration context to be used for the pipeline execution. This setting can be omitted if Nextflow itself is run as a pod in the Kubernetes clusters.
+The `k8s.context` represents the Kubernetes configuration context to be used for the pipeline execution. This setting can be omitted if Nextflow itself is running as a pod in the Kubernetes clusters.
 
 The `k8s.namespace` represents the Kubernetes namespace where the jobs submitted by the pipeline execution should be executed.
 
@@ -191,9 +191,10 @@ nextflow run <YOUR PIPELINE> -work-dir s3://<YOUR BUCKET>/scratch
 You an also use Fusion and Kubernetes with Azure Blob Storage and Google Storage using the same deployment approach.
 :::
 
-### Local execution
+### Local execution with AWS S3
 
-Fusion file system allows the use of an S3 bucket as a pipeline work directory with the Nextflow local executor. This configuration requires the use of Docker (or similar container engine) for the execution of your pipeline tasks.
+Fusion file system allows the use of an S3 bucket as a pipeline work directory with the Nextflow local executor. This
+configuration requires the use of Docker (or similar container engine) for the execution of your pipeline tasks.
 
 The AWS S3 bucket credentials should be made accessible via standard `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables.
 
@@ -204,6 +205,7 @@ docker.enabled = true
 fusion.enabled = true
 fusion.exportStorageCredentials = true
 wave.enabled = true
+tower.accessToken = '<your platform access token>' // optional
 ```
 
 Then you can run your pipeline using the following command:
@@ -212,7 +214,7 @@ Then you can run your pipeline using the following command:
 nextflow run <YOUR PIPELINE> -work-dir s3://<YOUR BUCKET>/scratch
 ```
 
-Replace `<YOUR PIPELINE>` and `<YOUR BUCKET>` with a pipeline script and bucket or your choice, for example:
+Replace `<YOUR PIPELINE>` and `<YOUR BUCKET>` with a pipeline script and bucket of your choice, for example:
 
 ```bash
 nextflow run https://github.com/nextflow-io/rnaseq-nf -work-dir s3://nextflow-ci/scratch
@@ -220,7 +222,98 @@ nextflow run https://github.com/nextflow-io/rnaseq-nf -work-dir s3://nextflow-ci
 
 :::{warning}
 The option `fusion.exportStorageCredentials` leaks the AWS credentials on the task launcher script created by Nextflow.
-This option should only be used for development purposes.
+This option should only be used for testing and development purposes.
+:::
+
+### Local execution with Minio
+
+[Minio](https://min.io/) is an open source, enterprise grade, object storage compatible with AWS S3. Nextflow and Fusion
+can use Minio (or other S3-compatible object storages) as an alternative to AWS S3 in some deployment scenarios.
+
+This configuration requires the the use of Nextflow local execution and Docker (or similar container engine) for the
+execution of your pipeline tasks.
+
+For the same of this example, runs a local instance of Minio using this command:
+
+```
+docker run -p 9000:9000 \
+    --rm -d -p 9001:9001 \
+    -e "MINIO_ROOT_USER=admin" \
+    -e "MINIO_ROOT_PASSWORD=secret" \
+    quay.io/minio/minio server /data --console-address ":9001"
+```
+
+Open the Minio console opening in your browser this address `http://localhost:9001`, then create a credentials pair,
+and a bucket. For the sake of this example the bucket name `foobar` will be used.
+
+
+The following configuration should be added in your Nextflow configuration file:
+
+```groovy
+aws.accessKey = '<YOUR MINIO ACCESS KEY>'
+aws.secretKey = '<YOUR MINIO SECRET KEY>'
+aws.client.endpoint = 'http://localhost:9000'
+aws.client.s3PathStyleAccess = true
+wave.enabled = true
+fusion.enabled = true
+fusion.exportStorageCredentials = true
+docker.enabled = true
+tower.accessToken = '<your platform access token>' // optional
+```
+
+Then you can run your pipeline using the following command:
+
+```bash
+nextflow run <YOUR PIPELINE> -work-dir s3://foobar/scratch
+```
+
+Replace `<YOUR PIPELINE>` with a pipeline script and bucket of your choice:
+
+:::{warning}
+The option `fusion.exportStorageCredentials` leaks the AWS credentials on the task launcher script created by Nextflow.
+This option should only be used for testing and development purposes.
+:::
+
+### Local execution with Oracle Object Storage
+
+Fusion file system and Nextflow are compatible with [Oracle Object Storage](https://www.oracle.com/cloud/storage/object-storage/).
+
+:::{note}
+This capability relies on the S3-like API compatibility provided by Oracle storage and not by a native support in
+Nextflow and Fusion. As such it may not fully work and support all Nextflow and Fusion features.
+:::
+
+This configuration requires the execution of your pipeline tasks using Docker or a similar container engine.
+
+The following should be included in your Nextflow configuration file:
+
+```groovy
+aws.region = '<YOUR_REGION>'
+aws.accessKey = '<YOUR_ACCESS_KEY>'
+aws.secretKey = '<YOUR_SECRET_KEY>'
+aws.client.endpoint = 'https://<YOUR_BUCKET_NAMESPACE>.compat.objectstorage.<YOUR_REGION>.oraclecloud.com'
+aws.client.s3PathStyleAccess = true
+aws.client.protocol = 'https'
+aws.client.signerOverride = 'AWSS3V4SignerType'
+docker.enabled = true
+docker.containerOptions = '-e FUSION_AWS_REGION=<YOUR_REGION>'
+fusion.enabled = true
+fusion.exportStorageCredentials = true
+wave.enabled = true
+tower.accessToken = '<YOUR_PLATFORM_ACCESS_TOKEN>' // optional
+```
+
+Then you can run your pipeline using the following command:
+
+```bash
+nextflow run <YOUR_PIPELINE> -work-dir s3://<YOUR_BUCKET>/scratch
+```
+
+In the above snippet replace the placeholders `<YOUR_ACCESS_KEY>` and `<YOUR_SECRET_KEY>` with your [Oracle Customer Secret Key](https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/managingcredentials.htm#Working2),
+and the placeholders `<YOUR_BUCKET_NAMESPACE>` and `<YOUR_REGION>` with the namespace and region of your Oracle bucket.
+
+:::{warning}
+The `fusion.exportStorageCredentials` option leaks the Oracle credentials to the Nextflow task launcher script and should only be used for testing and development purposes.
 :::
 
 ## Advanced settings

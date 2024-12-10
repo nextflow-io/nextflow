@@ -38,24 +38,27 @@ dependencies {
     compileOnly 'org.pf4j:pf4j:3.12.0'
 
     api ('javax.xml.bind:jaxb-api:2.4.0-b180830.0359')
-    api ('com.amazonaws:aws-java-sdk-s3:1.12.766')
-    api ('com.amazonaws:aws-java-sdk-ec2:1.12.766')
-    api ('com.amazonaws:aws-java-sdk-batch:1.12.766')
-    api ('com.amazonaws:aws-java-sdk-iam:1.12.766')
-    api ('com.amazonaws:aws-java-sdk-ecs:1.12.766')
-    api ('com.amazonaws:aws-java-sdk-logs:1.12.766')
-    api ('com.amazonaws:aws-java-sdk-codecommit:1.12.766')
-    api ('com.amazonaws:aws-java-sdk-sts:1.12.766')
-    api ('com.amazonaws:aws-java-sdk-ses:1.12.766')
+    api ('com.amazonaws:aws-java-sdk-s3:1.12.777')
+    api ('com.amazonaws:aws-java-sdk-ec2:1.12.777')
+    api ('com.amazonaws:aws-java-sdk-batch:1.12.777')
+    api ('com.amazonaws:aws-java-sdk-iam:1.12.777')
+    api ('com.amazonaws:aws-java-sdk-ecs:1.12.777')
+    api ('com.amazonaws:aws-java-sdk-logs:1.12.777')
+    api ('com.amazonaws:aws-java-sdk-codecommit:1.12.777')
+    api ('com.amazonaws:aws-java-sdk-sts:1.12.777')
+    api ('com.amazonaws:aws-java-sdk-ses:1.12.777')
     api ('software.amazon.awssdk:sso:2.26.26')
     api ('software.amazon.awssdk:ssooidc:2.26.26')
 
     constraints {
         api 'com.fasterxml.jackson.core:jackson-databind:2.12.7.1'
     }
+
+    // address security vulnerabilities
+    runtimeOnly 'io.netty:netty-common:4.1.115.Final'
         
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.apache.groovy:groovy:4.0.22"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.22"
+    testImplementation "org.apache.groovy:groovy:4.0.24"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.24"
 }

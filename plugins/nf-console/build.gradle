@@ -38,13 +38,13 @@ dependencies {
     compileOnly 'org.pf4j:pf4j:3.12.0'
 
     api("org.apache.groovy:groovy-console:4.0.21-patch.2") { transitive=false }
-    api("org.apache.groovy:groovy-swing:4.0.22")  { transitive=false }
+    api("org.apache.groovy:groovy-swing:4.0.24")  { transitive=false }
     // this is required by 'groovy-console'  
     api("com.github.javaparser:javaparser-core:3.25.8")
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.apache.groovy:groovy:4.0.22"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.22"
+    testImplementation "org.apache.groovy:groovy:4.0.24"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.24"
 }
 

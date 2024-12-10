@@ -15,6 +15,8 @@
  */
 package nextflow.processor
 
+import nextflow.trace.TraceRecord
+
 import static nextflow.processor.ErrorStrategy.*
 
 import java.lang.reflect.InvocationTargetException
@@ -85,7 +87,6 @@ import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
-import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
 import nextflow.script.params.BaseOutParam
 import nextflow.script.params.CmdEvalParam
@@ -308,6 +309,8 @@ class TaskProcessor {
         this.ownerScript = script
         this.config = config
         this.taskBody = taskBody
+        if( taskBody.isShell )
+            log.warn "Process ${name} > the `shell` block is deprecated, use `script` instead"
         this.name = name
         this.maxForks = config.maxForks && config.maxForks>0 ? config.maxForks as int : 0
         this.forksCount = maxForks ? new LongAdder() : null
@@ -642,14 +645,8 @@ class TaskProcessor {
         if( !checkWhenGuard(task) )
             return
 
-        TaskClosure block
-        if( session.stubRun && (block=task.config.getStubBlock()) ) {
-            task.resolve(block)
-        }
-        else {
-            // -- resolve the task command script
-            task.resolve(taskBody)
-        }
+        // -- resolve the task command script
+        task.resolve(taskBody)
 
         // -- verify if exists a stored result for this case,
         //    if true skip the execution and return the stored data
@@ -1023,7 +1020,7 @@ class TaskProcessor {
      *      a {@link ErrorStrategy#TERMINATE})
      */
     @PackageScope
-    final synchronized resumeOrDie( TaskRun task, Throwable error ) {
+    final synchronized resumeOrDie( TaskRun task, Throwable error, TraceRecord traceRecord = null) {
         log.debug "Handling unexpected condition for\n  task: name=${safeTaskName(task)}; work-dir=${task?.workDirStr}\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
         ErrorStrategy errorStrategy = TERMINATE
@@ -1068,6 +1065,10 @@ class TaskProcessor {
                 task.config.exitStatus = task.exitStatus
                 task.config.errorCount = procErrCount
                 task.config.retryCount = taskErrCount
+                //Add trace of the previous execution in the task context for next execution
+                if ( traceRecord )
+                    task.config.previousTrace = traceRecord
+                task.config.previousException = error
 
                 errorStrategy = checkErrorStrategy(task, error, taskErrCount, procErrCount, submitRetries)
                 if( errorStrategy.soft ) {
@@ -1284,6 +1285,9 @@ class TaskProcessor {
 
         if( task?.workDir )
             message << "\nWork dir:\n  ${task.workDirStr}"
+
+        if( task?.isContainerEnabled() )
+            message << "\nContainer:\n  ${task.container}".toString()
 
         message << suggestTip(message)
 
@@ -2365,7 +2369,8 @@ class TaskProcessor {
      * @param task The {@code TaskRun} instance to finalize
      */
     @PackageScope
-    final finalizeTask( TaskRun task ) {
+    final finalizeTask( TaskHandler handler) {
+        def task = handler.task
         log.trace "finalizing process > ${safeTaskName(task)} -- $task"
 
         def fault = null
@@ -2388,7 +2393,7 @@ class TaskProcessor {
             collectOutputs(task)
         }
         catch ( Throwable error ) {
-            fault = resumeOrDie(task, error)
+            fault = resumeOrDie(task, error, handler.getTraceRecord())
             log.trace "Task fault (3): $fault"
         }
 

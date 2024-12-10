@@ -559,7 +559,7 @@ class BashWrapperBuilderTest extends Specification {
         binding.unstage_outputs == '''\
                 IFS=$'\\n'
                 for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
-                    nxf_fs_copy "$name" /work/dir || true
+                    nxf_fs_copy "$name" /work/dir
                 done
                 unset IFS
                 '''.stripIndent().rightTrim()
@@ -576,7 +576,7 @@ class BashWrapperBuilderTest extends Specification {
         binding.unstage_outputs == '''\
                 IFS=$'\\n'
                 for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
-                    nxf_fs_move "$name" /another/dir || true
+                    nxf_fs_move "$name" /another/dir
                 done
                 unset IFS
                 '''.stripIndent().rightTrim()
@@ -781,7 +781,24 @@ class BashWrapperBuilderTest extends Specification {
                 # conda environment
                 source $(conda info --json | awk '/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }')/bin/activate /some/conda/env/foo
                 '''.stripIndent()
+    }
 
+    def 'should create micromamba activate snippet' () {
+
+        when:
+        def binding = newBashWrapperBuilder().makeBinding()
+        then:
+        binding.conda_activate == null
+        binding.containsKey('conda_activate')
+
+        when:
+        def CONDA = Paths.get('/some/conda/env/foo')
+        binding = newBashWrapperBuilder([condaEnv: CONDA, 'useMicromamba': true]).makeBinding()
+        then:
+        binding.conda_activate == '''\
+                # conda environment
+                eval "$(micromamba shell hook --shell bash)" && micromamba activate /some/conda/env/foo
+                '''.stripIndent()
     }
 
     def 'should create spack activate snippet' () {
@@ -1318,6 +1335,46 @@ class BashWrapperBuilderTest extends Specification {
         binding.stage_cmd == 'nxf_stage'
         binding.unstage_cmd == 'nxf_unstage'
         
+    }
+
+    def 'should get unstage control script'(){
+        given:
+        BashWrapperBuilder builder
+        when:
+        builder = newBashWrapperBuilder()
+        then:
+        builder.getUnstageControls() == '''\
+                cp .command.out /work/dir/.command.out || true
+                cp .command.err /work/dir/.command.err || true
+                '''.stripIndent()
+
+
+        when:
+        builder = newBashWrapperBuilder(statsEnabled: true)
+        then:
+        builder.getUnstageControls() == '''\
+                cp .command.out /work/dir/.command.out || true
+                cp .command.err /work/dir/.command.err || true
+                cp .command.trace /work/dir/.command.trace || true
+                '''.stripIndent()
+
+        when:
+        builder = newBashWrapperBuilder(outputEnvNames: ['some-data'])
+        then:
+        builder.getUnstageControls() == '''\
+                cp .command.out /work/dir/.command.out || true
+                cp .command.err /work/dir/.command.err || true
+                cp .command.env /work/dir/.command.env || true
+                '''.stripIndent()
+
+        when:
+        builder = newBashWrapperBuilder(outputEvals: [some:'data'])
+        then:
+        builder.getUnstageControls() == '''\
+                cp .command.out /work/dir/.command.out || true
+                cp .command.err /work/dir/.command.err || true
+                cp .command.env /work/dir/.command.env || true
+                '''.stripIndent()
     }
 
 

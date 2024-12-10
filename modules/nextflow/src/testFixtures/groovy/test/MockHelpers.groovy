@@ -175,7 +175,7 @@ class MockTaskHandler extends TaskHandler {
             task.code.call()
         }
         status = TaskStatus.COMPLETED
-        task.processor.finalizeTask(task)
+        task.processor.finalizeTask(this)
     }
 
     @Override

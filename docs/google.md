@@ -99,11 +99,12 @@ location and that fits the requested resources. If `memory` is not specified, 1 
 The `machineType` directive can be used to request a specific VM instance type. It can be any predefined Google Compute
 Platform [machine type](https://cloud.google.com/compute/docs/machine-types) or [custom machine type](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type).
 
-```groovy
+```nextflow
 process myTask {
     cpus 8
     memory '40 GB'
 
+    script:
     """
     your_command --here
     """
@@ -112,6 +113,7 @@ process myTask {
 process anotherTask {
     machineType 'n1-highmem-8'
 
+    script:
     """
     your_command --here
     """
@@ -124,12 +126,13 @@ process anotherTask {
 The `machineType` directive can also be a comma-separated list of patterns. The pattern can contain a `*` to match any
 number of characters and `?` to match any single character. Examples of valid patterns: `c2-*`, `m?-standard*`, `n*`.
 
-```groovy
+```nextflow
 process myTask {
     cpus 8
     memory '20 GB'
     machineType 'n2-*,c2-*,m3-*'
 
+    script:
     """
     your_command --here
     """
@@ -142,12 +145,13 @@ process myTask {
 The `machineType` directive can also be an [Instance Template](https://cloud.google.com/compute/docs/instance-templates),
 specified as `template://<instance-template>`. For example:
 
-```groovy
+```nextflow
 process myTask {
     cpus 8
     memory '20 GB'
     machineType 'template://my-template'
 
+    script:
     """
     your_command --here
     """
@@ -156,7 +160,7 @@ process myTask {
 
 :::{note}
 Using an instance template will overwrite the `accelerator` and `disk` directives, as well as the following Google Batch
-config options: `cpuPlatform`, `preemptible`, and `spot`.
+config options: `bootDiskImage`, `cpuPlatform`, `preemptible`, and `spot`.
 :::
 
 To use an instance template with GPUs, you must also set the `google.batch.installGpuDrivers` config option to `true`.
@@ -172,7 +176,7 @@ The `disk` directive can be used to set the boot disk size or provision a disk f
 
 Examples:
 
-```groovy
+```nextflow
 // set the boot disk size
 disk 100.GB
 
@@ -335,22 +339,24 @@ The process `machineType` directive may optionally be used to specify a predefin
 
 Examples:
 
-```groovy
+```nextflow
 process custom_resources_task {
     cpus 8
     memory '40 GB'
     disk '200 GB'
 
+    script:
     """
-    <Your script here>
+    your_command --here
     """
 }
 
 process predefined_resources_task {
     machineType 'n1-highmem-8'
 
+    script:
     """
-    <Your script here>
+    your_command --here
     """
 }
 ```
@@ -398,25 +404,26 @@ For an exhaustive list of error codes, refer to the official Google Life Science
 
 ### Hybrid execution
 
-Nextflow allows the use of multiple executors in the same workflow. This feature enables the deployment of hybrid workloads, in which some jobs are executed in the local computer or local computing cluster, and some jobs are offloaded to Google Life Sciences.
+Nextflow allows the use of multiple executors in the same workflow. This feature enables the deployment of hybrid workloads, in which some jobs are executed in the local computer or local computing cluster, and some jobs are offloaded to Google Cloud (either Google Batch or Google Life Sciences).
 
-To enable this feature, use one or more {ref}`config-process-selectors` in your Nextflow configuration file to apply the Google Life Sciences executor to the subset of processes that you want to offload. For example:
+To enable this feature, use one or more {ref}`config-process-selectors` in your Nextflow configuration file to apply the Google Cloud executor to the subset of processes that you want to offload. For example:
 
 ```groovy
 process {
     withLabel: bigTask {
-        executor = 'google-lifesciences'
+        executor = 'google-batch' // or 'google-lifesciences'
         container = 'my/image:tag'
     }
 }
 
 google {
     project = 'your-project-id'
-    zone = 'europe-west1-b'
+    location = 'us-central1' // for Google Batch
+    // zone = 'us-central1-a' // for Google Life Sciences
 }
 ```
 
-Then launch the pipeline with the `-bucket-dir` option to specify a Google Storage path for the jobs computed with Google Life Sciences and, optionally, the `-work-dir` to specify the local storage for the jobs computed locally:
+Then launch the pipeline with the `-bucket-dir` option to specify a Google Storage path for the jobs computed with Google Cloud and, optionally, the `-work-dir` to specify the local storage for the jobs computed locally:
 
 ```bash
 nextflow run <script or project name> -bucket-dir gs://my-bucket/some/path
@@ -424,6 +431,10 @@ nextflow run <script or project name> -bucket-dir gs://my-bucket/some/path
 
 :::{warning}
 The Google Storage path needs to contain at least one sub-directory (e.g. `gs://my-bucket/work` rather than `gs://my-bucket`).
+:::
+
+:::{note}
+Nextflow will automatically manage the transfer of input and output files between the local and cloud environments when using hybrid workloads.
 :::
 
 ### Limitations
