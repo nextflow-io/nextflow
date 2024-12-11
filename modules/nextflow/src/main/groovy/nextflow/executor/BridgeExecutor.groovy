@@ -124,6 +124,11 @@ class BridgeExecutor extends AbstractGridExecutor {
     protected List<String> getKillCommand() { ['ccc_mdel'] }
 
     @Override
+    List<String> queueJobStatusReportCommand(Object jobId, Object queue) {
+        return ['ccc_mstat','-H', jobId.toString()]
+    }
+
+    @Override
     protected List<String> queueStatusCommand(Object queue) {
 
         final result = ['ccc_bsstat','-o','batchid,state']
