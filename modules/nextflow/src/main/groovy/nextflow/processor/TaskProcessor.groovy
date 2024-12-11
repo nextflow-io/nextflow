@@ -803,16 +803,18 @@ class TaskProcessor {
         while( true ) {
             hash = HashBuilder.defaultHasher().putBytes(hash.asBytes()).putInt(tries).hash()
 
-            Path resumeDir = null
+            Path workDir = null
             boolean exists = false
             try {
                 final entry = session.cache.getTaskEntry(hash, this)
-                resumeDir = entry ? FileHelper.asPath(entry.trace.getWorkDir()) : null
-                if( resumeDir )
-                    exists = resumeDir.exists()
+                workDir = entry
+                    ? FileHelper.asPath(entry.trace.getWorkDir())
+                    : task.getWorkDirFor(hash)
+                if( workDir )
+                    exists = workDir.exists()
 
-                log.trace "[${safeTaskName(task)}] Cacheable folder=${resumeDir?.toUriString()} -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache; entry=$entry"
-                final cached = shouldTryCache && exists && entry.trace.isCompleted() && checkCachedOutput(task.clone(), resumeDir, hash, entry)
+                log.trace "[${safeTaskName(task)}] Cacheable folder=${workDir?.toUriString()} -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache; entry=$entry"
+                final cached = shouldTryCache && exists && entry && entry.trace.isCompleted() && checkCachedOutput(task.clone(), workDir, hash, entry)
                 if( cached )
                     break
             }
@@ -826,10 +828,7 @@ class TaskProcessor {
             }
 
             final lock = lockManager.acquire(hash)
-            final workDir = task.getWorkDirFor(hash)
             try {
-                if( resumeDir != workDir )
-                    exists = workDir.exists()
                 if( !exists && !workDir.mkdirs() )
                     throw new IOException("Unable to create directory=$workDir -- check file system permissions")
             }
