@@ -50,12 +50,6 @@ class CharliecloudCache {
 
     private Duration pullTimeout = Duration.of('20min')
 
-    private String registry
-
-    /** Only for debugging purpose - do not use */
-    @PackageScope
-    CharliecloudCache() {}
-
     /**
      * Create a Charliecloud cache object
      *
@@ -81,14 +75,6 @@ class CharliecloudCache {
         def p = imageUrl.indexOf('://')
         def name = p != -1 ? imageUrl.substring(p+3) : imageUrl
         
-        // add registry
-        if( registry ) {
-            if( !registry.endsWith('/') ) {
-                registry += '/'
-            }
-            name = registry + name
-        }
-
         name = name.replace(':','+').replace('/','%')
         return name 
     }

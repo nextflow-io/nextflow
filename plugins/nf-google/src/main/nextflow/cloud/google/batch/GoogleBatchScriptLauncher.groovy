@@ -32,6 +32,7 @@ import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
 import nextflow.util.Escape
 import nextflow.util.PathTrie
+import nextflow.util.TestOnly
 
 /**
  * Implement Nextflow task launcher script
@@ -50,7 +51,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
     private Set<String> buckets = new HashSet<>()
     private PathTrie pathTrie = new PathTrie()
 
-    /* ONLY FOR TESTING - DO NOT USE */
+    @TestOnly
     protected GoogleBatchScriptLauncher() {}
 
     GoogleBatchScriptLauncher(TaskBean bean, Path remoteBinDir) {
