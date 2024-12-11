@@ -92,6 +92,11 @@ The following environment variables control the configuration of the Nextflow ru
   :::
 : Enable Nextflow *strict* execution mode (default: `false`)
 
+`NXF_ENABLE_STRICT_PARSER`
+: :::{versionadded} 25.04.0
+  :::
+: Enable the strict parser for Nextflow config files.
+
 `NXF_ENABLE_VIRTUAL_THREADS`
 : :::{versionadded} 23.05.0-edge
   :::
