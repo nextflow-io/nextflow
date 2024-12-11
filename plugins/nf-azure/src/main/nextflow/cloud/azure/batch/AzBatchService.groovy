@@ -203,7 +203,6 @@ class AzBatchService implements Closeable {
             }
         }
         def sortedScores = scores.sort { it[0] }
-        log.warn "[AZURE BATCH] sortedScores: $sortedScores"
         return sortedScores ? getVmType(location, sortedScores.first()[1] as String) : null
     }
 
