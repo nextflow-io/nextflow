@@ -14,7 +14,7 @@ You can configure your credentials for various Git providers in the Git configur
 
 ## Using a local repository
 
-Nextflow can work with repositories stored in a local or shared file system. The repository must be created as a [bare repository](https://mijingo.com/blog/what-is-a-bare-git-repository).
+Nextflow can work with repositories stored in a local or shared file system. The repository must be created as a [bare repository](https://craftquest.io/articles/what-is-a-bare-git-repository).
 
 For example, given a bare repository at `/shared/projects/foo.git`, Nextflow is able to run it using the following syntax:
 
