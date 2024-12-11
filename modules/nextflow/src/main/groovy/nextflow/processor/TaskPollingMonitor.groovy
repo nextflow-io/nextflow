@@ -16,6 +16,12 @@
 
 package nextflow.processor
 
+import nextflow.cloud.CloudSpotTerminationException
+import nextflow.exception.FailedGuardException
+import nextflow.exception.ProcessEvalException
+import nextflow.exception.ProcessException
+import nextflow.exception.ProcessRetryableException
+
 import static nextflow.processor.TaskProcessor.*
 
 import java.util.concurrent.ExecutorService
@@ -34,10 +40,9 @@ import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.executor.BatchCleanup
 import nextflow.executor.GridTaskHandler
 import nextflow.util.Duration
+import nextflow.util.SysHelper
 import nextflow.util.Threads
 import nextflow.util.Throttle
-import static nextflow.util.SysHelper.dumpThreads
-
 /**
  * Monitors the queued tasks waiting for their termination
  *
@@ -465,7 +470,7 @@ class TaskPollingMonitor implements TaskMonitor {
     }
 
     protected dumpCurrentThreads() {
-        log.trace "Current running threads:\n${dumpThreads()}"
+        log.trace "Current running threads:\n${SysHelper.dumpThreads()}"
     }
 
     protected void dumpRunningQueue() {
@@ -573,6 +578,9 @@ class TaskPollingMonitor implements TaskMonitor {
                 checkTaskStatus(handler)
             }
             catch (Throwable error) {
+                // At this point NF assumes job is not running, but there could be errors at monitoring that could leave a job running (#5516).
+                // In this case, NF needs to ensure the job is killed.
+                handler.kill()
                 handleException(handler, error)
             }
         }

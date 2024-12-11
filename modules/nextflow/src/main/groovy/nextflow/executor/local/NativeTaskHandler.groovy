@@ -108,7 +108,7 @@ class NativeTaskHandler extends TaskHandler {
     }
 
     @Override
-    void kill() {
+    protected void killTask() {
         if( result ) result.cancel(true)
     }
 

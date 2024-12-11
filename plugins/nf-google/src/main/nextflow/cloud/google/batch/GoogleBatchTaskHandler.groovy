@@ -563,7 +563,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     @Override
-    void kill() {
+    protected void killTask() {
         if( isActive() ) {
             log.trace "[GOOGLE BATCH] Process `${task.lazyName()}` - deleting job name=$jobId"
             if( executor.shouldDeleteJob(jobId) )

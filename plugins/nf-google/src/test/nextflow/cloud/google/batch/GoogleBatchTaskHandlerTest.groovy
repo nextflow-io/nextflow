@@ -559,7 +559,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
         when:
         handler.@jobId = 'job1'
-        handler.kill()
+        handler.killTask()
         then:
         handler.isActive() >> false
         0 * executor.shouldDeleteJob('job1') >> true
@@ -568,7 +568,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
         when:
         handler.@jobId = 'job1'
-        handler.kill()
+        handler.killTask()
         then:
         handler.isActive() >> true
         1 * executor.shouldDeleteJob('job1') >> true
@@ -577,7 +577,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
         when:
         handler.@jobId = 'job1'
-        handler.kill()
+        handler.killTask()
         then:
         handler.isActive() >> true
         1 * executor.shouldDeleteJob('job1') >> false
