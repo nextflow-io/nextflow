@@ -70,7 +70,8 @@ class CmdInspect extends CmdBase {
 
     @Override
     void run() {
-        ContainerInspectMode.activate(!concretize)
+        ContainerInspectMode.activate(true)
+        ContainerInspectMode.concretize(concretize)
         // configure quiet mode
         LoggerHelper.setQuiet(true)
         // setup the target run command

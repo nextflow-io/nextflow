@@ -41,7 +41,7 @@ class ContainersInspectorTest extends Specification {
         }
         final processDef = Mock(ProcessDef) {
             getName() >> name
-            getTaskProcessor() >> Mock(TaskProcessor) {
+            createTaskProcessor() >> Mock(TaskProcessor) {
                 createTaskPreview() >> Mock(TaskRun) {
                     getContainer() >> container
                 }

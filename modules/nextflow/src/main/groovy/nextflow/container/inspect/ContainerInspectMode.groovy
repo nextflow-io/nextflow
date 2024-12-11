@@ -28,8 +28,14 @@ class ContainerInspectMode {
 
     private static Boolean active
 
+    private static Boolean concretize = true
+
     static boolean active() { return active==true }
 
     static void activate(boolean value) { active = value }
+
+    static boolean concretizeEnabled() { return concretize==true }
+
+    static void concretize(boolean value) { concretize = value }
 
 }

@@ -210,14 +210,14 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         output = new ChannelOut(declaredOutputs.clone())
 
         // start processor
-        getTaskProcessor().run()
+        createTaskProcessor().run()
 
         // the result channels
         assert declaredOutputs.size()>0, "Process output should contains at least one channel"
         return output
     }
 
-    TaskProcessor getTaskProcessor() {
+    TaskProcessor createTaskProcessor() {
         if( !processConfig )
             initialize()
         final executor = session
