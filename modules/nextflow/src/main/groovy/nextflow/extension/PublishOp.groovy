@@ -22,6 +22,7 @@ import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
+import nextflow.file.FileHelper
 import nextflow.Global
 import nextflow.Session
 import nextflow.processor.PublishDir
@@ -76,7 +77,7 @@ class PublishOp {
 
         // evaluate dynamic path
         final path = pathAs != null
-            ? pathAs.call(value)
+            ? targetDir.resolve(pathAs.call(value) as String)
             : targetDir
         if( path == null )
             return
