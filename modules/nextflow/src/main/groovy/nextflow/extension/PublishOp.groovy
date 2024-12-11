@@ -21,7 +21,6 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
-import nextflow.Global
 import nextflow.Session
 import nextflow.processor.PublishDir
 import nextflow.util.CsvWriter
@@ -34,6 +33,8 @@ import nextflow.util.CsvWriter
 @Slf4j
 @CompileStatic
 class PublishOp {
+
+    private Session session
 
     private DataflowReadChannel source
 
@@ -49,9 +50,8 @@ class PublishOp {
 
     private volatile boolean complete
 
-    private Session getSession() { Global.session as Session }
-
-    PublishOp(DataflowReadChannel source, Map opts) {
+    PublishOp(Session session, DataflowReadChannel source, Map opts) {
+        this.session = session
         this.source = source
         this.opts = opts
         this.path = opts.path as String

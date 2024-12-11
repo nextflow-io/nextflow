@@ -40,9 +40,8 @@ class PublishOpS3Test extends BaseSpec {
             getWorkDir() >> BASE
             getBucketDir() >> BUCKET_DIR
         }
-        Global.session = sess
 
-        def op = new PublishOp(Mock(DataflowReadChannel), [to:'/target'])
+        def op = new PublishOp(sess, Mock(DataflowReadChannel), [to:'/target'])
 
         when:
         def result = op.getTaskDir( BASE.resolve('xx/yyyy/this/and/that.txt') )

@@ -21,7 +21,6 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import nextflow.Global
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
@@ -36,8 +35,6 @@ import nextflow.file.FileHelper
 @Slf4j
 @CompileStatic
 class OutputDsl {
-
-    private Session session = Global.session as Session
 
     private Map<String,Map> targetConfigs = [:]
 
@@ -56,7 +53,8 @@ class OutputDsl {
         targetConfigs[name] = dsl.getOptions()
     }
 
-    void build(Map<DataflowWriteChannel,String> targets) {
+    void build(Session session) {
+        final targets = session.publishTargets
         final defaults = session.config.navigate('workflow.output', Collections.emptyMap()) as Map
 
         // construct mapping of target name -> source channels
@@ -86,7 +84,7 @@ class OutputDsl {
             final opts = publishOptions(name, defaults, overrides)
 
             if( opts.enabled == null || opts.enabled )
-                ops << new PublishOp(CH.getReadChannel(mixed), opts).apply()
+                ops << new PublishOp(session, CH.getReadChannel(mixed), opts).apply()
         }
     }
 
