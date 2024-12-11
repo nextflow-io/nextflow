@@ -190,19 +190,21 @@ class AzBatchService implements Closeable {
      */
     AzVmType findBestVm(String location, int cpus, MemoryUnit mem, MemoryUnit disk, String allFamilies) {
         def all = listAllVms(location)
-        def scores = new TreeMap<Double,String>()
+        List<Tuple2<Double,String>> scores = []
         def list = allFamilies ? allFamilies.tokenize(',') : ['']
         for( String family : list ) {
             for( Map entry : all ) {
                 if( !matchType(family, entry.name as String) )
                     continue
                 def score = computeScore(cpus, mem, disk, entry)
-                if( score != null )
-                    scores.put(score, entry.name as String)
+                if( score != null ) {
+                    scores << new Tuple2(score, entry.name as String)
+                }
             }
         }
-
-        return scores ? getVmType(location, scores.firstEntry().value) : null
+        def sortedScores = scores.sort { it[0] }
+        log.warn "[AZURE BATCH] sortedScores: $sortedScores"
+        return sortedScores ? getVmType(location, sortedScores.first()[1] as String) : null
     }
 
     protected boolean matchType(String family, String vmType) {
@@ -219,14 +221,14 @@ class AzBatchService implements Closeable {
     protected Double computeScore(int cpus, MemoryUnit mem, MemoryUnit disk, Map entry) {
         def vmCores = entry.numberOfCores as int
         double vmMemGb = (entry.memoryInMB as int) /1024
-        double vmDiskGb = entry.resourceDiskSizeInMB ? (entry.resourceDiskSizeInMB as int) / 1024 : entry.osDiskSizeInMB ? (entry.osDiskSizeInMB as int) / 1024 : 0.001
+        double vmDiskGb = entry.resourceDiskSizeInMB ? (entry.resourceDiskSizeInMB as int) / 1024 : 0.0
 
         // If requested CPUs exceed available, disqualify
         if( cpus > vmCores )
             return null
 
         // If disk is requested but VM has no resource disk, disqualify
-        if( disk && vmDiskGb == 0 )
+        if( disk && vmDiskGb == 0.0 )
             return null
 
         // Calculate weighted scores
@@ -256,6 +258,11 @@ class AzBatchService implements Closeable {
 
         // Round to 3 decimal places
         if (score == 0.0) return 0.0
+
+        // Add a small fraction based on name length to uniqueify names
+        // and  sort scores by VM name from smallest to largest
+        // VM sizes with shorter names have fewer features and are less expensive
+        score += 1-(1.0/entry.name.toString().length())
         return new BigDecimal(score).setScale(3, RoundingMode.HALF_UP).doubleValue()
     }
 

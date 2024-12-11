@@ -134,11 +134,11 @@ class AzBatchServiceTest extends Specification {
         1       | '10 MB' | '10 MB' | [numberOfCores: 1, memoryInMB: 10, resourceDiskSizeInMB: 10]       | 0.000    // Perfect match
         2       | '10 MB' | '10 MB' | [numberOfCores: 1, memoryInMB: 10, resourceDiskSizeInMB: 10]       | null     // Too many CPUs requested
         1       | '10 GB' | '10 MB' | [numberOfCores: 1, memoryInMB: 10, resourceDiskSizeInMB: 10]       | null     // Too much memory requested
-        1       | '10 MB' | '10 MB' | [numberOfCores: 2, memoryInMB: 10, resourceDiskSizeInMB: 10]       | 10.000   // VM has 1 extra CPU (weighted *10)
-        1       | '5 MB'  | '10 MB' | [numberOfCores: 1, memoryInMB: 10, resourceDiskSizeInMB: 10]       | 0.005    // VM has 5MB more memory
-        1       | '10 MB' | '5 MB'  | [numberOfCores: 1, memoryInMB: 10, resourceDiskSizeInMB: 10]       | 0.000    // Disk difference negligible after /100
+        1       | '10 MB' | '10 MB' | [numberOfCores: 2, memoryInMB: 10, resourceDiskSizeInMB: 10]       | 10.75    // VM has 1 extra CPU (weighted *10)
+        1       | '5 MB'  | '10 MB' | [numberOfCores: 1, memoryInMB: 10, resourceDiskSizeInMB: 10]       | 0.755    // VM has 5MB more memory
+        1       | '10 MB' | '5 MB'  | [numberOfCores: 1, memoryInMB: 10, resourceDiskSizeInMB: 10]       | 0.75     // Disk difference negligible after /100
         4       | '7 GB'  | '120 GB'| [numberOfCores: 4, memoryInMB: 7168, resourceDiskSizeInMB: 122880] | 0.000    // Basic_A3 match
-        4       | '7 GB'  | '120 GB'| [numberOfCores: 8, memoryInMB: 14336, resourceDiskSizeInMB: 382976]| 49.54   // Standard_A6 (worse match due to CPU difference)
+        4       | '7 GB'  | '120 GB'| [numberOfCores: 8, memoryInMB: 14336, resourceDiskSizeInMB: 382976]| 50.29    // Standard_A6 (worse match due to CPU difference)
     }
 
     def 'should find best match for northeurope' () {
@@ -149,7 +149,7 @@ class AzBatchServiceTest extends Specification {
         when:
         def ret = svc.findBestVm('northeurope', 4, MemoryUnit.of(7168), MemoryUnit.of(122880), null)
         then:
-        ret.name == 'Standard_F4s'
+        ret.name == 'Basic_A3'
 
         when:
         ret = svc.findBestVm('northeurope', 4, MemoryUnit.of(7168), MemoryUnit.of(291840),'standard_a?')
@@ -159,7 +159,7 @@ class AzBatchServiceTest extends Specification {
         when:
         ret = svc.findBestVm('northeurope', 4, null, MemoryUnit.of(291840), 'standard_a?')
         then:
-        ret.name == 'Standard_A6'
+        ret.name == 'Standard_A3'
 
         when:
         ret = svc.findBestVm('northeurope', 4, MemoryUnit.of(7168), MemoryUnit.of(291840), 'standard_a2,standard_a*')
