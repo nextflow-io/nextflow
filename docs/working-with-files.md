@@ -235,40 +235,36 @@ Nextflow works with many types of remote files and objects using the same interf
 - Azure Blob Storage (`az://`)
 - Google Cloud Storage (`gs://`)
 
-Nextflow downloads remote files when tasks that reference them are created and they do not exist on the same filesystem as the work directory. When possible, standard libraries are used to download files. For example, HttpURLConnection is used for HTTP, and AWS Java SDK is used for S3. Implementations can be viewed under FileSystemProvider in the Nextflow codebase.
-
 To reference a remote file, simply specify the URL when opening the file:
 
 ```nextflow
 pdb = file('http://files.rcsb.org/header/5FID.pdb')
 ```
 
-It can then be accessed as a local file:
+It can then be used in the same way as a local file:
 
 ```nextflow
 println pdb.text
 ```
-
-By default, downloaded files are staged in a subdirectory of the work directory. The subdirectory is named using the prefix `stage-`, followed by a hash. For example, `stage-XXXXXXXX`.
-
-<!---
-Details of hash generation.
---->
-
-Remote files are cached using the aforementioned hash. If multiple tasks request the same remote file at the same time, Nextflow will likely download a separate copy to separate folders.
-
-<!---
-Details of caching behavior.
---->
 
 :::{note}
 Not all operations are supported for all protocols. For example, writing and directory listing is not supported for HTTP(S) and FTP paths.
 :::
 
 :::{note}
-A custom process can be used to download a file into a task directory instead of using built-in remote file staging. To be staged by Nextflow, the file name must be provided to the process as a val input instead of a path input.
+Additional configuration may be required to work with cloud object storage. For example, to authenticate with a private bucket. Refer to the respective page for each cloud storage provider for more information.
 :::
 
+### Remote file staging
+
+In general, files do not need to be copied manually (e.g. using the `copyTo()` method). When a remote file is passed as an input to a process, Nextflow stages the file into the work directory using an appropriate Java SDK.
+
+Remote files are staged in a subdirectory of the work directory of the form `stage-<session-id>/<hash>/<filename>`, where `<hash>` is determined by the remote file path. If multiple tasks request the same remote file, the file will be downloaded once and reused by each task. These files can be also reused by resumed runs with the same session ID.
+
 :::{note}
-Additional configuration may be required to work with cloud object storage. For example, to authenticate with a private bucket. Refer to the respective page for each cloud storage provider for more information.
+Remote file staging can become a bottleneck for large runs where inputs must be staged into the work directory, for example, when inputs are stored in object storage but the work directory is in a shared filesystem. This is because Nextflow handles all of the file transfers.
+
+You can get around this bottleneck with a custom process that downloads the file(s), allowing you to stage many files with multiple parallel jobs. The file should be given as a `val` input instead of a `path` input to bypass the built-in remote file staging.
+
+Alternatively, you can use {ref}`fusion-page` with the work directory in object storage, in which case the remote files will be used directly by the tasks without any prior staging.
 :::
