@@ -680,8 +680,167 @@ class AssetManagerTest extends Specification {
         local_master != null
         !AssetManager.isRemoteBranch(local_master)
     }
-    @PendingFeature
-    def 'should work with defaultBranch = master'() {}
+
+    def 'should work with defaultBranch = master'() {
+        given:
+        def config = '''
+            manifest {
+                defaultBranch = 'master'
+            }
+            '''
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = config
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar')
+
+        then:
+        holder.manifest.getDefaultBranch() == 'master'
+        holder.manifest.getDefaultRevision() == 'master'
+    }
+
+    def 'should work with defaultRevision'() {
+        given:
+        def config = '''
+            manifest {
+                defaultRevision = '1.0.0'
+                defaultBranch = 'master'
+            }
+            '''
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = config
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar')
+
+        then:
+        holder.manifest.getDefaultRevision() == '1.0.0'
+        holder.manifest.getDefaultBranch() == 'master'
+    }
+
+    def 'should use version as defaultRevision when available'() {
+        given:
+        def config = '''
+            manifest {
+                version = '2.0.0'
+                defaultBranch = 'master'
+            }
+            '''
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = config
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar')
+
+        then:
+        holder.manifest.getVersion() == '2.0.0'
+        holder.manifest.getDefaultRevision() == '2.0.0'
+        holder.manifest.getDefaultBranch() == 'master'
+    }
+
+    def 'should prioritize defaultRevision over version'() {
+        given:
+        def config = '''
+            manifest {
+                version = '2.0.0'
+                defaultRevision = '1.0.0'
+                defaultBranch = 'master'
+            }
+            '''
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = config
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar')
+
+        then:
+        holder.manifest.getVersion() == '2.0.0'
+        holder.manifest.getDefaultRevision() == '1.0.0'
+        holder.manifest.getDefaultBranch() == 'master'
+    }
+
+    def 'should work with no defaultBranch'() {
+        given:
+        def config = '''
+            manifest {
+            }
+            '''
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = config
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar')
+
+        then:
+        holder.manifest.getDefaultBranch() == 'master'
+        holder.manifest.getDefaultRevision() == 'master'
+    }
+
+    def 'should default to version tag if manifest version and no defaultBranch'() {
+        given:
+        def config = '''
+            manifest {
+                version = '3.0.0'
+            }
+            '''
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = config
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar')
+
+        then:
+        holder.manifest.getVersion() == '3.0.0'
+        holder.manifest.getDefaultRevision() == '3.0.0'
+        holder.manifest.getDefaultBranch() == 'master'
+    }
+
+    def 'should handle commit hash in defaultRevision'() {
+        given:
+        def config = '''
+            manifest {
+                defaultRevision = '6b9515aba6c7efc6a9b3f273ce116fc0c224bf68'
+            }
+            '''
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = config
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar')
+
+        then:
+        holder.manifest.getDefaultRevision() == '6b9515aba6c7efc6a9b3f273ce116fc0c224bf68'
+        holder.manifest.getDefaultBranch() == 'master'
+    }
+
     @PendingFeature
     def 'should not warn if project uses a tag as a defaultBranch'() {
         given:
@@ -700,14 +859,5 @@ class AssetManagerTest extends Specification {
         !warning
         noExceptionThrown()
     }
-
-    @PendingFeature
-    def 'should work with no defaultBranch'() {}
-    @PendingFeature
-    def 'should default to latest tag if no defaultBranch'() {}
-    @PendingFeature
-    def 'should fallback to master if no defaultBranch'() {}
-    @PendingFeature
-    def 'should default to version tag if manifest version and no defaultBranch'() {}
 
 }
