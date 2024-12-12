@@ -25,6 +25,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
+import nextflow.container.inspect.ContainerInspectMode
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.plugin.Plugins
@@ -226,6 +227,8 @@ class ScriptRunner {
     protected void parseScript( ScriptFile scriptFile, String entryName ) {
         scriptParser = new ScriptParser(session)
                             .setEntryName(entryName)
+                            // setting module true when running in "inspect" mode to prevent the running the entry workflow
+                            .setModule(ContainerInspectMode.active())
                             .parse(scriptFile.main)
         session.script = scriptParser.script
     }
