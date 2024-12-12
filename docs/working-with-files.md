@@ -257,7 +257,7 @@ Additional configuration may be required to work with cloud object storage. For 
 
 ### Remote file staging
 
-In general, files do not need to be copied manually (e.g. using the `copyTo()` method). When a remote file is passed as an input to a process, Nextflow stages the file into the work directory using an appropriate Java SDK.
+When a remote file is passed as an input to a process, Nextflow stages the file into the work directory using an appropriate Java SDK.
 
 Remote files are staged in a subdirectory of the work directory of the form `stage-<session-id>/<hash>/<filename>`, where `<hash>` is determined by the remote file path. If multiple tasks request the same remote file, the file will be downloaded once and reused by each task. These files can be also reused by resumed runs with the same session ID.
 
