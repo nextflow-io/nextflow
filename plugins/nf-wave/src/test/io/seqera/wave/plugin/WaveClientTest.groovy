@@ -285,7 +285,7 @@ class WaveClientTest extends Specification {
 
     def 'should create request object with dry-run mode' () {
         given:
-        ContainerInspectMode.concretize(false)
+        ContainerInspectMode.activate(true)
         def session = Mock(Session) { getConfig() >> [:]}
         def IMAGE =  'foo:latest'
         def wave = new WaveClient(session)
@@ -306,7 +306,7 @@ class WaveClientTest extends Specification {
         req.timestamp instanceof String
 
         cleanup:
-        ContainerInspectMode.concretize(true)
+        ContainerInspectMode.activate(false)
     }
 
     def 'should create request object and platform' () {
