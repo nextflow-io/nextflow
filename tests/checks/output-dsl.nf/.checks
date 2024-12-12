@@ -56,9 +56,9 @@ rm -rf results
 
 $NXF_RUN --save_bam_bai -resume | tee stdout
 
-[[ `grep INFO .nextflow.log | grep -c 'Submitted process > fastqc'` == 3 ]] || false
-[[ `grep INFO .nextflow.log | grep -c 'Submitted process > align'` == 3 ]] || false
-[[ `grep INFO .nextflow.log | grep -c 'Submitted process > quant'` == 3 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > fastqc'` == 3 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > align'` == 3 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > quant'` == 3 ]] || false
 
 [[ -f results/fastqc/alpha.fastqc.log ]] || false
 [[ -f results/fastqc/beta.fastqc.log ]] || false
