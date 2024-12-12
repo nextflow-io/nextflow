@@ -1,8 +1,5 @@
 package nextflow.plugin
 
-import com.github.zafarkhaja.semver.Version
-import org.pf4j.PluginRuntimeException
-
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
@@ -12,18 +9,20 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
 import nextflow.BuildInfo
+import com.github.zafarkhaja.semver.Version
 import org.pf4j.Plugin
 import org.pf4j.PluginDescriptor
+import org.pf4j.PluginRuntimeException
 import org.pf4j.PluginWrapper
 import org.pf4j.update.PluginInfo
 import spock.lang.Specification
 import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class PluginUpdaterTest extends Specification {
+
     private static final String PLUGIN_ID = 'my-plugin'
 
     static class FooPlugin extends Plugin {

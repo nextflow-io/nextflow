@@ -46,12 +46,12 @@ class PluginsFacade implements PluginStateListener {
 
     private String mode
     private Path root
+    private boolean offline
     private PluginUpdater updater
     private CustomPluginManager manager
     private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
     private String indexUrl = Plugins.DEFAULT_PLUGINS_REPO
     private boolean embedded
-    private boolean offline
 
     PluginsFacade() {
         mode = getPluginsMode()

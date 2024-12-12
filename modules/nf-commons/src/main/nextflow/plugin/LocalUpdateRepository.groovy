@@ -12,7 +12,6 @@ import org.pf4j.update.UpdateRepository
 import org.pf4j.update.verifier.CompoundVerifier
 
 import java.nio.file.Path
-import java.nio.file.Paths
 
 /**
  * Implementation of UpdateRepository which looks in a local directory of already-downloaded
@@ -20,7 +19,7 @@ import java.nio.file.Paths
  */
 @CompileStatic
 @Slf4j
-class LocalUpdateRepository implements UpdateRepository{
+class LocalUpdateRepository implements UpdateRepository {
     private final String id
     private final Path dir
     private Map<String, PluginInfo> plugins
@@ -60,7 +59,7 @@ class LocalUpdateRepository implements UpdateRepository{
     @Override
     FileDownloader getFileDownloader() {
         // plugins in this repo are already downloaded, so treat any download url as a file path
-        return (URL url) -> Paths.get(url.toURI())
+        return (URL url) -> Path.of(url.toURI())
     }
 
     @Override
@@ -72,18 +71,19 @@ class LocalUpdateRepository implements UpdateRepository{
         // each plugin is stored in a dir called $id-$version; grab the descriptor from each
         final manifestReader = new ManifestPluginDescriptorFinder()
         final descriptors = FilesEx.listFiles(dir)
-            .collect( plugin -> new LocalPlugin(plugin, manifestReader.find(plugin)) )
+            .collect { plugin -> new LocalPlugin(plugin, manifestReader.find(plugin)) }
 
         // now group the descriptors by id, to create a PluginInfo with list of versions
-        return descriptors.groupBy { d -> d.getPluginId() }
-            .collectEntries { id, versions -> [id, toPluginInfo(id, versions)] }
+        return descriptors
+            .groupBy { d -> d.getPluginId() }
+            .collectEntries { id, versions -> List.of(id, toPluginInfo(id, versions)) }
     }
 
     private static PluginInfo toPluginInfo(String id, List<LocalPlugin> versions) {
-        def info = new PluginInfo()
+        final info = new PluginInfo()
         info.id = id
         info.releases = versions.collect { v ->
-            def release = new PluginInfo.PluginRelease()
+            final release = new PluginInfo.PluginRelease()
             release.version = v.version
             release.requires = v.requires
             release.url = v.path.toUri().toURL()

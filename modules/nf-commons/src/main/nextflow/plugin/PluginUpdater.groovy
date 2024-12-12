@@ -17,8 +17,6 @@
 
 package nextflow.plugin
 
-import org.pf4j.InvalidPluginDescriptorException
-
 import static java.nio.file.StandardCopyOption.*
 
 import java.nio.file.Files
@@ -38,6 +36,7 @@ import nextflow.SysEnv
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FileMutex
+import org.pf4j.InvalidPluginDescriptorException
 import org.pf4j.PluginDependency
 import org.pf4j.PluginRuntimeException
 import org.pf4j.PluginState
@@ -207,7 +206,7 @@ class PluginUpdater extends UpdateManager {
     }
 
     private Path download0(String id, String version) {
-        // 0. check version is specified
+        // 0. check if version is specified
         if( !version )
             throw new InvalidPluginDescriptorException("Missing version for plugin $id")
         log.info "Downloading plugin ${id}@${version}"
@@ -422,7 +421,7 @@ class PluginUpdater extends UpdateManager {
             return false
         }
         if( offline ) {
-            log.debug("Update not supported in offline mode")
+            log.debug "Update not supported in offline mode"
             return false
         }
 
