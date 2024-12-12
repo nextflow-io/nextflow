@@ -58,8 +58,12 @@ class Manifest {
         target.defaultBranch
     }
 
+    String getDefaultRevision() {
+        target.defaultRevision ?: getVersion() ?: getDefaultBranch()
+    }
+
     String getDescription() {
-        target.description 
+        target.description
     }
 
     String getAuthor() {
@@ -139,6 +143,7 @@ class Manifest {
             .map(c -> c.toMap())
             .collect(Collectors.toList())
         result.defaultBranch = getDefaultBranch()
+        result.defaultRevision = getDefaultRevision()
         result.description = getDescription()
         result.homePage = homePage
         result.gitmodules = getGitmodules()
