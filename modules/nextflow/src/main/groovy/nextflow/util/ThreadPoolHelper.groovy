@@ -34,7 +34,7 @@ import jdk.internal.vm.ThreadContainer
 @Slf4j
 class ThreadPoolHelper {
 
-    static void await(ExecutorService pool, Duration maxAwait, String waitMessage, String exitMsg) {
+    static boolean await(ExecutorService pool, Duration maxAwait, String waitMessage) {
         final max = maxAwait.millis
         final t0 = System.currentTimeMillis()
         // wait for ongoing file transfer to complete
@@ -45,10 +45,8 @@ class ThreadPoolHelper {
                 break
 
             final delta = System.currentTimeMillis()-t0
-            if( delta > max ) {
-                log.warn(exitMsg)
-                break
-            }
+            if( delta > max )
+                return false
 
             // log to console every 10 minutes (120 * 5 sec)
             if( count % 120 == 0 ) {
@@ -61,6 +59,7 @@ class ThreadPoolHelper {
             // increment the count
             count++
         }
+        return true
     }
 
     static protected int pending(ExecutorService pool) {
