@@ -102,13 +102,13 @@ class GithubRepositoryPublisher extends DefaultTask {
         }
 
         if ( modified ) {
-            new GsonBuilder()
+            return new GsonBuilder()
                 .setPrettyPrinting()
                 .disableHtmlEscaping()
                 .create()
                 .toJson(mainIndex)
         } else {
-            null
+            return null
         }
     }
 

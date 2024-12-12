@@ -98,8 +98,9 @@ pack:
 	BUILD_PACK=1 ./gradlew pack
 
 #
-# Upload final package to GitHub
+# Initiate the nextflow release process
 #
+.PHONY: release
 release:
 	./make-release.sh
 

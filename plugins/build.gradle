@@ -135,12 +135,12 @@ subprojects {
         }
         repositories {
             maven {
-                url = System.getenv('MAVEN_PUBLISH_URL')
-                    ?: ( version.endsWith('-SNAPSHOT') ? "s3://maven.seqera.io/snapshots" : "s3://maven.seqera.io/releases" )
+                url = findProperty('maven_publish_url') ?: System.getenv('MAVEN_PUBLISH_URL')
+                url = version.endsWith('-SNAPSHOT') ? "$url/snapshots" : "$url/releases"
 
                 credentials(AwsCredentials) {
-                    accessKey = System.getenv('AWS_ACCESS_KEY_ID') ?: findProperty('aws_access_key_id')
-                    secretKey = System.getenv('AWS_SECRET_ACCESS_KEY') ?: findProperty('aws_secret_access_key')
+                    accessKey = findProperty('aws_access_key_id') ?: System.getenv('AWS_ACCESS_KEY_ID')
+                    secretKey = findProperty('aws_secret_access_key') ?: System.getenv('AWS_SECRET_ACCESS_KEY')
                 }
             }
         }
@@ -169,10 +169,10 @@ project.parent.tasks.getByName("assemble").dependsOn << assemble
  * Merge and publish the plugins index file
  */
 task publishIndex( type: GithubRepositoryPublisher ) {
-    indexUrl = System.getenv('PLUGINS_INDEX_JSON') ?: 'https://github.com/nextflow-io/plugins/main/plugins.json'
+    indexUrl = project.findProperty('plugins_index_url') ?: System.getenv('PLUGINS_INDEX_JSON')
     repos = allPlugins()
-    owner = System.getenv('GH_ORG') ?: 'nextflow-io'
-    githubUser = System.getenv('GH_USER') ?: project.findProperty('github_username')
-    githubEmail = System.getenv('GH_USER_EMAIL') ?: project.findProperty('github_commit_email')
-    githubToken = System.getenv('GH_TOKEN') ?: project.findProperty('github_access_token')
+    owner = project.findProperty('github_organization') ?: System.getenv('GH_ORG')
+    githubUser = project.findProperty('github_username') ?: System.getenv('GH_USER')
+    githubEmail = project.findProperty('github_commit_email') ?: System.getenv('GH_USER_EMAIL')
+    githubToken =  project.findProperty('github_access_token') ?: System.getenv('GH_TOKEN')
 }

@@ -279,8 +279,7 @@ ext.enableSignArchives = project.findProperty('signing.keyId')
 ext.coreProjects = projects( ':nextflow', ':nf-commons', ':nf-httpfs' )
 
 /*
- * Maven central deployment
- * http://central.sonatype.org/pages/gradle.html
+ * Maven deployment
  */
 configure(coreProjects) {
     apply plugin: 'maven-publish'
@@ -343,12 +342,12 @@ configure(coreProjects) {
 
         repositories {
             maven {
-                url = System.getenv('MAVEN_PUBLISH_URL')
-                    ?: ( version.endsWith('-SNAPSHOT') ? "s3://maven.seqera.io/snapshots" : "s3://maven.seqera.io/releases" )
+                url = findProperty('maven_publish_url') ?: System.getenv('MAVEN_PUBLISH_URL')
+                url = version.endsWith('-SNAPSHOT') ? "$url/snapshots" : "$url/releases"
 
                 credentials(AwsCredentials) {
-                    accessKey = System.getenv('AWS_ACCESS_KEY_ID') ?: findProperty('aws_access_key_id')
-                    secretKey = System.getenv('AWS_SECRET_ACCESS_KEY') ?: findProperty('aws_secret_access_key')
+                    accessKey = findProperty('aws_access_key_id') ?: System.getenv('AWS_ACCESS_KEY_ID')
+                    secretKey = findProperty('aws_secret_access_key') ?: System.getenv('AWS_SECRET_ACCESS_KEY')
                 }
             }
         }
