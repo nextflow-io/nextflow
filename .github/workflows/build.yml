@@ -252,6 +252,8 @@ jobs:
     if: ${{ contains(needs.build.outputs.commit_message,'[release]') }}
     runs-on: ubuntu-latest
     needs: build
+    permissions:
+        contents: write
     timeout-minutes: 10
     steps:
       # setup steps
@@ -290,7 +292,7 @@ jobs:
 
       # release step
       - name: Release
-        run: bash .github/scripts/release.sh
+        run: bash release/main.sh
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_DEPLOY_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_DEPLOY_SECRET_ACCESS_KEY }}
@@ -301,7 +303,7 @@ jobs:
           MAVEN_PUBLISH_URL: ${{ vars.MAVEN_PLUGINS_PUBLISH_URL }}
           PLUGINS_INDEX_JSON: ${{ vars.PLUGINS_INDEX_JSON }}
           S3_RELEASE_BUCKET: ${{ vars.S3_RELEASE_BUCKET }}
-          SEQERA_REGISTRY: ${{ vars.SEQERA_PUBLIC_CR_URL }}
+          SEQERA_CONTAINER_REGISTRY: ${{ vars.SEQERA_PUBLIC_CR_URL }}
 
       # upload steps
       - name: Upload artifacts (libs)

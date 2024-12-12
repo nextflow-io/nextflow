@@ -2,19 +2,26 @@
 set -e
 
 # change to the project root
-cd "$(dirname "$0")/../.."
+cd "$(dirname "$0")/.."
 
 # read the nextflow version
 read -r NF_VERSION<VERSION
+
+echo "
+-------------------------------------------
+-- Uploading nextflow distribution to S3 --
+-------------------------------------------
+"
 
 S3_RELEASE_BUCKET=${S3_RELEASE_BUCKET:-'www2.nextflow.io'}
 S3_RELEASE_DIR="releases/v$NF_VERSION"
 
 # check if the release already exists
+release_exists=false
 aws s3api head-object --bucket "$S3_RELEASE_BUCKET" --key "$S3_RELEASE_DIR/nextflow" > /dev/null 2>&1 \
   && release_exists=true
 
-if [[ $release_exists ]]; then
+if [[ $release_exists == true ]]; then
   echo "Version $NF_VERSION already deployed to S3, skipping"
   exit
 fi

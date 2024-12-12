@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -e
 
+# -----------------------------------------------------------------------------
+# Nextflow release entrypoint
+#
+# This script starts a Nextflow release, and is executed by the `make release`
+# command. It will help guide you through the manual steps required to perform
+# a release, and then trigger a release build on the CI system (Github Actions).
+# -----------------------------------------------------------------------------
+
 cd "$(dirname "$0")"
 
 # read the nextflow version

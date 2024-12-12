@@ -2,7 +2,7 @@
 set -e
 
 # change to the project root
-cd "$(dirname "$0")/../.."
+cd "$(dirname "$0")/.."
 
 # read the nextflow version
 read -r NF_VERSION<VERSION
@@ -31,7 +31,11 @@ function get_change_notes() {
   done < changelog.txt
 }
 
-echo "Publishing nextflow release to github"
+echo "
+-------------------------------------------
+-- Publishing nextflow release to github --
+-------------------------------------------
+"
 
 # create a github (pre)release and attach launcher and dist files
 # use --verify-tag to fail if tag doesn't exist

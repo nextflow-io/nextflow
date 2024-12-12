@@ -2,7 +2,7 @@
 set -e
 
 # change to the project root
-cd "$(dirname "$0")/../.."
+cd "$(dirname "$0")/.."
 
 GH_ORG=${GH_ORG:-'nextflow-io'}
 
@@ -14,7 +14,11 @@ function get_plugin_version() {
 }
 
 # deploy plugin artifacts to github releases
-echo "Publishing plugins to github"
+echo "
+----------------------------------
+-- Publishing plugins to github --
+----------------------------------
+"
 
 for plugin in plugins/nf-*; do
   if [[ -d "$plugin" ]]; then
@@ -24,11 +28,12 @@ for plugin in plugins/nf-*; do
     plugin_version=$(get_plugin_version "$plugin")
 
     # check if release already exists
+    release_exists=false
     gh release view --repo "$plugin_repo" "$plugin_version" > /dev/null 2>&1 \
       && release_exists=true
 
     # if not exists, create github release, with zip & meta json files
-    if [[ $release_exists ]]; then
+    if [[ $release_exists == true ]]; then
       echo "Plugin $plugin_name $plugin_version already deployed to github, skipping"
     else
       gh release create \
