@@ -226,11 +226,10 @@ class ScriptRunner {
 
     protected void parseScript( ScriptFile scriptFile, String entryName ) {
         scriptParser = new ScriptParser(session)
-        scriptParser.setEntryName(entryName)
-        // don't execute entry workflow in the inspect command
-        if( ContainerInspectMode.active() )
-            scriptParser.setModule(true)
-        scriptParser.parse(scriptFile.main)
+                            .setEntryName(entryName)
+                            // setting module true when running in "inspect" mode to prevent the running the entry workflow
+                            .setModule(ContainerInspectMode.active())
+                            .parse(scriptFile.main)
         session.script = scriptParser.script
     }
 
