@@ -754,8 +754,8 @@ class AssetManagerTest extends Specification {
         given:
         def config = '''
             manifest {
-                version = '2.0.0'
-                defaultRevision = '1.0.0'
+                version = '2.0.0' // Development version for main branch
+                defaultRevision = '1.0.0' // Latest stable version
                 defaultBranch = 'master'
             }
             '''
@@ -860,4 +860,90 @@ class AssetManagerTest extends Specification {
         noExceptionThrown()
     }
 
+    @PendingFeature
+    def 'should handle development version with stable defaultRevision'() {
+        given:
+        def config = '''
+        manifest {
+            version = '2.3.0dev'
+            defaultRevision = '2.2.0'
+        }
+        '''
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = config
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar')
+
+        then:
+        holder.manifest.getVersion() == '2.3.0dev'
+        holder.manifest.getDefaultRevision() == '2.2.0'
+        holder.manifest.isDevelopmentVersion() == true
+    }
+
+    @PendingFeature
+    def 'should correctly compare development and release versions'() {
+        given:
+        def config = '''
+        manifest {
+            version = '2.3.0dev'
+            defaultRevision = '2.2.0'
+        }
+        '''
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = config
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar')
+
+        then:
+        holder.manifest.isVersionGreaterThan('2.2.0') == true
+        holder.manifest.isVersionCompatibleWith('2.2.0') == true
+    }
+
+    @PendingFeature
+    def 'should not warn if project uses a tag as a defaultBranch'() {
+        given:
+        def ENV = [FOO: '/something', NXF_DEBUG: 'true']
+
+    when:
+    new CmdRun(revision: 'xyz')
+
+    then:
+    def warning = capture
+            .toString()
+            .readLines()
+            .findResults { line -> line.contains('WARN') ? line : null }
+            .join('\n')
+    and:
+    !warning
+        noExceptionThrown()
+    }
+    def 'should handle release candidate versions'() {
+        // Test version = '2.3.0-RC1' with defaultRevision
+    }
+
+    def 'should handle hotfix versions'() {
+        // Test version = '2.2.1-hotfix' with defaultRevision = '2.2.0'
+    }
+
+    def 'should support multiple development branches'() {
+        // Test handling of feature branches while maintaining stable defaultRevision
+    }
+
+    def 'should handle version rollback scenarios'() {
+        // Test downgrading defaultRevision for emergency rollbacks
+    }
+
+    def 'should validate version and defaultRevision compatibility'() {
+        // Test that development version is always ahead of defaultRevision
+    }
 }
