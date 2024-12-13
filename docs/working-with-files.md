@@ -264,7 +264,7 @@ Remote files are staged in a subdirectory of the work directory with the form `s
 :::{note}
 Remote file staging can be a bottleneck during large-scale runs, particularly when input files are stored in object storage but need to be staged in a shared filesystem work directory. This bottleneck occurs because Nextflow handles all of these file transfers.
 
-To mitigate this, you can implement a custom process to download the required files, allowing you to stage multiple files efficiently through parallel jobs. File should be given as a `val` input instead of a `path` input to bypass Nextflow's built-in remote file staging.
+To mitigate this, you can implement a custom process to download the required files, allowing you to stage multiple files efficiently through parallel jobs. Files should be given as a `val` input instead of a `path` input to bypass Nextflow's built-in remote file staging.
 
 Alternatively, use {ref}`fusion-page` with the work directory set to object storage. In this case, tasks can access remote files directly without any prior staging, eliminating the bottleneck.
 :::
