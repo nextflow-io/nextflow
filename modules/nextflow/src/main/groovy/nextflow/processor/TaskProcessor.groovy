@@ -829,7 +829,7 @@ class TaskProcessor {
 
             final lock = lockManager.acquire(hash)
             try {
-                if( !exists && !workDir.mkdirs() )
+                if( !workDir.mkdirs() )
                     throw new IOException("Unable to create directory=$workDir -- check file system permissions")
             }
             finally {
