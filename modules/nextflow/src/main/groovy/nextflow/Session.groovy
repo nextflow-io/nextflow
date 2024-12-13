@@ -685,8 +685,8 @@ class Session implements ISession {
             final finalizerComplete = finalizePoolManager?.shutdown(false)
             final publisherComplete = publishPoolManager?.shutdown(false)
             if( !finalizerComplete || !publisherComplete ) {
-                final failOnIncomplete = config.navigate('workflow.output.ignoreErrors')
-                if( failOnIncomplete )
+                final ignoreErrors = config.navigate('workflow.output.ignoreErrors')
+                if( !ignoreErrors )
                     throw new AbortOperationException("Timed out while waiting to publish outputs")
             }
         }
