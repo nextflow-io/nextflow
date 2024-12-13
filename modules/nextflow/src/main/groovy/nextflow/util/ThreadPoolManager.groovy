@@ -109,27 +109,24 @@ class ThreadPoolManager {
         return result
     }
 
-    boolean shutdown(ISession session) {
+    void shutdown(ISession session) {
         final sess = (Session) session
-        return shutdown( sess != null && sess.aborted )
+        shutdown( sess != null && sess.aborted )
     }
 
-    boolean shutdown(boolean hard) {
+    void shutdown(boolean hard) {
         if( !executorService )
-            return true
+            return
 
         if( hard ) {
             executorService.shutdownNow()
-            return true
+            return
         }
 
         executorService.shutdown()
         // wait for remaining threads to complete
-        final complete = ThreadPoolHelper.await(executorService, maxAwait, waitMsg)
-        if( !complete )
-            log.warn exitMsg
+        ThreadPoolHelper.await(executorService, maxAwait, waitMsg, exitMsg)
         log.debug "Thread pool '$name' shutdown completed (hard=$hard)"
-        return complete
     }
 
     static ExecutorService create(String name, int maxThreads=0) {
