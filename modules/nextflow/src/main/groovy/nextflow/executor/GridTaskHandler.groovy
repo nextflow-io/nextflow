@@ -503,7 +503,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     @Override
-    void kill() {
+    protected void killTask() {
         if( batch ) {
             batch.collect(executor, jobId)
         }
