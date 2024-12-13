@@ -1078,11 +1078,11 @@ The following options are available:
 : *Can be specified multiple times*
 : Mounts a [ConfigMap](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/) with name and optional key to the given path. If the key is omitted, the path is interpreted as a directory and all entries in the `ConfigMap` are exposed in that path.
 
-`csi: '<name>', mountPath: '</absolute/path>'`
+`csi: '<config>', mountPath: '</absolute/path>'`
 : :::{versionadded} 22.11.0-edge
   :::
 : *Can be specified multiple times*
-: Mounts a [CSI ephemeral volume](https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#csi-ephemeral-volumes) by name to the given path.
+: Mounts a [CSI ephemeral volume](https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#csi-ephemeral-volumes) with the given configuration to the given path.
 
 `emptyDir: <config>, mountPath: '</absolute/path>'`
 : :::{versionadded} 22.11.0-edge
