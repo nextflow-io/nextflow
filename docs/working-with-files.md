@@ -262,7 +262,7 @@ When a remote file is passed as an input to a process, Nextflow stages the file 
 Remote files are staged in a subdirectory of the work directory with the form `stage-<session-id>/<hash>/<filename>`, where `<hash>` is determined by the remote file path. If multiple tasks request the same remote file, the file will be downloaded once and reused by each task. These files can be reused by resumed runs with the same session ID.
 
 :::{note}
-Remote file staging can be a bottleneck during large-scale runs, particularly when input files are stored in object storage but need to be staged in a shared filesystem work directory. This bottleneck occurs because Nextflow handles all file transfers.
+Remote file staging can be a bottleneck during large-scale runs, particularly when input files are stored in object storage but need to be staged in a shared filesystem work directory. This bottleneck occurs because Nextflow handles all of these file transfers.
 
 To mitigate this, you can implement a custom process to download the required files, allowing you to stage multiple files efficiently through parallel jobs. File should be given as a `val` input instead of a `path` input to bypass Nextflow's built-in remote file staging.
 
