@@ -611,7 +611,7 @@ index {
 }
 ```
 
-This example will produce the following index file.
+This example will produce the following index file:
 
 ```
 "id"|"name"|"fastq_1"|"fastq_2"
