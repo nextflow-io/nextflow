@@ -7,6 +7,13 @@ get_abs_filename() {
 
 export NXF_CMD=${NXF_CMD:-$(get_abs_filename ../launch.sh)}
 
+# Execution should fail ignoring
+$NXF_CMD run test-aws-unstage-fail.nf -c awsbatch-unstage-fail.config || true
+[[ `grep -c "Error executing process > 'test (1)'" .nextflow.log` == 1 ]] || false
+[[ `grep -c "  Essential container in task exited" .nextflow.log` == 1 ]] || false
+[[ `grep -cozP "Command exit status:\n  1" .nextflow.log` == 1 ]] || false
+[[ `grep -c "Producing a failure in aws" .nextflow.log` == 2 ]] || false
+
 $NXF_CMD run test-complexpaths.nf -c awsbatch.config
 [[ -d foo ]] || false
 [[ -e 'foo/.alpha' ]] || false
