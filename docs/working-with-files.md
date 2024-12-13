@@ -252,19 +252,19 @@ Not all operations are supported for all protocols. For example, writing and dir
 :::
 
 :::{note}
-Additional configuration may be required to work with cloud object storage. For example, to authenticate with a private bucket. Refer to the respective page for each cloud storage provider for more information.
+Additional configuration may be necessary for cloud object storage, such as authenticating with a private bucket. See the documentation for each cloud storage provider for further details.
 :::
 
 ### Remote file staging
 
-When a remote file is passed as an input to a process, Nextflow stages the file into the work directory using an appropriate Java SDK.
+When a remote file is passed as an input to a process, Nextflow stages the file in the work directory using an appropriate Java SDK.
 
-Remote files are staged in a subdirectory of the work directory of the form `stage-<session-id>/<hash>/<filename>`, where `<hash>` is determined by the remote file path. If multiple tasks request the same remote file, the file will be downloaded once and reused by each task. These files can be also reused by resumed runs with the same session ID.
+Remote files are staged in a subdirectory of the work directory with form `stage-<session-id>/<hash>/<filename>`, where `<hash>` is determined by the remote file path. If multiple tasks request the same remote file, the file will be downloaded once and reused by each task. These files can be reused by resumed runs with the same session ID.
 
 :::{note}
-Remote file staging can become a bottleneck for large runs where inputs must be staged into the work directory, for example, when inputs are stored in object storage but the work directory is in a shared filesystem. This is because Nextflow handles all of the file transfers.
+Remote file staging can be a bottleneck during large-scale runs, particularly when input files are stored in object storage but need to be staged in a shared filesystem work directory. This bottleneck occurs because Nextflow handles all file transfers.
 
-You can get around this bottleneck with a custom process that downloads the file(s), allowing you to stage many files with multiple parallel jobs. The file should be given as a `val` input instead of a `path` input to bypass the built-in remote file staging.
+To mitigate this, you can implement a custom process to download the required files, allowing you to stage multiple files efficiently through parallel jobs. File should be given as a `val` input instead of a `path` input to bypass Nextflow's built-in remote file staging.
 
-Alternatively, you can use {ref}`fusion-page` with the work directory in object storage, in which case the remote files will be used directly by the tasks without any prior staging.
+Alternatively, use {ref}`fusion-page` with the work directory set to object storage. In this case, tasks can access remote files directly without any prior staging, eliminating the bottleneck.
 :::
