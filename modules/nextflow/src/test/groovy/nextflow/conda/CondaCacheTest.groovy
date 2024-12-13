@@ -92,12 +92,12 @@ class CondaCacheTest extends Specification {
         def hash = CondaCache.sipHash(ENV)
         ENV.text = '''
             channels:
+              - conda-forge
               - bioconda
-              - defaults
             dependencies:
               # Default bismark
               - star=2.5.4a
-              - bwa=0.7.15        
+              - bwa=0.7.15
             '''
             .stripIndent(true)  // https://issues.apache.org/jira/browse/GROOVY-9423
         when:
@@ -119,15 +119,15 @@ class CondaCacheTest extends Specification {
         def BASE = Paths.get('/conda/envs')
         def ENV = Files.createTempFile('test','.yml')
         def hash = CondaCache.sipHash(ENV)
-        ENV.text = '''  
+        ENV.text = '''
             name: my-env-1.1
             channels:
+              - conda-forge
               - bioconda
-              - defaults
             dependencies:
               # Default bismark
               - star=2.5.4a
-              - bwa=0.7.15        
+              - bwa=0.7.15
             '''
                 .stripIndent(true)
 
@@ -150,7 +150,7 @@ class CondaCacheTest extends Specification {
         def hash = CondaCache.sipHash(ENV)
         ENV.text = '''
                 star=2.5.4a
-                bwa=0.7.15   
+                bwa=0.7.15
                 multiqc=1.2.3
                 '''
                 .stripIndent(true)  // https://issues.apache.org/jira/browse/GROOVY-9423
