@@ -18,6 +18,7 @@ package nextflow.cloud.aws.batch
 
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.model.AWSBatchException

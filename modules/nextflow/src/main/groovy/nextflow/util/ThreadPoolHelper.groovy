@@ -20,6 +20,7 @@ package nextflow.util
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
