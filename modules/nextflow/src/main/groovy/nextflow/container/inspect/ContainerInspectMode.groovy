@@ -26,23 +26,17 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class ContainerInspectMode {
 
-    private static boolean active
+    private static Boolean dryRun
 
-    private static boolean dryRun
+    static boolean active() { return dryRun!=null }
 
-    static boolean active() { return active }
+    static boolean dryRun() { return dryRun==true }
 
-    static boolean dryRun() { return dryRun }
-
-    static void activate(boolean active, boolean dryRun) {
-        if( !active && dryRun )
-            throw new IllegalArgumentException("Argument 'dryRun' cannot be true when 'activate' is false")
-        this.active = active
+    static void activate(boolean dryRun) {
         this.dryRun = dryRun
     }
 
     static void reset() {
-        this.active = false
-        this.dryRun = false
+        dryRun = null
     }
 }

@@ -31,21 +31,16 @@ class ContainerInspectModeTest extends Specification {
         !ContainerInspectMode.dryRun()
 
         when:
-        ContainerInspectMode.activate(true,false)
+        ContainerInspectMode.activate(false)
         then:
         ContainerInspectMode.active()
         !ContainerInspectMode.dryRun()
 
         when:
-        ContainerInspectMode.activate(true, true)
+        ContainerInspectMode.activate(true)
         then:
         ContainerInspectMode.active()
         ContainerInspectMode.dryRun()
-
-        when:
-        ContainerInspectMode.activate(false,true)
-        then:
-        thrown(IllegalArgumentException)
 
         when:
         ContainerInspectMode.reset()
