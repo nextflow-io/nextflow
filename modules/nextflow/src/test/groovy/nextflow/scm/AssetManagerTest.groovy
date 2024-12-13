@@ -914,36 +914,144 @@ class AssetManagerTest extends Specification {
         given:
         def ENV = [FOO: '/something', NXF_DEBUG: 'true']
 
-    when:
-    new CmdRun(revision: 'xyz')
+        when:
+        new CmdRun(revision: 'xyz')
 
-    then:
-    def warning = capture
+        then:
+        def warning = capture
             .toString()
             .readLines()
             .findResults { line -> line.contains('WARN') ? line : null }
             .join('\n')
-    and:
-    !warning
+        and:
+        !warning
         noExceptionThrown()
     }
+
+    // Test version = '2.3.0-RC1' with defaultRevision
     def 'should handle release candidate versions'() {
-        // Test version = '2.3.0-RC1' with defaultRevision
+        given:
+        def config = '''
+    manifest {
+        version = '2.3.0-RC1'
+        defaultRevision = '2.2.0'
+    }
+    '''
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = config
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar')
+
+        then:
+        holder.manifest.getVersion() == '2.3.0-RC1'
+        holder.manifest.getDefaultRevision() == '2.2.0'
+        holder.manifest.isVersionGreaterThan('2.2.0') == true
     }
 
+    // Test version = '2.2.1-hotfix' with defaultRevision = '2.2.0'
     def 'should handle hotfix versions'() {
-        // Test version = '2.2.1-hotfix' with defaultRevision = '2.2.0'
+        given:
+        def config = '''
+        manifest {
+        version = '2.2.1-hotfix'
+        defaultRevision = '2.2.0'
+    }
+    '''
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = config
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar')
+
+        then:
+        holder.manifest.getVersion() == '2.2.1-hotfix'
+        holder.manifest.getDefaultRevision() == '2.2.0'
+        holder.manifest.isVersionGreaterThan('2.2.0') == true
     }
 
+    // Test handling of feature branches while maintaining stable defaultRevision
     def 'should support multiple development branches'() {
-        // Test handling of feature branches while maintaining stable defaultRevision
+        given:
+        def config = '''
+        manifest {
+            version = '2.3.0-dev'
+            defaultRevision = '2.2.0'
+            defaultBranch = 'feature/new-feature'
+        }
+    '''
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = config
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar')
+
+        then:
+        holder.manifest.getVersion() == '2.3.0-dev'
+        holder.manifest.getDefaultRevision() == '2.2.0'
+        holder.manifest.getDefaultBranch() == 'feature/new-feature'
     }
 
+    // Test downgrading defaultRevision for emergency rollbacks
     def 'should handle version rollback scenarios'() {
-        // Test downgrading defaultRevision for emergency rollbacks
+        given:
+        def config = '''
+        manifest {
+        version = '2.2.0'
+        defaultRevision = '2.3.0'  // Attempting to rollback to older version
+    }
+    '''
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = config
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar')
+
+        then:
+        holder.manifest.getVersion() == '2.2.0'
+        holder.manifest.getDefaultRevision() == '2.3.0'
+        holder.manifest.isVersionGreaterThan('2.3.0') == false
     }
 
+    // Test that development version is always ahead of defaultRevision
     def 'should validate version and defaultRevision compatibility'() {
-        // Test that development version is always ahead of defaultRevision
+        given:
+        def config = '''
+        manifest {
+        version = '2.1.0'  // Version older than defaultRevision
+        defaultRevision = '2.2.0'
+    }
+    '''
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = config
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar')
+
+        then:
+        holder.manifest.getVersion() == '2.1.0'
+        holder.manifest.getDefaultRevision() == '2.2.0'
+        holder.manifest.isVersionGreaterThan('2.2.0') == false
+        holder.manifest.isVersionCompatibleWith('2.2.0') == false
     }
 }
