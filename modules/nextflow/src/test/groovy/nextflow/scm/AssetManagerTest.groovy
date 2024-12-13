@@ -17,7 +17,6 @@
 package nextflow.scm
 
 import spock.lang.IgnoreIf
-
 import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import org.eclipse.jgit.api.Git
@@ -40,24 +39,16 @@ import java.nio.file.Paths
 @IgnoreIf({System.getenv('NXF_SMOKE')})
 class AssetManagerTest extends Specification {
 
-    // Test configuration for basic Git repository
-    def "Test configuration for basic Git repository"() {
-        expect: 'Git config should be properly formatted'
-        GIT_CONFIG_TEXT == '''
+    static final String GIT_CONFIG_TEXT = '''
             [remote "origin"]
                 url = https://github.com/nextflow-io/nextflow.git
                 fetch = +refs/heads/*:refs/remotes/origin/*
             [branch "master"]
                 remote = origin
                 merge = refs/heads/master
-            '''
-            .stripIndent()
-    }
+            '''.stripIndent()
 
-    // Test configuration for Git repository with submodules
-    def "Test configuration for Git repository with submodules"() {
-        expect: 'Git config with submodules should be properly formatted'
-        GIT_CONFIG_LONG == '''
+    static final String GIT_CONFIG_LONG = '''
         [core]
             repositoryformatversion = 0
             filemode = true
@@ -72,33 +63,25 @@ class AssetManagerTest extends Specification {
             merge = refs/heads/master
         [submodule "tests"]
             url = git@github.com:nextflow-io/tests.git
-        '''
-        .stripIndent()
-    }
+        '''.stripIndent()
 
     @Rule
     TemporaryPath tempDir = new TemporaryPath()
 
     def setup() {
-        given: 'Initialize AssetManager root directory'
         AssetManager.root = tempDir.root.toFile()
     }
 
     // Helper method to grab the default branch if set in ~/.gitconfig
-    String getLocalDefaultBranch() {
-        given: 'Default branch configuration'
+    private String getLocalDefaultBranch() {
         def defaultBranch = 'master'
         def gitconfig = Paths.get(System.getProperty('user.home'),'.gitconfig')
-
-        when: 'Git config exists'
         if(gitconfig.exists()) {
             def config = new Config()
             config.fromText(gitconfig.text)
             defaultBranch = config.getString('init', null, 'defaultBranch') ?: 'master'
         }
-
-        then: 'Return the default branch'
-        return defaultBranch
+        defaultBranch
     }
 
     def "should list available pipeline assets"() {
