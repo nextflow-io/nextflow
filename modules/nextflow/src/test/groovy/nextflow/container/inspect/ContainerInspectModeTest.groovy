@@ -17,26 +17,36 @@
 
 package nextflow.container.inspect
 
-import groovy.transform.CompileStatic
+import spock.lang.Specification
+
 /**
- * Activate the container inspect mode
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@CompileStatic
-class ContainerInspectMode {
+class ContainerInspectModeTest extends Specification {
 
-    private static Boolean dryRun
+    def 'should validate activate and dry-run' () {
+        expect:
+        !ContainerInspectMode.active()
+        !ContainerInspectMode.dryRun()
 
-    static boolean active() { return dryRun!=null }
+        when:
+        ContainerInspectMode.activate(false)
+        then:
+        ContainerInspectMode.active()
+        !ContainerInspectMode.dryRun()
 
-    static boolean dryRun() { return dryRun==true }
+        when:
+        ContainerInspectMode.activate(true)
+        then:
+        ContainerInspectMode.active()
+        ContainerInspectMode.dryRun()
 
-    static void activate(boolean dryRun) {
-        this.dryRun = dryRun
+        when:
+        ContainerInspectMode.reset()
+        then:
+        !ContainerInspectMode.active()
+        !ContainerInspectMode.dryRun()
     }
 
-    static void reset() {
-        dryRun = null
-    }
 }
