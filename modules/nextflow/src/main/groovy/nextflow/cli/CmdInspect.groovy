@@ -20,6 +20,7 @@ package nextflow.cli
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -91,11 +92,24 @@ class CmdInspect extends CmdBase {
     }
 
     protected void applyInspect(Session session) {
+        // slow down max rate when concretize is specified
+        if( concretize ) {
+            configureMaxRate(session.config)
+        }
         // run the inspector
         new ContainersInspector(concretize)
                 .withFormat(format)
                 .withIgnoreErrors(ignoreErrors)
                 .printContainers()
+    }
+
+    @CompileDynamic
+    protected void configureMaxRate(Map config) {
+        if( config.wave == null )
+            config.wave = new HashMap()
+        if( config.wave.httpClient == null )
+            config.wave.httpClient = new HashMap()
+        config.wave.httpClient.maxRate = '5/30sec'
     }
 
 }
