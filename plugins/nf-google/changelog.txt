@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.15.3 - 16 Dec 2024
+- Fix Google Batch hang when internal error during scheduling (#5567)
+
 1.15.2 - 14 Oct 2024
 - Add Google LS deprecation notice (#5400) [0ee1d9bc]
 
