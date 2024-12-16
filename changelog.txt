@@ -1,5 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
+24.10.3 - 16 Dec 2024 
+- Fix Google Batch hang when internal error during scheduling (#5567) [79374c58]
+- Fixing getRepositoryUrl when project name is not provided (#5560) [9910cece]
+- Bump nf-google@1.15.3 [e80ded36]
+
 24.10.2 - 27 Nov 2024
 - Prevent NPE with null AWS Batch response [3d491934]
 - Fix overlapping conda lock file (#5540) [df66deaa]
