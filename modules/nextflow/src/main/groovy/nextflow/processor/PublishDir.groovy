@@ -409,9 +409,9 @@ class PublishDir {
 
         // create target dirs if required
         makeDirs(destination.parent)
-
+        def offload = false
         try {
-            processFileImpl(source, destination)
+            offload = processFileImpl(source, destination)
         }
         catch( FileAlreadyExistsException e ) {
             // don't copy source path if target is identical, but still emit the publish event
@@ -425,11 +425,12 @@ class PublishDir {
             
             if( !sameRealPath && shouldOverwrite(source, destination) ) {
                 FileHelper.deletePath(destination)
-                processFileImpl(source, destination)
+                offload = processFileImpl(source, destination)
             }
         }
-
-        notifyFilePublish(destination, source)
+        //Don't notify if file publication is offloaded. It will be notified after the offloaded job is finished.
+        if (!offload)
+            notifyFilePublish(destination, source)
     }
 
     private String real0(Path p) {
@@ -495,7 +496,7 @@ class PublishDir {
         return sourceHash != targetHash
     }
 
-    protected void processFileImpl( Path source, Path destination ) {
+    protected boolean processFileImpl( Path source, Path destination ) {
         log.trace "publishing file: $source -[$mode]-> $destination"
 
         if( !mode || mode == Mode.SYMLINK ) {
@@ -509,10 +510,18 @@ class PublishDir {
             FilesEx.mklink(source, [hard:true], destination)
         }
         else if( mode == Mode.MOVE ) {
-            FileHelper.movePath(source, destination)
+            if ( session.getPublishOffloadManager().tryMoveOffload(source, destination) ){
+                return true
+            } else {
+                FileHelper.movePath(source, destination)
+            }
         }
         else if( mode == Mode.COPY ) {
-            FileHelper.copyPath(source, destination)
+            if ( session.getPublishOffloadManager().tryCopyOffload(source, destination) ){
+                return true
+            } else {
+                FileHelper.copyPath(source, destination)
+            }
         }
         else if( mode == Mode.COPY_NO_FOLLOW ) {
             FileHelper.copyPath(source, destination, LinkOption.NOFOLLOW_LINKS)
@@ -520,6 +529,7 @@ class PublishDir {
         else {
             throw new IllegalArgumentException("Unknown file publish mode: ${mode}")
         }
+        return false
     }
 
     protected void createPublishDir() {

@@ -234,6 +234,22 @@ class ExecutorFactory {
         return result
     }
 
+    @CompileDynamic
+    static String getDefaultExecutorName(Session session) {
+        def result = session.config.process?.executor?.toString()
+        if( !result ) {
+            if (session.config.executor instanceof String) {
+                return session.config.executor
+            } else if (session.config.executor?.name instanceof String) {
+                return session.config.executor.name
+            } else {
+                return DEFAULT_EXECUTOR
+            }
+        }
+        return result
+    }
+
+
     void signalExecutors() {
         for( Executor exec : executors.values() )
             exec.signal()

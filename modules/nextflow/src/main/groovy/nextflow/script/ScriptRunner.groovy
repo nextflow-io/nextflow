@@ -242,6 +242,7 @@ class ScriptRunner {
     protected run() {
         log.debug "> Launching execution"
         assert scriptParser, "Missing script instance to run"
+        session.startPublishOffloadManager()
         // -- launch the script execution
         scriptParser.runScript()
         // -- normalise output

@@ -16,6 +16,7 @@
 
 package nextflow
 
+import nextflow.processor.PublishOffloadManager
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -293,6 +294,12 @@ class Session implements ISession {
 
     FilePorter getFilePorter() { filePorter }
 
+    boolean publishOffload
+
+    private PublishOffloadManager publishOffloadManager
+
+    PublishOffloadManager getPublishOffloadManager() {publishOffloadManager}
+
     /**
      * Creates a new session with an 'empty' (default) configuration
      */
@@ -394,6 +401,21 @@ class Session implements ISession {
         // -- file porter config
         this.filePorter = new FilePorter(this)
 
+        this.publishOffload = config.publishOffload as boolean
+
+        if ( this.publishOffload ) {
+            // -- publish offload manager config
+            log.warn("Publish offload flag enabled. Creating Offload Manager")
+            this.publishOffloadManager = new PublishOffloadManager(this)
+        }
+
+    }
+
+    void startPublishOffloadManager() {
+        if ( this.publishOffload ) {
+            log.debug("Starting Publish offload manager")
+            this.publishOffloadManager?.init()
+        }
     }
 
     protected Path cloudCachePath(Map cloudcache, Path workDir) {
