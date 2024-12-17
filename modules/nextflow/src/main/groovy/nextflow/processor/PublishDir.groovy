@@ -510,14 +510,14 @@ class PublishDir {
             FilesEx.mklink(source, [hard:true], destination)
         }
         else if( mode == Mode.MOVE ) {
-            if ( session.getPublishOffloadManager().tryMoveOffload(source, destination) ){
+            if ( session.getPublishOffloadManager()?.tryMoveOffload(source, destination) ){
                 return true
             } else {
                 FileHelper.movePath(source, destination)
             }
         }
         else if( mode == Mode.COPY ) {
-            if ( session.getPublishOffloadManager().tryCopyOffload(source, destination) ){
+            if ( session.getPublishOffloadManager()?.tryCopyOffload(source, destination) ){
                 return true
             } else {
                 FileHelper.copyPath(source, destination)
