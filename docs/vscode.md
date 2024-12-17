@@ -317,8 +317,6 @@ def foo(x, y, z) {
 }
 ```
 
-To ease the migration of existing scripts, the language server only reports warnings for Groovy-style type annotations and implicit variable declarations. These warnings will become errors in the future.
-
 :::{note}
 Because type annotations are useful for providing type checking at runtime, the language server will not report errors or warnings for Groovy-style type annotations at this time.
 
