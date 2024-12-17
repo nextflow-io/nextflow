@@ -232,13 +232,13 @@ if (aligner == 'bowtie2') {
 
 **Spread operator**
 
-Groovy supports a "spread" operator, which can be used to flatten a list in certain situations:
+Groovy supports a "spread" operator which can be used to flatten a nested list:
 
 ```groovy
 ch.map { meta, bambai -> [meta, *bambai] }
 ```
 
-The Nextflow language specification does not support the spread operator. Enumerate the list elements explicitly instead, for example:
+The Nextflow language specification does not support the spread operator. Enumerate the list elements explicitly instead:
 
 ```groovy
 // alternative 1
@@ -320,9 +320,9 @@ def foo(x, y, z) {
 To ease the migration of existing scripts, the language server only reports warnings for Groovy-style type annotations and implicit variable declarations. These warnings will become errors in the future.
 
 :::{note}
-Because type annotations are useful in practice for providing type checking at runtime, the language server will not report errors or warnings for Groovy-style type annotations, so as to not burden existing scripts that make heavy use of them.
+Because type annotations are useful for providing type checking at runtime, the language server will not report errors or warnings for Groovy-style type annotations at this time.
 
-Type annotations will be addressed in a future version of the Nextflow language specification, at which point the language server will provide a way to automatically migrate Groovy-style type annotations to the new syntax.
+Instead, type annotations will be addressed in a future version of the Nextflow language specification, at which point the language server will provide a way to automatically migrate Groovy-style type annotations to the new syntax.
 :::
 
 **Strings**
@@ -390,7 +390,7 @@ def map = (Map) readJson(json)  // soft cast
 def map = readJson(json) as Map // hard cast
 ```
 
-The Nextflow language specification only supports hard casts. However, hard casts are discouraged because they can cause unexpected behavior if used improperly. You can use a Groovy-style type annotation instead:
+The Nextflow language specification only supports hard casts. However, hard casts are discouraged because they can cause unexpected behavior if used improperly. Use a Groovy-style type annotation instead:
 
 ```groovy
 def Map map = readJson(json)
@@ -607,7 +607,7 @@ The following settings are available:
 : Specifies the folder path to the JDK. Use this setting if the extension cannot find Java automatically.
 
 `nextflow.paranoidWarnings`
-: Enable additional warnings for things like future deprecations, discouraged patterns, and so on.
+: Enable additional warnings for future deprecations, potential problems, and other discouraged patterns.
 
 ## Language server
 
