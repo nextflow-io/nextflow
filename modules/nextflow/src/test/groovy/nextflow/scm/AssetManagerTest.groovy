@@ -396,7 +396,11 @@ class AssetManagerTest extends Specification {
         given: 'A Git repository with files'
         def dir = tempDir.root
         dir.resolve('main.nf').text = "println 'Hello world'"
-        dir.resolve('nextflow.config').text = 'manifest {  }'
+        dir.resolve('nextflow.config').text = '''
+            manifest {
+                defaultBranch = 'master'
+            }
+            '''
         dir.resolve('foo.nf').text = 'this is foo content'
 
         and: 'Initialize Git repository'
@@ -658,92 +662,6 @@ class AssetManagerTest extends Specification {
         holder.manifest.getDefaultBranch() == 'master'
     }
 
-    def "should work with no defaultBranch"() {
-        given:
-        def config = '''
-            manifest {
-            }
-            '''
-        def dir = tempDir.getRoot()
-        dir.resolve('foo/bar').mkdirs()
-        dir.resolve('foo/bar/nextflow.config').text = config
-        dir.resolve('foo/bar/.git').mkdir()
-        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
-
-        when:
-        def holder = new AssetManager()
-        holder.build('foo/bar')
-
-        then:
-        holder.manifest.getDefaultBranch() == 'master'
-        holder.manifest.getDefaultRevision() == 'master'
-    }
-
-    def "should default to version tag if manifest version and no defaultBranch"() {
-        given:
-        def config = '''
-            manifest {
-                version = '3.0.0'
-            }
-            '''
-        def dir = tempDir.getRoot()
-        dir.resolve('foo/bar').mkdirs()
-        dir.resolve('foo/bar/nextflow.config').text = config
-        dir.resolve('foo/bar/.git').mkdir()
-        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
-
-        when:
-        def holder = new AssetManager()
-        holder.build('foo/bar')
-
-        then:
-        holder.manifest.getVersion() == '3.0.0'
-        holder.manifest.getDefaultRevision() == '3.0.0'
-        holder.manifest.getDefaultBranch() == 'master'
-    }
-
-    def "should handle commit hash in defaultRevision"() {
-        given:
-        def config = '''
-            manifest {
-                defaultRevision = '6b9515aba6c7efc6a9b3f273ce116fc0c224bf68'
-            }
-            '''
-        def dir = tempDir.getRoot()
-        dir.resolve('foo/bar').mkdirs()
-        dir.resolve('foo/bar/nextflow.config').text = config
-        dir.resolve('foo/bar/.git').mkdir()
-        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
-
-        when:
-        def holder = new AssetManager()
-        holder.build('foo/bar')
-
-        then:
-        holder.manifest.getDefaultRevision() == '6b9515aba6c7efc6a9b3f273ce116fc0c224bf68'
-        holder.manifest.getDefaultBranch() == 'master'
-    }
-
-    @PendingFeature
-    def "should not warn if project uses a tag as a defaultBranch"() {
-        given:
-        def ENV = [FOO: '/something', NXF_DEBUG: 'true']
-
-        when:
-        new CmdRun(revision: 'xyz')
-
-        then:
-        def warning = capture
-                .toString()
-                .readLines()
-                .findResults { line -> line.contains('WARN') ? line : null }
-                .join('\n')
-        and:
-        !warning
-        noExceptionThrown()
-    }
-
-    @PendingFeature
     def "should handle development version with stable defaultRevision"() {
         given:
         def config = '''
@@ -768,7 +686,54 @@ class AssetManagerTest extends Specification {
         holder.manifest.isDevelopmentVersion() == true
     }
 
-    @PendingFeature
+    def "should handle commit hash in defaultRevision"() {
+        given:
+        def config = '''
+            manifest {
+                defaultRevision = '6b9515aba6c7efc6a9b3f273ce116fc0c224bf68'
+                version = '2.0.0'  // Version should be ignored when defaultRevision is set
+            }
+            '''
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = config
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar')
+
+        then:
+        holder.manifest.getVersion() == '2.0.0'
+        holder.manifest.getDefaultRevision() == '6b9515aba6c7efc6a9b3f273ce116fc0c224bf68'
+        holder.manifest.getDefaultBranch() == 'master'
+    }
+
+    def "should handle development version with stable defaultRevision"() {
+        given:
+        def config = '''
+        manifest {
+            version = '2.3.0dev'
+            defaultRevision = '2.2.0'
+        }
+        '''
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = config
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar')
+
+        then:
+        holder.manifest.getVersion() == '2.3.0dev'
+        holder.manifest.getDefaultRevision() == '2.2.0'
+        holder.manifest.isDevelopmentVersion() == true
+    }
+
     def "should correctly compare development and release versions"() {
         given:
         def config = '''
@@ -802,10 +767,10 @@ class AssetManagerTest extends Specification {
 
         then:
         def warning = capture
-            .toString()
-            .readLines()
-            .findResults { line -> line.contains('WARN') ? line : null }
-            .join('\n')
+                .toString()
+                .readLines()
+                .findResults { line -> line.contains('WARN') ? line : null }
+                .join('\n')
         and:
         !warning
         noExceptionThrown()

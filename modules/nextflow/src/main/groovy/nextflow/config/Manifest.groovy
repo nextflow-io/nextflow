@@ -55,12 +55,17 @@ class Manifest {
 
 
     String getDefaultBranch() {
-        target.defaultBranch
+        target.defaultBranch ?: 'master'
     }
 
-    // 1. if defaultRevision is set, use that
-    // 2. if version is set, use that
-    // 3. Fallback to defaultBranch
+    /**
+     * Gets the default revision to use
+     * Priority order:
+     * 1. defaultRevision if set
+     * 2. version if set
+     * 3. defaultBranch
+     * @return The revision to use
+     */
     String getDefaultRevision() {
         target.defaultRevision ?: getVersion() ?: getDefaultBranch()
     }
@@ -111,6 +116,10 @@ class Manifest {
         target.nextflowVersion
     }
 
+    /**
+     * Gets the version
+     * @return The version string or null if not set
+     */
     String getVersion() {
         target.version
     }
@@ -200,5 +209,101 @@ class Manifest {
         AUTHOR,
         MAINTAINER,
         CONTRIBUTOR
+    }
+
+    /**
+     * Checks if the current version is a development version
+     * @return true if version ends with 'dev' or '-dev', false otherwise
+     */
+    boolean isDevelopmentVersion() {
+        def version = getVersion()
+        if (!version) return false
+        return version.endsWith('dev') || version.endsWith('-dev')
+    }
+
+    /**
+     * Checks if the current version is a release candidate
+     * @return true if version contains '-RC', false otherwise
+     */
+    boolean isReleaseCandidate() {
+        def version = getVersion()
+        if (!version) return false
+        return version.contains('-RC')
+    }
+
+    /**
+     * Checks if the current version is a hotfix
+     * @return true if version contains '-hotfix', false otherwise
+     */
+    boolean isHotfix() {
+        def version = getVersion()
+        if (!version) return false
+        return version.contains('-hotfix')
+    }
+
+    /**
+     * Validates if a version string is a valid semantic version
+     * @param version The version string to validate
+     * @return true if valid, false otherwise
+     */
+    boolean isValidVersion(String version) {
+        if (!version) return false
+        // Matches standard versions like 1.0.0, release candidates like 1.0.0-RC1, development versions like 1.0.0dev, and hotfixes like 1.0.0-hotfix
+        version ==~ /^\d+\.\d+\.\d+(-RC\d+|-dev|dev|-hotfix)?$/
+    }
+
+    /**
+     * Compares two version strings
+     * @return -1 if v1 < v2, 0 if v1 == v2, 1 if v1 > v2
+     */
+    private int compareVersions(String v1, String v2) {
+        def v1Parts = v1.tokenize('.')
+        def v2Parts = v2.tokenize('.')
+
+        for (int i = 0; i < Math.min(v1Parts.size(), v2Parts.size()); i++) {
+            def v1Part = v1Parts[i].replaceAll(/(-RC\d+|-dev|dev|-hotfix)$/, '') as int
+            def v2Part = v2Parts[i].replaceAll(/(-RC\d+|-dev|dev|-hotfix)$/, '') as int
+            if (v1Part != v2Part) {
+                return v1Part <=> v2Part
+            }
+        }
+
+        v1Parts.size() <=> v2Parts.size()
+    }
+
+    /**
+     * Checks if the current version is greater than the provided version
+     * @param otherVersion The version to compare against
+     * @return true if current version is greater, false otherwise
+     */
+    boolean isVersionGreaterThan(String otherVersion) {
+        def version = getVersion()
+        if (!version || !otherVersion) return false
+
+        // Strip any suffixes for comparison
+        def v1 = version.replaceAll(/(-RC\d+|-dev|dev|-hotfix)$/, '')
+        def v2 = otherVersion.replaceAll(/(-RC\d+|-dev|dev|-hotfix)$/, '')
+
+        compareVersions(v1, v2) > 0
+    }
+
+    /**
+     * Checks if the current version is compatible with the provided version
+     * @param otherVersion The version to check compatibility with
+     * @return true if compatible, false otherwise
+     */
+    boolean isVersionCompatibleWith(String otherVersion) {
+        def version = getVersion()
+        if (!version || !otherVersion) return false
+
+        // Development versions are always compatible
+        if (isDevelopmentVersion()) return true
+
+        // For release candidates and hotfixes, compare base versions
+        def v1 = version.replaceAll(/(-RC\d+|-dev|dev|-hotfix)$/, '')
+        def v2 = otherVersion.replaceAll(/(-RC\d+|-dev|dev|-hotfix)$/, '')
+
+        // Version should be greater than or equal to the other version
+        compareVersions(v1, v2) >= 0
     }
 }
