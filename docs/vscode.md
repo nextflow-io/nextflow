@@ -230,6 +230,27 @@ if (aligner == 'bowtie2') {
 }
 ```
 
+**Spread operator**
+
+Groovy supports a "spread" operator which can be used to flatten a nested list:
+
+```groovy
+ch.map { meta, bambai -> [meta, *bambai] }
+```
+
+The Nextflow language specification does not support the spread operator. Enumerate the list elements explicitly instead:
+
+```groovy
+// alternative 1
+ch.map { meta, bambai -> [meta, bambai[0], bambai[1]] }
+
+// alternative 2
+ch.map { meta, bambai ->
+    def (bam, bai) = bambai
+    [meta, bam, bai]
+}
+```
+
 **Implicit environment variables**
 
 In Nextflow DSL1 and DSL2, you can reference environment variables directly in strings:
@@ -296,10 +317,10 @@ def foo(x, y, z) {
 }
 ```
 
-To ease the migration of existing scripts, the language server only reports warnings for Groovy-style type annotations and implicit variable declarations. These warnings will become errors in the future.
-
 :::{note}
-Type annotations and static type checking will be addressed in a future version of the Nextflow language specification.
+Because type annotations are useful for providing type checking at runtime, the language server will not report errors or warnings for Groovy-style type annotations at this time.
+
+Instead, type annotations will be addressed in a future version of the Nextflow language specification, at which point the language server will provide a way to automatically migrate Groovy-style type annotations to the new syntax.
 :::
 
 **Strings**
@@ -356,6 +377,30 @@ Use a multi-line string instead:
 """
 echo "Hello world!"
 """
+```
+
+**Type conversions**
+
+Groovy supports two ways to perform type conversions:
+
+```groovy
+def map = (Map) readJson(json)  // soft cast
+def map = readJson(json) as Map // hard cast
+```
+
+The Nextflow language specification only supports hard casts. However, hard casts are discouraged because they can cause unexpected behavior if used improperly. Use a Groovy-style type annotation instead:
+
+```groovy
+def Map map = readJson(json)
+```
+
+Nextflow will raise an error at runtime if the `readJson()` function does not return a `Map`.
+
+In cases where you want to explicitly convert a value to a different type, it is better to use an explicit method. For example, to parse a string as a number:
+
+```groovy
+def x = '42' as Integer
+def x = '42'.toInteger()    // preferred
 ```
 
 **Process env inputs/outputs**
@@ -476,7 +521,7 @@ The process `shell` section is deprecated. Use the `script` block instead. The V
 
 See {ref}`config-syntax` for a comprehensive description of the configuration language.
 
-Currently, Nextflow parses config files as Groovy scripts, allowing the use of scripting constructs like variables, helper functions, and conditional logic for dynamic configuration. For example:
+Currently, Nextflow parses config files as Groovy scripts, allowing the use of scripting constructs like variables, helper functions, try-catch blocks, and conditional logic for dynamic configuration. For example:
 
 ```groovy
 def getHostname() {
@@ -559,8 +604,8 @@ The following settings are available:
 `nextflow.java.home`
 : Specifies the folder path to the JDK. Use this setting if the extension cannot find Java automatically.
 
-`nextflow.suppressFutureWarnings`
-: Hide warnings for future changes, deprecations, and removals.
+`nextflow.paranoidWarnings`
+: Enable additional warnings for future deprecations, potential problems, and other discouraged patterns.
 
 ## Language server
 
