@@ -117,7 +117,7 @@ class TowerFusionEnv implements FusionEnv {
      *
      * @return The signed JWT token
      */
-    protected String getLicenseToken(product, version) {
+    protected String getLicenseToken(String product, String version) {
         // FIXME(amiranda): Find out how to obtain the product and version
         // Candidate: FusionConfig?
 
@@ -131,13 +131,7 @@ class TowerFusionEnv implements FusionEnv {
             .header('Authorization', "Bearer ${accessToken}")
             .POST(
                 HttpRequest.BodyPublishers.ofString(
-                    new Gson().toJson(
-                        new LicenseTokenRequest(
-                            product: product,
-                            version: version
-                        ),
-                        LicenseTokenRequest.class
-                    ),
+                    makeLicenseTokenRequest(product, version)
                 )
             )
             .build()
@@ -146,7 +140,8 @@ class TowerFusionEnv implements FusionEnv {
             final resp = safeHttpSend(req, retryPolicy)
 
             if (resp.statusCode() == 200) {
-                return new Gson().fromJson(resp.body(), LicenseTokenResponse.class).signedToken
+                final ret = parseLicenseTokenResponse(resp)
+                return ret.signedToken
             }
 
             if (resp.statusCode() == 401) {
@@ -231,5 +226,32 @@ class TowerFusionEnv implements FusionEnv {
                 return resp
             } as CheckedSupplier
         ) as HttpResponse<String>
+    }
+
+    /**
+     * Create a JSON string representing a {@link LicenseTokenRequest} object
+     *
+     * @param product The product SKU
+     * @param version The version
+     * @return The resulting JSON string
+     */
+    private static String makeLicenseTokenRequest(String product, String version) {
+        return new Gson().toJson(
+            new LicenseTokenRequest(
+                product: product,
+                version: version
+            ),
+            LicenseTokenRequest.class
+        )
+    }
+
+    /**
+     * Parse a JSON string into a {@link LicenseTokenResponse} object
+     *
+     * @param stringHttpResponse The HttpResponse containing the JSON string
+     * @return The resulting LicenseTokenResponse object
+     */
+    private static LicenseTokenResponse parseLicenseTokenResponse(HttpResponse<String> resp) {
+        return new Gson().fromJson(resp.body(), LicenseTokenResponse.class)
     }
 }
