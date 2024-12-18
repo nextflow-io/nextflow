@@ -101,7 +101,7 @@ class TowerFusionEnv implements FusionEnv {
         try {
             final token = getLicenseToken(product, version)
             return [
-                'FUSION_LICENSE_TOKEN': token,
+                FUSION_LICENSE_TOKEN: token,
             ]
         } catch (Exception e) {
             log.warn("Error retrieving Fusion license information: ${e.message}")
