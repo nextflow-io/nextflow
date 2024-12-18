@@ -18,6 +18,7 @@ import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.fusion.FusionConfig
 import nextflow.fusion.FusionEnv
+import nextflow.platform.PlatformHelper
 import nextflow.util.Threads
 import org.pf4j.Extension
 
@@ -76,8 +77,8 @@ class TowerFusionEnv implements FusionEnv {
         this.session = Global.session as Session
         final towerConfig = session.config.navigate('tower') as Map ?: [:]
         final env = SysEnv.get()
-        this.endpoint = endpoint0(towerConfig, env)
-        this.accessToken = accessToken0(towerConfig, env)
+        this.endpoint = PlatformHelper.getEndpoint(towerConfig, env)
+        this.accessToken = PlatformHelper.getAccessToken(towerConfig, env)
     }
 
     /**
@@ -162,38 +163,6 @@ class TowerFusionEnv implements FusionEnv {
     /**************************************************************************
      * Helper methods
      *************************************************************************/
-
-    /**
-     * Get the configured Platform API endpoint: if the endpoint is not provided in the configuration, we fallback to the
-     * environment variable `TOWER_API_ENDPOINT`. If neither is provided, we fallback to the default endpoint.
-     *
-     * @param opts the configuration options for Platform
-     * @param env the applicable environment variables
-     * @return the Platform API endpoint
-     */
-    protected static String endpoint0(Map opts, Map<String, String> env) {
-        def result = opts.endpoint as String
-        if (!result || result == '-') {
-            result = env.get('TOWER_API_ENDPOINT') ?: TowerClient.DEF_ENDPOINT_URL
-        }
-        return result.stripEnd('/')
-    }
-
-    /**
-     * Get the configured Platform access token: if `TOWER_WORKFLOW_ID` is provided in the environment, we are running
-     * in a Platform-made run and we should ONLY retrieve the token from the environment. Otherwise, check
-     * the configuration file or fallback to the environment. If no token is found, returns null.
-     *
-     * @param opts the configuration options for Platform
-     * @param env the applicable environment variables
-     * @return the Platform access token
-     */
-    protected static String accessToken0(Map opts, Map<String, String> env) {
-        def token = env.get('TOWER_WORKFLOW_ID')
-            ? env.get('TOWER_ACCESS_TOKEN')
-            : opts.containsKey('accessToken') ? opts.accessToken as String : env.get('TOWER_ACCESS_TOKEN')
-        return token
-    }
 
     /**
      * Create a new HttpClient instance with default settings
