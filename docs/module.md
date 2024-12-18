@@ -184,41 +184,25 @@ Ciao world!
 
 ## Module templates
 
-Process script {ref}`templates <process-template>` can be included alongside a module in the `templates` directory.
-
-For example, suppose we have a project L with a module that defines two processes, P1 and P2, both of which use templates. The template files can be made available in the local `templates` directory:
+Template files can be stored in the `templates` directory alongside a module.
 
 ```
-Project L
-|── myModules.nf
-└── templates
-    |── P1-template.sh
-    └── P2-template.sh
+Project A
+├── main.nf
+└── modules
+    └── sayhello
+        ├── sayhello.nf
+        └── templates
+            └── sayhello.sh
 ```
 
-Then, we have a second project A with a workflow that includes P1 and P2:
+Template files can be invoked like regular scripts from a process in your pipeline using the `template` function. Variables prefixed with the dollar character (`$`) are interpreted as Nextflow variables when the template file is executed by Nextflow.
 
-```
-Pipeline A
-└── main.nf
-```
+See {ref}`process-template` for more information utilizing template files.
 
-Finally, we have a third project B with a workflow that also includes P1 and P2:
+Storing template files with the module that utilizes it encourages sharing of modules across pipelines. For example, future projects would be able to include the module from above by cloning the modules directory and including the module without needing to modify the process or template.
 
-```
-Pipeline B
-└── main.nf
-```
-
-With the possibility to keep the template files inside the project L, A and B can use the modules defined in L without any changes. A future project C would do the same, just cloning L (if not available on the system) and including its module.
-
-Beside promoting the sharing of modules across pipelines, there are several advantages to keeping the module template under the script path:
-
-1. Modules are self-contained
-2. Modules can be tested independently from the pipeline(s) that import them
-3. Modules can be made into libraries
-
-Having multiple template locations enables a structured project organization. If a project has several modules, and they all use templates, the project could group module scripts and their templates as needed. For example:
+Beyond facilitating module sharing across pipelines, organizing templates locations allows for a well-structured project. For example, complex projects with multiple modules that rely on templates can be organized into logical groups:
 
 ```
 baseDir
@@ -240,9 +224,10 @@ baseDir
     |── mymodules6.nf
     └── templates
         |── P5-template.sh
-        |── P6-template.sh
-        └── P7-template.sh
+        └── P6-template.sh
 ```
+
+Template files can also be stored in the project `templates` directory. See {ref}`structure-template` for more information about the project directory structure.
 
 (module-binaries)=
 
@@ -251,15 +236,9 @@ baseDir
 :::{versionadded} 22.10.0
 :::
 
-Modules can define binary scripts that are locally scoped to the processes defined by the tasks.
+Modules can define binary scripts that are locally scoped to the processes.
 
-To enable this feature, set the following flag in your pipeline script or configuration file:
-
-```nextflow
-nextflow.enable.moduleBinaries = true
-```
-
-The binary scripts must be placed in the module directory names `<module-dir>/resources/usr/bin`:
+Binary scripts must be placed in the module directory named `<module-dir>/resources/usr/bin`. For example:
 
 ```
 <module-dir>
@@ -267,15 +246,22 @@ The binary scripts must be placed in the module directory names `<module-dir>/re
 └── resources
     └── usr
         └── bin
-            |── your-module-script1.sh
-            └── another-module-script2.py
+            └── script.py
 ```
 
-Those scripts will be made accessible like any other command in the task environment, provided they have been granted the Linux execute permissions.
+Binary scripts can be invoked like regular commands from the locally scoped module without modifying the `PATH` environment variable or using an absolute path. Each script should include a shebang to specify the interpreter and inputs should be supplied as arguments. See {ref}`structure-bin` for more information about custom scripts in `bin` directories.
+
+To use this feature, the module binaries must be enabled in your pipeline script or configuration file:
+
+```nextflow
+nextflow.enable.moduleBinaries = true
+```
 
 :::{note}
-This feature requires the use of a local or shared file system for the pipeline work directory, or {ref}`wave-page` when using cloud-based executors.
+Module binary scripts require a local or shared file system for the pipeline work directory or {ref}`wave-page` when using cloud-based executors.
 :::
+
+Scripts can also be stored in project level `bin` directory. See {ref}`structure-bin` for more information.
 
 ## Sharing modules
 
