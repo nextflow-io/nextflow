@@ -40,8 +40,8 @@ import java.util.function.Predicate
 @CompileStatic
 class TowerFusionEnv implements FusionEnv {
 
-    // The endpoint where license-scoped JWT tokens are obtained
-    private static final String LICENSE_TOKEN_ENDPOINT = 'license/token/'
+    // The path relative to the Platform endpoint where license-scoped JWT tokens are obtained
+    private static final String LICENSE_TOKEN_PATH = 'license/token/'
 
     // Server errors that should trigger a retry
     private static final List<Integer> SERVER_ERRORS = [429, 500, 502, 503, 504]
@@ -126,7 +126,7 @@ class TowerFusionEnv implements FusionEnv {
         }
 
         final req = HttpRequest.newBuilder()
-            .uri(URI.create("${endpoint}/${LICENSE_TOKEN_ENDPOINT}").normalize())
+            .uri(URI.create("${endpoint}/${LICENSE_TOKEN_PATH}").normalize())
             .header('Content-Type', 'application/json')
             .header('Authorization', "Bearer ${accessToken}")
             .POST(
