@@ -36,8 +36,8 @@ class PublishDirTest extends Specification {
     }
 
     def 'should create a publish dir obj'() {
-
-        PublishDir publish
+        given:
+        def publish
 
         when:
         publish = PublishDir.create(path: '/data')
@@ -93,7 +93,7 @@ class PublishDirTest extends Specification {
 
     def 'should create publish dir with extended params' () {
         given:
-        PublishDir publish
+        def publish
 
         when:
         publish = PublishDir.create(tags: ['foo','bar'])
@@ -267,9 +267,6 @@ class PublishDirTest extends Specification {
     def 'should default mode to `symlink`' () {
 
         given:
-        def processor = [:] as TaskProcessor
-        processor.name = 'foo'
-
         def targetDir = Paths.get('/scratch/dir')
         def publisher = new PublishDir(path: targetDir, sourceFileSystem: FileSystems.default)
 
@@ -284,9 +281,6 @@ class PublishDirTest extends Specification {
 
         given:
         def workDirFileSystem = TestHelper.createInMemTempDir().fileSystem
-        def processor = [:] as TaskProcessor
-        processor.name = 'foo'
-
         def targetDir = TestHelper.createInMemTempDir()
         def publisher = new PublishDir(mode:'symlink', path: targetDir, sourceFileSystem: workDirFileSystem)
 

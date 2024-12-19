@@ -71,9 +71,6 @@ class IncludeDef {
         this.modules = new ArrayList<>(modules)
     }
 
-    /** only for testing purpose -- do not use */
-    protected IncludeDef() { }
-
     IncludeDef from(Object path) {
         this.path = path
         return this

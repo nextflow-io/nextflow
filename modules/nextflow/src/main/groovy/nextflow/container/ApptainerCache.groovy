@@ -27,9 +27,6 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class ApptainerCache extends SingularityCache {
 
-    /** only for testing */
-    protected ApptainerCache() {}
-
     ApptainerCache(ContainerConfig config, Map<String,String> env=null) {
         super(config, env)
     }
