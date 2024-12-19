@@ -12,27 +12,28 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package nextflow.config
 
 import groovy.transform.CompileStatic
-import groovy.transform.EqualsAndHashCode
+import groovy.util.logging.Slf4j
+import nextflow.SysEnv
+import nextflow.config.v1.ConfigParserV1
+import nextflow.config.v2.ConfigParserV2
+
 /**
- * Placeholder class that replaces closure definitions in the nextflow configuration
- * file in order to print the closure source text
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Ben Sherman <bentshermann@gmail.com>
  */
-@EqualsAndHashCode
+@Slf4j
 @CompileStatic
-class ConfigClosurePlaceholder {
+class ConfigParserFactory {
 
-    private String str
-
-    ConfigClosurePlaceholder(String str) {
-        this.str = str
+    static ConfigParser create() {
+        return SysEnv.get('NXF_ENABLE_STRICT_PARSER')=='true'
+            ? new ConfigParserV2()
+            : new ConfigParserV1()
     }
 
-    @Override String toString() { str }
 }
