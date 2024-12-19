@@ -1,5 +1,6 @@
 package nextflow.cloud.azure.batch
 
+import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.exception.ProcessUnrecoverableException
@@ -20,20 +21,52 @@ class AzBatchTaskHandlerTest extends Specification {
 
     def 'should validate config' () {
         when:
-        def task = Mock(TaskRun) { getName() >> 'foo'; }
+        def task = Mock(TaskRun) { 
+            getName() >> 'foo'
+            getProcessor() >> Mock(TaskProcessor) {
+                getExecutor() >> Mock(Executor) { getName() >> 'azurebatch' }
+            }
+        }
         and:
-        new AzBatchTaskHandler(task: task)
-                .validateConfiguration()
+        new AzBatchTaskHandler(task: task, executor: Mock(AzBatchExecutor) {
+            getConfig() >> new AzConfig([:])
+        }).validateConfiguration()
         then:
         def e = thrown(ProcessUnrecoverableException)
         e.message.startsWith('No container image specified for process foo')
 
+        when:
+        task = Mock(TaskRun) { 
+            getName() >> 'foo'
+            getContainer() >> 'ubuntu'
+        }
+        def CONFIG = [batch: [requireContainer: true]]
+        and:
+        new AzBatchTaskHandler(task: task, executor: Mock(AzBatchExecutor) {
+            getConfig() >> new AzConfig(CONFIG) 
+        }).validateConfiguration()
+        then:
+        noExceptionThrown()
+    }
+
+    def 'should ignore missing container if disabled' () {
+        given:
+        def task = Mock(TaskRun)
+        task.getName() >> 'batch-task'
+        task.getConfig() >> new TaskConfig()
+        task.getProcessor() >> Mock(TaskProcessor) {
+            getExecutor() >> Mock(Executor) { getName() >> 'azurebatch' }
+        }
+        and:
+        def handler = Spy(AzBatchTaskHandler)
+        handler.task = task
+        handler.executor = Mock(AzBatchExecutor) {
+            getConfig() >> new AzConfig([batch: [requireContainer: false]])
+        }
 
         when:
-        task = Mock(TaskRun) { getName() >> 'foo'; getContainer() >> 'ubuntu' }
-        and:
-        new AzBatchTaskHandler(task: task)
-                .validateConfiguration()
+        handler.validateConfiguration()
+        
         then:
         noExceptionThrown()
     }
