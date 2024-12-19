@@ -155,7 +155,7 @@ Replacing `<PIPELINE NAME>` with a pipeline name e.g. `nextflow-io/rnaseq-nf` an
 
 See the [Batch documentation](https://docs.microsoft.com/en-us/azure/batch/quick-create-portal) for further details about the configuration for Azure Batch.
 
-### Pools configuration
+### Autopools
 
 When using the `autoPoolMode` option, Nextflow automatically creates a `pool` of compute nodes appropriate for your pipeline.
 
@@ -167,12 +167,12 @@ To specify multiple Azure machine families, use a comma separated list with glob
 process.machineType = "Standard_D*d_v5,Standard_E*d_v5"
 ```
 
-For example, the following process will create a pool of `Standard_E4d_v5` machines based when using `autoPoolMode`:
+For example, the following process will create a pool of `Standard_E8d_v5` machines based when using `autoPoolMode`:
 
 ```nextflow
 process EXAMPLE_PROCESS {
     machineType "Standard_E*d_v5"
-    cpus 16
+    cpus 8
     memory 8.GB
 
     script:

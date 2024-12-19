@@ -1,5 +1,13 @@
 nf-amazon changelog
 ===================
+2.10.0 - 3 Dec 2024
+- Detecting errors in data unstaging (#5345) [3c8e602d]
+- Prevent NPE with null AWS Batch response [12fc1d60]
+- Fix Fargate warning on memory check (#5475) [bdf0ad00]
+- Bump groovy 4.0.24 [dd71ad31]
+- Bump aws sdk 1.12.777 (#5458) [8bad0b4b]
+- Bump netty-common to version 4.1.115.Final [d1bbd3d0]
+
 2.9.0 - 2 Oct 2024
 - Add Platform workflow prefix in AWS Batch job names (#5318) [e2e test] [42dd4ba8]
 - Fix AWS spot attempts with zero value (#5331) [ci fast] [bac2da12]
