@@ -937,9 +937,18 @@ class AssetManager {
         assert localPath
 
         def current = getCurrentRevision()
-        if( current != defaultBranch ) {
+        def defaultRev = getManifest().getDefaultRevision()
+        if( current != defaultRev ) {
+            // NOTE This is the issue
             if( !revision ) {
-                throw new AbortOperationException("Project `$project` is currently stuck on revision: $current -- you need to explicitly specify a revision with the option `-r` in order to use it")
+                Ref head = git.getRepository().findRef(Constants.HEAD);
+
+                // try to resolve the the current object id to a tag name
+                Map<ObjectId, String> names = git.nameRev().addPrefix( "refs/tags/" ).add(head.objectId).call()
+                def tag = names.get( head.objectId ) ?: head.objectId.name()
+                if( current != tag ) {
+                    throw new AbortOperationException("Project `$project` is currently stuck on revision: $current -- you need to explicitly specify a revision with the option `-r` in order to use it")
+                }
             }
         }
         if( !revision || revision == current ) {
