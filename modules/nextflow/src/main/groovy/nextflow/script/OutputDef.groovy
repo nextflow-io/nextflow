@@ -19,6 +19,7 @@ package nextflow.script
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.Session
 /**
  * Models the workflow output definition
  *
@@ -34,14 +35,20 @@ class OutputDef {
         this.closure = closure
     }
 
-    void run(Map<DataflowWriteChannel,String> targets) {
-        final dsl = new OutputDsl()
-        final cl = (Closure)closure.clone()
-        cl.setDelegate(dsl)
-        cl.setResolveStrategy(Closure.DELEGATE_FIRST)
-        cl.call()
+    OutputDef() {
+        this.closure = null
+    }
 
-        dsl.build(targets)
+    void run(Session session) {
+        final dsl = new OutputDsl()
+        if( closure ) {
+            final cl = (Closure)closure.clone()
+            cl.setDelegate(dsl)
+            cl.setResolveStrategy(Closure.DELEGATE_FIRST)
+            cl.call()
+        }
+
+        dsl.build(session)
     }
 
 }
