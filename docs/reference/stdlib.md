@@ -10,7 +10,7 @@ This page describes the built-in constants, functions, and types provided by Nex
 
 ### Constants
 
-The following constants are globally available in a Nextflow script:
+The following constants are globally available in a Nextflow script for workflow introspection:
 
 `baseDir`
 : :::{deprecated} 20.04.0
