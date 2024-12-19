@@ -1,0 +1,7 @@
+set -e
+cp .config nextflow.config
+
+$NXF_RUN > stdout
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > gen_data'` == 1 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > publish_dir_copy_process'` == 1 ]] || false
+[[ -f publishDir/chunk_1 ]] || false
