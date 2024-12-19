@@ -15,9 +15,9 @@
  */
 package nextflow.cloud.aws.batch
 
-import com.amazonaws.services.batch.model.ContainerProperties
 import com.amazonaws.services.batch.model.KeyValuePair
 import com.amazonaws.services.batch.model.LinuxParameters
+import com.amazonaws.services.batch.model.TaskContainerProperties
 import com.amazonaws.services.batch.model.Tmpfs
 import com.amazonaws.services.batch.model.Ulimit
 import groovy.transform.CompileStatic
@@ -28,20 +28,15 @@ import nextflow.util.MemoryUnit
  * Maps task container options to AWS container properties
  *
  * @see https://docs.docker.com/engine/reference/commandline/run/
- * @see https://docs.aws.amazon.com/batch/latest/APIReference/API_ContainerProperties.html
+ * @see https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/services/batch/model/TaskContainerProperties.html
  *
  * @author Manuele Simi <manuele.simi@gmail.com>
  */
 @CompileStatic
 class AwsContainerOptionsMapper {
 
-    @Deprecated
-    static ContainerProperties createContainerOpts(CmdLineOptionMap options) {
-        createContainerProperties(options)
-    }
-
-    static ContainerProperties createContainerProperties(CmdLineOptionMap options) {
-        final containerProperties = new ContainerProperties()
+    static TaskContainerProperties createContainerProperties(CmdLineOptionMap options) {
+        final containerProperties = new TaskContainerProperties();
         if ( options?.hasOptions() ) {
             checkPrivileged(options, containerProperties)
             checkEnvVars(options, containerProperties)
@@ -55,12 +50,12 @@ class AwsContainerOptionsMapper {
         return containerProperties
     }
 
-    protected static void checkPrivileged(CmdLineOptionMap options, ContainerProperties containerProperties) {
+    protected static void checkPrivileged(CmdLineOptionMap options, TaskContainerProperties containerProperties) {
         if ( findOptionWithBooleanValue(options, 'privileged') )
             containerProperties.setPrivileged(true);
     }
 
-    protected static void checkEnvVars(CmdLineOptionMap options, ContainerProperties containerProperties) {
+    protected static void checkEnvVars(CmdLineOptionMap options, TaskContainerProperties containerProperties) {
         final keyValuePairs = new ArrayList<KeyValuePair>()
         List<String> values = findOptionWithMultipleValues(options, 'env')
         values.addAll(findOptionWithMultipleValues(options, 'e'))
@@ -72,7 +67,7 @@ class AwsContainerOptionsMapper {
             containerProperties.setEnvironment(keyValuePairs)
     }
 
-    protected static void checkUser(CmdLineOptionMap options, ContainerProperties containerProperties) {
+    protected static void checkUser(CmdLineOptionMap options, TaskContainerProperties containerProperties) {
         String user = findOptionWithSingleValue(options, 'u')
         if ( !user)
             user = findOptionWithSingleValue(options, 'user')
@@ -80,12 +75,12 @@ class AwsContainerOptionsMapper {
             containerProperties.setUser(user)
     }
 
-    protected static void checkReadOnly(CmdLineOptionMap options, ContainerProperties containerProperties) {
+    protected static void checkReadOnly(CmdLineOptionMap options, TaskContainerProperties containerProperties) {
         if ( findOptionWithBooleanValue(options, 'read-only') )
             containerProperties.setReadonlyRootFilesystem(true);
     }
 
-    protected static void checkUlimit(CmdLineOptionMap options, ContainerProperties containerProperties) {
+    protected static void checkUlimit(CmdLineOptionMap options, TaskContainerProperties containerProperties) {
         final ulimits = new ArrayList<Ulimit>()
         findOptionWithMultipleValues(options, 'ulimit').each { value ->
             final tokens = value.tokenize('=')
