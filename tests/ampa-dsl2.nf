@@ -15,7 +15,7 @@ process ampaTask {
     output:
     path 'result'
 
-    // The BASH script to be executed - for each - sequence
+    script:
     """
     AMPA.pl -in=${seq} -noplot -rf=result -df=data
     """
@@ -23,9 +23,9 @@ process ampaTask {
 }
 
 workflow {
-    Channel.fromPath(params.in) |
-            splitFasta(file:true) |
-            ampaTask |
-            view { it.text }
+    Channel.fromPath(params.in)
+        | splitFasta(file:true)
+        | ampaTask
+        | view { file -> file.text }
 }
 

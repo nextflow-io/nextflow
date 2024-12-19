@@ -17,32 +17,33 @@
 
 process touch {
   input:
-    tuple val(id), val(fileName)
+  tuple val(id), val(fileName)
   output:
-    tuple val(id), path('file*')
+  tuple val(id), path('file*')
 
-  /
+  script:
+  """
   echo Creating $id
   touch $fileName
-  /
+  """
 }
 
 process makeFiles {
   input:
-    tuple val(id), path('file_x')
-
+  tuple val(id), path('file_x')
   output:
-    tuple val(id), path('*')
+  tuple val(id), path('*')
 
-  /
-   cp file_x copy_$id
-   touch beta_$id
-  /
+  script:
+  """
+  cp file_x copy_$id
+  touch beta_$id
+  """
 }
 
 
 workflow {
-  def x = Channel.from( ['a', 'file1'], ['b','file2'] )
+  def x = Channel.of( ['a', 'file1'], ['b','file2'] )
   touch(x)
   makeFiles(touch.out)
   makeFiles.out.view()

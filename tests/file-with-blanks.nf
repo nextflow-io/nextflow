@@ -16,7 +16,7 @@
  */
 
 workflow {
-  foo | view{ it.text }
+  foo | view { file -> file.text }
 }
 
 process foo {
@@ -24,6 +24,7 @@ process foo {
     debug true
     output:
     path "*/*.txt"
+    script:
     """
     mkdir "a b"
     echo "Hello world" > "a b/hello.txt"

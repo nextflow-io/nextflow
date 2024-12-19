@@ -20,6 +20,7 @@ process foo {
     val shell
     output:
     eval "$shell --version | cat -", emit: shell_version
+    script:
     '''
     echo Hello
     '''
@@ -28,5 +29,5 @@ process foo {
 
 workflow {
   foo('bash')
-  foo.out.shell_version.view{ it.readLines()[0] }
+  foo.out.shell_version.view { file -> file.readLines()[0] }
 }
