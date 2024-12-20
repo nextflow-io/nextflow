@@ -113,7 +113,7 @@ class TowerFusionEnv implements FusionEnv {
                 FUSION_LICENSE_TOKEN: token,
             ]
         } catch (Exception e) {
-            log.warn("Error retrieving Fusion license information: ${e.message}")
+            log.debug("Error retrieving Fusion license information: ${e.message}")
             return Map.of()
         }
     }
