@@ -1,6 +1,9 @@
 package io.seqera.tower.plugin
 
+import com.google.common.cache.Cache
+import com.google.common.cache.CacheBuilder
 import com.google.gson.Gson
+import com.google.gson.JsonSyntaxException
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
 import dev.failsafe.event.EventListener
@@ -61,6 +64,14 @@ class TowerFusionEnv implements FusionEnv {
     // The RetryPolicy instance used to retry requests
     private final RetryPolicy retryPolicy = newDefaultRetryPolicy(SERVER_ERRORS)
 
+    // Time-to-live for cached tokens
+    private Duration tokenTTL = Duration.of(1, ChronoUnit.HOURS)
+
+    // Cache used for storing license tokens
+    private Cache<String, LicenseTokenResponse> tokenCache = CacheBuilder.newBuilder()
+        .expireAfterWrite(tokenTTL)
+        .build()
+
     // Nextflow session
     private final Session session
 
@@ -112,48 +123,32 @@ class TowerFusionEnv implements FusionEnv {
      * Platform access token provided in the configuration of the current session.
      *
      * @throws AbortOperationException if a Platform access token cannot be found
-     * @throws UnauthorizedException if the access token is invalid
-     * @throws BadResponseException if the response is not as expected
-     * @throws IllegalStateException if the request cannot be sent
      *
      * @return The signed JWT token
      */
-    protected String getLicenseToken(String product, String version) {
-        // FIXME(amiranda): Find out how to obtain the product and version
-        // Candidate: FusionConfig?
-
+    protected String getLicenseToken(String product, String version) throws AbortOperationException {
         if (accessToken == null) {
             throw new AbortOperationException("Missing personal access token -- Make sure there's a variable TOWER_ACCESS_TOKEN in your environment")
         }
 
-        final req = HttpRequest.newBuilder()
-            .uri(URI.create("${endpoint}/${LICENSE_TOKEN_PATH}").normalize())
-            .header('Content-Type', 'application/json')
-            .header('Authorization', "Bearer ${accessToken}")
-            .POST(
-                HttpRequest.BodyPublishers.ofString(
-                    makeLicenseTokenRequest(product, version)
-                )
-            )
-            .build()
+        final req = new LicenseTokenRequest(
+            product: product,
+            version: version
+        )
 
-        try {
-            final resp = safeHttpSend(req, retryPolicy)
+        final key = '${product}-${version}'
+        def resp = tokenCache.get(
+            key,
+            () -> sendRequest(req)
+        ) as LicenseTokenResponse
 
-            if (resp.statusCode() == 200) {
-                final ret = parseLicenseTokenResponse(resp)
-                return ret.signedToken
-            }
-
-            if (resp.statusCode() == 401) {
-                throw new UnauthorizedException("Unauthorized [401] - Verify you have provided a valid access token")
-            }
-
-            throw new BadResponseException("Invalid response: ${req.method()} ${req.uri()} [${resp.statusCode()}] ${resp.body()}")
-
-        } catch (IOException e) {
-            throw new IllegalStateException("Unable to send request to '${req.uri()}' : ${e.message}")
+        if( resp.expirationDate.before(new Date()) ) {
+            log.debug "Cached token already expired; refreshing"
+            resp = sendRequest(req)
+            tokenCache.put(key, resp)
         }
+
+        return resp.signedToken
     }
 
     /**************************************************************************
@@ -230,29 +225,76 @@ class TowerFusionEnv implements FusionEnv {
     }
 
     /**
-     * Create a JSON string representing a {@link LicenseTokenRequest} object
+     * Create a {@link HttpRequest} representing a {@link LicenseTokenRequest} object
      *
-     * @param product The product SKU
-     * @param version The version
+     * @param req The LicenseTokenRequest object
+     * @return The resulting HttpRequest object
+     */
+    private HttpRequest makeHttpRequest(LicenseTokenRequest req) {
+        return HttpRequest.newBuilder()
+            .uri(URI.create("${endpoint}/${LICENSE_TOKEN_PATH}").normalize())
+            .header('Content-Type', 'application/json')
+            .header('Authorization', "Bearer ${accessToken}")
+            .POST(
+                HttpRequest.BodyPublishers.ofString(
+                    serializeToJson(req)
+                )
+            )
+            .build()
+    }
+
+    /**
+     * Serialize a {@link LicenseTokenRequest} object into a JSON string
+     *
+     * @param req The LicenseTokenRequest object
      * @return The resulting JSON string
      */
-    private static String makeLicenseTokenRequest(String product, String version) {
-        return new Gson().toJson(
-            new LicenseTokenRequest(
-                product: product,
-                version: version
-            ),
-            LicenseTokenRequest.class
-        )
+    private static String serializeToJson(LicenseTokenRequest req) {
+        return new Gson().toJson(req)
     }
 
     /**
      * Parse a JSON string into a {@link LicenseTokenResponse} object
      *
-     * @param stringHttpResponse The HttpResponse containing the JSON string
+     * @param resp The String containing the JSON representation of the LicenseTokenResponse object
      * @return The resulting LicenseTokenResponse object
+     *
+     * @throws JsonSyntaxException if the JSON string is not well-formed
      */
-    private static LicenseTokenResponse parseLicenseTokenResponse(HttpResponse<String> resp) {
-        return new Gson().fromJson(resp.body(), LicenseTokenResponse.class)
+    private static LicenseTokenResponse parseLicenseTokenResponse(String resp) throws JsonSyntaxException {
+        return new Gson().fromJson(resp, LicenseTokenResponse.class)
+    }
+
+    /**
+     * Request a license token from Platform.
+     *
+     * @param req The LicenseTokenRequest object
+     * @return The LicenseTokenResponse object
+     *
+     * @throws AbortOperationException if a Platform access token cannot be found
+     * @throws UnauthorizedException if the access token is invalid
+     * @throws BadResponseException if the response is not as expected
+     * @throws IllegalStateException if the request cannot be sent
+     */
+    private LicenseTokenResponse sendRequest(LicenseTokenRequest req) throws AbortOperationException, UnauthorizedException, BadResponseException, IllegalStateException {
+
+        final httpReq = makeHttpRequest(req)
+
+        try {
+            final resp = safeHttpSend(httpReq, retryPolicy)
+
+            if( resp.statusCode() == 200 ) {
+                final ret = parseLicenseTokenResponse(resp.body())
+                return ret
+            }
+
+            if( resp.statusCode() == 401 ) {
+                throw new UnauthorizedException("Unauthorized [401] - Verify you have provided a valid access token")
+            }
+
+            throw new BadResponseException("Invalid response: ${httpReq.method()} ${httpReq.uri()} [${resp.statusCode()}] ${resp.body()}")
+        } catch (IOException e) {
+            throw new IllegalStateException("Unable to send request to '${httpReq.uri()}' : ${e.message}")
+        }
     }
 }
