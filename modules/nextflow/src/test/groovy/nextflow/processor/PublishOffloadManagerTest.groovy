@@ -39,7 +39,7 @@ class PublishOffloadManagerTest extends Specification {
         session.init(scriptFile)
         //session.start()
         session.script = script;
-        def poManager = new PublishOffloadManager(session);
+        def poManager = new PublishOffloadManager(session, 2);
         when:
         poManager.init()
         then:
