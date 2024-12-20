@@ -294,7 +294,7 @@ class Session implements ISession {
 
     FilePorter getFilePorter() { filePorter }
 
-    boolean publishOffload
+    int publishOffloadBatchSize
 
     private PublishOffloadManager publishOffloadManager
 
@@ -401,9 +401,9 @@ class Session implements ISession {
         // -- file porter config
         this.filePorter = new FilePorter(this)
 
-        this.publishOffload = config.publishOffload as boolean
+        this.publishOffloadBatchSize = config.publishOffloadBatchSize ? config.publishOffloadBatchSize as int : 0
 
-        if ( this.publishOffload ) {
+        if ( this.publishOffloadBatchSize ) {
             // -- publish offload manager config
             log.warn("Publish offload flag enabled. Creating Offload Manager")
             this.publishOffloadManager = new PublishOffloadManager(this)
@@ -412,7 +412,7 @@ class Session implements ISession {
     }
 
     void startPublishOffloadManager() {
-        if ( this.publishOffload ) {
+        if ( this.publishOffloadBatchSize ) {
             log.debug("Starting Publish offload manager")
             this.publishOffloadManager?.init()
         }
@@ -698,13 +698,19 @@ class Session implements ISession {
         log.debug "Session await"
         processesBarrier.awaitCompletion()
         log.debug "Session await > all processes finished"
-        terminated = true
-        monitorsBarrier.awaitCompletion()
-        log.debug "Session await > all barriers passed"
+
+
         if( !aborted ) {
             joinAllOperators()
             log.trace "Session > all operators finished"
         }
+        // shutdown t
+        publishPoolManager?.shutdown(false)
+        publishOffloadManager?.close()
+        log.debug "Session await > Publish phase finished"
+        terminated = true
+        monitorsBarrier.awaitCompletion()
+        log.debug "Session await > all barriers passed"
     }
 
     void destroy() {

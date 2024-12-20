@@ -16,6 +16,7 @@
 
 package nextflow.processor
 
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Nextflow
 import nextflow.Session
@@ -26,52 +27,65 @@ import nextflow.fusion.FusionHelper
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
-import nextflow.script.TokenValCall
 import nextflow.util.ArrayTuple
 
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicInteger
 
 @Slf4j
 class PublishOffloadManager {
-    Map<TaskRun, ArrayTuple> runningPublications= new HashMap<TaskRun, ArrayTuple>(10)
+    Map<Integer, ArrayTuple> runningPublications= new HashMap<Integer, ArrayTuple>(10)
     static final Map SUPPORTED_SCHEMES = [awsbatch:['s3'], local:['file']]
     static final String S5CMD_CONTAINER = 'jorgeejarquea/s5cmd_aws:0.0.1'
-    Session session
-    PublishTaskProcessor copyProcessor
-    PublishTaskProcessor moveProcessor
+    static final String PUBLISH_FUNCTION = 'nxf_publish'
+    private Session session
+    private PublishTaskProcessor publishProcessor
+    private List<String> commands = new LinkedList<String>();
+    private boolean closed = false;
+    /**
+     * Unique offloaded index number
+     */
+    final protected AtomicInteger indexCount = new AtomicInteger()
 
     PublishOffloadManager(Session session) {
-        this.session = session
+        this.session = session;
     }
+    @PackageScope
+    TaskProcessor getPublishProcessor(){ publishProcessor }
 
     void init(){
-
-        if (useS5cmd()){
-            this.copyProcessor = createProcessor( "publish_dir_copy_process", new BodyDef({"s5cmd cp $source $target"},'copy data process') )
-            this.moveProcessor = createProcessor( "publish_dir_move_process", new BodyDef({"s5cmd mv $source $target"},'move data process') )
-        } else {
-            this.copyProcessor = createProcessor( "publish_dir_copy_process", new BodyDef({"cp $source $target"},'copy data process') )
-            this.moveProcessor = createProcessor( "publish_dir_move_process", new BodyDef({"mv $source $target"},'move data process') )
-        }
+        //Try with template
+        BodyDef body = new BodyDef({
+            def file = PublishOffloadManager.class.getResource('copy-group-template.sh')
+            return file.text
+        },'publish file process', 'shell')
+        this.publishProcessor = createProcessor( "publish_process", body )
 
     }
 
     private boolean checkOffload(Path source, Path destination, String executor){
-        return session.publishOffload && source.scheme in SUPPORTED_SCHEMES[executor] && destination.scheme in SUPPORTED_SCHEMES[executor];
+        return session.publishOffloadBatchSize > 0 && source.scheme in SUPPORTED_SCHEMES[executor] && destination.scheme in SUPPORTED_SCHEMES[executor];
     }
 
-    private synchronized boolean tryInvokeProcessor(TaskProcessor processor, Path origin, Path destination){
-        if (checkOffload(origin, destination, processor.executor.name)) {
-            final params = new TaskStartParams(TaskId.next(), processor.indexCount.incrementAndGet())
-            final values = new ArrayList(1)
-            log.debug("Creating task for file publication: ${origin.toUri().toString()} -> ${destination.toUri().toString()} " )
-            values[0] = generateFileValues(origin, destination)
-            final args = new ArrayList(2)
-            args[0] = params
-            args[1] = values
-            assert args.size() == 2
-            processor.invokeTask(args.toArray())
-            runningPublications.put(processor.currentTask.get(), Nextflow.tuple(origin, destination))
+    private void invokeProcessor(inputValue) {
+        final params = new TaskStartParams(TaskId.next(), publishProcessor.indexCount.incrementAndGet())
+        final values = new ArrayList(1)
+        values[0] = inputValue
+        final args = new ArrayList(2)
+        args[0] = params
+        args[1] = values
+        publishProcessor.invokeTask(args.toArray())
+    }
+
+    private synchronized boolean tryOffload(String command, Path origin, Path destination, PublishRetryConfig retryConfig, boolean failonError){
+        if (checkOffload(origin, destination, publishProcessor.executor.name)) {
+            final id = indexCount.incrementAndGet()
+            runningPublications.put(id, Nextflow.tuple(origin, destination, failonError))
+            commands.add(generateExecutionCommand(id, command, origin, destination, retryConfig))
+            if (commands.size() == session.publishOffloadBatchSize){
+                invokeProcessor(commands.join(";"))
+                commands.clear()
+            }
             return true
         }
         return false
@@ -85,20 +99,33 @@ class PublishOffloadManager {
         return ( (!isFusionEnabled()) && (ExecutorFactory.getDefaultExecutorName(session) == 'awsbatch') )
     }
 
-    private ArrayTuple<String> generateFileValues(Path origin, Path destination){
-        if ( isFusionEnabled() ){
-            Nextflow.tuple(FusionHelper.toContainerMount(origin), FusionHelper.toContainerMount(destination))
+    private String generateExecutionCommand(Integer id, String command, Path origin, Path destination, PublishRetryConfig retryConfig){
+        return "$PUBLISH_FUNCTION ${retryConfig.maxAttempts} ${retryConfig.delay.toMillis()} ${retryConfig.jitter} ${retryConfig.maxDelay.toMillis()} " +
+                "$id $command ${convertFilePath(origin)} ${convertFilePath(destination)}"
+    }
+
+    private String convertFilePath(Path path) {
+        if (isFusionEnabled()) {
+            return FusionHelper.toContainerMount(path)
         } else {
-            Nextflow.tuple(FilesEx.toUriString(origin), FilesEx.toUriString(destination))
+            return FilesEx.toUriString(path)
         }
     }
 
-    boolean tryMoveOffload(Path origin, Path destination) {
-        tryInvokeProcessor(moveProcessor, origin, destination)
+    boolean tryMoveOffload(Path origin, Path destination, PublishRetryConfig retryConfig, boolean failonError) {
+        String command = 'mv'
+        if ( useS5cmd() ) {
+            command = 's5cmd mv'
+        }
+        tryOffload(command, origin, destination, retryConfig, failonError)
     }
 
-    boolean tryCopyOffload(Path origin, Path destination) {
-        tryInvokeProcessor(copyProcessor, origin, destination)
+    boolean tryCopyOffload(Path origin, Path destination, PublishRetryConfig retryConfig, boolean failonError) {
+        String command = 'cp'
+        if ( useS5cmd() ) {
+            command = 's5cmd cp'
+        }
+        tryOffload(command, origin, destination, retryConfig, failonError)
     }
 
     private PublishTaskProcessor createProcessor( String name, BodyDef body){
@@ -112,8 +139,8 @@ class PublishOffloadManager {
         if (useS5cmd()) {
             processConfig.put('container', S5CMD_CONTAINER);
         }
-        processConfig._in_tuple(new TokenValCall('source'), new TokenValCall('target'))
-
+        processConfig._in_val('executions')
+        processConfig._out_stdout()
         if ( !body )
             throw new IllegalArgumentException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
 
@@ -127,10 +154,18 @@ class PublishOffloadManager {
         new PublishTaskProcessor( name, execObj, session, session.script, processConfig, body, this )
     }
 
+    synchronized void close() {
+        closed=true
+        if ( commands.size() ){
+            invokeProcessor(commands.join(";"))
+            commands.clear()
+        }
+
+    }
 }
 
+@Slf4j
 class PublishTaskProcessor extends TaskProcessor{
-
     PublishOffloadManager manager
 
     PublishTaskProcessor(String name, Executor executor, Session session, BaseScript baseScript, ProcessConfig processConfig, BodyDef bodyDef, PublishOffloadManager manager) {
@@ -139,8 +174,46 @@ class PublishTaskProcessor extends TaskProcessor{
     }
 
     @Override
-    void finalizeTask0(TaskRun task){
-        final tuple = manager.runningPublications.remove(task)
-        session.notifyFilePublish((Path)tuple.get(0), (Path)tuple.get(1))
+    void finalizeTask0(TaskRun task) {
+        if( task.outputs.size() == 1 ){
+            def value = task.outputs.values().first()
+            value = value instanceof Path ? value.text : value?.toString()
+            for ( String finishedCopy : value.split('\n') ){
+                final result = finishedCopy.split(":")
+                if (result.size() == 2) {
+                    final id = result[0] as Integer
+                    final tuple = manager.runningPublications.remove(id)
+                    final exitcode = result[1] as Integer
+                    if( exitcode == 0 ){
+                        session.notifyFilePublish((Path) tuple.get(0), (Path) tuple.get(1))
+                    } else {
+                        if (tuple.get(2) as Boolean) {
+                            log.error("Publication of file ${tuple.get(0)} -> ${tuple.get(1)} failed.")
+                        } else {
+                            log.warn("Publication of file ${tuple.get(0)} -> ${tuple.get(1)} failed.")
+                        }
+                        printPublishTaskError(task)
+                    }
+                }
+            }
+        } else {
+            log.error("Incorrect number of outputs in the publish task");
+        }
+    }
+
+    private void printPublishTaskError(TaskRun task){
+        final List<String> message = []
+        final max = 50
+        final lines = task.dumpStderr(max)
+        message << "Executed publish task:"
+        if( lines ) {
+                message << "\nCommand error:"
+                for( String it : lines ) {
+                    message << "  ${stripWorkDir(it, task.workDir)}"
+                }
+        }
+        if( task?.workDir )
+            message << "\nWork dir:\n  ${task.workDirStr}"
+        log.debug(message.join('\n'))
     }
 }

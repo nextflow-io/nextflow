@@ -43,8 +43,7 @@ class PublishOffloadManagerTest extends Specification {
         when:
         poManager.init()
         then:
-        poManager.copyProcessor != null
-        poManager.moveProcessor != null
+        poManager.publishProcessor != null
         cleanup:
         session.classesDir?.deleteDir()
 
