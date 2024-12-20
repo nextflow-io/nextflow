@@ -93,10 +93,8 @@ class TowerFusionEnv implements FusionEnv {
     @Override
     Map<String, String> getEnvironment(String scheme, FusionConfig config) {
 
-        // TODO(amiranda): Hardcoded for now. We need to find out how to obtain
-        // the concrete product SKU and version. Candidate: FusionConfig?
-        final product = 'fusion'
-        final version = '2.4'
+        final product = config.sku()
+        final version = config.version()
 
         try {
             final token = getLicenseToken(product, version)
