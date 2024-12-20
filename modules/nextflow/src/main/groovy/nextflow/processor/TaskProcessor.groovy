@@ -2422,7 +2422,7 @@ class TaskProcessor {
      * @param task The {@code TaskRun} instance to finalize
      * @param producedFiles The map of files to be bind the outputs
      */
-    private void finalizeTask0( TaskRun task ) {
+    protected void finalizeTask0( TaskRun task ) {
         log.trace "Finalize process > ${safeTaskName(task)}"
 
         // -- bind output (files)
