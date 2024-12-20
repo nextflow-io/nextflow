@@ -2,6 +2,7 @@ package io.seqera.tower.plugin
 
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
+import groovy.json.JsonOutput
 import io.seqera.tower.plugin.exception.UnauthorizedException
 import nextflow.Global
 import nextflow.Session
@@ -10,6 +11,8 @@ import nextflow.exception.AbortOperationException
 import nextflow.fusion.FusionConfig
 import spock.lang.Shared
 import spock.lang.Specification
+
+import java.time.temporal.ChronoUnit
 
 /**
  * Test cases for the TowerFusionEnv class.
@@ -256,6 +259,8 @@ class TowerFusionEnvTest extends Specification {
         def provider = new TowerFusionEnv()
 
         and: 'a mock endpoint returning a valid token'
+        final now = new Date().toInstant()
+        final expirationDate = JsonOutput.toJson(Date.from(now.plus(1, ChronoUnit.DAYS)))
         wireMockServer.stubFor(
             WireMock.post(WireMock.urlEqualTo("/license/token/"))
                 .withHeader('Authorization', WireMock.equalTo('Bearer abc123'))
@@ -263,7 +268,7 @@ class TowerFusionEnvTest extends Specification {
                     WireMock.aResponse()
                         .withStatus(200)
                         .withHeader('Content-Type', 'application/json')
-                        .withBody('{"signedToken":"xyz789"}')
+                        .withBody('{"signedToken":"xyz789", "expirationDate":' + expirationDate + '}')
                 )
         )
 

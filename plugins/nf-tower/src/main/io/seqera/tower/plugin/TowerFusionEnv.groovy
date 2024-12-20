@@ -2,6 +2,7 @@ package io.seqera.tower.plugin
 
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
+import com.google.common.util.concurrent.UncheckedExecutionException
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import dev.failsafe.Failsafe
@@ -136,19 +137,22 @@ class TowerFusionEnv implements FusionEnv {
             version: version
         )
 
-        final key = '${product}-${version}'
-        def resp = tokenCache.get(
-            key,
-            () -> sendRequest(req)
-        ) as LicenseTokenResponse
+        try {
+            final key = '${product}-${version}'
+            def resp = tokenCache.get(
+                key,
+                () -> sendRequest(req)
+            ) as LicenseTokenResponse
 
-        if( resp.expirationDate.before(new Date()) ) {
-            log.debug "Cached token already expired; refreshing"
-            resp = sendRequest(req)
-            tokenCache.put(key, resp)
+            if( resp.expirationDate.before(new Date()) ) {
+                log.debug "Cached token already expired; refreshing"
+                resp = sendRequest(req)
+                tokenCache.put(key, resp)
+            }
+            return resp.signedToken
+        } catch (UncheckedExecutionException e) {
+            throw e.getCause()
         }
-
-        return resp.signedToken
     }
 
     /**************************************************************************
