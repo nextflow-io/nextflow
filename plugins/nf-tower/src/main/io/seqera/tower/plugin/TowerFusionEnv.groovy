@@ -112,6 +112,9 @@ class TowerFusionEnv implements FusionEnv {
      * Platform access token provided in the configuration of the current session.
      *
      * @throws AbortOperationException if a Platform access token cannot be found
+     * @throws UnauthorizedException if the access token is invalid
+     * @throws BadResponseException if the response is not as expected
+     * @throws IllegalStateException if the request cannot be sent
      *
      * @return The signed JWT token
      */
