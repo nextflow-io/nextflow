@@ -298,7 +298,7 @@ class Session implements ISession {
 
     private PublishOffloadManager publishOffloadManager
 
-    PublishOffloadManager getPublishOffloadManager() {publishOffloadManager}
+    PublishOffloadManager getPublishOffloadManager() { publishOffloadManager }
 
     /**
      * Creates a new session with an 'empty' (default) configuration
