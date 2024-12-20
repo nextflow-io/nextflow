@@ -44,7 +44,7 @@ class TowerFusionEnv implements FusionEnv {
     private static final String LICENSE_TOKEN_PATH = 'license/token/'
 
     // Server errors that should trigger a retry
-    private static final List<Integer> SERVER_ERRORS = [429, 500, 502, 503, 504]
+    private static final List<Integer> SERVER_ERRORS = [408, 429, 500, 502, 503, 504]
 
     // Default connection timeout for HTTP requests
     private static final Duration DEFAULT_CONNECTION_TIMEOUT = Duration.of(30, ChronoUnit.SECONDS)
