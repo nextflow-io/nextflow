@@ -294,7 +294,7 @@ class Session implements ISession {
 
     FilePorter getFilePorter() { filePorter }
 
-    int publishOffloadBatchSize
+    private int publishOffloadBatchSize
 
     private PublishOffloadManager publishOffloadManager
 
@@ -406,7 +406,7 @@ class Session implements ISession {
         if ( this.publishOffloadBatchSize ) {
             // -- publish offload manager config
             log.warn("Publish offload flag enabled. Creating Offload Manager")
-            this.publishOffloadManager = new PublishOffloadManager(this)
+            this.publishOffloadManager = new PublishOffloadManager(this, publishOffloadBatchSize)
         }
 
     }
