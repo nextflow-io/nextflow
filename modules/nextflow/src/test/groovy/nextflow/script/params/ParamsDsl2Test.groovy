@@ -110,7 +110,7 @@ class ParamsDsl2Test extends Dsl2Spec {
     def 'should allow unqualified stdin and stdout' () {
 
         given:
-        new Session()
+        def session = new Session()
         and:
         def config = new CompilerConfiguration()
         config.setScriptBaseClass(BaseScript.class.name)
@@ -131,7 +131,7 @@ class ParamsDsl2Test extends Dsl2Spec {
         '''
 
         when:
-        def binding = new ScriptBinding().setSession(Mock(Session))
+        def binding = new ScriptBinding().setSession(session)
         def script = (BaseScript)new GroovyShell(binding,config).parse(SCRIPT); script.run()
         and:
         def process = ScriptMeta.get(script).getProcess('alpha'); process.initialize()
@@ -151,7 +151,7 @@ class ParamsDsl2Test extends Dsl2Spec {
     def 'should allow unqualified tuple stdin and stdout' () {
 
         given:
-        new Session()
+        def session = new Session()
         and:
         def config = new CompilerConfiguration()
         config.setScriptBaseClass(BaseScript.class.name)
@@ -172,7 +172,7 @@ class ParamsDsl2Test extends Dsl2Spec {
         '''
 
         when:
-        def binding = new ScriptBinding().setSession(Mock(Session))
+        def binding = new ScriptBinding().setSession(session)
         def script = (BaseScript)new GroovyShell(binding,config).parse(SCRIPT); script.run()
         and:
         def process = ScriptMeta.get(script).getProcess('beta'); process.initialize()
