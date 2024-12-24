@@ -20,6 +20,7 @@ package nextflow.util
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -45,10 +46,8 @@ class ThreadPoolHelper {
                 break
 
             final delta = System.currentTimeMillis()-t0
-            if( delta > max ) {
-                log.warn(exitMsg)
-                break
-            }
+            if( delta > max )
+                throw new TimeoutException(exitMsg)
 
             // log to console every 10 minutes (120 * 5 sec)
             if( count % 120 == 0 ) {
