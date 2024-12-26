@@ -15,6 +15,9 @@
  */
 
 package nextflow.trace
+
+import spock.lang.TempDir
+
 import java.nio.file.Files
 
 import nextflow.Session
@@ -28,7 +31,9 @@ import nextflow.processor.TaskStatus
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import spock.lang.Specification
-import test.TestHelper
+
+import java.nio.file.Path
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -36,6 +41,9 @@ import test.TestHelper
 class TraceFileObserverTest extends Specification {
 
     final static long MB = 1024 * 1024
+
+    @TempDir
+    Path tempDir
 
     def setupSpec() {
         TraceRecord.TIMEZONE = TimeZone.getTimeZone('UTC') // note: set the timezone to be sure the time string does not change on CI test servers
@@ -235,7 +243,7 @@ class TraceFileObserverTest extends Specification {
 
         given:
         final KB = 1024L
-        final file = TestHelper.createInMemTempFile('trace')
+        final file = Files.createTempFile(tempDir,'trace', '.txt')
         file.text =  '''
                 pid state %cpu %mem vmem rss peak_vmem peak_rss rchar wchar syscr syscw read_bytes write_bytes
                 18 0 7999 46 7868980 6694900 7876620 6702144 2147483647 2147483647 44001533 148401890 2147483647 2147483647

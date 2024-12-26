@@ -16,6 +16,9 @@
 
 package nextflow.processor
 
+import spock.lang.TempDir
+
+import java.nio.file.Path
 import java.util.concurrent.atomic.LongAdder
 
 import nextflow.Session
@@ -33,6 +36,9 @@ class TaskHandlerTest extends Specification {
 
     def static final long KB = 1024
 
+    @TempDir
+    Path folder
+
     def 'test get trace record'() {
 
         given:
@@ -42,7 +48,6 @@ class TaskHandlerTest extends Specification {
         '''
                 .leftTrim()
 
-        def folder = TestHelper.createInMemTempDir()
         folder.resolve( TaskRun.CMD_TRACE ).text = traceText
 
         def config = [
