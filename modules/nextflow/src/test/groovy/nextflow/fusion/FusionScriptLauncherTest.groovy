@@ -34,7 +34,7 @@ class FusionScriptLauncherTest extends Specification {
         given:
         Global.session = Mock(Session) { getConfig() >> [:] }
         and:
-        def fusion = new FusionScriptLauncher(scheme: 'http')
+        def fusion = new FusionScriptLauncher(Mock(TaskBean), 'http', null)
 
         when:
         def result = fusion.toContainerMount(XPath.get('http://foo/a/b/c.txt'))
@@ -57,9 +57,7 @@ class FusionScriptLauncherTest extends Specification {
         given:
         Global.config = [:]
         and:
-        def fusion = new FusionScriptLauncher(
-                scheme: 'http',
-                remoteWorkDir: XPath.get('http://foo/work'))
+        def fusion = new FusionScriptLauncher(Mock(TaskBean), 'http', XPath.get('http://foo/work'))
 
         expect:
         fusion.fusionEnv() == [
@@ -72,9 +70,7 @@ class FusionScriptLauncherTest extends Specification {
         given:
         Global.config = [fusion: [logLevel:'debug', logOutput:'stdout', tags: false]]
         and:
-        def fusion = new FusionScriptLauncher(
-                scheme: 'http',
-                remoteWorkDir: XPath.get('http://foo/work'))
+        def fusion = new FusionScriptLauncher(Mock(TaskBean), 'http', XPath.get('http://foo/work'))
 
         expect:
         fusion.fusionEnv() == [
@@ -88,9 +84,7 @@ class FusionScriptLauncherTest extends Specification {
         given:
         Global.config = [fusion: [tags: 'custom-tags-pattern-here']]
         and:
-        def fusion = new FusionScriptLauncher(
-                scheme: 'http',
-                remoteWorkDir: XPath.get('http://foo/work'))
+        def fusion = new FusionScriptLauncher(Mock(TaskBean), 'http', XPath.get('http://foo/work'))
 
         expect:
         fusion.fusionEnv() == [
@@ -101,10 +95,11 @@ class FusionScriptLauncherTest extends Specification {
 
     def 'should get header script' () {
         given:
-        def fusion = new FusionScriptLauncher(scheme: 's3')
-        def task = Mock(TaskBean) { getWorkDir() >> Path.of('/some/work/dir')}
+        def task = Mock(TaskBean) {
+            getWorkDir() >> Path.of('/some/work/dir')
+        }
 
         expect:
-        fusion.headerScript(task) == 'NXF_CHDIR=/some/work/dir\n'
+        FusionScriptLauncher.headerScript(task) == 'NXF_CHDIR=/some/work/dir\n'
     }
 }

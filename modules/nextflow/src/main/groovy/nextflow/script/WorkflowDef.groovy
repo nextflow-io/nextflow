@@ -24,6 +24,7 @@ import nextflow.exception.MissingProcessException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
+import nextflow.util.TestOnly
 /**
  * Models a script workflow component
  *
@@ -67,7 +68,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         this.variableNames = getVarNames0()
     }
 
-    /* ONLY FOR TESTING PURPOSE */
+    @TestOnly
     protected WorkflowDef() {}
 
     WorkflowDef clone() {

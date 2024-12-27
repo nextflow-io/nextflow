@@ -126,9 +126,6 @@ class ScriptMeta {
         }
     }
 
-    /** only for testing */
-    protected ScriptMeta() {}
-
     @PackageScope
     void setScriptPath(Path path) {
         scriptPath = path
