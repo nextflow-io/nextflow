@@ -148,6 +148,7 @@ class ConfigBuilderTest extends Specification {
             q = "$baseDir/2"
             x = "$projectDir/3"
             y = "$launchDir/4"
+            z = "$outputDir/5"
         }
         '''
 
@@ -158,6 +159,7 @@ class ConfigBuilderTest extends Specification {
         cfg.params.q == '/base/path/2'
         cfg.params.x == '/base/path/3'
         cfg.params.y == "${Paths.get('.').toRealPath()}/4"
+        cfg.params.z == "${Paths.get('results').complete()}/5"
 
     }
 
