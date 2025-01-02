@@ -1226,7 +1226,7 @@ class Session implements ISession {
             log.warn("Failed to cleanup work dir: ${workDir.toUriString()}")
         }
         finally {
-            db.close()
+            db?.close()
         }
     }
 
