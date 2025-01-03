@@ -21,7 +21,6 @@ import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 
 import com.google.api.gax.core.CredentialsProvider
-import com.google.api.gax.retrying.RetrySettings
 import com.google.api.gax.rpc.FixedHeaderProvider
 import com.google.api.gax.rpc.NotFoundException
 import com.google.api.gax.rpc.UnavailableException
@@ -43,7 +42,6 @@ import dev.failsafe.event.ExecutionAttemptedEvent
 import dev.failsafe.function.CheckedSupplier
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import org.threeten.bp.Duration
 /**
  * Implements Google Batch HTTP client
  *
@@ -79,51 +77,22 @@ class BatchClient {
         }
     }
 
-    protected BatchServiceSettings.Builder applyRetrySettings(BatchConfig batchConfig, BatchServiceSettings.Builder settings) {
-        log.info "[GOOGLE BATCH] Applying custom retry configuration"
-        log.info "[GOOGLE BATCH] google.grpc.initialRetryDelay = " + batchConfig.grpcInitialRetryDelay
-        log.info "[GOOGLE BATCH] google.grpc.retryDelayMultiplier = " + batchConfig.grpcRetryDelayMultiplier
-        log.info "[GOOGLE BATCH] google.grpc.maxRetryDelay = " + batchConfig.grpcMaxRetryDelay
-        log.info "[GOOGLE BATCH] google.grpc.initialRpcTimeout = " + batchConfig.grpcInitialRpcTimeout
-        log.info "[GOOGLE BATCH] google.grpc.timeoutMultiplier = " + batchConfig.grpcTimeoutMultiplier
-        log.info "[GOOGLE BATCH] google.grpc.maxRpcTimeout = " + batchConfig.grpcMaxRpcTimeout
-        log.info "[GOOGLE BATCH] google.grpc.totalTimeout = " + batchConfig.grpcTotalTimeout
-        log.info "[GOOGLE BATCH] google.grpc.retryableCodes = " + batchConfig.grpcRetryableCodes
-        final retrySettings = RetrySettings.newBuilder()
-                .setInitialRetryDelay(Duration.ofMillis(batchConfig.grpcInitialRetryDelay.toMillis()))
-                .setRetryDelayMultiplier(batchConfig.grpcRetryDelayMultiplier)
-                .setMaxRetryDelay(Duration.ofMillis(batchConfig.grpcMaxRetryDelay.toMillis()))
-                .setInitialRpcTimeout(Duration.ofMillis(batchConfig.grpcInitialRpcTimeout.toMillis()))
-                .setRpcTimeoutMultiplier(batchConfig.grpcTimeoutMultiplier)
-                .setMaxRpcTimeout(Duration.ofMillis(batchConfig.grpcMaxRpcTimeout.toMillis()))
-                .setTotalTimeout(Duration.ofMillis(batchConfig.grpcTotalTimeout.toMillis()))
-                .build()
-        settings.getJobSettings()
-                .setRetryableCodes(batchConfig.getGrpcRetryableCodes())
-                .setRetrySettings(retrySettings)
-        settings.listJobsSettings()
-                .setRetryableCodes(batchConfig.getGrpcRetryableCodes())
-                .setRetrySettings(retrySettings)
-        settings.getTaskSettings()
-                .setRetryableCodes(batchConfig.getGrpcRetryableCodes())
-                .setRetrySettings(retrySettings)
-        settings.listTasksSettings()
-                .setRetryableCodes(batchConfig.getGrpcRetryableCodes())
-                .setRetrySettings(retrySettings)
-        return settings
-    }
-
     protected BatchServiceClient createBatchService(BatchConfig config) {
         final provider = createCredentialsProvider(config)
-        final settings = applyRetrySettings(config, BatchServiceSettings.newBuilder())
         if( provider ) {
             log.debug "[GOOGLE BATCH] Creating service client with config credentials"
             final userAgent = FixedHeaderProvider.create('user-agent', 'Nextflow')
-            settings.setHeaderProvider(userAgent)
-            settings.setCredentialsProvider(provider)
+            final settings = BatchServiceSettings
+                            .newBuilder()
+                            .setHeaderProvider(userAgent)
+                            .setCredentialsProvider(provider)
+                            .build()
+            return BatchServiceClient.create(settings)
         }
-
-        return BatchServiceClient.create(settings.build())
+        else {
+            log.debug "[GOOGLE BATCH] Creating service client with default settings"
+            return BatchServiceClient.create()
+        }
     }
 
     Job submitJob(String jobId, Job job) {
