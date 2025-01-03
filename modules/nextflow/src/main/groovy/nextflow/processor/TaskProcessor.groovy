@@ -583,7 +583,7 @@ class TaskProcessor {
         this.openPorts = createPortsArray(opInputs.size())
         config.getOutputs().setSingleton(singleton)
         def interceptor = new TaskProcessorInterceptor(opInputs, singleton)
-        def params = [inputs: opInputs, maxForks: session.poolSize, listeners: [interceptor] ]
+        def params = [inputs: opInputs, outputs: config.getOutputs().getChannels(), maxForks: session.poolSize, listeners: [interceptor, new TaskTracker()] ]
         def invoke = new InvokeTaskAdapter(this, opInputs.size())
         session.allOperators << (operator = new DataflowOperator(group, params, invoke))
 
@@ -1519,8 +1519,16 @@ class TaskProcessor {
             // and result in a potential error. See https://github.com/nextflow-io/nextflow/issues/3768
             final copy = x instanceof List && x instanceof Cloneable ? x.clone() : x
             // emit the final value
-            ch.bind(copy)
+            bindOutParam0(param, ch, copy)
         }
+    }
+
+    protected void bindOutParam0(OutParam params, DataflowWriteChannel ch, Object value) {
+        final index = operator.getOutputs().indexOf(ch)
+        if( index==-1 )
+            throw new IllegalArgumentException("Unable to determine index of output channel for param: $params")
+        // use the operator "bindOutput" to rely on underlying binding event APIs
+        operator.bindOutput(index, value)
     }
 
     protected void collectOutputs( TaskRun task ) {
