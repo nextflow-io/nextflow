@@ -1209,8 +1209,8 @@ class Session implements ISession {
         if( aborted || cancelled || error )
             return
 
+        log.trace "Cleaning-up workdir"
         try (CacheDB db = CacheFactory.create(uniqueId, runName).openForRead()) {
-            log.trace "Cleaning-up workdir"
             db.eachRecord { HashCode hash, TraceRecord record ->
                 def deleted = db.removeTaskEntry(hash)
                 if( deleted ) {
