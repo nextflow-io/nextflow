@@ -1303,6 +1303,24 @@ If the task execution fail reporting an exit status in the range between 137 and
 
 The directive {ref}`process-maxretries` set the maximum number of time the same task can be re-executed.
 
+A more elaborate example:
+
+```nextflow
+process foo {
+  memory { 
+    def baseMem = 16.GB
+    def additionalMem = input_file.size() / 1e9
+    baseMem + (additionalMem * task.attempt).GB
+  }
+
+  input:
+  path input_file
+}
+```
+
+In this example, the minimum memory is 16 GB. The memory will increase depending on the size of `input_file`, and the number of attempts (`task.attempt`). Note: `input_file.size()` must be converted to bytes in order to perform calculations (e.g., to prevent `Unknown method invocation div on Long type` errors).
+
+
 ### Dynamic task resources with previous execution trace
 :::{versionadded} 24.10.0
 :::
