@@ -34,7 +34,7 @@ configurations {
 
 dependencies {
     compileOnly project(':nextflow')
-    compileOnly 'org.slf4j:slf4j-api:2.0.7'
+    compileOnly 'org.slf4j:slf4j-api:2.0.16'
     compileOnly 'org.pf4j:pf4j:3.12.0'
 
     api("org.apache.groovy:groovy-console:4.0.21-patch.2") { transitive=false }

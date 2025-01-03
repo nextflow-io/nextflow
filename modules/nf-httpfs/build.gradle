@@ -29,7 +29,7 @@ sourceSets {
 
 dependencies {
     api project(':nf-commons')
-    api "ch.qos.logback:logback-classic:1.4.14"
+    api "ch.qos.logback:logback-classic:1.5.13"
     api "org.apache.groovy:groovy:4.0.24"
     api "org.apache.groovy:groovy-nio:4.0.24"
     api("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
