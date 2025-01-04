@@ -30,7 +30,7 @@ configurations {
 
 dependencies {
     compileOnly project(':nextflow')
-    compileOnly 'org.slf4j:slf4j-api:2.0.7'
+    compileOnly 'org.slf4j:slf4j-api:2.0.16'
     compileOnly 'org.pf4j:pf4j:3.12.0'
     api 'org.apache.commons:commons-compress:1.26.1'
     api 'org.apache.commons:commons-lang3:3.12.0'
