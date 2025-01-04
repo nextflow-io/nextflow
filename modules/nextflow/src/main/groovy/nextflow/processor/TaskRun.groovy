@@ -98,6 +98,11 @@ class TaskRun implements Cloneable {
      */
     Map<OutParam,Object> outputs = [:]
 
+    /**
+     * Holds the IDs of the upstream tasks that contributed to trigger
+     * the execution of this task run
+     */
+    Set<TaskId> upstreamTasks
 
     void setInput( InParam param, Object value = null ) {
         assert param

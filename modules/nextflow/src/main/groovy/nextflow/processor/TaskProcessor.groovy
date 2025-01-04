@@ -15,6 +15,7 @@
  */
 package nextflow.processor
 
+import nextflow.provenance.ProvTracker
 import nextflow.trace.TraceRecord
 
 import static nextflow.processor.ErrorStrategy.*
@@ -259,6 +260,8 @@ class TaskProcessor {
 
     private TaskArrayCollector arrayCollector
 
+    private ProvTracker provenance
+
     private CompilerConfiguration compilerConfig() {
         final config = new CompilerConfiguration()
         config.addCompilationCustomizers( new ASTTransformationCustomizer(TaskTemplateVarsXform) )
@@ -318,6 +321,7 @@ class TaskProcessor {
         
         final arraySize = config.getArray()
         this.arrayCollector = arraySize > 0 ? new TaskArrayCollector(this, executor, arraySize) : null
+        this.provenance = session.getProvenance()
     }
 
     /**
@@ -583,7 +587,7 @@ class TaskProcessor {
         this.openPorts = createPortsArray(opInputs.size())
         config.getOutputs().setSingleton(singleton)
         def interceptor = new TaskProcessorInterceptor(opInputs, singleton)
-        def params = [inputs: opInputs, outputs: config.getOutputs().getChannels(), maxForks: session.poolSize, listeners: [interceptor, new TaskTracker()] ]
+        def params = [inputs: opInputs, maxForks: session.poolSize, listeners: [interceptor] ]
         def invoke = new InvokeTaskAdapter(this, opInputs.size())
         session.allOperators << (operator = new DataflowOperator(group, params, invoke))
 
@@ -623,15 +627,16 @@ class TaskProcessor {
     final protected void invokeTask( Object[] args ) {
         assert args.size()==2
         final params = (TaskStartParams) args[0]
-        final values = (List) args[1]
-
+        final inputs = (List) args[1]
         // create and initialize the task instance to be executed
-        log.trace "Invoking task > $name with params=$params; values=$values"
+        log.trace "Invoking task > $name with params=$params; values=${inputs}"
 
         // -- create the task run instance
         final task = createTaskRun(params)
         // -- set the task instance as the current in this thread
         currentTask.set(task)
+        // track the task provenance for the given inputs 
+        final values = provenance.beforeRun(task, inputs)
 
         // -- validate input lengths
         validateInputTuples(values)
@@ -1461,7 +1466,7 @@ class TaskProcessor {
             fairBindOutputs0(tuples, task)
         }
         else {
-            bindOutputs0(tuples)
+            bindOutputs0(tuples, task)
         }
 
         // -- finally prints out the task output when 'debug' is true
@@ -1492,7 +1497,7 @@ class TaskProcessor {
         }
     }
 
-    protected void bindOutputs0(Map<Short,List> tuples) {
+    protected void bindOutputs0(Map<Short,List> tuples, TaskRun task) {
         // -- bind out the collected values
         for( OutParam param : config.getOutputs() ) {
             final outValue = tuples[param.index]
@@ -1505,11 +1510,11 @@ class TaskProcessor {
             }
 
             log.trace "Process $name > Binding out param: ${param} = ${outValue}"
-            bindOutParam(param, outValue)
+            bindOutParam(param, outValue, task)
         }
     }
 
-    protected void bindOutParam( OutParam param, List values ) {
+    protected void bindOutParam( OutParam param, List values, TaskRun task ) {
         log.trace "<$name> Binding param $param with $values"
         final x = values.size() == 1 ? values[0] : values
         final ch = param.getOutChannel()
@@ -1519,16 +1524,8 @@ class TaskProcessor {
             // and result in a potential error. See https://github.com/nextflow-io/nextflow/issues/3768
             final copy = x instanceof List && x instanceof Cloneable ? x.clone() : x
             // emit the final value
-            bindOutParam0(param, ch, copy)
+            provenance.bindOutput(task, ch, copy)
         }
-    }
-
-    protected void bindOutParam0(OutParam params, DataflowWriteChannel ch, Object value) {
-        final index = operator.getOutputs().indexOf(ch)
-        if( index==-1 )
-            throw new IllegalArgumentException("Unable to determine index of output channel for param: $params")
-        // use the operator "bindOutput" to rely on underlying binding event APIs
-        operator.bindOutput(index, value)
     }
 
     protected void collectOutputs( TaskRun task ) {

@@ -53,6 +53,7 @@ import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskFault
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
+import nextflow.provenance.ProvTracker
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
 import nextflow.script.ProcessFactory
@@ -223,6 +224,8 @@ class Session implements ISession {
 
     private DAG dag
 
+    private ProvTracker provenance
+
     private CacheDB cache
 
     private Barrier processesBarrier = new Barrier()
@@ -380,6 +383,9 @@ class Session implements ISession {
 
         // -- DAG object
         this.dag = new DAG()
+
+        // -- create the provenance tracker
+        this.provenance = new ProvTracker()
 
         // -- init output dir
         this.outputDir = FileHelper.toCanonicalPath(config.outputDir ?: 'results')
@@ -855,6 +861,8 @@ class Session implements ISession {
     }
 
     DAG getDag() { this.dag }
+
+    ProvTracker getProvenance() { provenance }
 
     ExecutorService getExecService() { execService }
 
