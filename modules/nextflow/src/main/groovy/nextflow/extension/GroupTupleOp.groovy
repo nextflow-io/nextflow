@@ -224,7 +224,7 @@ class GroupTupleOp {
             target = CH.create()
 
         /*
-         * apply the logic the the source channel
+         * apply the logic to the source channel
          */
         DataflowHelper.subscribeImpl(channel, [onNext: this.&collect, onComplete: this.&finalise])
 

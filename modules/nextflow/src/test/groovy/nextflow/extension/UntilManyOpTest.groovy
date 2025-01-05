@@ -19,10 +19,13 @@ package nextflow.extension
 
 import nextflow.Channel
 import spock.lang.Specification
+import spock.lang.Timeout
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(10)
 class UntilManyOpTest extends Specification {
 
     def 'should emit channel items until the condition is verified' () {
@@ -93,6 +96,5 @@ class UntilManyOpTest extends Specification {
         Y.val == Channel.STOP
         Z.val == Channel.STOP
     }
-
 
 }

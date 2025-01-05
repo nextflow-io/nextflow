@@ -36,7 +36,6 @@ import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
 import nextflow.dag.NodeMarker
-import static java.util.Arrays.asList
 /**
  * This class provides helper methods to implement nextflow operators
  *
@@ -44,6 +43,70 @@ import static java.util.Arrays.asList
  */
 @Slf4j
 class DataflowHelper {
+
+    static class OpParams {
+        List<DataflowReadChannel> inputs
+        List<DataflowWriteChannel> outputs
+        List<DataflowEventListener> listeners
+        boolean accumulator
+
+        OpParams() { }
+        
+        OpParams(Map params) {
+            this.inputs = params.inputs as List<DataflowReadChannel> ?: List.<DataflowReadChannel>of()
+            this.outputs = params.outputs as List<DataflowWriteChannel> ?: List.<DataflowWriteChannel>of()
+            this.listeners = params.listeners as List<DataflowEventListener> ?: List.<DataflowEventListener>of()
+        }
+
+        OpParams withInput(DataflowReadChannel channel) {
+            assert channel != null
+            this.inputs = List.of(channel)
+            return this
+        }
+
+        OpParams withInputs(List<DataflowReadChannel> channels) {
+            assert channels != null
+            this.inputs = channels
+            return this
+        }
+
+        OpParams withOutput(DataflowWriteChannel channel) {
+            assert channel != null
+            this.outputs = List.of(channel)
+            return this
+        }
+
+        OpParams withOutputs(List<DataflowWriteChannel> channels) {
+            assert channels != null
+            this.outputs = channels
+            return this
+        }
+
+        OpParams withListener(DataflowEventListener listener) {
+            assert listener != null
+            this.listeners = List.of(listener)
+            return this
+        }
+
+        OpParams withListeners(List<DataflowEventListener> listeners) {
+            assert listeners != null
+            this.listeners = listeners
+            return this
+        }
+
+        OpParams withAccumulator(boolean acc) {
+            this.accumulator = acc
+            return this
+        }
+
+        Map toMap() {
+            final ret = new HashMap()
+            ret.inputs = inputs ?: List.of()
+            ret.outputs = outputs ?: List.of()
+            ret.listeners = listeners ?: List.of()
+            return ret
+        }
+    }
 
     private static Session getSession() { Global.getSession() as Session }
 
@@ -141,6 +204,7 @@ class DataflowHelper {
      * @param params The map holding inputs, outputs channels and other parameters
      * @param code The closure to be executed by the operator
      */
+    @Deprecated
     static DataflowProcessor newOperator( Map params, Closure code ) {
 
         // -- add a default error listener
@@ -149,13 +213,13 @@ class DataflowHelper {
             params.listeners = [ DEF_ERROR_LISTENER ]
         }
 
-        final op = Dataflow.operator(params, code)
-        NodeMarker.appendOperator(op)
-        if( session && session.allOperators != null ) {
-            session.allOperators.add(op)
-        }
+        return newOperator0(new OpParams(params), code)
+    }
 
-        return op
+    static DataflowProcessor newOperator( OpParams params, Closure code ) {
+        if( !params.listeners )
+            params.withListener(DEF_ERROR_LISTENER)
+        return newOperator0(params, code)
     }
 
     /**
@@ -195,16 +259,25 @@ class DataflowHelper {
      * @param code The closure to be executed by the operator
      */
     static DataflowProcessor newOperator( DataflowReadChannel input, DataflowWriteChannel output, DataflowEventListener listener, Closure code ) {
-
         if( !listener )
             listener = DEF_ERROR_LISTENER
 
-        def params = [:]
+        final params = [:]
         params.inputs = [input]
         params.outputs = [output]
         params.listeners = [listener]
 
-        final op = Dataflow.operator(params, code)
+        return newOperator0(new OpParams(params), code)
+    }
+
+    static private DataflowProcessor newOperator0(OpParams params, Closure code) {
+        assert params
+        assert params.inputs
+        assert params.listeners
+
+        // create the underlying dataflow operator
+        final op = Dataflow.operator(params.toMap(), Op.instrument(code, params.accumulator))
+        // track the operator as dag node
         NodeMarker.appendOperator(op)
         if( session && session.allOperators != null ) {
             session.allOperators << op
@@ -236,14 +309,11 @@ class DataflowHelper {
 
     }
 
-    /**
-     * Subscribe *onNext*, *onError* and *onComplete*
-     *
-     * @param source
-     * @param closure
-     * @return
-     */
     static final DataflowProcessor subscribeImpl(final DataflowReadChannel source, final Map<String,Closure> events ) {
+        subscribeImpl(source, false, events)
+    }
+
+    static final DataflowProcessor subscribeImpl(final DataflowReadChannel source, final boolean accumulator, final Map<String,Closure> events ) {
         checkSubscribeHandlers(events)
 
         def error = false
@@ -276,13 +346,12 @@ class DataflowHelper {
             }
         }
 
+        final params = new OpParams()
+            .withInput(source)
+            .withListener(listener)
+            .withAccumulator(accumulator)
 
-        final Map<String, Object> parameters = new HashMap<String, Object>();
-        parameters.put("inputs", [source])
-        parameters.put("outputs", [])
-        parameters.put('listeners', [listener])
-
-        newOperator (parameters) {
+        newOperator (params) {
             if( events.onNext ) {
                 events.onNext.call(it)
             }
@@ -292,7 +361,7 @@ class DataflowHelper {
         }
     }
 
-
+    @Deprecated
     static DataflowProcessor chainImpl(final DataflowReadChannel source, final DataflowWriteChannel target, final Map params, final Closure closure) {
 
         final Map<String, Object> parameters = new HashMap<String, Object>(params)
@@ -300,6 +369,10 @@ class DataflowHelper {
         parameters.put("outputs", asList(target))
 
         newOperator(parameters, new ChainWithClosure(closure))
+    }
+
+    static DataflowProcessor chainImpl(OpParams params, final Closure closure) {
+        newOperator(params, new ChainWithClosure(closure))
     }
 
     /**
@@ -321,7 +394,7 @@ class DataflowHelper {
              * call the passed closure each time
              */
             void afterRun(final DataflowProcessor processor, final List<Object> messages) {
-                final item = messages.get(0)
+                final item = Op.unwrap(messages).get(0)
                 final value = accum == null ? item : closure.call(accum, item)
 
                 if( value == Channel.VOID ) {
@@ -339,7 +412,7 @@ class DataflowHelper {
              * when terminates bind the result value
              */
             void afterStop(final DataflowProcessor processor) {
-                result.bind(accum)
+                Op.bind(result, accum)
             }
 
             boolean onException(final DataflowProcessor processor, final Throwable e) {
@@ -349,7 +422,12 @@ class DataflowHelper {
             }
         }
 
-        chainImpl(channel, CH.create(), [listeners: [listener]], {true})
+        final params = new OpParams()
+            .withInput(channel)
+            .withOutput(CH.create())
+            .withListener(listener)
+            .withAccumulator(true)
+        chainImpl(params, {true})
     }
 
     @PackageScope

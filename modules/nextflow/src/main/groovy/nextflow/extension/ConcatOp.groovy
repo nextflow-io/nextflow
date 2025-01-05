@@ -56,10 +56,10 @@ class ConcatOp {
         def next = index < channels.size() ? channels[index] : null
 
         def events = new HashMap<String,Closure>(2)
-        events.onNext = { result.bind(it) }
+        events.onNext = { Op.bind(result, it) }
         events.onComplete = {
             if(next) append(result, channels, index)
-            else result.bind(Channel.STOP)
+            else Op.bind(result, Channel.STOP)
         }
 
         DataflowHelper.subscribeImpl(current, events)

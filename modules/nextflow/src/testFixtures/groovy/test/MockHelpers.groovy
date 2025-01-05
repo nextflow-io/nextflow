@@ -127,7 +127,7 @@ class MockExecutor extends Executor {
 
     @Override
     TaskHandler createTaskHandler(TaskRun task) {
-        return new  MockTaskHandler(task)
+        return new MockTaskHandler(task)
     }
 }
 

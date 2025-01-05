@@ -25,7 +25,7 @@ import test.Dsl2Spec
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Timeout(5)
-class ConcatOp2Test extends Dsl2Spec {
+class ConcatOpTest extends Dsl2Spec {
 
     def 'should concat two channel'() {
 

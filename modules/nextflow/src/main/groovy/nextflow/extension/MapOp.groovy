@@ -16,7 +16,6 @@
 
 package nextflow.extension
 
-
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
@@ -53,16 +52,16 @@ class MapOp {
         final stopOnFirst = source instanceof DataflowExpression
         DataflowHelper.newOperator(source, target) { it ->
 
-            def result = mapper.call(it)
-            def proc = (DataflowProcessor) getDelegate()
+            final result = mapper.call(it)
+            final proc = (DataflowProcessor) getDelegate()
 
             // bind the result value
             if (result != Channel.VOID)
-                proc.bindOutput(result)
+                Op.bind(target, result)
 
             // when the `map` operator is applied to a dataflow flow variable
             // terminate the processor after the first emission -- Issue #44
-            if( result == Channel.STOP || stopOnFirst )
+            if( stopOnFirst )
                 proc.terminate()
 
         }

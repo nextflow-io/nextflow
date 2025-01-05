@@ -38,6 +38,7 @@ import nextflow.exception.ProcessTemplateException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
+import nextflow.prov.TrailRun
 import nextflow.script.BodyDef
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
@@ -59,7 +60,7 @@ import nextflow.spack.SpackCache
  */
 
 @Slf4j
-class TaskRun implements Cloneable {
+class TaskRun implements Cloneable, TrailRun {
 
     final private ConcurrentHashMap<String,?> cache0 = new ConcurrentHashMap()
 
@@ -578,8 +579,8 @@ class TaskRun implements Cloneable {
     static final public String CMD_ENV = '.command.env'
 
 
-    String toString( ) {
-        "id: $id; name: $name; type: $type; exit: ${exitStatus==Integer.MAX_VALUE ? '-' : exitStatus}; error: $error; workDir: $workDir"
+    String toString() {
+        "TaskRun[id: $id; name: $name; type: $type; upstreams: ${upstreamTasks} exit: ${exitStatus==Integer.MAX_VALUE ? '-' : exitStatus}; error: $error; workDir: $workDir]"
     }
 
 

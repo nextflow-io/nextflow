@@ -16,6 +16,9 @@
 
 package nextflow.extension
 
+import static nextflow.util.CacheHelper.*
+import static nextflow.util.CheckHelper.*
+
 import java.nio.file.Path
 
 import groovy.util.logging.Slf4j
@@ -28,8 +31,6 @@ import nextflow.file.FileHelper
 import nextflow.file.SimpleFileCollector
 import nextflow.file.SortFileCollector
 import nextflow.util.CacheHelper
-import static nextflow.util.CacheHelper.HashMode
-import static nextflow.util.CheckHelper.checkParams
 /**
  * Implements the body of {@link OperatorImpl#collectFile(groovyx.gpars.dataflow.DataflowReadChannel)} operator
  *
@@ -185,10 +186,10 @@ class CollectFileOp {
     protected emitItems( obj ) {
         // emit collected files to 'result' channel
         collector.saveTo(storeDir).each {
-            result.bind(it)
+            Op.bind(result,it)
         }
         // close the channel
-        result.bind(Channel.STOP)
+        Op.bind(result,Channel.STOP)
         // close the collector
         collector.safeClose()
     }
@@ -261,9 +262,8 @@ class CollectFileOp {
         return collector
     }
 
-
     DataflowWriteChannel apply() {
-        DataflowHelper.subscribeImpl( channel, [onNext: this.&processItem, onComplete: this.&emitItems] )
+        DataflowHelper.subscribeImpl( channel, true, [onNext: this.&processItem, onComplete: this.&emitItems] )
         return result
     }
 }

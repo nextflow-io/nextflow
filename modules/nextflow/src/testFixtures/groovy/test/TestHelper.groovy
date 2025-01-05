@@ -15,6 +15,7 @@
  */
 
 package test
+
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.GZIPInputStream
@@ -22,6 +23,9 @@ import java.util.zip.GZIPInputStream
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import groovy.transform.Memoized
+import nextflow.processor.TaskId
+import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskRun
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -91,4 +95,36 @@ class TestHelper {
         // Convert the decoded bytes into a string
         return new String(decodedBytes);
     }
+
+    static List<TaskRun> upstreamTasksOf(v) {
+        if( v instanceof TaskRun )
+            return upstreamTasksOf(v as TaskRun)
+
+        if( v instanceof CharSequence ) {
+            TaskRun t = getTaskByName(v.toString())
+            if( t )
+                return upstreamTasksOf(t)
+            else
+                throw new IllegalArgumentException("Cannot find any task with name: $v")
+        }
+
+        TaskRun t = getTaskById(v)
+        if( !t )
+            throw new IllegalArgumentException("Cannot find any task with id: $v")
+        return upstreamTasksOf(t)
+    }
+
+    static List<TaskRun> upstreamTasksOf(TaskRun t) {
+        final ids = t.upstreamTasks ?: Set.<TaskId>of()
+        return ids.collect(it -> getTaskById(it))
+    }
+
+    static TaskRun getTaskByName(String name) {
+        TaskProcessor.allTasks.values().find( it -> it.name==name )
+    }
+
+    static TaskRun getTaskById(id) {
+        TaskProcessor.allTasks.get(TaskId.of(id))
+    }
+
 }

@@ -53,7 +53,7 @@ class BranchOp {
     protected void doNext(it) {
         TokenBranchChoice ret = switchDef.closure.call(it)
         if( ret ) {
-            targets[ret.choice].bind(ret.value)
+            Op.bind(targets[ret.choice], ret.value)
         }
     }
 

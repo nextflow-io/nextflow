@@ -139,32 +139,31 @@ class OperatorImpl {
 
         newOperator(source, target, listener) {  item ->
 
-            def result = closure != null ? closure.call(item) : item
-            def proc = ((DataflowProcessor) getDelegate())
+            final result = closure != null ? closure.call(item) : item
 
             switch( result ) {
                 case Collection:
-                    result.each { it -> proc.bindOutput(it) }
+                    result.each { it -> Op.bind(target,it) }
                     break
 
                 case (Object[]):
-                    result.each { it -> proc.bindOutput(it) }
+                    result.each { it -> Op.bind(target,it) }
                     break
 
                 case Map:
-                    result.each { it -> proc.bindOutput(it) }
+                    result.each { it -> Op.bind(target,it) }
                     break
 
                 case Map.Entry:
-                    proc.bindOutput( (result as Map.Entry).key )
-                    proc.bindOutput( (result as Map.Entry).value )
+                    Op.bind(target, (result as Map.Entry).key )
+                    Op.bind(target, (result as Map.Entry).value )
                     break
 
                 case Channel.VOID:
                     break
 
                 default:
-                    proc.bindOutput(result)
+                    Op.bind(target,result)
             }
         }
 

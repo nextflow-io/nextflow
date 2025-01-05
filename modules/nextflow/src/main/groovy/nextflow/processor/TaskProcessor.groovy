@@ -15,9 +15,6 @@
  */
 package nextflow.processor
 
-import nextflow.provenance.ProvTracker
-import nextflow.trace.TraceRecord
-
 import static nextflow.processor.ErrorStrategy.*
 
 import java.lang.reflect.InvocationTargetException
@@ -36,6 +33,7 @@ import java.util.regex.Pattern
 import ch.artecat.grengine.Grengine
 import com.google.common.hash.HashCode
 import groovy.json.JsonOutput
+import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
@@ -83,6 +81,7 @@ import nextflow.file.FilePatternSplitter
 import nextflow.file.FilePorter
 import nextflow.plugin.Plugins
 import nextflow.processor.tip.TaskTipProvider
+import nextflow.prov.Prov
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
@@ -107,6 +106,7 @@ import nextflow.script.params.TupleInParam
 import nextflow.script.params.TupleOutParam
 import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
+import nextflow.trace.TraceRecord
 import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
@@ -134,6 +134,11 @@ class TaskProcessor {
         RunType(String str) { message=str };
     }
 
+    @Canonical
+    static class FairEntry {
+        TaskRun task
+        Map<Short,List> emissions
+    }
     static final public String TASK_CONTEXT_PROPERTY_NAME = 'task'
 
     final private static Pattern ENV_VAR_NAME = ~/[a-zA-Z_]+[a-zA-Z0-9_]*/
@@ -143,6 +148,8 @@ class TaskProcessor {
     @TestOnly private static volatile TaskProcessor currentProcessor0
 
     @TestOnly static TaskProcessor currentProcessor() { currentProcessor0 }
+
+    @TestOnly static Map<TaskId,TaskRun> allTasks = new HashMap<>()
 
     /**
      * Keeps track of the task instance executed by the current thread
@@ -252,15 +259,13 @@ class TaskProcessor {
 
     private static LockManager lockManager = new LockManager()
 
-    private List<Map<Short,List>> fairBuffers = new ArrayList<>()
+    private List<FairEntry> fairBuffers = new ArrayList<>()
 
-    private int currentEmission
+    private volatile int currentEmission
 
     private Boolean isFair0
 
     private TaskArrayCollector arrayCollector
-
-    private ProvTracker provenance
 
     private CompilerConfiguration compilerConfig() {
         final config = new CompilerConfiguration()
@@ -321,7 +326,6 @@ class TaskProcessor {
         
         final arraySize = config.getArray()
         this.arrayCollector = arraySize > 0 ? new TaskArrayCollector(this, executor, arraySize) : null
-        this.provenance = session.getProvenance()
     }
 
     /**
@@ -635,8 +639,9 @@ class TaskProcessor {
         final task = createTaskRun(params)
         // -- set the task instance as the current in this thread
         currentTask.set(task)
+        allTasks.put(task.id, task)
         // track the task provenance for the given inputs 
-        final values = provenance.beforeRun(task, inputs)
+        final values = Prov.tracker.receiveInputs(task, inputs)
 
         // -- validate input lengths
         validateInputTuples(values)
@@ -1479,19 +1484,20 @@ class TaskProcessor {
         synchronized (isFair0) {
             // decrement -1 because tasks are 1-based
             final index = task.index-1
+            FairEntry entry = new FairEntry(task,emissions)
             // store the task emission values in a buffer
-            fairBuffers[index-currentEmission] = emissions
+            fairBuffers[index-currentEmission] = entry
             // check if the current task index matches the expected next emission index
             if( currentEmission == index ) {
-                while( emissions!=null ) {
+                while( entry!=null ) {
                     // bind the emission values
-                    bindOutputs0(emissions)
+                    bindOutputs0(entry.emissions, entry.task)
                     // remove the head and try with the following
                     fairBuffers.remove(0)
                     // increase the index of the next emission
                     currentEmission++
                     // take the next emissions 
-                    emissions = fairBuffers[0]
+                    entry = fairBuffers[0]
                 }
             }
         }
@@ -1524,7 +1530,7 @@ class TaskProcessor {
             // and result in a potential error. See https://github.com/nextflow-io/nextflow/issues/3768
             final copy = x instanceof List && x instanceof Cloneable ? x.clone() : x
             // emit the final value
-            provenance.bindOutput(task, ch, copy)
+            Prov.tracker.bindOutput(task, ch, copy)
         }
     }
 
@@ -2374,7 +2380,7 @@ class TaskProcessor {
      * @param task The {@code TaskRun} instance to finalize
      */
     @PackageScope
-    final finalizeTask( TaskHandler handler) {
+    final finalizeTask(TaskHandler handler) {
         def task = handler.task
         log.trace "finalizing process > ${safeTaskName(task)} -- $task"
 

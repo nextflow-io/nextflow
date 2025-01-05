@@ -16,7 +16,7 @@
 
 package nextflow.extension
 
-import static nextflow.util.CheckHelper.checkParams
+import static nextflow.util.CheckHelper.*
 
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
@@ -55,7 +55,10 @@ class CollectOp {
 
         Map<String,Closure> events = [:]
         events.onNext = { append(result, it) }
-        events.onComplete = { target << ( result ? new ArrayBag(normalise(result)) : Channel.STOP )  }
+        events.onComplete = {
+            final msg = result ? new ArrayBag(normalise(result)) : Channel.STOP
+            Op.bind(target, msg)
+        }
 
         DataflowHelper.subscribeImpl(source, events)
         return target
