@@ -197,12 +197,13 @@ class AzBatchService implements Closeable {
                 if( !matchType(family, entry.name as String) )
                     continue
                 def score = computeScore(cpus, mem, disk, entry)
-                if( score != null ) {
+                if( score != null && score > 0 ) {
                     scores << new Tuple2(score, entry.name as String)
                 }
             }
         }
         def sortedScores = scores.sort { it[0] }
+        log.warn "[AZURE BATCH] sortedScores: $sortedScores"
         return sortedScores ? getVmType(location, sortedScores.first()[1] as String) : null
     }
 
@@ -256,7 +257,7 @@ class AzBatchService implements Closeable {
         }
 
         // Round to 3 decimal places
-        if (score == 0.0) return 0.0
+        if (score == 0.0) return null
 
         // Add a small fraction based on name length to uniqueify names
         // and  sort scores by VM name from smallest to largest
