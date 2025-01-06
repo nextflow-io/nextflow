@@ -52,19 +52,26 @@ class ToListOp {
             final result = new ArrayList(1)
             Map<String,Closure> events = [:]
             events.onNext = { result.add(it) }
-            events.onComplete = { target.bind(result) }
-            DataflowHelper.subscribeImpl(source, events )
+            events.onComplete = { Op.bind(target, result) }
+            DataflowHelper.subscribeImpl(source, events)
             return target
         }
 
-        DataflowHelper.reduceImpl(source, target, []) { List list, item -> list << item }
-        if( ordering ) {
-            final sort = { List list -> ordering instanceof Closure ? list.sort((Closure) ordering) : list.sort() }
-            return (DataflowVariable)target.then(sort)
-        }
-        else {
-            return target
-        }
+        Closure beforeBind = ordering
+                    ? { List list -> ordering instanceof Closure ? list.sort((Closure) ordering) : list.sort() }
+                    : null
+
+        final reduce = DataflowHelper
+            .ReduceParams
+            .build()
+            .withSource(source)
+            .withTarget(target)
+            .withSeed([])
+            .withBeforeBind(beforeBind)
+            .withAction{ List list, item -> list << item }
+
+        DataflowHelper.reduceImpl(reduce)
+        return target
     }
 
     @Deprecated

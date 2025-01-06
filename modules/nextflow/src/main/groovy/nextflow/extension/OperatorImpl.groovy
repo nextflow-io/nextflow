@@ -188,7 +188,11 @@ class OperatorImpl {
             throw new IllegalArgumentException('Operator `reduce` cannot be applied to a value channel')
 
         final target = new DataflowVariable()
-        reduceImpl( source, target, null, closure )
+        reduceImpl( ReduceParams
+            .build()
+            .withSource(source)
+            .withTarget(target)
+            .withAction(closure) )
         return target
     }
 
@@ -211,7 +215,12 @@ class OperatorImpl {
             throw new IllegalArgumentException('Operator `reduce` cannot be applied to a value channel')
 
         final target = new DataflowVariable()
-        reduceImpl( source, target, seed, closure )
+        reduceImpl( ReduceParams
+            .build()
+            .withSource(source)
+            .withTarget(target)
+            .withSeed(seed)
+            .withAction(closure) )
         return target
     }
 
@@ -488,8 +497,7 @@ class OperatorImpl {
      * @return A list holding all the items send over the channel
      */
     DataflowWriteChannel toList(final DataflowReadChannel source) {
-        final target = ToListOp.apply(source)
-        return target
+        return new ToListOp(source).apply()
     }
 
     /**
@@ -499,8 +507,7 @@ class OperatorImpl {
      * @return A list holding all the items send over the channel
      */
     DataflowWriteChannel toSortedList(final DataflowReadChannel source, Closure closure = null) {
-        final target = new ToListOp(source, closure ?: true).apply()
-        return target as DataflowVariable
+        return new ToListOp(source, closure ?: true).apply()
     }
 
     /**
@@ -538,9 +545,16 @@ class OperatorImpl {
             }
         }
         else {
-            reduceImpl(source, target, 0) { current, item ->
+            final action = { current, item ->
                 discriminator == null || discriminator.invoke(criteria, item) ? current+1 : current
             }
+            reduceImpl(ReduceParams
+                .build()
+                .withSource(source)
+                .withTarget(target)
+                .withSeed(0)
+                .withAction(action)
+            )
         }
 
         return target
@@ -554,7 +568,11 @@ class OperatorImpl {
      */
     DataflowWriteChannel min(final DataflowReadChannel source) {
         final target = new DataflowVariable()
-        reduceImpl(source, target, null) { min, val -> val<min ? val : min }
+        reduceImpl( ReduceParams
+            .build()
+            .withSource(source)
+            .withTarget(target)
+            .withAction{ min, val -> val<min ? val : min } )
         return target
     }
 
@@ -570,7 +588,7 @@ class OperatorImpl {
      */
     DataflowWriteChannel min(final DataflowReadChannel source, Closure comparator) {
 
-        def action
+        Closure action = null
         if( comparator.getMaximumNumberOfParameters() == 1 ) {
             action = (Closure){ min, item -> comparator.call(item) < comparator.call(min) ? item : min  }
         }
@@ -579,7 +597,11 @@ class OperatorImpl {
         }
 
         final target = new DataflowVariable()
-        reduceImpl(source, target, null, action)
+        reduceImpl(ReduceParams
+            .build()
+            .withSource(source)
+            .withTarget(target)
+            .withAction(action))
         return target
     }
 
@@ -592,7 +614,12 @@ class OperatorImpl {
      */
     DataflowWriteChannel min(final DataflowReadChannel source, Comparator comparator) {
         final target = new DataflowVariable()
-        reduceImpl(source, target, null) { a, b -> comparator.compare(a,b)<0 ? a : b }
+        reduceImpl(ReduceParams
+            .build()
+            .withSource(source)
+            .withTarget(target)
+            .withAction{ a, b -> comparator.compare(a,b)<0 ? a : b }
+        )
         return target
     }
 
@@ -604,7 +631,12 @@ class OperatorImpl {
      */
     DataflowWriteChannel max(final DataflowReadChannel source) {
         final target = new DataflowVariable()
-        reduceImpl(source,target, null) { max, val -> val>max ? val : max }
+        reduceImpl(ReduceParams
+            .build()
+            .withSource(source)
+            .withTarget(target)
+            .withAction { max, val -> val>max ? val : max }
+        )
         return target
     }
 
@@ -632,7 +664,11 @@ class OperatorImpl {
         }
 
         final target = new DataflowVariable()
-        reduceImpl(source, target, null, action)
+        reduceImpl(ReduceParams
+            .build()
+            .withSource(source)
+            .withTarget(target)
+            .withAction(action) )
         return target
     }
 
@@ -645,7 +681,11 @@ class OperatorImpl {
      */
     DataflowVariable max(final DataflowReadChannel source, Comparator comparator) {
         final target = new DataflowVariable()
-        reduceImpl(source, target, null) { a, b -> comparator.compare(a,b)>0 ? a : b }
+        reduceImpl(ReduceParams
+            .build()
+            .withSource(source)
+            .withTarget(target)
+            .withAction { a, b -> comparator.compare(a,b)>0 ? a : b } )
         return target
     }
 

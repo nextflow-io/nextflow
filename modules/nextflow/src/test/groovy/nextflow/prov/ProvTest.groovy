@@ -203,4 +203,59 @@ class ProvTest extends Dsl2Spec {
         t1.name == ['p1 (1)', 'p1 (2)', 'p1 (3)']
 
     }
+
+    def 'should track the provenance of two tasks and toList operator' () {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of('a','b','c') | p1 | toList | p2
+            }
+            
+            process p1 {
+              input: val(x) 
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        def t1 = upstreamTasksOf('p2')
+        t1.name == ['p1 (1)', 'p1 (2)', 'p1 (3)']
+
+    }
+
+    def 'should track the provenance of two tasks and toSortedList operator' () {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of('a','b','c') | p1 | toList | p2
+            }
+            
+            process p1 {
+              input: val(x) 
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        def t1 = upstreamTasksOf('p2')
+        t1.name == ['p1 (1)', 'p1 (2)', 'p1 (3)']
+
+    }
+
 }

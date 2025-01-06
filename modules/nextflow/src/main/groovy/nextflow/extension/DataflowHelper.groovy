@@ -53,9 +53,12 @@ class DataflowHelper {
         OpParams() { }
         
         OpParams(Map params) {
-            this.inputs = params.inputs as List<DataflowReadChannel> ?: List.<DataflowReadChannel>of()
-            this.outputs = params.outputs as List<DataflowWriteChannel> ?: List.<DataflowWriteChannel>of()
-            this.listeners = params.listeners as List<DataflowEventListener> ?: List.<DataflowEventListener>of()
+            if( params.inputs )
+                this.inputs = params.inputs as List<DataflowReadChannel>
+            if( params.outputs )
+                this.outputs = params.outputs as List<DataflowWriteChannel>
+            if( params.listeners )
+                this.listeners = params.listeners as List<DataflowEventListener>
         }
 
         OpParams withInput(DataflowReadChannel channel) {
@@ -106,6 +109,44 @@ class DataflowHelper {
             ret.listeners = listeners ?: List.of()
             return ret
         }
+    }
+
+    static class ReduceParams {
+        DataflowReadChannel source
+        DataflowVariable target
+        Object seed
+        Closure action
+        Closure beforeBind
+
+        static ReduceParams build() { new ReduceParams() }
+
+        ReduceParams withSource(DataflowReadChannel channel) {
+            assert channel!=null
+            this.source = channel
+            return this
+        }
+
+        ReduceParams withTarget(DataflowVariable output) {
+            assert output!=null
+            this.target = output
+            return this
+        }
+
+        ReduceParams withSeed(Object seed) {
+            this.seed = seed
+            return this
+        }
+
+        ReduceParams withAction(Closure action) {
+            this.action = action
+            return this
+        }
+
+        ReduceParams withBeforeBind(Closure beforeBind) {
+            this.beforeBind = beforeBind
+            return this
+        }
+
     }
 
     private static Session getSession() { Global.getSession() as Session }
@@ -383,10 +424,14 @@ class DataflowHelper {
      * @param closure
      * @return
      */
-    static DataflowProcessor reduceImpl(final DataflowReadChannel channel, final DataflowVariable result, def seed, final Closure closure) {
+    static DataflowProcessor reduceImpl(ReduceParams opts) {
+        assert opts
+        assert opts.source, "Reduce 'source' channel cannot be null"
+        assert opts.target, "Reduce 'target' channel cannot be null"
+        assert opts.action, "Reduce 'action' closure cannot be null"
 
         // the *accumulator* value
-        def accum = seed
+        def accum = opts.seed
 
         // intercepts operator events
         def listener = new DataflowEventAdapter() {
@@ -395,7 +440,7 @@ class DataflowHelper {
              */
             void afterRun(final DataflowProcessor processor, final List<Object> messages) {
                 final item = Op.unwrap(messages).get(0)
-                final value = accum == null ? item : closure.call(accum, item)
+                final value = accum == null ? item : opts.action.call(accum, item)
 
                 if( value == Channel.VOID ) {
                     // do nothing
@@ -412,7 +457,10 @@ class DataflowHelper {
              * when terminates bind the result value
              */
             void afterStop(final DataflowProcessor processor) {
-                Op.bind(result, accum)
+                final result = opts.beforeBind
+                    ? opts.beforeBind.call(accum)
+                    : accum
+                Op.bind(opts.target, result)
             }
 
             boolean onException(final DataflowProcessor processor, final Throwable e) {
@@ -423,7 +471,7 @@ class DataflowHelper {
         }
 
         final params = new OpParams()
-            .withInput(channel)
+            .withInput(opts.source)
             .withOutput(CH.create())
             .withListener(listener)
             .withAccumulator(true)
