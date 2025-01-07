@@ -27,6 +27,7 @@ import nextflow.container.ContainerConfig
 import nextflow.container.DockerBuilder
 import nextflow.container.SingularityBuilder
 import nextflow.processor.TaskBean
+import nextflow.processor.TaskId
 import nextflow.util.MustacheTemplateEngine
 import org.yaml.snakeyaml.Yaml
 import spock.lang.Specification
@@ -262,6 +263,7 @@ class BashWrapperBuilderTest extends Specification {
          */
         when:
         def wrapper = newBashWrapperBuilder(
+                taskId: TaskId.of(100),
                 name: 'Hello 1',
                 workDir: folder,
                 headerScript: '#BSUB -x 1\n#BSUB -y 2',
@@ -286,6 +288,7 @@ class BashWrapperBuilderTest extends Specification {
          */
         when:
         def wrapper = newBashWrapperBuilder(
+                taskId: TaskId.of(200),
                 name: 'Hello 2',
                 workDir: folder,
                 statsEnabled: true ) .buildNew0()
@@ -342,13 +345,15 @@ class BashWrapperBuilderTest extends Specification {
     def 'should create task metadata string' () {
         given:
         def builder = newBashWrapperBuilder(
+            taskId: TaskId.of(100),
             name: 'foo',
             arrayIndexName: 'SLURM_ARRAY_TASK_ID',
             arrayIndexStart: 0,
             arrayWorkDirs: [ Path.of('/work/01'), Path.of('/work/02'), Path.of('/work/03') ],
             containerConfig: [enabled: true],
             containerImage: 'quay.io/nextflow:bash',
-            outputFiles: ['foo.txt', '*.bar', '**/baz']
+            outputFiles: ['foo.txt', '*.bar', '**/baz'],
+            upstreamTasks: new LinkedHashSet<>([TaskId.of(10), TaskId.of(20)])
         )
 
         when:
@@ -356,6 +361,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         meta == '''\
             ### ---
+            ### id: '100'
             ### name: 'foo'
             ### array:
             ###   index-name: SLURM_ARRAY_TASK_ID
@@ -369,6 +375,9 @@ class BashWrapperBuilderTest extends Specification {
             ### - 'foo.txt'
             ### - '*.bar'
             ### - '**/baz'
+            ### upstream-tasks:
+            ### - '10'
+            ### - '20'
             ### ...
             '''.stripIndent()
 
@@ -376,6 +385,7 @@ class BashWrapperBuilderTest extends Specification {
         def yaml = meta.readLines().collect(it-> it.substring(4)).join('\n')
         def obj = new Yaml().load(yaml) as Map
         then:
+        obj.id == '100'
         obj.name == 'foo'
         obj.array == [
             'index-name':'SLURM_ARRAY_TASK_ID',
@@ -388,17 +398,22 @@ class BashWrapperBuilderTest extends Specification {
 
     def 'should add task metadata' () {
         when:
-        def bash = newBashWrapperBuilder([name:'task1'])
+        def bash = newBashWrapperBuilder(
+            taskId: TaskId.of(123),
+            name:'task1'
+        )
         then:
         bash.makeBinding().containsKey('task_metadata')
         bash.makeBinding().task_metadata == '''\
             ### ---
+            ### id: '123'
             ### name: 'task1'
             ### ...
             '''.stripIndent()
 
         when:
         bash = newBashWrapperBuilder(
+            taskId: TaskId.of(321),
             name: 'task2',
             arrayIndexName: 'SLURM_ARRAY_TASK_ID',
             arrayIndexStart: 0,
@@ -410,6 +425,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         bash.makeBinding().task_metadata == '''\
             ### ---
+            ### id: '321'
             ### name: 'task2'
             ### array:
             ###   index-name: SLURM_ARRAY_TASK_ID
