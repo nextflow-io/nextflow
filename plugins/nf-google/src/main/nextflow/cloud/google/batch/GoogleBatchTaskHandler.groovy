@@ -606,6 +606,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             }
         }
         catch (Exception e) {
+            log.warn "Cannot select machine type using Seqera Cloudinfo for task: `${task.lazyName()}`. This feature can be disabled with setting the environment variable NXF_CLOUDINFO_ENABLED to false."
             log.debug "[GOOGLE BATCH] Cannot select machine type using Seqera Cloudinfo for task: `${task.lazyName()}` - ${e.message}"
         }
 
@@ -618,6 +619,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             )
 
         // Fallback to Google Batch automatically deduce from requested resources
+        log.warn "Using Google Batch default machine type."
         return null
     }
 
