@@ -743,7 +743,7 @@ By default, unmatched items are discarded. The `remainder` option can be used to
 ```
 
 :::{note}
-The `join` operator is similar to an *inner join* in SQL, or an *outer join* when `remainder` is `true`. The only difference is that `join` does not support duplicate keys, whereas a SQL join produces the cross-product of duplicate keys. The `combine` operator with the `by` option is equivalent to a SQL join.
+The `join` operator is similar to an SQL *inner join*, or an SQL *outer join* when `remainder` is `true`. The only difference is that `join` does not support duplicate keys, whereas an SQL join produces the cross-product of duplicate keys. The `combine` operator with the `by` option is equivalent to an SQL join.
 :::
 
 Available options:
