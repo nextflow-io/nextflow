@@ -39,16 +39,16 @@ class BufferOpTest extends Specification {
         when:
         def r1 = Channel.of(1,2,3,1,2,3).buffer({ it == 2 })
         then:
-        r1.val == [1,2]
-        r1.val == [3,1,2]
-        r1.val == Channel.STOP
+        r1.unwrap() == [1,2]
+        r1.unwrap() == [3,1,2]
+        r1.unwrap() == Channel.STOP
 
         when:
         def r2 = Channel.of('a','b','c','a','b','z').buffer(~/b/)
         then:
-        r2.val == ['a','b']
-        r2.val == ['c','a','b']
-        r2.val == Channel.STOP
+        r2.unwrap() == ['a','b']
+        r2.unwrap() == ['c','a','b']
+        r2.unwrap() == Channel.STOP
 
     }
 
@@ -57,35 +57,35 @@ class BufferOpTest extends Specification {
         when:
         def r1 = Channel.of(1,2,3,1,2,3,1).buffer( size:2 )
         then:
-        r1.val == [1,2]
-        r1.val == [3,1]
-        r1.val == [2,3]
-        r1.val == Channel.STOP
+        r1.unwrap() == [1,2]
+        r1.unwrap() == [3,1]
+        r1.unwrap() == [2,3]
+        r1.unwrap() == Channel.STOP
 
         when:
         r1 = Channel.of(1,2,3,1,2,3,1).buffer( size:2, remainder: true )
         then:
-        r1.val == [1,2]
-        r1.val == [3,1]
-        r1.val == [2,3]
-        r1.val == [1]
-        r1.val == Channel.STOP
+        r1.unwrap() == [1,2]
+        r1.unwrap() == [3,1]
+        r1.unwrap() == [2,3]
+        r1.unwrap() == [1]
+        r1.unwrap() == Channel.STOP
 
 
         when:
         def r2 = Channel.of(1,2,3,4,5,1,2,3,4,5,1,2,9).buffer( size:3, skip:2 )
         then:
-        r2.val == [3,4,5]
-        r2.val == [3,4,5]
-        r2.val == Channel.STOP
+        r2.unwrap() == [3,4,5]
+        r2.unwrap() == [3,4,5]
+        r2.unwrap() == Channel.STOP
 
         when:
         r2 = Channel.of(1,2,3,4,5,1,2,3,4,5,1,2,9).buffer( size:3, skip:2, remainder: true )
         then:
-        r2.val == [3,4,5]
-        r2.val == [3,4,5]
-        r2.val == [9]
-        r2.val == Channel.STOP
+        r2.unwrap() == [3,4,5]
+        r2.unwrap() == [3,4,5]
+        r2.unwrap() == [9]
+        r2.unwrap() == Channel.STOP
 
     }
 
@@ -105,16 +105,16 @@ class BufferOpTest extends Specification {
         when:
         def r1 = Channel.of(1,2,3,4,5,1,2,3,4,5,1,2).buffer( 2, 4 )
         then:
-        r1.val == [2,3,4]
-        r1.val == [2,3,4]
-        r1.val == Channel.STOP
+        r1.unwrap() == [2,3,4]
+        r1.unwrap() == [2,3,4]
+        r1.unwrap() == Channel.STOP
 
         when:
         def r2 = Channel.of('a','b','c','a','b','z').buffer(~/a/,~/b/)
         then:
-        r2.val == ['a','b']
-        r2.val == ['a','b']
-        r2.val == Channel.STOP
+        r2.unwrap() == ['a','b']
+        r2.unwrap() == ['a','b']
+        r2.unwrap() == Channel.STOP
 
     }
 
@@ -124,9 +124,9 @@ class BufferOpTest extends Specification {
         def sum = 0
         def r1 = Channel.of(1,2,3,1,2,3).buffer(remainder: true, { sum+=it; sum==7 })
         then:
-        r1.val == [1,2,3,1]
-        r1.val == [2,3]
-        r1.val == Channel.STOP
+        r1.unwrap() == [1,2,3,1]
+        r1.unwrap() == [2,3]
+        r1.unwrap() == Channel.STOP
 
     }
 
@@ -135,19 +135,19 @@ class BufferOpTest extends Specification {
         when:
         def result = Channel.value(1).buffer(size: 1)
         then:
-        result.val == [1]
-        result.val == Channel.STOP
+        result.unwrap() == [1]
+        result.unwrap() == Channel.STOP
 
         when:
         result = Channel.value(1).buffer(size: 10)
         then:
-        result.val == Channel.STOP
+        result.unwrap() == Channel.STOP
 
         when:
         result = Channel.value(1).buffer(size: 10,remainder: true)
-        result.val == [1]
+        result.unwrap() == [1]
         then:
-        result.val == Channel.STOP
+        result.unwrap() == Channel.STOP
     }
 
 

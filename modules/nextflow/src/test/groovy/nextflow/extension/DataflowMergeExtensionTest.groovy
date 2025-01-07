@@ -48,10 +48,10 @@ class DataflowMergeExtensionTest extends Specification {
         def result = alpha.merge( beta, delta ) { a,b,c -> [c,b,a] }
         then:
         result instanceof DataflowQueue
-        result.val == [7,2,1]
-        result.val == [8,4,3]
-        result.val == [1,6,5]
-        result.val == Channel.STOP
+        result.unwrap() == [7,2,1]
+        result.unwrap() == [8,4,3]
+        result.unwrap() == [1,6,5]
+        result.unwrap() == Channel.STOP
     }
 
     def 'should merge with open array' () {
@@ -62,10 +62,10 @@ class DataflowMergeExtensionTest extends Specification {
         def result = alpha.merge( beta, delta )
         then:
         result instanceof DataflowQueue
-        result.val == [1,2,7]
-        result.val == [3,4,8]
-        result.val == [5,6,1]
-        result.val == Channel.STOP
+        result.unwrap() == [1,2,7]
+        result.unwrap() == [3,4,8]
+        result.unwrap() == [5,6,1]
+        result.unwrap() == Channel.STOP
     }
 
     def 'should merge with with default'() {
@@ -76,10 +76,10 @@ class DataflowMergeExtensionTest extends Specification {
         def result = left.merge(right)
         then:
         result instanceof DataflowQueue
-        result.val == [1,2]
-        result.val == [3,4]
-        result.val == [5,6]
-        result.val == Channel.STOP
+        result.unwrap() == [1,2]
+        result.unwrap() == [3,4]
+        result.unwrap() == [5,6]
+        result.unwrap() == Channel.STOP
 
         when:
         left  = Channel.of(1, 2, 3)
@@ -87,10 +87,10 @@ class DataflowMergeExtensionTest extends Specification {
         result = left.merge(right)
         then:
         result instanceof DataflowQueue
-        result.val == [1, 'a','b']
-        result.val == [2, 'p','q']
-        result.val == [3, 'x','z']
-        result.val == Channel.STOP
+        result.unwrap() == [1, 'a','b']
+        result.unwrap() == [2, 'p','q']
+        result.unwrap() == [3, 'x','z']
+        result.unwrap() == Channel.STOP
 
         when:
         left  = Channel.of('A','B','C')
@@ -98,10 +98,10 @@ class DataflowMergeExtensionTest extends Specification {
         result = left.merge(right)
         then:
         result instanceof DataflowQueue
-        result.val == ['A', 'a', [1,2,3]]
-        result.val == ['B', 'b', [3,4,5]]
-        result.val == ['C', 'c', [6,7,8]]
-        result.val == Channel.STOP
+        result.unwrap() == ['A', 'a', [1,2,3]]
+        result.unwrap() == ['B', 'b', [3,4,5]]
+        result.unwrap() == ['C', 'c', [6,7,8]]
+        result.unwrap() == Channel.STOP
 
     }
 
@@ -114,10 +114,10 @@ class DataflowMergeExtensionTest extends Specification {
         def result = alpha.merge( [beta, delta] ) { a,b,c -> [c,b,a] }
         then:
         result instanceof DataflowQueue
-        result.val == [7,2,1]
-        result.val == [8,4,3]
-        result.val == [1,6,5]
-        result.val == Channel.STOP
+        result.unwrap() == [7,2,1]
+        result.unwrap() == [8,4,3]
+        result.unwrap() == [1,6,5]
+        result.unwrap() == Channel.STOP
 
     }
 
@@ -131,10 +131,10 @@ class DataflowMergeExtensionTest extends Specification {
 
         then:
         result instanceof DataflowQueue
-        result.val == [1,3]
-        result.val == [3,5]
-        result.val == [5,7]
-        result.val == Channel.STOP
+        result.unwrap() == [1,3]
+        result.unwrap() == [3,5]
+        result.unwrap() == [5,7]
+        result.unwrap() == Channel.STOP
     }
 
     def 'should merge with variables with custom closure'() {
@@ -145,8 +145,8 @@ class DataflowMergeExtensionTest extends Specification {
         def result = alpha.merge(beta) { a,b -> [b, a] }
         then:
         result instanceof DataflowVariable
-        result.val == ['World', 'Hello']
-        result.val == ['World', 'Hello']
+        result.unwrap() == ['World', 'Hello']
+        result.unwrap() == ['World', 'Hello']
     }
 
     def 'should merge variables' () {
@@ -156,8 +156,8 @@ class DataflowMergeExtensionTest extends Specification {
         def result = alpha.merge(beta)
         then:
         result instanceof DataflowVariable
-        result.val == ['Hello','World']
-        result.val == ['Hello','World']
+        result.unwrap() == ['Hello','World']
+        result.unwrap() == ['Hello','World']
     }
 
 }

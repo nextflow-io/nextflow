@@ -62,7 +62,7 @@ class Tracker {
     }
 
     private logInputs(TaskRun task, List inputs) {
-        if( log.isDebugEnabled() ) {
+        if( log.isTraceEnabled() ) {
             def msg = "Task input"
             msg += "\n - id      : ${task.id} "
             msg += "\n - name    : '${task.name}'"
@@ -70,18 +70,18 @@ class Tracker {
             for( Object it : inputs ) {
                 msg += "\n<= ${it}"
             }
-            log.debug(msg)
+            log.trace(msg)
         }
     }
 
     private logInputs(OperatorRun run, List inputs) {
-        if( log.isDebugEnabled() ) {
+        if( log.isTraceEnabled() ) {
             def msg = "Operator input"
             msg += "\n - id: ${System.identityHashCode(run)} "
             for( Object it : inputs ) {
                 msg += "\n<= ${it}"
             }
-            log.debug(msg)
+            log.trace(msg)
         }
     }
 
@@ -122,7 +122,7 @@ class Tracker {
                     findUpstreamTasks0(it, upstream)
                 }
                 else {
-                    log.debug "Skip duplicate provenance message id=${msgId}"
+                    log.trace "Skip duplicate provenance message id=${msgId}"
                 }
             }
         }
@@ -156,7 +156,7 @@ class Tracker {
         else
             throw new IllegalArgumentException("Unknown run type: ${run}")
         str += "\n=> ${msg}"
-        log.debug(str)
+        log.trace(str)
     }
 
 }

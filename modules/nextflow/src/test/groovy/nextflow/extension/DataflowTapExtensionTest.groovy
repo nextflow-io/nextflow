@@ -16,13 +16,11 @@
 
 package nextflow.extension
 
-import groovyx.gpars.dataflow.DataflowQueue
-import groovyx.gpars.dataflow.DataflowVariable
+
 import nextflow.Channel
 import nextflow.Session
 import spock.lang.Shared
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -42,15 +40,15 @@ class DataflowTapExtensionTest extends Specification {
         when:
         def result = Channel.of( 4,7,9 ) .tap { first }.map { it+1 }
         then:
-        session.binding.first.val == 4
-        session.binding.first.val == 7
-        session.binding.first.val == 9
-        session.binding.first.val == Channel.STOP
+        session.binding.first.unwrap() == 4
+        session.binding.first.unwrap() == 7
+        session.binding.first.unwrap() == 9
+        session.binding.first.unwrap() == Channel.STOP
 
-        result.val == 5
-        result.val == 8
-        result.val == 10
-        result.val == Channel.STOP
+        result.unwrap() == 5
+        result.unwrap() == 8
+        result.unwrap() == 10
+        result.unwrap() == Channel.STOP
 
         !session.dag.isEmpty()
 
@@ -61,19 +59,19 @@ class DataflowTapExtensionTest extends Specification {
         when:
         def result = Channel.of( 4,7,9 ) .tap { foo; bar }.map { it+1 }
         then:
-        session.binding.foo.val == 4
-        session.binding.foo.val == 7
-        session.binding.foo.val == 9
-        session.binding.foo.val == Channel.STOP
-        session.binding.bar.val == 4
-        session.binding.bar.val == 7
-        session.binding.bar.val == 9
-        session.binding.bar.val == Channel.STOP
+        session.binding.foo.unwrap() == 4
+        session.binding.foo.unwrap() == 7
+        session.binding.foo.unwrap() == 9
+        session.binding.foo.unwrap() == Channel.STOP
+        session.binding.bar.unwrap() == 4
+        session.binding.bar.unwrap() == 7
+        session.binding.bar.unwrap() == 9
+        session.binding.bar.unwrap() == Channel.STOP
 
-        result.val == 5
-        result.val == 8
-        result.val == 10
-        result.val == Channel.STOP
+        result.unwrap() == 5
+        result.unwrap() == 8
+        result.unwrap() == 10
+        result.unwrap() == Channel.STOP
 
         !session.dag.isEmpty()
 

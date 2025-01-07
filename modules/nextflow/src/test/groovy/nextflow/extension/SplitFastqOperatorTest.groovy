@@ -79,7 +79,7 @@ class SplitFastqOperatorTest extends Specification {
         when:
         def target = Channel.of(READS).splitFastq(by:2)
         then:
-        target.val == '''
+        target.unwrap() == '''
             @SRR636272.19519409/1
             GGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAAGAAGGTGCCACAGATCG
             +
@@ -91,7 +91,7 @@ class SplitFastqOperatorTest extends Specification {
             '''
             .stripIndent().leftTrim()
 
-        target.val == '''
+        target.unwrap() == '''
             @SRR636272.21107783/1
             CGGGGAGCGCGGGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTAGGGAGCACCCCGCCGCAGGGGGACAGGCGAGATCGGAAGAGCACACGTCT
             +
@@ -103,7 +103,7 @@ class SplitFastqOperatorTest extends Specification {
             '''
                 .stripIndent().leftTrim()
 
-        target.val == Channel.STOP
+        target.unwrap() == Channel.STOP
     }
 
     def 'should split a fastq to gzip chunks' () {
@@ -114,7 +114,7 @@ class SplitFastqOperatorTest extends Specification {
         when:
         def target = Channel.of(READS).splitFastq(by:2, compress:true, file:folder)
         then:
-        gunzip(target.val) == '''
+        gunzip(target.unwrap()) == '''
             @SRR636272.19519409/1
             GGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAAGAAGGTGCCACAGATCG
             +
@@ -126,7 +126,7 @@ class SplitFastqOperatorTest extends Specification {
             '''
                 .stripIndent().leftTrim()
 
-        gunzip(target.val) == '''
+        gunzip(target.unwrap()) == '''
             @SRR636272.21107783/1
             CGGGGAGCGCGGGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTAGGGAGCACCCCGCCGCAGGGGGACAGGCGAGATCGGAAGAGCACACGTCT
             +
@@ -138,7 +138,7 @@ class SplitFastqOperatorTest extends Specification {
             '''
                 .stripIndent().leftTrim()
 
-        target.val == Channel.STOP
+        target.unwrap() == Channel.STOP
 
         cleanup:
         folder.deleteDir()
@@ -147,7 +147,7 @@ class SplitFastqOperatorTest extends Specification {
     def 'should split read pairs' () {
 
         when:
-        def result = Channel.of(['sample_id',READS,READS2]).splitFastq(by:1, elem:[1,2]).toList().val
+        def result = Channel.of(['sample_id',READS,READS2]).splitFastq(by:1, elem:[1,2]).toList().unwrap()
 
         then:
         result.size() ==4
@@ -218,7 +218,7 @@ class SplitFastqOperatorTest extends Specification {
 
         when:
         channel = Channel.of(['sample_id',file1,file2]).splitFastq(by:1, pe:true)
-        result = channel.val
+        result = channel.unwrap()
         then:
         result[0] == 'sample_id'
         result[1] == '''
@@ -235,7 +235,7 @@ class SplitFastqOperatorTest extends Specification {
                         '''.stripIndent().leftTrim()
 
         when:
-        result = channel.val
+        result = channel.unwrap()
         then:
         result[0] == 'sample_id'
         result[1] == '''
@@ -252,7 +252,7 @@ class SplitFastqOperatorTest extends Specification {
                         '''.stripIndent().leftTrim()
 
         when:
-        result = channel.val
+        result = channel.unwrap()
         then:
         result[0] == 'sample_id'
         result[1] == '''
@@ -269,7 +269,7 @@ class SplitFastqOperatorTest extends Specification {
                         '''.stripIndent().leftTrim()
 
         when:
-        result = channel.val
+        result = channel.unwrap()
         then:
         result[0] == 'sample_id'
         result[1] == '''
@@ -286,7 +286,7 @@ class SplitFastqOperatorTest extends Specification {
                         '''.stripIndent().leftTrim()
 
         when:
-        result = channel.val
+        result = channel.unwrap()
         then:
         result == Channel.STOP
 
@@ -307,7 +307,7 @@ class SplitFastqOperatorTest extends Specification {
         channel = Channel
                     .from([ ['aaa_id',file_a_1,file_a_2], ['bbb_id',file_b_1,file_b_2] ])
                     .splitFastq(by:1, pe:true, file:folder)
-        result = channel.val
+        result = channel.unwrap()
         then:
         result[0] == 'aaa_id'
         result[1].name == 'aaa_1.1.fq'
@@ -326,7 +326,7 @@ class SplitFastqOperatorTest extends Specification {
                         '''.stripIndent().leftTrim()
 
         when:
-        result = channel.val
+        result = channel.unwrap()
         then:
         result[0] == 'aaa_id'
         result[1].name == 'aaa_1.2.fq'
@@ -345,7 +345,7 @@ class SplitFastqOperatorTest extends Specification {
                         '''.stripIndent().leftTrim()
 
         when:
-        result = channel.val
+        result = channel.unwrap()
         then:
         result[0] == 'aaa_id'
         result[1].name == 'aaa_1.3.fq'
@@ -364,7 +364,7 @@ class SplitFastqOperatorTest extends Specification {
                         '''.stripIndent().leftTrim()
 
         when:
-        result = channel.val
+        result = channel.unwrap()
         then:
         result[0] == 'aaa_id'
         result[1].name == 'aaa_1.4.fq'
@@ -383,7 +383,7 @@ class SplitFastqOperatorTest extends Specification {
                         '''.stripIndent().leftTrim()
 
         when:
-        result = channel.val
+        result = channel.unwrap()
         then:
         result[0] == 'bbb_id'
         result[1].name == 'bbb_1.1.fq'
@@ -402,28 +402,28 @@ class SplitFastqOperatorTest extends Specification {
                         '''.stripIndent().leftTrim()
 
         when:
-        result = channel.val
+        result = channel.unwrap()
         then:
         result[0] == 'bbb_id'
         result[1].name == 'bbb_1.2.fq'
         result[2].name == 'bbb_2.2.fq'
 
         when:
-        result = channel.val
+        result = channel.unwrap()
         then:
         result[0] == 'bbb_id'
         result[1].name == 'bbb_1.3.fq'
         result[2].name == 'bbb_2.3.fq'
 
         when:
-        result = channel.val
+        result = channel.unwrap()
         then:
         result[0] == 'bbb_id'
         result[1].name == 'bbb_1.4.fq'
         result[2].name == 'bbb_2.4.fq'
 
         when:
-        result = channel.val
+        result = channel.unwrap()
         then:
         result == Channel.STOP
         sleep 1_000

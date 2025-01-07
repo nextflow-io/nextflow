@@ -28,7 +28,6 @@ import test.TestHelper
 class CountFastaOpTest extends Specification {
 
     def 'should count fasta channel' () {
-
         given:
         def str = '''
             >1aboA
@@ -64,8 +63,7 @@ class CountFastaOpTest extends Specification {
         when:
         def result = Channel.of( str, str2 ).countFasta()
         then:
-        result.val == 8
-
+        result.unwrap() == 8
     }
 
     def 'should count fasta records from files' () {
@@ -113,7 +111,6 @@ class CountFastaOpTest extends Specification {
         when:
         def result = Channel.of( file1, file2 ).countFasta()
         then:
-        result.val == 10
-
+        result.unwrap() == 10
     }
 }

@@ -37,7 +37,7 @@ class RandomSampleTest extends Specification {
         def sampler = new RandomSampleOp(ch, 10)
 
         when:
-        def result = (List)sampler.apply().toList().val
+        def result = (List)sampler.apply().toList().unwrap()
         then:
         result.size() == 10
         result.unique().size() == 10
@@ -52,7 +52,7 @@ class RandomSampleTest extends Specification {
         def sampler = new RandomSampleOp(ch, 20)
 
         when:
-        def result = (List)sampler.apply().toList().val
+        def result = (List)sampler.apply().toList().unwrap()
         then:
         result.size() == 10
         result.unique().size() == 10
@@ -66,7 +66,7 @@ class RandomSampleTest extends Specification {
         def sampler = new RandomSampleOp(ch, 10)
 
         when:
-        def result = (List)sampler.apply().toList().val
+        def result = (List)sampler.apply().toList().unwrap()
         then:
         result.size() == 10
         result.unique().size() == 10
@@ -83,8 +83,8 @@ class RandomSampleTest extends Specification {
         def secondSampler = new RandomSampleOp(ch2, 10, seed)
 
         when:
-        def resultFirstRun = (List)firstSampler.apply().toList().val
-        def resultSecondRun = (List)secondSampler.apply().toList().val
+        def resultFirstRun = (List)firstSampler.apply().toList().unwrap()
+        def resultSecondRun = (List)secondSampler.apply().toList().unwrap()
 
         then:
         resultFirstRun == resultSecondRun

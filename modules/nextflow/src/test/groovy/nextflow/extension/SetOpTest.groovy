@@ -33,9 +33,9 @@ class SetOpTest extends Dsl2Spec {
             foo | map { it *2 }
         /)
         then:
-        result.val == 2
-        result.val == 4
-        result.val == 6
+        result.unwrap() == 2
+        result.unwrap() == 4
+        result.unwrap() == 6
 
         when:
         result = dsl_eval(/
@@ -43,7 +43,7 @@ class SetOpTest extends Dsl2Spec {
                 foo | map { it *2 }
         /)
         then:
-        result.val == 10
+        result.unwrap() == 10
     }
 
     def 'should invoke set with dot notation' () {
@@ -53,9 +53,9 @@ class SetOpTest extends Dsl2Spec {
             foo.map { it *2 }
         /)
         then:
-        result.val == 2
-        result.val == 4
-        result.val == 6
+        result.unwrap() == 2
+        result.unwrap() == 4
+        result.unwrap() == 6
 
         when:
         result = dsl_eval(/
@@ -63,7 +63,7 @@ class SetOpTest extends Dsl2Spec {
             foo.map { it.toUpperCase() }
         /)
         then:
-        result.val == 'HELLO'
+        result.unwrap() == 'HELLO'
     }
 
 
@@ -77,7 +77,7 @@ class SetOpTest extends Dsl2Spec {
         return foo
         /)
         then:
-        result.val == 'X'
+        result.unwrap() == 'X'
 
         when:
         result = dsl_eval(/
@@ -88,8 +88,8 @@ class SetOpTest extends Dsl2Spec {
         return bar
         /)
         then:
-        result[0].val == 'X'
-        result[1].val == 'Y'
+        result[0].unwrap() == 'X'
+        result[1].unwrap() == 'Y'
     }
 
 }

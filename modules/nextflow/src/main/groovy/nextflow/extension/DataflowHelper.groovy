@@ -211,7 +211,7 @@ class DataflowHelper {
     static DataflowProcessor newOperator( Map params, Closure code ) {
 
         // -- add a default error listener
-        if( !params.containsKey('listeners') ) {
+        if( !params.listeners ) {
             // add the default error handler
             params.listeners = [ DEF_ERROR_LISTENER ]
         }
@@ -367,9 +367,9 @@ class DataflowHelper {
     @Deprecated
     static DataflowProcessor chainImpl(final DataflowReadChannel source, final DataflowWriteChannel target, final Map params, final Closure closure) {
 
-        final Map<String, Object> parameters = new HashMap<String, Object>(params)
-        parameters.put("inputs", asList(source))
-        parameters.put("outputs", asList(target))
+        final OpParams parameters = new OpParams()
+            .withInput(source)
+            .withOutput(target)
 
         newOperator(parameters, new ChainWithClosure(closure))
     }

@@ -34,7 +34,7 @@ class MixOpTest extends Dsl2Spec {
             c3 = Channel.value( 'z' )
             c1.mix(c2,c3)
             
-        ''') .toList().val
+        ''') .toList().unwrap()
 
         then:
         1 in result
@@ -44,7 +44,6 @@ class MixOpTest extends Dsl2Spec {
         'b' in result
         'z' in result
         !('c' in result)
-
     }
 
     def 'should mix with value channels'() {
@@ -53,7 +52,7 @@ class MixOpTest extends Dsl2Spec {
             Channel.value(1).mix( Channel.fromList([2,3])  )
             ''')
         then:
-        result.toList().val.sort() == [1,2,3]
+        result.toList().unwrap().sort() == [1,2,3]
     }
 
     def 'should mix with two singleton'() {
@@ -62,7 +61,7 @@ class MixOpTest extends Dsl2Spec {
             Channel.value(1).mix( Channel.value(2)  )
             ''')
         then:
-        result.toList().val.sort() == [1,2]
+        result.toList().unwrap().sort() == [1,2]
     }
 
 }
