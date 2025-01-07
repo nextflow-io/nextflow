@@ -479,8 +479,7 @@ class OperatorImpl {
     }
 
     DataflowWriteChannel collect(final DataflowReadChannel source, Map opts, Closure action=null) {
-        final target = new CollectOp(source,action,opts).apply()
-        return target
+        return new CollectOp(source,action,opts).apply()
     }
 
 

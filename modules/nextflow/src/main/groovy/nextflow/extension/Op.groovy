@@ -17,7 +17,7 @@
 
 package nextflow.extension
 
-import groovy.transform.CompileDynamic
+
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -28,6 +28,7 @@ import nextflow.Session
 import nextflow.prov.OperatorRun
 import nextflow.prov.Prov
 import nextflow.prov.Tracker
+import org.codehaus.groovy.runtime.InvokerHelper
 
 /**
  * Operator helpers methods
@@ -131,7 +132,6 @@ class Op {
         }
 
         @Override
-        @CompileDynamic
         Object call(final Object... args) {
             // when the accumulator flag true, re-use the previous run object
             final run = !accumulator || previousRun==null
@@ -141,9 +141,7 @@ class Op {
             currentOperator.set(run)
             // map the inputs
             final inputs = Prov.getTracker().receiveInputs(run, args.toList())
-            final arr = inputs.toArray()
-            // todo: the spread operator should be replaced with proper array
-            final ret = target.call(*arr)
+            final ret = InvokerHelper.invokeMethod(target, 'call', inputs.toArray())
             // track the previous run
             if( accumulator )
                 previousRun = run
@@ -152,14 +150,12 @@ class Op {
         }
 
         Object call(Object args) {
-            // todo: this should invoke the above one
-            target.call(args)
+            call(InvokerHelper.asArray(args))
         }
 
         @Override
         Object call() {
-            // todo: this should invoke the above one
-            target.call()
+            call(InvokerHelper.EMPTY_ARGS)
         }
     }
 

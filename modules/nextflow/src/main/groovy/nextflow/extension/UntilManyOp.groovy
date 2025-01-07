@@ -103,7 +103,7 @@ class UntilManyOp {
 
         @Override
         Object call(final Object arguments) {
-            throw new UnsupportedOperationException()
+            call(InvokerHelper.asArray(arguments))
         }
 
         @Override
