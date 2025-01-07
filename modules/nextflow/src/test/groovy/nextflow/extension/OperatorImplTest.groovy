@@ -489,7 +489,6 @@ class OperatorImplTest extends Specification {
 
     }
 
-
     def testUnique() {
         expect:
         mval(Channel.of(1,1,1,5,7,7,7,3,3).unique().toList()) == [1, 5, 7, 3]

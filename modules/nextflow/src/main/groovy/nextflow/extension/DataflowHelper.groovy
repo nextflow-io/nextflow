@@ -111,44 +111,6 @@ class DataflowHelper {
         }
     }
 
-    static class ReduceParams {
-        DataflowReadChannel source
-        DataflowVariable target
-        Object seed
-        Closure action
-        Closure beforeBind
-
-        static ReduceParams build() { new ReduceParams() }
-
-        ReduceParams withSource(DataflowReadChannel channel) {
-            assert channel!=null
-            this.source = channel
-            return this
-        }
-
-        ReduceParams withTarget(DataflowVariable output) {
-            assert output!=null
-            this.target = output
-            return this
-        }
-
-        ReduceParams withSeed(Object seed) {
-            this.seed = seed
-            return this
-        }
-
-        ReduceParams withAction(Closure action) {
-            this.action = action
-            return this
-        }
-
-        ReduceParams withBeforeBind(Closure beforeBind) {
-            this.beforeBind = beforeBind
-            return this
-        }
-
-    }
-
     private static Session getSession() { Global.getSession() as Session }
 
     /**
@@ -414,68 +376,6 @@ class DataflowHelper {
 
     static DataflowProcessor chainImpl(OpParams params, final Closure closure) {
         newOperator(params, new ChainWithClosure(closure))
-    }
-
-    /**
-     * Implements the {@code #reduce} operator
-     *
-     * @param channel
-     * @param seed
-     * @param closure
-     * @return
-     */
-    static DataflowProcessor reduceImpl(ReduceParams opts) {
-        assert opts
-        assert opts.source, "Reduce 'source' channel cannot be null"
-        assert opts.target, "Reduce 'target' channel cannot be null"
-        assert opts.action, "Reduce 'action' closure cannot be null"
-
-        // the *accumulator* value
-        def accum = opts.seed
-
-        // intercepts operator events
-        def listener = new DataflowEventAdapter() {
-            /*
-             * call the passed closure each time
-             */
-            void afterRun(final DataflowProcessor processor, final List<Object> messages) {
-                final item = Op.unwrap(messages).get(0)
-                final value = accum == null ? item : opts.action.call(accum, item)
-
-                if( value == Channel.VOID ) {
-                    // do nothing
-                }
-                else if( value == Channel.STOP ) {
-                    processor.terminate()
-                }
-                else {
-                    accum = value
-                }
-            }
-
-            /*
-             * when terminates bind the result value
-             */
-            void afterStop(final DataflowProcessor processor) {
-                final result = opts.beforeBind
-                    ? opts.beforeBind.call(accum)
-                    : accum
-                Op.bind(opts.target, result)
-            }
-
-            boolean onException(final DataflowProcessor processor, final Throwable e) {
-                log.error("@unknown", e)
-                session.abort(e)
-                return true;
-            }
-        }
-
-        final params = new OpParams()
-            .withInput(opts.source)
-            .withOutput(CH.create())
-            .withListener(listener)
-            .withAccumulator(true)
-        chainImpl(params, {true})
     }
 
     @PackageScope

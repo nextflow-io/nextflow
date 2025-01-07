@@ -17,7 +17,6 @@
 package nextflow.extension
 
 import groovyx.gpars.dataflow.DataflowQueue
-import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.DataflowEventListener
 import nextflow.Session
 import spock.lang.Specification
@@ -71,27 +70,6 @@ class DataflowHelperTest extends Specification {
         [0,2]           | ['A','B','C','D','E','F']     | ['A','C']     | ['B','D','E','F']
         [0,1,4]         | ['A','B','C','D','E','F']     | ['A','B','E'] | ['C','D','F']
         [0]             | 'A'                           | ['A']         | []
-    }
-
-    def 'should validate reduce params' () {
-        given:
-        def source = new DataflowQueue()
-        def target = new DataflowVariable()
-        def action = {-> 1}
-        def beforeBind = {-> 2}
-        def params = new DataflowHelper.ReduceParams()
-            .withSource(source)
-            .withTarget(target)
-            .withSeed('xyz')
-            .withAction(action)
-            .withBeforeBind(beforeBind)
-
-        expect:
-        params.source.is(source)
-        params.target.is(target)
-        params.seed.is('xyz')
-        params.action.is(action)
-        params.beforeBind.is(beforeBind)
     }
 
     def 'should validate operator params' () {

@@ -61,17 +61,13 @@ class ToListOp {
                     ? { List list -> ordering instanceof Closure ? list.sort((Closure) ordering) : list.sort() }
                     : null
 
-        final reduce = DataflowHelper
-            .ReduceParams
-            .build()
+        ReduceOp .create()
             .withSource(source)
             .withTarget(target)
-            .withSeed([])
+            .withSeed(new ArrayList())
             .withBeforeBind(beforeBind)
             .withAction{ List list, item -> list << item }
-
-        DataflowHelper.reduceImpl(reduce)
-        return target
+            .apply()
     }
 
     @Deprecated
