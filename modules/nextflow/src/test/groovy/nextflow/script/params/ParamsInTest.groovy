@@ -72,21 +72,21 @@ class ParamsInTest extends Dsl2Spec {
 
         in1.class == ValueInParam
         in1.name == 'x'
-        in1.inChannel.val == 'Hello'
+        in1.inChannel.unwrap() == 'Hello'
 
         in2.class == ValueInParam
         in2.name == 'x'
-        in2.inChannel.val == 'Hola'
+        in2.inChannel.unwrap() == 'Hola'
 
         in3.class == ValueInParam
         in3.name == 'x'
-        in3.inChannel.val == 'ciao'
+        in3.inChannel.unwrap() == 'ciao'
 
         in4.class == ValueInParam
         in4.name == 'x'
-        in4.inChannel.val == 1
-        in4.inChannel.val == 2
-        in4.inChannel.val == Channel.STOP
+        in4.inChannel.unwrap() == 1
+        in4.inChannel.unwrap() == 2
+        in4.inChannel.unwrap() == Channel.STOP
 
     }
 
@@ -122,19 +122,19 @@ class ParamsInTest extends Dsl2Spec {
 
         then:
         in1.name == 'x'
-        in1.inChannel.val == 1
-        in1.inChannel.val == 2
-        in1.inChannel.val == Channel.STOP
+        in1.inChannel.unwrap() == 1
+        in1.inChannel.unwrap() == 2
+        in1.inChannel.unwrap() == Channel.STOP
 
         in2.name == 'y'
-        in2.inChannel.val == 'a'
-        in2.inChannel.val == 'b'
-        in2.inChannel.val == Channel.STOP
+        in2.inChannel.unwrap() == 'a'
+        in2.inChannel.unwrap() == 'b'
+        in2.inChannel.unwrap() == Channel.STOP
 
         in3.name == 'z'
-        in3.inChannel.val == 3
-        in3.inChannel.val == 4
-        in3.inChannel.val == Channel.STOP
+        in3.inChannel.unwrap() == 3
+        in3.inChannel.unwrap() == 4
+        in3.inChannel.unwrap() == Channel.STOP
 
     }
 
@@ -172,27 +172,27 @@ class ParamsInTest extends Dsl2Spec {
 
         in1.name == 'x'
         in1.filePattern == '*'
-        in1.inChannel.val == Paths.get('file.x')
+        in1.inChannel.unwrap() == Paths.get('file.x')
         in1.index == 0
 
         in2.name == 'f1'
         in2.filePattern == '*'
-        in2.inChannel.val == Paths.get('file.x')
+        in2.inChannel.unwrap() == Paths.get('file.x')
         in2.index == 1
 
         in3.name == 'f2'
         in3.filePattern == 'abc'
-        in3.inChannel.val == Paths.get('file.x')
+        in3.inChannel.unwrap() == Paths.get('file.x')
         in3.index == 2
 
         in4.name == 'f3'
         in4.filePattern == '*.fa'
-        in4.inChannel.val == Paths.get('file.x')
+        in4.inChannel.unwrap() == Paths.get('file.x')
         in4.index == 3
 
         in5.name == 'file.txt'
         in5.filePattern == 'file.txt'
-        in5.inChannel.val == Paths.get('file.x')
+        in5.inChannel.unwrap() == Paths.get('file.x')
         in5.index == 4
 
     }
@@ -228,15 +228,15 @@ class ParamsInTest extends Dsl2Spec {
 
         in1.name == '__$fileinparam<0>'
         in1.getFilePattern(ctx) == 'main.txt'
-        in1.inChannel.val == Paths.get('file.txt')
+        in1.inChannel.unwrap() == Paths.get('file.txt')
 
         in2.name == '__$fileinparam<1>'
         in2.getFilePattern(ctx) == 'hello.txt'
-        in2.inChannel.val == "str"
+        in2.inChannel.unwrap() == "str"
 
         in3.name == 'f2'
         in3.getFilePattern(ctx) == 'the_file_name.fa'
-        in3.inChannel.val == Paths.get('file.txt')
+        in3.inChannel.unwrap() == Paths.get('file.txt')
 
     }
 
@@ -273,19 +273,19 @@ class ParamsInTest extends Dsl2Spec {
 
         in1.name == '__$fileinparam<0>'
         in1.getFilePattern(ctx) == 'main.txt'
-        in1.inChannel.val == Paths.get('file.txt')
+        in1.inChannel.unwrap() == Paths.get('file.txt')
 
         in2.name == '__$fileinparam<1>'
         in2.getFilePattern(ctx) == 'hello.txt'
-        in2.inChannel.val == "str"
+        in2.inChannel.unwrap() == "str"
 
         in3.name == 'f2'
         in3.getFilePattern(ctx) == 'the_file_name.fa'
-        in3.inChannel.val == Paths.get('file.txt')
+        in3.inChannel.unwrap() == Paths.get('file.txt')
 
         in4.name == 'f3'
         in4.getFilePattern(ctx) == 'the_file_name.txt'
-        in4.inChannel.val == Paths.get('file.txt')
+        in4.inChannel.unwrap() == Paths.get('file.txt')
 
     }
 
@@ -318,11 +318,11 @@ class ParamsInTest extends Dsl2Spec {
 
         in1.class == StdInParam
         in1.name == '-'
-        in1.inChannel.val == 'Hola mundo'
+        in1.inChannel.unwrap() == 'Hola mundo'
 
         in2.class == StdInParam
         in2.name == '-'
-        in2.inChannel.val == 'Ciao mondo'
+        in2.inChannel.unwrap() == 'Ciao mondo'
     }
 
     def testInputEnv() {
@@ -354,13 +354,13 @@ class ParamsInTest extends Dsl2Spec {
 
         in1.class == EnvInParam
         in1.name == 'VAR_X'
-        in1.inChannel.val == 'aaa'
+        in1.inChannel.unwrap() == 'aaa'
 
         in2.class == EnvInParam
         in2.name == 'VAR_Y'
-        in2.inChannel.val == 1
-        in2.inChannel.val == 2
-        in2.inChannel.val == Channel.STOP
+        in2.inChannel.unwrap() == 1
+        in2.inChannel.unwrap() == 2
+        in2.inChannel.unwrap() == Channel.STOP
 
     }
 
@@ -402,7 +402,7 @@ class ParamsInTest extends Dsl2Spec {
         in1.inner.get(0).index == 0
         in1.inner.get(0).mapIndex == 0
         in1.inner.get(0).name == 'p'
-        in1.inChannel.val == 'Hola mundo'
+        in1.inChannel.unwrap() == 'Hola mundo'
 
         in2.inner.size() == 2
         in2.inner.get(0) instanceof ValueInParam
@@ -413,7 +413,7 @@ class ParamsInTest extends Dsl2Spec {
         in2.inner.get(1).name == 'q'
         in2.inner.get(1).index == 1
         in2.inner.get(1).mapIndex == 1
-        in2.inChannel.val == 'Hola mundo'
+        in2.inChannel.unwrap() == 'Hola mundo'
 
         in3.inner.size() == 2
         in3.inner.get(0) instanceof ValueInParam
@@ -425,7 +425,7 @@ class ParamsInTest extends Dsl2Spec {
         in3.inner.get(1).filePattern == 'file_name.fa'
         in3.inner.get(1).index == 2
         in3.inner.get(1).mapIndex == 1
-        in3.inChannel.val == 'str'
+        in3.inChannel.unwrap() == 'str'
 
         in4.inner.size() == 3
         in4.inner.get(0) instanceof ValueInParam
@@ -441,7 +441,7 @@ class ParamsInTest extends Dsl2Spec {
         in4.inner.get(2).name == '-'
         in4.inner.get(2).index == 3
         in4.inner.get(2).mapIndex == 2
-        in4.inChannel.val == 'ciao'
+        in4.inChannel.unwrap() == 'ciao'
 
         in5.inner.size() == 2
         in5.inner.get(0) instanceof ValueInParam
@@ -453,7 +453,7 @@ class ParamsInTest extends Dsl2Spec {
         in5.inner.get(1).filePattern == 'file.fa'
         in5.inner.get(1).index == 4
         in5.inner.get(1).mapIndex == 1
-        in5.inChannel.val == 0
+        in5.inChannel.unwrap() == 0
 
     }
 
@@ -493,7 +493,7 @@ class ParamsInTest extends Dsl2Spec {
         def ctx = [x:'the_file', str: 'fastq']
 
         then:
-        in0.inChannel.val == 'the file content'
+        in0.inChannel.unwrap() == 'the file content'
         in0.inner[0] instanceof FileInParam
         (in0.inner[0] as FileInParam).name == 'name_$x'
         (in0.inner[0] as FileInParam).getFilePattern(ctx) == 'name_$x'
@@ -546,7 +546,7 @@ class ParamsInTest extends Dsl2Spec {
         process.config.getInputs().size() == 3
 
         in0.name == '__$tupleinparam<0>'
-        in0.inChannel.val == 1
+        in0.inChannel.unwrap() == 1
         in0.inner.size() == 3
         in0.inner.get(0) instanceof ValueInParam
         in0.inner.get(0).name == 'a'
@@ -629,21 +629,21 @@ class ParamsInTest extends Dsl2Spec {
 
         in0.class == EachInParam
         in0.inChannel instanceof DataflowVariable
-        in0.inChannel.val == ['aaa']
+        in0.inChannel.unwrap() == ['aaa']
         in0.inner.name == 'x'
         in0.inner.owner == in0
 
         in1.class == EachInParam
         in1.name == '__$eachinparam<1>'
         in1.inChannel instanceof DataflowVariable
-        in1.inChannel.val == [1,2]
+        in1.inChannel.unwrap() == [1,2]
         in1.inner.name == 'p'
         in1.inner instanceof ValueInParam
         in1.inner.owner == in1
 
         in2.class == EachInParam
         in2.name == '__$eachinparam<2>'
-        in2.inChannel.val == [1,2,3]
+        in2.inChannel.unwrap() == [1,2,3]
         in2.inner instanceof ValueInParam
         in2.inner.name == 'z'
         in2.inner.owner == in2
@@ -651,7 +651,7 @@ class ParamsInTest extends Dsl2Spec {
         in3.class == EachInParam
         in3.name == '__$eachinparam<3>'
         in3.inChannel instanceof DataflowVariable
-        in3.inChannel.val == ['file-a.txt']
+        in3.inChannel.unwrap() == ['file-a.txt']
         in3.inner instanceof FileInParam
         in3.inner.name == 'foo'
         in3.inner.owner == in3
@@ -659,7 +659,7 @@ class ParamsInTest extends Dsl2Spec {
         in4.class == EachInParam
         in4.name == '__$eachinparam<4>'
         in4.inChannel instanceof DataflowVariable
-        in4.inChannel.val == ['file-x.fa']
+        in4.inChannel.unwrap() == ['file-x.fa']
         in4.inner instanceof FileInParam
         in4.inner.name == 'bar'
         in4.inner.filePattern == 'bar'
@@ -735,28 +735,28 @@ class ParamsInTest extends Dsl2Spec {
 
         in0.name == 'x'
         in0.filePattern == '*'
-        in0.inChannel.val == FILE
+        in0.inChannel.unwrap() == FILE
         in0.index == 0
         in0.isPathQualifier()
         in0.arity == new ArityParam.Range(1, 1)
 
         in1.name == 'f1'
         in1.filePattern == '*'
-        in1.inChannel.val == FILE
+        in1.inChannel.unwrap() == FILE
         in1.index == 1
         in1.isPathQualifier()
         in1.arity == new ArityParam.Range(1, 2)
 
         in2.name == '*.fa'
         in2.filePattern == '*.fa'
-        in2.inChannel.val == FILE
+        in2.inChannel.unwrap() == FILE
         in2.index == 2
         in2.isPathQualifier()
         in2.arity == new ArityParam.Range(1, Integer.MAX_VALUE)
 
         in3.name == 'file.txt'
         in3.filePattern == 'file.txt'
-        in3.inChannel.val == FILE
+        in3.inChannel.unwrap() == FILE
         in3.index == 3
         in3.isPathQualifier()
 
@@ -800,12 +800,12 @@ class ParamsInTest extends Dsl2Spec {
 
         in1.name == '__$pathinparam<0>'
         in1.getFilePattern(ctx) == 'main.txt'
-        in1.inChannel.val == 'file.txt'
+        in1.inChannel.unwrap() == 'file.txt'
         in1.isPathQualifier()
 
         in2.name == '__$pathinparam<1>'
         in2.getFilePattern(ctx) == 'hello.txt'
-        in2.inChannel.val == "str"
+        in2.inChannel.unwrap() == "str"
         in2.isPathQualifier()
     }
 
@@ -835,7 +835,7 @@ class ParamsInTest extends Dsl2Spec {
         def ctx = [x:'the_file', str: 'fastq']
 
         then:
-        in1.inChannel.val == '/the/file/path'
+        in1.inChannel.unwrap() == '/the/file/path'
         in1.inner[0] instanceof FileInParam
         (in1.inner[0] as FileInParam).getName() == '__$pathinparam<0:0>'
         (in1.inner[0] as FileInParam).getFilePattern(ctx) == 'hola_the_file'
@@ -875,7 +875,7 @@ class ParamsInTest extends Dsl2Spec {
         process.config.getInputs().size() == 3
 
         in0.name == '__$tupleinparam<0>'
-        in0.inChannel.val == 1
+        in0.inChannel.unwrap() == 1
         in0.inner.size() == 2
         in0.inner.get(0) instanceof ValueInParam
         in0.inner.get(0).name == 'a'
@@ -938,7 +938,7 @@ class ParamsInTest extends Dsl2Spec {
         in0.class == EachInParam
         in0.name == '__$eachinparam<0>'
         in0.inChannel instanceof DataflowVariable
-        in0.inChannel.val == ['file-a.txt']
+        in0.inChannel.unwrap() == ['file-a.txt']
         in0.inner instanceof FileInParam
         (in0.inner as FileInParam).name == 'foo'
         (in0.inner as FileInParam).owner == in0
@@ -947,7 +947,7 @@ class ParamsInTest extends Dsl2Spec {
         in1.class == EachInParam
         in1.name == '__$eachinparam<1>'
         in1.inChannel instanceof DataflowVariable
-        in1.inChannel.val == ['file-x.fa']
+        in1.inChannel.unwrap() == ['file-x.fa']
         in1.inner instanceof FileInParam
         (in1.inner as FileInParam).name == 'bar'
         (in1.inner as FileInParam).filePattern == 'bar'

@@ -36,8 +36,8 @@ class ScriptDslTest extends Dsl2Spec {
         def runner = new MockScriptRunner()
         def result = runner.setScript(SCRIPT).execute()
         then:
-        result[0].val == 'Hello'
-        result[1].val == 'world'
+        result[0].unwrap() == 'Hello'
+        result[1].unwrap() == 'world'
     }
 
     def 'should execute basic workflow' () {
@@ -52,7 +52,7 @@ class ScriptDslTest extends Dsl2Spec {
         '''
 
         then:
-        result.val == 'Hello world'
+        result.unwrap() == 'Hello world'
     }
 
     def 'should execute emit' () {
@@ -66,7 +66,7 @@ class ScriptDslTest extends Dsl2Spec {
         '''
 
         then:
-        result.val == 'Hello world'
+        result.unwrap() == 'Hello world'
     }
 
     def 'should emit expression' () {
@@ -82,7 +82,7 @@ class ScriptDslTest extends Dsl2Spec {
         '''
 
         then:
-        result.val == 'HELLO WORLD'
+        result.unwrap() == 'HELLO WORLD'
     }
 
     def 'should emit process out' () {
@@ -101,7 +101,7 @@ class ScriptDslTest extends Dsl2Spec {
         '''
 
         then:
-        result.val == 'Hello'
+        result.unwrap() == 'Hello'
     }
 
 
@@ -142,7 +142,7 @@ class ScriptDslTest extends Dsl2Spec {
         '''
 
         then:
-        result.val == 'HELLO MUNDO'
+        result.unwrap() == 'HELLO MUNDO'
     }
 
 
@@ -229,7 +229,7 @@ class ScriptDslTest extends Dsl2Spec {
             }
         /)
         then:
-        result.val == 'HELLO'
+        result.unwrap() == 'HELLO'
     }
 
     def 'should branch and view' () {
@@ -250,12 +250,12 @@ class ScriptDslTest extends Dsl2Spec {
              [ch1, ch2]
         /)
         then:
-        result[0].val == 1
-        result[0].val == 2
-        result[0].val == 3
+        result[0].unwrap() == 1
+        result[0].unwrap() == 2
+        result[0].unwrap() == 3
         and:
-        result[1].val == 40
-        result[1].val == 50
+        result[1].unwrap() == 40
+        result[1].unwrap() == 50
     }
 
 
@@ -278,9 +278,9 @@ class ScriptDslTest extends Dsl2Spec {
         ''')
 
         then:
-        result.val == 'hello'
-        result.val == 'world'
-        result.val == Channel.STOP
+        result.unwrap() == 'hello'
+        result.unwrap() == 'world'
+        result.unwrap() == Channel.STOP
     }
 
     def 'should allow process and operator composition' () {
@@ -304,9 +304,9 @@ class ScriptDslTest extends Dsl2Spec {
 
 
         then:
-        result.val == 'hello'
-        result.val == 'world'
-        result.val == Channel.STOP
+        result.unwrap() == 'hello'
+        result.unwrap() == 'world'
+        result.unwrap() == Channel.STOP
     }
 
     def 'should run entry flow' () {
@@ -335,7 +335,7 @@ class ScriptDslTest extends Dsl2Spec {
 
 
         then:
-        result.val == 'world'
+        result.unwrap() == 'world'
         
     }
 
@@ -601,7 +601,7 @@ class ScriptDslTest extends Dsl2Spec {
         '''
 
         then:
-        result.val == 'Hello'
+        result.unwrap() == 'Hello'
     }
 
 

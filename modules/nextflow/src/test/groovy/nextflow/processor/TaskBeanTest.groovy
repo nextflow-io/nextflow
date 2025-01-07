@@ -54,7 +54,7 @@ class TaskBeanTest extends Specification {
         config.stageOutMode = 'rsync'
 
         def task = Mock(TaskRun)
-        task.getId() >> '123'
+        task.getId() >> TaskId.of('123')
         task.getName() >> 'Hello'
         task.getStdin() >> 'input from stdin'
         task.getScratch() >> '/tmp/x'

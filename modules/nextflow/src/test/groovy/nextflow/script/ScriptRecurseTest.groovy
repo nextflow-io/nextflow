@@ -53,10 +53,10 @@ class ScriptRecurseTest extends Dsl2Spec {
         def runner = new MockScriptRunner()
         def result = runner.setScript(SCRIPT).execute()
         then:
-        result.val == 2
-        result.val == 3
-        result.val == 4
-        result.val == Channel.STOP
+        result.unwrap() == 2
+        result.unwrap() == 3
+        result.unwrap() == 4
+        result.unwrap() == Channel.STOP
     }
 
     def 'should recourse a process until a condition is verified' () {
@@ -79,10 +79,10 @@ class ScriptRecurseTest extends Dsl2Spec {
         def runner = new MockScriptRunner()
         def result = runner.setScript(SCRIPT).execute()
         then:
-        result.val == 2
-        result.val == 3
-        result.val == 4
-        result.val == Channel.STOP
+        result.unwrap() == 2
+        result.unwrap() == 3
+        result.unwrap() == 4
+        result.unwrap() == Channel.STOP
     }
 
 
@@ -121,10 +121,10 @@ class ScriptRecurseTest extends Dsl2Spec {
         def runner = new MockScriptRunner()
         def result = runner.setScript(SCRIPT).execute()
         then:
-        result.val == 4
-        result.val == 25
-        result.val == 676
-        result.val == Channel.STOP
+        result.unwrap() == 4
+        result.unwrap() == 25
+        result.unwrap() == 676
+        result.unwrap() == Channel.STOP
     }
 
     def 'should recurse with scan' () {
@@ -151,9 +151,9 @@ class ScriptRecurseTest extends Dsl2Spec {
         def runner = new MockScriptRunner()
         def result = runner.setScript(SCRIPT).execute()
         then:
-        result.val == 11 // 10 +1
-        result.val == 32 // 20 + 11 +1
-        result.val == 74 // 30 + 11 + 32 +1
+        result.unwrap() == 11 // 10 +1
+        result.unwrap() == 32 // 20 + 11 +1
+        result.unwrap() == 74 // 30 + 11 + 32 +1
 
     }
 
