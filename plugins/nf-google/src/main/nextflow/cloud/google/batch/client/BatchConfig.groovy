@@ -68,7 +68,8 @@ class BatchConfig {
     String getServiceAccountEmail() { serviceAccountEmail }
     BatchRetryConfig getRetryConfig() { retryConfig }
     List<Integer> getAutoRetryExitCodes() { autoRetryExitCodes }
-
+    Duration getMaxStatusDuration() { maxStatusDuration }
+    
     static BatchConfig create(Session session) {
         final result = new BatchConfig()
         result.googleOpts = GoogleOpts.create(session)
@@ -87,6 +88,7 @@ class BatchConfig {
         result.serviceAccountEmail = session.config.navigate('google.batch.serviceAccountEmail')
         result.retryConfig = new BatchRetryConfig( session.config.navigate('google.batch.retryPolicy') as Map ?: Map.of() )
         result.autoRetryExitCodes = session.config.navigate('google.batch.autoRetryExitCodes', DEFAULT_RETRY_LIST) as List<Integer>
+        result.maxStatusDuration = session.config.navigate('google.batch.maxStatusDuration', Duration.ofMinutes(5)) as Duration
         return result
     }
 

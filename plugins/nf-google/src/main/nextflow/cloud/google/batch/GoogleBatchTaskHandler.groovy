@@ -456,21 +456,35 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             // if there are no tasks checks the job status
             return checkJobStatus()
         }
+
+        final elapsed = System.currentTimeMillis() - submissionTime
+        if (elapsed > executor.config.maxStatusDuration.toMillis()) {
+            throw new ProcessUnrecoverableException("[GOOGLE BATCH] Task status check timed out after ${executor.config.maxStatusDuration} - job=$jobId task=$taskId not found")
+        }
+
         final now = System.currentTimeMillis()
         final delta =  now - timestamp;
         if( !taskState || delta >= 1_000) {
-            final status = client.getTaskStatus(jobId, taskId)
-            final newState = status?.state as String
-            if( newState ) {
-                log.trace "[GOOGLE BATCH] Get job=$jobId task=$taskId state=$newState"
-                taskState = newState
-                timestamp = now
+            try {
+                final status = client.getTaskStatus(jobId, taskId)
+                final newState = status?.state as String
+                if( newState ) {
+                    log.trace "[GOOGLE BATCH] Get job=$jobId task=$taskId state=$newState"
+                    taskState = newState
+                    timestamp = now
+                }
+                if( newState == 'PENDING' ) {
+                    final eventsCount = status.getStatusEventsCount()
+                    final lastEvent = eventsCount > 0 ? status.getStatusEvents(eventsCount - 1) : null
+                    if( lastEvent?.getDescription()?.contains('CODE_GCE_QUOTA_EXCEEDED') )
+                        log.warn1 "Batch job cannot be run: ${lastEvent.getDescription()}"
+                }
             }
-            if( newState == 'PENDING' ) {
-                final eventsCount = status.getStatusEventsCount()
-                final lastEvent = eventsCount > 0 ? status.getStatusEvents(eventsCount - 1) : null
-                if( lastEvent?.getDescription()?.contains('CODE_GCE_QUOTA_EXCEEDED') )
-                    log.warn1 "Batch job cannot be run: ${lastEvent.getDescription()}"
+            catch (NotFoundException e) {
+                log.trace "[GOOGLE BATCH] Task status not found yet for job=$jobId task=$taskId - returning PENDING state"
+                taskState = 'PENDING'
+                timestamp = now
+                return taskState
             }
         }
         return taskState
