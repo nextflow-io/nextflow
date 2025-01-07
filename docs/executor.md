@@ -255,6 +255,7 @@ The `local` executor is useful for developing and testing a pipeline script on y
 Resource requests and other job characteristics can be controlled via the following process directives:
 
 - {ref}`process-cpus`
+- {ref}`process-disk`
 - {ref}`process-memory`
 - {ref}`process-time`
 - {ref}`process-container`

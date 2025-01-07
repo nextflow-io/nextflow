@@ -630,6 +630,11 @@ The following settings are available:
 `executor.cpus`
 : The maximum number of CPUs made available by the underlying system. Used only by the `local` executor.
 
+`executor.disk`
+: :::{versionadded} 24.12.0-edge
+  :::
+: The maximum amount of disk made available by the underlying system. Used only by the `local` executor.
+
 `executor.dumpInterval`
 : Determines how often to log the executor status (default: `5min`).
 

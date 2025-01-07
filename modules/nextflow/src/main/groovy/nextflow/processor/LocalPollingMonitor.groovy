@@ -15,7 +15,9 @@
  */
 
 package nextflow.processor
+
 import java.lang.management.ManagementFactory
+import java.nio.file.FileSystems
 
 import com.sun.management.OperatingSystemMXBean
 import groovy.transform.CompileStatic
@@ -59,6 +61,16 @@ class LocalPollingMonitor extends TaskPollingMonitor {
     private final long maxMemory
 
     /**
+     * Amount of `free` disk available to execute pending tasks
+     */
+    private long availDisk
+
+    /**
+     * Total amount of disk available in the system
+     */
+    private final long maxDisk
+
+    /**
      * Create the task polling monitor with the provided named parameters object.
      * <p>
      * Valid parameters are:
@@ -74,8 +86,9 @@ class LocalPollingMonitor extends TaskPollingMonitor {
         super(params)
         this.availCpus = maxCpus = params.cpus as int
         this.availMemory = maxMemory = params.memory as long
-        assert availCpus>0, "Local avail `cpus` attribute cannot be zero"
-        assert availMemory>0, "Local avail `memory` attribute cannot zero"
+        this.availDisk = maxDisk = params.disk as long
+        assert availCpus>0, "Local available `cpus` attribute cannot be zero"
+        assert availMemory>0, "Local available `memory` attribute cannot be zero"
     }
 
     /**
@@ -98,14 +111,16 @@ class LocalPollingMonitor extends TaskPollingMonitor {
 
         final int cpus = configCpus(session,name)
         final long memory = configMem(session,name)
+        final long disk = configDisk(session,name)
         final int size = session.getQueueSize(name, OS.getAvailableProcessors())
 
-        log.debug "Creating local task monitor for executor '$name' > cpus=$cpus; memory=${new MemoryUnit(memory)}; capacity=$size; pollInterval=$pollInterval; dumpInterval=$dumpInterval"
+        log.debug "Creating local task monitor for executor '$name' > cpus=$cpus; memory=${MemoryUnit.of(memory)}; disk=${MemoryUnit.of(disk)}; capacity=$size; pollInterval=$pollInterval; dumpInterval=$dumpInterval"
 
         new LocalPollingMonitor(
                 name: name,
                 cpus: cpus,
                 memory: memory,
+                disk: disk,
                 session: session,
                 capacity: size,
                 pollInterval: pollInterval,
@@ -126,6 +141,15 @@ class LocalPollingMonitor extends TaskPollingMonitor {
     @PackageScope
     static long configMem(Session session, String name) {
         (session.getExecConfigProp(name, 'memory', OS.getTotalPhysicalMemorySize()) as MemoryUnit).toBytes()
+    }
+
+    @PackageScope
+    static long configDisk(Session session, String name) {
+        if( session.workDir.fileSystem != FileSystems.default ) {
+            log.debug "Local executor is using a remote work directory -- task disk requirements will be ignored"
+            return 0
+        }
+        (session.getExecConfigProp(name, 'disk', session.workDir.toFile().getUsableSpace()) as MemoryUnit).toBytes()
     }
 
     /**
@@ -150,6 +174,17 @@ class LocalPollingMonitor extends TaskPollingMonitor {
     }
 
     /**
+     *
+     * @param handler
+     *      A {@link TaskHandler} instance
+     * @return
+     *      The amount of disk (bytes) requested to execute the specified task
+     */
+    private static long disk(TaskHandler handler) {
+        handler.task.getConfig()?.getDisk()?.toBytes() ?: 1L
+    }
+
+    /**
      * Determines if a task can be submitted for execution checking if the resources required
      * (cpus and memory) match the amount of avail resource
      *
@@ -167,18 +202,32 @@ class LocalPollingMonitor extends TaskPollingMonitor {
     protected boolean canSubmit(TaskHandler handler) {
 
         final taskCpus = cpus(handler)
-        if( taskCpus>maxCpus )
-            throw new ProcessUnrecoverableException("Process requirement exceeds available CPUs -- req: $taskCpus; avail: $maxCpus")
+        if( taskCpus > maxCpus )
+            throw new ProcessUnrecoverableException("Task requirement exceeds available CPUs -- req: $taskCpus; avail: $maxCpus")
 
         final taskMemory = mem(handler)
-        if( taskMemory>maxMemory)
-            throw new ProcessUnrecoverableException("Process requirement exceeds available memory -- req: ${new MemoryUnit(taskMemory)}; avail: ${new MemoryUnit(maxMemory)}")
+        if( taskMemory > maxMemory )
+            throw new ProcessUnrecoverableException("Task requirement exceeds available memory -- req: ${MemoryUnit.of(taskMemory)}; avail: ${MemoryUnit.of(maxMemory)}")
 
-        final result = super.canSubmit(handler) && taskCpus <= availCpus && taskMemory <= availMemory
-        if( !result && log.isTraceEnabled( ) ) {
-            log.trace "Task `${handler.task.name}` cannot be scheduled -- taskCpus: $taskCpus <= availCpus: $availCpus && taskMemory: ${new MemoryUnit(taskMemory)} <= availMemory: ${new MemoryUnit(availMemory)}"
+        final taskDisk = disk(handler)
+        if( isDiskEnabled() && taskDisk > maxDisk )
+            throw new ProcessUnrecoverableException("Task requirement exceeds available disk -- req: ${MemoryUnit.of(taskDisk)}; avail: ${MemoryUnit.of(maxDisk)}")
+
+        final result = super.canSubmit(handler) && taskCpus <= availCpus && taskMemory <= availMemory && (maxDisk == 0 || taskDisk <= availDisk)
+        if( !result && log.isTraceEnabled() ) {
+            def message = "Task `${handler.task.name}` cannot be scheduled -- taskCpus: $taskCpus <= availCpus: $availCpus && taskMemory: ${MemoryUnit.of(taskMemory)} <= availMemory: ${MemoryUnit.of(availMemory)}"
+            if( isDiskEnabled() )
+                message += " && taskDisk: ${MemoryUnit.of(taskDisk)} <= availDisk: ${MemoryUnit.of(availDisk)}"
+            log.trace message
         }
         return result
+    }
+
+    /**
+     * Determine whether task disk requirements should be enforced.
+     */
+    protected boolean isDiskEnabled() {
+        return maxDisk > 0
     }
 
     /**
@@ -192,6 +241,8 @@ class LocalPollingMonitor extends TaskPollingMonitor {
         super.submit(handler)
         availCpus -= cpus(handler)
         availMemory -= mem(handler)
+        if( isDiskEnabled() )
+            availDisk -= disk(handler)
     }
 
     /**
@@ -209,6 +260,8 @@ class LocalPollingMonitor extends TaskPollingMonitor {
         if( result ) {
             availCpus += cpus(handler)
             availMemory += mem(handler)
+            if( isDiskEnabled() )
+                availDisk += disk(handler)
         }
         return result
     }
