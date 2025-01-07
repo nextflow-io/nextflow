@@ -34,22 +34,11 @@ nxf_publish() {
             return
         fi
 
-        # Calculate jitter as a factor of the delay
-        local min_factor=$(bc <<< "1 - $jitter_factor")
-        local max_factor=$(bc <<< "1 + $jitter_factor")
-        local random_factor=$(awk -v min="$min_factor" -v max="$max_factor" 'BEGIN{srand(); print min + (max-min)*rand()}')
+        # Calculate jitter delay
+        local jittered_delay_ms=$(awk -v delay="$delay_ms" -v jitter="$jitter_factor" 'BEGIN { srand(); print ( 1 - jitter + (2 * jitter) * rand() ) * delay }')
 
-        # Apply the jitter factor to the delay
-        local jittered_delay_ms=$(bc <<< "$delay_ms * $random_factor")
-
-        # Ensure the delay does not exceed the maximum delay
-        if (( $(bc <<< "$jittered_delay_ms > $max_delay_ms") == 1 )); then
-            jittered_delay_ms=$max_delay_ms
-        fi
-
-        # Convert milliseconds to seconds for sleep
-        local total_delay_sec=$(bc <<< "scale=3; $jittered_delay_ms / 1000")
-
+        # Ensure the delay does not exceed the maximum delay and convert to seconds for sleep
+        local total_delay_sec=$(awk -v delay="$jittered_delay_ms" -v max="$max_delay_ms" 'BEGIN { if (delay > max) delay = max; print delay / 1000 }')
         echo "Command failed. Retrying in $total_delay_sec seconds..." >&2
         sleep "$total_delay_sec"
 
@@ -63,10 +52,9 @@ nxf_publish() {
     done
 }
 
-IFS=$';'
-publications=('!{executions}')
+commands="!{executions}"
+IFS=';' read -r -a publications <<< "$commands"
 for publication in "${publications[@]}"; do
         eval $publication &
 done
-unset IFS
 wait
