@@ -474,7 +474,7 @@ class FileHelper {
             return false
 
         final type = getPathFsType(path)
-        def result = type == 'nfs'
+        def result = type == 'nfs' || type == 'lustre'
         log.debug "NFS path ($result): $path"
         return result
     }
