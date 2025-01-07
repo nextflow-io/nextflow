@@ -12,7 +12,8 @@ This script defines two processes. The first splits a string into 6-character ch
 
 Execute the script by entering the following command in your terminal:
 
-```console
+```{code-block} console
+:class: copyable
 $ nextflow run tutorial.nf
 
 N E X T F L O W  ~  version 23.10.0
