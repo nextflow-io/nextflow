@@ -38,13 +38,14 @@ class LocalPollingMonitorTest extends Specification {
                 cpus: 10,
                 capacity: 20,
                 memory: _20_GB,
+                disk: _20_GB,
                 session: session,
                 name: 'local',
                 pollInterval: 100
         )
 
         def task = new TaskRun()
-        task.config = new TaskConfig(cpus: 3, memory: MemoryUnit.of('2GB'))
+        task.config = new TaskConfig(cpus: 3, memory: MemoryUnit.of('2GB'), disk: MemoryUnit.of('10GB'))
         def handler = Mock(TaskHandler)
         handler.getTask() >> { task }
 
@@ -52,8 +53,10 @@ class LocalPollingMonitorTest extends Specification {
         monitor.availCpus == 10
         monitor.capacity == 20
         monitor.availMemory == _20_GB
+        monitor.availDisk == _20_GB
         monitor.maxCpus == 10
         monitor.maxMemory == _20_GB
+        monitor.maxDisk == _20_GB
 
         when:
         monitor.submit(handler)
@@ -62,8 +65,10 @@ class LocalPollingMonitorTest extends Specification {
         monitor.getRunningQueue().size()==1
         monitor.availCpus == 7
         monitor.availMemory == MemoryUnit.of('18GB').toBytes()
+        monitor.availDisk == MemoryUnit.of('10GB').toBytes()
         monitor.maxCpus == 10
         monitor.maxMemory == _20_GB
+        monitor.maxDisk == _20_GB
 
         when:
         monitor.remove(handler)
@@ -71,8 +76,10 @@ class LocalPollingMonitorTest extends Specification {
         monitor.getRunningQueue().size()==0
         monitor.availCpus == 10
         monitor.availMemory == _20_GB
+        monitor.availDisk == _20_GB
         monitor.maxCpus == 10
         monitor.maxMemory == _20_GB
+        monitor.maxDisk == _20_GB
 
     }
 
@@ -86,18 +93,18 @@ class LocalPollingMonitorTest extends Specification {
                 cpus: 10,
                 capacity: 10,
                 memory: _20_GB,
+                disk: _20_GB,
                 session: session,
                 name: 'local',
                 pollInterval: 100
         )
 
         def task = new TaskRun()
-        task.config = new TaskConfig(cpus: 4, memory: MemoryUnit.of('8GB'))
+        task.config = new TaskConfig(cpus: 4, memory: MemoryUnit.of('8GB'), disk: MemoryUnit.of('10GB'))
         def handler = Mock(TaskHandler)
         handler.getTask() >> { task }
         handler.canForkProcess() >> true
         handler.isReady() >> true
-
         expect:
         monitor.canSubmit(handler) == true
 
@@ -110,6 +117,7 @@ class LocalPollingMonitorTest extends Specification {
         monitor.canSubmit(handler) == true
         monitor.availCpus == 6
         monitor.availMemory == MemoryUnit.of('12GB').toBytes()
+        monitor.availDisk == MemoryUnit.of('10GB').toBytes()
 
         when:
         monitor.submit(handler)
@@ -120,6 +128,7 @@ class LocalPollingMonitorTest extends Specification {
         monitor.canSubmit(handler) == false
         monitor.availCpus == 2
         monitor.availMemory == MemoryUnit.of('4GB').toBytes()
+        monitor.availDisk == 0
 
     }
 
@@ -132,6 +141,7 @@ class LocalPollingMonitorTest extends Specification {
                 cpus: 1,
                 capacity: 1,
                 memory: _20_GB,
+                disk: 0,
                 session: session,
                 name: 'local',
                 pollInterval: 100
@@ -167,6 +177,7 @@ class LocalPollingMonitorTest extends Specification {
                 cpus: 10,
                 capacity: 20,
                 memory: _20_GB,
+                disk: 0,
                 session: session,
                 name: 'local',
                 pollInterval: 100
@@ -181,7 +192,7 @@ class LocalPollingMonitorTest extends Specification {
         monitor.canSubmit(handler)
         then:
         def e1 = thrown(ProcessUnrecoverableException)
-        e1.message == 'Process requirement exceeds available CPUs -- req: 12; avail: 10'
+        e1.message == 'Task requirement exceeds available CPUs -- req: 12; avail: 10'
 
 
     }
@@ -195,6 +206,7 @@ class LocalPollingMonitorTest extends Specification {
                 cpus: 10,
                 capacity: 20,
                 memory: _20_GB,
+                disk: 0,
                 session: session,
                 name: 'local',
                 pollInterval: 100
@@ -209,7 +221,35 @@ class LocalPollingMonitorTest extends Specification {
         monitor.canSubmit(handler)
         then:
         def e2 = thrown(ProcessUnrecoverableException)
-        e2.message == 'Process requirement exceeds available memory -- req: 22 GB; avail: 20 GB'
+        e2.message == 'Task requirement exceeds available memory -- req: 22 GB; avail: 20 GB'
+
+    }
+
+    def 'should throw an exception for missing disk' () {
+
+        given:
+        def _20_GB = MemoryUnit.of('20GB').toBytes()
+        def session = new Session()
+        def monitor = new LocalPollingMonitor(
+                cpus: 10,
+                capacity: 20,
+                memory: _20_GB,
+                disk: _20_GB,
+                session: session,
+                name: 'local',
+                pollInterval: 100
+        )
+
+        def task = new TaskRun()
+        task.config = new TaskConfig(disk: MemoryUnit.of('22GB'))
+        def handler = Mock(TaskHandler)
+        handler.getTask() >> { task }
+
+        when:
+        monitor.canSubmit(handler)
+        then:
+        def e2 = thrown(ProcessUnrecoverableException)
+        e2.message == 'Task requirement exceeds available disk -- req: 22 GB; avail: 20 GB'
 
     }
 
@@ -265,6 +305,23 @@ class LocalPollingMonitorTest extends Specification {
         def session4 = new Session([executor: ['$sge': [memory: '1 GB']]])
         then:
         LocalPollingMonitor.configMem(session4,'local') == OS.getTotalPhysicalMemorySize()
+
+    }
+
+    def 'should get the amount of disk' () {
+
+        given:
+        def _10_GB = MemoryUnit.of('10 GB').toBytes()
+
+        when:
+        def session2 = new Session([executor: [disk: '10 GB']])
+        then:
+        LocalPollingMonitor.configDisk(session2,'local') == _10_GB
+
+        when:
+        def session3 = new Session([executor: ['$local': [disk: _10_GB]]])
+        then:
+        LocalPollingMonitor.configDisk(session3,'local') == _10_GB
 
     }
 }
