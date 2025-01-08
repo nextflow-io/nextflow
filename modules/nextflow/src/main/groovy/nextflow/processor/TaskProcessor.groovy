@@ -136,8 +136,8 @@ class TaskProcessor {
 
     @Canonical
     static class FairEntry {
-        TaskRun task
         Map<Short,List> emissions
+        TaskRun task
     }
     static final public String TASK_CONTEXT_PROPERTY_NAME = 'task'
 
@@ -1484,7 +1484,7 @@ class TaskProcessor {
         synchronized (isFair0) {
             // decrement -1 because tasks are 1-based
             final index = task.index-1
-            FairEntry entry = new FairEntry(task,emissions)
+            FairEntry entry = new FairEntry(emissions, task)
             // store the task emission values in a buffer
             fairBuffers[index-currentEmission] = entry
             // check if the current task index matches the expected next emission index
