@@ -106,9 +106,11 @@ class OperatorImpl {
      * @return
      */
     DataflowWriteChannel chain(final DataflowReadChannel<?> source, final Map<String, Object> params, final Closure closure) {
-        final target = CH.createBy(source)
-        chainImpl(source, target, params, closure)
-        return target;
+        return ChainOp.create()
+                .withSource(source)
+                .withTarget(CH.createBy(source))
+                .withAction(closure)
+                .apply()
     }
 
     /**
@@ -344,10 +346,12 @@ class OperatorImpl {
             }
         } as Closure
 
-        // filter removing all duplicates
-        chainImpl(source, target, [listeners: [events]], filter )
-
-        return target
+        return ChainOp.create()
+                .withSource(source)
+                .withTarget(target)
+                .withListener(events)
+                .withAction(filter)
+                .apply()
     }
 
     /**
@@ -383,9 +387,11 @@ class OperatorImpl {
             return it
         }
 
-        chainImpl(source, target, [:], filter)
-
-        return target
+        return ChainOp.create()
+            .withSource(source)
+            .withTarget(target)
+            .withAction(filter)
+            .apply()
     }
 
     /**

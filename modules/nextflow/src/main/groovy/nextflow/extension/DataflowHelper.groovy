@@ -28,7 +28,6 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
-import groovyx.gpars.dataflow.operator.ChainWithClosure
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowEventListener
 import groovyx.gpars.dataflow.operator.DataflowProcessor
@@ -362,20 +361,6 @@ class DataflowHelper {
                 ((DataflowProcessor) getDelegate()).terminate()
             }
         }
-    }
-
-    @Deprecated
-    static DataflowProcessor chainImpl(final DataflowReadChannel source, final DataflowWriteChannel target, final Map params, final Closure closure) {
-
-        final OpParams parameters = new OpParams()
-            .withInput(source)
-            .withOutput(target)
-
-        newOperator(parameters, new ChainWithClosure(closure))
-    }
-
-    static DataflowProcessor chainImpl(OpParams params, final Closure closure) {
-        newOperator(params, new ChainWithClosure(closure))
     }
 
     @PackageScope

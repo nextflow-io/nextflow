@@ -26,9 +26,6 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
-
-import static nextflow.extension.DataflowHelper.chainImpl
-
 /**
  * Implements reduce operator logic
  * 
@@ -130,12 +127,13 @@ class ReduceOp {
             }
         }
 
-        final params = new DataflowHelper.OpParams()
-            .withInput(source)
-            .withOutput(CH.create())
+        ChainOp.create()
+            .withSource(source)
+            .withTarget(CH.create())
             .withListener(listener)
             .withAccumulator(true)
-        chainImpl(params, {true})
+            .withAction({true})
+            .apply()
 
         return target
     }
