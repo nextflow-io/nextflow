@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,11 @@ class XPath implements Path {
     private Path path
 
     private String query
+
+    /*
+     * Only needed to prevent serialization issues - see https://github.com/nextflow-io/nextflow/issues/5208
+     */
+    protected XPath(){}
 
     XPath(XFileSystem fs, String path) {
         this(fs, path, EMPTY)

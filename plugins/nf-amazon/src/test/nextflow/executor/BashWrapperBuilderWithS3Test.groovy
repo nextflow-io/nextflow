@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,7 +58,7 @@ class BashWrapperBuilderWithS3Test extends Specification {
         binding.unstage_outputs == '''\
                     IFS=$'\\n'
                     for name in $(eval "ls -1d test.bam test.bai bla\\ nk.txt" | sort | uniq); do
-                        nxf_s3_upload $name s3://some/buck\\ et || true
+                        nxf_s3_upload $name s3://some/buck\\ et
                     done
                     unset IFS
                     '''.stripIndent().rightTrim()

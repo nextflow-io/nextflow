@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,15 @@
 
 package nextflow.fusion
 
+
+import java.util.regex.Pattern
+
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import nextflow.Global
+import nextflow.Session
 import nextflow.SysEnv
+import nextflow.util.MemoryUnit
 /**
  * Model Fusion config options
  *
@@ -29,11 +34,13 @@ import nextflow.SysEnv
 @CompileStatic
 class FusionConfig {
 
-    final static public String DEFAULT_FUSION_AMD64_URL = 'https://fusionfs.seqera.io/releases/v2.2-amd64.json'
-    final static public String DEFAULT_FUSION_ARM64_URL = 'https://fusionfs.seqera.io/releases/v2.2-arm64.json'
+    final static public String DEFAULT_FUSION_AMD64_URL = 'https://fusionfs.seqera.io/releases/v2.4-amd64.json'
+    final static public String DEFAULT_FUSION_ARM64_URL = 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
     final static public String DEFAULT_TAGS = "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
 
     final static public String FUSION_PATH = '/usr/bin/fusion'
+
+    final static private Pattern VERSION_JSON = ~/https:\/\/.*\/releases\/v(\d+(?:\.\w+)*)-(\w*)\.json$/
 
     final private Boolean enabled
     final private String containerConfigUrl
@@ -44,6 +51,7 @@ class FusionConfig {
     final private boolean tagsEnabled
     final private String tagsPattern
     final private boolean privileged
+    final private MemoryUnit cacheSize
 
     boolean enabled() { enabled }
 
@@ -63,6 +71,8 @@ class FusionConfig {
 
     String tagsPattern() { tagsPattern }
 
+    MemoryUnit cacheSize() { cacheSize }
+
     URL containerConfigUrl() {
         this.containerConfigUrl ? new URL(this.containerConfigUrl) : null
     }
@@ -81,6 +91,7 @@ class FusionConfig {
         this.tagsEnabled = opts.tags==null || opts.tags.toString()!='false'
         this.tagsPattern = (opts.tags==null || (opts.tags instanceof Boolean && opts.tags)) ? DEFAULT_TAGS : ( opts.tags !instanceof Boolean ? opts.tags as String : null )
         this.privileged = opts.privileged==null || opts.privileged.toString()=='true'
+        this.cacheSize = opts.cacheSize as MemoryUnit
         if( containerConfigUrl && !validProtocol(containerConfigUrl))
             throw new IllegalArgumentException("Fusion container config URL should start with 'http:' or 'https:' protocol prefix - offending value: $containerConfigUrl")
     }
@@ -93,8 +104,27 @@ class FusionConfig {
         return createConfig0(Global.config?.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
     }
 
+    static FusionConfig getConfig(Session session) {
+        return createConfig0(session.config?.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
+    }
+
     @Memoized
     static private FusionConfig createConfig0(Map config, Map env) {
         new FusionConfig(config, env)
+    }
+
+    protected String retrieveFusionVersion(String url) {
+        if( !url )
+            return null
+        final matcher_json = VERSION_JSON.matcher(url)
+        if( matcher_json.matches() )
+            return matcher_json.group(1)
+        return null
+    }
+
+    String version() {
+        return enabled
+            ? retrieveFusionVersion(this.containerConfigUrl ?: DEFAULT_FUSION_AMD64_URL)
+            : null
     }
 }

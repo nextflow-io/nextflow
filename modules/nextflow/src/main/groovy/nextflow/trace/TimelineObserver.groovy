@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,7 +73,7 @@ class TimelineObserver implements TraceObserver {
     void onFlowCreate(Session session) {
         beginMillis = startMillis = System.currentTimeMillis()
         if( Files.exists(reportFile) && !overwrite )
-            throw new AbortOperationException("Timeline file already exists: ${reportFile.toUriString()} -- enable the 'timelime.overwrite' option in your config file to overwrite existing files")
+            throw new AbortOperationException("Timeline file already exists: ${reportFile.toUriString()} -- enable the 'timeline.overwrite' option in your config file to overwrite existing files")
     }
 
     /**

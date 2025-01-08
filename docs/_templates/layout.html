@@ -1,11 +1,27 @@
 {% extends "!layout.html" %}
 
+{% block sidebartitle %}
+    {{ super() }}
+    {%- set version_selected = "stable" -%}
+    {%- if "edge" in release %}{%- set version_selected = "edge" -%}{%- endif %}
+    {%- if "dev" in release %}{%- set version_selected = "dev" -%}{%- endif %}
+    <div class="sidebar_version">
+        <span class="version">Version {{ release }} {{ release_checked_out }}</span>
+        <select onchange="window.location = this.value;">
+            <option value="/docs/stable/index.html" {% if version_selected == 'stable' %}selected{% endif %}>Stable</option>
+            <option value="/docs/edge/index.html" {% if version_selected == 'edge' %}selected{% endif %}>Edge</option>
+            <option value="/docs/latest/index.html" {% if version_selected == 'dev' %}selected{% endif %}>Latest</option>
+        </select>
+        </select>
+    </div>
+{% endblock %}
+
 {% block navigation %}
     {{ super() }}
     <div class="nav-footer-logo">
         <a href="https://seqera.io/" target="_blank" title="Developed by Seqera Labs">
             Nextflow is developed by:<br>
-            <img src="_static/seqera-logo.svg" alt="Seqera Labs">
+            <img src="{{ pathto('_static/seqera-logo.svg', 1) }}" alt="Seqera Labs">
         </a>
     </div>
 {% endblock %}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,11 @@
 
 package nextflow.script
 
-
 import java.nio.file.Paths
 import java.time.OffsetDateTime
 
-import nextflow.Const
 import nextflow.Session
+import nextflow.BuildInfo
 import nextflow.exception.WorkflowScriptErrorException
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStats
@@ -59,7 +58,8 @@ class WorkflowMetadataTest extends Specification {
         def handlerInvoked
         def config = [workflow: [onComplete: { -> handlerInvoked=workflow.commandLine } ],
                     docker:[enabled:true],
-                    manifest: [version: '1.0.0', nextflowVersion: '>=0.31.1']]
+                    manifest: [version: '1.0.0', nextflowVersion: '>=0.31.1'],
+                    wave:[enabled:true], fusion:[enabled:true, containerConfigUrl: 'https://fusionfs.seqera.io/releases/v1.2.3-amd64.json']]
         Session session = Spy(Session, constructorArgs: [config])
         session.configFiles >> [Paths.get('foo'), Paths.get('bar')]
         session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
@@ -83,20 +83,25 @@ class WorkflowMetadataTest extends Specification {
         metadata.start <= OffsetDateTime.now()
         metadata.complete == null
         metadata.commandLine == 'nextflow run -this -that'
-        metadata.nextflow.version == new VersionNumber(Const.APP_VER)
-        metadata.nextflow.build == Const.APP_BUILDNUM
-        metadata.nextflow.timestamp == Const.APP_TIMESTAMP_UTC
+        metadata.nextflow.version == new VersionNumber(BuildInfo.version)
+        metadata.nextflow.build == BuildInfo.buildNum as int
+        metadata.nextflow.timestamp == BuildInfo.timestampUTC
         metadata.profile == 'standard'
         metadata.sessionId == session.uniqueId
         metadata.runName == session.runName
         metadata.containerEngine == 'docker'
+        metadata.wave.enabled == true
+        metadata.fusion.enabled == true
+        metadata.fusion.version == '1.2.3'
         metadata.configFiles == [Paths.get('foo').toAbsolutePath(), Paths.get('bar').toAbsolutePath()]
         metadata.resume == false
         metadata.stubRun == false
+        metadata.preview == false
         metadata.userName == System.getProperty('user.name')
         metadata.homeDir == Paths.get(System.getProperty('user.home'))
         metadata.manifest.version == '1.0.0'
         metadata.manifest.nextflowVersion == '>=0.31.1'
+        !metadata.failOnIgnore
 
         when:
         metadata.invokeOnComplete()
@@ -111,11 +116,15 @@ class WorkflowMetadataTest extends Specification {
         session.profile >> 'foo_profile'
         session.resumeMode >> true
         session.stubRun >> true
+        session.preview >> true
+        session.failOnIgnore() >> true
         metadata = new WorkflowMetadata(session, script)
         then:
         metadata.profile == 'foo_profile'
         metadata.resume
         metadata.stubRun
+        metadata.preview
+        metadata.failOnIgnore
     }
 
     def foo_test_method() {

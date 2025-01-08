@@ -17,15 +17,20 @@
 
 package nextflow.cloud.google.batch
 
+import static nextflow.cloud.google.batch.GoogleBatchScriptLauncher.*
+
 import java.nio.file.Path
 
+import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.cloud.google.batch.client.BatchConfig
+import nextflow.SysEnv
 import nextflow.cloud.google.batch.client.BatchClient
+import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.cloud.google.batch.logging.BatchLogging
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
+import nextflow.executor.TaskArrayExecutor
 import nextflow.extension.FilesEx
 import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskHandler
@@ -33,6 +38,7 @@ import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
+import nextflow.util.Escape
 import nextflow.util.ServiceName
 import org.pf4j.ExtensionPoint
 /**
@@ -43,12 +49,14 @@ import org.pf4j.ExtensionPoint
 @Slf4j
 @ServiceName(value='google-batch')
 @CompileStatic
-class GoogleBatchExecutor extends Executor implements ExtensionPoint {
+class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExecutor {
 
     private BatchClient client
     private BatchConfig config
     private Path remoteBinDir
     private BatchLogging logging
+
+    private final Set<String> deletedJobs = new HashSet<>()
 
     BatchClient getClient() { return client }
     BatchConfig getConfig() { return config }
@@ -124,4 +132,54 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint {
     boolean isFusionEnabled() {
         return FusionHelper.isFusionEnabled(session)
     }
+
+    boolean isCloudinfoEnabled() {
+        return Boolean.parseBoolean(SysEnv.get('NXF_CLOUDINFO_ENABLED', 'true') )
+    }
+
+    boolean shouldDeleteJob(String jobId) {
+        if( jobId in deletedJobs ) {
+            // if the job is already in the list it has been already deleted
+            return false
+        }
+        synchronized (deletedJobs) {
+            // add the job id to the set of deleted jobs, if it's a new id, the `add` method
+            // returns true therefore the job should be deleted
+            return deletedJobs.add(jobId)
+        }
+    }
+
+    @Override
+    String getArrayIndexName() {
+        return 'BATCH_TASK_INDEX'
+    }
+
+    @Override
+    int getArrayIndexStart() {
+        return 0
+    }
+
+    @Override
+    String getArrayTaskId(String jobId, int index) {
+        return index.toString()
+    }
+
+    @Override
+    String getArrayWorkDir(TaskHandler handler) {
+        return isFusionEnabled() || isWorkDirDefaultFS()
+            ? TaskArrayExecutor.super.getArrayWorkDir(handler)
+            : containerMountPath(handler.task.workDir as CloudStoragePath)
+    }
+
+    @Override
+    String getArrayLaunchCommand(String taskDir) {
+        if( isFusionEnabled() || isWorkDirDefaultFS() ) {
+            return TaskArrayExecutor.super.getArrayLaunchCommand(taskDir)
+        }
+        else {
+            final cmd = List.of('/bin/bash','-o','pipefail','-c', launchCommand(taskDir))
+            return Escape.cli(cmd as String[])
+        }
+    }
+
 }

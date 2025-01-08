@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,27 +72,27 @@ class FluxExecutorTest extends Specification {
         then:
         // Flux doesn't have script headers
         executor.getHeaders(task) == ''
-        executor.getSubmitCommandLine(task, Paths.get('/some/path/job.sh')) == ['flux', 'mini', 'submit', '--setattr=cwd=/work/path', '--job-name="nf-my_task"', '--output=/work/path/.command.log', '--queue=delta', '/bin/bash', 'job.sh']
+        executor.getSubmitCommandLine(task, Paths.get('/some/path/job.sh')) == ['flux', 'submit', '--setattr=cwd=/work/path', '--job-name="nf-my_task"', '--output=/work/path/.command.log', '--queue=delta', '/bin/bash', 'job.sh']
 
         when:
         task.config = new TaskConfig()
         task.config.time = '1m'
         then:
-        executor.getSubmitCommandLine(task, Paths.get('/some/path/job.sh')) == ['flux', 'mini', 'submit', '--setattr=cwd=/work/path', '--job-name="nf-my_task"', '--output=/work/path/.command.log', '--time-limit=01', '/bin/bash', 'job.sh']
+        executor.getSubmitCommandLine(task, Paths.get('/some/path/job.sh')) == ['flux', 'submit', '--setattr=cwd=/work/path', '--job-name="nf-my_task"', '--output=/work/path/.command.log', '--time-limit=01', '/bin/bash', 'job.sh']
 
         when:
         task.config = new TaskConfig()
         task.config.time = '1h'
         task.config.clusterOptions = '--tasks-per-node=4'
         then:
-        executor.getSubmitCommandLine(task, Paths.get('/some/path/job.sh')) == ['flux', 'mini', 'submit', '--setattr=cwd=/work/path', '--job-name="nf-my_task"', '--output=/work/path/.command.log', '--time-limit=60', '--tasks-per-node=4', '/bin/bash', 'job.sh']
+        executor.getSubmitCommandLine(task, Paths.get('/some/path/job.sh')) == ['flux', 'submit', '--setattr=cwd=/work/path', '--job-name="nf-my_task"', '--output=/work/path/.command.log', '--time-limit=60', '--tasks-per-node=4', '/bin/bash', 'job.sh']
 
         when:
         task.config = new TaskConfig()
         task.config.time = '1h'
         task.config.clusterOptions = '--tasks-per-node=4 --cpus-per-node=4'
         then:
-        executor.getSubmitCommandLine(task, Paths.get('/some/path/job.sh')) == ['flux', 'mini', 'submit', '--setattr=cwd=/work/path', '--job-name="nf-my_task"', '--output=/work/path/.command.log', '--time-limit=60', '--tasks-per-node=4', '--cpus-per-node=4', '/bin/bash', 'job.sh']
+        executor.getSubmitCommandLine(task, Paths.get('/some/path/job.sh')) == ['flux', 'submit', '--setattr=cwd=/work/path', '--job-name="nf-my_task"', '--output=/work/path/.command.log', '--time-limit=60', '--tasks-per-node=4', '--cpus-per-node=4', '/bin/bash', 'job.sh']
 
     }
 
@@ -111,9 +111,9 @@ class FluxExecutorTest extends Specification {
         task.name = 'my task'
         task.workDir = Paths.get('/work/path')
         task.config = new TaskConfig()
-        
+
         expect:
-        executor.getSubmitCommandLine(task, Paths.get('/some/path/job.sh')) == ['flux', 'mini', 'submit', '--setattr=cwd=/work/path', '--job-name="nf-my_task"', '/bin/bash', 'job.sh']
+        executor.getSubmitCommandLine(task, Paths.get('/some/path/job.sh')) == ['flux', 'submit', '--setattr=cwd=/work/path', '--job-name="nf-my_task"', '/bin/bash', 'job.sh']
 
     }
 
@@ -135,7 +135,7 @@ class FluxExecutorTest extends Specification {
         task.index = 21
         task.config = new TaskConfig()
         then:
-        executor.getSubmitCommandLine(task, Paths.get('/some/path/job.sh')) == ['flux', 'mini', 'submit', '--setattr=cwd="/work/some\\ data/path"', '--job-name="nf-my_task"', '--output="/work/some\\ data/path/.command.log"', '/bin/bash', 'job.sh']
+        executor.getSubmitCommandLine(task, Paths.get('/some/path/job.sh')) == ['flux', 'submit', '--setattr=cwd="/work/some\\ data/path"', '--job-name="nf-my_task"', '--output="/work/some\\ data/path/.command.log"', '/bin/bash', 'job.sh']
 
     }
 
@@ -160,8 +160,8 @@ class FluxExecutorTest extends Specification {
         result['ƒ6upwy2MY3'] == AbstractGridExecutor.QueueStatus.RUNNING
         result['ƒ6upcbFjvf'] == AbstractGridExecutor.QueueStatus.HOLD
         result['ƒ6uon2RGVV'] == AbstractGridExecutor.QueueStatus.PENDING
-        result['ƒ6upwy2MY4'] == AbstractGridExecutor.QueueStatus.DONE 
-        result['ƒ6upcbFjvh'] == AbstractGridExecutor.QueueStatus.DONE 
+        result['ƒ6upwy2MY4'] == AbstractGridExecutor.QueueStatus.DONE
+        result['ƒ6upcbFjvh'] == AbstractGridExecutor.QueueStatus.DONE
     }
 
     def testQueueStatusCommand() {

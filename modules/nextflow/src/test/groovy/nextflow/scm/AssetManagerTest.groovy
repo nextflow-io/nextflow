@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -414,7 +414,7 @@ class AssetManagerTest extends Specification {
         then:
         holder.getMainScriptName() == 'main.nf'
         holder.getHomePage() == 'https://github.com/foo/bar'
-        holder.manifest.getDefaultBranch() == 'master'
+        holder.manifest.getDefaultBranch() == null
         holder.manifest.getDescription() == null
 
     }
@@ -599,6 +599,56 @@ class AssetManagerTest extends Specification {
         manager.download()
         then:
         noExceptionThrown()
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should identify default branch when downloading repo'() {
+
+        given:
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/socks', [providers: [github: [auth: token]]])
+
+        when:
+        // simulate calling `nextflow run nextflow-io/socks` without specifying a revision
+        manager.download()
+        manager.checkout(null)
+        then:
+        folder.resolve('nextflow-io/socks/.git').isDirectory()
+        manager.getCurrentRevision() == 'main'
+
+        when:
+        manager.download()
+        then:
+        noExceptionThrown()
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'can filter remote branches'() {
+        given:
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        manager.download()
+        def branches = manager.getBranchList()
+
+        when:
+        def remote_head = branches.find { it.name == 'refs/remotes/origin/HEAD' }
+        then:
+        remote_head != null
+        !AssetManager.isRemoteBranch(remote_head)
+
+        when:
+        def remote_master = branches.find { it.name == 'refs/remotes/origin/master' }
+        then:
+        remote_master != null
+        AssetManager.isRemoteBranch(remote_master)
+
+        when:
+        def local_master = branches.find { it.name == 'refs/heads/master' }
+        then:
+        local_master != null
+        !AssetManager.isRemoteBranch(local_master)
     }
 
 }

@@ -16,17 +16,16 @@
 package nextflow.cloud.azure.config
 
 import groovy.transform.CompileStatic
+import nextflow.SysEnv
 import nextflow.cloud.azure.nio.AzFileSystemProvider
 
 /**
- * Model Azure identity options from nextflow config file
+ * Model Azure Entra (formerly Active Directory) config options
  *
  * @author Abhinav Sharma <abhi18av@outlook.com>
  */
 @CompileStatic
 class AzActiveDirectoryOpts {
-
-    private Map<String, String> sysEnv
 
     String servicePrincipalId
     String servicePrincipalSecret
@@ -34,10 +33,9 @@ class AzActiveDirectoryOpts {
 
     AzActiveDirectoryOpts(Map config, Map<String, String> env = null) {
         assert config != null
-        this.sysEnv = env == null ? new HashMap<String, String>(System.getenv()) : env
-        this.servicePrincipalId = config.servicePrincipalId ?: sysEnv.get('AZURE_CLIENT_ID')
-        this.servicePrincipalSecret = config.servicePrincipalSecret ?: sysEnv.get('AZURE_CLIENT_SECRET')
-        this.tenantId = config.tenantId ?: sysEnv.get('AZURE_TENANT_ID')
+        this.servicePrincipalId = config.servicePrincipalId ?: SysEnv.get('AZURE_CLIENT_ID')
+        this.servicePrincipalSecret = config.servicePrincipalSecret ?: SysEnv.get('AZURE_CLIENT_SECRET')
+        this.tenantId = config.tenantId ?: SysEnv.get('AZURE_TENANT_ID')
     }
 
     Map<String, Object> getEnv() {

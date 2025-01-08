@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -133,6 +133,10 @@ class AwsOptions implements CloudTransferOptions {
         return awsConfig.s3Config.getDebug()
     }
 
+    Boolean getRequesterPays() {
+        return awsConfig.s3Config.getRequesterPays()
+    }
+
     String getAwsCli() {
         def result = getCliPath()
         if( !result ) result = 'aws'
@@ -144,4 +148,17 @@ class AwsOptions implements CloudTransferOptions {
         awsConfig.batchConfig.addVolume(path)
         return this
     }
+
+    boolean isFargateMode() {
+        return awsConfig.batchConfig.fargateMode
+    }
+
+    String getS5cmdPath() {
+        return awsConfig.batchConfig.s5cmdPath
+    }
+
+    String getExecutionRole() {
+        return awsConfig.batchConfig.getExecutionRole()
+    }
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,23 +23,25 @@ import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.model.AWSBatchException
 import com.amazonaws.services.ecs.model.AccessDeniedException
 import com.amazonaws.services.logs.model.ResourceNotFoundException
-import nextflow.cloud.aws.nio.S3Path
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.cloud.aws.AwsClientFactory
 import nextflow.cloud.aws.config.AwsConfig
+import nextflow.cloud.aws.nio.S3Path
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
-import nextflow.fusion.FusionHelper
+import nextflow.executor.TaskArrayExecutor
 import nextflow.extension.FilesEx
+import nextflow.fusion.FusionHelper
 import nextflow.processor.ParallelPollingMonitor
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
+import nextflow.util.Escape
 import nextflow.util.RateUnit
 import nextflow.util.ServiceName
 import nextflow.util.ThreadPoolHelper
@@ -54,7 +56,7 @@ import org.pf4j.ExtensionPoint
 @Slf4j
 @ServiceName('awsbatch')
 @CompileStatic
-class AwsBatchExecutor extends Executor implements ExtensionPoint {
+class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExecutor {
 
     /**
      * Proxy to throttle AWS batch client requests
@@ -81,6 +83,8 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
     private Path remoteBinDir = null
 
     private AwsOptions awsOptions
+
+    private final Set<String> deletedJobs = new HashSet<>()
 
     AwsOptions getAwsOptions() {  awsOptions  }
 
@@ -151,7 +155,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         helper = new AwsBatchHelper(client, driver)
         // create the options object
         awsOptions = new AwsOptions(this)
-        log.debug "[AWS BATCH] Executor options=$awsOptions"
+        log.debug "[AWS BATCH] Executor ${awsOptions.fargateMode ? '(FARGATE mode) ' : ''}options=$awsOptions"
     }
 
     /**
@@ -219,6 +223,8 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         new AwsBatchTaskHandler(task, this)
     }
 
+    private static final List<Integer> RETRYABLE_STATUS = [429, 500, 502, 503, 504]
+
     /**
      * @return Creates a {@link ThrottlingExecutor} service to throttle
      * the API requests to the AWS Batch service.
@@ -231,7 +237,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         final size = Runtime.runtime.availableProcessors() * 5
 
         final opts = new ThrottlingExecutor.Options()
-                .retryOn { Throwable t -> t instanceof AWSBatchException && t.errorCode=='TooManyRequestsException' }
+                .retryOn { Throwable t -> t instanceof AWSBatchException && (t.errorCode=='TooManyRequestsException' || t.statusCode in RETRYABLE_STATUS) }
                 .onFailure { Throwable t -> session?.abort(t) }
                 .onRateLimitChange { RateUnit rate -> logRateLimitChange(rate) }
                 .withRateLimit(limit)
@@ -263,6 +269,17 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
     @PackageScope
     ThrottlingExecutor getReaper() { reaper }
 
+    boolean shouldDeleteJob(String jobId) {
+        if( jobId in deletedJobs ) {
+            // if the job is already in the list if has been already deleted
+            return false
+        }
+        synchronized (deletedJobs) {
+            // add the job id to the set of deleted jobs, if it's a new id, the `add` method
+            // returns true therefore the job should be deleted
+            return deletedJobs.add(jobId)
+        }
+    }
 
     CloudMachineInfo getMachineInfoByQueueAndTaskArn(String queue, String taskArn) {
         try {
@@ -282,7 +299,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
 
     String getJobOutputStream(String jobId) {
         try {
-            return helper.getTaskLogStream(jobId)
+            return helper.getTaskLogStream(jobId, awsOptions.getLogsGroup())
         }
         catch (ResourceNotFoundException e) {
             log.debug "Unable to find AWS Cloudwatch logs for Batch Job id=$jobId - ${e.message}"
@@ -306,13 +323,52 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         ThreadPoolHelper.await(reaper, Duration.of('60min'), waitMsg, exitMsg)
     }
 
+    @Override
+    String getArrayIndexName() { 'AWS_BATCH_JOB_ARRAY_INDEX' }
+
+    @Override
+    int getArrayIndexStart() { 0 }
+
+    @Override
+    String getArrayTaskId(String jobId, int index) {
+        return "${jobId}:${index}"
+    }
+
+    @Override
+    String getArrayLaunchCommand(String taskDir) {
+        if( isFusionEnabled() || isWorkDirDefaultFS() )
+            return TaskArrayExecutor.super.getArrayLaunchCommand(taskDir)
+        else
+            return Escape.cli(getLaunchCommand(taskDir) as String[])
+    }
+
+    List<String> getLaunchCommand(String s3WorkDir) {
+        // the cmd list to launch it
+        final opts = getAwsOptions()
+        final cmd = opts.s5cmdPath
+            ? s5Cmd(s3WorkDir, opts)
+            : s3Cmd(s3WorkDir, opts)
+        return ['bash','-o','pipefail','-c', cmd.toString()]
+    }
+
+    static String s3Cmd(String workDir, AwsOptions opts) {
+        final cli = opts.getAwsCli()
+        final debug = opts.debug ? ' --debug' : ''
+        final sse = opts.storageEncryption ? " --sse $opts.storageEncryption" : ''
+        final kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''
+        final requesterPays = opts.requesterPays ? ' --request-payer requester' : ''
+        final aws = "$cli s3 cp --only-show-errors${sse}${kms}${debug}${requesterPays}"
+        final cmd = "trap \"{ ret=\$?; $aws ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}||true; exit \$ret; }\" EXIT; $aws ${workDir}/${TaskRun.CMD_RUN} - | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
+        return cmd
+    }
+
+    static String s5Cmd(String workDir, AwsOptions opts) {
+        final cli = opts.getS5cmdPath()
+        final sse = opts.storageEncryption ? " --sse $opts.storageEncryption" : ''
+        final kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''
+        final requesterPays = opts.requesterPays ? ' --request-payer requester' : ''
+        final cmd = "trap \"{ ret=\$?; $cli cp${sse}${kms}${requesterPays} ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}||true; exit \$ret; }\" EXIT; $cli cat ${workDir}/${TaskRun.CMD_RUN} | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
+        return cmd
+    }
+
 }
-
-
-
-
-
-
-
-
-

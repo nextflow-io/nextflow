@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.BuildInfo
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.exception.ConfigParseException
@@ -40,6 +41,9 @@ import nextflow.util.LoggerHelper
 import nextflow.util.ProxyConfig
 import nextflow.util.SpuriousDeps
 import org.eclipse.jgit.api.errors.GitAPIException
+
+import static nextflow.util.SysHelper.dumpThreads
+
 /**
  * Main application entry point. It parses the command line and
  * launch the pipeline execution.
@@ -553,24 +557,6 @@ class Launcher {
     }
 
     /**
-     * Dump th stack trace of current running threads
-     * @return
-     */
-    private String dumpThreads() {
-
-        def buffer = new StringBuffer()
-        Map<Thread, StackTraceElement[]> m = Thread.getAllStackTraces();
-        for(Map.Entry<Thread,  StackTraceElement[]> e : m.entrySet()) {
-            buffer.append('\n').append(e.getKey().toString()).append('\n')
-            for (StackTraceElement s : e.getValue()) {
-                buffer.append("  " + s).append('\n')
-            }
-        }
-
-        return buffer.toString()
-    }
-
-    /**
      * set up environment and system properties. It checks the following
      * environment variables:
      * <li>http_proxy</li>
@@ -668,6 +654,7 @@ class Launcher {
      * @param args The program options as specified by the user on the CLI
      */
     static void main(String... args)  {
+        LoggerHelper.bootstrapLogger()
         final status = new Launcher() .command(args) .run()
         if( status )
             System.exit(status)
@@ -685,10 +672,25 @@ class Launcher {
             SPLASH
         }
         else {
-            "${APP_NAME} version ${APP_VER}.${APP_BUILDNUM}"
+            "${APP_NAME} version ${BuildInfo.version}.${BuildInfo.buildNum}"
         }
 
     }
 
+    /*
+     * The application 'logo'
+     */
+    /*
+     * The application 'logo'
+     */
+    static public final String SPLASH =
+
+"""
+      N E X T F L O W
+      version ${BuildInfo.version} build ${BuildInfo.buildNum}
+      created ${BuildInfo.timestampUTC} ${BuildInfo.timestampDelta}
+      cite doi:10.1038/nbt.3820
+      http://nextflow.io
+"""
 
 }

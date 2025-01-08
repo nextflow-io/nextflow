@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -264,6 +264,45 @@ class FileHelper {
         }
 
         return result.toAbsolutePath().normalize()
+    }
+
+    /**
+     * Remove consecutive slashes in a URI path. Ignore by design any slash in the hostname and after the `?`
+     *
+     * @param uri The input URI as string
+     * @return The normalised URI string
+     */
+    protected static String normalisePathSlashes0(String uri) {
+       if( !uri )
+           return uri
+        final SLASH = '/' as char
+        final QMARK = '?' as char
+        final scheme = getUrlProtocol(uri)
+        if( scheme==null || scheme=='file') {
+            // ignore for local files
+            return uri
+        }
+
+        // find first non-slash
+        final clean = scheme ? uri.substring(scheme.size()+1) : uri
+        final start = clean.findIndexOf(it->it!='/')
+        final result = new StringBuilder()
+        if( scheme )
+            result.append(scheme+':')
+        if( start )
+            result.append(clean.substring(0,start))
+        for( int i=start; i<clean.size(); i++ ) {
+            final ch = clean.charAt(i)
+            if( (ch!=SLASH) || i+1==clean.size() || (clean.charAt(i+1)!=SLASH)) {
+                if( ch==QMARK ) {
+                    result.append(clean.substring(i))
+                    break
+                }
+                else
+                    result.append(clean.charAt(i))
+            }
+        }
+        return result.toString()
     }
 
     /**

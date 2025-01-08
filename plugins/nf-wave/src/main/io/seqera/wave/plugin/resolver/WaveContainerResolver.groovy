@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ import nextflow.processor.TaskRun
 @Priority(-10)  // <-- lower is higher, this is needed to override default provider behavior
 class WaveContainerResolver implements ContainerResolver {
 
-    private ContainerResolver defaultResolver = new DefaultContainerResolver()
+    private DefaultContainerResolver defaultResolver = new DefaultContainerResolver()
     static final private List<String> DOCKER_LIKE = ['docker','podman','sarus']
     static final private List<String> SINGULARITY_LIKE = ['singularity','apptainer']
     static final private String DOCKER_PREFIX = 'docker://'
@@ -54,7 +54,7 @@ class WaveContainerResolver implements ContainerResolver {
     }
 
     private String getContainerEngine0(ContainerConfig config) {
-        final result = config.getEngine()
+        final result = config.isEnabled() ? config.getEngine() : 'docker'
         if( result )
             return result
         // fallback to docker by default
@@ -70,34 +70,34 @@ class WaveContainerResolver implements ContainerResolver {
         final freeze = client().config().freezeMode()
         final config = task.getContainerConfig()
         final engine = getContainerEngine0(config)
-        final singularityOciMode = config.singularityOciMode()
-        final singularitySpec = freeze && engine in SINGULARITY_LIKE && !singularityOciMode
-        if( !imageName ) {
-            // when no image name is provided the module bundle should include a
-            // Dockerfile or a Conda recipe or a Spack recipe to build
-            // an image on-fly with an automatically assigned name
-            return waveContainer(task, null, singularitySpec)
-        }
+        final singularitySpec = freeze && engine in SINGULARITY_LIKE && !config.canRunOciImage()
 
         if( engine in DOCKER_LIKE ) {
-            final image = defaultResolver.resolveImage(task, imageName)
-            return waveContainer(task, image.target, false)
+            // find out the configured image name applying the default resolver
+            if( imageName )
+                imageName = defaultResolver.resolveImage(task, imageName).getTarget()
+            // fetch the wave container image name
+            return waveContainer(task, imageName, false)
         }
         else if( engine in SINGULARITY_LIKE ) {
             // remove any `docker://` prefix if any
-            if( imageName.startsWith(DOCKER_PREFIX) )
+            if( imageName && imageName.startsWith(DOCKER_PREFIX) )
                 imageName = imageName.substring(DOCKER_PREFIX.length())
             // singularity file image use the default resolver
-            else if( imageName.startsWith('/') || imageName.startsWith('file://') || Files.exists(Path.of(imageName))) {
+            else if( imageName && (imageName.startsWith('/') || imageName.startsWith('file://') || Files.exists(Path.of(imageName)))) {
                 return defaultResolver.resolveImage(task, imageName)
             }
-            // fetch the wave container name
+            // fetch the wave container image name
             final image = waveContainer(task, imageName, singularitySpec)
+            // when wave returns no info, just default to standard behaviour
+            if( !image ) {
+                return defaultResolver.resolveImage(task, imageName)
+            }
             // oras prefixed container are served directly
-            if( image && image.target.startsWith("oras://") )
+            if( image.target.startsWith("oras://") )
                 return image
-            // otherwise adapt it to singularity format
-            return defaultResolver.resolveImage(task, image.target)
+            // otherwise adapt it to singularity format using the target containerInfo to avoid the cache invalidation
+            return defaultResolver.resolveImage(task, image.target, image.hashKey)
         }
         else
             throw new IllegalArgumentException("Wave does not support '$engine' container engine")
@@ -127,4 +127,11 @@ class WaveContainerResolver implements ContainerResolver {
         return null
     }
 
+    @Override
+    boolean isContainerReady(String key) {
+        final c=client()
+        return c.enabled()
+            ? c.isContainerReady(key)
+            : defaultResolver.isContainerReady(key)
+    }
 }

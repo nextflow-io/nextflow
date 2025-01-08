@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,7 +56,7 @@ class StringUtils {
         return m.matches() ? m.group(1).toLowerCase() : null
     }
 
-    static private Pattern multilinePattern = ~/"?(password|token|secret|license)"?\s?[:=]\s?"?(\w+)"?/
+    static private Pattern multilinePattern = ~/["']?(password|token|secret|license)["']?\s?[:=]\s?["']?(\w+)["']?/
 
     static String stripSecrets(String message) {
         if (message == null) {
@@ -81,7 +81,8 @@ class StringUtils {
         return str.contains('password') \
             || str.contains('token') \
             || str.contains('secret') \
-            || str.contains('license')
+            || str.contains('license') \
+            || str.contains('auth')
     }
 
 

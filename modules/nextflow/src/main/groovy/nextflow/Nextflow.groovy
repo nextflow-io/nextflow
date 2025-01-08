@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,6 +57,17 @@ class Nextflow {
 
     private static final Random random = new Random()
 
+    /**
+     * Get the value of an environment variable from the launch environment.
+     *
+     * @param name
+     *      The environment variable name to be referenced
+     * @return
+     *      The value associate with the specified variable name or {@code null} if the variable does not exist.
+     */
+    static String env(String name) {
+        return SysEnv.get(name)
+    }
 
     static private fileNamePattern( FilePatternSplitter splitter, Map opts ) {
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,14 +22,12 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
+import nextflow.Global
+import nextflow.Session
 import nextflow.SysEnv
 import spock.lang.Ignore
 import spock.lang.Specification
-
-import nextflow.Global
-import nextflow.Session
 import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -128,4 +126,31 @@ class FileHelperGsTest extends Specification {
         '/file.txt'                 | '/file.txt'
         Path.of('/file.txt')        | '/file.txt'
     }
+
+    def 'should convert to a canonical path' () {
+        given:
+        Global.session = Mock(Session) { getConfig() >> [google:[project:'foo', region:'x']] }
+
+        expect:
+        FileHelper.toCanonicalPath(VALUE).toUri() == EXPECTED
+
+        where:
+        VALUE                       | EXPECTED
+        'gs://foo/some/file.txt'    | new URI('gs://foo/some/file.txt')
+        'gs://foo/some///file.txt'  | new URI('gs://foo/some/file.txt')
+    }
+
+    @Unroll
+    def 'should remove consecutive slashes in the path' () {
+        given:
+        Global.session = Mock(Session) { getConfig() >> [google:[project:'foo', region:'x']] }
+
+        expect:
+        FileHelper.asPath(STR).toUri() == EXPECTED
+        where:
+        STR                         | EXPECTED
+        'gs://foo//this/that'       | new URI('gs://foo/this/that')
+        'gs://foo//this///that'     | new URI('gs://foo/this/that')
+    }
+
 }

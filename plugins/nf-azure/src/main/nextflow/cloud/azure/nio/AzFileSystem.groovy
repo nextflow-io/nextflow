@@ -527,16 +527,23 @@ class AzFileSystem extends FileSystem {
      * @param cond A predicate that determines when a retry should be triggered
      * @return The {@link dev.failsafe.RetryPolicy} instance
      */
-    @Memoized
     protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond) {
+        // this is needed because apparently bytebuddy used by testing framework is not able
+        // to handle properly this method signature using both generics and `@Memoized` annotation.
+        // therefore the `@Memoized` has been moved to the inner method invocation
+        return (RetryPolicy<T>) retryPolicy0(cond)
+    }
+
+    @Memoized
+    protected RetryPolicy retryPolicy0(Predicate<? extends Throwable> cond) {
         final cfg = AzConfig.getConfig().retryConfig()
-        final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
+        final listener = new EventListener<ExecutionAttemptedEvent>() {
             @Override
-            void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
+            void accept(ExecutionAttemptedEvent event) throws Throwable {
                 log.debug("Azure I/O exception - attempt: ${event.attemptCount}; cause: ${event.lastFailure?.message}")
             }
         }
-        return RetryPolicy.<T>builder()
+        return RetryPolicy.builder()
                 .handleIf(cond)
                 .withBackoff(cfg.delay.toMillis(), cfg.maxDelay.toMillis(), ChronoUnit.MILLIS)
                 .withMaxAttempts(cfg.maxAttempts)

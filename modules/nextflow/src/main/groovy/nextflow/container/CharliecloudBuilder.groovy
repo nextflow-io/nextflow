@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,11 @@
  */
 
 package nextflow.container
+import java.nio.file.Path
+import java.nio.file.Paths
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.Global
 /**
  * Implements a builder for Charliecloud containerisation
  *
@@ -25,10 +28,13 @@ import groovy.util.logging.Slf4j
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Patrick Hüther <patrick.huether@gmail.com>
  * @author Laurent Modolo <laurent.modolo@ens-lyon.fr>
+ * @author Niklas Schandry <niklas@bio.lmu.de>
  */
 @CompileStatic
 @Slf4j
 class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
+    
+    private boolean writeFake = true
 
     CharliecloudBuilder(String name) {
         this.image = name
@@ -45,10 +51,13 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
 
         if( params.containsKey('runOptions') )
             addRunOptions(params.runOptions.toString())
+                
+        if ( params.containsKey('writeFake') )
+            this.writeFake = params.writeFake?.toString() != 'false'
 
         if( params.containsKey('readOnlyInputs') )
             this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
-
+        
         return this
     }
 
@@ -59,11 +68,22 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
 
     @Override
     CharliecloudBuilder build(StringBuilder result) {
+        
         assert image
+        def imageStorage = Paths.get(image).parent.parent
+        def imageName = image.split('/')[-1]
 
         result << 'ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env '
-        if (!readOnlyInputs)
+
+        if ( writeFake  )
+            result << '--write-fake '
+
+        if ( !writeFake && !readOnlyInputs ) {
+            // -w and CH_IMAGE_STORAGE are incompatible.
+            if(System.getenv('CH_IMAGE_STORAGE') == imageStorage)
+                throw new Exception('It is not possible to run writeable images from `$CH_IMAGE_STORAGE`')
             result << '-w '
+        }
 
         appendEnv(result)
 
@@ -75,7 +95,14 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
         if( runOptions )
             result << runOptions.join(' ') << ' '
 
-        result << image
+        if( writeFake && System.getenv('CH_IMAGE_STORAGE') ) {
+            // Run by name if writeFake is true and CH_IMAGE_STORAGE is set
+            result << imageName
+        } else {
+            // Otherwise run by path
+            result << image
+        }
+        
         result << ' --'
 
         runCommand = result.toString()

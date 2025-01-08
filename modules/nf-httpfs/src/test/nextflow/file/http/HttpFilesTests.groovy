@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -112,8 +112,8 @@ class HttpFilesTests extends Specification {
         def lines = Files.readAllLines(path, Charset.forName('UTF-8'))
         then:
         lines.size()>0
-        lines[0] == '<!DOCTYPE html>'
-
+        lines[0].startsWith('<!DOCTYPE html><html lang="en">')
+        
     }
 
     def 'should check file properties' () {
@@ -165,7 +165,7 @@ class HttpFilesTests extends Specification {
         def lines = Files.readAllLines(path, Charset.forName('UTF-8'))
         then:
         lines.size()>0
-        lines[0] == '<!DOCTYPE html>'
+        lines[0].startsWith('<!DOCTYPE html><html lang="en">')
 
     }
 
@@ -190,27 +190,17 @@ class HttpFilesTests extends Specification {
     @IgnoreIf({System.getenv('NXF_SMOKE')})
     def 'should read lines' () {
         given:
-        def path = Paths.get(new URI('ftp://ftp.ncbi.nlm.nih.gov/robots.txt'))
+        def uri = new URI('http://www.nextflow.io/index.html')
+        when:
+        def path = Paths.get(uri)
+        then:
+        path instanceof XPath
 
         when:
-        def lines = Files.readAllLines(path, Charset.forName('UTF-8'))
+        def str = new String(Files.readAllBytes(path), Charset.forName('UTF-8'))
         then:
-        lines[0] == 'User-agent: *'
-        lines[1] == 'Disallow: /'
-    }
-
-    @IgnoreIf({System.getenv('NXF_SMOKE')})
-    def 'should read all bytes' ( ) {
-        given:
-        def path = Paths.get(new URI('ftp://ftp.ncbi.nlm.nih.gov/robots.txt'))
-
-        when:
-        def bytes = Files.readAllBytes(path)
-        def lines = new String(bytes).readLines()
-        then:
-        lines[0] == 'User-agent: *'
-        lines[1] == 'Disallow: /'
-
+        str.size()>0
+        str.startsWith('<!DOCTYPE html><html lang="en">')
     }
 
     def 'should read with a newByteChannel' () {

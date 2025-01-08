@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,8 +64,6 @@ class PluginExtensionProvider implements ExtensionProvider {
      * and the target object on which it operator will be invoked
      */
     final private Map<String,PluginExtensionMethod> factoryExtensions = new HashMap<>()
-
-    private List<PluginExtensionPoint> channelExtensionPoints
 
     private Set<String> OPERATOR_NAMES
 
@@ -287,6 +285,9 @@ class PluginExtensionProvider implements ExtensionProvider {
             def reference = factoryExtensions.get(name)
             def factory = (ChannelFactoryInstance)reference.target
             return factory.invokeExtensionMethod(reference.method, args)
+        }
+        else {
+            throw new MissingMethodException("Channel.${name}", Object.class, args)
         }
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,14 @@ package nextflow.util
 
 import java.nio.file.Path
 
+import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.secret.SecretHolder
+import nextflow.config.ConfigClosurePlaceholder
 import org.codehaus.groovy.runtime.InvokerHelper
+import org.yaml.snakeyaml.DumperOptions
+import org.yaml.snakeyaml.Yaml
 /**
  * Helper method to handle configuration object
  *
@@ -240,9 +243,7 @@ class ConfigHelper {
             return render0(val)
         if( val instanceof Map )
             return render0(val)
-        if( val instanceof SecretHolder )
-            return val.call()
-        
+
         InvokerHelper.inspect(val)
     }
 
@@ -304,6 +305,19 @@ class ConfigHelper {
         flattenFormat(map.toConfigObject(), sort)
     }
 
+    static String toJsonString(ConfigObject config, boolean sort=false) {
+        final copy = normaliseConfig(config)
+        JsonOutput.prettyPrint(JsonOutput.toJson(sort ? deepSort(copy) : copy))
+    }
+
+    static String toYamlString(ConfigObject config, boolean sort=false) {
+        final copy = normaliseConfig(config)
+        final options = new DumperOptions();
+        options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK); // Use block style instead of inline
+        final yaml = new Yaml(options)
+        return yaml.dump(sort ? deepSort(copy) : copy);
+    }
+
     static boolean isValidIdentifier(String s) {
         // an empty or null string cannot be a valid identifier
         if (s == null || s.length() == 0) {
@@ -324,7 +338,50 @@ class ConfigHelper {
         return true;
     }
 
+    private static Map<String, Object> deepSort(Map<String, Object> map) {
+        Map<String, Object> sortedMap = new TreeMap<>(map);  // Sort current map
 
+        for (Map.Entry<String, Object> entry : sortedMap.entrySet()) {
+            Object value = entry.getValue();
+            if (value instanceof Map) {
+                // Recursively sort nested map
+                sortedMap.put(entry.getKey(), deepSort((Map<String, Object>) value));
+            }
+        }
+        return sortedMap;
+    }
 
+    private static Map<String,Object> normaliseConfig(ConfigObject config) {
+        final result = new LinkedHashMap()
+        for( Map.Entry it : config ) {
+            if( it.value instanceof Map && !it.value )
+                continue
+            result.put(it.key, normaliseObject0(it.value))
+        }
+        return result
+    }
+
+    private static Object normaliseObject0(Object value) {
+        if( value instanceof Map ) {
+            final map = value as Map
+            final ret = new LinkedHashMap(map.size())
+            for( Map.Entry entry : map.entrySet() ) {
+                ret.put(entry.key, normaliseObject0(entry.value))
+            }
+            return ret
+        }
+        if( value instanceof Collection ) {
+            final lis = value as List
+            final ret = new ArrayList(lis.size())
+            for( Object it : lis )
+                ret.add(normaliseObject0(it))
+            return ret
+        }
+        else if( value instanceof ConfigClosurePlaceholder ) {
+            return value.toString()
+        }
+        else
+            return value
+    }
 }
 

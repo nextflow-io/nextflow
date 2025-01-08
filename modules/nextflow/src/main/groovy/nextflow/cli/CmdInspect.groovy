@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,7 +70,7 @@ class CmdInspect extends CmdBase {
 
     @Override
     void run() {
-        ContainerInspectMode.activate(true)
+        ContainerInspectMode.activate(!concretize)
         // configure quiet mode
         LoggerHelper.setQuiet(true)
         // setup the target run command
@@ -85,24 +85,17 @@ class CmdInspect extends CmdBase {
         target.preview = true
         target.previewAction = this.&applyInspect
         target.ansiLog = false
+        target.skipHistoryFile = true
         // run it
         target.run()
     }
 
     protected void applyInspect(Session session) {
-        // disable wave await mode when running
-        if( session.config.wave instanceof Map )
-            checkWaveConfig(session.config.wave as Map)
         // run the inspector
-        new ContainersInspector(session.dag)
+        new ContainersInspector(concretize)
                 .withFormat(format)
                 .withIgnoreErrors(ignoreErrors)
                 .printContainers()
-    }
-
-    protected void checkWaveConfig(Map wave) {
-        if( wave.enabled && wave.freeze )
-            wave.dryRun = !concretize
     }
 
 }

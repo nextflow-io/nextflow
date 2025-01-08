@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,10 +39,24 @@ class DefaultContainerResolver implements ContainerResolver {
             return ContainerInfo.EMPTY
         }
 
-        final cfg = task.getContainerConfig()
-        final handler = new ContainerHandler(cfg)
-        final ret = handler.normalizeImageName(imageName)
+        final ret = resolveImage0(task, imageName)
         return new ContainerInfo(imageName, ret, ret)
     }
 
+    private String resolveImage0(TaskRun task, String imageName) {
+        final cfg = task.getContainerConfig()
+        final handler = new ContainerHandler(cfg)
+        return handler.normalizeImageName(imageName)
+    }
+
+    ContainerInfo resolveImage(TaskRun task, String imageName, String hashKey) {
+        assert imageName
+        final ret = resolveImage0(task, imageName)
+        return new ContainerInfo(imageName, ret, hashKey)
+    }
+
+    @Override
+    boolean isContainerReady(String key) {
+        return true
+    }
 }

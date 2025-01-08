@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,11 @@ package io.seqera.wave.plugin
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+import io.seqera.wave.api.ImageNameStrategy
+import io.seqera.wave.api.PackagesSpec
+import io.seqera.wave.api.ScanLevel
+import io.seqera.wave.api.ScanMode
+
 /**
  * Model a request for an augmented container
  *
@@ -52,11 +57,6 @@ class SubmitContainerTokenRequest {
     String towerEndpoint
 
     /**
-     * The ID of the workflow that submitted this container request
-     */
-    String workflowId
-
-    /**
      * Container image to be pulled
      */
     String containerImage
@@ -74,11 +74,13 @@ class SubmitContainerTokenRequest {
     /**
      * Conda recipe file used to build the container
      */
+    @Deprecated
     String condaFile
 
     /**
      * Spack recipe file used to build the container
      */
+    @Deprecated
     String spackFile
 
     /**
@@ -120,5 +122,42 @@ class SubmitContainerTokenRequest {
      * When {@code true} build requests are carried out in dry-run mode.
      */
     Boolean dryRun
+
+    /**
+     * Id of compute workflow environment in tower
+     */
+    String workflowId
+
+    /**
+     * One or more container should be included in upstream container request
+     */
+    List<String> containerIncludes
+
+    /**
+     * Defines the packages to be included in this container request
+     */
+    PackagesSpec packages
+
+    /**
+     * The strategy applied to name a container build by wave when using
+     * the freeze option.
+     */
+    ImageNameStrategy nameStrategy;
+
+    /**
+     * Whenever use container "mirror" mode
+     */
+    boolean mirror;
+
+    /**
+     * The request security scan mode
+     */
+    ScanMode scanMode;
+
+    /**
+     * Define the allows security vulnerabilities in the container request.
+     * Empty or null means no vulnerabilities are allowed.
+     */
+    List<ScanLevel> scanLevels
 
 }

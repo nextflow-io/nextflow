@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,8 +32,6 @@ import nextflow.cli.CmdNode
 import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
-import nextflow.secret.SecretHolder
-import nextflow.secret.SecretsContext
 import nextflow.secret.SecretsLoader
 import nextflow.trace.GraphObserver
 import nextflow.trace.ReportObserver
@@ -77,6 +75,8 @@ class ConfigBuilder {
 
     boolean showClosures
 
+    boolean stripSecrets
+
     boolean showMissingVariables
 
     Map<ConfigObject, String> emptyVariables = new LinkedHashMap<>(10)
@@ -92,6 +92,11 @@ class ConfigBuilder {
 
     ConfigBuilder setShowClosures(boolean value) {
         this.showClosures = value
+        return this
+    }
+
+    ConfigBuilder setStripSecrets(boolean value) {
+        this.stripSecrets = value
         return this
     }
 
@@ -333,8 +338,7 @@ class ConfigBuilder {
         binding.put('baseDir', base)
         binding.put('projectDir', base)
         binding.put('launchDir', Paths.get('.').toRealPath())
-        if( SecretsLoader.isEnabled() )
-            binding.put('secrets', new SecretsContext())
+        binding.put('secrets', SecretsLoader.secretContext())
         return binding
     }
 
@@ -344,6 +348,7 @@ class ConfigBuilder {
         final ignoreIncludes = options ? options.ignoreConfigIncludes : false
         final slurper = new ConfigParser()
                 .setRenderClosureAsString(showClosures)
+                .setStripSecrets(stripSecrets)
                 .setIgnoreIncludes(ignoreIncludes)
         ConfigObject result = new ConfigObject()
 
@@ -540,6 +545,13 @@ class ConfigBuilder {
         if( cmdRun.stubRun )
             config.stubRun = cmdRun.stubRun
 
+        // -- set the output directory
+        if( cmdRun.outputDir )
+            config.outputDir = cmdRun.outputDir
+
+        if( cmdRun.preview )
+            config.preview = cmdRun.preview
+
         // -- sets the working directory
         if( cmdRun.workDir )
             config.workDir = cmdRun.workDir
@@ -689,7 +701,7 @@ class ConfigBuilder {
             if( cmdRun.withTower != '-' )
                 config.tower.endpoint = cmdRun.withTower
             else if( !config.tower.endpoint )
-                config.tower.endpoint = 'https://api.tower.nf'
+                config.tower.endpoint = 'https://api.cloud.seqera.io'
         }
 
         // -- set wave options
@@ -841,10 +853,6 @@ class ConfigBuilder {
             }
             return result
         }
-        else if( config instanceof GString ) {
-            final holdSecrets = config.values.any { it instanceof SecretHolder }
-            return holdSecrets ? config : config.toString()
-        }
         else {
             return config
         }
@@ -900,6 +908,7 @@ class ConfigBuilder {
 
         final config = new ConfigBuilder()
                 .setShowClosures(true)
+                .setStripSecrets(true)
                 .setOptions(cmdRun.launcher.options)
                 .setCmdRun(cmdRun)
                 .setBaseDir(baseDir)

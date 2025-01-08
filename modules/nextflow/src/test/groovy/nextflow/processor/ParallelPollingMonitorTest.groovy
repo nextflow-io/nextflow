@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package nextflow.processor
 
+
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -23,6 +24,7 @@ import nextflow.Session
 import nextflow.util.Duration
 import nextflow.util.ThrottlingExecutor
 import spock.lang.Specification
+import spock.lang.Unroll
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -69,6 +71,51 @@ class ParallelPollingMonitorTest extends Specification {
         failure.get() == 0
         change.get() == 1
 
+    }
+
+    @Unroll
+    def 'should validate can submit method' () {
+        given:
+        def success = new AtomicInteger()
+        def failure = new AtomicInteger()
+        def count = new AtomicInteger()
+        def change = new AtomicInteger()
+        def retry = new AtomicInteger()
+
+        def session = Mock(Session)
+        def handler = Mock(TaskHandler)
+
+        def opts = new ThrottlingExecutor.Options()
+            .retryOn(IllegalArgumentException)
+            .withRateLimit('10/sec')
+            .withErrorBurstDelay(Duration.of('5sec'))
+            .withAutoThrottle()
+            .onSuccess { success.incrementAndGet() }
+            .onRetry { retry.incrementAndGet() }
+            .onFailure { failure.incrementAndGet() }
+            .onRateLimitChange { change.incrementAndGet() }
+
+        def exec = ThrottlingExecutor.create(opts)
+        def mon = Spy(new ParallelPollingMonitor(exec, [capacity:CAPACITY, session:session, name:'foo', pollInterval:'1sec']))
+        and:
+        SUBMIT.times { mon.runningQueue.add(Mock(TaskHandler))  }
+
+        when:
+        def result = mon.canSubmit(handler)
+        then:
+        handler.canForkProcess() >> FORK
+        handler.isReady() >> true
+        and:
+        result == EXPECTED
+
+        where:
+        CAPACITY    | SUBMIT | FORK  | EXPECTED
+        0           |   5    | true  | true
+        10          |   5    | true  | true
+        10          |   10   | true  | false
+        and:
+        0           |   1    | false | false
+        10          |   1    | false | false
     }
 
 }
