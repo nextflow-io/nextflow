@@ -62,7 +62,7 @@ class CollectOp {
             Op.bind(processor, target, msg)
         }
 
-        DataflowHelper.subscribeImpl(source, events)
+        DataflowHelper.subscribeImpl(source, true, events)
         return target
     }
 

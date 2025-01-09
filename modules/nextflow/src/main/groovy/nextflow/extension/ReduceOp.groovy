@@ -17,17 +17,19 @@
 
 package nextflow.extension
 
+import static nextflow.extension.DataflowHelper.*
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
+import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
 import nextflow.extension.op.Op
-
 /**
  * Implements reduce operator logic
  * 
@@ -88,30 +90,12 @@ class ReduceOp {
             throw new IllegalArgumentException("Missing reduce operator source channel")
         if( target==null )
             target = new DataflowVariable()
-
+        final stopOnFirst = source instanceof DataflowExpression
         // the *accumulator* value
         def accum = this.seed
 
         // intercepts operator events
         final listener = new DataflowEventAdapter() {
-            /*
-             * call the passed closure each time
-             */
-            void afterRun(final DataflowProcessor processor, final List<Object> messages) {
-                final item = Op.unwrap(messages).get(0)
-                final value = accum == null ? item : action.call(accum, item)
-
-                if( value == Channel.VOID ) {
-                    // do nothing
-                }
-                else if( value == Channel.STOP ) {
-                    processor.terminate()
-                }
-                else {
-                    accum = value
-                }
-            }
-
             /*
              * when terminates bind the result value
              */
@@ -129,13 +113,20 @@ class ReduceOp {
             }
         }
 
-        ChainOp.create()
-            .withSource(source)
-            .withTarget(CH.create())
-            .withListener(listener)
+        final parameters = new OpParams()
+            .withInput(source)
             .withAccumulator(true)
-            .withAction({true})
-            .apply()
+            .withListener(listener)
+
+        newOperator(parameters) {
+            final value = accum == null ? it : action.call(accum, it)
+            final proc = getDelegate() as DataflowProcessor
+            if( value!=Channel.VOID && value!=Channel.STOP ) {
+                accum = value
+            }
+            if( stopOnFirst || value==Channel.STOP )
+                proc.terminate()
+        }
 
         return target
     }

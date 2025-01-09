@@ -91,6 +91,7 @@ class OperatorImpl {
      * @param closure
      * @return
      */
+    @Deprecated
     DataflowWriteChannel chain(final DataflowReadChannel<?> source, final Closure closure) {
         final target = CH.createBy(source)
         newOperator(source, target, stopErrorListener(source,target), new ChainWithClosure(closure))
@@ -104,6 +105,7 @@ class OperatorImpl {
      * @param closure
      * @return
      */
+    @Deprecated
     DataflowWriteChannel chain(final DataflowReadChannel<?> source, final Map<String, Object> params, final Closure closure) {
         return ChainOp.create()
                 .withSource(source)
@@ -423,8 +425,7 @@ class OperatorImpl {
      * @return
      */
     DataflowWriteChannel count(final DataflowReadChannel source ) {
-        final target = count0(source, null)
-        return target
+        return count0(source, null)
     }
 
     /**
@@ -435,8 +436,7 @@ class OperatorImpl {
      * @return
      */
     DataflowWriteChannel count(final DataflowReadChannel source, final Object criteria ) {
-        final target = count0(source, criteria)
-        return target
+        return count0(source, criteria)
     }
 
     private static DataflowVariable count0(DataflowReadChannel<?> source, Object criteria) {
@@ -444,24 +444,17 @@ class OperatorImpl {
         final target = new DataflowVariable()
         final discriminator = criteria != null ? new BooleanReturningMethodInvoker("isCase") : null
 
-        if( source instanceof DataflowExpression) {
-            source.whenBound { item ->
-                discriminator == null || discriminator.invoke(criteria, item) ? target.bind(1) : target.bind(0)
-            }
-        }
-        else {
-            final action = { current, item ->
-                discriminator == null || discriminator.invoke(criteria, item) ? current+1 : current
-            }
-
-            ReduceOp .create()
-                .withSource(source)
-                .withTarget(target)
-                .withSeed(0)
-                .withAction(action)
-                .apply()
+        final action = { current, item ->
+            discriminator == null || discriminator.invoke(criteria, item) ? current+1 : current
         }
 
+        ReduceOp .create()
+            .withSource(source)
+            .withTarget(target)
+            .withSeed(0)
+            .withAction(action)
+            .apply()
+        
         return target
     }
 

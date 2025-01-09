@@ -451,6 +451,84 @@ class ProvTest extends Dsl2Spec {
         def upstream1 = upstreamTasksOf('p2')
         upstream1.size() == 1
         upstream1.first.name == 'p1 (5)'
-
     }
+
+    def 'should track provenance with collect operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of(1,2,3) | p1 | collect | p2 
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        def t1 = upstreamTasksOf('p2')
+        t1.name == ['p1 (1)', 'p1 (2)', 'p1 (3)']
+    }
+
+    def 'should track provenance with count value operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.value(1) | p1 | count | p2 
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        def t1 = upstreamTasksOf('p2')
+        t1.name == ['p1']
+    }
+
+    def 'should track provenance with count many operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of(1,2,3) | p1 | count | p2 
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        def t1 = upstreamTasksOf('p2')
+        t1.name == ['p1 (1)', 'p1 (2)', 'p1 (3)']
+    }
+
 }
