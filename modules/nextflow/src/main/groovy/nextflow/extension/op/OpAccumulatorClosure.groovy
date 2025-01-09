@@ -36,7 +36,7 @@ class OpAccumulatorClosure extends OpClosure {
     }
 
     @Override
-    protected OperatorRun runInstance() {
+    protected OperatorRun allocateRun() {
         return getPreviousRun()
     }
 }

@@ -51,7 +51,7 @@ class ProvTest extends Dsl2Spec {
         upstream.first.name == 'p1'
     }
 
-    def 'should branch two process'() {
+    def 'should track provenance with branch operator'() {
 
         when:
         dsl_eval(globalConfig(), '''
@@ -258,7 +258,7 @@ class ProvTest extends Dsl2Spec {
 
     }
 
-    def 'should track provenance two processes and the filter operator'() {
+    def 'should track provenance with filter operator'() {
 
         when:
         dsl_eval(globalConfig(), '''

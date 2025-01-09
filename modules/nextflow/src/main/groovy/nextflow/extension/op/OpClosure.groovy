@@ -36,7 +36,7 @@ class OpClosure extends Closure implements OpContext {
 
     private final Closure target
 
-    private final ThreadLocal<OperatorRun> runPerThread = ThreadLocal.withInitial(()->new OperatorRun())
+    private final ThreadLocal<OperatorRun> runPerThread = new ThreadLocal<>()
 
     private final Map<String,OperatorRun> holder = new ConcurrentHashMap<>()
 
@@ -96,8 +96,9 @@ class OpClosure extends Closure implements OpContext {
         target.setProperty(propertyName, newValue)
     }
 
-    protected OperatorRun runInstance() {
-        final result = runPerThread.get()
+    protected OperatorRun allocateRun() {
+        final result = new OperatorRun()
+        runPerThread.set(result)
         setPreviousRun(result)
         return result
     }
@@ -105,7 +106,7 @@ class OpClosure extends Closure implements OpContext {
     @Override
     Object call(final Object... args) {
         // when the accumulator flag true, re-use the previous run object
-        final OperatorRun run = runInstance()
+        final OperatorRun run = allocateRun()
         // map the inputs
         final List<Object> inputs = Prov.getTracker().receiveInputs(run, Arrays.asList(args))
         final Object result = InvokerHelper.invokeMethod(target, "call", inputs.toArray())
