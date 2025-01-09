@@ -17,6 +17,7 @@
 
 package nextflow.extension
 
+import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.DataflowProcessor
@@ -26,6 +27,7 @@ import nextflow.extension.op.Op
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class DistinctOp {
 
     private DataflowReadChannel source
@@ -65,8 +67,8 @@ class DistinctOp {
 
         def previous = null
         DataflowHelper.newOperator(params) {
-            final proc = ((DataflowProcessor) getDelegate())
-            def key = comparator.call(it)
+            final proc = getDelegate() as DataflowProcessor
+            final key = comparator.call(it)
             if( key != previous ) {
                 previous = key
                 Op.bind(proc, target, it)

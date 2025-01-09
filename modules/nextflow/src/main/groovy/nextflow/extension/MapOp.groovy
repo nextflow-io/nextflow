@@ -16,6 +16,7 @@
 
 package nextflow.extension
 
+import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
@@ -28,6 +29,7 @@ import nextflow.extension.op.Op
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class MapOp {
 
     private DataflowReadChannel source
@@ -55,7 +57,7 @@ class MapOp {
         DataflowHelper.newOperator(source, target) { it ->
 
             final result = mapper.call(it)
-            final proc = (DataflowProcessor) getDelegate()
+            final proc = getDelegate() as DataflowProcessor
 
             // bind the result value
             if (result != Channel.VOID)

@@ -19,6 +19,7 @@ package nextflow.extension
 
 import static nextflow.extension.DataflowHelper.*
 
+import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.DataflowProcessor
@@ -29,6 +30,7 @@ import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class UntilOp {
 
     private DataflowReadChannel source
@@ -44,7 +46,7 @@ class UntilOp {
         
         newOperator(source, target, {
             final result = DefaultTypeTransformation.castToBoolean(closure.call(it))
-            final proc = ((DataflowProcessor) getDelegate())
+            final proc = getDelegate() as DataflowProcessor
 
             if( result ) {
                 proc.bindOutput(Channel.STOP)

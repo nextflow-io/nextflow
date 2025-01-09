@@ -19,6 +19,7 @@ package nextflow.extension
 
 import static nextflow.extension.DataflowHelper.*
 
+import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
@@ -28,9 +29,11 @@ import nextflow.extension.op.Op
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
 /**
- *
+ * Implements the "filter" operator logic
+ * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class FilterOp {
 
     private DataflowReadChannel source
@@ -65,7 +68,7 @@ class FilterOp {
             final result = criteria instanceof Closure<Boolean>
                 ? DefaultTypeTransformation.castToBoolean(criteria.call(it))
                 : discriminator.invoke(criteria, (Object)it)
-            final proc = ((DataflowProcessor) getDelegate())
+            final proc = getDelegate() as DataflowProcessor
             if( result ) {
                 Op.bind(proc, target, it)
             }

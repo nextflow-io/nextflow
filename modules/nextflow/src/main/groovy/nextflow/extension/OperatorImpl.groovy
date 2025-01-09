@@ -28,7 +28,6 @@ import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.ChainWithClosure
-import groovyx.gpars.dataflow.operator.ControlMessage
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
@@ -342,9 +341,7 @@ class OperatorImpl {
             log.warn msg
         }
 
-        def target = new DataflowVariable()
-        source.whenBound { target.bind(it) }
-        return target
+        return first(source, { true })
     }
 
     /**
@@ -356,27 +353,11 @@ class OperatorImpl {
      * @param source
      * @return
      */
-    DataflowWriteChannel first( final DataflowReadChannel source, Object criteria ) {
-
-        def target = new DataflowVariable()
-        def discriminator = new BooleanReturningMethodInvoker("isCase");
-
-        if( source instanceof DataflowExpression ) {
-            source.whenBound {
-                def result = it instanceof ControlMessage ? false : discriminator.invoke(criteria, it)
-                target.bind( result ? it : Channel.STOP )
-            }
-        }
-        else {
-            newOperator([source],[]) {
-                if( discriminator.invoke(criteria, it) ) {
-                    target.bind(it)
-                    ((DataflowProcessor) getDelegate()).terminate()
-                }
-            }
-        }
-
-        return target
+    DataflowWriteChannel first( final DataflowReadChannel source, final Object criteria ) {
+        new FirstOp()
+            .withSource(source)
+            .withCriteria(criteria)
+            .apply()
     }
 
     /**
