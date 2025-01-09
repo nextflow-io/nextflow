@@ -26,7 +26,6 @@ import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.PathMatcher
-import java.nio.file.StandardCopyOption
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.ExecutorService
 
@@ -510,13 +509,13 @@ class PublishDir {
             FilesEx.mklink(source, [hard:true], destination)
         }
         else if( mode == Mode.MOVE ) {
-            FileHelper.movePath(source, destination, StandardCopyOption.COPY_ATTRIBUTES)
+            FileHelper.movePath(source, destination)
         }
         else if( mode == Mode.COPY ) {
-            FileHelper.copyPath(source, destination, StandardCopyOption.COPY_ATTRIBUTES)
+            FileHelper.copyPath(source, destination)
         }
         else if( mode == Mode.COPY_NO_FOLLOW ) {
-            FileHelper.copyPath(source, destination, StandardCopyOption.COPY_ATTRIBUTES, LinkOption.NOFOLLOW_LINKS)
+            FileHelper.copyPath(source, destination, LinkOption.NOFOLLOW_LINKS)
         }
         else {
             throw new IllegalArgumentException("Unknown file publish mode: ${mode}")
