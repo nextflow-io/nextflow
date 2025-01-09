@@ -1209,10 +1209,8 @@ class Session implements ISession {
         if( aborted || cancelled || error )
             return
 
-        CacheDB db = null
-        try {
-            log.trace "Cleaning-up workdir"
-            db = CacheFactory.create(uniqueId, runName).openForRead()
+        log.trace "Cleaning-up workdir"
+        try (CacheDB db = CacheFactory.create(uniqueId, runName).openForRead()) {
             db.eachRecord { HashCode hash, TraceRecord record ->
                 def deleted = db.removeTaskEntry(hash)
                 if( deleted ) {
@@ -1223,10 +1221,7 @@ class Session implements ISession {
             log.trace "Clean workdir complete"
         }
         catch( Exception e ) {
-            log.warn("Failed to cleanup work dir: ${workDir.toUriString()}")
-        }
-        finally {
-            db.close()
+            log.warn("Failed to cleanup work dir: ${workDir.toUriString()}", e)
         }
     }
 
