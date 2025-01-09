@@ -34,7 +34,8 @@ extensions = [
   'sphinxcontrib.mermaid',
   'sphinxext.rediraffe',
   'sphinx_rtd_theme',
-  'myst_parser'
+  'myst_parser',
+  'sphinx_tabs.tabs'
 ]
 
 myst_enable_extensions = ['colon_fence', 'deflist', 'dollarmath']

@@ -139,6 +139,7 @@ developer/plugins
 :caption: Tutorials
 :maxdepth: 1
 
+developer-env
 flux
 metrics
 ```
