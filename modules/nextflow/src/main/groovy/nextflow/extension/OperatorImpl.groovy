@@ -384,11 +384,7 @@ class OperatorImpl {
      * @return A {@code DataflowVariable} emitting the `last` item in the channel
      */
     DataflowWriteChannel last( final DataflowReadChannel source ) {
-
-        def target = new DataflowVariable()
-        def last = null
-        subscribeImpl( source, [onNext: { last = it }, onComplete: {  target.bind(last) }] )
-        return target
+        new LastOp().withSource(source).apply()
     }
 
     DataflowWriteChannel collect(final DataflowReadChannel source, Closure action=null) {
@@ -398,7 +394,6 @@ class OperatorImpl {
     DataflowWriteChannel collect(final DataflowReadChannel source, Map opts, Closure action=null) {
         return new CollectOp(source,action,opts).apply()
     }
-
 
     /**
      * Convert a {@code DataflowQueue} alias *channel* to a Java {@code List}

@@ -23,15 +23,15 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.operator.ChainWithClosure
-import groovyx.gpars.dataflow.operator.CopyChannelsClosure
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
+import nextflow.extension.op.Op
 
 /**
+ * Implement "take" operator
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -73,11 +73,16 @@ class TakeOp {
             }
         }
 
-        newOperator(
-                inputs: [source],
-                outputs: [target],
-                listeners: (length > 0 ? [listener] : []),
-                new ChainWithClosure(new CopyChannelsClosure()))
+        final params = new OpParams()
+            .withInput(source)
+            .withOutput(target)
+        if( length>0 )
+            params.withListener(listener)
+
+        newOperator(params) {
+            final proc = getDelegate() as DataflowProcessor
+            Op.bind(proc, target, it)
+        }
 
         return target
     }

@@ -368,7 +368,6 @@ class ProvTest extends Dsl2Spec {
     }
 
     def 'should track provenance with first operator'() {
-
         when:
         dsl_eval(globalConfig(), '''
             workflow {
@@ -393,5 +392,65 @@ class ProvTest extends Dsl2Spec {
         def upstream1 = upstreamTasksOf('p2')
         upstream1.size() == 1
         upstream1.first.name == 'p1 (1)'
+    }
+
+    def 'should track provenance with take operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of(1,2,3,4,5) | p1 | take(2) | p2 
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        def upstream1 = upstreamTasksOf('p2 (1)')
+        upstream1.size() == 1
+        upstream1.first.name == 'p1 (1)'
+        then:
+        def upstream2 = upstreamTasksOf('p2 (2)')
+        upstream2.size() == 1
+        upstream2.first.name == 'p1 (2)'
+
+    }
+
+    def 'should track provenance with last operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of(1,2,3,4,5) | p1 | last | p2 
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        def upstream1 = upstreamTasksOf('p2')
+        upstream1.size() == 1
+        upstream1.first.name == 'p1 (5)'
+
     }
 }
