@@ -263,7 +263,7 @@ class ProvTest extends Dsl2Spec {
         when:
         dsl_eval(globalConfig(), '''
             workflow {
-                channel.of(1,2,3) | p1 | filter { x-> x<30 } | p2 
+                channel.of(1,3,2) | p1 | filter { x-> x<30 } | p2
             }
             
             process p1 { 
@@ -281,8 +281,89 @@ class ProvTest extends Dsl2Spec {
         ''')
 
         then:
-        def upstream = upstreamTasksOf('p2 (1)')
-        upstream.size() == 1
-        upstream.first.name == 'p1 (1)'
+        def upstream1 = upstreamTasksOf('p2 (1)')
+        upstream1.size() == 1
+        upstream1.first.name == 'p1 (1)'
+        then:
+        def upstream2 = upstreamTasksOf('p2 (2)')
+        upstream2.size() == 1
+        upstream2.first.name == 'p1 (3)'
+    }
+
+    def 'should track provenance with unique operator'() {
+
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of(1,2,2,3) | p1 | unique | p2 
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        def upstream1 = upstreamTasksOf('p2 (1)')
+        upstream1.size() == 1
+        upstream1.first.name == 'p1 (1)'
+
+        then:
+        def upstream2 = upstreamTasksOf('p2 (2)')
+        upstream2.size() == 1
+        upstream2.first.name == 'p1 (2)'
+
+        then:
+        def upstream3 = upstreamTasksOf('p2 (3)')
+        upstream3.size() == 1
+        upstream3.first.name == 'p1 (4)'
+    }
+
+
+    def 'should track provenance with distinc operator'() {
+
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of(1,2,2,2,3) | p1 | unique | p2 
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        def upstream1 = upstreamTasksOf('p2 (1)')
+        upstream1.size() == 1
+        upstream1.first.name == 'p1 (1)'
+
+        then:
+        def upstream2 = upstreamTasksOf('p2 (2)')
+        upstream2.size() == 1
+        upstream2.first.name == 'p1 (2)'
+
+        then:
+        def upstream3 = upstreamTasksOf('p2 (3)')
+        upstream3.size() == 1
+        upstream3.first.name == 'p1 (5)'
     }
 }

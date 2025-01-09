@@ -291,43 +291,11 @@ class OperatorImpl {
      * @param comparator
      * @return
      */
-    DataflowWriteChannel unique(final DataflowReadChannel source, Closure comparator ) {
-
-        final history = [:]
-        final target = CH.createBy(source)
-        final stopOnFirst = source instanceof DataflowExpression
-
-        // when the operator stop clear the history map
-        final events = new DataflowEventAdapter() {
-            void afterStop(final DataflowProcessor processor) {
-                history.clear()
-            }
-        }
-
-        final filter = {
-            try {
-                final key = comparator.call(it)
-                if( history.containsKey(key) ) {
-                    return Channel.VOID
-                }
-                else {
-                    history.put(key,true)
-                    return it
-                }
-            }
-            finally {
-                if( stopOnFirst ) {
-                    ((DataflowProcessor) getDelegate()).terminate()
-                }
-            }
-        } as Closure
-
-        return ChainOp.create()
-                .withSource(source)
-                .withTarget(target)
-                .withListener(events)
-                .withAction(filter)
-                .apply()
+    DataflowWriteChannel unique(final DataflowReadChannel source, final Closure comparator) {
+        return new UniqueOp()
+            .withSource(source)
+            .withComparator(comparator)
+            .apply()
     }
 
     /**
@@ -349,24 +317,10 @@ class OperatorImpl {
      *
      * @return
      */
-    DataflowWriteChannel distinct( final DataflowReadChannel source, Closure comparator ) {
-
-        def previous = null
-        final target = CH.createBy(source)
-        Closure filter = { it ->
-
-            def key = comparator.call(it)
-            if( key == previous ) {
-                return Channel.VOID
-            }
-            previous = key
-            return it
-        }
-
-        return ChainOp.create()
+    DataflowWriteChannel distinct(final DataflowReadChannel source, final Closure comparator) {
+        new DistinctOp()
             .withSource(source)
-            .withTarget(target)
-            .withAction(filter)
+            .withComparator(comparator)
             .apply()
     }
 

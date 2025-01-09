@@ -93,7 +93,7 @@ class ReduceOp {
         def accum = this.seed
 
         // intercepts operator events
-        def listener = new DataflowEventAdapter() {
+        final listener = new DataflowEventAdapter() {
             /*
              * call the passed closure each time
              */
