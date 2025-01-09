@@ -319,7 +319,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     protected Integer readExitStatus() {
 
         String workDirList = null
-        if( exitTimestampMillis1 && FileHelper.workDirIsNFS ) {
+        if( exitTimestampMillis1 && FileHelper.workDirIsSharedFS ) {
             /*
              * When the file is in a NFS folder in order to avoid false negative
              * list the content of the parent path to force refresh of NFS metadata
