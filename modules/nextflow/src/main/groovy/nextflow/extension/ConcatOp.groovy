@@ -19,7 +19,10 @@ package nextflow.extension
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
+import nextflow.extension.op.Op
+
 /**
  * Implements the {@link OperatorImpl#concat} operator
  *
@@ -56,10 +59,10 @@ class ConcatOp {
         def next = index < channels.size() ? channels[index] : null
 
         def events = new HashMap<String,Closure>(2)
-        events.onNext = { Op.bind(result, it) }
-        events.onComplete = {
+        events.onNext = { DataflowProcessor proc, it -> Op.bind(proc, result, it) }
+        events.onComplete = { DataflowProcessor proc ->
             if(next) append(result, channels, index)
-            else Op.bind(result, Channel.STOP)
+            else Op.bind(proc, result, Channel.STOP)
         }
 
         DataflowHelper.subscribeImpl(current, events)

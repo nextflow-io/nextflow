@@ -21,6 +21,8 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
+import nextflow.extension.op.Op
+
 /**
  * Implements {@link OperatorImpl#map(groovyx.gpars.dataflow.DataflowReadChannel, groovy.lang.Closure)} operator
  *
@@ -57,7 +59,7 @@ class MapOp {
 
             // bind the result value
             if (result != Channel.VOID)
-                Op.bind(target, result)
+                Op.bind(proc, target, result)
 
             // when the `map` operator is applied to a dataflow flow variable
             // terminate the processor after the first emission -- Issue #44

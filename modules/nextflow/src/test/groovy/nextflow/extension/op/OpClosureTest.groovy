@@ -15,12 +15,27 @@
  *
  */
 
-package nextflow.prov
+package nextflow.extension.op
+
+import spock.lang.Specification
 
 /**
- * Marker interface to identity a {@link nextflow.processor.TaskRun} or {@link OperatorRun}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface TrailRun {
+class OpClosureTest extends Specification {
+
+    def 'should invoke target closure' () {
+        given:
+        def code = { a,b -> a+b }
+        def wrapper = new OpClosure(code)
+
+        when:
+        def result = wrapper.call(1,2)
+        then:
+        result == 3
+        and:
+        wrapper.getPreviousRun() != null
+    }
+
 }

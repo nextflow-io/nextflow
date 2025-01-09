@@ -24,8 +24,10 @@ import java.nio.file.Path
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 import nextflow.Global
+import nextflow.extension.op.Op
 import nextflow.file.FileCollector
 import nextflow.file.FileHelper
 import nextflow.file.SimpleFileCollector
@@ -137,7 +139,7 @@ class CollectFileOp {
      * each time a value is received, invoke the closure and
      * append its result value to a file
      */
-    protected processItem( item ) {
+    protected processItem( DataflowProcessor proc, Object item ) {
         def value = closure ? closure.call(item) : item
 
         // when the value is a list, the first item hold the grouping key
@@ -183,13 +185,13 @@ class CollectFileOp {
      *
      * @params obj: NOT USED. It needs to be declared because this method is invoked as a closure
      */
-    protected emitItems( obj ) {
+    protected emitItems(DataflowProcessor processor) {
         // emit collected files to 'result' channel
         collector.saveTo(storeDir).each {
-            Op.bind(result,it)
+            Op.bind(processor, result, it)
         }
         // close the channel
-        Op.bind(result,Channel.STOP)
+        Op.bind(processor, result, Channel.STOP)
         // close the collector
         collector.safeClose()
     }

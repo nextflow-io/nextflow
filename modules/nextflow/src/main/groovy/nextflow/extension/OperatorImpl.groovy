@@ -36,6 +36,7 @@ import nextflow.Channel
 import nextflow.Global
 import nextflow.NF
 import nextflow.Session
+import nextflow.extension.op.Op
 import nextflow.script.ChannelOut
 import nextflow.script.TokenBranchDef
 import nextflow.script.TokenMultiMapDef
@@ -44,7 +45,6 @@ import nextflow.splitter.FastqSplitter
 import nextflow.splitter.JsonSplitter
 import nextflow.splitter.TextSplitter
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
-import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
 /**
  * A set of operators inspired to RxJava extending the methods available on DataflowChannel
  * data structure
@@ -139,33 +139,34 @@ class OperatorImpl {
         final target = CH.create()
         final listener = stopErrorListener(source,target)
 
-        newOperator(source, target, listener) {  item ->
+        newOperator(source, target, listener) { Object item ->
 
             final result = closure != null ? closure.call(item) : item
+            final proc = ((DataflowProcessor) getDelegate())
 
             switch( result ) {
                 case Collection:
-                    result.each { it -> Op.bind(target,it) }
+                    result.each { it -> Op.bind(proc, target,it) }
                     break
 
                 case (Object[]):
-                    result.each { it -> Op.bind(target,it) }
+                    result.each { it -> Op.bind(proc, target,it) }
                     break
 
                 case Map:
-                    result.each { it -> Op.bind(target,it) }
+                    result.each { it -> Op.bind(proc, target,it) }
                     break
 
                 case Map.Entry:
-                    Op.bind(target, (result as Map.Entry).key )
-                    Op.bind(target, (result as Map.Entry).value )
+                    Op.bind(proc, target, (result as Map.Entry).key )
+                    Op.bind(proc, target, (result as Map.Entry).value )
                     break
 
                 case Channel.VOID:
                     break
 
                 default:
-                    Op.bind(target,result)
+                    Op.bind(proc, target, result)
             }
         }
 
@@ -252,47 +253,22 @@ class OperatorImpl {
      * @return
      */
     DataflowWriteChannel filter(final DataflowReadChannel source, final Object criteria) {
-        def discriminator = new BooleanReturningMethodInvoker("isCase");
-
-        def target = CH.createBy(source)
-        if( source instanceof DataflowExpression ) {
-            source.whenBound {
-                def result = it instanceof ControlMessage ? false : discriminator.invoke(criteria, (Object)it)
-                target.bind( result ? it : Channel.STOP )
-            }
-        }
-        else {
-            newOperator(source, target, {
-                def result = discriminator.invoke(criteria, (Object)it)
-                if( result ) target.bind(it)
-            })
-        }
-
-        return target
+        return new FilterOp()
+            .withSource(source)
+            .withCriteria(criteria)
+            .apply()
     }
 
     DataflowWriteChannel filter(DataflowReadChannel source, final Closure<Boolean> closure) {
-        def target = CH.createBy(source)
-        if( source instanceof DataflowExpression ) {
-            source.whenBound {
-                def result = it instanceof ControlMessage ? false : DefaultTypeTransformation.castToBoolean(closure.call(it))
-                target.bind( result ? it : Channel.STOP )
-            }
-        }
-        else {
-            newOperator(source, target, {
-                def result = DefaultTypeTransformation.castToBoolean(closure.call(it))
-                if( result ) target.bind(it)
-            })
-        }
-
-        return target
+        return new FilterOp()
+            .withSource(source)
+            .withCriteria(closure)
+            .apply()
     }
 
     DataflowWriteChannel until(DataflowReadChannel source, final Closure<Boolean> closure) {
         return new UntilOp(source,closure).apply()
     }
-
 
     /**
      * Modifies this collection to remove all duplicated items, using the default comparator.

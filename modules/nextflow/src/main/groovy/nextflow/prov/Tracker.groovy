@@ -23,11 +23,12 @@ import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import nextflow.extension.Op
+import nextflow.extension.op.Op
 import nextflow.processor.TaskId
 import nextflow.processor.TaskRun
 /**
- *
+ * Implement provenance tracking logic for tasks and operators
+ * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -143,20 +144,22 @@ class Tracker {
     }
 
     private void logOutput(TrailRun run, Msg msg) {
-        String str
-        if( run instanceof OperatorRun ) {
-            str = "Operator output"
-            str += "\n - id  : ${System.identityHashCode(run)}"
+        if( log.isTraceEnabled() ) {
+            String str
+            if( run instanceof OperatorRun ) {
+                str = "Operator output"
+                str += "\n - id  : ${System.identityHashCode(run)}"
+            }
+            else if( run instanceof TaskRun ) {
+                str = "Task output"
+                str += "\n - id  : ${run.id}"
+                str += "\n - name: '${run.name}'"
+            }
+            else
+                throw new IllegalArgumentException("Unknown run type: ${run}")
+            str += "\n=> ${msg}"
+            log.trace(str)
         }
-        else if( run instanceof TaskRun ) {
-            str = "Task output"
-            str += "\n - id  : ${run.id}"
-            str += "\n - name: '${run.name}'"
-        }
-        else
-            throw new IllegalArgumentException("Unknown run type: ${run}")
-        str += "\n=> ${msg}"
-        log.trace(str)
     }
 
 }

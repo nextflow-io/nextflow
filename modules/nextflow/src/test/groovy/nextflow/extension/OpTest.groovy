@@ -17,10 +17,8 @@
 
 package nextflow.extension
 
-
-import nextflow.prov.Prov
+import nextflow.extension.op.Op
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -38,10 +36,6 @@ class OpTest extends Specification {
         def z = c.call([v1, v2] as Object[])
         then:
         z == 3
-        and:
-        Op.currentOperator.get().inputIds == [ System.identityHashCode(v1), System.identityHashCode(v2) ]
 
-        cleanup:
-        Prov.clear()
     }
 }

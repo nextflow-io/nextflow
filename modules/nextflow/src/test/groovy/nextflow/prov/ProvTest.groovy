@@ -258,4 +258,31 @@ class ProvTest extends Dsl2Spec {
 
     }
 
+    def 'should track provenance two processes and the filter operator'() {
+
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of(1,2,3) | p1 | filter { x-> x<30 } | p2 
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x*10 
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        def upstream = upstreamTasksOf('p2 (1)')
+        upstream.size() == 1
+        upstream.first.name == 'p1 (1)'
+    }
 }

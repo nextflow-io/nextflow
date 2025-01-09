@@ -20,6 +20,8 @@ import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.expression.DataflowExpression
+import groovyx.gpars.dataflow.operator.DataflowProcessor
+import nextflow.extension.op.Op
 
 /**
  * Implements {@link OperatorImpl#toList(groovyx.gpars.dataflow.DataflowReadChannel)}  operator
@@ -52,7 +54,7 @@ class ToListOp {
             final result = new ArrayList(1)
             Map<String,Closure> events = [:]
             events.onNext = { result.add(it) }
-            events.onComplete = { Op.bind(target, result) }
+            events.onComplete = { DataflowProcessor processor -> Op.bind(processor, target, result) }
             DataflowHelper.subscribeImpl(source, events)
             return target
         }

@@ -15,12 +15,15 @@
  *
  */
 
-package nextflow.prov
+package nextflow.extension.op
+
+import nextflow.prov.OperatorRun
 
 /**
- * Marker interface to identity a {@link nextflow.processor.TaskRun} or {@link OperatorRun}
+ * Model an operator run context
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface TrailRun {
+interface OpContext {
+    OperatorRun getPreviousRun()
 }

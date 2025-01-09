@@ -15,12 +15,28 @@
  *
  */
 
-package nextflow.prov
+package nextflow.extension.op
+
+import nextflow.prov.OperatorRun
 
 /**
- * Marker interface to identity a {@link nextflow.processor.TaskRun} or {@link OperatorRun}
+ * A closure that wraps the execution of an operator target code (closure)
+ * and maps the inputs and outputs to the corresponding operator run.
+ *
+ * This class extends {@link OpClosure} assuming that all results are `"accumulated"`
+ * as they were executed in the same operator run
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface TrailRun {
+class OpAccumulatorClosure extends OpClosure {
+
+    OpAccumulatorClosure(Closure code) {
+        super(code)
+        setPreviousRun(new OperatorRun())
+    }
+
+    @Override
+    protected OperatorRun runInstance() {
+        return getPreviousRun()
+    }
 }

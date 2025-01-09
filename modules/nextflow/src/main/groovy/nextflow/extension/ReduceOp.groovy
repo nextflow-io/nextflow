@@ -26,6 +26,8 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
+import nextflow.extension.op.Op
+
 /**
  * Implements reduce operator logic
  * 
@@ -117,7 +119,7 @@ class ReduceOp {
                 final result = beforeBind
                     ? beforeBind.call(accum)
                     : accum
-                Op.bind(target, result)
+                Op.bind(processor, target, result)
             }
 
             boolean onException(final DataflowProcessor processor, final Throwable e) {

@@ -30,11 +30,14 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowEventListener
+import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
 import nextflow.dag.NodeMarker
+import nextflow.extension.op.Op
+
 /**
  * This class provides helper methods to implement nextflow operators
  *
@@ -278,13 +281,17 @@ class DataflowHelper {
         assert params.listeners
 
         // create the underlying dataflow operator
-        final op = Dataflow.operator(params.toMap(), Op.instrument(code, params.accumulator))
+        final closure = Op.instrument(code, params.accumulator)
+        final group = Dataflow.retrieveCurrentDFPGroup()
+        final operator = new DataflowOperator(group, params.toMap(), closure)
+        Op.context.put(operator, closure)
+        operator.start()
         // track the operator as dag node
-        NodeMarker.appendOperator(op)
+        NodeMarker.appendOperator(operator)
         if( session && session.allOperators != null ) {
-            session.allOperators << op
+            session.allOperators << operator
         }
-        return op
+        return operator
     }
 
     /*
@@ -354,11 +361,16 @@ class DataflowHelper {
             .withAccumulator(accumulator)
 
         newOperator (params) {
-            if( events.onNext ) {
-                events.onNext.call(it)
+            final proc = ((DataflowProcessor) getDelegate())
+            if( events.onNext instanceof Closure ) {
+                final action = (Closure) events.onNext
+                final types = action.getParameterTypes()
+                types.size()==2 && types[0]==DataflowProcessor.class
+                    ? action.call(proc, it)
+                    : action.call(it)
             }
             if( stopOnFirst ) {
-                ((DataflowProcessor) getDelegate()).terminate()
+                proc.terminate()
             }
         }
     }

@@ -21,7 +21,9 @@ import static nextflow.util.CheckHelper.*
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
+import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
+import nextflow.extension.op.Op
 import nextflow.util.ArrayBag
 /**
  * Implements {@link OperatorImpl#collect(groovyx.gpars.dataflow.DataflowReadChannel)}  operator
@@ -55,9 +57,9 @@ class CollectOp {
 
         Map<String,Closure> events = [:]
         events.onNext = { append(result, it) }
-        events.onComplete = {
+        events.onComplete = { DataflowProcessor processor ->
             final msg = result ? new ArrayBag(normalise(result)) : Channel.STOP
-            Op.bind(target, msg)
+            Op.bind(processor, target, msg)
         }
 
         DataflowHelper.subscribeImpl(source, events)
