@@ -535,7 +535,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		 * "copying directories is not yet supported: %s", target); // TODO
 		 */
 		ImmutableSet<CopyOption> actualOptions = ImmutableSet.copyOf(options);
-		verifySupportedOptions(EnumSet.of(StandardCopyOption.REPLACE_EXISTING),
+		verifySupportedOptions(EnumSet.of(StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING),
 				actualOptions);
 
 		if (!actualOptions.contains(StandardCopyOption.REPLACE_EXISTING)) {
