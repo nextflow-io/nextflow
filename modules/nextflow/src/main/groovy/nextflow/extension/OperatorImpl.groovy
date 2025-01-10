@@ -280,7 +280,7 @@ class OperatorImpl {
      * @return
      */
     DataflowWriteChannel unique(final DataflowReadChannel source) {
-        unique(source) { it }
+        unique(source, Closure.IDENTITY)
     }
 
     /**
@@ -308,7 +308,7 @@ class OperatorImpl {
      * @return
      */
     DataflowWriteChannel distinct( final DataflowReadChannel source ) {
-        distinct(source) {it}
+        distinct(source, Closure.IDENTITY)
     }
 
     /**
@@ -575,61 +575,18 @@ class OperatorImpl {
      * @return A {@code DataflowVariable} emitting the final sum value
      */
     DataflowWriteChannel sum(final DataflowReadChannel source, Closure closure = null) {
-
-        def target = new DataflowVariable()
-        def aggregate = new Aggregate(name: 'sum', action: closure)
-        subscribeImpl(source, [onNext: aggregate.&process, onComplete: { target.bind( aggregate.result ) }])
-        return target
+        return MathOp.sum()
+            .withSource(source)
+            .withAction(closure)
+            .apply()
     }
 
 
     DataflowWriteChannel mean(final DataflowReadChannel source, Closure closure = null) {
-
-        def target = new DataflowVariable()
-        def aggregate = new Aggregate(name: 'mean', action: closure, mean: true)
-        subscribeImpl(source, [onNext: aggregate.&process, onComplete: { target.bind( aggregate.result ) }])
-        return target
-    }
-
-
-    private static class Aggregate {
-
-        def accum
-        long count = 0
-        boolean mean
-        Closure action
-        String name
-
-        def process(it) {
-            if( it == null || it == Channel.VOID )
-                return
-
-            count++
-
-            def item = action != null ? action.call(it) : it
-            if( accum == null )
-                accum = item
-
-            else if( accum instanceof Number )
-                accum += item
-
-            else if( accum instanceof List && item instanceof List)
-                for( int i=0; i<accum.size() && i<item.size(); i++ )
-                    accum[i] += item.get(i)
-
-            else
-                throw new IllegalArgumentException("Invalid `$name` item: $item [${item.class.simpleName}]")
-        }
-
-        def getResult() {
-            if( !mean || count == 0 )
-                return accum
-
-            if( accum instanceof List )
-                return accum.collect { it / count }
-            else
-                return accum / count
-        }
+        return MathOp.mean()
+            .withSource(source)
+            .withAction(closure)
+            .apply()
     }
 
     DataflowWriteChannel combine( DataflowReadChannel left, Object right ) {

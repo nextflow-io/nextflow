@@ -34,8 +34,6 @@ class DistinctOp {
     private DataflowWriteChannel target
     private Closure comparator
 
-    DistinctOp() {}
-
     DistinctOp withSource(DataflowReadChannel source) {
         assert source!=null
         this.source = source
