@@ -26,6 +26,7 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.Global
 import nextflow.Session
+import nextflow.prov.OperatorRun
 import nextflow.prov.Prov
 import nextflow.prov.Tracker
 /**
@@ -55,17 +56,23 @@ class Op {
         obj instanceof Tracker.Msg ? obj : Tracker.Msg.of(obj)
     }
 
-    static void bind(DataflowProcessor operator, DataflowWriteChannel channel, Object msg) {
+    static void bind(DataflowProcessor operator, DataflowWriteChannel channel, List<Object> messages) {
         try {
-            if( msg instanceof PoisonPill ) {
-                channel.bind(msg);
-                context.remove(operator);
-            }
-            else {
-                final ctx = context.get(operator)
-                if( !ctx )
-                    throw new IllegalStateException("Cannot find any context for operator=$operator")
-                Prov.getTracker().bindOutput(ctx.getPreviousRun(), channel, msg)
+            OperatorRun run=null
+            for(Object msg : messages) {
+                if( msg instanceof PoisonPill ) {
+                    channel.bind(msg)
+                    context.remove(operator)
+                }
+                else {
+                    if( run==null ) {
+                        final ctx = context.get(operator)
+                        if( !ctx )
+                            throw new IllegalStateException("Cannot find any context for operator=$operator")
+                        run = ctx.getOperatorRun()
+                    }
+                    Prov.getTracker().bindOutput(run, channel, msg)
+                }
             }
         }
         catch (Throwable t) {
@@ -74,10 +81,15 @@ class Op {
         }
     }
 
-    static OpClosure instrument(Closure op, boolean accumulator=false) {
+
+    static void bind(DataflowProcessor operator, DataflowWriteChannel channel, Object msg) {
+        bind(operator, channel, List.of(msg))
+    }
+
+    static OpAbstractClosure instrument(Closure op, boolean accumulator=false) {
         return accumulator
-            ? new OpAccumulatorClosure(op)
-            : new OpClosure(op)
+            ? new OpGroupingClosure(op)
+            : new OpRunningClosure(op)
     }
 
 }

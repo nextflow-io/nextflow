@@ -17,7 +17,6 @@
 
 package nextflow.extension.op
 
-import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -32,29 +31,20 @@ import org.codehaus.groovy.runtime.InvokerHelper
  */
 @Slf4j
 @CompileStatic
-class OpClosure extends Closure implements OpContext {
+abstract class OpAbstractClosure extends Closure implements OpContext {
 
     private final Closure target
 
-    private final ThreadLocal<OperatorRun> runPerThread = new ThreadLocal<>()
-
-    private final Map<String,OperatorRun> holder = new ConcurrentHashMap<>()
-
-    @Override
-    OperatorRun getPreviousRun() {
-        return holder.get('previousRun')
-    }
-
-    protected void setPreviousRun(OperatorRun run) {
-        holder.put('previousRun', run)
-    }
-
-    OpClosure(Closure code) {
+    OpAbstractClosure(Closure code) {
         super(code.getOwner(), code.getThisObject())
         this.target = code
         this.target.setDelegate(code.getDelegate())
         this.target.setResolveStrategy(code.getResolveStrategy())
     }
+
+    abstract OperatorRun getOperatorRun()
+
+    abstract protected OperatorRun allocateRun()
 
     @Override
     Class<?>[] getParameterTypes() {
@@ -94,13 +84,6 @@ class OpClosure extends Closure implements OpContext {
     @Override
     void setProperty(String propertyName, Object newValue) {
         target.setProperty(propertyName, newValue)
-    }
-
-    protected OperatorRun allocateRun() {
-        final result = new OperatorRun()
-        runPerThread.set(result)
-        setPreviousRun(result)
-        return result
     }
 
     @Override

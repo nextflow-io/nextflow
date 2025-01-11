@@ -22,6 +22,8 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.extension.op.Op
+import static nextflow.extension.DataflowHelper.newOperator
+
 /**
  * Implements the "distinct" operator logic
  *
@@ -64,7 +66,7 @@ class DistinctOp {
             .withOutput(target)
 
         def previous = null
-        DataflowHelper.newOperator(params) {
+        newOperator(params) {
             final proc = getDelegate() as DataflowProcessor
             final key = comparator.call(it)
             if( key != previous ) {

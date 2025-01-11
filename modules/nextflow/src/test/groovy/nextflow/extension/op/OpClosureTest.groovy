@@ -28,14 +28,14 @@ class OpClosureTest extends Specification {
     def 'should invoke target closure' () {
         given:
         def code = { a,b -> a+b }
-        def wrapper = new OpClosure(code)
+        def wrapper = new OpRunningClosure(code)
 
         when:
         def result = wrapper.call(1,2)
         then:
         result == 3
         and:
-        wrapper.getPreviousRun() != null
+        wrapper.getOperatorRun() != null
     }
 
 }

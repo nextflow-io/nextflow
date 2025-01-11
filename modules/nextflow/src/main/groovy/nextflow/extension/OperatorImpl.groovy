@@ -147,20 +147,21 @@ class OperatorImpl {
 
             switch( result ) {
                 case Collection:
-                    result.each { it -> Op.bind(proc, target,it) }
+                    Op.bind(proc, target, new ArrayList<Object>(result))
                     break
 
                 case (Object[]):
-                    result.each { it -> Op.bind(proc, target,it) }
+                    Op.bind(proc, target, Arrays.asList(result))
                     break
 
                 case Map:
-                    result.each { it -> Op.bind(proc, target,it) }
+                    Op.bind(proc, target, result.collect { it -> Op.bind(proc, target,it) })
                     break
 
                 case Map.Entry:
-                    Op.bind(proc, target, (result as Map.Entry).key )
-                    Op.bind(proc, target, (result as Map.Entry).value )
+                    final k = (result as Map.Entry).key
+                    final v = (result as Map.Entry).value
+                    Op.bind(proc, target, List.of(k,v))
                     break
 
                 case Channel.VOID:

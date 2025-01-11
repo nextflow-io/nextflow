@@ -17,13 +17,36 @@
 
 package nextflow.extension.op
 
-import nextflow.prov.OperatorRun
+import java.util.concurrent.ConcurrentHashMap
 
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.prov.OperatorRun
 /**
- * Model an operator run context
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface OpContext {
-    OperatorRun getOperatorRun()
+@Slf4j
+@CompileStatic
+class OpRunningClosure extends OpAbstractClosure {
+
+    private final Map<String,OperatorRun> holder = new ConcurrentHashMap<>(1)
+
+    OpRunningClosure(Closure code) {
+        super(code)
+    }
+
+    @Override
+    protected OperatorRun allocateRun() {
+        final result = new OperatorRun()
+        holder.put('run', result)
+        return result
+    }
+
+    @Override
+    OperatorRun getOperatorRun() {
+        final result = holder.get('run')
+        return result
+    }
+
 }
