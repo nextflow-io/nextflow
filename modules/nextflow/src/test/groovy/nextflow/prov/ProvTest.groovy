@@ -5,11 +5,14 @@ import static test.TestHelper.*
 import nextflow.config.ConfigParser
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
+import spock.lang.Ignore
+import spock.lang.Timeout
 import test.Dsl2Spec
 /**
  *
  *  @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(5)
 class ProvTest extends Dsl2Spec {
 
     def setup() {
@@ -46,9 +49,8 @@ class ProvTest extends Dsl2Spec {
         ''')
 
         then:
-        def upstream = upstreamTasksOf('p2')
-        upstream.size() == 1
-        upstream.first.name == 'p1'
+        upstreamTasksOf('p2')
+                .name == ['p1']
     }
 
     def 'should track provenance with branch operator'() {
@@ -85,19 +87,16 @@ class ProvTest extends Dsl2Spec {
             }
         ''')
         then:
-        def t1 = upstreamTasksOf('p2 (1)')
-        t1.first.name == 'p1 (1)'
-        t1.size() ==  1
+        upstreamTasksOf('p2 (1)')
+                .name == ['p1 (1)']
 
         and:
-        def t2 = upstreamTasksOf('p3 (1)')
-        t2.first.name == 'p1 (2)'
-        t2.size() ==  1
+         upstreamTasksOf('p3 (1)')
+                .name == ['p1 (2)']
 
         and:
-        def t3 = upstreamTasksOf('p3 (2)')
-        t3.first.name == 'p1 (3)'
-        t3.size() ==  1
+        upstreamTasksOf('p3 (2)')
+                .name == ['p1 (3)']
     }
 
     def 'should track provenance with flatMap operator' () {
@@ -124,24 +123,20 @@ class ProvTest extends Dsl2Spec {
             }
         ''')
         then:
-        def t1 = upstreamTasksOf('p2 (1)')
-        t1.first.name == 'p1 (1)'
-        t1.size() ==  1
-        
-        and:
-        def t2 = upstreamTasksOf('p2 (2)')
-        t2.first.name == 'p1 (1)'
-        t2.size() ==  1
+        upstreamTasksOf('p2 (1)')
+                .name == ['p1 (1)']
 
         and:
-        def t3 = upstreamTasksOf('p2 (3)')
-        t3.first.name == 'p1 (2)'
-        t3.size() ==  1
+        upstreamTasksOf('p2 (2)')
+                .name == ['p1 (1)']
 
         and:
-        def t4 = upstreamTasksOf('p2 (4)')
-        t4.first.name == 'p1 (2)'
-        t4.size() ==  1
+        upstreamTasksOf('p2 (3)')
+                .name == ['p1 (2)']
+
+        and:
+        upstreamTasksOf('p2 (4)')
+                .name == ['p1 (2)']
     }
 
     def 'should track the provenance of two processes and reduce operator'() {
@@ -170,8 +165,8 @@ class ProvTest extends Dsl2Spec {
         ''')
 
         then:
-        def t1 = upstreamTasksOf('p2')
-        t1.name == ['p1 (1)', 'p1 (2)', 'p1 (3)']
+        upstreamTasksOf('p2')
+                .name == ['p1 (1)', 'p1 (2)', 'p1 (3)']
     }
 
     def 'should track the provenance of two tasks and collectFile operator' () {
@@ -199,8 +194,8 @@ class ProvTest extends Dsl2Spec {
         ''')
 
         then:
-        def t1 = upstreamTasksOf('p2 (1)')
-        t1.name == ['p1 (1)', 'p1 (2)', 'p1 (3)']
+        upstreamTasksOf('p2 (1)')
+                .name == ['p1 (1)', 'p1 (2)', 'p1 (3)']
 
     }
 
@@ -226,8 +221,8 @@ class ProvTest extends Dsl2Spec {
         ''')
 
         then:
-        def t1 = upstreamTasksOf('p2')
-        t1.name == ['p1 (1)', 'p1 (2)', 'p1 (3)']
+        upstreamTasksOf('p2')
+                .name == ['p1 (1)', 'p1 (2)', 'p1 (3)']
 
     }
 
@@ -253,8 +248,8 @@ class ProvTest extends Dsl2Spec {
         ''')
 
         then:
-        def t1 = upstreamTasksOf('p2')
-        t1.name == ['p1 (1)', 'p1 (2)', 'p1 (3)']
+        upstreamTasksOf('p2')
+                .name == ['p1 (1)', 'p1 (2)', 'p1 (3)']
 
     }
 
@@ -281,13 +276,11 @@ class ProvTest extends Dsl2Spec {
         ''')
 
         then:
-        def upstream1 = upstreamTasksOf('p2 (1)')
-        upstream1.size() == 1
-        upstream1.first.name == 'p1 (1)'
+        upstreamTasksOf('p2 (1)')
+                .name == ['p1 (1)']
         then:
-        def upstream2 = upstreamTasksOf('p2 (2)')
-        upstream2.size() == 1
-        upstream2.first.name == 'p1 (3)'
+        upstreamTasksOf('p2 (2)')
+                .name == ['p1 (3)']
     }
 
     def 'should track provenance with unique operator'() {
@@ -313,19 +306,16 @@ class ProvTest extends Dsl2Spec {
         ''')
 
         then:
-        def upstream1 = upstreamTasksOf('p2 (1)')
-        upstream1.size() == 1
-        upstream1.first.name == 'p1 (1)'
+        upstreamTasksOf('p2 (1)')
+                .name == ['p1 (1)']
 
         then:
-        def upstream2 = upstreamTasksOf('p2 (2)')
-        upstream2.size() == 1
-        upstream2.first.name == 'p1 (2)'
+        upstreamTasksOf('p2 (2)')
+                .name == ['p1 (2)']
 
         then:
-        def upstream3 = upstreamTasksOf('p2 (3)')
-        upstream3.size() == 1
-        upstream3.first.name == 'p1 (4)'
+        upstreamTasksOf('p2 (3)')
+                .name == ['p1 (4)']
     }
 
 
@@ -357,14 +347,12 @@ class ProvTest extends Dsl2Spec {
         upstream1.first.name == 'p1 (1)'
 
         then:
-        def upstream2 = upstreamTasksOf('p2 (2)')
-        upstream2.size() == 1
-        upstream2.first.name == 'p1 (2)'
+        upstreamTasksOf('p2 (2)')
+                .name == ['p1 (2)']
 
         then:
-        def upstream3 = upstreamTasksOf('p2 (3)')
-        upstream3.size() == 1
-        upstream3.first.name == 'p1 (5)'
+        upstreamTasksOf('p2 (3)')
+                .name == ['p1 (5)']
     }
 
     def 'should track provenance with first operator'() {
@@ -389,9 +377,8 @@ class ProvTest extends Dsl2Spec {
         ''')
 
         then:
-        def upstream1 = upstreamTasksOf('p2')
-        upstream1.size() == 1
-        upstream1.first.name == 'p1 (1)'
+        upstreamTasksOf('p2')
+                .name == ['p1 (1)']
     }
 
     def 'should track provenance with take operator'() {
@@ -416,13 +403,11 @@ class ProvTest extends Dsl2Spec {
         ''')
 
         then:
-        def upstream1 = upstreamTasksOf('p2 (1)')
-        upstream1.size() == 1
-        upstream1.first.name == 'p1 (1)'
+        upstreamTasksOf('p2 (1)')
+                .name == ['p1 (1)']
         then:
-        def upstream2 = upstreamTasksOf('p2 (2)')
-        upstream2.size() == 1
-        upstream2.first.name == 'p1 (2)'
+        upstreamTasksOf('p2 (2)')
+                .name == ['p1 (2)']
 
     }
 
@@ -448,9 +433,8 @@ class ProvTest extends Dsl2Spec {
         ''')
 
         then:
-        def upstream1 = upstreamTasksOf('p2')
-        upstream1.size() == 1
-        upstream1.first.name == 'p1 (5)'
+        upstreamTasksOf('p2')
+                .name == ['p1 (5)']
     }
 
     def 'should track provenance with collect operator'() {
@@ -475,8 +459,8 @@ class ProvTest extends Dsl2Spec {
         ''')
 
         then:
-        def t1 = upstreamTasksOf('p2')
-        t1.name == ['p1 (1)', 'p1 (2)', 'p1 (3)']
+        upstreamTasksOf('p2')
+                .name == ['p1 (1)', 'p1 (2)', 'p1 (3)']
     }
 
     def 'should track provenance with count value operator'() {
@@ -501,8 +485,8 @@ class ProvTest extends Dsl2Spec {
         ''')
 
         then:
-        def t1 = upstreamTasksOf('p2')
-        t1.name == ['p1']
+        upstreamTasksOf('p2')
+                .name == ['p1']
     }
 
     def 'should track provenance with count many operator'() {
@@ -527,8 +511,67 @@ class ProvTest extends Dsl2Spec {
         ''')
 
         then:
-        def t1 = upstreamTasksOf('p2')
-        t1.name == ['p1 (1)', 'p1 (2)', 'p1 (3)']
+        upstreamTasksOf('p2')
+                .name == ['p1 (1)', 'p1 (2)', 'p1 (3)']
     }
 
+    @Ignore // this should be review
+    def 'should track provenance with min operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of(3,2,1) | p1 | min | p2 
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        upstreamTasksOf('p2')
+                .name == ['p1 (3)']
+    }
+
+    def 'should track provenance with buffer operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of(1,2,3,4,5) | p1 | buffer(size:2, remainder:true) | p2 
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        upstreamTasksOf('p2 (1)')
+                .name == ['p1 (1)', 'p1 (2)']
+        and:
+        upstreamTasksOf('p2 (2)')
+                .name == ['p1 (3)', 'p1 (4)']
+
+        and:
+        upstreamTasksOf('p2 (3)')
+                .name == ['p1 (5)']
+    }
 }

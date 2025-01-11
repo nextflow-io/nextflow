@@ -661,36 +661,28 @@ class OperatorImpl {
      * @return A newly created dataflow queue which emitted the gathered values as bundles
      */
     DataflowWriteChannel buffer( final DataflowReadChannel source, Map params=null, Object closingCriteria ) {
-
-        def target = new BufferOp(source)
+        return new BufferOp(source)
                         .setParams(params)
                         .setCloseCriteria(closingCriteria)
                         .apply()
-        return target
     }
 
     DataflowWriteChannel buffer( final DataflowReadChannel source, Object startingCriteria, Object closingCriteria ) {
         assert startingCriteria != null
         assert closingCriteria != null
 
-        def target = new BufferOp(source)
+        return new BufferOp(source)
                 .setStartCriteria(startingCriteria)
                 .setCloseCriteria(closingCriteria)
                 .apply()
-
-        return target
     }
 
     DataflowWriteChannel buffer( DataflowReadChannel source, Map<String,?> params ) {
         checkParams( 'buffer', params, 'size','skip','remainder' )
-
-        def target = new BufferOp(source)
+        return new BufferOp(source)
                         .setParams(params)
                         .apply()
-
-        return target
     }
-
 
     DataflowWriteChannel collate( DataflowReadChannel source, int size, boolean keepRemainder = true ) {
         if( size <= 0 ) {

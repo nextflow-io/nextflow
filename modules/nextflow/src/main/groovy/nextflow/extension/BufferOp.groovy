@@ -16,6 +16,9 @@
 
 package nextflow.extension
 
+import static nextflow.extension.DataflowHelper.*
+import static nextflow.util.CheckHelper.*
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -28,10 +31,10 @@ import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
+import nextflow.extension.op.Op
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
-import static nextflow.extension.DataflowHelper.newOperator
-import static nextflow.util.CheckHelper.checkParams
 /**
+ * Implements the "buffer" operator
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -162,18 +165,14 @@ class BufferOp {
             @Override
             Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
                 if( message instanceof PoisonPill && remainder && buffer.size() ) {
-                    target.bind(buffer)
+                    Op.bind(processor,target, buffer)
                 }
                 return message
             }
 
             @Override
-            void afterRun(DataflowProcessor processor, List<Object> messages) {
-                if( !stopOnFirst )
-                    return
-                if( remainder && buffer)
-                    target.bind(buffer)
-                target.bind(Channel.STOP)
+            void afterStop(DataflowProcessor processor) {
+                Op.bind(processor, target, Channel.STOP)
             }
 
             @Override
@@ -188,7 +187,11 @@ class BufferOp {
         boolean isOpen = startingCriteria == null
 
         // -- the operator collecting the elements
-        newOperator( source, target, listener ) {
+        final params = new OpParams()
+            .withInput(source)
+            .withListener(listener)
+            .withAccumulator(true)
+        newOperator( params ) {
             if( isOpen ) {
                 buffer << it
             }
@@ -196,14 +199,18 @@ class BufferOp {
                 isOpen = true
                 buffer << it
             }
-
+            final proc = getDelegate() as DataflowProcessor
             if( closeCriteria.call(it) ) {
-                ((DataflowProcessor) getDelegate()).bindOutput(buffer);
+                Op.bind(proc, target, buffer)
                 buffer = []
                 // when a *startingCriteria* is defined, close the open frame flag
                 isOpen = (startingCriteria == null)
             }
-
+            if( stopOnFirst ) {
+                if( remainder && buffer )
+                    Op.bind(proc, target, buffer)
+                proc.terminate()
+            }
         }
     }
 
