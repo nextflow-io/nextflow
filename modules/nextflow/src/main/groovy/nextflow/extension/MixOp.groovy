@@ -24,7 +24,9 @@ import java.util.concurrent.atomic.AtomicInteger
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
+import nextflow.extension.op.Op
 
 /**
  * Implements Nextflow Mix operator
@@ -63,10 +65,10 @@ class MixOp {
     DataflowWriteChannel apply() {
         if( target == null )
             target = CH.create()
-        def count = new AtomicInteger( others.size()+1 )
-        def handlers = [
-                onNext: { target << it },
-                onComplete: { if(count.decrementAndGet()==0) { target << Channel.STOP } }
+        final count = new AtomicInteger( others.size()+1 )
+        final handlers = [
+                onNext: { DataflowProcessor proc, it -> Op.bind(proc, target, it) },
+                onComplete: { DataflowProcessor proc -> if(count.decrementAndGet()==0) { Op.bind(proc, target, Channel.STOP) } }
         ]
 
         subscribeImpl(source, handlers)

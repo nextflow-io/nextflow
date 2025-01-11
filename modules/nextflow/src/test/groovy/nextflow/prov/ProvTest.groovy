@@ -574,4 +574,42 @@ class ProvTest extends Dsl2Spec {
         upstreamTasksOf('p2 (3)')
                 .name == ['p1 (5)']
     }
+
+    @Ignore
+    def 'should track provenance with mix operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                def c1 = channel.of(1,2) | p1 
+                def c2 = channel.of(3,4) | p2 
+                p1.out | mix(p2.out) | p3  
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p3 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        upstreamTasksOf('p3 (1)')
+                .name == ['p1 (1)']
+
+
+    }
 }
