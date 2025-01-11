@@ -56,7 +56,7 @@ class Op {
         obj instanceof Tracker.Msg ? obj : Tracker.Msg.of(obj)
     }
 
-    static void bind(DataflowProcessor operator, DataflowWriteChannel channel, List<Object> messages) {
+    static void bindMany(DataflowProcessor operator, DataflowWriteChannel channel, List<Object> messages) {
         try {
             OperatorRun run=null
             for(Object msg : messages) {
@@ -83,7 +83,7 @@ class Op {
 
 
     static void bind(DataflowProcessor operator, DataflowWriteChannel channel, Object msg) {
-        bind(operator, channel, List.of(msg))
+        bindMany(operator, channel, List.of(msg))
     }
 
     static OpAbstractClosure instrument(Closure op, boolean accumulator=false) {
