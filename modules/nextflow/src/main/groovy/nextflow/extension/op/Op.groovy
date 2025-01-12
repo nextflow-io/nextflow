@@ -56,23 +56,18 @@ class Op {
         obj instanceof Tracker.Msg ? obj : Tracker.Msg.of(obj)
     }
 
-    static void bindMany(DataflowProcessor operator, DataflowWriteChannel channel, List<Object> messages) {
+    static void bind(DataflowProcessor operator, DataflowWriteChannel channel, Object msg) {
         try {
-            OperatorRun run=null
-            for(Object msg : messages) {
-                if( msg instanceof PoisonPill ) {
-                    channel.bind(msg)
-                    context.remove(operator)
-                }
-                else {
-                    if( run==null ) {
-                        final ctx = context.get(operator)
-                        if( !ctx )
-                            throw new IllegalStateException("Cannot find any context for operator=$operator")
-                        run = ctx.getOperatorRun()
-                    }
-                    Prov.getTracker().bindOutput(run, channel, msg)
-                }
+            if( msg instanceof PoisonPill ) {
+                channel.bind(msg)
+                context.remove(operator)
+            }
+            else {
+                final ctx = context.get(operator)
+                if( !ctx )
+                    throw new IllegalStateException("Cannot find any context for operator=$operator")
+                final run = ctx.getOperatorRun()
+                Prov.getTracker().bindOutput(run, channel, msg)
             }
         }
         catch (Throwable t) {
@@ -81,15 +76,8 @@ class Op {
         }
     }
 
-
-    static void bind(DataflowProcessor operator, DataflowWriteChannel channel, Object msg) {
-        bindMany(operator, channel, List.of(msg))
-    }
-
-    static OpAbstractClosure instrument(Closure op, boolean accumulator=false) {
-        return accumulator
-            ? new OpGroupingClosure(op)
-            : new OpRunningClosure(op)
+    static bind(OperatorRun run, DataflowWriteChannel channel, Object msg) {
+        Prov.getTracker().bindOutput(run, channel, msg)
     }
 
 }

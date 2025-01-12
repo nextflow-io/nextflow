@@ -17,36 +17,28 @@
 
 package nextflow.extension.op
 
-import java.util.concurrent.ConcurrentHashMap
-
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
+import groovy.transform.Canonical
 import nextflow.prov.OperatorRun
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-@CompileStatic
-class OpRunningClosure extends OpAbstractClosure {
+@Canonical
+class OpDatum {
+    Object value
+    OperatorRun run
 
-    private final Map<String,OperatorRun> holder = new ConcurrentHashMap<>(1)
-
-    OpRunningClosure(Closure code) {
-        super(code)
+    static OpDatum of(Object value, OperatorRun run) {
+        new OpDatum(value,run)
     }
 
-    @Override
-    protected OperatorRun allocateRun() {
-        final result = new OperatorRun()
-        holder.put('run', result)
-        return result
+    static Object unwrap(Object obj) {
+        if( obj instanceof Collection )
+            return obj.collect(it-> unwrap(it))
+        if( obj instanceof OpDatum )
+            return obj.value
+        else
+            return obj
     }
-
-    @Override
-    OperatorRun getOperatorRun() {
-        final result = holder.get('run')
-        return result
-    }
-
 }

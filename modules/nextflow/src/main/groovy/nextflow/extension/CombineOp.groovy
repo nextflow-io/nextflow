@@ -92,7 +92,7 @@ class CombineOp {
         def opts = new LinkedHashMap(2)
         opts.onNext = {
             if( pivot ) {
-                def pair = makeKey(pivot, it)
+                def pair = makeKey(pivot, it, null)
                 emit(target, index, pair.keys, pair.values)
             }
             else {

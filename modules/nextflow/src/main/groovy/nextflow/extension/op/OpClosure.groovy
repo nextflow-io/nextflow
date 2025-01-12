@@ -31,20 +31,18 @@ import org.codehaus.groovy.runtime.InvokerHelper
  */
 @Slf4j
 @CompileStatic
-abstract class OpAbstractClosure extends Closure implements OpContext {
+class OpClosure extends Closure {
 
     private final Closure target
+    private final OpContext context
 
-    OpAbstractClosure(Closure code) {
+    OpClosure(Closure code, OpContext context) {
         super(code.getOwner(), code.getThisObject())
         this.target = code
         this.target.setDelegate(code.getDelegate())
         this.target.setResolveStrategy(code.getResolveStrategy())
+        this.context = context
     }
-
-    abstract OperatorRun getOperatorRun()
-
-    abstract protected OperatorRun allocateRun()
 
     @Override
     Class<?>[] getParameterTypes() {
@@ -89,7 +87,7 @@ abstract class OpAbstractClosure extends Closure implements OpContext {
     @Override
     Object call(final Object... args) {
         // when the accumulator flag true, re-use the previous run object
-        final OperatorRun run = allocateRun()
+        final OperatorRun run = context.allocateRun()
         // map the inputs
         final List<Object> inputs = Prov.getTracker().receiveInputs(run, Arrays.asList(args))
         final Object result = InvokerHelper.invokeMethod(target, "call", inputs.toArray())

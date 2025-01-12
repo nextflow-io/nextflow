@@ -25,5 +25,6 @@ import nextflow.prov.OperatorRun
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 interface OpContext {
+    OperatorRun allocateRun()
     OperatorRun getOperatorRun()
 }

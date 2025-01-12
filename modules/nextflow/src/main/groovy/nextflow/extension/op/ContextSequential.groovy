@@ -19,36 +19,26 @@ package nextflow.extension.op
 
 import java.util.concurrent.ConcurrentHashMap
 
-import groovy.transform.CompileStatic
 import nextflow.prov.OperatorRun
+
 /**
- * A closure that wraps the execution of an operator target code (closure)
- * and maps the inputs and outputs to the corresponding operator run.
- *
- * This class extends {@link OpAbstractClosure} assuming that all results are `"accumulated"`
- * as they were executed in the same operator run
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@CompileStatic
-class OpGroupingClosure extends OpAbstractClosure {
+class ContextSequential implements OpContext {
 
     private final Map<String,OperatorRun> holder = new ConcurrentHashMap<>(1)
 
-    OpGroupingClosure(Closure code) {
-        super(code)
-        holder.put('run', new OperatorRun())
+    @Override
+    OperatorRun allocateRun() {
+        final result = new OperatorRun()
+        holder.put('run', result)
+        return result
     }
 
     @Override
     OperatorRun getOperatorRun() {
         final result = holder.get('run')
-        holder.put('run', new OperatorRun())
         return result
-    }
-
-    @Override
-    protected OperatorRun allocateRun() {
-        return holder.get('run')
     }
 }

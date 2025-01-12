@@ -25,9 +25,15 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 import nextflow.NF
 import nextflow.exception.AbortOperationException
+import nextflow.extension.op.ContextJoining
+import nextflow.extension.op.Op
+import nextflow.extension.op.OpContext
+import nextflow.extension.op.OpDatum
+import nextflow.prov.OperatorRun
 import nextflow.util.CheckHelper
 /**
  * Implements {@link OperatorImpl#join} operator logic
@@ -58,6 +64,8 @@ class JoinOp {
 
     private Set uniqueKeys = new LinkedHashSet()
 
+    private OpContext context = new ContextJoining()
+
     JoinOp( DataflowReadChannel source, DataflowReadChannel target, Map params = null ) {
         CheckHelper.checkParams('join', params, JOIN_PARAMS)
         this.source = source
@@ -81,7 +89,6 @@ class JoinOp {
     }
 
     DataflowWriteChannel apply() {
-
         // the resulting channel
         final result = CH.create()
         // the following buffer maintains the state of collected items as a map of maps.
@@ -91,10 +98,17 @@ class JoinOp {
 
         final count = 2
         final stopCount = new AtomicInteger(count)
-
-        DataflowHelper.subscribeImpl( source, handler(state, count, 0, result, stopCount, remainder) )
-        DataflowHelper.subscribeImpl( target, handler(state, count, 1, result, stopCount, remainder) )
+        subscribe0( source, handler(state, count, 0, result, stopCount, remainder) )
+        subscribe0( target, handler(state, count, 1, result, stopCount, remainder) )
         return result
+    }
+
+    private void subscribe0(DataflowReadChannel source, Map events) {
+        new SubscribeOp()
+            .withSource(source)
+            .withEvents(events)
+            .withContext(context)
+            .apply()
     }
 
     /**
@@ -111,22 +125,22 @@ class JoinOp {
 
         final Map<String,Closure> result = new HashMap<>(2)
 
-        result.onNext = {
+        result.onNext = { DataflowProcessor proc, Object it ->
             synchronized (this) {
                 if(!failed) try {
-                    def entries = join0(buffer, size, index, it)
+                    final entries = join0(buffer, size, index, it)
                     if( entries ) {
-                        target.bind( entries.size()==1 ? entries[0] : entries )
+                        emitEntries(target, entries)
                     }
                 }
                 catch (Exception e) {
                     failed = true
-                    target << Channel.STOP
+                    Op.bind(proc, target, Channel.STOP)
                     throw e
                 }
             }}
 
-        result.onComplete = {
+        result.onComplete = { DataflowProcessor proc ->
             if( stopCount.decrementAndGet()==0 && !failed ) {
                 try {
                     if( remainder || failOnDuplicate )
@@ -135,13 +149,27 @@ class JoinOp {
                         checkForMismatch(buffer)
                 }
                 finally {
-                    target << Channel.STOP
+                    Op.bind(proc, target, Channel.STOP)
                 }
             }}
-        
+
         return result
     }
 
+    private void emitEntries(DataflowWriteChannel target, List entries) {
+        final inputs = new ArrayList(entries.size())
+        final values = new ArrayList(entries.size())
+        for( Object it : entries ) {
+            if( it instanceof OpDatum ) {
+                inputs.addAll(it.run.inputIds)
+                values.add(it.value)
+            }
+            else
+                values.add(it)
+        }
+        final run = new OperatorRun(inputs)
+        Op.bind(run, target, values.size()==1 ? values[0] : values)
+    }
 
     /**
      * Implements the join operator logic. Basically buffers the values received on each channel by their key .
@@ -171,7 +199,7 @@ class JoinOp {
         //  before a match for it is found on another channel)
 
         // get the index key for this object
-        final item0 = DataflowHelper.makeKey(pivot, data)
+        final item0 = DataflowHelper.makeKey(pivot, data, context.getOperatorRun())
 
         // check for unique keys
         checkForDuplicate(item0.keys, item0.values, index, false)
@@ -187,11 +215,10 @@ class JoinOp {
             channels[index] = []
         }
 
-        def entries = channels[index]
-
         // add the received item to the list
         // when it is used in the gather op add always as the first item
-        entries << item0.values
+        final entries = channels[index]
+        entries.add(item0.values)
         setSingleton(index, item0.values.size()==0)
 
         // now check if it has received an element matching for each channel
@@ -221,7 +248,7 @@ class JoinOp {
         return result
     }
 
-    private final void checkRemainder(Map<Object,Map<Integer,List>> buffers, int count, DataflowWriteChannel target ) {
+    private final void checkRemainder(Map<Object,Map<Integer,List>> buffers, int count, DataflowWriteChannel target) {
        log.trace "Operator `join` remainder buffer: ${-> buffers}"
 
         for( Object key : buffers.keySet() ) {
@@ -249,9 +276,9 @@ class JoinOp {
                 }
 
                 if( fill ) {
-                    final value = singleton() ? result[0] : result
                     // bind value to target channel
-                    if( remainder ) target.bind(value)
+                    if( remainder )
+                        emitEntries(target, result)
                 }
                 else
                     break
@@ -293,7 +320,10 @@ class JoinOp {
 
 
     private String csv0(value, String sep) {
-        value instanceof List ? value.join(sep) : value.toString()
+        final result = value instanceof List
+            ? value.collect(it->OpDatum.unwrap(it)).join(sep)
+            : OpDatum.unwrap(value).toString()
+        return result
     }
 
     private boolean singleton(int i=-1) {

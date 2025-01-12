@@ -36,7 +36,12 @@ import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
 import nextflow.dag.NodeMarker
+import nextflow.extension.op.ContextGrouping
 import nextflow.extension.op.Op
+import nextflow.extension.op.OpClosure
+import nextflow.extension.op.ContextSequential
+import nextflow.extension.op.OpContext
+import nextflow.prov.OperatorRun
 
 /**
  * This class provides helper methods to implement nextflow operators
@@ -46,11 +51,12 @@ import nextflow.extension.op.Op
 @Slf4j
 class DataflowHelper {
 
+    @CompileStatic
     static class OpParams {
         List<DataflowReadChannel> inputs
         List<DataflowWriteChannel> outputs
         List<DataflowEventListener> listeners
-        boolean accumulator
+        OpContext context = new ContextSequential()
 
         OpParams() { }
         
@@ -100,7 +106,12 @@ class DataflowHelper {
         }
 
         OpParams withAccumulator(boolean acc) {
-            this.accumulator = acc
+            this.context = acc ? new ContextGrouping() : new ContextSequential()
+            return this
+        }
+
+        OpParams withContext(OpContext context) {
+            this.context = context
             return this
         }
 
@@ -176,8 +187,8 @@ class DataflowHelper {
             @Override
             void afterRun(final DataflowProcessor processor, final List<Object> messages) {
                 if( source instanceof DataflowExpression ) {
-                    if( !(target instanceof DataflowExpression) )
-                        processor.bindOutput( Channel.STOP )
+                    if( target !instanceof DataflowExpression )
+                        Op.bind(processor, target, Channel.STOP )
                     processor.terminate()
                 }
             }
@@ -281,10 +292,11 @@ class DataflowHelper {
         assert params.listeners
 
         // create the underlying dataflow operator
-        final closure = Op.instrument(code, params.accumulator)
+        final context = params.context
+        final closure = new OpClosure(code, context)
         final group = Dataflow.retrieveCurrentDFPGroup()
         final operator = new DataflowOperator(group, params.toMap(), closure)
-        Op.context.put(operator, closure)
+        Op.context.put(operator, context)
         operator.start()
         // track the operator as dag node
         NodeMarker.appendOperator(operator)
@@ -377,10 +389,12 @@ class DataflowHelper {
 
     @PackageScope
     @CompileStatic
-    static KeyPair makeKey(List<Integer> pivot, entry) {
+    static KeyPair makeKey(List<Integer> pivot, entry, OperatorRun run) {
+        if( run==null )
+            throw new IllegalStateException("Argument 'run' cannot be null")
         final result = new KeyPair()
 
-        if( !(entry instanceof List) ) {
+        if( entry !instanceof List ) {
             if( pivot != [0] )
                 throw new IllegalArgumentException("Not a valid `by` index: $pivot")
             result.keys = [entry]
@@ -396,7 +410,7 @@ class DataflowHelper {
             if( i in pivot )
                 result.addKey(list[i])
             else
-                result.addValue(list[i])
+                result.addValue(list[i], run)
         }
 
         return result

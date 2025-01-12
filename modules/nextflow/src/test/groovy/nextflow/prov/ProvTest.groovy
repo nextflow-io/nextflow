@@ -140,7 +140,6 @@ class ProvTest extends Dsl2Spec {
     }
 
     def 'should track the provenance of two processes and reduce operator'() {
-
         when:
         dsl_eval(globalConfig(), '''
             workflow {
@@ -610,6 +609,49 @@ class ProvTest extends Dsl2Spec {
         upstreamTasksOf('p3 (1)')
                 .name == ['p1 (1)']
 
+    }
+
+    def 'should track provenance with join operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                def c1 = channel.of(['a',10], ['b',20]) | p1 
+                def c2 = channel.of(['a',11], ['b',21], ['c',31]) | p2 
+                p1.out | join(p2.out, remainder:true) | p3
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p3 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        upstreamTasksOf('p3 (1)')
+                .name.sort() == ['p1 (1)', 'p2 (1)']
+
+        and:
+        upstreamTasksOf('p3 (2)')
+            .name.sort() == ['p1 (2)', 'p2 (2)']
+
+        and:
+        upstreamTasksOf('p3 (3)')
+            .name.sort() == ['p2 (3)']
 
     }
 }

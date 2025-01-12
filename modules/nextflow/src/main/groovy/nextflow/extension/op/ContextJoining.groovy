@@ -15,27 +15,34 @@
  *
  */
 
-package nextflow.extension
+package nextflow.extension.op
 
-import nextflow.extension.op.Op
-import spock.lang.Specification
+
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.prov.OperatorRun
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class OpTest extends Specification {
+@Slf4j
+@CompileStatic
+class ContextJoining implements OpContext {
 
-    def 'should instrument a closure'() {
-        given:
-        def code = { int x, int y -> x+y }
-        def v1 = 1
-        def v2 = 2
+    private final ThreadLocal<OperatorRun> runs = ThreadLocal.withInitial(()->new OperatorRun())
 
-        when:
-        def c = Op.instrument(code)
-        def z = c.call([v1, v2] as Object[])
-        then:
-        z == 3
+    @Override
+    synchronized OperatorRun allocateRun() {
+        final run = runs.get()
+        log.debug "+ AllocateRun run=$run"
+        return run
+    }
 
+    @Override
+    synchronized OperatorRun getOperatorRun() {
+        final run = runs.get()
+        log.debug "+ GetOperatorRun run=$run"
+        runs.remove()
+        return run
     }
 }

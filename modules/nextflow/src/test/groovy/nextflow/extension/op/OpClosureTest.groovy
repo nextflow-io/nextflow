@@ -17,8 +17,8 @@
 
 package nextflow.extension.op
 
-import spock.lang.Specification
 
+import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -28,14 +28,27 @@ class OpClosureTest extends Specification {
     def 'should invoke target closure' () {
         given:
         def code = { a,b -> a+b }
-        def wrapper = new OpRunningClosure(code)
+        def context = new ContextSequential()
+        def wrapper = new OpClosure(code, context)
 
         when:
         def result = wrapper.call(1,2)
         then:
         result == 3
         and:
-        wrapper.getOperatorRun() != null
+        context.getOperatorRun() != null
     }
 
+    def 'should instrument a closure'() {
+        given:
+        def code = { int x, int y -> x+y }
+        def v1 = 1
+        def v2 = 2
+
+        when:
+        def c = new OpClosure(code, new ContextSequential())
+        def z = c.call([v1, v2] as Object[])
+        then:
+        z == 3
+    }
 }

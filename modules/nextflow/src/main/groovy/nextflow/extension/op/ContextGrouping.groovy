@@ -12,37 +12,44 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package nextflow.extension
+package nextflow.extension.op
+
+import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileStatic
-import groovy.transform.EqualsAndHashCode
-import groovy.transform.ToString
-import nextflow.extension.op.OpDatum
+import groovy.util.logging.Slf4j
 import nextflow.prov.OperatorRun
 
 /**
- * Implements an helper key-value helper object used in dataflow operators
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
-@ToString
-@EqualsAndHashCode
-class KeyPair {
-    List keys
-    List values
+class ContextGrouping implements OpContext {
 
-    void addKey(el) {
-        keys.add(safeStr(el))
+    private final Map<String,OperatorRun> holder = new ConcurrentHashMap<>(1);
+
+    ContextGrouping(){
+        holder.put('run', new OperatorRun())
     }
 
-    void addValue(el, OperatorRun run) {
-        values.add(OpDatum.of(el,run))
+    @Override
+    OperatorRun allocateRun() {
+        final result = holder.get('run')
+        log.debug "+ AllocateRun=$result"
+        return result
+    }
+    
+    @Override
+    OperatorRun getOperatorRun() {
+        final result = holder.get('run')
+        log.debug "+ GetOperatorRun=$result"
+        holder.put('run', new OperatorRun())
+        return result
     }
 
-    static private safeStr(key) {
-        key instanceof GString ? key.toString() : key
-    }
 }
