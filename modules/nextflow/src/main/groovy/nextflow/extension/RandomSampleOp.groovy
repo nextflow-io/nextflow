@@ -20,10 +20,6 @@ import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
-
-import static DataflowHelper.eventsMap
-import static DataflowHelper.subscribeImpl
-
 /**
  * Implements Reservoir sampling of channel content
  *
@@ -80,7 +76,11 @@ class RandomSampleOp {
 
     DataflowWriteChannel apply() {
         result = CH.create()
-        subscribeImpl(source, eventsMap(this.&sampling, this.&emit))
+        new SubscribeOp()
+            .withSource(source)
+            .withOnNext(this.&sampling)
+            .withOnComplete(this.&emit)
+            .apply()
         return result
     }
 }

@@ -226,7 +226,11 @@ class GroupTupleOp {
         /*
          * apply the logic to the source channel
          */
-        DataflowHelper.subscribeImpl(channel, [onNext: this.&collect, onComplete: this.&finalise])
+        new SubscribeOp()
+            .withSource(channel)
+            .withOnNext(this.&collect)
+            .withOnComplete(this.&finalise)
+            .apply()
 
         /*
          * return the target channel

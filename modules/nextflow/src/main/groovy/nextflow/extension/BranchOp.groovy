@@ -75,7 +75,10 @@ class BranchOp {
         def events = new HashMap<String,Closure>(2)
         events.put('onNext', this.&doNext)
         events.put('onComplete', this.&doComplete)
-        DataflowHelper.subscribeImpl(source, events)
+        new SubscribeOp()
+            .withSource(source)
+            .withEvents(events)
+            .apply()
         return this
     }
 

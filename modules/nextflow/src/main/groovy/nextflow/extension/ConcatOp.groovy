@@ -43,7 +43,6 @@ class ConcatOp {
         this.target = target
     }
 
-
     DataflowWriteChannel apply() {
         final result = CH.create()
         final allChannels = [source]
@@ -55,16 +54,19 @@ class ConcatOp {
 
 
     private static void append( DataflowWriteChannel result, List<DataflowReadChannel> channels, int index ) {
-        def current = channels[index++]
-        def next = index < channels.size() ? channels[index] : null
+        final current = channels[index++]
+        final next = index < channels.size() ? channels[index] : null
 
-        def events = new HashMap<String,Closure>(2)
+        final events = new HashMap<String,Closure>(2)
         events.onNext = { DataflowProcessor proc, it -> Op.bind(proc, result, it) }
         events.onComplete = { DataflowProcessor proc ->
             if(next) append(result, channels, index)
             else Op.bind(proc, result, Channel.STOP)
         }
 
-        DataflowHelper.subscribeImpl(current, events)
+        new SubscribeOp()
+            .withSource(current)
+            .withEvents(events)
+            .apply()
     }
 }

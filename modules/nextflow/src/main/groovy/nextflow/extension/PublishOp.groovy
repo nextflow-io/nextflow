@@ -18,7 +18,6 @@ package nextflow.extension
 
 import java.nio.file.Path
 
-import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
@@ -64,10 +63,11 @@ class PublishOp {
     boolean getComplete() { complete }
 
     PublishOp apply() {
-        final events = new HashMap(2)
-        events.onNext = this.&onNext
-        events.onComplete = this.&onComplete
-        DataflowHelper.subscribeImpl(source, events)
+        new SubscribeOp()
+            .withSource(source)
+            .withOnNext(this.&onNext)
+            .withOnComplete(this.&onComplete)
+            .apply()
         return this
     }
 

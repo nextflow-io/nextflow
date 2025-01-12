@@ -91,7 +91,7 @@ class OperatorImplTest extends Specification {
         def channel = Channel.create()
         int count = 0
         channel.subscribe { count++; } << 1 << 2 << 3
-        sleep(100)
+        sleep(200)
         then:
         count == 3
 

@@ -52,10 +52,11 @@ class ToListOp {
         final target = new DataflowVariable()
         if( source instanceof DataflowExpression ) {
             final result = new ArrayList(1)
-            Map<String,Closure> events = [:]
-            events.onNext = { result.add(it) }
-            events.onComplete = { DataflowProcessor processor -> Op.bind(processor, target, result) }
-            DataflowHelper.subscribeImpl(source, events)
+            new SubscribeOp()
+                .withSource(source)
+                .withOnNext({ result.add(it) })
+                .withOnComplete({ DataflowProcessor processor -> Op.bind(processor, target, result) })
+                .apply()
             return target
         }
 

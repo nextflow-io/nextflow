@@ -68,7 +68,10 @@ class OperatorImpl {
      * @return
      */
     DataflowReadChannel subscribe(final DataflowReadChannel source, final Closure closure) {
-        subscribeImpl( source, [onNext: closure] )
+        new SubscribeOp()
+            .withSource(source)
+            .withOnNext(closure)
+            .apply()
         return source
     }
 
@@ -80,7 +83,10 @@ class OperatorImpl {
      * @return
      */
     DataflowReadChannel subscribe(final DataflowReadChannel source, final Map<String,Closure> events ) {
-        subscribeImpl(source, events)
+        new SubscribeOp()
+            .withSource(source)
+            .withEvents(events)
+            .apply()
         return source
     }
 
@@ -911,7 +917,11 @@ class OperatorImpl {
                 result.bind(Channel.STOP)
         }
 
-        subscribeImpl(source, [onNext: next, onComplete: complete])
+        new SubscribeOp()
+            .withSource(source)
+            .withOnNext(next)
+            .withOnComplete(complete)
+            .apply()
 
         return result
     }
@@ -931,17 +941,16 @@ class OperatorImpl {
         final newLine = opts.newLine != false
 
         final target = CH.createBy(source);
-        final apply = new HashMap<String,Closure>(2)
 
-        apply.onNext  = {
-            final obj = closure != null ? closure.call(it) : it
-            session.printConsole(obj?.toString(), newLine)
-            target.bind(it)
-        }
-
-        apply. onComplete = { CH.close0(target) }
-
-        subscribeImpl(source,apply)
+        new SubscribeOp()
+            .withSource(source)
+            .withOnNext{
+                final obj = closure != null ? closure.call(it) : it
+                session.printConsole(obj?.toString(), newLine)
+                target.bind(it)
+            }
+            .withOnComplete{ CH.close0(target) }
+            .apply()
         return target
     }
 
@@ -974,8 +983,7 @@ class OperatorImpl {
         if( source instanceof DataflowExpression )
             throw new IllegalArgumentException("Operator `randomSample` cannot be applied to a value channel")
 
-        final result = new RandomSampleOp(source,n, seed).apply()
-        return result
+        return new RandomSampleOp(source,n, seed).apply()
     }
 
     DataflowWriteChannel toInteger(final DataflowReadChannel source) {
@@ -995,13 +1003,11 @@ class OperatorImpl {
     }
 
     DataflowWriteChannel transpose( final DataflowReadChannel source, final Map params=null ) {
-        def result = new TransposeOp(source,params).apply()
-        return result
+        return new TransposeOp(source,params).apply()
     }
 
     DataflowWriteChannel splitText(DataflowReadChannel source, Map opts=null) {
-        final result = new SplitOp( source, 'splitText', opts ).apply()
-        return result
+        return new SplitOp( source, 'splitText', opts ).apply()
     }
 
     DataflowWriteChannel splitText(DataflowReadChannel source, Map opts=null, Closure action) {
@@ -1014,23 +1020,19 @@ class OperatorImpl {
     }
 
     DataflowWriteChannel splitCsv(DataflowReadChannel source, Map opts=null) {
-        final result = new SplitOp( source, 'splitCsv', opts ).apply()
-        return result
+        return new SplitOp( source, 'splitCsv', opts ).apply()
     }
 
     DataflowWriteChannel splitFasta(DataflowReadChannel source, Map opts=null) {
-        final result = new SplitOp( source, 'splitFasta', opts ).apply()
-        return result
+        return new SplitOp( source, 'splitFasta', opts ).apply()
     }
 
     DataflowWriteChannel splitFastq(DataflowReadChannel source, Map opts=null) {
-        final result = new SplitOp( source, 'splitFastq', opts ).apply()
-        return result
+        return new SplitOp( source, 'splitFastq', opts ).apply()
     }
 
     DataflowWriteChannel splitJson(DataflowReadChannel source, Map opts=null) {
-        final result = new SplitOp( source, 'splitJson', opts ).apply()
-        return result
+        return new SplitOp( source, 'splitJson', opts ).apply()
     }
     
     DataflowWriteChannel countLines(DataflowReadChannel source, Map opts=null) {

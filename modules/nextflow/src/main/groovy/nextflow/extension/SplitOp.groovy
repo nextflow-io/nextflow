@@ -186,10 +186,11 @@ class SplitOp {
 
     @PackageScope
     void applySplittingOperator( DataflowReadChannel origin, DataflowWriteChannel output, AbstractSplitter splitter ) {
-        final events = new HashMap(2)
-        events.onNext = { entry -> splitter.target(entry).apply() }
-        events.onComplete = { output << Channel.STOP }
-        DataflowHelper.subscribeImpl ( origin, events )
+        new SubscribeOp()
+            .withSource(origin)
+            .withOnNext({ entry -> splitter.target(entry).apply() })
+            .withOnComplete({ output << Channel.STOP })
+            .apply()
     }
 
     @PackageScope

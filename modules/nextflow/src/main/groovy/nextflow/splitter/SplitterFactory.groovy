@@ -21,7 +21,7 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import nextflow.extension.DataflowHelper
+import nextflow.extension.SubscribeOp
 /**
  * Factory class for splitter objects
  *
@@ -95,11 +95,11 @@ class SplitterFactory {
         opt.each = { count++ }
         strategy.options(opt)
 
-        def events = new HashMap(2)
-        events.onNext = { entry -> strategy.target(entry).apply() }
-        events.onComplete = { result.bind(count) }
-
-        DataflowHelper.subscribeImpl ( source, events )
+        new SubscribeOp()
+            .withSource(source)
+            .withOnNext({ entry -> strategy.target(entry).apply() })
+            .withOnComplete({ result.bind(count) })
+            .apply()
 
         // return the resulting channel
         return result

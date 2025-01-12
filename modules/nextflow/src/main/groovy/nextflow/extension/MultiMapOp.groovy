@@ -67,10 +67,11 @@ class MultiMapOp {
     }
 
     MultiMapOp apply() {
-        def events = new HashMap<String,Closure>(2)
-        events.put('onNext', this.&doNext)
-        events.put('onComplete', this.&doComplete)
-        DataflowHelper.subscribeImpl(source, events)
+        new SubscribeOp()
+            .withSource(source)
+            .withOnNext(this.&doNext)
+            .withOnComplete(this.&doComplete)
+            .apply()
         return this
     }
 }

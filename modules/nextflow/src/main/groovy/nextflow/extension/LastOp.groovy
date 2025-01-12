@@ -53,9 +53,11 @@ class LastOp {
             target = new DataflowVariable()
 
         def last = null
-        final next = { last = it }
-        final done = { DataflowProcessor proc -> Op.bind(proc, target, last) }
-        DataflowHelper.subscribeImpl( source, [onNext:next, onComplete: done] )
+        new SubscribeOp()
+            .withSource(source)
+            .withOnNext{ last = it }
+            .withOnComplete{ DataflowProcessor proc -> Op.bind(proc, target, last) }
+            .apply()
         return target
     }
 

@@ -17,7 +17,6 @@
 
 package nextflow.extension
 
-import static nextflow.extension.DataflowHelper.*
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
@@ -74,7 +73,10 @@ class MathOp {
         assert source!=null
         if( target==null )
             target = new DataflowVariable()
-        subscribeImpl(source, [onNext: aggregate.&process, onComplete: this.&completion ])
+        new SubscribeOp()
+            .withSource(source)
+            .withEvents(onNext: aggregate.&process, onComplete: this.&completion)
+            .apply()
         return target
     }
 
