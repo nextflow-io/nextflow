@@ -21,12 +21,14 @@ import static nextflow.util.CheckHelper.*
 
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 import nextflow.Global
+import nextflow.extension.op.ContextGrouping
 import nextflow.extension.op.Op
 import nextflow.file.FileCollector
 import nextflow.file.FileHelper
@@ -264,8 +266,15 @@ class CollectFileOp {
         return collector
     }
 
+    @CompileStatic
     DataflowWriteChannel apply() {
-        DataflowHelper.subscribeImpl( channel, true, [onNext: this.&processItem, onComplete: this.&emitItems] )
+        new SubscribeOp()
+            .withSource(channel)
+            .withOnNext(this.&processItem)
+            .withOnComplete(this.&emitItems)
+            .withContext( new ContextGrouping() )
+            .apply()
+
         return result
     }
 }

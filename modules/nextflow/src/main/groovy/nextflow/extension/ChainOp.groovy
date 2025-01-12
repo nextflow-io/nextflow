@@ -22,10 +22,7 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.ChainWithClosure
 import groovyx.gpars.dataflow.operator.DataflowEventListener
-
-import static nextflow.extension.DataflowHelper.newOperator
-import static nextflow.extension.DataflowHelper.OpParams
-
+import nextflow.extension.op.Op
 /**
  * Implements the chain operator
  * 
@@ -37,7 +34,6 @@ class ChainOp {
     private DataflowReadChannel source
     private DataflowWriteChannel target
     private List<DataflowEventListener> listeners = List.of()
-    private boolean accumulator
     private Closure action
 
     static ChainOp create() {
@@ -68,11 +64,6 @@ class ChainOp {
         return this
     }
 
-    ChainOp withAccumulator(boolean value) {
-        this.accumulator = value
-        return this
-    }
-
     ChainOp withAction(Closure action) {
         this.action = action
         return this
@@ -83,13 +74,13 @@ class ChainOp {
         assert target
         assert action
 
-        final OpParams parameters = new OpParams()
+        new Op()
             .withInput(source)
             .withOutput(target)
-            .withAccumulator(accumulator)
             .withListeners(listeners)
+            .withCode(new ChainWithClosure(action))
+            .apply()
 
-        newOperator(parameters, new ChainWithClosure(action))
         return target
     }
 }

@@ -17,7 +17,6 @@
 
 package nextflow.extension
 
-import static nextflow.extension.DataflowHelper.*
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -29,7 +28,6 @@ import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
 import nextflow.extension.op.Op
-
 /**
  * Implement "take" operator
  *
@@ -73,16 +71,15 @@ class TakeOp {
             }
         }
 
-        final params = new OpParams()
+        new Op()
             .withInput(source)
             .withOutput(target)
-        if( length>0 )
-            params.withListener(listener)
-
-        newOperator(params) {
-            final proc = getDelegate() as DataflowProcessor
-            Op.bind(proc, target, it)
-        }
+            .withListener(length>0 ? listener : null)
+            .withCode {
+                final proc = getDelegate() as DataflowProcessor
+                Op.bind(proc, target, it)
+            }
+            .apply()
 
         return target
     }

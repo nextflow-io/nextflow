@@ -23,8 +23,10 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
+import nextflow.extension.op.ContextGrouping
 import nextflow.extension.op.Op
 import nextflow.util.ArrayBag
+
 /**
  * Implements {@link OperatorImpl#collect(groovyx.gpars.dataflow.DataflowReadChannel)}  operator
  *
@@ -55,14 +57,16 @@ class CollectOp {
         final result = []
         final target = new DataflowVariable()
 
-        Map<String,Closure> events = [:]
-        events.onNext = { append(result, it) }
-        events.onComplete = { DataflowProcessor processor ->
-            final msg = result ? new ArrayBag(normalise(result)) : Channel.STOP
-            Op.bind(processor, target, msg)
-        }
+        new SubscribeOp()
+            .withSource(source)
+            .withContext(new ContextGrouping())
+            .withOnNext { append(result, it) }
+            .withOnComplete { DataflowProcessor processor ->
+                final msg = result ? new ArrayBag(normalise(result)) : Channel.STOP
+                Op.bind(processor, target, msg)
+            }
+            .apply()
 
-        DataflowHelper.subscribeImpl(source, true, events)
         return target
     }
 

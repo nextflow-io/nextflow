@@ -21,11 +21,16 @@ import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.Dataflow
+import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import groovyx.gpars.dataflow.operator.DataflowEventListener
+import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.Global
 import nextflow.Session
+import nextflow.dag.NodeMarker
 import nextflow.prov.OperatorRun
 import nextflow.prov.Prov
 import nextflow.prov.Tracker
@@ -38,7 +43,7 @@ import nextflow.prov.Tracker
 @CompileStatic
 class Op {
 
-    static final public ConcurrentHashMap<DataflowProcessor, OpContext> context = new ConcurrentHashMap<>();
+    static final public ConcurrentHashMap<DataflowProcessor, OpContext> allContexts = new ConcurrentHashMap<>();
 
     static List<Object> unwrap(List messages) {
         final ArrayList<Object> result = new ArrayList<>();
@@ -60,10 +65,10 @@ class Op {
         try {
             if( msg instanceof PoisonPill ) {
                 channel.bind(msg)
-                context.remove(operator)
+                allContexts.remove(operator)
             }
             else {
-                final ctx = context.get(operator)
+                final ctx = allContexts.get(operator)
                 if( !ctx )
                     throw new IllegalStateException("Cannot find any context for operator=$operator")
                 final run = ctx.getOperatorRun()
@@ -78,6 +83,104 @@ class Op {
 
     static bind(OperatorRun run, DataflowWriteChannel channel, Object msg) {
         Prov.getTracker().bindOutput(run, channel, msg)
+    }
+
+    private static Session getSession() { Global.getSession() as Session }
+
+    private List<DataflowReadChannel> inputs
+    private List<DataflowWriteChannel> outputs
+    private List<DataflowEventListener> listeners
+    private OpContext context = new ContextSequential()
+    private Closure code
+
+    List<DataflowReadChannel> getInputs() { inputs }
+    List<DataflowWriteChannel> getOutputs() { outputs }
+    List<DataflowEventListener> getListeners() { listeners }
+    OpContext getContext() { context }
+    Closure getCode() { code }
+
+    Op withInput(DataflowReadChannel channel) {
+        assert channel != null
+        this.inputs = List.of(channel)
+        return this
+    }
+
+    Op withInputs(List<DataflowReadChannel> channels) {
+        assert channels != null
+        this.inputs = channels
+        return this
+    }
+
+    Op withOutput(DataflowWriteChannel channel) {
+        assert channel != null
+        this.outputs = List.of(channel)
+        return this
+    }
+
+    Op withOutputs(List<DataflowWriteChannel> channels) {
+        assert channels != null
+        this.outputs = channels
+        return this
+    }
+
+    Op withListener(DataflowEventListener listener) {
+        if( listener )
+            this.listeners = List.of(listener)
+        return this
+    }
+
+    Op withListeners(List<DataflowEventListener> listeners) {
+        if( listeners )
+            this.listeners = listeners
+        return this
+    }
+
+    Op withParams(Map params) {
+        if( params.inputs )
+            this.inputs = params.inputs as List<DataflowReadChannel>
+        if( params.outputs )
+            this.outputs = params.outputs as List<DataflowWriteChannel>
+        if( params.listeners )
+            this.listeners = params.listeners as List<DataflowEventListener>
+        return this
+    }
+
+    Op withContext(OpContext context) {
+        if( context!=null )
+            this.context = context
+        return this
+    }
+
+    Op withCode(Closure code) {
+        this.code = code
+        return this
+    }
+
+    Map toMap() {
+        final ret = new HashMap()
+        ret.inputs = inputs ?: List.of()
+        ret.outputs = outputs ?: List.of()
+        ret.listeners = listeners ?: List.of()
+        return ret
+    }
+
+    DataflowProcessor apply() {
+        assert inputs
+        assert code
+        assert context
+
+        // create the underlying dataflow operator
+        final closure = new OpClosure(code, context)
+        final group = Dataflow.retrieveCurrentDFPGroup()
+        final operator = new DataflowOperator(group, toMap(), closure)
+        Op.allContexts.put(operator, context)
+        operator.start()
+        // track the operator as dag node
+        NodeMarker.appendOperator(operator)
+        if( session && session.allOperators != null ) {
+            session.allOperators << operator
+        }
+        return operator
     }
 
 }

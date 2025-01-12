@@ -74,12 +74,7 @@ class UniqueOp {
             }
         }
 
-        final params = new DataflowHelper.OpParams()
-            .withInput(source)
-            .withOutput(target)
-            .withListener(listener)
-
-        DataflowHelper.newOperator(params) {
+        final code = {
             final proc = getDelegate() as DataflowProcessor
             try {
                 final key = comparator.call(it)
@@ -94,6 +89,13 @@ class UniqueOp {
                 }
             }
         }
+
+        new Op()
+            .withInput(source)
+            .withOutput(target)
+            .withListener(listener)
+            .withCode(code)
+            .apply()
 
         return target
     }

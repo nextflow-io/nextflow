@@ -25,9 +25,8 @@ import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Global
 import nextflow.Session
+import nextflow.extension.op.Op
 import nextflow.extension.op.OpContext
-
-import static nextflow.extension.DataflowHelper.newOperator
 /**
  * Implements the "subscribe" operator
  *
@@ -36,6 +35,8 @@ import static nextflow.extension.DataflowHelper.newOperator
 @Slf4j
 @CompileStatic
 class SubscribeOp {
+
+    static private List<String> VALID_HANDLERS = [ 'onNext', 'onComplete', 'onError' ]
 
     private DataflowReadChannel source
     private OpContext context
@@ -67,14 +68,20 @@ class SubscribeOp {
     }
 
     SubscribeOp withEvents(Map<String,Closure> events) {
-        this.onNext = events.onNext as Closure
-        this.onComplete = events.onComplete as Closure
-        this.onError = events.onError as Closure
+        if( events ) {
+            events.keySet().each {
+                if( !VALID_HANDLERS.contains(it) )  throw new IllegalArgumentException("Not a valid handler name: $it")
+            }
+            this.onNext = events.onNext as Closure
+            this.onComplete = events.onComplete as Closure
+            this.onError = events.onError as Closure
+        }
         return this
     }
 
     SubscribeOp withContext(OpContext context) {
-        this.context = context
+        if( context!=null )
+            this.context = context
         return this
     }
 
@@ -109,12 +116,7 @@ class SubscribeOp {
             }
         }
 
-        final params = new DataflowHelper.OpParams()
-            .withInput(source)
-            .withListener(listener)
-            .withContext(context)
-
-        newOperator (params) {
+        final code = {
             final proc = getDelegate() as DataflowProcessor
             if( onNext instanceof Closure ) {
                 final action = (Closure) onNext
@@ -127,5 +129,13 @@ class SubscribeOp {
                 proc.terminate()
             }
         }
+
+        new Op()
+            .withInput(source)
+            .withListener(listener)
+            .withContext(context)
+            .withCode(code)
+            .apply()
+
     }
 }

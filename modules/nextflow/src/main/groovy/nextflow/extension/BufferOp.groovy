@@ -31,6 +31,7 @@ import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
+import nextflow.extension.op.ContextGrouping
 import nextflow.extension.op.Op
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
 /**
@@ -186,12 +187,8 @@ class BufferOp {
         // -- open frame flag
         boolean isOpen = startingCriteria == null
 
-        // -- the operator collecting the elements
-        final params = new OpParams()
-            .withInput(source)
-            .withListener(listener)
-            .withAccumulator(true)
-        newOperator( params ) {
+        // -- op code
+        final code = {
             if( isOpen ) {
                 buffer << it
             }
@@ -212,6 +209,14 @@ class BufferOp {
                 proc.terminate()
             }
         }
+
+        // -- the operator collecting the elements
+        new Op()
+            .withInput(source)
+            .withListener(listener)
+            .withContext(new ContextGrouping())
+            .withCode(code)
+            .apply()
     }
 
 }

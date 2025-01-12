@@ -17,7 +17,6 @@
 
 package nextflow.extension
 
-import static nextflow.extension.DataflowHelper.*
 
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
@@ -70,17 +69,15 @@ class FirstOp {
         final stopOnFirst = source instanceof DataflowExpression
         final discriminator = new BooleanReturningMethodInvoker("isCase");
 
-        final params = new OpParams()
-            .withInput(source)
-            .withListener(new DataflowEventAdapter() {
-                @Override
-                void afterStop(DataflowProcessor proc) {
-                    if( stopOnFirst && !target.isBound() )
-                        Op.bind(proc, target, Channel.STOP)
-                }
-            })
+        final listener = new DataflowEventAdapter() {
+            @Override
+            void afterStop(DataflowProcessor proc) {
+                if( stopOnFirst && !target.isBound() )
+                    Op.bind(proc, target, Channel.STOP)
+            }
+        }
 
-        newOperator(params) {
+        final code = {
             final proc = getDelegate() as DataflowProcessor
             final accept = discriminator.invoke(criteria, it)
             if( accept )
@@ -88,6 +85,12 @@ class FirstOp {
             if( accept || stopOnFirst )
                 proc.terminate()
         }
+
+        new Op()
+            .withInput(source)
+            .withListener(listener)
+            .withCode(code)
+            .apply()
 
         return target
     }

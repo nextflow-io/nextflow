@@ -17,7 +17,6 @@
 
 package nextflow.extension
 
-import static nextflow.extension.DataflowHelper.*
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -29,6 +28,7 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
+import nextflow.extension.op.ContextGrouping
 import nextflow.extension.op.Op
 /**
  * Implements reduce operator logic
@@ -113,12 +113,7 @@ class ReduceOp {
             }
         }
 
-        final parameters = new OpParams()
-            .withInput(source)
-            .withAccumulator(true)
-            .withListener(listener)
-
-        newOperator(parameters) {
+        final code = {
             final value = accum == null ? it : action.call(accum, it)
             final proc = getDelegate() as DataflowProcessor
             if( value!=Channel.VOID && value!=Channel.STOP ) {
@@ -127,6 +122,13 @@ class ReduceOp {
             if( stopOnFirst || value==Channel.STOP )
                 proc.terminate()
         }
+
+        new Op()
+            .withInput(source)
+            .withContext(new ContextGrouping())
+            .withListener(listener)
+            .withCode(code)
+            .apply()
 
         return target
     }

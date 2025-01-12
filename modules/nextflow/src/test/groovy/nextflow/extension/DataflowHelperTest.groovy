@@ -16,11 +16,8 @@
 
 package nextflow.extension
 
-import groovyx.gpars.dataflow.DataflowQueue
-import groovyx.gpars.dataflow.operator.DataflowEventListener
+
 import nextflow.Session
-import nextflow.extension.op.ContextGrouping
-import nextflow.extension.op.ContextSequential
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -29,32 +26,8 @@ import spock.lang.Unroll
  */
 class DataflowHelperTest extends Specification {
 
-
     def setupSpec() {
         new Session()
-    }
-
-    def 'should subscribe handlers'() {
-
-        when:
-        DataflowHelper.checkSubscribeHandlers( [:] )
-        then:
-        thrown(IllegalArgumentException)
-
-        when:
-        DataflowHelper.checkSubscribeHandlers( [ onNext:{}] )
-        then:
-        true
-
-        when:
-        DataflowHelper.checkSubscribeHandlers( [ onNext:{}, xxx:{}] )
-        then:
-        thrown(IllegalArgumentException)
-
-        when:
-        DataflowHelper.checkSubscribeHandlers( [ xxx:{}] )
-        then:
-        thrown(IllegalArgumentException)
     }
 
     @Unroll
@@ -74,53 +47,4 @@ class DataflowHelperTest extends Specification {
         [0]             | 'A'                           | ['A']         | []
     }
 
-    def 'should validate operator params' () {
-        when:
-        def p1 = new DataflowHelper.OpParams().toMap()
-        then:
-        p1.inputs == List.of()
-        p1.outputs == List.of()
-        p1.listeners == List.of()
-
-        when:
-        def s1 = new DataflowQueue()
-        def t1 = new DataflowQueue()
-        def l1 = Mock(DataflowEventListener)
-        and:
-        def p2 = new DataflowHelper.OpParams()
-                .withInput(s1)
-                .withOutput(t1)
-                .withListener(l1)
-                .withAccumulator(true)
-        then:
-        p2.inputs == List.of(s1)
-        p2.outputs == List.of(t1)
-        p2.listeners == List.of(l1)
-        p2.context instanceof ContextGrouping
-        and:
-        p2.toMap().inputs == List.of(s1)
-        p2.toMap().outputs == List.of(t1)
-        p2.toMap().listeners == List.of(l1)
-
-        when:
-        def s2 = new DataflowQueue()
-        def t2 = new DataflowQueue()
-        def l2 = Mock(DataflowEventListener)
-        and:
-        def p3 = new DataflowHelper.OpParams()
-            .withInputs([s1,s2])
-            .withOutputs([t1,t2])
-            .withListeners([l1,l2])
-            .withAccumulator(false)
-        then:
-        p3.inputs == List.of(s1,s2)
-        p3.outputs == List.of(t1,t2)
-        p3.listeners == List.of(l1,l2)
-        p3.context instanceof ContextSequential
-        and:
-        p3.toMap().inputs == List.of(s1,s2)
-        p3.toMap().outputs == List.of(t1,t2)
-        p3.toMap().listeners == List.of(l1,l2)
-
-    }
 }

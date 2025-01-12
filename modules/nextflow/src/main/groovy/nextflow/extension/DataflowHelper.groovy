@@ -21,7 +21,6 @@ import java.lang.reflect.InvocationTargetException
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.DataflowChannel
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
@@ -30,19 +29,12 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowEventListener
-import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
-import nextflow.dag.NodeMarker
-import nextflow.extension.op.ContextGrouping
 import nextflow.extension.op.Op
-import nextflow.extension.op.OpClosure
-import nextflow.extension.op.ContextSequential
-import nextflow.extension.op.OpContext
 import nextflow.prov.OperatorRun
-
 /**
  * This class provides helper methods to implement nextflow operators
  *
@@ -50,79 +42,6 @@ import nextflow.prov.OperatorRun
  */
 @Slf4j
 class DataflowHelper {
-
-    @CompileStatic
-    static class OpParams {
-        List<DataflowReadChannel> inputs
-        List<DataflowWriteChannel> outputs
-        List<DataflowEventListener> listeners
-        OpContext context = new ContextSequential()
-
-        OpParams() { }
-        
-        OpParams(Map params) {
-            if( params.inputs )
-                this.inputs = params.inputs as List<DataflowReadChannel>
-            if( params.outputs )
-                this.outputs = params.outputs as List<DataflowWriteChannel>
-            if( params.listeners )
-                this.listeners = params.listeners as List<DataflowEventListener>
-        }
-
-        OpParams withInput(DataflowReadChannel channel) {
-            assert channel != null
-            this.inputs = List.of(channel)
-            return this
-        }
-
-        OpParams withInputs(List<DataflowReadChannel> channels) {
-            assert channels != null
-            this.inputs = channels
-            return this
-        }
-
-        OpParams withOutput(DataflowWriteChannel channel) {
-            assert channel != null
-            this.outputs = List.of(channel)
-            return this
-        }
-
-        OpParams withOutputs(List<DataflowWriteChannel> channels) {
-            assert channels != null
-            this.outputs = channels
-            return this
-        }
-
-        OpParams withListener(DataflowEventListener listener) {
-            assert listener != null
-            this.listeners = List.of(listener)
-            return this
-        }
-
-        OpParams withListeners(List<DataflowEventListener> listeners) {
-            assert listeners != null
-            this.listeners = listeners
-            return this
-        }
-
-        OpParams withAccumulator(boolean acc) {
-            this.context = acc ? new ContextGrouping() : new ContextSequential()
-            return this
-        }
-
-        OpParams withContext(OpContext context) {
-            this.context = context
-            return this
-        }
-
-        Map toMap() {
-            final ret = new HashMap()
-            ret.inputs = inputs ?: List.of()
-            ret.outputs = outputs ?: List.of()
-            ret.listeners = listeners ?: List.of()
-            return ret
-        }
-    }
 
     private static Session getSession() { Global.getSession() as Session }
 
@@ -229,13 +148,10 @@ class DataflowHelper {
             params.listeners = [ DEF_ERROR_LISTENER ]
         }
 
-        return newOperator0(new OpParams(params), code)
-    }
-
-    static DataflowProcessor newOperator( OpParams params, Closure code ) {
-        if( !params.listeners )
-            params.withListener(DEF_ERROR_LISTENER)
-        return newOperator0(params, code)
+        return new Op()
+            .withParams(params)
+            .withCode(code)
+            .apply()
     }
 
     /**
@@ -247,6 +163,7 @@ class DataflowHelper {
      * @param outputs The list of list output {@code DataflowWriteChannel}s
      * @param code The closure to be executed by the operator
      */
+    @Deprecated
     static DataflowProcessor newOperator( List inputs, List outputs, Closure code ) {
         newOperator( inputs: inputs, outputs: outputs, code )
     }
@@ -283,63 +200,16 @@ class DataflowHelper {
         params.outputs = [output]
         params.listeners = [listener]
 
-        return newOperator0(new OpParams(params), code)
-    }
-
-    static private DataflowProcessor newOperator0(OpParams params, Closure code) {
-        assert params
-        assert params.inputs
-        assert params.listeners
-
-        // create the underlying dataflow operator
-        final context = params.context
-        final closure = new OpClosure(code, context)
-        final group = Dataflow.retrieveCurrentDFPGroup()
-        final operator = new DataflowOperator(group, params.toMap(), closure)
-        Op.context.put(operator, context)
-        operator.start()
-        // track the operator as dag node
-        NodeMarker.appendOperator(operator)
-        if( session && session.allOperators != null ) {
-            session.allOperators << operator
-        }
-        return operator
-    }
-
-    /*
-     * the list of valid subscription handlers
-     */
-    static private VALID_HANDLERS = [ 'onNext', 'onComplete', 'onError' ]
-
-    /**
-     * Verify that the map contains only valid names of subscribe handlers.
-     * Throws an {@code IllegalArgumentException} when an invalid name is specified
-     *
-     * @param handlers The handlers map
-     */
-    @PackageScope
-    static checkSubscribeHandlers( Map handlers ) {
-
-        if( !handlers ) {
-            throw new IllegalArgumentException("You must specify at least one of the following events: onNext, onComplete, onError")
-        }
-
-        handlers.keySet().each {
-            if( !VALID_HANDLERS.contains(it) )  throw new IllegalArgumentException("Not a valid handler name: $it")
-        }
-
+        return new Op()
+            .withParams(params)
+            .withCode(code)
+            .apply()
     }
 
     static final DataflowProcessor subscribeImpl(final DataflowReadChannel source, final Map<String,Closure> events ) {
-        subscribeImpl(source, false, events)
-    }
-
-    static final DataflowProcessor subscribeImpl(final DataflowReadChannel source, final boolean accumulator, final Map<String,Closure> events ) {
-        checkSubscribeHandlers(events)
         new SubscribeOp()
             .withSource(source)
             .withEvents(events)
-            .withContext( accumulator ? new ContextSequential() : new ContextGrouping() )
             .apply()
     }
 
