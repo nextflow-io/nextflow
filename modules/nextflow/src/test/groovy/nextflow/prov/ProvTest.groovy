@@ -574,7 +574,6 @@ class ProvTest extends Dsl2Spec {
                 .name == ['p1 (5)']
     }
 
-    @Ignore
     def 'should track provenance with mix operator'() {
         when:
         dsl_eval(globalConfig(), '''
@@ -608,6 +607,9 @@ class ProvTest extends Dsl2Spec {
         then:
         upstreamTasksOf('p3 (1)')
                 .name == ['p1 (1)']
+        and:
+        upstreamTasksOf('p3 (2)')
+            .name == ['p2 (1)']
 
     }
 
