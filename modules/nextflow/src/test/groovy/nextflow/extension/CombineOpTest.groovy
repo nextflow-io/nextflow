@@ -36,7 +36,7 @@ class CombineOpTest extends Specification {
         def op = new CombineOp(Mock(DataflowQueue), Mock(DataflowQueue))
 
         expect:
-        op.tuple(pivot, left,right) == result
+        op.tuple(pivot, left, right) == result
 
         where:
         pivot       | left              | right             | result

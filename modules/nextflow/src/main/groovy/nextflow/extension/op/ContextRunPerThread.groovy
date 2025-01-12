@@ -27,7 +27,7 @@ import nextflow.prov.OperatorRun
  */
 @Slf4j
 @CompileStatic
-class ContextJoining implements OpContext {
+class ContextRunPerThread implements OpContext {
 
     private final ThreadLocal<OperatorRun> runs = ThreadLocal.withInitial(()->new OperatorRun())
 

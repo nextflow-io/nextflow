@@ -29,7 +29,7 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 import nextflow.NF
 import nextflow.exception.AbortOperationException
-import nextflow.extension.op.ContextJoining
+import nextflow.extension.op.ContextRunPerThread
 import nextflow.extension.op.Op
 import nextflow.extension.op.OpContext
 import nextflow.extension.op.OpDatum
@@ -64,7 +64,7 @@ class JoinOp {
 
     private Set uniqueKeys = new LinkedHashSet()
 
-    private OpContext context = new ContextJoining()
+    private OpContext context = new ContextRunPerThread()
 
     JoinOp( DataflowReadChannel source, DataflowReadChannel target, Map params = null ) {
         CheckHelper.checkParams('join', params, JOIN_PARAMS)

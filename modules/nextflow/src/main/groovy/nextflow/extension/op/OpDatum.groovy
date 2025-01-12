@@ -33,11 +33,15 @@ class OpDatum {
         new OpDatum(value,run)
     }
 
-    static Object unwrap(Object obj) {
-        if( obj instanceof Collection )
-            return obj.collect(it-> unwrap(it))
-        if( obj instanceof OpDatum )
+    static Object unwrap(Object obj, List inputs=null) {
+        if( obj instanceof Collection ) {
+            return obj.collect(it-> unwrap(it,inputs))
+        }
+        if( obj instanceof OpDatum ) {
+            if(inputs!=null)
+                inputs.addAll(obj.run.inputIds)
             return obj.value
+        }
         else
             return obj
     }
