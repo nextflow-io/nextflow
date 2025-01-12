@@ -21,7 +21,9 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
+import nextflow.extension.op.ContextRunPerThread
 import nextflow.extension.op.Op
+import nextflow.extension.op.OpContext
 
 /**
  * Implements the {@link OperatorImpl#concat} operator
@@ -35,10 +37,11 @@ class ConcatOp {
 
     private DataflowReadChannel[] target
 
+    private OpContext context = new ContextRunPerThread()
+
     ConcatOp( DataflowReadChannel source, DataflowReadChannel... target ) {
         assert source != null
         assert target
-
         this.source = source
         this.target = target
     }
@@ -47,26 +50,21 @@ class ConcatOp {
         final result = CH.create()
         final allChannels = [source]
         allChannels.addAll(target)
-
         append(result, allChannels, 0)
         return result
     }
 
-
-    private static void append( DataflowWriteChannel result, List<DataflowReadChannel> channels, int index ) {
+    private void append( DataflowWriteChannel result, List<DataflowReadChannel> channels, int index ) {
         final current = channels[index++]
         final next = index < channels.size() ? channels[index] : null
-
-        final events = new HashMap<String,Closure>(2)
-        events.onNext = { DataflowProcessor proc, it -> Op.bind(proc, result, it) }
-        events.onComplete = { DataflowProcessor proc ->
-            if(next) append(result, channels, index)
-            else Op.bind(proc, result, Channel.STOP)
-        }
-
         new SubscribeOp()
             .withSource(current)
-            .withEvents(events)
+            .withContext(context)
+            .withOnNext { DataflowProcessor proc, it -> Op.bind(proc, result, it) }
+            .withOnComplete { DataflowProcessor proc ->
+                if(next) append(result, channels, index)
+                else Op.bind(proc, result, Channel.STOP)
+            }
             .apply()
     }
 }

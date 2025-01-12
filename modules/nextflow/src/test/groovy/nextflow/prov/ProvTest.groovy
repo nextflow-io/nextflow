@@ -703,4 +703,48 @@ class ProvTest extends Dsl2Spec {
             .name.sort() == ['p1 (2)', 'p2 (2)']
 
     }
+
+    def 'should track provenance with concat operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                def c1 = channel.of(1,2) | p1 
+                def c2 = channel.of(3,4) | p2 
+                p1.out | concat(p2.out) | p3  
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p3 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        upstreamTasksOf('p3 (1)')
+            .name == ['p1 (1)']
+        and:
+        upstreamTasksOf('p3 (2)')
+            .name == ['p1 (2)']
+        and:
+        upstreamTasksOf('p3 (3)')
+            .name == ['p2 (1)']
+        and:
+        upstreamTasksOf('p3 (4)')
+            .name == ['p2 (2)']
+    }
 }
