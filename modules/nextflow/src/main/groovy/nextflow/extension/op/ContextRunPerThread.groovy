@@ -34,14 +34,14 @@ class ContextRunPerThread implements OpContext {
     @Override
     synchronized OperatorRun allocateRun() {
         final run = runs.get()
-        log.debug "+ AllocateRun run=$run"
+        log.trace "+ AllocateRun run=$run"
         return run
     }
 
     @Override
     synchronized OperatorRun getOperatorRun() {
         final run = runs.get()
-        log.debug "+ GetOperatorRun run=$run"
+        log.trace "+ GetOperatorRun run=$run"
         runs.remove()
         return run
     }

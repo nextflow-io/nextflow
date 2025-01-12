@@ -19,6 +19,8 @@ package nextflow.extension
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.operator.DataflowEventListener
 import nextflow.Session
+import nextflow.extension.op.ContextGrouping
+import nextflow.extension.op.ContextSequential
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -58,7 +60,7 @@ class DataflowHelperTest extends Specification {
     @Unroll
     def 'should split entry' () {
         when:
-        def pair = DataflowHelper.makeKey(pivot, entry)
+        def pair = DataflowHelper.makeKey(pivot, entry, null)
         then:
         pair.keys == keys
         pair.values == values
@@ -94,7 +96,7 @@ class DataflowHelperTest extends Specification {
         p2.inputs == List.of(s1)
         p2.outputs == List.of(t1)
         p2.listeners == List.of(l1)
-        p2.accumulator
+        p2.context instanceof ContextGrouping
         and:
         p2.toMap().inputs == List.of(s1)
         p2.toMap().outputs == List.of(t1)
@@ -114,7 +116,7 @@ class DataflowHelperTest extends Specification {
         p3.inputs == List.of(s1,s2)
         p3.outputs == List.of(t1,t2)
         p3.listeners == List.of(l1,l2)
-        !p3.accumulator
+        p3.context instanceof ContextSequential
         and:
         p3.toMap().inputs == List.of(s1,s2)
         p3.toMap().outputs == List.of(t1,t2)

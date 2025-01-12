@@ -336,62 +336,16 @@ class DataflowHelper {
 
     static final DataflowProcessor subscribeImpl(final DataflowReadChannel source, final boolean accumulator, final Map<String,Closure> events ) {
         checkSubscribeHandlers(events)
-
-        def error = false
-        def stopOnFirst = source instanceof DataflowExpression
-        def listener = new DataflowEventAdapter() {
-
-            @Override
-            void afterStop(final DataflowProcessor processor) {
-                if( !events.onComplete || error ) return
-                try {
-                    events.onComplete.call(processor)
-                }
-                catch( Exception e ) {
-                    OperatorImpl.log.error("@unknown", e)
-                    session.abort(e)
-                }
-            }
-
-            @Override
-            boolean onException(final DataflowProcessor processor, final Throwable e) {
-                error = true
-                if( !events.onError ) {
-                    log.error("@unknown", e)
-                    session.abort(e)
-                }
-                else {
-                    events.onError.call(e)
-                }
-                return true
-            }
-        }
-
-        final params = new OpParams()
-            .withInput(source)
-            .withListener(listener)
-            .withAccumulator(accumulator)
-
-        newOperator (params) {
-            final proc = ((DataflowProcessor) getDelegate())
-            if( events.onNext instanceof Closure ) {
-                final action = (Closure) events.onNext
-                final types = action.getParameterTypes()
-                types.size()==2 && types[0]==DataflowProcessor.class
-                    ? action.call(proc, it)
-                    : action.call(it)
-            }
-            if( stopOnFirst ) {
-                proc.terminate()
-            }
-        }
+        new SubscribeOp()
+            .withSource(source)
+            .withEvents(events)
+            .withContext( accumulator ? new ContextSequential() : new ContextGrouping() )
+            .apply()
     }
 
     @PackageScope
     @CompileStatic
     static KeyPair makeKey(List<Integer> pivot, entry, OperatorRun run) {
-        if( run==null )
-            throw new IllegalStateException("Argument 'run' cannot be null")
         final result = new KeyPair()
 
         if( entry !instanceof List ) {

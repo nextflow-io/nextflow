@@ -40,14 +40,14 @@ class ContextGrouping implements OpContext {
     @Override
     OperatorRun allocateRun() {
         final result = holder.get('run')
-        log.debug "+ AllocateRun=$result"
+        log.trace "+ AllocateRun=$result"
         return result
     }
     
     @Override
     OperatorRun getOperatorRun() {
         final result = holder.get('run')
-        log.debug "+ GetOperatorRun=$result"
+        log.trace "+ GetOperatorRun=$result"
         holder.put('run', new OperatorRun())
         return result
     }

@@ -16,7 +16,6 @@
 
 package nextflow
 
-
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -74,7 +73,6 @@ import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import nextflow.util.LoggerHelper
 import nextflow.util.NameGenerator
-import nextflow.util.SysHelper
 import nextflow.util.ThreadPoolManager
 import nextflow.util.Threads
 import nextflow.util.VersionNumber
@@ -800,7 +798,7 @@ class Session implements ISession {
             if( status )
                 log.debug(status)
             // dump threads status
-            log.debug(SysHelper.dumpThreads())
+//            log.debug(SysHelper.dumpThreads())
             // force termination
             notifyError(null)
             ansiLogObserver?.forceTermination()

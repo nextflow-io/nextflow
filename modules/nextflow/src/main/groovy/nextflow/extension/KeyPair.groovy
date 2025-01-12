@@ -39,7 +39,8 @@ class KeyPair {
     }
 
     void addValue(el, OperatorRun run) {
-        values.add(OpDatum.of(el,run))
+        final v = run ? OpDatum.of(el,run) : el
+        values.add(v)
     }
 
     static private safeStr(key) {
