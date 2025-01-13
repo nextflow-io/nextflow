@@ -91,36 +91,6 @@ class OperatorImpl {
     }
 
     /**
-     * Chain operator, this is a synonym of {@code DataflowReadChannel.chainWith}
-     *
-     * @param source
-     * @param closure
-     * @return
-     */
-    @Deprecated
-    DataflowWriteChannel chain(final DataflowReadChannel<?> source, final Closure closure) {
-        final target = CH.createBy(source)
-        newOperator(source, target, stopErrorListener(source,target), new ChainWithClosure(closure))
-        return target
-    }
-
-    /**
-     * Chain operator, this is a synonym of {@code DataflowReadChannel.chainWith}
-     *
-     * @param source
-     * @param closure
-     * @return
-     */
-    @Deprecated
-    DataflowWriteChannel chain(final DataflowReadChannel<?> source, final Map<String, Object> params, final Closure closure) {
-        return ChainOp.create()
-                .withSource(source)
-                .withTarget(CH.createBy(source))
-                .withAction(closure)
-                .apply()
-    }
-
-    /**
      * Transform the items emitted by a channel by applying a function to each of them
      *
      * @param channel
@@ -987,19 +957,31 @@ class OperatorImpl {
     }
 
     DataflowWriteChannel toInteger(final DataflowReadChannel source) {
-        return chain(source, { it -> it as Integer })
+        return new MapOp()
+            .withSource(source)
+            .withMapper { it -> it as Integer }
+            .apply()
     }
 
     DataflowWriteChannel toLong(final DataflowReadChannel source) {
-        return chain(source, { it -> it as Long })
+        return new MapOp()
+            .withSource(source)
+            .withMapper { it -> it as Long }
+            .apply()
     }
 
     DataflowWriteChannel toFloat(final DataflowReadChannel source) {
-        return chain(source, { it -> it as Float })
+        return new MapOp()
+            .withSource(source)
+            .withMapper { it -> it as Float }
+            .apply()
     }
 
     DataflowWriteChannel toDouble(final DataflowReadChannel source) {
-        return chain(source, { it -> it as Double })
+        return new MapOp()
+            .withSource(source)
+            .withMapper { it -> it as Double }
+            .apply()
     }
 
     DataflowWriteChannel transpose( final DataflowReadChannel source, final Map params=null ) {

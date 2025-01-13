@@ -38,9 +38,21 @@ class MapOp {
 
     private DataflowWriteChannel target
 
+    MapOp() {}
+
     MapOp( final DataflowReadChannel<?> source, final Closure mapper ) {
         this.source = source
         this.mapper = mapper
+    }
+
+    MapOp withSource(DataflowReadChannel<?> source) {
+        this.source = source
+        return this
+    }
+
+    MapOp withMapper(Closure code) {
+        this.mapper = code
+        return this
     }
 
     MapOp setTarget( DataflowWriteChannel target ) {
