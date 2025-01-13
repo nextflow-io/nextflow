@@ -35,6 +35,7 @@ extensions = [
   'sphinxext.rediraffe',
   'sphinx_rtd_theme',
   'myst_parser',
+  'sphinx_tabs.tabs',
   'sphinx_copybutton'
 ]
 

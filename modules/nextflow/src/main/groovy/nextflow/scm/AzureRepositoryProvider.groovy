@@ -35,6 +35,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
 
     private String user
     private String repo
+    private String urlPath;
     private String continuationToken
 
     AzureRepositoryProvider(String project, ProviderConfig config=null) {
@@ -42,6 +43,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
         Azure repo format follows Organization/Project/Repository where Project can be optional
         If Project is not present then Repository is used as Project (and also as Repository)
          */
+        this.urlPath = project
         def tokens = project.tokenize('/')
         this.repo = tokens.removeLast()
         if( tokens.size() == 1){
@@ -164,7 +166,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     String getRepositoryUrl() {
-        "${config.server}/$project"
+        "${config.server}/${urlPath}"
     }
 
     /** {@inheritDoc} */
