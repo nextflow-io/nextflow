@@ -2,7 +2,7 @@
 
 # Your first script
 
-Once you have Nextflow installed, you’re ready to run your first script. This guide includes:
+Once you have Nextflow installed, you’re ready to run your first script. This guide details how to run a basic Nextflow pipeline that will run teach you fundamental Nextflow skills. It includes:
 
 - Running a pipeline
 - Modifying and resuming a pipeline
@@ -183,7 +183,7 @@ executor >  local (2)
 
 Nextflow skips the execution of the process `splitString` process and retrieves the results from the cache. The `convertToUpper` process is executed twice.
 
-See {ref}`cache-resume-page` for more information about Nextflow cache and resume. 
+See {ref}`cache-resume-page` for more information about Nextflow cache and resume functionality. 
 
 (getstarted-params)=
 
