@@ -437,8 +437,6 @@ class AzBatchService implements Closeable {
 
         // Add environment variables for managed identity if configured
         final env = [:] as Map<String,String>
-        // env.put('AZCOPY_LOG_LOCATION', '$HOME/.azcopy_log')
-        // env.put('AZCOPY_JOB_PLAN_LOCATION', '$HOME/.azcopy')
         if( pool?.opts?.managedIdentityId ) {
             env.put('AZCOPY_AUTO_LOGIN_TYPE', 'MSI')
             env.put('AZCOPY_MSI_CLIENT_ID', pool.opts.managedIdentityId)
