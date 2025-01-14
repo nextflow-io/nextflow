@@ -468,14 +468,14 @@ class FileHelper {
      * @return The {@code true} when the path is a NFS mount {@code false} otherwise
      */
     @Memoized
-    static boolean isPathNFS(Path path) {
+    static boolean isPathSharedFS(Path path) {
         assert path
         if( path.getFileSystem() != FileSystems.getDefault() )
             return false
 
         final type = getPathFsType(path)
-        def result = type == 'nfs'
-        log.debug "NFS path ($result): $path"
+        final result = type == 'nfs' || type == 'lustre'
+        log.debug "FS path type ($result): $path"
         return result
     }
 
@@ -491,7 +491,7 @@ class FileHelper {
         process.destroy()
 
         if( status ) {
-            log.debug "Can't check if specified path is NFS ($status): ${FilesEx.toUriString(path)}\n${Bolts.indent(text,'  ')}"
+            log.debug "Unable to determine FS type ($status): ${FilesEx.toUriString(path)}\n${Bolts.indent(text,'  ')}"
             return null
         }
 
@@ -503,8 +503,8 @@ class FileHelper {
      *      {@code true} when the current session working directory is a NFS mounted path
      *      {@code false otherwise}
      */
-    static boolean getWorkDirIsNFS() {
-        isPathNFS(Global.session.workDir)
+    static boolean getWorkDirIsSharedFS() {
+        isPathSharedFS(Global.session.workDir)
     }
 
     /**
@@ -546,7 +546,7 @@ class FileHelper {
         if( Files.exists(self) )
             return true
 
-        if( !workDirIsNFS )
+        if( !workDirIsSharedFS )
             return false
 
 

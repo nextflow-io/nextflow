@@ -56,6 +56,7 @@ process someJob {
     secret 'MY_ACCESS_KEY'
     secret 'MY_SECRET_KEY'
 
+    script:
     """
     your_command --access \$MY_ACCESS_KEY --secret \$MY_SECRET_KEY
     """
