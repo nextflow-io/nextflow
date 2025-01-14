@@ -135,6 +135,8 @@ WARN: WORKFLOW OUTPUT DSL IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CH
 
 ::: 
 
+See 
+
 (getstarted-resume)=
 
 ## Modify and resume
@@ -217,6 +219,8 @@ executor >  local (4)
 ```
 
 The input string is now longer and the `splitString` process splits it into three chunks. The `convertToUpper` process is run three times.
+
+See {ref}`cli-params` for more information about modifying pipeline parameters.
 
 ## Next steps
 
