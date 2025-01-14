@@ -87,7 +87,9 @@ This script defines two processes:
 
 The `splitString` output is emitted as a single element. The `flatten` operator splits this combined element so that each file is treated as a sole element.
 
-The outputs from both processes are published in the `results` directory. To run your pipeline:
+The outputs from both processes are published in the `results` directory. Each publish target is saved into a subdirectory of the `results` directory. By default, the target name is used as the directory name.
+
+To run your pipeline:
 
 1. Create a new file named `main.nf` in your current directory
 2. Copy and save the above pipeline to your new file
