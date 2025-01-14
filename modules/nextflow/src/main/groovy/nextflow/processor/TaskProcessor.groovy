@@ -561,7 +561,9 @@ class TaskProcessor {
 
             // the channel forwarding the data from the *iterator* process to the target task
             final linkingChannels = new ArrayList(size)
-            size.times { linkingChannels[it] = new DataflowQueue() }
+            for( int i=0; i<size; i++ ) {
+                linkingChannels[i] = new DataflowQueue()
+            }
 
             // the script implementing the iterating process
             final forwarder = new ForwardClosure(size, iteratorIndexes)

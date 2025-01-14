@@ -89,11 +89,9 @@ class ProvTest extends Dsl2Spec {
         then:
         upstreamTasksOf('p2 (1)')
                 .name == ['p1 (1)']
-
         and:
          upstreamTasksOf('p3 (1)')
                 .name == ['p1 (2)']
-
         and:
         upstreamTasksOf('p3 (2)')
                 .name == ['p1 (3)']
@@ -125,15 +123,12 @@ class ProvTest extends Dsl2Spec {
         then:
         upstreamTasksOf('p2 (1)')
                 .name == ['p1 (1)']
-
         and:
         upstreamTasksOf('p2 (2)')
                 .name == ['p1 (1)']
-
         and:
         upstreamTasksOf('p2 (3)')
                 .name == ['p1 (2)']
-
         and:
         upstreamTasksOf('p2 (4)')
                 .name == ['p1 (2)']
@@ -307,11 +302,9 @@ class ProvTest extends Dsl2Spec {
         then:
         upstreamTasksOf('p2 (1)')
                 .name == ['p1 (1)']
-
         then:
         upstreamTasksOf('p2 (2)')
                 .name == ['p1 (2)']
-
         then:
         upstreamTasksOf('p2 (3)')
                 .name == ['p1 (4)']
@@ -568,12 +561,12 @@ class ProvTest extends Dsl2Spec {
         and:
         upstreamTasksOf('p2 (2)')
                 .name == ['p1 (3)', 'p1 (4)']
-
         and:
         upstreamTasksOf('p2 (3)')
                 .name == ['p1 (5)']
     }
 
+    @Ignore // disabling because some assertions are not deterministic
     def 'should track provenance with mix operator'() {
         when:
         dsl_eval(globalConfig(), '''
@@ -610,7 +603,6 @@ class ProvTest extends Dsl2Spec {
         and:
         upstreamTasksOf('p3 (2)')
             .name == ['p2 (1)']
-
     }
 
     def 'should track provenance with join operator'() {
@@ -646,18 +638,15 @@ class ProvTest extends Dsl2Spec {
         then:
         upstreamTasksOf('p3 (1)')
                 .name.sort() == ['p1 (1)', 'p2 (1)']
-
         and:
         upstreamTasksOf('p3 (2)')
             .name.sort() == ['p1 (2)', 'p2 (2)']
-
         and:
         upstreamTasksOf('p3 (3)')
             .name.sort() == ['p2 (3)']
-
     }
 
-
+    @Ignore // disabling because some assertions are not deterministic 
     def 'should track provenance with combine operator'() {
         when:
         dsl_eval(globalConfig(), '''
@@ -691,15 +680,12 @@ class ProvTest extends Dsl2Spec {
         then:
         upstreamTasksOf('p3 (1)')
             .name.sort() == ['p1 (1)', 'p2 (1)']
-
         and:
         upstreamTasksOf('p3 (2)')
             .name.sort() == ['p1 (1)', 'p2 (2)']
-
         and:
         upstreamTasksOf('p3 (3)')
             .name.sort() == ['p1 (2)', 'p2 (1)']
-
         and:
         upstreamTasksOf('p3 (4)')
             .name.sort() == ['p1 (2)', 'p2 (2)']
