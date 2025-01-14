@@ -35,7 +35,6 @@ import nextflow.Channel
 import nextflow.Global
 import nextflow.NF
 import nextflow.Session
-import nextflow.extension.op.Op
 import nextflow.script.ChannelOut
 import nextflow.script.TokenBranchDef
 import nextflow.script.TokenMultiMapDef
@@ -98,9 +97,10 @@ class OperatorImpl {
      * @return
      */
     DataflowWriteChannel map(final DataflowReadChannel source, final Closure closure) {
-        assert source != null
-        assert closure
-        return new MapOp(source, closure).apply()
+        return new MapOp()
+            .withSource(source)
+            .withMapper(closure)
+            .apply()
     }
 
     /**
@@ -112,42 +112,10 @@ class OperatorImpl {
      */
     DataflowWriteChannel flatMap(final DataflowReadChannel<?> source, final Closure closure=null) {
         assert source != null
-
-        final target = CH.create()
-        final listener = stopErrorListener(source,target)
-
-        newOperator(source, target, listener) { Object item ->
-
-            final result = closure != null ? closure.call(item) : item
-            final proc = ((DataflowProcessor) getDelegate())
-
-            switch( result ) {
-                case Collection:
-                    result.each { it -> Op.bind(proc, target,it) }
-                    break
-
-                case (Object[]):
-                    result.each { it -> Op.bind(proc, target,it) }
-                    break
-
-                case Map:
-                    result.each { it -> Op.bind(proc, target,it) }
-                    break
-
-                case Map.Entry:
-                    Op.bind(proc, target, (result as Map.Entry).key )
-                    Op.bind(proc, target, (result as Map.Entry).value )
-                    break
-
-                case Channel.VOID:
-                    break
-
-                default:
-                    Op.bind(proc, target, result)
-            }
-        }
-
-        return target
+        new FlatMapOp()
+            .withSource(source)
+            .withMapper(closure)
+            .apply()
     }
 
     /**

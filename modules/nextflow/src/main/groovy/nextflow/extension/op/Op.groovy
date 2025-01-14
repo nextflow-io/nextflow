@@ -173,7 +173,7 @@ class Op {
         final closure = new OpClosure(code, context)
         final group = Dataflow.retrieveCurrentDFPGroup()
         final operator = new DataflowOperator(group, toMap(), closure)
-        Op.allContexts.put(operator, context)
+        allContexts.put(operator, context)
         operator.start()
         // track the operator as dag node
         NodeMarker.appendOperator(operator)

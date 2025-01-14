@@ -45,12 +45,14 @@ class MapOp {
         this.mapper = mapper
     }
 
-    MapOp withSource(DataflowReadChannel<?> source) {
+    MapOp withSource(DataflowReadChannel source) {
+        assert source!=null
         this.source = source
         return this
     }
 
     MapOp withMapper(Closure code) {
+        assert code!=null
         this.mapper = code
         return this
     }
