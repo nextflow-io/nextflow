@@ -55,7 +55,7 @@ class ToListOp {
             new SubscribeOp()
                 .withSource(source)
                 .withOnNext({ result.add(it) })
-                .withOnComplete({ DataflowProcessor processor -> Op.bind(processor, target, result) })
+                .withOnComplete({ DataflowProcessor dp -> Op.bind(dp, target, result) })
                 .apply()
             return target
         }

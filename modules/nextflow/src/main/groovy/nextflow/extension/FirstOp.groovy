@@ -71,9 +71,9 @@ class FirstOp {
 
         final listener = new DataflowEventAdapter() {
             @Override
-            void afterStop(DataflowProcessor proc) {
+            void afterStop(DataflowProcessor dp) {
                 if( stopOnFirst && !target.isBound() )
-                    Op.bind(proc, target, Channel.STOP)
+                    Op.bind(dp, target, Channel.STOP)
             }
         }
 

@@ -99,14 +99,14 @@ class ReduceOp {
             /*
              * when terminates bind the result value
              */
-            void afterStop(final DataflowProcessor processor) {
+            void afterStop(final DataflowProcessor dp) {
                 final result = beforeBind
                     ? beforeBind.call(accum)
                     : accum
-                Op.bind(processor, target, result)
+                Op.bind(dp, target, result)
             }
 
-            boolean onException(final DataflowProcessor processor, final Throwable e) {
+            boolean onException(final DataflowProcessor dp, final Throwable e) {
                 log.error("@unknown", e)
                 session.abort(e)
                 return true;

@@ -91,7 +91,7 @@ class DataflowHelper {
     @PackageScope
     static DEF_ERROR_LISTENER = new DataflowEventAdapter() {
         @Override
-        boolean onException(final DataflowProcessor processor, final Throwable t) {
+        boolean onException(final DataflowProcessor dp, final Throwable t) {
             final e = t instanceof InvocationTargetException ? t.cause : t
             OperatorImpl.log.error("@unknown", e)
             session?.abort(e)
@@ -104,16 +104,16 @@ class DataflowHelper {
 
         new DataflowEventAdapter() {
             @Override
-            void afterRun(final DataflowProcessor processor, final List<Object> messages) {
+            void afterRun(final DataflowProcessor dp, final List<Object> messages) {
                 if( source instanceof DataflowExpression ) {
                     if( target !instanceof DataflowExpression )
-                        Op.bind(processor, target, Channel.STOP )
-                    processor.terminate()
+                        Op.bind(dp, target, Channel.STOP )
+                    dp.terminate()
                 }
             }
 
             @Override
-            boolean onException(final DataflowProcessor processor, final Throwable e) {
+            boolean onException(final DataflowProcessor dp, final Throwable e) {
                 DataflowHelper.log.error("@unknown", e)
                 session.abort(e)
                 return true

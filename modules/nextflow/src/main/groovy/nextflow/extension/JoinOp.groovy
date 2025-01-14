@@ -125,7 +125,7 @@ class JoinOp {
 
         final Map<String,Closure> result = new HashMap<>(2)
 
-        result.onNext = { DataflowProcessor proc, Object it ->
+        result.onNext = { DataflowProcessor dp, Object it ->
             synchronized (this) {
                 if(!failed) try {
                     final entries = join0(buffer, size, index, it)
@@ -135,12 +135,12 @@ class JoinOp {
                 }
                 catch (Exception e) {
                     failed = true
-                    Op.bind(proc, target, Channel.STOP)
+                    Op.bind(dp, target, Channel.STOP)
                     throw e
                 }
             }}
 
-        result.onComplete = { DataflowProcessor proc ->
+        result.onComplete = { DataflowProcessor dp ->
             if( stopCount.decrementAndGet()==0 && !failed ) {
                 try {
                     if( remainder || failOnDuplicate )
@@ -149,7 +149,7 @@ class JoinOp {
                         checkForMismatch(buffer)
                 }
                 finally {
-                    Op.bind(proc, target, Channel.STOP)
+                    Op.bind(dp, target, Channel.STOP)
                 }
             }}
 

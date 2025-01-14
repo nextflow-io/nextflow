@@ -61,9 +61,9 @@ class CollectOp {
             .withSource(source)
             .withContext(new ContextGrouping())
             .withOnNext { append(result, it) }
-            .withOnComplete { DataflowProcessor processor ->
+            .withOnComplete { DataflowProcessor dp ->
                 final msg = result ? new ArrayBag(normalise(result)) : Channel.STOP
-                Op.bind(processor, target, msg)
+                Op.bind(dp, target, msg)
             }
             .apply()
 

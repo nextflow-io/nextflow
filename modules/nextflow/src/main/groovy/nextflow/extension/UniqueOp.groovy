@@ -69,7 +69,7 @@ class UniqueOp {
 
         // when the operator stop clear the history map
         final listener = new DataflowEventAdapter() {
-            void afterStop(final DataflowProcessor processor) {
+            void afterStop(final DataflowProcessor dp) {
                 history.clear()
             }
         }

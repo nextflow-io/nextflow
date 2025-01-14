@@ -60,10 +60,10 @@ class ConcatOp {
         new SubscribeOp()
             .withSource(current)
             .withContext(context)
-            .withOnNext { DataflowProcessor proc, it -> Op.bind(proc, result, it) }
-            .withOnComplete { DataflowProcessor proc ->
+            .withOnNext { DataflowProcessor dp, Object it -> Op.bind(dp, result, it) }
+            .withOnComplete { DataflowProcessor dp ->
                 if(next) append(result, channels, index)
-                else Op.bind(proc, result, Channel.STOP)
+                else Op.bind(dp, result, Channel.STOP)
             }
             .apply()
     }

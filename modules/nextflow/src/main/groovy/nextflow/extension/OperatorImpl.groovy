@@ -555,17 +555,17 @@ class OperatorImpl {
 
         listeners << new DataflowEventAdapter() {
             @Override
-            void afterRun(final DataflowProcessor processor, final List<Object> messages) {
+            void afterRun(final DataflowProcessor dp, final List<Object> messages) {
                 if( stopOnFirst )
-                    processor.terminate()
+                    dp.terminate()
             }
 
             @Override
-            void afterStop(final DataflowProcessor processor) {
-                processor.bindOutput(Channel.STOP)
+            void afterStop(final DataflowProcessor dp) {
+                dp.bindOutput(Channel.STOP)
             }
 
-            boolean onException(final DataflowProcessor processor, final Throwable e) {
+            boolean onException(final DataflowProcessor dp, final Throwable e) {
                 OperatorImpl.log.error("@unknown", e)
                 session.abort(e)
                 return true;
@@ -657,7 +657,7 @@ class OperatorImpl {
         // -- intercepts the PoisonPill and sent out the items remaining in the buffer when the 'remainder' flag is true
         def listener = new DataflowEventAdapter() {
 
-            Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
+            Object controlMessageArrived(final DataflowProcessor dp, final DataflowReadChannel<Object> channel, final int index, final Object message) {
                 if( message instanceof PoisonPill && keepRemainder && allBuffers.size() ) {
                     allBuffers.each {
                         target.bind( it )
@@ -668,7 +668,7 @@ class OperatorImpl {
             }
 
             @Override
-            boolean onException(DataflowProcessor processor, Throwable e) {
+            boolean onException(DataflowProcessor dp, Throwable e) {
                 OperatorImpl.log.error("@unknown", e)
                 session.abort(e)
                 return true

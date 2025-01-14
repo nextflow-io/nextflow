@@ -80,8 +80,8 @@ class MathOp {
         return target
     }
 
-    private void completion(DataflowProcessor proc) {
-        Op.bind(proc, target, aggregate.result )
+    private void completion(DataflowProcessor dp) {
+        Op.bind(dp, target, aggregate.result )
     }
 
     /**

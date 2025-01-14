@@ -141,7 +141,7 @@ class CollectFileOp {
      * each time a value is received, invoke the closure and
      * append its result value to a file
      */
-    protected processItem( DataflowProcessor proc, Object item ) {
+    protected processItem( DataflowProcessor dp, Object item ) {
         def value = closure ? closure.call(item) : item
 
         // when the value is a list, the first item hold the grouping key
@@ -187,13 +187,13 @@ class CollectFileOp {
      *
      * @params obj: NOT USED. It needs to be declared because this method is invoked as a closure
      */
-    protected emitItems(DataflowProcessor processor) {
+    protected emitItems(DataflowProcessor dp) {
         // emit collected files to 'result' channel
         collector.saveTo(storeDir).each {
-            Op.bind(processor, result, it)
+            Op.bind(dp, result, it)
         }
         // close the channel
-        Op.bind(processor, result, Channel.STOP)
+        Op.bind(dp, result, Channel.STOP)
         // close the collector
         collector.safeClose()
     }

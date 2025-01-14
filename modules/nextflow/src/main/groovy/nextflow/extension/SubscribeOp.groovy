@@ -91,10 +91,10 @@ class SubscribeOp {
         def listener = new DataflowEventAdapter() {
 
             @Override
-            void afterStop(final DataflowProcessor processor) {
+            void afterStop(final DataflowProcessor dp) {
                 if( !onComplete || error ) return
                 try {
-                    onComplete.call(processor)
+                    onComplete.call(dp)
                 }
                 catch( Exception e ) {
                     SubscribeOp.log.error("@unknown", e)
@@ -103,7 +103,7 @@ class SubscribeOp {
             }
 
             @Override
-            boolean onException(final DataflowProcessor processor, final Throwable e) {
+            boolean onException(final DataflowProcessor dp, final Throwable e) {
                 error = true
                 if( !onError ) {
                     log.error("@unknown", e)

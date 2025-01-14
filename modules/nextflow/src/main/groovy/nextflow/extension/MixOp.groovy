@@ -68,8 +68,8 @@ class MixOp {
             target = CH.create()
         final count = new AtomicInteger( others.size()+1 )
         final handlers = [
-                onNext: { DataflowProcessor proc, it -> Op.bind(proc, target, it) },
-                onComplete: { DataflowProcessor proc -> if(count.decrementAndGet()==0) { Op.bind(proc, target, Channel.STOP) } }
+                onNext: { DataflowProcessor dp, it -> Op.bind(dp, target, it) },
+                onComplete: { DataflowProcessor dp -> if(count.decrementAndGet()==0) { Op.bind(dp, target, Channel.STOP) } }
         ]
 
         subscribe0(source, handlers)

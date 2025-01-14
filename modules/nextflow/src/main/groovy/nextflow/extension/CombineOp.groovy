@@ -99,7 +99,7 @@ class CombineOp {
 
     private Map handler(int index, DataflowWriteChannel target, AtomicInteger stopCount) {
 
-        def opts = new LinkedHashMap(2)
+        final opts = new LinkedHashMap(2)
         opts.onNext = {
             if( pivot ) {
                 final pair = makeKey(pivot, it, context.getOperatorRun())
@@ -110,9 +110,9 @@ class CombineOp {
             }
         }
 
-        opts.onComplete = { DataflowProcessor proc ->
+        opts.onComplete = { DataflowProcessor dp ->
             if( stopCount.decrementAndGet()==0) {
-                Op.bind(proc, target, Channel.STOP)
+                Op.bind(dp, target, Channel.STOP)
             }}
 
         return opts

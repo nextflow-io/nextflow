@@ -52,21 +52,21 @@ class BranchOp {
 
     ChannelOut getOutput() { this.output }
 
-    protected void doNext(DataflowProcessor proc, Object it) {
+    protected void doNext(DataflowProcessor dp, Object it) {
         TokenBranchChoice ret = switchDef.closure.call(it)
         if( ret ) {
-            Op.bind(proc, targets[ret.choice], ret.value)
+            Op.bind(dp, targets[ret.choice], ret.value)
         }
     }
 
-    protected void doComplete(DataflowProcessor proc) {
+    protected void doComplete(DataflowProcessor dp) {
         for( DataflowWriteChannel ch : targets.values() ) {
             if( ch instanceof DataflowExpression ) {
                 if( !ch.isBound() )
-                    Op.bind(proc, ch, Channel.STOP)
+                    Op.bind(dp, ch, Channel.STOP)
             }
             else {
-                Op.bind(proc, ch, Channel.STOP)
+                Op.bind(dp, ch, Channel.STOP)
             }
         }
     }

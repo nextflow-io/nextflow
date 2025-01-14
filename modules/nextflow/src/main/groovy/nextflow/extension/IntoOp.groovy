@@ -107,10 +107,10 @@ class IntoOp {
         final stopOnFirst = source instanceof DataflowExpression
         final listener = new DataflowEventAdapter() {
             @Override
-            void afterRun(DataflowProcessor processor, List<Object> messages) {
+            void afterRun(DataflowProcessor dp, List<Object> messages) {
                 if( !stopOnFirst ) return
                 // -- terminate the process
-                processor.terminate()
+                dp.terminate()
                 // -- close the output channels
                 for( def it : outputs ) {
                     if( !(it instanceof DataflowExpression))
@@ -123,7 +123,7 @@ class IntoOp {
             }
 
             @Override
-            public boolean onException(final DataflowProcessor processor, final Throwable e) {
+            public boolean onException(final DataflowProcessor dp, final Throwable e) {
                 log.error("@unknown", e)
                 session.abort(e)
                 return true;

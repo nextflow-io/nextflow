@@ -56,7 +56,7 @@ class LastOp {
         new SubscribeOp()
             .withSource(source)
             .withOnNext{ last = it }
-            .withOnComplete{ DataflowProcessor proc -> Op.bind(proc, target, last) }
+            .withOnComplete{ DataflowProcessor dp -> Op.bind(dp, target, last) }
             .apply()
         return target
     }

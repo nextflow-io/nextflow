@@ -57,14 +57,14 @@ class TakeOp {
 
         final listener = new DataflowEventAdapter() {
             @Override
-            void afterRun(final DataflowProcessor processor, final List<Object> messages) {
+            void afterRun(final DataflowProcessor dp, final List<Object> messages) {
                 if( ++count >= length ) {
-                    processor.bindOutput( Channel.STOP )
-                    processor.terminate()
+                    dp.bindOutput( Channel.STOP )
+                    dp.terminate()
                 }
             }
 
-            boolean onException(final DataflowProcessor processor, final Throwable e) {
+            boolean onException(final DataflowProcessor dp, final Throwable e) {
                 TakeOp.log.error("@unknown", e)
                 (Global.session as Session).abort(e)
                 return true;
