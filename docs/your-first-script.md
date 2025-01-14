@@ -2,7 +2,7 @@
 
 # Your first script
 
-Once you have Nextflow installed, you’re ready to run your first script. This guide details how to run a basic Nextflow pipeline that will run teach you fundamental Nextflow skills. It includes:
+Once you have Nextflow installed, you’re ready to run your first script. This guide details how to run a basic Nextflow pipeline. It includes:
 
 - Running a pipeline
 - Modifying and resuming a pipeline
@@ -87,7 +87,7 @@ This script defines two processes:
 
 The `splitString` output is emitted as a single element. The `flatten` operator splits this combined element so that each file is treated as a sole element.
 
-The outputs from both processes are published in the `results` directory. Each publish target is saved into a subdirectory of the `results` directory. By default, the target names, that is, `lower` and `upper`, are used as the subdirectory names.
+The outputs from both processes are published in the `results` directory. Each publish target is saved into a `results` subdirectory. By default, the target names, that is, `lower` and `upper`, are used as the subdirectory names.
 
 To run your pipeline:
 
