@@ -73,6 +73,7 @@ import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import nextflow.util.LoggerHelper
 import nextflow.util.NameGenerator
+import nextflow.util.SysHelper
 import nextflow.util.ThreadPoolManager
 import nextflow.util.Threads
 import nextflow.util.VersionNumber
@@ -798,7 +799,8 @@ class Session implements ISession {
             if( status )
                 log.debug(status)
             // dump threads status
-//            log.debug(SysHelper.dumpThreads())
+            if( log.isTraceEnabled() )
+                log.trace(SysHelper.dumpThreads())
             // force termination
             notifyError(null)
             ansiLogObserver?.forceTermination()
