@@ -31,7 +31,11 @@ import nextflow.util.ArrayTuple
 
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
-
+/**
+ * Manages the offload of publishing outputs to Nextflow tasks
+ *
+ * @author Jorge Ejarque <jorge.ejarque@seqera.io>
+ */
 @Slf4j
 class PublishOffloadManager {
     Map<Integer, ArrayTuple> runningPublications= new HashMap<Integer, ArrayTuple>(10)
@@ -42,37 +46,41 @@ class PublishOffloadManager {
     private PublishTaskProcessor publishProcessor
     private List<String> commands = new LinkedList<String>()
     private boolean closed = false
-    private int batchSize
+    private PublishOffloadConfig config
     /**
      * Unique offloaded index number
      */
     final protected AtomicInteger indexCount = new AtomicInteger()
 
-    PublishOffloadManager(Session session, int batchSize) {
-        this.session = session;
-        this.batchSize = batchSize;
+    PublishOffloadManager(Session session, PublishOffloadConfig config) {
+        this.session = session
+        this.config = config
     }
     @PackageScope
     TaskProcessor getPublishProcessor(){ publishProcessor }
 
-    void init(){
+    synchronized void init(){
         //Try with template
         BodyDef body = new BodyDef({
             def file = PublishOffloadManager.class.getResource('copy-group-template.sh')
-            return file.text
-        },'publish file process', 'shell')
+            final engine = new TaskTemplateEngine()
+            engine.setPlaceholder('!' as char)
+            engine.eval(file.text, delegate)
+            return engine.result
+        },'publish file process', 'script')
         this.publishProcessor = createProcessor( "publish_process", body )
-
+        log.debug("Publish Offload Manager initialized.")
     }
 
     private boolean checkOffload(Path source, Path destination, String executor){
-        return this.batchSize > 0 && source.scheme in SUPPORTED_SCHEMES[executor] && destination.scheme in SUPPORTED_SCHEMES[executor];
+        return this.config.enable && source.scheme in SUPPORTED_SCHEMES[executor] && destination.scheme in SUPPORTED_SCHEMES[executor]
     }
 
     private void invokeProcessor(inputValue) {
         final params = new TaskStartParams(TaskId.next(), publishProcessor.indexCount.incrementAndGet())
-        final values = new ArrayList(1)
+        final values = new ArrayList(2)
         values[0] = inputValue
+        values[1] = this.config.maxParallel
         final args = new ArrayList(2)
         args[0] = params
         args[1] = values
@@ -84,7 +92,7 @@ class PublishOffloadManager {
             final id = indexCount.incrementAndGet()
             runningPublications.put(id, Nextflow.tuple(origin, destination, failOnError))
             commands.add(generateExecutionCommand(id, command, origin, destination, retryConfig))
-            if (commands.size() == this.batchSize){
+            if (commands.size() == this.config.batchSize){
                 invokeProcessor(commands.join(";"))
                 commands.clear()
             }
@@ -94,7 +102,7 @@ class PublishOffloadManager {
     }
 
     private isFusionEnabled(){
-        return FusionHelper.isFusionEnabled(session)
+        return FusionHelper.isFusionEnabled(session) && config.useFusion
     }
 
     private useS5cmd(){
@@ -139,9 +147,10 @@ class PublishOffloadManager {
         // Invoke the code block which will return the script closure to the executed.
         // As side effect will set all the property declarations in the 'taskConfig' object.
         if (useS5cmd()) {
-            processConfig.put('container', S5CMD_CONTAINER);
+            processConfig.put('container', S5CMD_CONTAINER)
         }
         processConfig._in_val('executions')
+        processConfig._in_val('max_parallel')
         processConfig._out_stdout()
         if ( !body )
             throw new IllegalArgumentException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
@@ -199,7 +208,7 @@ class PublishTaskProcessor extends TaskProcessor{
                 }
             }
         } else {
-            log.error("Incorrect number of outputs in the publish task");
+            log.error("Incorrect number of outputs in the publish task")
         }
     }
 

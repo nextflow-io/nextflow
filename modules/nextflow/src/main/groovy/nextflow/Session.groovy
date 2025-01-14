@@ -16,6 +16,7 @@
 
 package nextflow
 
+import nextflow.processor.PublishOffloadConfig
 import nextflow.processor.PublishOffloadManager
 
 import java.nio.file.Files
@@ -294,7 +295,7 @@ class Session implements ISession {
 
     FilePorter getFilePorter() { filePorter }
 
-    private int publishOffloadBatchSize
+    private boolean publishOffload
 
     private PublishOffloadManager publishOffloadManager
 
@@ -401,18 +402,22 @@ class Session implements ISession {
         // -- file porter config
         this.filePorter = new FilePorter(this)
 
-        this.publishOffloadBatchSize = config.publishOffloadBatchSize ? config.publishOffloadBatchSize as int : 0
-
-        if ( this.publishOffloadBatchSize ) {
-            // -- publish offload manager config
-            log.warn("Publish offload flag enabled. Creating Offload Manager")
-            this.publishOffloadManager = new PublishOffloadManager(this, publishOffloadBatchSize)
-        }
+        // -- Configuration for offloading workflow output publication
+        this.publishOffload = config.publishOffload ? loadPublishOffload(config.publishOffload as Map) : false
 
     }
 
+    private boolean loadPublishOffload(Map config){
+        final poConfig = new PublishOffloadConfig(config)
+        if (poConfig.enable){
+            log.warn("Publish offload flag enabled. Creating Offload Manager")
+            this.publishOffloadManager = new PublishOffloadManager(this, poConfig)
+        }
+        return poConfig.enable
+    }
+
     void startPublishOffloadManager() {
-        if ( this.publishOffloadBatchSize ) {
+        if ( this.publishOffload ) {
             log.debug("Starting Publish offload manager")
             this.publishOffloadManager?.init()
         }
