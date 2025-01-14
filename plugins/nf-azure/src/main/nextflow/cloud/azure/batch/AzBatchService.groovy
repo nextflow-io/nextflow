@@ -47,6 +47,7 @@ import com.azure.compute.batch.models.ContainerConfiguration
 import com.azure.compute.batch.models.ContainerRegistryReference
 import com.azure.compute.batch.models.ContainerType
 import com.azure.compute.batch.models.ElevationLevel
+import com.azure.compute.batch.models.EnvironmentSetting
 import com.azure.compute.batch.models.MetadataItem
 import com.azure.compute.batch.models.MountConfiguration
 import com.azure.compute.batch.models.NetworkConfiguration
@@ -434,6 +435,12 @@ class AzBatchService implements Closeable {
 
         log.trace "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
 
+        // Add environment variables for managed identity if configured
+        final env = [:] as Map<String,String>
+        if( pool?.opts?.managedIdentityId ) {
+            env.put('NXF_AZURE_MI_CLIENT_ID', pool.opts.managedIdentityId)
+        }
+
         return new BatchTaskCreateContent(taskId, cmd)
                 .setUserIdentity(userIdentity(pool.opts.privileged, pool.opts.runAs, AutoUserScope.TASK))
                 .setContainerSettings(containerOpts)
@@ -441,8 +448,9 @@ class AzBatchService implements Closeable {
                 .setOutputFiles(outputFileUrls(task, sas))
                 .setRequiredSlots(slots)
                 .setConstraints(constraints)
-                
-
+                .setEnvironmentSettings(env.collect { name, value -> 
+                    new EnvironmentSetting(name).setValue(value)
+                })
     }
 
     AzTaskKey runTask(String poolId, String jobId, TaskRun task) {

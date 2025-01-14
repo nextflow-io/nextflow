@@ -68,6 +68,8 @@ class AzPoolOpts implements CacheFunnel {
     boolean lowPriority
     AzStartTaskOpts startTask
     
+    String managedIdentityId
+
     AzPoolOpts() {
         this(Collections.emptyMap())
     }
@@ -92,6 +94,7 @@ class AzPoolOpts implements CacheFunnel {
         this.password = opts.password
         this.virtualNetwork = opts.virtualNetwork
         this.lowPriority = opts.lowPriority as boolean
+        this.managedIdentityId = opts.managedIdentityId
     }
 
     @Override
@@ -114,6 +117,7 @@ class AzPoolOpts implements CacheFunnel {
         hasher.putBoolean(lowPriority)
         hasher.putUnencodedChars(startTask.script ?: '')
         hasher.putBoolean(startTask.privileged)
+        hasher.putUnencodedChars(managedIdentityId ?: '')
         return hasher
     }
 

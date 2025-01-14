@@ -1,10 +1,13 @@
 package nextflow.cloud.azure.batch
 
+import nextflow.cloud.azure.config.AzPoolOpts
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
+import nextflow.cloud.azure.batch.AzVmPoolSpec
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.Executor
+import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -84,5 +87,4 @@ class AzBatchTaskHandlerTest extends Specification {
         trace.machineInfo.zone == 'west-eu'
         trace.machineInfo.priceModel == PriceModel.standard
     }
-
 }
