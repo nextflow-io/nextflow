@@ -58,15 +58,16 @@ final class AzureRepositoryProvider extends RepositoryProvider {
         if( tokens.size() == 2 ){
             // URL is just organization/project. project and repo are the same.
             return [tokens[0], tokens[1], tokens[1]]
-        } else if( tokens.size() == 3 ){
+        } 
+        if( tokens.size() == 3 ){
             // URL is as expected organization/project/repository.
             return tokens
-        } else if( tokens.size() == 4 && tokens[2] == '_git' ){
+        }
+        if( tokens.size() == 4 && tokens[2] == '_git' ){
             // Clone URL organization/project/_git/repository
             return [tokens[0], tokens[1], tokens[3]]
-        } else {
-            throw new IllegalArgumentException("Incorrect Azure repository urlPath ($urlPath)")
-        }
+        } 
+        throw new IllegalArgumentException("Incorrect Azure repository urlPath ($urlPath)")
     }
 
     /** {@inheritDoc} */
