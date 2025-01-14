@@ -135,8 +135,6 @@ WARN: WORKFLOW OUTPUT DSL IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CH
 
 ::: 
 
-See 
-
 (getstarted-resume)=
 
 ## Modify and resume
