@@ -2,10 +2,10 @@
 
 # Your first script
 
-Once you have Nextflow installed, you’re ready to run your first script. This guide details how to run a basic pipeline on the command line. It includes:
+Once you have Nextflow installed, you’re ready to run your first script. This guide includes:
 
 - Running a pipeline
-- Modifying and and resuming a pipeline
+- Modifying and resuming a pipeline
 - Configuring a pipeline parameter
 
 **Prerequisites**
@@ -20,7 +20,7 @@ This guide uses the second preview of publish targets, introduced in Nextflow 24
 
 ## Run a pipeline
 
-You will run a basic Nextflow pipeline that splits a string of text into two files, and then converts lowercase letters to uppercase letters. You can see the pipeline here:
+You will run a basic Nextflow pipeline that splits a string of text into two files and then converts lowercase letters to uppercase letters. You can see the pipeline here:
 
 ```groovy
 // Enable output targets
@@ -85,7 +85,7 @@ This script defines two processes:
 - `splitString`: takes a string input, splits it into 6-character chunks, and writes the chunks to files with the prefix `chunk_`
 - `convertToUpper`: takes files as input, transforms their contents to uppercase letters, and writes the uppercase strings to files with the prefix `upper_`
 
-The `splitString` output is emitted as a single element. The `flatten` operator is used so that this element is split and each file is treated as a sole element.
+The `splitString` output is emitted as a single element. The `flatten` operator splits this combined element so that each file is treated as a sole element.
 
 The outputs from both processes are published in the `results` directory. To run your pipeline:
 
@@ -109,7 +109,7 @@ executor >  local (3)
 [fb/d2d170] process > convertToUpper (chunk_ab) [100%] 2 of 2 ✔
 ```
 
-Nextflow creates a `work` directory to store files used during a pipeline run. Each execution of a processes is run as a separate task. The `splitString` process is run as one task and the `convertToUpper` process is run as two tasks. The hexadecimal string, for example `e6/1f8da1`, is the beginning of a unique hash. It is a prefix used to identify the task directory where the script was executed.
+Nextflow creates a `work` directory to store files used during a pipeline run. Each execution of a process is run as a separate task. The `splitString` process is run as one task and the `convertToUpper` process is run as two tasks. The hexadecimal string, for example, `e6/1f8da1`, is the beginning of a unique hash. It is a prefix used to identify the task directory where the script was executed.
 
 Pipeline outputs are published in the `results` directory.
 
@@ -137,7 +137,7 @@ WARN: WORKFLOW OUTPUT DSL IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CH
 
 ## Modify and resume
 
-Nextflow tracks task executions in a task cache, a key-value store of previously-executed tasks. The task cache is used in conjunction with the work directory to recover cached tasks. If you modify and re-run your pipeline, only the processes that are changed will be re-executed. Cached results will be used for tasks that don't change.
+Nextflow tracks task executions in a task cache, a key-value store of previously executed tasks. The task cache is used in conjunction with the work directory to recover cached tasks. If you modify and re-run your pipeline, only the processes that are changed will be re-executed. The cached results will be used for tasks that don't change.
 
 You can enable resumability using the `-resume` flag when running a pipeline. To modify and resume your pipeline:
 
@@ -191,7 +191,7 @@ See {ref}`cache-resume-page` for more information about Nextflow cache and resum
 
 Nextflow looks for configuration settings in multiple locations when launched. Configuration settings are merged and, if conflicts exist, override each other in a set order. 
 
-Parameters are a type of configuration. They are declared by prepending a variable name to the prefix `params`, separated by dot character. Parameters can also be specified on the command line by prefixing the parameter name with a double dash character, for example, `--paramName`. Parameters specified on the command line override parameters specified in a pipeline scripts.
+Parameters are a type of configuration. They are declared by prepending a variable name to the prefix `params`, separated by dot character. Parameters can also be specified on the command line by prefixing the parameter name with a double dash character, for example, `--paramName`. Parameters specified on the command line override parameters specified in a main script.
 
 You can configure the `str` parameter in your pipeline. To modify your `str` parameter:
 
