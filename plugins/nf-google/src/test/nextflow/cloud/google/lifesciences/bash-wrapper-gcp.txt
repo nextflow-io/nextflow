@@ -1,5 +1,6 @@
 #!/bin/bash
 ### ---
+### id: '10'
 ### name: 'Hello 1'
 ### ...
 set -e
