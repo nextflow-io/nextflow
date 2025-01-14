@@ -49,17 +49,13 @@ class AzureRepositoryProviderTest extends Specification {
         def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
 
         expect:
-        new AzureRepositoryProvider('t-neumann/hello', obj).getEndpointUrl() == 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello'
-    }
+        new AzureRepositoryProvider(PATH, obj).getEndpointUrl() == EXPECTED
 
-    def 'should return repo with organization url' () {
-
-        given:
-        def config = new ConfigSlurper().parse(CONFIG)
-        def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
-
-        expect:
-        new AzureRepositoryProvider('ORGANIZATION/PROJECT/hello', obj).getEndpointUrl() == 'https://dev.azure.com/ORGANIZATION/PROJECT/_apis/git/repositories/hello'
+        where:
+        PATH                                | EXPECTED
+        't-neumann/hello'                   | 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello'
+        'ORGANIZATION/PROJECT/hello'        | 'https://dev.azure.com/ORGANIZATION/PROJECT/_apis/git/repositories/hello'
+        'ORGANIZATION/PROJECT/_git/hello'   | 'https://dev.azure.com/ORGANIZATION/PROJECT/_apis/git/repositories/hello'
     }
 
     def 'should return project URL' () {
@@ -69,18 +65,12 @@ class AzureRepositoryProviderTest extends Specification {
         def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
 
         expect:
-        new AzureRepositoryProvider('t-neumann/hello', obj).getRepositoryUrl() == 'https://dev.azure.com/t-neumann/hello'
-
-    }
-
-    def 'should return project with organization URL' () {
-
-        given:
-        def config = new ConfigSlurper().parse(CONFIG)
-        def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
-
-        expect:
-        new AzureRepositoryProvider('ORGANIZATION/PROJECT/hello', obj).getRepositoryUrl() == 'https://dev.azure.com/ORGANIZATION/PROJECT/hello'
+        new AzureRepositoryProvider(PATH, obj).getRepositoryUrl() == EXPECTED
+        where:
+        PATH                                | EXPECTED
+        't-neumann/hello'                   | 'https://dev.azure.com/t-neumann/hello'
+        'ORGANIZATION/PROJECT/hello'        | 'https://dev.azure.com/ORGANIZATION/PROJECT/hello'
+        'ORGANIZATION/PROJECT/_git/hello'   | 'https://dev.azure.com/ORGANIZATION/PROJECT/_git/hello'
 
     }
 
