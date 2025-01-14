@@ -548,51 +548,9 @@ class OperatorImpl {
     }
 
     DataflowWriteChannel flatten( final DataflowReadChannel source )  {
-
-        final listeners = []
-        final target = CH.create()
-        final stopOnFirst = source instanceof DataflowExpression
-
-        listeners << new DataflowEventAdapter() {
-            @Override
-            void afterRun(final DataflowProcessor dp, final List<Object> messages) {
-                if( stopOnFirst )
-                    dp.terminate()
-            }
-
-            @Override
-            void afterStop(final DataflowProcessor dp) {
-                dp.bindOutput(Channel.STOP)
-            }
-
-            boolean onException(final DataflowProcessor dp, final Throwable e) {
-                OperatorImpl.log.error("@unknown", e)
-                session.abort(e)
-                return true;
-            }
-        }
-
-        newOperator(inputs: [source], outputs: [target], listeners: listeners) {  item ->
-
-            def proc = ((DataflowProcessor) getDelegate())
-            switch( item ) {
-                case Collection:
-                    ((Collection)item).flatten().each { value -> proc.bindOutput(value) }
-                    break
-
-                case (Object[]):
-                    ((Collection)item).flatten().each { value -> proc.bindOutput(value) }
-                    break
-
-                case Channel.VOID:
-                    break
-
-                default:
-                    proc.bindOutput(item)
-            }
-        }
-
-        return target
+        new FlattenOp()
+            .withSource(source)
+            .apply()
     }
 
     /**

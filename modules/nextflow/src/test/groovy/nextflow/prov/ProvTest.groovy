@@ -735,4 +735,41 @@ class ProvTest extends Dsl2Spec {
         upstreamTasksOf('p3 (4)')
             .name == ['p2 (2)']
     }
+
+    def 'should track provenance with flatten operator' () {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of([1,'a'], [2,'b']) \
+                    | p1 \
+                    | flatten \
+                    | p2
+            }
+            
+            process p1 {
+              input: val(x) 
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+        then:
+        upstreamTasksOf('p2 (1)')
+            .name == ['p1 (1)']
+        and:
+        upstreamTasksOf('p2 (2)')
+            .name == ['p1 (1)']
+        and:
+        upstreamTasksOf('p2 (3)')
+            .name == ['p1 (2)']
+        and:
+        upstreamTasksOf('p2 (4)')
+            .name == ['p1 (2)']
+    }
 }
