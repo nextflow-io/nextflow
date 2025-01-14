@@ -46,11 +46,9 @@ class IntoOp {
 
     private Session session = (Session)Global.session
 
-
     IntoOp( DataflowReadChannel source, List<DataflowWriteChannel> targets ) {
         assert source
         assert targets
-
         this.source = source
         this.outputs = targets
     }
@@ -62,27 +60,6 @@ class IntoOp {
         def targets = new ArrayList(n)
         for( int i=0; i<n; i++ )
             targets << new DataflowQueue()
-
-        this.source = source
-        this.outputs = targets
-    }
-
-    IntoOp( DataflowReadChannel source, Closure holder ) {
-        assert source
-        assert holder
-
-        final names = CaptureProperties.capture(holder)
-        if( !names )
-            throw new IllegalArgumentException("Missing target channel names in `into` operator")
-        if( names.size() == 1 )
-            log.warn("The `into` operator should be used to connect two or more target channels -- consider replacing it with `.set { ${names[0]} }`")
-
-        List<DataflowWriteChannel> targets = []
-        names.each { identifier ->
-            def channel = newChannelBy(source)
-            targets.add(channel)
-            NF.binding.setVariable(identifier, channel)
-        }
 
         this.source = source
         this.outputs = targets
