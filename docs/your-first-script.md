@@ -87,7 +87,7 @@ This script defines two processes:
 
 The `splitString` output is emitted as a single element. The `flatten` operator splits this combined element so that each file is treated as a sole element.
 
-The outputs from both processes are published in the `results` directory. Each publish target is saved into a subdirectory of the `results` directory. By default, the target name is used as the directory name.
+The outputs from both processes are published in the `results` directory. Each publish target is saved into a subdirectory of the `results` directory. By default, the target names, that is, `lower` and `upper`, are used as the subdirectory names.
 
 To run your pipeline:
 
