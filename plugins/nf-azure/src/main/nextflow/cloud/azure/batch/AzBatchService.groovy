@@ -437,8 +437,11 @@ class AzBatchService implements Closeable {
 
         // Add environment variables for managed identity if configured
         final env = [:] as Map<String,String>
+        // env.put('AZCOPY_LOG_LOCATION', '$HOME/.azcopy_log')
+        // env.put('AZCOPY_JOB_PLAN_LOCATION', '$HOME/.azcopy')
         if( pool?.opts?.managedIdentityId ) {
-            env.put('NXF_AZURE_MI_CLIENT_ID', pool.opts.managedIdentityId)
+            env.put('AZCOPY_AUTO_LOGIN_TYPE', 'MSI')
+            env.put('AZCOPY_MSI_CLIENT_ID', pool.opts.managedIdentityId)
         }
 
         return new BatchTaskCreateContent(taskId, cmd)
@@ -511,6 +514,13 @@ class AzBatchService implements Closeable {
         List<OutputFile> result = new ArrayList<>(20)
         result << destFile(TaskRun.CMD_EXIT, task.workDir, sas)
         result << destFile(TaskRun.CMD_LOG, task.workDir, sas)
+        result << destFile(TaskRun.CMD_OUTFILE, task.workDir, sas)
+        result << destFile(TaskRun.CMD_ERRFILE, task.workDir, sas)
+        result << destFile(TaskRun.CMD_SCRIPT, task.workDir, sas)
+        result << destFile(TaskRun.CMD_RUN, task.workDir, sas)
+        result << destFile(TaskRun.CMD_STAGE, task.workDir, sas)
+        result << destFile(TaskRun.CMD_TRACE, task.workDir, sas)
+        result << destFile(TaskRun.CMD_ENV, task.workDir, sas)
         return result
     }
 
