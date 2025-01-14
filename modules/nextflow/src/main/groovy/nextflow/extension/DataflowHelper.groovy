@@ -251,11 +251,4 @@ class DataflowHelper {
         }
     }
 
-    @CompileStatic
-    static Map<String,Closure> eventsMap(Closure onNext, Closure onComplete) {
-        def result = new HashMap<String,Closure>(2)
-        result.put('onNext', onNext)
-        result.put('onComplete', onComplete)
-        return result
-    }
 }

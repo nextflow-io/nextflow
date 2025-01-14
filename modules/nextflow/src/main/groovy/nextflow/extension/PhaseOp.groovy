@@ -84,27 +84,30 @@ class PhaseOp {
      * @return A map with {@code OnNext} and {@code onComplete} methods entries
      */
     static private final Map<String,Closure> phaseHandler( Map<Object,Map<Integer,List>> buffer, int size, int index, DataflowWriteChannel target, Closure mapper, AtomicInteger stopCount, boolean remainder ) {
+        eventsMap(
+            {
+                synchronized (buffer) {
+                    def entries = phaseImpl(buffer, size, index, it, mapper, false)
+                    if( entries ) {
+                        target.bind(entries)
+                    }
+                }},
 
-        DataflowHelper.eventsMap(
-                {
-                    synchronized (buffer) {
-                        def entries = phaseImpl(buffer, size, index, it, mapper, false)
-                        if( entries ) {
-                            target.bind(entries)
-                        }
-                    }},
-
-                {
-                    if( stopCount.decrementAndGet()==0) {
-                        if( remainder )
-                            phaseRemainder(buffer,size, target)
-                        target << Channel.STOP
-                    }}
-
+            {
+                if( stopCount.decrementAndGet()==0) {
+                    if( remainder )
+                        phaseRemainder(buffer,size, target)
+                    target << Channel.STOP
+                }}
         )
-
     }
 
+    static private Map<String,Closure> eventsMap(Closure onNext, Closure onComplete) {
+        def result = new HashMap<String,Closure>(2)
+        result.put('onNext', onNext)
+        result.put('onComplete', onComplete)
+        return result
+    }
 
     /**
      * Implements the phase operator logic. Basically buffers the values received on each channel by their key .
@@ -183,7 +186,6 @@ class PhaseOp {
 
         return result
     }
-
 
     static private final void phaseRemainder( Map<Object,Map<Integer,List>> buffers, int count, DataflowWriteChannel target ) {
         Collection<Map<Integer,List>> slots = buffers.values()
