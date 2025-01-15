@@ -53,8 +53,62 @@ class ProvTest extends Dsl2Spec {
                 .name == ['p1']
     }
 
-    def 'should track provenance with branch operator'() {
+    def 'should track provenance with multiMap operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of(1,2,3) | p1 
+                
+                p1.out.multiMap { v ->
+                    foo: v + 1
+                    bar: v * v
+                }
+                .set { result }
+                
+                result.foo | p2
+                result.bar | p3                                
+            }
+            
+            process p1 {
+              input: val(x) 
+              output: val(y) 
+              exec: 
+                y = x 
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+            
+            process p3 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+        then:
+        upstreamTasksOf('p2 (1)')
+            .name == ['p1 (1)']
+        and:
+        upstreamTasksOf('p2 (2)')
+            .name == ['p1 (2)']
+        and:
+        upstreamTasksOf('p2 (3)')
+            .name == ['p1 (3)']
+        and:
+        upstreamTasksOf('p3 (1)')
+            .name == ['p1 (1)']
+        and:
+        upstreamTasksOf('p3 (2)')
+            .name == ['p1 (2)']
+        and:
+        upstreamTasksOf('p3 (3)')
+            .name == ['p1 (3)']
+    }
 
+    def 'should track provenance with branch operator'() {
         when:
         dsl_eval(globalConfig(), '''
             workflow {
