@@ -1303,8 +1303,13 @@ Read the {ref}`container-podman` page to learn more about how to use Podman cont
 (config-publishOffload)=
 
 ## `publishOffload`
-
+:::{versionadded} 24.11.0-edge
+:::
 The `publishOffload` scope allows you to configure the offload of the publication of workflow output as remote tasks. An internal `offload:publish_process` is created to offload the file operation (copies and moves) required to publish the output files. This functionality is currently available for 's3' files with the 'awsbatch' executor. File operations can be maneged with `s5cmd` (default option) of Fusion. 
+
+:::{note}
+To avoid error in the offloaded tasks, be sure that the `InstanceRole` of your AWS Batch Compute Environment has read and write permissions in the bucket used to publish the files.
+:::
 
 The following settings are available:
 
@@ -1325,7 +1330,7 @@ You can also control the resources assigned to the `publish_process` defining a 
 ```groovy
 process {
     withName: publish_process {
-        cpus = 4
+        cpus = 4:
         memory = 8.GB
     }
 }
