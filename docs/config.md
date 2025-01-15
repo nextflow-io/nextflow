@@ -7,7 +7,7 @@
 When a pipeline script is launched, Nextflow looks for configuration files in multiple locations. Since each configuration file may contain conflicting settings, they are applied in the following order (from lowest to highest priority):
 
 1. Parameters defined in pipeline scripts (e.g. `main.nf`)
-2. The config file `$HOME/.nextflow/config`
+2. The config file `$HOME/.nextflow/config`, or `$NXF_HOME/.nextflow/config` when `NXF_HOME` is set (see [`NXF` prefixed variables](reference/env-vars.html#nextflow-settings)).
 3. The config file `nextflow.config` in the project directory
 4. The config file `nextflow.config` in the launch directory
 5. Config file specified using the `-c <config-file>` option
