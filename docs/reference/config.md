@@ -1330,7 +1330,7 @@ You can also control the resources assigned to the `publish_process` defining a 
 ```groovy
 process {
     withName: publish_process {
-        cpus = 4:
+        cpus = 4
         memory = 8.GB
     }
 }
