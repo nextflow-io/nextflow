@@ -311,7 +311,7 @@ class ProvTest extends Dsl2Spec {
     }
 
 
-    def 'should track provenance with distinc operator'() {
+    def 'should track provenance with distinct operator'() {
 
         when:
         dsl_eval(globalConfig(), '''
@@ -507,7 +507,7 @@ class ProvTest extends Dsl2Spec {
                 .name == ['p1 (1)', 'p1 (2)', 'p1 (3)']
     }
 
-    @Ignore // this should be review
+    @Ignore // the semantic of this should be reviewed
     def 'should track provenance with min operator'() {
         when:
         dsl_eval(globalConfig(), '''
@@ -532,6 +532,85 @@ class ProvTest extends Dsl2Spec {
         then:
         upstreamTasksOf('p2')
                 .name == ['p1 (3)']
+    }
+
+    @Ignore // the semantic of this should be reviewed
+    def 'should track provenance with max operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of(3,2,1) | p1 | max | p2 
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        upstreamTasksOf('p2')
+            .name == ['p1 (1)']
+    }
+
+    def 'should track provenance with sum operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of(3,2,1) | p1 | sum | p2 
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        upstreamTasksOf('p2')
+            .name == ['p1 (1)', 'p1 (2)', 'p1 (3)']
+    }
+
+    def 'should track provenance with mean operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of(3,2,1) | p1 | mean | p2 
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        upstreamTasksOf('p2')
+            .name == ['p1 (1)', 'p1 (2)', 'p1 (3)']
     }
 
     def 'should track provenance with buffer operator'() {

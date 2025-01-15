@@ -25,6 +25,7 @@ import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
+import nextflow.extension.op.ContextGrouping
 import nextflow.extension.op.Op
 /**
  * Implements the logic for "sum" and "mean" operators
@@ -75,7 +76,9 @@ class MathOp {
             target = new DataflowVariable()
         new SubscribeOp()
             .withSource(source)
-            .withEvents(onNext: aggregate.&process, onComplete: this.&completion)
+            .withContext(new ContextGrouping())
+            .withOnNext(aggregate.&process)
+            .withOnComplete(this.&completion)
             .apply()
         return target
     }
