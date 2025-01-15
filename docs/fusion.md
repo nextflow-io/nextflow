@@ -101,6 +101,11 @@ Seqera Platform is able to automatically format and configure the NVMe instance 
 the option "Use Fast storage" when creating the Batch compute environment.
 :::
 
+:::{tip}
+In alternative to setting up a NVMe storage in you compute node, you can use an EBS volume type `gp3` selecting
+325 MiB/s (or more as throughput) and 100 GiB (or more as size). 
+:::
+
 #### AWS IAM permissions
 
 The AWS S3 bucket should be configured with the following IAM permissions:
