@@ -32,7 +32,7 @@ class HttpOptsTest extends Specification {
         def opts = new HttpOpts([:])
         then:
         opts.connectTimeout() == Duration.ofSeconds(30)
-        opts.maxRate() == RateUnit.of('20 /min')
+        opts.maxRate() == RateUnit.of('1/sec')
 
         when:
         opts = new HttpOpts([connectTimeout:'50s', maxRate: '10/s'])

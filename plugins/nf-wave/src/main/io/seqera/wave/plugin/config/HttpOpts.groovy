@@ -37,7 +37,7 @@ class HttpOpts {
 
     HttpOpts(Map opts) {
         connectTimeout = opts.connectTimeout as Duration ?: Duration.of('30s')
-        maxRate = opts.maxRate as RateUnit ?: RateUnit.of('20 /min')
+        maxRate = opts.maxRate as RateUnit ?: RateUnit.of('1/sec')
     }
 
     java.time.Duration connectTimeout() {
