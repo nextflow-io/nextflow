@@ -42,6 +42,32 @@ class AzureRepositoryProviderTest extends Specification {
         }
         '''
 
+    def 'should parse repo fields from path' () {
+        expect:
+        AzureRepositoryProvider.getUniformPath(PATH) == EXPECTED
+
+        where:
+        PATH                                | EXPECTED
+        't-neumann/hello'                   | ['t-neumann', 'hello', 'hello']
+        'ORGANIZATION/PROJECT/hello'        | ['ORGANIZATION','PROJECT','hello']
+        'ORGANIZATION/PROJECT/_git/hello'   | ['ORGANIZATION','PROJECT','hello']
+
+    }
+
+    def 'should throw exception if wrong path' () {
+        when:
+        def path = AzureRepositoryProvider.getUniformPath(PATH)
+
+        then :
+        def exception = thrown(IllegalArgumentException)
+        exception?.message == EXCEPTION
+
+        where:
+        PATH                                | EXCEPTION
+        'incorrect_path_1'                  | "Unexpected Azure repository path format - offending value: 'incorrect_path_1'"
+        'ORG/PROJ/hello/incorrect'          | "Unexpected Azure repository path format - offending value: 'ORG/PROJ/hello/incorrect'"
+    }
+
     def 'should return repo url' () {
 
         given:
