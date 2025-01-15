@@ -28,9 +28,6 @@ import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.ChainWithClosure
-import groovyx.gpars.dataflow.operator.DataflowEventAdapter
-import groovyx.gpars.dataflow.operator.DataflowProcessor
-import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.Channel
 import nextflow.Global
 import nextflow.NF
@@ -590,72 +587,19 @@ class OperatorImpl {
             throw new IllegalArgumentException("Illegal argument 'size' for operator 'collate' -- it must be greater than zero: $size")
         }
 
-        def target = new BufferOp(source)
-                        .setParams( size: size, remainder: keepRemainder )
-                        .apply()
-
-        return target
+        return new BufferOp(source)
+                    .setParams( size: size, remainder: keepRemainder )
+                    .apply()
     }
 
     DataflowWriteChannel collate( DataflowReadChannel source, int size, int step, boolean keepRemainder = true ) {
-        if( size <= 0 ) {
-            throw new IllegalArgumentException("Illegal argument 'size' for operator 'collate' -- it must be greater than zero: $size")
-        }
-
-        if( step <= 0 ) {
-            throw new IllegalArgumentException("Illegal argument 'step' for operator 'collate' -- it must be greater than zero: $step")
-        }
-
-        // the result queue
-        final target = CH.create()
-
-        // the list holding temporary collected elements
-        List<List<?>> allBuffers = []
-
-        // -- intercepts the PoisonPill and sent out the items remaining in the buffer when the 'remainder' flag is true
-        def listener = new DataflowEventAdapter() {
-
-            Object controlMessageArrived(final DataflowProcessor dp, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-                if( message instanceof PoisonPill && keepRemainder && allBuffers.size() ) {
-                    allBuffers.each {
-                        target.bind( it )
-                    }
-                }
-
-                return message;
-            }
-
-            @Override
-            boolean onException(DataflowProcessor dp, Throwable e) {
-                OperatorImpl.log.error("@unknown", e)
-                session.abort(e)
-                return true
-            }
-        }
-
-
-        int index = 0
-
-        // -- the operator collecting the elements
-        newOperator( inputs: [source], outputs: [target], listeners: [listener]) {
-
-            if( index++ % step == 0 ) {
-                allBuffers.add( [] )
-            }
-
-            allBuffers.each { List list -> list.add(it) }
-
-            def buf = allBuffers.head()
-            if( buf.size() == size )  {
-                ((DataflowProcessor) getDelegate()).bindOutput(buf)
-                allBuffers = allBuffers.tail()
-            }
-
-        }
-
-        return target
+        new CollateOp()
+            .withSource(source)
+            .withSize(size)
+            .withStep(step)
+            .withRemainder(keepRemainder)
+            .apply()
     }
-
 
     /**
      * Similar to https://github.com/Netflix/RxJava/wiki/Combining-Observables#merge
@@ -744,12 +688,9 @@ class OperatorImpl {
     }
 
     DataflowWriteChannel cross( DataflowReadChannel source, DataflowReadChannel other, Closure mapper = null ) {
-
-        def target = new CrossOp(source, other)
+        return new CrossOp(source, other)
                     .setMapper(mapper)
                     .apply()
-
-        return target
     }
 
 

@@ -509,6 +509,51 @@ class ProvTest extends Dsl2Spec {
                 .name == ['p1 (1)', 'p1 (2)', 'p1 (3)']
     }
 
+    def 'should track provenance with collate operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of(1, 2, 3, 4) | p1 | collate( 3, 1 ) | p2 
+            }
+          
+            // 
+            // the "collate" emits the following values:
+            //  
+            //   [1, 2, 3]
+            //   [2, 3, 4]
+            //   [3, 4]
+            //   [4]
+            // 
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println "$task.process ($task.index) = ${x}"
+            }
+        ''')
+
+        then:
+        upstreamTasksOf('p2 (1)')
+            .name == ['p1 (1)', 'p1 (2)', 'p1 (3)' ]
+        and:
+        upstreamTasksOf('p2 (2)')
+            .name == ['p1 (2)', 'p1 (3)', 'p1 (4)']
+        and:
+        upstreamTasksOf('p2 (3)')
+            .name == ['p1 (3)', 'p1 (4)']
+        and:
+        upstreamTasksOf('p2 (4)')
+            .name == ['p1 (4)']
+
+    }
+
     def 'should track provenance with count value operator'() {
         when:
         dsl_eval(globalConfig(), '''

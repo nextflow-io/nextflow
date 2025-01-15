@@ -33,7 +33,6 @@ import nextflow.extension.op.ContextRunPerThread
 import nextflow.extension.op.Op
 import nextflow.extension.op.OpContext
 import nextflow.extension.op.OpDatum
-import nextflow.prov.OperatorRun
 import nextflow.util.CheckHelper
 /**
  * Implements {@link OperatorImpl#join} operator logic
@@ -130,7 +129,7 @@ class JoinOp {
                 if(!failed) try {
                     final entries = join0(buffer, size, index, it)
                     if( entries ) {
-                        emitEntries(target, entries)
+                        Op.bindRunValues(target, entries, true)
                     }
                 }
                 catch (Exception e) {
@@ -156,20 +155,7 @@ class JoinOp {
         return result
     }
 
-    private void emitEntries(DataflowWriteChannel target, List entries) {
-        final inputs = new ArrayList(entries.size())
-        final values = new ArrayList(entries.size())
-        for( Object it : entries ) {
-            if( it instanceof OpDatum ) {
-                inputs.addAll(it.run.inputIds)
-                values.add(it.value)
-            }
-            else
-                values.add(it)
-        }
-        final run = new OperatorRun(inputs)
-        Op.bind(run, target, values.size()==1 ? values[0] : values)
-    }
+
 
     /**
      * Implements the join operator logic. Basically buffers the values received on each channel by their key .
@@ -278,12 +264,11 @@ class JoinOp {
                 if( fill ) {
                     // bind value to target channel
                     if( remainder )
-                        emitEntries(target, result)
+                        Op.bindRunValues(target, result, true)
                 }
                 else
                     break
             }
-
         }
     }
 

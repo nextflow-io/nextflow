@@ -538,7 +538,7 @@ class OperatorImplTest extends Specification {
         r2.unwrap() == Channel.STOP
 
         when:
-        def r3 = Channel.of(1,2,3,4).collate( 3, 1  )
+        def r3 = Channel.of(1,2,3,4).collate( 3, 1 )
         then:
         r3.unwrap() == [1, 2, 3]
         r3.unwrap() == [2, 3, 4]
