@@ -46,13 +46,14 @@ final class AzureRepositoryProvider extends RepositoryProvider {
         this.config = config ?: new ProviderConfig('azurerepos')
         this.continuationToken = null
     }
-    /**
-     An Azure repo is identified with the Organization/Project/Repository parameters.
-     This function gets these parameters for the different URL path formats supported in Nextflow for Azure repositories.
 
-     @param urlPath Path of the Azure repo URL
-     @return List with the azure repo parameters with the following order [ Organization, Project, Repository ]
-     **/
+    /**
+     * An Azure repo is identified with the Organization/Project/Repository parameters.
+     * This function gets these parameters for the different URL path formats supported in Nextflow for Azure repositories.
+     *
+     * @param urlPath Path of the Azure repo URL
+     * @return List with the azure repo parameters with the following order [ Organization, Project, Repository ]
+     */
     static List<String> getUniformPath(String urlPath){
         def tokens = urlPath.tokenize('/')
         if( tokens.size() == 2 ){
