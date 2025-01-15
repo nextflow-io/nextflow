@@ -12,7 +12,7 @@ Once you have Nextflow installed, you’re ready to run your first script. This 
 
 You will need the following to get started:
 
-- Nextflow 22.10.0 or later. See {ref}`install-page` for instructions to install or update your version of Nextflow.
+- Nextflow 23.10.0 or later. See {ref}`install-page` for instructions to install or update your version of Nextflow.
 
 ## Run a pipeline
 
@@ -207,4 +207,4 @@ See {ref}`cli-params` for more information about modifying pipeline parameters.
 
 <h2>Next steps</h2>
 
-See [training.nextflow.io](https://training.nextflow.io/) for Nextflow training modules.
+See [training.nextflow.io](https://training.nextflow.io/) for further Nextflow training modules.
