@@ -65,31 +65,31 @@ class FlatMapOp {
             .withListener(stopErrorListener(source,target))
             .withCode { Object item ->
                     final result = mapper != null ? mapper.call(item) : item
-                    final proc = getDelegate() as DataflowProcessor
+                    final dp = getDelegate() as DataflowProcessor
 
                     switch( result ) {
                         case Collection:
-                            result.each { it -> Op.bind(proc, target,it) }
+                            result.each { it -> Op.bind(dp, target,it) }
                             break
 
                         case (Object[]):
-                            result.each { it -> Op.bind(proc, target,it) }
+                            result.each { it -> Op.bind(dp, target,it) }
                             break
 
                         case Map:
-                            result.each { it -> Op.bind(proc, target,it) }
+                            result.each { it -> Op.bind(dp, target,it) }
                             break
 
                         case Map.Entry:
-                            Op.bind(proc, target, (result as Map.Entry).key )
-                            Op.bind(proc, target, (result as Map.Entry).value )
+                            Op.bind(dp, target, (result as Map.Entry).key )
+                            Op.bind(dp, target, (result as Map.Entry).value )
                             break
 
                         case Channel.VOID:
                             break
 
                         default:
-                            Op.bind(proc, target, result)
+                            Op.bind(dp, target, result)
                     }
                 }
             .apply()

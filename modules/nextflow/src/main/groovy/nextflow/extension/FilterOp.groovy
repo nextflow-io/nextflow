@@ -68,12 +68,12 @@ class FilterOp {
             final result = criteria instanceof Closure<Boolean>
                 ? DefaultTypeTransformation.castToBoolean(criteria.call(it))
                 : discriminator.invoke(criteria, (Object)it)
-            final proc = getDelegate() as DataflowProcessor
+            final dp = getDelegate() as DataflowProcessor
             if( result ) {
-                Op.bind(proc, target, it)
+                Op.bind(dp, target, it)
             }
             if( stopOnFirst ) {
-                Op.bind(proc, target, Channel.STOP)
+                Op.bind(dp, target, Channel.STOP)
             }
         })
 

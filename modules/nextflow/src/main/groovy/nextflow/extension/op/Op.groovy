@@ -61,16 +61,16 @@ class Op {
         obj instanceof Tracker.Msg ? obj : Tracker.Msg.of(obj)
     }
 
-    static void bind(DataflowProcessor operator, DataflowWriteChannel channel, Object msg) {
+    static void bind(DataflowProcessor dp, DataflowWriteChannel channel, Object msg) {
         try {
             if( msg instanceof PoisonPill ) {
                 channel.bind(msg)
-                allContexts.remove(operator)
+                allContexts.remove(dp)
             }
             else {
-                final ctx = allContexts.get(operator)
+                final ctx = allContexts.get(dp)
                 if( !ctx )
-                    throw new IllegalStateException("Cannot find any context for operator=$operator")
+                    throw new IllegalStateException("Cannot find any context for operator=$dp")
                 final run = ctx.getOperatorRun()
                 Prov.getTracker().bindOutput(run, channel, msg)
             }
@@ -81,7 +81,7 @@ class Op {
         }
     }
 
-    static bind(OperatorRun run, DataflowWriteChannel channel, Object msg) {
+    static void bind(OperatorRun run, DataflowWriteChannel channel, Object msg) {
         Prov.getTracker().bindOutput(run, channel, msg)
     }
 

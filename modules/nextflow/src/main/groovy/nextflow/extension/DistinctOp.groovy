@@ -61,11 +61,11 @@ class DistinctOp {
 
         def previous = null
         final code = {
-            final proc = getDelegate() as DataflowProcessor
+            final dp = getDelegate() as DataflowProcessor
             final key = comparator.call(it)
             if( key != previous ) {
                 previous = key
-                Op.bind(proc, target, it)
+                Op.bind(dp, target, it)
             }
         }
 

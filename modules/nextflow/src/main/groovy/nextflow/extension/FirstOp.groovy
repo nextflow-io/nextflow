@@ -78,12 +78,12 @@ class FirstOp {
         }
 
         final code = {
-            final proc = getDelegate() as DataflowProcessor
+            final dp = getDelegate() as DataflowProcessor
             final accept = discriminator.invoke(criteria, it)
             if( accept )
-                Op.bind(proc, target, it)
+                Op.bind(dp, target, it)
             if( accept || stopOnFirst )
-                proc.terminate()
+                dp.terminate()
         }
 
         new Op()

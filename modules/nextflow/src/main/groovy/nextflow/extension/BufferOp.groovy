@@ -164,16 +164,16 @@ class BufferOp {
         final listener = new DataflowEventAdapter() {
 
             @Override
-            Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
+            Object controlMessageArrived(final DataflowProcessor dp, final DataflowReadChannel<Object> channel, final int index, final Object message) {
                 if( message instanceof PoisonPill && remainder && buffer.size() ) {
-                    Op.bind(processor,target, buffer)
+                    Op.bind(dp, target, buffer)
                 }
                 return message
             }
 
             @Override
-            void afterStop(DataflowProcessor processor) {
-                Op.bind(processor, target, Channel.STOP)
+            void afterStop(DataflowProcessor dp) {
+                Op.bind(dp, target, Channel.STOP)
             }
 
             @Override
@@ -196,17 +196,17 @@ class BufferOp {
                 isOpen = true
                 buffer << it
             }
-            final proc = getDelegate() as DataflowProcessor
+            final dp = getDelegate() as DataflowProcessor
             if( closeCriteria.call(it) ) {
-                Op.bind(proc, target, buffer)
+                Op.bind(dp, target, buffer)
                 buffer = []
                 // when a *startingCriteria* is defined, close the open frame flag
                 isOpen = (startingCriteria == null)
             }
             if( stopOnFirst ) {
                 if( remainder && buffer )
-                    Op.bind(proc, target, buffer)
-                proc.terminate()
+                    Op.bind(dp, target, buffer)
+                dp.terminate()
             }
         }
 

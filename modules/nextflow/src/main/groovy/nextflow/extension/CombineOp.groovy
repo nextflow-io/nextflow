@@ -111,7 +111,7 @@ class CombineOp {
         }
 
         opts.onComplete = { DataflowProcessor dp ->
-            if( stopCount.decrementAndGet()==0) {
+            if( stopCount.decrementAndGet()==0 ) {
                 Op.bind(dp, target, Channel.STOP)
             }}
 
