@@ -1300,6 +1300,37 @@ The following settings are available:
 
 Read the {ref}`container-podman` page to learn more about how to use Podman containers with Nextflow.
 
+(config-publishOffload)=
+
+## `publishOffload`
+
+The `publishOffload` scope allows you to configure the offload of the publication of workflow output as remote tasks. An internal `offload:publish_process` is created to offload the file operation (copies and moves) required to publish the output files. This functionality is currently available for 's3' files with the 'awsbatch' executor. File operations can be maneged with `s5cmd` (default option) of Fusion. 
+
+The following settings are available:
+
+`publishOffload.enable`
+: If `true` enables the offload of workflow outputs publication. (Default: `false`)
+
+`publishOffload.batchSize`
+: Indicates the number of files operations in each `publish_process` execution. (Default: 10)
+
+`publishOffload.maxParallel`
+: Indicates the maximum number of concurrent files operations in each `publish_process` execution. If `maxParallel` is not specified, it gets the value of `batchSize`.
+
+`publishOffload.useFusion`
+: Enables the use of Fusion to manage the file operations. (Default: `false`)
+
+You can also control the resources assigned to the `publish_process` defining a process selector such as the following:
+
+```groovy
+process {
+    withName: publish_process {
+        cpus = 4
+        memory = 8.GB
+    }
+}
+```
+
 (config-report)=
 
 ## `report`

@@ -68,7 +68,7 @@ class PublishOffloadManager {
             engine.eval(file.text, delegate)
             return engine.result
         },'publish file process', 'script')
-        this.publishProcessor = createProcessor( "publish_process", body )
+        this.publishProcessor = createProcessor( "offload:publish_process", body )
         log.debug("Publish Offload Manager initialized.")
     }
 
@@ -156,7 +156,7 @@ class PublishOffloadManager {
             throw new IllegalArgumentException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
 
         // -- apply settings from config file to process config
-        processConfig.applyConfig((Map)session.config.process, name, name, name)
+        processConfig.applyConfig((Map)session.config.process, 'publish_process', name, name)
 
         // -- get the executor for the given process config
         final execObj = session.executorFactory.getExecutor(name, processConfig, body, session)
