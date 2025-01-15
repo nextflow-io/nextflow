@@ -53,7 +53,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
      @param urlPath Path of the Azure repo URL
      @return List with the azure repo parameters with the following order [ Organization, Project, Repository ]
      **/
-    public static List<String> getUniformPath(String urlPath){
+    static List<String> getUniformPath(String urlPath){
         def tokens = urlPath.tokenize('/')
         if( tokens.size() == 2 ){
             // URL is just organization/project. project and repo are the same.
@@ -67,7 +67,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
             // Clone URL organization/project/_git/repository
             return [tokens[0], tokens[1], tokens[3]]
         } 
-        throw new IllegalArgumentException("Incorrect Azure repository urlPath ($urlPath)")
+        throw new IllegalArgumentException("Unexpected Azure repository path format - offending value: '$urlPath'")
     }
 
     /** {@inheritDoc} */
