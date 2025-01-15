@@ -34,6 +34,7 @@ import java.util.function.Predicate
 
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
+import com.google.common.util.concurrent.RateLimiter
 import com.google.common.util.concurrent.UncheckedExecutionException
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -125,6 +126,8 @@ class WaveClient {
 
     final private URL s5cmdConfigUrl
 
+    final private RateLimiter limiter
+
     WaveClient(Session session) {
         this.session = session
         this.config = new WaveConfig(session.config.wave as Map ?: Collections.emptyMap(), SysEnv.get())
@@ -137,6 +140,7 @@ class WaveClient {
         log.debug "Wave config: $config"
         this.packer = new Packer().withPreserveTimestamp(config.preserveFileTimestamp())
         this.waveRegistry = new URI(endpoint).getAuthority()
+        this.limiter = RateLimiter.create( config.httpOpts().maxRate().rate  )
         // create cache
         this.cache = CacheBuilder<String, Handle>
             .newBuilder()
@@ -257,7 +261,20 @@ class WaveClient {
         return sendRequest(request)
     }
 
+    private void checkLimiter() {
+        final ts = System.currentTimeMillis()
+        try {
+            limiter.acquire()
+        } finally {
+            final delta = System.currentTimeMillis()-ts
+            if( delta>0 )
+                log.debug "Request limiter blocked ${Duration.ofMillis(delta)}"
+        }
+    }
+
+
     SubmitContainerTokenResponse sendRequest(SubmitContainerTokenRequest request) {
+        checkLimiter()
         return sendRequest0(request, 1)
     }
 
