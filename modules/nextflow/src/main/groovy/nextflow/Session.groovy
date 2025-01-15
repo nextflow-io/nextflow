@@ -799,7 +799,8 @@ class Session implements ISession {
             if( status )
                 log.debug(status)
             // dump threads status
-            log.debug(SysHelper.dumpThreads())
+            if( log.isTraceEnabled() )
+                log.trace(SysHelper.dumpThreads())
             // force termination
             notifyError(null)
             ansiLogObserver?.forceTermination()
