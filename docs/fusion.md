@@ -102,8 +102,7 @@ the option "Use Fast storage" when creating the Batch compute environment.
 :::
 
 :::{tip}
-In alternative to setting up a NVMe storage in you compute node, you can use an EBS volume type `gp3` selecting
-325 MiB/s (or more as throughput) and 100 GiB (or more as size). 
+As an alternative to configuring NVMe storage on your compute node, you can use an EBS `gp3` volume with a throughput of 325 MiB/s (or more) and a size of 100 GiB (or larger). While slower than NVMe storage, this configuration provides sufficient performance for many workloads.
 :::
 
 #### AWS IAM permissions
