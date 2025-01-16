@@ -15,30 +15,31 @@
  *
  */
 
-package io.seqera.wave.plugin.config
+package nextflow.cli
 
-import java.time.Duration
-
-import nextflow.util.RateUnit
 import spock.lang.Specification
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class HttpOptsTest extends Specification {
+class CmdInspectTest extends Specification {
 
-    def 'should get http options' () {
-        when:
-        def opts = new HttpOpts([:])
-        then:
-        opts.connectTimeout() == Duration.ofSeconds(30)
-        opts.maxRate() == RateUnit.of('1/sec')
+    def 'should configure max rate' () {
+        given:
+        def cmd = new CmdInspect()
 
         when:
-        opts = new HttpOpts([connectTimeout:'50s', maxRate: '10/s'])
+        def cfg1 = [:]
+        cmd.configureMaxRate(cfg1)
         then:
-        opts.connectTimeout() == Duration.ofSeconds(50)
-        opts.maxRate()  == RateUnit.of('10/s')
+        cfg1 == [wave:[httpClient:[maxRate:'5/30sec']]]
 
+        when:
+        def cfg2 = [wave:[enabled:true, httpClient: [something:true, maxRate: '1/s']]]
+        cmd.configureMaxRate(cfg2)
+        then:
+        cfg2 == [wave:[enabled:true, httpClient: [something:true, maxRate: '5/30sec']]]
     }
+
 }
