@@ -618,7 +618,6 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             )
 
         // Fallback to Google Batch automatically deduce from requested resources
-        log.warn "Using Google Batch default machine type."
         return null
     }
 
