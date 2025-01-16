@@ -2,7 +2,7 @@
 
 # Your first script
 
-Once you have Nextflow installed, you’re ready to run your first script. This guide details fundamental skills to run a basic Nextflow pipeline. It includes:
+This guide details fundamental skills to run a basic Nextflow pipeline. It includes:
 
 - Running a pipeline
 - Modifying and resuming a pipeline
@@ -12,7 +12,7 @@ Once you have Nextflow installed, you’re ready to run your first script. This 
 
 You will need the following to get started:
 
-- Nextflow 23.10.0 or later. See {ref}`install-page` for instructions to install or update your version of Nextflow.
+- Nextflow. See {ref}`install-page` for instructions to install or update your version of Nextflow.
 
 ## Run a pipeline
 
@@ -176,9 +176,7 @@ See {ref}`cache-resume-page` for more information about Nextflow cache and resum
 
 ## Pipeline parameters
 
-Nextflow looks for configuration settings in multiple locations when launched. Configuration settings are merged and, if conflicts exist, override each other in a set order. 
-
-Parameters are a type of configuration. They are declared by prepending a variable name to the prefix `params`, separated by dot character. Parameters can be specified on the command line by prefixing the parameter name with a double dash character, for example, `--paramName`. Parameters specified on the command line override parameters specified in a main script.
+Parameters are used to control the inputs to a pipeline. They are declared by prepending a variable name to the prefix `params`, separated by dot character. Parameters can be specified on the command line by prefixing the parameter name with a double dash character, for example, `--paramName`. Parameters specified on the command line override parameters specified in a main script.
 
 You can configure the `str` parameter in your pipeline. To modify your `str` parameter:
 
@@ -207,4 +205,4 @@ See {ref}`cli-params` for more information about modifying pipeline parameters.
 
 <h2>Next steps</h2>
 
-See [training.nextflow.io](https://training.nextflow.io/) for further Nextflow training modules.
+Your first script is a brief introduction to running pipelines, modifying and resuming pipelines, and pipeline parameters. See [training.nextflow.io](https://training.nextflow.io/) for further Nextflow training modules.
