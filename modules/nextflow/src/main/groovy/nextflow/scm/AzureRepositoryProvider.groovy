@@ -39,20 +39,36 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     private String continuationToken
 
     AzureRepositoryProvider(String project, ProviderConfig config=null) {
-        /*
-        Azure repo format follows Organization/Project/Repository where Project can be optional
-        If Project is not present then Repository is used as Project (and also as Repository)
-         */
         this.urlPath = project
-        def tokens = project.tokenize('/')
+        def tokens = getUniformPath(project)
         this.repo = tokens.removeLast()
-        if( tokens.size() == 1){
-            this.project = [tokens.first(), this.repo].join('/')
-        }else{
-            this.project = tokens.join('/')
-        }
+        this.project = tokens.join('/')
         this.config = config ?: new ProviderConfig('azurerepos')
         this.continuationToken = null
+    }
+
+    /**
+     * An Azure repo is identified with the Organization/Project/Repository parameters.
+     * This function gets these parameters for the different URL path formats supported in Nextflow for Azure repositories.
+     *
+     * @param urlPath Path of the Azure repo URL
+     * @return List with the azure repo parameters with the following order [ Organization, Project, Repository ]
+     */
+    static List<String> getUniformPath(String urlPath){
+        def tokens = urlPath.tokenize('/')
+        if( tokens.size() == 2 ){
+            // URL is just organization/project. project and repo are the same.
+            return [tokens[0], tokens[1], tokens[1]]
+        } 
+        if( tokens.size() == 3 ){
+            // URL is as expected organization/project/repository.
+            return tokens
+        }
+        if( tokens.size() == 4 && tokens[2] == '_git' ){
+            // Clone URL organization/project/_git/repository
+            return [tokens[0], tokens[1], tokens[3]]
+        } 
+        throw new IllegalArgumentException("Unexpected Azure repository path format - offending value: '$urlPath'")
     }
 
     /** {@inheritDoc} */
