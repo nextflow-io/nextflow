@@ -111,7 +111,6 @@ NXF_VER=23.10.0 nextflow info
 
 ## Seqera Platform
 
-
 You can launch workflows directly from [Seqera Platform](https://seqera.io/platform/) without installing Nextflow locally.
 Launching from Seqera Platform provides you with:
 - User-friendly launch interfaces
