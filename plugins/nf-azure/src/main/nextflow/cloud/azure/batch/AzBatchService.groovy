@@ -239,7 +239,7 @@ class AzBatchService implements Closeable {
         score += cpuScore * 10  // Give more weight to CPU match
 
         // Memory score if specified
-        if( mem && vmMemGb ) {
+        if( mem ) {
             double memGb = mem.toMega()/1024
             if( memGb > vmMemGb )
                 return null
@@ -248,7 +248,7 @@ class AzBatchService implements Closeable {
         }
 
         // Disk score if specified  
-        if( disk && vmDiskGb != MemoryUnit.ZERO) {
+        if( disk ) {
             double diskGb = disk.toMega()/1024
             if( diskGb > vmDiskGb )
                 return null
@@ -256,13 +256,12 @@ class AzBatchService implements Closeable {
             score += diskScore
         }
 
-        // Round to 3 decimal places
-        if (score == 0.0) return null
-
         // Add a small fraction based on name length to uniqueify names
         // and  sort scores by VM name from smallest to largest
         // VM sizes with shorter names have fewer features and are less expensive
         score += 1-(1.0/entry.name.toString().length())
+
+        // Round to 3 decimal places and return
         return new BigDecimal(score).setScale(3, RoundingMode.HALF_UP).doubleValue()
     }
 
