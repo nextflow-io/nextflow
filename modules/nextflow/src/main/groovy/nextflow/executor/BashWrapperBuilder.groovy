@@ -563,6 +563,14 @@ class BashWrapperBuilder {
         statsEnabled || fixOwnership()
     }
 
+    protected String shellPath() {
+        // keep the shell path as "/bin/bash" when a non-custom "shell" attribute is specified
+        // to not introduce unexpected changes due to the fact BASH is defined as "/bin/bash -eu" by default
+        return shell.is(BASH)
+            ? "/bin/bash"
+            : shell.join(' ')
+    }
+
     protected String getLaunchCommand(String interpreter, String env) {
         /*
         * process stats
@@ -574,7 +582,7 @@ class BashWrapperBuilder {
         final traceWrapper = isTraceRequired()
         if( traceWrapper ) {
             // executes the stub which in turn executes the target command
-            launcher = "/bin/bash ${fileStr(wrapperFile)} nxf_trace"
+            launcher = "${shellPath()} ${fileStr(wrapperFile)} nxf_trace"
         }
         else {
             launcher = "${interpreter} ${fileStr(scriptFile)}"
