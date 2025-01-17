@@ -566,7 +566,7 @@ class BashWrapperBuilder {
     protected String shellPath() {
         // keep the shell path as "/bin/bash" when a non-custom "shell" attribute is specified
         // to not introduce unexpected changes due to the fact BASH is defined as "/bin/bash -eu" by default
-        return shell==null || shell.is(BASH)
+        return shell.is(BASH)
             ? "/bin/bash"
             : shell.join(' ')
     }

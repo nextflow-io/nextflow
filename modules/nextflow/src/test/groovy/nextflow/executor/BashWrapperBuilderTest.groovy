@@ -1224,6 +1224,7 @@ class BashWrapperBuilderTest extends Specification {
         given:
         def bean = Mock(TaskBean) {
             inputFiles >> [:]
+            shell >> BashWrapperBuilder.BASH
             outputFiles >> []
         }
         def copy = Mock(ScriptFileCopyStrategy)
