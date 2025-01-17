@@ -672,14 +672,41 @@ class BashWrapperBuilderTest extends Specification {
         when:
         binding = newBashWrapperBuilder(statsEnabled: true).makeBinding()
         then:
-        binding.launch_cmd == '/bin/bash -ue /work/dir/.command.run nxf_trace'
+        binding.launch_cmd == '/bin/bash /work/dir/.command.run nxf_trace'
         binding.unstage_controls == null
         binding.containsKey('unstage_controls')
 
         when:
         binding = newBashWrapperBuilder(statsEnabled: true, scratch: true).makeBinding()
         then:
-        binding.launch_cmd == '/bin/bash -ue /work/dir/.command.run nxf_trace'
+        binding.launch_cmd == '/bin/bash /work/dir/.command.run nxf_trace'
+        binding.unstage_controls == '''\
+                        cp .command.out /work/dir/.command.out || true
+                        cp .command.err /work/dir/.command.err || true
+                        cp .command.trace /work/dir/.command.trace || true
+                        '''.stripIndent()
+
+    }
+
+    def 'should enable trace feature with custom shell' () {
+        when:
+        def binding = newBashWrapperBuilder(statsEnabled: false, shell: ['/bin/bash', '-ue']).makeBinding()
+        then:
+        binding.launch_cmd == '/bin/bash -ue /work/dir/.command.sh'
+        binding.unstage_controls == null
+        binding.containsKey('unstage_controls')
+
+        when:
+        binding = newBashWrapperBuilder(statsEnabled: true, shell: ['/bin/bash', '-eu']).makeBinding()
+        then:
+        binding.launch_cmd == '/bin/bash -eu /work/dir/.command.run nxf_trace'
+        binding.unstage_controls == null
+        binding.containsKey('unstage_controls')
+
+        when:
+        binding = newBashWrapperBuilder(statsEnabled: true, scratch: true, shell: ['/bin/bash', '-eu']).makeBinding()
+        then:
+        binding.launch_cmd == '/bin/bash -eu /work/dir/.command.run nxf_trace'
         binding.unstage_controls == '''\
                         cp .command.out /work/dir/.command.out || true
                         cp .command.err /work/dir/.command.err || true
@@ -1197,7 +1224,6 @@ class BashWrapperBuilderTest extends Specification {
         given:
         def bean = Mock(TaskBean) {
             inputFiles >> [:]
-            shell >> BashWrapperBuilder.BASH
             outputFiles >> []
         }
         def copy = Mock(ScriptFileCopyStrategy)
