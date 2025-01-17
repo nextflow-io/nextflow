@@ -109,28 +109,19 @@ You can also temporarily switch to a specific version of Nextflow with the `NXF_
 NXF_VER=23.10.0 nextflow info
 ```
 
-## Use Nextflow with Seqera Platform
+## Seqera Platform
 
-To take your Nextflow usage to the next level, you can try
-[Seqera Platform](https://seqera.io/platform/).
-It's a tool created by the team behind Nextflow that's designed to monitor, manage,
-and optimise Nextflow workflows.
-It's free for small teams, and academic researchers can apply to get Seqera Cloud Pro for free.
+Take your Nextflow usage to the next level with [Seqera Platform](https://seqera.io/platform/), a tool created by the team behind Nextflow that's designed to monitor, manage,
+and optimize Nextflow workflows.
 
 You can launch workflows directly from Seqera Platform, skipping the need to install Nextflow at all.
-Launching from Platform gives you a user-friendly launch interface,
+Launching from Platform provides you a user-friendly launch interface,
 the ability to automatically create complex cloud infrastructure,
-organisational user management for shared access control,
-and advanced analytics to optimise performance and costs for you.
-See the [Seqera Platform docs](https://docs.seqera.io/platform) for more information and a tutorials.
+organizational user management for shared access control,
+and advanced analytics to optimize performance and costs.
 
-You can also monitor your Nextflow workflows launched from the local CLI,
-which streams real-time execution data to your Seqera Platform dashboard:
-
-```bash
-export TOWER_ACCESS_TOKEN="<YOUR_ACCESS_TOKEN>"
-nextflow run hello -with-tower
-```
+Seqera Cloud Basic is free for small teams. Researchers at qualifying academic institutions can apply for free access to Seqera Cloud Pro.
+See [Seqera Platform](https://docs.seqera.io/platform) for set-up information and tutorials to get started.
 
 ## Stable and edge releases
 
