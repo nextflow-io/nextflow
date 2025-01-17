@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,9 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.processor.TaskHandler
 import nextflow.trace.TraceObserver
+import nextflow.trace.TraceRecord
 import nextflow.util.Duration
 import nextflow.util.Threads
 /**
@@ -47,6 +49,7 @@ class LogsCheckpoint implements TraceObserver {
         this.config = session.config
         this.handler = new LogsHandler(session, SysEnv.get())
         this.interval = config.navigate('tower.logs.checkpoint.interval', defaultInterval()) as Duration
+        thread = Threads.start('tower-logs-checkpoint', this.&run)
     }
 
     private String defaultInterval() {
@@ -54,12 +57,12 @@ class LogsCheckpoint implements TraceObserver {
     }
 
     @Override
-    void onFlowBegin() {
-        thread = Threads.start('tower-logs-checkpoint', this.&run)
-    }
-
-    @Override
     void onFlowComplete() {
+        this.terminated = true
+        thread.join()
+    }
+    @Override
+    void onFlowError(TaskHandler handler, TraceRecord trace){
         this.terminated = true
         thread.join()
     }
@@ -67,7 +70,7 @@ class LogsCheckpoint implements TraceObserver {
     protected void run() {
         log.debug "Starting logs checkpoint thread - interval: ${interval}"
         try {
-            while( !terminated && !thread.isInterrupted() ) {
+            while( !terminated && !Thread.currentThread().isInterrupted() ) {
                 // just wait the declared delay
                 await(interval)
                 // checkpoint the logs

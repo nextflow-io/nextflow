@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -130,16 +130,19 @@ class BatchLoggingTest extends Specification {
         when:
         def state=null
         do {
-            state = batchClient.getJobState(jobId)
-            log.debug "Test job state=$state"
+            if( batchClient.listTasks(jobId).iterator().hasNext() )
+                state = batchClient.getTaskState(jobId, '0')
+            else
+                state = 'PENDING'
+            log.debug "Test task state=$state"
             sleep 10_000
         } while( state !in ['SUCCEEDED', 'FAILED'] )
         then:
         state in ['SUCCEEDED', 'FAILED']
 
         when:
-        def stdout = logClient.stdout(uid)
-        def stderr = logClient.stderr(uid)
+        def stdout = logClient.stdout(uid, '0')
+        def stderr = logClient.stderr(uid, '0')
         log.debug "STDOUT: $stdout"
         log.debug "STDERR: $stderr"
         then:

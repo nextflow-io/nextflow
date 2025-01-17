@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package nextflow.script
 
-import java.lang.reflect.Method
 
 import groovy.transform.CompileStatic
 /**
@@ -58,10 +57,22 @@ class FunctionDef extends ComponentDef implements ChainableDef {
         final meta = target.metaClass.getMetaMethod(name, arr)
         if( meta == null )
             throw new MissingMethodException(name, target.getClass(), arr)
-        Method callMethod = target.getClass().getMethod(name, meta.getNativeParameterTypes())
+        final types = meta.getNativeParameterTypes()
+        final callMethod = target.getClass().getMethod(name, types)
         if( callMethod == null )
             throw new MissingMethodException(name, target.getClass(), arr)
-        return callMethod.invoke(target, arr)
+        return callMethod.invoke(target, coerce0(arr,types))
+    }
+
+    static protected Object[] coerce0(Object[] arr, Class[] types) {
+        assert arr.length==types.length
+        // when the argument is a GString and type declared is a String
+        // force the evaluation of the string to invoke the target function
+        for( int i=0; i<arr.length; i++ ){
+            if( arr[i] instanceof GString && types[i]==String.class )
+                arr[i] = ((GString)arr[i]).toString()
+        }
+        return arr
     }
 
     @Override

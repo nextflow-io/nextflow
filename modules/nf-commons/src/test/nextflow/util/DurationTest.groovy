@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package nextflow.util
 import java.time.Instant
 
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -61,6 +62,8 @@ class DurationTest extends Specification {
         Duration.of('1days').toHours() == 24
         Duration.of('1day').toHours() == 24
         Duration.of('1d').toHours() == 24
+
+        Duration.of('30d').toMillis() == 30 * DAY
 
     }
 

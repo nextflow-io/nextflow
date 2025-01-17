@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,13 +21,13 @@ import java.nio.file.Path
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.dag.CytoscapeHtmlRenderer
 import nextflow.dag.DAG
 import nextflow.dag.DagRenderer
 import nextflow.dag.DotRenderer
 import nextflow.dag.GexfRenderer
 import nextflow.dag.GraphvizRenderer
 import nextflow.dag.MermaidRenderer
+import nextflow.dag.MermaidHtmlRenderer
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.processor.TaskHandler
@@ -41,7 +41,7 @@ import nextflow.processor.TaskProcessor
 @Slf4j
 class GraphObserver implements TraceObserver {
 
-    static public final String DEF_FILE_NAME = "dag-${TraceHelper.launchTimestampFmt()}.dot"
+    static public final String DEF_FILE_NAME = "dag-${TraceHelper.launchTimestampFmt()}.html"
 
     private Path file
 
@@ -61,7 +61,7 @@ class GraphObserver implements TraceObserver {
         assert file
         this.file = file
         this.name = file.baseName
-        this.format = file.getExtension().toLowerCase() ?: 'dot'
+        this.format = file.getExtension().toLowerCase() ?: 'html'
     }
 
     @Override
@@ -91,7 +91,7 @@ class GraphObserver implements TraceObserver {
             new DotRenderer(name)
 
         else if( format == 'html' )
-            new CytoscapeHtmlRenderer()
+            new MermaidHtmlRenderer()
 
         else if( format == 'gexf' )
             new GexfRenderer(name)

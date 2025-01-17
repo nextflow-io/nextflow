@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ import nextflow.exception.ProcessNonZeroExitStatusException
 import nextflow.file.FileHelper
 import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionHelper
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.trace.TraceRecord
@@ -98,6 +99,12 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         this.exitStatusReadTimeoutMillis = duration.toMillis()
         this.queue = task.config?.queue
         this.sanityCheckInterval = duration
+    }
+
+    @Override
+    void prepareLauncher() {
+        // -- create the wrapper script
+        createTaskWrapper(task).build()
     }
 
     protected ProcessBuilder createProcessBuilder() {
@@ -254,17 +261,15 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     void submit() {
         ProcessBuilder builder = null
         try {
-            // -- create the wrapper script
-            createTaskWrapper(task).build()
             // -- start the execution and notify the event to the monitor
             builder = createProcessBuilder()
             // -- forward the job launcher script to the command stdin if required
             final stdinScript = executor.pipeLauncherScript() ? stdinLauncherScript() : null
             // -- execute with a re-triable strategy
             final result = safeExecute( () -> processStart(builder, stdinScript) )
-            // -- save the JobId in the
-            this.jobId = executor.parseJobId(result)
-            this.status = SUBMITTED
+            // -- save the job id
+            final jobId = (String)executor.parseJobId(result)
+            updateStatus(jobId)
             log.debug "[${executor.name.toUpperCase()}] submitted process ${task.name} > jobId: $jobId; workDir: ${task.workDir}"
 
         }
@@ -281,9 +286,21 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
             status = COMPLETED
             throw new ProcessFailedException("Error submitting process '${task.name}' for execution", e )
         }
-
     }
 
+    private void updateStatus(String jobId) {
+        if( task instanceof TaskArrayRun ) {
+            for( int i=0; i<task.children.size(); i++ ) {
+                final handler = task.children[i] as GridTaskHandler
+                final arrayTaskId = ((TaskArrayExecutor)executor).getArrayTaskId(jobId, i)
+                handler.updateStatus(arrayTaskId)
+            }
+        }
+        else {
+            this.jobId = jobId
+            this.status = SUBMITTED
+        }
+    }
 
     private long startedMillis
 
@@ -302,7 +319,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     protected Integer readExitStatus() {
 
         String workDirList = null
-        if( exitTimestampMillis1 && FileHelper.workDirIsNFS ) {
+        if( exitTimestampMillis1 && FileHelper.workDirIsSharedFS ) {
             /*
              * When the file is in a NFS folder in order to avoid false negative
              * list the content of the parent path to force refresh of NFS metadata
@@ -375,6 +392,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
             }
             catch( Exception e ) {
                 log.warn "Unable to parse process exit file: ${exitFile.toUriString()} -- bad value: '$status'"
+                return Integer.MAX_VALUE
             }
         }
 
@@ -400,9 +418,8 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
                 return null
             }
             log.warn "Unable to read command status from: ${exitFile.toUriString()} after $delta ms"
+            return -1
         }
-
-        return Integer.MAX_VALUE
     }
 
     @Override
@@ -478,7 +495,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
                 return true
             }
             // if the task is not complete (ie submitted or running)
-            // AND the work-dir does not exists ==> something is wrong
+            // AND the work-dir does not exist ==> something is wrong
             task.error = new ProcessException("Task work directory is missing (!)")
             // sanity check does not pass
             return false
@@ -486,7 +503,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     @Override
-    void kill() {
+    protected void killTask() {
         if( batch ) {
             batch.collect(executor, jobId)
         }

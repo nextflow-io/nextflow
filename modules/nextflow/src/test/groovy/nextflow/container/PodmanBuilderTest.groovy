@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,10 +40,10 @@ class PodmanBuilderTest extends Specification {
         def quotes =  [ Paths.get('/folder with blanks/A'), Paths.get('/folder with blanks/B') ]
 
         expect:
-        builder.makeVolumes([]).toString() == '-v "$PWD":"$PWD" '
-        builder.makeVolumes(files).toString() == '-v /folder:/folder -v "$PWD":"$PWD" '
-        builder.makeVolumes(real).toString()  == '-v /user/yo/nextflow:/user/yo/nextflow -v /db/pdb/local/data:/db/pdb/local/data -v "$PWD":"$PWD" '
-        builder.makeVolumes(quotes).toString() == '-v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v "$PWD":"$PWD" '
+        builder.makeVolumes([]).toString() == '-v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" '
+        builder.makeVolumes(files).toString() == '-v /folder:/folder -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" '
+        builder.makeVolumes(real).toString()  == '-v /user/yo/nextflow:/user/yo/nextflow -v /db/pdb/local/data:/db/pdb/local/data -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" '
+        builder.makeVolumes(quotes).toString() == '-v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" '
         and:
         builder.addMountWorkDir(false).makeVolumes([]).toString() == ''
         builder.addMountWorkDir(false).makeVolumes(files).toString() == '-v /folder:/folder '
@@ -74,67 +74,67 @@ class PodmanBuilderTest extends Specification {
         expect:
         new PodmanBuilder('fedora')
                 .build()
-                .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'podman run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
 
         new PodmanBuilder('fedora')
                 .addEnv(env)
                 .build()
-                .runCommand == 'podman run -i -e "FOO=1" -e "BAR=hello world" -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'podman run -i -e "FOO=1" -e "BAR=hello world" -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
 
         new PodmanBuilder('ubuntu')
                 .params(temp:'/hola')
                 .build()
-                .runCommand == 'podman run -i -v /hola:/tmp -v "$PWD":"$PWD" -w "$PWD" ubuntu'
+                .runCommand == 'podman run -i -v /hola:/tmp -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" ubuntu'
 
         new PodmanBuilder('busybox')
                 .params(entry: '/bin/bash')
                 .build()
-                .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --entrypoint /bin/bash busybox'
+                .runCommand == 'podman run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --entrypoint /bin/bash busybox'
 
         new PodmanBuilder('busybox')
                 .params(runOptions: '-x --zeta')
                 .build()
-                .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" -x --zeta busybox'
+                .runCommand == 'podman run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" -x --zeta busybox'
 
         new PodmanBuilder('busybox')
                 .setName('hola')
                 .build()
-                .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --name hola busybox'
+                .runCommand == 'podman run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --name hola busybox'
 
         new PodmanBuilder('busybox')
                 .params(engineOptions: '--tls-verify=false --cert-dir "/path/to/my/cert-dir"')
                 .build()
-                .runCommand == 'podman --tls-verify=false --cert-dir "/path/to/my/cert-dir" run -i -v "$PWD":"$PWD" -w "$PWD" busybox'
+                .runCommand == 'podman --tls-verify=false --cert-dir "/path/to/my/cert-dir" run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" busybox'
 
         new PodmanBuilder('fedora')
                 .addEnv(env)
                 .addMount(db_file)
                 .addMount(db_file)  // <-- add twice the same to prove that the final string won't contain duplicates
                 .build()
-                .runCommand == 'podman run -i -e "FOO=1" -e "BAR=hello world" -v /home/db:/home/db -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'podman run -i -e "FOO=1" -e "BAR=hello world" -v /home/db:/home/db -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
 
         new PodmanBuilder('fedora')
                 .params(readOnlyInputs: true)
                 .addMount(db_file)
                 .build()
-                .runCommand == 'podman run -i -v /home/db:/home/db:ro -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'podman run -i -v /home/db:/home/db:ro -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
 
         new PodmanBuilder('fedora')
                 .params(mountFlags: 'Z')
                 .addMount(db_file)
                 .build()
-                .runCommand == 'podman run -i -v /home/db:/home/db:Z -v "$PWD":"$PWD":Z -w "$PWD" fedora'
+                .runCommand == 'podman run -i -v /home/db:/home/db:Z -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR":Z -w "$NXF_TASK_WORKDIR" fedora'
 
         new PodmanBuilder('fedora')
                 .params(privileged: true)
                 .build()
-                .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --privileged fedora'
+                .runCommand == 'podman run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --privileged fedora'
 
         new PodmanBuilder('fedora')
                 .params(device: '/dev/fuse')
                 .params(capAdd: 'SYS_ADMIN')
                 .build()
-                .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --device /dev/fuse --cap-add SYS_ADMIN fedora'
+                .runCommand == 'podman run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --device /dev/fuse --cap-add SYS_ADMIN fedora'
     }
 
     def 'test add mount'() {
@@ -158,14 +158,14 @@ class PodmanBuilderTest extends Specification {
         when:
         def podman = new PodmanBuilder('busybox').setName('c1').build()
         then:
-        podman.runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --name c1 busybox'
+        podman.runCommand == 'podman run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --name c1 busybox'
         podman.removeCommand == 'podman rm c1'
         podman.killCommand == 'podman stop c1'
 
         when:
         podman = new PodmanBuilder('busybox').setName('c3').params(remove: true).build()
         then:
-        podman.runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --name c3 busybox'
+        podman.runCommand == 'podman run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --name c3 busybox'
         podman.removeCommand == 'podman rm c3'
         podman.killCommand == 'podman stop c3'
 
@@ -188,17 +188,17 @@ class PodmanBuilderTest extends Specification {
         when:
         def cli = new PodmanBuilder('ubuntu:14').build().getRunCommand()
         then:
-        cli ==  'podman run -i -v "$PWD":"$PWD" -w "$PWD" ubuntu:14'
+        cli ==  'podman run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" ubuntu:14'
 
         when:
         cli = new PodmanBuilder('ubuntu:14').build().getRunCommand('bwa --this --that file.fasta')
         then:
-        cli ==  'podman run -i -v "$PWD":"$PWD" -w "$PWD" ubuntu:14 bwa --this --that file.fasta'
+        cli ==  'podman run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" ubuntu:14 bwa --this --that file.fasta'
 
         when:
         cli = new PodmanBuilder('ubuntu:14').params(entry:'/bin/bash').build().getRunCommand('bwa --this --that file.fasta')
         then:
-        cli ==  'podman run -i -v "$PWD":"$PWD" -w "$PWD" --entrypoint /bin/bash ubuntu:14 -c "bwa --this --that file.fasta"'
+        cli ==  'podman run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --entrypoint /bin/bash ubuntu:14 -c "bwa --this --that file.fasta"'
 
     }
 
@@ -226,18 +226,18 @@ class PodmanBuilderTest extends Specification {
         new PodmanBuilder('fedora')
                 .setCpus(3)
                 .build()
-                .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --cpu-shares 3072 fedora'
+                .runCommand == 'podman run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --cpu-shares 3072 fedora'
 
         new PodmanBuilder('fedora')
                 .setMemory(new MemoryUnit('100m'))
                 .build()
-                .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --memory 100m fedora'
+                .runCommand == 'podman run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --memory 100m fedora'
 
         new PodmanBuilder('fedora')
                 .setCpus(1)
                 .setMemory(new MemoryUnit('400m'))
                 .build()
-                .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --cpu-shares 1024 --memory 400m fedora'
+                .runCommand == 'podman run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --cpu-shares 1024 --memory 400m fedora'
 
     }
 }

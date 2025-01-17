@@ -17,6 +17,7 @@
 package nextflow.cloud.azure.config
 
 import groovy.transform.CompileStatic
+import nextflow.SysEnv
 import nextflow.cloud.azure.batch.AzHelper
 import nextflow.cloud.azure.nio.AzFileSystemProvider
 import nextflow.util.Duration
@@ -28,7 +29,6 @@ import nextflow.util.Duration
 @CompileStatic
 class AzStorageOpts {
 
-    private Map<String,String> sysEnv
     String accountKey
     String accountName
     String sasToken
@@ -36,12 +36,11 @@ class AzStorageOpts {
     Map<String,AzFileShareOpts> fileShares
 
 
-    AzStorageOpts(Map config, Map<String,String> env=null) {
+    AzStorageOpts(Map config, Map<String,String> env=SysEnv.get()) {
         assert config!=null
-        this.sysEnv = env==null ? new HashMap<String,String>(System.getenv()) : env
-        this.accountKey = config.accountKey ?: sysEnv.get('AZURE_STORAGE_ACCOUNT_KEY')
-        this.accountName = config.accountName ?: sysEnv.get('AZURE_STORAGE_ACCOUNT_NAME')
-        this.sasToken = config.sasToken
+        this.accountKey = config.accountKey ?: env.get('AZURE_STORAGE_ACCOUNT_KEY')
+        this.accountName = config.accountName ?: env.get('AZURE_STORAGE_ACCOUNT_NAME')
+        this.sasToken = config.sasToken ?: env.get('AZURE_STORAGE_SAS_TOKEN')
         this.tokenDuration = (config.tokenDuration as Duration) ?: Duration.of('48h')
         this.fileShares = parseFileShares(config.fileShares instanceof Map ? config.fileShares as Map<String, Map>
                 : Collections.<String,Map> emptyMap())
@@ -62,11 +61,5 @@ class AzStorageOpts {
             result[entry.key] = new AzFileShareOpts(entry.value)
         }
         return result
-    }
-
-    synchronized String getOrCreateSasToken() {
-        if( !sasToken )
-            sasToken = AzHelper.generateAccountSas(accountName, accountKey, tokenDuration)
-        return sasToken
     }
 }

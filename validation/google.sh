@@ -6,18 +6,6 @@ get_abs_filename() {
 
 export NXF_CMD=${NXF_CMD:-$(get_abs_filename ../launch.sh)}
 
-#
-# setup credentials:
-#  1. decrypt credentials file
-#  2. export required env var
-# Note: file was encrypted with the command:
-#  gpg --symmetric --cipher-algo AES256 --output ./google_credentials.gpg $GOOGLE_APPLICATION_CREDENTIALS
-#
-# More details https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets
-#   
-gpg --quiet --batch --yes --decrypt --passphrase=$GOOGLE_SECRET --output google_credentials.json ./google_credentials.gpg
-export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
-
 [[ $TOWER_ACCESS_TOKEN ]] && OPTS='-with-tower' || OPTS=''
 set -x
 
@@ -81,3 +69,16 @@ $NXF_CMD -C ./google.config \
     -resume
 [[ `grep -c 'Using Nextflow cache factory: nextflow.cache.CloudCacheFactory' .nextflow.log` == 1 ]] || false
 [[ `grep -c 'Cached process > ' .nextflow.log` == 4 ]] || false
+
+## Test job array with Fusion
+$NXF_CMD -C ./google.config \
+    run nextflow-io/hello \
+    -process.array 10 \
+    -with-wave \
+    -with-fusion
+    
+## Test job array
+$NXF_CMD -C ./google.config \
+    run nextflow-io/hello \
+    -process.array 10
+

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, Sage-Bionetworks
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ import nextflow.Const
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ProcessUnrecoverableException
-import nextflow.util.CacheHelper
+import nextflow.util.Escape
 /**
  * Implements a secrets store that saves secrets into a JSON file save into the
  * nextflow home. The file can be relocated using the env variable {@code NXF_SECRETS_FILE}.
@@ -49,7 +49,7 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
 
     private Map<String,String> env = SysEnv.get()
 
-    private Map<String,Secret> secretsMap
+    private Map<String, Secret> secretsMap
 
     private Path storeFile
 
@@ -197,23 +197,28 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
         if( !secretsMap )
             return null
 
-        final name = ".nf-${CacheHelper.hasher(secretsMap.values()).hash()}.secrets"
+        final name = ".nf-${UUID.randomUUID().toString()}.secrets"
         final path = storeFile.parent.resolve(name)
         if( path.exists() ) {
             // make sure the file can only be accessed by the owner user
             path.setPermissions(ONLY_OWNER_PERMS)
+            // remove it on completion
+            path.toFile().deleteOnExit()
             return path
         }
 
         def result = ''
         for( Secret s : secretsMap.values() ) {
-            result += /export ${s.name}="${s.value}"/
+            result += /export ${s.name}="${Escape.variable(s.value)}"/
             result += '\n'
         }
         Files.createFile(path)
         // make sure the file can only be accessed by the owner user
         path.setPermissions(ONLY_OWNER_PERMS)
         path.text = result
+        // remove it on completion
+        path.toFile().deleteOnExit()
+        // return the temp path
         return path
     }
 }

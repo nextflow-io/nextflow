@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,10 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
+import nextflow.container.inspect.ContainerInspectMode
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
+import nextflow.plugin.Plugins
 import nextflow.util.HistoryFile
 /**
  * Run a nextflow script file
@@ -225,6 +227,8 @@ class ScriptRunner {
     protected void parseScript( ScriptFile scriptFile, String entryName ) {
         scriptParser = new ScriptParser(session)
                             .setEntryName(entryName)
+                            // setting module true when running in "inspect" mode to prevent the running the entry workflow
+                            .setModule(ContainerInspectMode.active())
                             .parse(scriptFile.main)
         session.script = scriptParser.script
     }
@@ -257,6 +261,7 @@ class ScriptRunner {
 
     protected shutdown() {
         session.destroy()
+        Plugins.stop()
         session.cleanup()
         Global.cleanUp()
         log.debug "> Execution complete -- Goodbye"

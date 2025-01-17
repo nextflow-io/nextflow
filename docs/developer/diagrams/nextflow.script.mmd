@@ -1,0 +1,130 @@
+classDiagram
+    %%
+    %% nextflow.script
+    %%
+    CmdRun --> ScriptRunner : run
+
+    class ScriptRunner {
+        scriptFile : ScriptFile
+        session : Session
+    }
+    ScriptRunner --* ScriptFile
+    ScriptRunner --> ScriptParser : execute
+    ScriptParser --> BaseScript : parse
+
+    class ScriptFile {
+        source : Path
+        main : Path
+        repository : String
+        revisionInfo : AssetManager.RevisionInfo
+        localPath : Path
+        projectName : String
+    }
+
+    class BaseScript {
+        meta : ScriptMeta
+        entryFlow : WorkflowDef
+    }
+    BaseScript --* ScriptBinding
+    BaseScript --* ScriptMeta
+    BaseScript --> IncludeDef : include
+
+    IncludeDef --> ScriptParser : load0
+
+    class ScriptBinding {
+        scriptPath : Path
+        args : List~String~
+        params : ParamsMap
+        configEnv : Map
+        entryName : String
+    }
+
+    class ScriptMeta {
+        scriptPath : Path
+        definitions : Map
+        imports : Map
+        module : boolean
+    }
+    ScriptMeta "1" --* "*" ComponentDef : definitions
+    ScriptMeta "1" --* "*" ComponentDef : imports
+
+    ComponentDef <|-- FunctionDef
+    ComponentDef <|-- ProcessDef
+    ComponentDef <|-- WorkflowDef
+
+    class FunctionDef {
+        target : Object
+        name : String
+        alias : String
+    }
+
+    class ProcessDef {
+        processName : String
+        simpleName : String
+        baseName : String
+        rawBody : Closure~BodyDef~
+    }
+    ProcessDef --* ProcessConfig
+    ProcessDef --* BodyDef
+    ProcessDef --* ChannelOut
+
+    class WorkflowDef {
+        name : String
+        body : BodyDef
+        declaredInputs : List~String~
+        declaredOutputs : List~String~
+        variableNames : Set~String~
+    }
+    WorkflowDef --* BodyDef
+    WorkflowDef --* WorkflowBinding
+    WorkflowDef --* ChannelOut
+
+    class ProcessConfig {
+        configProperties : Map
+        inputs : InputsList
+        outputs : OutputsList
+    }
+    ProcessConfig --* InputsList
+    ProcessConfig --* OutputsList
+
+    class BodyDef {
+        closure : Closure
+        source : String
+        type : ScriptType
+        isShell : boolean
+    }
+
+    class ChannelOut {
+        target : List~DataflowWriteChannel~
+        channels : Map
+    }
+
+    class WorkflowBinding {
+        vars : Map
+    }
+
+    class InputsList {
+        target : List~InParam~
+    }
+    InputsList "1" --* "*" InParam
+
+    class OutputsList {
+        target : List~OutParam~
+    }
+    OutputsList "1" --* "*" OutParam
+
+    %% InParam <|-- BaseInParam
+    %% BaseInParam <|-- EachInParam
+    %% BaseInParam <|-- EnvInParam
+    %% BaseInParam <|-- FileInParam
+    %% BaseInParam <|-- StdInParam
+    %% BaseInParam <|-- TupleInParam
+    %% BaseInParam <|-- ValueInParam
+
+    %% OutParam <|-- BaseOutParam
+    %% BaseOutParam <|-- EachOutParam
+    %% BaseOutParam <|-- EnvOutParam
+    %% BaseOutParam <|-- FileOutParam
+    %% BaseOutParam <|-- StdOutParam
+    %% BaseOutParam <|-- TupleOutParam
+    %% BaseOutParam <|-- ValueOutParam

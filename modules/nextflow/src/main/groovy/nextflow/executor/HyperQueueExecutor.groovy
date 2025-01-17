@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ class HyperQueueExecutor extends AbstractGridExecutor {
 
         // No enforcement, Hq just makes sure that the allocated value is below the limit
         if( task.config.getMemory() )
-            result << '--resource' << "mem=${task.config.getMemory().toBytes()}".toString()
+            result << '--resource' << "mem=${task.config.getMemory().toMega()}".toString()
         if( task.config.hasCpus() )
             result << '--cpus'<< task.config.getCpus().toString()
         if( task.config.getTime() )
@@ -73,9 +73,7 @@ class HyperQueueExecutor extends AbstractGridExecutor {
             result << '--resource' << "gpus=${task.config.getAccelerator().limit}".toString()
 
         // -- At the end append the command script wrapped file name
-        if( task.config.clusterOptions ) {
-            result << task.config.clusterOptions.toString() << ''
-        }
+        addClusterOptionsDirective(task.config, result)
 
         return result
     }

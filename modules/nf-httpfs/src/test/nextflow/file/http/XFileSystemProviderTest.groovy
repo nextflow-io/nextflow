@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,6 +42,7 @@ class XFileSystemProviderTest extends Specification {
 
     def "should return input stream from path"() {
         given:
+        def DATA = 'Hello world'
         def fsp = Spy(new HttpFileSystemProvider())
         def path = fsp.getPath(new URI('http://host.com/index.html?query=123'))
         def connection = Mock(URLConnection)
@@ -54,7 +55,8 @@ class XFileSystemProviderTest extends Specification {
             return connection
         }
         and:
-        connection.getInputStream() >> new ByteArrayInputStream('Hello world'.bytes)
+        connection.getInputStream() >> new ByteArrayInputStream(DATA.bytes)
+        connection.getContentLengthLong() >> DATA.size()
         and:
         stream.text == 'Hello world'
     }

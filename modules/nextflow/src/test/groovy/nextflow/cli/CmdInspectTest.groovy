@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,38 +17,29 @@
 
 package nextflow.cli
 
-
 import spock.lang.Specification
-import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class CmdInspectTest extends Specification {
 
-    @Unroll
-    def 'should ask for confirmation' () {
+    def 'should configure max rate' () {
         given:
-        def cmd = Spy(new CmdInspect(concretize: CONCRETIZE))
-        Map wave
+        def cmd = new CmdInspect()
 
         when:
-        wave = WAVE
-        cmd.checkWaveConfig(wave)
+        def cfg1 = [:]
+        cmd.configureMaxRate(cfg1)
         then:
-        wave == EXPECTED
+        cfg1 == [wave:[httpClient:[maxRate:'5/30sec']]]
 
-        where:
-        WAVE                            | CONCRETIZE    | EXPECTED
-        [:]                             | false         | [:]
-        [:]                             | true          | [:]
-        and:
-        [enabled:true]                  | false         | [enabled:true]
-        [enabled:true]                  | true          | [enabled:true]
-        and:
-        [enabled:true, freeze: true]    | false         | [enabled:true, freeze:true, dryRun: true]
-        [enabled:true, freeze: true]    | true          | [enabled:true, freeze:true, dryRun: false]
-
+        when:
+        def cfg2 = [wave:[enabled:true, httpClient: [something:true, maxRate: '1/s']]]
+        cmd.configureMaxRate(cfg2)
+        then:
+        cfg2 == [wave:[enabled:true, httpClient: [something:true, maxRate: '5/30sec']]]
     }
 
 }

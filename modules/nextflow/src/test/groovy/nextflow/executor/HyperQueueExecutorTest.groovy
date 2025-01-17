@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -133,7 +133,7 @@ class HyperQueueExecutorTest extends Specification {
             #HQ --name nf-task-1
             #HQ --log /work/dir/.command.log
             #HQ --cwd /work/dir
-            #HQ --resource mem=8589934592
+            #HQ --resource mem=8192
             #HQ --cpus 4
             #HQ --time-limit 60sec
             #HQ --resource gpus=2

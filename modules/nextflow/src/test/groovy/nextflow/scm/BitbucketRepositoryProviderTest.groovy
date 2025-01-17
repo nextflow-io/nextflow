@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -91,27 +91,60 @@ class BitbucketRepositoryProviderTest extends Specification {
         result.contains( new RepositoryProvider.BranchInfo('test-branch', '755ba829cbc4f28dcb3c16b9dcc1c49c7ee47ff5') )
     }
 
+    @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )
     def 'should return content URL' () {
         given:
-        String CONFIG = '''
-        providers {
-            mybitbucket {
-                server = 'https://bitbucket.org'
-                endpoint = 'https://bitbucket.org'
-                platform = 'bitbucket'
-                user = 'myname'
-                password = 'mypassword'
-            }
-        }
-        '''
-
-        def config = new ConfigSlurper().parse(CONFIG)
-        def obj = new ProviderConfig('bitbucket', config.providers.mybitbucket as ConfigObject)
+        def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')
+        def config = new ProviderConfig('bitbucket').setAuth(token)
 
         expect:
-        new BitbucketRepositoryProvider('pditommaso/hello', obj)
-                .setRevision('foo')
-                .getContentUrl('main.nf') == 'https://bitbucket.org/api/2.0/repositories/pditommaso/hello/src/foo/main.nf'
+        new BitbucketRepositoryProvider('pditommaso/tutorial', config)
+                .setRevision('test-branch')
+                .getContentUrl('main.nf') == 'https://bitbucket.org/api/2.0/repositories/pditommaso/tutorial/src/test-branch/main.nf'
+
+        and:
+        new BitbucketRepositoryProvider('pditommaso/tutorial', config)
+            .setRevision('feature/with-slash')
+            .getContentUrl('main.nf') == 'https://bitbucket.org/api/2.0/repositories/pditommaso/tutorial/src/a6b825b22d46758cdeb496ae6cf26aef839ace52/main.nf'
+
+        and:
+        new BitbucketRepositoryProvider('pditommaso/tutorial', config)
+            .setRevision('test/tag/v2')
+            .getContentUrl('main.nf') == 'https://bitbucket.org/api/2.0/repositories/pditommaso/tutorial/src/8f849beceb2ea479ef836809ca33d3daeeed25f9/main.nf'
+
+    }
+
+    @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )
+    def 'should read content on main and on separate branch' () {
+        given:
+        def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')
+        def config = new ProviderConfig('bitbucket').setAuth(token)
+        and:
+        def repo = new BitbucketRepositoryProvider('pditommaso/tutorial', config)
+
+        expect:
+        repo.readText('main.nf').contains('world')
+        !repo.readText('main.nf').contains('WORLD')
+
+        and:
+        repo.setRevision('test-branch')
+        repo.readText('main.nf').contains('world')
+        !repo.readText('main.nf').contains('WORLD')
+
+        and:
+        repo.setRevision('feature/with-slash')
+        !repo.readText('main.nf').contains('world')
+        repo.readText('main.nf').contains('WORLD')
+
+        and:
+        repo.setRevision('v1.1')
+        repo.readText('main.nf').contains('world')
+        !repo.readText('main.nf').contains('WORLD')
+
+        and:
+        repo.setRevision('test/tag/v2')
+        !repo.readText('main.nf').contains('world')
+        repo.readText('main.nf').contains('mundo')
 
     }
 }

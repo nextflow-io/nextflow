@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,7 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
+import java.security.Security;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
@@ -45,11 +46,14 @@ import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.RSAPrivateCrtKeySpec;
-
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 
 import org.apache.commons.codec.binary.Base64;
+import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
+import org.bouncycastle.openssl.PEMKeyPair;
+import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 
 
 public class SSLUtils {
@@ -87,25 +91,48 @@ public class SSLUtils {
         }
     }
 
+    static private PrivateKey generateEcKey(InputStream keyInputStream) throws IOException {
+        PrivateKey privateKey=null;
+        Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+        Object object = new PEMParser(new InputStreamReader(keyInputStream)).readObject();
+        if (object instanceof PEMKeyPair) {
+            PEMKeyPair keys = (PEMKeyPair) object;
+            privateKey = new JcaPEMKeyConverter().getKeyPair(keys).getPrivate();
+        }
+        if( object instanceof PrivateKeyInfo) {
+            PrivateKeyInfo privateKeyInfo = (PrivateKeyInfo)object;
+            privateKey = new JcaPEMKeyConverter().getPrivateKey(privateKeyInfo);
+        }
+        if( privateKey == null) {
+            throw new IOException("Unsupported EC algorithm");
+        }
+        return privateKey;
+    }
+
+    static private PrivateKey generateStdKey(InputStream keyInputStream, String clientKeyAlgo) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
+        byte[] keyBytes = decodePem(keyInputStream);
+
+        KeyFactory keyFactory = KeyFactory.getInstance(clientKeyAlgo);
+        try {
+            // First let's try PKCS8
+            return keyFactory.generatePrivate(new PKCS8EncodedKeySpec(keyBytes));
+        }
+        catch (InvalidKeySpecException e) {
+            // Otherwise try PKCS1
+            RSAPrivateCrtKeySpec keySpec = decodePKCS1(keyBytes);
+            return keyFactory.generatePrivate(keySpec);
+        }
+    }
+
     public static KeyStore createKeyStore(InputStream certInputStream, InputStream keyInputStream, String clientKeyAlgo,
                                           char[] clientKeyPassphrase, String keyStoreFile, char[] keyStorePassphrase) throws IOException,
             CertificateException, NoSuchAlgorithmException, InvalidKeySpecException, KeyStoreException {
         CertificateFactory certFactory = CertificateFactory.getInstance("X509");
         X509Certificate cert = (X509Certificate) certFactory.generateCertificate(certInputStream);
 
-        byte[] keyBytes = decodePem(keyInputStream);
-
-        PrivateKey privateKey;
-
-        KeyFactory keyFactory = KeyFactory.getInstance(clientKeyAlgo);
-        try {
-            // First let's try PKCS8
-            privateKey = keyFactory.generatePrivate(new PKCS8EncodedKeySpec(keyBytes));
-        } catch (InvalidKeySpecException e) {
-            // Otherwise try PKCS1
-            RSAPrivateCrtKeySpec keySpec = decodePKCS1(keyBytes);
-            privateKey = keyFactory.generatePrivate(keySpec);
-        }
+        PrivateKey privateKey  = clientKeyAlgo.equals("EC")
+                    ? generateEcKey(keyInputStream)
+                    : generateStdKey(keyInputStream, clientKeyAlgo);
 
         KeyStore keyStore = KeyStore.getInstance("JKS");
         if (keyStoreFile != null && keyStoreFile.length() > 0) {
