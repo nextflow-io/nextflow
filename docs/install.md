@@ -114,7 +114,7 @@ NXF_VER=23.10.0 nextflow info
 Take your Nextflow usage to the next level with [Seqera Platform](https://seqera.io/platform/), a tool created by the team behind Nextflow that's designed to monitor, manage,
 and optimize Nextflow workflows.
 
-You can launch workflows directly from Seqera Platform, skipping the need to install Nextflow at all.
+You can launch workflows directly from Seqera Platform without installing Nextflow locally.
 Launching from Platform provides you a user-friendly launch interface,
 the ability to automatically create complex cloud infrastructure,
 organizational user management for shared access control,
