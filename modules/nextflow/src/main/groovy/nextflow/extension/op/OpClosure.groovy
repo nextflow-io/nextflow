@@ -17,15 +17,14 @@
 
 package nextflow.extension.op
 
-
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.prov.OperatorRun
 import nextflow.prov.Prov
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
- * A closure that wraps the execution of an operator target code (closure)
- * and maps the inputs and outputs to the corresponding operator run.
+ * A closure that wraps the execution of an operator target code
+ * associating the inputs and outputs to the corresponding operator run.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

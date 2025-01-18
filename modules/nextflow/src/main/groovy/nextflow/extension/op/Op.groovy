@@ -35,7 +35,7 @@ import nextflow.prov.OperatorRun
 import nextflow.prov.Prov
 import nextflow.prov.Tracker
 /**
- * Operator helpers methods
+ * Model a dataflow operator
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -43,6 +43,10 @@ import nextflow.prov.Tracker
 @CompileStatic
 class Op {
 
+    /**
+     * Associate a {@link DataflowProcessor} with the corresponding {@link OpContext} object
+     * tracking running operator context
+     */
     static final public ConcurrentHashMap<DataflowProcessor, OpContext> allContexts = new ConcurrentHashMap<>();
 
     static List<Object> unwrap(List messages) {
@@ -81,6 +85,21 @@ class Op {
         }
     }
 
+    /**
+     * This method gets a list of one or more {@link OpDatum} objects, and binds
+     * the corresponding values to the specified channel using a new {@link OperatorRun}
+     * instance using as {@link OperatorRun#inputIds} the set of IDs obtained by the
+     * provide "entries" lists.
+     *
+     * @param target
+     *      The dataflow channel where outputs are going to be bound.
+     * @param entries
+     *      A list of one or more {@link OpDatum} holding the value to be bound.
+     * @param singleton
+     *      When {@code true} and the entries list is provided, the value object is emitted
+     *      in place of a list with a sole object, when {@code false} the list of values
+     *      is emitted in any case.
+     */
     static void bindRunValues(DataflowWriteChannel target, List<OpDatum> entries, boolean singleton) {
         final inputs = new ArrayList(entries.size())
         final values = new ArrayList(entries.size())
@@ -115,42 +134,99 @@ class Op {
     OpContext getContext() { context }
     Closure getCode() { code }
 
+    /**
+     * Set the operator input channel
+     *
+     * @param channel
+     *      The channel from which the operator is receiving the input data.
+     * @return
+     *      The operator object itself.
+     */
     Op withInput(DataflowReadChannel channel) {
         assert channel != null
         this.inputs = List.of(channel)
         return this
     }
 
+    /**
+     * Set the operator input channels
+     *
+     * @param channels
+     *      The channels from which the operator is receiving the input data
+     * @return
+     *      The operator object itself.
+     */
     Op withInputs(List<DataflowReadChannel> channels) {
         assert channels != null
         this.inputs = channels
         return this
     }
 
+    /**
+     * Set the operator output channel
+     *
+     * @param channel
+     *      The channel to which the operator is binding output data.
+     * @return
+     *      The operator object itself.
+     */
     Op withOutput(DataflowWriteChannel channel) {
         assert channel != null
         this.outputs = List.of(channel)
         return this
     }
 
+    /**
+     * Set the operator output channels
+     *
+     * @param channels
+     *      The channels to which the operator is binding output data.
+     * @return
+     *      The operator object itself.
+     */
     Op withOutputs(List<DataflowWriteChannel> channels) {
         assert channels != null
         this.outputs = channels
         return this
     }
 
+    /**
+     * Set a {@link DataflowEventListener} associated with the operator.
+     *
+     * @param listener
+     *      The {@link DataflowEventListener} listener object.
+     * @return
+     *      The operator object itself.
+     */
     Op withListener(DataflowEventListener listener) {
         if( listener )
             this.listeners = List.of(listener)
         return this
     }
 
+    /**
+     * Set one or more {@link DataflowEventListener} objects associated with the operator.
+     *
+     * @param listeners
+     *      The list of {@link DataflowEventListener} listener objects.
+     * @return
+     *      The operator object itself.
+     */
     Op withListeners(List<DataflowEventListener> listeners) {
         if( listeners )
             this.listeners = listeners
         return this
     }
 
+    /**
+     * Set the operator inputs, outputs and listeners parameters using a map object.
+     *
+     * @param params
+     *      A {@link Map} object holding the {@code inputs} and {@code outputs} channels
+     *      and {@code listeners} objects.
+     * @return
+     *      The operator object itself.
+     */
     Op withParams(Map params) {
         if( params.inputs )
             this.inputs = params.inputs as List<DataflowReadChannel>
@@ -161,18 +237,43 @@ class Op {
         return this
     }
 
+    /**
+     * Set the context object associated associated with the operator run.
+     *
+     * @param context
+     *      The {@link OpContext} object associated with the operator execution.
+     * @return
+     *      The operator object itself.
+     */
     Op withContext(OpContext context) {
         if( context!=null )
             this.context = context
         return this
     }
 
+    /**
+     * Set the operator action as a closure
+     *
+     * @param code
+     *      The action that should be performed when the operator run.
+     * @return
+     *      The operator object itself.
+     *
+     */
     Op withCode(Closure code) {
         this.code = code
         return this
     }
 
-    Map toMap() {
+    /**
+     * Map the operator inputs, outputs and listeners to a Java {@Link Map}
+     * for compatibility with {@link DataflowProcessor} API
+     *
+     * @return
+     *      A map object holding the operator {@code inputs}, {@code outputs} channels
+     *      and the {@code listeners} object.
+     */
+    protected Map toMap() {
         final ret = new HashMap()
         ret.inputs = inputs ?: List.of()
         ret.outputs = outputs ?: List.of()
@@ -180,12 +281,19 @@ class Op {
         return ret
     }
 
+    /**
+     * Creates the {@link DataflowOperator} object and start it
+     *
+     * @return
+     *      The corresponding {@link DataflowOperator} object
+     */
     DataflowProcessor apply() {
         assert inputs
         assert code
         assert context
 
-        // create the underlying dataflow operator
+        // Encapsulate the target "code" closure with a "OpClosure" object
+        // to grab input data and track the execution provenance
         final closure = new OpClosure(code, context)
         final group = Dataflow.retrieveCurrentDFPGroup()
         final operator = new DataflowOperator(group, toMap(), closure)
