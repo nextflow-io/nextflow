@@ -16,7 +16,7 @@
 
 package nextflow.extension
 
-
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
@@ -36,18 +36,19 @@ import nextflow.util.CheckHelper
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class GroupTupleOp {
 
-    static private Map GROUP_TUPLE_PARAMS = [ by: [Integer, List], sort: [Boolean, 'true','natural','deep','hash',Closure,Comparator], size: Integer, remainder: Boolean ]
+    static final private Map GROUP_TUPLE_PARAMS = [ by: [Integer, List], sort: [Boolean, 'true','natural','deep','hash',Closure,Comparator], size: Integer, remainder: Boolean ]
 
-    static private List<Integer> GROUP_DEFAULT_INDEX = [0]
+    static final private List<Integer> GROUP_DEFAULT_INDEX = [0]
 
     /**
      * Comparator used to sort tuple entries (when required)
      */
     private Comparator comparator
 
-    private int size
+    private Integer size
 
     private List indices
 
@@ -68,7 +69,7 @@ class GroupTupleOp {
 
         channel = source
         indices = getGroupTupleIndices(params)
-        size = params?.size ?: 0
+        size = params?.size as Integer ?: 0
         remainder = params?.remainder ?: false
         sort = params?.sort
 
@@ -162,7 +163,7 @@ class GroupTupleOp {
     }
 
     static protected OperatorRun unwrapValues(List tuple) {
-        final inputs = new ArrayList()
+        final inputs = new ArrayList<Integer>()
 
         for( Object it : tuple ) {
             if( it instanceof ArrayBag ) {
@@ -190,21 +191,21 @@ class GroupTupleOp {
             case true:
             case 'true':
             case 'natural':
-                comparator = { o1,o2 -> o1<=>o2 } as Comparator
+                comparator = { o1, o2 -> o1<=>o2 } as Comparator<Comparable>
                 break;
 
             case 'hash':
                 comparator = { o1, o2 ->
-                    def h1 = CacheHelper.hasher(o1).hash()
-                    def h2 = CacheHelper.hasher(o2).hash()
+                    final h1 = CacheHelper.hasher(o1).hash()
+                    final h2 = CacheHelper.hasher(o2).hash()
                     return h1.asLong() <=> h2.asLong()
                 } as Comparator
                 break
 
             case 'deep':
                 comparator = { o1, o2 ->
-                    def h1 = CacheHelper.hasher(o1, CacheHelper.HashMode.DEEP).hash()
-                    def h2 = CacheHelper.hasher(o2, CacheHelper.HashMode.DEEP).hash()
+                    final h1 = CacheHelper.hasher(o1, CacheHelper.HashMode.DEEP).hash()
+                    final h2 = CacheHelper.hasher(o2, CacheHelper.HashMode.DEEP).hash()
                     return h1.asLong() <=> h2.asLong()
                 } as Comparator
                 break
@@ -220,8 +221,8 @@ class GroupTupleOp {
                 }
                 else if( closure.getMaximumNumberOfParameters()==1 ) {
                     comparator = { o1, o2 ->
-                        def v1 = closure.call(o1)
-                        def v2 = closure.call(o2)
+                        final v1 = closure.call(o1) as Comparable
+                        final v2 = closure.call(o2) as Comparable
                         return v1 <=> v2
                     } as Comparator
                 }
