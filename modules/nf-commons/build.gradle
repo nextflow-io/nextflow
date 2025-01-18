@@ -25,7 +25,7 @@ sourceSets {
 }
 
 dependencies {
-    api "ch.qos.logback:logback-classic:1.5.13"
+    api "ch.qos.logback:logback-classic:1.5.16"
     api "org.apache.groovy:groovy:4.0.24"
     api "org.apache.groovy:groovy-nio:4.0.24"
     api "commons-lang:commons-lang:2.6"
