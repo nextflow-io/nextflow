@@ -157,9 +157,9 @@ class CombineOp {
     }
 
     private void bindValues(List p, a, b) {
-        final i = new ArrayList()
+        final i = new ArrayList<Integer>()
         final t = tuple(p, OpDatum.unwrap(a,i), OpDatum.unwrap(b,i))
-        final r = new OperatorRun(i)
+        final r = new OperatorRun(new LinkedHashSet<Integer>(i))
         Op.bind(r, target, t)
     }
 

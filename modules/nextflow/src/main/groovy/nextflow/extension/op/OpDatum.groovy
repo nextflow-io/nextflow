@@ -21,7 +21,9 @@ import groovy.transform.Canonical
 import nextflow.prov.OperatorRun
 
 /**
- *
+ * Associated a data value acquired by an operator with the corresponding
+ * {@link OperatorRun} instance.
+ * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Canonical

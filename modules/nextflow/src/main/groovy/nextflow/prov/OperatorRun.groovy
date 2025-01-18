@@ -31,7 +31,7 @@ class OperatorRun implements TrailRun {
     /**
      * The list of (object) ids that was received as input by a operator run
      */
-    List<Integer> inputIds = new ArrayList<>(10)
+    Set<Integer> inputIds = new LinkedHashSet<>(10)
 
     @Override
     String toString() {

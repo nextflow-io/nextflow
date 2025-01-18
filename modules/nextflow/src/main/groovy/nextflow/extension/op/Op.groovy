@@ -101,7 +101,7 @@ class Op {
      *      is emitted in any case.
      */
     static void bindRunValues(DataflowWriteChannel target, List<OpDatum> entries, boolean singleton) {
-        final inputs = new ArrayList(entries.size())
+        final inputs = new ArrayList<Integer>(entries.size())
         final values = new ArrayList(entries.size())
         for( Object it : entries ) {
             if( it instanceof OpDatum ) {
@@ -111,7 +111,7 @@ class Op {
             else
                 values.add(it)
         }
-        final run = new OperatorRun(inputs)
+        final run = new OperatorRun(new LinkedHashSet<Integer>(inputs))
         final out = singleton && values.size()==1 ? values[0] : values
         Op.bind(run, target, out)
     }
