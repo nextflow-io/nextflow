@@ -522,7 +522,7 @@ class Channel  {
         def groupChannel = isFlat ? new DataflowQueue<>() : CH.create()
 
         new GroupTupleOp(groupOpts, mapChannel)
-                .setTarget(groupChannel)
+                .withTarget(groupChannel)
                 .apply()
 
         // -- flat the group resulting tuples

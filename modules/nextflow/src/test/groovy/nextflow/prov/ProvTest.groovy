@@ -950,4 +950,44 @@ class ProvTest extends Dsl2Spec {
         upstreamTasksOf('p2 (4)')
             .name == ['p1 (2)']
     }
+
+    def 'should track provenance with groupTuple operator' () {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of( [1, 'A'], [1, 'B'], [2, 'C'], [3, 'B'], [1, 'C'], [2, 'A'], [3, 'D'] ) \
+                    | p1 \
+                    | groupTuple \
+                    | p2
+            }
+            
+            // the groupTuple should emit the following values
+            // 
+            // [1, [A, B, C]]
+            // [2, [C, A]]
+            // [3, [B, D]]
+            
+            process p1 {
+              input: val(x) 
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println "$task.process ($task.index) = ${x}"
+            }
+        ''')
+        then:
+        upstreamTasksOf('p2 (1)')
+            .name == ['p1 (1)', 'p1 (2)', 'p1 (5)']
+        and:
+        upstreamTasksOf('p2 (2)')
+            .name == ['p1 (3)', 'p1 (6)']
+        and:
+        upstreamTasksOf('p2 (3)')
+            .name == ['p1 (4)', 'p1 (7)']
+    }
 }

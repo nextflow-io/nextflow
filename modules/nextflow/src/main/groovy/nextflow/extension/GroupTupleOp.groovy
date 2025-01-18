@@ -16,10 +16,17 @@
 
 package nextflow.extension
 
+
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
+import nextflow.extension.op.ContextRunPerThread
+import nextflow.extension.op.Op
+import nextflow.extension.op.OpContext
+import nextflow.extension.op.OpDatum
+import nextflow.prov.OperatorRun
 import nextflow.util.ArrayBag
 import nextflow.util.CacheHelper
 import nextflow.util.CheckHelper
@@ -34,7 +41,6 @@ class GroupTupleOp {
     static private Map GROUP_TUPLE_PARAMS = [ by: [Integer, List], sort: [Boolean, 'true','natural','deep','hash',Closure,Comparator], size: Integer, remainder: Boolean ]
 
     static private List<Integer> GROUP_DEFAULT_INDEX = [0]
-
 
     /**
      * Comparator used to sort tuple entries (when required)
@@ -55,8 +61,9 @@ class GroupTupleOp {
 
     private sort
 
-    GroupTupleOp(Map params, DataflowReadChannel source) {
+    private OpContext context = new ContextRunPerThread()
 
+    GroupTupleOp(Map params, DataflowReadChannel source) {
         CheckHelper.checkParams('groupTuple', params, GROUP_TUPLE_PARAMS)
 
         channel = source
@@ -68,7 +75,7 @@ class GroupTupleOp {
         defineComparator()
     }
 
-    GroupTupleOp setTarget(DataflowWriteChannel target) {
+    GroupTupleOp withTarget(DataflowWriteChannel target) {
         this.target = target
         return this
     }
@@ -90,7 +97,7 @@ class GroupTupleOp {
     /*
      * Collects received values grouping by key
      */
-    private void collect(List tuple) {
+    private void collectTuple(List tuple) {
 
         final key = tuple[indices]                      // the actual grouping key
         final len = tuple.size()
@@ -102,6 +109,7 @@ class GroupTupleOp {
             return result
         }
 
+        final run = context.getOperatorRun()
         int count=-1
         for( int i=0; i<len; i++ ) {                    // append the values in the tuple
             if( i !in indices ) {
@@ -110,8 +118,9 @@ class GroupTupleOp {
                     list = new ArrayBag()
                     items.add(i, list)
                 }
-                list.add( tuple[i] )
-                count=list.size()
+                // wrap the acquired value in OpDatum object to track the input provenance
+                list.add( OpDatum.of(tuple[i], run) )
+                count = list.size()
             }
         }
 
@@ -122,42 +131,55 @@ class GroupTupleOp {
         }
     }
 
-
     /*
      * finalize the grouping binding the remaining values
      */
-    private void finalise(nop) {
+    private void finalise(DataflowProcessor dp) {
         groups.each { keys, items -> bindTuple(items, size ?: sizeBy(keys)) }
-        target.bind(Channel.STOP)
+        Op.bind(dp, target, Channel.STOP)
     }
 
     /*
      * bind collected items to the target channel
      */
     private void bindTuple( List items, int sz ) {
-
-        def tuple = new ArrayList(items)
-
+        final tuple = new ArrayList(items)
         if( !remainder && sz>0 ) {
             // verify exist it contains 'size' elements
-            List list = items.find { it instanceof List }
+            def list = (List) items.find { it instanceof List }
             if( list.size() != sz ) {
                 return
             }
         }
-
+        // unwrap all "OpData" object and restore original values
+        final run = unwrapValues(tuple)
+        // sort the tuple content when a comparator is defined
         if( comparator ) {
             sortInnerLists(tuple, comparator)
         }
+        // finally bind the resulting tuple
+        Op.bind(run, target, tuple)
+    }
 
-        target.bind( tuple )
+    static protected OperatorRun unwrapValues(List tuple) {
+        final inputs = new ArrayList()
+
+        for( Object it : tuple ) {
+            if( it instanceof ArrayBag ) {
+                final bag = it
+                for( int i=0; i<bag.size(); i++ ) {
+                    bag[i] = OpDatum.unwrap(bag[i], inputs)
+                }
+            }
+        }
+
+        return new OperatorRun(new LinkedHashSet<Integer>(inputs))
     }
 
     /**
      * Define the comparator to be used depending the #sort property
      */
     private void defineComparator( ) {
-
         /*
          * comparator logic used to sort tuple elements
          */
@@ -210,7 +232,6 @@ class GroupTupleOp {
             default:
                 throw new IllegalArgumentException("Not a valid sort argument: ${sort}")
         }
-
     }
 
     /**
@@ -228,7 +249,8 @@ class GroupTupleOp {
          */
         new SubscribeOp()
             .withSource(channel)
-            .withOnNext(this.&collect)
+            .withContext(context)
+            .withOnNext(this.&collectTuple)
             .withOnComplete(this.&finalise)
             .apply()
 
@@ -239,13 +261,11 @@ class GroupTupleOp {
     }
 
     private static sortInnerLists( List tuple, Comparator c ) {
-
         for( int i=0; i<tuple.size(); i++ ) {
-            def entry = tuple[i]
-            if( !(entry instanceof List) ) continue
+            final entry = tuple[i]
+            if( entry !instanceof List ) continue
             Collections.sort(entry as List, c)
         }
-
     }
 
     static protected int sizeBy(List target)  {
