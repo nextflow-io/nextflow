@@ -830,7 +830,11 @@ class TaskProcessor {
             try {
                 if( resumeDir != workDir )
                     exists = workDir.exists()
-                if( !exists && !workDir.mkdirs() )
+                if( exists ) {
+                    tries++
+                    continue
+                }
+                else if( !workDir.mkdirs() )
                     throw new IOException("Unable to create directory=$workDir -- check file system permissions")
             }
             finally {
