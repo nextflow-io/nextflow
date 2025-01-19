@@ -1593,11 +1593,11 @@ process formatBlastDatabases {
 ```
 
 :::{warning}
-The `storeDir` directive is meant for long-term process caching and should not be used to publish output files or organize outputs into a semantic directory structure. In those cases, use the [publishDir](#publishdir) directive instead.
+If a process uses `storeDir` and all of its outputs are optional, the process will always be skipped, even if the store directory is empty. This issue can be avoided by specifying at least one required file output.
 :::
 
-:::{note}
-The use of AWS S3 paths is supported, however it requires the installation of the [AWS CLI](https://aws.amazon.com/cli/) (i.e. `aws`) in the target compute node.
+:::{warning}
+The `storeDir` directive should not be used to publish workflow outputs. Use the [publishDir](#publishdir) directive or the {ref}`workflow output definition <workflow-output-def>` instead.
 :::
 
 (process-tag)=
