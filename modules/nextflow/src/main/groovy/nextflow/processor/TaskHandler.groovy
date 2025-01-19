@@ -227,7 +227,7 @@ abstract class TaskHandler {
                 }
             }
 
-            def file = task.workDir?.resolve(TaskRun.CMD_TRACE)
+            final file = task.workDir?.resolve(TaskRun.CMD_TRACE)
             try {
                 if(file) record.parseTraceFile(file)
             }
