@@ -22,7 +22,8 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.prov.OperatorRun
 /**
- *
+ * Implements an operator context that binds a new run to the current thread
+ * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j

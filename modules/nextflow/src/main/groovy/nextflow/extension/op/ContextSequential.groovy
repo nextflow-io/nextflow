@@ -22,7 +22,9 @@ import java.util.concurrent.ConcurrentHashMap
 import nextflow.prov.OperatorRun
 
 /**
- *
+ * Implements an operator context that expected a new run is allocated
+ * "sequentially" after the previous execution
+ * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class ContextSequential implements OpContext {
