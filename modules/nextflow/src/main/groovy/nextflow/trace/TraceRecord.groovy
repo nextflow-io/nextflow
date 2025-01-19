@@ -16,6 +16,9 @@
 
 package nextflow.trace
 
+import groovy.json.JsonOutput
+import groovy.yaml.YamlSlurper
+
 import java.nio.file.Path
 import java.util.regex.Pattern
 
@@ -101,7 +104,9 @@ class TraceRecord implements Serializable {
             vol_ctxt: 'num',        // -- /proc/$pid/status field 'voluntary_ctxt_switches'
             inv_ctxt: 'num',        // -- /proc/$pid/status field 'nonvoluntary_ctxt_switches'
             hostname: 'str',
-            cpu_model:  'str'
+            cpu_model:  'str',
+            inputs: 'obj',
+            outputs: 'obj'
     ]
 
     static public Map<String,Closure<String>> FORMATTER = [
@@ -317,7 +322,7 @@ class TraceRecord implements Serializable {
      * @param converter A converter string
      * @return A string value formatted according the specified converter
      */
-    String getFmtStr( String name, String converter = null ) {
+    String getFmtStr( String name, String converter = null, boolean json = false) {
         assert name
         def val = store.get(name)
 
@@ -338,13 +343,26 @@ class TraceRecord implements Serializable {
         if( !type )
             throw new IllegalArgumentException("Not a valid trace field name: '$name'")
 
+        if( type == 'obj') {
+            if (json) {
+                // render object in json
+                return JsonOutput.toJson(val)
+            } else {
+                return val.toString()
+            }
+        }
 
         def formatter = FORMATTER.get(type)
         if( !formatter )
             throw new IllegalArgumentException("Not a valid trace formatter for field: '$name' with type: '$type'")
 
         try {
-            return formatter.call(val,sFormat)
+            def result = formatter.call(val,sFormat)
+            if( json ){
+                return '"' + StringEscapeUtils.escapeJavaScript(result ?: NA) + '"'
+            } else {
+                return result
+            }
         }
         catch( Throwable e ) {
             log.debug "Not a valid trace value -- field: '$name'; value: '$val'; format: '$sFormat'"
@@ -387,8 +405,8 @@ class TraceRecord implements Serializable {
             if( i ) result << ','
             String name = fields[i]
             String format = i<formats?.size() ? formats[i] : null
-            String value = StringEscapeUtils.escapeJavaScript(getFmtStr(name, format) ?: NA)
-            result << QUOTE << name << QUOTE << ":" << QUOTE << value << QUOTE
+            String value = getFmtStr(name, format, true)
+            result << QUOTE << name << QUOTE << ":" <<  value
         }
         result << "}"
         return result
@@ -463,6 +481,16 @@ class TraceRecord implements Serializable {
         }
 
         return this
+    }
+
+    TraceRecord parseSizesFile(Path file){
+        def yaml = new YamlSlurper().parse(file)
+        if( yaml.getAt('inputs') != null ) {
+            this.put('inputs', yaml.getAt('inputs'))
+        }
+        if( yaml.getAt('outputs') != null ) {
+            this.put('outputs', yaml.getAt('outputs'))
+        }
     }
 
     private TraceRecord parseLegacy( Path file, List<String> lines) {
