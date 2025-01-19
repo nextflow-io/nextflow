@@ -72,7 +72,6 @@ name: my-env
 channels:
   - conda-forge
   - bioconda
-  - defaults
 dependencies:
   - star=2.5.4a
   - bwa=0.7.15
@@ -105,7 +104,8 @@ Conda environment files can also be used to install Python packages from the [Py
 ```yaml
 name: my-env-2
 channels:
-  - defaults
+  - conda-forge
+  - bioconda
 dependencies:
   - pip
   - pip:
