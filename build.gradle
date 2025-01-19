@@ -77,8 +77,8 @@ allprojects {
     }
 
     tasks.withType(GroovyCompile) {
-        sourceCompatibility = '17'
-        targetCompatibility = '17'
+        sourceCompatibility = 17
+        targetCompatibility = 17
     }
 
     idea {
