@@ -114,10 +114,10 @@ NXF_VER=23.10.0 nextflow info
 You can launch workflows directly from [Seqera Platform](https://seqera.io/platform/) without installing Nextflow locally.
 
 Launching from Seqera Platform provides you with:
-- User-friendly launch interfaces
-- Automated cloud infrastructure creation
-- Organizational user management
-- Advanced analytics with resource optimization
+- User-friendly launch interfaces.
+- Automated cloud infrastructure creation.
+- Organizational user management.
+- Advanced analytics with resource optimization.
 
 Seqera Cloud Basic is free for small teams. Researchers at qualifying academic institutions can apply for free access to Seqera Cloud Pro.
 See the [Seqera Platform documentation](https://docs.seqera.io/platform) for set-up information and tutorials to get started.
