@@ -28,10 +28,13 @@ import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.ChainWithClosure
+import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 import nextflow.Global
 import nextflow.NF
 import nextflow.Session
+import nextflow.extension.op.ContextRunPerThread
+import nextflow.extension.op.Op
 import nextflow.script.ChannelOut
 import nextflow.script.TokenBranchDef
 import nextflow.script.TokenMultiMapDef
@@ -587,9 +590,9 @@ class OperatorImpl {
             throw new IllegalArgumentException("Illegal argument 'size' for operator 'collate' -- it must be greater than zero: $size")
         }
 
-        return new BufferOp(source)
-                    .setParams( size: size, remainder: keepRemainder )
-                    .apply()
+        new BufferOp(source)
+            .setParams( size: size, remainder: keepRemainder )
+            .apply()
     }
 
     DataflowWriteChannel collate( DataflowReadChannel source, int size, int step, boolean keepRemainder = true ) {
@@ -622,8 +625,7 @@ class OperatorImpl {
         // therefore the channel need to be added `'manually` to the inputs list
         // fixes #1346
         OpCall.current.get().inputs.add(right)
-        def target = new JoinOp(left,right) .apply()
-        return target
+        return new JoinOp(left,right) .apply()
     }
 
     DataflowWriteChannel join( DataflowReadChannel left, Map opts, right ) {
@@ -633,8 +635,7 @@ class OperatorImpl {
         // therefore the channel need to be added `'manually` to the inputs list
         // fixes #1346
         OpCall.current.get().inputs.add(right)
-        def target = new JoinOp(left,right,opts) .apply()
-        return target
+        return new JoinOp(left,right,opts) .apply()
     }
 
     /**
@@ -732,7 +733,6 @@ class OperatorImpl {
         return tap.result
     }
 
-
     /**
      * Empty the specified value only if the source channel to which is applied is empty i.e. do not emit
      * any value.
@@ -746,18 +746,19 @@ class OperatorImpl {
         boolean empty = true
         final result = CH.createBy(source)
         final singleton = result instanceof DataflowExpression
-        final next = { result.bind(it); empty=false }
-        final complete = {
-            if(empty)
-                result.bind( value instanceof Closure ? value() : value )
-            if( !singleton )
-                result.bind(Channel.STOP)
-        }
 
         new SubscribeOp()
             .withSource(source)
-            .withOnNext(next)
-            .withOnComplete(complete)
+            .withContext(new ContextRunPerThread())
+            .withOnNext { DataflowProcessor dp, Object it -> Op.bind(dp,result,it); empty=false }
+            .withOnComplete { DataflowProcessor dp ->
+                    if(empty) {
+                        final x = value instanceof Closure ? value.call() : value
+                        Op.bind(dp,result,x)
+                    }
+                    if( !singleton )
+                        result.bind(Channel.STOP)
+                }
             .apply()
 
         return result
