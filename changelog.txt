@@ -1,5 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
+24.10.4 - 20 Jan 2025
+- Fix CLI params normalization (#5661) [42a9d8a0]
+- Fix azure repos when clone URL is used (#5667) [eb092c9f]
+- Fix Prevent the use existing work dir (#5682) [7ed233ea]
+
 24.10.3 - 16 Dec 2024 
 - Fix Google Batch hang when internal error during scheduling (#5567) [79374c58]
 - Fixing getRepositoryUrl when project name is not provided (#5560) [9910cece]
