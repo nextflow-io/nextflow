@@ -1141,9 +1141,27 @@ process FOO {
     """
 }
 
+
+
 workflow {
     FOO()
     FOO.out.hello.view()
+}
+```
+
+Note that when naming a `stdout` output, the trailing comma is not necessary _unless_ the `stdout` is part of a tuple:
+
+```nextflow
+process FOO {
+    output:
+    tuple path('hello.txt'), stdout, emit: foo
+    stdout emit: bye
+
+    script:
+    """
+    echo "hello" > hello.txt
+    echo "bye"
+    """
 }
 ```
 
