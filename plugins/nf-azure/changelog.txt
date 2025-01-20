@@ -1,5 +1,10 @@
 nf-azure changelog
 ===================
+1.12.0 - 20 Jan 2025
+- Ensure job is killed when exception in task status check (#5561) [9eefd207]
+- Bump logback 1.5.13 + slf4j 2.0.16 [cc0163ac]
+- Bump groovy 4.0.24 missing deps [40670f7e]
+
 1.11.0 - 3 Dec 2024
 - Detecting errors in data unstaging (#5345) [3c8e602d]
 - Bump netty-common to version 4.1.115.Final [d1bbd3d0]

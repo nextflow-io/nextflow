@@ -1,5 +1,11 @@
 nf-google changelog
 ===================
+1.17.0 - 20 Jan 2025
+- Ensure job is killed when exception in task status check (#5561) [9eefd207]
+- Fix Google Batch hang when internal error during scheduling (#5567) [18f7de13]
+- Bump groovy 4.0.24 missing deps [40670f7e]
+- Bump logback 1.5.13 + slf4j 2.0.16 [cc0163ac]
+
 1.16.0 - 3 Dec 2024
 - Detecting errors in data unstaging (#5345) [3c8e602d]
 - Bump bouncycastle to jdk18on:1.78.1  (#5467) [cd8c385f]
