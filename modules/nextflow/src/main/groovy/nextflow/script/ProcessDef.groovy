@@ -100,7 +100,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         assert processConfig==null
 
         // the config object
-        processConfig = new ProcessConfig(owner,processName)
+        processConfig = new ProcessConfig(owner,processName,session.getContainerConfig().isEnabled())
 
         // Invoke the code block which will return the script closure to the executed.
         // As side effect will set all the property declarations in the 'taskConfig' object.

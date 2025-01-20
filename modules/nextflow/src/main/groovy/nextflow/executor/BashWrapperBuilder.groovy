@@ -65,6 +65,8 @@ class BashWrapperBuilder {
 
     static final public List<String> BASH
 
+    static final public List<String> ENV_BASH
+
     static private int level
 
     @PackageScope
@@ -85,6 +87,7 @@ class BashWrapperBuilder {
             log.warn "Invalid value for `NXF_DEBUG` variable: $str -- See http://www.nextflow.io/docs/latest/config.html#environment-variables"
         }
         BASH = Collections.unmodifiableList( level > 0 ? ['/bin/bash','-uex'] : ['/bin/bash','-ue'] )
+        ENV_BASH = Collections.unmodifiableList(['/usr/bin/env', '-S', 'bash', BASH[1]])
 
     }
 
@@ -563,12 +566,14 @@ class BashWrapperBuilder {
         statsEnabled || fixOwnership()
     }
 
-    protected String shellPath() {
-        // keep the shell path as "/bin/bash" when a non-custom "shell" attribute is specified
-        // to not introduce unexpected changes due to the fact BASH is defined as "/bin/bash -eu" by default
-        return shell.is(BASH)
-            ? "/bin/bash"
-            : shell.join(' ')
+    protected String traceInterpreter() {
+        // if no specific shell was defined, do not use the default one (i.e. "...bash -ue[x]") neither because
+        // -ue[x] should not be used during tracing
+        if( shell.is(BASH) || shell.is(ENV_BASH) ) {
+            return shell.init().join(' ')
+        }
+        // otherwise, stick to the custom shell
+        return shell.join(' ')
     }
 
     protected String getLaunchCommand(String interpreter, String env) {
@@ -582,7 +587,7 @@ class BashWrapperBuilder {
         final traceWrapper = isTraceRequired()
         if( traceWrapper ) {
             // executes the stub which in turn executes the target command
-            launcher = "${shellPath()} ${fileStr(wrapperFile)} nxf_trace"
+            launcher = "${traceInterpreter()} ${fileStr(wrapperFile)} nxf_trace"
         }
         else {
             launcher = "${interpreter} ${fileStr(scriptFile)}"

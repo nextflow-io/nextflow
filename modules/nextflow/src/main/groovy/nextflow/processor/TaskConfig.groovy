@@ -374,10 +374,10 @@ class TaskConfig extends LazyMap implements Cloneable {
         return (List<String>) get('secret')
     }
 
-    List<String> getShell() {
+    List<String> getShell(boolean isContainerEnabled = true) {
         final value = get('shell')
         if( !value )
-            return BashWrapperBuilder.BASH
+            return isContainerEnabled ? BashWrapperBuilder.BASH : BashWrapperBuilder.ENV_BASH
 
         if( value instanceof List )
             return (List)value
