@@ -17,13 +17,12 @@
 
 package nextflow.extension
 
-import static nextflow.extension.DataflowHelper.*
-
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
+import nextflow.extension.op.Op
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
 /**
  * Implements Nextflow `until` operator
@@ -43,19 +42,22 @@ class UntilOp {
 
     DataflowWriteChannel apply() {
         final target = CH.createBy(source)
-        
-        newOperator(source, target, {
-            final result = DefaultTypeTransformation.castToBoolean(closure.call(it))
-            final proc = getDelegate() as DataflowProcessor
 
-            if( result ) {
-                proc.bindOutput(Channel.STOP)
-                proc.terminate()
+        new Op()
+            .withInput(source)
+            .withOutput(target)
+            .withCode {
+                final result = DefaultTypeTransformation.castToBoolean(closure.call(it))
+                final dp = getDelegate() as DataflowProcessor
+                if( result ) {
+                    Op.bind(dp, target, Channel.STOP)
+                    dp.terminate()
+                }
+                else {
+                    Op.bind(dp, target, it)
+                }
             }
-            else {
-                proc.bindOutput(it)
-            }
-        })
+        .apply()
 
         return target
     }

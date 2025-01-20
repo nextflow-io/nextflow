@@ -727,7 +727,7 @@ class OperatorImpl {
      * @return The tap resulting dataflow channel
      */
     DataflowWriteChannel tap( final DataflowReadChannel source, final Closure holder ) {
-        def tap = new TapOp(source, holder).apply()
+        final tap = new TapOp(source, holder).apply()
         OpCall.current.get().outputs.addAll( tap.outputs )
         return tap.result
     }
