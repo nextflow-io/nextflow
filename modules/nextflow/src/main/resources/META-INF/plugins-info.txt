@@ -1,8 +1,8 @@
-nf-amazon@2.10.0
-nf-azure@1.11.0
-nf-cloudcache@0.4.2
-nf-codecommit@0.2.2
-nf-console@1.1.4
-nf-google@1.16.0
-nf-tower@1.9.3
-nf-wave@1.8.0
+nf-amazon@2.11.0
+nf-azure@1.12.0
+nf-cloudcache@0.4.3
+nf-codecommit@0.2.3
+nf-console@1.1.5
+nf-google@1.17.0
+nf-tower@1.9.4
+nf-wave@1.9.0
