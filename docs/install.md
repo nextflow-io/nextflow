@@ -2,7 +2,7 @@
 
 # Installation
 
-Nextflow can be used on any POSIX-compatible system (Linux, macOS, etc), and on Windows through [WSL](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux).
+Nextflow can be used on any POSIX-compatible system (Linux, macOS, etc), and on Windows through [WSL](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux). This page describes how to install Nextflow.
 
 (install-requirements)=
 
@@ -19,7 +19,7 @@ java -version
 Support for Java versions prior to 17 was dropped.
 :::
 
-If you don't have a compatible version of Java installed in your computer, it is recommended that you install it through [SDKMAN!](https://sdkman.io/), and that you use the latest LTS version of Temurin. See [this website](https://whichjdk.com/) for more information.
+If you don't have a compatible version of Java installed, it is recommended that you install it through [SDKMAN!](https://sdkman.io/), and that you use the latest LTS version of Temurin. See [Which version of JDK should I use?](https://whichjdk.com/) for more information about different versions.
 
 To install Java with SDKMAN:
 
