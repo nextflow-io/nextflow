@@ -25,7 +25,6 @@ import java.util.concurrent.TimeoutException
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import jdk.internal.vm.ThreadContainer
-
 /**
  * Thread pool helpers
  *
@@ -35,7 +34,7 @@ import jdk.internal.vm.ThreadContainer
 @Slf4j
 class ThreadPoolHelper {
 
-    static void await(ExecutorService pool, Duration maxAwait, String waitMessage, String exitMsg) {
+    static void await(ExecutorService pool, Duration maxAwait, String waitMessage, String exitMsg) throws TimeoutException {
         final max = maxAwait.millis
         final t0 = System.currentTimeMillis()
         // wait for ongoing file transfer to complete

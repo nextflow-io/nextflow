@@ -32,7 +32,6 @@ import spock.lang.Specification
  */
 class TaskConfigTest extends Specification {
 
-
     def testShell() {
 
         when:
