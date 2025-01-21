@@ -79,7 +79,6 @@ notifications
 secrets
 sharing
 vscode
-dsl1
 ```
 
 ```{toctree}
