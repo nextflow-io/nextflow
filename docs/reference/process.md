@@ -1078,11 +1078,11 @@ The following options are available:
 : *Can be specified multiple times*
 : Mounts a [ConfigMap](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/) with name and optional key to the given path. If the key is omitted, the path is interpreted as a directory and all entries in the `ConfigMap` are exposed in that path.
 
-`csi: '<name>', mountPath: '</absolute/path>'`
+`csi: '<config>', mountPath: '</absolute/path>'`
 : :::{versionadded} 22.11.0-edge
   :::
 : *Can be specified multiple times*
-: Mounts a [CSI ephemeral volume](https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#csi-ephemeral-volumes) by name to the given path.
+: Mounts a [CSI ephemeral volume](https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#csi-ephemeral-volumes) with the given configuration to the given path.
 
 `emptyDir: <config>, mountPath: '</absolute/path>'`
 : :::{versionadded} 22.11.0-edge
@@ -1593,11 +1593,11 @@ process formatBlastDatabases {
 ```
 
 :::{warning}
-The `storeDir` directive is meant for long-term process caching and should not be used to publish output files or organize outputs into a semantic directory structure. In those cases, use the [publishDir](#publishdir) directive instead.
+If a process uses `storeDir` and all of its outputs are optional, the process will always be skipped, even if the store directory is empty. This issue can be avoided by specifying at least one required file output.
 :::
 
-:::{note}
-The use of AWS S3 paths is supported, however it requires the installation of the [AWS CLI](https://aws.amazon.com/cli/) (i.e. `aws`) in the target compute node.
+:::{warning}
+The `storeDir` directive should not be used to publish workflow outputs. Use the [publishDir](#publishdir) directive or the {ref}`workflow output definition <workflow-output-def>` instead.
 :::
 
 (process-tag)=

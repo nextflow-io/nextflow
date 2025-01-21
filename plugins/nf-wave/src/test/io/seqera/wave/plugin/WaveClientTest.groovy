@@ -306,7 +306,7 @@ class WaveClientTest extends Specification {
         req.timestamp instanceof String
 
         cleanup:
-        ContainerInspectMode.activate(false)
+        ContainerInspectMode.reset()
     }
 
     def 'should create request object and platform' () {

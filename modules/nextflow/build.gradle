@@ -21,16 +21,16 @@ dependencies {
     api(project(':nf-commons'))
     api(project(':nf-httpfs'))
     api "org.apache.groovy:groovy:4.0.24"
-    api "org.apache.groovy:groovy-nio:4.0.23"
-    api "org.apache.groovy:groovy-xml:4.0.23"
-    api "org.apache.groovy:groovy-json:4.0.23"
-    api "org.apache.groovy:groovy-templates:4.0.23"
-    api "org.apache.groovy:groovy-yaml:4.0.23"
-    api "org.slf4j:jcl-over-slf4j:2.0.7"
-    api "org.slf4j:jul-to-slf4j:2.0.7"
-    api "org.slf4j:log4j-over-slf4j:2.0.7"
-    api "ch.qos.logback:logback-classic:1.4.14"
-    api "ch.qos.logback:logback-core:1.4.14"
+    api "org.apache.groovy:groovy-nio:4.0.24"
+    api "org.apache.groovy:groovy-xml:4.0.24"
+    api "org.apache.groovy:groovy-json:4.0.24"
+    api "org.apache.groovy:groovy-templates:4.0.24"
+    api "org.apache.groovy:groovy-yaml:4.0.24"
+    api "org.slf4j:jcl-over-slf4j:2.0.16"
+    api "org.slf4j:jul-to-slf4j:2.0.16"
+    api "org.slf4j:log4j-over-slf4j:2.0.16"
+    api "ch.qos.logback:logback-classic:1.5.16"
+    api "ch.qos.logback:logback-core:1.5.16"
     api "org.codehaus.gpars:gpars:1.2.1"
     api("ch.artecat.grengine:grengine:3.0.2") { exclude group: 'org.codehaus.groovy' }
     api "commons-lang:commons-lang:2.6"
@@ -39,7 +39,7 @@ dependencies {
     api "com.beust:jcommander:1.35"
     api("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
     api('org.iq80.leveldb:leveldb:0.12')
-    api('org.eclipse.jgit:org.eclipse.jgit:6.10.0.202406032230-r')
+    api('org.eclipse.jgit:org.eclipse.jgit:7.1.0.202411261347-r')
     api ('javax.activation:activation:1.1.1')
     api ('javax.mail:mail:1.4.7')
     api ('org.yaml:snakeyaml:2.2')
@@ -53,7 +53,7 @@ dependencies {
     testImplementation 'org.subethamail:subethasmtp:3.1.7'
 
     // test configuration
-    testFixturesApi ("org.apache.groovy:groovy-test:4.0.23") { exclude group: 'org.apache.groovy' }
+    testFixturesApi ("org.apache.groovy:groovy-test:4.0.24") { exclude group: 'org.apache.groovy' }
     testFixturesApi ("org.objenesis:objenesis:3.4")
     testFixturesApi ("net.bytebuddy:byte-buddy:1.14.17")
     testFixturesApi ("org.spockframework:spock-core:2.3-groovy-4.0") { exclude group: 'org.apache.groovy' }
