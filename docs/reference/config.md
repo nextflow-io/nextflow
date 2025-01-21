@@ -1654,6 +1654,7 @@ The `workflow` scope provides workflow execution options.
 `workflow.output.copyAttributes`
 : :::{versionadded} 25.01.0-edge
   :::
+: *Currently only supported for local and shared filesystems.*
 : Copy file attributes (such as the last modified timestamp) to the published file (default: `false`).
 
 `workflow.output.enabled`

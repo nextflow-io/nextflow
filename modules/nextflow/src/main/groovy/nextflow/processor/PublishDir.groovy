@@ -501,7 +501,7 @@ class PublishDir {
         log.trace "publishing file: $source -[$mode]-> $destination"
 
         final options = new ArrayList<>(2)
-        final copyAttributes = session.config.navigate('workflow.output.copyAttributes') as Boolean
+        final copyAttributes = session.config.navigate('workflow.output.copyAttributes', false)
         if( copyAttributes )
             options.add(StandardCopyOption.COPY_ATTRIBUTES)
 
