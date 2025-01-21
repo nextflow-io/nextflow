@@ -1,8 +1,10 @@
 (dsl1-page)=
 
-# Migrating from DSL 1
+# Migrate from DSL1
 
 In Nextflow version `22.03.0-edge`, DSL2 became the default DSL version. In version `22.12.0-edge`, DSL1 support was removed, and the Nextflow documentation was updated to use DSL2 by default. Users who are still using DSL1 should migrate their pipelines to DSL2 in order to use the latest versions of Nextflow. This page describes the differences between DSL1 and DSL2, and how to migrate to DSL2.
+
+## Enable DSL2
 
 In Nextflow versions prior to `22.03.0-edge`, you must enable DSL2 explicitly in order to use it. You can either set the feature flag in your pipeline script:
 

@@ -125,6 +125,16 @@ reference/operator
 
 ```{toctree}
 :hidden:
+:caption: Updates
+:maxdepth: 1
+
+updates
+dsl1
+```
+
+
+```{toctree}
+:hidden:
 :caption: Contributing
 :maxdepth: 1
 

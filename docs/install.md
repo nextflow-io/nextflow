@@ -2,11 +2,13 @@
 
 # Installation
 
+Nextflow can be used on any POSIX-compatible system (Linux, macOS, etc), and on Windows through [WSL](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux).
+
 (install-requirements)=
 
 ## Requirements
 
-Nextflow can be used on any POSIX-compatible system (Linux, macOS, etc), and on Windows through [WSL](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux). It requires Bash 3.2 (or later) and [Java 17 (or later, up to 23)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed. You can see which version you have using the following command:
+Nextflow requires Bash 3.2 (or later) and [Java 17 (or later, up to 23)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed. You can see which version you have using the following command:
 
 ```{code-block} bash
 :class: copyable
@@ -50,7 +52,7 @@ To install Java with SDKMAN:
 
 Nextflow is distributed as a self-installing package, in order to make the installation process as simple as possible:
 
-1. Install Nextflow:
+1. Download Nextflow:
 
     ```{code-block} bash
     :class: copyable
@@ -93,22 +95,6 @@ Nextflow is distributed as a self-installing package, in order to make the insta
     nextflow info
     ```
 
-## Updates
-
-With Nextflow installed in your environment, you can update to the latest version using the following command:
-
-```{code-block} bash
-:class: copyable
-nextflow self-update
-```
-
-You can also temporarily switch to a specific version of Nextflow with the `NXF_VER` environment variable. For example:
-
-```{code-block} bash
-:class: copyable
-NXF_VER=23.10.0 nextflow info
-```
-
 ## Seqera Platform
 
 You can launch workflows directly from [Seqera Platform](https://seqera.io/platform/) without installing Nextflow locally.
@@ -121,26 +107,6 @@ Launching from Seqera Platform provides you with:
 
 Seqera Cloud Basic is free for small teams. Researchers at qualifying academic institutions can apply for free access to Seqera Cloud Pro.
 See the [Seqera Platform documentation](https://docs.seqera.io/platform) for set-up information and tutorials to get started.
-
-## Stable and edge releases
-
-A *stable* version of Nextflow is released every six months, in the 4th and 10th month of each year.
-
-Additionally, an *edge* version is released on a monthly basis. The edge releases can be used to access the latest updates and experimental features.
-
-To use the latest edge release, set `NXF_EDGE=1` when updating:
-
-```{code-block} bash
-:class: copyable
-NXF_EDGE=1 nextflow self-update
-```
-
-You can also use `NXF_VER` to temporarily switch to any edge release. For example:
-
-```{code-block} bash
-:class: copyable
-NXF_VER=24.06.0-edge nextflow info
-```
 
 ## Standalone distribution
 
