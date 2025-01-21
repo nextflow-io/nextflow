@@ -174,7 +174,7 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     @Override
-    void kill() {
+    protected void killTask() {
         if( !taskKey )
             return
         batchService.terminate(taskKey)

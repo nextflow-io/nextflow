@@ -299,7 +299,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * {@inheritDoc}
      */
     @Override
-    void kill() {
+    protected void killTask() {
         assert jobId
         log.trace "[AWS BATCH] Process `${task.lazyName()}` - killing job=$jobId"
         final targetId = normaliseJobId(jobId)

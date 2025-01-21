@@ -15,28 +15,31 @@
  *
  */
 
-package nextflow.container.inspect
+package nextflow.cli
 
-import groovy.transform.CompileStatic
+import spock.lang.Specification
+
 /**
- * Activate the container inspect mode
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@CompileStatic
-class ContainerInspectMode {
+class CmdInspectTest extends Specification {
 
-    private static Boolean dryRun
+    def 'should configure max rate' () {
+        given:
+        def cmd = new CmdInspect()
 
-    static boolean active() { return dryRun!=null }
+        when:
+        def cfg1 = [:]
+        cmd.configureMaxRate(cfg1)
+        then:
+        cfg1 == [wave:[httpClient:[maxRate:'5/30sec']]]
 
-    static boolean dryRun() { return dryRun==true }
-
-    static void activate(boolean dryRun) {
-        this.dryRun = dryRun
+        when:
+        def cfg2 = [wave:[enabled:true, httpClient: [something:true, maxRate: '1/s']]]
+        cmd.configureMaxRate(cfg2)
+        then:
+        cfg2 == [wave:[enabled:true, httpClient: [something:true, maxRate: '5/30sec']]]
     }
 
-    static void reset() {
-        dryRun = null
-    }
 }

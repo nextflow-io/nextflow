@@ -882,7 +882,7 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         when:
         handler.@jobId = 'job1'
-        handler.kill()
+        handler.killTask()
         then:
         1 * executor.shouldDeleteJob('job1') >> true
         and:
@@ -890,7 +890,7 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         when:
         handler.@jobId = 'job1:task2'
-        handler.kill()
+        handler.killTask()
         then:
         1 * executor.shouldDeleteJob('job1') >> true
         and:
@@ -898,7 +898,7 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         when:
         handler.@jobId = 'job1:task2'
-        handler.kill()
+        handler.killTask()
         then:
         1 * executor.shouldDeleteJob('job1') >> false
         and:
