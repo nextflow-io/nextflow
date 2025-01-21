@@ -362,9 +362,7 @@ class ProviderConfig {
         }
 
         if( server == 'https://dev.azure.com' ) {
-            final parts = project.tokenize('/')
-            if( parts[2]=='_git' )
-                project = "${parts[0]}/${parts[1]}"
+            project = AzureRepositoryProvider.getUniformPath(project).join('/')
         }
 
         return project.stripStart('/')

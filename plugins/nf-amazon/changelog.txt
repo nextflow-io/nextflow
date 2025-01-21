@@ -1,5 +1,11 @@
 nf-amazon changelog
 ===================
+2.11.0 - 20 Jan 2025
+- Disable AWS SDK v1 warning [ci fast] [cd00a26d]
+- Ensure job is killed when exception in task status check (#5561) [9eefd207]
+- Bump logback 1.5.13 + slf4j 2.0.16 [cc0163ac]
+- Bump groovy 4.0.24 missing deps [40670f7e]
+
 2.10.0 - 3 Dec 2024
 - Detecting errors in data unstaging (#5345) [3c8e602d]
 - Prevent NPE with null AWS Batch response [12fc1d60]

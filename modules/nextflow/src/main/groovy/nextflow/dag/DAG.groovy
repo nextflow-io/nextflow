@@ -113,7 +113,7 @@ class DAG {
     void addOperatorNode( String label, inputs, outputs, List<DataflowProcessor> operators=null )  {
         assert label
         assert inputs
-        addVertex(Type.OPERATOR, label, normalizeChannels(inputs), normalizeChannels(outputs), operators )
+        addVertex( Type.OPERATOR, label, normalizeChannels(inputs), normalizeChannels(outputs), operators )
     }
 
     /**
@@ -125,7 +125,7 @@ class DAG {
     void addSourceNode( String label, source )  {
         assert label
         assert source
-        addVertex(Type.ORIGIN, label, null, normalizeChannels(source) )
+        addVertex( Type.ORIGIN, label, null, normalizeChannels(source) )
     }
 
     /**
@@ -158,7 +158,7 @@ class DAG {
      * @return A {@link Vertex} object
      */
     @PackageScope
-    Vertex createVertex( Type type, String label, extra=null ) {
+    Vertex createVertex( Type type, String label, Object extra=null ) {
         def result = new Vertex(type, label)
         if( extra instanceof TaskProcessor ) {
             result.process = extra
