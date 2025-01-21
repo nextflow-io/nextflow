@@ -35,7 +35,7 @@ class PlatformHelper {
      * @return the Platform access token
      */
     static String getAccessToken(Map opts, Map<String,String> env) {
-        def token = env.get('TOWER_WORKFLOW_ID')
+        final token = env.get('TOWER_WORKFLOW_ID')
             ? env.get('TOWER_ACCESS_TOKEN')
             : opts.containsKey('accessToken') ? opts.accessToken as String : env.get('TOWER_ACCESS_TOKEN')
         return token
@@ -51,7 +51,7 @@ class PlatformHelper {
      * @return the Platform refresh token
      */
     static String getRefreshToken(Map opts, Map<String,String> env) {
-        def token = env.get('TOWER_WORKFLOW_ID')
+        final token = env.get('TOWER_WORKFLOW_ID')
             ? env.get('TOWER_REFRESH_TOKEN')
             : opts.containsKey('refreshToken') ? opts.refreshToken as String : env.get('TOWER_REFRESH_TOKEN')
         return token
@@ -66,7 +66,7 @@ class PlatformHelper {
      * @return
      */
     static String getWorkspaceId(Map opts, Map<String,String> env) {
-        def workspaceId = env.get('TOWER_WORKFLOW_ID')
+        final workspaceId = env.get('TOWER_WORKFLOW_ID')
             ? env.get('TOWER_WORKSPACE_ID')
             : opts.workspaceId as Long ?: env.get('TOWER_WORKSPACE_ID') as Long
         return workspaceId
