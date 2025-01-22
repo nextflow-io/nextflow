@@ -410,8 +410,8 @@ public class S3Path implements Path, TagAwareFile {
 		builder.append("s3://");
 		if (fileSystem.getEndpoint() != null) {
 			builder.append(fileSystem.getEndpoint());
+    		builder.append("/");
 		}
-		builder.append("/");
 		builder.append(bucket);
 		builder.append(PATH_SEPARATOR);
 		builder.append(Joiner.on(PATH_SEPARATOR).join(parts));
