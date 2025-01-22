@@ -22,6 +22,7 @@ import java.nio.file.Path
 import ch.artecat.grengine.Grengine
 import groovy.transform.Memoized
 import nextflow.SysEnv
+import nextflow.config.StripSecretsXform
 import nextflow.exception.IllegalConfigException
 import nextflow.file.FileHelper
 import org.codehaus.groovy.control.CompilerConfiguration
