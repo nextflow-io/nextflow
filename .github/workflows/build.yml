@@ -85,7 +85,9 @@ jobs:
 
       - name: Compile
         if: steps.changed-files.outputs.any_changed == 'true'
-        run: make assemble
+        run: |
+            wget https://github.com/nextflow-io/language-server/releases/download/v1-SNAPSHOT/compiler.jar
+            make assemble
 
       - name: Test
         if: steps.changed-files.outputs.any_changed == 'true'

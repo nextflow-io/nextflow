@@ -18,7 +18,10 @@ compileGroovy {
 }
 
 dependencies {
-    implementation project('compiler')
+    // TODO: replace with Maven repository
+    implementation 'org.antlr:antlr4:4.9.2'
+    implementation files('../../compiler.jar')
+
     api(project(':nf-commons'))
     api(project(':nf-httpfs'))
     api "org.apache.groovy:groovy:4.0.24"
