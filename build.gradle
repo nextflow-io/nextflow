@@ -67,18 +67,16 @@ allprojects {
     apply plugin: 'jacoco'
 
     java {
+        // these settings apply to all jvm tooling, including groovy
         toolchain {
             languageVersion = JavaLanguageVersion.of(21)
         }
+        sourceCompatibility = 17
+        targetCompatibility = 17
     }
 
     compileJava {
         options.release.set(17)
-    }
-
-    tasks.withType(GroovyCompile) {
-        sourceCompatibility = 17
-        targetCompatibility = 17
     }
 
     idea {
