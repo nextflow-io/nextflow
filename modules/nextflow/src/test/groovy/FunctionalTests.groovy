@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import nextflow.config.ConfigParser
+import nextflow.config.ConfigParserFactory
 import nextflow.exception.AbortRunException
 import nextflow.processor.TaskProcessor
 import nextflow.util.MemoryUnit
@@ -80,7 +80,7 @@ class FunctionalTests extends Dsl2Spec {
             '''
 
         when:
-        new MockScriptRunner(new ConfigParser().parse(config))
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
                 .setScript(script)
                 .execute()
         def processor = TaskProcessor.currentProcessor()
@@ -116,7 +116,7 @@ class FunctionalTests extends Dsl2Spec {
             '''
 
         when:
-        new MockScriptRunner(new ConfigParser().parse(config))
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
                 .setScript(script)
                 .execute()
         def processor = TaskProcessor.currentProcessor()
@@ -155,7 +155,7 @@ class FunctionalTests extends Dsl2Spec {
             '''
 
         when:
-        new MockScriptRunner(new ConfigParser().parse(config))
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
                 .setScript(script)
                 .execute()
         def processor = TaskProcessor.currentProcessor()
@@ -196,7 +196,7 @@ class FunctionalTests extends Dsl2Spec {
             '''
 
         when:
-        new MockScriptRunner(new ConfigParser().parse(config))
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
                 .setScript(script)
                 .execute()
         def processor = TaskProcessor.currentProcessor()
@@ -255,7 +255,7 @@ class FunctionalTests extends Dsl2Spec {
                 '''
 
         when:
-            new MockScriptRunner(new ConfigParser().parse(config))
+            new MockScriptRunner(ConfigParserFactory.create().parse(config))
                     .setScript(script)
                     .execute()
             def processor = TaskProcessor.currentProcessor()
@@ -282,7 +282,7 @@ class FunctionalTests extends Dsl2Spec {
                 '''
 
         and:
-            new MockScriptRunner(new ConfigParser().parse(config))
+            new MockScriptRunner(ConfigParserFactory.create().parse(config))
                     .setScript(script)
                     .execute()
             processor = TaskProcessor.currentProcessor()
@@ -308,7 +308,7 @@ class FunctionalTests extends Dsl2Spec {
                 workflow { foo() }
                 '''
         and:
-            new MockScriptRunner(new ConfigParser().parse(config))
+            new MockScriptRunner(ConfigParserFactory.create().parse(config))
                     .setScript(script)
                     .execute()
             processor = TaskProcessor.currentProcessor()
@@ -337,7 +337,7 @@ class FunctionalTests extends Dsl2Spec {
                 '''
 
         and:
-            new MockScriptRunner(new ConfigParser().parse(config))
+            new MockScriptRunner(ConfigParserFactory.create().parse(config))
                     .setScript(script)
                     .execute()
             processor = TaskProcessor.currentProcessor()
@@ -389,7 +389,7 @@ class FunctionalTests extends Dsl2Spec {
                 '''
 
         when:
-        new MockScriptRunner(new ConfigParser().parse(config))
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
                 .setScript(script)
                 .execute()
         def processor = TaskProcessor.currentProcessor()
@@ -415,7 +415,7 @@ class FunctionalTests extends Dsl2Spec {
                 workflow { bar() }
                 '''
         and:
-        new MockScriptRunner(new ConfigParser().parse(config))
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
                 .setScript(script)
                 .execute()
         processor = TaskProcessor.currentProcessor()
@@ -448,7 +448,7 @@ class FunctionalTests extends Dsl2Spec {
                 '''
 
         when:
-        new MockScriptRunner(new ConfigParser().parse(config))
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
                 .setScript(script)
                 .execute()
         def processor = TaskProcessor.currentProcessor()
@@ -479,7 +479,7 @@ class FunctionalTests extends Dsl2Spec {
                 '''
 
         and:
-        new MockScriptRunner(new ConfigParser().parse(config))
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
                 .setScript(script)
                 .execute()
         processor = TaskProcessor.currentProcessor()
@@ -509,7 +509,7 @@ class FunctionalTests extends Dsl2Spec {
                 '''
 
         when:
-        new MockScriptRunner(new ConfigParser().parse(config))
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
                 .setScript(script)
                 .execute()
         def processor = TaskProcessor.currentProcessor()
@@ -535,7 +535,7 @@ class FunctionalTests extends Dsl2Spec {
                 workflow { foo() }
                 '''
         and:
-        new MockScriptRunner(new ConfigParser().parse(config))
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
                 .setScript(script)
                 .execute()
         processor = TaskProcessor.currentProcessor()
@@ -564,7 +564,7 @@ class FunctionalTests extends Dsl2Spec {
                 '''
 
         and:
-        new MockScriptRunner(new ConfigParser().parse(config))
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
                 .setScript(script)
                 .execute()
         processor = TaskProcessor.currentProcessor()
@@ -594,7 +594,7 @@ class FunctionalTests extends Dsl2Spec {
                 '''
 
         and:
-        new MockScriptRunner(new ConfigParser().parse(config))
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
                 .setScript(script)
                 .execute()
         processor = TaskProcessor.currentProcessor()
@@ -626,7 +626,7 @@ class FunctionalTests extends Dsl2Spec {
                 '''
 
         and:
-        new MockScriptRunner(new ConfigParser().parse(config))
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
                 .setScript(script)
                 .execute()
         processor = TaskProcessor.currentProcessor()
@@ -656,7 +656,7 @@ class FunctionalTests extends Dsl2Spec {
                 '''
 
         when:
-        new MockScriptRunner(new ConfigParser().parse(config))
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
                 .setScript(script)
                 .execute()
         def processor = TaskProcessor.currentProcessor()
@@ -685,7 +685,7 @@ class FunctionalTests extends Dsl2Spec {
                 '''
 
         and:
-        new MockScriptRunner(new ConfigParser().parse(config))
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
                 .setScript(script)
                 .execute()
         processor = TaskProcessor.currentProcessor()
@@ -716,7 +716,7 @@ class FunctionalTests extends Dsl2Spec {
                 '''
 
         when:
-        new MockScriptRunner(new ConfigParser().parse(config))
+        new MockScriptRunner(ConfigParserFactory.create().parse(config))
                 .setScript(script)
                 .execute()
         then:

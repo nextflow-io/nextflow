@@ -45,7 +45,7 @@ class ConfigParserTest extends Specification {
         def CONFIG = '''
         process.cpus = env('MAX_CPUS')
         '''
-        def config = new ConfigParser().parse(CONFIG)
+        def config = ConfigParserFactory.create().parse(CONFIG)
 
         then:
         config.process.cpus == '1'
@@ -70,7 +70,7 @@ class ConfigParserTest extends Specification {
         '''
 
         when:
-        def config = new ConfigParser().parse(CONFIG)
+        def config = ConfigParserFactory.create().parse(CONFIG)
 
         then:
         config.plugins == ['foo','bar'] as Set
@@ -89,7 +89,7 @@ class ConfigParserTest extends Specification {
         '''
 
         when:
-        def config = new ConfigParser().parse(CONFIG)
+        def config = ConfigParserFactory.create().parse(CONFIG)
 
         then:
         def e = thrown(ConfigParseException)
@@ -129,7 +129,7 @@ class ConfigParserTest extends Specification {
         '''
 
         when:
-        def config = new ConfigParser().parse(text)
+        def config = ConfigParserFactory.create().parse(text)
         then:
         config.process.name == 'alpha'
         config.process.resources.cpus == 4
@@ -193,7 +193,7 @@ class ConfigParserTest extends Specification {
         '''
 
         when:
-        def config = new ConfigParser().setBinding().parse(text)
+        def config = ConfigParserFactory.create().setBinding().parse(text)
         then:
         config.params.xxx == 'x'
         config.params.yyy == 'y'
@@ -251,7 +251,7 @@ class ConfigParserTest extends Specification {
         '''
 
         when:
-        def config = new ConfigParser().setBinding([MIN: 1, MAX: 32]).parse(main)
+        def config = ConfigParserFactory.create().setBinding([MIN: 1, MAX: 32]).parse(main)
         then:
         config.profiles.proc1.cpus == 4
         config.profiles.proc1.memory == '8GB'
@@ -308,7 +308,7 @@ class ConfigParserTest extends Specification {
         '''
 
         when:
-        def config = new ConfigParser().parse(main)
+        def config = ConfigParserFactory.create().parse(main)
         then:
         config.process.name == 'foo'
         config.process.resources.cpus == 4
@@ -372,8 +372,8 @@ class ConfigParserTest extends Specification {
         """
 
         when:
-        def config1 = new ConfigParser()
-                        .registerConditionalBlock('profiles','slow')
+        def config1 = ConfigParserFactory.create()
+                        .setProfiles(['slow'])
                         .parse(configText)
         then:
         config1.workDir == '/my/scratch'
@@ -382,8 +382,8 @@ class ConfigParserTest extends Specification {
         config1.process.disk == '100GB'
 
         when:
-        def config2 = new ConfigParser()
-                        .registerConditionalBlock('profiles','fast')
+        def config2 = ConfigParserFactory.create()
+                        .setProfiles(['fast'])
                         .parse(configText)
         then:
         config2.workDir == '/fast/scratch'
@@ -409,77 +409,19 @@ class ConfigParserTest extends Specification {
                 b = 2
             }
         }
-
-        servers {
-            local {
-                x = 1
-            }
-            test {
-                y = 2
-            }
-            prod {
-                z = 3
-            }
-        }
         '''
 
         when:
-        def slurper = new ConfigParser().registerConditionalBlock('profiles','alpha')
+        def slurper = ConfigParserFactory.create().setProfiles(['alpha'])
         slurper.parse(text)
         then:
-        slurper.getConditionalBlockNames() == ['alpha','beta'] as Set
+        slurper.getProfiles() == ['alpha','beta'] as Set
 
         when:
-        slurper = new ConfigParser().registerConditionalBlock('profiles','omega')
+        slurper = ConfigParserFactory.create().setProfiles(['omega'])
         slurper.parse(text)
         then:
-        slurper.getConditionalBlockNames() == ['alpha','beta'] as Set
-
-        when:
-        slurper = new ConfigParser().registerConditionalBlock('servers','xxx')
-        slurper.parse(text)
-        then:
-        slurper.getConditionalBlockNames() == ['local','test','prod'] as Set
-
-        when:
-        slurper = new ConfigParser().registerConditionalBlock('foo','bar')
-        slurper.parse(text)
-        then:
-        slurper.getConditionalBlockNames() == [] as Set
-    }
-
-    def 'should return the profile names' () {
-        given:
-        def text = '''
-        profiles {
-            alpha {
-                a = 1
-            }
-            beta {
-                b = 2
-            }
-        }
-
-        servers {
-            local {
-                x = 1
-            }
-            test {
-                y = 2
-            }
-            prod {
-                z = 3
-            }
-        }
-        '''
-
-        when:
-        def slurper = new ConfigParser()
-        slurper.parse(text)
-        then:
-        slurper.getProfileNames() == ['alpha','beta'] as Set
-        slurper.getConditionalBlockNames() == [] as Set
-
+        slurper.getProfiles() == ['alpha','beta'] as Set
     }
 
     def 'should disable includeConfig parsing' () {
@@ -494,12 +436,12 @@ class ConfigParserTest extends Specification {
         '''
 
         when:
-        def config = new ConfigParser().setIgnoreIncludes(true).parse(text)
+        def config = ConfigParserFactory.create().setIgnoreIncludes(true).parse(text)
         then:
         config.manifest.description == 'some text ..'
 
         when:
-        new ConfigParser().parse(text)
+        ConfigParserFactory.create().parse(text)
         then:
         thrown(NoSuchFileException)
 
@@ -512,7 +454,7 @@ class ConfigParserTest extends Specification {
         configFile.text = 'XXX.enabled = true'
 
         when:
-        new ConfigParser().parse(configFile)
+        ConfigParserFactory.create().parse(configFile)
         then:
         noExceptionThrown()
 
@@ -533,7 +475,7 @@ class ConfigParserTest extends Specification {
            '''
 
         when:
-        result = new ConfigParser()
+        result = ConfigParserFactory.create()
                 .parse(CONFIG)
         then:
         result.str1 instanceof String
@@ -542,7 +484,7 @@ class ConfigParserTest extends Specification {
         result.map1.bar instanceof Closure
 
         when:
-        result = new ConfigParser()
+        result = ConfigParserFactory.create()
                 .setRenderClosureAsString(false)
                 .parse(CONFIG)
         then:
@@ -552,7 +494,7 @@ class ConfigParserTest extends Specification {
         result.map1.bar instanceof Closure
 
         when:
-        result = new ConfigParser()
+        result = ConfigParserFactory.create()
                     .setRenderClosureAsString(true)
                     .parse(CONFIG)
         then:
@@ -578,7 +520,7 @@ class ConfigParserTest extends Specification {
            '''
 
         when:
-        result = new ConfigParser()
+        result = ConfigParserFactory.create()
                 .parse(CONFIG)   
         then:
         result.mem1 instanceof MemoryUnit
@@ -652,7 +594,7 @@ class ConfigParserTest extends Specification {
         '''
 
         when:
-        def config = new ConfigParser().parse(CONFIG)
+        def config = ConfigParserFactory.create().parse(CONFIG)
 
         then:
         config.params.foo.bar == 'bar1'
@@ -670,7 +612,7 @@ class ConfigParserTest extends Specification {
             }
         '''
         and:
-        config = new ConfigParser().parse(CONFIG)
+        config = ConfigParserFactory.create().parse(CONFIG)
 
         then:
         config.params.foo.bar == 'bar1'
@@ -725,7 +667,7 @@ class ConfigParserTest extends Specification {
         """
 
         when:
-        def config1 = new ConfigParser()
+        def config1 = ConfigParserFactory.create()
                 .parse(configText)
         then:
         config1.workDir == '/my/scratch'

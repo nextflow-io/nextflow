@@ -95,8 +95,6 @@ import org.codehaus.groovy.runtime.InvokerHelper
  * @since 1.5
  */
 class ConfigParserLegacy implements ConfigParser {
-    private static final ENVIRONMENTS_METHOD = 'environments'
-
     private Map bindingVars = [:]
     private Map paramVars = [:]
 
@@ -113,45 +111,16 @@ class ConfigParserLegacy implements ConfigParser {
 
     private Grengine grengine
 
-    ConfigParserLegacy() {
-        this('')
-    }
-
-    /**
-     * Constructs a new IncludeConfigSlurper instance using the given environment
-     * @param env The Environment to use
-     */
-    ConfigParserLegacy(String env) {
-        conditionValues[ENVIRONMENTS_METHOD] = [env]
-    }
-
-    ConfigParser registerConditionalBlock(String blockName, String blockValue) {
-        if (blockName) {
-            if (!blockValue) {
-                conditionValues.remove(blockName)
-            }
-            else {
-                conditionValues[blockName] = [blockValue]
-            }
-        }
-        return this
-    }
-
-    ConfigParser registerConditionalBlock(String blockName, List<String> blockValues) {
-        if (blockName) {
-            if (!blockValues) {
-                conditionValues.remove(blockName)
-            }
-            else {
-                conditionValues[blockName] = blockValues
-            }
-        }
-        return this
-    }
-
     @Override
     ConfigParser setProfiles(List<String> profiles) {
-        registerConditionalBlock('profiles', profiles)
+        final blockName = 'profiles'
+        if (!profiles) {
+            conditionValues.remove(blockName)
+        }
+        else {
+            conditionValues[blockName] = profiles
+        }
+        return this
     }
 
     @Override
@@ -490,6 +459,7 @@ class ConfigParserLegacy implements ConfigParser {
         // disable include parsing when required
         script.setIgnoreIncludes(ignoreIncludes)
         script.setRenderClosureAsString(renderClosureAsString)
+        script.setStripSecrets(stripSecrets)
 
         // -- set the binding and run
         script.binding = binding
