@@ -25,6 +25,7 @@ import com.google.cloud.batch.v1.Volume
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.NF
 import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.executor.BashWrapperBuilder
 import nextflow.extension.FilesEx
@@ -178,7 +179,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
     }
 
     static String launchCommand( String workDir ) {
-        "trap \"{ cp ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}; }\" ERR; /bin/bash ${workDir}/${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
+        "trap \"{ cp ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}; }\" ERR; ${NF.bash()} ${workDir}/${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
     }
 
     static String containerMountPath(CloudStoragePath path) {

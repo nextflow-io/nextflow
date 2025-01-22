@@ -24,6 +24,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
+import nextflow.NF
 import nextflow.Session
 import nextflow.cloud.CloudTransferOptions
 import nextflow.exception.AbortOperationException
@@ -45,7 +46,7 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
 
     public final static String DEFAULT_SSH_IMAGE = 'gcr.io/cloud-genomics-pipelines/tools'
 
-    public final static String DEFAULT_ENTRY_POINT = '/bin/bash'
+    public final static String DEFAULT_ENTRY_POINT = NF.bash()
 
     public final static int DEF_PARALLEL_THREAD_COUNT =1
     public final static int DEF_DOWNLOAD_MAX_COMPONENTS =8

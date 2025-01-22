@@ -17,6 +17,7 @@
 package nextflow
 
 import groovy.runtime.metaclass.NextflowDelegatingMetaClass
+import groovy.transform.Memoized
 import nextflow.extension.CH
 import nextflow.plugin.extension.PluginExtensionProvider
 import nextflow.script.ExecutionStack
@@ -78,5 +79,10 @@ class NF {
 
     static boolean isTopicChannelEnabled() {
         NextflowMeta.instance.preview.topic
+    }
+
+    @Memoized
+    static String bash() {
+        session().config.navigate('nextflow.defaults.bash') ?: '/bin/bash'
     }
 }

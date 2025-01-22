@@ -27,6 +27,7 @@ import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
 import com.google.common.hash.Hashing
 import groovy.util.logging.Slf4j
+import nextflow.NF
 import nextflow.cli.CmdKubeRun
 import nextflow.cli.CmdRun
 import nextflow.config.ConfigBuilder
@@ -535,7 +536,7 @@ class K8sDriverLauncher {
         PodSpecBuilder builder = new PodSpecBuilder()
             .withPodName(runName)
             .withImageName(headImage ?: k8sConfig.getNextflowImageName())
-            .withCommand(['/bin/bash', '-c', cmd])
+            .withCommand([NF.bash(), '-c', cmd])
             .withLabels([ app: 'nextflow', runName: runName ])
             .withNamespace(k8sClient.config.namespace)
             .withServiceAccount(k8sClient.config.serviceAccount)
@@ -692,7 +693,7 @@ class K8sDriverLauncher {
 
     protected void launchLogin() {
         def launchDir = k8sConfig.getLaunchDir()
-        def cmd = "kubectl -n ${k8sClient.config.namespace} exec -it $runName -- /bin/bash -c 'cd $launchDir; exec bash --login -i'"
+        def cmd = "kubectl -n ${k8sClient.config.namespace} exec -it $runName -- ${NF.bash()} -c 'cd $launchDir; exec bash --login -i'"
         def proc = new ProcessBuilder().command('bash','-c',cmd).inheritIO().start()
         def result = proc.waitFor()
         if( result == 0 ) {

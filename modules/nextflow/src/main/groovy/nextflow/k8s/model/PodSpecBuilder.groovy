@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import nextflow.NF
 import nextflow.executor.res.AcceleratorResource
 import nextflow.util.MemoryUnit
 import groovy.util.logging.Slf4j
@@ -169,14 +170,14 @@ class PodSpecBuilder {
     PodSpecBuilder withCommand( cmd ) {
         if( cmd==null ) return this
         assert cmd instanceof List || cmd instanceof CharSequence, "Missing or invalid K8s command parameter: $cmd"
-        this.command = cmd instanceof List ? cmd as List<String> : ['/bin/bash','-c', cmd.toString()]
+        this.command = cmd instanceof List ? cmd as List<String> : [NF.bash(), '-c', cmd.toString()]
         return this
     }
 
     PodSpecBuilder withArgs( args ) {
         if( args==null ) return this
         assert args instanceof List || args instanceof CharSequence, "Missing or invalid K8s args parameter: $args"
-        this.args = args instanceof List ? args as List<String> : ['/bin/bash','-c', args.toString()]
+        this.args = args instanceof List ? args as List<String> : [NF.bash(), '-c', args.toString()]
         return this
     }
 

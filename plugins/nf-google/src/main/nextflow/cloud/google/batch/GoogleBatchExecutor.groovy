@@ -24,6 +24,7 @@ import java.nio.file.Path
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.NF
 import nextflow.SysEnv
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.client.BatchConfig
@@ -177,7 +178,7 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
             return TaskArrayExecutor.super.getArrayLaunchCommand(taskDir)
         }
         else {
-            final cmd = List.of('/bin/bash','-o','pipefail','-c', launchCommand(taskDir))
+            final cmd = List.of(NF.bash(),'-o','pipefail','-c', launchCommand(taskDir))
             return Escape.cli(cmd as String[])
         }
     }

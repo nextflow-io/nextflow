@@ -20,6 +20,7 @@ import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.NF
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
 /**
@@ -93,7 +94,7 @@ class FluxExecutor extends AbstractGridExecutor {
         // Any extra cluster options the user wants!
         addClusterOptionsDirective(task.config, result)
 
-        result << '/bin/bash' << scriptFile.getName()
+        result << NF.bash() << scriptFile.getName()
         return result
     }
 
