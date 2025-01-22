@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.config.v1
+package nextflow.config.parser.legacy
 
 import java.nio.file.Path
 
@@ -24,6 +24,7 @@ import groovy.transform.PackageScope
 import nextflow.ast.NextflowXform
 import nextflow.config.ConfigParser
 import nextflow.config.PluginsDsl
+import nextflow.config.StripSecretsXform
 import nextflow.exception.ConfigParseException
 import nextflow.extension.Bolts
 import nextflow.file.FileHelper
@@ -93,7 +94,7 @@ import org.codehaus.groovy.runtime.InvokerHelper
  * @author Andres Almiray
  * @since 1.5
  */
-class ConfigParserV1 implements ConfigParser {
+class ConfigParserLegacy implements ConfigParser {
     private static final ENVIRONMENTS_METHOD = 'environments'
 
     private Map bindingVars = [:]
@@ -108,9 +109,11 @@ class ConfigParserV1 implements ConfigParser {
 
     private boolean renderClosureAsString
 
+    private boolean stripSecrets
+
     private Grengine grengine
 
-    ConfigParserV1() {
+    ConfigParserLegacy() {
         this('')
     }
 
@@ -118,7 +121,7 @@ class ConfigParserV1 implements ConfigParser {
      * Constructs a new IncludeConfigSlurper instance using the given environment
      * @param env The Environment to use
      */
-    ConfigParserV1(String env) {
+    ConfigParserLegacy(String env) {
         conditionValues[ENVIRONMENTS_METHOD] = [env]
     }
 
@@ -164,6 +167,8 @@ class ConfigParserV1 implements ConfigParser {
         // set the required base script
         def config = new CompilerConfiguration()
         config.scriptBaseClass = ConfigBase.class.name
+        if( stripSecrets )
+            config.addCompilationCustomizers(new ASTTransformationCustomizer(StripSecretsXform))
         def params = [:]
         if( renderClosureAsString )
             params.put('renderClosureAsString', true)
@@ -186,6 +191,12 @@ class ConfigParserV1 implements ConfigParser {
     @Override
     ConfigParser setStrict(boolean value) {
         // not supported
+        return this
+    }
+
+    @Override
+    ConfigParser setStripSecrets(boolean value) {
+        this.stripSecrets = value
         return this
     }
 

@@ -20,8 +20,8 @@ package nextflow.config
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
-import nextflow.config.v1.ConfigParserV1
-import nextflow.config.v2.ConfigParserV2
+import nextflow.config.parser.legacy.ConfigParserLegacy
+import nextflow.config.parser.ConfigParserImpl
 
 /**
  * @author Ben Sherman <bentshermann@gmail.com>
@@ -32,8 +32,8 @@ class ConfigParserFactory {
 
     static ConfigParser create() {
         return SysEnv.get('NXF_ENABLE_STRICT_PARSER')=='true'
-            ? new ConfigParserV2()
-            : new ConfigParserV1()
+            ? new ConfigParserImpl()
+            : new ConfigParserLegacy()
     }
 
 }

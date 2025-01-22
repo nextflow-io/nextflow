@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.config.v2
+package nextflow.config.parser
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j

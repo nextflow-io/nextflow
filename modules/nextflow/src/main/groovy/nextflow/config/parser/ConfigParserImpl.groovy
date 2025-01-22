@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.config.v2
+package nextflow.config.parser
 
 import java.nio.file.Path
 
@@ -23,6 +23,8 @@ import com.google.common.hash.Hashing
 import groovy.transform.CompileStatic
 import nextflow.ast.NextflowXform
 import nextflow.config.ConfigParser
+import nextflow.config.StripSecretsXform
+import nextflow.config.parser.ConfigParserPluginFactory
 import nextflow.extension.Bolts
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
@@ -36,7 +38,7 @@ import org.codehaus.groovy.control.customizers.ImportCustomizer
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @CompileStatic
-class ConfigParserV2 implements ConfigParser {
+class ConfigParserImpl implements ConfigParser {
 
     private Map bindingVars = [:]
 
@@ -48,6 +50,8 @@ class ConfigParserV2 implements ConfigParser {
 
     private boolean strict = true
 
+    private boolean stripSecrets
+
     private List<String> appliedProfiles
 
     private Set<String> parsedProfiles
@@ -55,7 +59,7 @@ class ConfigParserV2 implements ConfigParser {
     private Grengine grengine
 
     @Override
-    ConfigParserV2 setProfiles(List<String> profiles) {
+    ConfigParserImpl setProfiles(List<String> profiles) {
         this.appliedProfiles = profiles
         return this
     }
@@ -74,6 +78,8 @@ class ConfigParserV2 implements ConfigParser {
         def config = new CompilerConfiguration()
         config.scriptBaseClass = ConfigDsl.class.name
         config.setPluginFactory(new ConfigParserPluginFactory())
+        if( stripSecrets )
+            config.addCompilationCustomizers(new ASTTransformationCustomizer(StripSecretsXform))
         if( renderClosureAsString )
             config.addCompilationCustomizers(new ASTTransformationCustomizer(ClosureToStringXform))
         config.addCompilationCustomizers(new ASTTransformationCustomizer(NextflowXform))
@@ -86,31 +92,37 @@ class ConfigParserV2 implements ConfigParser {
     }
 
     @Override
-    ConfigParserV2 setIgnoreIncludes(boolean value) {
+    ConfigParserImpl setIgnoreIncludes(boolean value) {
         this.ignoreIncludes = value
         return this
     }
 
     @Override
-    ConfigParserV2 setRenderClosureAsString(boolean value) {
+    ConfigParserImpl setRenderClosureAsString(boolean value) {
         this.renderClosureAsString = value
         return this
     }
 
     @Override
-    ConfigParserV2 setStrict(boolean value) {
+    ConfigParserImpl setStrict(boolean value) {
         this.strict = value
         return this
     }
 
     @Override
-    ConfigParserV2 setBinding(Map vars) {
+    ConfigParser setStripSecrets(boolean value) {
+        this.stripSecrets = value
+        return this
+    }
+
+    @Override
+    ConfigParserImpl setBinding(Map vars) {
         this.bindingVars = vars
         return this
     }
 
     @Override
-    ConfigParserV2 setParams(Map vars) {
+    ConfigParserImpl setParams(Map vars) {
         // deep clone the map to prevent side-effect
         // see https://github.com/nextflow-io/nextflow/issues/1923
         this.paramVars = Bolts.deepClone(vars)

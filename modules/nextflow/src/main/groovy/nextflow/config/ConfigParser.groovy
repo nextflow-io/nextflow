@@ -32,10 +32,12 @@ interface ConfigParser {
      */
     ConfigParser setIgnoreIncludes(boolean value)
 
-    ConfigParser setStripSecrets(boolean value) {
-        this.stripSecrets = value
-        return this
-    }
+    /**
+     * Toggle whether to strip secrets when rendering the config.
+     *
+     * @param value
+     */
+    ConfigParser setStripSecrets(boolean value)
 
     /**
      * Toggle whether to render the source code of closures.

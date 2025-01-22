@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.config.v2
+package nextflow.config.parser
 
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -141,7 +141,7 @@ class ConfigDsl extends Script {
             includePath = configPath.resolveSibling(includeFile)
 
         final configText = readConfigFile(includePath)
-        final config = new ConfigParserV2()
+        final config = new ConfigParserImpl()
                 .setIgnoreIncludes(ignoreIncludes)
                 .setRenderClosureAsString(renderClosureAsString)
                 .setStrict(strict)

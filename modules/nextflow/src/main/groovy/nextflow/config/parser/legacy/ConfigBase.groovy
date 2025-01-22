@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.config.v1
+package nextflow.config.parser.legacy
 
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
