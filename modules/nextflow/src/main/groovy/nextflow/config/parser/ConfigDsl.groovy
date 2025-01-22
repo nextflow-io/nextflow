@@ -23,7 +23,6 @@ import java.nio.file.Paths
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
-import nextflow.config.PluginsDsl
 import nextflow.exception.ConfigParseException
 import nextflow.extension.Bolts
 import nextflow.file.FileHelper
@@ -41,8 +40,6 @@ class ConfigDsl extends Script {
 
     private boolean renderClosureAsString
 
-    private boolean strict
-
     private Path configPath
 
     private Map target = [:]
@@ -53,10 +50,6 @@ class ConfigDsl extends Script {
 
     void setRenderClosureAsString( boolean value ) {
         this.renderClosureAsString = value
-    }
-
-    void setStrict( boolean value ) {
-        this.strict = value
     }
 
     void setConfigPath(Path path) {
@@ -80,11 +73,19 @@ class ConfigDsl extends Script {
             return super.getProperty(name)
         }
         catch( MissingPropertyException e ) {
-            if( strict )
-                throw e
-            else
-                return null
+            throw e
         }
+    }
+
+    void append(List<String> names, Object right) {
+        def ctx = target
+        for( final name : names[0..<-1] ) {
+            if( name !in ctx ) ctx[name] = [:]
+            ctx = ctx[name]
+        }
+        if( names.last() !in ctx )
+            ctx[names.last()] = []
+        (ctx[names.last()] as List).add(right)
     }
 
     void assign(List<String> names, Object right) {
@@ -101,13 +102,6 @@ class ConfigDsl extends Script {
     }
 
     void block(List<String> names, Closure closure) {
-        if( names.last() == 'plugins' ) {
-            if( names.size() > 1 )
-                throw new ConfigParseException("Plugins definition is only allowed as a top-level config scope")
-            plugins(closure)
-            return
-        }
-
         final delegate = new ConfigBlockDsl(this, names)
         final cl = (Closure)closure.clone()
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
@@ -115,13 +109,13 @@ class ConfigDsl extends Script {
         cl.call()
     }
 
-    protected void plugins(Closure closure) {
-        final pluginsDsl = new PluginsDsl()
-        final cl = (Closure)closure.clone()
-        cl.setResolveStrategy(Closure.DELEGATE_ONLY)
-        cl.setDelegate(pluginsDsl)
-        cl.call()
-        assign(['plugins'], pluginsDsl.getPlugins())
+    /**
+     * Get the value of an environment variable from the launch environment.
+     *
+     * @param name
+     */
+    String env(String name) {
+        return System.getenv(name)
     }
 
     void includeConfig(String includeFile) {
@@ -144,7 +138,6 @@ class ConfigDsl extends Script {
         final config = new ConfigParserImpl()
                 .setIgnoreIncludes(ignoreIncludes)
                 .setRenderClosureAsString(renderClosureAsString)
-                .setStrict(strict)
                 .setBinding(binding.getVariables())
                 .parse(configText, includePath)
 

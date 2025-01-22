@@ -18,13 +18,11 @@ package nextflow.config.parser
 
 import java.nio.file.Path
 
-import ch.artecat.grengine.Grengine
 import com.google.common.hash.Hashing
 import groovy.transform.CompileStatic
 import nextflow.ast.NextflowXform
 import nextflow.config.ConfigParser
 import nextflow.config.StripSecretsXform
-import nextflow.config.parser.ConfigParserPluginFactory
 import nextflow.extension.Bolts
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
@@ -48,15 +46,13 @@ class ConfigParserImpl implements ConfigParser {
 
     private boolean renderClosureAsString = false
 
-    private boolean strict = true
-
     private boolean stripSecrets
 
     private List<String> appliedProfiles
 
     private Set<String> parsedProfiles
 
-    private Grengine grengine
+    private GroovyShell groovyShell
 
     @Override
     ConfigParserImpl setProfiles(List<String> profiles) {
@@ -67,28 +63,6 @@ class ConfigParserImpl implements ConfigParser {
     @Override
     Set<String> getProfiles() {
         return parsedProfiles
-    }
-
-    private Grengine getGrengine() {
-        if( grengine ) {
-            return grengine
-        }
-
-        // set the required base script
-        def config = new CompilerConfiguration()
-        config.scriptBaseClass = ConfigDsl.class.name
-        config.setPluginFactory(new ConfigParserPluginFactory())
-        if( stripSecrets )
-            config.addCompilationCustomizers(new ASTTransformationCustomizer(StripSecretsXform))
-        if( renderClosureAsString )
-            config.addCompilationCustomizers(new ASTTransformationCustomizer(ClosureToStringXform))
-        config.addCompilationCustomizers(new ASTTransformationCustomizer(NextflowXform))
-        //  add implicit types
-        def importCustomizer = new ImportCustomizer()
-        importCustomizer.addImports( Duration.name )
-        importCustomizer.addImports( MemoryUnit.name )
-        config.addCompilationCustomizers(importCustomizer)
-        return grengine = new Grengine(config)
     }
 
     @Override
@@ -105,7 +79,7 @@ class ConfigParserImpl implements ConfigParser {
 
     @Override
     ConfigParserImpl setStrict(boolean value) {
-        this.strict = value
+        // ignore
         return this
     }
 
@@ -130,21 +104,6 @@ class ConfigParserImpl implements ConfigParser {
     }
 
     /**
-     * Creates a unique name for the config class in order to avoid collision
-     * with top level configuration scopes
-     *
-     * @param text
-     */
-    private String createUniqueName(String text) {
-        def hash = Hashing
-                .murmur3_32()
-                .newHasher()
-                .putUnencodedChars(text)
-                .hash()
-        return "_nf_config_$hash"
-    }
-
-    /**
      * Parse the given script as a string and return the configuration object
      *
      * @param text
@@ -156,19 +115,20 @@ class ConfigParserImpl implements ConfigParser {
     }
 
     ConfigObject parse(String text, Path location) {
-        final grengine = getGrengine()
-        final dsl = (ConfigDsl)grengine.load(text, createUniqueName(text)).newInstance()
-        dsl.setIgnoreIncludes(ignoreIncludes)
-        dsl.setRenderClosureAsString(renderClosureAsString)
-        dsl.setStrict(strict)
+        final groovyShell = getGroovyShell()
+        final script = (ConfigDsl) groovyShell.parse(text, uniqueClassName(text))
         if( location )
-            dsl.setConfigPath(location)
+            script.setConfigPath(location)
+        script.setIgnoreIncludes(ignoreIncludes)
+        script.setRenderClosureAsString(renderClosureAsString)
+        if( location )
+            script.setConfigPath(location)
 
-        dsl.setBinding(new Binding(bindingVars))
-        dsl.setParams(paramVars)
-        dsl.run()
+        script.setBinding(new Binding(bindingVars))
+        script.setParams(paramVars)
+        script.run()
 
-        final result = Bolts.toConfigObject(dsl.getTarget())
+        final result = Bolts.toConfigObject(script.getTarget())
         final profiles = (result.profiles ?: [:]) as ConfigObject
         parsedProfiles = profiles.keySet()
         if( appliedProfiles ) {
@@ -189,6 +149,32 @@ class ConfigParserImpl implements ConfigParser {
     @Override
     ConfigObject parse(Path path) {
         return parse(path.text, path)
+    }
+
+    private GroovyShell getGroovyShell() {
+        if( groovyShell )
+            return groovyShell
+        final classLoader = new GroovyClassLoader()
+        final config = new CompilerConfiguration()
+        config.setScriptBaseClass(ConfigDsl.class.getName())
+        config.setPluginFactory(new ConfigParserPluginFactory())
+        config.addCompilationCustomizers(new ASTTransformationCustomizer(ConfigToGroovyXform))
+        return groovyShell = new GroovyShell(classLoader, new Binding(), config)
+    }
+
+    /**
+     * Creates a unique name for the config class in order to avoid collision
+     * with config DSL
+     *
+     * @param text
+     */
+    private String uniqueClassName(String text) {
+        def hash = Hashing
+                .sipHash24()
+                .newHasher()
+                .putUnencodedChars(text)
+                .hash()
+        return "_nf_config_$hash"
     }
 
 }
