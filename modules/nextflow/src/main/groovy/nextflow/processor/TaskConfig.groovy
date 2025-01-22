@@ -380,12 +380,24 @@ class TaskConfig extends LazyMap implements Cloneable {
             return BashWrapperBuilder.BASH
 
         if( value instanceof List )
-            return (List)value
+            return validateShell(value as List)
 
         if( value instanceof CharSequence )
-            return [ value.toString() ]
+            return validateShell(List.of(value.toString()))
 
         throw new IllegalArgumentException("Not a valid `shell` configuration value: ${value}")
+    }
+
+    protected List<String> validateShell(List<String> shell) {
+        for( String it : shell ) {
+            if( !it )
+                throw new IllegalArgumentException("Directive `process.shell` cannot contain empty values - offending value: ${shell}")
+            if( !it || it.contains('\n') || it.contains('\r') )
+                throw new IllegalArgumentException("Directive `process.shell` cannot contain new-line characters - offending value: ${shell}")
+            if( it.startsWith(' ') || it.endsWith(' '))
+                throw new IllegalArgumentException("Directive `process.shell` cannot contain leading or tralining blanks - offending value: ${shell}")
+        }
+        return shell
     }
 
     Path getStoreDir() {

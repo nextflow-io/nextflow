@@ -34,7 +34,9 @@ extensions = [
   'sphinxcontrib.mermaid',
   'sphinxext.rediraffe',
   'sphinx_rtd_theme',
-  'myst_parser'
+  'myst_parser',
+  'sphinx_tabs.tabs',
+  'sphinx_copybutton'
 ]
 
 myst_enable_extensions = ['colon_fence', 'deflist', 'dollarmath']
@@ -129,6 +131,8 @@ pygments_style = 'default'
 # A list of ignored prefixes for module index sorting.
 #modindex_common_prefix = []
 
+# Add copyable selector
+copybutton_selector = ".copyable pre"
 
 # -- Options for HTML output ---------------------------------------------------
 

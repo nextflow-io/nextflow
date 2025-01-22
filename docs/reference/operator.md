@@ -718,7 +718,7 @@ See also: {ref}`channel-empty` channel factory
 
 The `join` operator emits the inner product of two source channels using a matching key.
 
-To be more precise, the operator transforms a sequence of tuples like *(K, V1, V2, ..)* and *(K, W1, W1, ..)* into a sequence of tuples like *(K, V1, V2, .., W1, W2, ..)*. It is equivalent to an *inner join* in SQL, or an *outer join* when `remainder` is `true`.
+To be more precise, the operator transforms a sequence of tuples like *(K, V1, V2, ..)* and *(K, W1, W1, ..)* into a sequence of tuples like *(K, V1, V2, .., W1, W2, ..)*.
 
 For example:
 
@@ -741,6 +741,10 @@ By default, unmatched items are discarded. The `remainder` option can be used to
 ```{literalinclude} ../snippets/join-with-remainder.out
 :language: console
 ```
+
+:::{note}
+The `join` operator is similar to an SQL *inner join*, or an SQL *outer join* when `remainder` is `true`. The only difference is that `join` does not support duplicate keys, whereas an SQL join produces the cross-product of duplicate keys. The `combine` operator with the `by` option is equivalent to an SQL join.
+:::
 
 Available options:
 
