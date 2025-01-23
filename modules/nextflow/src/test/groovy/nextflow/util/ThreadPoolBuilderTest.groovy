@@ -42,10 +42,11 @@ class ThreadPoolBuilderTest extends Specification {
         pool.getMaximumPoolSize() == 10
         pool.getKeepAliveTime(TimeUnit.MILLISECONDS) == 60_000
         pool.getThreadFactory() instanceof CustomThreadFactory
-        pool.getRejectedExecutionHandler() instanceof ThreadPoolExecutor.CallerRunsPolicy
+        pool.getRejectedExecutionHandler() instanceof ThreadPoolExecutor.AbortPolicy
         and:
         builder.getName().startsWith('nf-thread-pool-')
         builder.getWorkQueue() instanceof LinkedBlockingQueue
+        builder.getWorkQueue().remainingCapacity() == Integer.MAX_VALUE
     }
 
     def 'should create pool with all settings' () {
@@ -66,6 +67,8 @@ class ThreadPoolBuilderTest extends Specification {
         builder.queueSize == 1000
         builder.allowCoreThreadTimeout
         builder.rejectionPolicy instanceof ThreadPoolExecutor.AbortPolicy
+        builder.workQueue instanceof HardBlockingQueue
+        builder.workQueue.remainingCapacity() == 1000
 
         when:
         def pool = builder.build()
