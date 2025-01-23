@@ -6,7 +6,7 @@ This page describes Nextflow release cadence, how to self-update Nextflow, and h
 
 A stable version of Nextflow is released in the 4th and 10th month of each year. A edge version of Nextflow is released on a monthly basis. The edge version can be used to access the latest updates and experimental features. 
 
-You can find an exhaustive list of changes in the [Nextflow changelog](https://github.com/nextflow-io/nextflow/blob/master/changelog.txt).
+You can find an exhaustive list of releases and updates in the [Nextflow changelog](https://github.com/nextflow-io/nextflow/blob/master/changelog.txt).
 
 :::{warning}
 Nextflow will update its executable during the self-update process. The update can fail if the Nextflow executable is in a directory with restricted permissions.
@@ -14,7 +14,7 @@ Nextflow will update its executable during the self-update process. The update c
 
 ## Self-update
 
-To update to the latest stable release of Nextflow, use the `self-update` command:
+To update to the latest stable release of Nextflow, run the `self-update` command:
 
 ```{code-block} bash
 :class: copyable
@@ -44,7 +44,7 @@ To set a specific version of Nextflow for a terminal session, export the `NXF_VE
 export NXF_VER=23.10.0
 ```
 
-To set a specific version of Nextflow for your user profile, add the above `NXF_VER` export command to your shell configuration file, such as `~/.bashrc` or `~/.zshrc`, and open and restart your session.
+To set a specific version of Nextflow for your user profile, add the above `NXF_VER` export command to your shell configuration file, such as `~/.bashrc` or `~/.zshrc`, and restart your session.
 
 :::{tip}
 You can use `NXF_VER` to switch to an edge release. For example:

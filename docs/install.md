@@ -8,7 +8,7 @@ Nextflow can be used on any POSIX-compatible system (Linux, macOS, etc), and on 
 
 ## Requirements
 
-Nextflow requires Bash 3.2 (or later) and [Java 17 (or later, up to 23)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed. You can see which version you have using the following command:
+Nextflow requires Bash 3.2 (or later) and [Java 17 (or later, up to 23)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed. To see which version of Java you have, use the following command:
 
 ```{code-block} bash
 :class: copyable
@@ -19,7 +19,7 @@ java -version
 Support for Java versions prior to 17 was dropped.
 :::
 
-If you don't have a compatible version of Java installed, it is recommended that you install it through [SDKMAN!](https://sdkman.io/), and that you use the latest LTS version of Temurin. See [Which version of JDK should I use?](https://whichjdk.com/) for more information about different versions.
+If you don't have a compatible version of Java installed, it is recommended that you install it through [SDKMAN!](https://sdkman.io/), and that you use the latest Long-Term-Support (LTS) version of Temurin. See [Which version of JDK should I use?](https://whichjdk.com/) for more information about different versions of Java.
 
 To install Java with SDKMAN:
 
@@ -52,14 +52,14 @@ To install Java with SDKMAN:
 
 Nextflow is distributed as a self-installing package, in order to make the installation process as simple as possible:
 
+To install Nextflow:
+
 1. Download Nextflow:
 
     ```{code-block} bash
     :class: copyable
     curl -s https://get.nextflow.io | bash
     ```
-
-    This will create the `nextflow` executable in the current directory.
 
     :::{tip}
     Set `export CAPSULE_LOG=none` to make the installation logs less verbose.
@@ -100,6 +100,7 @@ Nextflow is distributed as a self-installing package, in order to make the insta
 You can launch workflows directly from [Seqera Platform](https://seqera.io/platform/) without installing Nextflow locally.
 
 Launching from Seqera Platform provides you with:
+
 - User-friendly launch interfaces.
 - Automated cloud infrastructure creation.
 - Organizational user management.
@@ -111,11 +112,10 @@ See the [Seqera Platform documentation](https://docs.seqera.io/platform) for set
 ## Standalone distribution
 
 The Nextflow standalone distribution (i.e. the `dist` distribution) consists of self-contained `nextflow` executable file
-that includes all the application dependencies for core functionalities, and it can run without downloading third parties
+that includes all the application dependencies for core functionalities and can run without downloading third parties
 libraries. This distribution is mainly useful for offline environments.
 
-Note however the support for cloud services e.g. AWS, Seqera Platform, Wave, etc. still require the download
-of the corresponding Nextflow plugins.
+Support for cloud services, such as AWS, Seqera Platform, and Wave, still require downloading the corresponding Nextflow plugins.
 
 To use the standalone distribution:
 
