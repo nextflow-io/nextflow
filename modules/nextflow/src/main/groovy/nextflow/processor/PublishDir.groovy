@@ -21,11 +21,14 @@ import static nextflow.util.CacheHelper.*
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
+import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.PathMatcher
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.ExecutorService
 
@@ -344,10 +347,10 @@ class PublishDir {
         }
 
         if( inProcess ) {
-            safeProcessFile(source, destination)
+            safeProcessPath(source, destination)
         }
         else {
-            threadPool.submit({ safeProcessFile(source, destination) } as Runnable)
+            threadPool.submit({ safeProcessPath(source, destination) } as Runnable)
         }
 
     }
@@ -370,9 +373,23 @@ class PublishDir {
         throw new IllegalArgumentException("Not a valid publish target path: `$target` [${target?.class?.name}]")
     }
 
-    protected void safeProcessFile(Path source, Path target) {
+    protected void safeProcessPath(Path source, Path target) {
         try {
-            retryableProcessFile(source, target)
+            // publish each file in the directory tree
+            if( Files.isDirectory(source) ) {
+                Files.walkFileTree(source, new SimpleFileVisitor<Path>() {
+                    FileVisitResult visitFile(Path sourceFile, BasicFileAttributes attrs) {
+                        final targetFile = target.resolve(source.relativize(sourceFile).toString())
+                        retryableProcessFile(sourceFile, targetFile)
+                        FileVisitResult.CONTINUE
+                    }
+                })
+            }
+
+            // otherwise publish file directly
+            else {
+                retryableProcessFile(source, target)
+            }
         }
         catch( Throwable e ) {
             final msg =  "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- See log file for details"
@@ -402,7 +419,7 @@ class PublishDir {
             .build()
         Failsafe
             .with( retryPolicy )
-            .get({it-> processFile(source, target)})
+            .get { it-> processFile(source, target) }
     }
 
     protected void processFile( Path source, Path destination ) {
