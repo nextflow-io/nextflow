@@ -42,7 +42,7 @@ class ThreadPoolManager {
     
     final static public int DEFAULT_MIN_THREAD = 10
     final static public int DEFAULT_MAX_THREAD = Math.max(DEFAULT_MIN_THREAD, Runtime.runtime.availableProcessors()*3)
-    final static public int DEFAULT_QUEUE_SIZE = 10_000
+    final static public int DEFAULT_QUEUE_SIZE = -1 // use -1 for using an unbound queue
     final static public Duration DEFAULT_KEEP_ALIVE =  Duration.of('60sec')
     final static public Duration DEFAULT_MAX_AWAIT = Duration.of('12 hour')
 
