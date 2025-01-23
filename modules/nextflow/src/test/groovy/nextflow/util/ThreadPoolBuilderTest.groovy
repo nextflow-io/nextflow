@@ -67,7 +67,7 @@ class ThreadPoolBuilderTest extends Specification {
         builder.queueSize == 1000
         builder.allowCoreThreadTimeout
         builder.rejectionPolicy instanceof ThreadPoolExecutor.AbortPolicy
-        builder.workQueue instanceof BlockingBlockingQueue
+        builder.workQueue instanceof HardBlockingQueue
         builder.workQueue.remainingCapacity() == 1000
 
         when:
