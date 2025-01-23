@@ -23,6 +23,7 @@ import java.nio.file.Paths
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeoutException
 
 import com.google.common.hash.HashCode
 import groovy.transform.CompileDynamic
@@ -689,8 +690,17 @@ class Session implements ISession {
         try {
             log.trace "Session > destroying"
             // shutdown thread pools
-            finalizePoolManager?.shutdown(aborted)
-            publishPoolManager?.shutdown(aborted)
+            try {
+                finalizePoolManager?.shutdownOrAbort(aborted,this)
+                publishPoolManager?.shutdownOrAbort(aborted,this)
+            }
+            catch( TimeoutException e ) {
+                final ignoreErrors = config.navigate('workflow.output.ignoreErrors', false)
+                if( !ignoreErrors )
+                    throw new AbortOperationException("Timed out while waiting to publish outputs")
+                else
+                    log.warn e.message
+            }
             // invoke shutdown callbacks
             shutdown0()
             log.trace "Session > after cleanup"
