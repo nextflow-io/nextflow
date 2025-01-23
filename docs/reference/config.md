@@ -829,7 +829,7 @@ The following settings are available for Google Cloud Batch:
 `google.batch.autoRetryExitCodes`
 : :::{versionadded} 24.07.0-edge
   :::
-: Defines the list of exit codes that will be automatically retried by Google Batch when `google.batch.maxSpotAttempts` is greater than 0 (default `[50001]`). Refer to the [Google Batch documentation](https://cloud.google.com/batch/docs/troubleshooting#reserved-exit-codes) for the list of retryable exit codes.
+: Defines the list of exit codes that will trigger Google Batch to automatically retry the job (default: `[50001]`). For this setting to take effect, `google.batch.maxSpotAttempts` must be greater than 0. See [Google Batch documentation](https://cloud.google.com/batch/docs/troubleshooting#reserved-exit-codes) for the complete list of retryable exit codes.
 
 `google.batch.bootDiskImage`
 : :::{versionadded} 24.08.0-edge
