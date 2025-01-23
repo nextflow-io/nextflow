@@ -6,7 +6,7 @@ In Nextflow version `22.03.0-edge`, DSL2 became the default DSL version. In vers
 
 ## Enable DSL2
 
-To use DSL2 prior to Nextflow version `22.03.0-edge`, you must explicitly enable it. You can enable the feature flag in two ways:
+To use DSL2 prior to Nextflow version `22.03.0-edge`, you must explicitly enable it. You can enable the feature flag in one of two ways:
 
 - Set the feature flag in your pipeline script:
 
