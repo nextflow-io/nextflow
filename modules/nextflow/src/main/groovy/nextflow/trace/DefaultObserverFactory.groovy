@@ -25,7 +25,12 @@ class DefaultObserverFactory implements TraceObserverFactory {
         createTimelineObserver(result)
         createDagObserver(result)
         createAnsiLogObserver(result)
+        createProvObserver(result)
         return result
+    }
+
+    protected void createProvObserver(Collection<TraceObserver> result) {
+        result << new ProvObserver()
     }
 
     protected void createAnsiLogObserver(Collection<TraceObserver> result) {
