@@ -354,7 +354,6 @@ For cloud-based executors like AWS Batch, or when using Fusion with any executor
 When using Wave, the following additional directives must be uniform:
 
 - {ref}`process-conda`
-- {ref}`process-spack`
 
 (process-beforescript)=
 
