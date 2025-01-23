@@ -18,6 +18,7 @@ package nextflow.cloud.aws.batch
 
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.model.AWSBatchException
@@ -320,7 +321,17 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
         reaper.shutdown()
         final waitMsg = "[AWS BATCH] Waiting jobs reaper to complete (%d jobs to be terminated)"
         final exitMsg = "[AWS BATCH] Exiting before jobs reaper thread pool complete -- Some jobs may not be terminated"
-        ThreadPoolHelper.await(reaper, Duration.of('60min'), waitMsg, exitMsg)
+        awaitCompletion(reaper, Duration.of('60min'), waitMsg, exitMsg)
+
+    }
+
+    protected void awaitCompletion(ThrottlingExecutor executor, Duration duration, String waitMsg, String exitMsg) {
+        try {
+            ThreadPoolHelper.await(executor, duration, waitMsg, exitMsg)
+        }
+        catch( TimeoutException e ) {
+            log.warn(e.message, e)
+        }
     }
 
     @Override
