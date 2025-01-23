@@ -665,22 +665,4 @@ public final class S3OutputStream extends OutputStream {
         return executorSingleton;
     }
 
-    /**
-     * Shutdown the executor and clear the singleton
-     */
-    static void shutdownExecutor(boolean hard) {
-        if( hard ) {
-            executorSingleton.shutdownNow();
-        }
-        else {
-            executorSingleton.shutdown();
-            log.trace("Uploader await completion");
-            final String waitMsg = "[AWS S3] Waiting stream uploader to complete (%d files)";
-            final String exitMsg = "[AWS S3] Exiting before stream uploader thread pool complete -- Some files maybe lost";
-            ThreadPoolHelper.await(executorSingleton, Duration.of("1h") ,waitMsg, exitMsg);
-            log.trace("Uploader shutdown completed");
-            executorSingleton = null;
-        }
-    }
-
 }
