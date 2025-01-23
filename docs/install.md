@@ -8,7 +8,7 @@ Nextflow can be used on any POSIX-compatible system (Linux, macOS, etc), and on 
 
 ## Requirements
 
-Nextflow requires Bash 3.2 (or later) and [Java 17 (or later, up to 23)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed. To see which version of Java you have, use the following command:
+Nextflow requires Bash 3.2 (or later) and [Java 17 (or later, up to 23)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed. To see which version of Java you have, run the following command:
 
 ```{code-block} bash
 :class: copyable
