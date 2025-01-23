@@ -44,7 +44,6 @@ class TaskArrayCollector {
             'accelerator',
             'arch',
             'clusterOptions',
-            'conda',
             'cpus',
             'disk',
             'machineType',
@@ -56,6 +55,9 @@ class TaskArrayCollector {
             // only needed for container-native executors and/or Fusion
             'container',
             'containerOptions',
+            // only needed when using Wave
+            'conda',
+            'spack',
     ]
 
     private TaskProcessor processor
