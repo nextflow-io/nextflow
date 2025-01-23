@@ -44,6 +44,7 @@ class TaskArrayCollector {
             'accelerator',
             'arch',
             'clusterOptions',
+            'conda',
             'cpus',
             'disk',
             'machineType',
