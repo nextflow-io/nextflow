@@ -167,6 +167,7 @@ jobs:
           export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
           fi
           cat $HOME/.nextflow/scm
+          wget https://github.com/nextflow-io/language-server/releases/download/v1-SNAPSHOT/compiler.jar
           make clean assemble install
           bash test-ci.sh
         env:
