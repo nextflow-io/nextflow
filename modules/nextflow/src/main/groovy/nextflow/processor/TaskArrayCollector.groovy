@@ -55,6 +55,8 @@ class TaskArrayCollector {
             // only needed for container-native executors and/or Fusion
             'container',
             'containerOptions',
+            // only needed when using Wave
+            'conda',
     ]
 
     private TaskProcessor processor

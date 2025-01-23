@@ -342,6 +342,10 @@ For cloud-based executors like AWS Batch, or when using Fusion with any executor
 - {ref}`process-container`
 - {ref}`process-containerOptions`
 
+When using Wave, the following additional directives must be uniform:
+
+- {ref}`process-conda`
+
 (process-beforescript)=
 
 ### beforeScript
