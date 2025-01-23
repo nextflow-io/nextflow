@@ -321,11 +321,16 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
         reaper.shutdown()
         final waitMsg = "[AWS BATCH] Waiting jobs reaper to complete (%d jobs to be terminated)"
         final exitMsg = "[AWS BATCH] Exiting before jobs reaper thread pool complete -- Some jobs may not be terminated"
+        awaitCompletion(reaper, Duration.of('60min'), waitMsg, exitMsg)
+
+    }
+
+    protected void awaitCompletion(ThrottlingExecutor executor, Duration duration, String waitMsg, String exitMsg) {
         try {
-            ThreadPoolHelper.await(reaper, Duration.of('60min'), waitMsg, exitMsg)
+            ThreadPoolHelper.await(executor, duration, waitMsg, exitMsg)
         }
         catch( TimeoutException e ) {
-            log.warn e.message
+            log.warn(e.message, e)
         }
     }
 

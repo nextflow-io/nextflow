@@ -691,8 +691,8 @@ class Session implements ISession {
             log.trace "Session > destroying"
             // shutdown thread pools
             try {
-                finalizePoolManager?.shutdown(aborted)
-                publishPoolManager?.shutdown(aborted)
+                finalizePoolManager?.shutdownOrAbort(aborted,this)
+                publishPoolManager?.shutdownOrAbort(aborted,this)
             }
             catch( TimeoutException e ) {
                 final ignoreErrors = config.navigate('workflow.output.ignoreErrors', false)
