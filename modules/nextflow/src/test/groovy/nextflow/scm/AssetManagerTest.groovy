@@ -17,6 +17,7 @@
 package nextflow.scm
 
 import spock.lang.IgnoreIf
+import spock.lang.Tag
 
 import nextflow.exception.AbortOperationException
 import org.eclipse.jgit.api.Git
@@ -83,6 +84,7 @@ class AssetManagerTest extends Specification {
         return defaultBranch
     }
 
+    @Tag("core")
     def testList() {
 
         given:
@@ -104,6 +106,7 @@ class AssetManagerTest extends Specification {
     }
 
 
+    @Tag("core")
     def testResolveName() {
 
         given:
@@ -157,6 +160,7 @@ class AssetManagerTest extends Specification {
     }
 
 
+    @Tag("git")
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testPull() {
 
@@ -178,6 +182,7 @@ class AssetManagerTest extends Specification {
     }
 
 
+    @Tag("git")
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testPullTagTwice() {
 
@@ -198,6 +203,7 @@ class AssetManagerTest extends Specification {
     }
 
     // The hashes used here are NOT associated with tags.
+    @Tag("git")
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testPullHashTwice() {
 
@@ -221,6 +227,7 @@ class AssetManagerTest extends Specification {
 
     // Downloading a branch first and then pulling the branch
     // should work fine, unlike with tags.
+    @Tag("git")
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testPullBranchTwice() {
 
@@ -244,6 +251,7 @@ class AssetManagerTest extends Specification {
     // when you execute nextflow.
     // Note that while the download will work, execution will fail subsequently
     // at a separate check - this just tests that we don't fail because of a detached head.
+    @Tag("git")
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testPullTagThenBranch() {
 
@@ -264,6 +272,7 @@ class AssetManagerTest extends Specification {
     }
 
 
+    @Tag("git")
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testClone() {
 
@@ -281,6 +290,7 @@ class AssetManagerTest extends Specification {
 
     }
 
+    @Tag("config")
     def testGetScriptName() {
 
         given:
@@ -338,6 +348,7 @@ class AssetManagerTest extends Specification {
 
     }
 
+    @Tag("core")
     def testCreateProviderFor(){
 
         when:
@@ -367,6 +378,7 @@ class AssetManagerTest extends Specification {
     }
 
 
+    @Tag("config")
     def 'should read manifest file' () {
 
         given:
@@ -398,6 +410,7 @@ class AssetManagerTest extends Specification {
 
     }
 
+    @Tag("config")
     def 'should return default main script file' () {
 
         given:
@@ -419,6 +432,7 @@ class AssetManagerTest extends Specification {
 
     }
 
+    @Tag("git")
     def 'should parse git config and return the remote url' () {
 
         given:
@@ -433,6 +447,7 @@ class AssetManagerTest extends Specification {
 
     }
 
+    @Tag("git")
     def 'should parse git config and return the remote host' () {
 
         given:
@@ -447,7 +462,8 @@ class AssetManagerTest extends Specification {
 
     }
 
-    def 'should create a script file object' () {
+    @Tag("script")
+    def "should create script file object correctly"() {
 
         given:
         def dir = tempDir.root
@@ -501,6 +517,7 @@ class AssetManagerTest extends Specification {
 
     }
 
+    @Tag("git")
     def 'should return project name from git url' () {
 
         AssetManager manager
@@ -545,6 +562,7 @@ class AssetManagerTest extends Specification {
 
     }
 
+    @Tag("git")
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'should download branch specified'() {
 
@@ -566,6 +584,7 @@ class AssetManagerTest extends Specification {
         noExceptionThrown()
     }
 
+    @Tag("git")
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'should fetch main script from branch specified'() {
 
@@ -580,6 +599,7 @@ class AssetManagerTest extends Specification {
 
     }
 
+    @Tag("git")
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'should download tag specified'() {
 
@@ -601,6 +621,7 @@ class AssetManagerTest extends Specification {
         noExceptionThrown()
     }
 
+    @Tag("git")
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'should identify default branch when downloading repo'() {
 
@@ -623,6 +644,7 @@ class AssetManagerTest extends Specification {
         noExceptionThrown()
     }
 
+    @Tag("git")
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'can filter remote branches'() {
         given:
