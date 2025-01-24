@@ -1651,6 +1651,12 @@ The `workflow` scope provides workflow execution options.
 : *Currently only supported for S3.*
 : Specify the media type, also known as [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/MIME_types), of published files (default: `false`). Can be a string (e.g. `'text/html'`), or `true` to infer the content type from the file extension.
 
+`workflow.output.copyAttributes`
+: :::{versionadded} 25.01.0-edge
+  :::
+: *Currently only supported for local and shared filesystems.*
+: Copy file attributes (such as the last modified timestamp) to the published file (default: `false`).
+
 `workflow.output.enabled`
 : Enable or disable publishing (default: `true`).
 
