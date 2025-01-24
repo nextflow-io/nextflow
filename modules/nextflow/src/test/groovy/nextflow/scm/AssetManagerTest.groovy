@@ -17,6 +17,7 @@
 package nextflow.scm
 
 import spock.lang.IgnoreIf
+import spock.lang.Unroll
 
 import nextflow.exception.AbortOperationException
 import org.eclipse.jgit.api.Git
@@ -649,6 +650,140 @@ class AssetManagerTest extends Specification {
         then:
         local_master != null
         !AssetManager.isRemoteBranch(local_master)
+    }
+
+    @Unroll
+    def 'should resolve name #name to #expected'() {
+        given:
+        def manager = new AssetManager()
+
+        expect:
+        manager.resolveName(name) == expected
+
+        where:
+        name                                        | expected
+        'nextflow-io/hello'                        | 'nextflow-io/hello'
+        'hello'                                    | 'nextflow-io/hello'
+        'https://github.com/nextflow-io/hello.git' | 'nextflow-io/hello'
+        'https://gitlab.com/user/repo.git'         | 'user/repo'
+        'file:///path/to/repo.git'                 | 'local/repo'
+    }
+
+    @Unroll
+    def 'should throw exception for invalid project name #name'() {
+        given:
+        def manager = new AssetManager()
+
+        when:
+        manager.resolveName(name)
+
+        then:
+        thrown(AbortOperationException)
+
+        where:
+        name << ['./invalid', '../invalid', '/invalid', 'a/b/c/d']
+    }
+
+    @Unroll
+    def 'should create hub provider for #providerName'() {
+        given:
+        def manager = new AssetManager()
+
+        when:
+        def provider = manager.createHubProvider(providerName)
+
+        then:
+        provider.class == expectedClass
+
+        where:
+        providerName  | expectedClass
+        'github'      | GithubRepositoryProvider
+        'gitlab'      | GitlabRepositoryProvider
+        'bitbucket'   | BitbucketRepositoryProvider
+        'gitea'       | GiteaRepositoryProvider
+    }
+
+    @Unroll
+    def 'should parse Git URL #url'() {
+        given:
+        def manager = new AssetManager()
+
+        expect:
+        manager.resolveNameFromGitUrl(url) == expected
+        manager.hub == expectedHub
+
+        where:
+        url                                         | expected           | expectedHub
+        'https://github.com/foo/bar.git'           | 'foo/bar'         | 'github'
+        'https://gitlab.com/foo/bar.git'           | 'foo/bar'         | 'gitlab'
+        'file:///path/to/repo.git'                 | 'local/repo'      | 'file:/path/to'
+        'https://custom.gitea.org/foo/bar.git'     | 'foo/bar'         | 'gitea'
+    }
+
+    @Unroll
+    def 'should resolve script name #scriptName from manifest'() {
+        given:
+        def dir = tempDir.getRoot()
+        dir.resolve('test/repo').mkdirs()
+        if (configContent) {
+            dir.resolve('test/repo/nextflow.config').text = configContent
+        }
+        dir.resolve('test/repo/.git').mkdir()
+        dir.resolve('test/repo/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        def manager = new AssetManager()
+        manager.setLocalPath(dir.resolve('test/repo').toFile())
+
+        then:
+        manager.getMainScriptName() == expected
+
+        where:
+        scriptName   | configContent                                    | expected
+        null        | null                                            | 'main.nf'
+        null        | 'manifest { mainScript = "custom.nf" }'         | 'custom.nf'
+        'test.nf'   | 'manifest { mainScript = "custom.nf" }'        | 'custom.nf'
+    }
+
+    @Unroll
+    def 'should filter remote branches'() {
+        given:
+        def ref = Mock(Ref)
+        ref.name >> refName
+
+        expect:
+        AssetManager.isRemoteBranch(ref) == expected
+
+        where:
+        refName                                  | expected
+        'refs/remotes/origin/master'            | true
+        'refs/remotes/origin/HEAD'              | false
+        'refs/heads/master'                     | false
+        'refs/tags/v1.0'                        | false
+    }
+
+    @Unroll
+    def 'should parse Git config and return remote #configText'() {
+        given:
+        def dir = tempDir.root
+        dir.resolve('.git').mkdir()
+        dir.resolve('.git/config').text = configText
+
+        when:
+        def manager = new AssetManager().setLocalPath(dir.toFile())
+
+        then:
+        manager.getGitConfigRemoteUrl() == expectedUrl
+        manager.getGitConfigRemoteDomain() == expectedDomain
+
+        where:
+        configText                                                           | expectedUrl                                    | expectedDomain
+        GIT_CONFIG_TEXT                                                     | 'https://github.com/nextflow-io/nextflow.git' | 'github.com'
+        GIT_CONFIG_LONG                                                     | 'git@github.com:nextflow-io/nextflow.git'     | 'github.com'
+        '''[remote "origin"]
+            url = https://gitlab.com/user/repo.git'''                       | 'https://gitlab.com/user/repo.git'            | 'gitlab.com'
+        '''[remote "origin"]
+            url = file:///local/path/repo.git'''                           | 'file:///local/path/repo.git'                 | '/local/path'
     }
 
 }
