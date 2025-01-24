@@ -38,6 +38,7 @@ import dev.failsafe.event.ExecutionAttemptedEvent
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
@@ -500,11 +501,6 @@ class PublishDir {
     protected void processFileImpl( Path source, Path destination ) {
         log.trace "publishing file: $source -[$mode]-> $destination"
 
-        final options = new ArrayList<>(2)
-        final copyAttributes = session.config.navigate('workflow.output.copyAttributes', false)
-        if( copyAttributes )
-            options.add(StandardCopyOption.COPY_ATTRIBUTES)
-
         if( !mode || mode == Mode.SYMLINK ) {
             Files.createSymbolicLink(destination, source)
         }
@@ -516,18 +512,25 @@ class PublishDir {
             FilesEx.mklink(source, [hard:true], destination)
         }
         else if( mode == Mode.MOVE ) {
-            FileHelper.movePath(source, destination, options as CopyOption[])
+            FileHelper.movePath(source, destination, copyOpts())
         }
         else if( mode == Mode.COPY ) {
-            FileHelper.copyPath(source, destination, options as CopyOption[])
+            FileHelper.copyPath(source, destination, copyOpts())
         }
         else if( mode == Mode.COPY_NO_FOLLOW ) {
-            options.add(LinkOption.NOFOLLOW_LINKS)
-            FileHelper.copyPath(source, destination, options as CopyOption[])
+            FileHelper.copyPath(source, destination, copyOpts(LinkOption.NOFOLLOW_LINKS))
         }
         else {
             throw new IllegalArgumentException("Unknown file publish mode: ${mode}")
         }
+    }
+
+    @Memoized
+    protected CopyOption[] copyOpts(CopyOption... opts) {
+        final copyAttributes = session.config.navigate('workflow.output.copyAttributes', false)
+        return copyAttributes
+            ? opts + StandardCopyOption.COPY_ATTRIBUTES
+            : opts
     }
 
     protected void createPublishDir() {
