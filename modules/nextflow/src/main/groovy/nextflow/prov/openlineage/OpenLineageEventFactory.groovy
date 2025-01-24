@@ -105,9 +105,9 @@ class OpenLineageEventFactory {
     }
 
 
-    private static OpenLineage.Job generatePublishJob(){
+    private OpenLineage.Job generatePublishJob(){
         final jobType = OL.newJobTypeJobFacet("BATCH", "Nextflow", "JOB")
-        return OL.newJobBuilder().namespace("io.nextflow").name("publish (${publishCount.getAndIncrement()})")
+        return OL.newJobBuilder().namespace(this.workflow.namespace).name("publish (${publishCount.getAndIncrement()})")
             .facets(OL.newJobFacetsBuilder().jobType(jobType).build())
             .build()
     }
