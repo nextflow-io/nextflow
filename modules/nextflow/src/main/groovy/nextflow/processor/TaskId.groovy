@@ -38,6 +38,8 @@ class TaskId extends Number implements Comparable, Serializable, Cloneable {
 
     private final int value
 
+    int getValue() { value }
+
     static TaskId of( value ) {
         if( value instanceof Integer )
             return new TaskId(value)
