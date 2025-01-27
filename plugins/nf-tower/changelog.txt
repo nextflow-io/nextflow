@@ -1,5 +1,9 @@
 nf-tower changelog
 ===================
+1.9.4 - 20 Jan 2025
+- Bump logback 1.5.13 + slf4j 2.0.16 [cc0163ac]
+- Bump groovy 4.0.24 missing deps [40670f7e]
+
 1.9.3 - 27 Oct 2024
 - Fix nf-tower plugin to upload logs when early failures  (#5434) [4222442a]
 

@@ -1,5 +1,9 @@
 nf-codecommit changelog
 =======================
+0.2.3 - 20 Jan 2025
+- Bump logback 1.5.13 + slf4j 2.0.16 [cc0163ac]
+- Bump groovy 4.0.24 missing deps [40670f7e]
+
 0.2.2 - 5 Aug 2024
 - Bump pf4j to version 3.12.0 [96117b9a]
 

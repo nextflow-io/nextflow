@@ -1,5 +1,19 @@
 nf-amazon changelog
 ===================
+2.11.0 - 20 Jan 2025
+- Disable AWS SDK v1 warning [ci fast] [cd00a26d]
+- Ensure job is killed when exception in task status check (#5561) [9eefd207]
+- Bump logback 1.5.13 + slf4j 2.0.16 [cc0163ac]
+- Bump groovy 4.0.24 missing deps [40670f7e]
+
+2.10.0 - 3 Dec 2024
+- Detecting errors in data unstaging (#5345) [3c8e602d]
+- Prevent NPE with null AWS Batch response [12fc1d60]
+- Fix Fargate warning on memory check (#5475) [bdf0ad00]
+- Bump groovy 4.0.24 [dd71ad31]
+- Bump aws sdk 1.12.777 (#5458) [8bad0b4b]
+- Bump netty-common to version 4.1.115.Final [d1bbd3d0]
+
 2.9.0 - 2 Oct 2024
 - Add Platform workflow prefix in AWS Batch job names (#5318) [e2e test] [42dd4ba8]
 - Fix AWS spot attempts with zero value (#5331) [ci fast] [bac2da12]

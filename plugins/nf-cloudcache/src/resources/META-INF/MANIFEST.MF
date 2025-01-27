@@ -1,6 +1,6 @@
 Manifest-Version: 1.0
 Plugin-Class: nextflow.CloudCachePlugin
 Plugin-Id: nf-cloudcache
-Plugin-Version: 0.4.2
+Plugin-Version: 0.4.3
 Plugin-Provider: Seqera Labs
 Plugin-Requires: >=24.04.4

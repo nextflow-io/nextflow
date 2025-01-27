@@ -86,7 +86,7 @@ class NopeTaskHandler extends TaskHandler {
     }
 
     @Override
-    void kill() { }
+    protected void killTask() { }
 
 }
 

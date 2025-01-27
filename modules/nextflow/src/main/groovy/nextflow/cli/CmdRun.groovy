@@ -685,7 +685,7 @@ class CmdRun extends CmdBase implements HubOptions {
             addParam((Map)nested, key.substring(p+1), value, path, fullKey)
         }
         else {
-            params.put(key.replaceAll(DOT_ESCAPED,'.'), parseParamValue(value))
+            addParam0(params, key.replaceAll(DOT_ESCAPED,'.'), parseParamValue(value))
         }
     }
 

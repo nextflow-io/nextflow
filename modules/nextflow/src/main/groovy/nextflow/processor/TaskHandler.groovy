@@ -19,6 +19,7 @@ package nextflow.processor
 import static nextflow.processor.TaskStatus.*
 
 import java.nio.file.NoSuchFileException
+import java.util.concurrent.atomic.AtomicBoolean
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
@@ -36,6 +37,8 @@ import nextflow.trace.TraceRecord
 @Slf4j
 @CompileStatic
 abstract class TaskHandler {
+
+    private AtomicBoolean killed = new AtomicBoolean()
 
     protected TaskHandler(TaskRun task) {
         this.task = task
@@ -77,10 +80,22 @@ abstract class TaskHandler {
     abstract boolean checkIfCompleted()
 
     /**
-     * Force the submitted job to quit
+     * Template method implementing the termination of a task execution.
+     * This is not mean to be invoked directly. See also {@link #kill()}
      */
-    abstract void kill()
+    abstract protected void killTask()
 
+    /**
+     * Kill a job execution.
+     *
+     * @see #killTask()
+     */
+    void kill() {
+        if (!killed.getAndSet(true)) {
+            killTask()
+        }
+    }
+    
     /**
      * Submit the task for execution.
      *
@@ -212,7 +227,7 @@ abstract class TaskHandler {
                 }
             }
 
-            def file = task.workDir?.resolve(TaskRun.CMD_TRACE)
+            final file = task.workDir?.resolve(TaskRun.CMD_TRACE)
             try {
                 if(file) record.parseTraceFile(file)
             }
@@ -300,4 +315,5 @@ abstract class TaskHandler {
         final workflowId = env.get("TOWER_WORKFLOW_ID")
         return workflowId ? "tw-${workflowId}-${name}" : name
     }
+
 }
