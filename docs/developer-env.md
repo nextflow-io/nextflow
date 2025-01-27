@@ -6,7 +6,7 @@ Setting up a Nextflow development environment is a prerequisite for creating, te
 
 <h3>Recommended tools</h3>
 
-- {ref}`devenv-vscode`: A versatile code editor that enhances your Nextflow development with features like syntax highlighting, autocompletion, and debugging.
+- {ref}`devenv-vscode`: A versatile code editor that enhances your Nextflow development with features like syntax highlighting and debugging.
 - {ref}`devenv-extensions`: The VS Code marketplace offers a variety of extensions to enhance development. The {ref}`Nextflow extension <devenv-nextflow>` is specifically designed to enhance Nextflow development with diagnostics, hover hints, code navigation, code completion, and more.
 - {ref}`devenv-docker`: A containerization platform that ensures your Nextflow workflows run consistently across different environments by packaging dependencies into isolated containers.
 - {ref}`devenv-git`: A version control system that helps manage and track changes in your Nextflow projects, making collaboration, and code management more efficient.
