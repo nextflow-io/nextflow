@@ -40,7 +40,7 @@ class FusionMetaTest extends Specification {
         OPTS                        | EXPECTED_ENABLED  | EXPECTED_VERSION
         [:]                         | false             | null
         [fusion:[enabled:false]]    | false             | null
-        [fusion:[enabled:true]]     | true              | '2.4'
+        [fusion:[enabled:true]]     | true              | '2.5'
         [fusion:[enabled:true, containerConfigUrl: 'https://foo.io/releases/v3.0-amd64.json']]     | true    | '3.0'
     }
 
