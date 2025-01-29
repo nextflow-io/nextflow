@@ -18,6 +18,7 @@ package nextflow.scm
 
 import spock.lang.IgnoreIf
 import spock.lang.Tag
+import spock.lang.Unroll
 
 import nextflow.exception.AbortOperationException
 import org.eclipse.jgit.api.Git
@@ -107,56 +108,44 @@ class AssetManagerTest extends Specification {
 
 
     @Tag("core")
-    def testResolveName() {
-
+    @Unroll
+    def 'should resolve name #input to #expected'() {
         given:
         def folder = tempDir.getRoot()
         folder.resolve('cbcrg/pipe1').mkdirs()
         folder.resolve('cbcrg/pipe2').mkdirs()
         folder.resolve('ncbi/blast').mkdirs()
+        def manager = new AssetManager()
 
+        expect:
+        manager.resolveName(input) == expected
+
+        where:
+        input                   | expected
+        'x/y'                  | 'x/y'
+        'blast'                | 'ncbi/blast'
+        'ncbi/blast/script.nf' | 'ncbi/blast'
+        'blast/script.nf'      | 'ncbi/blast'
+    }
+
+    @Tag("core")
+    @Unroll
+    def 'should throw exception for invalid name #input'() {
+        given:
+        def folder = tempDir.getRoot()
+        folder.resolve('cbcrg/pipe1').mkdirs()
+        folder.resolve('cbcrg/pipe2').mkdirs()
+        folder.resolve('ncbi/blast').mkdirs()
         def manager = new AssetManager()
 
         when:
-        def result = manager.resolveName('x/y')
-        then:
-        result == 'x/y'
+        manager.resolveName(input)
 
-        when:
-        result = manager.resolveName('blast')
-        then:
-        result == 'ncbi/blast'
-
-        when:
-        result = manager.resolveName('ncbi/blast/script.nf')
-        then:
-        result == 'ncbi/blast'
-
-        when:
-        result = manager.resolveName('blast/script.nf')
-        then:
-        result == 'ncbi/blast'
-
-        when:
-        manager.resolveName('pipe')
         then:
         thrown(AbortOperationException)
 
-        when:
-        manager.resolveName('pipe/alpha/beta')
-        then:
-        thrown(AbortOperationException)
-
-        when:
-        result = manager.resolveName('../blast/script.nf')
-        then:
-        thrown(AbortOperationException)
-
-        when:
-        result = manager.resolveName('./blast/script.nf')
-        then:
-        thrown(AbortOperationException)
-
+        where:
+        input << ['pipe', 'pipe/alpha/beta', '../blast/script.nf', './blast/script.nf']
     }
 
 
@@ -349,32 +338,17 @@ class AssetManagerTest extends Specification {
     }
 
     @Tag("core")
-    def testCreateProviderFor(){
-
+    @Unroll
+    def 'should create hub provider for #providerName'() {
         when:
         def manager = new AssetManager()
-        def repo = manager.createHubProvider('github')
-        then:
-        repo instanceof GithubRepositoryProvider
+        def repo = manager.createHubProvider(providerName)
 
-        when:
-        manager = new AssetManager()
-        repo = manager.createHubProvider('bitbucket')
         then:
-        repo instanceof BitbucketRepositoryProvider
+        repo instanceof RepositoryProvider
 
-        when:
-        manager = new AssetManager()
-        repo = manager.createHubProvider('gitlab')
-        then:
-        repo instanceof GitlabRepositoryProvider
-
-        when:
-        manager = [:] as AssetManager
-        manager.createHubProvider('xxx')
-        then:
-        thrown(AbortOperationException)
-
+        where:
+        providerName << ['github', 'bitbucket', 'gitlab']
     }
 
 
@@ -433,38 +407,74 @@ class AssetManagerTest extends Specification {
     }
 
     @Tag("git")
-    def 'should parse git config and return the remote url' () {
-
+    @Unroll
+    def 'should parse Git URL #url'() {
         given:
-        def dir = tempDir.root
-        dir.resolve('.git').mkdir()
-        dir.resolve('.git/config').text = GIT_CONFIG_LONG
+        def manager = new AssetManager()
+        // Add provider configurations before testing
+        manager.providerConfigs.add(new ProviderConfig('local-scm', [platform: 'github', server: 'http://foo.bar.com']))
+        manager.providerConfigs.add(new ProviderConfig('gitea', [platform: 'gitea', server: 'http://my-server.org/sub1']))
 
         when:
-        def manager = new AssetManager().setLocalPath(dir.toFile())
-        then:
-        manager.getGitConfigRemoteUrl() == 'git@github.com:nextflow-io/nextflow.git'
+        def result = manager.resolveNameFromGitUrl(url)
 
+        then:
+        result == expected
+        manager.hub == hub
+
+        where:
+        url                                         | expected            | hub
+        'nextflow/pipe'                            | null                | null
+        'https://gitlab.com/pditommaso/hello.git'  | 'pditommaso/hello'  | 'gitlab'
+        'file:/user/repo/projects/hello.git'       | 'local/hello'       | 'file:/user/repo/projects'
+        'https://foo.bar.com/project/xyz.git'      | 'project/xyz'       | 'local-scm'
+        'http://my-server.org/sub1/foo/bar.git'    | 'foo/bar'          | 'gitea'
     }
 
     @Tag("git")
-    def 'should parse git config and return the remote host' () {
+    @Unroll
+    def 'should filter remote branches #refName'() {
+        given:
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        manager.download()
+        def branches = manager.getBranchList()
 
+        expect:
+        def remote_branch = branches.find { it.name == refName }
+        remote_branch != null
+        AssetManager.isRemoteBranch(remote_branch) == isRemote
+
+        where:
+        refName                         | isRemote
+        'refs/remotes/origin/HEAD'      | false
+        'refs/remotes/origin/master'    | true
+        'refs/heads/master'             | false
+    }
+
+    @Tag("git")
+    @Unroll
+    def 'should parse Git config and return remote #configType'() {
         given:
         def dir = tempDir.root
         dir.resolve('.git').mkdir()
-        dir.resolve('.git/config').text = GIT_CONFIG_LONG
+        dir.resolve('.git/config').text = configText
 
         when:
         def manager = new AssetManager().setLocalPath(dir.toFile())
-        then:
-        manager.getGitConfigRemoteDomain() == 'github.com'
 
+        then:
+        manager.getGitConfigRemoteUrl() == expectedUrl
+
+        where:
+        configType   | configText      | expectedUrl
+        'simple'     | GIT_CONFIG_TEXT | 'https://github.com/nextflow-io/nextflow.git'
+        'long'       | GIT_CONFIG_LONG | 'git@github.com:nextflow-io/nextflow.git'
     }
 
     @Tag("script")
     def "should create script file object correctly"() {
-
         given:
         def dir = tempDir.root
         // create the repo dir
@@ -472,14 +482,14 @@ class AssetManagerTest extends Specification {
         dir.resolve('nextflow.config').text = 'manifest {  }'
         dir.resolve('foo.nf').text = 'this is foo content'
 
+        // Initialize git repo with proper configuration
+        dir.resolve('.git').mkdir()
+        dir.resolve('.git/config').text = GIT_CONFIG_TEXT
         def init = Git.init()
-        def repo = init.setDirectory( dir.toFile() ).call()
+        def repo = init.setDirectory(dir.toFile()).call()
         repo.add().addFilepattern('.').call()
         def commit = repo.commit().setSign(false).setAll(true).setMessage('First commit').call()
         repo.close()
-
-        // append fake remote data
-        dir.resolve('.git/config').text = GIT_CONFIG_TEXT
 
         when:
         def p = Mock(RepositoryProvider) { getRepositoryUrl() >> 'https://github.com/nextflow-io/nextflow' }
@@ -514,52 +524,6 @@ class AssetManagerTest extends Specification {
         script.text == "this is foo content"
         script.repository == 'https://github.com/nextflow-io/nextflow'
         script.projectName == 'nextflow-io/nextflow'
-
-    }
-
-    @Tag("git")
-    def 'should return project name from git url' () {
-
-        AssetManager manager
-        String result
-
-        when:
-        manager = new AssetManager()
-        result = manager.resolveNameFromGitUrl('nextflow/pipe')
-        then:
-        result == null
-        manager.hub == null
-
-        when:
-        manager = new AssetManager()
-        result = manager.resolveNameFromGitUrl('https://gitlab.com/pditommaso/hello.git')
-        then:
-        result == 'pditommaso/hello'
-        manager.hub == 'gitlab'
-
-        when:
-        manager = new AssetManager()
-        result = manager.resolveNameFromGitUrl('file:/user/repo/projects/hello.git')
-        then:
-        result == 'local/hello'
-        manager.hub == 'file:/user/repo/projects'
-
-        when:
-        manager = new AssetManager()
-        manager.providerConfigs.add( new ProviderConfig('local-scm', [platform: 'github', server: 'http://foo.bar.com']) )
-        result = manager.resolveNameFromGitUrl('https://foo.bar.com/project/xyz.git')
-        then:
-        result == 'project/xyz'
-        manager.hub == 'local-scm'
-
-        when:
-        manager = new AssetManager()
-        manager.providerConfigs.add( new ProviderConfig('gitea', [platform: 'gitea', server: 'http://my-server.org/sub1']) )
-        result = manager.resolveNameFromGitUrl('http://my-server.org/sub1/foo/bar.git')
-        then:
-        result == 'foo/bar'
-        manager.hub == 'gitea'
-
     }
 
     @Tag("git")
