@@ -600,7 +600,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         builder.build()
     }
 
-    def 'should check job status when no tasks in job '() {
+    def 'should check job status when no tasks in task array '() {
 
         given:
         def jobId = 'job-id'
@@ -609,7 +609,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def task = Mock(TaskRun) {
             lazyName() >> 'foo (1)'
         }
-        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task))
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task, belongsToArray: true))
         final message = 'Job failed when Batch tries to schedule it: Batch Error: code - CODE_MACHINE_TYPE_NOT_FOUND'
         when:
         client.listTasks(jobId) >>> [new LinkedList<Task>(), new LinkedList<Task>()]
@@ -619,12 +619,12 @@ class GoogleBatchTaskHandlerTest extends Specification {
             makeJobStatus(JobStatus.State.FAILED, message)
         ]
         then:
-        handler.getTaskState() == "PENDING"
+        handler.getTaskState() == null
         handler.getTaskState() == "FAILED"
         handler.getJobError().message == message
     }
 
-    def 'should manage not found when getting task state '() {
+    def 'should manage not found when getting task state in task array'() {
         given:
         def jobId = '1'
         def taskId = '1'
@@ -632,7 +632,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def task = Mock(TaskRun) {
             lazyName() >> 'foo (1)'
         }
-        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task))
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task, belongsToArray: true))
 
         when:
         client.generateTaskName(jobId, taskId) >> "$jobId/group0/$taskId"

@@ -18,6 +18,7 @@
 package nextflow.cloud.google.batch
 
 import com.google.api.gax.rpc.NotFoundException
+import com.google.cloud.batch.v1.JobStatus
 import com.google.cloud.batch.v1.Task
 
 import java.nio.file.Path
@@ -93,6 +94,11 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      * Job unique id assigned by Google Batch service
      */
     private String uid
+
+    /**
+     * Flag to indicate if task belong to an TaskRunArray
+     */
+    private boolean belongsToArray
 
     /**
      * Task state assigned by Google Batch service
@@ -183,19 +189,20 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` submitted > job=$jobId; uid=$uid; work-dir=${task.getWorkDirStr()}"
     }
 
-    protected void updateStatus(String jobId, String taskId, String uid) {
+    protected void updateStatus(String jobId, String taskId, String uid, boolean belongsToArray = false) {
         if( task instanceof TaskArrayRun ) {
             // update status for children
             for( int i=0; i<task.children.size(); i++ ) {
                 final handler = task.children[i] as GoogleBatchTaskHandler
                 final arrayTaskId = executor.getArrayTaskId(jobId, i)
-                handler.updateStatus(jobId, arrayTaskId, uid)
+                handler.updateStatus(jobId, arrayTaskId, uid, true)
             }
         }
         else {
             this.jobId = jobId
             this.taskId = taskId
             this.uid = uid
+            this.belongsToArray = belongsToArray
             this.status = TaskStatus.SUBMITTED
         }
     }
@@ -454,10 +461,17 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      * @return Retrieve the submitted task state
      */
     protected String getTaskState() {
+        if (belongsToArray) {
+            return getStateFromTaskStatus()
+        } else {
+            return getStateFromJobStatus()
+        }
+    }
+
+    protected String getStateFromTaskStatus() {
         final tasks = client.listTasks(jobId)
         if( !tasks.iterator().hasNext() ) {
-            // if there are no tasks checks the job status
-            return checkJobStatus()
+            return getStateFromJobStatus()
         }
         final now = System.currentTimeMillis()
         final delta =  now - timestamp;
@@ -468,6 +482,16 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             }catch (NotFoundException e) {
                 manageNotFound(tasks)
             }
+        }
+        return taskState
+    }
+
+    protected String getStateFromJobStatus() {
+        final now = System.currentTimeMillis()
+        final delta =  now - timestamp;
+        if( !taskState || delta >= 1_000) {
+            final status = client.getJobStatus(jobId)
+            inspectJobStatus(status)
         }
         return taskState
     }
@@ -489,36 +513,39 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     protected String manageNotFound( Iterable<Task> tasks) {
         // If task is array, check if the in the task list
-        if (tasks.size() > 1) {
-            for (Task t in tasks) {
-                if (t.name == client.generateTaskName(jobId, taskId)) {
-                    inspectTaskStatus(t.status)
-                    return taskState
-                }
+        for (Task t in tasks) {
+            if (t.name == client.generateTaskName(jobId, taskId)) {
+               inspectTaskStatus(t.status)
+               return taskState
             }
         }
         // if not array or it task is not in the list, check job status.
-        checkJobStatus()
+        final status = client.getJobStatus(jobId)
+        inspectJobStatus(status)
+        return taskState
     }
 
-    protected String checkJobStatus() {
-        final jobStatus = client.getJobStatus(jobId)
-        final newState = jobStatus?.state as String
+    protected String inspectJobStatus(JobStatus status) {
+        final newState = status?.state as String
         if (newState) {
+            log.trace "[GOOGLE BATCH] Get job=$jobId state=$newState"
             taskState = newState
             timestamp = System.currentTimeMillis()
             if (newState == "FAILED") {
                 noTaskJobfailure = true
             }
-            return taskState
-        } else {
-            return "PENDING"
+        }
+        if (newState == 'SCHEDULED') {
+            final eventsCount = status.getStatusEventsCount()
+            final lastEvent = eventsCount > 0 ? status.getStatusEvents(eventsCount - 1) : null
+            if (lastEvent?.getDescription()?.contains('CODE_GCE_QUOTA_EXCEEDED'))
+                log.warn1 "Batch job cannot be run: ${lastEvent.getDescription()}"
         }
     }
 
-    static private final List<String> RUNNING_OR_COMPLETED = ['RUNNING', 'SUCCEEDED', 'FAILED']
+    static private final List<String> RUNNING_OR_COMPLETED = ['RUNNING', 'SUCCEEDED', 'FAILED', 'DELETION_IN_PROGRESS']
 
-    static private final List<String> COMPLETED = ['SUCCEEDED', 'FAILED']
+    static private final List<String> COMPLETED = ['SUCCEEDED', 'FAILED', 'DELETION_IN_PROGRESS']
 
     @Override
     boolean checkIfRunning() {
