@@ -18,9 +18,7 @@ compileGroovy {
 }
 
 dependencies {
-    // TODO: replace with Maven repository
-    implementation 'org.antlr:antlr4:4.9.2'
-    implementation files('../../compiler.jar')
+    implementation 'com.github.nextflow-io:compiler:jitpack-SNAPSHOT'
 
     api(project(':nf-commons'))
     api(project(':nf-httpfs'))

@@ -86,7 +86,8 @@ jobs:
       - name: Compile
         if: steps.changed-files.outputs.any_changed == 'true'
         run: |
-            wget https://github.com/nextflow-io/language-server/releases/download/v1-SNAPSHOT/compiler.jar
+            git clone https://github.com/nextflow-io/language-server -b jitpack
+            (cd language-server ; ./gradlew publishToMavenLocal)
             make assemble
 
       - name: Test
@@ -167,7 +168,8 @@ jobs:
           export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
           fi
           cat $HOME/.nextflow/scm
-          wget https://github.com/nextflow-io/language-server/releases/download/v1-SNAPSHOT/compiler.jar
+          git clone https://github.com/nextflow-io/language-server -b jitpack
+          (cd language-server ; ./gradlew publishToMavenLocal)
           make clean assemble install
           bash test-ci.sh
         env:
