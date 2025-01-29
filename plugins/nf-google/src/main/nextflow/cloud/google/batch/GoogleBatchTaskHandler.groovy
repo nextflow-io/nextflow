@@ -463,18 +463,16 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected String getStateFromTaskStatus() {
-        final tasks = client.listTasks(jobId)
-        if( !tasks.iterator().hasNext() ) {
-            return getStateFromJobStatus()
-        }
         final now = System.currentTimeMillis()
         final delta =  now - timestamp;
         if( !taskState || delta >= 1_000) {
-            try {
-                final status = client.getTaskStatus(jobId, taskId)
+            final status = client.getTaskInArrayStatus(jobId, taskId)
+            if( status ) {
                 inspectTaskStatus(status)
-            }catch (NotFoundException e) {
-                manageNotFound(tasks)
+            } else {
+                // If no task status retrieved check job status
+                final jobStatus = client.getJobStatus(jobId)
+                inspectJobStatus(jobStatus)
             }
         }
         return taskState
@@ -503,20 +501,6 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             if (lastEvent?.getDescription()?.contains('CODE_GCE_QUOTA_EXCEEDED'))
                 log.warn1 "Batch job cannot be run: ${lastEvent.getDescription()}"
         }
-    }
-
-    protected String manageNotFound( Iterable<Task> tasks) {
-        // If task is array, check if the in the task list
-        for (Task t in tasks) {
-            if (t.name == client.generateTaskName(jobId, taskId)) {
-               inspectTaskStatus(t.status)
-               return taskState
-            }
-        }
-        // if not array or it task is not in the list, check job status.
-        final status = client.getJobStatus(jobId)
-        inspectJobStatus(status)
-        return taskState
     }
 
     protected String inspectJobStatus(JobStatus status) {
@@ -571,6 +555,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 task.stderr = errorFile
             }
             status = TaskStatus.COMPLETED
+            if( belongsToArray )
+                client.removeFromArrayTasks(jobId, taskId)
             return true
         }
 
