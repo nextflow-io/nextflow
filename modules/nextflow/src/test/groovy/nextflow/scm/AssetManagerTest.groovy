@@ -483,9 +483,8 @@ class AssetManagerTest extends Specification {
         dir.resolve('foo.nf').text = 'this is foo content'
 
         // Initialize git repo with proper configuration
-        dir.resolve('.git').mkdir()
-        dir.resolve('.git/config').text = GIT_CONFIG_TEXT
         def init = Git.init()
+        init.setInitialBranch('master')
         def repo = init.setDirectory(dir.toFile()).call()
         repo.add().addFilepattern('.').call()
         def commit = repo.commit().setSign(false).setAll(true).setMessage('First commit').call()
