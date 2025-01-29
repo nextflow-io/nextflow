@@ -68,6 +68,7 @@ import nextflow.processor.TaskRun
 import nextflow.script.bundle.ResourcesBundle
 import nextflow.util.SysHelper
 import nextflow.util.Threads
+import nextflow.util.TraceUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 /**
@@ -290,12 +291,13 @@ class WaveClient {
         request.towerAccessToken = accessToken
         request.towerRefreshToken = refreshToken
 
+        final trace = TraceUtils.nextTrace()
         final body = JsonOutput.toJson(request)
         final uri = URI.create("${endpoint}/v1alpha2/container")
         log.debug "Wave request: $uri; attempt=$attempt - request: $request"
         final req = HttpRequest.newBuilder()
                 .uri(uri)
-                .headers('Content-Type','application/json')
+                .headers('Content-Type','application/json', 'Traceparent', trace)
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build()
 
