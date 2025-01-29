@@ -59,4 +59,8 @@ class DefaultContainerResolver implements ContainerResolver {
     boolean isContainerReady(String key) {
         return true
     }
+
+    Map<String,Object> getContainerMeta(String key) {
+        return null
+    }
 }

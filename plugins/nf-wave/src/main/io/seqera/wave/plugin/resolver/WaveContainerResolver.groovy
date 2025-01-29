@@ -134,4 +134,11 @@ class WaveContainerResolver implements ContainerResolver {
             ? c.isContainerReady(key)
             : defaultResolver.isContainerReady(key)
     }
+
+    Map<String,Object> getContainerMeta(String key) {
+        final c=client()
+        return c.enabled()
+            ? c.getContainerMeta(key)
+            : defaultResolver.getContainerMeta(key)
+    }
 }

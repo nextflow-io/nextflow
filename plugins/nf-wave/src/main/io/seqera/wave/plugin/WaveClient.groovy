@@ -672,6 +672,22 @@ class WaveClient {
             return true
     }
 
+    Map<String,Object> getContainerMeta(String key) {
+        final handle = responses.get(key)
+        if( !handle )
+            return null
+        final result = new LinkedHashMap()
+        result.requestId = handle.response.requestId
+        result.sourceImage = handle.response.containerImage
+        result.targetImage = handle.response.targetImage
+        result.buildId = handle.response.buildId
+        result.scanId = handle.response.scanId
+        result.cached = handle.response.cached
+        result.freeze = handle.response.freeze
+        result.mirror = handle.response.mirror
+        return result
+    }
+
     protected static int randomRange(int min, int max) {
         assert min<max
         Random rand = new Random();

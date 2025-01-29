@@ -119,6 +119,7 @@ class TraceRecord implements Serializable {
 
     transient private String executorName
     transient private CloudMachineInfo machineInfo
+    transient private String containerKey
 
     /**
      * Convert the given value to a string
@@ -609,4 +610,11 @@ class TraceRecord implements Serializable {
         this.machineInfo = value
     }
 
+    String getContainerKey() {
+        return containerKey
+    }
+
+    void setContainerKey(String containerKey) {
+        this.containerKey = containerKey
+    }
 }
