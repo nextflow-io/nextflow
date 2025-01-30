@@ -122,7 +122,7 @@ class SimpleHttpClient {
             con.setRequestMethod(method)
             con.setRequestProperty("Content-Type", contentType)
             con.setRequestProperty("User-Agent", userAgent)
-            con.setRequestProperty("Traceparent", TraceUtils.nextTrace())
+            con.setRequestProperty("Traceparent", TraceUtils.rndTrace())
             // set charset
             if( charset )
                 con.setRequestProperty("charset", "utf-8")

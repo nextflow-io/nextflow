@@ -27,7 +27,7 @@ class TraceUtilsTest extends Specification {
 
     def 'should create a traceparent string' () {
         when:
-        def trace = TraceUtils.nextTrace()
+        def trace = TraceUtils.rndTrace()
         then:
         trace =~ /00-[a-f0-9]{32}-[a-f0-9]{16}-01/
     }
