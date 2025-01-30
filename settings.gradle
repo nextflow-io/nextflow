@@ -34,7 +34,7 @@ dependencyResolutionManagement {
         maven { url "https://s3-eu-west-1.amazonaws.com/maven.seqera.io/snapshots" }
         maven {
             url 'https://jitpack.io'
-            content { includeGroup 'com.github.nextflow-io' }
+            content { includeGroup 'com.github.nextflow-io.language-server' }
         }
     }
 }

@@ -18,10 +18,9 @@ compileGroovy {
 }
 
 dependencies {
-    implementation 'com.github.nextflow-io:compiler:jitpack-SNAPSHOT'
-
     api(project(':nf-commons'))
     api(project(':nf-httpfs'))
+    api 'com.github.nextflow-io.language-server:compiler:jitpack-SNAPSHOT'
     api "org.apache.groovy:groovy:4.0.24"
     api "org.apache.groovy:groovy-nio:4.0.24"
     api "org.apache.groovy:groovy-xml:4.0.24"
