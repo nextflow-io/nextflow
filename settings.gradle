@@ -23,22 +23,6 @@ plugins {
 
 rootProject.name = 'nextflow-prj'
 
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories {
-        mavenLocal()
-        mavenCentral()
-        maven { url 'https://repo.eclipse.org/content/groups/releases' }
-        maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
-        maven { url "https://s3-eu-west-1.amazonaws.com/maven.seqera.io/releases" }
-        maven { url "https://s3-eu-west-1.amazonaws.com/maven.seqera.io/snapshots" }
-        maven {
-            url 'https://jitpack.io'
-            content { includeGroup 'com.github.nextflow-io.language-server' }
-        }
-    }
-}
-
 include 'nextflow'
 include 'nf-commons'
 include 'nf-httpfs'

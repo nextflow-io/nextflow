@@ -51,6 +51,11 @@ subprojects {
     apply plugin: 'io.nextflow.nf-build-plugin'
     apply plugin: 'maven-publish'
     
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+
     group = 'io.nextflow'
     version = metaFromManifest('Plugin-Version',file('src/resources/META-INF/MANIFEST.MF'))
 

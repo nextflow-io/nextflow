@@ -85,10 +85,7 @@ jobs:
 
       - name: Compile
         if: steps.changed-files.outputs.any_changed == 'true'
-        run: |
-            git clone https://github.com/nextflow-io/language-server -b jitpack
-            (cd language-server ; ./gradlew publishToMavenLocal)
-            make assemble
+        run: make assemble
 
       - name: Test
         if: steps.changed-files.outputs.any_changed == 'true'
@@ -168,8 +165,6 @@ jobs:
           export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
           fi
           cat $HOME/.nextflow/scm
-          git clone https://github.com/nextflow-io/language-server -b jitpack
-          (cd language-server ; ./gradlew publishToMavenLocal)
           make clean assemble install
           bash test-ci.sh
         env:
