@@ -24,5 +24,5 @@ import groovy.transform.InheritConstructors
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors
-class ProcessStageException extends ProcessException implements ShowOnlyExceptionMessage {
+class ProcessStageException extends ProcessUnrecoverableException implements ShowOnlyExceptionMessage {
 }
