@@ -236,7 +236,7 @@ The following functions are available in Nextflow scripts:
 `sendMail( [options] )`
 : Send an email. See {ref}`mail-page` for more information.
 
-`sleep( milliseconds )`
+`sleep( milliseconds: long )`
 : Sleep for the given number of milliseconds.
 
 `tuple( collection: List ) -> ArrayTuple`
@@ -443,7 +443,7 @@ The following methods are available for iterables:
 : The closure should follow the same semantics as the closure parameter of `sort()`.
 
 :::{note}
-Iterables in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Iterable.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/lang/Iterable.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
+Iterables in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Iterable.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/lang/Iterable.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
 :::
 
 (stdlib-types-list)=
@@ -528,7 +528,7 @@ The following methods are available for a list:
 See also: [Iterable](#iterable)
 
 :::{note}
-Lists in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/List.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/List.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
+Lists in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/List.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
 :::
 
 (stdlib-types-map)=
@@ -584,7 +584,7 @@ The following methods are available for a map:
 : Returns a collection of the values in the map.
 
 :::{note}
-Maps in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Map.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/Map.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
+Maps in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/Map.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
 :::
 
 (stdlib-types-memoryunit)=
@@ -666,10 +666,19 @@ def hello = file('hello.txt')
 println hello.text
 ```
 
+The `files()` function can be used to get a collection of Paths from a glob pattern:
+
+```nextflow
+def inputs = files('*.txt')
+inputs.each { input ->
+  println "${input.name}: ${input.text}"
+}
+```
+
 The following sections describe the methods that are available for paths.
 
 :::{note}
-Paths in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/Path.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/nio/file/Path.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
+Paths in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/Path.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/nio/file/Path.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
 :::
 
 ### Operators
@@ -755,19 +764,19 @@ The following methods are available for reading files:
 : Returns the file content as a string value.
 
 `newInputStream() -> InputStream`
-: Returns an [InputStream](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/InputStream.html) object to read a binary file.
+: Returns an [InputStream](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/InputStream.html) object to read a binary file.
 
 `newReader() -> Reader`
-: Returns a [Reader](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/Reader.html) object to read a text file.
+: Returns a [Reader](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/Reader.html) object to read a text file.
 
 `readLines() -> List<String>`
 : Reads the file line by line and returns the content as a list of strings.
 
 `withInputStream( action: Closure )`
-: Opens a file for reading and lets you access it with an [InputStream](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/InputStream.html) object.
+: Opens a file for reading and lets you access it with an [InputStream](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/InputStream.html) object.
 
 `withReader( action: Closure )`
-: Opens a file for reading and lets you access it with a [Reader](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/Reader.html) object.
+: Opens a file for reading and lets you access it with a [Reader](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/Reader.html) object.
 
 ### Writing
 
@@ -777,13 +786,13 @@ The following methods are available for writing to files:
 : Appends a string value to a file without replacing existing content.
 
 `newOutputStream() -> OutputStream`
-: Creates an [OutputStream](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/OutputStream.html) object that allows you to write binary data to a file.
+: Creates an [OutputStream](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/OutputStream.html) object that allows you to write binary data to a file.
 
 `newPrintWriter() -> PrintWriter`
-: Creates a [PrintWriter](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/PrintWriter.html) object that allows you to write formatted text to a file.
+: Creates a [PrintWriter](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/PrintWriter.html) object that allows you to write formatted text to a file.
 
 `newWriter() -> Writer`
-: Creates a [Writer](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/Writer.html) object that allows you to save text data to a file.
+: Creates a [Writer](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/Writer.html) object that allows you to save text data to a file.
 
 `setBytes( bytes: byte[] )`
 : Writes a byte array to a file. Equivalent to setting the `bytes` property.
@@ -792,13 +801,13 @@ The following methods are available for writing to files:
 : Writes a string value to a file. Equivalent to setting the `text` property.
 
 `withOutputStream( action: Closure )`
-: Applies the specified closure to an [OutputStream](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/OutputStream.html) object, closing it when finished.
+: Applies the specified closure to an [OutputStream](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/OutputStream.html) object, closing it when finished.
 
 `withPrintWriter( action: Closure )`
-: Applies the specified closure to a [PrintWriter](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/PrintWriter.html) object, closing it when finished.
+: Applies the specified closure to a [PrintWriter](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/PrintWriter.html) object, closing it when finished.
 
 `withWriter( action: Closure )`
-: Applies the specified closure to a [Writer](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/Writer.html) object, closing it when finished.
+: Applies the specified closure to a [Writer](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/Writer.html) object, closing it when finished.
 
 `write( text: String )`
 : Writes a string to a file, replacing any existing content.
@@ -895,7 +904,7 @@ The following methods are available for manipulating files and directories in a 
   : When `true`, creates a *hard* link, otherwise creates a *soft* (aka *symbolic*) link (default: `false`).
 
   `overwrite: boolean`
-  : When `true`, overwrites any existing file with the same name, otherwise throws a [FileAlreadyExistsException](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/FileAlreadyExistsException.html) (default: `false`).
+  : When `true`, overwrites any existing file with the same name, otherwise throws a [FileAlreadyExistsException](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/FileAlreadyExistsException.html) (default: `false`).
 
 `moveTo( target: Path )`
 : Moves a source file or directory to a target file or directory. Follows the same semantics as `copyTo()`.
@@ -1004,7 +1013,7 @@ The following methods are available for a set:
 See also: [Iterable](#iterable)
 
 :::{note}
-Sets in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Set.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/Set.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
+Sets in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Set.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/Set.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
 :::
 
 (stdlib-types-string)=
@@ -1029,11 +1038,11 @@ The following operators are supported for strings:
 
 `~ : (String) -> Pattern`
 : Creates a regular expression from a string.
-: See [Pattern](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/regex/Pattern.html) in the Java standard library for more information.
+: See [Pattern](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/regex/Pattern.html) in the Java standard library for more information.
 
 `=~ : (String, String) -> Matcher`
 : Given a string and a pattern, creates a matcher that is truthy if the pattern occurs anywhere in the string.
-: See [Matcher](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/regex/Matcher.html) in the Java standard library for more information.
+: See [Matcher](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/regex/Matcher.html) in the Java standard library for more information.
 
 `==~ : (String, String) -> boolean`
 : Given a string and a pattern, returns `true` if the string matches the pattern exactly.
@@ -1129,7 +1138,7 @@ The following methods are available for a string:
 : Splits the string into a list of substrings using the given delimiters. Each character in the delimiter string is treated as a separate delimiter.
 
 :::{note}
-Strings in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/lang/String.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
+Strings in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/lang/String.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
 :::
 
 (stdlib-types-versionnumber)=
