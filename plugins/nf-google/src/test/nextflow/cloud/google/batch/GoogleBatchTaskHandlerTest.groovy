@@ -19,7 +19,6 @@ package nextflow.cloud.google.batch
 
 import com.google.api.gax.grpc.GrpcStatusCode
 import com.google.api.gax.rpc.NotFoundException
-import com.google.api.gax.rpc.StatusCode
 import com.google.cloud.batch.v1.JobStatus
 import com.google.cloud.batch.v1.Task
 import io.grpc.Status
@@ -609,7 +608,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def task = Mock(TaskRun) {
             lazyName() >> 'foo (1)'
         }
-        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task, belongsToArray: true))
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task, isChild: true))
         final message = 'Job failed when Batch tries to schedule it: Batch Error: code - CODE_MACHINE_TYPE_NOT_FOUND'
         when:
         client.listTasks(jobId) >>> [new LinkedList<Task>(), new LinkedList<Task>()]
@@ -632,7 +631,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def task = Mock(TaskRun) {
             lazyName() >> 'foo (1)'
         }
-        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task, belongsToArray: true))
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task, isChild: true))
 
         when:
         client.generateTaskName(jobId, taskId) >> "$jobId/group0/$taskId"

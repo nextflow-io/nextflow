@@ -98,7 +98,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     /**
      * Flag to indicate if task belong to an TaskRunArray
      */
-    private boolean belongsToArray
+    private boolean isChild
 
     /**
      * Task state assigned by Google Batch service
@@ -189,7 +189,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` submitted > job=$jobId; uid=$uid; work-dir=${task.getWorkDirStr()}"
     }
 
-    protected void updateStatus(String jobId, String taskId, String uid, boolean belongsToArray = false) {
+    protected void updateStatus(String jobId, String taskId, String uid, boolean isChild = false) {
         if( task instanceof TaskArrayRun ) {
             // update status for children
             for( int i=0; i<task.children.size(); i++ ) {
@@ -202,7 +202,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             this.jobId = jobId
             this.taskId = taskId
             this.uid = uid
-            this.belongsToArray = belongsToArray
+            this.isChild = isChild
             this.status = TaskStatus.SUBMITTED
         }
     }
@@ -461,7 +461,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      * @return Retrieve the submitted task state
      */
     protected String getTaskState() {
-        if (belongsToArray) {
+        if (isChild) {
             return getStateFromTaskStatus()
         } else {
             return getStateFromJobStatus()
