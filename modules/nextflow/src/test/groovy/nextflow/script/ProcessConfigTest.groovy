@@ -47,7 +47,7 @@ class ProcessConfigTest extends Specification {
         expect:
         config.shell ==  ['/bin/bash','-ue']
         config.cacheable
-        config.maxRetries == 0
+        config.maxRetries == 1
         config.maxErrors == -1
         config.errorStrategy == ErrorStrategy.TERMINATE
     }

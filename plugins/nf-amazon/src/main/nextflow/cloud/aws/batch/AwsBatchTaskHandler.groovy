@@ -198,7 +198,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // retrieve the status for the specified job and along with the next batch
         log.trace "[AWS BATCH] requesting describe jobs=${jobIdsToString(batchIds)}"
         DescribeJobsResult resp = client.describeJobs(new DescribeJobsRequest().withJobs(batchIds))
-        if( !resp.getJobs() ) {
+        if( !resp || !resp.getJobs() ) {
             log.debug "[AWS BATCH] cannot retrieve running status for job=$jobId"
             return null
         }
@@ -298,7 +298,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * {@inheritDoc}
      */
     @Override
-    void kill() {
+    protected void killTask() {
         assert jobId
         log.trace "[AWS BATCH] Process `${task.lazyName()}` - killing job=$jobId"
         final targetId = normaliseJobId(jobId)
@@ -931,7 +931,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final slot = FARGATE_MEM.get(cpus)
         if( slot==null )
             throw new ProcessUnrecoverableException("Requirement of $cpus CPUs is not allowed by Fargate -- Check process with name '${task.lazyName()}'")
-        if( mega <=slot.min ) {
+        if( mega <slot.min ) {
             log.warn "Process '${task.lazyName()}' memory requirement of ${mem} is below the minimum allowed by Fargate of ${MemoryUnit.of(mega+'MB')}"
             return slot.min
         }

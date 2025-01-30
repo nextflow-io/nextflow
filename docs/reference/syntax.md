@@ -187,7 +187,7 @@ process sayHello {
 }
 ```
 
-A process may define additional sections for *directives*, *inputs*, *outputs*, *script*, *shell*, *exec*, and *stub*:
+A process may define additional sections for *directives*, *inputs*, *outputs*, *script*, *exec*, and *stub*:
 
 ```nextflow
 process greet {
@@ -202,7 +202,7 @@ process greet {
     output:
     stdout
 
-    script: // or shell: or exec:
+    script: // or exec:
     """
     echo '${greeting}, ${name}!'
     """
@@ -214,7 +214,7 @@ process greet {
 }
 ```
 
-- A process must define a script, shell, or exec section (see below). All other sections are optional. Directives do not have an explicit section label, but must be defined first.
+- A process must define a script or exec section (see below). All other sections are optional. Directives do not have an explicit section label, but must be defined first.
 
 - The `script:` section label can be omitted only when there are no other sections in the body.
 
@@ -222,19 +222,9 @@ process greet {
 
 Each section may contain one or more statements. For directives, inputs, and outputs, these statements must be [function calls](#function-call). See {ref}`process-reference` for the set of available input qualifiers, output qualifiers, and directives.
 
-The script section can be substituted with a shell or exec section:
+The script section can be substituted with an exec section:
 
 ```nextflow
-process greetShell {
-    input: 
-    val greeting
-
-    shell:
-    '''
-    echo '!{greeting}, ${USER}!'
-    '''
-}
-
 process greetExec {
     input: 
     val greeting
@@ -248,7 +238,7 @@ process greetExec {
 }
 ```
 
-The script, shell, and stub sections must return a string in the same manner as a [function](#function).
+The script and stub sections must return a string in the same manner as a [function](#function).
 
 See {ref}`process-page` for more information on the semantics of each process section.
 
@@ -356,7 +346,7 @@ Variables declared in a function, as well as the parameters of that function, ex
 
 Workflow inputs exist for the entire workflow body. Variables declared in the main section exist for the main, emit, and publish sections. Named outputs are not considered variable declarations and therefore do not have any scope.
 
-Process input variables exist for the entire process body. Variables declared in the process script, shell, exec, and stub sections exist only in their respective section, with one exception -- variables declared without the `def` keyword also exist in the output section.
+Process input variables exist for the entire process body. Variables declared in the process script, exec, and stub sections exist only in their respective section, with one exception -- variables declared without the `def` keyword also exist in the output section.
 
 Variables declared in an if or else branch exist only within that branch:
 
@@ -632,16 +622,6 @@ A *slashy string* is enclosed by slashes instead of quotes:
 /no escape!/
 ```
 
-Slashy strings can also span multiple lines:
-
-```nextflow
-/
-Patterns in the code,
-Symbols dance to match and find,
-Logic unconfined.
-/
-```
-
 :::{note}
 A slashy string cannot be empty because it would become a line comment.
 :::
@@ -767,10 +747,12 @@ myList[0]
 
 ### Property expression
 
-A property expression consists of an *object expression* and a *property*, separated by a dot:
+A property expression consists of an *object expression* and a *property*, separated by a *dot*, *spread dot*, or *safe dot*:
 
 ```nextflow
-file.text
+myFile.text       // dot
+myFiles*.text     // spread dot:  myFiles.collect { myFile -> myFile.text }
+myFile?.text      // safe dot:    myFile != null ? myFile.text : null
 ```
 
 The property must be an identifier or string literal.
@@ -783,10 +765,12 @@ A function call consists of a name and argument list:
 printf('Hello %s!\n', 'World')
 ```
 
-A *method call* consists of an *object expression* and a function call separated by a dot:
+A *method call* consists of an *object expression* and a function call separated by a *dot*, *spread dot*, or *safe dot*:
 
 ```nextflow
-myList.size()
+myFile.getText()    // dot
+myFiles*.getText()  // spread dot:  myFiles.collect { myFile -> myFile.getText() }
+myFile?.getText()   // safe dot:    myFile != null ? myFile.getText() : null
 ```
 
 The argument list may contain any number of *positional arguments* and *named arguments*:
@@ -954,4 +938,5 @@ The following legacy features were excluded from this page because they are depr
 
 - The `addParams` and `params` clauses of include declarations. See {ref}`module-params` for more information.
 - The `when:` section of a process definition. See {ref}`process-when` for more information.
+- The `shell:` section of a process definition. See {ref}`process-shell` for more information.
 - The implicit `it` closure parameter. See {ref}`script-closure` for more information.

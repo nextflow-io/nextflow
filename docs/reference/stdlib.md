@@ -10,7 +10,7 @@ This page describes the built-in constants, functions, and types provided by Nex
 
 ### Constants
 
-The following constants are globally available in a Nextflow script:
+The following constants are globally available in a Nextflow script for workflow introspection:
 
 `baseDir: Path`
 : :::{deprecated} 20.04.0
@@ -189,6 +189,11 @@ The following functions are available in Nextflow scripts:
 
 `branchCriteria( criteria: Closure ) -> Closure`
 : Create a branch criteria to use with the {ref}`operator-branch` operator.
+
+`env( name: String ) -> String`
+: :::{versionadded} 24.11.0-edge
+  :::
+: Get the value of the environment variable with the specified name in the Nextflow launch environment.
 
 `error( message: String = null )`
 : Throw a script runtime error with an optional error message.

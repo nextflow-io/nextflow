@@ -22,12 +22,14 @@ import java.util.function.Predicate
 
 import com.google.api.gax.core.CredentialsProvider
 import com.google.api.gax.rpc.FixedHeaderProvider
+import com.google.api.gax.rpc.NotFoundException
 import com.google.api.gax.rpc.UnavailableException
 import com.google.auth.Credentials
 import com.google.cloud.batch.v1.BatchServiceClient
 import com.google.cloud.batch.v1.BatchServiceSettings
 import com.google.cloud.batch.v1.Job
 import com.google.cloud.batch.v1.JobName
+import com.google.cloud.batch.v1.JobStatus
 import com.google.cloud.batch.v1.LocationName
 import com.google.cloud.batch.v1.Task
 import com.google.cloud.batch.v1.TaskGroupName
@@ -122,6 +124,10 @@ class BatchClient {
         return describeTask(jobId, taskId).getStatus()
     }
 
+    JobStatus getJobStatus(String jobId) {
+        return describeJob(jobId).getStatus()
+    }
+
     String getTaskState(String jobId, String taskId) {
         final status = getTaskStatus(jobId, taskId)
         return status ? status.getState().toString() : null
@@ -177,6 +183,8 @@ class BatchClient {
                 if( t instanceof IOException || t.cause instanceof IOException )
                     return true
                 if( t instanceof TimeoutException || t.cause instanceof TimeoutException )
+                    return true
+                if( t instanceof NotFoundException || t.cause instanceof NotFoundException )
                     return true
                 return false
             }

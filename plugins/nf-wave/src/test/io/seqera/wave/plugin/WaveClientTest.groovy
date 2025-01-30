@@ -27,7 +27,6 @@ import java.nio.file.attribute.FileTime
 import java.time.Duration
 import java.time.Instant
 
-import com.google.common.cache.Cache
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
@@ -307,7 +306,7 @@ class WaveClientTest extends Specification {
         req.timestamp instanceof String
 
         cleanup:
-        ContainerInspectMode.activate(false)
+        ContainerInspectMode.reset()
     }
 
     def 'should create request object and platform' () {
@@ -990,11 +989,11 @@ class WaveClientTest extends Specification {
         
         where:
         ARCH                | EXPECTED
-        'linux/amd64'       | 'https://fusionfs.seqera.io/releases/v2.4-amd64.json'
-        'linux/x86_64'      | 'https://fusionfs.seqera.io/releases/v2.4-amd64.json'
-        'arm64'             | 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
-        'linux/arm64'       | 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
-        'linux/arm64/v8'    | 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
+        'linux/amd64'       | 'https://fusionfs.seqera.io/releases/v2.5-amd64.json'
+        'linux/x86_64'      | 'https://fusionfs.seqera.io/releases/v2.5-amd64.json'
+        'arm64'             | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
+        'linux/arm64'       | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
+        'linux/arm64/v8'    | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
     }
 
     @Unroll
@@ -1303,18 +1302,18 @@ class WaveClientTest extends Specification {
     def 'should validate isContainerReady' () {
         given:
         def sess = Mock(Session) {getConfig() >> [wave: [build:[maxDuration: '500ms']]] }
-        def cache = Mock(Cache)
+        def cache = Mock(Map)
         and:
         def resp = Mock(SubmitContainerTokenResponse)
         def handle = new WaveClient.Handle(resp,Instant.now())
-        def wave = Spy(new WaveClient(session:sess, cache: cache))
+        def wave = Spy(new WaveClient(session:sess, responses: cache))
         boolean ready
 
         // container succeeded
         when:
         ready = wave.isContainerReady('xyz')
         then:
-        cache.getIfPresent('xyz') >> handle
+        cache.get('xyz') >> handle
         and:
         resp.requestId >> '12345'
         resp.succeeded >> true
@@ -1328,7 +1327,7 @@ class WaveClientTest extends Specification {
         when:
         ready = wave.isContainerReady('xyz')
         then:
-        cache.getIfPresent('xyz') >> handle
+        cache.get('xyz') >> handle
         and:
         resp.requestId >> '12345'
         resp.succeeded >> null
@@ -1342,7 +1341,7 @@ class WaveClientTest extends Specification {
         when:
         ready = wave.isContainerReady('xyz')
         then:
-        cache.getIfPresent('xyz') >> handle
+        cache.get('xyz') >> handle
         and:
         resp.requestId >> '12345'
         resp.succeeded >> false
@@ -1357,7 +1356,7 @@ class WaveClientTest extends Specification {
         when:
         ready = wave.isContainerReady('xyz')
         then:
-        cache.getIfPresent('xyz') >> handle
+        cache.get('xyz') >> handle
         and:
         resp.buildId >> 'bd-5678'
         resp.cached >> false
@@ -1371,7 +1370,7 @@ class WaveClientTest extends Specification {
         when:
         ready = wave.isContainerReady('xyz')
         then:
-        cache.getIfPresent('xyz') >> handle
+        cache.get('xyz') >> handle
         and:
         resp.requestId >> null
         resp.buildId >> 'bd-5678'
@@ -1386,7 +1385,7 @@ class WaveClientTest extends Specification {
         when:
         ready = wave.isContainerReady('xyz')
         then:
-        cache.getIfPresent('xyz') >> handle
+        cache.get('xyz') >> handle
         and:
         resp.requestId >> null
         resp.buildId >> 'bd-5678'

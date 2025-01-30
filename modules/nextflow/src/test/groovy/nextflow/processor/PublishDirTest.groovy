@@ -16,9 +16,12 @@
 
 package nextflow.processor
 
+import java.nio.file.CopyOption
 import java.nio.file.FileSystems
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 
 import nextflow.Global
 import nextflow.Session
@@ -417,4 +420,22 @@ class PublishDirTest extends Specification {
         [NXF_PUBLISH_FAIL_ON_ERROR: 'true']         | true
         [NXF_PUBLISH_FAIL_ON_ERROR: 'false']        | false
     }
+
+    def 'should return copy attributes' () {
+        expect:
+        new PublishDir().copyOpts() == [] as CopyOption[]
+        and:
+        new PublishDir().copyOpts(LinkOption.NOFOLLOW_LINKS) == [LinkOption.NOFOLLOW_LINKS] as CopyOption[]
+
+        when:
+        Global.session = Mock(Session) { getConfig()>>[workflow:[output:[copyAttributes: true]]] }
+        then:
+        new PublishDir().copyOpts() == [StandardCopyOption.COPY_ATTRIBUTES] as CopyOption[]
+        and:
+        new PublishDir().copyOpts(LinkOption.NOFOLLOW_LINKS) == [LinkOption.NOFOLLOW_LINKS,StandardCopyOption.COPY_ATTRIBUTES] as CopyOption[]
+
+        cleanup:
+        Global.session = null
+    }
+
 }

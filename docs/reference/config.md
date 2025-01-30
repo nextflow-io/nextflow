@@ -52,6 +52,9 @@ The following settings are available:
 `apptainer.envWhitelist`
 : Comma separated list of environment variable names to be included in the container environment.
 
+`apptainer.libraryDir`
+: Directory where remote Apptainer images are retrieved. When using a computing cluster it must be a shared folder accessible to all compute nodes.
+
 `apptainer.noHttps`
 : Pull the Apptainer image with http protocol (default: `false`).
 
@@ -472,31 +475,34 @@ Read the {ref}`container-charliecloud` page to learn more about how to use Charl
 
 ## `conda`
 
-The `conda` scope controls the creation of a Conda environment by the Conda package manager.
+The `conda` scope controls the creation of Conda environments by the Conda package manager.
 
 The following settings are available:
 
 `conda.enabled`
-: Enable Conda execution (default: `false`).
+: Enables Conda execution (default: `false`).
 
 `conda.cacheDir`
-: Defines the path where Conda environments are stored. When using a compute cluster make sure to provide a shared file system path accessible from all compute nodes.
+: Defines the path where Conda environments are stored. Ensure the path is accessible from all compute nodes when using a shared file system.
+
+`conda.channels`
+: Defines the Conda channels that can be used to resolve Conda packages. Channels can be defined as a list (e.g., `['bioconda','conda-forge']`) or a comma separated list string (e.g., `'bioconda,conda-forge'`). Channel priority decreases from left to right.
 
 `conda.createOptions`
-: Defines any extra command line options supported by the `conda create` command. For details see the [Conda documentation](https://docs.conda.io/projects/conda/en/latest/commands/create.html).
+: Defines extra command line options supported by the `conda create` command. See the [Conda documentation](https://docs.conda.io/projects/conda/en/latest/commands/create.html) for more information.
 
 `conda.createTimeout`
 : Defines the amount of time the Conda environment creation can last. The creation process is terminated when the timeout is exceeded (default: `20 min`).
 
 `conda.useMamba`
-: Uses the `mamba` binary instead of `conda` to create the Conda environments. For details see the [Mamba documentation](https://github.com/mamba-org/mamba).
+: Uses the `mamba` binary instead of `conda` to create the Conda environments. See the [Mamba documentation](https://github.com/mamba-org/mamba) for more information about Mamba.
 
 `conda.useMicromamba`
 : :::{versionadded} 22.05.0-edge
   :::
-: uses the `micromamba` binary instead of `conda` to create the Conda environments. For details see the [Micromamba documentation](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html).
+: Uses the `micromamba` binary instead of `conda` to create Conda environments. See the [Micromamba documentation](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html) for more information about Micromamba.
 
-Read the {ref}`conda-page` page to learn more about how to use Conda environments with Nextflow.
+See {ref}`conda-page` for more information about using Conda environments with Nextflow.
 
 (config-dag)=
 
@@ -823,7 +829,7 @@ The following settings are available for Google Cloud Batch:
 `google.batch.autoRetryExitCodes`
 : :::{versionadded} 24.07.0-edge
   :::
-: Defines the list of exit codes that will be automatically retried by Google Batch when `google.batch.maxSpotAttempts` is greater than 0 (default `[50001]`). Refer to the [Google Batch documentation](https://cloud.google.com/batch/docs/troubleshooting#reserved-exit-codes) for the list of retryable exit codes.
+: Defines the list of exit codes that will trigger Google Batch to automatically retry the job (default: `[50001]`). For this setting to take effect, `google.batch.maxSpotAttempts` must be greater than 0. See [Google Batch documentation](https://cloud.google.com/batch/docs/troubleshooting#reserved-exit-codes) for the complete list of retryable exit codes.
 
 `google.batch.bootDiskImage`
 : :::{versionadded} 24.08.0-edge
@@ -1372,6 +1378,9 @@ The following settings are available:
 `singularity.envWhitelist`
 : Comma separated list of environment variable names to be included in the container environment.
 
+`singularity.libraryDir`
+: Directory where remote Singularity images are retrieved. When using a computing cluster it must be a shared folder accessible to all compute nodes.
+
 `singularity.noHttps`
 : Pull the Singularity image with http protocol (default: `false`).
 
@@ -1641,6 +1650,12 @@ The `workflow` scope provides workflow execution options.
 `workflow.output.contentType`
 : *Currently only supported for S3.*
 : Specify the media type, also known as [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/MIME_types), of published files (default: `false`). Can be a string (e.g. `'text/html'`), or `true` to infer the content type from the file extension.
+
+`workflow.output.copyAttributes`
+: :::{versionadded} 25.01.0-edge
+  :::
+: *Currently only supported for local and shared filesystems.*
+: Copy file attributes (such as the last modified timestamp) to the published file (default: `false`).
 
 `workflow.output.enabled`
 : Enable or disable publishing (default: `true`).

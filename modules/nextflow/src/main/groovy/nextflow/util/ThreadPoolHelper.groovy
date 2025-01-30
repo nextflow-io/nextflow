@@ -20,11 +20,11 @@ package nextflow.util
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import jdk.internal.vm.ThreadContainer
-
 /**
  * Thread pool helpers
  *
@@ -34,7 +34,7 @@ import jdk.internal.vm.ThreadContainer
 @Slf4j
 class ThreadPoolHelper {
 
-    static void await(ExecutorService pool, Duration maxAwait, String waitMessage, String exitMsg) {
+    static void await(ExecutorService pool, Duration maxAwait, String waitMessage, String exitMsg) throws TimeoutException {
         final max = maxAwait.millis
         final t0 = System.currentTimeMillis()
         // wait for ongoing file transfer to complete
@@ -45,10 +45,8 @@ class ThreadPoolHelper {
                 break
 
             final delta = System.currentTimeMillis()-t0
-            if( delta > max ) {
-                log.warn(exitMsg)
-                break
-            }
+            if( delta > max )
+                throw new TimeoutException(exitMsg)
 
             // log to console every 10 minutes (120 * 5 sec)
             if( count % 120 == 0 ) {

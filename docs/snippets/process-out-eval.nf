@@ -1,9 +1,10 @@
 process sayHello {
     output:
-    eval('bash --version')
+    eval('echo Hello world!')
 
+    script:
     """
-    echo Hello world!
+    true
     """
 }
 

@@ -21,6 +21,7 @@ In the first example, let's consider the simple use case in which a process perf
 process CpuUsageEx1 {
   cpus 2
 
+  script:
   """
   stress -c 1 -t 10 # compute square-root of random numbers during 10s using 1 CPU
   """
@@ -35,6 +36,7 @@ In the second example, some time will be spent performing pure computation and s
 process CpuUsageEx2 {
   cpus 1
 
+  script:
   """
   stress -c 1 -t 10 # compute square-root of random numbers during 10s using 1 CPU
   stress -c 1 -t 5 # compute square-root of random numbers during 5s using 1 CPU
@@ -57,6 +59,7 @@ The third example is similar to the second one except that the pure computation 
 process CpuUsageEx3 {
   cpus 2
 
+  script:
   """
   stress -c 2 -t 10 # compute square-root of random numbers during 10s using 2 CPUs
   sleep 10 # use no CPU during 10s
@@ -232,6 +235,7 @@ The first and second programs are executed in `foo` and `bar` processes respecti
 process foo {
     memory '1.5 GB'
 
+    script:
     """
     memory_vmem_1GiB_ram_0Gib
     """
@@ -240,6 +244,7 @@ process foo {
 process bar {
     memory '1.5 GB'
 
+    script:
     """
     memory_vmem_1GiB_ram_1Gib
     """

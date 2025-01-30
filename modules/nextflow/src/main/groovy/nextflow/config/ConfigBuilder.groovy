@@ -684,6 +684,7 @@ class ConfigBuilder {
 
         // -- sets the messages options
         if( cmdRun.withWebLog ) {
+            log.warn "The command line option '-with-weblog' is deprecated - consider enabling this feature by setting 'weblog.enabled=true' in your configuration file"
             if( !(config.weblog instanceof Map) )
                 config.weblog = [:]
             config.weblog.enabled = true
