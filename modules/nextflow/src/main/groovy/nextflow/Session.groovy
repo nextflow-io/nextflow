@@ -689,8 +689,8 @@ class Session implements ISession {
         try {
             log.trace "Session > destroying"
             // shutdown thread pools
-            finalizePoolManager?.shutdown(aborted)
-            publishPoolManager?.shutdown(aborted)
+            finalizePoolManager?.shutdownOrAbort(aborted,this)
+            publishPoolManager?.shutdownOrAbort(aborted,this)
             // invoke shutdown callbacks
             shutdown0()
             log.trace "Session > after cleanup"
