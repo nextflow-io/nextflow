@@ -331,7 +331,7 @@ class FilePorter {
                     // remove the target file that could be have partially downloaded
                     cleanup(stagePath)
                     // check if a stage/download retry is allowed
-                    if( count++ < maxRetries && e !instanceof NoSuchFileException && (e instanceof SocketTimeoutException || e !instanceof InterruptedIOException) && !Thread.currentThread().isInterrupted() ) {
+                    if( count++ < maxRetries && recoverableError(e) && !Thread.currentThread().isInterrupted() ) {
                         def message = "Unable to stage foreign file: ${filePath.toUriString()} (try ${count} of ${maxRetries}) -- Cause: $e.message"
                         log.isDebugEnabled() ? log.warn(message, e) : log.warn(message)
 
@@ -342,6 +342,12 @@ class FilePorter {
                     throw new ProcessStageException(fmtError(filePath,e), e)
                 }
             }
+        }
+
+        private boolean recoverableError(Throwable e){
+            return e !instanceof NoSuchFileException
+                && (e instanceof SocketTimeoutException || e !instanceof InterruptedIOException)
+                && e !instanceof SocketException
         }
 
         private String fmtError(Path filePath, Exception e) {
