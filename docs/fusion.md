@@ -13,7 +13,7 @@ Cloud object stores such as AWS S3 are scalable and cost-effective, but they don
 
 Fusion is a virtual, lightweight, distributed file system that bridges the gap between pipelines and cloud-native storage. Fusion enables seamless filesystem I/O to cloud object stores via a standard POSIX interface, resulting in simpler pipeline logic and faster, more efficient pipeline execution.
 
-See [Fusion File System](https://docs.seqera.io/fusion) for more information about the Fusion features.
+See [Fusion file system](https://docs.seqera.io/fusion) for more information about Fusion features.
 
 :::{note}
 Fusion requires a license for use in Seqera Platform compute environments or directly in Nextflow. Fusion can be trialed at no cost. [Contact Seqera](https://seqera.io/contact-us/) for more details.
@@ -25,4 +25,4 @@ Use Fusion directly in Seqera Platform compute environments, or add Fusion to yo
 
 ## Configuration options
 
-See {ref}`config-fusion` for a full list of Fusion configuration options.
+Add Fusion configuration options to your `nextflow.config` file. See {ref}`config-fusion` for a full list of Fusion configuration options.
