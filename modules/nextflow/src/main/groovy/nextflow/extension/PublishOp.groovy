@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Session
+import nextflow.file.FileHelper
 import nextflow.processor.PublishDir
 import nextflow.util.CsvWriter
 /**
@@ -235,11 +236,11 @@ class PublishOp {
 
     private String normalizePath(Path path, targetDirOrClosure) {
         if( targetDirOrClosure instanceof Closure )
-            return (targetDirOrClosure.call(path.getName()) as Path).normalize().toUriString()
+            return FileHelper.asPath(targetDirOrClosure.call(path.getName()).toString()).normalize().toUriString()
         final sourceDir = getTaskDir(path)
         if( sourceDir == null )
             return path.toUriString()
-        final targetDir = targetDirOrClosure as Path
+        final targetDir = FileHelper.asPath(targetDirOrClosure.toString())
         return targetDir.resolve(sourceDir.relativize(path)).normalize().toUriString()
     }
 
