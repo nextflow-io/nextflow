@@ -17,19 +17,10 @@
 
 package nextflow.data.cid.model
 
-import groovy.transform.Canonical
-import groovy.transform.CompileStatic
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Canonical
-@CompileStatic
-class TaskRun {
-    DataType type
-    int id
-    String name
-    String hash
-    List<String> annotations
+enum DataType {
+    Task, Workflow, Output
 }

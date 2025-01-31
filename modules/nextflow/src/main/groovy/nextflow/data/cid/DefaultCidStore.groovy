@@ -37,7 +37,7 @@ class DefaultCidStore implements CidStore {
     private Path location
 
     void open(DataConfig config) {
-        location = config.store.location
+        location = config.store.location.resolve('.meta')
         if( !Files.exists(location) && !Files.createDirectories(location) ) {
             throw new AbortOperationException("Unable to create CID store directory: $location")
         }
