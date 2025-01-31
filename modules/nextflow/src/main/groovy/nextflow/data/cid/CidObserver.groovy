@@ -24,6 +24,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import nextflow.Session
+import nextflow.data.cid.model.DataType
 import nextflow.data.cid.model.TaskOutput
 import nextflow.data.config.DataConfig
 import nextflow.processor.TaskHandler
@@ -31,6 +32,8 @@ import nextflow.processor.TaskRun
 import nextflow.script.params.FileOutParam
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceRecord
+import nextflow.util.CacheHelper
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -70,20 +73,24 @@ class CidObserver implements TraceObserver {
 
     protected void storeTaskRun(TaskRun task) {
         final value = new nextflow.data.cid.model.TaskRun(
+            DataType.Task,
             task.id.value,
             task.getName(),
             task.hash.toString() )
         // store in the underlying persistence
-        final key = "${value.hash}/.task"
+        final key = "${value.hash}/.data.json"
         store.save(key, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
     }
 
     protected void storeTaskOutput(TaskRun task, Path path) {
         final attrs = readAttributes(path)
         final rel = task.workDir.relativize(path).toString()
-        final key = "${task.hash}/${rel}"
+        final key = "${task.hash}/${rel}/.data.json"
+        final hash = CacheHelper.hasher(path).hash().toString()
         final value = new TaskOutput(
+            DataType.Output,
             "cid://$key",
+            hash,
             attrs.size(),
             attrs.creationTime().toMillis(),
             attrs.lastModifiedTime().toMillis() )

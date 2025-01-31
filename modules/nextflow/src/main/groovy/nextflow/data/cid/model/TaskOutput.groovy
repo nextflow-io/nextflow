@@ -27,7 +27,9 @@ import groovy.transform.CompileStatic
 @Canonical
 @CompileStatic
 class TaskOutput {
+    DataType type
     String uri
+    String hash
     long size
     long createdAt
     long modifiedAt
