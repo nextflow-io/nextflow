@@ -510,7 +510,7 @@ a certain condition is met (e.g. after receiving 10 files, receiving a file name
 
 :::{note}
 The `channel.watchPath` relies on the Java file watch API which and POSIX notify events.
-As such, `channel.watchPath` may not work with NFS network mounts and will not work for cloud provider URIs (e.g. `s3://.../*.txt`).
+As such, `channel.watchPath` will not work with cloud URIs (e.g. `s3://.../*.txt`).
 :::
 
 See also: [channel.fromPath](#frompath) factory method.
