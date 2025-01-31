@@ -85,11 +85,14 @@ class CidObserver implements TraceObserver {
     protected void storeTaskOutput(TaskRun task, Path path) {
         final attrs = readAttributes(path)
         final rel = task.workDir.relativize(path).toString()
-        final key = "${task.hash}/${rel}/.data.json"
+        final cid = "${task.hash}/${rel}"
+        final uri = "cid://${cid}"
+        final key = "${cid}/.data.json"
         final hash = CacheHelper.hasher(path).hash().toString()
         final value = new TaskOutput(
             DataType.Output,
-            "cid://$key",
+            uri,
+            path.toUriString(),
             hash,
             attrs.size(),
             attrs.creationTime().toMillis(),

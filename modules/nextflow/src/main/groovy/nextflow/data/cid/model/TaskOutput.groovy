@@ -29,6 +29,7 @@ import groovy.transform.CompileStatic
 class TaskOutput {
     DataType type
     String uri
+    String realPath
     String hash
     long size
     long createdAt
