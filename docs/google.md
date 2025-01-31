@@ -232,25 +232,9 @@ process {
 :::{versionadded} 23.02.0-edge
 :::
 
-The Google Batch executor supports the use of {ref}`fusion-page`. Fusion allows the use of Google Cloud Storage as a virtual distributed file system, optimising the data transfer and speeding up most job I/O operations.
+The Google Batch executor supports the use of {ref}`fusion-page`. Fusion allows the use of Google Cloud Storage as a virtual distributed file system, optimizing the data transfer and speeding up most job I/O operations.
 
-To enable the use of Fusion file system in your pipeline, add the following snippet to your Nextflow configuration file:
-
-```groovy
-fusion.enabled = true
-wave.enabled = true
-process.scratch = false
-tower.accessToken = '<YOUR ACCESS TOKEN>'
-```
-
-The [Seqera Platform](https://seqera.io) access token is optional, but it enables higher API rate limits for the {ref}`wave-page` service required by Fusion.
-
-By default, Fusion mounts a local SSD disk to the VM at `/tmp`, using a machine type that can attach local SSD disks. If you specify your own machine type or machine series, they should be able to attach local SSD disks, otherwise the job scheduling will fail.
-
-:::{versionadded} 23.06.0-edge
-:::
-
-The `disk` directive can be used to override the disk requested by Fusion. See the {ref}`Process definition <google-batch-process>` section above for examples. Note that local SSD disks must be a multiple of 375 GB in size, otherwise the size will be increased to the next multiple of 375 GB.
+See [Google Cloud Batch](https://docs.seqera.io/fusion/guide/gcp-batch) for more information about configuring Fusion for Google Cloud Batch.
 
 ### Supported directives
 
