@@ -545,6 +545,13 @@ class ConfigBuilder {
         if( cmdRun.stubRun )
             config.stubRun = cmdRun.stubRun
 
+        // -- set the output directory
+        if( cmdRun.outputDir )
+            config.outputDir = cmdRun.outputDir
+
+        if( cmdRun.preview )
+            config.preview = cmdRun.preview
+
         // -- sets the working directory
         if( cmdRun.workDir )
             config.workDir = cmdRun.workDir
@@ -677,6 +684,7 @@ class ConfigBuilder {
 
         // -- sets the messages options
         if( cmdRun.withWebLog ) {
+            log.warn "The command line option '-with-weblog' is deprecated - consider enabling this feature by setting 'weblog.enabled=true' in your configuration file"
             if( !(config.weblog instanceof Map) )
                 config.weblog = [:]
             config.weblog.enabled = true

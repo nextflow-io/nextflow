@@ -100,7 +100,18 @@ class BitbucketRepositoryProviderTest extends Specification {
         expect:
         new BitbucketRepositoryProvider('pditommaso/tutorial', config)
                 .setRevision('test-branch')
-                .getContentUrl('main.nf') == 'https://bitbucket.org/api/2.0/repositories/pditommaso/tutorial/src/755ba829cbc4f28dcb3c16b9dcc1c49c7ee47ff5/main.nf'
+                .getContentUrl('main.nf') == 'https://bitbucket.org/api/2.0/repositories/pditommaso/tutorial/src/test-branch/main.nf'
+
+        and:
+        new BitbucketRepositoryProvider('pditommaso/tutorial', config)
+            .setRevision('feature/with-slash')
+            .getContentUrl('main.nf') == 'https://bitbucket.org/api/2.0/repositories/pditommaso/tutorial/src/a6b825b22d46758cdeb496ae6cf26aef839ace52/main.nf'
+
+        and:
+        new BitbucketRepositoryProvider('pditommaso/tutorial', config)
+            .setRevision('test/tag/v2')
+            .getContentUrl('main.nf') == 'https://bitbucket.org/api/2.0/repositories/pditommaso/tutorial/src/8f849beceb2ea479ef836809ca33d3daeeed25f9/main.nf'
+
     }
 
     @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )
@@ -114,9 +125,26 @@ class BitbucketRepositoryProviderTest extends Specification {
         expect:
         repo.readText('main.nf').contains('world')
         !repo.readText('main.nf').contains('WORLD')
+
+        and:
+        repo.setRevision('test-branch')
+        repo.readText('main.nf').contains('world')
+        !repo.readText('main.nf').contains('WORLD')
+
         and:
         repo.setRevision('feature/with-slash')
         !repo.readText('main.nf').contains('world')
         repo.readText('main.nf').contains('WORLD')
+
+        and:
+        repo.setRevision('v1.1')
+        repo.readText('main.nf').contains('world')
+        !repo.readText('main.nf').contains('WORLD')
+
+        and:
+        repo.setRevision('test/tag/v2')
+        !repo.readText('main.nf').contains('world')
+        repo.readText('main.nf').contains('mundo')
+
     }
 }

@@ -32,6 +32,7 @@ import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.CacheHelper
+import nextflow.util.Escape
 /**
  * Implements a secrets store that saves secrets into a JSON file save into the
  * nextflow home. The file can be relocated using the env variable {@code NXF_SECRETS_FILE}.
@@ -207,7 +208,7 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
 
         def result = ''
         for( Secret s : secretsMap.values() ) {
-            result += /export ${s.name}="${s.value}"/
+            result += /export ${s.name}="${Escape.variable(s.value)}"/
             result += '\n'
         }
         Files.createFile(path)

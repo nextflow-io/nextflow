@@ -22,6 +22,7 @@ import java.util.function.Predicate
 
 import com.google.api.gax.core.CredentialsProvider
 import com.google.api.gax.rpc.FixedHeaderProvider
+import com.google.api.gax.rpc.NotFoundException
 import com.google.api.gax.rpc.UnavailableException
 import com.google.auth.Credentials
 import com.google.cloud.batch.v1.BatchServiceClient
@@ -30,7 +31,10 @@ import com.google.cloud.batch.v1.Job
 import com.google.cloud.batch.v1.JobName
 import com.google.cloud.batch.v1.JobStatus
 import com.google.cloud.batch.v1.LocationName
+import com.google.cloud.batch.v1.Task
 import com.google.cloud.batch.v1.TaskGroupName
+import com.google.cloud.batch.v1.TaskName
+import com.google.cloud.batch.v1.TaskStatus
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
 import dev.failsafe.event.EventListener
@@ -101,9 +105,14 @@ class BatchClient {
         return apply(()-> batchServiceClient.getJob(name))
     }
 
-    Iterable<?> listTasks(String jobId) {
+    Iterable<Task> listTasks(String jobId) {
         final parent = TaskGroupName.of(projectId, location, jobId, 'group0')
         return apply(()-> batchServiceClient.listTasks(parent).iterateAll())
+    }
+
+    Task describeTask(String jobId, String taskId) {
+        final name = TaskName.of(projectId, location, jobId, 'group0', taskId)
+        return apply(()-> batchServiceClient.getTask(name))
     }
 
     void deleteJob(String jobId) {
@@ -111,13 +120,16 @@ class BatchClient {
         apply(()-> batchServiceClient.deleteJobAsync(name))
     }
 
-    JobStatus getJobStatus(String jobId) {
-        final job = describeJob(jobId)
-        return job.getStatus()
+    TaskStatus getTaskStatus(String jobId, String taskId) {
+        return describeTask(jobId, taskId).getStatus()
     }
 
-    String getJobState(String jobId) {
-        final status = getJobStatus(jobId)
+    JobStatus getJobStatus(String jobId) {
+        return describeJob(jobId).getStatus()
+    }
+
+    String getTaskState(String jobId, String taskId) {
+        final status = getTaskStatus(jobId, taskId)
         return status ? status.getState().toString() : null
     }
 
@@ -171,6 +183,8 @@ class BatchClient {
                 if( t instanceof IOException || t.cause instanceof IOException )
                     return true
                 if( t instanceof TimeoutException || t.cause instanceof TimeoutException )
+                    return true
+                if( t instanceof NotFoundException || t.cause instanceof NotFoundException )
                     return true
                 return false
             }

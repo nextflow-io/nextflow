@@ -35,16 +35,19 @@ class NextflowMeta {
     static trait Flags {
         abstract float dsl
         abstract boolean strict
+        abstract boolean moduleBinaries
     }
 
-    @Deprecated
     @Slf4j
     static class Preview implements Flags {
-        volatile float dsl
-        boolean strict
+        @Deprecated volatile float dsl
+        @Deprecated boolean strict
+        boolean output
         boolean recursion
         boolean topic
+        boolean moduleBinaries
 
+        @Deprecated
         void setDsl( float num ) {
             if( num == 1 )
                 throw new IllegalArgumentException(DSL1_EOL_MESSAGE)
@@ -55,22 +58,29 @@ class NextflowMeta {
             dsl = num
         }
 
-        void setRecursion(Boolean recurse) {
-            if( recurse )
-                log.warn "NEXTFLOW RECURSION IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
-            this.recursion = recurse
+        void setOutput(Boolean output) {
+            if( output )
+                log.warn "WORKFLOW OUTPUT DSL IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
+            this.output = output
         }
 
-        void setTopic(Boolean value) {
+        void setRecursion(Boolean recursion) {
+            if( recursion )
+                log.warn "NEXTFLOW RECURSION IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
+            this.recursion = recursion
+        }
+
+        void setTopic(Boolean topic) {
             if( topic )
                 log.warn "CHANNEL TOPICS ARE A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
-            this.topic = value
+            this.topic = topic
         }
     }
 
     static class Features implements Flags {
         volatile float dsl
         boolean strict
+        boolean moduleBinaries
     }
 
     final VersionNumber version
@@ -81,7 +91,6 @@ class NextflowMeta {
      */
     final String timestamp
 
-    @Deprecated
     final Preview preview = new Preview()
 
     final Features enable = new Features()
@@ -104,6 +113,8 @@ class NextflowMeta {
             result.dsl = 2i
         if( isStrictModeEnabled() )
             result.strict = true
+        if( isModuleBinariesEnabled() )
+            result.moduleBinaries = true
         return result
     }
 
@@ -155,6 +166,14 @@ class NextflowMeta {
 
     void strictMode(boolean mode) {
         enable.strict = mode
+    }
+
+    boolean isModuleBinariesEnabled() {
+        return enable.moduleBinaries
+    }
+
+    void moduleBinaries(boolean mode) {
+        enable.moduleBinaries = mode
     }
 
     static String checkDslMode(String script) {

@@ -16,6 +16,7 @@
 
 package nextflow.trace
 
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.regex.Pattern
 
@@ -416,53 +417,52 @@ class TraceRecord implements Serializable {
      * </pre>
      *
      */
-
     TraceRecord parseTraceFile( Path file ) {
 
-        final text = file.text
+        try(BufferedReader reader = Files.newBufferedReader(file)) {
+            final lines = reader.readLines()
+            if( !lines )
+                return this
+            if( lines[0] != 'nextflow.trace/v2' )
+                return parseLegacy(file, lines)
 
-        final lines = text.readLines()
-        if( !lines )
-            return this
-        if( lines[0] != 'nextflow.trace/v2' )
-            return parseLegacy(file, lines)
+            for( int i=0; i<lines.size(); i++ ) {
+                final pair = lines[i].tokenize('=')
+                final name = pair[0]
+                final value = pair[1]
+                if( value == null )
+                    continue
 
-        for( int i=0; i<lines.size(); i++ ) {
-            final pair = lines[i].tokenize('=')
-            final name = pair[0]
-            final value = pair[1]
-            if( value == null )
-                continue
+                switch (name) {
+                    case '%cpu':
+                    case '%mem':
+                        // fields '%cpu' and '%mem' are expressed as percent value
+                        this.put(name, parseInt(value, file, name) / 10F)
+                        break
 
-            switch (name) {
-                case '%cpu':
-                case '%mem':
-                    // fields '%cpu' and '%mem' are expressed as percent value
-                    this.put(name, parseInt(value, file, name) / 10F)
-                    break
+                    case 'rss':
+                    case 'vmem':
+                    case 'peak_rss':
+                    case 'peak_vmem':
+                        // these fields are provided in KB, so they are normalized to bytes
+                        def val = parseLong(value, file, name) * 1024
+                        this.put(name, val)
+                        break
 
-                case 'rss':
-                case 'vmem':
-                case 'peak_rss':
-                case 'peak_vmem':
-                    // these fields are provided in KB, so they are normalized to bytes
-                    def val = parseLong(value, file, name) * 1024
-                    this.put(name, val)
-                    break
+                    case 'cpu_model':
+                        this.put(name, value)
+                        break
 
-                case 'cpu_model':
-                    this.put(name, value)
-                    break
+                    default:
+                        def val = parseLong(value, file, name)
+                        this.put(name, val)
+                        break
+                }
 
-                default:
-                    def val = parseLong(value, file, name)
-                    this.put(name, val)
-                    break
             }
 
+            return this
         }
-
-        return this
     }
 
     private TraceRecord parseLegacy( Path file, List<String> lines) {

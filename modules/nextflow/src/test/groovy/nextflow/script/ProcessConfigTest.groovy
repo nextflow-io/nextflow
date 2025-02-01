@@ -47,7 +47,7 @@ class ProcessConfigTest extends Specification {
         expect:
         config.shell ==  ['/bin/bash','-ue']
         config.cacheable
-        config.maxRetries == 0
+        config.maxRetries == 1
         config.maxErrors == -1
         config.errorStrategy == ErrorStrategy.TERMINATE
     }
@@ -718,6 +718,16 @@ class ProcessConfigTest extends Specification {
         process.arch name: 'linux/x86_64', target: 'zen3'
         then:
         process.arch == [name: 'linux/x86_64', target: 'zen3']
+    }
+
+    def 'should apply resourceLimits' () {
+        given:
+        def process = new ProcessConfig(Mock(BaseScript))
+
+        when:
+        process.resourceLimits time:'1h', memory: '2GB'
+        then:
+        process.resourceLimits == [time:'1h', memory: '2GB']
     }
 
 
