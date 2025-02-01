@@ -13,15 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.script.v2
 
-import org.codehaus.groovy.control.ParserPlugin
-import org.codehaus.groovy.control.ParserPluginFactory
+package nextflow.script.parser
 
-class ScriptParserPluginFactory extends ParserPluginFactory {
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
-    @Override
-    ParserPlugin createParserPlugin() {
-        return new ScriptParserPlugin()
-    }
-}
+import org.codehaus.groovy.transform.GroovyASTTransformationClass
+
+@Retention(RetentionPolicy.SOURCE)
+@Target(ElementType.METHOD)
+@GroovyASTTransformationClass(classes = [NextflowDSLImpl])
+@interface NextflowDSL {}

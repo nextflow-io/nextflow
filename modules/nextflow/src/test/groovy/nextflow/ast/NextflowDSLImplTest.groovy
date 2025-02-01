@@ -129,7 +129,7 @@ class NextflowDSLImplTest extends Dsl2Spec {
         def session = new Session()
         session.executorFactory = new MockExecutorFactory()
         and:
-        def parser = new ScriptParser(session)
+        def parser = ScriptParserFactory.create(session)
 
         def SCRIPT = '''
             process alpha {

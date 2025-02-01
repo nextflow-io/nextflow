@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.script.v2
+package nextflow.script.parser.legacy
 
 import java.nio.file.Path
 
@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 import nextflow.Channel
 import nextflow.Nextflow
 import nextflow.Session
+import nextflow.ast.NextflowDSL
 import nextflow.ast.NextflowXform
 import nextflow.ast.OpXform
 import nextflow.exception.ScriptCompilationException
@@ -39,16 +40,16 @@ import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.ImportCustomizer
 /**
- * Script parser implementation based on the Nextflow formal grammar.
+ * Legacy script parser implement based on the Groovy parser.
  *
- * @author Ben Sherman <bentshermann@gmail.com>
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class ScriptParserV2 extends ScriptParser {
+class ScriptParserLegacy extends ScriptParser {
 
     private CompilerConfiguration config
 
-    ScriptParserV2(Session session) {
+    ScriptParserLegacy(Session session) {
         super(session)
     }
 
@@ -71,6 +72,9 @@ class ScriptParserV2 extends ScriptParser {
             msg = msg != 'startup failed' ? msg : header
             msg = msg.replaceAll(/startup failed:\n/,'')
             msg = msg.replaceAll(~/$className(: \d+:\b*)?/, header+'\n- cause:')
+            if( msg.contains "Unexpected input: '{'" ) {
+                msg += "\nNOTE: If this is the beginning of a process or workflow, there may be a syntax error in the body, such as a missing or extra comma, for which a more specific error message could not be produced."
+            }
             throw new ScriptCompilationException(msg, e)
         }
     }
@@ -90,7 +94,7 @@ class ScriptParserV2 extends ScriptParser {
 
         // define the imports
         final importCustomizer = new ImportCustomizer()
-        importCustomizer.addImports( StringUtils.name )
+        importCustomizer.addImports( StringUtils.name, groovy.transform.Field.name )
         importCustomizer.addImports( Path.name )
         importCustomizer.addImports( Channel.name )
         importCustomizer.addImports( Duration.name )
@@ -102,7 +106,6 @@ class ScriptParserV2 extends ScriptParser {
         config = new CompilerConfiguration()
         config.addCompilationCustomizers( importCustomizer )
         config.scriptBaseClass = BaseScript.class.name
-        config.setPluginFactory(new ScriptParserPluginFactory())
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
         config.addCompilationCustomizers( new ASTTransformationCustomizer(OpXform))

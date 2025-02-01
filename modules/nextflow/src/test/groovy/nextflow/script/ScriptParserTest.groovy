@@ -17,7 +17,7 @@ class ScriptParserTest extends Specification {
 
         given:
         def session = new Session()
-        def parser = new ScriptParser(session)
+        def parser = ScriptParserFactory.create(session)
         def binding = new ScriptBinding(params:[foo:'Hello'])
 
         def file = TestHelper.createInMemTempFile('foo.nf')
@@ -41,7 +41,7 @@ class ScriptParserTest extends Specification {
 
         given:
         def session = new Session()
-        def parser = new ScriptParser(session)
+        def parser = ScriptParserFactory.create(session)
         def binding = new ScriptBinding(params:[foo:'Hello'])
 
         def TEXT = '''
@@ -64,7 +64,7 @@ class ScriptParserTest extends Specification {
 
         given:
         def session = new Session()
-        def parser = new ScriptParser(session)
+        def parser = ScriptParserFactory.create(session)
         session.binding.setVariable('foo', 'Hello')
 
         def TEXT = '''
@@ -85,7 +85,7 @@ class ScriptParserTest extends Specification {
     def 'should normalise script name'() {
 
         given:
-        def parser = new ScriptParser(Mock(Session))
+        def parser = ScriptParserFactory.create(Mock(Session))
 
         expect:
         parser.computeClassName(Paths.get(SCRIPT)) == EXPECTED
@@ -101,7 +101,7 @@ class ScriptParserTest extends Specification {
     def 'should normalise script text' () {
 
         given:
-        def parser = new ScriptParser(Mock(Session))
+        def parser = ScriptParserFactory.create(Mock(Session))
 
         when:
         def result = parser.computeClassName('process foo { etc } ')
@@ -116,7 +116,7 @@ class ScriptParserTest extends Specification {
         def SESS = Mock(Session) { getClassLoader() >> CL }
 
         when:
-        def parser = new ScriptParser(SESS)
+        def parser = ScriptParserFactory.create(SESS)
         then:
         parser.getSession() == SESS
         parser.getClassLoader() == CL
@@ -126,7 +126,7 @@ class ScriptParserTest extends Specification {
     def 'should catch compilation errors' () {
         given:
         def session = new Session()
-        def parser = new ScriptParser(session)
+        def parser = ScriptParserFactory.create(session)
 
         def file = TestHelper.createInMemTempFile('foo.nf')
         file.text = '''

@@ -21,8 +21,8 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.SysEnv
-import nextflow.script.v1.ScriptParserV1
-import nextflow.script.v2.ScriptParserV2
+import nextflow.script.parser.ScriptParserImpl
+import nextflow.script.parser.legacy.ScriptParserLegacy
 
 /**
  * @author Ben Sherman <bentshermann@gmail.com>
@@ -33,8 +33,8 @@ class ScriptParserFactory {
 
     static ScriptParser create(Session session) {
         return SysEnv.get('NXF_ENABLE_STRICT_DSL')=='true'
-            ? new ScriptParserV2(session)
-            : new ScriptParserV1(session)
+            ? new ScriptParserImpl(session)
+            : new ScriptParserLegacy(session)
     }
 
 }
