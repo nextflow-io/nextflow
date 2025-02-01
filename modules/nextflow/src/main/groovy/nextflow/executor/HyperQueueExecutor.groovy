@@ -59,7 +59,7 @@ class HyperQueueExecutor extends AbstractGridExecutor {
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
         result << '--name' << getJobNameFor(task)
-        result << '--log' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
+        result << '--stream' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
         result << '--cwd' << quote(task.workDir)
 
         // No enforcement, Hq just makes sure that the allocated value is below the limit
