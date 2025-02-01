@@ -18,6 +18,7 @@ package nextflow.extension
 
 import java.nio.file.Files
 
+import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Channel
 import test.Dsl2Spec
 /**
@@ -77,9 +78,9 @@ class SplitFastqOp2Test extends Dsl2Spec {
         when:
         channel = dsl_eval("""
             Channel.of(['sample_id', file("$file1"), file("$file2")]).splitFastq(by:1, pe:true)
-        """)
+        """) as DataflowReadChannel
 
-        result = channel.val
+        result = channel.unwrap()
         
         then:
         result[0] == 'sample_id'
@@ -97,7 +98,7 @@ class SplitFastqOp2Test extends Dsl2Spec {
                     '''.stripIndent().leftTrim()
 
         when:
-        result = channel.val
+        result = channel.unwrap()
         then:
         result[0] == 'sample_id'
         result[1] == '''
@@ -114,7 +115,7 @@ class SplitFastqOp2Test extends Dsl2Spec {
                     '''.stripIndent().leftTrim()
 
         when:
-        result = channel.val
+        result = channel.unwrap()
         then:
         result[0] == 'sample_id'
         result[1] == '''
@@ -131,7 +132,7 @@ class SplitFastqOp2Test extends Dsl2Spec {
                     '''.stripIndent().leftTrim()
 
         when:
-        result = channel.val
+        result = channel.unwrap()
         then:
         result[0] == 'sample_id'
         result[1] == '''
@@ -148,7 +149,7 @@ class SplitFastqOp2Test extends Dsl2Spec {
                     '''.stripIndent().leftTrim()
 
         when:
-        result = channel.val
+        result = channel.unwrap()
         then:
         result == Channel.STOP
 

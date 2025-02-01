@@ -22,7 +22,9 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
+import nextflow.extension.op.Op
 import nextflow.splitter.AbstractSplitter
 import nextflow.splitter.FastqSplitter
 import nextflow.splitter.SplitterFactory
@@ -164,7 +166,7 @@ class SplitOp {
         params.into = output
 
         // -- create the splitter and set the options
-        def splitter = createSplitter(methodName, params)
+        final splitter = createSplitter(methodName, params)
 
         // -- specify if it's a multi-file splitting operation
         if( multiSplit )
@@ -188,8 +190,8 @@ class SplitOp {
     void applySplittingOperator( DataflowReadChannel origin, DataflowWriteChannel output, AbstractSplitter splitter ) {
         new SubscribeOp()
             .withSource(origin)
-            .withOnNext({ entry -> splitter.target(entry).apply() })
-            .withOnComplete({ output << Channel.STOP })
+            .withOnNext({ DataflowProcessor dp, entry -> splitter.processor(dp).target(entry).apply() })
+            .withOnComplete({ DataflowProcessor dp -> Op.bind(dp,output,Channel.STOP) })
             .apply()
     }
 
@@ -202,7 +204,11 @@ class SplitOp {
 
     @PackageScope
     void applyMergingOperator(List splitted, DataflowWriteChannel output, List<Integer> indexes) {
-        DataflowHelper.newOperator(splitted, [output], new SplitterMergeClosure(indexes))
+        new Op()
+            .withInputs(splitted)
+            .withOutput(output)
+            .withCode(new SplitterMergeClosure(indexes, output))
+            .apply()
     }
 
     @PackageScope

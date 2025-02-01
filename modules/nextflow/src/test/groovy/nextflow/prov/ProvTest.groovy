@@ -535,7 +535,7 @@ class ProvTest extends Dsl2Spec {
             process p2 {
               input: val(x)
               exec: 
-                println "$task.process ($task.index) = ${x}"
+                println "${task.name} = ${x}"
             }
         ''')
 
@@ -977,7 +977,7 @@ class ProvTest extends Dsl2Spec {
             process p2 {
               input: val(x)
               exec: 
-                println "$task.process ($task.index) = ${x}"
+                println "${task.name} = ${x}"
             }
         ''')
         then:
@@ -1054,4 +1054,71 @@ class ProvTest extends Dsl2Spec {
         upstreamTasksOf('p2 (3)')
             .name == ['p1 (3)']
     }
+
+    def 'should track provenance with splitText operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                Channel.of('aa\\nbb\\ncc') | p1 | splitText | p2
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x 
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        upstreamTasksOf('p2 (1)')
+            .name == ['p1 (1)']
+        and:
+        upstreamTasksOf('p2 (2)')
+            .name == ['p1 (1)']
+        and:
+        upstreamTasksOf('p2 (3)')
+            .name == ['p1 (1)']
+    }
+
+    def 'should track provenance with splitText and a file'() {
+        given:
+
+        when:
+        dsl_eval(globalConfig(), """
+            workflow {
+                p1 | splitText | p2
+            }
+            
+            process p1 { 
+              output: path('result.txt') 
+              exec: 
+                task.workDir.resolve('result.txt').text = 'a\\nbb\\nccc\\n' 
+            }
+            
+            process p2 {
+              input: val(chunk)
+              exec: 
+                println "\${task.name}: chunck=\$chunk"
+            }
+        """)
+
+        then:
+        upstreamTasksOf('p2 (1)')
+            .name == ['p1']
+        and:
+        upstreamTasksOf('p2 (2)')
+            .name == ['p1']
+        and:
+        upstreamTasksOf('p2 (3)')
+            .name == ['p1']
+
+    }
+
 }

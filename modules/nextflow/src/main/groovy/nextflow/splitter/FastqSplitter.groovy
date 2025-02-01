@@ -101,7 +101,7 @@ class FastqSplitter extends AbstractTextSplitter {
     }
 
 
-    def private StringBuilder buffer = new StringBuilder()
+    private StringBuilder buffer = new StringBuilder()
 
     private String errorMessage = "Invalid FASTQ format"
 
