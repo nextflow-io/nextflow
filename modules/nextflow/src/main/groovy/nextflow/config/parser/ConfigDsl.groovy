@@ -69,17 +69,12 @@ class ConfigDsl extends Script {
         if( name == 'params' )
             return target.params
 
-        try {
-            return super.getProperty(name)
-        }
-        catch( MissingPropertyException e ) {
-            throw e
-        }
+        return super.getProperty(name)
     }
 
     void append(List<String> names, Object right) {
         def ctx = target
-        for( final name : names[0..<-1] ) {
+        for( final name : names.init() ) {
             if( name !in ctx ) ctx[name] = [:]
             ctx = ctx[name]
         }
@@ -90,7 +85,7 @@ class ConfigDsl extends Script {
 
     void assign(List<String> names, Object right) {
         def ctx = target
-        for( final name : names[0..<-1] ) {
+        for( final name : names.init() ) {
             if( name !in ctx ) ctx[name] = [:]
             ctx = ctx[name]
         }
@@ -141,7 +136,20 @@ class ConfigDsl extends Script {
                 .setBinding(binding.getVariables())
                 .parse(configText, includePath)
 
-        Bolts.deepMerge(target, config)
+        if( !names ) {
+            target = Bolts.deepMerge(target, config)
+        }
+        else {
+            def ctx = target
+            for( final name : names.init() ) {
+                if( name !in ctx ) ctx[name] = [:]
+                ctx = ctx[name]
+            }
+            final last = names.last()
+            if( last !in ctx )
+                ctx[last] = [:]
+            ctx[last] = Bolts.deepMerge(ctx[last] as Map, config)
+        }
     }
 
     /**
