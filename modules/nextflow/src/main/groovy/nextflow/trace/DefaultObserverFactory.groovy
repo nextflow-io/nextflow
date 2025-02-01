@@ -1,5 +1,7 @@
 package nextflow.trace
 
+import nextflow.prov.openlineage.OpenLineageObserver
+
 import java.nio.file.Path
 
 import nextflow.Session
@@ -25,7 +27,18 @@ class DefaultObserverFactory implements TraceObserverFactory {
         createTimelineObserver(result)
         createDagObserver(result)
         createAnsiLogObserver(result)
+        createOpenLineageObserver(result)
         return result
+    }
+
+    protected void createOpenLineageObserver(Collection<TraceObserver> result){
+        final enabled = session.config.navigate('openLineage.enabled')
+        if (!enabled)
+            return
+        final server = session.config.navigate('openLineage.server') as String
+        if (!server)
+            throw new IllegalArgumentException("OpenLineage API Server must be specified for the nf-open-linage plugin")
+        result << new OpenLineageObserver(server)
     }
 
     protected void createAnsiLogObserver(Collection<TraceObserver> result) {
