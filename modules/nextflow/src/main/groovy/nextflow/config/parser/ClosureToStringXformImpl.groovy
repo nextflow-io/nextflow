@@ -44,26 +44,30 @@ import org.codehaus.groovy.transform.GroovyASTTransformation
 class ClosureToStringXformImpl implements ASTTransformation {
 
     @Override
-    void visit(ASTNode[] astNodes, SourceUnit unit) {
+    void visit(ASTNode[] astNodes, SourceUnit sourceUnit) {
         final clazz = (ClassNode)astNodes[1]
-        new ClosureToStringVisitor(unit: unit).visitClass(clazz)
+        new ClosureToStringVisitor(sourceUnit).visitClass(clazz)
     }
 
     @CompileStatic
     static class ClosureToStringVisitor extends ClassCodeVisitorSupport {
 
-        protected SourceUnit unit
+        protected SourceUnit sourceUnit
+
+        ClosureToStringVisitor(SourceUnit sourceUnit) {
+            this.sourceUnit = sourceUnit
+        }
 
         @Override
-        protected SourceUnit getSourceUnit() { unit }
+        protected SourceUnit getSourceUnit() { sourceUnit }
 
         @Override
         void visitMethodCallExpression(MethodCallExpression methodCall) {
             final name = methodCall.methodAsString
-            if( name == 'block' )
+            if( name != 'assign' ) {
                 super.visitMethodCallExpression(methodCall)
-            if( name != 'assign' )
                 return
+            }
 
             final arguments = (ArgumentListExpression)methodCall.arguments
             if( arguments.size() != 2 )
@@ -71,9 +75,10 @@ class ClosureToStringXformImpl implements ASTTransformation {
 
             final arg = arguments.last()
             if( arg instanceof MapExpression ) {
-                for( final entry : arg.mapEntryExpressions )
+                for( final entry : arg.mapEntryExpressions ) {
                     if( entry.valueExpression instanceof ClosureExpression )
                         entry.valueExpression = closureToString(entry.valueExpression)
+                }
             }
             if( arg instanceof ClosureExpression ) {
                 final placeholder = closureToString(arg)
@@ -98,7 +103,7 @@ class ClosureToStringXformImpl implements ASTTransformation {
             final lineLast = expr.getLastLineNumber()
 
             for( int i=lineFirst; i<=lineLast; i++ ) {
-                def line = unit.source.getLine(i, null)
+                def line = sourceUnit.source.getLine(i, null)
                 if( i==lineFirst ) {
                     def str = i==lineLast ? line.substring(colBegin,colEnd) : line.substring(colBegin)
                     buffer.append(str)

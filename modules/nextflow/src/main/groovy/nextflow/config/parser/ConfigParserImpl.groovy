@@ -159,6 +159,11 @@ class ConfigParserImpl implements ConfigParser {
         config.setScriptBaseClass(ConfigDsl.class.getName())
         config.setPluginFactory(new ConfigParserPluginFactory())
         config.addCompilationCustomizers(new ASTTransformationCustomizer(ConfigToGroovyXform))
+        if( stripSecrets )
+            config.addCompilationCustomizers(new ASTTransformationCustomizer(StripSecretsXform))
+        if( renderClosureAsString )
+            config.addCompilationCustomizers(new ASTTransformationCustomizer(ClosureToStringXform))
+        config.addCompilationCustomizers(new ASTTransformationCustomizer(NextflowXform))
         return groovyShell = new GroovyShell(classLoader, new Binding(), config)
     }
 
