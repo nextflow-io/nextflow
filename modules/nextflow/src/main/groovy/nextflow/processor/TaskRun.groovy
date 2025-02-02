@@ -31,6 +31,7 @@ import nextflow.Session
 import nextflow.conda.CondaCache
 import nextflow.container.ContainerConfig
 import nextflow.container.resolver.ContainerInfo
+import nextflow.container.resolver.ContainerMeta
 import nextflow.container.resolver.ContainerResolver
 import nextflow.container.resolver.ContainerResolverProvider
 import nextflow.exception.ProcessException
@@ -680,7 +681,7 @@ class TaskRun implements Cloneable {
     }
 
     @Memoized
-    private ContainerResolver containerResolver() {
+    protected ContainerResolver containerResolver() {
         ContainerResolverProvider.load()
     }
 
@@ -719,6 +720,12 @@ class TaskRun implements Cloneable {
        return containerKey
             ? containerResolver().isContainerReady(containerKey)
             : true
+    }
+
+    ContainerMeta containerMeta() {
+        return containerKey
+            ? containerResolver().getContainerMeta(containerKey)
+            : null
     }
 
     ResourcesBundle getModuleBundle() {

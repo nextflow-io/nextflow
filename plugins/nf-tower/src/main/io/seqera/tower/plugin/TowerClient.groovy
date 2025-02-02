@@ -34,6 +34,7 @@ import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.container.resolver.ContainerMeta
 import nextflow.container.resolver.ContainerResolver
 import nextflow.container.resolver.ContainerResolverProvider
 import nextflow.exception.AbortOperationException
@@ -715,13 +716,11 @@ class TowerClient implements TraceObserver {
         return result
     }
 
-    protected List<Map<String,Object>> getNewContainers(Collection<TraceRecord> tasks) {
-        final result = new ArrayList<Map<String,Object>>()
+    protected List<ContainerMeta> getNewContainers(Collection<TraceRecord> tasks) {
+        final result = new ArrayList<ContainerMeta>()
         for( TraceRecord it : tasks ) {
-            if( !it.containerKey || allContainers.containsKey(it.containerKey) )
-                continue
-            final meta = containerResolver().getContainerMeta(it.containerKey)
-            if( meta )
+            final meta = it.getContainerMeta()
+            if( meta && !allContainers.containsKey(meta.targetImage) )
                 result.add(meta)
         }
         return result

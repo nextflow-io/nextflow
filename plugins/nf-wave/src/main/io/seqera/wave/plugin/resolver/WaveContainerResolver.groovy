@@ -27,6 +27,7 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.container.ContainerConfig
 import nextflow.container.resolver.ContainerInfo
+import nextflow.container.resolver.ContainerMeta
 import nextflow.container.resolver.ContainerResolver
 import nextflow.container.resolver.DefaultContainerResolver
 import nextflow.plugin.Priority
@@ -135,7 +136,8 @@ class WaveContainerResolver implements ContainerResolver {
             : defaultResolver.isContainerReady(key)
     }
 
-    Map<String,Object> getContainerMeta(String key) {
+    @Override
+    ContainerMeta getContainerMeta(String key) {
         final c=client()
         return c.enabled()
             ? c.getContainerMeta(key)

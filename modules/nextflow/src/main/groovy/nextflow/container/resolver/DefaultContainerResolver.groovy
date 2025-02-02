@@ -60,7 +60,8 @@ class DefaultContainerResolver implements ContainerResolver {
         return true
     }
 
-    Map<String,Object> getContainerMeta(String key) {
-        return null
+    @Override
+    ContainerMeta getContainerMeta(String key) {
+        return new ContainerMeta(sourceImage: key, targetImage: key)
     }
 }

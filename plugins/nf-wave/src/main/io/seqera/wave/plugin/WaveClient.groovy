@@ -61,6 +61,7 @@ import nextflow.Session
 import nextflow.SysEnv
 import nextflow.container.inspect.ContainerInspectMode
 import nextflow.container.resolver.ContainerInfo
+import nextflow.container.resolver.ContainerMeta
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.fusion.FusionConfig
 import nextflow.processor.Architecture
@@ -672,11 +673,11 @@ class WaveClient {
             return true
     }
 
-    Map<String,Object> getContainerMeta(String key) {
+    ContainerMeta getContainerMeta(String key) {
         final handle = responses.get(key)
         if( !handle )
             return null
-        final result = new LinkedHashMap()
+        final result = new ContainerMeta()
         result.requestId = handle.response.requestId
         result.sourceImage = handle.response.containerImage
         result.targetImage = handle.response.targetImage

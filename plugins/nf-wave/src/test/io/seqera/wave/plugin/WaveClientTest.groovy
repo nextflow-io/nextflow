@@ -43,6 +43,7 @@ import io.seqera.wave.config.CondaOpts
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.container.inspect.ContainerInspectMode
+import nextflow.container.resolver.ContainerMeta
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
@@ -1396,4 +1397,40 @@ class WaveClientTest extends Specification {
         and:
         ready
     }
+
+    def 'should return container meta' () {
+        given:
+        def containerKey = 'xyz'
+        def sess = Mock(Session) {getConfig() >> [:] }
+        def cache = Mock(Map)
+        and:
+        def resp = new SubmitContainerTokenResponse(
+            requestId: '12345',
+            targetImage: 'wave.io/12345/my/container:latest',
+            containerImage: 'my/container:latest',
+            buildId: 'bd-123',
+            scanId: 'sc-123',
+            mirror: true,
+            freeze: true,
+            cached: true
+        )
+        def handle = new WaveClient.Handle(resp,Instant.now())
+        def wave = Spy(new WaveClient(session:sess, responses: cache))
+
+        when:
+        def result = wave.getContainerMeta(containerKey)
+        then:
+        cache.get(containerKey)>>handle
+        and:
+        result == new ContainerMeta(
+                requestId: resp.requestId,
+                sourceImage: resp.containerImage,
+                targetImage: resp.targetImage,
+                buildId: resp.buildId,
+                scanId: resp.scanId,
+                mirror: resp.mirror,
+                freeze: resp.freeze,
+                cached: resp.cached )
+    }
+
 }

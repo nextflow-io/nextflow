@@ -60,5 +60,5 @@ interface ContainerResolver extends ExtensionPoint {
      * @param key The container key
      * @return A map holding the metadata for this container or {@code null} if not available
      */
-    Map<String,Object> getContainerMeta(String key)
+    ContainerMeta getContainerMeta(String key)
 }
