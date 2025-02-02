@@ -3,6 +3,7 @@ package nextflow.prov
 import static test.TestHelper.*
 
 import nextflow.config.ConfigParser
+import nextflow.extension.SplitFastqOp2Test
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
 import spock.lang.Ignore
@@ -1118,6 +1119,52 @@ class ProvTest extends Dsl2Spec {
         and:
         upstreamTasksOf('p2 (3)')
             .name == ['p1']
+
+    }
+
+    def 'should track provenance with splitFastq paired'() {
+        given:
+
+        when:
+        dsl_eval(globalConfig(), """
+            workflow {
+                p1()
+                p2()
+                p1.out | join(p2.out) | splitFastq(by:1, pe:true, file:true) | p3
+            }
+            
+            process p1 { 
+              output: tuple val(sample), path('read1.fq') 
+              exec:
+                sample = 'sample_1' 
+                task.workDir.resolve('read1.fq').text = '''${SplitFastqOp2Test.READS1}'''
+            }
+
+            process p2 { 
+              output: tuple val(sample), path('read2.fq')
+              exec:
+                sample = 'sample_1'  
+                task.workDir.resolve('read2.fq').text = '''${SplitFastqOp2Test.READS2}'''
+            }
+            
+            process p3 {
+              input: tuple val(sample), path(r1), path(r2)
+              exec:
+                println "\${task.name}: sample=\${sample};"
+            }
+   
+        """)
+
+        then:
+        noExceptionThrown()
+        upstreamTasksOf('p3 (1)')
+            .name == ['p1 (1)', 'p2 (1)']
+//        and:
+//        upstreamTasksOf('p2 (2)')
+//            .name == ['p1']
+//        and:
+//        upstreamTasksOf('p2 (3)')
+//            .name == ['p1']
 
     }
 

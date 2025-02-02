@@ -27,7 +27,7 @@ import test.Dsl2Spec
  */
 class SplitFastqOp2Test extends Dsl2Spec {
 
-    String READS = '''
+    static String READS1 = '''
         @SRR636272.19519409/1
         GGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAAGAAGGTGCCACAGATCG
         +
@@ -46,7 +46,7 @@ class SplitFastqOp2Test extends Dsl2Spec {
         CCCFFFFFHHHHHJJJJJJJJJJJJJJJHFDDBDDBDDDDDDDDDDDDADDDDDDDDDDDDDDDDDDDDDDDDDDBDBDDD9@DDDDDDDDDDDDBBDDDBDD@@
         '''.stripIndent().leftTrim()
 
-    String READS2 = '''
+    static String READS2 = '''
         @SRR636272.19519409/2
         GGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAAGAAGGTGCCACAGATCG
         +
@@ -69,7 +69,7 @@ class SplitFastqOp2Test extends Dsl2Spec {
     def 'should split pair-ended using dsl2' () {
         given:
         def folder = Files.createTempDirectory('test')
-        def file1 = folder.resolve('one.fq'); file1.text = READS
+        def file1 = folder.resolve('one.fq'); file1.text = READS1
         def file2 = folder.resolve('two.fq'); file2.text = READS2
 
         def result
