@@ -60,7 +60,7 @@ class DefaultContainerResolverTest extends Specification {
         when:
         def meta = resolver.getContainerMeta(image)
         then:
-        meta == new ContainerMeta(sourceImage: image, targetImage: image)
+        meta == new ContainerMeta(targetImage: image)
     }
 
 }

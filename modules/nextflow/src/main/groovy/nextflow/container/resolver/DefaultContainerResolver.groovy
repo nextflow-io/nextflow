@@ -62,6 +62,6 @@ class DefaultContainerResolver implements ContainerResolver {
 
     @Override
     ContainerMeta getContainerMeta(String key) {
-        return new ContainerMeta(sourceImage: key, targetImage: key)
+        return new ContainerMeta(targetImage: key)
     }
 }
