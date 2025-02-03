@@ -86,7 +86,7 @@ The use of {ref}`fusion-page` allows deploying a Nextflow pipeline to a remote (
 
 This also makes unnecessary the use of the special `kuberun` command for the pipeline execution.
 
-See [Amazon EKS](https://docs.seqera.io/fusion/guide/aws-eks) for a guide to set up Fusion in Amazon EKS compute environments and [Google GKE](https://docs.seqera.io/fusion/guide/gcp-gke) for a guide to set up Fusion in Google GKE compute environments.
+See [Amazon EKS](https://docs.seqera.io/fusion/guide/aws-eks) for a guide to set up Fusion in Amazon EKS compute environments and [Google Kubernetes Engine (GKE)](https://docs.seqera.io/fusion/guide/gcp-gke) for a guide to set up Fusion in GKE compute environments.
 
 ### Running in a pod
 
