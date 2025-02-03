@@ -129,9 +129,7 @@ class FusionConfig {
      * @return A string representing the Fusion SKU
      */
     String sku() {
-        return enabled
-            ? PRODUCT_NAME
-            : null
+        return enabled ? PRODUCT_NAME : null
     }
 
     String version() {
