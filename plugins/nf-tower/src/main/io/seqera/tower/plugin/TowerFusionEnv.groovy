@@ -110,11 +110,10 @@ class TowerFusionEnv implements FusionEnv {
 
         try {
             final token = getLicenseToken(product, version)
-            return [
-                FUSION_LICENSE_TOKEN: token,
-            ]
-        } catch (Exception e) {
-            log.debug("Error retrieving Fusion license information: ${e.message}")
+            return Map.of('FUSION_LICENSE_TOKEN', token)
+        }
+        catch (Exception e) {
+            log.warn("Error retrieving Fusion license information: ${e.message}", e)
             return Map.of()
         }
     }
@@ -129,13 +128,10 @@ class TowerFusionEnv implements FusionEnv {
      */
     protected String getLicenseToken(String product, String version) throws AbortOperationException {
         if (accessToken == null) {
-            throw new AbortOperationException("Missing personal access token -- Make sure there's a variable TOWER_ACCESS_TOKEN in your environment")
+            throw new AbortOperationException("Missing Platform access token -- Make sure there's a variable TOWER_ACCESS_TOKEN in your environment")
         }
 
-        final req = new LicenseTokenRequest(
-            product: product,
-            version: version
-        )
+        final req = new LicenseTokenRequest(product: product, version: version)
 
         try {
             final key = '${product}-${version}'
