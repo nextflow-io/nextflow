@@ -130,7 +130,7 @@ assert 'two plus two' != 'four'
 ```
 
 :::{tip}
-The `assert` keyword simply tests a condition and raises an error if the condition is false. Every assert that you see on this page should succeed if you execute it.
+The `assert` keyword simply tests a condition and raises an error if the condition is false. Every assert that you see on this page will succeed if executed.
 :::
 
 Comparison operators can be used to compare two values:
