@@ -112,7 +112,7 @@ class TowerFusionEnv implements FusionEnv {
             return Map.of('FUSION_LICENSE_TOKEN', token)
         }
         catch (Exception e) {
-            log.warn1("Error retrieving Fusion license information: ${e.message}", causedBy:e)
+            log.warn1("Error retrieving Fusion license information: ${e.message}", causedBy:e, cacheKey:'getLicenseTokenException')
             return Map.of()
         }
     }
@@ -134,10 +134,7 @@ class TowerFusionEnv implements FusionEnv {
 
         try {
             final key = '${product}-${version}'
-            def resp = tokenCache.get(
-                key,
-                () -> sendRequest(req)
-            ) as LicenseTokenResponse
+            def resp = tokenCache.get(key, () -> sendRequest(req))
 
             if( resp.expirationDate.before(new Date()) ) {
                 log.debug "Cached token already expired; refreshing"
@@ -215,9 +212,9 @@ class TowerFusionEnv implements FusionEnv {
     private <T> HttpResponse<String> safeHttpSend(HttpRequest req, RetryPolicy<T> policy) {
         return Failsafe.with(policy).get(
             () -> {
-                log.debug "Request: method:=${req.method()}; uri:=${req.uri()}; request:=${req}"
+                log.debug "Http request: method=${req.method()}; uri=${req.uri()}; request=${req}"
                 final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
-                log.debug "Response: statusCode:=${resp.statusCode()}; body:=${resp.body()}"
+                log.debug "Http response: statusCode=${resp.statusCode()}; body=${resp.body()}"
                 return resp
             } as CheckedSupplier
         ) as HttpResponse<String>
