@@ -509,8 +509,7 @@ a certain condition is met (e.g. after receiving 10 files, receiving a file name
 :::
 
 :::{note}
-The `channel.watchPath` relies on the Java file watch API which and POSIX notify events.
-As such, `channel.watchPath` will not work with cloud URIs (e.g. `s3://.../*.txt`).
+The `channel.watchPath` factory only works with local and shared filesystems. It does not support object storage such as S3.
 :::
 
 See also: [channel.fromPath](#frompath) factory method.
