@@ -17,13 +17,16 @@
 
 package nextflow.fusion
 
-
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import nextflow.plugin.Plugins
 /**
  * Provider strategy for {@link FusionEnv}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
+@CompileStatic
 class FusionEnvProvider {
 
     Map<String,String> getEnvironment(String scheme) {
@@ -33,6 +36,9 @@ class FusionEnvProvider {
         for( FusionEnv it : list ) {
             final env = it.getEnvironment(scheme,config)
             if( env ) result.putAll(env)
+        }
+        if( !result.containsKey('FUSION_LICENSE_TOKEN') ) {
+            log.warn1 "Fusion file system requires the use of Seqera Platform - Make sure to have added in your config 'tower.accessToken' or have defined the variable TOWER_ACCESS_TOKEN in your launch environment"
         }
         // tags setting
         if( config.tagsEnabled() )
