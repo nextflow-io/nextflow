@@ -302,7 +302,7 @@ class TowerFusionEnvTest extends Specification {
 
         then: 'an exception is thrown'
         final ex = thrown(AbortOperationException)
-        ex.message == 'Missing personal access token -- Make sure there\'s a variable TOWER_ACCESS_TOKEN in your environment'
+        ex.message == 'Missing Platform access token -- Make sure there\'s a variable TOWER_ACCESS_TOKEN in your environment'
     }
 
     def 'should fail getting a token if the Platform configuration is empty'() {
@@ -319,7 +319,7 @@ class TowerFusionEnvTest extends Specification {
 
         then: 'an exception is thrown'
         final ex = thrown(AbortOperationException)
-        ex.message == 'Missing personal access token -- Make sure there\'s a variable TOWER_ACCESS_TOKEN in your environment'
+        ex.message == 'Missing Platform access token -- Make sure there\'s a variable TOWER_ACCESS_TOKEN in your environment'
     }
 
     def 'should fail getting a token if the Platform access token is missing'() {
@@ -338,7 +338,7 @@ class TowerFusionEnvTest extends Specification {
 
         then: 'an exception is thrown'
         final ex = thrown(AbortOperationException)
-        ex.message == 'Missing personal access token -- Make sure there\'s a variable TOWER_ACCESS_TOKEN in your environment'
+        ex.message == 'Missing Platform access token -- Make sure there\'s a variable TOWER_ACCESS_TOKEN in your environment'
     }
 
     def 'should throw UnauthorizedException if getting a token fails with 401'() {
