@@ -73,8 +73,8 @@ class FusionConfig {
 
     MemoryUnit cacheSize() { cacheSize }
 
-    URL containerConfigUrl() {
-        this.containerConfigUrl ? new URL(this.containerConfigUrl) : null
+    URI containerConfigURI() {
+        containerConfigUrl ? new URI(containerConfigUrl) : null
     }
 
     boolean privileged() {

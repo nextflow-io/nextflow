@@ -17,6 +17,8 @@
 
 package io.seqera.wave.plugin
 
+import java.nio.file.Paths
+
 import static io.seqera.wave.util.DockerHelper.*
 
 import java.net.http.HttpClient
@@ -376,23 +378,42 @@ class WaveClient {
     }
 
     ContainerConfig resolveContainerConfig(String platform = DEFAULT_DOCKER_PLATFORM) {
-        final urls = new ArrayList<URL>(config.containerConfigUrl())
+        final uris = config.containerConfigUrl().collect { it.toURI() }
         if( fusion.enabled() ) {
-            final fusionUrl = fusion.containerConfigUrl() ?: defaultFusionUrl(platform)
-            urls.add(fusionUrl)
+            final fusionUrl = fusion.containerConfigURI() ?: defaultFusionUrl(platform).toURI()
+            uris.add(fusionUrl)
         }
         if( awsFargate ) {
             final s5cmdUrl = s5cmdConfigUrl ?: defaultS5cmdUrl(platform)
-            urls.add(s5cmdUrl)
+            uris.add(s5cmdUrl.toURI())
         }
-        if( !urls )
+        if( !uris )
             return null
         def result = new ContainerConfig()
-        for( URL it : urls ) {
+        for( URI it : uris ) {
             // append each config to the other - the last has priority
             result += fetchContainerConfig(it)
         }
         return result
+    }
+
+    @Memoized
+    synchronized protected ContainerConfig fetchContainerConfig(URI configURI) {
+        log.debug "Wave fetch container config: $configURI"
+        String scheme = configURI.getScheme()
+        if (scheme != null && scheme == 'http' || scheme == 'https' ) {
+            return fetchContainerConfig(configURI.toURL())
+        }
+        if (scheme == null || scheme == 'file') {
+            return fetchContainerConfig(Paths.get(configURI))
+        }
+        throw new IllegalArgumentException("Unsupported container config URI scheme: $scheme")
+    }
+
+    @Memoized
+    synchronized protected ContainerConfig fetchContainerConfig(Path configPath) {
+        log.debug "Wave read local container config: $configPath"
+        return jsonToContainerConfig(configPath.text)
     }
 
     @Memoized
