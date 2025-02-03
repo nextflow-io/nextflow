@@ -31,7 +31,10 @@ import nextflow.config.parser.ConfigParserImpl
 class ConfigParserFactory {
 
     static ConfigParser create() {
-        return SysEnv.get('NXF_ENABLE_STRICT_PARSER')=='true'
+        final strict = SysEnv.get('NXF_ENABLE_STRICT_PARSER')=='true'
+        if( strict )
+            log.debug "Using strict config parser"
+        return strict
             ? new ConfigParserImpl()
             : new ConfigParserLegacy()
     }

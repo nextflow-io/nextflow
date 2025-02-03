@@ -23,7 +23,6 @@ import com.google.common.hash.Hashing
 import groovy.transform.PackageScope
 import nextflow.ast.NextflowXform
 import nextflow.config.ConfigParser
-import nextflow.config.PluginsDsl
 import nextflow.config.StripSecretsXform
 import nextflow.exception.ConfigParseException
 import nextflow.extension.Bolts

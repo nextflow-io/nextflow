@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.config
+package nextflow.config.parser.legacy
 
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
@@ -25,6 +25,8 @@ import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
 import nextflow.SysEnv
+import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigClosurePlaceholder
 import nextflow.exception.ConfigParseException
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
@@ -35,7 +37,7 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ConfigParserTest extends Specification {
+class ConfigParserLegacyTest extends Specification {
 
     def 'should get an environment variable' () {
         given:
@@ -45,7 +47,7 @@ class ConfigParserTest extends Specification {
         def CONFIG = '''
         process.cpus = env('MAX_CPUS')
         '''
-        def config = ConfigParserFactory.create().parse(CONFIG)
+        def config = new ConfigParserLegacy().parse(CONFIG)
 
         then:
         config.process.cpus == '1'
@@ -61,16 +63,16 @@ class ConfigParserTest extends Specification {
             id 'foo'
             id 'bar'
             id 'bar'
-        } 
-             
+        }
+
         process {
             cpus = 1
-            mem = 2 
+            mem = 2
         }
         '''
 
         when:
-        def config = ConfigParserFactory.create().parse(CONFIG)
+        def config = new ConfigParserLegacy().parse(CONFIG)
 
         then:
         config.plugins == ['foo','bar'] as Set
@@ -84,12 +86,12 @@ class ConfigParserTest extends Specification {
         profiles {
             plugins {
                 id 'foo'
-            } 
+            }
         }
         '''
 
         when:
-        def config = ConfigParserFactory.create().parse(CONFIG)
+        def config = new ConfigParserLegacy().parse(CONFIG)
 
         then:
         def e = thrown(ConfigParseException)
@@ -129,7 +131,7 @@ class ConfigParserTest extends Specification {
         '''
 
         when:
-        def config = ConfigParserFactory.create().parse(text)
+        def config = new ConfigParserLegacy().parse(text)
         then:
         config.process.name == 'alpha'
         config.process.resources.cpus == 4
@@ -141,20 +143,20 @@ class ConfigParserTest extends Specification {
         when:
         def buffer = new StringWriter()
         config.writeTo(buffer)
-        def str = buffer.toString()
+        def str = buffer.toString().replaceAll('\t', '    ')
         then:
         str == '''
         process {
-        	name='alpha'
-        	resources {
-        		disk='1TB'
-        		cpus=4
-        		memory='8GB'
-        		nested {
-        			foo=1
-        			bar=2
-        		}
-        	}
+            name='alpha'
+            resources {
+                disk='1TB'
+                cpus=4
+                memory='8GB'
+                nested {
+                    foo=1
+                    bar=2
+                }
+            }
         }
         '''.stripIndent().leftTrim()
 
@@ -193,7 +195,7 @@ class ConfigParserTest extends Specification {
         '''
 
         when:
-        def config = ConfigParserFactory.create().setBinding().parse(text)
+        def config = new ConfigParserLegacy().setBinding().parse(text)
         then:
         config.params.xxx == 'x'
         config.params.yyy == 'y'
@@ -251,7 +253,7 @@ class ConfigParserTest extends Specification {
         '''
 
         when:
-        def config = ConfigParserFactory.create().setBinding([MIN: 1, MAX: 32]).parse(main)
+        def config = new ConfigParserLegacy().setBinding([MIN: 1, MAX: 32]).parse(main)
         then:
         config.profiles.proc1.cpus == 4
         config.profiles.proc1.memory == '8GB'
@@ -308,7 +310,7 @@ class ConfigParserTest extends Specification {
         '''
 
         when:
-        def config = ConfigParserFactory.create().parse(main)
+        def config = new ConfigParserLegacy().parse(main)
         then:
         config.process.name == 'foo'
         config.process.resources.cpus == 4
@@ -372,7 +374,7 @@ class ConfigParserTest extends Specification {
         """
 
         when:
-        def config1 = ConfigParserFactory.create()
+        def config1 = new ConfigParserLegacy()
                         .setProfiles(['slow'])
                         .parse(configText)
         then:
@@ -382,7 +384,7 @@ class ConfigParserTest extends Specification {
         config1.process.disk == '100GB'
 
         when:
-        def config2 = ConfigParserFactory.create()
+        def config2 = new ConfigParserLegacy()
                         .setProfiles(['fast'])
                         .parse(configText)
         then:
@@ -412,13 +414,13 @@ class ConfigParserTest extends Specification {
         '''
 
         when:
-        def slurper = ConfigParserFactory.create().setProfiles(['alpha'])
+        def slurper = new ConfigParserLegacy().setProfiles(['alpha'])
         slurper.parse(text)
         then:
         slurper.getProfiles() == ['alpha','beta'] as Set
 
         when:
-        slurper = ConfigParserFactory.create().setProfiles(['omega'])
+        slurper = new ConfigParserLegacy().setProfiles(['omega'])
         slurper.parse(text)
         then:
         slurper.getProfiles() == ['alpha','beta'] as Set
@@ -436,12 +438,12 @@ class ConfigParserTest extends Specification {
         '''
 
         when:
-        def config = ConfigParserFactory.create().setIgnoreIncludes(true).parse(text)
+        def config = new ConfigParserLegacy().setIgnoreIncludes(true).parse(text)
         then:
         config.manifest.description == 'some text ..'
 
         when:
-        ConfigParserFactory.create().parse(text)
+        new ConfigParserLegacy().parse(text)
         then:
         thrown(NoSuchFileException)
 
@@ -454,7 +456,7 @@ class ConfigParserTest extends Specification {
         configFile.text = 'XXX.enabled = true'
 
         when:
-        ConfigParserFactory.create().parse(configFile)
+        new ConfigParserLegacy().parse(configFile)
         then:
         noExceptionThrown()
 
@@ -467,7 +469,7 @@ class ConfigParserTest extends Specification {
 
         given:
         ConfigObject result
-        def CONFIG = '''   
+        def CONFIG = '''
            str1 = 'hello'
            str2 = "${str1} world"
            closure1 = { "$str" }
@@ -475,7 +477,7 @@ class ConfigParserTest extends Specification {
            '''
 
         when:
-        result = ConfigParserFactory.create()
+        result = new ConfigParserLegacy()
                 .parse(CONFIG)
         then:
         result.str1 instanceof String
@@ -484,7 +486,7 @@ class ConfigParserTest extends Specification {
         result.map1.bar instanceof Closure
 
         when:
-        result = ConfigParserFactory.create()
+        result = new ConfigParserLegacy()
                 .setRenderClosureAsString(false)
                 .parse(CONFIG)
         then:
@@ -494,7 +496,7 @@ class ConfigParserTest extends Specification {
         result.map1.bar instanceof Closure
 
         when:
-        result = ConfigParserFactory.create()
+        result = new ConfigParserLegacy()
                     .setRenderClosureAsString(true)
                     .parse(CONFIG)
         then:
@@ -509,19 +511,19 @@ class ConfigParserTest extends Specification {
 
     def 'should handle extend mem and duration units' () {
         ConfigObject result
-        def CONFIG = '''   
+        def CONFIG = '''
             mem1 = 1.GB
             mem2 = 1_000_000.toMemory()
             mem3 = MemoryUnit.of(2_000)
             time1 = 2.hours
             time2 = 60_000.toDuration()
             time3 = Duration.of(120_000)
-            flag = 10000 < 1.GB 
+            flag = 10000 < 1.GB
            '''
 
         when:
-        result = ConfigParserFactory.create()
-                .parse(CONFIG)   
+        result = new ConfigParserLegacy()
+                .parse(CONFIG)
         then:
         result.mem1 instanceof MemoryUnit
         result.mem1 == MemoryUnit.of('1 GB')
@@ -557,11 +559,11 @@ class ConfigParserTest extends Specification {
 
         folder.resolve('conf/remote.config').text = '''
         process {
-            cpus = 4 
+            cpus = 4
             memory = '10GB'
         }
         '''
-        
+
         when:
         def url = 'http://localhost:9900/nextflow.config' as Path
         def cfg = new ConfigBuilder().buildGivenFiles(url)
@@ -594,7 +596,7 @@ class ConfigParserTest extends Specification {
         '''
 
         when:
-        def config = ConfigParserFactory.create().parse(CONFIG)
+        def config = new ConfigParserLegacy().parse(CONFIG)
 
         then:
         config.params.foo.bar == 'bar1'
@@ -612,7 +614,7 @@ class ConfigParserTest extends Specification {
             }
         '''
         and:
-        config = ConfigParserFactory.create().parse(CONFIG)
+        config = new ConfigParserLegacy().parse(CONFIG)
 
         then:
         config.params.foo.bar == 'bar1'
@@ -667,7 +669,7 @@ class ConfigParserTest extends Specification {
         """
 
         when:
-        def config1 = ConfigParserFactory.create()
+        def config1 = new ConfigParserLegacy()
                 .parse(configText)
         then:
         config1.workDir == '/my/scratch'

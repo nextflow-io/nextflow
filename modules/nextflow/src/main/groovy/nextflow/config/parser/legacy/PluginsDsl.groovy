@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.config
+package nextflow.config.parser.legacy
 
 import groovy.transform.CompileStatic
 

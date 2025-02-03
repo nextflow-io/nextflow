@@ -164,6 +164,10 @@ class ConfigParserImpl implements ConfigParser {
         if( renderClosureAsString )
             config.addCompilationCustomizers(new ASTTransformationCustomizer(ClosureToStringXform))
         config.addCompilationCustomizers(new ASTTransformationCustomizer(NextflowXform))
+        final importCustomizer = new ImportCustomizer()
+        importCustomizer.addImports( Duration.name )
+        importCustomizer.addImports( MemoryUnit.name )
+        config.addCompilationCustomizers(importCustomizer)
         return groovyShell = new GroovyShell(classLoader, new Binding(), config)
     }
 

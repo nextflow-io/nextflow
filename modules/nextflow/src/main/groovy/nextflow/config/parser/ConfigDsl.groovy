@@ -23,6 +23,7 @@ import java.nio.file.Paths
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 import nextflow.exception.ConfigParseException
 import nextflow.extension.Bolts
 import nextflow.file.FileHelper
@@ -73,21 +74,20 @@ class ConfigDsl extends Script {
     }
 
     void append(List<String> names, Object right) {
-        def ctx = target
+        Map ctx = target
         for( final name : names.init() ) {
             if( name !in ctx ) ctx[name] = [:]
-            ctx = ctx[name]
+            ctx = ctx[name] as Map
         }
-        if( names.last() !in ctx )
-            ctx[names.last()] = []
-        (ctx[names.last()] as List).add(right)
+        final values = (Set) ctx.computeIfAbsent(names.last(), (k) -> new HashSet<>())
+        values.add(right)
     }
 
     void assign(List<String> names, Object right) {
-        def ctx = target
+        Map ctx = target
         for( final name : names.init() ) {
             if( name !in ctx ) ctx[name] = [:]
-            ctx = ctx[name]
+            ctx = ctx[name] as Map
         }
         ctx[names.last()] = right
     }
@@ -110,7 +110,7 @@ class ConfigDsl extends Script {
      * @param name
      */
     String env(String name) {
-        return System.getenv(name)
+        return SysEnv.get(name)
     }
 
     void includeConfig(String includeFile) {
@@ -146,9 +146,7 @@ class ConfigDsl extends Script {
                 ctx = ctx[name]
             }
             final last = names.last()
-            if( last !in ctx )
-                ctx[last] = [:]
-            ctx[last] = Bolts.deepMerge(ctx[last] as Map, config)
+            ctx[last] = Bolts.deepMerge((ctx[last] ?: [:]) as Map, config)
         }
     }
 
@@ -178,6 +176,10 @@ class ConfigDsl extends Script {
         ConfigBlockDsl(ConfigDsl dsl, List<String> scope) {
             this.dsl = dsl
             this.scope = scope
+        }
+
+        void append(String name, Object right) {
+            dsl.append(scope, right)
         }
 
         void assign(List<String> names, Object right) {
