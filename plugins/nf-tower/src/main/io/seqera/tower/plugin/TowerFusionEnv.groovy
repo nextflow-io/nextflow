@@ -104,7 +104,6 @@ class TowerFusionEnv implements FusionEnv {
      */
     @Override
     Map<String, String> getEnvironment(String scheme, FusionConfig config) {
-
         final product = config.sku()
         final version = config.version()
 
@@ -113,7 +112,7 @@ class TowerFusionEnv implements FusionEnv {
             return Map.of('FUSION_LICENSE_TOKEN', token)
         }
         catch (Exception e) {
-            log.warn("Error retrieving Fusion license information: ${e.message}", e)
+            log.warn1("Error retrieving Fusion license information: ${e.message}", causedBy:e)
             return Map.of()
         }
     }
