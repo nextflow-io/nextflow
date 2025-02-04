@@ -30,9 +30,9 @@ import groovy.util.logging.Slf4j
  */
 @Slf4j
 @CompileStatic
-class BlockingBlockingQueue<E> extends LinkedBlockingQueue<E> {
+class HardBlockingQueue<E> extends LinkedBlockingQueue<E> {
 
-    BlockingBlockingQueue(int maxSize) {
+    HardBlockingQueue(int maxSize) {
         super(maxSize);
     }
 
