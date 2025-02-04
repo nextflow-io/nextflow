@@ -70,6 +70,12 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
                 toContainerMount(it)
         }
 
+        // add input file mounts
+        if( bean.arrayInputFiles ) {
+            for( Path it : bean.arrayInputFiles )
+                toContainerMount(it)
+        }
+
         // remap input files to container mounted paths
         for( Map.Entry<String,Path> entry : new HashMap<>(bean.inputFiles).entrySet() ) {
             bean.inputFiles.put( entry.key, toContainerMount(entry.value, true) )
