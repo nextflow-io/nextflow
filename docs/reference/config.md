@@ -12,7 +12,8 @@ This page lists all of the available settings in the {ref}`Nextflow configuratio
 : If `true`, on a successful completion of a run all files in *work* directory are automatically deleted.
 
   :::{warning}
-  The use of the `cleanup` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run. Also, be aware that deleting all scratch files can take a lot of time, especially when using a shared file system or remote cloud storage.
+  The use of the `cleanup` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run.
+  Also, this capability is not supported by remote work directory such as AWS S3, Google Storage and Azure Blob container.
   :::
 
 `dumpHashes`
