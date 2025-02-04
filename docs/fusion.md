@@ -25,4 +25,4 @@ Use Fusion directly in Seqera Platform compute environments, or add Fusion to yo
 
 ## Configuration options
 
-Add Fusion configuration options to your `nextflow.config` file. See {ref}`config-fusion` for a full list of configuration options.
+Add Fusion configuration options to your `nextflow.config` file. See [Reference](https://docs.seqera.io/fusion/reference) for a full list of Fusion configuration options.
