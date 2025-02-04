@@ -117,7 +117,7 @@ For example, shebang definitions `#!/usr/bin/python` and `#!/usr/local/bin/pytho
 
 #### The `lib` directory
 
-The `lib` directory can be used to add utility code or external libraries without cluttering the pipeline scripts. The `lib` directory in the Nextflow project root is added to the classpath by default. Classes or packages defined in the `lib` directory will be available in the execution context. Scripts or functions defined outside of classes will not be available in the execution context.
+The `lib` directory can be used to add utility code or external libraries without cluttering the pipeline scripts. The `lib` directory in the Nextflow project root is added to the classpath by default. Classes defined in the `lib` directory will be available in pipeline scripts. Functions defined outside of classes will not be available in pipeline scripts.
 
 For example, `lib/DNASequence.groovy` defines the `DNASequence` class:
 
@@ -155,20 +155,25 @@ The `DNASequence` class is available in the execution context:
 // main.nf
 workflow {
     Channel.of('ACGTTGCAATGCCGTA', 'GCGTACGGTACGTTAC')
-    .map { seq -> new DNASequence(seq) }
-    .view { dna -> 
-        def meltTemp = dna.getMeltingTemperature()
-        "Found sequence '$dna' with melting temperaure ${meltTemp}°C" 
-    }
+        .map { seq -> new DNASequence(seq) }
+        .view { dna ->
+            "Found sequence '$dna' with melting temperaure ${dna.getMeltingTemperature()}°C"
+        }
 }
 ```
 
-It returns:
+It prints:
 
 ```
 Found sequence 'DNA[ACGTTGCAATGCCGTA]' with melting temperaure 48.0°C
 Found sequence 'DNA[GCGTACGGTACGTTAC]' with melting temperaure 50.0°C
 ```
+
+:::{note}
+Package declarations in the `lib` directory are ignored. The package of a class is determined by the directory structure within the `lib` directory.
+
+For example, if the above example were defined in `lib/utils/DNASequence.groovy`, the class would need to be referenced in pipeline scripts as `utils.DNASequence`.
+:::
 
 ### Data
 
