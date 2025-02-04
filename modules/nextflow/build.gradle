@@ -49,6 +49,7 @@ dependencies {
     api 'dev.failsafe:failsafe:3.1.0'
     api 'org.bouncycastle:bcprov-ext-jdk18on:1.78.1'
     api 'org.bouncycastle:bcpkix-jdk18on:1.78.1'
+    api 'io.seqera:lib-trace:0.1.0'
 
     testImplementation 'org.subethamail:subethasmtp:3.1.7'
 
