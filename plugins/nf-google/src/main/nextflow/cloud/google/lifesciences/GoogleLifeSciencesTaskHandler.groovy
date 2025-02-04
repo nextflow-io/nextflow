@@ -41,6 +41,7 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.MemoryUnit
+import nextflow.util.TestOnly
 /**
  * Task handler for Google Pipelines.
  *
@@ -103,10 +104,8 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
     }
 
 
-    /* ONLY FOR TESTING PURPOSE */
-    protected GoogleLifeSciencesTaskHandler() {
-
-    }
+    @TestOnly
+    protected GoogleLifeSciencesTaskHandler() {}
 
     Operation getOperation() { operation }
 
