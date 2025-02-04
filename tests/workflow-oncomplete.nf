@@ -26,9 +26,11 @@ params.command = 'echo'
 
 process sayHello {
   debug true
+
   input:
   val x
   
+  script:
   """
   ${params.command} '$x world!'
   """

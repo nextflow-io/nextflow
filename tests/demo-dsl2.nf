@@ -5,6 +5,7 @@ process sayHello {
   input:
   val x
 
+  script:
   """
   echo '$x world!'
   """

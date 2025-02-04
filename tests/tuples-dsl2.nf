@@ -7,11 +7,11 @@ process touch {
   output:
     tuple val(id), path('file*')
 
-
-  /
+  script:
+  """
   echo Creating $id
   touch $fileName
-  /
+  """
 }
 
 process makeFiles {
@@ -21,18 +21,17 @@ process makeFiles {
   output:
     tuple val(id), path('*')
 
-  /
-   cp file_x copy_$id
-   touch beta_$id
-  /
+  script:
+  """
+  cp file_x copy_$id
+  touch beta_$id
+  """
 }
 
 workflow {
-
-    Channel
-        .from( ['a', 'file1'], ['b','file2'] ) \
-        | touch \
-        | makeFiles \
-        | flatten \
-        | subscribe { println it }
+  Channel.of( ['a', 'file1'], ['b','file2'] )
+    | touch
+    | makeFiles
+    | flatten
+    | subscribe { v -> println v }
 }

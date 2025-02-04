@@ -17,27 +17,29 @@
 
 
 process hola {
-    debug true
-    input:
-    val x
-    each y
-    each z
+  debug true
 
-    """
-    echo 'x: $x; y: $y; z: $z'
-    """
+  input:
+  val x
+  each y
+  each z
 
+  script:
+  """
+  echo 'x: $x; y: $y; z: $z'
+  """
 }
 
 process foo {
-    debug true
+  debug true
 
-    input:
-    each v
+  input:
+  each v
 
-    """
-    echo foo $v
-    """
+  script:
+  """
+  echo foo $v
+  """
 }
 
 workflow {

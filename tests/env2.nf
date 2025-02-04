@@ -19,8 +19,9 @@ process printEnv {
     debug true
 
     input:
-    env HELLO
+    env 'HELLO'
 
+    script:
     '''
     echo $HELLO world!
     '''

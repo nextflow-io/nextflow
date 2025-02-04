@@ -20,11 +20,12 @@ process foo {
   path 'a b.txt'
   output:
   path 'x z.txt'
+  script:
   '''
   cat 'a b.txt' > 'x z.txt'
   '''
 }
 
 workflow {
-  foo("$baseDir/data/data'3.txt") | view { it.text }
+  foo("$baseDir/data/data'3.txt") | view { file -> file.text }
 }

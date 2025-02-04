@@ -21,6 +21,7 @@ process recurseDir {
     file 'folder/**.fa'
     file 'folder/**/*.txt' 
 
+    script:
     """
     mkdir -p folder/x
     mkdir -p folder/y
@@ -34,6 +35,6 @@ process recurseDir {
 
 workflow {
   recurseDir()
-  recurseDir.out[0] | flatten | view { "result1: " + it.name }
-  recurseDir.out[1] | flatten | view { "result2: " + it.name }
+  recurseDir.out[0] | flatten | view { file -> "result1: ${file.name}" }
+  recurseDir.out[1] | flatten | view { file -> "result2: ${file.name}" }
 }
