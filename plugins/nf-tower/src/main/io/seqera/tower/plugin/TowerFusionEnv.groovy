@@ -134,14 +134,19 @@ class TowerFusionEnv implements FusionEnv {
 
         try {
             final key = '${product}-${version}'
-            def resp = tokenCache.get(key, () -> sendRequest(req))
-
-            if( resp.expirationDate.before(new Date()) ) {
-                log.debug "Cached token already expired; refreshing"
-                resp = sendRequest(req)
-                tokenCache.put(key, resp)
+            int i=0
+            while( i++<2 ) {
+                final resp = tokenCache.get(key, () -> sendRequest(req))
+                // Check if the cached response has expired
+                // It's needed because the JWT token TTL in the cache (1 hour) and its expiration date (e.g. 1 day?) are not sync'ed,
+                // so it could happen that we get a token from the cache which was valid at the time of insertion but is now expired.
+                if( resp.expirationDate.before(new Date()) ) {
+                    log.debug "Cached token already expired; refreshing"
+                    tokenCache.invalidate(key)
+                }
+                else
+                    return resp.signedToken
             }
-            return resp.signedToken
         } catch (UncheckedExecutionException e) {
             throw e.getCause()
         }
