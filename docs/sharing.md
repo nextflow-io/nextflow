@@ -133,13 +133,13 @@ class DNASequence {
 
     // Method to calculate melting temperature using the Wallace rule
     double getMeltingTemperature() {
-        int gCount = sequence.count('G')
-        int cCount = sequence.count('C')
-        int aCount = sequence.count('A')
-        int tCount = sequence.count('T')
+        int g_count = sequence.count('G')
+        int c_count = sequence.count('C')
+        int a_count = sequence.count('A')
+        int t_count = sequence.count('T')
 
         // Wallace rule calculation
-        double tm = 4 * (gCount + cCount) + 2 * (aCount + tCount)
+        double tm = 4 * (g_count + c_count) + 2 * (a_count + t_count)
         return tm
     }
 
