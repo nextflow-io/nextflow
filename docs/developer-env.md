@@ -2,9 +2,20 @@
 
 # Environment setup
 
-Setting up a Nextflow development environment is a prerequisite for creating, testing, and optimizing data analysis pipelines. The steps below outline recommended tools for setting up an optimal Nextflow development environment.
+Setting up a Nextflow development environment is a prerequisite for creating, testing, and optimizing data analysis pipelines.
 
+<h3>Recommended tools</h3>
+
+- {ref}`devenv-vscode`: A versatile code editor that enhances your Nextflow development with features like syntax highlighting and debugging.
+- {ref}`devenv-extensions`: The VS Code marketplace offers a variety of extensions to enhance development. The {ref}`Nextflow extension <devenv-nextflow>` is specifically designed to enhance Nextflow development with diagnostics, hover hints, code navigation, code completion, and more.
+- {ref}`devenv-docker`: A containerization platform that ensures your Nextflow workflows run consistently across different environments by packaging dependencies into isolated containers.
+- {ref}`devenv-git`: A version control system that helps manage and track changes in your Nextflow projects, making collaboration, and code management more efficient.
+
+The sections below outline the steps for setting up these tools.
+
+:::{note}
 Nextflow must be installed separately. See {ref}`install-page` for Nextflow installation instructions.
+:::
 
 :::{note}
 If you are using a Windows computer, first install and configure the Windows Subsystem for Linux (WSL). See {ref}`devenv-wsl` for installation instructions.
@@ -60,9 +71,13 @@ See [Linux installation](https://code.visualstudio.com/docs/setup/linux#_install
 
 ````
 
+(devenv-extensions)=
+
 ## Extensions
 
 Extensions are a key feature of IDEs and allow you to customize your development environment by adding support for various programming languages, tools, and features. The [VS Code Marketplace](https://marketplace.visualstudio.com/vscode) offers thousands of extensions that can enhance your productivity and tailor the editor to your specific needs. Popular VS Code extensions for Nextflow developers are listed below:
+
+(devenv-nextflow)=
 
 **Nextflow**
 
@@ -221,6 +236,8 @@ To install Docker Desktop on Linux Debian/Ubuntu distributions:
 ````
 
 Nextflow supports multiple container technologies (e.g., Singularity and Podman) so you can choose the one that best fits your needs. See {ref}`container-page` for more information about other supported container engines.
+
+(devenv-git)=
 
 ## Git
 
