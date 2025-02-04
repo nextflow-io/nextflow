@@ -20,6 +20,7 @@ package nextflow.util
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.util.trace.TraceUtils
 import nextflow.BuildInfo
 /**
  * Small and simple http client that sends POST requests

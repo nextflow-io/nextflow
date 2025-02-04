@@ -48,6 +48,7 @@ import groovy.json.JsonSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import io.seqera.util.trace.TraceUtils
 import io.seqera.wave.api.BuildStatusResponse
 import io.seqera.wave.api.ContainerStatus
 import io.seqera.wave.api.ContainerStatusResponse
@@ -68,7 +69,6 @@ import nextflow.processor.TaskRun
 import nextflow.script.bundle.ResourcesBundle
 import nextflow.util.SysHelper
 import nextflow.util.Threads
-import nextflow.util.TraceUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 /**
