@@ -12,6 +12,10 @@ export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
 [[ $TOWER_ACCESS_TOKEN ]] && OPTS='-with-tower' || OPTS=''
 set -x
 
+$NXF_CMD -C ./google.config -q run ./test-arrays.nf > array_output
+[[ `grep 'Hi from the nf-test-array bucket!' -c array_output` == 3 ]] && echo OK || { echo 'Failed array tasks' && false; }
+
+
 $NXF_CMD -C ./google.config \
     run ./test-readspair.nf \
     -with-report \
@@ -47,7 +51,7 @@ $NXF_CMD -C ./google.config run ./test-complexpaths.nf -resume
 [[ -e 'foo/sample_(1 2).vcf' ]] || false
 
 ## run test-subdirs inputs/outputs
-$NXF_CMD -C ./gls.config run ./test-subdirs.nf
+$NXF_CMD -C ./gls.config -q run ./test-subdirs.nf
 
 ## run publishDir overwrite
 $NXF_CMD -C ./gls.config run ./test-overwrite.nf
