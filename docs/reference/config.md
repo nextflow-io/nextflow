@@ -13,7 +13,9 @@ This page lists all of the available settings in the {ref}`Nextflow configuratio
 
   :::{warning}
   The use of the `cleanup` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run.
-  Also, this capability is not supported by remote work directory such as AWS S3, Google Storage and Azure Blob container.
+  :::
+  :::{warning}
+  The `cleanup` option is not supported for remote work directory such as Amazon S3, Google Cloud Storage, and Azure Blob Storage.
   :::
 
 `dumpHashes`

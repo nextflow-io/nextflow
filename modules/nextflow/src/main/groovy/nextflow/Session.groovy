@@ -1209,8 +1209,8 @@ class Session implements ISession {
         if( aborted || cancelled || error )
             return
 
-        if( workDir.scheme!='file' ) {
-            log.warn "Clean-up setting is not supported by remote work directory: ${workDir.toUriString()}"
+        if( workDir.scheme != 'file' ) {
+            log.warn "The `cleanup` option is not supported for remote work directory: ${workDir.toUriString()}"
             return
         }
 
