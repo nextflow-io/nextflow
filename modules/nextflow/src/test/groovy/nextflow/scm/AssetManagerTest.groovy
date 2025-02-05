@@ -665,4 +665,173 @@ class AssetManagerTest extends Specification {
         !AssetManager.isRemoteBranch(local_master)
     }
 
+    @Tag("config")
+    def 'should handle manifest with gitmodules configuration'() {
+        given:
+        def config = '''
+            manifest {
+                gitmodules = ['module1', 'module2']
+                recurseSubmodules = true
+            }
+            '''
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = config
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+        dir.resolve('foo/bar/.gitmodules').text = '''
+            [submodule "module1"]
+                path = module1
+                url = https://github.com/org/module1.git
+            [submodule "module2"]
+                path = module2
+                url = https://github.com/org/module2.git
+            '''
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar')
+
+        then:
+        holder.manifest.gitmodules == ['module1', 'module2']
+        holder.manifest.recurseSubmodules == true
+    }
+
+    @Tag("config")
+    def 'should handle manifest with string gitmodules configuration'() {
+        given:
+        def config = '''
+            manifest {
+                gitmodules = 'module1, module2'
+                recurseSubmodules = true
+            }
+            '''
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = config
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar')
+
+        then:
+        holder.manifest.gitmodules.tokenize(', ') == ['module1', 'module2']
+        holder.manifest.recurseSubmodules == true
+    }
+
+    @Tag("git")
+    def 'should handle malformed manifest file'() {
+        given:
+        def config = '''
+            manifest {
+                malformed syntax here
+            }
+            '''
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = config
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar')
+        and:
+        holder.getManifest()
+
+        then:
+        thrown(AbortOperationException)
+    }
+
+    @Tag("git")
+    def 'should handle missing manifest file'() {
+        given:
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar')
+        def manifest = holder.getManifest()
+
+        then:
+        manifest != null
+        manifest.getMainScript() == 'main.nf'
+        manifest.getDefaultBranch() == null
+        manifest.getHomePage() == null
+    }
+
+    @Tag("git")
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should handle submodule operations'() {
+        given:
+        def dir = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        dir.resolve('foo/bar').mkdirs()
+        def mainDir = dir.resolve('foo/bar').toFile()
+
+        // Initialize main repo with proper configuration
+        def init = Git.init()
+        init.setInitialBranch('master')
+        def repo = init.setDirectory(mainDir).call()
+        mainDir.resolve('.git/config').text = GIT_CONFIG_TEXT
+
+        // Create and add a submodule
+        def submoduleDir = dir.resolve('foo/submodule').toFile()
+        submoduleDir.mkdirs()
+        def subInit = Git.init()
+        subInit.setInitialBranch('master')
+        def subRepo = subInit.setDirectory(submoduleDir).call()
+        new File(submoduleDir, 'test.txt').text = 'test content'
+        subRepo.add().addFilepattern('.').call()
+        subRepo.commit().setSign(false).setMessage('First commit in submodule').call()
+
+        // Add submodule to main repo
+        repo.submoduleAdd()
+            .setPath('submodule')
+            .setURI(submoduleDir.toURI().toString())
+            .call()
+        repo.add().addFilepattern('.').call()
+        repo.commit().setSign(false).setMessage('Added submodule').call()
+
+        // Create manifest with submodule config
+        new File(mainDir, 'nextflow.config').text = '''
+            manifest {
+                gitmodules = ['submodule']
+                recurseSubmodules = true
+            }
+            '''
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar', [providers: [github: [auth: token]]])
+        holder.updateModules()
+
+        then:
+        new File(mainDir, '.gitmodules').exists()
+        new File(mainDir, 'submodule/test.txt').exists()
+    }
+
+    @Tag("git")
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should handle repository errors'() {
+        given:
+        def dir = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        dir.resolve('foo/bar').mkdirs()
+        def mainDir = dir.resolve('foo/bar').toFile()
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar', [providers: [github: [auth: token]]])
+        holder.getGit()
+
+        then:
+        thrown(RepositoryNotFoundException)
+    }
+
 }
