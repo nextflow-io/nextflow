@@ -16,6 +16,7 @@ import io.seqera.tower.plugin.exception.BadResponseException
 import io.seqera.tower.plugin.exception.UnauthorizedException
 import io.seqera.tower.plugin.exchange.LicenseTokenRequest
 import io.seqera.tower.plugin.exchange.LicenseTokenResponse
+import io.seqera.util.trace.TraceUtils
 import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
@@ -235,6 +236,7 @@ class TowerFusionEnv implements FusionEnv {
         return HttpRequest.newBuilder()
             .uri(URI.create("${endpoint}/${LICENSE_TOKEN_PATH}").normalize())
             .header('Content-Type', 'application/json')
+            .header('Traceparent', TraceUtils.rndTrace())
             .header('Authorization', "Bearer ${accessToken}")
             .POST(
                 HttpRequest.BodyPublishers.ofString(
