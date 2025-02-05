@@ -101,9 +101,9 @@ class ScriptParserImpl extends ScriptParser {
 
         config = new CompilerConfiguration()
         config.addCompilationCustomizers( importCustomizer )
-        config.scriptBaseClass = BaseScript.class.name
+        config.setScriptBaseClass(BaseScript.class.getName())
         config.setPluginFactory(new ScriptParserPluginFactory())
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(ScriptToGroovyXform))
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
         config.addCompilationCustomizers( new ASTTransformationCustomizer(OpXform))
 

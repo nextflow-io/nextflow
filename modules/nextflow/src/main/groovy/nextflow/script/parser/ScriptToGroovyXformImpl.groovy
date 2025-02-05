@@ -16,14 +16,18 @@
 
 package nextflow.script.parser
 
-import java.lang.annotation.ElementType
-import java.lang.annotation.Retention
-import java.lang.annotation.RetentionPolicy
-import java.lang.annotation.Target
+import org.codehaus.groovy.ast.ASTNode
+import org.codehaus.groovy.control.CompilePhase
+import org.codehaus.groovy.control.SourceUnit
+import org.codehaus.groovy.transform.ASTTransformation
+import org.codehaus.groovy.transform.GroovyASTTransformation
 
-import org.codehaus.groovy.transform.GroovyASTTransformationClass
+@GroovyASTTransformation(phase = CompilePhase.CONVERSION)
+class ScriptToGroovyXformImpl implements ASTTransformation {
 
-@Retention(RetentionPolicy.SOURCE)
-@Target(ElementType.METHOD)
-@GroovyASTTransformationClass(classes = [NextflowDSLImpl])
-@interface NextflowDSL {}
+    @Override
+    public void visit(ASTNode[] astNodes, SourceUnit sourceUnit) {
+        new ScriptToGroovyVisitor(sourceUnit).visit()
+    }
+
+}

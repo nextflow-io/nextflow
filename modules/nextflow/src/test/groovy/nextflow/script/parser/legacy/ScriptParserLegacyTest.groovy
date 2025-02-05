@@ -1,23 +1,24 @@
-package nextflow.script
-
-import spock.lang.Specification
+package nextflow.script.parser.legacy
 
 import java.nio.file.Paths
 
 import nextflow.Session
 import nextflow.exception.ScriptCompilationException
+import nextflow.script.BaseScript
+import nextflow.script.ScriptBinding
+import spock.lang.Specification
 import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ScriptParserTest extends Specification {
+class ScriptParserLegacyTest extends Specification {
 
     def 'should run a file script' () {
 
         given:
         def session = new Session()
-        def parser = ScriptParserFactory.create(session)
+        def parser = new ScriptParserLegacy(session)
         def binding = new ScriptBinding(params:[foo:'Hello'])
 
         def file = TestHelper.createInMemTempFile('foo.nf')
@@ -41,7 +42,7 @@ class ScriptParserTest extends Specification {
 
         given:
         def session = new Session()
-        def parser = ScriptParserFactory.create(session)
+        def parser = new ScriptParserLegacy(session)
         def binding = new ScriptBinding(params:[foo:'Hello'])
 
         def TEXT = '''
@@ -64,7 +65,7 @@ class ScriptParserTest extends Specification {
 
         given:
         def session = new Session()
-        def parser = ScriptParserFactory.create(session)
+        def parser = new ScriptParserLegacy(session)
         session.binding.setVariable('foo', 'Hello')
 
         def TEXT = '''
@@ -85,7 +86,7 @@ class ScriptParserTest extends Specification {
     def 'should normalise script name'() {
 
         given:
-        def parser = ScriptParserFactory.create(Mock(Session))
+        def parser = new ScriptParserLegacy(Mock(Session))
 
         expect:
         parser.computeClassName(Paths.get(SCRIPT)) == EXPECTED
@@ -101,7 +102,7 @@ class ScriptParserTest extends Specification {
     def 'should normalise script text' () {
 
         given:
-        def parser = ScriptParserFactory.create(Mock(Session))
+        def parser = new ScriptParserLegacy(Mock(Session))
 
         when:
         def result = parser.computeClassName('process foo { etc } ')
@@ -116,7 +117,7 @@ class ScriptParserTest extends Specification {
         def SESS = Mock(Session) { getClassLoader() >> CL }
 
         when:
-        def parser = ScriptParserFactory.create(SESS)
+        def parser = new ScriptParserLegacy(SESS)
         then:
         parser.getSession() == SESS
         parser.getClassLoader() == CL
@@ -126,7 +127,7 @@ class ScriptParserTest extends Specification {
     def 'should catch compilation errors' () {
         given:
         def session = new Session()
-        def parser = ScriptParserFactory.create(session)
+        def parser = new ScriptParserLegacy(session)
 
         def file = TestHelper.createInMemTempFile('foo.nf')
         file.text = '''
