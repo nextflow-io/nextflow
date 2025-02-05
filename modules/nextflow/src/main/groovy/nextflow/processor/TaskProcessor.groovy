@@ -309,6 +309,8 @@ class TaskProcessor {
         this.ownerScript = script
         this.config = config
         this.taskBody = taskBody
+        if( taskBody.isShell )
+            log.warn "Process ${name} > the `shell` block is deprecated, use `script` instead"
         this.name = name
         this.maxForks = config.maxForks && config.maxForks>0 ? config.maxForks as int : 0
         this.forksCount = maxForks ? new LongAdder() : null
@@ -828,7 +830,11 @@ class TaskProcessor {
             try {
                 if( resumeDir != workDir )
                     exists = workDir.exists()
-                if( !exists && !workDir.mkdirs() )
+                if( exists ) {
+                    tries++
+                    continue
+                }
+                else if( !workDir.mkdirs() )
                     throw new IOException("Unable to create directory=$workDir -- check file system permissions")
             }
             finally {

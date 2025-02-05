@@ -17,6 +17,9 @@
 
 package nextflow.cloud.google.batch
 
+import com.google.cloud.batch.v1.JobStatus
+import com.google.cloud.batch.v1.Task
+
 import java.nio.file.Path
 
 import com.google.cloud.batch.v1.GCS
@@ -556,7 +559,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
         when:
         handler.@jobId = 'job1'
-        handler.kill()
+        handler.killTask()
         then:
         handler.isActive() >> false
         0 * executor.shouldDeleteJob('job1') >> true
@@ -565,7 +568,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
         when:
         handler.@jobId = 'job1'
-        handler.kill()
+        handler.killTask()
         then:
         handler.isActive() >> true
         1 * executor.shouldDeleteJob('job1') >> true
@@ -574,11 +577,46 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
         when:
         handler.@jobId = 'job1'
-        handler.kill()
+        handler.killTask()
         then:
         handler.isActive() >> true
         1 * executor.shouldDeleteJob('job1') >> false
         and:
         0 * client.deleteJob('job1') >> null
+    }
+
+    JobStatus makeJobStatus(JobStatus.State state, String desc = null) {
+        final builder = JobStatus.newBuilder().setState(state)
+        if( desc ) {
+            builder.addStatusEvents(
+                StatusEvent.newBuilder()
+                    .setDescription(desc)
+            )
+        }
+        builder.build()
+    }
+
+    def 'should check job status when no tasks in job '() {
+
+        given:
+        def jobId = 'job-id'
+        def taskId = 'task-id'
+        def client = Mock(BatchClient)
+        def task = Mock(TaskRun) {
+            lazyName() >> 'foo (1)'
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task))
+        final message = 'Job failed when Batch tries to schedule it: Batch Error: code - CODE_MACHINE_TYPE_NOT_FOUND'
+        when:
+        client.listTasks(jobId) >>> [new LinkedList<Task>(), new LinkedList<Task>()]
+        client.getJobStatus(jobId) >>> [
+            null,
+            makeJobStatus(JobStatus.State.FAILED, 'Scheduling Failed'),
+            makeJobStatus(JobStatus.State.FAILED, message)
+        ]
+        then:
+        handler.getTaskState() == "PENDING"
+        handler.getTaskState() == "FAILED"
+        handler.getJobError().message == message
     }
 }

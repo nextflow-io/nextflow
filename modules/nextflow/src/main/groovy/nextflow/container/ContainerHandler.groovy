@@ -70,7 +70,7 @@ class ContainerHandler {
             if( normalizedImageName.startsWith('docker://') && config.canRunOciImage() )
                 return normalizedImageName
             final requiresCaching = normalizedImageName =~ IMAGE_URL_PREFIX
-            if( ContainerInspectMode.active() && requiresCaching )
+            if( ContainerInspectMode.dryRun() && requiresCaching )
                 return imageName
             final result = requiresCaching ? createSingularityCache(this.config, normalizedImageName) : normalizedImageName
             return Escape.path(result)
@@ -82,7 +82,7 @@ class ContainerHandler {
             if( normalizedImageName.startsWith('docker://') && config.canRunOciImage() )
                 return normalizedImageName
             final requiresCaching = normalizedImageName =~ IMAGE_URL_PREFIX
-            if( ContainerInspectMode.active() && requiresCaching )
+            if( ContainerInspectMode.dryRun() && requiresCaching )
                 return imageName
             final result = requiresCaching ? createApptainerCache(this.config, normalizedImageName) : normalizedImageName
             return Escape.path(result)
@@ -94,7 +94,7 @@ class ContainerHandler {
             // if the imagename starts with '/' it's an absolute path
             // otherwise we assume it's in a remote registry and pull it from there
             final requiresCaching = !imageName.startsWith('/')
-            if( ContainerInspectMode.active() && requiresCaching )
+            if( ContainerInspectMode.dryRun() && requiresCaching )
                 return imageName
             final result = requiresCaching ? createCharliecloudCache(this.config, normalizedImageName) : normalizedImageName
             return Escape.path(result)

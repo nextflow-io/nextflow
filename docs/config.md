@@ -7,7 +7,7 @@
 When a pipeline script is launched, Nextflow looks for configuration files in multiple locations. Since each configuration file may contain conflicting settings, they are applied in the following order (from lowest to highest priority):
 
 1. Parameters defined in pipeline scripts (e.g. `main.nf`)
-2. The config file `$HOME/.nextflow/config`
+2. The config file `$HOME/.nextflow/config`, or `$NXF_HOME/.nextflow/config` when `NXF_HOME` is set (see [`NXF` prefixed variables](reference/env-vars.html#nextflow-settings)).
 3. The config file `nextflow.config` in the project directory
 4. The config file `nextflow.config` in the launch directory
 5. Config file specified using the `-c <config-file>` option
@@ -113,6 +113,15 @@ The following constants are globally available in a Nextflow configuration file:
 `projectDir`
 : The directory where the main script is located.
 
+## Functions
+
+The following functions are globally available in a Nextflow configuration file:
+
+`env( name )`
+: :::{versionadded} 24.11.0-edge
+  :::
+: Get the value of the environment variable with the specified name in the Nextflow launch environment.
+
 (config-params)=
 
 ## Parameters
@@ -128,6 +137,8 @@ params {
     beta_2 = 'another string ..'
 }
 ```
+
+See {ref}`cli-params` for information about how to modify these on the command line.
 
 (config-process)=
 

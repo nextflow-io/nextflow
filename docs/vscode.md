@@ -1,3 +1,4 @@
+(vscode-page)=
 
 # VS Code integration
 
@@ -229,36 +230,25 @@ if (aligner == 'bowtie2') {
 }
 ```
 
-**Slashy dollar strings**
+**Spread operator**
 
-Groovy supports a wide variety of strings, including multi-line strings, dynamic strings, slashy strings, multi-line dynamic slashy strings, and more.
-
-The Nextflow language specification supports single- and double-quoted strings, multi-line strings, and slashy strings. Dynamic slashy strings are not supported:
+Groovy supports a "spread" operator which can be used to flatten a nested list:
 
 ```groovy
-def logo = /--cl-config 'custom_logo: "${multiqc_logo}"'/
+ch.map { meta, bambai -> [meta, *bambai] }
 ```
 
-Use a double-quoted string instead:
-
-```nextflow
-def logo = "--cl-config 'custom_logo: \"${multiqc_logo}\"'"
-```
-
-Slashy dollar strings are not supported:
+The Nextflow language specification does not support the spread operator. Enumerate the list elements explicitly instead:
 
 ```groovy
-$/
-echo "Hello world!"
-/$
-```
+// alternative 1
+ch.map { meta, bambai -> [meta, bambai[0], bambai[1]] }
 
-Use a multi-line string instead:
-
-```nextflow
-"""
-echo "Hello world!"
-"""
+// alternative 2
+ch.map { meta, bambai ->
+    def (bam, bai) = bambai
+    [meta, bam, bai]
+}
 ```
 
 **Implicit environment variables**
@@ -274,6 +264,14 @@ The Nextflow language specification does not support implicit environment variab
 ```nextflow
 println "PWD = ${System.getenv('PWD')}"
 ```
+
+:::{versionadded} 24.11.0-edge
+The `env()` function can be used instead of `System.getenv()`:
+
+```nextflow
+println "PWD = ${env('PWD')}"
+```
+:::
 
 ### Restricted syntax
 
@@ -319,11 +317,91 @@ def foo(x, y, z) {
 }
 ```
 
-To ease the migration of existing scripts, the language server only reports warnings for Groovy-style type annotations and implicit variable declarations. These warnings will become errors in the future.
-
 :::{note}
-Type annotations and static type checking will be addressed in a future version of the Nextflow language specification.
+Because type annotations are useful for providing type checking at runtime, the language server will not report errors or warnings for Groovy-style type annotations at this time.
+
+Instead, type annotations will be addressed in a future version of the Nextflow language specification, at which point the language server will provide a way to automatically migrate Groovy-style type annotations to the new syntax.
 :::
+
+**Strings**
+
+Groovy supports a wide variety of strings, including multi-line strings, dynamic strings, slashy strings, multi-line dynamic slashy strings, and more.
+
+The Nextflow language specification supports single- and double-quoted strings, multi-line strings, and slashy strings.
+
+Slashy strings cannot be interpolated:
+
+```nextflow
+def id = 'SRA001'
+assert 'SRA001.fastq' ~= /${id}\.f(?:ast)?q/
+```
+
+Use a double-quoted string instead:
+
+```nextflow
+def id = 'SRA001'
+assert 'SRA001.fastq' ~= "${id}\\.f(?:ast)?q"
+```
+
+Slashy strings cannot span multiple lines:
+
+```groovy
+/
+Patterns in the code,
+Symbols dance to match and find,
+Logic unconfined.
+/
+```
+
+Use a multi-line string instead:
+
+```nextflow
+"""
+Patterns in the code,
+Symbols dance to match and find,
+Logic unconfined.
+"""
+```
+
+Dollar slashy strings are not supported:
+
+```groovy
+$/
+echo "Hello world!"
+/$
+```
+
+Use a multi-line string instead:
+
+```nextflow
+"""
+echo "Hello world!"
+"""
+```
+
+**Type conversions**
+
+Groovy supports two ways to perform type conversions:
+
+```groovy
+def map = (Map) readJson(json)  // soft cast
+def map = readJson(json) as Map // hard cast
+```
+
+The Nextflow language specification only supports hard casts. However, hard casts are discouraged because they can cause unexpected behavior if used improperly. Use a Groovy-style type annotation instead:
+
+```groovy
+def Map map = readJson(json)
+```
+
+Nextflow will raise an error at runtime if the `readJson()` function does not return a `Map`.
+
+In cases where you want to explicitly convert a value to a different type, it is better to use an explicit method. For example, to parse a string as a number:
+
+```groovy
+def x = '42' as Integer
+def x = '42'.toInteger()    // preferred
+```
 
 **Process env inputs/outputs**
 
@@ -334,6 +412,8 @@ process PROC {
     input:
     env FOO
     env 'BAR'
+
+    // ...
 }
 ```
 
@@ -344,6 +424,8 @@ process PROC {
     input:
     env 'FOO'
     env 'BAR'
+
+    // ...
 }
 ```
 
@@ -431,11 +513,15 @@ The `each` process input is deprecated. Use the `combine` or `cross` operator to
 
 The process `when` section is deprecated. Use conditional logic, such as an `if` statement or the `filter` operator, to control the process invocation in the calling workflow.
 
+**Process shell section**
+
+The process `shell` section is deprecated. Use the `script` block instead. The VS Code extension provides syntax highlighting and error checking to help distinguish between Nextflow variables and Bash variables.
+
 ### Configuration syntax
 
 See {ref}`config-syntax` for a comprehensive description of the configuration language.
 
-Currently, Nextflow parses config files as Groovy scripts, allowing the use of scripting constructs like variables, helper functions, and conditional logic for dynamic configuration. For example:
+Currently, Nextflow parses config files as Groovy scripts, allowing the use of scripting constructs like variables, helper functions, try-catch blocks, and conditional logic for dynamic configuration. For example:
 
 ```groovy
 def getHostname() {
@@ -464,7 +550,7 @@ includeConfig ({
         return 'large.config'
     else
         return '/dev/null'
-})()
+}())
 ```
 
 The include source is a closure that is immediately invoked. It includes a different config file based on the return value of the closure. Including `/dev/null` is equivalent to including nothing.
@@ -518,8 +604,8 @@ The following settings are available:
 `nextflow.java.home`
 : Specifies the folder path to the JDK. Use this setting if the extension cannot find Java automatically.
 
-`nextflow.suppressFutureWarnings`
-: Hide warnings for future changes, deprecations, and removals.
+`nextflow.paranoidWarnings`
+: Enable additional warnings for future deprecations, potential problems, and other discouraged patterns.
 
 ## Language server
 

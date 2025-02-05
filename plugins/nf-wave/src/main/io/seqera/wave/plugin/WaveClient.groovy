@@ -27,12 +27,14 @@ import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.function.Predicate
 
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
+import com.google.common.util.concurrent.RateLimiter
 import com.google.common.util.concurrent.UncheckedExecutionException
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -46,6 +48,7 @@ import groovy.json.JsonSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import io.seqera.util.trace.TraceUtils
 import io.seqera.wave.api.BuildStatusResponse
 import io.seqera.wave.api.ContainerStatus
 import io.seqera.wave.api.ContainerStatusResponse
@@ -104,7 +107,9 @@ class WaveClient {
 
     final private String endpoint
 
-    private Cache<String, Handle> cache
+    private Cache<String, SubmitContainerTokenResponse> cache
+
+    private Map<String,Handle> responses = new ConcurrentHashMap<>()
 
     private Session session
 
@@ -122,6 +127,8 @@ class WaveClient {
 
     final private URL s5cmdConfigUrl
 
+    final private RateLimiter limiter
+
     WaveClient(Session session) {
         this.session = session
         this.config = new WaveConfig(session.config.wave as Map ?: Collections.emptyMap(), SysEnv.get())
@@ -134,8 +141,9 @@ class WaveClient {
         log.debug "Wave config: $config"
         this.packer = new Packer().withPreserveTimestamp(config.preserveFileTimestamp())
         this.waveRegistry = new URI(endpoint).getAuthority()
+        this.limiter = RateLimiter.create( config.httpOpts().maxRate().rate  )
         // create cache
-        cache = CacheBuilder<String, Handle>
+        this.cache = CacheBuilder<String, Handle>
             .newBuilder()
             .expireAfterWrite(config.tokensCacheMaxDuration().toSeconds(), TimeUnit.SECONDS)
             .build()
@@ -219,7 +227,7 @@ class WaveClient {
                 fingerprint: assets.fingerprint(),
                 freeze: config.freezeMode(),
                 format: assets.singularity ? 'sif' : null,
-                dryRun: ContainerInspectMode.active(),
+                dryRun: ContainerInspectMode.dryRun(),
                 mirror: config.mirrorMode(),
                 scanMode: config.scanMode(),
                 scanLevels: config.scanAllowedLevels()
@@ -246,7 +254,7 @@ class WaveClient {
                 towerEndpoint: tower.endpoint,
                 workflowId: tower.workflowId,
                 freeze: config.freezeMode(),
-                dryRun: ContainerInspectMode.active(),
+                dryRun: ContainerInspectMode.dryRun(),
                 mirror: config.mirrorMode(),
                 scanMode: config.scanMode(),
                 scanLevels: config.scanAllowedLevels()
@@ -254,7 +262,20 @@ class WaveClient {
         return sendRequest(request)
     }
 
+    private void checkLimiter() {
+        final ts = System.currentTimeMillis()
+        try {
+            limiter.acquire()
+        } finally {
+            final delta = System.currentTimeMillis()-ts
+            if( delta>0 )
+                log.debug "Request limiter blocked ${Duration.ofMillis(delta)}"
+        }
+    }
+
+
     SubmitContainerTokenResponse sendRequest(SubmitContainerTokenRequest request) {
+        checkLimiter()
         return sendRequest0(request, 1)
     }
 
@@ -270,12 +291,13 @@ class WaveClient {
         request.towerAccessToken = accessToken
         request.towerRefreshToken = refreshToken
 
+        final trace = TraceUtils.rndTrace()
         final body = JsonOutput.toJson(request)
         final uri = URI.create("${endpoint}/v1alpha2/container")
         log.debug "Wave request: $uri; attempt=$attempt - request: $request"
         final req = HttpRequest.newBuilder()
                 .uri(uri)
-                .headers('Content-Type','application/json')
+                .headers('Content-Type','application/json', 'Traceparent', trace)
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build()
 
@@ -572,8 +594,12 @@ class WaveClient {
             final key = assets.fingerprint()
             log.trace "Wave fingerprint: $key; assets: $assets"
             // get from cache or submit a new request
-            final handle = cache.get(key, () -> new Handle(sendRequest(assets),Instant.now()) )
-            return new ContainerInfo(assets.containerImage, handle.response.targetImage, key)
+            final resp = cache.get(key, () -> {
+                final ret = sendRequest(assets);
+                responses.put(key,new Handle(ret,Instant.now()));
+                return ret
+            })
+            return new ContainerInfo(assets.containerImage, resp.targetImage, key)
         }
         catch ( UncheckedExecutionException e ) {
             throw e.cause
@@ -633,7 +659,7 @@ class WaveClient {
     }
 
     boolean isContainerReady(String key) {
-        final handle = cache.getIfPresent(key)
+        final handle = responses.get(key)
         if( !handle )
             throw new IllegalStateException("Unable to find any container with key: $key")
         final resp = handle.response

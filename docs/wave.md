@@ -90,6 +90,8 @@ conda.channels = 'conda-forge,bioconda'
 ```
 :::
 
+Packages from the [Python Package Index](https://pypi.org/) can also be added to a Conda `environment.yml` file. See {ref}`Conda and PyPI <conda-pypi>` for more information.
+
 (wave-singularity)=
 
 ### Build Singularity native images

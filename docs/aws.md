@@ -46,53 +46,54 @@ Minimal permissions policies to be attached to the AWS account used by Nextflow 
 - To use AWS Batch:
 
   ```json
-  "batch:DescribeJobQueues"
   "batch:CancelJob"
-  "batch:SubmitJob"
-  "batch:ListJobs"
   "batch:DescribeComputeEnvironments"
-  "batch:TerminateJob"
-  "batch:DescribeJobs"
-  "batch:RegisterJobDefinition"
   "batch:DescribeJobDefinitions"
+  "batch:DescribeJobQueues"
+  "batch:DescribeJobs"
+  "batch:ListJobs"
+  "batch:RegisterJobDefinition"
+  "batch:SubmitJob"
+  "batch:TagResource"
+  "batch:TerminateJob"
   ```
 
 - To view [EC2](https://aws.amazon.com/ec2/) instances:
 
   ```json
-  "ecs:DescribeTasks"
-  "ec2:DescribeInstances"
-  "ec2:DescribeInstanceTypes"
   "ec2:DescribeInstanceAttribute"
-  "ecs:DescribeContainerInstances"
+  "ec2:DescribeInstances"
   "ec2:DescribeInstanceStatus"
+  "ec2:DescribeInstanceTypes"
+  "ecs:DescribeContainerInstances"
+  "ecs:DescribeTasks"
   ```
 
 - To pull container images from [ECR](https://aws.amazon.com/ecr/) repositories:
 
   ```json
-  "ecr:GetAuthorizationToken"
   "ecr:BatchCheckLayerAvailability"
-  "ecr:GetDownloadUrlForLayer"
-  "ecr:GetRepositoryPolicy"
-  "ecr:DescribeRepositories"
-  "ecr:ListImages"
-  "ecr:DescribeImages"
   "ecr:BatchGetImage"
+  "ecr:DescribeImages"
+  "ecr:DescribeImageScanFindings"
+  "ecr:DescribeRepositories"
+  "ecr:GetAuthorizationToken"
+  "ecr:GetDownloadUrlForLayer"
   "ecr:GetLifecyclePolicy"
   "ecr:GetLifecyclePolicyPreview"
+  "ecr:GetRepositoryPolicy"
+  "ecr:ListImages"
   "ecr:ListTagsForResource"
-  "ecr:DescribeImageScanFindings"
   ```
 
 :::{note}
 If you are running Fargate or Fargate Spot, you may need the following policies in addition to the listed above:
   ```json
+  "ec2:DescribeSubnets"
   "ecs:CreateCluster"
   "ecs:DeleteCluster"
   "ecs:DescribeClusters"
   "ecs:ListClusters"
-  "ec2:DescribeSubnets"
   ```
 :::
 
@@ -538,7 +539,8 @@ See the AWS documentation for details how to create the required AWS Batch queue
 and the Batch Execution Role.
 
 :::{note}
-This feature requires the use {ref}`Wave <wave-page>` container provisioning service.
+Nextflow uses [s5cmd](https://github.com/peak/s5cmd) to download the task input data and upload the task outputs.
+To enable this capability, you need to enable the Wave service in the Nextflow configuration, as shown in the above example. See {ref}`Wave <wave-page>` documentation for more details.
 :::
 
 ## Advanced configuration
