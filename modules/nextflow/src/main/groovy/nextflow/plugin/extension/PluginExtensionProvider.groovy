@@ -65,8 +65,6 @@ class PluginExtensionProvider implements ExtensionProvider {
      */
     final private Map<String,PluginExtensionMethod> factoryExtensions = new HashMap<>()
 
-    private List<PluginExtensionPoint> channelExtensionPoints
-
     private Set<String> OPERATOR_NAMES
 
     static PluginExtensionProvider INSTANCE() {
@@ -287,6 +285,9 @@ class PluginExtensionProvider implements ExtensionProvider {
             def reference = factoryExtensions.get(name)
             def factory = (ChannelFactoryInstance)reference.target
             return factory.invokeExtensionMethod(reference.method, args)
+        }
+        else {
+            throw new MissingMethodException("Channel.${name}", Object.class, args)
         }
     }
 

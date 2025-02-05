@@ -31,6 +31,7 @@ import nextflow.container.ContainerBuilder
 import nextflow.container.DockerBuilder
 import nextflow.container.SingularityBuilder
 import nextflow.exception.ProcessException
+import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
@@ -235,7 +236,7 @@ class BashWrapperBuilder {
         // out eval
         for( Map.Entry<String,String> eval : outEvals ) {
             result << "#\n"
-            result <<"nxf_eval_cmd STDOUT STDERR ${eval.value}\n"
+            result <<"nxf_eval_cmd STDOUT STDERR bash -c \"${eval.value.replace('"','\\\"')}\"\n"
             result << 'status=$?\n'
             result << 'if [ $status -eq 0 ]; then\n'
             result << "  echo $eval.key=\"\$STDOUT\" >> ${TaskRun.CMD_ENV}\n"
@@ -307,6 +308,7 @@ class BashWrapperBuilder {
 
         final binding = new HashMap<String,String>(20)
         binding.header_script = headerScript
+        binding.task_metadata = getTaskMetadata()
         binding.task_name = name
         binding.helpers_script = getHelpersScript()
 
@@ -447,7 +449,9 @@ class BashWrapperBuilder {
                 }
                 return path
             }
-            catch (FileSystemException | SocketException | RuntimeException e) {
+            catch (Exception e) {
+                if( !isRetryable0(e) )
+                    throw e
                 final isLocalFS = path.getFileSystem()==FileSystems.default
                 // the retry logic is needed for non-local file system such as S3.
                 // when the file is local fail without retrying
@@ -459,6 +463,43 @@ class BashWrapperBuilder {
                 Thread.sleep(delay)
             }
         }
+    }
+
+    static protected boolean isRetryable0(Exception e) {
+        if( e instanceof FileSystemException )
+            return true
+        if( e instanceof SocketException )
+            return true
+        if( e instanceof RuntimeException )
+            return true
+        if( e.class.getSimpleName() == 'HttpResponseException' )
+            return true
+        return false
+    }
+
+    protected String getTaskMetadata() {
+        final lines = new StringBuilder()
+        lines << '### ---\n'
+        lines << "### name: '${bean.name}'\n"
+        if( bean.arrayIndexName ) {
+            lines << '### array:\n'
+            lines << "###   index-name: ${bean.arrayIndexName}\n"
+            lines << "###   index-start: ${bean.arrayIndexStart}\n"
+            lines << "###   work-dirs:\n"
+            for( Path it : bean.arrayWorkDirs )
+                lines << "###   - ${Escape.path(FilesEx.toUriString(it))}\n"
+        }
+
+        if( containerConfig?.isEnabled() )
+            lines << "### container: '${bean.containerImage}'\n"
+
+        if( outputFiles.size() > 0 ) {
+            lines << '### outputs:\n'
+            for( final output : bean.outputFiles )
+                lines << "### - '${output}'\n"
+        }
+
+        lines << '### ...\n'
     }
 
     protected String getHelpersScript() {
@@ -492,10 +533,13 @@ class BashWrapperBuilder {
     private String getCondaActivateSnippet() {
         if( !condaEnv )
             return null
-        def result = "# conda environment\n"
-        result += 'source $(conda info --json | awk \'/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }\')'
-        result += "/bin/activate ${Escape.path(condaEnv)}\n"
-        return result
+        final command = useMicromamba
+            ? 'eval "$(micromamba shell hook --shell bash)" && micromamba activate'
+            : 'source $(conda info --json | awk \'/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }\')/bin/activate'
+        return """\
+            # conda environment
+            ${command} ${Escape.path(condaEnv)}
+            """.stripIndent()
     }
 
     private String getSpackActivateSnippet() {
@@ -519,6 +563,14 @@ class BashWrapperBuilder {
         statsEnabled || fixOwnership()
     }
 
+    protected String shellPath() {
+        // keep the shell path as "/bin/bash" when a non-custom "shell" attribute is specified
+        // to not introduce unexpected changes due to the fact BASH is defined as "/bin/bash -eu" by default
+        return shell.is(BASH)
+            ? "/bin/bash"
+            : shell.join(' ')
+    }
+
     protected String getLaunchCommand(String interpreter, String env) {
         /*
         * process stats
@@ -530,7 +582,7 @@ class BashWrapperBuilder {
         final traceWrapper = isTraceRequired()
         if( traceWrapper ) {
             // executes the stub which in turn executes the target command
-            launcher = "/bin/bash ${fileStr(wrapperFile)} nxf_trace"
+            launcher = "${shellPath()} ${fileStr(wrapperFile)} nxf_trace"
         }
         else {
             launcher = "${interpreter} ${fileStr(scriptFile)}"
@@ -716,7 +768,7 @@ class BashWrapperBuilder {
         result += copyFileToWorkDir(TaskRun.CMD_ERRFILE) + ' || true' + ENDL
         if( statsEnabled )
             result += copyFileToWorkDir(TaskRun.CMD_TRACE) + ' || true' + ENDL
-        if(  outputEnvNames )
+        if( outputEnvNames || outputEvals )
             result += copyFileToWorkDir(TaskRun.CMD_ENV) + ' || true' + ENDL
         return result
     }

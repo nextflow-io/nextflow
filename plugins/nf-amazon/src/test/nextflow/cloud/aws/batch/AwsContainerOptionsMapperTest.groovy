@@ -94,7 +94,25 @@ class AwsContainerOptionsMapperTest extends Specification {
         def map = CmdLineHelper.parseGnuArgs('--shm-size 12048024')
         def properties = AwsContainerOptionsMapper.createContainerProperties(map)
         then:
-        properties.getLinuxParameters().getSharedMemorySize() == 12048024
+        properties.getLinuxParameters().getSharedMemorySize() == 11
+    }
+
+    def 'should set shared memory size with unit in MiB'() {
+
+        when:
+        def map = CmdLineHelper.parseGnuArgs('--shm-size 256m')
+        def properties = AwsContainerOptionsMapper.createContainerProperties(map)
+        then:
+        properties.getLinuxParameters().getSharedMemorySize() == 256
+    }
+
+    def 'should set shared memory size with unit in GiB'() {
+
+        when:
+        def map = CmdLineHelper.parseGnuArgs('--shm-size 1g')
+        def properties = AwsContainerOptionsMapper.createContainerProperties(map)
+        then:
+        properties.getLinuxParameters().getSharedMemorySize() == 1024
     }
 
     def 'should set memory swappiness'() {

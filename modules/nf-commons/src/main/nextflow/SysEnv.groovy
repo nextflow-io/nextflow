@@ -49,6 +49,11 @@ class SysEnv {
         return holder.containsKey(name) ? holder.get(name) : defValue
     }
 
+    static boolean getBool(String name, boolean defValue) {
+        final result = get(name,String.valueOf(defValue))
+        return Boolean.parseBoolean(result)
+    }
+
     static void push(Map<String,String> env) {
         history.push(holder.getTarget())
         holder.setTarget(env)

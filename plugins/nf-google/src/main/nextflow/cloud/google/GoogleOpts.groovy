@@ -102,6 +102,9 @@ class GoogleOpts {
         catch(FileNotFoundException e) {
             throw new AbortOperationException("Missing Google credentials file: $credsFilePath")
         }
+        catch (Exception e) {
+            throw new AbortOperationException("Invalid or corrupted Google credentials file: $credsFilePath", e)
+        }
     }
 
     static GoogleOpts create(Session session) {

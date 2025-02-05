@@ -249,4 +249,32 @@ class TaskHandlerTest extends Specification {
         TaskStatus.RUNNING  | false       | false            | true           | true            | false
         TaskStatus.COMPLETED| false       | false            | false          | false           | true
     }
+
+    @Unroll
+    def 'should include the tower prefix'() {
+        given:
+        def name = 'job_1'
+
+        expect:
+        TaskHandler.prependWorkflowPrefix(name, ENV) == EXPECTED
+
+        where:
+        ENV                         | EXPECTED
+        [:]                         | "job_1"
+        [TOWER_WORKFLOW_ID: '1234'] | "tw-1234-job_1"
+    }
+
+    def 'should not kill task twice'() {
+        given:
+        def handler = Spy(TaskHandler)
+        when:
+        handler.kill()
+        then:
+        1 * handler.killTask() >> {}
+
+        when:
+        handler.kill()
+        then:
+        0 * handler.killTask()
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022, Seqera Labs
+ * Copyright 2022-2025, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
 /**
  * Processor for Flux Framework executor
@@ -34,7 +35,7 @@ import nextflow.processor.TaskRun
 @CompileStatic
 class FluxExecutor extends AbstractGridExecutor {
 
-    static final private Pattern SUBMIT_REGEX = ~/(ƒ.+)/
+    static final private Pattern SUBMIT_REGEX = ~/((ƒ|f).+)/
 
     /**
      * Gets the directives to submit the specified task to the cluster for execution
@@ -60,7 +61,7 @@ class FluxExecutor extends AbstractGridExecutor {
     @Override
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
 
-        List<String> result = ['flux', 'mini', 'submit']
+        List<String> result = ['flux', 'submit']
         result << '--setattr=cwd=' + quote(task.workDir)
         result << '--job-name="' + getJobNameFor(task) + '"'
 
@@ -90,18 +91,25 @@ class FluxExecutor extends AbstractGridExecutor {
         }
 
         // Any extra cluster options the user wants!
-        // Options tokenized with ; akin to OarExecutor
-        if( task.config.clusterOptions ) {
+        addClusterOptionsDirective(task.config, result)
 
+        result << '/bin/bash' << scriptFile.getName()
+        return result
+    }
+
+    @Override
+    protected void addClusterOptionsDirective(TaskConfig config, List<String> result) {
+        final opts = config.getClusterOptions()
+        final str = opts instanceof Collection ? opts.join(' ') : opts?.toString()
+
+        if( str ) {
             // Split by space
-            for (String item : task.config.clusterOptions.toString().tokenize(' ')) {
+            for (String item : str.tokenize(' ')) {
                 if ( item ) {
                     result << item.stripIndent(true).trim()
                 }
             }
         }
-        result << '/bin/bash' << scriptFile.getName()
-        return result
     }
 
     /**

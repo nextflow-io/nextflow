@@ -4,12 +4,17 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.function.Predicate
 
+import com.azure.compute.batch.models.BatchPool
+import com.azure.compute.batch.models.ElevationLevel
+import com.azure.identity.ManagedIdentityCredential
 import com.google.common.hash.HashCode
-import com.microsoft.azure.batch.protocol.models.CloudPool
 import nextflow.Global
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.cloud.azure.config.AzConfig
+import nextflow.cloud.azure.config.AzManagedIdentityOpts
 import nextflow.cloud.azure.config.AzPoolOpts
+import nextflow.cloud.azure.config.AzStartTaskOpts
 import nextflow.file.FileSystemPathFactory
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
@@ -17,7 +22,6 @@ import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
-import org.joda.time.Period
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -27,6 +31,14 @@ import spock.lang.Unroll
 class AzBatchServiceTest extends Specification {
 
     static long _1GB = 1024 * 1024 * 1024
+
+    def setup() {
+        SysEnv.push([:])  // <-- clear the system host env
+    }
+
+    def cleanup() {
+        SysEnv.pop()      // <-- restore the system host env
+    }
 
     def 'should make job id'() {
         given:
@@ -121,12 +133,12 @@ class AzBatchServiceTest extends Specification {
         
         where:
         CPUS    | MEM       | VM                                            | EXPECTED
-        1       | '10 MB'   | [numberOfCores: 1, memoryInMb: 10]            | 0.0
-        2       | '10 MB'   | [numberOfCores: 1, memoryInMb: 10]            | null
-        1       | '10 GB'   | [numberOfCores: 1, memoryInMb: 10]            | null
-        1       | '10 MB'   | [numberOfCores: 2, memoryInMb: 10]            | 1.0
-        1       | '10 GB'   | [numberOfCores: 1, memoryInMb: 10]            | null
-        1       | '10 GB'   | [numberOfCores: 1, memoryInMb: 11 * 1024]     | 1.0
+        1       | '10 MB'   | [numberOfCores: 1, memoryInMB: 10]            | 0.0
+        2       | '10 MB'   | [numberOfCores: 1, memoryInMB: 10]            | null
+        1       | '10 GB'   | [numberOfCores: 1, memoryInMB: 10]            | null
+        1       | '10 MB'   | [numberOfCores: 2, memoryInMB: 10]            | 1.0
+        1       | '10 GB'   | [numberOfCores: 1, memoryInMB: 10]            | null
+        1       | '10 GB'   | [numberOfCores: 1, memoryInMB: 11 * 1024]     | 1.0
     }
 
     def 'should find best match for northeurope' () {
@@ -224,6 +236,86 @@ class AzBatchServiceTest extends Specification {
 
     }
 
+
+    def 'should configure default startTask' () {
+        given:
+        def CONFIG = [batch:[copyToolInstallMode: 'node']]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def svc = new AzBatchService(exec)
+
+        when:
+        def configuredStartTask = svc.createStartTask( new AzStartTaskOpts() )
+        then:
+        configuredStartTask.commandLine == 'bash -c "chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/"'
+        configuredStartTask.resourceFiles.size()==1
+        configuredStartTask.resourceFiles.first().filePath == 'azcopy'
+    }
+
+    def 'should configure custom startTask' () {
+        given:
+        def CONFIG = [batch:[copyToolInstallMode: 'node']]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def svc = new AzBatchService(exec)
+
+        when:
+        def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: 'echo hello-world') )
+        then:
+        configuredStartTask.commandLine == 'bash -c "chmod +x azcopy && mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/"; bash -c \'echo hello-world\''
+        and:
+        configuredStartTask.resourceFiles.size()==1
+        configuredStartTask.resourceFiles.first().filePath == 'azcopy'
+    }
+
+    def 'should configure not install AzCopy because copyToolInstallMode is off' () {
+        given:
+        def CONFIG = [batch:[copyToolInstallMode: 'off']]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def svc = new AzBatchService(exec)
+
+        when:
+        def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: 'echo hello-world') )
+        then:
+        configuredStartTask.commandLine == "bash -c 'echo hello-world'"
+        configuredStartTask.resourceFiles.isEmpty()
+    }
+
+    def 'should configure not install AzCopy because copyToolInstallMode is task and quote command' () {
+        given:
+        def CONFIG = [batch:[copyToolInstallMode: 'task']]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def svc = new AzBatchService(exec)
+
+        when:
+        def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(script: "echo 'hello-world'") )
+        then:
+        configuredStartTask.commandLine == "bash -c 'echo ''hello-world'''"
+        configuredStartTask.resourceFiles.isEmpty()
+    }
+
+    def 'should create null startTask because no options are enabled' () {
+        given:
+        def CONFIG = [batch:[copyToolInstallMode: 'off']]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def svc = new AzBatchService(exec)
+
+        when:
+        def configuredStartTask = svc.createStartTask( new AzStartTaskOpts() )
+        then:
+        configuredStartTask == null
+    }
+
+    def 'should configure privileged startTask' () {
+        given:
+        def CONFIG = [batch:[copyToolInstallMode: 'node']]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def svc = new AzBatchService(exec)
+        and:
+
+        when:
+        def configuredStartTask = svc.createStartTask( new AzStartTaskOpts(privileged: true) )
+        then:
+        configuredStartTask.userIdentity.autoUser.elevationLevel == ElevationLevel.ADMIN
+    }
 
     def 'should check scaling formula' () {
         given:
@@ -359,7 +451,7 @@ class AzBatchServiceTest extends Specification {
         then:
         1 * svc.guessBestVm(LOC, CPUS, MEM, TYPE) >> VM
         and:
-        spec.poolId == 'nf-pool-6e9cf97d3d846621464131d3842265ce-Standard_X1'
+        spec.poolId == 'nf-pool-289d374ac1622e709cf863bce2570cab-Standard_X1'
         spec.metadata == [foo: 'bar']
 
     }
@@ -470,7 +562,7 @@ class AzBatchServiceTest extends Specification {
         when:
         def result = svc.specFromPoolConfig(POOL_ID)
         then:
-        1 * svc.getPool(_) >> new CloudPool(vmSize: 'Standard_D2_v2')
+        1 * svc.getPool(_) >> new BatchPool(vmSize: 'Standard_D2_v2')
         and:        
         result.vmType.name == 'Standard_D2_v2'
         result.vmType.numberOfCores == 2
@@ -531,22 +623,28 @@ class AzBatchServiceTest extends Specification {
         1 * azure.resourceFileUrls(TASK, SAS) >> []
         1 * azure.outputFileUrls(TASK, SAS) >> []
         and:
-        result.id() == 'nf-01000000'
-        result.requiredSlots() == 4
+        result.id == 'nf-01000000'
+        result.requiredSlots == 4
         and:
-        result.commandLine() == "sh -c 'bash .command.run 2>&1 | tee .command.log'"
+        result.commandLine == "sh -c 'bash .command.run 2>&1 | tee .command.log'"
         and:
-        result.containerSettings().imageName() == 'ubuntu:latest'
-        result.containerSettings().containerRunOptions() == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro '
+        result.containerSettings.imageName == 'ubuntu:latest'
+        result.containerSettings.containerRunOptions == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro '
     }
 
     def 'should create task for submit with extra options' () {
         given:
         def POOL_ID = 'my-pool'
         def SAS = '123'
+
         def CONFIG = [storage: [sasToken: SAS, fileShares: [file1: [mountOptions: 'mountOptions1', mountPath: 'mountPath1']]]]
         def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
         AzBatchService azure = Spy(new AzBatchService(exec))
+        def session = Mock(Session) {
+            getConfig() >>[fusion:[enabled:false]]
+            statsEnabled >> true
+        }
+        Global.session = session
         and:
         def TASK = Mock(TaskRun) {
             getHash() >> HashCode.fromInt(2)
@@ -555,6 +653,7 @@ class AzBatchServiceTest extends Specification {
                 getContainerOptions() >> '-v /foo:/foo'
                 getTime() >> Duration.of('24 h')
             }
+
         }
         and:
         def SPEC = new AzVmPoolSpec(poolId: POOL_ID, vmType: Mock(AzVmType), opts: new AzPoolOpts([:]))
@@ -567,15 +666,15 @@ class AzBatchServiceTest extends Specification {
         1 * azure.resourceFileUrls(TASK, SAS) >> []
         1 * azure.outputFileUrls(TASK, SAS) >> []
         and:
-        result.id() == 'nf-02000000'
-        result.requiredSlots() == 4
+        result.id == 'nf-02000000'
+        result.requiredSlots == 4
         and:
-        result.commandLine() == "sh -c 'bash .command.run 2>&1 | tee .command.log'"
+        result.commandLine == "sh -c 'bash .command.run 2>&1 | tee .command.log'"
         and:
-        result.containerSettings().imageName() == 'ubuntu:latest'
-        result.containerSettings().containerRunOptions() == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro -v /mnt/batch/tasks/fsmounts/file1:mountPath1:rw -v /foo:/foo '
+        result.containerSettings.imageName == 'ubuntu:latest'
+        result.containerSettings.containerRunOptions == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro -v /mnt/batch/tasks/fsmounts/file1:mountPath1:rw -v /foo:/foo '
         and:
-        result.constraints().maxWallClockTime() == new Period( TASK.config.time.toMillis() )
+        Duration.of(result.constraints.maxWallClockTime.toMillis()) == TASK.config.time
     }
 
     def 'should create task for submit with fusion' () {
@@ -610,12 +709,34 @@ class AzBatchServiceTest extends Specification {
         1 * azure.resourceFileUrls(TASK, SAS) >> []
         1 * azure.outputFileUrls(TASK, SAS) >> []
         and:
-        result.id() == 'nf-01000000'
-        result.requiredSlots() == 1
+        result.id == 'nf-01000000'
+        result.requiredSlots == 1
         and:
-        result.commandLine() == "/usr/bin/fusion bash /fusion/az/foo/work/dir/.command.run"
+        result.commandLine == "/usr/bin/fusion bash /fusion/az/foo/work/dir/.command.run"
         and:
-        result.containerSettings().imageName() == 'ubuntu:latest'
-        result.containerSettings().containerRunOptions() == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro --privileged -e FUSION_WORK=/fusion/az/foo/work/dir -e FUSION_TAGS=[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true) -e AZURE_STORAGE_ACCOUNT=my-account -e AZURE_STORAGE_SAS_TOKEN=1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890 '
+        result.containerSettings.imageName == 'ubuntu:latest'
+        result.containerSettings.containerRunOptions == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro --privileged -e FUSION_WORK=/fusion/az/foo/work/dir -e FUSION_TAGS=[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true) -e AZURE_STORAGE_ACCOUNT=my-account -e AZURE_STORAGE_SAS_TOKEN=1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890 '
     }
+
+    @Unroll
+    def 'should create user-assigned managed identity credentials token' () {
+        given:
+        def config = Mock(AzConfig)
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        AzBatchService service = Spy(new AzBatchService(exec))
+
+        when:
+        def token = service.createBatchCredentialsWithManagedIdentity()
+        then:
+        config.managedIdentity() >> { Mock(AzManagedIdentityOpts) }
+        then:
+        token instanceof ManagedIdentityCredential
+        (token as ManagedIdentityCredential).clientId == EXPECTED
+
+        where:
+        CONFIG                                          | EXPECTED
+        [:]                                             | null
+        [managedIdentity: [clientId: 'client-123']]     | 'client-123'
+    }
+
 }

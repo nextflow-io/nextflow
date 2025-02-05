@@ -1,8 +1,8 @@
 (metrics-page)=
 
-# Metrics
+# Understanding task resource metrics
 
-This section details how the resource usage metrics from the {ref}`Execution report <execution-report>` are computed.
+This tutorial explains how the resource usage metrics from the {ref}`Execution report <execution-report>` are computed.
 
 ## CPU Usage
 
@@ -15,12 +15,13 @@ Let's illustrate how this plot behaves with several examples.
 
 In the first example, let's consider the simple use case in which a process performs one task of pure computation using one CPU. Then, you expect the `Raw Usage` tab to report 100%. If the task is distributed over, 2, 3, 4, `etc.` CPUs, then the `Raw Usage` will be 200%, 300%, 400%, `etc.` respectively. The `% Allocated` tab just rescales the raw value usage with respect to the number of CPUs set with the `cpus` directive (if not set with the directive, the number of CPUs is set to 1, thus showing the same values as in the `Raw Usage` tab). Using the program [stress](https://people.seas.harvard.edu/~apw/stress/) as follows would report 100% in the `Raw Usage` tab and 50% in the `% Allocated` tab since the process asked twice the number of CPUs needed by the process:
 
-```groovy
+```nextflow
 #!/usr/bin/env nextflow
 
 process CpuUsageEx1 {
   cpus 2
 
+  script:
   """
   stress -c 1 -t 10 # compute square-root of random numbers during 10s using 1 CPU
   """
@@ -29,12 +30,13 @@ process CpuUsageEx1 {
 
 In the second example, some time will be spent performing pure computation and some time just waiting. Using the program [stress](https://people.seas.harvard.edu/~apw/stress/) and `sleep` as follows would report 75% in the `Raw Usage` tab:
 
-```groovy
+```nextflow
 #!/usr/bin/env nextflow
 
 process CpuUsageEx2 {
   cpus 1
 
+  script:
   """
   stress -c 1 -t 10 # compute square-root of random numbers during 10s using 1 CPU
   stress -c 1 -t 5 # compute square-root of random numbers during 5s using 1 CPU
@@ -51,12 +53,13 @@ $$
 
 The third example is similar to the second one except that the pure computation stage is performed in a single step forked on 2 CPUs:
 
-```groovy
+```nextflow
 #!/usr/bin/env nextflow
 
 process CpuUsageEx3 {
   cpus 2
 
+  script:
   """
   stress -c 2 -t 10 # compute square-root of random numbers during 10s using 2 CPUs
   sleep 10 # use no CPU during 10s
@@ -226,12 +229,13 @@ int main(int argc, char **argv) {
 
 The first and second programs are executed in `foo` and `bar` processes respectively as follows:
 
-```groovy
+```nextflow
 #!/usr/bin/env nextflow
 
 process foo {
     memory '1.5 GB'
 
+    script:
     """
     memory_vmem_1GiB_ram_0Gib
     """
@@ -240,6 +244,7 @@ process foo {
 process bar {
     memory '1.5 GB'
 
+    script:
     """
     memory_vmem_1GiB_ram_1Gib
     """
@@ -276,7 +281,7 @@ The plot has two tabs the job duration (a.k.a. elapsed real time, real time or w
 
 The plot has two tabs showing how many data were read and/or written each process. For example, the following processes read and write 1GB and 256MB of data respectively:
 
-```groovy
+```nextflow
 #!/usr/bin/env nextflow
 
 process io_read_write_1G {

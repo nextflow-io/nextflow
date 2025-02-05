@@ -17,6 +17,7 @@
 
 package nextflow.executor.local
 
+import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.Callable
 import java.util.concurrent.Future
 
@@ -91,11 +92,15 @@ class NativeTaskHandler extends TaskHandler {
     boolean checkIfCompleted() {
         if( isRunning() && result.isDone() ) {
             status = TaskStatus.COMPLETED
-            if( result.get() instanceof Throwable ) {
-                task.error = (Throwable)result.get()
+            final ret = result.get()
+            if( ret instanceof InvocationTargetException ) {
+                task.error = ret.cause
+            }
+            else if( ret instanceof Throwable ) {
+                task.error = (Throwable)ret
             }
             else {
-                task.stdout = result.get()
+                task.stdout = ret
             }
             return true
         }
@@ -103,7 +108,7 @@ class NativeTaskHandler extends TaskHandler {
     }
 
     @Override
-    void kill() {
+    protected void killTask() {
         if( result ) result.cancel(true)
     }
 

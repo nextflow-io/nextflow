@@ -1163,6 +1163,31 @@ class ScriptIncludesTest extends Dsl2Spec {
         def e = thrown(IllegalStateException)
         e.message == "Include statement is not allowed within a workflow definition"
 
+    }
 
+    def 'should should allow invoking function passing gstring' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def MODULE = folder.resolve('module.nf')
+
+        MODULE.text = '''
+        def alpha(String str) {
+            return str.reverse()
+        }   
+        '''
+
+        when:
+        def SCRIPT = """
+        include { alpha } from "$MODULE"
+        
+        def x = "world"
+        def y = "Hello \$x"
+        
+        return alpha(y)
+        """
+        def runner = new MockScriptRunner()
+        def result = runner.setScript(SCRIPT).execute()
+        then:
+        result == 'dlrow olleH'
     }
 }

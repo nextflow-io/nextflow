@@ -1,10 +1,10 @@
 process myTask {
     output:
-    env FOO
+    env 'FOO'
 
     script:
     '''
-    FOO=$(ls -a1)
+    FOO=$(seq 5)
     '''
 }
 
