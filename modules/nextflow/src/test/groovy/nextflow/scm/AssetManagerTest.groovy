@@ -778,7 +778,19 @@ class AssetManagerTest extends Specification {
         def init = Git.init()
         init.setInitialBranch('master')
         def repo = init.setDirectory(mainDir).call()
-        mainDir.resolve('.git/config').text = GIT_CONFIG_TEXT
+
+        // Set up Git config with remote URL
+        mainDir.resolve('.git/config').text = """[core]
+        repositoryformatversion = 0
+        filemode = true
+        bare = false
+        logallrefupdates = true
+[remote "origin"]
+        url = https://github.com/nextflow-io/hello.git
+        fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "master"]
+        remote = origin
+        merge = refs/heads/master"""
 
         // Create and add a submodule
         def submoduleDir = dir.resolve('foo/submodule').toFile()
@@ -824,6 +836,20 @@ class AssetManagerTest extends Specification {
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         dir.resolve('foo/bar').mkdirs()
         def mainDir = dir.resolve('foo/bar').toFile()
+
+        // Set up Git config with non-existent repository
+        mainDir.resolve('.git').mkdirs()
+        mainDir.resolve('.git/config').text = """[core]
+        repositoryformatversion = 0
+        filemode = true
+        bare = false
+        logallrefupdates = true
+[remote "origin"]
+        url = https://github.com/nextflow-io/non-existent-repo.git
+        fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "master"]
+        remote = origin
+        merge = refs/heads/master"""
 
         when:
         def holder = new AssetManager()
