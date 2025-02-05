@@ -1,5 +1,14 @@
 package io.seqera.tower.plugin
 
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+import java.util.concurrent.Executors
+import java.util.function.Predicate
+
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import com.google.common.util.concurrent.UncheckedExecutionException
@@ -14,8 +23,9 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.tower.plugin.exception.BadResponseException
 import io.seqera.tower.plugin.exception.UnauthorizedException
-import io.seqera.tower.plugin.exchange.LicenseTokenRequest
-import io.seqera.tower.plugin.exchange.LicenseTokenResponse
+import io.seqera.tower.plugin.exchange.GetLicenseTokenRequest
+import io.seqera.tower.plugin.exchange.GetLicenseTokenResponse
+import nextflow.util.GsonHelper
 import io.seqera.util.trace.TraceUtils
 import nextflow.Global
 import nextflow.Session
@@ -26,15 +36,6 @@ import nextflow.fusion.FusionEnv
 import nextflow.platform.PlatformHelper
 import nextflow.util.Threads
 import org.pf4j.Extension
-
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
-import java.time.Duration
-import java.time.temporal.ChronoUnit
-import java.util.concurrent.Executors
-import java.util.function.Predicate
-
 /**
  * Environment provider for Platform-specific environment variables.
  *
@@ -70,7 +71,7 @@ class TowerFusionEnv implements FusionEnv {
     private Duration tokenTTL = Duration.of(1, ChronoUnit.HOURS)
 
     // Cache used for storing license tokens
-    private Cache<String, LicenseTokenResponse> tokenCache = CacheBuilder.newBuilder()
+    private Cache<String, GetLicenseTokenResponse> tokenCache = CacheBuilder.newBuilder()
         .expireAfterWrite(tokenTTL)
         .build()
 
@@ -131,17 +132,18 @@ class TowerFusionEnv implements FusionEnv {
             throw new AbortOperationException("Missing Platform access token -- Make sure there's a variable TOWER_ACCESS_TOKEN in your environment")
         }
 
-        final req = new LicenseTokenRequest(product: product, version: version)
+        final req = new GetLicenseTokenRequest(product: product, version: version)
 
         try {
             final key = '${product}-${version}'
+            final now = Instant.now()
             int i=0
             while( i++<2 ) {
                 final resp = tokenCache.get(key, () -> sendRequest(req))
                 // Check if the cached response has expired
                 // It's needed because the JWT token TTL in the cache (1 hour) and its expiration date (e.g. 1 day?) are not sync'ed,
                 // so it could happen that we get a token from the cache which was valid at the time of insertion but is now expired.
-                if( resp.expirationDate.before(new Date()) ) {
+                if( resp.expiresAt.isBefore(now) ) {
                     log.debug "Cached token already expired; refreshing"
                     tokenCache.invalidate(key)
                 }
@@ -227,45 +229,42 @@ class TowerFusionEnv implements FusionEnv {
     }
 
     /**
-     * Create a {@link HttpRequest} representing a {@link LicenseTokenRequest} object
+     * Create a {@link HttpRequest} representing a {@link GetLicenseTokenRequest} object
      *
      * @param req The LicenseTokenRequest object
      * @return The resulting HttpRequest object
      */
-    private HttpRequest makeHttpRequest(LicenseTokenRequest req) {
+    private HttpRequest makeHttpRequest(GetLicenseTokenRequest req) {
+        final body = HttpRequest.BodyPublishers.ofString( GsonHelper.toJson(req) )
         return HttpRequest.newBuilder()
             .uri(URI.create("${endpoint}/${LICENSE_TOKEN_PATH}").normalize())
             .header('Content-Type', 'application/json')
             .header('Traceparent', TraceUtils.rndTrace())
             .header('Authorization', "Bearer ${accessToken}")
-            .POST(
-                HttpRequest.BodyPublishers.ofString(
-                    serializeToJson(req)
-                )
-            )
+            .POST(body)
             .build()
     }
 
     /**
-     * Serialize a {@link LicenseTokenRequest} object into a JSON string
+     * Serialize a {@link GetLicenseTokenRequest} object into a JSON string
      *
      * @param req The LicenseTokenRequest object
      * @return The resulting JSON string
      */
-    private static String serializeToJson(LicenseTokenRequest req) {
+    private static String serializeToJson(GetLicenseTokenRequest req) {
         return new Gson().toJson(req)
     }
 
     /**
-     * Parse a JSON string into a {@link LicenseTokenResponse} object
+     * Parse a JSON string into a {@link GetLicenseTokenResponse} object
      *
-     * @param resp The String containing the JSON representation of the LicenseTokenResponse object
+     * @param json The String containing the JSON representation of the LicenseTokenResponse object
      * @return The resulting LicenseTokenResponse object
      *
      * @throws JsonSyntaxException if the JSON string is not well-formed
      */
-    private static LicenseTokenResponse parseLicenseTokenResponse(String resp) throws JsonSyntaxException {
-        return new Gson().fromJson(resp, LicenseTokenResponse.class)
+    protected static GetLicenseTokenResponse parseLicenseTokenResponse(String json) throws JsonSyntaxException {
+        return GsonHelper.fromJson(json, GetLicenseTokenResponse.class)
     }
 
     /**
@@ -279,7 +278,7 @@ class TowerFusionEnv implements FusionEnv {
      * @throws BadResponseException if the response is not as expected
      * @throws IllegalStateException if the request cannot be sent
      */
-    private LicenseTokenResponse sendRequest(LicenseTokenRequest req) throws AbortOperationException, UnauthorizedException, BadResponseException, IllegalStateException {
+    private GetLicenseTokenResponse sendRequest(GetLicenseTokenRequest req) throws AbortOperationException, UnauthorizedException, BadResponseException, IllegalStateException {
 
         final httpReq = makeHttpRequest(req)
 

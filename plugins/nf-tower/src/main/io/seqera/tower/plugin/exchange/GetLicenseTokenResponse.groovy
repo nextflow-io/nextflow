@@ -1,5 +1,7 @@
 package io.seqera.tower.plugin.exchange
 
+import java.time.Instant
+
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
 
@@ -10,14 +12,14 @@ import groovy.transform.ToString
  */
 @CompileStatic
 @ToString(includeNames = true, includePackage = false)
-class LicenseTokenResponse {
+class GetLicenseTokenResponse {
     /**
      * The signed JWT token
      */
     String signedToken
 
     /**
-     * The expiration date of the token
+     * The expiration timestamp of the token
      */
-    Date expirationDate
+    Instant expiresAt
 }

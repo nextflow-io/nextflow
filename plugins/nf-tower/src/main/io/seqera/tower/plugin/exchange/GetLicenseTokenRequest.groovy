@@ -12,7 +12,7 @@ import groovy.transform.ToString
 @EqualsAndHashCode
 @ToString(includeNames = true, includePackage = false)
 @CompileStatic
-class LicenseTokenRequest {
+class GetLicenseTokenRequest {
 
     /** The product code */
     String product
