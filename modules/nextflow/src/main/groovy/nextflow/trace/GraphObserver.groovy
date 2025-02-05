@@ -16,6 +16,7 @@
 
 package nextflow.trace
 
+import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.transform.PackageScope
@@ -81,6 +82,12 @@ class GraphObserver implements TraceObserver {
     void onFlowComplete() {
         // -- normalise the DAG
         dag.normalize()
+
+        // -- make sure parent path exists
+        final parent = file.getParent()
+        if( parent )
+            Files.createDirectories(parent)
+
         // -- render it to a file
         createRender().renderDocument(dag,file)
     }
