@@ -455,11 +455,17 @@ class AssetManagerTest extends Specification {
 
     @Tag("git")
     @Unroll
-    def 'should parse Git config and return remote #configType'() {
+    def "should parse Git config for #testCase"() {
         given:
         def dir = tempDir.root
-        dir.resolve('.git').mkdir()
+        // Initialize git repo with proper configuration
+        def init = Git.init()
+        init.setInitialBranch('master')
+        def repo = init.setDirectory(dir.toFile()).call()
         dir.resolve('.git/config').text = configText
+        repo.add().addFilepattern('.').call()
+        repo.commit().setSign(false).setAll(true).setMessage('First commit').call()
+        repo.close()
 
         when:
         def manager = new AssetManager().setLocalPath(dir.toFile())
@@ -468,9 +474,32 @@ class AssetManagerTest extends Specification {
         manager.getGitConfigRemoteUrl() == expectedUrl
 
         where:
-        configType   | configText      | expectedUrl
-        'simple'     | GIT_CONFIG_TEXT | 'https://github.com/nextflow-io/nextflow.git'
-        'long'       | GIT_CONFIG_LONG | 'git@github.com:nextflow-io/nextflow.git'
+        testCase                        | configText                | expectedUrl
+        'simple origin URL'             | GIT_CONFIG_TEXT           | 'https://github.com/nextflow-io/nextflow.git'
+        'SSH origin URL'                | GIT_CONFIG_LONG           | 'git@github.com:nextflow-io/nextflow.git'
+        'multiple remotes'             | '''
+            [remote "origin"]
+                url = https://github.com/foo/bar.git
+            [remote "upstream"]
+                url = https://git.example.com/group/project.git
+            [branch "master"]
+                remote = origin
+                merge = refs/heads/master
+        '''.stripIndent()               | 'https://github.com/foo/bar.git'
+        'non-default branch'            | '''
+            [remote "origin"]
+                url = https://gitlab.com/user/repo.git
+            [branch "dev"]
+                remote = origin
+                merge = refs/heads/dev
+        '''.stripIndent()               | 'https://gitlab.com/user/repo.git'
+        'custom default branch'         | '''
+            [remote "origin"]
+                url = https://github.com/org/repo.git
+            [branch "main"]
+                remote = origin
+                merge = refs/heads/main
+        '''.stripIndent()               | 'https://github.com/org/repo.git'
     }
 
     @Tag("script")
