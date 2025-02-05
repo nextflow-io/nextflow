@@ -46,6 +46,8 @@ class ConfigParserImpl implements ConfigParser {
 
     private boolean renderClosureAsString = false
 
+    private boolean strict = true
+
     private boolean stripSecrets
 
     private List<String> appliedProfiles
@@ -79,7 +81,7 @@ class ConfigParserImpl implements ConfigParser {
 
     @Override
     ConfigParserImpl setStrict(boolean value) {
-        // ignore
+        this.strict = value
         return this
     }
 

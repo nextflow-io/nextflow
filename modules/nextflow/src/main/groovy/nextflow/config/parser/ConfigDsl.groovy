@@ -41,6 +41,8 @@ class ConfigDsl extends Script {
 
     private boolean renderClosureAsString
 
+    private boolean strict
+
     private Path configPath
 
     private Map target = [:]
@@ -51,6 +53,10 @@ class ConfigDsl extends Script {
 
     void setRenderClosureAsString( boolean value ) {
         this.renderClosureAsString = value
+    }
+
+    void setStrict( boolean value ) {
+        this.strict = value
     }
 
     void setConfigPath(Path path) {
@@ -70,7 +76,15 @@ class ConfigDsl extends Script {
         if( name == 'params' )
             return target.params
 
-        return super.getProperty(name)
+        try {
+            return super.getProperty(name)
+        }
+        catch( MissingPropertyException e ) {
+            if( strict )
+                throw e
+            else
+                return null
+        }
     }
 
     void append(List<String> names, Object right) {
@@ -133,6 +147,7 @@ class ConfigDsl extends Script {
         final config = new ConfigParserImpl()
                 .setIgnoreIncludes(ignoreIncludes)
                 .setRenderClosureAsString(renderClosureAsString)
+                .setStrict(strict)
                 .setBinding(binding.getVariables())
                 .parse(configText, includePath)
 
