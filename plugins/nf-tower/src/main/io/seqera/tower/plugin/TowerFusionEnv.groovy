@@ -80,13 +80,18 @@ class TowerFusionEnv implements FusionEnv {
     // Platform access token to use for requests
     private String accessToken
 
-    protected void init() {
+    TowerFusionEnv() {
         final config = PlatformHelper.config()
         final env = SysEnv.get()
         this.endpoint = PlatformHelper.getEndpoint(config, env)
         if( !endpoint )
             throw new IllegalArgumentException("Missing Seqera Platform endpoint")
         this.accessToken = PlatformHelper.getAccessToken(config, env)
+    }
+
+    protected void validateConfig() {
+        if( !endpoint )
+            throw new IllegalArgumentException("Missing Seqera Platform endpoint")
         if( !accessToken )
             throw new IllegalArgumentException("Missing Seqera Platform access token")
         final client = TowerFactory.client()
@@ -115,7 +120,7 @@ class TowerFusionEnv implements FusionEnv {
     }
 
     protected Map<String,String> getEnvironment0(String scheme, FusionConfig config) {
-        init()
+        validateConfig()
         final product = config.sku()
         final version = config.version()
         final token = getLicenseToken(product, version)

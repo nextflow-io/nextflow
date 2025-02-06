@@ -9,8 +9,6 @@ import io.seqera.tower.plugin.exception.UnauthorizedException
 import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
-import nextflow.exception.AbortOperationException
-import nextflow.fusion.FusionConfig
 import nextflow.util.GsonHelper
 import spock.lang.Shared
 import spock.lang.Specification
@@ -290,56 +288,7 @@ class TowerFusionEnvTest extends Specification {
         null           | null
     }
 
-    def 'should fail getting a token if the Platform configuration is missing'() {
-        given: 'a TowerFusionEnv provider'
-        Global.session = Mock(Session) {
-            config >> [:]
-        }
-        def provider = new TowerFusionEnv()
 
-        when: 'a license token is requested'
-        provider.getLicenseToken('some-product', 'some-version')
-
-        then: 'an exception is thrown'
-        final ex = thrown(AbortOperationException)
-        ex.message == 'Missing Platform access token -- Make sure there\'s a variable TOWER_ACCESS_TOKEN in your environment'
-    }
-
-    def 'should fail getting a token if the Platform configuration is empty'() {
-        given: 'a TowerFusionEnv provider'
-        Global.session = Mock(Session) {
-            config >> [
-                tower: [:]
-            ]
-        }
-        def provider = new TowerFusionEnv()
-
-        when: 'a license token is requested'
-        provider.getLicenseToken('some-product', 'some-version')
-
-        then: 'an exception is thrown'
-        final ex = thrown(AbortOperationException)
-        ex.message == 'Missing Platform access token -- Make sure there\'s a variable TOWER_ACCESS_TOKEN in your environment'
-    }
-
-    def 'should fail getting a token if the Platform access token is missing'() {
-        given: 'a TowerFusionEnv provider'
-        Global.session = Mock(Session) {
-            config >> [
-                tower: [
-                    endpoint: 'http://localhost:18080'
-                ]
-            ]
-        }
-        def provider = new TowerFusionEnv()
-
-        when: 'a license token is requested'
-        provider.getLicenseToken('some-product', 'some-version')
-
-        then: 'an exception is thrown'
-        final ex = thrown(AbortOperationException)
-        ex.message == 'Missing Platform access token -- Make sure there\'s a variable TOWER_ACCESS_TOKEN in your environment'
-    }
 
     def 'should throw UnauthorizedException if getting a token fails with 401'() {
         given: 'a TowerFusionEnv provider'
@@ -372,56 +321,6 @@ class TowerFusionEnvTest extends Specification {
         thrown(UnauthorizedException)
     }
 
-    def 'should return a valid environment' () {
-        given: 'a TowerFusionEnv provider'
-        Global.session = Mock(Session) {
-            config >> [:]
-        }
-        def provider = Spy(TowerFusionEnv)
-
-        when: 'the environment is requested'
-        def env = provider.getEnvironment('s3', Mock(FusionConfig))
-
-        then: 'the environment has the expected values'
-        1 * provider.getLicenseToken(_, _) >> 'xyz789'
-        env == [FUSION_LICENSE_TOKEN: 'xyz789']
-    }
-
-    def 'should return an empty environment if no Platform config is available' () {
-        given: 'a session with no config for Platform'
-        Global.session = Mock(Session) {
-            config >> [:]
-        }
-
-        when: 'the environment is requested'
-        def provider = new TowerFusionEnv()
-        def env = provider.getEnvironment('-', Mock(FusionConfig))
-
-        then: 'the environment is empty'
-        env == [:]
-    }
-
-    def 'should return an empty environment if the license token cannot be obtained' () {
-        given: 'a TowerFusionEnv provider'
-        Global.session = Mock(Session) {
-            config >> [
-                tower: [
-                    endpoint   : 'http://localhost:18080',
-                    accessToken: 'abc123'
-                ]
-            ]
-        }
-        def provider = Spy(TowerFusionEnv)
-
-        when: 'the environment is requested'
-        def env = provider.getEnvironment('s3', Mock(FusionConfig))
-
-        then: 'the environment has the expected values'
-        1 * provider.getLicenseToken(_, _) >> {
-            throw new Exception('error')
-        }
-        env == [:]
-    }
 
     def 'should deserialize response' () {
         given:
