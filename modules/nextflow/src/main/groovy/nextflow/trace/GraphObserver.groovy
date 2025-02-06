@@ -84,9 +84,7 @@ class GraphObserver implements TraceObserver {
         dag.normalize()
 
         // -- make sure parent path exists
-        final parent = file.getParent()
-        if( parent )
-            Files.createDirectories(parent)
+        file.parent?.mkdirs()
 
         // -- render it to a file
         createRender().renderDocument(dag,file)
