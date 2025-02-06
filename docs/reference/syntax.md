@@ -795,6 +795,9 @@ printf 'Hello %s!\n', 'World'
 
 // positional and named args
 file 'hello.txt', checkIfExists: true
+
+// named args
+resourceLabels group: 'my-group', user: 'me'
 ```
 
 If the last argument is a closure, it can be specified outside of the parentheses:
