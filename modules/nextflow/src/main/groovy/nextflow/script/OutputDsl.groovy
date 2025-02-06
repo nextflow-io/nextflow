@@ -160,7 +160,7 @@ class OutputDsl {
 
         void path(Closure value) {
             setOption('path', '.')
-            setOption('dynamicPath', value)
+            setOption('pathResolver', value)
         }
 
         void storageClass(String value) {
