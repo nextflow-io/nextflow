@@ -14,25 +14,20 @@
  * limitations under the License.
  */
 
-package nextflow.config
+package nextflow.config.parser;
 
-import groovy.transform.CompileStatic
-import groovy.transform.EqualsAndHashCode
-/**
- * Placeholder class that replaces closure definitions in the nextflow configuration
- * file in order to print the closure source text
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
- */
-@EqualsAndHashCode
-@CompileStatic
-class ConfigClosurePlaceholder {
+import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.control.CompilePhase;
+import org.codehaus.groovy.control.SourceUnit;
+import org.codehaus.groovy.transform.ASTTransformation;
+import org.codehaus.groovy.transform.GroovyASTTransformation;
 
-    private String str
+@GroovyASTTransformation(phase = CompilePhase.CONVERSION)
+class ConfigToGroovyXformImpl implements ASTTransformation {
 
-    ConfigClosurePlaceholder(String str) {
-        this.str = str
+    @Override
+    public void visit(ASTNode[] astNodes, SourceUnit sourceUnit) {
+        new ConfigToGroovyVisitor(sourceUnit).visit();
     }
 
-    @Override String toString() { str }
 }

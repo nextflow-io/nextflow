@@ -13,26 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package nextflow.config
+package nextflow.config.parser.legacy
 
 import groovy.transform.CompileStatic
-import groovy.transform.EqualsAndHashCode
+
 /**
- * Placeholder class that replaces closure definitions in the nextflow configuration
- * file in order to print the closure source text
+ * Model a mini-dsl for plugins configuration
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@EqualsAndHashCode
 @CompileStatic
-class ConfigClosurePlaceholder {
+class PluginsDsl {
 
-    private String str
+    private Set<String> plugins = []
 
-    ConfigClosurePlaceholder(String str) {
-        this.str = str
+    Set<String> getPlugins() { plugins }
+
+    void id( String plg ) {
+        if( !plg )
+            throw new IllegalArgumentException("Plugin id cannot be empty or null")
+        plugins << plg
     }
 
-    @Override String toString() { str }
 }

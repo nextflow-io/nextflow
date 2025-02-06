@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.config
+package nextflow.config.parser.legacy
 
 import java.lang.annotation.ElementType
 import java.lang.annotation.Retention
