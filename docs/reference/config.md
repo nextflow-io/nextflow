@@ -695,7 +695,7 @@ The following settings are available:
   :::
 : Max delay when retrying failed job submissions (default: `30s`). Used only by grid executors.
 
-`executor.retry.reason`
+`executor.submit.retry.reason`
 : :::{versionadded} 22.03.0-edge
   :::
 : Regex pattern that when verified cause a failed submit operation to be re-tried (default: `Socket timed out`). Used only by grid executors.
