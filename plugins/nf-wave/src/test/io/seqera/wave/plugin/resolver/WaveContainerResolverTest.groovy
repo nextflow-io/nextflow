@@ -21,6 +21,7 @@ import io.seqera.wave.plugin.WaveClient
 import io.seqera.wave.plugin.config.WaveConfig
 import nextflow.container.ContainerConfig
 import nextflow.container.resolver.ContainerInfo
+import nextflow.container.resolver.ContainerMeta
 import nextflow.container.resolver.DefaultContainerResolver
 import nextflow.executor.Executor
 import nextflow.processor.TaskProcessor
@@ -84,4 +85,21 @@ class WaveContainerResolverTest extends Specification {
         result == ORAS_CONTAINER
     }
 
+    def 'should return container meta' () {
+        given:
+        def containerKey = 'abc'
+        def client = Mock(WaveClient)
+        def resolver = Spy(new WaveContainerResolver())
+        def meta = Mock(ContainerMeta)
+
+        when:
+        def result = resolver.getContainerMeta(containerKey)
+        then:
+        resolver.client()>>client
+        and:
+        client.enabled()>>true
+        client.getContainerMeta(containerKey)>>meta
+        and:
+        result == meta
+    }
 }

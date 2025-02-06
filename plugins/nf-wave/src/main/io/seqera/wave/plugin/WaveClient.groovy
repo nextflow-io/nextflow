@@ -62,6 +62,7 @@ import nextflow.Session
 import nextflow.SysEnv
 import nextflow.container.inspect.ContainerInspectMode
 import nextflow.container.resolver.ContainerInfo
+import nextflow.container.resolver.ContainerMeta
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.fusion.FusionConfig
 import nextflow.processor.Architecture
@@ -672,6 +673,22 @@ class WaveClient {
             return checkBuildCompletion(handle)
         else
             return true
+    }
+
+    ContainerMeta getContainerMeta(String key) {
+        final handle = responses.get(key)
+        if( !handle )
+            return null
+        final result = new ContainerMeta()
+        result.requestId = handle.response.requestId
+        result.sourceImage = handle.response.containerImage
+        result.targetImage = handle.response.targetImage
+        result.buildId = handle.response.buildId
+        result.scanId = handle.response.scanId
+        result.cached = handle.response.cached
+        result.freeze = handle.response.freeze
+        result.mirror = handle.response.mirror
+        return result
     }
 
     protected static int randomRange(int min, int max) {
