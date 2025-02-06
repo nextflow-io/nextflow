@@ -51,27 +51,34 @@ class FusionEnvProvider {
     }
 
     protected Map<String,String> getPluginsEnv(List<FusionEnv> list, String scheme, FusionConfig config) {
+        final result = new HashMap()
         try {
-            return getPluginsEnv0(list,scheme,config)
+            return getPluginsEnv0(list,scheme,config,result)
         }
         catch (ReportWarningException e) {
             log.warn1(e.message, causedBy:e, cacheKey:e.kind)
-            return Map.of()
+            return result
         }
     }
 
-    protected Map<String,String> getPluginsEnv0(List<FusionEnv> list, String scheme, FusionConfig config) {
-        final result = new HashMap()
+    protected void getPluginsEnv0(List<FusionEnv> list, String scheme, FusionConfig config, Map<String,String> result) {
+        ReportWarningException warn = null
         for( FusionEnv it : list ) {
-            final env = it.getEnvironment(scheme,config)
-            if( env )
-                result.putAll(env)
+            try {
+                final env = it.getEnvironment(scheme,config)
+                if( env )
+                    result.putAll(env)
+            }
+            catch (ReportWarningException e) {
+                warn = e
+            }
         }
+        if( warn )
+            throw warn
         if( !result.containsKey('FUSION_LICENSE_TOKEN') ) {
             final msg = "Unable to validate Fusion license - Make sure to have added in your config 'tower.accessToken' or have defined the variable TOWER_ACCESS_TOKEN in your launch environment"
             throw new ReportWarningException(msg, 'getFusionLicenseException')
         }
-        return result
     }
 
 }
