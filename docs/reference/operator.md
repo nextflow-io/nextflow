@@ -795,7 +795,7 @@ The `map` operator applies a *mapping function* to each item from a source chann
 ```
 
 :::{note}
-Null values are not emitted by `map`.
+`null` values are not emitted by `map`.
 :::
 
 (operator-max)=
