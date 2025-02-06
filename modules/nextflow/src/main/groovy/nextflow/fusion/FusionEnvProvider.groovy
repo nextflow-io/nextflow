@@ -67,7 +67,7 @@ class FusionEnvProvider {
         log.debug "Fusion token extensions=$providers"
         final result = new HashMap<String,String>()
         try {
-            final env = providers.first.getEnvironment(scheme,config)
+            final env = providers.first().getEnvironment(scheme,config)
             if( env )
                 result.putAll(env)
         }
