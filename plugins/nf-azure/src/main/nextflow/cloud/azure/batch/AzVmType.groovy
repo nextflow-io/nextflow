@@ -43,7 +43,7 @@ class AzVmType {
         this.maxDataDiskCount = map.maxDataDiskCount as Integer
         this.memory = map.memoryInMB ? MemoryUnit.of( "$map.memoryInMB MB" ) : null
         this.numberOfCores = map.numberOfCores as Integer
-        this.osDiskSize = map.osDiskSizeInMB ? MemoryUnit.of( "$map.osDiskSizeInMB MB" ) : null
-        this.resourceDiskSize = map.resourceDiskSizeInMB ? MemoryUnit.of( "$map.resourceDiskSizeInMB MB" ) : null
+        this.osDiskSize = map.osDiskSizeInMB ? MemoryUnit.of( "$map.osDiskSizeInMB MB" ) : MemoryUnit.of("0 MB")
+        this.resourceDiskSize = map.resourceDiskSizeInMB ? MemoryUnit.of( "$map.resourceDiskSizeInMB MB" ) : MemoryUnit.of("0 MB")
     }
 }
