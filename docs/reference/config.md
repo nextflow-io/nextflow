@@ -344,6 +344,11 @@ The following settings are available:
 `azure.batch.pools.<name>.lowPriority`
 : Enable the use of low-priority VMs (default: `false`).
 
+`azure.batch.pools.<name>.managedIdentityId`
+: :::{versionadded} 25.01.0-edge
+  :::
+: Specify the pool has a managed identity attached. This will be passed to the task as the environment variable `NXF_AZURE_MI_CLIENT_ID`.
+
 `azure.batch.pools.<name>.maxVmCount`
 : Specify the max of virtual machine when using auto scale option.
 

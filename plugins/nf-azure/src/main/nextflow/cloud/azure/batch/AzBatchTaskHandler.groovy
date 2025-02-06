@@ -202,4 +202,5 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
         return machineInfo
     }
+
 }
