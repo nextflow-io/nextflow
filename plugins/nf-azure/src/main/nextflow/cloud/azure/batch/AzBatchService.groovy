@@ -579,8 +579,8 @@ class AzBatchService implements Closeable {
         if( pool.state != BatchPoolState.ACTIVE ) {
             throw new IllegalStateException("Azure Batch pool '${pool.id}' not in active state")
         }
-        else if ( pool.resizeErrors && pool.currentDedicatedNodes==0 ) {
-            throw new IllegalStateException("Azure Batch pool '${pool.id}' has resize errors")
+        else if ( pool.resizeErrors && pool.currentDedicatedNodes==0 && pool.currentLowPriorityNodes==0 ) {
+            throw new IllegalStateException("Azure Batch pool '${pool.id}' has resize errors and no agents are available")
         }
         if( pool.taskSlotsPerNode != spec.vmType.numberOfCores ) {
             throw new IllegalStateException("Azure Batch pool '${pool.id}' slots per node does not match the VM num cores (slots: ${pool.taskSlotsPerNode}, cores: ${spec.vmType.numberOfCores})")

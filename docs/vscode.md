@@ -464,6 +464,34 @@ process greet {
 }
 ```
 
+**Workflow onComplete/onError handlers**
+
+{ref}`Workflow handlers <workflow-handlers>` (i.e. `workflow.onComplete` and `workflow.onError`) can be defined in several different ways in a script, but are typically defined as top-level statements and without an equals sign:
+
+```nextflow
+workflow.onComplete {
+    println "Pipeline completed at: $workflow.complete"
+    println "Execution status: ${ workflow.success ? 'OK' : 'failed' }"
+}
+```
+
+The Nextflow language specification does not allow statements to be mixed with script declarations, so workflow handlers must be defined in the entry workflow:
+
+```nextflow
+workflow {
+    // ...
+
+    workflow.onComplete = {
+        println "Pipeline completed at: $workflow.complete"
+        println "Execution status: ${ workflow.success ? 'OK' : 'failed' }"
+    }
+}
+```
+
+:::{note}
+A more concise syntax for workflow handlers will be addressed in a future version of the Nextflow language specification.
+:::
+
 ### Deprecated syntax
 
 The following patterns are deprecated. The language server reports "future warnings" for these patterns. Future warnings are disabled by default. Enable them by deselecting **Nextflow > Suppress Future Warnings** in the [extension settings](#settings). These warnings may become errors in the future.
