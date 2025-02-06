@@ -132,7 +132,7 @@ class TowerFusionEnv implements FusionEnv {
             throw new AbortOperationException("Missing Platform access token -- Make sure there's a variable TOWER_ACCESS_TOKEN in your environment")
         }
 
-        final req = new GetLicenseTokenRequest(product: product, version: version)
+        final req = new GetLicenseTokenRequest(product: product, version: version ?: 'unknown')
 
         try {
             final key = '${product}-${version}'
