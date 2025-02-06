@@ -555,7 +555,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 task.stderr = errorFile
             }
             status = TaskStatus.COMPLETED
-            if( isChild )
+            if( task.isChild )
                 client.removeFromArrayTasks(jobId, taskId)
             return true
         }
