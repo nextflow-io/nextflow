@@ -711,77 +711,85 @@ class AzBatchService implements Closeable {
     }
 
     protected void createPool(AzVmPoolSpec spec) {
+        try {
+            final poolParams = new BatchPoolCreateContent(spec.poolId, spec.vmType.name)
+                    .setVirtualMachineConfiguration(poolVmConfig(spec.opts))
+                    // same as the number of cores
+                    // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
+                    .setTaskSlotsPerNode(spec.vmType.numberOfCores)
 
-        final poolParams = new BatchPoolCreateContent(spec.poolId, spec.vmType.name)
-                .setVirtualMachineConfiguration(poolVmConfig(spec.opts))
-                // same as the number of cores
-                // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
-                .setTaskSlotsPerNode(spec.vmType.numberOfCores)
-
-        final startTask = createStartTask(spec.opts.startTask)
-        if( startTask ) {
-            poolParams .setStartTask(startTask)
-        }
-
-        // resource labels
-        if( spec.metadata ) {
-            final metadata = spec.metadata.collect { name, value ->
-                new MetadataItem(name, value)
+            final startTask = createStartTask(spec.opts.startTask)
+            if( startTask ) {
+                poolParams .setStartTask(startTask)
             }
-            poolParams.setMetadata(metadata)
-        }
 
-        // virtual network
-        if( spec.opts.virtualNetwork )
-            poolParams.setNetworkConfiguration( new NetworkConfiguration().setSubnetId(spec.opts.virtualNetwork) )
-
-        // scheduling policy
-        if( spec.opts.schedulePolicy ) {
-            final pol = BatchNodeFillType.fromString(spec.opts.schedulePolicy)
-            if( !pol ) throw new IllegalArgumentException("Unknown Azure Batch scheduling policy: ${spec.opts.schedulePolicy}")
-            poolParams.setTaskSchedulingPolicy( new BatchTaskSchedulingPolicy(pol) )
-        }
-
-        // mount points
-        if ( config.storage().fileShares ) {
-            List<MountConfiguration> mountConfigs = new ArrayList(config.storage().fileShares.size())
-            config.storage().fileShares.each {
-                if (it.key) {
-                    final String accountName = config.storage().accountName
-                    final endpoint = "https://${config.storage().accountName}.file.core.windows.net/${it.key}" as String
-                    final accountKey = config.storage().accountKey
-                    final shareConfig = new AzureFileShareConfiguration( accountName, endpoint, accountKey, it.key )
-                            .setMountOptions(it.value.mountOptions)
-
-                    mountConfigs << new MountConfiguration().setAzureFileShareConfiguration(shareConfig)
-                } else {
-                    throw new IllegalArgumentException("Cannot mount a null File Share")
+            // resource labels
+            if( spec.metadata ) {
+                final metadata = spec.metadata.collect { name, value ->
+                    new MetadataItem(name, value)
                 }
+                poolParams.setMetadata(metadata)
             }
-            poolParams.setMountConfiguration(mountConfigs)
-        }
 
-        // autoscale
-        if( spec.opts.autoScale ) {
-            log.debug "Creating autoscale pool with id: ${spec.poolId}; vmCount=${spec.opts.vmCount}; maxVmCount=${spec.opts.maxVmCount}; interval=${spec.opts.scaleInterval}"
-            final interval = spec.opts.scaleInterval.seconds as int
-            poolParams
-                    .setEnableAutoScale(true)
-                    .setAutoScaleEvaluationInterval( Duration.of(interval, ChronoUnit.SECONDS) )
-                    .setAutoScaleFormula(scaleFormula(spec.opts))
-        }
-        else if( spec.opts.lowPriority ) {
-            log.debug "Creating low-priority pool with id: ${spec.poolId}; vmCount=${spec.opts.vmCount};"
-            poolParams
-                    .setTargetLowPriorityNodes(spec.opts.vmCount)
-        }
-        else  {
-            log.debug "Creating fixed pool with id: ${spec.poolId}; vmCount=${spec.opts.vmCount};"
-            poolParams
-                    .setTargetDedicatedNodes(spec.opts.vmCount)
-        }
+            // virtual network
+            if( spec.opts.virtualNetwork )
+                poolParams.setNetworkConfiguration( new NetworkConfiguration().setSubnetId(spec.opts.virtualNetwork) )
 
-        apply(() -> client.createPool(poolParams))
+            // scheduling policy
+            if( spec.opts.schedulePolicy ) {
+                final pol = BatchNodeFillType.fromString(spec.opts.schedulePolicy)
+                if( !pol ) throw new IllegalArgumentException("Unknown Azure Batch scheduling policy: ${spec.opts.schedulePolicy}")
+                poolParams.setTaskSchedulingPolicy( new BatchTaskSchedulingPolicy(pol) )
+            }
+
+            // mount points
+            if ( config.storage().fileShares ) {
+                List<MountConfiguration> mountConfigs = new ArrayList(config.storage().fileShares.size())
+                config.storage().fileShares.each {
+                    if (it.key) {
+                        final String accountName = config.storage().accountName
+                        final endpoint = "https://${config.storage().accountName}.file.core.windows.net/${it.key}" as String
+                        final accountKey = config.storage().accountKey
+                        final shareConfig = new AzureFileShareConfiguration( accountName, endpoint, accountKey, it.key )
+                                .setMountOptions(it.value.mountOptions)
+
+                        mountConfigs << new MountConfiguration().setAzureFileShareConfiguration(shareConfig)
+                    } else {
+                        throw new IllegalArgumentException("Cannot mount a null File Share")
+                    }
+                }
+                poolParams.setMountConfiguration(mountConfigs)
+            }
+
+            // autoscale
+            if( spec.opts.autoScale ) {
+                log.debug "Creating autoscale pool with id: ${spec.poolId}; vmCount=${spec.opts.vmCount}; maxVmCount=${spec.opts.maxVmCount}; interval=${spec.opts.scaleInterval}"
+                final interval = spec.opts.scaleInterval.seconds as int
+                poolParams
+                        .setEnableAutoScale(true)
+                        .setAutoScaleEvaluationInterval( Duration.of(interval, ChronoUnit.SECONDS) )
+                        .setAutoScaleFormula(scaleFormula(spec.opts))
+            }
+            else if( spec.opts.lowPriority ) {
+                log.debug "Creating low-priority pool with id: ${spec.poolId}; vmCount=${spec.opts.vmCount};"
+                poolParams
+                        .setTargetLowPriorityNodes(spec.opts.vmCount)
+            }
+            else  {
+                log.debug "Creating fixed pool with id: ${spec.poolId}; vmCount=${spec.opts.vmCount};"
+                poolParams
+                        .setTargetDedicatedNodes(spec.opts.vmCount)
+            }
+
+            apply(() -> client.createPool(poolParams))
+        }
+        catch (HttpResponseException e) {
+            if (e.response.statusCode == 409 && e.response.body.toString().contains("PoolExists")) {
+                log.debug "Pool ${spec.poolId} already exists, ignoring creation request"
+                return
+            }
+            throw e
+        }
     }
 
     protected String scaleFormula(AzPoolOpts opts) {
@@ -923,7 +931,7 @@ class AzBatchService implements Closeable {
                 .build()
     }
 
-    final private static List<Integer> RETRY_CODES = List.of(408, 429, 500, 502, 503, 504)
+    final private static List<Integer> RETRY_CODES = List.of(408, 409, 429, 500, 502, 503, 504)
 
     /**
      * Carry out the invocation of the specified action using a retry policy
