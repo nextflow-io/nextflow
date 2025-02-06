@@ -41,6 +41,7 @@ class FusionConfig {
     final static public String FUSION_PATH = '/usr/bin/fusion'
 
     final static private String PRODUCT_NAME = 'fusion'
+
     final static private Pattern VERSION_JSON = ~/https:\/\/.*\/releases\/v(\d+(?:\.\w+)*)-(\w*)\.json$/
 
     final private Boolean enabled

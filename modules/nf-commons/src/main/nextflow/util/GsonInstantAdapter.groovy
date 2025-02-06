@@ -25,7 +25,7 @@ import com.google.gson.stream.JsonWriter
 import groovy.transform.CompileStatic
 
 /**
- * Implements a Gson adapter for @link Instant}
+ * Implements a Gson adapter for {@link Instant}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
