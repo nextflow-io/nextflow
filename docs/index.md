@@ -141,7 +141,7 @@ developer/plugins
 :maxdepth: 1
 troubleshooting/cache-failures.md
 troubleshooting/compute-storage.md
-troubleshooting/vscode.md
+troubleshooting/language-server.md
 ```
 
 ```{toctree}

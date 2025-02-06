@@ -1,5 +1,7 @@
 # Compute and storage
 
+This page describes common compute and storage errors and strategies to resolve them.
+
 ## Amazon Web Services
 
 ### Job queue not found

@@ -1,6 +1,6 @@
 # Language server
 
-This page describes common errors and strategies strategies to resolve language server error.
+This page describes common language server errors and strategies to resolve them.
 
 ## Common errors
 
