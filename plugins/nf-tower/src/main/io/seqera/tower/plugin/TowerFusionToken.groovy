@@ -30,8 +30,9 @@ import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ReportWarningException
 import nextflow.fusion.FusionConfig
-import nextflow.fusion.FusionEnv
+import nextflow.fusion.FusionToken
 import nextflow.platform.PlatformHelper
+import nextflow.plugin.Priority
 import nextflow.util.GsonHelper
 import nextflow.util.Threads
 import org.pf4j.Extension
@@ -43,7 +44,8 @@ import org.pf4j.Extension
 @Slf4j
 @Extension
 @CompileStatic
-class TowerFusionEnv implements FusionEnv {
+@Priority(-10)
+class TowerFusionToken implements FusionToken {
 
     // The path relative to the Platform endpoint where license-scoped JWT tokens are obtained
     private static final String LICENSE_TOKEN_PATH = 'license/token/'
@@ -80,7 +82,7 @@ class TowerFusionEnv implements FusionEnv {
     // Platform access token to use for requests
     private String accessToken
 
-    TowerFusionEnv() {
+    TowerFusionToken() {
         final config = PlatformHelper.config()
         final env = SysEnv.get()
         this.endpoint = PlatformHelper.getEndpoint(config, env)

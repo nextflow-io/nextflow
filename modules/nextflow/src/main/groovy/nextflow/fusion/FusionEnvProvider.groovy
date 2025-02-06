@@ -32,11 +32,11 @@ class FusionEnvProvider {
 
     Map<String,String> getEnvironment(String scheme) {
         final config = FusionConfig.getConfig()
-        final list = Plugins.getExtensions(FusionEnv)
         final result = new HashMap<String,String>()
-        final env = getPluginsEnv(list, scheme, config)
-        if( env )
-            result.putAll(env)
+        final env = getFusionEnvironment(scheme,config)
+        result.putAll(env)
+        final validator = getFusionToken(scheme,config)
+        result.putAll(validator)
         // tags setting
         if( config.tagsEnabled() )
             result.FUSION_TAGS = config.tagsPattern()
@@ -50,35 +50,31 @@ class FusionEnvProvider {
         return result
     }
 
-    protected Map<String,String> getPluginsEnv(List<FusionEnv> list, String scheme, FusionConfig config) {
-        final result = new HashMap()
+    protected Map<String,String> getFusionEnvironment(String scheme, FusionConfig config) {
+        final list = Plugins.getExtensions(FusionEnv)
+        log.debug "Fusion environment extensions=$list"
+        final result = new HashMap<String,String>()
+        for( FusionEnv it : list ) {
+            final env = it.getEnvironment(scheme,config)
+            if( env )
+                result.putAll(env)
+        }
+        return result
+    }
+
+    protected Map<String,String> getFusionToken(String scheme, FusionConfig config) {
+        final providers = Plugins.getPriorityExtensions(FusionToken)
+        log.debug "Fusion token extensions=$providers"
+        final result = new HashMap<String,String>()
         try {
-            return getPluginsEnv0(list,scheme,config,result)
+            final env = providers.first.getEnvironment(scheme,config)
+            if( env )
+                result.putAll(env)
         }
         catch (ReportWarningException e) {
             log.warn1(e.message, causedBy:e, cacheKey:e.kind)
-            return result
         }
-    }
-
-    protected void getPluginsEnv0(List<FusionEnv> list, String scheme, FusionConfig config, Map<String,String> result) {
-        ReportWarningException warn = null
-        for( FusionEnv it : list ) {
-            try {
-                final env = it.getEnvironment(scheme,config)
-                if( env )
-                    result.putAll(env)
-            }
-            catch (ReportWarningException e) {
-                warn = e
-            }
-        }
-        if( warn )
-            throw warn
-        if( !result.containsKey('FUSION_LICENSE_TOKEN') ) {
-            final msg = "Unable to validate Fusion license - Make sure to have added in your config 'tower.accessToken' or have defined the variable TOWER_ACCESS_TOKEN in your launch environment"
-            throw new ReportWarningException(msg, 'getFusionLicenseException')
-        }
+        return result
     }
 
 }

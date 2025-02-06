@@ -52,7 +52,7 @@ class TowerFusionEnvTest extends Specification {
         }
 
         when: 'the provider is created'
-        def provider = new TowerFusionEnv()
+        def provider = new TowerFusionToken()
 
         then: 'the endpoint has the expected value'
         provider.endpoint == 'https://tower.nf'
@@ -66,7 +66,7 @@ class TowerFusionEnvTest extends Specification {
         }
 
         when: 'the provider is created'
-        def provider = new TowerFusionEnv()
+        def provider = new TowerFusionToken()
 
         then: 'the endpoint has the expected value'
         provider.endpoint == 'https://tower.nf'
@@ -82,7 +82,7 @@ class TowerFusionEnvTest extends Specification {
                 tower: [:]
             ]
         }
-        def provider = new TowerFusionEnv()
+        def provider = new TowerFusionToken()
 
         then: 'the endpoint has the expected value'
         provider.endpoint == TowerClient.DEF_ENDPOINT_URL
@@ -158,7 +158,7 @@ class TowerFusionEnvTest extends Specification {
         }
 
         when: 'the provider is created'
-        def provider = new TowerFusionEnv()
+        def provider = new TowerFusionToken()
 
         then: 'the access token has the expected value'
         provider.accessToken == 'abc123'
@@ -172,7 +172,7 @@ class TowerFusionEnvTest extends Specification {
         SysEnv.push(['TOWER_ACCESS_TOKEN': 'abc123'])
 
         when: 'the provider is created'
-        def provider = new TowerFusionEnv()
+        def provider = new TowerFusionToken()
 
         then: 'the access token has the expected value'
         provider.accessToken == 'abc123'
@@ -193,7 +193,7 @@ class TowerFusionEnvTest extends Specification {
         SysEnv.push(['TOWER_ACCESS_TOKEN': 'xyz789'])
 
         when: 'the provider is created'
-        def provider = new TowerFusionEnv()
+        def provider = new TowerFusionToken()
 
         then: 'the access token has the expected value'
         provider.accessToken == 'abc123'
@@ -214,7 +214,7 @@ class TowerFusionEnvTest extends Specification {
         SysEnv.push(['TOWER_ACCESS_TOKEN': 'xyz789'])
 
         when: 'the provider is created'
-        def provider = new TowerFusionEnv()
+        def provider = new TowerFusionToken()
 
         then: 'the access token has the expected value'
         provider.accessToken == null
@@ -235,7 +235,7 @@ class TowerFusionEnvTest extends Specification {
         SysEnv.push(['TOWER_ACCESS_TOKEN' : 'xyz789', 'TOWER_WORKFLOW_ID': '123'])
 
         when: 'the provider is created'
-        def provider = new TowerFusionEnv()
+        def provider = new TowerFusionToken()
 
         then: 'the access token has the expected value'
         provider.accessToken == 'xyz789'
@@ -254,7 +254,7 @@ class TowerFusionEnvTest extends Specification {
                 ]
             ]
         }
-        def provider = new TowerFusionEnv()
+        def provider = new TowerFusionToken()
 
         and: 'a mock endpoint returning a valid token'
         final now = Instant.now()
@@ -300,7 +300,7 @@ class TowerFusionEnvTest extends Specification {
                 ]
             ]
         }
-        def provider = new TowerFusionEnv()
+        def provider = new TowerFusionToken()
 
         and: 'a mock endpoint returning an error'
         wireMockServer.stubFor(
@@ -328,7 +328,7 @@ class TowerFusionEnvTest extends Specification {
         def json = '{"signedToken":"foo","expiresAt":"2025-02-05T20:55:14Z"}'
 
         when:
-        def resp = TowerFusionEnv.parseLicenseTokenResponse(json)
+        def resp = TowerFusionToken.parseLicenseTokenResponse(json)
         then:
         resp.signedToken == 'foo'
         resp.expiresAt == ts
