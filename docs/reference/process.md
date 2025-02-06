@@ -73,7 +73,7 @@ Additionally, the [directive values](#directives) for the given task can be acce
 
 `path( identifier | stageName )`
 
-: Declare a file input. The received value should be a file or collection of files, and it will be staged into the task directory.
+: Declare a file input. The received value should be a file or collection of files and will be staged into the task directory.
 
 : The argument can be an identifier or string. If an identifier, the received value will be made available to the process body as a variable. If a string, the received value will be staged into the task directory under the given alias.
 
