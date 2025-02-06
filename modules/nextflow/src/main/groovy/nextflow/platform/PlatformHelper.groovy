@@ -1,6 +1,8 @@
 package nextflow.platform
 
 import groovy.transform.CompileStatic
+import nextflow.Global
+import nextflow.Session
 
 /**
  * Helper methods for Platform-related operations
@@ -70,5 +72,13 @@ class PlatformHelper {
             ? env.get('TOWER_WORKSPACE_ID')
             : opts.workspaceId as Long ?: env.get('TOWER_WORKSPACE_ID') as Long
         return workspaceId
+    }
+
+    static Map<String,Object> config() {
+        session().config.navigate('tower') as Map<String,Object> ?: Map.<String,Object>of()
+    }
+
+    static private Session session() {
+        Global.session as Session
     }
 }

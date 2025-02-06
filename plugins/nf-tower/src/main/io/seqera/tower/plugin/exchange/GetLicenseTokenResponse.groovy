@@ -22,4 +22,9 @@ class GetLicenseTokenResponse {
      * The expiration timestamp of the token
      */
     Instant expiresAt
+
+    /**
+     * The Exception returned while trying to access the token
+     */
+    Throwable error
 }

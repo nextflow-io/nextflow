@@ -25,15 +25,14 @@ import io.seqera.tower.plugin.exception.BadResponseException
 import io.seqera.tower.plugin.exception.UnauthorizedException
 import io.seqera.tower.plugin.exchange.GetLicenseTokenRequest
 import io.seqera.tower.plugin.exchange.GetLicenseTokenResponse
-import nextflow.util.GsonHelper
 import io.seqera.util.trace.TraceUtils
-import nextflow.Global
-import nextflow.Session
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
+import nextflow.exception.ReportWarningException
 import nextflow.fusion.FusionConfig
 import nextflow.fusion.FusionEnv
 import nextflow.platform.PlatformHelper
+import nextflow.util.GsonHelper
 import nextflow.util.Threads
 import org.pf4j.Extension
 /**
@@ -75,24 +74,24 @@ class TowerFusionEnv implements FusionEnv {
         .expireAfterWrite(tokenTTL)
         .build()
 
-    // Nextflow session
-    private final Session session
-
     // Platform endpoint to use for requests
-    private final String endpoint
+    private String endpoint
 
     // Platform access token to use for requests
-    private final String accessToken
+    private String accessToken
 
-    /**
-     * Constructor for the class. It initializes the session, endpoint, and access token.
-     */
-    TowerFusionEnv() {
-        this.session = Global.session as Session
-        final towerConfig = session.config.navigate('tower') as Map ?: [:]
+    protected void init() {
+        final config = PlatformHelper.config()
         final env = SysEnv.get()
-        this.endpoint = PlatformHelper.getEndpoint(towerConfig, env)
-        this.accessToken = PlatformHelper.getAccessToken(towerConfig, env)
+        this.endpoint = PlatformHelper.getEndpoint(config, env)
+        if( !endpoint )
+            throw new IllegalArgumentException("Missing Seqera Platform endpoint")
+        this.accessToken = PlatformHelper.getAccessToken(config, env)
+        if( !accessToken )
+            throw new IllegalArgumentException("Missing Seqera Platform access token")
+        final client = TowerFactory.client()
+        if( !client )
+            throw new IllegalArgumentException("Seqera Platform client is not enabled")
     }
 
     /**
@@ -106,17 +105,21 @@ class TowerFusionEnv implements FusionEnv {
      */
     @Override
     Map<String, String> getEnvironment(String scheme, FusionConfig config) {
-        final product = config.sku()
-        final version = config.version()
-
         try {
-            final token = getLicenseToken(product, version)
-            return Map.of('FUSION_LICENSE_TOKEN', token)
+            getEnvironment0(scheme, config)
         }
         catch (Exception e) {
-            log.warn1("Error retrieving Fusion license information: ${e.message}", causedBy:e, cacheKey:'getLicenseTokenException')
-            return Map.of()
+            final msg = "Unable to validate Fusion license - reason: ${e.message}"
+            throw new ReportWarningException(msg, 'getFusionLicenseException', e)
         }
+    }
+
+    protected Map<String,String> getEnvironment0(String scheme, FusionConfig config) {
+        init()
+        final product = config.sku()
+        final version = config.version()
+        final token = getLicenseToken(product, version)
+        return Map.of('FUSION_LICENSE_TOKEN', token)
     }
 
     /**
@@ -127,19 +130,16 @@ class TowerFusionEnv implements FusionEnv {
      *
      * @return The signed JWT token
      */
-    protected String getLicenseToken(String product, String version) throws AbortOperationException {
-        if (accessToken == null) {
-            throw new AbortOperationException("Missing Platform access token -- Make sure there's a variable TOWER_ACCESS_TOKEN in your environment")
-        }
-
+    protected String getLicenseToken(String product, String version) {
         final req = new GetLicenseTokenRequest(product: product, version: version ?: 'unknown')
-
+        final key = '${product}-${version}'
         try {
-            final key = '${product}-${version}'
             final now = Instant.now()
             int i=0
             while( i++<2 ) {
                 final resp = tokenCache.get(key, () -> sendRequest(req))
+                if( resp.error )
+                    throw resp.error
                 // Check if the cached response has expired
                 // It's needed because the JWT token TTL in the cache (1 hour) and its expiration date (e.g. 1 day?) are not sync'ed,
                 // so it could happen that we get a token from the cache which was valid at the time of insertion but is now expired.
@@ -150,8 +150,12 @@ class TowerFusionEnv implements FusionEnv {
                 else
                     return resp.signedToken
             }
-        } catch (UncheckedExecutionException e) {
-            throw e.getCause()
+        }
+        catch (UncheckedExecutionException e) {
+            // most likely the exception is thrown for the lack of license
+            // to avoid to keep requesting it, and error response is added to the cache
+            tokenCache.put(key, new GetLicenseTokenResponse(error: e.cause))
+            throw e.cause
         }
     }
 
@@ -295,7 +299,8 @@ class TowerFusionEnv implements FusionEnv {
             }
 
             throw new BadResponseException("Invalid response: ${httpReq.method()} ${httpReq.uri()} [${resp.statusCode()}] ${resp.body()}")
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             throw new IllegalStateException("Unable to send request to '${httpReq.uri()}' : ${e.message}")
         }
     }

@@ -19,6 +19,7 @@ package nextflow.fusion
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.exception.ReportWarningException
 import nextflow.plugin.Plugins
 /**
  * Provider strategy for {@link FusionEnv}
@@ -33,13 +34,9 @@ class FusionEnvProvider {
         final config = FusionConfig.getConfig()
         final list = Plugins.getExtensions(FusionEnv)
         final result = new HashMap<String,String>()
-        for( FusionEnv it : list ) {
-            final env = it.getEnvironment(scheme,config)
-            if( env ) result.putAll(env)
-        }
-        if( !result.containsKey('FUSION_LICENSE_TOKEN') ) {
-            log.warn1 "Fusion file system requires the use of Seqera Platform - Make sure to have added in your config 'tower.accessToken' or have defined the variable TOWER_ACCESS_TOKEN in your launch environment"
-        }
+        final env = getPluginsEnv(list, scheme, config)
+        if( env )
+            result.putAll(env)
         // tags setting
         if( config.tagsEnabled() )
             result.FUSION_TAGS = config.tagsPattern()
@@ -52,4 +49,29 @@ class FusionEnvProvider {
             result.FUSION_CACHE_SIZE = "${config.cacheSize().toMega()}M"
         return result
     }
+
+    protected Map<String,String> getPluginsEnv(List<FusionEnv> list, String scheme, FusionConfig config) {
+        try {
+            return getPluginsEnv0(list,scheme,config)
+        }
+        catch (ReportWarningException e) {
+            log.warn1(e.message, causedBy:e, cacheKey:e.kind)
+            return Map.of()
+        }
+    }
+
+    protected Map<String,String> getPluginsEnv0(List<FusionEnv> list, String scheme, FusionConfig config) {
+        final result = new HashMap()
+        for( FusionEnv it : list ) {
+            final env = it.getEnvironment(scheme,config)
+            if( env )
+                result.putAll(env)
+        }
+        if( !result.containsKey('FUSION_LICENSE_TOKEN') ) {
+            final msg = "Unable to validate Fusion license - Make sure to have added in your config 'tower.accessToken' or have defined the variable TOWER_ACCESS_TOKEN in your launch environment"
+            throw new ReportWarningException(msg, 'getFusionLicenseException')
+        }
+        return result
+    }
+
 }
