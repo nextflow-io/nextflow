@@ -1295,12 +1295,12 @@ process foo {
 
 In the above example the {ref}`process-memory` and execution {ref}`process-time` limits are defined dynamically. The first time the process is executed the `task.attempt` is set to `1`, thus it will request 2 GB of memory and 1 hour of walltime.
 
-If the task execution fails with an exit status between 137 and 140, the task is re-executed, otherwise the run is terminated immediately. The re-executed task will have `task.attempt` set to `2`, and will request 4 GB of memory and 2 hours of walltime, and so on.
+If the task execution fails with an exit status between 137 and 140, the task is re-executed; otherwise, the run is terminated immediately. The re-executed task will have `task.attempt` set to `2`, and will request 4 GB of memory and 2 hours of walltime.
 
 The {ref}`process-maxretries` directive sets the maximum number of times the same task can be re-executed.
 
 :::{tip}
-Directives with named arguments like `accelerator` and `disk` must use a more verbose syntax when they are dynamic. For example:
+Directives with named arguments, such as `accelerator` and `disk`, must use a more verbose syntax when they are dynamic. For example:
 
 ```nextflow
 // static request
@@ -1331,7 +1331,7 @@ process foo {
 }
 ```
 
-In the above example, the {ref}`process-memory` is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to one GB. In the subsequent attempts, it doubles the previously allocated memory. See {ref}`trace-report` for more information about trace records.
+In the above example, the {ref}`process-memory` is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to 1 GB. In each subsequent attempt, the requested memory is doubled. See {ref}`trace-report` for more information about trace records.
 
 ### Dynamic retry with backoff
 
