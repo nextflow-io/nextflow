@@ -57,8 +57,10 @@ class IncludeDef {
     private Session session
 
     IncludeDef(TokenVar token, String alias=null) {
-        def component = token.name; if(alias) component += " as $alias"
-        throw new DeprecationException("Unwrapped module inclusion is deprecated -- Replace `include $component from './MODULE/PATH'` with `include { $component } from './MODULE/PATH'`")
+        def component = token.name
+        if( alias )
+            component += " as $alias"
+        throw new DeprecationException("Invalid include declaration -- Replace `include $component from './MODULE/PATH'` with `include { $component } from './MODULE/PATH'`")
     }
 
     protected IncludeDef(List<Module> modules) {

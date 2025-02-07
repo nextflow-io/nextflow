@@ -167,7 +167,7 @@ class NextflowDSLImplTest extends Dsl2Spec {
         new GroovyShell(config).parse(SCRIPT)
         then:
         def e = thrown(MultipleCompilationErrorsException)
-        e.message.contains 'Invalid process input statement, possible syntax error'
+        e.message.contains 'Invalid process input declaration, possible syntax error'
 
         when:
         SCRIPT = '''
@@ -181,7 +181,7 @@ class NextflowDSLImplTest extends Dsl2Spec {
         new GroovyShell(config).parse(SCRIPT)
         then:
         e = thrown(MultipleCompilationErrorsException)
-        e.message.contains 'Invalid process output statement, possible syntax error'
+        e.message.contains 'Invalid process output declaration, possible syntax error'
     }
 
 }

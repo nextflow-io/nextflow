@@ -1131,8 +1131,8 @@ class ScriptIncludesTest extends Dsl2Spec {
         def runner = new MockScriptRunner()
         def result = runner.setScript(SCRIPT).execute()
         then:
-        def e = thrown(ScriptCompilationException)
-        e.message.contains "Not a valid include statement -- the correct syntax is `include { ... } from '...'`"
+        def e = thrown(DeprecationException)
+        e.message.contains "Invalid include declaration -- Replace `include foo from './MODULE/PATH'` with `include { foo } from './MODULE/PATH'`"
 
     }
 
