@@ -129,7 +129,7 @@ class NextflowDSLImplTest extends Dsl2Spec {
         def session = new Session()
         session.executorFactory = new MockExecutorFactory()
         and:
-        def parser = new ScriptParser(session)
+        def parser = ScriptParserFactory.create(session)
 
         def SCRIPT = '''
             process alpha {
@@ -149,6 +149,39 @@ class NextflowDSLImplTest extends Dsl2Spec {
         parser.runScript(SCRIPT)
         then:
         ScriptMeta.get(parser.getScript()).getProcessNames() == ['alpha', 'beta'] as Set
+    }
+
+    def 'should throw error on missing comma in process' () {
+        given:
+        def config = createCompilerConfig()
+
+        when:
+        def SCRIPT = '''
+            process hola {
+              input:
+              tuple val(x) val(y)
+
+              /command/
+            }
+            '''
+        new GroovyShell(config).parse(SCRIPT)
+        then:
+        def e = thrown(MultipleCompilationErrorsException)
+        e.message.contains 'Invalid process input statement, possible syntax error'
+
+        when:
+        SCRIPT = '''
+            process hola {
+              output:
+              tuple val('x') val('y')
+
+              /command/
+            }
+            '''
+        new GroovyShell(config).parse(SCRIPT)
+        then:
+        e = thrown(MultipleCompilationErrorsException)
+        e.message.contains 'Invalid process output statement, possible syntax error'
     }
 
 }

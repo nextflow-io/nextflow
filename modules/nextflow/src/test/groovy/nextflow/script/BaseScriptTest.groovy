@@ -48,7 +48,7 @@ class BaseScriptTest extends Dsl2Spec {
             getWorkflowMetadata() >> WORKFLOW
         }
         def binding = new ScriptBinding([:])
-        def parser = new ScriptParser(session)
+        def parser = ScriptParserFactory.create(session)
 
         when:
         script.text = '''
@@ -85,7 +85,7 @@ class BaseScriptTest extends Dsl2Spec {
         and:
         def session = Mock(Session)
         def binding = new ScriptBinding([:])
-        def parser = new ScriptParser(session)
+        def parser = ScriptParserFactory.create(session)
 
         when:
         script.text = '''
@@ -117,7 +117,7 @@ class BaseScriptTest extends Dsl2Spec {
         and:
         def session = Mock(Session)
         def binding = new ScriptBinding([:])
-        def parser = new ScriptParser(session)
+        def parser = ScriptParserFactory.create(session)
 
         when:
         module.text = '''
@@ -166,7 +166,7 @@ class BaseScriptTest extends Dsl2Spec {
         and:
         def session = Mock(Session)
         def binding = new ScriptBinding([:])
-        def parser = new ScriptParser(session)
+        def parser = ScriptParserFactory.create(session)
 
         when:
         script.text = '''
