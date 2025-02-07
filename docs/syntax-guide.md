@@ -1,4 +1,4 @@
-## Syntax guide
+# Syntax guide
 
 The language server is implemented as a part of the Nextflow VS Code extension and parses scripts and config files according to the {ref}`Nextflow language specification <syntax-page>`. The Nextflow language specification is strict specification of Nextflow DSL2 and will be used define the Nextflow language instead of introducing new DSL versions.
 
@@ -412,7 +412,7 @@ process greet {
 
 ## Deprecated syntax
 
-The following patterns are deprecated. The language server reports _future warnings_ for these patterns. Future warnings are disabled by default. Enable them by deselecting **Nextflow > Suppress Future Warnings** in the [extension settings](#settings). These warnings may become errors in the future.
+The following patterns are deprecated. The language server reports _future warnings_ for these patterns. Future warnings are disabled by default. Enable them by deselecting **Nextflow > Suppress Future Warnings** in {ref}`vscode-settings`. These warnings may become errors in the future.
 
 <h3>Implicit closure parameter</h3>
 

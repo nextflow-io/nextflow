@@ -77,6 +77,8 @@ The following commands are available from the command palette:
 - Restart language server
 - Stop language server
 
+(vscode-settings)=
+
 ## Settings
 
 The following settings are available:
