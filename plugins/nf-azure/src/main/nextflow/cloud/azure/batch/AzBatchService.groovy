@@ -111,7 +111,7 @@ class AzBatchService implements Closeable {
 
     AzConfig config
 
-    Map<TaskProcessor,String> allJobIds = new HashMap<>(50)
+    Map<Tuple2<TaskProcessor,String>,String> allJobIds = new HashMap<>(50)
 
     AzBatchService(AzBatchExecutor executor) {
         assert executor
@@ -355,7 +355,9 @@ class AzBatchService implements Closeable {
     }
 
     synchronized String getOrCreateJob(String poolId, TaskRun task) {
-        final mapKey = task.processor
+        log.debug "[AZURE BATCH] getOrCreateJob for task ${task.processor} with poolId ${poolId}"
+        final mapKey = new Tuple2<>(task.processor, poolId)
+        log.debug "[AZURE BATCH] mapKey: $mapKey"
         if( allJobIds.containsKey(mapKey)) {
             return allJobIds[mapKey]
         }
