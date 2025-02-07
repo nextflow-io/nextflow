@@ -49,7 +49,7 @@ Record types will be addressed in a future version of the Nextflow language spec
 A script may contain any of the following top-level declarations:
 
 - Feature flags
-- Includes
+- Include declarations
 - Parameter declarations
 - Workflows
 - Processes
