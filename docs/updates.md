@@ -1,4 +1,4 @@
-# Update Nextflow
+# Updating Nextflow
 
 This page describes Nextflow release cadence, how to self-update Nextflow, and how select your version of Nextflow.
 

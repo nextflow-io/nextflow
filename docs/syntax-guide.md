@@ -1,4 +1,4 @@
-# Syntax guide
+# Nextflow language specification
 
 The language server is implemented as a part of the Nextflow VS Code extension and parses scripts and config files according to the {ref}`Nextflow language specification <syntax-page>`. The Nextflow language specification is strict specification of Nextflow DSL2 and will be used define the Nextflow language instead of introducing new DSL versions.
 
@@ -176,7 +176,7 @@ if (aligner == 'bowtie2') {
 }
 ```
 
-<h3>Spread operator<h3>
+<h3>Spread operator</h3>
 
 In Groovy, the _spread_ operator can be used to flatten a nested list:
 
@@ -197,7 +197,7 @@ ch.map { meta, bambai ->
 }
 ```
 
-<h3>Implicit environment variables<h3>
+<h3>Implicit environment variables</h3>
 
 In Nextflow DSL1 and DSL2, you can reference environment variables directly in strings:
 
@@ -212,18 +212,15 @@ println "PWD = ${System.getenv('PWD')}"
 ```
 
 :::{versionadded} 24.11.0-edge
-The `env()` function can be used instead of `System.getenv()`:
-
-```nextflow
-println "PWD = ${env('PWD')}"
-```
+The `env()` function can be used instead of `System.getenv()`. For example,
+`println "PWD = ${env('PWD')}"`.
 :::
 
 ## Restricted syntax
 
 The following patterns are still supported but have been restricted. That is, some syntax variants have been removed.
 
-<h3>Variable declarations<h3>
+<h3>Variable declarations</h3>
 
 In Groovy, variables can be declared in many different ways:
 
