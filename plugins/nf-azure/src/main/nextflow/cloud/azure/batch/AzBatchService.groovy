@@ -359,7 +359,7 @@ class AzBatchService implements Closeable {
         if( allJobIds.containsKey(mapKey)) {
             return allJobIds[mapKey]
         }
-        log.debug "[AZURE BATCH] create job for ${task.processor} with poolId ${poolId}"
+        log.debug "[AZURE BATCH] create job for ${task.processor.name} with pool ${poolId}"
         // create a batch job
         final jobId = makeJobId(task)
         final content = new BatchJobCreateContent(jobId, new BatchPoolInfo(poolId: poolId))
