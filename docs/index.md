@@ -128,6 +128,7 @@ reference/operator
 :maxdepth: 1
 
 updates
+syntax-guide
 dsl1
 ```
 
