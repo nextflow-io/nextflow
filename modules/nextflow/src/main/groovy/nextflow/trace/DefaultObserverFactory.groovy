@@ -3,6 +3,7 @@ package nextflow.trace
 import java.nio.file.Path
 
 import nextflow.Session
+import nextflow.data.cid.CidObserver
 
 /**
  * Creates Nextflow observes object
@@ -25,7 +26,12 @@ class DefaultObserverFactory implements TraceObserverFactory {
         createTimelineObserver(result)
         createDagObserver(result)
         createAnsiLogObserver(result)
+        createCidObserver(result)
         return result
+    }
+
+    protected void createCidObserver(Collection<TraceObserver> result) {
+        result.add( new CidObserver() )
     }
 
     protected void createAnsiLogObserver(Collection<TraceObserver> result) {
