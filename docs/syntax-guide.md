@@ -1,12 +1,12 @@
 ## Syntax guide
 
-The language server is implemented as a part of the Nextflow VS Code extension and parses scripts and config files according to the {ref}`Nextflow language specification <syntax-page>`. The Nextflow language specification is strict specification of Nextflow DSL2 and will be used define the Nextflow language moving forward, instead of introducing new DSL versions.
+The language server is implemented as a part of the Nextflow VS Code extension and parses scripts and config files according to the {ref}`Nextflow language specification <syntax-page>`. The Nextflow language specification is strict specification of Nextflow DSL2 and will be used define the Nextflow language instead of introducing new DSL versions.
 
 Unlike the Nextflow CLI that allows all Groovy syntax, the Nextflow language specification is not a superset of Groovy. You may need to adjust your code to adhere to the strict syntax. This page highlights some of the most common unsupported features and offers solutions to resolve them.
 
 :::{note}
 The language server is implemented as a part of the Nextflow VS Code extension and parses scripts and config files according to the {ref}`Nextflow language specification <syntax-page>`.
-See {ref}`vscode-page` for more information about using the extension and {ref}`devenv-page` for guides to install the extension in a development environment.
+See {ref}`vscode-page` for more information about using the Nextflow VS Code extension.
 :::
 
 :::{tip}
@@ -25,7 +25,7 @@ import groovy.json.JsonSlurper
 def json = new JsonSlurper().parseText(json_file.text)
 ```
 
-Instead, use the fully qualified name directly:
+For the Nextflow language specification, use the fully qualified name instead:
 
 ```nextflow
 def json = new groovy.json.JsonSlurper().parseText(json_file.text)
@@ -33,7 +33,7 @@ def json = new groovy.json.JsonSlurper().parseText(json_file.text)
 
 <h3>Class declarations</h3>
 
-Some users use custom classes in Nextflow to define helper functions or custom record types. Instead, helper functions can be defined as standalone functions in a script and custom record classes must be moved to the `lib` directory. Enums, a special type of class, are supported. However, they cannot be included across modules at this time.
+Some users use custom classes in Nextflow to define helper functions or custom record types. Instead, define helper functions as standalone functions in a script and move custom record classes to the `lib` directory. Enums, a special type of class, are supported. However, they cannot be included across modules at this time.
 
 :::{note}
 Record types will be addressed in a future version of the Nextflow language specification.
@@ -87,13 +87,13 @@ Mixing statements and script declarations was necessary in DSL1 and allowed in D
 
 <h3>Assignment expressions</h3>
 
-In Groovy, you can assign a variable as part of an expression:
+In Groovy, variables can be assigned as part of an expression:
 
 ```groovy
 foo(x = 1, y = 2)
 ```
 
-The Nextflow language specification only allows assignment as statements:
+For the Nextflow language specification, assign variables as statements instead:
 
 ```nextflow
 x = 1
@@ -101,16 +101,23 @@ y = 2
 foo(x, y)
 ```
 
-The increment (`++`) and decrement (`--`) operators are no longer supported. Use `+=` and `-=` instead:
+In Groovy, the increment (`++`) and decrement (`--`) arithmetic operators are supported.
 
 ```nextflow
-x += 1 // x++
-x -= 1 // x--
+x++
+x--
+```
+
+For the Nextflow language specification, use `+=` and `-=` instead:
+
+```nextflow
+x += 1
+x -= 1
 ```
 
 <h3>For and while loops</h3>
 
-Groovy supports loop statements such as `for` and `while`:
+In Groovy, loop statements, such as `for` and `while`, are supported:
 
 ```groovy
 for (rseqc_module in ['read_distribution', 'inner_distance', 'tin']) {
@@ -119,7 +126,7 @@ for (rseqc_module in ['read_distribution', 'inner_distance', 'tin']) {
 }
 ```
 
-The Nextflow language specification does not support loop statements. Use higher-order functions like the `each` method instead:
+For the Nextflow language specification, use higher-order functions, such as the `each` method, instead:
 
 ```nextflow
 ['read_distribution', 'inner_distance', 'tin'].each { rseqc_module ->
@@ -132,7 +139,7 @@ Lists, maps, and sets provide several functions (e.g., `collect`, `find`, `findA
 
 <h3>Switch statements</h3>
 
-Groovy supports switch statements for pattern matching on a value:
+In Groovy, switch statements can be used for pattern matching on a value:
 
 ```groovy
 switch (aligner) {
@@ -153,7 +160,7 @@ default:
 }
 ```
 
-The Nextflow language specification does not support switch statements. Use if-else statements instead:
+For the Nextflow language specification, use if-else statements instead:
 
 ```nextflow
 if (aligner == 'bowtie2') {
@@ -171,13 +178,13 @@ if (aligner == 'bowtie2') {
 
 <h3>Spread operator<h3>
 
-Groovy supports the _spread_ operator which can be used to flatten a nested list:
+In Groovy, the _spread_ operator can be used to flatten a nested list:
 
 ```groovy
 ch.map { meta, bambai -> [meta, *bambai] }
 ```
 
-The Nextflow language specification does not support the spread operator. Enumerate the list elements explicitly instead:
+For the Nextflow language specification, enumerate the list elements explicitly instead:
 
 ```groovy
 // alternative 1
@@ -198,7 +205,7 @@ In Nextflow DSL1 and DSL2, you can reference environment variables directly in s
 println "PWD = ${PWD}"
 ```
 
-The Nextflow language specification does not support implicit environment variables. Use `System.getenv()` instead:
+For the Nextflow language specification, use `System.getenv()` instead:
 
 ```nextflow
 println "PWD = ${System.getenv('PWD')}"
@@ -214,7 +221,7 @@ println "PWD = ${env('PWD')}"
 
 ## Restricted syntax
 
-The following patterns are still supported but have been restricted, i.e. some syntax variants have been removed.
+The following patterns are still supported but have been restricted. That is, some syntax variants have been removed.
 
 <h3>Variable declarations<h3>
 
@@ -229,7 +236,7 @@ String str = 'foo'
 def Map meta = [:]
 ```
 
-In Nextflow, variables should be declared with `def` and should not specify a type:
+For the Nextflow language specification, declare variables with `def` and do not specify a type:
 
 ```nextflow
 def a = 1
@@ -240,10 +247,10 @@ def str = 'foo'
 def meta = [:]
 ```
 
-Similarly, functions should be declared with `def` and should not specify a return type or parameter types:
+Similarly, for the Nextflow language specification, declare functions with `def` and do not specify a return type or parameter type:
 
 ```nextflow
-/<h3>
+/**
  * You can use comments to denote types, for example:
  *
  * @param x: Map
@@ -320,14 +327,14 @@ echo "Hello world!"
 
 <h3>Type conversions</h3>
 
-Groovy supports two ways to perform type conversions:
+In Groovy, soft and hard casts are supported:
 
 ```groovy
 def map = (Map) readJson(json)  // soft cast
 def map = readJson(json) as Map // hard cast
 ```
 
-The Nextflow language specification only supports hard casts. However, hard casts are discouraged because they can cause unexpected behavior if used improperly. Use a Groovy-style type annotation instead:
+For the Nextflow language specification, only hard casts are supported. However, hard casts are discouraged because they can cause unexpected behavior if used improperly. Use a Groovy-style type annotation instead:
 
 ```groovy
 def Map map = readJson(json)
@@ -335,7 +342,7 @@ def Map map = readJson(json)
 
 Nextflow will raise an error at runtime if the `readJson()` function does not return a `Map`.
 
-In cases where you want to explicitly convert a value to a different type, it is better to use an explicit method. For example, to parse a string as a number:
+In cases where you want to explicitly convert a value to a different type, use an explicit method. For example, to parse a string as a number:
 
 ```groovy
 def x = '42' as Integer
@@ -356,7 +363,7 @@ process PROC {
 }
 ```
 
-The Nextflow language specification requires the name to be specified with quotes:
+For the Nextflow language specification, specify the name with quotes:
 
 ```nextflow
 process PROC {
@@ -383,7 +390,7 @@ process greet {
 }
 ```
 
-The Nextflow language specification allows the `script:` label to be omitted only if there are no other sections:
+For the Nextflow language specification, omit the `script:` label only if there are no other sections:
 
 ```nextflow
 process sayHello {
@@ -409,10 +416,15 @@ The following patterns are deprecated. The language server reports _future warni
 
 <h3>Implicit closure parameter</h3>
 
-In Groovy, a closure with no parameters is assumed to have a single parameter named `it`. The Nextflow language specification does not support implicit closure parameters. Declare the parameter explicitly instead:
+In Groovy, a closure with no parameters is assumed to have a single parameter named `it`.
 
 ```nextflow
-ch | map { it * 2 }       // deprecated
+ch | map { it * 2 }
+```
+
+For the Nextflow language specification, implicit closure parameters are not supported. Declare the parameter explicitly instead:
+
+```nextflow
 ch | map { v -> v * 2 }   // correct
 ch | map { it -> it * 2 } // also correct
 ```
@@ -421,7 +433,7 @@ ch | map { it -> it * 2 } // also correct
 
 While params can be used anywhere in the pipeline code, they are only intended to be used in the entry workflow.
 
-Processes and workflows should receive params as explicit inputs:
+For the Nextflow language specification, processes and workflows should receive params as explicit inputs:
 
 ```nextflow
 process foo {
@@ -460,7 +472,7 @@ The process `shell` section is deprecated. Use the `script` block instead. The V
 
 See {ref}`config-syntax` for a comprehensive description of the configuration language.
 
-Currently, Nextflow parses config files as Groovy scripts, allowing the use of scripting constructs like variables, helper functions, try-catch blocks, and conditional logic for dynamic configuration. For example:
+Currently, Nextflow parses config files as Groovy scripts, allowing the use of scripting constructs like variables, helper functions, try-catch blocks, and conditional logic for dynamic configuration:
 
 ```groovy
 def getHostname() {
