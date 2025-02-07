@@ -16,6 +16,8 @@
 
 package nextflow.processor
 
+import nextflow.script.params.CmdEvalParam
+
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
@@ -1169,6 +1171,53 @@ class TaskProcessorTest extends Specification {
         '*'             | [Path.of('/work/file.txt')]               | true      | false     | '2'           | IllegalArityException | "Incorrect number of output files for process `foo` -- expected 2, found 1"
         '*'             | [Path.of('/work/file.txt')]               | true      | false     | '2..*'        | IllegalArityException | "Incorrect number of output files for process `foo` -- expected 2..*, found 1"
         '*'             | []                                        | true      | true      | '1..*'        | IllegalArityException | "Incorrect number of output files for process `foo` -- expected 1..*, found 0"
+
+    }
+
+    def 'should use eval outputs in hash' () {
+        given:
+        def session = Mock(Session) {
+            getDumpHashes() >> 'json'
+            getUniqueId() >> UUID.fromString('b69b6eeb-b332-4d2c-9957-c291b15f498c')
+            getBinEntries() >> ['foo.sh': Paths.get('/some/path/foo.sh'), 'bar.sh': Paths.get('/some/path/bar.sh')]
+        }
+        def outParam = Mock(CmdEvalParam) {
+            getTarget( _ as Map) >> 'foo --version'
+        }
+        def task1 = Spy(TaskRun) {
+            getSource() >> 'hello world'
+            lazyName() >> 'hello'
+            isContainerEnabled() >> false
+            getContainer() >> null
+            getSpackEnv() >> null
+            getCondaEnv() >> null
+            getConfig() >> Mock(TaskConfig)
+            getContext() >> [:]
+        }
+        def task2 = Spy(TaskRun) {
+            getSource() >> 'hello world'
+            lazyName() >> 'hello'
+            isContainerEnabled() >> false
+            getContainer() >> null
+            getSpackEnv() >> null
+            getCondaEnv() >> null
+            getConfig() >> Mock(TaskConfig)
+            getContext() >> [:]
+        }
+        task2.setOutput(outParam)
+
+        def processor = Spy(TaskProcessor){
+            getTaskGlobalVars( _ as TaskRun) >> [foo:'a', bar:'b']
+        }
+        processor.@session = session
+        processor.@config = Mock(ProcessConfig)
+
+        when:
+        def uuid1 = processor.createTaskHashKey(task1)
+        def uuid2 = processor.createTaskHashKey(task2)
+
+        then:
+        uuid1 != uuid2
 
     }
 
