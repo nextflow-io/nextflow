@@ -115,6 +115,8 @@ For example, shebang definitions `#!/usr/bin/python` and `#!/usr/local/bin/pytho
 ```
 :::
 
+(lib-directory)=
+
 #### The `lib` directory
 
 Any Groovy scripts or JAR files in the `lib` directory will be automatically loaded and made available to your pipeline scripts. The `lib` directory is a useful way to provide utility code or external libraries without cluttering the pipeline scripts.

@@ -138,7 +138,7 @@ DSL2 scripts cannot exceed 64 KB in size. Split large DSL1 scripts into modules 
   process foo {
       input:
       tuple X, 'some-file.sam'
-      
+
       output:
       tuple X, 'some-file.bam'
 
@@ -155,7 +155,7 @@ DSL2 scripts cannot exceed 64 KB in size. Split large DSL1 scripts into modules 
   process foo {
       input:
       tuple val(X), path('some-file.sam')
-      
+
       output:
       tuple val(X), path('some-file.bam')
 

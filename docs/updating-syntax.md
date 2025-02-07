@@ -1,19 +1,24 @@
-# Nextflow language specification
+(updating-syntax-page)=
 
-The language server is implemented as a part of the Nextflow VS Code extension and parses scripts and config files according to the {ref}`Nextflow language specification <syntax-page>`. The Nextflow language specification is strict specification of Nextflow DSL2 and will be used define the Nextflow language instead of introducing new DSL versions.
+# Updating Nextflow syntax
 
-Unlike the Nextflow CLI that allows all Groovy syntax, the Nextflow language specification is not a superset of Groovy. You may need to adjust your code to adhere to the strict syntax. This page highlights some of the most common unsupported features and offers solutions to resolve them.
+This page describes how to update Nextflow scripts and config files to adhere to the {ref}`Nextflow language specification <syntax-page>`, also known as the "strict syntax".
 
 :::{note}
-The language server is implemented as a part of the Nextflow VS Code extension and parses scripts and config files according to the {ref}`Nextflow language specification <syntax-page>`.
-See {ref}`vscode-page` for more information about using the Nextflow VS Code extension.
+If you are still using DSL1, see {ref}`dsl1-page` to learn how to migrate your Nextflow pipelines to DSL2 first, before consulting this guide.
 :::
 
-:::{tip}
-You can move unsupported code into the `lib` directory or a plugin, both of which support the full Groovy language.
-:::
+## Preparing for strict syntax
 
-## Excluded syntax
+The strict syntax is a subset of DSL2. While DSL2 in practice allows any Groovy syntax, the strict syntax allows only a subset of Groovy syntax that is appropriate for Nextflow scripts and config files. This new specification enables more specific error reporting and more consistent code, and it will allow the Nextflow language to evolve independently of Groovy.
+
+The strict syntax is currently only enforced by the Nextflow language server, which is provided as part of the {ref}`vscode-page` for Nextflow. However, the strict syntax will be gradually adopted by the Nextflow CLI in future versions, and will eventually be the only way to write Nextflow code.
+
+New language features will be generally implemented as part of the strict syntax, and not the current "lenient" DSL2 parser, with few exceptions. Therefore, it will be important to prepare for the strict syntax in order to use new language features in the future.
+
+This section highlights the most common errors encountered when updating to the strict syntax, and shows how to resolve them. In general, the amount of required changes depends on the amount of custom Groovy code that you have.
+
+### Removed syntax
 
 <h3>Import declarations</h3>
 
@@ -25,7 +30,7 @@ import groovy.json.JsonSlurper
 def json = new JsonSlurper().parseText(json_file.text)
 ```
 
-For the Nextflow language specification, use the fully qualified name instead:
+For the strict syntax, use the fully qualified name instead:
 
 ```nextflow
 def json = new groovy.json.JsonSlurper().parseText(json_file.text)
@@ -82,7 +87,7 @@ workflow {
 ```
 
 :::{note}
-Mixing statements and script declarations was necessary in DSL1 and allowed in DSL2. However, it is no longer supported in the Nextflow language specification in order to simplify the language and to ensure that top-level statements are only executed when the script is executed directly and not when it is included as a module.
+Mixing statements and script declarations was necessary in DSL1 and allowed in DSL2. However, it is no longer supported in the strict syntax in order to simplify the language and to ensure that top-level statements are only executed when the script is executed directly and not when it is included as a module.
 :::
 
 <h3>Assignment expressions</h3>
@@ -93,7 +98,7 @@ In Groovy, variables can be assigned as part of an expression:
 foo(x = 1, y = 2)
 ```
 
-For the Nextflow language specification, assign variables as statements instead:
+For the strict syntax, assign variables as statements instead:
 
 ```nextflow
 x = 1
@@ -108,7 +113,7 @@ x++
 x--
 ```
 
-For the Nextflow language specification, use `+=` and `-=` instead:
+For the strict syntax, use `+=` and `-=` instead:
 
 ```nextflow
 x += 1
@@ -126,7 +131,7 @@ for (rseqc_module in ['read_distribution', 'inner_distance', 'tin']) {
 }
 ```
 
-For the Nextflow language specification, use higher-order functions, such as the `each` method, instead:
+For the strict syntax, use higher-order functions, such as the `each` method, instead:
 
 ```nextflow
 ['read_distribution', 'inner_distance', 'tin'].each { rseqc_module ->
@@ -160,7 +165,7 @@ default:
 }
 ```
 
-For the Nextflow language specification, use if-else statements instead:
+For the strict syntax, use if-else statements instead:
 
 ```nextflow
 if (aligner == 'bowtie2') {
@@ -184,7 +189,7 @@ In Groovy, the _spread_ operator can be used to flatten a nested list:
 ch.map { meta, bambai -> [meta, *bambai] }
 ```
 
-For the Nextflow language specification, enumerate the list elements explicitly instead:
+For the strict syntax, enumerate the list elements explicitly instead:
 
 ```groovy
 // alternative 1
@@ -205,7 +210,7 @@ In Nextflow DSL1 and DSL2, you can reference environment variables directly in s
 println "PWD = ${PWD}"
 ```
 
-For the Nextflow language specification, use `System.getenv()` instead:
+For the strict syntax, use `System.getenv()` instead:
 
 ```nextflow
 println "PWD = ${System.getenv('PWD')}"
@@ -216,7 +221,7 @@ The `env()` function can be used instead of `System.getenv()`. For example,
 `println "PWD = ${env('PWD')}"`.
 :::
 
-## Restricted syntax
+### Restricted syntax
 
 The following patterns are still supported but have been restricted. That is, some syntax variants have been removed.
 
@@ -233,7 +238,7 @@ String str = 'foo'
 def Map meta = [:]
 ```
 
-For the Nextflow language specification, declare variables with `def` and do not specify a type:
+For the strict syntax, declare variables with `def` and do not specify a type:
 
 ```nextflow
 def a = 1
@@ -244,7 +249,7 @@ def str = 'foo'
 def meta = [:]
 ```
 
-Similarly, for the Nextflow language specification, declare functions with `def` and do not specify a return type or parameter type:
+Similarly, for the strict syntax, declare functions with `def` and do not specify a return type or parameter type:
 
 ```nextflow
 /**
@@ -270,7 +275,7 @@ Instead, type annotations will be addressed in a future version of the Nextflow 
 
 Groovy supports a wide variety of strings, including multi-line strings, dynamic strings, slashy strings, multi-line dynamic slashy strings, and more.
 
-The Nextflow language specification supports single- and double-quoted strings, multi-line strings, and slashy strings.
+The strict syntax supports single- and double-quoted strings, multi-line strings, and slashy strings.
 
 Slashy strings cannot be interpolated:
 
@@ -331,7 +336,7 @@ def map = (Map) readJson(json)  // soft cast
 def map = readJson(json) as Map // hard cast
 ```
 
-For the Nextflow language specification, only hard casts are supported. However, hard casts are discouraged because they can cause unexpected behavior if used improperly. Use a Groovy-style type annotation instead:
+For the strict syntax, only hard casts are supported. However, hard casts are discouraged because they can cause unexpected behavior if used improperly. Use a Groovy-style type annotation instead:
 
 ```groovy
 def Map map = readJson(json)
@@ -360,7 +365,7 @@ process PROC {
 }
 ```
 
-For the Nextflow language specification, specify the name with quotes:
+For the strict syntax, specify the name with quotes:
 
 ```nextflow
 process PROC {
@@ -387,7 +392,7 @@ process greet {
 }
 ```
 
-For the Nextflow language specification, omit the `script:` label only if there are no other sections:
+For the strict syntax, omit the `script:` label only if there are no other sections:
 
 ```nextflow
 process sayHello {
@@ -407,9 +412,9 @@ process greet {
 }
 ```
 
-## Deprecated syntax
+### Deprecated syntax
 
-The following patterns are deprecated. The language server reports _future warnings_ for these patterns. Future warnings are disabled by default. Enable them by deselecting **Nextflow > Suppress Future Warnings** in {ref}`vscode-settings`. These warnings may become errors in the future.
+The following patterns are deprecated. The language server reports _paranoid warnings_ for these patterns. Paranoid warnings are disabled by default. Enable them by selecting **Nextflow > Paranoid Warnings** in {ref}`vscode-settings`. These warnings may become errors in the future.
 
 <h3>Implicit closure parameter</h3>
 
@@ -419,7 +424,7 @@ In Groovy, a closure with no parameters is assumed to have a single parameter na
 ch | map { it * 2 }
 ```
 
-For the Nextflow language specification, implicit closure parameters are not supported. Declare the parameter explicitly instead:
+For the strict syntax, implicit closure parameters are not supported. Declare the parameter explicitly instead:
 
 ```nextflow
 ch | map { v -> v * 2 }   // correct
@@ -430,7 +435,7 @@ ch | map { it -> it * 2 } // also correct
 
 While params can be used anywhere in the pipeline code, they are only intended to be used in the entry workflow.
 
-For the Nextflow language specification, processes and workflows should receive params as explicit inputs:
+For the strict syntax, processes and workflows should receive params as explicit inputs:
 
 ```nextflow
 process foo {
@@ -465,7 +470,7 @@ The process `when` section is deprecated. Use conditional logic, such as an `if`
 
 The process `shell` section is deprecated. Use the `script` block instead. The VS Code extension provides syntax highlighting and error checking to help distinguish between Nextflow variables and Bash variables.
 
-## Configuration syntax
+### Configuration syntax
 
 See {ref}`config-syntax` for a comprehensive description of the configuration language.
 
@@ -514,3 +519,11 @@ params.max_cpus = 8
 params.max_memory = 128.GB
 params.max_cpus = 32
 ```
+
+## Preserving Groovy code
+
+There are two ways to preserve Groovy code, for example, if the code is difficult to update: using the `lib` directory or writing a plugin.
+
+Any Groovy code can be moved into the `lib` directory, which supports the full Groovy language. This approach is useful for temporarily preserving some Groovy code until it can be updated later and incorporated into a Nextflow script. See the {ref}`lib directory <lib-directory>` documentation for more information.
+
+For Groovy code that is more complicated or depends on third-party libraries, it may be better to create a plugin. Plugins can define custom functions that can be included by Nextflow scripts like a module. Furthermore, plugins can be easily re-used across different pipelines. See {ref}`plugins-dev-page` for more information on how to develop plugins.

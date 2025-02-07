@@ -1,4 +1,4 @@
-(updates-page)=
+(updating-nextflow-page)=
 
 # Updating Nextflow
 

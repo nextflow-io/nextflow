@@ -16,6 +16,10 @@ The extension highlights source code in red for errors and yellow for warnings.
 
 To view all diagnostics for the workspace, open the **Problems** tab. Here, you can search for diagnostics by diagnostic message, filename, and so on.
 
+:::{note}
+The language server parses scripts and config files according to the {ref}`Nextflow language specification <syntax-page>`, which is more strict than the Nextflow CLI. See the {ref}`update guide <updating-syntax-page>` for more information.
+:::
+
 ### Hover hints
 
 When you hover over certain source code elements, such as variable names and function calls, the extension provides a tooltip with related information, such as the definition and/or documentation for the element.

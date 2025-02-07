@@ -127,11 +127,10 @@ reference/operator
 :caption: Updates
 :maxdepth: 1
 
-updates
-syntax-guide
+updating-nextflow
+updating-syntax
 dsl1
 ```
-
 
 ```{toctree}
 :hidden:

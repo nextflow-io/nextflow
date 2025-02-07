@@ -5,7 +5,7 @@
 Nextflow can be used on any POSIX-compatible system (Linux, macOS, etc), and on Windows through [WSL](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux). This page describes how to install Nextflow.
 
 :::{note}
-New versions of Nextflow are released regularly. See {ref}`updates-page` for more information about Nextflow release cadence, how to self-update Nextflow, and how select your version of Nextflow.
+New versions of Nextflow are released regularly. See {ref}`updates-page` for more information about Nextflow release cadence, how to update Nextflow, and how select your version of Nextflow.
 :::
 
 (install-requirements)=
