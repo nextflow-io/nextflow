@@ -392,8 +392,8 @@ class AzBatchService implements Closeable {
             throw new IllegalArgumentException("Missing Azure Blob storage SAS token")
 
         final container = task.getContainer()
-        if( !container )
-            throw new IllegalArgumentException("Missing container image for process: $task.name")
+        if( !container && config.batch().requireContainer )
+            throw new IllegalArgumentException("Missing container image for process: $task.name\nYou can disable this behaviour setting `azure.batch.requireContainer=false` in the nextflow config file")
         final taskId = "nf-${task.hash.toString()}"
         // get the pool config
         final pool = getPoolSpec(poolId)
@@ -419,8 +419,11 @@ class AzBatchService implements Closeable {
             }
         }
         // config overall container settings
-        final containerOpts = new BatchTaskContainerSettings(container)
+        BatchTaskContainerSettings containerOpts = null
+        if (container) {
+            containerOpts = new BatchTaskContainerSettings(container)
                 .setContainerRunOptions(opts)
+        }
         // submit command line
         final String cmd = fusionEnabled
                 ? launcher.fusionSubmitCli(task).join(' ')
@@ -434,15 +437,18 @@ class AzBatchService implements Closeable {
 
         log.trace "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
 
-        return new BatchTaskCreateContent(taskId, cmd)
+        final batchTask = new BatchTaskCreateContent(taskId, cmd)
                 .setUserIdentity(userIdentity(pool.opts.privileged, pool.opts.runAs, AutoUserScope.TASK))
-                .setContainerSettings(containerOpts)
                 .setResourceFiles(resourceFileUrls(task, sas))
                 .setOutputFiles(outputFileUrls(task, sas))
                 .setRequiredSlots(slots)
                 .setConstraints(constraints)
-                
 
+        if (containerOpts) {
+            batchTask.setContainerSettings(containerOpts)
+        }
+
+        return batchTask
     }
 
     AzTaskKey runTask(String poolId, String jobId, TaskRun task) {

@@ -395,6 +395,11 @@ The following settings are available:
 `azure.batch.pools.<name>.vmType`
 : Specify the virtual machine type used by the pool identified with `<name>`.
 
+`azure.batch.requireContainer`
+: :::{versionadded} 25.01.0-edge
+  :::
+: Require the use of a container when running tasks (default: `true`). Note this requires an existing Azure Batch pool configured to not use a container image. Running a process without a container when the node pool requires one will raise an error on Azure Batch
+
 `azure.managedIdentity.clientId`
 : Specify the client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview). See {ref}`azure-managed-identities` for more details.
 
