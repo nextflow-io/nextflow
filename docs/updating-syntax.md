@@ -38,7 +38,11 @@ def json = new groovy.json.JsonSlurper().parseText(json_file.text)
 
 <h4>Class declarations</h4>
 
-Some users use custom classes in Nextflow to define helper functions or custom record types. In the strict syntax, helper functions should be defined as standalone functions in a script and custom record classes should be added to the `lib` directory. Enums, a special type of class, are supported. However, they cannot be included across modules at this time.
+Some users use classes in Nextflow to define helper functions or custom types. Instead, define helper functions as standalone functions in Nextflow and move custom types to the `lib` directory.
+
+:::{note}
+Enums, a special type of class, are supported, but they cannot be included across modules at this time.
+:::
 
 :::{note}
 Record types will be addressed in a future version of the Nextflow language specification.
@@ -87,7 +91,7 @@ workflow {
 ```
 
 :::{note}
-Mixing statements and script declarations was necessary in DSL1 and allowed in DSL2. However, it is no longer supported in the strict syntax in order to simplify the language and to ensure that top-level statements are only executed when the script is executed directly and not when it is included as a module.
+Mixing statements and script declarations was necessary in DSL1 and optional in DSL2. However, it is no longer supported in the strict syntax in order to simplify the language and to ensure that top-level statements are not executed when the script is included as a module.
 :::
 
 <h4>Assignment expressions</h4>
@@ -353,7 +357,7 @@ def x = '42'.toInteger()    // preferred
 
 <h4>Process env inputs and outputs</h4>
 
-In Nextflow DSL1 and DSL2, the name of a process `env` input/output can be specified with or without quotes:
+In Nextflow DSL2, the name of a process `env` input/output can be specified with or without quotes:
 
 ```nextflow
 process PROC {
@@ -442,7 +446,7 @@ A more concise syntax for workflow handlers will be addressed in a future versio
 
 ### Deprecated syntax
 
-The following patterns are deprecated. The language server reports _paranoid warnings_ for these patterns. Paranoid warnings are disabled by default. Enable them by selecting **Nextflow > Paranoid Warnings** in the {ref}`extension settings <vscode-settings>`. These warnings may become errors in the future.
+The following patterns are deprecated. The language server reports _paranoid warnings_ for these patterns, which are disabled by default. Enable them by selecting **Nextflow > Paranoid Warnings** in the {ref}`extension settings <vscode-settings>`. These warnings may become errors in the future.
 
 <h4>Implicit closure parameter</h4>
 
@@ -500,7 +504,7 @@ The process `shell` section is deprecated. Use the `script` block instead. The V
 
 ### Configuration syntax
 
-See {ref}`config-syntax` for a comprehensive description of the configuration language.
+See {ref}`Configuration <config-syntax>` for a comprehensive description of the configuration language.
 
 Currently, Nextflow parses config files as Groovy scripts, allowing the use of scripting constructs like variables, helper functions, try-catch blocks, and conditional logic for dynamic configuration:
 
