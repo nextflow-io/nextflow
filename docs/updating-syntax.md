@@ -135,7 +135,7 @@ for (rseqc_module in ['read_distribution', 'inner_distance', 'tin']) {
 }
 ```
 
-In the strict syntax, higher-order functions, such as the `each` method, are required:
+In the strict syntax, higher-order functions, such as the `each` method, are used:
 
 ```nextflow
 ['read_distribution', 'inner_distance', 'tin'].each { rseqc_module ->
