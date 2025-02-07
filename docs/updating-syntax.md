@@ -10,13 +10,13 @@ If you are still using DSL1, see {ref}`dsl1-page` to learn how to migrate your N
 
 ## Preparing for strict syntax
 
-The strict syntax is a subset of DSL2. While DSL2 in practice allows any Groovy syntax, the strict syntax allows only a subset of Groovy syntax that is appropriate for Nextflow scripts and config files. This new specification enables more specific error reporting and more consistent code, and it will allow the Nextflow language to evolve independently of Groovy.
+The strict syntax is a subset of DSL2. While DSL2 in practice allows any Groovy syntax, the strict syntax allows only a subset of Groovy syntax that is appropriate for Nextflow scripts and config files. This specification enables more specific error reporting and more consistent code, and it will allow the Nextflow language to evolve independently of Groovy.
 
 The strict syntax is currently only enforced by the Nextflow language server, which is provided as part of the {ref}`vscode-page` for Nextflow. However, the strict syntax will be gradually adopted by the Nextflow CLI in future versions, and will eventually be the only way to write Nextflow code.
 
-New language features will be generally implemented as part of the strict syntax, and not the current "lenient" DSL2 parser, with few exceptions. Therefore, it will be important to prepare for the strict syntax in order to use new language features in the future.
+New language features will be implemented as part of the strict syntax, and not the current "lenient" DSL2 parser, with few exceptions. Therefore, it will be important to prepare for the strict syntax in order to use new language features in the future.
 
-This section highlights the most common errors encountered when updating to the strict syntax, and shows how to resolve them. In general, the amount of required changes depends on the amount of custom Groovy code that you have.
+This section describes the most common errors encountered when updating to the strict syntax, and how to resolve them. In general, the amount of required changes depends on the amount of custom Groovy code that you have.
 
 ### Removed syntax
 
@@ -38,7 +38,11 @@ def json = new groovy.json.JsonSlurper().parseText(json_file.text)
 
 <h4>Class declarations</h4>
 
-Some users use custom classes in Nextflow to define helper functions or custom record types. Instead, define helper functions as standalone functions in a script and move custom record classes to the `lib` directory. Enums, a special type of class, are supported. However, they cannot be included across modules at this time.
+Some users use classes in Nextflow to define helper functions or custom types. Instead, define helper functions as standalone functions in Nextflow and move custom types to the `lib` directory.
+
+:::{note}
+Enums, a special type of class, are supported, but they cannot be included across modules at this time.
+:::
 
 :::{note}
 Record types will be addressed in a future version of the Nextflow language specification.
@@ -87,7 +91,7 @@ workflow {
 ```
 
 :::{note}
-Mixing statements and script declarations was necessary in DSL1 and allowed in DSL2. However, it is no longer supported in the strict syntax in order to simplify the language and to ensure that top-level statements are only executed when the script is executed directly and not when it is included as a module.
+Mixing statements and script declarations was necessary in DSL1 and optional in DSL2. However, it is no longer supported in the strict syntax in order to simplify the language and to ensure that top-level statements are not executed when the script is included as a module.
 :::
 
 <h4>Assignment expressions</h4>
@@ -353,7 +357,7 @@ def x = '42'.toInteger()    // preferred
 
 <h4>Process env inputs and outputs</h4>
 
-In Nextflow DSL1 and DSL2, the name of a process `env` input/output can be specified with or without quotes:
+In Nextflow DSL2, the name of a process `env` input/output can be specified with or without quotes:
 
 ```nextflow
 process PROC {
@@ -442,7 +446,7 @@ A more concise syntax for workflow handlers will be addressed in a future versio
 
 ### Deprecated syntax
 
-The following patterns are deprecated. The language server reports _paranoid warnings_ for these patterns. Paranoid warnings are disabled by default. Enable them by selecting **Nextflow > Paranoid Warnings** in the {ref}`extension settings <vscode-settings>`. These warnings may become errors in the future.
+The following patterns are deprecated. The language server reports _paranoid warnings_ for these patterns, which are disabled by default. Enable them by selecting **Nextflow > Paranoid Warnings** in the {ref}`extension settings <vscode-settings>`. These warnings may become errors in the future.
 
 <h4>Implicit closure parameter</h4>
 
@@ -500,7 +504,7 @@ The process `shell` section is deprecated. Use the `script` block instead. The V
 
 ### Configuration syntax
 
-See {ref}`config-syntax` for a comprehensive description of the configuration language.
+See {ref}`Configuration <config-syntax>` for a comprehensive description of the configuration language.
 
 Currently, Nextflow parses config files as Groovy scripts, allowing the use of scripting constructs like variables, helper functions, try-catch blocks, and conditional logic for dynamic configuration:
 
