@@ -2,21 +2,21 @@
 
 # Updating Nextflow syntax
 
-This page describes how to update Nextflow scripts and config files to adhere to the {ref}`Nextflow language specification <syntax-page>`, also known as the "strict syntax".
+This page explains how to update Nextflow scripts and config files to adhere to the {ref}`Nextflow language specification <syntax-page>`, also known as the _strict syntax_.
 
 :::{note}
-If you are still using DSL1, see {ref}`dsl1-page` to learn how to migrate your Nextflow pipelines to DSL2 first, before consulting this guide.
+If you are still using DSL1, see {ref}`dsl1-page` to learn how to migrate your Nextflow pipelines to DSL2 before consulting this guide.
 :::
 
 ## Preparing for strict syntax
 
-The strict syntax is a subset of DSL2. While DSL2 in practice allows any Groovy syntax, the strict syntax allows only a subset of Groovy syntax that is appropriate for Nextflow scripts and config files. This new specification enables more specific error reporting and more consistent code, and it will allow the Nextflow language to evolve independently of Groovy.
+The strict syntax is a subset of DSL2. While DSL2 allows any Groovy syntax, the strict syntax allows only a subset of Groovy syntax for Nextflow scripts and config files. This new specification enables more specific error reporting, ensures more consistent code, and will allow the Nextflow language to evolve independently of Groovy.
 
-The strict syntax is currently only enforced by the Nextflow language server, which is provided as part of the {ref}`vscode-page` for Nextflow. However, the strict syntax will be gradually adopted by the Nextflow CLI in future versions, and will eventually be the only way to write Nextflow code.
+The strict syntax is currently only enforced by the Nextflow language server, which is provided as part of the {ref}`vscode-page` for Nextflow. However, the strict syntax will be gradually adopted by the Nextflow CLI in future releases and will eventually be the only way to write Nextflow code.
 
-New language features will be generally implemented as part of the strict syntax, and not the current "lenient" DSL2 parser, with few exceptions. Therefore, it will be important to prepare for the strict syntax in order to use new language features in the future.
+New language features will be generally implemented as part of the strict syntax, and not the current _lenient_ DSL2 parser, with few exceptions. Therefore, it will be important to prepare for the strict syntax in order to use new language features in the future.
 
-This section highlights the most common errors encountered when updating to the strict syntax, and shows how to resolve them. In general, the amount of required changes depends on the amount of custom Groovy code that you have.
+This section describes the key differences between the DSL2 and the strict syntax. In general, the amount of changes that are required depends on the amount of custom Groovy code in your scripts and config files.
 
 ### Removed syntax
 
@@ -30,7 +30,7 @@ import groovy.json.JsonSlurper
 def json = new JsonSlurper().parseText(json_file.text)
 ```
 
-In the strict syntax, use the fully qualified name instead:
+In the strict syntax, names should be fully qualified:
 
 ```nextflow
 def json = new groovy.json.JsonSlurper().parseText(json_file.text)
@@ -38,7 +38,7 @@ def json = new groovy.json.JsonSlurper().parseText(json_file.text)
 
 <h4>Class declarations</h4>
 
-Some users use custom classes in Nextflow to define helper functions or custom record types. Instead, define helper functions as standalone functions in a script and move custom record classes to the `lib` directory. Enums, a special type of class, are supported. However, they cannot be included across modules at this time.
+Some users use custom classes in Nextflow to define helper functions or custom record types. In the strict syntax, helper functions should be defined as standalone functions in a script and custom record classes should be added to the `lib` directory. Enums, a special type of class, are supported. However, they cannot be included across modules at this time.
 
 :::{note}
 Record types will be addressed in a future version of the Nextflow language specification.
@@ -70,7 +70,7 @@ workflow {
 }
 ```
 
-Script declarations and statements cannot be mixed at the same level. All statements must reside within script declarations unless the script is a code snippet:
+Script declarations and statements cannot be mixed at the same level. All statements should reside within script declarations unless the script is a code snippet:
 
 ```nextflow
 process foo {
@@ -98,7 +98,7 @@ In Groovy, variables can be assigned as part of an expression:
 foo(x = 1, y = 2)
 ```
 
-In the strict syntax, assign variables as statements instead:
+In the strict syntax, variables should be assigned as statements:
 
 ```nextflow
 x = 1
@@ -113,7 +113,7 @@ x++
 x--
 ```
 
-In the strict syntax, use `+=` and `-=` instead:
+In the strict syntax, `+=` and `-=` should be used:
 
 ```nextflow
 x += 1
@@ -131,7 +131,7 @@ for (rseqc_module in ['read_distribution', 'inner_distance', 'tin']) {
 }
 ```
 
-In the strict syntax, use higher-order functions, such as the `each` method, instead:
+In the strict syntax, higher-order functions, such as the `each` method, are required:
 
 ```nextflow
 ['read_distribution', 'inner_distance', 'tin'].each { rseqc_module ->
@@ -144,7 +144,7 @@ Lists, maps, and sets provide several functions (e.g., `collect`, `find`, `findA
 
 <h4>Switch statements</h4>
 
-In Groovy, switch statements can be used for pattern matching on a value:
+In Groovy, switch statements are used for pattern matching on a value:
 
 ```groovy
 switch (aligner) {
@@ -165,7 +165,7 @@ default:
 }
 ```
 
-In the strict syntax, use if-else statements instead:
+In the strict syntax, if-else statements should be used:
 
 ```nextflow
 if (aligner == 'bowtie2') {
@@ -189,7 +189,7 @@ In Groovy, the _spread_ operator can be used to flatten a nested list:
 ch.map { meta, bambai -> [meta, *bambai] }
 ```
 
-In the strict syntax, enumerate the list elements explicitly instead:
+In the strict syntax, list elements should be enumerated explicitly:
 
 ```groovy
 // alternative 1
@@ -210,7 +210,7 @@ In Nextflow DSL1 and DSL2, you can reference environment variables directly in s
 println "PWD = ${PWD}"
 ```
 
-In the strict syntax, use `System.getenv()` instead:
+In the strict syntax, `System.getenv()` should be used instead:
 
 ```nextflow
 println "PWD = ${System.getenv('PWD')}"
@@ -238,7 +238,7 @@ String str = 'foo'
 def Map meta = [:]
 ```
 
-In the strict syntax, declare variables with `def` and do not specify a type:
+In the strict syntax, variables should be defined with `def` and should not specify a type:
 
 ```nextflow
 def a = 1
@@ -249,7 +249,7 @@ def str = 'foo'
 def meta = [:]
 ```
 
-Similarly, for the strict syntax, declare functions with `def` and do not specify a return type or parameter type:
+Similarly, for the strict syntax, functions should be declared with `def` and should not specify a return type or parameter type:
 
 ```nextflow
 /**
@@ -284,7 +284,7 @@ def id = 'SRA001'
 assert 'SRA001.fastq' ~= /${id}\.f(?:ast)?q/
 ```
 
-Use a double-quoted string instead:
+Double-quoted string should be used instead:
 
 ```nextflow
 def id = 'SRA001'
@@ -301,7 +301,7 @@ Logic unconfined.
 /
 ```
 
-Use a multi-line string instead:
+Multi-line strings should be used instead:
 
 ```nextflow
 """
@@ -319,7 +319,7 @@ echo "Hello world!"
 /$
 ```
 
-Use a multi-line string instead:
+Multi-line strings should be used instead:
 
 ```nextflow
 """
@@ -336,7 +336,7 @@ def map = (Map) readJson(json)  // soft cast
 def map = readJson(json) as Map // hard cast
 ```
 
-In the strict syntax, only hard casts are supported. However, hard casts are discouraged because they can cause unexpected behavior if used improperly. Use a Groovy-style type annotation instead:
+In the strict syntax, only hard casts are supported. However, hard casts are discouraged because they can cause unexpected behavior if used improperly. Groovy-style type annotations should be used instead:
 
 ```groovy
 def Map map = readJson(json)
@@ -344,7 +344,7 @@ def Map map = readJson(json)
 
 Nextflow will raise an error at runtime if the `readJson()` function does not return a `Map`.
 
-In cases where you want to explicitly convert a value to a different type, use an explicit method. For example, to parse a string as a number:
+In the strict syntax, an explicit method is required to explicitly convert a value to a different type. For example, to parse a string as a number:
 
 ```groovy
 def x = '42' as Integer
@@ -365,7 +365,7 @@ process PROC {
 }
 ```
 
-In the strict syntax, specify the name with quotes:
+In the strict syntax, the name should be specified with quotes:
 
 ```nextflow
 process PROC {
@@ -392,7 +392,7 @@ process greet {
 }
 ```
 
-In the strict syntax, the `script:` label can be omitted only if there are no other sections:
+In the strict syntax, the `script:` label should be omitted only if there are no other sections:
 
 ```nextflow
 process sayHello {
@@ -423,7 +423,7 @@ workflow.onComplete {
 }
 ```
 
-Because the strict syntax does not allow statements to be mixed with script declarations, workflow handlers must be defined in the entry workflow:
+Because the strict syntax does not allow statements to be mixed with script declarations, workflow handlers should be defined in the entry workflow:
 
 ```nextflow
 workflow {
@@ -452,7 +452,7 @@ In Groovy, a closure with no parameters is assumed to have a single parameter na
 ch | map { it * 2 }
 ```
 
-In the strict syntax, implicit closure parameters are not supported. Declare the parameter explicitly instead:
+In the strict syntax, implicit closure parameters are not supported. The parameter should be explicitly declared:
 
 ```nextflow
 ch | map { v -> v * 2 }   // correct
@@ -520,7 +520,7 @@ else if (hostname == 'large') {
 }
 ```
 
-The strict config syntax does not support functions, and only allows statements (e.g., variables and if statements) within closures. You can achieve the same dynamic configuration by using a dynamic include:
+The strict config syntax does not support functions, and only allows statements (e.g., variables and if statements) within closures. The same dynamic configuration can be achieved by using a dynamic include:
 
 ```groovy
 includeConfig ({
