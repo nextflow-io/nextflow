@@ -127,7 +127,7 @@ To use the standalone distribution:
 
     ```{code-block} bash
     :class: copyable
-    chmod -x nextflow-24.10.1-dist
+    chmod +x nextflow-24.10.1-dist
     ```
 
 3. Use it as a drop-in replacement for `nextflow` command. For example:

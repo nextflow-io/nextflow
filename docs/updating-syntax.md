@@ -30,7 +30,7 @@ import groovy.json.JsonSlurper
 def json = new JsonSlurper().parseText(json_file.text)
 ```
 
-For the strict syntax, use the fully qualified name instead:
+In the strict syntax, use the fully qualified name instead:
 
 ```nextflow
 def json = new groovy.json.JsonSlurper().parseText(json_file.text)
@@ -98,7 +98,7 @@ In Groovy, variables can be assigned as part of an expression:
 foo(x = 1, y = 2)
 ```
 
-For the strict syntax, assign variables as statements instead:
+In the strict syntax, assign variables as statements instead:
 
 ```nextflow
 x = 1
@@ -113,7 +113,7 @@ x++
 x--
 ```
 
-For the strict syntax, use `+=` and `-=` instead:
+In the strict syntax, use `+=` and `-=` instead:
 
 ```nextflow
 x += 1
@@ -131,7 +131,7 @@ for (rseqc_module in ['read_distribution', 'inner_distance', 'tin']) {
 }
 ```
 
-For the strict syntax, use higher-order functions, such as the `each` method, instead:
+In the strict syntax, use higher-order functions, such as the `each` method, instead:
 
 ```nextflow
 ['read_distribution', 'inner_distance', 'tin'].each { rseqc_module ->
@@ -165,7 +165,7 @@ default:
 }
 ```
 
-For the strict syntax, use if-else statements instead:
+In the strict syntax, use if-else statements instead:
 
 ```nextflow
 if (aligner == 'bowtie2') {
@@ -189,7 +189,7 @@ In Groovy, the _spread_ operator can be used to flatten a nested list:
 ch.map { meta, bambai -> [meta, *bambai] }
 ```
 
-For the strict syntax, enumerate the list elements explicitly instead:
+In the strict syntax, enumerate the list elements explicitly instead:
 
 ```groovy
 // alternative 1
@@ -210,7 +210,7 @@ In Nextflow DSL1 and DSL2, you can reference environment variables directly in s
 println "PWD = ${PWD}"
 ```
 
-For the strict syntax, use `System.getenv()` instead:
+In the strict syntax, use `System.getenv()` instead:
 
 ```nextflow
 println "PWD = ${System.getenv('PWD')}"
@@ -238,7 +238,7 @@ String str = 'foo'
 def Map meta = [:]
 ```
 
-For the strict syntax, declare variables with `def` and do not specify a type:
+In the strict syntax, declare variables with `def` and do not specify a type:
 
 ```nextflow
 def a = 1
@@ -336,7 +336,7 @@ def map = (Map) readJson(json)  // soft cast
 def map = readJson(json) as Map // hard cast
 ```
 
-For the strict syntax, only hard casts are supported. However, hard casts are discouraged because they can cause unexpected behavior if used improperly. Use a Groovy-style type annotation instead:
+In the strict syntax, only hard casts are supported. However, hard casts are discouraged because they can cause unexpected behavior if used improperly. Use a Groovy-style type annotation instead:
 
 ```groovy
 def Map map = readJson(json)
@@ -365,7 +365,7 @@ process PROC {
 }
 ```
 
-For the strict syntax, specify the name with quotes:
+In the strict syntax, specify the name with quotes:
 
 ```nextflow
 process PROC {
@@ -392,7 +392,7 @@ process greet {
 }
 ```
 
-For the strict syntax, omit the `script:` label only if there are no other sections:
+In the strict syntax, the `script:` label can be omitted only if there are no other sections:
 
 ```nextflow
 process sayHello {
@@ -412,19 +412,47 @@ process greet {
 }
 ```
 
+<h3>Workflow onComplete/onError handlers</h3>
+
+{ref}`Workflow handlers <workflow-handlers>` (i.e. `workflow.onComplete` and `workflow.onError`) can be defined in several different ways in a script, but are typically defined as top-level statements and without an equals sign:
+
+```nextflow
+workflow.onComplete {
+    println "Pipeline completed at: $workflow.complete"
+    println "Execution status: ${ workflow.success ? 'OK' : 'failed' }"
+}
+```
+
+Because the strict syntax does not allow statements to be mixed with script declarations, workflow handlers must be defined in the entry workflow:
+
+```nextflow
+workflow {
+    // ...
+
+    workflow.onComplete = {
+        println "Pipeline completed at: $workflow.complete"
+        println "Execution status: ${ workflow.success ? 'OK' : 'failed' }"
+    }
+}
+```
+
+:::{note}
+A more concise syntax for workflow handlers will be addressed in a future version of the Nextflow language specification.
+:::
+
 ### Deprecated syntax
 
-The following patterns are deprecated. The language server reports _paranoid warnings_ for these patterns. Paranoid warnings are disabled by default. Enable them by selecting **Nextflow > Paranoid Warnings** in {ref}`vscode-settings`. These warnings may become errors in the future.
+The following patterns are deprecated. The language server reports _paranoid warnings_ for these patterns. Paranoid warnings are disabled by default. Enable them by selecting **Nextflow > Paranoid Warnings** in the {ref}`extension settings <vscode-settings>`. These warnings may become errors in the future.
 
 <h3>Implicit closure parameter</h3>
 
-In Groovy, a closure with no parameters is assumed to have a single parameter named `it`.
+In Groovy, a closure with no parameters is assumed to have a single parameter named `it`:
 
 ```nextflow
 ch | map { it * 2 }
 ```
 
-For the strict syntax, implicit closure parameters are not supported. Declare the parameter explicitly instead:
+In the strict syntax, implicit closure parameters are not supported. Declare the parameter explicitly instead:
 
 ```nextflow
 ch | map { v -> v * 2 }   // correct
@@ -435,7 +463,7 @@ ch | map { it -> it * 2 } // also correct
 
 While params can be used anywhere in the pipeline code, they are only intended to be used in the entry workflow.
 
-For the strict syntax, processes and workflows should receive params as explicit inputs:
+In the strict syntax, processes and workflows should receive params as explicit inputs:
 
 ```nextflow
 process foo {
