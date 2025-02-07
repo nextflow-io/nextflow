@@ -20,7 +20,7 @@ This section highlights the most common errors encountered when updating to the 
 
 ### Removed syntax
 
-<h3>Import declarations</h3>
+<h4>Import declarations</h4>
 
 In Groovy, the `import` declaration can be used to import external classes:
 
@@ -36,7 +36,7 @@ In the strict syntax, use the fully qualified name instead:
 def json = new groovy.json.JsonSlurper().parseText(json_file.text)
 ```
 
-<h3>Class declarations</h3>
+<h4>Class declarations</h4>
 
 Some users use custom classes in Nextflow to define helper functions or custom record types. Instead, define helper functions as standalone functions in a script and move custom record classes to the `lib` directory. Enums, a special type of class, are supported. However, they cannot be included across modules at this time.
 
@@ -44,7 +44,7 @@ Some users use custom classes in Nextflow to define helper functions or custom r
 Record types will be addressed in a future version of the Nextflow language specification.
 :::
 
-<h3>Mixing script declarations and statements</h3>
+<h4>Mixing script declarations and statements</h4>
 
 A script may contain any of the following top-level declarations:
 
@@ -90,7 +90,7 @@ workflow {
 Mixing statements and script declarations was necessary in DSL1 and allowed in DSL2. However, it is no longer supported in the strict syntax in order to simplify the language and to ensure that top-level statements are only executed when the script is executed directly and not when it is included as a module.
 :::
 
-<h3>Assignment expressions</h3>
+<h4>Assignment expressions</h4>
 
 In Groovy, variables can be assigned as part of an expression:
 
@@ -120,7 +120,7 @@ x += 1
 x -= 1
 ```
 
-<h3>For and while loops</h3>
+<h4>For and while loops</h4>
 
 In Groovy, loop statements, such as `for` and `while`, are supported:
 
@@ -142,7 +142,7 @@ In the strict syntax, use higher-order functions, such as the `each` method, ins
 
 Lists, maps, and sets provide several functions (e.g., `collect`, `find`, `findAll`, `inject`) for iteration. See [Groovy standard library](https://docs.groovy-lang.org/latest/html/groovy-jdk/overview-summary.html) for more information.
 
-<h3>Switch statements</h3>
+<h4>Switch statements</h4>
 
 In Groovy, switch statements can be used for pattern matching on a value:
 
@@ -181,7 +181,7 @@ if (aligner == 'bowtie2') {
 }
 ```
 
-<h3>Spread operator</h3>
+<h4>Spread operator</h4>
 
 In Groovy, the _spread_ operator can be used to flatten a nested list:
 
@@ -202,7 +202,7 @@ ch.map { meta, bambai ->
 }
 ```
 
-<h3>Implicit environment variables</h3>
+<h4>Implicit environment variables</h4>
 
 In Nextflow DSL1 and DSL2, you can reference environment variables directly in strings:
 
@@ -225,7 +225,7 @@ The `env()` function can be used instead of `System.getenv()`. For example,
 
 The following patterns are still supported but have been restricted. That is, some syntax variants have been removed.
 
-<h3>Variable declarations</h3>
+<h4>Variable declarations</h4>
 
 In Groovy, variables can be declared in many different ways:
 
@@ -271,7 +271,7 @@ Type annotations are useful for providing type checking at runtime. The language
 Instead, type annotations will be addressed in a future version of the Nextflow language specification, at which point the language server will provide a way to automatically migrate Groovy-style type annotations to the new syntax.
 :::
 
-<h3>Strings</h3>
+<h4>Strings</h4>
 
 Groovy supports a wide variety of strings, including multi-line strings, dynamic strings, slashy strings, multi-line dynamic slashy strings, and more.
 
@@ -327,7 +327,7 @@ echo "Hello world!"
 """
 ```
 
-<h3>Type conversions</h3>
+<h4>Type conversions</h4>
 
 In Groovy, soft and hard casts are supported:
 
@@ -351,7 +351,7 @@ def x = '42' as Integer
 def x = '42'.toInteger()    // preferred
 ```
 
-<h3>Process env inputs and outputs</h3>
+<h4>Process env inputs and outputs</h4>
 
 In Nextflow DSL1 and DSL2, the name of a process `env` input/output can be specified with or without quotes:
 
@@ -377,7 +377,7 @@ process PROC {
 }
 ```
 
-<h3>Implicit process script section</h3>
+<h4>Implicit process script section</h4>
 
 In Nextflow DSL1 and DSL2, the process `script:` section label can almost always be omitted:
 
@@ -412,7 +412,7 @@ process greet {
 }
 ```
 
-<h3>Workflow onComplete/onError handlers</h3>
+<h4>Workflow onComplete/onError handlers</h4>
 
 {ref}`Workflow handlers <workflow-handlers>` (i.e. `workflow.onComplete` and `workflow.onError`) can be defined in several different ways in a script, but are typically defined as top-level statements and without an equals sign:
 
@@ -444,7 +444,7 @@ A more concise syntax for workflow handlers will be addressed in a future versio
 
 The following patterns are deprecated. The language server reports _paranoid warnings_ for these patterns. Paranoid warnings are disabled by default. Enable them by selecting **Nextflow > Paranoid Warnings** in the {ref}`extension settings <vscode-settings>`. These warnings may become errors in the future.
 
-<h3>Implicit closure parameter</h3>
+<h4>Implicit closure parameter</h4>
 
 In Groovy, a closure with no parameters is assumed to have a single parameter named `it`:
 
@@ -459,7 +459,7 @@ ch | map { v -> v * 2 }   // correct
 ch | map { it -> it * 2 } // also correct
 ```
 
-<h3>Using params outside the entry workflow</h3>
+<h4>Using params outside the entry workflow</h4>
 
 While params can be used anywhere in the pipeline code, they are only intended to be used in the entry workflow.
 
@@ -486,15 +486,15 @@ workflow {
 }
 ```
 
-<h3>Process each input</h3>
+<h4>Process each input</h4>
 
 The `each` process input is deprecated. Use the `combine` or `cross` operator to explicitly repeat over inputs in the calling workflow.
 
-<h3>Process when section</h3>
+<h4>Process when section</h4>
 
 The process `when` section is deprecated. Use conditional logic, such as an `if` statement or the `filter` operator, to control the process invocation in the calling workflow.
 
-<h3>Process shell section</h3>
+<h4>Process shell section</h4>
 
 The process `shell` section is deprecated. Use the `script` block instead. The VS Code extension provides syntax highlighting and error checking to help distinguish between Nextflow variables and Bash variables.
 
