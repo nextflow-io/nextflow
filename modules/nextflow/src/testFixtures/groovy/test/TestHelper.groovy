@@ -116,7 +116,7 @@ class TestHelper {
 
     static List<TaskRun> upstreamTasksOf(TaskRun t) {
         final ids = t.upstreamTasks ?: Set.<TaskId>of()
-        return ids.collect(it -> getTaskById(it))
+        return ids.collect(it -> getTaskById(it)).sort((run)->run.id)
     }
 
     static TaskRun getTaskByName(String name) {

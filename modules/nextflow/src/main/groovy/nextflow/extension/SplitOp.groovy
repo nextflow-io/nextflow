@@ -86,7 +86,7 @@ class SplitOp {
         this.methodName = methodName
 
         if( params.pe && methodName != 'splitFastq' )
-            throw new IllegalArgumentException("Unknown argument 'pe' for operator 'splitFastq'")
+            throw new IllegalArgumentException("Unknown argument 'pe' for operator '${methodName}'")
 
         if( params.pe==true && params.elem )
             throw new IllegalArgumentException("Parameter `pe` and `elem` conflicts")
@@ -109,7 +109,6 @@ class SplitOp {
 
         if( params.into && !(CH.isChannelQueue(params.into)) )
             throw new IllegalArgumentException('Parameter `into` must reference a channel object')
-
     }
 
     /**
@@ -131,22 +130,22 @@ class SplitOp {
         final cardinality = indexes.size()
 
         // -- creates a copy of `source` channel for each element to split
-        def copies = createSourceCopies(source, cardinality)
+        final copies = createSourceCopies(source, cardinality)
 
         // -- applies the splitter the each channel copy
-        def splitted = new ArrayList(cardinality)
+        final splitted = new ArrayList(cardinality)
         for( int i=0; i<cardinality; i++ ) {
             def channel = copies.get(i)
             def opts = new HashMap(params)
             opts.remove('pe')
             opts.elem = indexes.get(i)
             opts.into = createInto0()
-            def result = splitSingleEntry(channel as DataflowReadChannel, opts)
+            final result = splitSingleEntry(channel as DataflowReadChannel, opts)
             splitted.add( result )
         }
 
         // -- now merge the result
-        def output = CH.create()
+        final output = CH.create()
         applyMergingOperator(splitted, output, indexes)
         return output
     }
@@ -159,7 +158,6 @@ class SplitOp {
      * Apply the split operation to a single element
      */
     protected DataflowWriteChannel splitSingleEntry(DataflowReadChannel origin, Map params) {
-
         // -- get the output channel
         final output = getOrCreateWriteChannel(params)
         // -- the output channel is passed to the splitter by using the `into` parameter

@@ -1094,7 +1094,7 @@ class ProvTest extends Dsl2Spec {
         when:
         dsl_eval(globalConfig(), """
             workflow {
-                p1 | splitText | p2
+                p1 | splitText(file:true) | p2
             }
             
             process p1 { 
@@ -1122,7 +1122,125 @@ class ProvTest extends Dsl2Spec {
 
     }
 
-    def 'should track provenance with splitFastq paired'() {
+    def 'should track provenance with splitFasta and a file'() {
+        given:
+        def FASTA = """\
+                >1aboA
+                NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS
+                NYITPVN
+                >1ycsB
+                KGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY
+                VPRNLLGLYP
+                >1pht
+                GYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG
+                WLNGYNETTGERGDFPGTYVE
+                YIGRKKISP
+                """.stripIndent()
+
+        when:
+        dsl_eval(globalConfig(), """
+            workflow {
+                p1 | splitFasta(file:true) | p2
+            }
+            
+            process p1 { 
+              output: path('result.txt') 
+              exec: 
+                task.workDir.resolve('result.txt').text = '''${FASTA}''' 
+            }
+            
+            process p2 {
+              input: val(chunk)
+              exec: 
+                println "\${task.name}: chunck=\$chunk"
+            }
+        """)
+
+        then:
+        upstreamTasksOf('p2 (1)')
+            .name == ['p1']
+        and:
+        upstreamTasksOf('p2 (2)')
+            .name == ['p1']
+        and:
+        upstreamTasksOf('p2 (3)')
+            .name == ['p1']
+
+    }
+
+    def 'should track provenance with splitFastq and a file'() {
+        when:
+        dsl_eval(globalConfig(), """
+            workflow {
+                p1 | splitFastq(file:true) | p2
+            }
+            
+            process p1 { 
+              output: path('result.txt') 
+              exec: 
+                task.workDir.resolve('result.txt').text = '''${SplitFastqOp2Test.READS1}''' 
+            }
+            
+            process p2 {
+              input: val(chunk)
+              exec: 
+                println "\${task.name}: chunck=\$chunk"
+            }
+        """)
+
+        then:
+        upstreamTasksOf('p2 (1)')
+            .name == ['p1']
+        and:
+        upstreamTasksOf('p2 (2)')
+            .name == ['p1']
+        and:
+        upstreamTasksOf('p2 (3)')
+            .name == ['p1']
+        and:
+        upstreamTasksOf('p2 (4)')
+            .name == ['p1']
+    }
+
+    def 'should track provenance with splitFastq with paired files'() {
+        when:
+        dsl_eval(globalConfig(), """
+            workflow {
+                p1()
+                p1.out | splitFastq(pe:true, file:true) | p2
+            }
+            
+            process p1 { 
+              output: tuple val(sample), path('one.fq'), path('two.fq') 
+              exec:
+                sample = 'sample_1' 
+                task.workDir.resolve('one.fq').text = '''${SplitFastqOp2Test.READS1}'''
+                task.workDir.resolve('two.fq').text = '''${SplitFastqOp2Test.READS2}'''
+            }
+            process p2 {
+              input: tuple val(sample), path(r1), path(r2)
+              exec:
+                println "\${task.name}: sample=\${sample};"
+            }
+   
+        """)
+
+        then:
+        noExceptionThrown()
+        upstreamTasksOf('p2 (1)')
+            .name == ['p1']
+        and:
+        upstreamTasksOf('p2 (2)')
+            .name == ['p1']
+        and:
+        upstreamTasksOf('p2 (3)')
+            .name == ['p1']
+        and:
+        upstreamTasksOf('p2 (4)')
+            .name == ['p1']
+    }
+
+    def 'should track provenance with splitFastq join and paired files'() {
         given:
 
         when:
@@ -1158,13 +1276,16 @@ class ProvTest extends Dsl2Spec {
         then:
         noExceptionThrown()
         upstreamTasksOf('p3 (1)')
-            .name == ['p1 (1)', 'p2 (1)']
-//        and:
-//        upstreamTasksOf('p2 (2)')
-//            .name == ['p1']
-//        and:
-//        upstreamTasksOf('p2 (3)')
-//            .name == ['p1']
+            .id == [TaskId.of(1), TaskId.of(2)]
+        and:
+        upstreamTasksOf('p3 (2)')
+            .id == [TaskId.of(1), TaskId.of(2)]
+        and:
+        upstreamTasksOf('p3 (3)')
+            .id == [TaskId.of(1), TaskId.of(2)]
+        and:
+        upstreamTasksOf('p3 (4)')
+            .id == [TaskId.of(1), TaskId.of(2)]
 
     }
 

@@ -122,7 +122,6 @@ class TaskRun implements Cloneable, TrailRun {
         outputs[param] = value
     }
 
-
     /**
      * The value to be piped to the process stdin
      */

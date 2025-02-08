@@ -76,9 +76,9 @@ class SplitterMergeClosure extends Closure {
         List result = null
         boolean header = false
         for( int i=0; i<args.size(); i++ ) {
-            def item = args[i]
+            final item = args[i]
             // - When Pair-ended splitting is enabled the Fastq splitter
-            //   emits the indexes of the splitted files as first tuple
+            //   emits the indexes of the split files as first tuple
             // - Those indexes are needed to merge the final tuple in correct order
             if( emissionCount==0 && item instanceof FastqSplitter.SplitIndex ) {
                 indexes[i] = item.value

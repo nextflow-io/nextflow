@@ -65,11 +65,11 @@ class Tracker {
     private logInputs(TaskRun task, List inputs) {
         if( log.isTraceEnabled() ) {
             def msg = "Task input"
-            msg += "\n - id      : ${task.id} "
+            msg += "\n - task id : ${task.id} "
             msg += "\n - name    : '${task.name}'"
-            msg += "\n - upstream: ${task.upstreamTasks*.value.join(',')}"
+            msg += "\n - upstream: ${task.upstreamTasks*.value}"
             for( Object it : inputs ) {
-                msg += "\n<= ${it}"
+                msg += "\n=> ${dumpInput(it)}"
             }
             log.trace(msg)
         }
@@ -78,12 +78,21 @@ class Tracker {
     private logInputs(OperatorRun run, List inputs) {
         if( log.isTraceEnabled() ) {
             def msg = "Operator input"
-            msg += "\n - id: ${System.identityHashCode(run)} "
+            msg += "\n - run id: ${System.identityHashCode(run)} "
             for( Object it : inputs ) {
-                msg += "\n<= ${it}"
+                msg += "\n=> ${dumpInput(it)}"
             }
             log.trace(msg)
         }
+    }
+
+    private String dumpInput(Object it) {
+        if( it==null )
+            return "null"
+        if( it instanceof Msg )
+            return it.toString()
+        else
+            return "${it.getClass().getName()}[id=${System.identityHashCode(it)}; value=${it.toString()}]"
     }
 
     List<Object> receiveInputs(OperatorRun run, List inputs) {
@@ -148,16 +157,16 @@ class Tracker {
             String str
             if( run instanceof OperatorRun ) {
                 str = "Operator output"
-                str += "\n - id  : ${System.identityHashCode(run)}"
+                str += "\n - run id: ${System.identityHashCode(run)}"
             }
             else if( run instanceof TaskRun ) {
                 str = "Task output"
-                str += "\n - id  : ${run.id}"
-                str += "\n - name: '${run.name}'"
+                str += "\n - task id : ${run.id}"
+                str += "\n - name    : '${run.name}'"
             }
             else
                 throw new IllegalArgumentException("Unknown run type: ${run}")
-            str += "\n=> ${msg}"
+            str += "\n<= ${msg}"
             log.trace(str)
         }
     }
