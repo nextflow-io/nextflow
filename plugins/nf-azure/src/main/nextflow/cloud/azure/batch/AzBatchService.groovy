@@ -88,7 +88,6 @@ import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.fusion.FusionHelper
 import nextflow.fusion.FusionScriptLauncher
-import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
@@ -111,7 +110,7 @@ class AzBatchService implements Closeable {
 
     AzConfig config
 
-    Map<TaskProcessor,String> allJobIds = new HashMap<>(50)
+    Map<AzJobKey,String> allJobIds = new HashMap<>(50)
 
     AzBatchService(AzBatchExecutor executor) {
         assert executor
@@ -355,17 +354,26 @@ class AzBatchService implements Closeable {
     }
 
     synchronized String getOrCreateJob(String poolId, TaskRun task) {
-        final mapKey = task.processor
+        // Use the same job Id for the same Process,PoolId pair
+        // The Pool is added to allow using different queue names (corresponding
+        // a pool id) for the same process. See also
+        // https://github.com/nextflow-io/nextflow/pull/5766
+        final mapKey = new AzJobKey(task.processor, poolId)
         if( allJobIds.containsKey(mapKey)) {
             return allJobIds[mapKey]
         }
+        final jobId = createJob0(poolId,task)
+        // add to the map
+        allJobIds[mapKey] = jobId
+        return jobId
+    }
+
+    protected String createJob0(String poolId, TaskRun task) {
+        log.debug "[AZURE BATCH] created job for ${task.processor.name} with pool ${poolId}"
         // create a batch job
         final jobId = makeJobId(task)
         final content = new BatchJobCreateContent(jobId, new BatchPoolInfo(poolId: poolId))
         apply(() -> client.createJob(content))
-        // add to the map
-        allJobIds[mapKey] = jobId
-        return jobId
     }
 
     String makeJobId(TaskRun task) {
