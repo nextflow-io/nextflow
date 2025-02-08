@@ -66,6 +66,8 @@ class Op {
     }
 
     static void bind(DataflowProcessor dp, DataflowWriteChannel channel, Object msg) {
+        if( dp==null )
+            throw new IllegalStateException("DataflowProcessor argument cannot be null")
         try {
             if( msg instanceof PoisonPill ) {
                 channel.bind(msg)

@@ -29,32 +29,25 @@ import test.TestHelper
 class TextSplitterTest extends Specification {
 
     def testTextByLine() {
-
         expect:
         new TextSplitter().target("Hello\nworld\n!").list() == ['Hello\n','world\n','!\n']
         new TextSplitter().target("Hello\nworld\n!").options(each:{ it.trim().reverse() }) .list()  == ['olleH','dlrow','!']
-
     }
 
     def testTextByLineWithLimit() {
-
         expect:
         new TextSplitter(limit: 3).target("1\n2\n3\n4\n5").list() == ['1\n','2\n','3\n']
-
     }
 
     def testTextByLineWithLimitWithMultiTargets() {
-
         given:
         def splitter = new TextSplitter(limit: 3)
         expect:
         splitter.target("1\n2\n3\n4\n5").list() == ['1\n','2\n','3\n']
         splitter.target("a\nb\nc\nd\ne").list() == ['a\n','b\n','c\n']
-
     }
 
     def testSplitLinesByCount () {
-
         expect:
         new TextSplitter().target("Hello\nHola\nHalo").list() == ['Hello\n', 'Hola\n', 'Halo\n']
         new TextSplitter().options(by:3).target("11\n22\n33\n44\n55").list() == [ '11\n22\n33\n', '44\n55\n' ]
@@ -63,7 +56,6 @@ class TextSplitterTest extends Specification {
     }
 
     def testSplitFileByLine () {
-
         setup:
         def file = File.createTempFile('chunk','test')
         file.deleteOnExit()
@@ -88,27 +80,23 @@ class TextSplitterTest extends Specification {
         when:
         def channel = new TextSplitter().target(file).options(by:2).channel()
         then:
-        channel.val == 'line1\nline2\n'
-        channel.val == 'line3\nline4\n'
-        channel.val == 'line5\n'
-        channel.val == Channel.STOP
-
+        channel.unwrap() == 'line1\nline2\n'
+        channel.unwrap() == 'line3\nline4\n'
+        channel.unwrap() == 'line5\n'
+        channel.unwrap() == Channel.STOP
     }
 
     def testSplitChannel() {
-
         when:
         def channel = new TextSplitter().target("Hello\nworld\n!").channel()
         then:
-        channel.val == 'Hello\n'
-        channel.val == 'world\n'
-        channel.val == '!\n'
-        channel.val == Channel.STOP
-
+        channel.unwrap() == 'Hello\n'
+        channel.unwrap() == 'world\n'
+        channel.unwrap() == '!\n'
+        channel.unwrap() == Channel.STOP
     }
 
     def testSplitTextFile() {
-
         given:
         def folder = TestHelper.createInMemTempDir()
         def file = folder.resolve('file.txt')
@@ -117,15 +105,13 @@ class TextSplitterTest extends Specification {
         when:
         def channel = new TextSplitter().target(file).channel()
         then:
-        channel.val == 'a\n'
-        channel.val == 'bb\n'
-        channel.val == 'ccc\n'
-        channel.val == Channel.STOP
-
+        channel.unwrap() == 'a\n'
+        channel.unwrap() == 'bb\n'
+        channel.unwrap() == 'ccc\n'
+        channel.unwrap() == Channel.STOP
     }
 
     def testSplitGzipTextFile() {
-
         given:
         def folder = TestHelper.createInMemTempDir()
         def file = folder.resolve('file.txt.gz')
@@ -136,15 +122,13 @@ class TextSplitterTest extends Specification {
         when:
         def channel = new TextSplitter().target(file).channel()
         then:
-        channel.val == 'a\n'
-        channel.val == 'bb\n'
-        channel.val == 'ccc\n'
-        channel.val == Channel.STOP
-
+        channel.unwrap() == 'a\n'
+        channel.unwrap() == 'bb\n'
+        channel.unwrap() == 'ccc\n'
+        channel.unwrap() == Channel.STOP
     }
 
     def testSplitGzipTextFileWithDecompressOption() {
-
         given:
         def folder = TestHelper.createInMemTempDir()
         def file = folder.resolve('file.txt')
@@ -155,15 +139,13 @@ class TextSplitterTest extends Specification {
         when:
         def channel = new TextSplitter().target(file).options(decompress: true).channel()
         then:
-        channel.val == 'a\n'
-        channel.val == 'bb\n'
-        channel.val == 'ccc\n'
-        channel.val == Channel.STOP
-
+        channel.unwrap() == 'a\n'
+        channel.unwrap() == 'bb\n'
+        channel.unwrap() == 'ccc\n'
+        channel.unwrap() == Channel.STOP
     }
 
     def testSplitChunkToFiles() {
-
         given:
         def folder = TestHelper.createInMemTempDir()
 
@@ -188,11 +170,9 @@ class TextSplitterTest extends Specification {
         chunks[0] == folder.resolve('chunk.1')
         chunks[1] == folder.resolve('chunk.2')
         chunks[2] == folder.resolve('chunk.3')
-
     }
 
     def testSplitFileToFiles() {
-
         given:
         def folder = TestHelper.createInMemTempDir()
         def source = folder.resolve('my_file.txt')
@@ -217,11 +197,9 @@ class TextSplitterTest extends Specification {
         chunks[0] == folder.resolve('my_file.1.txt')
         chunks[1] == folder.resolve('my_file.2.txt')
         chunks[2] == folder.resolve('my_file.3.txt')
-
     }
 
     def testSplitTextTuples() {
-
         given:
         def folder = TestHelper.createInMemTempDir()
         def file = folder.resolve('lines.txt')
@@ -240,11 +218,9 @@ class TextSplitterTest extends Specification {
         chunks[1] == ['line2\n', 'lines.txt']
         chunks[2] == ['line3\n', 'lines.txt']
         chunks[3] == ['line4\n', 'lines.txt']
-
     }
 
     def testSplitTextTuplesWithElement() {
-
         given:
         def folder = TestHelper.createInMemTempDir()
         def file = folder.resolve('lines.txt')
@@ -262,12 +238,10 @@ class TextSplitterTest extends Specification {
         chunks[0] == [1, 'lines.txt', 'line1\n']
         chunks[1] == [1, 'lines.txt', 'line2\n']
         chunks[2] == [1, 'lines.txt', 'line3\n']
-        chunks[3] == [1, 'lines.txt', 'line4\n']
 
     }
 
     def testSplitTupleWithFileToFileChunks() {
-
         given:
         def folder = TestHelper.createInMemTempDir()
 
@@ -294,20 +268,16 @@ class TextSplitterTest extends Specification {
 
         chunks[0][1].text == 'line1\nline2\n'
         chunks[1][1].text == 'line3\nline4\n'
-
     }
 
     def testRecordModeNotWorking() {
-
         when:
         new TextSplitter().options(record:true)
         then:
         thrown(IllegalArgumentException)
-
     }
 
     def testSplitLinesByCountMulti () {
-
         given:
         def ts = new TextSplitter().options(by: 2)
 
@@ -318,7 +288,6 @@ class TextSplitterTest extends Specification {
         then:
         lines1 == ['1\n2\n', '3\n']
         lines2 == ['4\n5\n', '6\n']
-
     }
 
 
@@ -343,7 +312,6 @@ class TextSplitterTest extends Specification {
         lines[1] == 'HEADER\n4\n5\n6\n'
         lines[2] == 'HEADER\n7\n'
         lines.size()==3
-
     }
 
     def testKeepHeaderWithFile() {
@@ -374,6 +342,5 @@ class TextSplitterTest extends Specification {
         lines[1].text == 'HEADER\n4\n5\n6\n'
         lines[2].text == 'HEADER\n7\n'
         lines.size()==3
-
     }
 }

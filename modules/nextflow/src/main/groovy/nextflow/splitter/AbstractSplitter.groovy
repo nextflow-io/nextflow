@@ -429,12 +429,14 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
     protected void append( into, value ) {
         log.trace "Splitter value: ${debugCount++}"
 
-        if( into instanceof Collection )
+        if( into instanceof Collection ) {
             into.add(value)
-
-        else if( into instanceof DataflowWriteChannel )
-            Op.bind(processor, into, value)
-
+        }
+        else if( into instanceof DataflowWriteChannel ) {
+            processor!=null
+                ? Op.bind(processor, into, value)
+                : into.bind(value)
+        }
         else
             throw new IllegalArgumentException("Not a valid 'into' target object: ${into?.class?.name}")
     }

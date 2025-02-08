@@ -26,7 +26,6 @@ import test.TestHelper
  */
 class FastaSplitterTest extends Specification {
 
-
     def testFastaRecord() {
         def fasta = /
             ;
@@ -61,7 +60,6 @@ class FastaSplitterTest extends Specification {
     }
 
 
-
     def testSplitFasta () {
 
         when:
@@ -83,14 +81,12 @@ class FastaSplitterTest extends Specification {
 
         then:
         count == 2
-        q.val == ">prot1\nLCLYTHIGRNIYYGS1\nEWIWGGFSVDKATLN\n"
-        q.val == ">prot2\nLLILILLLLLLALLS\nGLMPFLHTSKHRSMM\nIENY\n"
-        q.val == Channel.STOP
-
+        q.unwrap() == ">prot1\nLCLYTHIGRNIYYGS1\nEWIWGGFSVDKATLN\n"
+        q.unwrap() == ">prot2\nLLILILLLLLLALLS\nGLMPFLHTSKHRSMM\nIENY\n"
+        q.unwrap() == Channel.STOP
     }
 
     def testSplitFastaRecord() {
-
         given:
         def fasta = """\
                 >1aboA
@@ -110,15 +106,13 @@ class FastaSplitterTest extends Specification {
         def q = new FastaSplitter().options(record: [id:true, seqString:true]).target(fasta) .channel()
 
         then:
-        q.val == [id:'1aboA', seqString: 'NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPSNYITPVN']
-        q.val == [id:'1ycsB', seqString: 'KGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGYVPRNLLGLYP']
-        q.val == [id:'1pht', seqString: 'GYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIGWLNGYNETTGERGDFPGTYVEYIGRKKISP']
-        q.val == Channel.STOP
-
+        q.unwrap() == [id:'1aboA', seqString: 'NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPSNYITPVN']
+        q.unwrap() == [id:'1ycsB', seqString: 'KGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGYVPRNLLGLYP']
+        q.unwrap() == [id:'1pht', seqString: 'GYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIGWLNGYNETTGERGDFPGTYVEYIGRKKISP']
+        q.unwrap() == Channel.STOP
     }
 
     def testSplitFastaFile () {
-
         setup:
         def file = File.createTempFile('chunk','test')
         file.deleteOnExit()
@@ -148,7 +142,6 @@ class FastaSplitterTest extends Specification {
         result[1] == ">prot3\nDD\n>prot4\nEE\nFF\nGG\n"
         result[2] == ">prot5\nLL\nNN\n"
 
-
         when:
         def result2 = new FastaSplitter()
                 .options(record: [id: true, seqString: true], each:{ [ it.id, it.seqString.size() ]} )
@@ -162,12 +155,10 @@ class FastaSplitterTest extends Specification {
         result2[3] == [ 'prot4', 6 ]
         result2[4] == [ 'prot5', 4 ]
         result2.size() == 5
-
     }
 
 
     def testSplitWithLimit() {
-
         given:
         def fasta = '''
             >1aboA
@@ -194,12 +185,9 @@ class FastaSplitterTest extends Specification {
         result[0] == [id: '1aboA']
         result[1] == [id: '1ycsB']
         result[2] == [id: '1pht']
-
     }
 
-
     def testSplitToFile() {
-
         given:
         def folder = TestHelper.createInMemTempDir()
         def fasta = '''
@@ -254,7 +242,6 @@ class FastaSplitterTest extends Specification {
     }
 
     def testSplitToFileByOne() {
-
         given:
         def folder = TestHelper.createInMemTempDir()
         def fasta = '''
@@ -299,7 +286,6 @@ class FastaSplitterTest extends Specification {
 
 
     def testSplitRecordBy2() {
-
         given:
         def fasta = '''
             >1aboA
@@ -326,7 +312,6 @@ class FastaSplitterTest extends Specification {
         result[0] == [[id: '1aboA'], [id: '1ycsB']]
         result[1] == [[id: '1pht'], [id: '1vie']]
         result[2] == [[id: '1ihvA']]
-
     }
 
     def 'should split by size' () {
@@ -375,7 +360,6 @@ class FastaSplitterTest extends Specification {
     }
 
     def 'should fetch a record' () {
-
         given:
         def fasta = """\
                 >prot1
@@ -415,7 +399,6 @@ class FastaSplitterTest extends Specification {
 
         splitter.counter.increment == 31
         splitter.counter.size == 1024 * 1024
-
     }
 
 }
