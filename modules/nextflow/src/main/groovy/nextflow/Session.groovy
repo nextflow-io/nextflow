@@ -1212,6 +1212,11 @@ class Session implements ISession {
         if( aborted || cancelled || error )
             return
 
+        if( workDir.scheme != 'file' ) {
+            log.warn "The `cleanup` option is not supported for remote work directory: ${workDir.toUriString()}"
+            return
+        }
+
         log.trace "Cleaning-up workdir"
         try (CacheDB db = CacheFactory.create(uniqueId, runName).openForRead()) {
             db.eachRecord { HashCode hash, TraceRecord record ->

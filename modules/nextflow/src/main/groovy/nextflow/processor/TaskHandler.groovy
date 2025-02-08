@@ -175,7 +175,7 @@ abstract class TaskHandler {
             return getTraceRecord()
         }
         catch (Exception e) {
-                log.debug "Unable to get task trace record -- cause: ${e.message}", e
+            log.debug "Unable to get task trace record -- cause: ${e.message}", e
             return null
         }
     }

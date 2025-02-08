@@ -2256,7 +2256,7 @@ class TaskProcessor {
             }
         }
 
-        if( session.stubRun ) {
+        if( session.stubRun && task.config.getStubBlock() ) {
             keys.add('stub-run')
         }
 
