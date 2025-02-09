@@ -802,8 +802,12 @@ class OperatorImpl {
         final inputs = [source, other]
         final action = closure ? new ChainWithClosure<>(closure) : new DefaultMergeClosure(inputs.size())
         final listener = stopErrorListener(source,result)
-        final params = createOpParams(inputs, result, listener)
-        newOperator(params, action)
+        new Op()
+            .withInputs(inputs)
+            .withOutput(result)
+            .withListener(listener)
+            .withCode(action)
+            .apply()
         return result;
     }
 

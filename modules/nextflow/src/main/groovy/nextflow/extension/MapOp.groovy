@@ -68,21 +68,23 @@ class MapOp {
             target = CH.createBy(source)
 
         final stopOnFirst = source instanceof DataflowExpression
-        DataflowHelper.newOperator(source, target) { it ->
+        new Op()
+            .withInput(source)
+            .withOutput(target)
+            .withCode { it ->
+                final result = mapper.call(it)
+                final proc = getDelegate() as DataflowProcessor
 
-            final result = mapper.call(it)
-            final proc = getDelegate() as DataflowProcessor
+                // bind the result value
+                if (result != Channel.VOID)
+                    Op.bind(proc, target, result)
 
-            // bind the result value
-            if (result != Channel.VOID)
-                Op.bind(proc, target, result)
-
-            // when the `map` operator is applied to a dataflow flow variable
-            // terminate the processor after the first emission -- Issue #44
-            if( stopOnFirst )
-                proc.terminate()
-
-        }
+                // when the `map` operator is applied to a dataflow flow variable
+                // terminate the processor after the first emission -- Issue #44
+                if( stopOnFirst )
+                    proc.terminate()
+            }
+            .apply()
 
         return target
     }

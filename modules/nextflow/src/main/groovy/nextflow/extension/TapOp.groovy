@@ -23,7 +23,7 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.ChainWithClosure
 import groovyx.gpars.dataflow.operator.CopyChannelsClosure
 import nextflow.NF
-import static nextflow.extension.DataflowHelper.newOperator
+import nextflow.extension.op.Op
 /**
  * Implements the {@link OperatorImpl#tap} operator
  *
@@ -108,7 +108,11 @@ class TapOp {
      * @return An instance of {@link TapOp} itself
      */
     TapOp apply() {
-        newOperator([source], outputs, new ChainWithClosure(new CopyChannelsClosure()));
+        new Op()
+            .withInput(source)
+            .withOutputs(outputs)
+            .withCode(new ChainWithClosure(new CopyChannelsClosure()))
+            .apply()
         return this
     }
 

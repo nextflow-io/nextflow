@@ -17,15 +17,13 @@
 
 package nextflow.extension
 
-import static nextflow.extension.DataflowHelper.createOpParams
-import static nextflow.extension.DataflowHelper.newOperator
-import static nextflow.extension.DataflowHelper.stopErrorListener
+import static nextflow.extension.DataflowHelper.*
 
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.ChainWithClosure
-
+import nextflow.extension.op.Op
 /**
  * Implements merge operator
  *
@@ -56,8 +54,12 @@ class MergeOp {
         inputs.add(source)
         inputs.addAll(others)
         final listener = stopErrorListener(source,result)
-        final params = createOpParams(inputs, result, listener)
-        newOperator(params, action)
+        new Op()
+            .withInputs(inputs)
+            .withOutput(result)
+            .withListener(listener)
+            .withCode(action)
+            .apply()
         return result
     }
 }
