@@ -17,11 +17,11 @@
 package nextflow.extension
 
 import nextflow.Channel
-
-import spock.lang.Specification
-
 import nextflow.Session
-
+import nextflow.extension.op.OpDatum
+import nextflow.prov.OperatorRun
+import nextflow.util.ArrayBag
+import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -33,7 +33,6 @@ class GroupTupleOpTest extends Specification {
     }
 
     def 'should reuse the same key' () {
-
         given:
         def key1 = ['a', 'b', 'c']
         def key2 = ['a', 'b', 'c']
@@ -63,7 +62,6 @@ class GroupTupleOpTest extends Specification {
     }
 
     def 'should reuse same key with GroupSize' () {
-
         given:
         def key1 = [new GroupKey('A',1) ]
         def key2 = [new GroupKey('A',1) ]
@@ -80,7 +78,6 @@ class GroupTupleOpTest extends Specification {
         map.get(key2) == 1
         map.get(key3) == null
         map.getOrCreate(key2) { return 10 } == 1
-
     }
 
     def 'should fetch groupsize' () {
@@ -100,6 +97,33 @@ class GroupTupleOpTest extends Specification {
         0       | []
     }
 
+    def 'should unwrap tuple values' () {
+        given:
+        def r1 = new OperatorRun(new HashSet<Integer>([1,2]))
+        def r2 = new OperatorRun(new HashSet<Integer>([2,3]))
+        def d1 = OpDatum.of('A', r1)
+        def d2 = OpDatum.of('B', r1)
+        def d3 = OpDatum.of('C', r2)
+        def d4 = OpDatum.of('D', r2)
+        and:
+        def bag1 = new ArrayBag(d1, d2)
+        def bag2 = new ArrayBag(d3, d4)
+        def key = Mock(GroupKey)
+        and:
+        def tuple = [key, bag1, bag2]
+
+        when:
+        def result = GroupTupleOp.unwrapValues(tuple)
+        then:
+        tuple[0] == key
+        and:
+        tuple[1] == new ArrayBag<>('A','B')
+        and:
+        tuple[2] == new ArrayBag<>('C', 'D')
+        and:
+        result.inputIds == [1,2,3] as Set
+        
+    }
 
     def 'should group items using dyn group size' () {
         given:
@@ -115,29 +139,29 @@ class GroupTupleOpTest extends Specification {
         // here the size is defined as operator argument
         def result = tuples.channel().groupTuple(size: 2)
         then:
-        result.val == [k1, ['a', 'b'] ]
-        result.val == [k1, ['d', 'c'] ]
-        result.val == [k2, ['x', 'y'] ]
-        result.val == Channel.STOP
+        result.unwrap() == [k1, ['a', 'b'] ]
+        result.unwrap() == [k1, ['d', 'c'] ]
+        result.unwrap() == [k2, ['x', 'y'] ]
+        result.unwrap() == Channel.STOP
 
         when:
         // here the size is inferred by the key itself
         result = tuples.channel().groupTuple()
         then:
-        result.val == [k1, ['a', 'b'] ]
-        result.val == [k1, ['d', 'c'] ]
-        result.val == [k2, ['x', 'y', 'z'] ]
-        result.val == Channel.STOP
+        result.unwrap() == [k1, ['a', 'b'] ]
+        result.unwrap() == [k1, ['d', 'c'] ]
+        result.unwrap() == [k2, ['x', 'y', 'z'] ]
+        result.unwrap() == Channel.STOP
 
 
         when:
         result = tuples.channel().groupTuple(remainder: true)
         then:
-        result.val == [k1, ['a', 'b'] ]
-        result.val == [k1, ['d', 'c'] ]
-        result.val == [k2, ['x', 'y', 'z'] ]
-        result.val == [k3, ['q']]
-        result.val == [k1, ['f']]
-        result.val == Channel.STOP
+        result.unwrap() == [k1, ['a', 'b'] ]
+        result.unwrap() == [k1, ['d', 'c'] ]
+        result.unwrap() == [k2, ['x', 'y', 'z'] ]
+        result.unwrap() == [k3, ['q']]
+        result.unwrap() == [k1, ['f']]
+        result.unwrap() == Channel.STOP
     }
 }
