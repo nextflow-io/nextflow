@@ -22,5 +22,5 @@ package nextflow.prov
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface TrailRun {
+interface ProvLink {
 }

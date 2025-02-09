@@ -27,7 +27,7 @@ import groovy.transform.CompileStatic
  */
 @Canonical
 @CompileStatic
-class OperatorRun implements TrailRun {
+class OperatorRun implements ProvLink {
     /**
      * The list of (object) ids that was received as input by a operator run
      */

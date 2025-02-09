@@ -38,7 +38,7 @@ import nextflow.exception.ProcessTemplateException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
-import nextflow.prov.TrailRun
+import nextflow.prov.ProvLink
 import nextflow.script.BodyDef
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
@@ -60,7 +60,7 @@ import nextflow.spack.SpackCache
  */
 
 @Slf4j
-class TaskRun implements Cloneable, TrailRun {
+class TaskRun implements Cloneable, ProvLink {
 
     final private ConcurrentHashMap<String,?> cache0 = new ConcurrentHashMap()
 

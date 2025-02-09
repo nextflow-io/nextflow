@@ -50,7 +50,7 @@ class Tracker {
     /**
      * Associate an output value with the corresponding task run that emitted it
      */
-    private Map<Integer,TrailRun> messages = new ConcurrentHashMap<>()
+    private Map<Integer,ProvLink> messages = new ConcurrentHashMap<>()
 
     List<Object> receiveInputs(TaskRun task, List inputs) {
         // find the upstream tasks id
@@ -139,7 +139,7 @@ class Tracker {
         return upstream
     }
 
-    Msg bindOutput(TrailRun run, DataflowWriteChannel channel, Object out) {
+    Msg bindOutput(ProvLink run, DataflowWriteChannel channel, Object out) {
         assert run!=null, "Argument 'run' cannot be null"
         assert channel!=null, "Argument 'channel' cannot be null"
 
@@ -152,7 +152,7 @@ class Tracker {
         return msg
     }
 
-    private void logOutput(TrailRun run, Msg msg) {
+    private void logOutput(ProvLink run, Msg msg) {
         if( log.isTraceEnabled() ) {
             String str
             if( run instanceof OperatorRun ) {
