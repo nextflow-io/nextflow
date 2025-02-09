@@ -97,7 +97,7 @@ class DumpOp {
         events.onComplete = { CH.close0(target) }
 
         new SubscribeOp()
-            .withSource(source)
+            .withInput(source)
             .withEvents(events)
             .apply()
 

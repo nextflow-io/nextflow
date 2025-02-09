@@ -84,7 +84,7 @@ class MixOp {
 
     private void subscribe0(final DataflowReadChannel source, final Map<String,Closure> events ) {
         new SubscribeOp()
-            .withSource(source)
+            .withInput(source)
             .withContext(context)
             .withEvents(events)
             .apply()

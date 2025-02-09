@@ -96,7 +96,7 @@ class SplitterFactory {
         strategy.options(opt)
 
         new SubscribeOp()
-            .withSource(source)
+            .withInput(source)
             .withOnNext({ entry -> strategy.target(entry).apply() })
             .withOnComplete({ result.bind(count) })
             .apply()

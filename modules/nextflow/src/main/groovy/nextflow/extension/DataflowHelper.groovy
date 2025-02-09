@@ -96,7 +96,7 @@ class DataflowHelper {
 
     static final DataflowProcessor subscribeImpl(final DataflowReadChannel source, final Map<String,Closure> events ) {
         new SubscribeOp()
-            .withSource(source)
+            .withInput(source)
             .withEvents(events)
             .apply()
     }

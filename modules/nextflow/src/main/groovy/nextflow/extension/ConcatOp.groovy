@@ -58,7 +58,7 @@ class ConcatOp {
         final current = channels[index++]
         final next = index < channels.size() ? channels[index] : null
         new SubscribeOp()
-            .withSource(current)
+            .withInput(current)
             .withContext(context)
             .withOnNext { DataflowProcessor dp, Object it -> Op.bind(dp, result, it) }
             .withOnComplete { DataflowProcessor dp ->

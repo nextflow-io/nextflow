@@ -65,7 +65,7 @@ class TransposeOp {
 
     DataflowWriteChannel apply() {
         new SubscribeOp()
-            .withSource(source)
+            .withInput(source)
             .withOnNext(this.&transpose)
             .withOnComplete(this.&done)
             .apply()

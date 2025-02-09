@@ -82,7 +82,7 @@ class RandomSampleOp {
     DataflowWriteChannel apply() {
         result = CH.create()
         new SubscribeOp()
-            .withSource(source)
+            .withInput(source)
             .withContext(context)
             .withOnNext(this.&sampling)
             .withOnComplete(this.&emit)

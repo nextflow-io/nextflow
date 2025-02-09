@@ -106,7 +106,7 @@ class HelloExtension extends PluginExtensionPoint {
             target.bind(Channel.STOP)
         }
         new SubscribeOp()
-            .withSource(source)
+            .withInput(source)
             .withEvents([onNext: next, onComplete: done])
             .apply()
         return target

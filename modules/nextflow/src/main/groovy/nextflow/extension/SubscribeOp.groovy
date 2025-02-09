@@ -46,7 +46,7 @@ class SubscribeOp {
 
     private static Session getSession() { Global.getSession() as Session }
 
-    SubscribeOp withSource(DataflowReadChannel source) {
+    SubscribeOp withInput(DataflowReadChannel source) {
         assert source!=null
         this.source = source
         return this
@@ -136,6 +136,5 @@ class SubscribeOp {
             .withContext(context)
             .withCode(code)
             .apply()
-
     }
 }

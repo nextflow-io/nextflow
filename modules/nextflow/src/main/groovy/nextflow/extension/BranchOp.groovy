@@ -76,7 +76,7 @@ class BranchOp {
         events.put('onNext', this.&doNext)
         events.put('onComplete', this.&doComplete)
         new SubscribeOp()
-            .withSource(source)
+            .withInput(source)
             .withEvents(events)
             .apply()
         return this

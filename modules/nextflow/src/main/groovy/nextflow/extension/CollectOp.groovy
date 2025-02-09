@@ -58,7 +58,7 @@ class CollectOp {
         final target = new DataflowVariable()
 
         new SubscribeOp()
-            .withSource(source)
+            .withInput(source)
             .withContext(new ContextGrouping())
             .withOnNext { append(result, it) }
             .withOnComplete { DataflowProcessor dp ->

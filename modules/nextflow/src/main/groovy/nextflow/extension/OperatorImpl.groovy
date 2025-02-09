@@ -64,7 +64,7 @@ class OperatorImpl {
      */
     DataflowReadChannel subscribe(final DataflowReadChannel source, final Closure closure) {
         new SubscribeOp()
-            .withSource(source)
+            .withInput(source)
             .withOnNext(closure)
             .apply()
         return source
@@ -79,7 +79,7 @@ class OperatorImpl {
      */
     DataflowReadChannel subscribe(final DataflowReadChannel source, final Map<String,Closure> events ) {
         new SubscribeOp()
-            .withSource(source)
+            .withInput(source)
             .withEvents(events)
             .apply()
         return source
@@ -744,7 +744,7 @@ class OperatorImpl {
         final singleton = result instanceof DataflowExpression
 
         new SubscribeOp()
-            .withSource(source)
+            .withInput(source)
             .withContext(new ContextRunPerThread())
             .withOnNext { DataflowProcessor dp, Object it -> Op.bind(dp,result,it); empty=false }
             .withOnComplete { DataflowProcessor dp ->

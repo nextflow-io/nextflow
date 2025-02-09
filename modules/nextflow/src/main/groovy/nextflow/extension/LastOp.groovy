@@ -54,7 +54,7 @@ class LastOp {
 
         def last = null
         new SubscribeOp()
-            .withSource(source)
+            .withInput(source)
             .withOnNext{ last = it }
             .withOnComplete{ DataflowProcessor dp -> Op.bind(dp, target, last) }
             .apply()

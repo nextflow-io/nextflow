@@ -65,7 +65,7 @@ class ViewOp {
         final target = CH.createBy(source);
 
         new SubscribeOp()
-            .withSource(source)
+            .withInput(source)
             .withOnNext { DataflowProcessor dp, Object it->
                 final obj = action != null ? action.call(it) : it
                 session.printConsole(obj?.toString(), newLine)

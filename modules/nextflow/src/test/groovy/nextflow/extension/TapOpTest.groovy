@@ -21,11 +21,14 @@ import nextflow.Channel
 import nextflow.Session
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Timeout
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class DataflowTapExtensionTest extends Specification {
+@Timeout(10)
+class TapOpTest extends Specification {
 
     @Shared
     Session session
@@ -34,9 +37,7 @@ class DataflowTapExtensionTest extends Specification {
         session = new Session()
     }
 
-
     def 'should `tap` item to a new channel' () {
-
         when:
         def result = Channel.of( 4,7,9 ) .tap { first }.map { it+1 }
         then:
@@ -51,11 +52,9 @@ class DataflowTapExtensionTest extends Specification {
         result.unwrap() == Channel.STOP
 
         !session.dag.isEmpty()
-
     }
 
     def 'should `tap` item to more than one channel' () {
-
         when:
         def result = Channel.of( 4,7,9 ) .tap { foo; bar }.map { it+1 }
         then:
@@ -74,7 +73,19 @@ class DataflowTapExtensionTest extends Specification {
         result.unwrap() == Channel.STOP
 
         !session.dag.isEmpty()
+    }
 
+    def 'should `tap` item with data value' () {
+        when:
+        def result = Channel.value(1 ) .tap { first }.map { it+1 }
+        then:
+        session.binding.first.unwrap() == 1
+        session.binding.first.unwrap() == 1
+        and:
+        result.unwrap() == 2
+        result.unwrap() == 2
+
+        !session.dag.isEmpty()
     }
 
 }

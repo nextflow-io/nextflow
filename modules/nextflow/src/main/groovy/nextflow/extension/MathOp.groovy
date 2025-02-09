@@ -75,7 +75,7 @@ class MathOp {
         if( target==null )
             target = new DataflowVariable()
         new SubscribeOp()
-            .withSource(source)
+            .withInput(source)
             .withContext(new ContextGrouping())
             .withOnNext(aggregate.&process)
             .withOnComplete(this.&completion)

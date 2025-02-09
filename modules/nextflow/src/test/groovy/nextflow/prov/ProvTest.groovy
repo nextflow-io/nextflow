@@ -1408,4 +1408,56 @@ class ProvTest extends Dsl2Spec {
                 .name.first =~ /p1 \(\d\)/
 
     }
+
+    def 'should track provenance with tap operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of(1..3) | p1 
+                p1.out.tap { ch2 }.set{ ch3 }
+                p2(ch2)
+                p3(ch3)                
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+            
+            process p3 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        upstreamTasksOf('p2 (1)')
+                .name == ['p1 (1)']
+        and:
+        upstreamTasksOf('p2 (2)')
+                .name == ['p1 (2)']
+        and:
+        upstreamTasksOf('p2 (3)')
+                .name == ['p1 (3)']
+
+        then:
+        upstreamTasksOf('p3 (1)')
+                .name == ['p1 (1)']
+        and:
+        upstreamTasksOf('p3 (2)')
+                .name == ['p1 (2)']
+        and:
+        upstreamTasksOf('p3 (3)')
+                .name == ['p1 (3)']
+
+    }
 }

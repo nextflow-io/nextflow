@@ -187,7 +187,7 @@ class SplitOp {
     @PackageScope
     void applySplittingOperator( DataflowReadChannel origin, DataflowWriteChannel output, AbstractSplitter splitter ) {
         new SubscribeOp()
-            .withSource(origin)
+            .withInput(origin)
             .withOnNext({ DataflowProcessor dp, entry -> splitter.processor(dp).target(entry).apply() })
             .withOnComplete({ DataflowProcessor dp -> Op.bind(dp,output,Channel.STOP) })
             .apply()

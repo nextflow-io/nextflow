@@ -64,7 +64,7 @@ class PublishOp {
 
     PublishOp apply() {
         new SubscribeOp()
-            .withSource(source)
+            .withInput(source)
             .withOnNext(this.&onNext)
             .withOnComplete(this.&onComplete)
             .apply()
