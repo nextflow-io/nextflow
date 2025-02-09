@@ -1381,4 +1381,31 @@ class ProvTest extends Dsl2Spec {
         upstreamTasksOf('p2 (3)')
                 .name == ['p1 (3)']
     }
+
+    def 'should track provenance with randomSample operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of(1..9) | p1 | randomSample(1) | p2 
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        upstreamTasksOf('p2 (1)')
+                .name.first =~ /p1 \(\d\)/
+
+    }
 }
