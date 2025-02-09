@@ -22,20 +22,11 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
-import groovyx.gpars.dataflow.operator.ChainWithClosure
-import groovyx.gpars.dataflow.operator.CopyChannelsClosure
-import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
-import nextflow.Global
-import nextflow.NF
-import nextflow.Session
-import static nextflow.extension.DataflowHelper.newChannelBy
-
 import nextflow.extension.op.Op
-
 /**
- * Implements the {@link OperatorImpl#into} operators logic
+ * Implements the "into" operator logic
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -46,8 +37,6 @@ class IntoOp {
     private DataflowReadChannel source
 
     private List<DataflowWriteChannel> outputs
-
-    private Session session = (Session)Global.session
 
     IntoOp( DataflowReadChannel source, List<DataflowWriteChannel> targets ) {
         assert source
