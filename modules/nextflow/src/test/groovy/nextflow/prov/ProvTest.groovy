@@ -1321,6 +1321,77 @@ class ProvTest extends Dsl2Spec {
 
     }
 
+    def 'should track provenance with countLines and a file'() {
+        given:
+        def FASTA = """\
+                a
+                bb
+                ccc
+                """.stripIndent()
+
+        when:
+        dsl_eval(globalConfig(), """
+            workflow {
+                p1 | countLines | p2
+            }
+            
+            process p1 { 
+              output: path('result.txt') 
+              exec: 
+                task.workDir.resolve('result.txt').text = '''${FASTA}''' 
+            }
+            
+            process p2 {
+              input: val(count)
+              exec: 
+                println "\${task.name}: count=\$count"
+            }
+        """)
+
+        then:
+        upstreamTasksOf('p2')
+                .name == ['p1']
+    }
+
+    def 'should track provenance with countFasta and a file'() {
+        given:
+        def FASTA = """\
+                >1aboA
+                NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS
+                NYITPVN
+                >1ycsB
+                KGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY
+                VPRNLLGLYP
+                >1pht
+                GYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG
+                WLNGYNETTGERGDFPGTYVE
+                YIGRKKISP
+                """.stripIndent()
+
+        when:
+        dsl_eval(globalConfig(), """
+            workflow {
+                p1 | countFasta | p2
+            }
+            
+            process p1 { 
+              output: path('result.txt') 
+              exec: 
+                task.workDir.resolve('result.txt').text = '''${FASTA}''' 
+            }
+            
+            process p2 {
+              input: val(count)
+              exec: 
+                println "\${task.name}: count=\$count"
+            }
+        """)
+
+        then:
+        upstreamTasksOf('p2')
+                .name == ['p1']
+    }
+
     def 'should track provenance with toInteger operator'() {
         when:
         dsl_eval(globalConfig(), '''

@@ -21,7 +21,10 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.extension.SubscribeOp
+import nextflow.extension.op.Op
+
 /**
  * Factory class for splitter objects
  *
@@ -83,11 +86,10 @@ class SplitterFactory {
      * @return
      */
     static DataflowWriteChannel countOverChannel(DataflowReadChannel source, SplitterStrategy splitter, Map opt )  {
-
         // create a new DataflowChannel that will receive the splitter entries
         DataflowVariable result = new DataflowVariable ()
 
-        def strategy = splitter as AbstractSplitter
+        final strategy = splitter as AbstractSplitter
 
         // set the splitter strategy options
         long count = 0
@@ -97,13 +99,12 @@ class SplitterFactory {
 
         new SubscribeOp()
             .withInput(source)
-            .withOnNext({ entry -> strategy.target(entry).apply() })
-            .withOnComplete({ result.bind(count) })
+            .withOnNext { DataflowProcessor dp, Object entry -> strategy.target(entry).apply() }
+            .withOnComplete { DataflowProcessor dp -> Op.bind(dp, result, count) }
             .apply()
 
         // return the resulting channel
         return result
     }
-
 
 }

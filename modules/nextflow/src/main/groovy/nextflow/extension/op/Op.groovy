@@ -22,8 +22,10 @@ import java.util.concurrent.ConcurrentHashMap
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.Dataflow
+import groovyx.gpars.dataflow.DataflowChannel
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.DataflowEventListener
 import groovyx.gpars.dataflow.operator.DataflowOperator
 import groovyx.gpars.dataflow.operator.DataflowProcessor
@@ -71,7 +73,9 @@ class Op {
             throw new IllegalStateException("DataflowProcessor argument cannot be null")
         try {
             if( msg instanceof PoisonPill ) {
-                channel.bind(msg)
+                final emit = channel !instanceof DataflowExpression || !(channel as DataflowChannel).isBound()
+                if( emit )
+                    channel.bind(msg)
                 allContexts.remove(dp)
             }
             else {
