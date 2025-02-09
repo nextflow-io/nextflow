@@ -30,9 +30,7 @@ import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.ChainWithClosure
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
-import nextflow.Global
 import nextflow.NF
-import nextflow.Session
 import nextflow.extension.op.ContextRunPerThread
 import nextflow.extension.op.Op
 import nextflow.script.ChannelOut
@@ -56,8 +54,6 @@ import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
 class OperatorImpl {
 
     static final public OperatorImpl instance = new OperatorImpl()
-
-    private static Session getSession() { Global.getSession() as Session }
 
     /**
      * Subscribe *onNext* event
@@ -778,18 +774,11 @@ class OperatorImpl {
         checkParams('view', opts, PARAMS_VIEW)
         final newLine = opts.newLine != false
 
-        final target = CH.createBy(source);
-
-        new SubscribeOp()
+        return new ViewOp()
             .withSource(source)
-            .withOnNext{
-                final obj = closure != null ? closure.call(it) : it
-                session.printConsole(obj?.toString(), newLine)
-                target.bind(it)
-            }
-            .withOnComplete{ CH.close0(target) }
+            .withNewLine(newLine)
+            .withCode(closure)
             .apply()
-        return target
     }
 
     DataflowWriteChannel view(final DataflowReadChannel source, Closure closure = null) {

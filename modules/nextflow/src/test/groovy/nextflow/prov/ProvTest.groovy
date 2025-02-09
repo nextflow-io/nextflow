@@ -1088,6 +1088,38 @@ class ProvTest extends Dsl2Spec {
             .name == ['p1 (1)']
     }
 
+    def 'should track provenance with splitJson operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                Channel.of('{"A": 1, "B": 2, "C": 3}') | p1 | splitJson | p2
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x 
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        upstreamTasksOf('p2 (1)')
+                .name == ['p1 (1)']
+        and:
+        upstreamTasksOf('p2 (2)')
+                .name == ['p1 (1)']
+        and:
+        upstreamTasksOf('p2 (3)')
+                .name == ['p1 (1)']
+    }
+
     def 'should track provenance with splitText and a file'() {
         given:
 
@@ -1289,4 +1321,64 @@ class ProvTest extends Dsl2Spec {
 
     }
 
+    def 'should track provenance with toInteger operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of('1','2','3') | p1 | toInteger | p2 
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        upstreamTasksOf('p2 (1)')
+                .name == ['p1 (1)']
+        and:
+        upstreamTasksOf('p2 (2)')
+                .name == ['p1 (2)']
+    }
+
+    def 'should track provenance with view operator'() {
+        when:
+        dsl_eval(globalConfig(), '''
+            workflow {
+                channel.of('1','2','3') | p1 | view | p2 
+            }
+            
+            process p1 { 
+              input: val(x)
+              output: val(y) 
+              exec: 
+                y = x
+            }
+            
+            process p2 {
+              input: val(x)
+              exec: 
+                println x
+            }
+        ''')
+
+        then:
+        upstreamTasksOf('p2 (1)')
+                .name == ['p1 (1)']
+        and:
+        upstreamTasksOf('p2 (2)')
+                .name == ['p1 (2)']
+        and:
+        upstreamTasksOf('p2 (3)')
+                .name == ['p1 (3)']
+    }
 }
