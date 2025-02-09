@@ -374,6 +374,7 @@ class AzBatchService implements Closeable {
         final jobId = makeJobId(task)
         final content = new BatchJobCreateContent(jobId, new BatchPoolInfo(poolId: poolId))
         apply(() -> client.createJob(content))
+        return jobId
     }
 
     String makeJobId(TaskRun task) {
