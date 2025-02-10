@@ -50,7 +50,7 @@ import groovy.util.logging.Slf4j
 @Slf4j
 @CompileStatic
 class BatchClient {
-    private static long TASK_STATE_INVALID_TIME = 1_000
+    private final static long TASK_STATE_INVALID_TIME = 1_000
     protected String projectId
     protected String location
     protected BatchServiceClient batchServiceClient
