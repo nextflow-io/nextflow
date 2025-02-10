@@ -10,10 +10,6 @@ A stable version of Nextflow is released in the 4th and 10th month of each year.
 
 You can find an exhaustive list of releases and updates in the [Nextflow changelog](https://github.com/nextflow-io/nextflow/blob/master/changelog.txt).
 
-:::{warning}
-Nextflow will update its executable during the self-update process. The update can fail if the Nextflow executable is in a directory with restricted permissions.
-:::
-
 ## Self-update
 
 To update to the latest stable release of Nextflow, run the `self-update` command:
@@ -29,6 +25,10 @@ To use the latest edge release, set `NXF_EDGE=1` when you self-update Nextflow:
 :class: copyable
 NXF_EDGE=1 nextflow self-update
 ```
+
+:::{warning}
+Nextflow will update its executable during the self-update process. The update can fail if the Nextflow executable is in a directory with restricted permissions.
+:::
 
 ## Version selection
 
@@ -55,4 +55,8 @@ You can use `NXF_VER` to switch to an edge release. For example:
 :class: copyable
 NXF_VER=24.06.0-edge nextflow info
 ```
+:::
+
+:::{warning}
+Nextflow will update its executable during the self-update process. The update can fail if the Nextflow executable is in a directory with restricted permissions.
 :::

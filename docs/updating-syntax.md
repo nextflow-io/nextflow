@@ -12,9 +12,9 @@ If you are still using DSL1, see {ref}`dsl1-page` to learn how to migrate your N
 
 The strict syntax is a subset of DSL2. While DSL2 allows any Groovy syntax, the strict syntax allows only a subset of Groovy syntax for Nextflow scripts and config files. This new specification enables more specific error reporting, ensures more consistent code, and will allow the Nextflow language to evolve independently of Groovy.
 
-The strict syntax is currently only enforced by the Nextflow language server, which is provided as part of the {ref}`vscode-page` for Nextflow. However, the strict syntax will be gradually adopted by the Nextflow CLI in future releases and will eventually be the only way to write Nextflow code.
+The strict syntax is currently only enforced by the Nextflow language server, which is provided as part of the Nextflow {ref}`vscode-page`. However, the strict syntax will be gradually adopted by the Nextflow CLI in future releases and will eventually be the only way to write Nextflow code.
 
-New language features will be generally implemented as part of the strict syntax, and not the current _lenient_ DSL2 parser, with few exceptions. Therefore, it will be important to prepare for the strict syntax in order to use new language features in the future.
+New language features will be generally implemented as part of the strict syntax, and not the current _lenient_ DSL2 parser, with few exceptions. Therefore, it is important to prepare for the strict syntax in order to use new language features in the future.
 
 This section describes the key differences between the DSL2 and the strict syntax. In general, the amount of changes that are required depends on the amount of custom Groovy code in your scripts and config files.
 
@@ -50,7 +50,7 @@ Record types will be addressed in a future version of the Nextflow language spec
 
 <h4>Mixing script declarations and statements</h4>
 
-A script may contain any of the following top-level declarations:
+In the strict syntax, a script may contain any of the following top-level declarations:
 
 - Feature flags
 - Include declarations
@@ -214,7 +214,7 @@ In Nextflow DSL1 and DSL2, you can reference environment variables directly in s
 println "PWD = ${PWD}"
 ```
 
-In the strict syntax, `System.getenv()` should be used instead:
+In the strict syntax, `System.getenv()` should be used:
 
 ```nextflow
 println "PWD = ${System.getenv('PWD')}"
@@ -554,8 +554,8 @@ params.max_cpus = 32
 
 ## Preserving Groovy code
 
-There are two ways to preserve Groovy code, for example, if the code is difficult to update: using the `lib` directory or writing a plugin.
+There are two ways to preserve Groovy code, using the `lib` directory or writing a plugin.
 
-Any Groovy code can be moved into the `lib` directory, which supports the full Groovy language. This approach is useful for temporarily preserving some Groovy code until it can be updated later and incorporated into a Nextflow script. See the {ref}`lib directory <lib-directory>` documentation for more information.
+Any Groovy code can be moved into the `lib` directory, which supports the full Groovy language. This approach is useful for temporarily preserving some Groovy code until it can be updated later and incorporated into a Nextflow script. See {ref}`<lib-directory>` documentation for more information.
 
-For Groovy code that is more complicated or depends on third-party libraries, it may be better to create a plugin. Plugins can define custom functions that can be included by Nextflow scripts like a module. Furthermore, plugins can be easily re-used across different pipelines. See {ref}`plugins-dev-page` for more information on how to develop plugins.
+For Groovy code that is complicated or if it depends on third-party libraries, it may be better to create a plugin. Plugins can define custom functions that can be included by Nextflow scripts like a module. Furthermore, plugins can be easily re-used across different pipelines. See {ref}`plugins-dev-page` for more information on how to develop plugins.
