@@ -32,6 +32,7 @@ import dev.failsafe.function.CheckedSupplier
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.NF
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessNonZeroExitStatusException
@@ -231,7 +232,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         final containerOpts = task.config.getContainerOptions()
         final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), containerOpts, submit)
         // create an inline script to launch the job execution
-        return '#!/bin/bash\n' + submitDirective(task) + cmd + '\n'
+        return '#!'+ NF.bash()+'\n' + submitDirective(task) + cmd + '\n'
     }
 
     protected String submitDirective(TaskRun task) {
