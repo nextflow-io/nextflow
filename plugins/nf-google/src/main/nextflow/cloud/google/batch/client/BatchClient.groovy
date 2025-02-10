@@ -50,11 +50,12 @@ import groovy.util.logging.Slf4j
 @Slf4j
 @CompileStatic
 class BatchClient {
-
+    private final static long TASK_STATE_INVALID_TIME = 1_000
     protected String projectId
     protected String location
     protected BatchServiceClient batchServiceClient
     protected BatchConfig config
+    private Map<String, TaskStatusRecord> arrayTaskStatus = new HashMap<String, TaskStatusRecord>()
 
     BatchClient(BatchConfig config) {
         this.config = config
@@ -197,5 +198,40 @@ class BatchClient {
         final policy = retryPolicy(cond)
         // apply the action with
         return Failsafe.with(policy).get(action)
+    }
+
+
+    TaskStatus getTaskInArrayStatus(String jobId, String taskId) {
+        final taskName = generateTaskName(jobId,taskId)
+        final now = System.currentTimeMillis()
+        TaskStatusRecord record = arrayTaskStatus.get(taskName)
+        if( !record || now - record.timestamp > TASK_STATE_INVALID_TIME ){
+            log.debug("[GOOGLE BATCH] Updating tasks status for job $jobId")
+            updateArrayTasks(jobId, now)
+            record = arrayTaskStatus.get(taskName)
+        }
+        return record?.status
+    }
+
+    private void updateArrayTasks(String jobId, long now){
+        for( Task t: listTasks(jobId) ){
+            arrayTaskStatus.put(t.name, new TaskStatusRecord(t.status, now))
+        }
+    }
+
+    void removeFromArrayTasks(String jobId, String taskId){
+        final taskName = generateTaskName(jobId,taskId)
+        TaskStatusRecord record = arrayTaskStatus.remove(taskName)
+    }
+}
+
+@CompileStatic
+class TaskStatusRecord {
+    protected TaskStatus status
+    protected long timestamp
+
+    TaskStatusRecord(TaskStatus status, long timestamp) {
+        this.status = status
+        this.timestamp = timestamp
     }
 }
