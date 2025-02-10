@@ -188,7 +188,9 @@ jobs:
 
       - name: Tar integration tests
         if: always()
-        run: tar -cvf integration-tests.tar tests/checks
+        run: | 
+            tar -cvf integration-tests.tar.gz tests/checks
+            tar -cvf validation-tests.tar.gz validation
 
       - name: Publish tests report
         uses: actions/upload-artifact@v4
@@ -196,10 +198,8 @@ jobs:
         with:
           name: report-${{ matrix.test_mode }}-jdk-${{ matrix.java_version }}
           path: |
-            validation/**/*        # All regular files
-            validation/.[!.]*      # Top-level hidden files
-            validation/**/.[!.]*   # Hidden files in subdirectories
-            integration-tests.tar
+            validation-tests.tar.gz
+            integration-tests.tar.gz
 
   test-e2e:
       if: ${{ contains(needs.build.outputs.commit_message,'[e2e stage]') || contains(needs.build.outputs.commit_message,'[e2e prod]') }}
