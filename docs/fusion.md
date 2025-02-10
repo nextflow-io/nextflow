@@ -31,7 +31,7 @@ wave.enabled = true
 tower.accessToken = '<PLATFORM_ACCESS_TOKEN>' // Optional
 ```
 
-Replace <PLATFORM_ACCESS_TOKEN> with your Platform access token.
+Replace `<PLATFORM_ACCESS_TOKEN>` with your Platform access token.
 
 :::{tip}
 The use of the Platform access token is not mandatory, however, it's required to enable access to private repositories and it allows higher service rate limits compared to anonymous users.
