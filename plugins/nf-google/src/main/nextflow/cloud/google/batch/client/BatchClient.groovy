@@ -111,7 +111,7 @@ class BatchClient {
     }
 
     Task describeTask(String jobId, String taskId) {
-        final name = TaskName.of(projectId, location, jobId, 'group0', taskId)
+        final name = generateTaskName(jobId, taskId)
         return apply(()-> batchServiceClient.getTask(name))
     }
 
@@ -139,6 +139,10 @@ class BatchClient {
 
     String getLocation() {
         return location
+    }
+
+    String generateTaskName(String jobId, String taskId) {
+        TaskName.of(projectId, location, jobId, 'group0', taskId)
     }
 
     /**

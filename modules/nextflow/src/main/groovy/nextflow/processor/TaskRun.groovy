@@ -325,6 +325,11 @@ class TaskRun implements Cloneable {
     volatile boolean aborted
 
     /**
+     * Mark the task if belongs to a TaskArrayRun
+     */
+    volatile boolean isChild
+
+    /**
      * The action {@link ErrorStrategy} action applied if task has failed
      */
     volatile ErrorStrategy errorAction

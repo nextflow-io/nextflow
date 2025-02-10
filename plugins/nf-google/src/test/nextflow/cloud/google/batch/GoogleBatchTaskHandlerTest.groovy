@@ -17,8 +17,11 @@
 
 package nextflow.cloud.google.batch
 
+import com.google.api.gax.grpc.GrpcStatusCode
+import com.google.api.gax.rpc.NotFoundException
 import com.google.cloud.batch.v1.JobStatus
 import com.google.cloud.batch.v1.Task
+import io.grpc.Status
 
 import java.nio.file.Path
 
@@ -596,7 +599,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         builder.build()
     }
 
-    def 'should check job status when no tasks in job '() {
+    def 'should check job status when no tasks in task array '() {
 
         given:
         def jobId = 'job-id'
@@ -604,6 +607,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def client = Mock(BatchClient)
         def task = Mock(TaskRun) {
             lazyName() >> 'foo (1)'
+            isChild >> true
         }
         def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task))
         final message = 'Job failed when Batch tries to schedule it: Batch Error: code - CODE_MACHINE_TYPE_NOT_FOUND'
@@ -615,8 +619,41 @@ class GoogleBatchTaskHandlerTest extends Specification {
             makeJobStatus(JobStatus.State.FAILED, message)
         ]
         then:
-        handler.getTaskState() == "PENDING"
+        handler.getTaskState() == null
         handler.getTaskState() == "FAILED"
         handler.getJobError().message == message
+    }
+
+    def 'should manage not found when getting task state in task array'() {
+        given:
+        def jobId = '1'
+        def taskId = '1'
+        def client = Mock(BatchClient)
+        def task = Mock(TaskRun) {
+            lazyName() >> 'foo (1)'
+            isChild >> true
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task))
+
+        when:
+        client.generateTaskName(jobId, taskId) >> "$jobId/group0/$taskId"
+        //Force errors
+        client.getTaskStatus(jobId, taskId) >> { throw new NotFoundException(new Exception("Error"), GrpcStatusCode.of(Status.Code.NOT_FOUND), false) }
+        client.listTasks(jobId) >>  TASK_LIST
+        client.getJobStatus(jobId) >>  makeJobStatus(JOB_STATUS, "")
+        then:
+        handler.getTaskState() == EXPECTED
+
+        where:
+        EXPECTED     | JOB_STATUS                 | TASK_LIST
+        "FAILED"     | JobStatus.State.FAILED     | {[ makeTask("1/group0/2", TaskStatus.State.PENDING), makeTask("1/group0/3", TaskStatus.State.PENDING) ].iterator() } // Task not in the list, get from job
+        "SUCCEEDED"  | JobStatus.State.FAILED     | {[ makeTask("1/group0/1", TaskStatus.State.SUCCEEDED), makeTask("1/group0/2", TaskStatus.State.PENDING)].iterator() } //Task in the list, get from task status
+    }
+
+    def makeTask(String name, TaskStatus.State state){
+        Task.newBuilder().setName(name)
+            .setStatus(TaskStatus.newBuilder().setState(state).build())
+            .build()
+
     }
 }
