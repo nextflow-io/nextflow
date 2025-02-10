@@ -21,8 +21,20 @@ Fusion requires a license for use in Seqera Platform compute environments or dir
 
 ## Get started
 
-Use Fusion directly in Seqera Platform compute environments, or add Fusion to your Nextflow pipeline configuration. See [Get started](https://docs.seqera.io/fusion/get-started) for more information about configuring Fusion for your compute environment.
+Fusion integrates with Nextflow directly and does not require any installation or change in pipeline code. It only requires use of a container runtime or a container computing service, such as Kubernetes, AWS Batch, or Google Cloud Batch.
 
-## Configuration options
+To enable Fusion in your Nextflow pipeline, add the following snippet to your `nextflow.config` file:
 
-Add Fusion configuration options to your `nextflow.config` file. See [Reference](https://docs.seqera.io/fusion/reference) for a full list of Fusion configuration options.
+```
+fusion.enabled = true
+wave.enabled = true
+tower.accessToken = '<PLATFORM_ACCESS_TOKEN>' // Optional
+```
+
+Replace <PLATFORM_ACCESS_TOKEN> with your Platform access token.
+
+:::{tip}
+The use of the Platform access token is not mandatory, however, it's required to enable access to private repositories and it allows higher service rate limits compared to anonymous users.
+:::
+
+See [Get started](https://docs.seqera.io/fusion/get-started) for more information and guides to get started with Fusion.
