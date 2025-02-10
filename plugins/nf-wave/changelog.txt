@@ -1,5 +1,11 @@
 nf-wave changelog
 ==================
+1.9.0 - 20 Jan 2025
+- Add rate limiter to wave requests (#5608) [ecf68294]
+- Improve inspect mode (#5605) [8e2056e7]
+- Bump logback 1.5.13 + slf4j 2.0.16 [cc0163ac]
+- Bump groovy 4.0.24 missing deps [40670f7e]
+
 1.8.0 - 3 Dec 2024
 - Fix missing wave response (#5547) [ci fast] [ee252173]
 - Update wave deps [09ccd295]

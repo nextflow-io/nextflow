@@ -12,7 +12,10 @@ This page lists all of the available settings in the {ref}`Nextflow configuratio
 : If `true`, on a successful completion of a run all files in *work* directory are automatically deleted.
 
   :::{warning}
-  The use of the `cleanup` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run. Also, be aware that deleting all scratch files can take a lot of time, especially when using a shared file system or remote cloud storage.
+  The use of the `cleanup` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run.
+  :::
+  :::{warning}
+  The `cleanup` option is not supported for remote work directories, such as Amazon S3, Google Cloud Storage, and Azure Blob Storage.
   :::
 
 `dumpHashes`
@@ -695,7 +698,7 @@ The following settings are available:
   :::
 : Max delay when retrying failed job submissions (default: `30s`). Used only by grid executors.
 
-`executor.retry.reason`
+`executor.submit.retry.reason`
 : :::{versionadded} 22.03.0-edge
   :::
 : Regex pattern that when verified cause a failed submit operation to be re-tried (default: `Socket timed out`). Used only by grid executors.
@@ -1650,6 +1653,12 @@ The `workflow` scope provides workflow execution options.
 `workflow.output.contentType`
 : *Currently only supported for S3.*
 : Specify the media type, also known as [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/MIME_types), of published files (default: `false`). Can be a string (e.g. `'text/html'`), or `true` to infer the content type from the file extension.
+
+`workflow.output.copyAttributes`
+: :::{versionadded} 25.01.0-edge
+  :::
+: *Currently only supported for local and shared filesystems.*
+: Copy file attributes (such as the last modified timestamp) to the published file (default: `false`).
 
 `workflow.output.enabled`
 : Enable or disable publishing (default: `true`).

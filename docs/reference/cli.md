@@ -13,7 +13,7 @@ The top-level options are meant to be invoked in relation to the core Nextflow a
 Available options:
 
 `-C`
-: Use the specified configuration file(s) overriding any defaults.
+: Comma-separated list of configuration files which are used as the configuration set. Any other default configuration files are ignored.
 
 `-D`
 : Set JVM properties.
@@ -22,7 +22,7 @@ Available options:
 : Execute nextflow in background.
 
 `-c, -config`
-: Add the specified file to configuration set.
+: Comma-separated list of configuration files which are added to the configuration set.
 
 `-d, -dockerize`
 : :::{deprecated} 23.09.0-edge

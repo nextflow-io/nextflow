@@ -1,8 +1,8 @@
 package nextflow.cloud.google.batch
 
 import nextflow.cloud.google.batch.GoogleBatchMachineTypeSelector.MachineType
-import nextflow.cloud.types.PriceModel
 import nextflow.util.MemoryUnit
+import spock.lang.IgnoreIf
 import spock.lang.Specification
 
 class GoogleBatchMachineTypeSelectorTest extends Specification {
@@ -63,6 +63,7 @@ class GoogleBatchMachineTypeSelectorTest extends Specification {
 
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def 'should parse Seqera cloud info API'() {
         when:
         GoogleBatchMachineTypeSelector.INSTANCE.getAvailableMachineTypes("europe-west2", true)

@@ -195,8 +195,9 @@ jobs:
         with:
           name: report-${{ matrix.test_mode }}-jdk-${{ matrix.java_version }}
           path: |
-            validation/**/*
-            validation/**/.*
+            validation/**/*        # All regular files
+            validation/.[!.]*      # Top-level hidden files
+            validation/**/.[!.]*   # Hidden files in subdirectories
             integration-tests.tar
 
   test-e2e:
