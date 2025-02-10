@@ -112,8 +112,6 @@ class TaskBean implements Serializable, Cloneable {
 
     List<Path> arrayWorkDirs
 
-    List<Path> arrayInputFiles
-
     @PackageScope
     TaskBean() {
         shell = BashWrapperBuilder.BASH
@@ -175,7 +173,6 @@ class TaskBean implements Serializable, Cloneable {
             this.arrayIndexName = executor.getArrayIndexName()
             this.arrayIndexStart = executor.getArrayIndexStart()
             this.arrayWorkDirs = task.children.collect( h -> h.task.workDir )
-            this.arrayInputFiles = task.children.collectMany { h -> h.task.getInputFilesMap().values() }
         }
     }
 
