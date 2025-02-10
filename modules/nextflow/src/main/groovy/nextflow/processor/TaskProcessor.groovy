@@ -2185,7 +2185,7 @@ class TaskProcessor {
         session.filePorter.transfer(batch)
     }
 
-    final protected void makeTaskContextStage3( TaskRun task, HashCode hash, Path folder ) {
+    protected void makeTaskContextStage3( TaskRun task, HashCode hash, Path folder ) {
 
         // set hash-code & working directory
         task.hash = hash
@@ -2340,12 +2340,12 @@ class TaskProcessor {
 
         makeTaskContextStage3(task, hash, folder)
 
-        // add the task to the collection of running tasks
-        if( arrayCollector )
-            arrayCollector.collect(task)
-        else
+        // when no collector is define OR it's a task retry submit directly for execution
+        if( !arrayCollector || task.config.getAttempt() > 1 )
             executor.submit(task)
-
+        // add the task to the collection of running tasks
+        else
+            arrayCollector.collect(task)
     }
 
     protected boolean checkWhenGuard(TaskRun task) {

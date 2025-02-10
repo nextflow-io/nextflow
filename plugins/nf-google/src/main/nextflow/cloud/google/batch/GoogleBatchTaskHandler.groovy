@@ -455,11 +455,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      * @return Retrieve the submitted task state
      */
     protected String getTaskState() {
-        if (task.isChild) {
-            return getStateFromTaskStatus()
-        } else {
-            return getStateFromJobStatus()
-        }
+        return task.isChild
+            ? getStateFromTaskStatus()
+            : getStateFromJobStatus()
     }
 
     protected String getStateFromTaskStatus() {

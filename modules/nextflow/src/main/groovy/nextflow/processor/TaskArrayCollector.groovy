@@ -92,14 +92,12 @@ class TaskArrayCollector {
         try {
             // submit task directly if the collector is closed
             // or if the task is retried (since it might have dynamic resources)
-            if( closed || task.config.getAttempt() > 1 ) {
-                task.isChild = false
+            if( closed ) {
                 executor.submit(task)
                 return
             }
 
             // add task to the array
-            task.isChild = true
             array.add(task)
 
             // submit job array when it is ready
@@ -120,9 +118,7 @@ class TaskArrayCollector {
         sync.lock()
         try {
             if( array.size() == 1 ) {
-                final task = array.first()
-                task.isChild = false
-                executor.submit(task)
+                executor.submit(array.first())
             }
             else if( array.size() > 0 ) {
                 executor.submit(createTaskArray(array))
@@ -141,6 +137,9 @@ class TaskArrayCollector {
      * @param tasks
      */
     protected TaskArrayRun createTaskArray(List<TaskRun> tasks) {
+        // mark the task as a child
+        for( TaskRun t : tasks )
+            t.isChild = true
         // prepare child job launcher scripts
         final handlers = tasks.collect( t -> executor.createTaskHandler(t) )
         for( TaskHandler handler : handlers ) {

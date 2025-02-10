@@ -87,23 +87,6 @@ class TaskArrayCollectorTest extends Specification {
         1 * executor.submit(task)
     }
 
-    def 'should submit retried tasks directly' () {
-        given:
-        def executor = Mock(DummyExecutor)
-        def collector = Spy(new TaskArrayCollector(null, executor, 5))
-        and:
-        def task = Mock(TaskRun) {
-            getConfig() >> Mock(TaskConfig) {
-                getAttempt() >> 2
-            }
-        }
-
-        when:
-        collector.collect(task)
-        then:
-        1 * executor.submit(task)
-    }
-
     def 'should create task array' () {
         given:
         def exec = Mock(DummyExecutor) {
