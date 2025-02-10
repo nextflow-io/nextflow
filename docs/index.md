@@ -80,7 +80,6 @@ notifications
 secrets
 sharing
 vscode
-dsl1
 ```
 
 ```{toctree}
@@ -122,6 +121,16 @@ reference/stdlib
 reference/process
 reference/channel
 reference/operator
+```
+
+```{toctree}
+:hidden:
+:caption: Updates
+:maxdepth: 1
+
+updating-nextflow
+updating-syntax
+dsl1
 ```
 
 ```{toctree}

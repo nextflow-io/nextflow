@@ -27,8 +27,8 @@ A Nextflow script may contain the following top-level declarations:
 
 - Shebang
 - Feature flags
-- Includes
-- Parameter definitions
+- Include declarations
+- Parameter declarations
 - Workflow definitions
 - Process definitions
 - Function definitions
