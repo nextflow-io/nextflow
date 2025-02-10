@@ -25,7 +25,8 @@ Fusion integrates with Nextflow directly and does not require any installation o
 
 To enable Fusion in your Nextflow pipeline, add the following snippet to your `nextflow.config` file:
 
-```
+```{code-block} nextflow
+:class: copyable
 fusion.enabled = true
 wave.enabled = true
 tower.accessToken = '<PLATFORM_ACCESS_TOKEN>' // Optional
