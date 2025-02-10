@@ -639,7 +639,7 @@ class TaskProcessor {
         // -- map the inputs to a map and use to delegate closure values interpolation
         final secondPass = [:]
         int count = makeTaskContextStage1(task, secondPass, values)
-        makeTaskContextStage2(task, secondPass, count)
+        final batch = makeTaskContextStage2(task, secondPass, count)
 
         // verify that `when` guard, when specified, is satisfied
         if( !checkWhenGuard(task) )
@@ -652,6 +652,9 @@ class TaskProcessor {
         //    if true skip the execution and return the stored data
         if( checkStoredOutput(task) )
             return
+
+        // -- download foreign files
+        session.filePorter.transfer(batch)
 
         def hash = createTaskHashKey(task)
         checkCachedOrLaunchTask(task, hash, resumable)
@@ -2139,7 +2142,7 @@ class TaskProcessor {
         return count
     }
 
-    final protected void makeTaskContextStage2( TaskRun task, Map secondPass, int count ) {
+    final protected FilePorter.Batch makeTaskContextStage2( TaskRun task, Map secondPass, int count ) {
 
         final ctx = task.context
         final allNames = new HashMap<String,Integer>()
@@ -2180,9 +2183,7 @@ class TaskProcessor {
             def message = "Process `$name` input file name collision -- There are multiple input files for each of the following file names: ${conflicts.keySet().join(', ')}"
             throw new ProcessUnrecoverableException(message)
         }
-
-        // -- download foreign files
-        session.filePorter.transfer(batch)
+        return batch
     }
 
     final protected void makeTaskContextStage3( TaskRun task, HashCode hash, Path folder ) {
