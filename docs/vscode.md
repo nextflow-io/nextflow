@@ -595,23 +595,17 @@ params.max_memory = 128.GB
 params.max_cpus = 32
 ```
 
-## Troubleshooting
-
-In the event of an error, you can stop or restart the language server from the command palette. See [Commands](#commands) for the set of available commands.
-
-Report issues at [nextflow-io/vscode-language-nextflow](https://github.com/nextflow-io/vscode-language-nextflow) or [nextflow-io/language-server](https://github.com/nextflow-io/language-server). When reporting, include a minimal code snippet that reproduces the issue and any error logs from the server. To view logs, open the **Output** tab and select **Nextflow Language Server** from the dropdown. Enable **Nextflow > Debug** in the [extension settings](#settings) to show additional log messages while debugging.
-
 ## Limitations
 
-- The language server does not detect certain filesystem changes, such as changing the current Git branch. Restart the language server from the command palette to sync it with your workspace.
+- The language server does not detect certain filesystem changes. For example, changing the current Git branch. Restart the language server from the command palette to sync it with your workspace.
 
-- The language server does not recognize configuration options from third-party plugins and will report "Unrecognized config option" warnings for them.
+- The language server does not recognize configuration options from third-party plugins and will report unrecognized config option warnings.
 
-- The language server provides limited support for Groovy scripts in the `lib` directory. Errors in Groovy scripts are not reported as diagnostics, and changing a Groovy script does not automatically re-compile the Nextflow scripts that reference it. Edit the Nextflow script or close and re-open it to refresh the diagnostics.
+- The language server provides limited support for Groovy scripts in the lib directory. Errors in Groovy scripts are not reported as diagnostics, and changing a Groovy script does not automatically re-compile the Nextflow scripts that reference it. Edit or close and re-open the Nextflow script to refresh the diagnostics.
 
 ## Commands
 
-The following commands are available from the command palette:
+The following commands are available from the Command Palette:
 
 - Restart language server
 - Stop language server
