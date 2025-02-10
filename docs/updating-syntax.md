@@ -554,7 +554,10 @@ params.max_cpus = 32
 
 ## Preserving Groovy code
 
-There are two ways to preserve Groovy code, using the `lib` directory or writing a plugin.
+There are two ways to preserve Groovy code:
+
+ - Moving the code to the `lib` directory
+ - Create a plugin
 
 Any Groovy code can be moved into the `lib` directory, which supports the full Groovy language. This approach is useful for temporarily preserving some Groovy code until it can be updated later and incorporated into a Nextflow script. See {ref}`<lib-directory>` documentation for more information.
 
