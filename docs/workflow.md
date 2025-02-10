@@ -465,7 +465,7 @@ results/
 Target names cannot begin or end with a slash (`/`).
 :::
 
-By default, all files emitted by a published channel will be published into the specified directory. If a channel emits list values, each file in the list (including nested lists) will be published. For example:
+By default, all files emitted by a published channel will be published into the specified directory. Lists and maps are recursively scanned for nested files. For example:
 
 ```nextflow
 workflow {
@@ -503,12 +503,12 @@ workflow {
 }
 
 output {
-    'foo' {
+    foo {
         enabled params.save_foo
         path 'intermediates/foo'
     }
 
-    'bar' {
+    bar {
         mode 'copy'
     }
 }
@@ -523,7 +523,7 @@ This output block has the following effect:
 See [Reference](#reference) for all available directives in the output block.
 
 :::{tip}
-The output block is only needed if you want to customize the behavior of specific targets. If you are satisfied with the default behavior and don't need to customize anything, the output block can be omitted.
+The output block can be omitted if you are satisfied with the default behavior. However, as a best practice, you should declare each output in the output block, even if you don't need to customize the publish path or create any index files.
 :::
 
 ### Dynamic publish path
@@ -533,15 +533,17 @@ The `path` directive in a target block can also be a closure which defines a cus
 ```nextflow
 workflow {
     main:
-    ch_fastq = Channel.of( [ [id: 'SAMP1'], file('1.fastq'), file('2.fastq') ] )
+    ch_samples = Channel.of(
+        [id: 'SAMP1', fastq_1: file('1.fastq'), fastq_1: file('2.fastq')]
+    )
 
     publish:
-    ch_fastq >> 'fastq'
+    ch_samples >> 'samples'
 }
 
 output {
-    'fastq' {
-        path { meta, fastq_1, fastq_2 -> "fastq/${meta.id}" }
+    samples {
+        path { sample -> "fastq/${sample.id}" }
     }
 }
 ```
@@ -552,19 +554,15 @@ The closure can even define a different path for each individual file by returni
 
 ```nextflow
 output {
-    'fastq' {
-        path { meta, fastq_1, fastq_2 ->
-            { file -> "fastq/${meta.id}/${file.baseName}" }
+    samples {
+        path { sample ->
+            { filename -> "fastq/${sample.id}/${filename}" }
         }
     }
 }
 ```
 
-The inner closure will be applied to each file in the channel value, in this case `fastq_1` and `fastq_2`.
-
-:::{tip}
-A mapping closure should usually have only one parameter. However, if the incoming values are tuples, the closure can specify a parameter for each tuple element for more convenient access, also known as "destructuring" or "unpacking".
-:::
+The inner closure will be applied to each file in the channel value, in this case `sample.fastq_1` and `sample.fastq_2`.
 
 ### Index files
 
@@ -575,29 +573,29 @@ For example:
 ```nextflow
 workflow {
     main:
-    ch_fastq = Channel.of(
-        [ [id: 1, name: 'sample 1'], '1a.fastq', '1b.fastq' ],
-        [ [id: 2, name: 'sample 2'], '2a.fastq', '2b.fastq' ],
-        [ [id: 3, name: 'sample 3'], '3a.fastq', '3b.fastq' ]
+    ch_samples = Channel.of(
+        [id: 1, name: 'sample 1', fastq_1: '1a.fastq', fastq_2: '1b.fastq'],
+        [id: 2, name: 'sample 2', fastq_1: '2a.fastq', fastq_2: '2b.fastq'],
+        [id: 3, name: 'sample 3', fastq_1: '3a.fastq', fastq_2: '3b.fastq']
     )
 
     publish:
-    ch_fastq >> 'fastq'
+    ch_samples >> 'samples'
 }
 
 output {
-    'fastq' {
+    samples {
+        path 'fastq'
         index {
-            path 'index.csv'
+            path 'samples.csv'
         }
     }
 }
 ```
 
-The above example will write the following CSV file to `results/fastq/index.csv`:
+The above example will write the following CSV file to `results/samples.csv`:
 
-```csv
-"id","name","fastq_1","fastq_2"
+```
 "1","sample 1","results/fastq/1a.fastq","results/fastq/1b.fastq"
 "2","sample 2","results/fastq/2a.fastq","results/fastq/2b.fastq"
 "3","sample 3","results/fastq/3a.fastq","results/fastq/3b.fastq"
@@ -607,14 +605,20 @@ You can customize the index file with additional directives, for example:
 
 ```nextflow
 index {
-    path 'index.csv'
-    header ['id', 'fastq_1', 'fastq_1']
-    sep '\t'
-    mapper { meta, fq_1, fq_2 -> meta + [fastq_1: fq_1, fastq_2: fq_2] }
+    path 'samples.csv'
+    header true
+    sep '|'
 }
 ```
 
-This example will produce the same index file as above, but with the `name` column removed and with tabs instead of commas.
+This example will produce the following index file:
+
+```
+"id"|"name"|"fastq_1"|"fastq_2"
+"1"|"sample 1"|"results/fastq/1a.fastq"|"results/fastq/1b.fastq"
+"2"|"sample 2"|"results/fastq/2a.fastq"|"results/fastq/2b.fastq"
+"3"|"sample 3"|"results/fastq/3a.fastq"|"results/fastq/3b.fastq"
+```
 
 See [Reference](#reference) for the list of available index directives.
 
