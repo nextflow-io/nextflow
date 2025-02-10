@@ -78,10 +78,6 @@ process doOtherThings {
 
 In this example, `$MAX` is a Nextflow variable that must be defined elsewhere in the pipeline script. Nextflow replaces it with the actual value before executing the script. Meanwhile, `$DB` is a Bash variable that must exist in the execution environment, and Bash will replace it with the actual value during execution.
 
-:::{tip}
-Alternatively, you can use the {ref}`process-shell` block definition, which allows a script to contain both Bash and Nextflow variables without having to escape the first.
-:::
-
 ### Scripts *à la carte*
 
 The process script is interpreted by Nextflow as a Bash script by default, but you are not limited to Bash.
@@ -1132,12 +1128,12 @@ The `emit` option can be used on a process output to define a name for the corre
 process FOO {
     output:
     path 'hello.txt', emit: hello
-    path 'bye.txt', emit: bye
+    stdout emit: bye
 
     script:
     """
     echo "hello" > hello.txt
-    echo "bye" > bye.txt
+    echo "bye"
     """
 }
 
