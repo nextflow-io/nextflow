@@ -72,11 +72,13 @@ class VariableVisitor extends ClassCodeVisitorSupport {
     void visitDeclarationExpression(DeclarationExpression expr) {
         declaration = true
         try {
-            super.visitDeclarationExpression(expr)
+            visit(expr.getLeftExpression())
         }
         finally {
             declaration = false
         }
+
+        visit(expr.getRightExpression())
     }
 
     @Override
@@ -107,7 +109,7 @@ class VariableVisitor extends ClassCodeVisitorSupport {
 
         if( declaration ) {
             if( fAllVariables.containsKey(name) )
-                sourceUnit.addError( new SyntaxException("Variable `$name` already defined in the process scope", line, coln))
+                sourceUnit.addError( new SyntaxException("Variable `$name` already declared in the process scope", line, coln))
             else
                 localDef.add(name)
         }
