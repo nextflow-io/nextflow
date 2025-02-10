@@ -217,7 +217,6 @@ class BatchClient {
         for( Task t: listTasks(jobId) ){
             arrayTaskStatus.put(t.name, new TaskStatusRecord(t.status, now))
         }
-
     }
 
     void removeFromArrayTasks(String jobId, String taskId){
