@@ -46,7 +46,7 @@ The core plugins are documented in this documentation. For all other plugins, pl
 
 To use Nextflow plugins in an offline environment:
 
-1. {ref}`Install Nextflow <install-nextflow>` on a system with an internet connection. Do not use the "all" package, as this does not allow the use of custom plugins.
+1. {ref}`Install Nextflow <install-nextflow>` on a system with an internet connection.
 
 2. Download any additional plugins by running `nextflow plugin install <pluginId,..>`. Alternatively, simply run your pipeline once and Nextflow will download all of the plugins that it needs.
 

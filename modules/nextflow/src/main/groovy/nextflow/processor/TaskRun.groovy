@@ -407,7 +407,7 @@ class TaskRun implements Cloneable {
     }
 
     String getTraceScript() {
-        return template!=null && body.source
+        return template!=null && body?.source
             ? body.source
             : getScript()
     }
@@ -852,7 +852,13 @@ class TaskRun implements Cloneable {
         this.source = block.getSource()
 
         try {
-            script = code.call()?.toString()
+            final result = code.call()
+            if ( result instanceof Path ) {
+                script = renderTemplate(result)
+            }
+            else {
+                script = result.toString()
+            }
         }
         catch( ProcessException e ) {
             throw e
