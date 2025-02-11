@@ -740,4 +740,54 @@ class AzBatchServiceTest extends Specification {
         [managedIdentity: [clientId: 'client-123']]     | 'client-123'
     }
 
+    def 'should cache job id' () {
+        given:
+        def exec = Mock(AzBatchExecutor)
+        def service = Spy(new AzBatchService(exec))
+        and:
+        def p1 = Mock(TaskProcessor)
+        def p2 = Mock(TaskProcessor)
+        def t1 = Mock(TaskRun) { getProcessor()>>p1 }
+        def t2 = Mock(TaskRun) { getProcessor()>>p2 }
+        def t3 = Mock(TaskRun) { getProcessor()>>p2 }
+
+        when:
+        def result = service.getOrCreateJob('foo',t1)
+        then:
+        1 * service.createJob0('foo',t1) >> 'job1'
+        and:
+        result == 'job1'
+
+        // second time is cached
+        when:
+        result = service.getOrCreateJob('foo',t1)
+        then:
+        0 * service.createJob0('foo',t1) >> null
+        and:
+        result == 'job1'
+
+        // changing pool id returns a new job id
+        when:
+        result = service.getOrCreateJob('bar',t1)
+        then:
+        1 * service.createJob0('bar',t1) >> 'job2'
+        and:
+        result == 'job2'
+
+        // changing process returns a new job id
+        when:
+        result = service.getOrCreateJob('bar',t2)
+        then:
+        1 * service.createJob0('bar',t2) >> 'job3'
+        and:
+        result == 'job3'
+
+        // change task with the same process, return cached job id
+        when:
+        result = service.getOrCreateJob('bar',t3)
+        then:
+        0 * service.createJob0('bar',t3) >> null
+        and:
+        result == 'job3'
+    }
 }

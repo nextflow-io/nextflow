@@ -73,7 +73,7 @@ Additionally, the [directive values](#directives) for the given task can be acce
 
 `path( identifier | stageName )`
 
-: Declare a file input. The received value can be any type, and it will be staged into the task directory. If the received value is not a file or collection of files, it is implicitly converted to a string and written to a file.
+: Declare a file input. The received value should be a file or collection of files and will be staged into the task directory.
 
 : The argument can be an identifier or string. If an identifier, the received value will be made available to the process body as a variable. If a string, the received value will be staged into the task directory under the given alias.
 
@@ -350,6 +350,10 @@ For cloud-based executors like AWS Batch, or when using Fusion with any executor
 
 - {ref}`process-container`
 - {ref}`process-containerOptions`
+
+When using Wave, the following additional directives must be uniform:
+
+- {ref}`process-conda`
 
 (process-beforescript)=
 

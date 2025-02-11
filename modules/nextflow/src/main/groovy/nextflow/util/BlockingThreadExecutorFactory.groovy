@@ -114,7 +114,7 @@ class BlockingThreadExecutorFactory {
                     Integer.MAX_VALUE,
                     keepAlive.getMillis(),
                     TimeUnit.MILLISECONDS,
-                    new BlockingBlockingQueue<Runnable>(maxQueueSize-maxThreads),
+                    new HardBlockingQueue<Runnable>(maxQueueSize-maxThreads),
                     new CustomThreadFactory(prefix),
                     new ThreadPoolExecutor.CallerRunsPolicy() )
                     // ^^^^^
