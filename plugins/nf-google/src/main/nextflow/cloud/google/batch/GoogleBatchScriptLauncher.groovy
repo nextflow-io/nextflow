@@ -43,7 +43,6 @@ import nextflow.util.PathTrie
 class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatchLauncherSpec {
 
     private static final String MOUNT_ROOT = '/mnt/disks'
-    private static final String ARRAY_WORKDIR_VAR = 'nxf_array_task_workdir'
 
     private BatchConfig config
     private CloudStoragePath remoteWorkDir
@@ -99,7 +98,6 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
 
         // make it change to the task work dir
         bean.headerScript = headerScript(bean)
-
         // enable use of local scratch dir
         if( scratch==null )
             scratch = true
@@ -130,7 +128,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
 
     @Override
     String runCommand() {
-        isArray ? launchArrayCommand(this.arrayWorkDirs) : launchCommand(workDirMount)
+        isArray ? launchArrayCommand(workDirMount) : launchCommand(workDirMount)
     }
 
     @Override
@@ -187,9 +185,9 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         this.config = config
         return this
     }
-    String launchArrayCommand(List<Path> workdirs) {
-        final workDirs = workdirs.collect( p -> toContainerMount(p) ).join(' ')
-        "array=($workDirs); export ${ARRAY_WORKDIR_VAR}=\${array[${arrayIndexName}]}; /bin/bash \$${ARRAY_WORKDIR_VAR}/${TaskRun.CMD_RUN} 2>&1 | tee \$${ARRAY_WORKDIR_VAR}/${TaskRun.CMD_LOG}"
+
+    static String launchArrayCommand(String workDir ) {
+        "/bin/bash ${workDir}/${TaskRun.CMD_SCRIPT}"
     }
     static String launchCommand( String workDir ) {
         "trap \"{ cp ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}; }\" ERR; /bin/bash ${workDir}/${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
