@@ -21,6 +21,7 @@ import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 
 import com.google.api.gax.core.CredentialsProvider
+import com.google.api.gax.rpc.DeadlineExceededException
 import com.google.api.gax.rpc.FixedHeaderProvider
 import com.google.api.gax.rpc.NotFoundException
 import com.google.api.gax.rpc.UnavailableException
@@ -179,6 +180,8 @@ class BatchClient {
             @Override
             boolean test(Throwable t) {
                 if( t instanceof UnavailableException )
+                    return true
+                if( t instanceof DeadlineExceededException )
                     return true
                 if( t instanceof IOException || t.cause instanceof IOException )
                     return true
