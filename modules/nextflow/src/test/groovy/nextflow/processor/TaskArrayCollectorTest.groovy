@@ -120,6 +120,7 @@ class TaskArrayCollectorTest extends Specification {
         when:
         def taskArray = collector.createTaskArray([task, task, task])
         then:
+        3 * handler.withArrayChild(true) >> handler
         3 * exec.createTaskHandler(task) >> handler
         3 * handler.prepareLauncher()
         1 * collector.createArrayTaskScript([handler, handler, handler]) >> 'the-task-array-script'

@@ -2185,15 +2185,13 @@ class TaskProcessor {
         session.filePorter.transfer(batch)
     }
 
-    final protected void makeTaskContextStage3( TaskRun task, HashCode hash, Path folder ) {
-
+    protected void makeTaskContextStage3( TaskRun task, HashCode hash, Path folder ) {
         // set hash-code & working directory
         task.hash = hash
         task.workDir = folder
         task.config.workDir = folder
         task.config.hash = hash.toString()
         task.config.name = task.getName()
-
     }
 
     final protected HashCode createTaskHashKey(TaskRun task) {
