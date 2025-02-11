@@ -355,6 +355,7 @@ class TaskRun implements Cloneable {
         taskClone.config = config.clone()
         taskClone.config.setContext(taskClone.context)
         taskClone.cache0.clear()
+        taskClone.isChild = false
         return taskClone
     }
 
