@@ -54,9 +54,8 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
     /* ONLY FOR TESTING - DO NOT USE */
     protected GoogleBatchScriptLauncher() {}
 
-    GoogleBatchScriptLauncher(TaskBean bean, Path remoteBinDir, boolean isArray) {
+    GoogleBatchScriptLauncher(TaskBean bean, Path remoteBinDir) {
         super(bean)
-        this.isArray = isArray
         // keep track the google storage work dir
         this.remoteWorkDir = (CloudStoragePath) bean.workDir
         this.remoteBinDir = toContainerMount(remoteBinDir)
@@ -67,7 +66,6 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         bean.targetDir = toContainerMount(bean.targetDir)
 
         // add all children work dir 
-
         if( bean.arrayWorkDirs ) {
             for( Path it : bean.arrayWorkDirs )
                 toContainerMount(it)
@@ -128,7 +126,9 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
 
     @Override
     String runCommand() {
-        isArray ? launchArrayCommand(workDirMount) : launchCommand(workDirMount)
+        return isArray
+            ? launchArrayCommand(workDirMount)
+            : launchCommand(workDirMount)
     }
 
     @Override
@@ -186,9 +186,20 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         return this
     }
 
+    GoogleBatchScriptLauncher withIsArray(boolean value) {
+        this.isArray = value
+        return this
+    }
+
     static String launchArrayCommand(String workDir ) {
+        // when executing a job array run directly the command script
+        // to prevent that all child jobs write on the same .command.*
+        // control files, causing an issue with the gcsfuse mount
+        // For the same reason the .command.log file is not uploaded
+        // See https://github.com/nextflow-io/nextflow/issues/5777
         "/bin/bash ${workDir}/${TaskRun.CMD_SCRIPT}"
     }
+
     static String launchCommand( String workDir ) {
         "trap \"{ cp ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}; }\" ERR; /bin/bash ${workDir}/${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
     }
