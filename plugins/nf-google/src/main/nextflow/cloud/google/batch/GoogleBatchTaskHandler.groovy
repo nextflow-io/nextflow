@@ -149,6 +149,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             final taskBean = task.toTaskBean()
             return new GoogleBatchScriptLauncher(taskBean, executor.remoteBinDir)
                 .withConfig(executor.config)
+                .withIsArray(task.isArray())
         }
     }
 
