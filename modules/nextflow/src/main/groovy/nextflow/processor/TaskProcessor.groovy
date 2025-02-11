@@ -2340,7 +2340,7 @@ class TaskProcessor {
 
         makeTaskContextStage3(task, hash, folder)
 
-        // when no collector is define OR it's a task retry submit directly for execution
+        // when no collector is define OR it's a task retry, then submit directly for execution
         if( !arrayCollector || task.config.getAttempt() > 1 )
             executor.submit(task)
         // add the task to the collection of running tasks
