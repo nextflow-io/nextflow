@@ -21,7 +21,6 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import nextflow.Global
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
@@ -36,8 +35,6 @@ import nextflow.file.FileHelper
 @Slf4j
 @CompileStatic
 class OutputDsl {
-
-    private Session session = Global.session as Session
 
     private Map<String,Map> targetConfigs = [:]
 
@@ -56,7 +53,8 @@ class OutputDsl {
         targetConfigs[name] = dsl.getOptions()
     }
 
-    void build(Map<DataflowWriteChannel,String> targets) {
+    void build(Session session) {
+        final targets = session.publishTargets
         final defaults = session.config.navigate('workflow.output', Collections.emptyMap()) as Map
 
         // construct mapping of target name -> source channels
@@ -73,7 +71,7 @@ class OutputDsl {
         // validate target configs
         for( final name : targetConfigs.keySet() ) {
             if( name !in publishSources )
-                log.warn "Publish target '${name}' was defined in the output block but not used by the workflow"
+                log.warn "Workflow output '${name}' was declared in the output block but not assigned in the workflow"
         }
 
         // create publish op (and optional index op) for each target
@@ -86,7 +84,7 @@ class OutputDsl {
             final opts = publishOptions(name, defaults, overrides)
 
             if( opts.enabled == null || opts.enabled )
-                ops << new PublishOp(CH.getReadChannel(mixed), opts).apply()
+                ops << new PublishOp(session, CH.getReadChannel(mixed), opts).apply()
         }
     }
 
@@ -99,11 +97,11 @@ class OutputDsl {
 
         final path = opts.path as String ?: name
         if( path.startsWith('/') || path.endsWith('/') )
-            throw new ScriptRuntimeException("Invalid publish target path '${path}' -- it should not contain a leading or trailing slash")
-        opts.path = session.outputDir.resolve(path)
+            throw new ScriptRuntimeException("Invalid path '${path}' for workflow output '${name}' -- it should not contain a leading or trailing slash")
+        opts.path = path
 
         if( opts.index && !(opts.index as Map).path )
-            throw new ScriptRuntimeException("Index file definition for publish target '${name}' is missing `path` option")
+            throw new ScriptRuntimeException("Index file definition for workflow output '${name}' is missing `path` option")
 
         return opts
     }
@@ -162,7 +160,7 @@ class OutputDsl {
 
         void path(Closure value) {
             setOption('path', '.')
-            setOption('pathAs', value)
+            setOption('pathResolver', value)
         }
 
         void storageClass(String value) {
