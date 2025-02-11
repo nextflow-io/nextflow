@@ -17,10 +17,6 @@
 
 package nextflow.cloud.google.batch
 
-import com.google.api.gax.rpc.NotFoundException
-import com.google.cloud.batch.v1.JobStatus
-import com.google.cloud.batch.v1.Task
-
 import java.nio.file.Path
 import java.util.regex.Pattern
 
@@ -28,6 +24,7 @@ import com.google.cloud.batch.v1.AllocationPolicy
 import com.google.cloud.batch.v1.ComputeResource
 import com.google.cloud.batch.v1.Environment
 import com.google.cloud.batch.v1.Job
+import com.google.cloud.batch.v1.JobStatus
 import com.google.cloud.batch.v1.LifecyclePolicy
 import com.google.cloud.batch.v1.LogsPolicy
 import com.google.cloud.batch.v1.Runnable
@@ -456,7 +453,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      * @return Retrieve the submitted task state
      */
     protected String getTaskState() {
-        return task.isChild
+        return isArrayChild
             ? getStateFromTaskStatus()
             : getStateFromJobStatus()
     }
@@ -554,7 +551,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 task.stderr = errorFile
             }
             status = TaskStatus.COMPLETED
-            if( task.isChild )
+            if( isArrayChild )
                 client.removeFromArrayTasks(jobId, taskId)
             return true
         }

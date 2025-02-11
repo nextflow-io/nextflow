@@ -325,11 +325,6 @@ class TaskRun implements Cloneable {
     volatile boolean aborted
 
     /**
-     * Mark the task if belongs to a TaskArrayRun
-     */
-    volatile boolean isChild
-
-    /**
      * The action {@link ErrorStrategy} action applied if task has failed
      */
     volatile ErrorStrategy errorAction
@@ -355,7 +350,6 @@ class TaskRun implements Cloneable {
         taskClone.config = config.clone()
         taskClone.config.setContext(taskClone.context)
         taskClone.cache0.clear()
-        taskClone.isChild = false
         return taskClone
     }
 

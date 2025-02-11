@@ -610,7 +610,6 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def client = Mock(BatchClient)
         def task = Mock(TaskRun) {
             lazyName() >> 'foo (1)'
-            isChild >> true
         }
         def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task))
         final message = 'Job failed when Batch tries to schedule it: Batch Error: code - CODE_MACHINE_TYPE_NOT_FOUND'
@@ -634,9 +633,8 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def client = Mock(BatchClient)
         def task = Mock(TaskRun) {
             lazyName() >> 'foo (1)'
-            isChild >> true
         }
-        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task))
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task, isArrayChild: true))
 
         when:
         client.generateTaskName(jobId, taskId) >> "$jobId/group0/$taskId"
