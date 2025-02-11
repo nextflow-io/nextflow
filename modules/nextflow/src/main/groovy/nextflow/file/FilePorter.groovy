@@ -344,10 +344,13 @@ class FilePorter {
             }
         }
 
-        private boolean recoverableError(Throwable e){
-            return e !instanceof NoSuchFileException
+        private boolean recoverableError(IOException e){
+            final result =
+                e !instanceof NoSuchFileException
                 && (e instanceof SocketTimeoutException || e !instanceof InterruptedIOException)
                 && e !instanceof SocketException
+            log.debug "Stage foreign file exception: recoverable=$result; type=${e.class.name}; message=${e.message}"
+            return result
         }
 
         private String fmtError(Path filePath, Exception e) {

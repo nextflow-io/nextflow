@@ -2185,7 +2185,7 @@ class TaskProcessor {
         session.filePorter.transfer(batch)
     }
 
-    protected void makeTaskContextStage3( TaskRun task, HashCode hash, Path folder ) {
+    final protected void makeTaskContextStage3( TaskRun task, HashCode hash, Path folder ) {
 
         // set hash-code & working directory
         task.hash = hash

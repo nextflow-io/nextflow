@@ -137,11 +137,8 @@ class TaskArrayCollector {
      * @param tasks
      */
     protected TaskArrayRun createTaskArray(List<TaskRun> tasks) {
-        // mark the task as a child
-        for( TaskRun t : tasks )
-            t.isChild = true
         // prepare child job launcher scripts
-        final handlers = tasks.collect( t -> executor.createTaskHandler(t) )
+        final handlers = tasks.collect( t -> executor.createTaskHandler(t).withArrayChild(true) )
         for( TaskHandler handler : handlers ) {
             handler.prepareLauncher()
         }

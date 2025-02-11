@@ -27,8 +27,6 @@ import spock.lang.Specification
  */
 class BatchClientTest extends Specification{
 
-
-
     def 'should return task status with getTaskInArray' () {
         given:
         def project = 'project-id'
@@ -42,7 +40,6 @@ class BatchClientTest extends Specification{
         def job3 = 'job3-id'
         def task3 = 'task3-id'
         def task3Name = TaskName.of(project, location, job3, 'group0', task3).toString()
-        def now = System.currentTimeMillis()
         def arrayTasks = new HashMap<String,TaskStatusRecord>()
         def client = Spy( new BatchClient( projectId: project, location: location, arrayTaskStatus: arrayTasks ) )
 
@@ -69,16 +66,14 @@ class BatchClientTest extends Specification{
         client.getTaskInArrayStatus(job3, task3).state == TaskStatus.State.SUCCEEDED
     }
 
-    def TaskStatusRecord makeTaskStatusRecord(TaskStatus.State state, long timestamp) {
+    TaskStatusRecord makeTaskStatusRecord(TaskStatus.State state, long timestamp) {
         return new TaskStatusRecord(TaskStatus.newBuilder().setState(state).build(), timestamp)
-
     }
 
     def makeTask(String name, TaskStatus.State state){
         Task.newBuilder().setName(name)
             .setStatus(TaskStatus.newBuilder().setState(state).build())
             .build()
-
     }
 
 }

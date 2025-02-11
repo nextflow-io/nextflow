@@ -17,6 +17,7 @@
 package nextflow.cloud.google.batch.client
 
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 
@@ -55,7 +56,7 @@ class BatchClient {
     protected String location
     protected BatchServiceClient batchServiceClient
     protected BatchConfig config
-    private Map<String, TaskStatusRecord> arrayTaskStatus = new HashMap<String, TaskStatusRecord>()
+    private Map<String, TaskStatusRecord> arrayTaskStatus = new ConcurrentHashMap<String, TaskStatusRecord>()
 
     BatchClient(BatchConfig config) {
         this.config = config
