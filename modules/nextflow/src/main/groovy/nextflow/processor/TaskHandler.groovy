@@ -58,6 +58,16 @@ abstract class TaskHandler {
     TaskRun getTask() { task }
 
     /**
+     * Whenever this handle reference a job array task child
+     */
+    boolean isArrayChild
+
+    TaskHandler withArrayChild(boolean child) {
+        this.isArrayChild = child
+        return this
+    }
+
+    /**
      * Task current status
      */
     volatile TaskStatus status = NEW
