@@ -263,4 +263,20 @@ class TaskHandlerTest extends Specification {
         [:]                         | "job_1"
         [TOWER_WORKFLOW_ID: '1234'] | "tw-1234-job_1"
     }
+
+    @Unroll
+    def 'should set isChildArray flag'() {
+        given:
+        def handler = Spy(TaskHandler)
+
+        expect:
+        !handler.isArrayChild
+        and:
+        handler.withArrayChild(VALUE).isArrayChild == VALUE
+
+        where:
+        VALUE   | _
+        false   | _
+        true    | _
+    }
 }

@@ -24,6 +24,7 @@ import com.google.cloud.batch.v1.AllocationPolicy
 import com.google.cloud.batch.v1.ComputeResource
 import com.google.cloud.batch.v1.Environment
 import com.google.cloud.batch.v1.Job
+import com.google.cloud.batch.v1.JobStatus
 import com.google.cloud.batch.v1.LifecyclePolicy
 import com.google.cloud.batch.v1.LogsPolicy
 import com.google.cloud.batch.v1.Runnable
@@ -452,49 +453,73 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      * @return Retrieve the submitted task state
      */
     protected String getTaskState() {
-        final tasks = client.listTasks(jobId)
-        if( !tasks.iterator().hasNext() ) {
-            // if there are no tasks checks the job status
-            return checkJobStatus()
-        }
+        return isArrayChild
+            ? getStateFromTaskStatus()
+            : getStateFromJobStatus()
+    }
+
+    protected String getStateFromTaskStatus() {
         final now = System.currentTimeMillis()
         final delta =  now - timestamp;
         if( !taskState || delta >= 1_000) {
-            final status = client.getTaskStatus(jobId, taskId)
-            final newState = status?.state as String
-            if( newState ) {
-                log.trace "[GOOGLE BATCH] Get job=$jobId task=$taskId state=$newState"
-                taskState = newState
-                timestamp = now
-            }
-            if( newState == 'PENDING' ) {
-                final eventsCount = status.getStatusEventsCount()
-                final lastEvent = eventsCount > 0 ? status.getStatusEvents(eventsCount - 1) : null
-                if( lastEvent?.getDescription()?.contains('CODE_GCE_QUOTA_EXCEEDED') )
-                    log.warn1 "Batch job cannot be run: ${lastEvent.getDescription()}"
+            final status = client.getTaskInArrayStatus(jobId, taskId)
+            if( status ) {
+                inspectTaskStatus(status)
+            } else {
+                // If no task status retrieved check job status
+                final jobStatus = client.getJobStatus(jobId)
+                inspectJobStatus(jobStatus)
             }
         }
         return taskState
     }
 
-    protected String checkJobStatus() {
-        final jobStatus = client.getJobStatus(jobId)
-        final newState = jobStatus?.state as String
+    protected String getStateFromJobStatus() {
+        final now = System.currentTimeMillis()
+        final delta =  now - timestamp;
+        if( !taskState || delta >= 1_000) {
+            final status = client.getJobStatus(jobId)
+            inspectJobStatus(status)
+        }
+        return taskState
+    }
+
+    private void inspectTaskStatus(com.google.cloud.batch.v1.TaskStatus status) {
+        final newState = status?.state as String
         if (newState) {
+            log.trace "[GOOGLE BATCH] Get job=$jobId task=$taskId state=$newState"
+            taskState = newState
+            timestamp = System.currentTimeMillis()
+        }
+        if (newState == 'PENDING') {
+            final eventsCount = status.getStatusEventsCount()
+            final lastEvent = eventsCount > 0 ? status.getStatusEvents(eventsCount - 1) : null
+            if (lastEvent?.getDescription()?.contains('CODE_GCE_QUOTA_EXCEEDED'))
+                log.warn1 "Batch job cannot be run: ${lastEvent.getDescription()}"
+        }
+    }
+
+    protected String inspectJobStatus(JobStatus status) {
+        final newState = status?.state as String
+        if (newState) {
+            log.trace "[GOOGLE BATCH] Get job=$jobId state=$newState"
             taskState = newState
             timestamp = System.currentTimeMillis()
             if (newState == "FAILED") {
                 noTaskJobfailure = true
             }
-            return taskState
-        } else {
-            return "PENDING"
+        }
+        if (newState == 'SCHEDULED') {
+            final eventsCount = status.getStatusEventsCount()
+            final lastEvent = eventsCount > 0 ? status.getStatusEvents(eventsCount - 1) : null
+            if (lastEvent?.getDescription()?.contains('CODE_GCE_QUOTA_EXCEEDED'))
+                log.warn1 "Batch job cannot be run: ${lastEvent.getDescription()}"
         }
     }
 
-    static private final List<String> RUNNING_OR_COMPLETED = ['RUNNING', 'SUCCEEDED', 'FAILED']
+    static private final List<String> RUNNING_OR_COMPLETED = ['RUNNING', 'SUCCEEDED', 'FAILED', 'DELETION_IN_PROGRESS']
 
-    static private final List<String> COMPLETED = ['SUCCEEDED', 'FAILED']
+    static private final List<String> COMPLETED = ['SUCCEEDED', 'FAILED', 'DELETION_IN_PROGRESS']
 
     @Override
     boolean checkIfRunning() {
@@ -526,6 +551,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 task.stderr = errorFile
             }
             status = TaskStatus.COMPLETED
+            if( isArrayChild )
+                client.removeFromArrayTasks(jobId, taskId)
             return true
         }
 
