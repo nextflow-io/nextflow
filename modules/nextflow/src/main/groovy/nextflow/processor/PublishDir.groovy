@@ -146,7 +146,7 @@ class PublishDir {
         final resolved = value instanceof Closure ? value.call() : value
         if( resolved instanceof String || resolved instanceof GString )
             nullPathWarn = checkNull(resolved.toString())
-        if( session.cidEnabled ){
+        if( session?.cidEnabled ){
             final resolvedPath = FileHelper.toPath(resolved)
             if (resolvedPath.isAbsolute()){
                 log.warn("CID store is enabled but publish dir is set to an absolute path ($resolvedPath). Outputs in this path will not published in the CID store")

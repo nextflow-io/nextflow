@@ -17,6 +17,9 @@
 
 package nextflow.data.cid
 
+import groovy.json.JsonOutput
+import nextflow.util.CacheHelper
+
 import java.nio.file.Files
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileTime
@@ -36,7 +39,7 @@ class CidObserverTest extends Specification {
     def 'should save task run' () {
         given:
         def folder = Files.createTempDirectory('test')
-        def config = [workflow:[data:[store:[location:folder.toString()]]]]
+        def config = [cid:[store:[location:folder.toString()]]]
         def session = Mock(Session) { getConfig()>>config }
         def observer = new CidObserver()
         observer.onFlowCreate(session)
@@ -51,7 +54,7 @@ class CidObserverTest extends Specification {
         when:
         observer.storeTaskRun(task)
         then:
-        folder.resolve(hash.toString()).text == '{"id":100,"name":"foo","hash":"15cd5b07","annotations":null}'
+        folder.resolve(".meta/${hash.toString()}/.data.json").text == JsonOutput.prettyPrint('{"type":"Task","id":100,"name":"foo","hash":"15cd5b07","inputs": null,"annotations":null}')
 
         cleanup:
         folder?.deleteDir()
@@ -60,7 +63,7 @@ class CidObserverTest extends Specification {
     def 'should save task output' () {
         given:
         def folder = Files.createTempDirectory('test')
-        def config = [workflow:[data:[store:[location:folder.toString()]]]]
+        def config = [cid:[store:[location:folder.toString()]]]
         def session = Mock(Session) { getConfig()>>config }
         def observer = Spy(new CidObserver())
         observer.onFlowCreate(session)
@@ -71,6 +74,7 @@ class CidObserverTest extends Specification {
         def outFile = workDir.resolve('foo/bar/file.bam')
         Files.createDirectories(outFile.parent)
         outFile.text = 'some data'
+        def fileHash = CacheHelper.hasher(outFile).hash().toString()
         and:
         def hash = HashCode.fromInt(123456789)
         and:
@@ -81,21 +85,24 @@ class CidObserverTest extends Specification {
             getWorkDir() >> workDir
         }
         and:
-        def ts1 = Instant.ofEpochMilli(1737914400)
-        def ts2 = Instant.ofEpochMilli(1737914500)
-        def attrs = Mock(BasicFileAttributes) {
-            size() >> 100
-            creationTime() >> FileTime.from(ts1)
-            lastModifiedTime() >> FileTime.from(ts2)
-        }
+        def attrs = Files.readAttributes(outFile, BasicFileAttributes)
+        def expectedString = '{"type":"Output",' +
+            '"path":"' + outFile.toString() + '",' +
+            '"hash":"'+ fileHash + '",' +
+            '"source":"cid://15cd5b07",' +
+            '"size":'+attrs.size() + ',' +
+            '"createdAt":' + attrs.creationTime().toMillis() + ',' +
+            '"modifiedAt":'+ attrs.lastModifiedTime().toMillis() + ',' +
+            '"annotations":null}'
+
         and:
         observer.readAttributes(outFile) >> attrs
 
         when:
         observer.storeTaskOutput(task, outFile)
         then:
-        folder.resolve("${hash}/foo/bar/file.bam").text
-            == '{"uri":"cid://15cd5b07/foo/bar/file.bam","size":100,"createdAt":1737914400,"modifiedAt":1737914500,"annotations":null}'
+        folder.resolve(".meta/${hash}/foo/bar/file.bam/.data.json").text
+            == JsonOutput.prettyPrint(expectedString)
 
         cleanup:
         folder?.deleteDir()

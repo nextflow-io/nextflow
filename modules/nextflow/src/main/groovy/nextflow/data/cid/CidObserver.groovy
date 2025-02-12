@@ -106,7 +106,7 @@ class CidObserver implements TraceObserver {
             task.id.value,
             task.getName(),
             task.hash.toString(),
-            convertToReferences(task.inputFilesMap)
+            task.inputFilesMap ? convertToReferences(task.inputFilesMap): null
             )
         // store in the underlying persistence
         final key = "${value.hash}/.data.json"
