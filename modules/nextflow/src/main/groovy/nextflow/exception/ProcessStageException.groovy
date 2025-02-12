@@ -23,9 +23,9 @@ import groovy.transform.InheritConstructors
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * 
- * Note: This exception extends ProcessUrecoverableException to force the exceution to fail instead of
- * retrying the task execution because the file staging process has its own retry streategy, and
- * theforefore it's likely to be a permanent error.
+ * Note: This exception extends ProcessUrecoverableException to force the execution to fail instead of
+ * retrying the task execution because the file staging process has its own retry strategy, and
+ * therefore it's likely to be a permanent error.
  *
  * See also https://github.com/nextflow-io/nextflow/issues/5727
  */
