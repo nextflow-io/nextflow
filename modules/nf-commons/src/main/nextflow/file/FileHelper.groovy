@@ -256,6 +256,9 @@ class FileHelper {
     }
 
     static Path toCanonicalPath(value) {
+        if( value==null )
+            return null
+
         Path result = toPath(value)
 
         if( result.fileSystem != FileSystems.default ) {
