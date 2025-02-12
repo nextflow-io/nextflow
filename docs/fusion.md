@@ -23,7 +23,7 @@ Fusion requires a license for use in Seqera Platform compute environments or dir
 
 Fusion integrates with Nextflow directly and does not require any installation or change in pipeline code. It only requires use of a container runtime or a container computing service, such as Kubernetes, AWS Batch, or Google Cloud Batch.
 
-To enable Fusion in your Nextflow pipeline, add the following snippet to your `nextflow.config` file:
+To enable Fusion in your Nextflow pipeline, add the following to your `nextflow.config` file:
 
 ```{code-block} nextflow
 :class: copyable
