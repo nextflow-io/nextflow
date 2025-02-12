@@ -15,29 +15,22 @@
  *
  */
 
-package nextflow.data.cid
+package nextflow.data.cid.model
 
-import java.nio.file.Path
-import java.util.function.Consumer
-
+import groovy.transform.Canonical
 import groovy.transform.CompileStatic
-import nextflow.data.config.DataConfig
+
+
 /**
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Jorge Ejarque <jorge.ejarque@seqera.io
  */
+@Canonical
 @CompileStatic
-interface CidStore {
-
-    void open(DataConfig config)
-
-    void save(String key, Object value)
-
-    void list(String key, Consumer<String> consumer)
-
-    Object load(String key)
-
-    Path getPath()
-
-
+class Workflow {
+    DataType type
+    String scriptFile
+    String scriptId
+    String repository
+    String commitId
 }

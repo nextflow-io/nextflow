@@ -16,6 +16,8 @@
 
 package nextflow
 
+import nextflow.util.CacheHelper
+
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -254,6 +256,14 @@ class Session implements ISession {
 
     private boolean statsEnabled
 
+    private volatile boolean cidEnabled
+
+    boolean getCidEnabled() { cidEnabled }
+
+    private HashCode executionHash
+
+    String getExecutionHash() { executionHash }
+
     private WorkflowMetadata workflowMetadata
 
     private WorkflowStatsObserver statsObserver
@@ -393,6 +403,10 @@ class Session implements ISession {
         // -- file porter config
         this.filePorter = new FilePorter(this)
 
+        if (config.cid) {
+            this.cidEnabled = true
+        }
+
     }
 
     protected Path cloudCachePath(Map cloudcache, Path workDir) {
@@ -405,12 +419,27 @@ class Session implements ISession {
         }
         return result
     }
+    private HashCode generateExecutionHash(ScriptFile scriptFile){
+        List keys = [generateScriptHash(scriptFile).toString(), scriptFile?.repository, scriptFile?.commitId, uniqueId, (Map)config.params]
+        return CacheHelper.hasher(keys).hash()
+    }
+
+    private HashCode generateScriptHash(ScriptFile scriptFile){
+        List keys = [ scriptFile?.scriptId ]
+        for( Path p : ScriptMeta.allScriptNames().values() ){
+            keys << CacheHelper.hasher(p.text).hash().toString()
+        }
+        return CacheHelper.hasher(keys).hash()
+    }
 
     /**
      * Initialize the session workDir, libDir, baseDir and scriptName variables
      */
     Session init( ScriptFile scriptFile, List<String> args=null ) {
 
+        if(cidEnabled) {
+            this.executionHash = generateExecutionHash(scriptFile)
+        }
         if(!workDir.mkdirs()) throw new AbortOperationException("Cannot create work-dir: $workDir -- Make sure you have write permissions or specify a different directory by using the `-w` command line option")
         log.debug "Work-dir: ${workDir.toUriString()} [${FileHelper.getPathFsType(workDir)}]"
 
@@ -439,7 +468,6 @@ class Session implements ISession {
         binding.setArgs( new ScriptRunner.ArgsList(args) )
 
         cache = CacheFactory.create(uniqueId,runName).open()
-
         return this
     }
 

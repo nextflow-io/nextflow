@@ -26,11 +26,11 @@ import groovy.transform.CompileStatic
  */
 @Canonical
 @CompileStatic
-class TaskOutput {
+class Output {
     DataType type
-    String uri
-    String realPath
+    String path
     String hash
+    String source
     long size
     long createdAt
     long modifiedAt

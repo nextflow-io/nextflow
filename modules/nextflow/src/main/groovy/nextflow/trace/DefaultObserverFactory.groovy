@@ -26,7 +26,9 @@ class DefaultObserverFactory implements TraceObserverFactory {
         createTimelineObserver(result)
         createDagObserver(result)
         createAnsiLogObserver(result)
-        createCidObserver(result)
+        if( session.cidEnabled ){
+            createCidObserver(result)
+        }
         return result
     }
 

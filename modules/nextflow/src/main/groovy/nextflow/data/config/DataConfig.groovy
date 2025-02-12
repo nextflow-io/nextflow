@@ -37,7 +37,7 @@ class DataConfig {
 
     static DataConfig create(Session session) {
         if( session ) {
-            return new DataConfig(session.config.navigate('workflow.data') as Map ?: Map.of())
+            return new DataConfig(session.config.navigate('cid') as Map ?: Map.of())
         }
         else
             throw new IllegalStateException("Missing Nextflow session")

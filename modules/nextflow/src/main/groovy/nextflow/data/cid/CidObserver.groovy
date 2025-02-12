@@ -17,6 +17,11 @@
 
 package nextflow.data.cid
 
+import com.google.common.hash.HashCode
+import nextflow.data.cid.model.Workflow
+import nextflow.data.cid.model.WorkflowRun
+import nextflow.file.FileHelper
+
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
@@ -25,7 +30,7 @@ import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import nextflow.Session
 import nextflow.data.cid.model.DataType
-import nextflow.data.cid.model.TaskOutput
+import nextflow.data.cid.model.Output
 import nextflow.data.config.DataConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
@@ -42,19 +47,43 @@ import nextflow.util.CacheHelper
 class CidObserver implements TraceObserver {
 
     private CidStore store
+    private Session session
 
     @Override
     void onFlowCreate(Session session) {
+        this.session = session
         store = new DefaultCidStore()
         store.open(DataConfig.create(session))
     }
 
+    void onFlowBegin() {
+        storeWorkflowRun()
+    }
+
+    protected void storeWorkflowRun() {
+        final workflow = new Workflow(
+            DataType.Workflow,
+            session.workflowMetadata.scriptFile.toString(),
+            session.workflowMetadata.scriptId.toString(),
+            session.workflowMetadata.repository,
+            session.workflowMetadata.commitId
+        )
+        final value = new WorkflowRun(
+            DataType.WorkflowRun,
+            workflow,
+            session.uniqueId.toString(),
+            session.runName,
+            session.params
+        )
+        final content = JsonOutput.prettyPrint(JsonOutput.toJson(value))
+        store.save("${session.executionHash}/.data.json", content)
+    }
     @Override
     void onProcessComplete(TaskHandler handler, TraceRecord trace) {
         storeTaskInfo(handler.task)
     }
 
-    void storeTaskInfo(TaskRun task) {
+    protected void storeTaskInfo(TaskRun task) {
         // store the task run entry
         storeTaskRun(task)
         // store all task outputs files
@@ -76,7 +105,9 @@ class CidObserver implements TraceObserver {
             DataType.Task,
             task.id.value,
             task.getName(),
-            task.hash.toString() )
+            task.hash.toString(),
+            convertToReferences(task.inputFilesMap)
+            )
         // store in the underlying persistence
         final key = "${value.hash}/.data.json"
         store.save(key, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
@@ -86,14 +117,13 @@ class CidObserver implements TraceObserver {
         final attrs = readAttributes(path)
         final rel = task.workDir.relativize(path).toString()
         final cid = "${task.hash}/${rel}"
-        final uri = "cid://${cid}"
         final key = "${cid}/.data.json"
         final hash = CacheHelper.hasher(path).hash().toString()
-        final value = new TaskOutput(
+        final value = new Output(
             DataType.Output,
-            uri,
-            path.toUriString(),
+            path.toString(),
             hash,
+            "cid://$task.hash",
             attrs.size(),
             attrs.creationTime().toMillis(),
             attrs.lastModifiedTime().toMillis() )
@@ -103,5 +133,56 @@ class CidObserver implements TraceObserver {
 
     protected BasicFileAttributes readAttributes(Path path) {
         Files.readAttributes(path, BasicFileAttributes)
+    }
+
+    @Override
+    void onFilePublish(Path destination, Path source){
+        final hash = CacheHelper.hasher(destination).hash().toString()
+        final rel = session.outputDir.relativize(destination).toString()
+        final key = "${rel}/.data.json"
+        final sourceReference = getSourceReference(source)
+        final attrs = readAttributes(destination)
+        final value = new Output(
+            DataType.Output,
+            destination.toString(),
+            hash,
+            sourceReference,
+            attrs.size(),
+            attrs.creationTime().toMillis(),
+            attrs.lastModifiedTime().toMillis() )
+        store.save(key, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
+    }
+
+    String getSourceReference(Path source){
+        final hash = FileHelper.getTaskHashFromPath(source, session.workDir)
+        if (hash) {
+            final target = FileHelper.getWorkFolder(session.workDir, hash).relativize(source).toString()
+            return "cid://$hash/$target"
+        }
+        return null
+    }
+
+    @Override
+    void onFilePublish(Path destination){
+        final hash = CacheHelper.hasher(destination).hash().toString()
+        final rel = session.outputDir.relativize(destination).toString()
+        final attrs = readAttributes(destination)
+        final value = new Output(
+            DataType.Output,
+            destination.toString(),
+            hash,
+            session.executionHash,
+            attrs.size(),
+            attrs.creationTime().toMillis(),
+            attrs.lastModifiedTime().toMillis() )
+        store.save(rel, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
+    }
+
+    protected Map convertToReferences(Map<String, Path> inputs) {
+        Map<String, String> references = new HashMap<String, String>()
+        inputs.each { name, path ->
+            final ref = getSourceReference(path)
+            references.put(name, ref ? ref : path.toString())}
+        return references
     }
 }

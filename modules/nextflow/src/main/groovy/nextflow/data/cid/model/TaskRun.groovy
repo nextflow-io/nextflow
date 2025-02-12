@@ -31,5 +31,6 @@ class TaskRun {
     int id
     String name
     String hash
+    Map inputs
     List<String> annotations
 }

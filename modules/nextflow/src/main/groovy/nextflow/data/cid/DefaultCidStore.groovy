@@ -64,4 +64,8 @@ class DefaultCidStore implements CidStore {
         location.resolve(key).text
     }
 
+    @Override
+    Path getPath(){ location }
+
+
 }
