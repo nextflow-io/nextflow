@@ -17,8 +17,11 @@
 
 package nextflow.cloud.google.batch
 
+import com.google.api.gax.grpc.GrpcStatusCode
+import com.google.api.gax.rpc.NotFoundException
 import com.google.cloud.batch.v1.JobStatus
 import com.google.cloud.batch.v1.Task
+import io.grpc.Status
 
 import java.nio.file.Path
 
@@ -461,13 +464,16 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
     }
 
-    TaskStatus makeTaskStatus(String desc) {
-        TaskStatus.newBuilder()
-            .addStatusEvents(
+    TaskStatus makeTaskStatus(TaskStatus.State state, String desc) {
+        def builder = TaskStatus.newBuilder()
+        if (state)
+            builder.setState(state)
+        if (desc)
+            builder.addStatusEvents(
                 StatusEvent.newBuilder()
                     .setDescription(desc)
             )
-            .build()
+        builder.build()
     }
 
     def 'should detect spot failures from status event'() {
@@ -482,8 +488,8 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
         when:
         client.getTaskStatus(jobId, taskId) >>> [
-            makeTaskStatus('Task failed due to Spot VM preemption with exit code 50001.'),
-            makeTaskStatus('Task succeeded')
+            makeTaskStatus(null,'Task failed due to Spot VM preemption with exit code 50001.'),
+            makeTaskStatus(null, 'Task succeeded')
         ]
         then:
         handler.getJobError().message == "Task failed due to Spot VM preemption with exit code 50001."
@@ -595,7 +601,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         builder.build()
     }
 
-    def 'should check job status when no tasks in job '() {
+    def 'should check job status when no tasks in task array '() {
 
         given:
         def jobId = 'job-id'
@@ -614,8 +620,40 @@ class GoogleBatchTaskHandlerTest extends Specification {
             makeJobStatus(JobStatus.State.FAILED, message)
         ]
         then:
-        handler.getTaskState() == "PENDING"
+        handler.getTaskState() == null
         handler.getTaskState() == "FAILED"
         handler.getJobError().message == message
+    }
+
+    def 'should manage not found when getting task state in task array'() {
+        given:
+        def jobId = '1'
+        def taskId = '1'
+        def client = Mock(BatchClient)
+        def task = Mock(TaskRun) {
+            lazyName() >> 'foo (1)'
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task, isArrayChild: true))
+
+        when:
+        client.generateTaskName(jobId, taskId) >> "$jobId/group0/$taskId"
+        //Force errors
+        client.getTaskStatus(jobId, taskId) >> { throw new NotFoundException(new Exception("Error"), GrpcStatusCode.of(Status.Code.NOT_FOUND), false) }
+        client.getTaskInArrayStatus(jobId, taskId) >> TASK_STATUS
+        client.getJobStatus(jobId) >>  makeJobStatus(JOB_STATUS, "")
+        then:
+        handler.getTaskState() == EXPECTED
+
+        where:
+        EXPECTED     | JOB_STATUS                 | TASK_STATUS
+        "FAILED"     | JobStatus.State.FAILED     | null // Task not in the list, get from job
+        "SUCCEEDED"  | JobStatus.State.FAILED     | makeTaskStatus(TaskStatus.State.SUCCEEDED, "") // get from task status
+    }
+
+    def makeTask(String name, TaskStatus.State state){
+        Task.newBuilder().setName(name)
+            .setStatus(TaskStatus.newBuilder().setState(state).build())
+            .build()
+
     }
 }
