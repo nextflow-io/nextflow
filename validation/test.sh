@@ -102,6 +102,10 @@ fi
 # Wave
 #
 if [[ $TEST_MODE == 'test_wave' ]]; then
+    if [ "$TOWER_ACCESS_TOKEN" ]; then
       echo "Wave tests"
       bash wave.sh
+    else
+      echo "Missing TOWER_ACCESS_TOKEN variable -- Skipping Wave tests"
+    fi
 fi
