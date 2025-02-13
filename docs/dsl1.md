@@ -82,15 +82,15 @@ In DSL1, a channel can be used as an input only once; to use a channel multiple 
 
 ```nextflow
 Channel
-    .from('Hello','Hola','Ciao')
-    .set{ cheers }
+    .of('Hello','Hola','Ciao')
+    .set { cheers }
 
 cheers
-    .map{ it.toUpperCase() }
+    .map { v -> v.toUpperCase() }
     .view()
 
 cheers
-    .map{ it.reverse() }
+    .map { v -> v.reverse() }
     .view()
 ```
 

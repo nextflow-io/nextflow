@@ -115,9 +115,9 @@ See the [Seqera Platform documentation](https://docs.seqera.io/platform) for set
 
 ## Standalone distribution
 
-The Nextflow standalone distribution (i.e. the `dist` release) is a self-contained `nextflow` executable that can run without needing to download core dependencies at runtime. This distribution is useful for offline environments, as well as building and testing Nextflow locally.  
+The Nextflow standalone distribution (i.e. the `dist` release) is a self-contained `nextflow` executable that can run without needing to download core dependencies at runtime. This distribution is useful for offline environments, as well as building and testing Nextflow locally.
 
-The standalone distribution will still download core and third-party plugins as needed at runtime.  
+The standalone distribution will still download core and third-party plugins as needed at runtime.
 
 To use the standalone distribution:
 
