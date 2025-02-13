@@ -30,7 +30,7 @@ import groovy.json.JsonSlurper
 def json = new JsonSlurper().parseText(json_file.text)
 ```
 
-In the strict syntax, names should be fully qualified:
+In the strict syntax, use the fully qualified name to reference the class:
 
 ```nextflow
 def json = new groovy.json.JsonSlurper().parseText(json_file.text)
@@ -38,7 +38,7 @@ def json = new groovy.json.JsonSlurper().parseText(json_file.text)
 
 <h4>Class declarations</h4>
 
-Some users use classes in Nextflow to define helper functions or custom types. Instead, define helper functions as standalone functions in Nextflow and move custom types to the `lib` directory.
+Some users use classes in Nextflow to define helper functions or custom types. Helper functions should be defined as standalone functions in Nextflow. Custom types should be moved to the `lib` directory.
 
 :::{note}
 Enums, a special type of class, are supported, but they cannot be included across modules at this time.
@@ -74,7 +74,7 @@ workflow {
 }
 ```
 
-Script declarations and statements cannot be mixed at the same level. All statements should reside within script declarations unless the script is a code snippet:
+Script declarations and statements cannot be mixed at the same level. All statements must reside within script declarations unless the script is a code snippet:
 
 ```nextflow
 process foo {
@@ -96,13 +96,13 @@ Mixing statements and script declarations was necessary in DSL1 and optional in 
 
 <h4>Assignment expressions</h4>
 
-In Groovy, variables can be assigned as part of an expression:
+In Groovy, variables can be assigned in an expression:
 
 ```groovy
 foo(x = 1, y = 2)
 ```
 
-In the strict syntax, variables should be assigned as statements:
+In the strict syntax, assignments are allowed only as statements:
 
 ```nextflow
 x = 1
@@ -110,18 +110,18 @@ y = 2
 foo(x, y)
 ```
 
-In Groovy, the increment (`++`) and decrement (`--`) arithmetic operators are supported.
+In Groovy, variables can be incremented and decremented in an expression:
 
-```nextflow
-x++
-x--
+```groovy
+foo(x++, y--)
 ```
 
-In the strict syntax, `+=` and `-=` should be used:
+In the strict syntax, use `+=` and `-=` instead:
 
 ```nextflow
 x += 1
-x -= 1
+y -= 1
+foo(x, y)
 ```
 
 <h4>For and while loops</h4>
@@ -135,7 +135,7 @@ for (rseqc_module in ['read_distribution', 'inner_distance', 'tin']) {
 }
 ```
 
-In the strict syntax, higher-order functions, such as the `each` method, are used:
+In the strict syntax, use higher-order functions, such as the `each` method, instead:
 
 ```nextflow
 ['read_distribution', 'inner_distance', 'tin'].each { rseqc_module ->
@@ -169,7 +169,7 @@ default:
 }
 ```
 
-In the strict syntax, if-else statements should be used:
+In the strict syntax, use if-else statements instead:
 
 ```nextflow
 if (aligner == 'bowtie2') {
@@ -193,7 +193,7 @@ In Groovy, the _spread_ operator can be used to flatten a nested list:
 ch.map { meta, bambai -> [meta, *bambai] }
 ```
 
-In the strict syntax, list elements should be enumerated explicitly:
+In the strict syntax, enumerate the list elements explicitly:
 
 ```groovy
 // alternative 1
@@ -208,21 +208,24 @@ ch.map { meta, bambai ->
 
 <h4>Implicit environment variables</h4>
 
-In Nextflow DSL1 and DSL2, you can reference environment variables directly in strings:
+In Nextflow DSL1 and DSL2, environment variables can be referenced directly in strings:
 
 ```nextflow
 println "PWD = ${PWD}"
 ```
 
-In the strict syntax, `System.getenv()` should be used:
+In the strict syntax, use `System.getenv()` instead:
 
 ```nextflow
 println "PWD = ${System.getenv('PWD')}"
 ```
 
 :::{versionadded} 24.11.0-edge
-The `env()` function can be used instead of `System.getenv()`. For example,
-`println "PWD = ${env('PWD')}"`.
+The `env()` function should be used instead of `System.getenv()`:
+
+```nextflow
+println "PWD = ${env('PWD')}"
+```
 :::
 
 ### Restricted syntax
@@ -242,7 +245,7 @@ String str = 'foo'
 def Map meta = [:]
 ```
 
-In the strict syntax, variables should be defined with `def` and should not specify a type:
+In the strict syntax, variables must be declared with `def` and must not specify a type:
 
 ```nextflow
 def a = 1
@@ -253,26 +256,8 @@ def str = 'foo'
 def meta = [:]
 ```
 
-Similarly, for the strict syntax, functions should be declared with `def` and should not specify a return type or parameter type:
-
-```nextflow
-/**
- * You can use comments to denote types, for example:
- *
- * @param x: Map
- * @param y: String
- * @param z: Integer
- * @return List
- */
-def foo(x, y, z) {
-    // ...
-}
-```
-
 :::{note}
-Type annotations are useful for providing type checking at runtime. The language server will not report errors or warnings for Groovy-style type annotations at this time.
-
-Instead, type annotations will be addressed in a future version of the Nextflow language specification, at which point the language server will provide a way to automatically migrate Groovy-style type annotations to the new syntax.
+Because type annotations are useful for providing type checking at runtime, the language server will not report errors for Groovy-style type annotations at this time. Type annotations will be addressed in a future version of the Nextflow language specification.
 :::
 
 <h4>Strings</h4>
@@ -288,7 +273,7 @@ def id = 'SRA001'
 assert 'SRA001.fastq' ~= /${id}\.f(?:ast)?q/
 ```
 
-Double-quoted string should be used instead:
+Use a double-quoted string instead:
 
 ```nextflow
 def id = 'SRA001'
@@ -305,7 +290,7 @@ Logic unconfined.
 /
 ```
 
-Multi-line strings should be used instead:
+Use a multi-line string instead:
 
 ```nextflow
 """
@@ -323,7 +308,7 @@ echo "Hello world!"
 /$
 ```
 
-Multi-line strings should be used instead:
+Use a multi-line string instead:
 
 ```nextflow
 """
@@ -333,7 +318,7 @@ echo "Hello world!"
 
 <h4>Type conversions</h4>
 
-In Groovy, soft and hard casts are supported:
+In Groovy, there are two ways to perform type conversions or _casts_:
 
 ```groovy
 def map = (Map) readJson(json)  // soft cast
@@ -348,7 +333,7 @@ def Map map = readJson(json)
 
 Nextflow will raise an error at runtime if the `readJson()` function does not return a `Map`.
 
-In the strict syntax, an explicit method is required to explicitly convert a value to a different type. For example, to parse a string as a number:
+When converting a value to a different type, it is better to use an explicit method rather than a cast. For example, to parse a string as a number:
 
 ```groovy
 def x = '42' as Integer
@@ -369,7 +354,7 @@ process PROC {
 }
 ```
 
-In the strict syntax, the name should be specified with quotes:
+In the strict syntax, the name must be specified with quotes:
 
 ```nextflow
 process PROC {
@@ -396,7 +381,7 @@ process greet {
 }
 ```
 
-In the strict syntax, the `script:` label should be omitted only if there are no other sections:
+In the strict syntax, the `script:` label can be omitted only if there are no other sections:
 
 ```nextflow
 process sayHello {
@@ -427,7 +412,7 @@ workflow.onComplete {
 }
 ```
 
-Because the strict syntax does not allow statements to be mixed with script declarations, workflow handlers should be defined in the entry workflow:
+The strict syntax does not allow statements to be mixed with script declarations, so workflow handlers must be defined in the entry workflow:
 
 ```nextflow
 workflow {
@@ -456,7 +441,7 @@ In Groovy, a closure with no parameters is assumed to have a single parameter na
 ch | map { it * 2 }
 ```
 
-In the strict syntax, implicit closure parameters are not supported. The parameter should be explicitly declared:
+In the strict syntax, the closure parameter should be explicitly declared:
 
 ```nextflow
 ch | map { v -> v * 2 }   // correct
