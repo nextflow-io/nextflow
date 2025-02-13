@@ -1,3 +1,4 @@
+(plugins-dev-page)=
 
 # Plugins
 
