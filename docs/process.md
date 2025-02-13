@@ -1128,12 +1128,12 @@ The `emit` option can be used on a process output to define a name for the corre
 process FOO {
     output:
     path 'hello.txt', emit: hello
-    path 'bye.txt', emit: bye
+    stdout emit: bye
 
     script:
     """
     echo "hello" > hello.txt
-    echo "bye" > bye.txt
+    echo "bye"
     """
 }
 
