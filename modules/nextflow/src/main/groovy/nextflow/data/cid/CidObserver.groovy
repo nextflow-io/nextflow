@@ -21,6 +21,7 @@ import com.google.common.hash.HashCode
 import nextflow.data.cid.model.Workflow
 import nextflow.data.cid.model.WorkflowRun
 import nextflow.file.FileHelper
+import nextflow.script.ScriptMeta
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -31,7 +32,6 @@ import groovy.transform.CompileStatic
 import nextflow.Session
 import nextflow.data.cid.model.DataType
 import nextflow.data.cid.model.Output
-import nextflow.data.config.DataConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.script.params.FileOutParam
@@ -45,15 +45,15 @@ import nextflow.util.CacheHelper
  */
 @CompileStatic
 class CidObserver implements TraceObserver {
-
+    public static final String METADATA_FILE = '.data.json'
+    public static final String CID_PROT = 'cid://'
     private CidStore store
     private Session session
 
     @Override
     void onFlowCreate(Session session) {
         this.session = session
-        store = new DefaultCidStore()
-        store.open(DataConfig.create(session))
+        this.store = session.cidStore
     }
 
     void onFlowBegin() {
@@ -64,7 +64,7 @@ class CidObserver implements TraceObserver {
         final workflow = new Workflow(
             DataType.Workflow,
             session.workflowMetadata.scriptFile.toString(),
-            session.workflowMetadata.scriptId.toString(),
+            ScriptMeta.allScriptNames().values().collect { it.toString()},
             session.workflowMetadata.repository,
             session.workflowMetadata.commitId
         )
@@ -76,7 +76,7 @@ class CidObserver implements TraceObserver {
             session.params
         )
         final content = JsonOutput.prettyPrint(JsonOutput.toJson(value))
-        store.save("${session.executionHash}/.data.json", content)
+        store.save("${session.executionHash}/$METADATA_FILE", content)
     }
     @Override
     void onProcessComplete(TaskHandler handler, TraceRecord trace) {
@@ -109,7 +109,7 @@ class CidObserver implements TraceObserver {
             task.inputFilesMap ? convertToReferences(task.inputFilesMap): null
             )
         // store in the underlying persistence
-        final key = "${value.hash}/.data.json"
+        final key = "${value.hash}/$METADATA_FILE"
         store.save(key, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
     }
 
@@ -117,13 +117,13 @@ class CidObserver implements TraceObserver {
         final attrs = readAttributes(path)
         final rel = task.workDir.relativize(path).toString()
         final cid = "${task.hash}/${rel}"
-        final key = "${cid}/.data.json"
+        final key = "${cid}/$METADATA_FILE"
         final hash = CacheHelper.hasher(path).hash().toString()
         final value = new Output(
             DataType.Output,
             path.toString(),
             hash,
-            "cid://$task.hash",
+            "$CID_PROT$task.hash",
             attrs.size(),
             attrs.creationTime().toMillis(),
             attrs.lastModifiedTime().toMillis() )
@@ -139,7 +139,7 @@ class CidObserver implements TraceObserver {
     void onFilePublish(Path destination, Path source){
         final hash = CacheHelper.hasher(destination).hash().toString()
         final rel = session.outputDir.relativize(destination).toString()
-        final key = "${rel}/.data.json"
+        final key = "$session.executionHash/${rel}/$METADATA_FILE"
         final sourceReference = getSourceReference(source)
         final attrs = readAttributes(destination)
         final value = new Output(
@@ -157,7 +157,7 @@ class CidObserver implements TraceObserver {
         final hash = FileHelper.getTaskHashFromPath(source, session.workDir)
         if (hash) {
             final target = FileHelper.getWorkFolder(session.workDir, hash).relativize(source).toString()
-            return "cid://$hash/$target"
+            return "$CID_PROT$hash/$target"
         }
         return null
     }
@@ -166,6 +166,7 @@ class CidObserver implements TraceObserver {
     void onFilePublish(Path destination){
         final hash = CacheHelper.hasher(destination).hash().toString()
         final rel = session.outputDir.relativize(destination).toString()
+        final key = "$session.executionHash/${rel}/$METADATA_FILE"
         final attrs = readAttributes(destination)
         final value = new Output(
             DataType.Output,
@@ -175,7 +176,7 @@ class CidObserver implements TraceObserver {
             attrs.size(),
             attrs.creationTime().toMillis(),
             attrs.lastModifiedTime().toMillis() )
-        store.save(rel, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
+        store.save(key, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
     }
 
     protected Map convertToReferences(Map<String, Path> inputs) {

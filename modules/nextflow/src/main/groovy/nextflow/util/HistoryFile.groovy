@@ -61,14 +61,14 @@ class HistoryFile extends File {
         super(file.toString())
     }
 
-    void write( String name, UUID key, String revisionId, args, Date date = null ) {
+    void write( String name, UUID key, String revisionId, String cidHash, args, Date date = null ) {
         assert key
         assert args != null
 
         withFileLock {
             def timestamp = date ?: new Date()
             def value = args instanceof Collection ? args.join(' ') : args
-            this << new Record(timestamp: timestamp, runName: name, revisionId: revisionId, sessionId: key, command: value).toString() << '\n'
+            this << new Record(timestamp: timestamp, runName: name, revisionId: revisionId, sessionId: key, cidHash: cidHash, command: value).toString() << '\n'
         }
     }
 
@@ -350,6 +350,41 @@ class HistoryFile extends File {
 
     }
 
+    void updateCidHash(String name, String hashCode) {
+        assert name
+        assert hashCode
+        try {
+            withFileLock {updateCidHash0(name, hashCode) }
+        }
+        catch( Throwable e ) {
+            log.warn "Can't update history file: $this",e
+        }
+    }
+
+    private void updateCidHash0(String name, String hashCode){
+        def newHistory = new StringBuilder()
+
+        this.readLines().each { line ->
+            try {
+                def current = line ? Record.parse(line) : null
+                if( current?.runName == name ) {
+                    current.cidHash = hashCode
+                    newHistory << current.toString() << '\n'
+                }
+                else {
+                    newHistory << line << '\n'
+                }
+            }
+            catch( IllegalArgumentException e ) {
+                log.warn("Can't read history file: $this", e)
+            }
+        }
+
+        // rewrite the history content
+        this.setText(newHistory.toString())
+    }
+
+
     @EqualsAndHashCode(includes = 'runName,sessionId')
     static class Record {
         Date timestamp
@@ -358,6 +393,7 @@ class HistoryFile extends File {
         String status
         String revisionId
         UUID sessionId
+        String cidHash
         String command
 
         Record(String sessionId, String name=null) {
@@ -380,6 +416,7 @@ class HistoryFile extends File {
             line << (status ?: '-')
             line << (revisionId ?: '-')
             line << (sessionId.toString())
+            line << (cidHash ?: '-')
             line << (command ?: '-')
         }
 
@@ -393,7 +430,7 @@ class HistoryFile extends File {
             if( cols.size() == 2 )
                 return new Record(cols[0])
 
-            if( cols.size()==7 ) {
+            if( cols.size()== 8 ) {
 
                 return new Record(
                         timestamp: TIMESTAMP_FMT.parse(cols[0]),
@@ -402,7 +439,8 @@ class HistoryFile extends File {
                         status: cols[3] && cols[3] != '-' ? cols[3] : null,
                         revisionId: cols[4],
                         sessionId: UUID.fromString(cols[5]),
-                        command: cols[6]
+                        cidHash: cols[6],
+                        command: cols[7]
                 )
             }
 

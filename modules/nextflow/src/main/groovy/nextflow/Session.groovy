@@ -16,6 +16,9 @@
 
 package nextflow
 
+import nextflow.data.cid.CidStore
+import nextflow.data.cid.DefaultCidStore
+import nextflow.data.config.DataConfig
 import nextflow.util.CacheHelper
 
 import java.nio.file.Files
@@ -262,6 +265,10 @@ class Session implements ISession {
 
     private HashCode executionHash
 
+    private CidStore cidStore
+
+    CidStore getCidStore() { cidStore }
+
     String getExecutionHash() { executionHash }
 
     private WorkflowMetadata workflowMetadata
@@ -405,6 +412,8 @@ class Session implements ISession {
 
         if (config.cid) {
             this.cidEnabled = true
+            this.cidStore = new DefaultCidStore()
+            this.cidStore.open(DataConfig.create(this))
         }
 
     }
@@ -439,6 +448,11 @@ class Session implements ISession {
 
         if(cidEnabled) {
             this.executionHash = generateExecutionHash(scriptFile)
+            this.outputDir = cidStore.getPath().resolve(executionHash.toString())
+            log.warn("CID store enabled. Defined output directory will be ignored and set to ${outputDir}.")
+            if( !HistoryFile.disabled() && HistoryFile.DEFAULT.exists() ) {
+                HistoryFile.DEFAULT.updateCidHash(runName,executionHash.toString())
+            }
         }
         if(!workDir.mkdirs()) throw new AbortOperationException("Cannot create work-dir: $workDir -- Make sure you have write permissions or specify a different directory by using the `-w` command line option")
         log.debug "Work-dir: ${workDir.toUriString()} [${FileHelper.getPathFsType(workDir)}]"

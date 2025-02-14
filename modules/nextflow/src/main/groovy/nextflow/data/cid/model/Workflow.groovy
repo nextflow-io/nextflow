@@ -29,8 +29,8 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class Workflow {
     DataType type
-    String scriptFile
-    String scriptId
+    String mainScriptFile
+    List<String> otherScriptFiles
     String repository
     String commitId
 }

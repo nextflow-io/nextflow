@@ -149,11 +149,11 @@ class PublishDir {
         if( session?.cidEnabled ){
             final resolvedPath = FileHelper.toPath(resolved)
             if (resolvedPath.isAbsolute()){
-                log.warn("CID store is enabled but publish dir is set to an absolute path ($resolvedPath). Outputs in this path will not published in the CID store")
+                log.warn("CID store is enabled but 'publishDir' is set to an absolute path ($resolvedPath). Outputs in this path will not published in the CID store")
                 this.path = FileHelper.toCanonicalPath(resolved)
             }
             else{
-                this.path = session.outputDir.resolve(session.executionHash).resolve(resolvedPath)
+                this.path = session.outputDir.resolve(resolvedPath)
             }
         }
         else {
@@ -383,17 +383,6 @@ class PublishDir {
         }
 
         throw new IllegalArgumentException("Not a valid publish target path: `$target` [${target?.class?.name}]")
-    }
-
-    private Path resolveRelative(String target){
-        //If comes from a task
-        if (session.cidEnabled && sourceDir && sourceDir.startsWith(session.workDir)){
-            log.debug("Must add taskhash")
-            String taskHash = FileHelper.getTaskHashFromPath(sourceDir, session.workDir)
-            if( taskHash )
-                return path.resolve(Path.of(taskHash, target.toString()))
-        }
-        return path.resolve(target)
     }
 
     protected void safeProcessFile(Path source, Path target) {

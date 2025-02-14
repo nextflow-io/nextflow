@@ -34,18 +34,20 @@ import nextflow.exception.AbortOperationException
 @CompileStatic
 class DefaultCidStore implements CidStore {
 
+    private Path metaLocation
     private Path location
 
     void open(DataConfig config) {
-        location = config.store.location.resolve('.meta')
-        if( !Files.exists(location) && !Files.createDirectories(location) ) {
-            throw new AbortOperationException("Unable to create CID store directory: $location")
+        location = config.store.location
+        metaLocation = location.resolve('.meta')
+        if( !Files.exists(metaLocation) && !Files.createDirectories(metaLocation) ) {
+            throw new AbortOperationException("Unable to create CID store directory: $metaLocation")
         }
     }
 
     @Override
     void save(String key, Object value) {
-        final path = location.resolve(key)
+        final path = metaLocation.resolve(key)
         Files.createDirectories(path.parent)
         log.debug "Save CID file path: $path"
         path.text = value
@@ -53,15 +55,15 @@ class DefaultCidStore implements CidStore {
 
     @Override
     void list(String key, Consumer<String> consumer) {
-        for( Path it : Files.walk(location.resolve(key)) ) {
-            final fileKey = location.relativize(it).toString()
+        for( Path it : Files.walk(metaLocation.resolve(key)) ) {
+            final fileKey = metaLocation.relativize(it).toString()
             consumer.accept(fileKey)
         }
     }
 
     @Override
     Object load(String key) {
-        location.resolve(key).text
+        metaLocation.resolve(key).text
     }
 
     @Override
