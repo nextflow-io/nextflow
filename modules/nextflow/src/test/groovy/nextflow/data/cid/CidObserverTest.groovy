@@ -18,6 +18,7 @@
 package nextflow.data.cid
 
 import groovy.json.JsonOutput
+import nextflow.data.config.DataConfig
 import nextflow.util.CacheHelper
 
 import java.nio.file.Files
@@ -40,7 +41,12 @@ class CidObserverTest extends Specification {
         given:
         def folder = Files.createTempDirectory('test')
         def config = [cid:[store:[location:folder.toString()]]]
-        def session = Mock(Session) { getConfig()>>config }
+        def store = new DefaultCidStore();
+        def session = Mock(Session) {
+            getConfig()>>config
+            getCidStore()>>store
+        }
+        store.open(DataConfig.create(session))
         def observer = new CidObserver()
         observer.onFlowCreate(session)
         and:
@@ -54,7 +60,7 @@ class CidObserverTest extends Specification {
         when:
         observer.storeTaskRun(task)
         then:
-        folder.resolve(".meta/${hash.toString()}/.data.json").text == JsonOutput.prettyPrint('{"type":"Task","id":100,"name":"foo","hash":"15cd5b07","inputs": null,"annotations":null}')
+        folder.resolve(".meta/${hash.toString()}/.data.json").text == JsonOutput.prettyPrint('{"type":"Task","id":100,"name":"foo","inputs": null,"annotations":null}')
 
         cleanup:
         folder?.deleteDir()
@@ -64,7 +70,12 @@ class CidObserverTest extends Specification {
         given:
         def folder = Files.createTempDirectory('test')
         def config = [cid:[store:[location:folder.toString()]]]
-        def session = Mock(Session) { getConfig()>>config }
+        def store = new DefaultCidStore();
+        def session = Mock(Session) {
+            getConfig()>>config
+            getCidStore()>>store
+        }
+        store.open(DataConfig.create(session))
         def observer = Spy(new CidObserver())
         observer.onFlowCreate(session)
         and:

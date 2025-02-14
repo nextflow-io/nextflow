@@ -105,11 +105,10 @@ class CidObserver implements TraceObserver {
             DataType.Task,
             task.id.value,
             task.getName(),
-            task.hash.toString(),
             task.inputFilesMap ? convertToReferences(task.inputFilesMap): null
             )
         // store in the underlying persistence
-        final key = "${value.hash}/$METADATA_FILE"
+        final key = "${task.hash}/$METADATA_FILE"
         store.save(key, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
     }
 
