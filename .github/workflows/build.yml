@@ -134,7 +134,7 @@ jobs:
       matrix:
         java_version: [17, 23]
         test_mode: ["test_integration", "test_docs", "test_aws", "test_azure", "test_google", "test_wave"]
-        strict_parser: [true, false]
+        strict_syntax: [true, false]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -172,7 +172,7 @@ jobs:
         env:
           TEST_JDK: ${{ matrix.java_version }}
           TEST_MODE: ${{ matrix.test_mode }}
-          NXF_ENABLE_STRICT_PARSER: ${{ matrix.strict_parser }}
+          NXF_ENABLE_STRICT_SYNTAX: ${{ matrix.strict_syntax }}
           GRADLE_OPTS: '-Dorg.gradle.daemon=false'
           TOWER_ACCESS_TOKEN: ${{ secrets.TOWER_ACCESS_TOKEN }}
           AWS_DEFAULT_REGION: eu-west-1
@@ -198,7 +198,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: report-${{ matrix.test_mode }}-jdk-${{ matrix.java_version }}-strict-${{ matrix.strict_parser }}
+          name: report-${{ matrix.test_mode }}-jdk-${{ matrix.java_version }}-strict-${{ matrix.strict_syntax }}
           path: |
             validation-tests.tar.gz
             integration-tests.tar.gz

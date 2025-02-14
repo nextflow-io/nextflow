@@ -489,6 +489,10 @@ The process `shell` section is deprecated. Use the `script` block instead. The V
 
 ### Configuration syntax
 
+:::{versionadded} 25.02.0-edge
+The strict config syntax can be enabled in Nextflow by setting `NXF_ENABLE_STRICT_SYNTAX=true`.
+:::
+
 See {ref}`Configuration <config-syntax>` for a comprehensive description of the configuration language.
 
 Currently, Nextflow parses config files as Groovy scripts, allowing the use of scripting constructs like variables, helper functions, try-catch blocks, and conditional logic for dynamic configuration:
