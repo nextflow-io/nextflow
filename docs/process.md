@@ -78,10 +78,6 @@ process doOtherThings {
 
 In this example, `$MAX` is a Nextflow variable that must be defined elsewhere in the pipeline script. Nextflow replaces it with the actual value before executing the script. Meanwhile, `$DB` is a Bash variable that must exist in the execution environment, and Bash will replace it with the actual value during execution.
 
-:::{tip}
-Alternatively, you can use the {ref}`process-shell` block definition, which allows a script to contain both Bash and Nextflow variables without having to escape the first.
-:::
-
 ### Scripts *à la carte*
 
 The process script is interpreted by Nextflow as a Bash script by default, but you are not limited to Bash.
@@ -1132,12 +1128,12 @@ The `emit` option can be used on a process output to define a name for the corre
 process FOO {
     output:
     path 'hello.txt', emit: hello
-    path 'bye.txt', emit: bye
+    stdout emit: bye
 
     script:
     """
     echo "hello" > hello.txt
-    echo "bye" > bye.txt
+    echo "bye"
     """
 }
 
@@ -1297,13 +1293,26 @@ process foo {
 }
 ```
 
-In the above example the {ref}`process-memory` and execution {ref}`process-time` limits are defined dynamically. The first time the process is executed the `task.attempt` is set to `1`, thus it will request a two GB of memory and one hour of maximum execution time.
+In the above example the {ref}`process-memory` and execution {ref}`process-time` limits are defined dynamically. The first time the process is executed the `task.attempt` is set to `1`, thus it will request 2 GB of memory and 1 hour of walltime.
 
-If the task execution fail reporting an exit status in the range between 137 and 140, the task is re-submitted (otherwise terminates immediately). This time the value of `task.attempt` is `2`, thus increasing the amount of the memory to four GB and the time to 2 hours, and so on.
+If the task execution fails with an exit status between 137 and 140, the task is re-executed; otherwise, the run is terminated immediately. The re-executed task will have `task.attempt` set to `2`, and will request 4 GB of memory and 2 hours of walltime.
 
-The directive {ref}`process-maxretries` set the maximum number of time the same task can be re-executed.
+The {ref}`process-maxretries` directive sets the maximum number of times the same task can be re-executed.
+
+:::{tip}
+Directives with named arguments, such as `accelerator` and `disk`, must use a more verbose syntax when they are dynamic. For example:
+
+```nextflow
+// static request
+disk 375.GB, type: 'local-ssd'
+
+// dynamic request
+disk { [request: 375.GB * task.attempt, type: 'local-ssd'] }
+```
+:::
 
 ### Dynamic task resources with previous execution trace
+
 :::{versionadded} 24.10.0
 :::
 
@@ -1321,8 +1330,8 @@ process foo {
     """
 }
 ```
-In the above example, the {ref}`process-memory` is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to one GB. In the subsequent attempts, it doubles the previously allocated memory. See {ref}`trace-report` for more information about trace records.
 
+In the above example, the {ref}`process-memory` is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to 1 GB. In each subsequent attempt, the requested memory is doubled. See {ref}`trace-report` for more information about trace records.
 
 ### Dynamic retry with backoff
 

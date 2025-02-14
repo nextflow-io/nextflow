@@ -336,6 +336,7 @@ class ConfigBuilder {
         binding.put('baseDir', base)
         binding.put('projectDir', base)
         binding.put('launchDir', Paths.get('.').toRealPath())
+        binding.put('outputDir', Paths.get('results').complete())
         binding.put('secrets', SecretsLoader.secretContext())
         return binding
     }

@@ -549,13 +549,13 @@ class NextflowDSLImpl implements ASTTransformation {
             final block = (BlockStatement)closure.code
             for( Statement stmt : block.statements ) {
                 if( stmt !instanceof ExpressionStatement ) {
-                    syntaxError(stmt, "Invalid publish target definition")
+                    syntaxError(stmt, "Invalid output target definition")
                     return
                 }
 
                 final stmtExpr = (ExpressionStatement)stmt
                 if( stmtExpr.expression !instanceof MethodCallExpression ) {
-                    syntaxError(stmt, "Invalid publish target definition")
+                    syntaxError(stmt, "Invalid output target definition")
                     return
                 }
 
@@ -564,7 +564,7 @@ class NextflowDSLImpl implements ASTTransformation {
 
                 final targetArgs = (ArgumentListExpression)call.arguments
                 if( targetArgs.size() != 1 || targetArgs[0] !instanceof ClosureExpression ) {
-                    syntaxError(stmt, "Invalid publish target definition")
+                    syntaxError(stmt, "Invalid output target definition")
                     return
                 }
 
