@@ -54,7 +54,7 @@ class ConfigParserTest extends Specification {
         SysEnv.pop()
     }
 
-    def 'should parse plugins id' () {
+    def 'should parse plugin ids' () {
         given:
         def CONFIG = '''
         plugins {
@@ -376,7 +376,7 @@ class ConfigParserTest extends Specification {
 
     }
 
-    def 'should return the set of visited block names' () {
+    def 'should return the set of parsed profiles' () {
 
         given:
         def text = '''

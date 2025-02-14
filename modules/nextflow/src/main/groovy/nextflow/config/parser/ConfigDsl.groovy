@@ -67,7 +67,11 @@ class ConfigDsl extends Script {
         target.params = params
     }
 
-    Map getTarget() { target }
+    Map getTarget() {
+        if( !target.params )
+            target.remove('params')
+        return target
+    }
 
     Object run() {}
 
@@ -88,22 +92,21 @@ class ConfigDsl extends Script {
     }
 
     void append(List<String> names, Object right) {
-        Map ctx = target
-        for( final name : names.init() ) {
-            if( name !in ctx ) ctx[name] = [:]
-            ctx = ctx[name] as Map
-        }
-        final values = (Set) ctx.computeIfAbsent(names.last(), (k) -> new HashSet<>())
+        final values = (Set) navigate(names.init()).computeIfAbsent(names.last(), (k) -> new HashSet<>())
         values.add(right)
     }
 
     void assign(List<String> names, Object right) {
+        navigate(names.init()).put(names.last(), right)
+    }
+
+    private Map navigate(List<String> names) {
         Map ctx = target
-        for( final name : names.init() ) {
+        for( final name : names ) {
             if( name !in ctx ) ctx[name] = [:]
             ctx = ctx[name] as Map
         }
-        ctx[names.last()] = right
+        return ctx
     }
 
     void block(String name, Closure closure) {
@@ -151,18 +154,8 @@ class ConfigDsl extends Script {
                 .setBinding(binding.getVariables())
                 .parse(configText, includePath)
 
-        if( !names ) {
-            target = Bolts.deepMerge(target, config)
-        }
-        else {
-            def ctx = target
-            for( final name : names.init() ) {
-                if( name !in ctx ) ctx[name] = [:]
-                ctx = ctx[name]
-            }
-            final last = names.last()
-            ctx[last] = Bolts.deepMerge((ctx[last] ?: [:]) as Map, config)
-        }
+        final ctx = navigate(names)
+        ctx.putAll(Bolts.deepMerge(ctx, config))
     }
 
     /**
