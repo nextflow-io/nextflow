@@ -858,7 +858,7 @@ class TaskProcessor {
      */
     final boolean checkStoredOutput( TaskRun task ) {
         if( !task.config.storeDir ) {
-            log.trace "[${safeTaskName(task)}] Store dir not set -- return false"
+            log.trace "[${safeTaskName(task)}] storeDir not set -- return false"
             return false
         }
 
@@ -874,12 +874,12 @@ class TaskProcessor {
             return true
         }
         if( invalid ) {
-            checkWarn "[${safeTaskName(task)}] StoreDir can only be used when using 'file' outputs"
+            checkWarn "[${safeTaskName(task)}] storeDir can only be used with `val` and `path` outputs"
             return false
         }
 
         if( !task.config.getStoreDir().exists() ) {
-            log.trace "[${safeTaskName(task)}] Store dir does not exist > ${task.config.storeDir} -- return false"
+            log.trace "[${safeTaskName(task)}] storeDir does not exist > ${task.config.storeDir} -- return false"
             // no folder -> no cached result
             return false
         }
@@ -901,7 +901,7 @@ class TaskProcessor {
             return true
         }
         catch( MissingFileException | MissingValueException e ) {
-            log.trace "[${safeTaskName(task)}] Missed store > ${e.getMessage()} -- folder: ${task.config.storeDir}"
+            log.trace "[${safeTaskName(task)}] Missed storeDir > ${e.getMessage()} -- folder: ${task.config.storeDir}"
             task.exitStatus = Integer.MAX_VALUE
             task.workDir = null
             return false
