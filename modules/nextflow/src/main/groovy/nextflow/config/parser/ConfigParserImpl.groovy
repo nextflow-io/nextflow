@@ -52,7 +52,7 @@ class ConfigParserImpl implements ConfigParser {
 
     private List<String> appliedProfiles
 
-    private Set<String> parsedProfiles
+    private Set<String> parsedProfiles = []
 
     private GroovyShell groovyShell
 
@@ -132,11 +132,12 @@ class ConfigParserImpl implements ConfigParser {
 
         final result = Bolts.toConfigObject(script.getTarget())
         final profiles = (result.profiles ?: [:]) as ConfigObject
-        parsedProfiles = profiles.keySet()
+        parsedProfiles.addAll(profiles.keySet())
         if( appliedProfiles ) {
-            for( def profile : appliedProfiles )
-                if( profile in parsedProfiles )
+            for( final profile : appliedProfiles ) {
+                if( profile in profiles.keySet() )
                     result.merge(profiles[profile] as ConfigObject)
+            }
             result.remove('profiles')
         }
 
