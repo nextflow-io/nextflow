@@ -32,7 +32,7 @@ import nextflow.script.parser.legacy.ScriptParserLegacy
 class ScriptParserFactory {
 
     static ScriptParser create(Session session) {
-        return SysEnv.get('NXF_ENABLE_STRICT_PARSER')=='true'
+        return SysEnv.get('NXF_ENABLE_STRICT_SYNTAX')=='true'
             ? new ScriptParserImpl(session)
             : new ScriptParserLegacy(session)
     }
