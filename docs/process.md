@@ -1243,7 +1243,7 @@ process foo {
   queue { entries > 100 ? 'long' : 'short' }
 
   input:
-  tuple val(entries), path(data, name: 'data.txt')
+  tuple val(entries), path('data.txt')
 
   script:
   """
@@ -1253,12 +1253,6 @@ process foo {
 ```
 
 In the above example, the {ref}`process-queue` directive is evaluated dynamically, depending on the input value `entries`. When it is larger than 100, jobs will be submitted to the `long` queue, otherwise the `short` queue will be used.
-
-You can also set dynamic directives based on input files, for example:
-```groovy
-  // set the task memory equal to the input file size
-  memory { data.size() }
-```
 
 All directives can be assigned a dynamic value except the following:
 
@@ -1282,7 +1276,7 @@ Note, however, that the latter syntax can be used both for a directive's main ar
 
 It's a very common scenario that different instances of the same process may have very different needs in terms of computing resources. In such situations requesting, for example, an amount of memory too low will cause some tasks to fail. Instead, using a higher limit that fits all the tasks in your execution could significantly decrease the execution priority of your jobs.
 
-The [Dynamic directives](#dynamic-directives) evaluation feature can be used to modify the amount of computing resources requested in case of a process failure and try to re-execute it using a higher limit. For example:
+[Dynamic directives](#dynamic-directives) can be used to adjust the requested task resources when a task fails and is re-executed. For example:
 
 ```nextflow
 process foo {
@@ -1316,6 +1310,19 @@ disk 375.GB, type: 'local-ssd'
 disk { [request: 375.GB * task.attempt, type: 'local-ssd'] }
 ```
 :::
+
+Task resources can also be defined in terms of task inputs, for example:
+
+```nextflow
+process foo {
+    memory { 8.GB + 1.GB * Math.ceil(input_file.size() / 1e9) }
+
+    input:
+    path input_file
+}
+```
+
+In this example, each task requests 8 GB, plus the size of the input file rounded up to the next GB. This way, each task requests only as much memory as it needs based on the size of the inputs. The specific function that you use should be tuned for each process.
 
 ### Dynamic task resources with previous execution trace
 
