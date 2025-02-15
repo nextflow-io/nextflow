@@ -17,6 +17,7 @@ process splitSequences {
     output:
     path 'seq_*'
 
+    script:
     """
     awk '/^>/{f="seq_"++d} {print > f}' < input.fa
     """
@@ -34,6 +35,7 @@ process reverse {
     output:
     stdout
 
+    script:
     """
     cat $x | rev
     """

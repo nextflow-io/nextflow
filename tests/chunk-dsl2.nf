@@ -8,6 +8,7 @@ process foo {
     input:
     stdin()
 
+    script:
     "cat -"
 }
 

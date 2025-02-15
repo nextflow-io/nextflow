@@ -7,11 +7,11 @@ process touch {
   output:
     tuple val(id), path('file*')
 
-
-  /
+  script:
+  """
   echo Creating $id
   touch $fileName
-  /
+  """
 }
 
 process makeFiles {
@@ -21,10 +21,11 @@ process makeFiles {
   output:
     tuple val(id), path('*')
 
-  /
+  script:
+  """
    cp file_x copy_$id
    touch beta_$id
-  /
+  """
 }
 
 workflow {

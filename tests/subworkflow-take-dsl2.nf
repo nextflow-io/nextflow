@@ -2,12 +2,14 @@
 process foo {
     input: val x 
     output: val x
+    script:
     /echo true/
 }
 
 process bar { 
     input: val x 
     output: val x
+    script:
     /echo true/
 }
 

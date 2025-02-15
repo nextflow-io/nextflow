@@ -29,10 +29,10 @@ process algn {
   output:
   tuple val(barcode), val(seq_id), file('bam'), file('bai')
 
+  script:
   """
   echo BAM $seq_id - $barcode > bam
   echo BAI $seq_id - $barcode > bai
-
   """
 }
 
@@ -46,6 +46,7 @@ process merge {
   input:
   tuple val(barcode), val(seq_id), file(bam: 'bam?'), file(bai: 'bai?')
 
+  script:
   """
   echo barcode: $barcode
   echo seq_ids: $seq_id

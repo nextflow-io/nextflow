@@ -14,7 +14,7 @@ process foo {
   file '.alpha'
 
   script:
-  $/
+  """
   echo A > hello.txt
   echo B > sample.zip 
   echo C > sample.html
@@ -26,7 +26,7 @@ process foo {
   echo 3 > f3.fa
   mkdir .alpha
   echo "Hello world!" > .alpha/hello.txt
-  /$
+  """
 }
 
 process bar {
@@ -36,8 +36,8 @@ process bar {
   file '*'
 
   script:
-  $/
+  """
   cat .alpha/hello.txt
   [ `cat * | grep -c ''` == 9 ] || false
-  /$
+  """
 }

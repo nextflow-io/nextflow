@@ -10,6 +10,7 @@ process foo {
   path 'file-\\*.txt'
   path 'file-?.txt', glob: false
 
+  script:
   '''
   touch file-\\*.txt
   touch file-\\?.txt
