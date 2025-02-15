@@ -92,7 +92,7 @@ class TaskArrayCollector {
         try {
             // submit task directly if the collector is closed
             // or if the task is retried (since it might have dynamic resources)
-            if( closed || task.config.getAttempt() > 1 ) {
+            if( closed ) {
                 executor.submit(task)
                 return
             }
@@ -138,7 +138,7 @@ class TaskArrayCollector {
      */
     protected TaskArrayRun createTaskArray(List<TaskRun> tasks) {
         // prepare child job launcher scripts
-        final handlers = tasks.collect( t -> executor.createTaskHandler(t) )
+        final handlers = tasks.collect( t -> executor.createTaskHandler(t).withArrayChild(true) )
         for( TaskHandler handler : handlers ) {
             handler.prepareLauncher()
         }

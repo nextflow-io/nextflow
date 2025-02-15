@@ -294,6 +294,8 @@ Multiple configuration profiles can be specified by separating the profile names
 ```bash
 nextflow run <your script> -profile standard,cloud
 ```
+
+Config profiles are applied in the order in which they were defined in the config file, regardless of the order they are specified on the command line.
 :::
 
 :::{danger}
