@@ -17,6 +17,7 @@ package nextflow.script.parser
 
 import java.util.stream.Collectors
 
+import groovy.transform.CompileStatic
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.IncludeDef
@@ -63,6 +64,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.*
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
+@CompileStatic
 public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     private static Set<String> RESERVED_NAMES
@@ -111,12 +113,12 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitInclude(IncludeNode node) {
-        final moduleArgs = node.modules.stream()
+        final moduleArgs = (List<Expression>) node.modules.stream()
             .map((module) -> {
                 final name = constX(module.name)
                 return module.alias != null
-                    ? (Expression) createX(IncludeDef.Module.class, name, constX(module.alias))
-                    : (Expression) createX(IncludeDef.Module.class, name)
+                    ? createX(IncludeDef.Module.class, name, constX(module.alias))
+                    : createX(IncludeDef.Module.class, name)
             })
             .collect(Collectors.toList())
 
@@ -179,7 +181,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
                 code.addStatement(stmtX)
             }
             else {
-                final target = varX("$out")
+                final target = varX('$out')
                 code.addStatement(assignS(target, emit))
                 stmtX.setExpression(callThisX("_emit_", args(constX(target.getName()))))
                 code.addStatement(stmtX)
