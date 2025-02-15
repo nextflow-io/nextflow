@@ -16,16 +16,15 @@
 
 package nextflow.cloud.azure.config
 
+import com.azure.compute.batch.models.ImageVerificationType
+import com.azure.compute.batch.models.OSType
 import com.google.common.hash.Hasher
-import com.microsoft.azure.batch.protocol.models.OSType
-import com.microsoft.azure.batch.protocol.models.VerificationType
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 import nextflow.util.CacheFunnel
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
-
 /**
  * Model the settings of a VM pool
  *
@@ -51,7 +50,7 @@ class AzPoolOpts implements CacheFunnel {
     String fileShareRootPath
     String sku
     OSType osType = DEFAULT_OS_TYPE
-    VerificationType verification = VerificationType.VERIFIED
+    ImageVerificationType verification = ImageVerificationType.VERIFIED
 
     String vmType
     Integer vmCount = 1
@@ -67,7 +66,8 @@ class AzPoolOpts implements CacheFunnel {
 
     String virtualNetwork
     boolean lowPriority
-
+    AzStartTaskOpts startTask
+    
     AzPoolOpts() {
         this(Collections.emptyMap())
     }
@@ -86,6 +86,7 @@ class AzPoolOpts implements CacheFunnel {
         this.schedulePolicy = opts.schedulePolicy
         this.scaleInterval = opts.scaleInterval as Duration ?: DEFAULT_SCALE_INTERVAL
         this.maxVmCount = opts.maxVmCount as Integer ?: vmCount *3
+        this.startTask = new AzStartTaskOpts( opts.startTask ? opts.startTask as Map : Map.of() )
         this.registry = opts.registry
         this.userName = opts.userName
         this.password = opts.password
@@ -111,6 +112,8 @@ class AzPoolOpts implements CacheFunnel {
         hasher.putUnencodedChars(schedulePolicy ?: '')
         hasher.putUnencodedChars(virtualNetwork ?: '')
         hasher.putBoolean(lowPriority)
+        hasher.putUnencodedChars(startTask.script ?: '')
+        hasher.putBoolean(startTask.privileged)
         return hasher
     }
 

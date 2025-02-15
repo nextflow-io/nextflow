@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -121,6 +121,13 @@ trait TraceObserver {
      *      The associated {@link TraceRecord} for the current task.
      */
     void onFlowError(TaskHandler handler, TraceRecord trace){}
+
+    /**
+     * Method that is invoked when a value is published from a channel.
+     *
+     * @param value
+     */
+    void onWorkflowPublish(Object value){}
 
     /**
      * Method that is invoke when an output file is published

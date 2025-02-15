@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.fusion.FusionHelper
+import nextflow.processor.TaskArrayRun
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
 /**
  * Processor for LSF resource manager
@@ -36,7 +38,7 @@ import nextflow.processor.TaskRun
  */
 @Slf4j
 @CompileStatic
-class LsfExecutor extends AbstractGridExecutor {
+class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
     static private Pattern KEY_REGEX = ~/^[A-Z_0-9]+=.*/
 
@@ -68,7 +70,7 @@ class LsfExecutor extends AbstractGridExecutor {
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
-        result << '-o' << task.workDir.resolve(TaskRun.CMD_LOG).toString()
+        result << '-o' << (task.isArray() ?  '/dev/null' : task.workDir.resolve(TaskRun.CMD_LOG).toString())
 
         // add other parameters (if any)
         if( task.config.queue ) {
@@ -104,14 +106,49 @@ class LsfExecutor extends AbstractGridExecutor {
         }
 
         // -- the job name
-        result << '-J' << getJobNameFor(task)
+        if( task instanceof TaskArrayRun ) {
+            final arraySize = task.getArraySize()
+            result << '-J' << "${getJobNameFor(task)}[1-${arraySize}]".toString()
+        }
+        else {
+            result << '-J' << getJobNameFor(task)
+        }
 
         // -- at the end append the command script wrapped file name
-        result.addAll( task.config.getClusterOptionsAsList() )
+        addClusterOptionsDirective(task.config, result)
+
+        // add account from config
+        final account = session.getExecConfigProp(getName(), 'account', null) as String
+        if( account ) {
+            result << '-G' << account
+        }
 
         return result
     }
 
+    @Override
+    protected void addClusterOptionsDirective(TaskConfig config, List<String> result) {
+        final opts = config.getClusterOptions()
+        // when cluster options are defined as a list rely on default behavior
+        if( opts instanceof Collection ) {
+            super.addClusterOptionsDirective(config,result)
+        }
+        // when cluster options are a string value use the `getClusterOptionsAsList` for backward compatibility
+        else if( opts instanceof CharSequence ) {
+            result.addAll( config.getClusterOptionsAsList() )
+        }
+        else if( opts != null ) {
+            throw new IllegalArgumentException("Unexpected value for clusterOptions process directive - offending value: $opts")
+        }
+    }
+
+    @Override
+    String sanitizeJobName( String name ) {
+        // LSF does not allow square brackets in job names except for job arrays
+        name = name.replace('[','').replace(']','')
+        // Old LSF versions do not allow job names longer than 511 chars
+        name.size()>511 ? name.substring(0,511) : name
+    }
 
     /**
      * The command line to submit this job
@@ -304,4 +341,21 @@ class LsfExecutor extends AbstractGridExecutor {
     boolean isFusionEnabled() {
         return FusionHelper.isFusionEnabled(session)
     }
+
+    @Override
+    String getArrayIndexName() {
+        return 'LSB_JOBINDEX'
+    }
+
+    @Override
+    int getArrayIndexStart() {
+        return 1
+    }
+
+    @Override
+    String getArrayTaskId(String jobId, int index) {
+        assert jobId, "Missing 'jobId' argument"
+        return "${jobId}[${index + 1}]"
+    }
+
 }

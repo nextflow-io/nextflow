@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -222,6 +222,27 @@ class AwsOptionsTest extends Specification {
         opts.volumes == ['/some/dir', '/other/dir']
     }
 
+    @Unroll
+    def 'should get aws cli path' () {
+        def session = new Session(CONFIG)
+
+        when:
+        def opts = new AwsOptions(session)
+        then:
+        opts.cliPath == S3CLI_PATH
+        opts.s5cmdPath == S5CMD_PATH
+
+        where:
+        CONFIG                                                                      | S3CLI_PATH        | S5CMD_PATH
+        [aws:[batch:[:]]]                                                           | null              | null
+        [aws:[batch:[cliPath: '/usr/bin/aws']]]                                     | '/usr/bin/aws'    | null
+        [aws:[batch:[cliPath: 's5cmd']]]                                            | null              | null
+        [aws:[batch:[platformType: 'fargate', cliPath: 's5cmd']]]                   | null              | 's5cmd'
+        [aws:[batch:[platformType: 'fargate', cliPath: '/some/path/s5cmd']]]        | null              | '/some/path/s5cmd'
+        [aws:[batch:[platformType: 'fargate', cliPath: 's5cmd --foo']]]             | null              | 's5cmd --foo'
+        [aws:[batch:[platformType: 'fargate', cliPath: '/some/path/s5cmd --foo']]]  | null              | '/some/path/s5cmd --foo'
+    }
+    
     def 'should parse s3 acl' ( ) {
         when:
         def opts = new AwsOptions(new Session(aws:[client:[s3Acl: 'PublicRead']]))

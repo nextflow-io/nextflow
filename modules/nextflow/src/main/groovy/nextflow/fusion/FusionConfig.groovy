@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,15 @@
 
 package nextflow.fusion
 
+
+import java.util.regex.Pattern
+
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import nextflow.Global
+import nextflow.Session
 import nextflow.SysEnv
 import nextflow.util.MemoryUnit
-
 /**
  * Model Fusion config options
  *
@@ -31,11 +34,15 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class FusionConfig {
 
-    final static public String DEFAULT_FUSION_AMD64_URL = 'https://fusionfs.seqera.io/releases/v2.2-amd64.json'
-    final static public String DEFAULT_FUSION_ARM64_URL = 'https://fusionfs.seqera.io/releases/v2.2-arm64.json'
+    final static public String DEFAULT_FUSION_AMD64_URL = 'https://fusionfs.seqera.io/releases/v2.5-amd64.json'
+    final static public String DEFAULT_FUSION_ARM64_URL = 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
     final static public String DEFAULT_TAGS = "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
 
     final static public String FUSION_PATH = '/usr/bin/fusion'
+
+    final static private String PRODUCT_NAME = 'fusion'
+
+    final static private Pattern VERSION_JSON = ~/https:\/\/.*\/releases\/v(\d+(?:\.\w+)*)-(\w*)\.json$/
 
     final private Boolean enabled
     final private String containerConfigUrl
@@ -99,8 +106,36 @@ class FusionConfig {
         return createConfig0(Global.config?.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
     }
 
+    static FusionConfig getConfig(Session session) {
+        return createConfig0(session.config?.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
+    }
+
     @Memoized
     static private FusionConfig createConfig0(Map config, Map env) {
         new FusionConfig(config, env)
+    }
+
+    protected String retrieveFusionVersion(String url) {
+        if( !url )
+            return null
+        final matcher_json = VERSION_JSON.matcher(url)
+        if( matcher_json.matches() )
+            return matcher_json.group(1)
+        return null
+    }
+
+    /**
+     * Return the Fusion SKU string
+     *
+     * @return A string representing the Fusion SKU
+     */
+    String sku() {
+        return enabled ? PRODUCT_NAME : null
+    }
+
+    String version() {
+        return enabled
+            ? retrieveFusionVersion(this.containerConfigUrl ?: DEFAULT_FUSION_AMD64_URL)
+            : null
     }
 }

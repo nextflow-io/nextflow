@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package nextflow.executor
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskRun
 /**
  * An executor specialised for CRG cluster
@@ -41,9 +42,16 @@ class CrgExecutor extends SgeExecutor {
             task.config.penv = 'smp'
         }
 
+        if( task instanceof TaskArrayRun ) {
+            final arraySize = task.getArraySize()
+            result << '-t' << "1-${arraySize}".toString()
+        }
+
         result << '-N' << getJobNameFor(task)
-        result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
+
+        result << '-o' << (task.isArray() ? '/dev/null' : quote(task.workDir.resolve(TaskRun.CMD_LOG)))
         result << '-j' << 'y'
+
         result << '-terse' << ''    // note: directive need to be returned as pairs
 
         /*
@@ -95,9 +103,7 @@ class CrgExecutor extends SgeExecutor {
         }
 
         // -- at the end append the command script wrapped file name
-        if( task.config.clusterOptions ) {
-            result << task.config.clusterOptions.toString() << ''
-        }
+        addClusterOptionsDirective(task.config, result)
 
         return result
     }

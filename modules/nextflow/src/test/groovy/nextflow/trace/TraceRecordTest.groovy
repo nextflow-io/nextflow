@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,9 @@
  */
 
 package nextflow.trace
+
+import java.nio.file.NoSuchFileException
+import java.nio.file.Path
 
 import groovy.json.JsonSlurper
 import spock.lang.Specification
@@ -333,4 +336,12 @@ class TraceRecordTest extends Specification {
         'COMPLETED' | true
     }
 
+    def 'should throw file not found exception' () {
+        given:
+        def rec = new TraceRecord([:])
+        when:
+        rec.parseTraceFile(Path.of('unknown'))
+        then:
+        thrown(NoSuchFileException)
+    }
 }

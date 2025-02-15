@@ -36,7 +36,7 @@ import nextflow.util.Duration
 @CompileStatic
 class AwsBatchConfig implements CloudTransferOptions {
 
-    public static final int DEFAULT_MAX_SPOT_ATTEMPTS = 5
+    public static final int DEFAULT_MAX_SPOT_ATTEMPTS = 0
 
     public static final int DEFAULT_AWS_MAX_ATTEMPTS = 5
 
@@ -79,23 +79,41 @@ class AwsBatchConfig implements CloudTransferOptions {
      */
     private Integer schedulingPriority
 
+    /**
+     * The container execution role
+     */
+    String executionRole
+
+    /**
+     * The path for the `s5cmd` tool as an alternative to `aws s3` CLI to upload/download files
+     */
+    String s5cmdPath
+
+    /**
+     * Whenever it should use Fargate API
+     */
+    boolean fargateMode
+
     /*
      * only for testing
      */
     protected AwsBatchConfig() {}
 
     AwsBatchConfig(Map opts) {
-        cliPath = parseCliPath(opts.cliPath as String)
+        fargateMode = opts.platformType == 'fargate'
+        cliPath = !fargateMode ? parseCliPath(opts.cliPath as String) : null
+        s5cmdPath = fargateMode ? parses5cmdPath(opts.cliPath as String) : null
         maxParallelTransfers = opts.maxParallelTransfers as Integer ?: MAX_TRANSFER
         maxTransferAttempts = opts.maxTransferAttempts as Integer ?: defaultMaxTransferAttempts()
         delayBetweenAttempts = opts.delayBetweenAttempts as Duration ?: DEFAULT_DELAY_BETWEEN_ATTEMPTS
-        maxSpotAttempts = opts.maxSpotAttempts as Integer ?: DEFAULT_MAX_SPOT_ATTEMPTS
+        maxSpotAttempts = opts.maxSpotAttempts!=null ? opts.maxSpotAttempts as Integer : DEFAULT_MAX_SPOT_ATTEMPTS
         volumes = makeVols(opts.volumes)
         jobRole = opts.jobRole
         logsGroup = opts.logsGroup
         retryMode = opts.retryMode ?: 'standard'
         shareIdentifier = opts.shareIdentifier
         schedulingPriority = opts.schedulingPriority as Integer ?: 0
+        executionRole = opts.executionRole
         if( retryMode == 'built-in' )
             retryMode = null // this force falling back on NF built-in retry mode instead of delegating to AWS CLI tool
         if( retryMode && retryMode !in AwsOptions.VALID_RETRY_MODES )
@@ -161,6 +179,8 @@ class AwsBatchConfig implements CloudTransferOptions {
     private String parseCliPath(String value) {
         if( !value )
             return null
+        if( value.tokenize('/ ').contains('s5cmd') )
+            return null
         if( !value.startsWith('/') )
             throw new ProcessUnrecoverableException("Not a valid aws-cli tools path: $value -- it must be an absolute path")
         if( !value.endsWith('/bin/aws'))
@@ -195,4 +215,11 @@ class AwsBatchConfig implements CloudTransferOptions {
         return this
     }
 
+    protected String parses5cmdPath(String value) {
+        if( !value )
+            return 's5cmd'
+        if( value.tokenize('/ ').contains('s5cmd') )
+            return value
+        return 's5cmd'
+    }
 }

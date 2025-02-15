@@ -286,7 +286,7 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
     }
 
     @Override
-    void kill() {
+    protected void killTask() {
         if( !operation ) return
         log.debug "[GLS] Killing task > $task.name - Pipeline Id: $pipelineId"
         helper.cancelOperation(operation)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -248,5 +248,49 @@ class TaskHandlerTest extends Specification {
         TaskStatus.SUBMITTED| false       | true             | false          | true            | false
         TaskStatus.RUNNING  | false       | false            | true           | true            | false
         TaskStatus.COMPLETED| false       | false            | false          | false           | true
+    }
+
+    @Unroll
+    def 'should include the tower prefix'() {
+        given:
+        def name = 'job_1'
+
+        expect:
+        TaskHandler.prependWorkflowPrefix(name, ENV) == EXPECTED
+
+        where:
+        ENV                         | EXPECTED
+        [:]                         | "job_1"
+        [TOWER_WORKFLOW_ID: '1234'] | "tw-1234-job_1"
+    }
+
+    def 'should not kill task twice'() {
+        given:
+        def handler = Spy(TaskHandler)
+        when:
+        handler.kill()
+        then:
+        1 * handler.killTask() >> {}
+
+        when:
+        handler.kill()
+        then:
+        0 * handler.killTask()
+    }
+
+    @Unroll
+    def 'should set isChildArray flag'() {
+        given:
+        def handler = Spy(TaskHandler)
+
+        expect:
+        !handler.isArrayChild
+        and:
+        handler.withArrayChild(VALUE).isArrayChild == VALUE
+
+        where:
+        VALUE   | _
+        false   | _
+        true    | _
     }
 }

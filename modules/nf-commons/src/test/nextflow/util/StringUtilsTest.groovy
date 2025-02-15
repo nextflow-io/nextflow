@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -92,6 +92,7 @@ class StringUtilsTest extends Specification {
         [url: 'redis://host:port']              | [url: 'redis://host:port']
         [url: 'redis://secret@host:port']       | [url: 'redis://****@host:port']
         [url: 'ftp://secretlong@host:port/x/y'] | [url: 'ftp://sec****@host:port/x/y']
+        [providers:[github:[auth:'12345']]]     | [providers:[github:[auth:'****']]]
     }
 
     @Unroll
@@ -100,13 +101,15 @@ class StringUtilsTest extends Specification {
         StringUtils.stripSecrets(SECRET) == EXPECTED
 
         where:
-        SECRET                                  | EXPECTED
-        'Hi\n here is the "password" : "1234"'  | 'Hi\n here is the "password" : "********"'
-        'Hi\n here is the password : "1"'       | 'Hi\n here is the password : "********"'
-        'Hi\n here is the password : "1"'       | 'Hi\n here is the password : "********"'
-        'Hi\n "password" :"1" \n "token": "123"'| 'Hi\n "password" :"********" \n "token": "********"'
-        'Hi\n password :"1"\nsecret: "345"'     | 'Hi\n password :"********"\nsecret: "********"'
-        'secret="abc" password:"1" more text'   | 'secret="********" password:"********" more text'
+        SECRET                                          | EXPECTED
+        'Hi\n here is the "password" : "1234"'          | 'Hi\n here is the "password" : "********"'
+        'Hi\n here is the password : "1"'               | 'Hi\n here is the password : "********"'
+        'Hi\n here is the password : \'1\''             | 'Hi\n here is the password : \'********\''
+        'Hi\n "password" :"1" \n "token": "123"'        | 'Hi\n "password" :"********" \n "token": "********"'
+        'Hi\n "password" :\'1\' \n "token": "123"'      | 'Hi\n "password" :\'********\' \n "token": "********"'
+        'Hi\n \'password\' :\'1\' \n \'token\': \'123\''| 'Hi\n \'password\' :\'********\' \n \'token\': \'********\''
+        'Hi\n password :"1"\nsecret: "345"'             | 'Hi\n password :"********"\nsecret: "********"'
+        'secret="abc" password:"1" more text'           | 'secret="********" password:"********" more text'
     }
 
     @Unroll

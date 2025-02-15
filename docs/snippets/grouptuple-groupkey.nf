@@ -1,12 +1,13 @@
-chr_frequency = ["chr1": 2, "chr2": 3]
-
 Channel.of(
-        ['region1', 'chr1', '/path/to/region1_chr1.vcf'],
-        ['region2', 'chr1', '/path/to/region2_chr1.vcf'],
-        ['region1', 'chr2', '/path/to/region1_chr2.vcf'],
-        ['region2', 'chr2', '/path/to/region2_chr2.vcf'],
-        ['region3', 'chr2', '/path/to/region3_chr2.vcf']
+        ['chr1', ['/path/to/region1_chr1.vcf', '/path/to/region2_chr1.vcf']],
+        ['chr2', ['/path/to/region1_chr2.vcf', '/path/to/region2_chr2.vcf', '/path/to/region3_chr2.vcf']],
     )
-    .map { region, chr, vcf -> tuple( groupKey(chr, chr_frequency[chr]), vcf ) }
+    .flatMap { chr, vcfs ->
+        vcfs.collect { vcf ->
+            tuple(groupKey(chr, vcfs.size()), vcf)              // preserve group size with key
+        }
+    }
+    .view { v -> "scattered: ${v}" }
     .groupTuple()
-    .view()
+    .map { key, vcfs -> tuple(key.getGroupTarget(), vcfs) }     // unwrap group key
+    .view { v -> "gathered: ${v}" }

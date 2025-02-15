@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -601,16 +601,22 @@ class SessionTest extends Specification {
 
     }
 
+    @Unroll
     def 'should get module binaries status'() {
         given:
-        def session = new Session(CONFIG)
+        def session = new Session()
+        NextflowMeta.instance.moduleBinaries(MODE)
 
         expect:
         session.enableModuleBinaries() == EXPECTED
-        
+
+        cleanup:
+        NextflowMeta.instance.moduleBinaries(false)
+
         where:
-        CONFIG                                      | EXPECTED
-        [:]                                         | false
-        [nextflow:[enable:[moduleBinaries: true]]]  | true
+        MODE  | EXPECTED
+        false | false
+        true  | true
+
     }
 }

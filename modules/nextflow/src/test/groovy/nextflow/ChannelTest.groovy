@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -988,6 +988,25 @@ class ChannelTest extends Specification {
         result.val == ['SRR389222_sub2', [ftp2]]
         result.val == Channel.STOP
 
+    }
+
+    def 'should not fail when setting SRA correct properties' () {
+        given:
+        def id = 'SRR389222'
+        def retryPolicy = [maxAttempts: 2]
+
+        when:
+        def result = Channel.fromSRA(id, apiKey: '1234', retryPolicy: retryPolicy, cache: false, max: 10, protocol: 'http')
+        then:
+        result != null
+
+    }
+
+    def 'should fail when SRA incorrect property' () {
+        when:
+        def result = Channel.fromSRA('SRR389222', incorrectKey: '1234')
+        then:
+        thrown(IllegalArgumentException)
     }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,11 +96,6 @@ class DockerBuilderTest extends Specification {
                 .params(runOptions: '-x --zeta')
                 .build()
                 .runCommand == 'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" -x --zeta busybox'
-
-        new DockerBuilder('busybox')
-                .params(userEmulation:true)
-                .build()
-                .runCommand == 'docker run -i -u $(id -u) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" busybox'
 
         new DockerBuilder('busybox')
                 .setName('hola')

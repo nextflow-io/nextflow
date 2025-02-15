@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,6 +41,8 @@ class CmdConfig extends CmdBase {
 
     static final public NAME = 'config'
 
+    static final List<String> FORMATS = ['flat','properties','canonical','json','yaml']
+
     @Parameter(description = 'project name')
     List<String> args = []
 
@@ -50,10 +52,12 @@ class CmdConfig extends CmdBase {
     @Parameter(names=['-profile'], description = 'Choose a configuration profile')
     String profile
 
-    @Parameter(names = '-properties', description = 'Prints config using Java properties notation')
+    @Deprecated
+    @Parameter(names = '-properties', description = 'Prints config using Java properties notation (deprecated: use `-o properties` instead)')
     boolean printProperties
 
-    @Parameter(names = '-flat', description = 'Print config using flat notation')
+    @Deprecated
+    @Parameter(names = '-flat', description = 'Print config using flat notation (deprecated: use `-o flat` instead)')
     boolean printFlatten
 
     @Parameter(names = '-sort', description = 'Sort config attributes')
@@ -61,6 +65,9 @@ class CmdConfig extends CmdBase {
 
     @Parameter(names = '-value', description = 'Print the value of a config option, or fail if the option is not defined')
     String printValue
+
+    @Parameter(names = ['-o','-output'], description = 'Print the config using the specified format: canonical,properties,flat,json,yaml')
+    String outputFormat
 
     @Override
     String getName() { NAME }
@@ -79,16 +86,26 @@ class CmdConfig extends CmdBase {
         }
 
         if( printProperties && printFlatten )
-            throw new AbortOperationException("Option `-flat` and `-properties` conflicts")
+            throw new AbortOperationException("Option `-flat` and `-properties` conflicts each other")
 
         if ( printValue && printFlatten )
-            throw new AbortOperationException("Option `-value` and `-flat` conflicts")
+            throw new AbortOperationException("Option `-value` and `-flat` conflicts each other")
 
         if ( printValue && printProperties )
-            throw new AbortOperationException("Option `-value` and `-properties` conflicts")
+            throw new AbortOperationException("Option `-value` and `-properties` conflicts each other")
+
+        if( printValue && outputFormat )
+            throw new AbortOperationException("Option `-value` and `-output` conflicts each other")
+
+        if( printFlatten )
+            outputFormat = 'flat'
+
+        if( printProperties )
+            outputFormat = 'properties'
 
         final builder = new ConfigBuilder()
                 .setShowClosures(true)
+                .setStripSecrets(true)
                 .showMissingVariables(true)
                 .setOptions(launcher.options)
                 .setBaseDir(base)
@@ -96,17 +113,30 @@ class CmdConfig extends CmdBase {
 
         final config = builder.buildConfigObject()
 
-        if( printProperties ) {
-            printProperties0(config, stdout)
-        }
-        else if( printFlatten ) {
-            printFlatten0(config, stdout)
-        }
-        else if( printValue ) {
+        if( printValue ) {
             printValue0(config, printValue, stdout)
         }
-        else {
+        else if( outputFormat=='properties' ) {
+            printProperties0(config, stdout)
+        }
+        else if( outputFormat=='flat' ) {
+            printFlatten0(config, stdout)
+        }
+        else if( outputFormat=='yaml' ) {
+            printYaml0(config, stdout)
+        }
+        else if( outputFormat=='json') {
+            printJson0(config, stdout)
+        }
+        else if( !outputFormat || outputFormat=='canonical' ) {
             printCanonical0(config, stdout)
+        }
+        else {
+            def msg = "Unknown output format: $outputFormat"
+            def suggest = FORMATS.closest(outputFormat)
+            if( suggest )
+                msg += " - did you mean '${suggest.first()}' instead?"
+            throw new AbortOperationException(msg)
         }
 
         for( String msg : builder.warnings )
@@ -171,6 +201,13 @@ class CmdConfig extends CmdBase {
         config.writeTo( writer )
     }
 
+    @PackageScope void printJson0(ConfigObject config, OutputStream output) {
+        output << ConfigHelper.toJsonString(config, sort) << '\n'
+    }
+
+    @PackageScope void printYaml0(ConfigObject config, OutputStream output) {
+        output << ConfigHelper.toYamlString(config, sort)
+    }
 
     Path getBaseDir(String path) {
 

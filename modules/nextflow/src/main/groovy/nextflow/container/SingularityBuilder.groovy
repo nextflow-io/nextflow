@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
     private String runCmd0
 
-    private Boolean oci
+    private Boolean ociMode
 
     SingularityBuilder(String name) {
         this.image = name
@@ -94,8 +94,11 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
         if( params.containsKey('readOnlyInputs') )
             this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
 
-        if( params.oci!=null )
-            oci = params.oci.toString() == 'true'
+        // note: 'oci' flag should be ignored by Apptainer sub-class
+        if( params.oci!=null && this.class==SingularityBuilder )
+            ociMode = params.oci.toString() == 'true'
+        else if( params.ociMode!=null && this.class==SingularityBuilder )
+            ociMode = params.ociMode.toString() == 'true'
 
         return this
     }
@@ -122,11 +125,11 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
         if( !homeMount )
             result << '--no-home '
 
-        if( newPidNamespace && !oci )
+        if( newPidNamespace && !ociMode )
             result << '--pid '
 
-        if( oci != null )
-            result << (oci ? '--oci ' : '--no-oci ')
+        if( ociMode != null )
+            result << (ociMode ? '--oci ' : '--no-oci ')
 
         if( autoMounts ) {
             makeVolumes(mounts, result)
@@ -154,7 +157,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
         makeEnv('TMP',result) .append(' ')
         makeEnv('TMPDIR',result) .append(' ')
         // add magic variables required by singularity to run in OCI-mode
-        if( oci ) {
+        if( ociMode ) {
             result .append('${XDG_RUNTIME_DIR:+XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR"} ')
             result .append('${DBUS_SESSION_BUS_ADDRESS:+DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS"} ')
         }

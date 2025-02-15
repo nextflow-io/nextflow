@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -152,6 +152,11 @@ class ApptainerBuilderTest extends Specification {
                 .params(newPidNamespace: false)
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --no-home -B "$NXF_TASK_WORKDIR" ubuntu'
+
+        new ApptainerBuilder('ubuntu')
+            .params(oci: true)
+            .build()
+            .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --no-home --pid -B "$NXF_TASK_WORKDIR" ubuntu'
 
     }
 

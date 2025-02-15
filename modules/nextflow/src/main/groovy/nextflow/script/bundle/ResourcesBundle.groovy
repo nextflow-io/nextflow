@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -205,7 +205,7 @@ class ResourcesBundle {
     final private static List<String> BIN_PATHS = ['bin','usr/bin','usr/local/bin']
 
     List<Path> getBinDirs() {
-        final result = new ArrayList(10)
+        final result = new ArrayList<Path>(10)
         for( Map.Entry<String,Path> it : content ) {
             if( it.key in BIN_PATHS && Files.isDirectory(it.value) && !result.contains(it.value) )
                 result.add(it.value)

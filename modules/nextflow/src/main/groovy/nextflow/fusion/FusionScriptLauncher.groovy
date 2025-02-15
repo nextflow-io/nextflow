@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         bean.headerScript = headerScript(bean)
         // enable use of local scratch dir
         if( bean.scratch==null )
-            bean.scratch = true
+            bean.scratch = false
 
         return new FusionScriptLauncher(bean, scheme, remoteWorkDir)
     }

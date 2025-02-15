@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ package nextflow.cli
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -70,7 +71,7 @@ class CmdInspect extends CmdBase {
 
     @Override
     void run() {
-        ContainerInspectMode.activate(true)
+        ContainerInspectMode.activate(!concretize)
         // configure quiet mode
         LoggerHelper.setQuiet(true)
         // setup the target run command
@@ -85,24 +86,30 @@ class CmdInspect extends CmdBase {
         target.preview = true
         target.previewAction = this.&applyInspect
         target.ansiLog = false
+        target.skipHistoryFile = true
         // run it
         target.run()
     }
 
     protected void applyInspect(Session session) {
-        // disable wave await mode when running
-        if( session.config.wave instanceof Map )
-            checkWaveConfig(session.config.wave as Map)
+        // slow down max rate when concretize is specified
+        if( concretize ) {
+            configureMaxRate(session.config)
+        }
         // run the inspector
-        new ContainersInspector(session.dag)
+        new ContainersInspector(concretize)
                 .withFormat(format)
                 .withIgnoreErrors(ignoreErrors)
                 .printContainers()
     }
 
-    protected void checkWaveConfig(Map wave) {
-        if( wave.enabled && wave.freeze )
-            wave.dryRun = !concretize
+    @CompileDynamic
+    protected void configureMaxRate(Map config) {
+        if( config.wave == null )
+            config.wave = new HashMap()
+        if( config.wave.httpClient == null )
+            config.wave.httpClient = new HashMap()
+        config.wave.httpClient.maxRate = '5/30sec'
     }
 
 }

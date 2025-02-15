@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -198,7 +198,7 @@ class AwsBatchHelper {
      *      The Batch jobs as a string value or {@code null} if no logs is available. Note, if the log
      *      is made of multiple *page* this method returns only the first one
      */
-    String getTaskLogStream(String jobId) {
+    String getTaskLogStream(String jobId, String groupName) {
         final streamId = getLogStreamId(jobId)
         if( !streamId ) {
             log.debug "Unable to find CloudWatch log stream for batch job id=$jobId"
@@ -206,7 +206,7 @@ class AwsBatchHelper {
         }
 
         final logRequest = new GetLogEventsRequest()
-                .withLogGroupName("/aws/batch/job")
+                .withLogGroupName(groupName ?: "/aws/batch/job")
                 .withLogStreamName(streamId)
 
         final result = new StringBuilder()

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,13 @@
 
 package nextflow.config
 
-import ch.artecat.grengine.Grengine
-import groovy.transform.Memoized
-
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
+import ch.artecat.grengine.Grengine
+import groovy.transform.Memoized
+import nextflow.SysEnv
+import nextflow.exception.IllegalConfigException
 import nextflow.file.FileHelper
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -49,6 +50,12 @@ abstract class ConfigBase extends Script {
 
     private boolean renderClosureAsString
 
+    private boolean stripSecrets
+
+    protected void setStripSecrets( boolean value ) {
+        this.stripSecrets = value
+    }
+
     protected void setIgnoreIncludes( boolean value ) {
         this.ignoreIncludes = value
     }
@@ -68,10 +75,23 @@ abstract class ConfigBase extends Script {
     }
 
     /**
+     * Get the value of an environment variable from the launch environment.
+     *
+     * @param name
+     *      The environment variable name to be referenced
+     * @return
+     *      The value associate with the specified variable name or {@code null} if the variable does not exist.
+     */
+    String env(String name) {
+        return SysEnv.get(name)
+    }
+
+    /**
      * Implements the config file include
      */
     def includeConfig( includeFile ) {
-        assert includeFile
+        if( !includeFile )
+            throw new IllegalConfigException("includeConfig argument cannot be empty")
 
         if( ignoreIncludes )
             return
@@ -92,6 +112,8 @@ abstract class ConfigBase extends Script {
         // -- set the required base script
         def config = new CompilerConfiguration()
         config.scriptBaseClass = ConfigBase.class.name
+        if( stripSecrets )
+            config.addCompilationCustomizers(new ASTTransformationCustomizer(StripSecretsXform))
         def params = [:]
         if( renderClosureAsString )
             params.put('renderClosureAsString', true)

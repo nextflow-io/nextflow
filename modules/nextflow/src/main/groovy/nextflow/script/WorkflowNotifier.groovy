@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -110,9 +110,9 @@ class WorkflowNotifier {
         List<File> templates = []
         normaliseTemplate0(notification.template, templates)
         if (templates) {
-            final binding = normaliseBindings0(notification.binding)
+            final binding = normaliseBindings0(notification.attributes)
 
-            templates.each { file ->
+            for( File file : templates ) {
                 def content = loadMailTemplate(file, binding)
                 def plain = file.extension == 'txt'
                 if (plain) {
@@ -135,7 +135,7 @@ class WorkflowNotifier {
     protected Map normaliseBindings0(binding) {
 
         if (binding == null)
-            return null
+            return Map.of()
 
         if (binding instanceof Map)
             return binding
@@ -218,8 +218,10 @@ class WorkflowNotifier {
 
     private String loadMailTemplate0(InputStream source, Map binding) {
         def map = new HashMap()
-        map.putAll(variables)
-        map.putAll(binding)
+        if( variables )
+            map.putAll(variables)
+        if( binding )
+            map.putAll(binding)
 
         def template = new GStringTemplateEngine().createTemplate(new InputStreamReader(source))
         template.make(map).toString()

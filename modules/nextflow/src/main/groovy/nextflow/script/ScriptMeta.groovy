@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,6 +67,15 @@ class ScriptMeta {
             result.addAll( entry.getProcessNames() )
         // add all resolved names
         result.addAll(resolvedProcessNames)
+        return result
+    }
+
+    static Set<ProcessDef> allProcesses() {
+        final result = new HashSet()
+        for( final entry : REGISTRY.values() ) {
+            final processes = entry.getDefinitions().findAll { d -> d instanceof ProcessDef }
+            result.addAll(processes)
+        }
         return result
     }
 

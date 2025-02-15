@@ -1,5 +1,5 @@
 #
-#  Copyright 2013-2023, Seqera Labs
+#  Copyright 2013-2024, Seqera Labs
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -24,14 +24,10 @@ build-arm: dist/docker/arm64
 	docker buildx build --platform linux/arm64 --output=type=docker --progress=plain --tag nextflow/nextflow:${version} --build-arg TARGETPLATFORM=linux/arm64 .
 
 release: build
-	docker tag nextflow/nextflow:${version} nextflow/nextflow:latest
 	docker push nextflow/nextflow:${version}
-	docker push nextflow/nextflow:latest
 	#
-	docker tag nextflow/nextflow:${version} public.ecr.aws/seqera-labs/nextflow:${version}
-	docker tag nextflow/nextflow:${version} public.ecr.aws/seqera-labs/nextflow:latest
-	docker push public.ecr.aws/seqera-labs/nextflow:${version}
-	docker push public.ecr.aws/seqera-labs/nextflow:latest
+	docker tag nextflow/nextflow:${version} public.cr.seqera.io/nextflow/nextflow:${version}
+	docker push public.cr.seqera.io/nextflow/nextflow:${version}
 
 #Static builds can now be found at:
 #

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,10 @@ import org.codehaus.groovy.runtime.InvokerHelper
 @CompileStatic
 class ArrayBag<E> implements Bag<E>, List<E>, KryoSerializable {
 
-    @Delegate(interfaces = false)
+    // note: excludes 'reversed' to prevent issues caused by the introduction
+    // of SequenceCollection by Java 21 when running on Java 20 or earlier
+    // see: https://github.com/nextflow-io/nextflow/issues/5029
+    @Delegate(interfaces = false, excludes = ['reversed','addFirst','addLast','getFirst','getLast','removeFirst','removeLast'])
     List target
 
     ArrayBag() { target = new ArrayList() }
@@ -60,53 +63,66 @@ class ArrayBag<E> implements Bag<E>, List<E>, KryoSerializable {
         InvokerHelper.inspect(this)
     }
 
-//    E getAt( int index )  {
-//        target.get(index)
-//    }
-//
-//    void putAt( int index, E value ) {
-//        target.set(index, value)
-//    }
-//
-//    @Override
-//    int hashCode() {
-//        int h = 0;
-//        Iterator<E> i = target.iterator();
-//        while (i.hasNext()) {
-//            E obj = i.next();
-//            if (obj != null)
-//                h += obj.hashCode();
-//        }
-//        return h;
-//    }
-//
-//    @Override
-//    boolean equals(Object o) {
-//        if ( o.is(this) )
-//            return true;
-//
-//        if (!(o instanceof ArrayBag))
-//            return false;
-//
-//        Collection other = ((ArrayBag)o).target
-//        if (other.size() != target.size())
-//            return false;
-//
-//        try {
-//            return target.containsAll(other);
-//        }
-//        catch (ClassCastException unused)   {
-//            return false;
-//        }
-//        catch (NullPointerException unused) {
-//            return false;
-//        }
-//    }
+    @Override
+    int hashCode() {
+        int h = 0;
+        Iterator<E> i = target.iterator();
+        while (i.hasNext()) {
+            E obj = i.next();
+            if (obj != null)
+                h += obj.hashCode();
+        }
+        return h;
+    }
 
+    /**
+     * NOTE!!! this method implements an equality is NOT used when invoking `equals` method
+     * or using `==` operator from Groovy code. This because the Groovy runtime implements its
+     * own equality logic both for {@link Map} and {@link Collection} logic.
+     *
+     * See
+     * https://issues.apache.org/jira/browse/GROOVY-9003
+     *
+     * However this is still applied when equality is checked by Java compiled code e.g. Java SDK.
+     * For this reason is necessary to implement the expected equals (and hashCode) semantic by `join`
+     * (and other) operators.
+     *
+     * See issue
+     * https://github.com/nextflow-io/nextflow/issues/5187
+     *
+     * @return
+     *      {@code true} is the content of the bag is equals to another bag irrespective the elements order,
+     *      {@code false} otherwise
+     */
+    @Override
+    boolean equals(Object o) {
+        if ( o.is(this) )
+            return true;
+
+        if (!(o instanceof ArrayBag))
+            return false;
+
+        Collection other = ((ArrayBag)o).target
+        if (other.size() != target.size())
+            return false;
+
+        try {
+            return target.containsAll(other);
+        }
+        catch (ClassCastException unused)   {
+            return false;
+        }
+        catch (NullPointerException unused) {
+            return false;
+        }
+    }
+
+    @Override
     void read (Kryo kryo, Input input) {
         target = kryo.readObject(input,ArrayList)
     }
 
+    @Override
     void write (Kryo kryo, Output output) {
         kryo.writeObject(output, target)
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -128,5 +128,27 @@ class FusionConfigTest extends Specification {
         [:]                     | true
         [privileged:true]       | true
         [privileged:false]      | false
+    }
+
+    @Unroll
+    def 'should parse fusion version' () {
+        expect:
+        new FusionConfig([:]).retrieveFusionVersion(FUSION_URL) == EXPECTED
+        where:
+        FUSION_URL                              | EXPECTED
+        FusionConfig.DEFAULT_FUSION_AMD64_URL   | '2.5'
+        FusionConfig.DEFAULT_FUSION_ARM64_URL   | '2.5'
+        'https://foo.com/releases/v3.0-amd.json'| '3.0'
+    }
+
+    def 'should get version version from config' () {
+        expect:
+        new FusionConfig([containerConfigUrl:FUSION_URL, enabled:ENABLED]).version() == EXPECTED
+        where:
+        FUSION_URL                                      | ENABLED  | EXPECTED
+        null                                            | false    | null
+        null                                            | true     | '2.5'
+        'https://foo.com/releases/v4.0-amd64.json'      | true     | '4.0'
+        'https://foo.com/releases/v4.0.1-amd64.json'    | true     | '4.0.1'
     }
 }

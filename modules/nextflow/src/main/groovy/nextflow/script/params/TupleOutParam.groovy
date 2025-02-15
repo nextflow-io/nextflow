@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 package nextflow.script.params
 
 import groovy.transform.InheritConstructors
-import nextflow.NF
+import nextflow.script.TokenEvalCall
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenFileCall
 import nextflow.script.TokenPathCall
@@ -58,6 +58,9 @@ class TupleOutParam extends BaseOutParam implements OptionalParam {
             }
             else if( item instanceof TokenEnvCall ) {
                 create(EnvOutParam).bind(item.val)
+            }
+            else if( item instanceof TokenEvalCall ) {
+                create(CmdEvalParam).bind(item.val)
             }
             else if( item instanceof GString ) {
                 throw new IllegalArgumentException("Unqualified output path declaration is not allowed - replace `tuple \"$item\",..` with `tuple path(\"$item\"),..`")

@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  ~ Copyright 2013-2023, Seqera Labs
+  ~ Copyright 2013-2024, Seqera Labs
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -194,6 +194,14 @@
 
         <dt class="col-sm-3">Container engine</dt>
         <dd class="col-sm-9"><samp>${workflow.containerEngine?:'-'}</samp></dd>
+        <% } %>
+
+        <% if (workflow.wave.enabled) { %>
+        <dt class="col-sm-3">Wave enabled</dt>
+        <dd class="col-sm-9"><samp>${workflow.wave.enabled}</samp></dd>
+
+        <dt class="col-sm-3">Fusion enabled</dt>
+        <dd class="col-sm-9"><samp>${workflow.fusion.enabled}</samp>, version <samp>${workflow.fusion.version ?: '-'}</samp></dd>
         <% } %>
 
         <dt class="col-sm-3">Nextflow version</dt>

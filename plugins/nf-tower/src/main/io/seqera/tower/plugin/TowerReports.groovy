@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,10 @@ import groovy.yaml.YamlSlurper
 import groovyx.gpars.agent.Agent
 import nextflow.Session
 import nextflow.file.FileHelper
+import nextflow.trace.GraphObserver
+import nextflow.trace.ReportObserver
+import nextflow.trace.TimelineObserver
+import nextflow.trace.TraceFileObserver
 /**
  * If reports are defined at `nf-<workflow_id>-tower.yml`, collects all published files
  * that are reports and writes `nf-<workflow_id>-reports.tsv` file with all the paths.
@@ -212,12 +216,35 @@ class TowerReports {
             it.flush()
         }
         catch (Throwable e) {
-            log.error ("Unexpected error writing Tower report entry '${destination.toUriString()}'", e)
+            log.error ("Unexpected error writing report entry '${destination.toUriString()}'", e)
         }
     }
 
     protected static String convertToGlobPattern(String reportKey) {
         final prefix = reportKey.startsWith("**/") ? "" : "**/"
         return "glob:${prefix}${reportKey}"
+    }
+
+    /**
+     * Publish any built-in reports that are enabled to the reports file.
+     */
+    void publishRuntimeReports() {
+        final config = session.config
+        final files = []
+
+        if( config.navigate('report.enabled') )
+            files << config.navigate('report.file', ReportObserver.DEF_FILE_NAME)
+
+        if( config.navigate('timeline.enabled') )
+            files << config.navigate('timeline.file', TimelineObserver.DEF_FILE_NAME)
+
+        if( config.navigate('trace.enabled') )
+            files << config.navigate('trace.file', TraceFileObserver.DEF_FILE_NAME)
+
+        if( config.navigate('dag.enabled') )
+            files << config.navigate('dag.file', GraphObserver.DEF_FILE_NAME)
+
+        for( def file : files )
+            filePublish( (file as Path).complete() )
     }
 }

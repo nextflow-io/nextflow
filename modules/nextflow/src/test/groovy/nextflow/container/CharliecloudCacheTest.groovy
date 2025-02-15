@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import spock.lang.Unroll
  * @author Patrick Hüther <patrick.huether@gmail.com>
  */
 class CharliecloudCacheTest extends Specification {
-
     @Unroll
     def 'should return a simple name given an image url'() {
 
@@ -48,7 +47,22 @@ class CharliecloudCacheTest extends Specification {
         'foo:bar'                   | 'foo+bar'
     }
 
-    def 'should return the cache dir from the config file' () {
+    @Unroll
+    def 'should return a path with registry'() {
+
+        given:
+        def helper = new CharliecloudCache([registry: registry])
+
+        expect:
+        helper.simpleName(url) == expected
+
+        where:
+        url                      | registry   | expected
+        'foo:2.0'                | 'my.reg'   | 'my.reg%foo+2.0'
+        'foo:2.0'                | 'my.reg/'  | 'my.reg%foo+2.0'
+    }
+
+    def 'should return the cache dir from the config file'() {
 
         given:
         def dir = Files.createTempDirectory('test')
@@ -64,7 +78,7 @@ class CharliecloudCacheTest extends Specification {
         dir.deleteDir()
     }
 
-    def 'should return the cache dir from the environment' () {
+    def 'should return the cache dir from the environment'() {
 
         given:
         def dir = Files.createTempDirectory('test')
@@ -75,6 +89,84 @@ class CharliecloudCacheTest extends Specification {
         def cache = new CharliecloudCache(GroovyMock(ContainerConfig), [NXF_CHARLIECLOUD_CACHEDIR: "$cacheDir"])
         then:
         cache.getCacheDir() == cacheDir
+
+        cleanup:
+        dir.deleteDir()
+    }
+
+    def 'should use CH_IMAGE_STORAGE over cacheDir'() {
+
+        given:
+        def dir = Files.createTempDirectory('test')
+        and:
+        def cacheDir = dir.resolve('nxf.ch')
+        and:
+        def charliecloudCacheDir = dir.resolve('charliecloud')
+
+        when:
+        def cache = new CharliecloudCache([cacheDir: "$cacheDir"] as ContainerConfig, [CH_IMAGE_STORAGE: "$charliecloudCacheDir"])
+     
+        then:
+        cache.getCacheDir() == charliecloudCacheDir
+
+        cleanup:
+        dir.deleteDir()
+    }
+
+    def 'should use CH_IMAGE_STORAGE over NXF_CHARLIECLOUD_CACHEDIR'() {
+
+        given:
+        def dir = Files.createTempDirectory('test')
+        and:
+        def cacheDir = dir.resolve('nxf.ch')
+        and:
+        def charliecloudCacheDir = dir.resolve('charliecloud')
+
+        when:
+        def cache = new CharliecloudCache(GroovyMock(ContainerConfig), [NXF_CHARLIECLOUD_CACHEDIR: "$cacheDir", CH_IMAGE_STORAGE: "$charliecloudCacheDir"])
+     
+        then:
+        cache.getCacheDir() == charliecloudCacheDir
+
+        cleanup:
+        dir.deleteDir()
+    }
+
+    def 'should throw exception: cacheDir and CH_IMAGE_STORAGE are the same'() {
+
+        given:
+        def dir = Files.createTempDirectory('test')
+        and:
+        def cacheDir = dir.resolve('nxf.ch')
+
+        when:
+        def cache = new CharliecloudCache([cacheDir: "$cacheDir", writeFake: 'false'] as ContainerConfig, [CH_IMAGE_STORAGE: "$cacheDir"])
+        and:
+        cache.getCacheDir()
+
+        then:
+        def e = thrown(Exception)
+        e.message == "`charliecloud.cacheDir` configuration parameter must be different from env variable `CH_IMAGE_STORAGE`"
+
+        cleanup:
+        dir.deleteDir()
+    }
+
+    def 'should throw exception: NXF_CHARLIECLOUD_CACHEDIR and CH_IMAGE_STORAGE are the same'() {
+
+        given:
+        def dir = Files.createTempDirectory('test')
+        and:
+        def cacheDir = dir.resolve('nxf.ch')
+
+        when:
+        def cache = new CharliecloudCache([writeFake: 'false'] as ContainerConfig, [ NXF_CHARLIECLOUD_CACHEDIR: "$cacheDir", CH_IMAGE_STORAGE: "$cacheDir" ])
+        and:
+        cache.getCacheDir()
+        
+        then:
+        def e = thrown(Exception)
+        e.message == "`NXF_CHARLIECLOUD_CACHEDIR` env variable must be different from env variable `CH_IMAGE_STORAGE`"
 
         cleanup:
         dir.deleteDir()
@@ -132,7 +224,7 @@ class CharliecloudCacheTest extends Specification {
 
     @Ignore
     @Timeout(1)
-    def 'should pull a charliecloud image' () {
+    def 'should pull a charliecloud image'() {
 
         given:
         def IMAGE = 'busybox:latest'

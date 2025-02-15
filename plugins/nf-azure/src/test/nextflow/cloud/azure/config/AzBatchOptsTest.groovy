@@ -1,5 +1,7 @@
 package nextflow.cloud.azure.config
 
+import nextflow.Global
+import nextflow.Session
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -67,20 +69,23 @@ class AzBatchOptsTest extends Specification {
     @Unroll
     def 'should check azcopy install' () {
         given:
+        Global.session = Mock(Session) { getConfig()>>[fusion:[enabled: FUSION]] }
         AzBatchOpts opts = Spy(AzBatchOpts, constructorArgs: [ CONFIG,[:] ])
 
         expect:
         opts.getCopyToolInstallMode() == EXPECTED
 
         where:
-        EXPECTED                    | CONFIG
-        CopyToolInstallMode.task    | [:]
-        CopyToolInstallMode.node    | [allowPoolCreation: true]
-        CopyToolInstallMode.node    | [autoPoolMode: true]
-        CopyToolInstallMode.node    | [allowPoolCreation: true, copyToolInstallMode: 'node']
-        CopyToolInstallMode.task    | [allowPoolCreation: true, copyToolInstallMode: 'task']
-        CopyToolInstallMode.task    | [copyToolInstallMode: 'task']
-        CopyToolInstallMode.node    | [copyToolInstallMode: 'node']
+        EXPECTED                    | CONFIG                                                    | FUSION
+        CopyToolInstallMode.task    | [:]                                                       | false
+        CopyToolInstallMode.node    | [allowPoolCreation: true]                                 | false
+        CopyToolInstallMode.node    | [autoPoolMode: true]                                      | false
+        CopyToolInstallMode.node    | [allowPoolCreation: true, copyToolInstallMode: 'node']    | false
+        CopyToolInstallMode.task    | [allowPoolCreation: true, copyToolInstallMode: 'task']    | false
+        CopyToolInstallMode.task    | [copyToolInstallMode: 'task']                             | false
+        CopyToolInstallMode.node    | [copyToolInstallMode: 'node']                             | false
+        CopyToolInstallMode.off     | [copyToolInstallMode: 'off']                              | false
+        CopyToolInstallMode.off     | [:]                                                       | true
 
     }
 }

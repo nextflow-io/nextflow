@@ -1,6 +1,0 @@
-Manifest-Version: 1.0
-Plugin-Class: nextflow.ga4gh.Ga4ghPlugin
-Plugin-Id: nf-ga4gh
-Plugin-Version: 1.1.1
-Plugin-Provider: Seqera Labs
-Plugin-Requires: >=23.11.0-edge

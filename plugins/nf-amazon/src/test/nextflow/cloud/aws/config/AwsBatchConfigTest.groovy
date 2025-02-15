@@ -40,8 +40,11 @@ class AwsBatchConfigTest extends Specification {
         !batch.cliPath
         !batch.volumes
         !batch.jobRole
+        !batch.executionRole
         !batch.logsGroup
         !batch.shareIdentifier
+        !batch.isFargateMode()
+        !batch.s5cmdPath
         batch.schedulingPriority == 0
     }
 
@@ -55,6 +58,7 @@ class AwsBatchConfigTest extends Specification {
                 maxSpotAttempts: 4,
                 volumes: '/some/path:/mnt/path,/other/path',
                 jobRole: 'xyz',
+                executionRole: 'some:exec:role',
                 logsGroup: 'group-name-123',
                 retryMode: 'legacy',
                 shareIdentifier: 'id-x1',
@@ -71,10 +75,12 @@ class AwsBatchConfigTest extends Specification {
         batch.maxSpotAttempts == 4
         batch.volumes == ['/some/path:/mnt/path', '/other/path']
         batch.jobRole == 'xyz'
+        batch.executionRole == 'some:exec:role'
         batch.logsGroup == 'group-name-123'
         batch.retryMode == 'legacy'
         batch.shareIdentifier == 'id-x1'
         batch.schedulingPriority == 100
+        !batch.isFargateMode()
     }
 
     def 'should parse volumes list' () {
@@ -110,6 +116,27 @@ class AwsBatchConfigTest extends Specification {
         opts.addVolume(Paths.get('/other/dir'))
         then:
         opts.volumes == ['/some/dir', '/other/dir']
+    }
+
+    def 'should parse cli path' () {
+        given:
+        def opts = new AwsBatchConfig(OPTS)
+
+        expect:
+        opts.cliPath == S3_CLI_PATH
+        opts.s5cmdPath == S5_CLI_PATH
+        opts.isFargateMode() == FARGATE
+        
+        where:
+        OPTS                                                        | S3_CLI_PATH       | S5_CLI_PATH       | FARGATE
+        [:]                                                         | null              | null              | false
+        [cliPath: "/opt/bin/aws"]                                   | '/opt/bin/aws'    | null              | false
+        [cliPath: "/s5cmd"]                                         | null              | null              | false
+        [cliPath: "/opt/s5cmd --foo"]                               | null              | null              | false
+        and:
+        [platformType: 'fargate', cliPath: "/opt/bin/aws"]          | null              | 's5cmd'           | true
+        [platformType: 'fargate', cliPath: "/opt/s5cmd"]            | null              | '/opt/s5cmd'      | true
+        [platformType: 'fargate', cliPath: "/opt/s5cmd --foo"]      | null              | '/opt/s5cmd --foo'| true
     }
 
 }

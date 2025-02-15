@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,6 +76,8 @@ class PodSpecBuilder {
 
     Integer cpus
 
+    boolean cpuLimits
+
     String memory
 
     String disk
@@ -119,6 +121,8 @@ class PodSpecBuilder {
     Map<String,?> resourcesLimits
 
     String schedulerName
+
+    Integer ttlSecondsAfterFinished
 
     /**
      * @return A sequential volume unique identifier
@@ -165,19 +169,24 @@ class PodSpecBuilder {
     PodSpecBuilder withCommand( cmd ) {
         if( cmd==null ) return this
         assert cmd instanceof List || cmd instanceof CharSequence, "Missing or invalid K8s command parameter: $cmd"
-        this.command = cmd instanceof List ? cmd : ['/bin/bash','-c', cmd.toString()]
+        this.command = cmd instanceof List ? cmd as List<String> : ['/bin/bash','-c', cmd.toString()]
         return this
     }
 
     PodSpecBuilder withArgs( args ) {
         if( args==null ) return this
         assert args instanceof List || args instanceof CharSequence, "Missing or invalid K8s args parameter: $args"
-        this.args = args instanceof List ? args : ['/bin/bash','-c', args.toString()]
+        this.args = args instanceof List ? args as List<String> : ['/bin/bash','-c', args.toString()]
         return this
     }
 
     PodSpecBuilder withCpus( Integer cpus ) {
         this.cpus = cpus
+        return this
+    }
+
+    PodSpecBuilder withCpuLimits(boolean cpuLimits) {
+        this.cpuLimits = cpuLimits
         return this
     }
 
@@ -378,6 +387,9 @@ class PodSpecBuilder {
         privileged = opts.privileged
         // -- scheduler name
         schedulerName = opts.schedulerName
+        // -- ttl seconds after finished (job)
+        if( opts.ttlSecondsAfterFinished != null )
+            ttlSecondsAfterFinished = opts.ttlSecondsAfterFinished
 
         return this
     }
@@ -576,25 +588,29 @@ class PodSpecBuilder {
 
     Map buildAsJob() {
         final pod = build()
+        final spec = [
+            backoffLimit: 0,
+            template: [
+                metadata: pod.metadata,
+                spec: pod.spec
+            ]
+        ]
+
+        if( ttlSecondsAfterFinished != null )
+            spec.ttlSecondsAfterFinished = ttlSecondsAfterFinished
 
         return [
             apiVersion: 'batch/v1',
             kind: 'Job',
             metadata: pod.metadata,
-            spec: [
-                backoffLimit: 0,
-                template: [
-                    metadata: pod.metadata,
-                    spec: pod.spec
-                ]
-            ]
+            spec: spec
         ]
     }
 
     @PackageScope
     Map addResourcesLimits(Map limits, Map result) {
         if( result == null )
-            result = new LinkedHashMap(10)
+            result = new LinkedHashMap(2)
 
         final limits0 = result.limits as Map ?: new LinkedHashMap(10)
         limits0.putAll( limits )
@@ -606,11 +622,17 @@ class PodSpecBuilder {
     @PackageScope
     Map addCpuResources(Integer cpus, Map res) {
         if( res == null )
-            res = [:]
+            res = new LinkedHashMap(2)
 
-        final req = res.requests as Map ?: new LinkedHashMap<>(10)
-        req.cpu = cpus
-        res.requests = req
+        final requests0 = res.requests as Map ?: new LinkedHashMap<>(10)
+        requests0.cpu = cpus
+        res.requests = requests0
+
+        if( cpuLimits ) {
+            final limits0 = res.limits as Map ?: new LinkedHashMap(10)
+            limits0.cpu = cpus
+            res.limits = limits0
+        }
 
         return res
     }
@@ -618,7 +640,7 @@ class PodSpecBuilder {
     @PackageScope
     Map addMemoryResources(String memory, Map res) {
         if( res == null )
-            res = new LinkedHashMap(10)
+            res = new LinkedHashMap(2)
 
         final req = res.requests as Map ?: new LinkedHashMap(10)
         req.memory = memory
@@ -634,7 +656,7 @@ class PodSpecBuilder {
     @PackageScope
     Map addDiskResources(String diskRequest, Map res) {
         if( res == null )
-            res = new LinkedHashMap(10)
+            res = new LinkedHashMap(2)
 
         final req = res.requests as Map ?: new LinkedHashMap(10)
         req.'ephemeral-storage' = diskRequest
