@@ -37,9 +37,11 @@ import nextflow.script.ast.ProcessNode
 import nextflow.script.ast.ScriptNode
 import nextflow.script.ast.ScriptVisitorSupport
 import nextflow.script.ast.WorkflowNode
+import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.VariableScope
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.BinaryExpression
+import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.EmptyExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
@@ -98,8 +100,12 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitFeatureFlag(FeatureFlagNode node) {
-        final left = constX(node.name)
-        final result = stmt(callThisX("feature", args(left, node.value)))
+        final names = node.name.tokenize('.')
+        Expression target = varX(names.head())
+        for( final name : names.tail() )
+            target = propX(target, name)
+
+        final result = stmt(assignX(target, node.value))
         moduleNode.addStatement(result)
     }
 
@@ -186,7 +192,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         for( final stmt : asBlockStatements(publishers) ) {
             final stmtX = (ExpressionStatement)stmt
             final publish = (BinaryExpression)stmtX.getExpression()
-            stmtX.setExpression(callThisX("_publish_", args(publish.getLeftExpression(), publish.getRightExpression())))
+            stmtX.setExpression(callThisX("_publish_target", args(publish.getLeftExpression(), publish.getRightExpression())))
             code.addStatement(stmtX)
         }
     }
@@ -283,7 +289,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             final arguments = node.getExpressions()
             for( int i = 0; i < arguments.size(); i++ )
                 arguments.set(i, varToConstX(arguments.get(i), withinTuple, withinEach))
-            return te
+            return node
         }
 
         return node
@@ -320,7 +326,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     @Override
     public void visitFunction(FunctionNode node) {
         if( RESERVED_NAMES.contains(node.getName()) ) {
-            sourceUnit.addError( new SyntaxException("`${node.getName()}` is not allowed as a function name because it is reserved for internal use", node) )
+            syntaxError(node, "`${node.getName()}` is not allowed as a function name because it is reserved for internal use")
             return
         }
         moduleNode.getScriptClassDummy().addMethod(node)
@@ -328,9 +334,26 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitOutput(OutputNode node) {
+        visitOutputTargets(node.body)
+
         final closure = closureX(node.body)
         final result = stmt(callThisX("output", args(closure)))
         moduleNode.addStatement(result)
+    }
+
+    private void visitOutputTargets(Statement body) {
+        for( final stmt : asBlockStatements(body) ) {
+            final es = (ExpressionStatement)stmt
+            final mce = (MethodCallExpression)es.getExpression()
+            final name = mce.getMethod()
+            final targetArgs = (ArgumentListExpression)mce.getArguments()
+            final targetBody = (ClosureExpression)targetArgs[0]
+            es.setExpression( callThisX('target', args(name, targetBody)) )
+        }
+    }
+
+    private void syntaxError(ASTNode node, String message) {
+        sourceUnit.addError(new SyntaxException(message, node))
     }
 
 }
