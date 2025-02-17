@@ -775,7 +775,8 @@ class AzBatchService implements Closeable {
 
         final poolParams = new BatchPoolCreateContent(spec.poolId, spec.vmType.name)
                 .setVirtualMachineConfiguration(poolVmConfig(spec.opts))
-                // same as the number of cores to a maximum of 256, which is the limit on Azure Batch
+                // same as the number of cores
+                // maximum of 256, which is the limit on Azure Batch
                 // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
                 .setTaskSlotsPerNode(Math.min(256, spec.vmType.numberOfCores))
 
