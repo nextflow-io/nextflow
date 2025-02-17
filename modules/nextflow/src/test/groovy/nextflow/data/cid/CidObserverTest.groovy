@@ -19,9 +19,12 @@ package nextflow.data.cid
 
 import groovy.json.JsonOutput
 import nextflow.data.config.DataConfig
+import nextflow.processor.TaskProcessor
 import nextflow.util.CacheHelper
+import nextflow.util.PathNormalizer
 
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileTime
 import java.time.Instant
@@ -42,9 +45,11 @@ class CidObserverTest extends Specification {
         def folder = Files.createTempDirectory('test')
         def config = [cid:[store:[location:folder.toString()]]]
         def store = new DefaultCidStore();
+        def uniqueId = UUID.randomUUID()
         def session = Mock(Session) {
             getConfig()>>config
             getCidStore()>>store
+            getUniqueId()>>uniqueId
         }
         store.open(DataConfig.create(session))
         def observer = new CidObserver()
@@ -52,15 +57,31 @@ class CidObserverTest extends Specification {
         and:
         def hash = HashCode.fromInt(123456789)
         and:
+        def processor = Mock(TaskProcessor){
+            getTaskGlobalVars(_) >> [:]
+            getTaskBinEntries(_) >> []
+        }
         def task = Mock(TaskRun) {
             getId() >> TaskId.of(100)
             getName() >> 'foo'
             getHash() >> hash
+            getProcessor() >> processor
+            getSource() >> 'echo task source'
         }
+        def normalizer = Mock(PathNormalizer.class) {
+            normalizePath( _ as Path) >> {Path p -> p?.toString()}
+            normalizePath( _ as String) >> {String p -> p}
+        }
+        def expectedString = '{"type":"TaskRun",' +
+            '"sessionId":"'+uniqueId.toString() + '",' +
+            '"name":"foo","source":"echo task source",' +
+            '"inputs": null,"container": null,"conda": null,' +
+            '"spack": null,"architecture": null,' +
+            '"globalVars": {},"binEntries": [],"annotations":null}'
         when:
-        observer.storeTaskRun(task)
+        observer.storeTaskRun(task, normalizer)
         then:
-        folder.resolve(".meta/${hash.toString()}/.data.json").text == JsonOutput.prettyPrint('{"type":"Task","id":100,"name":"foo","inputs": null,"annotations":null}')
+        folder.resolve(".meta/${hash.toString()}/.data.json").text == JsonOutput.prettyPrint(expectedString)
 
         cleanup:
         folder?.deleteDir()
@@ -97,9 +118,9 @@ class CidObserverTest extends Specification {
         }
         and:
         def attrs = Files.readAttributes(outFile, BasicFileAttributes)
-        def expectedString = '{"type":"Output",' +
+        def expectedString = '{"type":"TaskOutput",' +
             '"path":"' + outFile.toString() + '",' +
-            '"hash":"'+ fileHash + '",' +
+            '"checksum":"'+ fileHash + '",' +
             '"source":"cid://15cd5b07",' +
             '"size":'+attrs.size() + ',' +
             '"createdAt":' + attrs.creationTime().toMillis() + ',' +
