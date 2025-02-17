@@ -690,7 +690,7 @@ class FileHelper {
         /*
          * get the provider for the specified URI
          */
-        def provider = getProviderFor(uri.scheme)
+        final provider = getProviderFor(uri.scheme)
         if( !provider )
             throw new IllegalArgumentException("Cannot a find a file system provider for scheme: ${uri.scheme}")
 
