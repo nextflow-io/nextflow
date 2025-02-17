@@ -17,11 +17,12 @@
 
 package nextflow.data.cid
 
-import com.google.common.hash.HashCode
+import groovy.util.logging.Slf4j
 import nextflow.data.cid.model.Workflow
 import nextflow.data.cid.model.WorkflowRun
 import nextflow.file.FileHelper
 import nextflow.script.ScriptMeta
+import nextflow.util.PathNormalizer
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -43,6 +44,7 @@ import nextflow.util.CacheHelper
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class CidObserver implements TraceObserver {
     public static final String METADATA_FILE = '.data.json'
@@ -61,10 +63,12 @@ class CidObserver implements TraceObserver {
     }
 
     protected void storeWorkflowRun() {
+        final normalizer = new PathNormalizer(session.workflowMetadata)
+        final mainScript = normalizer.normalizePath(session.workflowMetadata.scriptFile.normalize())
         final workflow = new Workflow(
             DataType.Workflow,
-            session.workflowMetadata.scriptFile.toString(),
-            ScriptMeta.allScriptNames().values().collect { it.toString()},
+            mainScript,
+            ScriptMeta.allScriptNames().values().collect {normalizer.normalizePath(it.normalize())},
             session.workflowMetadata.repository,
             session.workflowMetadata.commitId
         )
@@ -73,19 +77,36 @@ class CidObserver implements TraceObserver {
             workflow,
             session.uniqueId.toString(),
             session.runName,
-            session.params
+            getNormalizedParams(session.params, normalizer)
         )
         final content = JsonOutput.prettyPrint(JsonOutput.toJson(value))
         store.save("${session.executionHash}/$METADATA_FILE", content)
     }
+
+    private static Map getNormalizedParams(Map<String, Object> params, PathNormalizer normalizer){
+        final normalizedParams = new HashMap<String,Object>()
+        params.each{String key, Object value ->
+            log.debug("Managing parameter $key , class ${value.class}")
+            if (value instanceof Path)
+                normalizedParams.put(key,normalizer.normalizePath(value as Path))
+            else if (value instanceof String || value instanceof GString)
+                normalizedParams.put(key,normalizer.normalizePath(value.toString()))
+            else
+                normalizedParams.put(key, value)
+        }
+        return normalizedParams
+    }
+
+
     @Override
     void onProcessComplete(TaskHandler handler, TraceRecord trace) {
         storeTaskInfo(handler.task)
     }
 
     protected void storeTaskInfo(TaskRun task) {
+        final pathNormalizer = new PathNormalizer(session.workflowMetadata)
         // store the task run entry
-        storeTaskRun(task)
+        storeTaskRun(task, pathNormalizer)
         // store all task outputs files
         final outputs = task.getOutputsByType(FileOutParam)
         for( Map.Entry entry : outputs ) {
@@ -100,12 +121,19 @@ class CidObserver implements TraceObserver {
         }
     }
 
-    protected void storeTaskRun(TaskRun task) {
+    protected void storeTaskRun(TaskRun task, PathNormalizer normalizer) {
         final value = new nextflow.data.cid.model.TaskRun(
-            DataType.Task,
-            task.id.value,
+            DataType.TaskRun,
+            session.uniqueId.toString(),
             task.getName(),
-            task.inputFilesMap ? convertToReferences(task.inputFilesMap): null
+            session.stubRun ? task.stubSource: task.source,
+            task.inputFilesMap ? convertToReferences(task.inputFilesMap, normalizer): null,
+            task.isContainerEnabled() ? task.getContainerFingerprint(): null,
+            normalizer.normalizePath(task.getCondaEnv()),
+            normalizer.normalizePath(task.getSpackEnv()),
+            task.config?.getArchitecture()?.toString(),
+            task.processor.getTaskGlobalVars(task),
+            task.processor.getTaskBinEntries(task.source).collect { Path p -> normalizer.normalizePath(p.normalize()) }
             )
         // store in the underlying persistence
         final key = "${task.hash}/$METADATA_FILE"
@@ -119,7 +147,7 @@ class CidObserver implements TraceObserver {
         final key = "${cid}/$METADATA_FILE"
         final hash = CacheHelper.hasher(path).hash().toString()
         final value = new Output(
-            DataType.Output,
+            DataType.TaskOutput,
             path.toString(),
             hash,
             "$CID_PROT$task.hash",
@@ -142,7 +170,7 @@ class CidObserver implements TraceObserver {
         final sourceReference = getSourceReference(source)
         final attrs = readAttributes(destination)
         final value = new Output(
-            DataType.Output,
+            DataType.WorkflowOutput,
             destination.toString(),
             hash,
             sourceReference,
@@ -168,7 +196,7 @@ class CidObserver implements TraceObserver {
         final key = "$session.executionHash/${rel}/$METADATA_FILE"
         final attrs = readAttributes(destination)
         final value = new Output(
-            DataType.Output,
+            DataType.WorkflowOutput,
             destination.toString(),
             hash,
             session.executionHash,
@@ -178,11 +206,11 @@ class CidObserver implements TraceObserver {
         store.save(key, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
     }
 
-    protected Map convertToReferences(Map<String, Path> inputs) {
-        Map<String, String> references = new HashMap<String, String>()
+    protected List<String> convertToReferences(Map<String, Path> inputs, PathNormalizer normalizer) {
+        List<String> references = new LinkedList<String>()
         inputs.each { name, path ->
             final ref = getSourceReference(path)
-            references.put(name, ref ? ref : path.toString())}
+            references.add(ref ? ref : normalizer.normalizePath(path))}
         return references
     }
 }

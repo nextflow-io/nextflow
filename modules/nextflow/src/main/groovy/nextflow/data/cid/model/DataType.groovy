@@ -22,5 +22,5 @@ package nextflow.data.cid.model
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 enum DataType {
-    Task, Workflow, WorkflowRun, Output
+    TaskRun, Workflow, WorkflowRun, TaskOutput, WorkflowOutput
 }

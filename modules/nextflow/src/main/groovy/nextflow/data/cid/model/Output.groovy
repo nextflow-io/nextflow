@@ -29,7 +29,7 @@ import groovy.transform.CompileStatic
 class Output {
     DataType type
     String path
-    String hash
+    String checksum
     String source
     long size
     long createdAt

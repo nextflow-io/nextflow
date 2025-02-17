@@ -28,8 +28,15 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class TaskRun {
     DataType type
-    int id
+    String sessionId
     String name
-    Map inputs
+    String source
+    List<String> inputs
+    String container
+    String conda
+    String spack
+    String architecture
+    Map globalVars
+    List<String> binEntries
     List<String> annotations
 }

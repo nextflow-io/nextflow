@@ -29,7 +29,7 @@ import groovy.transform.CompileStatic
 class WorkflowRun {
     DataType type
     Workflow workflow
-    String uniqueId
+    String sessionId
     String name
     Map params
 }

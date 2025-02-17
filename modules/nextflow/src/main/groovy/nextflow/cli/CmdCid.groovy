@@ -179,7 +179,8 @@ class CmdCid extends CmdBase {
             final slurper = new JsonSlurper()
             final cidObject = slurper.parse(store.load("$nodeToRender/$METADATA_FILE").toString().toCharArray()) as Map
             switch (DataType.valueOf(cidObject.type as String)) {
-                case DataType.Output:
+                case DataType.TaskOutput:
+                case DataType.WorkflowOutput:
                     lines << "    ${nodeToRender}@{shape: document, label: \"${nodeToRender}\"}".toString();
                     final source = cidObject.source as String
                     if (source) {
@@ -202,10 +203,10 @@ class CmdCid extends CmdBase {
                         edges.add(new Edge(it.toString(), nodeToRender))
                     }
                     break;
-                case DataType.Task:
+                case DataType.TaskRun:
                     lines << "    ${nodeToRender}@{shape: process, label: \"${cidObject.name}\"}".toString()
-                    final parameters = cidObject.inputs as Map<String, String>
-                    parameters.values().each { String source ->
+                    final parameters = cidObject.inputs as List<String>
+                    parameters.each { String source ->
                         if (source.startsWith(CID_PROT)) {
                             final cid = source.substring(CID_PROT.size())
                             nodes.add(cid)
