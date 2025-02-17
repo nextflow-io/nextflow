@@ -196,13 +196,13 @@ class AzBatchService implements Closeable {
                 if( !matchType(family, entry.name as String) )
                     continue
                 def score = computeScore(cpus, mem, disk, entry)
-                if( score != null && score > 0 ) {
+                if( score > 0 ) {
                     scores << new Tuple2(score, entry.name as String)
                 }
             }
         }
         def sortedScores = scores.sort { it[0] }
-        log.warn "[AZURE BATCH] sortedScores: $sortedScores"
+        log.debug "[AZURE BATCH] sortedScores: $sortedScores"
         return sortedScores ? getVmType(location, sortedScores.first()[1] as String) : null
     }
 
@@ -248,7 +248,7 @@ class AzBatchService implements Closeable {
 
         // Disk score if specified  
         if( disk ) {
-            double diskGb = disk.toMega()/1024
+            double diskGb = disk.toGiga()
             if( diskGb > vmDiskGb )
                 return null
             double diskScore = Math.abs(diskGb - vmDiskGb) / 100  // Reduce disk impact
@@ -313,7 +313,7 @@ class AzBatchService implements Closeable {
 
     protected int memSlots(float memGb, float vmMemGb, int vmCpus) {
         BigDecimal result = memGb / (vmMemGb / vmCpus)
-        log.warn("[AZURE BATCH] memSlots: memGb=${memGb}, vmMemGb=${vmMemGb}, vmCpus=${vmCpus}, result=${result}")
+        log.debug("[AZURE BATCH] memSlots: memGb=${memGb}, vmMemGb=${vmMemGb}, vmCpus=${vmCpus}, result=${result}")
         result.setScale(0, RoundingMode.UP).intValue()
     }
 
@@ -775,7 +775,7 @@ class AzBatchService implements Closeable {
 
         final poolParams = new BatchPoolCreateContent(spec.poolId, spec.vmType.name)
                 .setVirtualMachineConfiguration(poolVmConfig(spec.opts))
-                // same as the number of cores
+                // same as the number of cores to a maximum of 256, which is the limit on Azure Batch
                 // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
                 .setTaskSlotsPerNode(Math.min(256, spec.vmType.numberOfCores))
 
