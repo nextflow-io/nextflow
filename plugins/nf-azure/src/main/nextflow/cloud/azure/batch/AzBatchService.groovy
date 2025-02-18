@@ -413,34 +413,31 @@ class AzBatchService implements Closeable {
         def opts = new StringBuilder()
         
         // Add CPU and memory constraints if specified
-        if(task.config.getCpus()) {
+        if( task.config.getCpus() )
             opts.append("--cpu-shares ${task.config.getCpus() * 1024} ")
-        }
-        if(task.config.getMemory()) {
+
+        if( task.config.getMemory() )
             opts.append("--memory ${task.config.getMemory().toMega()}m ")
-        }
 
         // Mount host certificates for azcopy
         opts.append("-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro ")
 
         // Add any shared volume mounts
         final shares = getShareVolumeMounts(pool)
-        if(shares) {
+        if( shares )
             opts.append(shares.join(' ')).append(' ')
-        }
 
         // Add custom container options
-        if(task.config.getContainerOptions()) {
+        if( task.config.getContainerOptions() )
             opts.append(task.config.getContainerOptions()).append(' ')
-        }
 
         // Handle Fusion settings
         final fusionEnabled = FusionHelper.isFusionEnabled((Session)Global.session)
         final launcher = fusionEnabled ? FusionScriptLauncher.create(task.toTaskBean(), 'az') : null
-        if(fusionEnabled) {
+        if( fusionEnabled ) {
             opts.append("--privileged ")
-            launcher.fusionEnv().each { key, value -> 
-                opts.append("-e $key=$value ")
+            for( Map.Entry<String,String> it : launcher.fusionEnv() ) {
+                opts.append("-e $it.key=$it.value ")
             }
         }
 
