@@ -126,19 +126,19 @@ class AzBatchServiceTest extends Specification {
         }
         def svc = new AzBatchService(exec)
 
-
         expect:
-        svc.computeScore(CPUS, MemoryUnit.of(MEM), VM) == EXPECTED
+        svc.computeScore(CPUS, MemoryUnit.of(MEM), MemoryUnit.of(DISK), VM) == EXPECTED
 
-        
         where:
-        CPUS    | MEM       | VM                                            | EXPECTED
-        1       | '10 MB'   | [numberOfCores: 1, memoryInMB: 10]            | 0.0
-        2       | '10 MB'   | [numberOfCores: 1, memoryInMB: 10]            | null
-        1       | '10 GB'   | [numberOfCores: 1, memoryInMB: 10]            | null
-        1       | '10 MB'   | [numberOfCores: 2, memoryInMB: 10]            | 1.0
-        1       | '10 GB'   | [numberOfCores: 1, memoryInMB: 10]            | null
-        1       | '10 GB'   | [numberOfCores: 1, memoryInMB: 11 * 1024]     | 1.0
+        CPUS    | MEM     | DISK    | VM                                                                 | EXPECTED
+        1       | '10 MB' | '10 MB' | [numberOfCores: 1, memoryInMB: 10, resourceDiskSizeInMB: 10]       | 0.75     // Perfect match plus name adjustment (0.75)
+        2       | '10 MB' | '10 MB' | [numberOfCores: 1, memoryInMB: 10, resourceDiskSizeInMB: 10]       | null     // Too many CPUs requested
+        1       | '10 GB' | '10 MB' | [numberOfCores: 1, memoryInMB: 10, resourceDiskSizeInMB: 10]       | null     // Too much memory requested
+        1       | '10 MB' | '10 MB' | [numberOfCores: 2, memoryInMB: 10, resourceDiskSizeInMB: 10]       | 10.75    // VM has 1 extra CPU (weighted *10)
+        1       | '5 MB'  | '10 MB' | [numberOfCores: 1, memoryInMB: 10, resourceDiskSizeInMB: 10]       | 0.755    // VM has 5MB more memory plus name adjustment (0.75)
+        1       | '10 MB' | '5 MB'  | [numberOfCores: 1, memoryInMB: 10, resourceDiskSizeInMB: 10]       | 0.75     // Disk difference negligible after /100
+        4       | '7 GB'  | '120 GB'| [numberOfCores: 4, memoryInMB: 7168, resourceDiskSizeInMB: 122880] | 0.75     // Basic_A3 match plus name adjustment (0.75)
+        4       | '7 GB'  | '120 GB'| [numberOfCores: 8, memoryInMB: 14336, resourceDiskSizeInMB: 382976]| 50.29    // Standard_A6 (worse match due to CPU difference)
     }
 
     def 'should find best match for northeurope' () {
@@ -147,24 +147,24 @@ class AzBatchServiceTest extends Specification {
         def svc = new AzBatchService(exec)
         
         when:
-        def ret = svc.findBestVm('northeurope', 4, MemoryUnit.of(7168), null)
+        def ret = svc.findBestVm('northeurope', 4, MemoryUnit.of(7168), MemoryUnit.of(122880), null)
         then:
         ret.name == 'Basic_A3'
 
         when:
-        ret = svc.findBestVm('northeurope', 4, MemoryUnit.of(7168), 'standard_a?')
+        ret = svc.findBestVm('northeurope', 4, MemoryUnit.of(7168), MemoryUnit.of(291840),'standard_a?')
         then:
         ret.name == 'Standard_A3'
 
         when:
-        ret = svc.findBestVm('northeurope', 4, null, 'standard_a?')
-        then:
-        ret.name == 'Standard_A6'
-
-        when:
-        ret = svc.findBestVm('northeurope', 4, MemoryUnit.of(7168), 'standard_a2,standard_a*')
+        ret = svc.findBestVm('northeurope', 4, null, MemoryUnit.of(291840), 'standard_a?')
         then:
         ret.name == 'Standard_A3'
+
+        when:
+        ret = svc.findBestVm('northeurope', 4, MemoryUnit.of(7168), MemoryUnit.of(291840), 'standard_a2,standard_a*')
+        then:
+        ret.name == 'Standard_A4_v2'
     }
 
     def 'should match familty' () {
@@ -220,20 +220,21 @@ class AzBatchServiceTest extends Specification {
         def svc = new AzBatchService(exec)
         
         expect:
-        svc.computeSlots(CPUS, MemoryUnit.of(MEM * _1GB), VM_CPUS, MemoryUnit.of(VM_MEM*_1GB)) == EXPECTED
-
+        svc.computeSlots(CPUS, MemoryUnit.of(MEM*_1GB), MemoryUnit.of(DISK*_1GB), VM_CPUS, MemoryUnit.of(VM_MEM*_1GB), MemoryUnit.of(VM_DISK*_1GB)) == EXPECTED
         where:
-        CPUS  | MEM   | VM_CPUS   | VM_MEM    |   EXPECTED
-        1     | 1     | 1         | 1         |   1
+        CPUS  | MEM   | DISK | VM_CPUS   | VM_MEM    | VM_DISK |   EXPECTED
+        1     | 1     | 1    | 1         | 1         | 1       |   1
         and:
-        1     | 1     | 4         | 64        |   1
-        1     | 8     | 4         | 64        |   1
-        1     | 16    | 4         | 64        |   1
-        1     | 32    | 4         | 64        |   2
-        2     | 1     | 4         | 64        |   2
-        4     | 1     | 4         | 64        |   4
-        2     | 64    | 4         | 64        |   4
-
+        1     | 1     | 1    | 4         | 64        | 4       |   1         // Task needs 1 slot, 1 CPU
+        1     | 8     | 1    | 4         | 64        | 4       |   1         // Task needs 1 because the memory fits into 1 cpu share
+        1     | 16    | 1    | 4         | 64        | 4       |   1         // Task needs 1 because the memory fits into 1 cpu share
+        1     | 32    | 1    | 4         | 64        | 4       |   2         // Task needs 2 slots because the memory is half the VM memory and requires half the CPUs
+        1     | 1     | 4    | 4         | 64        | 4       |   4         // Task needs entire disk so needs 4 CPUs/slots
+        1     | 1     | 4    | 4         | 64        | 8       |   2         // Task needs half the disk so needs 2 CPUs/slots
+        2     | 1     | 1    | 4         | 64        | 4       |   2         // Task needs 2 CPUs
+        4     | 1     | 1    | 4         | 64        | 4       |   4         // Task needs all CPUs
+        2     | 64    | 1    | 4         | 64        | 4       |   4         // Task needs all memory
+        1     | 1     | 1    | 256       | 256       | 256     |   1         // Max slots is 256
     }
 
 
@@ -367,32 +368,32 @@ class AzBatchServiceTest extends Specification {
         AzBatchService svc = Spy(AzBatchService, constructorArgs: [exec])
 
         when:
-        def ret = svc.guessBestVm(LOC, 1, null, 'xyz')
+        def ret = svc.guessBestVm(LOC, 1, null, null, 'xyz')
         then:
-        1 * svc.findBestVm(LOC, 1, null, 'xyz')  >> TYPE
+        1 * svc.findBestVm(LOC, 1, null, null, 'xyz')  >> TYPE
         and:
         ret == TYPE
 
         when:
-        ret = svc.guessBestVm(LOC, 8, null, 'xyz_*')
+        ret = svc.guessBestVm(LOC, 8, null, null, 'xyz_*')
         then:
-        1 * svc.findBestVm(LOC, 16, null, 'xyz_*')  >> null
-        1 * svc.findBestVm(LOC, 8, null, 'xyz_*')  >> TYPE
+        1 * svc.findBestVm(LOC, 16, null, null, 'xyz_*')  >> null
+        1 * svc.findBestVm(LOC, 8, null, null, 'xyz_*')  >> TYPE
         and:
         ret == TYPE
 
         when:
-        ret = svc.guessBestVm(LOC, 8, null, 'xyz_?')
+        ret = svc.guessBestVm(LOC, 8, null, null, 'xyz_?')
         then:
-        1 * svc.findBestVm(LOC, 16, null, 'xyz_?')  >> null
-        1 * svc.findBestVm(LOC, 8, null, 'xyz_?')  >> TYPE
+        1 * svc.findBestVm(LOC, 16, null, null, 'xyz_?')  >> null
+        1 * svc.findBestVm(LOC, 8, null, null, 'xyz_?')  >> TYPE
         and:
         ret == TYPE
 
         when:
-        ret = svc.guessBestVm(LOC, 16, null, 'xyz*')
+        ret = svc.guessBestVm(LOC, 16, null, null, 'xyz*')
         then:
-        1 * svc.findBestVm(LOC, 16, null, 'xyz*')  >> TYPE
+        1 * svc.findBestVm(LOC, 16, null, null, 'xyz*')  >> TYPE
         and:
         ret == TYPE
 
@@ -449,7 +450,7 @@ class AzBatchServiceTest extends Specification {
         when:
         def spec = svc.specFromAutoPool(TASK)
         then:
-        1 * svc.guessBestVm(LOC, CPUS, MEM, TYPE) >> VM
+        1 * svc.guessBestVm(LOC, CPUS, MEM, null, TYPE) >> VM
         and:
         spec.poolId == 'nf-pool-289d374ac1622e709cf863bce2570cab-Standard_X1'
         spec.metadata == [foo: 'bar']
