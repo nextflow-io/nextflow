@@ -1311,7 +1311,7 @@ disk { [request: 375.GB * task.attempt, type: 'local-ssd'] }
 ```
 :::
 
-Task resources can also be defined in terms of task inputs, for example:
+Task resources can also be defined in terms of task inputs. For example:
 
 ```nextflow
 process foo {
@@ -1322,7 +1322,7 @@ process foo {
 }
 ```
 
-In this example, each task requests 8 GB, plus the size of the input file rounded up to the next GB. This way, each task requests only as much memory as it needs based on the size of the inputs. The specific function that you use should be tuned for each process.
+In this example, each task requests 8 GB of memory, plus the size of the input file rounded up to the next GB. This way, each task requests only as much memory as it needs based on the size of the inputs. The specific function that you use should be tuned for each process.
 
 ### Dynamic task resources with previous execution trace
 
