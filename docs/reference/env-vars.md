@@ -12,6 +12,8 @@ The following environment variables control the configuration of the Nextflow ru
 `JAVA_HOME`
 : Defines the path location of the Java VM installation used to run Nextflow.
 
+(nxf-env-vars)=
+
 ## Nextflow settings
 
 `NXF_ANSI_LOG`
