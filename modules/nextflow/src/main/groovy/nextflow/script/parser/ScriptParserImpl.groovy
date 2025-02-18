@@ -28,12 +28,10 @@ import nextflow.ast.OpXform
 import nextflow.exception.ScriptCompilationException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
-import nextflow.io.ValueObject
 import nextflow.script.BaseScript
 import nextflow.script.ScriptParser
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
-import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -90,12 +88,10 @@ class ScriptParserImpl extends ScriptParser {
 
         // define the imports
         final importCustomizer = new ImportCustomizer()
-        importCustomizer.addImports( StringUtils.name )
         importCustomizer.addImports( Path.name )
         importCustomizer.addImports( Channel.name )
         importCustomizer.addImports( Duration.name )
         importCustomizer.addImports( MemoryUnit.name )
-        importCustomizer.addImports( ValueObject.name )
         importCustomizer.addImport( 'channel', Channel.name )
         importCustomizer.addStaticStars( Nextflow.name )
 
