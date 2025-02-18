@@ -487,6 +487,8 @@ The process `when` section is deprecated. Use conditional logic, such as an `if`
 
 The process `shell` section is deprecated. Use the `script` block instead. The VS Code extension provides syntax highlighting and error checking to help distinguish between Nextflow variables and Bash variables.
 
+(updating-config-syntax)=
+
 ### Configuration syntax
 
 :::{versionadded} 25.02.0-edge

@@ -43,8 +43,8 @@ class ConfigParserTest extends Specification {
 
         when:
         def CONFIG = '''
-        process.cpus = env('MAX_CPUS')
-        '''
+            process.cpus = env('MAX_CPUS')
+            '''
         def config = new ConfigParserImpl().parse(CONFIG)
 
         then:
@@ -57,17 +57,17 @@ class ConfigParserTest extends Specification {
     def 'should parse plugin ids' () {
         given:
         def CONFIG = '''
-        plugins {
-            id 'foo'
-            id 'bar'
-            id 'bar'
-        }
+            plugins {
+                id 'foo'
+                id 'bar'
+                id 'bar'
+            }
 
-        process {
-            cpus = 1
-            mem = 2
-        }
-        '''
+            process {
+                cpus = 1
+                mem = 2
+            }
+            '''
 
         when:
         def config = new ConfigParserImpl().parse(CONFIG)
@@ -85,29 +85,28 @@ class ConfigParserTest extends Specification {
         def snippet1 = new File(folder,'config1.txt').absoluteFile
         def snippet2 = new File(folder,'config2.txt').absoluteFile
 
-
         def text = """
-        process {
-            name = 'alpha'
-            resources {
-                disk = '1TB'
-                includeConfig "$snippet1"
+            process {
+                name = 'alpha'
+                resources {
+                    disk = '1TB'
+                    includeConfig "$snippet1"
+                }
             }
-        }
-        """
+            """
 
         snippet1.text = """
-        cpus = 4
-        memory = '8GB'
-        nested {
-            includeConfig("$snippet2")
-        }
-        """
+            cpus = 4
+            memory = '8GB'
+            nested {
+                includeConfig("$snippet2")
+            }
+            """
 
         snippet2.text = '''
-        foo = 1
-        bar = 2
-        '''
+            foo = 1
+            bar = 2
+            '''
 
         when:
         def config = new ConfigParserImpl().parse(text)
@@ -125,19 +124,19 @@ class ConfigParserTest extends Specification {
         def str = buffer.toString().replaceAll('\t', '    ')
         then:
         str == '''
-        process {
-            name='alpha'
-            resources {
-                disk='1TB'
-                cpus=4
-                memory='8GB'
-                nested {
-                    foo=1
-                    bar=2
+            process {
+                name='alpha'
+                resources {
+                    disk='1TB'
+                    cpus=4
+                    memory='8GB'
+                    nested {
+                        foo=1
+                        bar=2
+                    }
                 }
             }
-        }
-        '''.stripIndent().leftTrim()
+            '''.stripIndent().leftTrim()
 
         cleanup:
         folder?.deleteDir()
@@ -151,27 +150,26 @@ class ConfigParserTest extends Specification {
         def snippet1 = new File(folder,'config1.txt').absoluteFile
         def snippet2 = new File(folder,'config2.txt').absoluteFile
 
-
         def text = """
-        process.name = 'alpha'
-        includeConfig "$snippet1"
-        """
+            process.name = 'alpha'
+            includeConfig "$snippet1"
+            """
 
         snippet1.text = """
-        params.xxx = 'x'
+            params.xxx = 'x'
 
-        process.cpus = 4
-        process.memory = '8GB'
+            process.cpus = 4
+            process.memory = '8GB'
 
-        includeConfig("$snippet2")
-        """
+            includeConfig("$snippet2")
+            """
 
         snippet2.text = '''
-        params.yyy = 'y'
-        process { disk = '1TB' }
-        process.resources.foo = 1
-        process.resources.bar = 2
-        '''
+            params.yyy = 'y'
+            process { disk = '1TB' }
+            process.resources.foo = 1
+            process.resources.bar = 2
+            '''
 
         when:
         def config = new ConfigParserImpl().setBinding().parse(text)
@@ -203,33 +201,33 @@ class ConfigParserTest extends Specification {
         folder3.mkdirs()
 
         main. text = '''
-        profiles {
-            includeConfig 'dir1/config'
-            includeConfig 'dir2/config'
-            includeConfig 'dir3/config'
-        }
-        '''
+            profiles {
+                includeConfig 'dir1/config'
+                includeConfig 'dir2/config'
+                includeConfig 'dir3/config'
+            }
+            '''
 
         new File(folder,'dir1/config').text = '''
-        proc1 {
-            cpus = 4
-            memory = '8GB'
-        }
-        '''
+            proc1 {
+                cpus = 4
+                memory = '8GB'
+            }
+            '''
 
         new File(folder, 'dir2/config').text = '''
-        proc2 {
-            cpus = MIN
-            memory = '6GB'
-        }
-        '''
+            proc2 {
+                cpus = MIN
+                memory = '6GB'
+            }
+            '''
 
         new File(folder, 'dir3/config').text = '''
-        proc3 {
-            cpus = MAX
-            disk = '500GB'
-        }
-        '''
+            proc3 {
+                cpus = MAX
+                disk = '500GB'
+            }
+            '''
 
         when:
         def config = new ConfigParserImpl().setBinding([MIN: 1, MAX: 32]).parse(main)
@@ -257,36 +255,36 @@ class ConfigParserTest extends Specification {
         folder2.mkdirs()
 
         main. text = """
-        process {
-            name = 'foo'
-            resources {
-                disk = '1TB'
-                includeConfig "dir1/nextflow.config"
-            }
+            process {
+                name = 'foo'
+                resources {
+                    disk = '1TB'
+                    includeConfig "dir1/nextflow.config"
+                }
 
-            commands {
-                includeConfig "dir2/nextflow.config"
+                commands {
+                    includeConfig "dir2/nextflow.config"
+                }
             }
-        }
-        """
+            """
 
         new File(folder,'dir1/nextflow.config').text = """
-        cpus = 4
-        memory = '8GB'
-        nested {
-            includeConfig 'dir3/nextflow.config'
-        }
-        """
+            cpus = 4
+            memory = '8GB'
+            nested {
+                includeConfig 'dir3/nextflow.config'
+            }
+            """
 
         new File(folder, 'dir1/dir3/nextflow.config').text = '''
-        alpha = 1
-        delta = 2
-        '''
+            alpha = 1
+            delta = 2
+            '''
 
         new File(folder, 'dir2/nextflow.config').text = '''
-        cmd1 = 'echo true'
-        cmd2 = 'echo false'
-        '''
+            cmd1 = 'echo true'
+            cmd2 = 'echo false'
+            '''
 
         when:
         def config = new ConfigParserImpl().parse(main)
@@ -320,7 +318,7 @@ class ConfigParserTest extends Specification {
                 memory = '2GB'
                 disk = '100GB'
             }
-        '''
+            '''
 
         snippet2.text = '''
             process {
@@ -328,27 +326,26 @@ class ConfigParserTest extends Specification {
                 memory = '20GB'
                 disk = '2TB'
             }
-        '''
-
+            '''
 
         def configText = """
-        workDir = '/my/scratch'
+            workDir = '/my/scratch'
 
-        profiles {
+            profiles {
 
-            standard {}
+                standard {}
 
-            slow {
-                includeConfig "$snippet1"
+                slow {
+                    includeConfig "$snippet1"
+                }
+
+                fast {
+                    workDir = '/fast/scratch'
+                    includeConfig "$snippet2"
+                }
+
             }
-
-            fast {
-                workDir = '/fast/scratch'
-                includeConfig "$snippet2"
-            }
-
-        }
-        """
+            """
 
         when:
         def config1 = new ConfigParserImpl()
@@ -380,15 +377,15 @@ class ConfigParserTest extends Specification {
 
         given:
         def text = '''
-        profiles {
-            alpha {
-                a = 1
+            profiles {
+                alpha {
+                    a = 1
+                }
+                beta {
+                    b = 2
+                }
             }
-            beta {
-                b = 2
-            }
-        }
-        '''
+            '''
 
         when:
         def slurper = new ConfigParserImpl().setProfiles(['alpha'])
@@ -403,16 +400,16 @@ class ConfigParserTest extends Specification {
         slurper.getProfiles() == ['alpha','beta'] as Set
     }
 
-    def 'should disable includeConfig parsing' () {
+    def 'should ignore config includes when specified' () {
         given:
         def text = '''
-        manifest {
-          description = 'some text ..'
-        }
+            manifest {
+                description = 'some text ..'
+            }
 
-        includeConfig 'this'
-        includeConfig 'that'
-        '''
+            includeConfig 'this'
+            includeConfig 'that'
+            '''
 
         when:
         def config = new ConfigParserImpl().setIgnoreIncludes(true).parse(text)
@@ -498,7 +495,7 @@ class ConfigParserTest extends Specification {
             time2 = 60_000.toDuration()
             time3 = Duration.of(120_000)
             flag = 10000 < 1.GB
-           '''
+            '''
 
         when:
         result = new ConfigParserImpl()
@@ -519,28 +516,27 @@ class ConfigParserTest extends Specification {
         given:
         def folder = Files.createTempDirectory('test')
         folder.resolve('conf').mkdir()
-        // launch web server
+
         HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
         server.createContext("/", new ConfigFileHandler(folder));
         server.start()
 
-        // main `nextflow.config` file
         folder.resolve('nextflow.config').text = '''
-        includeConfig 'conf/base.config'
-        includeConfig 'http://localhost:9900/conf/remote.config'
-        '''
+            includeConfig 'conf/base.config'
+            includeConfig 'http://localhost:9900/conf/remote.config'
+            '''
 
         folder.resolve('conf/base.config').text = '''
-        params.foo = 'Hello'
-        params.bar = 'world!'
-        '''
+            params.foo = 'Hello'
+            params.bar = 'world!'
+            '''
 
         folder.resolve('conf/remote.config').text = '''
-        process {
-            cpus = 4
-            memory = '10GB'
-        }
-        '''
+            process {
+                cpus = 4
+                memory = '10GB'
+            }
+            '''
 
         when:
         def url = 'http://localhost:9900/nextflow.config' as Path
@@ -571,7 +567,7 @@ class ConfigParserTest extends Specification {
                 }
               }
             }
-        '''
+            '''
 
         when:
         def config = new ConfigParserImpl().parse(CONFIG)
@@ -590,7 +586,7 @@ class ConfigParserTest extends Specification {
               nested.baz = 'baz2'
               nested.foo.bar = 'bar2'
             }
-        '''
+            '''
         and:
         config = new ConfigParserImpl().parse(CONFIG)
 
@@ -599,6 +595,48 @@ class ConfigParserTest extends Specification {
         config.params.baz == 'baz1'
         config.params.nested.baz == 'baz2'
         config.params.nested.foo.bar == 'bar2'
+    }
+
+    def 'should apply profiles in the order they are specified at runtime' () {
+        given:
+        def CONFIG = '''
+            profiles {
+                foo {
+                    params.input = 'foo'
+                }
+
+                bar {
+                    params.input = 'bar'
+                }
+            }
+            '''
+
+        when:
+        def config = new ConfigParserImpl().setProfiles(['bar', 'foo']).parse(CONFIG)
+
+        then:
+        config.params.input == 'foo'
+    }
+
+    def 'should allow mixed use of dot and block syntax in a profile' () {
+        given:
+        def CONFIG = '''
+            profiles {
+                foo {
+                    process.memory = '2 GB'
+                    process {
+                        cpus = 2
+                    }
+                }
+            }
+            '''
+
+        when:
+        def config = new ConfigParserImpl().setProfiles(['foo']).parse(CONFIG)
+
+        then:
+        config.process.memory == '2 GB'
+        config.process.cpus == 2
     }
 
     static class ConfigFileHandler implements HttpHandler {

@@ -683,6 +683,26 @@ class ConfigParserLegacyTest extends Specification {
 
     }
 
+    def 'should apply profiles in the order they were defined' () {
+        given:
+        def CONFIG = '''
+            profiles {
+                foo {
+                    params.input = 'foo'
+                }
+
+                bar {
+                    params.input = 'bar'
+                }
+            }
+            '''
+
+        when:
+        def config = new ConfigParserLegacy().setProfiles(['bar', 'foo']).parse(CONFIG)
+
+        then:
+        config.params.input == 'bar'
+    }
 
     static class ConfigFileHandler implements HttpHandler {
 

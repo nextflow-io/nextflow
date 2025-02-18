@@ -259,13 +259,12 @@ With the above configuration:
 
 ## Config profiles
 
-Configuration files can contain the definition of one or more *profiles*. A profile is a set of configuration attributes that can be selected during pipeline execution by using the `-profile` command line option.
+Configuration files can define one or more *profiles*. A profile is a set of configuration settings that can be selected during pipeline execution using the `-profile` command line option.
 
-Configuration profiles are defined by using the special scope `profiles`, which group the attributes that belong to the same profile using a common prefix. For example:
+Configuration profiles are defined in the `profiles` scope. For example:
 
 ```groovy
 profiles {
-
     standard {
         process.executor = 'local'
     }
@@ -281,41 +280,47 @@ profiles {
         process.container = 'cbcrg/imagex'
         docker.enabled = true
     }
-
 }
 ```
 
-This configuration defines three different profiles: `standard`, `cluster`, and `cloud`, that each set different process
-configuration strategies depending on the target runtime platform. The `standard` profile is used by default when no profile is specified.
+This configuration defines three profiles: `standard`, `cluster`, and `cloud`. Each profile provides a different configuration for a given execution environment. The `standard` profile is used by default when no profile is specified.
 
-:::{tip}
-Multiple configuration profiles can be specified by separating the profile names with a comma, for example:
+Configuration profiles can be specified at runtime as a comma-separated list:
 
 ```bash
 nextflow run <your script> -profile standard,cloud
 ```
 
 Config profiles are applied in the order in which they were defined in the config file, regardless of the order they are specified on the command line.
+
+:::{versionadded} 25.02.0-edge
+When using the {ref}`strict config syntax <updating-config-syntax>`, profiles are applied in the order in which they are specified on the command line.
 :::
 
 :::{danger}
-When using the `profiles` feature in your config file, do NOT set attributes in the same scope both inside and outside a `profiles` context. For example:
+When defining a profile in the config file, avoid using both the dot and block syntax for the same scope. For example:
 
 ```groovy
-process.cpus = 1
-
 profiles {
-  foo {
-    process.memory = '2 GB'
-  }
-
-  bar {
-    process.memory = '4 GB'
-  }
+    foo {
+        process.memory = '2 GB'
+        process {
+            cpus = 2
+        }
+    }
 }
 ```
 
-In the above example, the `process.cpus` attribute is not correctly applied because the `process` scope is also used in the `foo` and `bar` profiles.
+Due to a limitation of the legacy config parser, the first setting will be overwritten by the second:
+
+```console
+$ nextflow config -profile foo
+process {
+   cpus = 2
+}
+```
+
+This limitation can be avoided by using the {ref}`strict config syntax <updating-config-syntax>`.
 :::
 
 ## Workflow handlers
