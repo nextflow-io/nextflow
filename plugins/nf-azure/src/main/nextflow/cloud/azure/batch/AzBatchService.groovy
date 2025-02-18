@@ -408,28 +408,35 @@ class AzBatchService implements Closeable {
         final pool = getPoolSpec(poolId)
         if( !pool )
             throw new IllegalStateException("Missing Azure Batch pool spec with id: $poolId")
+
         // container settings
-        // mount host certificates otherwise `azcopy` fails
-        def opts = "-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro "
+        def opts = new StringBuilder()
+            .append(task.config.getCpus() ? "--cpu-shares ${task.config.getCpus() * 1024} " : "")
+            .append(task.config.getMemory() ? "--memory ${task.config.getMemory().toMega()}m " : "")
+            // mount host certificates otherwise `azcopy` fails
+            .append("-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro ")
+
         // shared volume mounts
         final shares = getShareVolumeMounts(pool)
         if( shares )
-            opts += "${shares.join(' ')} "
+            opts.append("${shares.join(' ')} ")
         // custom container settings
         if( task.config.getContainerOptions() )
-            opts += "${task.config.getContainerOptions()} "
+            opts.append("${task.config.getContainerOptions()} ")
         // fusion environment settings
         final fusionEnabled = FusionHelper.isFusionEnabled((Session)Global.session)
         final launcher = fusionEnabled ? FusionScriptLauncher.create(task.toTaskBean(), 'az') : null
         if( fusionEnabled ) {
-            opts += "--privileged "
+            opts.append("--privileged ")
             for( Map.Entry<String,String> it : launcher.fusionEnv() ) {
-                opts += "-e $it.key=$it.value "
+                opts.append("-e $it.key=$it.value ")
             }
         }
+        
         // config overall container settings
         final containerOpts = new BatchTaskContainerSettings(container)
-                .setContainerRunOptions(opts)
+                .setContainerRunOptions(opts.toString())
+
         // submit command line
         final String cmd = fusionEnabled
                 ? launcher.fusionSubmitCli(task).join(' ')
