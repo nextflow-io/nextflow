@@ -1315,7 +1315,7 @@ Task resources can also be defined in terms of task inputs. For example:
 
 ```nextflow
 process foo {
-    memory { 8.GB + 1.GB * Math.ceil(input_file.size() / 1e9) }
+    memory { 8.GB + 1.GB * Math.ceil(input_file.size() / 1024 ** 3) }
 
     input:
     path input_file
