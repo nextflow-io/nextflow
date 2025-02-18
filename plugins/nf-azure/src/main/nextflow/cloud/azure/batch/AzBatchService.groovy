@@ -411,29 +411,40 @@ class AzBatchService implements Closeable {
 
         // container settings
         def opts = new StringBuilder()
-            .append(task.config.getCpus() ? "--cpu-shares ${task.config.getCpus() * 1024} " : "")
-            .append(task.config.getMemory() ? "--memory ${task.config.getMemory().toMega()}m " : "")
-            // mount host certificates otherwise `azcopy` fails
-            .append("-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro ")
+        
+        // Add CPU and memory constraints if specified
+        if(task.config.getCpus()) {
+            opts.append("--cpu-shares ${task.config.getCpus() * 1024} ")
+        }
+        if(task.config.getMemory()) {
+            opts.append("--memory ${task.config.getMemory().toMega()}m ")
+        }
 
-        // shared volume mounts
+        // Mount host certificates for azcopy
+        opts.append("-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro ")
+
+        // Add any shared volume mounts
         final shares = getShareVolumeMounts(pool)
-        if( shares )
-            opts.append("${shares.join(' ')} ")
-        // custom container settings
-        if( task.config.getContainerOptions() )
-            opts.append("${task.config.getContainerOptions()} ")
-        // fusion environment settings
+        if(shares) {
+            opts.append(shares.join(' ')).append(' ')
+        }
+
+        // Add custom container options
+        if(task.config.getContainerOptions()) {
+            opts.append(task.config.getContainerOptions()).append(' ')
+        }
+
+        // Handle Fusion settings
         final fusionEnabled = FusionHelper.isFusionEnabled((Session)Global.session)
         final launcher = fusionEnabled ? FusionScriptLauncher.create(task.toTaskBean(), 'az') : null
-        if( fusionEnabled ) {
+        if(fusionEnabled) {
             opts.append("--privileged ")
-            for( Map.Entry<String,String> it : launcher.fusionEnv() ) {
-                opts.append("-e $it.key=$it.value ")
+            launcher.fusionEnv().each { key, value -> 
+                opts.append("-e $key=$value ")
             }
         }
-        
-        // config overall container settings
+
+        // Create container settings
         final containerOpts = new BatchTaskContainerSettings(container)
                 .setContainerRunOptions(opts.toString())
 
