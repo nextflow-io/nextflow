@@ -298,7 +298,7 @@ The following settings are available:
 : The Azure tenant ID
 
 `azure.azcopy.blobTier`
-: The blob [access tier](https://learn.microsoft.com/en-us/azure/storage/blobs/access-tiers-overview) used by `azcopy` to upload files to Azure Blob Storage. Valid options are `Hot`, `Cold`, `Cool`, and `Archive` (default: `None`).
+: The blob [access tier](https://learn.microsoft.com/en-us/azure/storage/blobs/access-tiers-overview) used by `azcopy` to upload files to Azure Blob Storage. Valid options are `None`, `Hot`, or `Cool` (default: `None`).
 
 `azure.azcopy.blockSize`
 : The block size (in MB) used by `azcopy` to transfer files between Azure Blob Storage and compute nodes (default: 4).
