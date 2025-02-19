@@ -62,7 +62,8 @@ import static nextflow.script.ast.ASTHelpers.*
 import static org.codehaus.groovy.ast.tools.GeneralUtils.*
 
 /**
- * Transform Nextflow AST nodes into pure Groovy.
+ * Visitor to convert a Nextflow script AST into a
+ * Groovy AST which is executed against {@link BaseScript}.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

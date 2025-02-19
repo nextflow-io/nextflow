@@ -25,6 +25,8 @@ import nextflow.script.parser.ScriptParserImpl
 import nextflow.script.parser.legacy.ScriptParserLegacy
 
 /**
+ * Factory for creating an instance of {@link ScriptParser}.
+ *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
