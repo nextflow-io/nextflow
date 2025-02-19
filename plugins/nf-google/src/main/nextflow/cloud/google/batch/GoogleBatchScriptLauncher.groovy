@@ -49,6 +49,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
     private Path remoteBinDir
     private Set<String> buckets = new HashSet<>()
     private PathTrie pathTrie = new PathTrie()
+    private boolean isArray
 
     /* ONLY FOR TESTING - DO NOT USE */
     protected GoogleBatchScriptLauncher() {}
@@ -67,6 +68,12 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         // add all children work dir 
         if( bean.arrayWorkDirs ) {
             for( Path it : bean.arrayWorkDirs )
+                toContainerMount(it)
+        }
+
+        // add input file mounts
+        if( bean.arrayInputFiles ) {
+            for( Path it : bean.arrayInputFiles )
                 toContainerMount(it)
         }
 
@@ -119,7 +126,9 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
 
     @Override
     String runCommand() {
-        launchCommand(workDirMount)
+        return isArray
+            ? launchArrayCommand(workDirMount)
+            : launchCommand(workDirMount)
     }
 
     @Override
@@ -175,6 +184,20 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
     GoogleBatchScriptLauncher withConfig(BatchConfig config) {
         this.config = config
         return this
+    }
+
+    GoogleBatchScriptLauncher withIsArray(boolean value) {
+        this.isArray = value
+        return this
+    }
+
+    static String launchArrayCommand(String workDir ) {
+        // when executing a job array run directly the command script
+        // to prevent that all child jobs write on the same .command.*
+        // control files, causing an issue with the gcsfuse mount
+        // For the same reason the .command.log file is not uploaded
+        // See https://github.com/nextflow-io/nextflow/issues/5777
+        "/bin/bash ${workDir}/${TaskRun.CMD_SCRIPT}"
     }
 
     static String launchCommand( String workDir ) {

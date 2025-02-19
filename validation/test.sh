@@ -62,13 +62,6 @@ if [[ $TEST_MODE == 'test_docs' ]]; then
 
 fi
 
-if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-  if [ "$(jq -r '.pull_request.head.repo.fork' $GITHUB_EVENT_PATH)" = "true" ]; then
-    echo "Skipping cloud integration tests on external PR event"
-    exit 0
-  fi
-fi
-
 #
 # AWS Batch tests
 #
@@ -77,7 +70,7 @@ if [[ $TEST_MODE == 'test_aws' ]]; then
       echo "AWS batch tests"
       bash awsbatch.sh
     else
-      echo "Missing AWS_ACCESS_KEY_ID variable -- Skipping AWS Batch tests"
+      echo "::warning file=$0,line=$LINENO::Missing AWS_ACCESS_KEY_ID variable -- Skipping AWS Batch tests"
     fi
 fi
 
@@ -89,7 +82,7 @@ if [[ $TEST_MODE == 'test_azure' ]]; then
       echo "Azure batch tests"
       bash azure.sh
     else
-      echo "Missing AZURE_BATCH_ACCOUNT_KEY variable -- Skipping Azure Batch tests"
+      echo "::warning file=$0,line=$LINENO::Missing AZURE_BATCH_ACCOUNT_KEY variable -- Skipping Azure Batch tests"
     fi
 fi
 
@@ -101,7 +94,7 @@ if [[ $TEST_MODE == 'test_google' ]]; then
       echo "Google Batch tests"
       bash google.sh
     else
-      echo "Missing GOOGLE_SECRET variable -- Skipping Google Batch tests"
+      echo "::warning file=$0,line=$LINENO::Missing GOOGLE_SECRET variable -- Skipping Google Batch tests"
     fi
 fi
 
@@ -109,6 +102,10 @@ fi
 # Wave
 #
 if [[ $TEST_MODE == 'test_wave' ]]; then
+    if [ "$TOWER_ACCESS_TOKEN" ]; then
       echo "Wave tests"
       bash wave.sh
+    else
+      echo "::warning file=$0,line=$LINENO::Missing TOWER_ACCESS_TOKEN variable -- Skipping Wave tests"
+    fi
 fi
