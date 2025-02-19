@@ -18,10 +18,12 @@ package nextflow.script.parser
 import java.util.stream.Collectors
 
 import groovy.transform.CompileStatic
+import nextflow.ast.GStringToLazyVisitor
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.IncludeDef
 import nextflow.script.TokenEnvCall
+import nextflow.script.TokenEvalCall
 import nextflow.script.TokenFileCall
 import nextflow.script.TokenPathCall
 import nextflow.script.TokenStdinCall
@@ -148,7 +150,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             )
         ))
         final closure = closureX(block(new VariableScope(), List.of(
-            node.takes, // TODO: cannot be null
+            node.takes,
             node.emits,
             bodyDef
         )))
@@ -201,6 +203,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitProcess(ProcessNode node) {
+        visitProcessDirectives(node.directives)
         visitProcessInputs(node.inputs)
         visitProcessOutputs(node.outputs)
 
@@ -226,8 +229,16 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         moduleNode.addStatement(result)
     }
 
+    private void visitProcessDirectives(Statement directives) {
+        asDirectives(directives).forEach((call) -> {
+            fixLazyGString(call)
+        })
+    }
+
     private void visitProcessInputs(Statement inputs) {
         asDirectives(inputs).forEach((call) -> {
+            fixLazyGString(call)
+
             final name = call.getMethodAsString()
             varToConstX(call.getArguments(), "tuple".equals(name), "each".equals(name))
             call.setMethod( constX("_in_" + name) )
@@ -236,6 +247,8 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     private void visitProcessOutputs(Statement outputs) {
         asDirectives(outputs).forEach((call) -> {
+            fixLazyGString(call)
+
             final name = call.getMethodAsString()
             varToConstX(call.getArguments(), "tuple".equals(name), "each".equals(name))
             call.setMethod( constX("_out_" + name) )
@@ -257,6 +270,10 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         }
     }
 
+    private void fixLazyGString(Expression node) {
+        new GStringToLazyVisitor(sourceUnit).visit(node)
+    }
+
     private Expression varToConstX(Expression node, boolean withinTuple, boolean withinEach) {
         if( node instanceof VariableExpression ) {
             final name = node.getName()
@@ -276,6 +293,9 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
             if( "env".equals(name) && withinTuple )
                 return createX( TokenEnvCall.class, (TupleExpression) varToStrX(arguments) )
+
+            if( "eval".equals(name) && withinTuple )
+                return createX( TokenEvalCall.class, (TupleExpression) varToStrX(arguments) )
 
             if( "file".equals(name) && (withinTuple || withinEach) )
                 return createX( TokenFileCall.class, (TupleExpression) varToConstX(arguments, withinTuple, withinEach) )
