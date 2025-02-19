@@ -462,11 +462,9 @@ class AzBatchService implements Closeable {
 
         // container settings
         String opts = ""
-        
         // Add CPU and memory constraints if specified
         if( task.config.getCpus() )
             opts += "--cpu-shares ${task.config.getCpus() * 1024} "
-
         if( task.config.getMemory() )
             opts += "--memory ${task.config.getMemory().toMega()}m "
 
@@ -508,7 +506,6 @@ class AzBatchService implements Closeable {
             constraints.setMaxWallClockTime( Duration.of(task.config.getTime().toMillis(), ChronoUnit.MILLIS) )
 
         log.trace "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
-
         return new BatchTaskCreateContent(taskId, cmd)
                 .setUserIdentity(userIdentity(pool.opts.privileged, pool.opts.runAs, AutoUserScope.TASK))
                 .setContainerSettings(containerOpts)
@@ -516,8 +513,6 @@ class AzBatchService implements Closeable {
                 .setOutputFiles(outputFileUrls(task, sas))
                 .setRequiredSlots(slots)
                 .setConstraints(constraints)
-                
-
     }
 
     AzTaskKey runTask(String poolId, String jobId, TaskRun task) {
