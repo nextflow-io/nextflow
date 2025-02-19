@@ -410,40 +410,40 @@ class AzBatchService implements Closeable {
             throw new IllegalStateException("Missing Azure Batch pool spec with id: $poolId")
 
         // container settings
-        def opts = new StringBuilder()
+        String opts = ""
         
         // Add CPU and memory constraints if specified
         if( task.config.getCpus() )
-            opts.append("--cpu-shares ${task.config.getCpus() * 1024} ")
+            opts += "--cpu-shares ${task.config.getCpus() * 1024} "
 
         if( task.config.getMemory() )
-            opts.append("--memory ${task.config.getMemory().toMega()}m ")
+            opts += "--memory ${task.config.getMemory().toMega()}m "
 
         // Mount host certificates for azcopy
-        opts.append("-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro ")
+        opts += "-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro "
 
         // Add any shared volume mounts
         final shares = getShareVolumeMounts(pool)
         if( shares )
-            opts.append(shares.join(' ')).append(' ')
+            opts += shares.join(' ') + ' '
 
         // Add custom container options
         if( task.config.getContainerOptions() )
-            opts.append(task.config.getContainerOptions()).append(' ')
+            opts += task.config.getContainerOptions() + ' '
 
         // Handle Fusion settings
         final fusionEnabled = FusionHelper.isFusionEnabled((Session)Global.session)
         final launcher = fusionEnabled ? FusionScriptLauncher.create(task.toTaskBean(), 'az') : null
         if( fusionEnabled ) {
-            opts.append("--privileged ")
+            opts += "--privileged "
             for( Map.Entry<String,String> it : launcher.fusionEnv() ) {
-                opts.append("-e $it.key=$it.value ")
+                opts += "-e $it.key=$it.value "
             }
         }
 
         // Create container settings
         final containerOpts = new BatchTaskContainerSettings(container)
-                .setContainerRunOptions(opts.toString())
+                .setContainerRunOptions(opts)
 
         // submit command line
         final String cmd = fusionEnabled
