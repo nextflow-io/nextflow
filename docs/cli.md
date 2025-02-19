@@ -223,7 +223,7 @@ These commands will execute two different project revisions based on the given G
 
 ### Pipeline parameters
 
-Pipeline scripts can define *parameters* which can be overridden on the command line.
+Pipeline scripts can define *parameters* that can be overridden on the command line.
 
 Parameters can be declared in the main script:
 
@@ -246,7 +246,7 @@ params {
 The above parameter can be specified on the command line as `--alpha`:
 
 ```console
-$ nextflow run <pipeline> --alpha Hello
+$ nextflow run main.nf --alpha Hello
 ```
 
 :::{note}
@@ -254,7 +254,7 @@ Parameters that are specified on the command line without a value are set to `tr
 :::
 
 :::{note}
-Parameters that are specified on the command line with `kebab-case` names are automatically converted to `camelCase`. For exapmle, a parameter defined as `fooBar` in the pipeline script can be given on the command line as `--fooBar` or `--foo-bar`.
+Parameters that are specified on the command line in kebab case (e.g., `--foo-bar`) are automatically converted to camel case (e.g., `--fooBar`). Because of this, a parameter defined as `fooBar` in the pipeline script can be specified on the command line as `--fooBar` or `--foo-bar`.
 :::
 
 :::{warning}
