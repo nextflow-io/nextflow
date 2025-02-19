@@ -297,6 +297,12 @@ The following settings are available:
 `azure.activeDirectory.tenantId`
 : The Azure tenant ID
 
+`azure.azcopy.blobTier`
+: The blob [access tier](https://learn.microsoft.com/en-us/azure/storage/blobs/access-tiers-overview) used by `azcopy` to upload files to Azure Blob Storage (default: `None`).
+
+`azure.azcopy.blockSize`
+: The block size (in MB) used by `azcopy` to transfer files between Azure Blob Storage and compute nodes (default: 4).
+
 `azure.batch.accountName`
 : The batch service account name.
 
