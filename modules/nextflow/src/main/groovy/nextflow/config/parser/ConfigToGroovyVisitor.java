@@ -33,6 +33,8 @@ import org.codehaus.groovy.control.SourceUnit;
 import static org.codehaus.groovy.ast.tools.GeneralUtils.*;
 
 /**
+ * Visitor to convert a Nextflow config AST into a
+ * Groovy AST which is executed against {@link ConfigDsl}.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

@@ -24,6 +24,8 @@ import nextflow.config.parser.legacy.ConfigParserLegacy
 import nextflow.config.parser.ConfigParserImpl
 
 /**
+ * Factory for creating an instance of {@link ConfigParser}.
+ *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
