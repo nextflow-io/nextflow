@@ -87,7 +87,8 @@ class PluginUpdater extends UpdateManager {
         List<UpdateRepository> result = new ArrayList<>(1)
         if( offline ) {
             result.add(new LocalUpdateRepository('downloaded', local))
-        } else {
+        }
+        else {
             result.add(new DefaultUpdateRepository('nextflow.io', remote))
             result.addAll(customRepos())
         }
@@ -323,16 +324,19 @@ class PluginUpdater extends UpdateManager {
     private boolean load0(String id, String requestedVersion) {
         assert id, "Missing plugin Id"
 
-        if( offline && !requestedVersion )
+        if( offline && !requestedVersion ) {
             throw new IllegalStateException("Cannot find version for $id plugin -- plugin versions MUST be specified in offline mode")
+        }
 
         def version = requestedVersion
-        if( !version )
+        if( !version ) {
             version = getLastPluginRelease(id)?.version
-        else if( !Version.isValid(version) )
+        }
+        else if( !Version.isValid(version) ) {
             // a version is 'valid' if it's an exact semver version "major.minor.patch" so
             // if it's not that, treat it as a version constraint and look for matches
             version = findNewestMatchingRelease(id, version)?.version
+        }
 
         if( !version ) {
             final msg = requestedVersion
@@ -340,8 +344,10 @@ class PluginUpdater extends UpdateManager {
                 : "Cannot find latest version of $id plugin"
             throw new IllegalStateException(msg)
         }
-        if( version != requestedVersion )
+
+        if( version != requestedVersion ) {
             log.debug "Plugin $id version $requestedVersion resolved to: $version"
+        }
 
         def pluginPath = pluginsStore.resolve("$id-$version")
         if( !FilesEx.exists(pluginPath) ) {

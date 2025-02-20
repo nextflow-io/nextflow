@@ -76,7 +76,7 @@ class LocalUpdateRepository implements UpdateRepository {
         // now group the descriptors by id, to create a PluginInfo with list of versions
         return descriptors
             .groupBy { d -> d.getPluginId() }
-            .collectEntries { id, versions -> List.of(id, toPluginInfo(id, versions)) }
+            .collectEntries { id, versions -> Map.entry(id, toPluginInfo(id, versions)) }
     }
 
     private static PluginInfo toPluginInfo(String id, List<LocalPlugin> versions) {

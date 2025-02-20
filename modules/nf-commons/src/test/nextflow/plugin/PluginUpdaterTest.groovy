@@ -305,7 +305,7 @@ class PluginUpdaterTest extends Specification {
     }
 
 
-    def 'should safe move plugin directory' () {
+    def 'should safely move plugin directory' () {
         given:
         def folder = Files.createTempDirectory('test')
         and:
@@ -432,8 +432,8 @@ class PluginUpdaterTest extends Specification {
         Files.createDirectory(dir)
 
         List<MockPlugin> plugins = versions
-            .collect( version -> createPlugin(dir, version) )
-            .collect{ plugin ->
+            .collect ( version -> createPlugin(dir, version) )
+            .collect { plugin ->
                 plugin.zip = zipDir(plugin.path)
                 plugin
             }
@@ -461,30 +461,31 @@ class PluginUpdaterTest extends Specification {
                 Plugin-Class: ${clazz.getName()}
                 Plugin-Id: $id
                 Plugin-Version: $ver
-                """
-            .stripIndent()
+                """.stripIndent()
 
         return new MockPlugin(version: ver, path: pluginDir)
     }
 
     static private Path createRepositoryIndex(Path repoDir, List<MockPlugin> plugins) {
         String releases = plugins
-            .collect(p -> """
-            {
-              "version": "${p.version}",
-              "date": "Jun 25, 2020 9:58:35 PM",
-              "url": "file:${p.zip}"
-            }
-            """)
+            .collect ( p ->
+                """
+                {
+                "version": "${p.version}",
+                "date": "Jun 25, 2020 9:58:35 PM",
+                "url": "file:${p.zip}"
+                }
+                """
+            )
             .join(",")
 
         Path index = repoDir.resolve('plugins.json')
         index.text = """
-              [{
-                "id": "my-plugin",
-                "description": "Test plugin",
-                "releases": [${releases}]
-              }]
+            [{
+            "id": "my-plugin",
+            "description": "Test plugin",
+            "releases": [${releases}]
+            }]
             """
         return index
     }
