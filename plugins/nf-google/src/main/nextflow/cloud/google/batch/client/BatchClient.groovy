@@ -17,10 +17,12 @@
 package nextflow.cloud.google.batch.client
 
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 
 import com.google.api.gax.core.CredentialsProvider
+import com.google.api.gax.rpc.DeadlineExceededException
 import com.google.api.gax.rpc.FixedHeaderProvider
 import com.google.api.gax.rpc.NotFoundException
 import com.google.api.gax.rpc.UnavailableException
@@ -29,6 +31,7 @@ import com.google.cloud.batch.v1.BatchServiceClient
 import com.google.cloud.batch.v1.BatchServiceSettings
 import com.google.cloud.batch.v1.Job
 import com.google.cloud.batch.v1.JobName
+import com.google.cloud.batch.v1.JobStatus
 import com.google.cloud.batch.v1.LocationName
 import com.google.cloud.batch.v1.Task
 import com.google.cloud.batch.v1.TaskGroupName
@@ -49,11 +52,12 @@ import groovy.util.logging.Slf4j
 @Slf4j
 @CompileStatic
 class BatchClient {
-
+    private final static long TASK_STATE_INVALID_TIME = 1_000
     protected String projectId
     protected String location
     protected BatchServiceClient batchServiceClient
     protected BatchConfig config
+    private Map<String, TaskStatusRecord> arrayTaskStatus = new ConcurrentHashMap<String, TaskStatusRecord>()
 
     BatchClient(BatchConfig config) {
         this.config = config
@@ -110,7 +114,7 @@ class BatchClient {
     }
 
     Task describeTask(String jobId, String taskId) {
-        final name = TaskName.of(projectId, location, jobId, 'group0', taskId)
+        final name = generateTaskName(jobId, taskId)
         return apply(()-> batchServiceClient.getTask(name))
     }
 
@@ -121,6 +125,10 @@ class BatchClient {
 
     TaskStatus getTaskStatus(String jobId, String taskId) {
         return describeTask(jobId, taskId).getStatus()
+    }
+
+    JobStatus getJobStatus(String jobId) {
+        return describeJob(jobId).getStatus()
     }
 
     String getTaskState(String jobId, String taskId) {
@@ -134,6 +142,10 @@ class BatchClient {
 
     String getLocation() {
         return location
+    }
+
+    String generateTaskName(String jobId, String taskId) {
+        TaskName.of(projectId, location, jobId, 'group0', taskId)
     }
 
     /**
@@ -175,6 +187,8 @@ class BatchClient {
             boolean test(Throwable t) {
                 if( t instanceof UnavailableException )
                     return true
+                if( t instanceof DeadlineExceededException )
+                    return true
                 if( t instanceof IOException || t.cause instanceof IOException )
                     return true
                 if( t instanceof TimeoutException || t.cause instanceof TimeoutException )
@@ -188,5 +202,40 @@ class BatchClient {
         final policy = retryPolicy(cond)
         // apply the action with
         return Failsafe.with(policy).get(action)
+    }
+
+
+    TaskStatus getTaskInArrayStatus(String jobId, String taskId) {
+        final taskName = generateTaskName(jobId,taskId)
+        final now = System.currentTimeMillis()
+        TaskStatusRecord record = arrayTaskStatus.get(taskName)
+        if( !record || now - record.timestamp > TASK_STATE_INVALID_TIME ){
+            log.debug("[GOOGLE BATCH] Updating tasks status for job $jobId")
+            updateArrayTasks(jobId, now)
+            record = arrayTaskStatus.get(taskName)
+        }
+        return record?.status
+    }
+
+    private void updateArrayTasks(String jobId, long now){
+        for( Task t: listTasks(jobId) ){
+            arrayTaskStatus.put(t.name, new TaskStatusRecord(t.status, now))
+        }
+    }
+
+    void removeFromArrayTasks(String jobId, String taskId){
+        final taskName = generateTaskName(jobId,taskId)
+        TaskStatusRecord record = arrayTaskStatus.remove(taskName)
+    }
+}
+
+@CompileStatic
+class TaskStatusRecord {
+    protected TaskStatus status
+    protected long timestamp
+
+    TaskStatusRecord(TaskStatus status, long timestamp) {
+        this.status = status
+        this.timestamp = timestamp
     }
 }

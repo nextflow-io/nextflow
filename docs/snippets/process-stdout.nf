@@ -2,6 +2,7 @@ process sayHello {
     output:
     stdout
 
+    script:
     """
     echo Hello world!
     """

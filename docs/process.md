@@ -78,10 +78,6 @@ process doOtherThings {
 
 In this example, `$MAX` is a Nextflow variable that must be defined elsewhere in the pipeline script. Nextflow replaces it with the actual value before executing the script. Meanwhile, `$DB` is a Bash variable that must exist in the execution environment, and Bash will replace it with the actual value during execution.
 
-:::{tip}
-Alternatively, you can use the {ref}`process-shell` block definition, which allows a script to contain both Bash and Nextflow variables without having to escape the first.
-:::
-
 ### Scripts *à la carte*
 
 The process script is interpreted by Nextflow as a Bash script by default, but you are not limited to Bash.
@@ -161,9 +157,9 @@ In the above example, the process will execute one of several scripts depending 
 
 ### Template
 
-Process scripts can be externalised to **template** files, which can be reused across different processes and tested independently from the overall pipeline execution.
+Process scripts can be externalized to **template** files, which allows them to be reused across different processes and tested independently from the pipeline execution.
 
-A template is simply a shell script file that Nextflow is able to execute by using the `template` function as shown below:
+A template can be used in place of an embedded script using the `template` function in the script section:
 
 ```nextflow
 process templateExample {
@@ -179,9 +175,9 @@ workflow {
 }
 ```
 
-By default, Nextflow looks for the `my_script.sh` template file in the `templates` directory located alongside the Nextflow script and/or the module script in which the process is defined. Any other location can be specified by using an absolute template path.
+By default, Nextflow looks for the template script in the `templates` directory located alongside the Nextflow script in which the process is defined. An absolute path can be used to specify a different location. However, this practice is discouraged because it hinders pipeline portability.
 
-The template script may contain any code that can be executed by the underlying environment. For example:
+An example template script is provided below:
 
 ```bash
 #!/bin/bash
@@ -190,17 +186,31 @@ echo $STR
 echo "process completed"
 ```
 
-:::{tip}
-The dollar character (`$`) is interpreted as a Nextflow variable when the script is run as a Nextflow template, whereas it is evaluated as a Bash variable when run as a Bash script. This can be very useful for testing your script independently from Nextflow execution. You only need to provide a Bash environment variable for each of the Nextflow variables that are referenced in your script. For example, it would be possible to execute the above script with the following command in the terminal: `STR='foo' bash templates/my_script.sh`
-:::
+Variables prefixed with the dollar character (`$`) are interpreted as Nextflow variables when the template script is executed by Nextflow and Bash variables when executed directly. For example, the above script can be executed from the command line by providing each input as an environment variable:
+
+```bash
+STR='foo' bash templates/my_script.sh
+```
+
+The following caveats should be considered:
+
+- Template scripts are recommended only for Bash scripts. Languages that do not prefix variables with `$` (e.g. Python and R) can't be executed directly as a template script.
+
+- Variables escaped with `\$` will be interpreted as Bash variables when executed by Nextflow, but will not be interpreted as variables when executed from the command line. This practice should be avoided to ensure that the template script behaves consistently.
+
+- Template variables are evaluated even if they are commented out in the template script. If a template variable is missing, it will cause the pipeline to fail regardless of where it occurs in the template.
 
 :::{tip}
-As a best practice, the template script should not contain any `\$` escaped variables, because these variables will not be evaluated properly when the script is executed directly.
+Template scripts are generally discouraged due to the caveats described above. The best practice for using a custom script is to embed it in the process definition at first and move it to a separate file with its own command line interface once the code matures.
 :::
 
 (process-shell)=
 
 ### Shell
+
+:::{deprecated} 24.11.0-edge
+Use the `script` block instead. Consider using the {ref}`VS Code extension <vscode-page>`, which provides syntax highlighting and error checking to distinguish Nextflow variables from Bash variables in the process script.
+:::
 
 The `shell` block is a string expression that defines the script that is executed by the process. It is an alternative to the {ref}`process-script` definition with one important difference: it uses the exclamation mark `!` character, instead of the usual dollar `$` character, to denote Nextflow variables.
 
@@ -227,7 +237,7 @@ In the above example, `$USER` is treated as a Bash variable, while `!{str}` is t
 :::{note}
 - Shell script definitions require the use of single-quote `'` delimited strings. When using double-quote `"` delimited strings, dollar variables are interpreted as Nextflow variables as usual. See {ref}`string-interpolation`.
 - Variables prefixed with `!` must always be enclosed in curly brackets, i.e. `!{str}` is a valid variable whereas `!str` is ignored.
-- Shell scripts support the use of the {ref}`process-template` mechanism. The same rules are applied to the variables defined in the script template.
+- Shell scripts support the use of the {ref}`process-template` mechanism. The same rules are applied to the variables defined in the template script.
 :::
 
 (process-native)=
@@ -335,7 +345,10 @@ process basicExample {
   input:
   val x
 
-  "echo process job $x"
+  script:
+  """
+  echo process job $x
+  """
 }
 
 workflow {
@@ -364,7 +377,10 @@ process basicExample {
   input:
   val x
 
-  "echo process job $x"
+  script:
+  """
+  echo process job $x
+  """
 }
 
 workflow {
@@ -384,7 +400,10 @@ process blastThemAll {
   input:
   path query_file
 
-  "blastp -query ${query_file} -db nr"
+  script:
+  """
+  blastp -query ${query_file} -db nr
+  """
 }
 
 workflow {
@@ -418,7 +437,10 @@ process blastThemAll {
   input:
   path 'query.fa'
 
-  "blastp -query query.fa -db nr"
+  script:
+  """
+  blastp -query query.fa -db nr
+  """
 }
 
 workflow {
@@ -440,6 +462,7 @@ process foo {
   input:
   path x
 
+  script:
   """
   your_command --in $x
   """
@@ -487,7 +510,10 @@ process blastThemAll {
     input:
     path 'seq'
 
-    "echo seq*"
+    script:
+    """
+    echo seq*
+    """
 }
 
 workflow {
@@ -526,7 +552,10 @@ process blastThemAll {
     input:
     path 'seq?.fa'
 
-    "cat seq1.fa seq2.fa seq3.fa"
+    script:
+    """
+    cat seq1.fa seq2.fa seq3.fa
+    """
 }
 
 workflow {
@@ -549,6 +578,7 @@ process simpleCount {
   val x
   path "${x}.fa"
 
+  script:
   """
   cat ${x}.fa | grep '>'
   """
@@ -572,6 +602,7 @@ process printEnv {
     input:
     env 'HELLO'
 
+    script:
     '''
     echo $HELLO world!
     '''
@@ -598,6 +629,7 @@ process printAll {
   input:
   stdin
 
+  script:
   """
   cat -
   """
@@ -630,6 +662,7 @@ process tupleExample {
     input:
     tuple val(x), path('input.txt')
 
+    script:
     """
     echo "Processing $x"
     cat input.txt > copy
@@ -655,6 +688,7 @@ process alignSequences {
   path seq
   each mode
 
+  script:
   """
   t_coffee -in $seq -mode $mode > result
   """
@@ -679,6 +713,7 @@ process alignSequences {
   each mode
   each path(lib)
 
+  script:
   """
   t_coffee -in $seq -mode $mode -lib $lib > result
   """
@@ -818,6 +853,7 @@ process foo {
   output:
   val x
 
+  script:
   """
   echo $x > file
   """
@@ -869,6 +905,7 @@ process randomNum {
   output:
   path 'result.txt'
 
+  script:
   '''
   echo $RANDOM > result.txt
   '''
@@ -909,9 +946,10 @@ process splitLetters {
     output:
     path 'chunk_*'
 
-    '''
+    script:
+    """
     printf 'Hola' | split -b 1 - chunk_
-    '''
+    """
 }
 
 workflow {
@@ -956,6 +994,7 @@ process align {
   output:
   path "${species}.aln"
 
+  script:
   """
   t_coffee -in $seq > ${species}.aln
   """
@@ -1056,9 +1095,10 @@ process foo {
     output:
     path 'result.txt', hidden: true
 
-    '''
+    script:
+    """
     echo 'another new line' >> result.txt
-    '''
+    """
 }
 ```
 
@@ -1069,10 +1109,11 @@ process foo {
     output:
     tuple path('last_result.txt'), path('result.txt', hidden: true)
 
-    '''
+    script:
+    """
     echo 'another new line' >> result.txt
     echo 'another new line' > last_result.txt
-    '''
+    """
 }
 ```
 :::
@@ -1087,11 +1128,12 @@ The `emit` option can be used on a process output to define a name for the corre
 process FOO {
     output:
     path 'hello.txt', emit: hello
-    path 'bye.txt', emit: bye
+    stdout emit: bye
 
+    script:
     """
     echo "hello" > hello.txt
-    echo "bye" > bye.txt
+    echo "bye"
     """
 }
 
@@ -1205,7 +1247,7 @@ process foo {
 
   script:
   """
-  < your job here >
+  your_command --here
   """
 }
 ```
@@ -1234,7 +1276,7 @@ Note, however, that the latter syntax can be used both for a directive's main ar
 
 It's a very common scenario that different instances of the same process may have very different needs in terms of computing resources. In such situations requesting, for example, an amount of memory too low will cause some tasks to fail. Instead, using a higher limit that fits all the tasks in your execution could significantly decrease the execution priority of your jobs.
 
-The [Dynamic directives](#dynamic-directives) evaluation feature can be used to modify the amount of computing resources requested in case of a process failure and try to re-execute it using a higher limit. For example:
+[Dynamic directives](#dynamic-directives) can be used to adjust the requested task resources when a task fails and is re-executed. For example:
 
 ```nextflow
 process foo {
@@ -1245,17 +1287,45 @@ process foo {
     maxRetries 3
 
     script:
-    <your job here>
+    """
+    your_command --here
+    """
 }
 ```
 
-In the above example the {ref}`process-memory` and execution {ref}`process-time` limits are defined dynamically. The first time the process is executed the `task.attempt` is set to `1`, thus it will request a two GB of memory and one hour of maximum execution time.
+In the above example the {ref}`process-memory` and execution {ref}`process-time` limits are defined dynamically. The first time the process is executed the `task.attempt` is set to `1`, thus it will request 2 GB of memory and 1 hour of walltime.
 
-If the task execution fail reporting an exit status in the range between 137 and 140, the task is re-submitted (otherwise terminates immediately). This time the value of `task.attempt` is `2`, thus increasing the amount of the memory to four GB and the time to 2 hours, and so on.
+If the task execution fails with an exit status between 137 and 140, the task is re-executed; otherwise, the run is terminated immediately. The re-executed task will have `task.attempt` set to `2`, and will request 4 GB of memory and 2 hours of walltime.
 
-The directive {ref}`process-maxretries` set the maximum number of time the same task can be re-executed.
+The {ref}`process-maxretries` directive sets the maximum number of times the same task can be re-executed.
+
+:::{tip}
+Directives with named arguments, such as `accelerator` and `disk`, must use a more verbose syntax when they are dynamic. For example:
+
+```nextflow
+// static request
+disk 375.GB, type: 'local-ssd'
+
+// dynamic request
+disk { [request: 375.GB * task.attempt, type: 'local-ssd'] }
+```
+:::
+
+Task resources can also be defined in terms of task inputs. For example:
+
+```nextflow
+process foo {
+    memory { 8.GB + 1.GB * Math.ceil(input_file.size() / 1024 ** 3) }
+
+    input:
+    path input_file
+}
+```
+
+In this example, each task requests 8 GB of memory, plus the size of the input file rounded up to the next GB. This way, each task requests only as much memory as it needs based on the size of the inputs. The specific function that you use should be tuned for each process.
 
 ### Dynamic task resources with previous execution trace
+
 :::{versionadded} 24.10.0
 :::
 
@@ -1268,11 +1338,13 @@ process foo {
     maxRetries 3
 
     script:
-    <your job here>
+    """
+    your_command --here
+    """
 }
 ```
-In the above example, the {ref}`process-memory` is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to one GB. In the subsequent attempts, it doubles the previously allocated memory. See {ref}`trace-report` for more information about trace records.
 
+In the above example, the {ref}`process-memory` is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to 1 GB. In each subsequent attempt, the requested memory is doubled. See {ref}`trace-report` for more information about trace records.
 
 ### Dynamic retry with backoff
 
@@ -1284,9 +1356,9 @@ process foo {
   maxRetries 5
 
   script:
-  '''
+  """
   your_command --here
-  '''
+  """
 }
 ```
 

@@ -32,7 +32,6 @@ import spock.lang.Specification
  */
 class TaskConfigTest extends Specification {
 
-
     def testShell() {
 
         when:
@@ -157,8 +156,8 @@ class TaskConfigTest extends Specification {
 
         where:
         value   | expected
-        null    | 0
-        0       | 0
+        null    | 1
+        0       | 1
         1       | 1
         '3'     | 3
         10      | 10
@@ -171,8 +170,8 @@ class TaskConfigTest extends Specification {
         when:
         config = new TaskConfig()
         then:
-        config.maxRetries == 0
-        config.getMaxRetries() == 0
+        config.maxRetries == 1
+        config.getMaxRetries() == 1
         config.getErrorStrategy() == ErrorStrategy.TERMINATE
 
         when:
@@ -670,5 +669,29 @@ class TaskConfigTest extends Specification {
         then:
         def e = thrown(ProcessUnrecoverableException)
         e.message == "Directive 'resourceLimits.cpus' cannot be a negative value - offending value: -1"
+    }
+
+    def 'should validate shell cli' () {
+        given:
+        def config = new TaskConfig([:])
+        when:
+        config.validateShell(['bash','this','that'])
+        then:
+        noExceptionThrown()
+
+        when:
+        config.validateShell([''])
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        config.validateShell(['bash\nthis\nthat'])
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        config.validateShell(['bash', ' -eu '])
+        then:
+        thrown(IllegalArgumentException)
     }
 }

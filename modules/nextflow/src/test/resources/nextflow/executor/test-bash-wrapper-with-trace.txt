@@ -98,26 +98,28 @@ nxf_mem_watch() {
         count=$((count+1))
     done
 
-    echo "%mem=${nxf_stat_ret[1]}"      >> $trace_file
-    echo "vmem=${nxf_stat_ret[2]}"      >> $trace_file
-    echo "rss=${nxf_stat_ret[3]}"       >> $trace_file
-    echo "peak_vmem=${nxf_stat_ret[4]}" >> $trace_file
-    echo "peak_rss=${nxf_stat_ret[5]}"  >> $trace_file
-    echo "vol_ctxt=${nxf_stat_ret[6]}"  >> $trace_file
-    echo "inv_ctxt=${nxf_stat_ret[7]}"  >> $trace_file
+    printf "%s\n" \
+        "%mem=${nxf_stat_ret[1]}" \
+        "vmem=${nxf_stat_ret[2]}" \
+        "rss=${nxf_stat_ret[3]}" \
+        "peak_vmem=${nxf_stat_ret[4]}" \
+        "peak_rss=${nxf_stat_ret[5]}" \
+        "vol_ctxt=${nxf_stat_ret[6]}" \
+        "inv_ctxt=${nxf_stat_ret[7]}" >> "$trace_file" || >&2 echo "Error: Failed to append to file: $trace_file"
 }
 
 nxf_write_trace() {
-    echo "nextflow.trace/v2"           > $trace_file
-    echo "realtime=$wall_time"         >> $trace_file
-    echo "%cpu=$ucpu"                  >> $trace_file
-    echo "cpu_model=$cpu_model"        >> $trace_file
-    echo "rchar=${io_stat1[0]}"        >> $trace_file
-    echo "wchar=${io_stat1[1]}"        >> $trace_file
-    echo "syscr=${io_stat1[2]}"        >> $trace_file
-    echo "syscw=${io_stat1[3]}"        >> $trace_file
-    echo "read_bytes=${io_stat1[4]}"   >> $trace_file
-    echo "write_bytes=${io_stat1[5]}"  >> $trace_file
+    printf "%s\n" \
+        "nextflow.trace/v2" \
+        "realtime=$wall_time" \
+        "%cpu=$ucpu" \
+        "cpu_model=$cpu_model" \
+        "rchar=${io_stat1[0]}" \
+        "wchar=${io_stat1[1]}" \
+        "syscr=${io_stat1[2]}" \
+        "syscw=${io_stat1[3]}" \
+        "read_bytes=${io_stat1[4]}" \
+        "write_bytes=${io_stat1[5]}" > "$trace_file" || >&2 echo "Error: Failed to write to file: $trace_file"
 }
 
 nxf_trace_mac() {
@@ -173,16 +175,17 @@ nxf_trace_linux() {
     local wall_time=$((end_millis-start_millis))
     [ $NXF_DEBUG = 1 ] && echo "+++ STATS %CPU=$ucpu TIME=$wall_time I/O=${io_stat1[*]}"
 
-    echo "nextflow.trace/v2"           > $trace_file
-    echo "realtime=$wall_time"         >> $trace_file
-    echo "%cpu=$ucpu"                  >> $trace_file
-    echo "cpu_model=$cpu_model"        >> $trace_file
-    echo "rchar=${io_stat1[0]}"        >> $trace_file
-    echo "wchar=${io_stat1[1]}"        >> $trace_file
-    echo "syscr=${io_stat1[2]}"        >> $trace_file
-    echo "syscw=${io_stat1[3]}"        >> $trace_file
-    echo "read_bytes=${io_stat1[4]}"   >> $trace_file
-    echo "write_bytes=${io_stat1[5]}"  >> $trace_file
+    printf "%s\n" \
+        "nextflow.trace/v2" \
+        "realtime=$wall_time" \
+        "%cpu=$ucpu" \
+        "cpu_model=$cpu_model" \
+        "rchar=${io_stat1[0]}" \
+        "wchar=${io_stat1[1]}" \
+        "syscr=${io_stat1[2]}" \
+        "syscw=${io_stat1[3]}" \
+        "read_bytes=${io_stat1[4]}" \
+        "write_bytes=${io_stat1[5]}" > "$trace_file" || >&2 echo "Error: Failed to write to file: $trace_file"
 
     [ -e /proc/$mem_proc ] && eval "echo 'DONE' >&$mem_fd" || true
     wait $mem_proc 2>/dev/null || true
@@ -270,7 +273,10 @@ nxf_fs_fcp() {
 }
 
 on_exit() {
-    exit_status=${nxf_main_ret:=$?}
+    local last_err=$?
+    local exit_status=${nxf_main_ret:=0}
+    [[ ${exit_status} -eq 0 && ${nxf_unstage_ret:=0} -ne 0 ]] && exit_status=${nxf_unstage_ret:=0}
+    [[ ${exit_status} -eq 0 && ${last_err} -ne 0 ]] && exit_status=${last_err}
     printf -- $exit_status > {{folder}}/.exitcode
     set +u
     exit $exit_status
@@ -289,9 +295,20 @@ nxf_stage() {
     true
 }
 
-nxf_unstage() {
+nxf_unstage_outputs() {
     true
-    [[ ${nxf_main_ret:=0} != 0 ]] && return
+}
+
+nxf_unstage_controls() {
+    true
+}
+
+nxf_unstage() {
+    if [[ ${nxf_main_ret:=0} == 0 ]]; then
+        (set -e -o pipefail; (nxf_unstage_outputs | tee -a .command.out) 3>&1 1>&2 2>&3 | tee -a .command.err)
+        nxf_unstage_ret=$?
+    fi
+    nxf_unstage_controls
 }
 
 nxf_main() {

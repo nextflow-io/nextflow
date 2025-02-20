@@ -17,6 +17,7 @@
 
 package nextflow.cli
 
+import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
@@ -37,6 +38,9 @@ class CmdPlugin extends CmdBase {
     String getName() {
         return 'plugin'
     }
+
+    @DynamicParameter(names = "--", description = "Custom plugin parameters go here", hidden = true)
+    private Map<String, String> params = new HashMap<>();
 
     @Parameter(hidden = true)
     List<String> args
@@ -69,6 +73,12 @@ class CmdPlugin extends CmdBase {
                 throw new AbortOperationException("Cannot find target plugin: $target")
             final plugin = wrapper.getPlugin()
             if( plugin instanceof PluginExecAware ) {
+                def mapped = [] as List<String>
+                params.entrySet().each{
+                    mapped << "--$it.key".toString()
+                    mapped << "$it.value".toString()
+                }
+                args.addAll(mapped)
                 final ret = plugin.exec(getLauncher(), target, cmd, args)
                 // use explicit exit to invoke the system shutdown hooks
                 System.exit(ret)

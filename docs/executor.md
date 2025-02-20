@@ -55,6 +55,7 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-container`
 - {ref}`process-containerOptions`
 - {ref}`process-cpus`
+- {ref}`process-disk`
 - {ref}`process-machineType`
 - {ref}`process-memory`
 - {ref}`process-queue`
@@ -223,7 +224,7 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-memory`
 - {ref}`process-time`
 
-:::{note} As of Nextflow version 24.06.0-edge, HyperQueue version 0.17.0 or later is required.
+:::{note} HyperQueue version 0.20.0 or later is required.
 :::
 
 (k8s-executor)=

@@ -99,16 +99,16 @@ class CmdRunTest extends Specification {
 
         when:
         def params = [:]
-        CmdRun.addParam0(params, 'alphaBeta', 1)
-        CmdRun.addParam0(params, 'alpha-beta', 10)
+        CmdRun.addParam(params, 'alphaBeta', '1')
+        CmdRun.addParam(params, 'alpha-beta', '10')
         then:
         params['alphaBeta'] == 10
         !params.containsKey('alpha-beta')
 
         when:
         params = [:]
-        CmdRun.addParam0(params, 'aaa-bbb-ccc', 1)
-        CmdRun.addParam0(params, 'aaaBbbCcc', 10)
+        CmdRun.addParam(params, 'aaa-bbb-ccc', '1')
+        CmdRun.addParam(params, 'aaaBbbCcc', '10')
         then:
         params['aaaBbbCcc'] == 10
         !params.containsKey('aaa-bbb-ccc')

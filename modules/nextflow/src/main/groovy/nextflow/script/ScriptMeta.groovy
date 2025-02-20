@@ -70,6 +70,15 @@ class ScriptMeta {
         return result
     }
 
+    static Set<ProcessDef> allProcesses() {
+        final result = new HashSet()
+        for( final entry : REGISTRY.values() ) {
+            final processes = entry.getDefinitions().findAll { d -> d instanceof ProcessDef }
+            result.addAll(processes)
+        }
+        return result
+    }
+
     static void addResolvedName(String name) {
         resolvedProcessNames.add(name)
     }

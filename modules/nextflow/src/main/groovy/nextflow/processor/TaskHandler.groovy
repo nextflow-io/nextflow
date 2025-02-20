@@ -19,6 +19,7 @@ package nextflow.processor
 import static nextflow.processor.TaskStatus.*
 
 import java.nio.file.NoSuchFileException
+import java.util.concurrent.atomic.AtomicBoolean
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
@@ -37,6 +38,8 @@ import nextflow.trace.TraceRecord
 @CompileStatic
 abstract class TaskHandler {
 
+    private AtomicBoolean killed = new AtomicBoolean()
+
     protected TaskHandler(TaskRun task) {
         this.task = task
     }
@@ -53,6 +56,16 @@ abstract class TaskHandler {
      * The task managed by this handler
      */
     TaskRun getTask() { task }
+
+    /**
+     * Whenever this handle reference a job array task child
+     */
+    boolean isArrayChild
+
+    TaskHandler withArrayChild(boolean child) {
+        this.isArrayChild = child
+        return this
+    }
 
     /**
      * Task current status
@@ -77,10 +90,22 @@ abstract class TaskHandler {
     abstract boolean checkIfCompleted()
 
     /**
-     * Force the submitted job to quit
+     * Template method implementing the termination of a task execution.
+     * This is not mean to be invoked directly. See also {@link #kill()}
      */
-    abstract void kill()
+    abstract protected void killTask()
 
+    /**
+     * Kill a job execution.
+     *
+     * @see #killTask()
+     */
+    void kill() {
+        if (!killed.getAndSet(true)) {
+            killTask()
+        }
+    }
+    
     /**
      * Submit the task for execution.
      *
@@ -160,7 +185,7 @@ abstract class TaskHandler {
             return getTraceRecord()
         }
         catch (Exception e) {
-                log.debug "Unable to get task trace record -- cause: ${e.message}", e
+            log.debug "Unable to get task trace record -- cause: ${e.message}", e
             return null
         }
     }
@@ -212,7 +237,7 @@ abstract class TaskHandler {
                 }
             }
 
-            def file = task.workDir?.resolve(TaskRun.CMD_TRACE)
+            final file = task.workDir?.resolve(TaskRun.CMD_TRACE)
             try {
                 if(file) record.parseTraceFile(file)
             }
@@ -244,7 +269,7 @@ abstract class TaskHandler {
 
     /**
      * Determine if a task is ready for execution or it depends on resources
-     * e.g. container that needs to be provisionied
+     * e.g. container that needs to be provisioned
      *
      * @return {@code true} when the task is ready for execution, {@code false} otherwise
      */
@@ -300,4 +325,5 @@ abstract class TaskHandler {
         final workflowId = env.get("TOWER_WORKFLOW_ID")
         return workflowId ? "tw-${workflowId}-${name}" : name
     }
+
 }

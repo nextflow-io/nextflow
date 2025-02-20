@@ -1,3 +1,4 @@
+(plugins-dev-page)=
 
 # Plugins
 
@@ -141,6 +142,8 @@ You can then use this executor in your pipeline:
 ```nextflow
 process foo {
     executor 'my-executor'
+
+    // ...
 }
 ```
 

@@ -6,18 +6,13 @@
 
 When a pipeline script is launched, Nextflow looks for configuration files in multiple locations. Since each configuration file may contain conflicting settings, they are applied in the following order (from lowest to highest priority):
 
-1. Parameters defined in pipeline scripts (e.g. `main.nf`)
-2. The config file `$HOME/.nextflow/config`
-3. The config file `nextflow.config` in the project directory
-4. The config file `nextflow.config` in the launch directory
-5. Config file specified using the `-c <config-file>` option
-6. Parameters specified in a params file (`-params-file` option)
-7. Parameters specified on the command line (`--something value`)
-
-When more than one of these options for specifying configurations are used, they are merged, so that the settings in the first override the same settings appearing in the second, and so on.
+1. The config file `$HOME/.nextflow/config` (or `$NXF_HOME/.nextflow/config` when {ref}`NXF_HOME <nxf-env-vars>` is set).
+2. The config file `nextflow.config` in the project directory
+3. The config file `nextflow.config` in the launch directory
+4. Config files specified using the `-c <config-files>` option
 
 :::{tip}
-You can use the `-C <config-file>` option to use a single configuration file and ignore all other files.
+You can alternatively use the `-C <config-file>` option to specify a fixed set of configuration files and ignore all other files.
 :::
 
 (config-syntax)=
@@ -113,6 +108,15 @@ The following constants are globally available in a Nextflow configuration file:
 `projectDir`
 : The directory where the main script is located.
 
+## Functions
+
+The following functions are globally available in a Nextflow configuration file:
+
+`env( name )`
+: :::{versionadded} 24.11.0-edge
+  :::
+: Get the value of the environment variable with the specified name in the Nextflow launch environment.
+
 (config-params)=
 
 ## Parameters
@@ -120,14 +124,16 @@ The following constants are globally available in a Nextflow configuration file:
 Pipeline parameters can be defined in the config file using the `params` scope:
 
 ```groovy
-params.custom_param = 123
-params.another_param = 'string value .. '
+params.alpha = 123
+params.beta = 'string value .. '
 
 params {
-    alpha_1 = true
-    beta_2 = 'another string ..'
+    gamma = true
+    delta = "params.alpha is ${params.alpha}"
 }
 ```
+
+See {ref}`cli-params` for information about how to specify pipeline parameters.
 
 (config-process)=
 
@@ -283,6 +289,8 @@ Multiple configuration profiles can be specified by separating the profile names
 ```bash
 nextflow run <your script> -profile standard,cloud
 ```
+
+Config profiles are applied in the order in which they were defined in the config file, regardless of the order they are specified on the command line.
 :::
 
 :::{danger}

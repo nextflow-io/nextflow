@@ -34,11 +34,13 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class FusionConfig {
 
-    final static public String DEFAULT_FUSION_AMD64_URL = 'https://fusionfs.seqera.io/releases/v2.4-amd64.json'
-    final static public String DEFAULT_FUSION_ARM64_URL = 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
+    final static public String DEFAULT_FUSION_AMD64_URL = 'https://fusionfs.seqera.io/releases/v2.5-amd64.json'
+    final static public String DEFAULT_FUSION_ARM64_URL = 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
     final static public String DEFAULT_TAGS = "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
 
     final static public String FUSION_PATH = '/usr/bin/fusion'
+
+    final static private String PRODUCT_NAME = 'fusion'
 
     final static private Pattern VERSION_JSON = ~/https:\/\/.*\/releases\/v(\d+(?:\.\w+)*)-(\w*)\.json$/
 
@@ -120,6 +122,15 @@ class FusionConfig {
         if( matcher_json.matches() )
             return matcher_json.group(1)
         return null
+    }
+
+    /**
+     * Return the Fusion SKU string
+     *
+     * @return A string representing the Fusion SKU
+     */
+    String sku() {
+        return enabled ? PRODUCT_NAME : null
     }
 
     String version() {

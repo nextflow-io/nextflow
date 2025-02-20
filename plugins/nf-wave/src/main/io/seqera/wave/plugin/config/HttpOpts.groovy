@@ -20,6 +20,8 @@ package io.seqera.wave.plugin.config
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
 import nextflow.util.Duration
+import nextflow.util.RateUnit
+
 /**
  * Model the HTTP client settings to connect the Wave service
  *
@@ -31,12 +33,18 @@ class HttpOpts {
 
     final private Duration connectTimeout
 
+    final private RateUnit maxRate
+
     HttpOpts(Map opts) {
         connectTimeout = opts.connectTimeout as Duration ?: Duration.of('30s')
+        maxRate = opts.maxRate as RateUnit ?: RateUnit.of('1/sec')
     }
 
     java.time.Duration connectTimeout() {
         return java.time.Duration.ofMillis(connectTimeout.toMillis())
     }
 
+    RateUnit maxRate() {
+        return maxRate
+    }
 }

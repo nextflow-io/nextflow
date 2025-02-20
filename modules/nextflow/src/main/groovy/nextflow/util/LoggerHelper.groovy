@@ -16,10 +16,6 @@
 
 package nextflow.util
 
-import ch.qos.logback.core.encoder.Encoder
-import ch.qos.logback.core.spi.FilterAttachable
-import ch.qos.logback.core.spi.LifeCycle
-
 import static nextflow.Const.*
 
 import java.lang.reflect.Field
@@ -28,6 +24,7 @@ import java.nio.file.FileAlreadyExistsException
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.regex.Pattern
 
 import ch.qos.logback.classic.Level
@@ -42,13 +39,16 @@ import ch.qos.logback.core.ConsoleAppender
 import ch.qos.logback.core.CoreConstants
 import ch.qos.logback.core.FileAppender
 import ch.qos.logback.core.LayoutBase
+import ch.qos.logback.core.encoder.Encoder
 import ch.qos.logback.core.encoder.LayoutWrappingEncoder
 import ch.qos.logback.core.filter.Filter
 import ch.qos.logback.core.joran.spi.NoAutoStart
 import ch.qos.logback.core.rolling.FixedWindowRollingPolicy
 import ch.qos.logback.core.rolling.RollingFileAppender
 import ch.qos.logback.core.rolling.TriggeringPolicyBase
+import ch.qos.logback.core.spi.FilterAttachable
 import ch.qos.logback.core.spi.FilterReply
+import ch.qos.logback.core.spi.LifeCycle
 import ch.qos.logback.core.util.FileSize
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -84,6 +84,10 @@ import org.slf4j.MarkerFactory
  */
 @CompileStatic
 class LoggerHelper {
+
+    static volatile boolean aborted
+
+    static final AtomicInteger errCount = new AtomicInteger()
 
     static private Logger log = LoggerFactory.getLogger(LoggerHelper)
 
@@ -209,8 +213,8 @@ class LoggerHelper {
             root.addAppender(syslogAppender)
 
         // -- main package logger
-        def mainLevel = packages[MAIN_PACKAGE] == Level.TRACE ? Level.TRACE : Level.DEBUG
-        def logger = createLogger(MAIN_PACKAGE, mainLevel)
+        final mainLevel = packages[MAIN_PACKAGE] == Level.TRACE ? Level.TRACE : Level.DEBUG
+        final logger = createLogger(MAIN_PACKAGE, mainLevel)
 
         // -- set AWS lib level to WARN to reduce noise in the log file
         final AWS = 'com.amazonaws'
@@ -418,6 +422,10 @@ class LoggerHelper {
             if (!isStarted()) {
                 return FilterReply.NEUTRAL;
             }
+
+            // print to console only the very first error log and ignore the others
+            if( aborted && event.level==Level.ERROR && errCount.getAndIncrement()>0 )
+                return FilterReply.DENY;
 
             def logger = event.getLoggerName()
             def level = event.getLevel()

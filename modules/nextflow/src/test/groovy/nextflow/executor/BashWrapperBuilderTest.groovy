@@ -559,7 +559,7 @@ class BashWrapperBuilderTest extends Specification {
         binding.unstage_outputs == '''\
                 IFS=$'\\n'
                 for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
-                    nxf_fs_copy "$name" /work/dir || true
+                    nxf_fs_copy "$name" /work/dir
                 done
                 unset IFS
                 '''.stripIndent().rightTrim()
@@ -576,7 +576,7 @@ class BashWrapperBuilderTest extends Specification {
         binding.unstage_outputs == '''\
                 IFS=$'\\n'
                 for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
-                    nxf_fs_move "$name" /another/dir || true
+                    nxf_fs_move "$name" /another/dir
                 done
                 unset IFS
                 '''.stripIndent().rightTrim()
@@ -685,6 +685,38 @@ class BashWrapperBuilderTest extends Specification {
                         cp .command.err /work/dir/.command.err || true
                         cp .command.trace /work/dir/.command.trace || true
                         '''.stripIndent()
+
+    }
+
+    def 'should enable trace feature with custom shell' () {
+        when:
+        def binding = newBashWrapperBuilder(statsEnabled: false, shell: ['/bin/bash', '-ue']).makeBinding()
+        then:
+        binding.launch_cmd == '/bin/bash -ue /work/dir/.command.sh'
+        binding.unstage_controls == null
+        binding.containsKey('unstage_controls')
+
+        when:
+        binding = newBashWrapperBuilder(statsEnabled: true, shell: ['/bin/bash', '-eu']).makeBinding()
+        then:
+        binding.launch_cmd == '/bin/bash -eu /work/dir/.command.run nxf_trace'
+        binding.unstage_controls == null
+        binding.containsKey('unstage_controls')
+
+        when:
+        binding = newBashWrapperBuilder(statsEnabled: true, scratch: true, shell: ['/bin/bash', '-eu']).makeBinding()
+        then:
+        binding.launch_cmd == '/bin/bash -eu /work/dir/.command.run nxf_trace'
+        binding.unstage_controls == '''\
+                        cp .command.out /work/dir/.command.out || true
+                        cp .command.err /work/dir/.command.err || true
+                        cp .command.trace /work/dir/.command.trace || true
+                        '''.stripIndent()
+
+        when:
+        binding = newBashWrapperBuilder(statsEnabled: true, shell: ['/usr/local/bin/bash', '-ue']).makeBinding()
+        then:
+        binding.launch_cmd == '/usr/local/bin/bash -ue /work/dir/.command.run nxf_trace'
 
     }
 
@@ -1192,6 +1224,7 @@ class BashWrapperBuilderTest extends Specification {
         given:
         def bean = Mock(TaskBean) {
             inputFiles >> [:]
+            shell >> BashWrapperBuilder.BASH
             outputFiles >> []
         }
         def copy = Mock(ScriptFileCopyStrategy)

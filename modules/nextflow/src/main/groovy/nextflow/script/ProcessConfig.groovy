@@ -126,7 +126,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             debug: false,
             cacheable: true,
             shell: BashWrapperBuilder.BASH,
-            maxRetries: 0,
+            maxRetries: 1,
             maxErrors: -1,
             errorStrategy: ErrorStrategy.TERMINATE
     ]

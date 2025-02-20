@@ -428,11 +428,15 @@ A process output can be assigned to a topic using the `topic` option on an outpu
 process foo {
   output:
   val('foo'), topic: my_topic
+
+  // ...
 }
 
 process bar {
   output:
   val('bar'), topic: my_topic
+
+  // ...
 }
 ```
 
@@ -502,6 +506,10 @@ channel
 The `channel.watchPath` factory waits endlessly for files that match the specified pattern and event(s), which means
 that it will cause your pipeline to run forever. Consider using the `take` or `until` operator to close the channel when
 a certain condition is met (e.g. after receiving 10 files, receiving a file named `DONE`).
+:::
+
+:::{note}
+The `channel.watchPath` factory only works with local and shared filesystems. It does not support object storage such as S3.
 :::
 
 See also: [channel.fromPath](#frompath) factory method.

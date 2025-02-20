@@ -548,7 +548,7 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
         def unstage = helper.getUnstagingScript(dir)
         then:
         unstage ==
-                'set -x; trap \'err=$?; exec 1>&2; gsutil -m -q cp -R /work/dir/.command.log gs://my-bucket/work/dir/.command.log || true; [[ $err -gt 0 || $GOOGLE_LAST_EXIT_STATUS -gt 0 || $NXF_DEBUG -gt 0 ]] && { ls -lah /work/dir || true; gsutil -m -q cp -R /google/ gs://my-bucket/work/dir; } || rm -rf /work/dir; exit $err\' EXIT; { cd /work/dir; bash .command.run nxf_unstage; } >> /work/dir/.command.log 2>&1'
+                'set -x; trap \'err=$?; exec 1>&2; gsutil -m -q cp -R /work/dir/.command.log gs://my-bucket/work/dir/.command.log || true; [[ $err -gt 0 || $GOOGLE_LAST_EXIT_STATUS -gt 0 || $NXF_DEBUG -gt 0 ]] && { ls -lah /work/dir || true; gsutil -m -q cp -R /google/ gs://my-bucket/work/dir; } || rm -rf /work/dir; exit $err\' EXIT; { cd /work/dir; bash .command.run nxf_unstage;} >> /work/dir/.command.log 2>&1'
     }
 
     @Unroll

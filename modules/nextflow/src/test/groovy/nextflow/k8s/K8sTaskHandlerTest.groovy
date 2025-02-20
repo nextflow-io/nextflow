@@ -515,13 +515,13 @@ class K8sTaskHandlerTest extends Specification {
         def handler = Spy(new K8sTaskHandler(client:client, podName: POD_NAME))
 
         when:
-        handler.kill()
+        handler.killTask()
         then:
         1 * handler.cleanupDisabled() >> false
         1 * client.podDelete(POD_NAME) >> null
 
         when:
-        handler.kill()
+        handler.killTask()
         then:
         1 * handler.cleanupDisabled() >> true
         0 * client.podDelete(POD_NAME) >> null

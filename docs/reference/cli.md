@@ -13,7 +13,7 @@ The top-level options are meant to be invoked in relation to the core Nextflow a
 Available options:
 
 `-C`
-: Use the specified configuration file(s) overriding any defaults.
+: Comma-separated list of configuration files which are used as the configuration set. Any other default configuration files are ignored.
 
 `-D`
 : Set JVM properties.
@@ -22,7 +22,7 @@ Available options:
 : Execute nextflow in background.
 
 `-c, -config`
-: Add the specified file to configuration set.
+: Comma-separated list of configuration files which are added to the configuration set.
 
 `-d, -dockerize`
 : :::{deprecated} 23.09.0-edge
@@ -1172,29 +1172,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
   $ nextflow run main.nf -params-file pipeline_params.yml
   ```
 
-  For example, the following params file in YAML format:
-
-  ```yaml
-  alpha: 1
-  beta: 'foo'
-  ```
-
-  Or in JSON format:
-
-  ```json
-  {
-    "alpha": 1,
-    "beta": "foo"
-  }
-  ```
-
-  Is equivalent to the following command line:
-
-  ```console
-  $ nextflow run main.nf --alpha 1 --beta foo
-  ```
-
-  The parameters specified with this mechanism are merged with the resolved configuration (base configuration and profiles). The values provided via a params file overwrite those of the same name in the Nextflow configuration file.
+  See {ref}`cli-params` for more information about writing custom parameters files.
 
 ### `self-update`
 

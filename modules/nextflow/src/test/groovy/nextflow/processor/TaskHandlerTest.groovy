@@ -263,4 +263,34 @@ class TaskHandlerTest extends Specification {
         [:]                         | "job_1"
         [TOWER_WORKFLOW_ID: '1234'] | "tw-1234-job_1"
     }
+
+    def 'should not kill task twice'() {
+        given:
+        def handler = Spy(TaskHandler)
+        when:
+        handler.kill()
+        then:
+        1 * handler.killTask() >> {}
+
+        when:
+        handler.kill()
+        then:
+        0 * handler.killTask()
+    }
+
+    @Unroll
+    def 'should set isChildArray flag'() {
+        given:
+        def handler = Spy(TaskHandler)
+
+        expect:
+        !handler.isArrayChild
+        and:
+        handler.withArrayChild(VALUE).isArrayChild == VALUE
+
+        where:
+        VALUE   | _
+        false   | _
+        true    | _
+    }
 }

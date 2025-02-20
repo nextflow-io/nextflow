@@ -22,10 +22,10 @@ The task hash is computed from the following metadata:
 - Task {ref}`environment modules <process-module>` (if applicable)
 - Task {ref}`Conda environment <process-conda>` (if applicable)
 - Task {ref}`Spack environment <process-spack>` and {ref}`CPU architecture <process-arch>` (if applicable)
-- Task {ref}`process-ext` directive (if applicable)
 - Task {ref}`inputs <process-input>`
 - Task {ref}`script <process-script>`
 - Any global variables referenced in the task script
+- Any task {ref}`process-ext` properties referenced in the task script
 - Any {ref}`bundled scripts <bundling-executables>` used in the task script
 - Whether the task is a {ref}`stub run <process-stub>`
 - Task attempt
@@ -148,6 +148,8 @@ process gather {
     input:
     tuple val(id), file(foo)
     tuple val(id), file(bar)
+
+    script:
     """
     merge_command $foo $bar
     """
@@ -168,6 +170,8 @@ workflow {
 process gather {
     input:
     tuple val(id), file(foo), file(bar)
+
+    script:
     """
     merge_command $foo $bar
     """

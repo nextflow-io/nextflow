@@ -16,7 +16,6 @@
 
 package nextflow
 
-
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -71,6 +70,7 @@ import nextflow.util.Barrier
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
+import nextflow.util.LoggerHelper
 import nextflow.util.NameGenerator
 import nextflow.util.SysHelper
 import nextflow.util.ThreadPoolManager
@@ -688,8 +688,8 @@ class Session implements ISession {
         try {
             log.trace "Session > destroying"
             // shutdown thread pools
-            finalizePoolManager?.shutdown(aborted)
-            publishPoolManager?.shutdown(aborted)
+            finalizePoolManager?.shutdownOrAbort(aborted,this)
+            publishPoolManager?.shutdownOrAbort(aborted,this)
             // invoke shutdown callbacks
             shutdown0()
             log.trace "Session > after cleanup"
@@ -787,17 +787,19 @@ class Session implements ISession {
      */
     void abort(Throwable cause = null) {
         if( aborted ) return
-        if( !(cause instanceof ScriptCompilationException) )
+        if( cause !instanceof ScriptCompilationException )
             log.debug "Session aborted -- Cause: ${cause?.message ?: cause ?: '-'}"
         aborted = true
         error = cause
+        LoggerHelper.aborted = true
         try {
             // log the dataflow network status
             def status = dumpNetworkStatus()
             if( status )
                 log.debug(status)
             // dump threads status
-            log.debug(SysHelper.dumpThreads())
+            if( log.isTraceEnabled() )
+                log.trace(SysHelper.dumpThreads())
             // force termination
             notifyError(null)
             ansiLogObserver?.forceTermination()
@@ -1207,10 +1209,13 @@ class Session implements ISession {
         if( aborted || cancelled || error )
             return
 
-        CacheDB db = null
-        try {
-            log.trace "Cleaning-up workdir"
-            db = CacheFactory.create(uniqueId, runName).openForRead()
+        if( workDir.scheme != 'file' ) {
+            log.warn "The `cleanup` option is not supported for remote work directory: ${workDir.toUriString()}"
+            return
+        }
+
+        log.trace "Cleaning-up workdir"
+        try (CacheDB db = CacheFactory.create(uniqueId, runName).openForRead()) {
             db.eachRecord { HashCode hash, TraceRecord record ->
                 def deleted = db.removeTaskEntry(hash)
                 if( deleted ) {
@@ -1221,10 +1226,7 @@ class Session implements ISession {
             log.trace "Clean workdir complete"
         }
         catch( Exception e ) {
-            log.warn("Failed to cleanup work dir: ${workDir.toUriString()}")
-        }
-        finally {
-            db.close()
+            log.warn("Failed to cleanup work dir: ${workDir.toUriString()}", e)
         }
     }
 

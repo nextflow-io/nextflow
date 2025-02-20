@@ -39,17 +39,18 @@ jobs:
         run: |
             if [ "${{ github.event_name }}" = "pull_request" ]; then
                 echo "GitHub event=pull_request"
-                COMMIT_SHA=${{ github.event.pull_request.head.sha }}
-                COMMIT_MESSAGE=$(curl -s \
+                COMMIT_SHA="${{ github.event.pull_request.head.sha }}"
+                COMMIT_MESSAGE="$(curl -s \
                   -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                  https://api.github.com/repos/${{ github.repository }}/commits/$COMMIT_SHA | jq -r '.commit.message')
+                  https://api.github.com/repos/${{ github.repository }}/commits/$COMMIT_SHA | jq -r '.commit.message')"
                 echo "Commit message=$COMMIT_MESSAGE" | head -n 1
                 echo "commit_message=$COMMIT_MESSAGE" | head -n 1 >> $GITHUB_OUTPUT
             else
-               echo "GitHub event=${{ github.event_name }}"
-               echo "Commit message=${{ github.event.head_commit.message }}" | head -n 1
-               echo "commit_message=${{ github.event.head_commit.message }}" | head -n 1 >> $GITHUB_OUTPUT
-            fi 
+                echo "GitHub event=${{ github.event_name }}"
+                COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
+                echo "Commit message=$COMMIT_MESSAGE" | head -n 1
+                echo "commit_message=$COMMIT_MESSAGE" | head -n 1 >> $GITHUB_OUTPUT
+            fi
 
       - name: Get changed files
         id: changed-files
@@ -90,6 +91,7 @@ jobs:
       - name: Test
         if: steps.changed-files.outputs.any_changed == 'true'
         run: |
+            env | sort
             # configure test env
             if [[ "$GOOGLE_SECRET" ]]; then
             echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
@@ -158,6 +160,11 @@ jobs:
       - name: Run tests
         run: |
           env | sort
+          # configure test env
+          if [[ "$GOOGLE_SECRET" ]]; then
+          echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
+          export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
+          fi
           cat $HOME/.nextflow/scm
           make clean assemble install
           bash test-ci.sh
@@ -181,7 +188,9 @@ jobs:
 
       - name: Tar integration tests
         if: always()
-        run: tar -cvf integration-tests.tar tests/checks
+        run: | 
+            tar -cvf integration-tests.tar.gz tests/checks
+            tar -cvf validation-tests.tar.gz validation
 
       - name: Publish tests report
         uses: actions/upload-artifact@v4
@@ -189,9 +198,8 @@ jobs:
         with:
           name: report-${{ matrix.test_mode }}-jdk-${{ matrix.java_version }}
           path: |
-            validation/**/*
-            validation/**/.*
-            integration-tests.tar
+            validation-tests.tar.gz
+            integration-tests.tar.gz
 
   test-e2e:
       if: ${{ contains(needs.build.outputs.commit_message,'[e2e stage]') || contains(needs.build.outputs.commit_message,'[e2e prod]') }}
