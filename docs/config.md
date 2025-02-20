@@ -278,7 +278,7 @@ profiles {
 }
 ```
 
-This configuration defines three profiles: `standard`, `cluster`, and `cloud`. Each profile provides a different configuration for a given execution environment. The `standard` profile is used by default when no profile is specified.
+The above configuration defines three profiles: `standard`, `cluster`, and `cloud`. Each profile provides a different configuration for a given execution environment. The `standard` profile is used by default when no profile is specified.
 
 Configuration profiles can be specified at runtime as a comma-separated list:
 
