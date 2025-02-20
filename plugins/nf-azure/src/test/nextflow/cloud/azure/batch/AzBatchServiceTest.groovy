@@ -452,7 +452,7 @@ class AzBatchServiceTest extends Specification {
         then:
         1 * svc.guessBestVm(LOC, CPUS, MEM, null, TYPE) >> VM
         and:
-        spec.poolId == 'nf-pool-289d374ac1622e709cf863bce2570cab-Standard_X1'
+        spec.poolId == 'nf-pool-4b13d8b84fc3a3837be5660d66daec1f-Standard_X1'
         spec.metadata == [foo: 'bar']
 
     }
