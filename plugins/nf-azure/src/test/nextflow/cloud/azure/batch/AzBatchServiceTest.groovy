@@ -639,6 +639,52 @@ class AzBatchServiceTest extends Specification {
         result.containerSettings.containerRunOptions == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro '
     }
 
+    def 'should create task for submit with cpu and memory' () {
+        given:
+        def POOL_ID = 'my-pool'
+        def SAS = '123'
+
+        def CONFIG = [storage: [sasToken: SAS]]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        AzBatchService azure = Spy(new AzBatchService(exec))
+        def session = Mock(Session) {
+            getConfig() >>[fusion:[enabled:false]]
+            statsEnabled >> true
+        }
+        Global.session = session
+        and:
+        def TASK = Mock(TaskRun) {
+            getHash() >> HashCode.fromInt(2)
+            getContainer() >> 'ubuntu:latest'
+            getConfig() >> Mock(TaskConfig) {
+                getTime() >> Duration.of('24 h')
+                getCpus() >> 4
+                getMemory() >> MemoryUnit.of('8 GB')
+            }
+
+        }
+        and:
+        def SPEC = new AzVmPoolSpec(poolId: POOL_ID, vmType: Mock(AzVmType), opts: new AzPoolOpts([:]))
+
+        when:
+        def result = azure.createTask(POOL_ID, 'salmon', TASK)
+        then:
+        1 * azure.getPoolSpec(POOL_ID) >> SPEC
+        1 * azure.computeSlots(TASK, SPEC) >> 4
+        1 * azure.resourceFileUrls(TASK, SAS) >> []
+        1 * azure.outputFileUrls(TASK, SAS) >> []
+        and:
+        result.id == 'nf-02000000'
+        result.requiredSlots == 4
+        and:
+        result.commandLine == "sh -c 'bash .command.run 2>&1 | tee .command.log'"
+        and:
+        result.containerSettings.imageName == 'ubuntu:latest'
+        result.containerSettings.containerRunOptions == '--cpu-shares 4096 --memory 8192m -v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro '
+        and:
+        Duration.of(result.constraints.maxWallClockTime.toMillis()) == TASK.config.time
+    }
+
     def 'should create task for submit with extra options' () {
         given:
         def POOL_ID = 'my-pool'

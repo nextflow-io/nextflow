@@ -459,17 +459,28 @@ class AzBatchService implements Closeable {
         final pool = getPoolSpec(poolId)
         if( !pool )
             throw new IllegalStateException("Missing Azure Batch pool spec with id: $poolId")
+
         // container settings
-        // mount host certificates otherwise `azcopy` fails
-        def opts = "-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro "
-        // shared volume mounts
+        String opts = ""
+        // Add CPU and memory constraints if specified
+        if( task.config.getCpus() )
+            opts += "--cpu-shares ${task.config.getCpus() * 1024} "
+        if( task.config.getMemory() )
+            opts += "--memory ${task.config.getMemory().toMega()}m "
+
+        // Mount host certificates for azcopy
+        opts += "-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro "
+
+        // Add any shared volume mounts
         final shares = getShareVolumeMounts(pool)
         if( shares )
-            opts += "${shares.join(' ')} "
-        // custom container settings
+            opts += shares.join(' ') + ' '
+
+        // Add custom container options
         if( task.config.getContainerOptions() )
-            opts += "${task.config.getContainerOptions()} "
-        // fusion environment settings
+            opts += task.config.getContainerOptions() + ' '
+
+        // Handle Fusion settings
         final fusionEnabled = FusionHelper.isFusionEnabled((Session)Global.session)
         final launcher = fusionEnabled ? FusionScriptLauncher.create(task.toTaskBean(), 'az') : null
         if( fusionEnabled ) {
@@ -478,9 +489,11 @@ class AzBatchService implements Closeable {
                 opts += "-e $it.key=$it.value "
             }
         }
-        // config overall container settings
+
+        // Create container settings
         final containerOpts = new BatchTaskContainerSettings(container)
                 .setContainerRunOptions(opts)
+
         // submit command line
         final String cmd = fusionEnabled
                 ? launcher.fusionSubmitCli(task).join(' ')
@@ -493,7 +506,6 @@ class AzBatchService implements Closeable {
             constraints.setMaxWallClockTime( Duration.of(task.config.getTime().toMillis(), ChronoUnit.MILLIS) )
 
         log.trace "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
-
         return new BatchTaskCreateContent(taskId, cmd)
                 .setUserIdentity(userIdentity(pool.opts.privileged, pool.opts.runAs, AutoUserScope.TASK))
                 .setContainerSettings(containerOpts)
@@ -501,8 +513,6 @@ class AzBatchService implements Closeable {
                 .setOutputFiles(outputFileUrls(task, sas))
                 .setRequiredSlots(slots)
                 .setConstraints(constraints)
-                
-
     }
 
     AzTaskKey runTask(String poolId, String jobId, TaskRun task) {
