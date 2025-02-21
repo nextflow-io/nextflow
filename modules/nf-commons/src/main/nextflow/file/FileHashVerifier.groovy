@@ -53,6 +53,10 @@ class FileHashVerifier {
             return file
         }
 
+        if (Files.isDirectory(file)) {
+            throw new IllegalArgumentException("Cannot verify hash of a directory: ${file.toString()}")
+        }
+
         def parts = knownHash.split(':', 2)
         if (parts.length != 2) {
             throw new IllegalArgumentException("Invalid hash format. Expected 'algorithm:hash', got: ${knownHash}")

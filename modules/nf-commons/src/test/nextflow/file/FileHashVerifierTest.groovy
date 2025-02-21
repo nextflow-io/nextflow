@@ -170,8 +170,8 @@ class FileHashVerifierTest extends Specification {
         FileHashVerifier.verifyHash(dir, "sha256:${sha256Hash}")
 
         then:
-        def e = thrown(IOException)
-        e.message == "Is a directory"
+        def e = thrown(IllegalArgumentException)
+        e.message == "Cannot verify hash of a directory: ${dir.toString()}"
 
         cleanup:
         dir?.deleteDir()
