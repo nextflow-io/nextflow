@@ -430,13 +430,13 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             // prepend first-line indent
             if( i == first ) {
                 int k = 0
-                while( k < line.size() && line[k] == ' ' )
+                while( k < line.length() && line[k] == ' ' )
                     k++
                 builder.append( line.substring(0, k) )
             }
 
             final begin = (i == first) ? colx - 1 : 0
-            final end = (i == last) ? colz - 1 : line.size()
+            final end = (i == last) ? colz - 1 : line.length()
             builder.append( line.substring(begin, end) ).append('\n')
         }
         return builder.toString()
