@@ -7,7 +7,7 @@ params.chunkSize = 1
 process blast {
     input:
     path 'seq.fa'
-    path db
+    val db
 
     output:
     path 'out'
@@ -36,7 +36,7 @@ workflow {
     ch_fasta = Channel.fromPath(params.query)
         | splitFasta( by: params.chunkSize, file:true )
 
-    blast(ch_fasta, file(params.db))
+    blast(ch_fasta, params.db)
         | collect
         | sort
         | subscribe { hits -> println hits }

@@ -10,7 +10,7 @@ params.chunk = 1
 process blast {
     input:
     path 'query.fa'
-    path db
+    val db
 
     output:
     path 'top_hits'
@@ -55,14 +55,12 @@ process align {
  * main flow
  */
 workflow {
-    db = file(params.db)
-
     ch_fasta = Channel.fromPath(params.query)
         | splitFasta(by: params.chunk, file:true)
 
-    ch_sequences = blast(ch_fasta, db)
+    ch_sequences = blast(ch_fasta, params.db)
 
-    extract(ch_sequences, db)
+    extract(ch_sequences, params.db)
         | collectFile(name:'all_seq') // Collect all hits to a single file called  'all_seq'
         | align
 }
