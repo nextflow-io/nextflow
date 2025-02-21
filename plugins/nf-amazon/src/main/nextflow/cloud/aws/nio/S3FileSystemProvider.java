@@ -835,7 +835,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		ClientConfiguration clientConfig = createClientConfig(props);
 
 		final String bucketName = S3Path.bucketName(uri);
-		final boolean global = bucketName!=null && awsConfig.getRegion() == null && props.getProperty("endpoint") == null;
+		final boolean global = bucketName!=null && !awsConfig.getS3Config().isCustomEndpoint();
 		final AwsClientFactory factory = new AwsClientFactory(awsConfig, globalRegion(awsConfig));
 		client = new S3Client(factory.getS3Client(clientConfig, global));
 
