@@ -406,24 +406,17 @@ The following methods are available for iterables:
 
 `max( comparator: Closure ) -> ?`
 : Returns the maximum value in the iterable according to the given closure.
-: The closure should follow the same semantics as the closure parameter of `sort()`.
+: The closure should follow the same semantics as the closure parameter of `toSorted()`.
 
 `min() -> ?`
 : Returns the maximum value in the iterable.
 
 `min( comparator: Closure ) -> ?`
 : Returns the maximum value in the iterable according to the given closure.
-: The closure should follow the same semantics as the closure parameter of `sort()`.
+: The closure should follow the same semantics as the closure parameter of `toSorted()`.
 
 `size() -> int`
 : Returns the number of values in the iterable.
-
-`sort() -> List`
-: Returns a sorted list of the iterable's values.
-
-`sort( comparator: Closure ) -> List`
-: Returns a list of the iterable's values, sorted according to the given closure.
-: The closure should either accept one parameter and transform each value into the value that will be used for comparisons, or accept two parameters and define how to compare two values.
 
 `sum() -> ?`
 : Returns the sum of the values in the iterable. The values should support the `+` operator.
@@ -434,18 +427,25 @@ The following methods are available for iterables:
 `toList() -> List`
 : Converts the iterable to a list.
 : :::{danger}
-  Converting an unordered collection to a list can lead to non-deterministic behavior. Consider using `sort()` instead to ensure a deterministic ordering. See {ref}`cache-nondeterministic-inputs` for more information.
+  Converting an unordered collection to a list can lead to non-deterministic behavior. Consider using `toSorted()` instead to ensure a deterministic ordering. See {ref}`cache-nondeterministic-inputs` for more information.
   :::
 
 `toSet() -> Set`
 : Converts the iterable to a set. Duplicate values are excluded.
 
-`unique() -> Iterable`
+`toSorted() -> List`
+: Returns a sorted list of the iterable's values.
+
+`toSorted( comparator: Closure ) -> List`
+: Returns a list of the iterable's values, sorted according to the given closure.
+: The closure should either accept one parameter and transform each value into the value that will be used for comparisons, or accept two parameters and define how to compare two values.
+
+`toUnique() -> Iterable`
 : Returns a shallow copy of the iterable with duplicate values excluded.
 
-`unique( comparator: Closure ) -> Iterable`
+`toUnique( comparator: Closure ) -> Iterable`
 : Returns a shallow copy of the iterable with duplicate values excluded.
-: The closure should follow the same semantics as the closure parameter of `sort()`.
+: The closure should follow the same semantics as the closure parameter of `toSorted()`.
 
 :::{note}
 Iterables in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Iterable.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/lang/Iterable.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.

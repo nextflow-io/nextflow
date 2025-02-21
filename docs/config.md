@@ -117,7 +117,7 @@ The following constants are globally available in a Nextflow configuration file:
 
 The following functions are globally available in a Nextflow configuration file:
 
-`env( name )`
+`env( name: String ) -> String`
 : :::{versionadded} 24.11.0-edge
   :::
 : Get the value of the environment variable with the specified name in the Nextflow launch environment.
