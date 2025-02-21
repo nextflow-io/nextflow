@@ -18,9 +18,9 @@ process foo {
   echo A > hello.txt
   echo B > sample.zip 
   echo C > sample.html
-  echo D > 01_A\(R1\).fastq
-  echo E > 01_A\(R2\).fastq
-  echo F > sample_\(1\ 2\).vcf
+  echo D > 01_A\\(R1\\).fastq
+  echo E > 01_A\\(R2\\).fastq
+  echo F > sample_\\(1\\ 2\\).vcf
   echo 1 > f1.fa
   echo 2 > f2.fa
   echo 3 > f3.fa

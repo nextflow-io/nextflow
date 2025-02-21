@@ -19,9 +19,11 @@ import java.util.stream.Collectors
 
 import groovy.transform.CompileStatic
 import nextflow.ast.GStringToLazyVisitor
+import nextflow.ast.TaskCmdXformVisitor
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.IncludeDef
+import nextflow.script.TaskClosure
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenEvalCall
 import nextflow.script.TokenFileCall
@@ -48,6 +50,7 @@ import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.EmptyExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
+import org.codehaus.groovy.ast.expr.PropertyExpression
 import org.codehaus.groovy.ast.expr.TupleExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
@@ -208,6 +211,10 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         visitProcessInputs(node.inputs)
         visitProcessOutputs(node.outputs)
 
+        if( node.type == "script" )
+            node.exec.visit(new TaskCmdXformVisitor(sourceUnit))
+        node.stub.visit(new TaskCmdXformVisitor(sourceUnit))
+
         final when = processWhen(node.when)
         final bodyDef = stmt(createX(
             BodyDef.class,
@@ -320,8 +327,20 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     private Expression varToStrX(Expression node) {
         if( node instanceof VariableExpression ) {
+            // before:
+            //   val(x)
+            // after:
+            //   val(TokenVar('x'))
             final name = node.getName()
             return createX( TokenVar.class, constX(name) )
+        }
+
+        if( node instanceof PropertyExpression ) {
+            // before:
+            //   tuple val( x.foo )
+            // after:
+            //   tuple val({ x.foo })
+            return wrapExpressionInClosure(node)
         }
 
         if( node instanceof TupleExpression ) {
@@ -334,16 +353,32 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         return node
     }
 
+    protected ClosureExpression wrapExpressionInClosure(Expression node)  {
+        return closureX(block(new VariableScope(), stmt(node)))
+    }
+
     private Statement processWhen(Expression when) {
         if( when instanceof EmptyExpression )
             return EmptyStatement.INSTANCE
-        return stmt(when)
+        return stmt(callThisX("when", createX(
+            TaskClosure.class,
+            args(
+                wrapExpressionInClosure(when),
+                constX("") // TODO: when source
+            )
+        )))
     }
 
     private Statement processStub(Statement stub) {
         if( stub instanceof EmptyStatement )
             return EmptyStatement.INSTANCE
-        return stmt(callThisX("stub", closureX(stub)))
+        return stmt(callThisX("stub", createX(
+            TaskClosure.class,
+            args(
+                closureX(stub),
+                constX("") // TODO: stub source
+            )
+        )))
     }
 
     @Override
