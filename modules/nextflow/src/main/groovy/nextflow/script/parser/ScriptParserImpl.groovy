@@ -23,8 +23,6 @@ import groovy.transform.CompileStatic
 import nextflow.Channel
 import nextflow.Nextflow
 import nextflow.Session
-import nextflow.ast.NextflowXform
-import nextflow.ast.OpXform
 import nextflow.exception.ScriptCompilationException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
@@ -34,7 +32,6 @@ import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.control.CompilerConfiguration
-import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.ImportCustomizer
 /**
  * Script parser implementation based on the Nextflow formal grammar.
@@ -52,12 +49,12 @@ class ScriptParserImpl extends ScriptParser {
 
     @Override
     protected BaseScript parse0(String scriptText, Path scriptPath) {
-        final interpreter = getInterpreter()
+        final compiler = getCompiler()
         final className = computeClassName(scriptText)
         try {
             final parsed = scriptPath && session.debug
-                    ? interpreter.parse(scriptPath.toFile())
-                    : interpreter.parse(scriptText, className)
+                    ? compiler.compile(scriptPath.toFile())
+                    : compiler.compile(scriptText, className)
             if( parsed !instanceof BaseScript )
                throw new CompilationFailedException(0, null)
             return (BaseScript)parsed
@@ -73,13 +70,13 @@ class ScriptParserImpl extends ScriptParser {
         }
     }
 
-    private GroovyShell getInterpreter() {
+    private ScriptCompiler getCompiler() {
         if( !binding && session )
             binding = session.binding
         if( !binding )
             throw new IllegalArgumentException("Missing Script binding object")
 
-        return new GroovyShell(classLoader, binding, getConfig())
+        return new ScriptCompiler(classLoader, binding, getConfig())
     }
 
     CompilerConfiguration getConfig() {
@@ -99,9 +96,6 @@ class ScriptParserImpl extends ScriptParser {
         config.addCompilationCustomizers( importCustomizer )
         config.setScriptBaseClass(BaseScript.class.getName())
         config.setPluginFactory(new ScriptParserPluginFactory())
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(ScriptToGroovyXform))
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(OpXform))
 
         if( session?.debug )
             config.debug = true
