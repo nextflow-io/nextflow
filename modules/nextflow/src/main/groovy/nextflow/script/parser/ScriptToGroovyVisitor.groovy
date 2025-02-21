@@ -47,6 +47,7 @@ import org.codehaus.groovy.ast.VariableScope
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.BinaryExpression
 import org.codehaus.groovy.ast.expr.ClosureExpression
+import org.codehaus.groovy.ast.expr.DeclarationExpression
 import org.codehaus.groovy.ast.expr.EmptyExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
@@ -143,6 +144,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     @Override
     public void visitWorkflow(WorkflowNode node) {
         visitWorkflowTakes(node.takes)
+        visit(node.main)
         visitWorkflowEmits(node.emits, node.main)
         visitWorkflowPublishers(node.publishers, node.main)
 
@@ -211,6 +213,8 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         visitProcessDirectives(node.directives)
         visitProcessInputs(node.inputs)
         visitProcessOutputs(node.outputs)
+        visit(node.exec)
+        visit(node.stub)
 
         if( "script".equals(node.type) )
             node.exec.visit(new TaskCmdXformVisitor(sourceUnit))
@@ -419,6 +423,17 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         }
     }
 
+    // see: VariableScopeVisitor::visitExpressionStatement()
+    @Override
+    public void visitExpressionStatement(ExpressionStatement node) {
+        final exp = node.getExpression()
+        if( exp instanceof DeclarationExpression && exp.getNodeMetaData(IMPLICIT_DECLARATION) ) {
+            final result = new AssignmentExpression(exp.getLeftExpression(), exp.getRightExpression())
+            result.setSourcePosition(exp)
+            node.setExpression(result)
+        }
+    }
+
     private String getSourceText(Statement node) {
         final builder = new StringBuilder()
         final colx = node.getColumnNumber()
@@ -472,5 +487,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     private void syntaxError(ASTNode node, String message) {
         sourceUnit.addError(new SyntaxException(message, node))
     }
+
+    private static final String IMPLICIT_DECLARATION = "_IMPLICIT_DECLARATION"
 
 }

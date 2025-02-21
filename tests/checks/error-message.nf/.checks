@@ -2,5 +2,10 @@ set +e
 $NXF_RUN | tee stdout
 set -e
 
-< stdout grep "Check script '.*error-message.nf' at line: 19"
-
+if [[ "$NXF_ENABLE_STRICT_SYNTAX" == "true" ]] ; then
+    # strict syntax should give compile-time error
+    < stdout grep "\`printx\` is not defined @ line 19, column 1"
+else
+    # legacy parser should give runtime error
+    < stdout grep "Check script '.*error-message.nf' at line: 19"
+fi

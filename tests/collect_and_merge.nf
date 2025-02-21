@@ -19,7 +19,7 @@
 /*
  * fake alignment step producing a BAM and BAI files
  */
-process algn {
+process align {
   debug true
 
   input:
@@ -27,7 +27,7 @@ process algn {
   each seq_id
 
   output:
-  tuple val(barcode), val(seq_id), file('bam'), file('bai')
+  tuple val(barcode), val(seq_id), path('bam'), path('bai')
 
   script:
   """
@@ -44,14 +44,14 @@ process merge {
   debug true
 
   input:
-  tuple val(barcode), val(seq_id), file(bam: 'bam?'), file(bai: 'bai?')
+  tuple val(barcode), val(seq_id), path('bam?'), path('bai?')
 
   script:
   """
   echo barcode: $barcode
   echo seq_ids: $seq_id
-  echo bam    : $bam
-  echo bai    : $bai
+  echo bam    : bam
+  echo bai    : bam
   """
 
 }
@@ -60,14 +60,14 @@ workflow {
   def ch1 = channel.of('alpha', 'gamma')
   def ch2 = channel.of('one', 'two', 'three')
 
-  aggregation = algn(ch1, ch2)
+  aggregation = align(ch1, ch2)
 
   /*
    * aggregation is made by using a 'reduce' operator
    * followed by 'flatMap'
    */
 
-   aggregation = algn.out
+   aggregation = align.out
                      .reduce([:]) { map, tuple ->    // 'map' is used to collect all values; 'tuple' is the record containing four items: barcode, seqid, bam file and bai file
                          def barcode = tuple[0]      // the first item is the 'barcode'
                          def group = map[barcode]    // get the aggregation for current 'barcode'
