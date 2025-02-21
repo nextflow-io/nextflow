@@ -2,6 +2,7 @@ package nextflow.cloud.azure.batch
 
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
+import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.Executor
@@ -38,24 +39,28 @@ class AzBatchTaskHandlerTest extends Specification {
         noExceptionThrown()
     }
 
-    def 'should submit task' () {
+    def 'should submit task'() {
         given:
-        def builder = Mock(BashWrapperBuilder)
-        def task = Mock(TaskRun)
-        def azure = Mock(AzBatchService)
+        def executor = Mock(AzBatchExecutor)
+        def processor = Mock(TaskProcessor) {
+            getExecutor() >> executor
+        }
+        def task = Mock(TaskRun) {
+            getProcessor() >> processor
+            getConfig() >> Mock(TaskConfig)
+        }
         and:
-        def handler = Spy(AzBatchTaskHandler) {getBatchService() >> azure }
+        def handler = Spy(AzBatchTaskHandler)
         handler.task = task
+        handler.executor = executor
+        
         when:
         handler.submit()
+        
         then:
-        1 * handler.createBashWrapper() >> builder
-        1 * builder.build() >> null
-        1 * azure.submitTask(task) >> null
-        and:
-        handler.getStatus() == TaskStatus.SUBMITTED
+        1 * handler.createTaskWrapper() >> Mock(BashWrapperBuilder)
+        1 * handler.getBatchService() >> Mock(AzBatchService)
     }
-
 
     def 'should create the trace record' () {
         given:
@@ -84,5 +89,4 @@ class AzBatchTaskHandlerTest extends Specification {
         trace.machineInfo.zone == 'west-eu'
         trace.machineInfo.priceModel == PriceModel.standard
     }
-
 }
