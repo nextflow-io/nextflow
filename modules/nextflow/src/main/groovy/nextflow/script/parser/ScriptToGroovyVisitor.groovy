@@ -128,8 +128,9 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             })
             .collect(Collectors.toList())
 
-        final include = callThisX("include", args(createX(IncludeDef.class, args((Expression) listX(moduleArgs), (Expression) node.source))))
-        final result = stmt(callX(include, "load0", new ArgumentListExpression()))
+        final include = callThisX("include", args(createX(IncludeDef.class, (Expression) listX(moduleArgs))))
+        final from = callX(include, "from", args(node.source))
+        final result = stmt(callX(from, "load0", args(varX("params"))))
         moduleNode.addStatement(result)
     }
 
