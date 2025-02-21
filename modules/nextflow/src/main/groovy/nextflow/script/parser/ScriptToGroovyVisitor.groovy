@@ -149,7 +149,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             BodyDef.class,
             args(
                 closureX(node.main),
-                constX(getSourceText(node.main)),
+                constX(getSourceText(node)),
                 constX("workflow")
             )
         ))
@@ -438,6 +438,32 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             final begin = (i == first) ? colx - 1 : 0
             final end = (i == last) ? colz - 1 : line.length()
             builder.append( line.substring(begin, end) ).append('\n')
+        }
+        return builder.toString()
+    }
+
+    private String getSourceText(WorkflowNode node) {
+        if( node.isEntry() && node.getLineNumber() == -1 )
+            return getSourceText(node.main)
+
+        final builder = new StringBuilder()
+        final colx = node.getColumnNumber()
+        final colz = node.getLastColumnNumber()
+        final first = node.getLineNumber()
+        final last = node.getLastLineNumber()
+        for( int i = first; i <= last; i++ ) {
+            def line = sourceUnit.getSource().getLine(i, null)
+            if( i == last ) {
+                line = line.substring(0, colz-1).replaceFirst(/}.*$/, '')
+                if( !line.trim() )
+                    continue
+            }
+            if( i == first ) {
+                line = line.substring(colx-1).replaceFirst(/^.*\{/, '').trim()
+                if( !line )
+                    continue
+            }
+            builder.append(line).append('\n')
         }
         return builder.toString()
     }
