@@ -149,7 +149,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             BodyDef.class,
             args(
                 closureX(node.main),
-                constX(""), // TODO: source code formatting
+                constX(getSourceText(node.main)),
                 constX("workflow")
             )
         ))
@@ -220,7 +220,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             BodyDef.class,
             args(
                 closureX(node.exec),
-                constX(""), // TODO: source code formatting
+                constX(getSourceText(node.exec)),
                 constX(node.type)
             )
         ))
@@ -384,7 +384,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             TaskClosure.class,
             args(
                 closureX(stub),
-                constX("") // TODO: stub source
+                constX(getSourceText(stub))
             )
         )))
     }
@@ -416,6 +416,30 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             final targetBody = (ClosureExpression)targetArgs[0]
             es.setExpression( callThisX('target', args(name, targetBody)) )
         }
+    }
+
+    private String getSourceText(Statement node) {
+        final builder = new StringBuilder()
+        final colx = node.getColumnNumber()
+        final colz = node.getLastColumnNumber()
+        final first = node.getLineNumber()
+        final last = node.getLastLineNumber()
+        for( int i = first; i <= last; i++ ) {
+            final line = sourceUnit.getSource().getLine(i, null)
+
+            // prepend first-line indent
+            if( i == first ) {
+                int k = 0
+                while( k < line.size() && line[k] == ' ' )
+                    k++
+                builder.append( line.substring(0, k) )
+            }
+
+            final begin = (i == first) ? colx - 1 : 0
+            final end = (i == last) ? colz - 1 : line.size()
+            builder.append( line.substring(begin, end) ).append('\n')
+        }
+        return builder.toString()
     }
 
     private void syntaxError(ASTNode node, String message) {
