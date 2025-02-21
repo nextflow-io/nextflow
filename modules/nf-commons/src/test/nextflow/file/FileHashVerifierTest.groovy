@@ -19,6 +19,7 @@ package nextflow.file
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
+import java.io.IOException
 
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -153,5 +154,26 @@ class FileHashVerifierTest extends Specification {
 
         cleanup:
         file?.deleteDir()
+    }
+
+    def 'should throw exception when verifying hash of a directory'() {
+        given:
+        def dir = Files.createTempDirectory('test-dir')
+        def content = 'test content'
+        def file1 = dir.resolve('file1.txt')
+        def file2 = dir.resolve('file2.txt')
+        file1.text = content
+        file2.text = content
+        def sha256Hash = MessageDigest.getInstance("SHA-256").digest(content.bytes).encodeHex().toString()
+
+        when:
+        FileHashVerifier.verifyHash(dir, "sha256:${sha256Hash}")
+
+        then:
+        def e = thrown(IOException)
+        e.message == "Is a directory"
+
+        cleanup:
+        dir?.deleteDir()
     }
 }
