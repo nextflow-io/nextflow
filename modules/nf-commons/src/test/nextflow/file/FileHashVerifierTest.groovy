@@ -20,6 +20,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
 import java.io.IOException
+import java.nio.file.NoSuchFileException
 
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -175,5 +176,37 @@ class FileHashVerifierTest extends Specification {
 
         cleanup:
         dir?.deleteDir()
+    }
+
+    def 'should throw exception for non-existent file'() {
+        given:
+        def file = Files.createTempFile('test', '.txt')
+        Files.delete(file)
+        def sha256Hash = MessageDigest.getInstance("SHA-256").digest('any content'.bytes).encodeHex().toString()
+
+        when:
+        FileHashVerifier.verifyHash(file, "sha256:${sha256Hash}")
+
+        then:
+        def e = thrown(NoSuchFileException)
+        e.file == file.toString()
+
+        cleanup:
+        file?.deleteDir()
+    }
+
+    def 'should verify hash of empty file'() {
+        given:
+        def file = Files.createTempFile('test', '.txt')
+        def emptyHash = MessageDigest.getInstance("SHA-256").digest(''.bytes).encodeHex().toString()
+
+        when:
+        def result = FileHashVerifier.verifyHash(file, "sha256:${emptyHash}")
+
+        then:
+        result == file
+
+        cleanup:
+        file?.deleteDir()
     }
 }
