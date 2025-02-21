@@ -211,7 +211,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         visitProcessInputs(node.inputs)
         visitProcessOutputs(node.outputs)
 
-        if( node.type == "script" )
+        if( "script".equals(node.type) )
             node.exec.visit(new TaskCmdXformVisitor(sourceUnit))
         node.stub.visit(new TaskCmdXformVisitor(sourceUnit))
 
@@ -283,6 +283,13 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     }
 
     private Expression varToConstX(Expression node, boolean withinTuple, boolean withinEach) {
+        if( node instanceof TupleExpression ) {
+            final arguments = node.getExpressions()
+            for( int i = 0; i < arguments.size(); i++ )
+                arguments.set(i, varToConstX(arguments.get(i), withinTuple, withinEach))
+            return node
+        }
+
         if( node instanceof VariableExpression ) {
             final name = node.getName()
 
@@ -315,17 +322,25 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
                 return createX( TokenValCall.class, (TupleExpression) varToStrX(arguments) )
         }
 
-        if( node instanceof TupleExpression ) {
-            final arguments = node.getExpressions()
-            for( int i = 0; i < arguments.size(); i++ )
-                arguments.set(i, varToConstX(arguments.get(i), withinTuple, withinEach))
-            return node
+        if( node instanceof PropertyExpression ) {
+            // before:
+            //   val( x.foo )
+            // after:
+            //   val({ x.foo })
+            return wrapExpressionInClosure(node)
         }
 
         return node
     }
 
     private Expression varToStrX(Expression node) {
+        if( node instanceof TupleExpression ) {
+            final arguments = node.getExpressions()
+            for( int i = 0; i < arguments.size(); i++ )
+                arguments.set(i, varToStrX(arguments.get(i)))
+            return node
+        }
+
         if( node instanceof VariableExpression ) {
             // before:
             //   val(x)
@@ -341,13 +356,6 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             // after:
             //   tuple val({ x.foo })
             return wrapExpressionInClosure(node)
-        }
-
-        if( node instanceof TupleExpression ) {
-            final arguments = node.getExpressions()
-            for( int i = 0; i < arguments.size(); i++ )
-                arguments.set(i, varToStrX(arguments.get(i)))
-            return node
         }
 
         return node
