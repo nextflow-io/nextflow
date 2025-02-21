@@ -100,6 +100,7 @@ class HttpFilesTests extends Specification {
         server?.stop(0)
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def 'read a http file ' () {
         given:
         def uri = new URI('http://www.nextflow.io/index.html')
@@ -116,6 +117,7 @@ class HttpFilesTests extends Specification {
         
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def 'should check file properties' () {
         given:
         SysEnv.push([NXF_HTTPFS_MAX_ATTEMPTS: '1'])
@@ -152,8 +154,8 @@ class HttpFilesTests extends Specification {
         lines[1] == 'Disallow: /'
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def 'should read HTTPS file' () {
-
         given:
         def uri = new URI('https://www.nextflow.io/index.html')
         when:
@@ -166,11 +168,10 @@ class HttpFilesTests extends Specification {
         then:
         lines.size()>0
         lines[0].startsWith('<!DOCTYPE html><html lang="en">')
-
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def 'should copy a file' () {
-
         given:
         def uri = new URI('https://www.nextflow.io/index.html')
         def source = Paths.get(uri)
@@ -184,7 +185,6 @@ class HttpFilesTests extends Specification {
 
         cleanup:
         target?.parent?.deleteDir()
-
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
@@ -204,7 +204,6 @@ class HttpFilesTests extends Specification {
     }
 
     def 'should read with a newByteChannel' () {
-
         given:
         def wireMock = new WireMockGroovy(18080)
         wireMock.stub {
@@ -237,9 +236,7 @@ class HttpFilesTests extends Specification {
         then:
         buffer.toString() == path.text
         buffer.toString() == '01234567890123456789012345678901234567890123456789'
-
     }
-
 
     def 'should use basic auth' () {
         given:
