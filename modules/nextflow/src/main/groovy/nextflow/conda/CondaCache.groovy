@@ -33,6 +33,7 @@ import nextflow.file.FileMutex
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import nextflow.util.Escape
+import nextflow.util.TestOnly
 /**
  * Handle Conda environment creation and caching
  *
@@ -86,9 +87,8 @@ class CondaCache {
         return "conda"
     }
 
-    /** Only for testing purpose - do not use */
-    @PackageScope
-    CondaCache() {}
+    @TestOnly
+    protected CondaCache() {}
 
     /**
      * Create a Conda env cache object

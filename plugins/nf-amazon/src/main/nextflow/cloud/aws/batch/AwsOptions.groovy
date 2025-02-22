@@ -45,7 +45,6 @@ class AwsOptions implements CloudTransferOptions {
 
     volatile Boolean fetchInstanceType
 
-    /* Only for testing purpose */
     @TestOnly
     protected AwsOptions() {
         this.awsConfig=new AwsConfig(Collections.emptyMap())
