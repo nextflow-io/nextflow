@@ -19,8 +19,8 @@ package nextflow.config
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 /**
- * Placeholder class that replaces closure definitions in the nextflow configuration
- * file in order to print the closure source text
+ * Placeholder class that replacing closure definitions in the nextflow configuration
+ * file in order to print the closure content itself
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
