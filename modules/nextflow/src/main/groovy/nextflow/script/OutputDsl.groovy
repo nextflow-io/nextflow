@@ -44,7 +44,7 @@ class OutputDsl {
         if( declarations.containsKey(name) )
             throw new ScriptRuntimeException("Workflow output '${name}' is declared more than once in the workflow output block")
 
-        final dsl = new TargetDsl()
+        final dsl = new DeclareDsl()
         final cl = (Closure)closure.clone()
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
         cl.setDelegate(dsl)
@@ -60,7 +60,12 @@ class OutputDsl {
         // make sure every output was assigned
         for( final name : declarations.keySet() ) {
             if( name !in outputs )
-                log.warn "Workflow output '${name}' was declared in the output block but not assigned in the workflow"
+                throw new ScriptRuntimeException("Workflow output '${name}' was declared in the output block but not assigned in the workflow")
+        }
+
+        for( final name : outputs.keySet() ) {
+            if( name !in declarations )
+                throw new ScriptRuntimeException("Workflow output '${name}' was assigned in the workflow but not declared in the output block")
         }
 
         // create publish op for each output
@@ -99,7 +104,7 @@ class OutputDsl {
         return true
     }
 
-    static class TargetDsl {
+    static class DeclareDsl {
 
         private Map opts = [:]
 

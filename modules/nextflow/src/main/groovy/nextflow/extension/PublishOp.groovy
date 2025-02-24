@@ -96,7 +96,7 @@ class PublishOp {
         final overrides = targetResolver instanceof Closure
             ? [saveAs: targetResolver]
             : [path: targetResolver]
-        final publisher = PublishDir.create(opts + overrides)
+        final publisher = PublishDir.create(publishOpts + overrides)
 
         // publish files
         final result = collectFiles([:], value)
