@@ -377,7 +377,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             TaskClosure.class,
             args(
                 wrapExpressionInClosure(when),
-                constX("") // TODO: when source
+                constX(getSourceText(when))
             )
         )))
     }
@@ -456,6 +456,12 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             builder.append( line.substring(begin, end) ).append('\n')
         }
         return builder.toString()
+    }
+
+    private String getSourceText(Expression node) {
+        final stm = stmt(node)
+        stm.setSourcePosition(node)
+        return getSourceText(stm)
     }
 
     private String getSourceText(WorkflowNode node) {

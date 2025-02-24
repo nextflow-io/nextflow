@@ -39,7 +39,6 @@ abstract class ScriptParser {
 
     private ScriptBinding binding
 
-    // TODO: not needed as a member
     private Path scriptPath
 
     private BaseScript script
@@ -122,7 +121,6 @@ abstract class ScriptParser {
     }
 
     private void setupContext() {
-        // TODO: move to parse() ?
         assert session
         binding.setSession(session)
         binding.setScriptPath(scriptPath)
