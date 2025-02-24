@@ -36,6 +36,10 @@ class TaskBean implements Serializable, Cloneable {
 
     String name
 
+    TaskId taskId
+
+    Set<TaskId> upstreamTasks
+
     def input
 
     def scratch
@@ -124,6 +128,8 @@ class TaskBean implements Serializable, Cloneable {
     TaskBean(TaskRun task) {
 
         this.name = task.name
+        this.taskId = task.id
+        this.upstreamTasks = task.upstreamTasks
 
         // set the input (when available)
         this.input = task.stdin

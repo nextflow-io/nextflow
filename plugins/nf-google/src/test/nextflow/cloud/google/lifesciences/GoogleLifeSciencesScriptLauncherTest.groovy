@@ -21,6 +21,7 @@ import java.nio.file.Files
 import nextflow.Session
 import nextflow.cloud.google.GoogleSpecification
 import nextflow.processor.TaskBean
+import nextflow.processor.TaskId
 import nextflow.util.MustacheTemplateEngine
 /**
  *
@@ -72,6 +73,7 @@ class GoogleLifeSciencesScriptLauncherTest extends GoogleSpecification {
             }
         }
         def bean = [name: 'Hello 1',
+                    taskId: TaskId.of(10),
                     script: 'echo Hello world!',
                     workDir: WORK_DIR] as TaskBean
         /*

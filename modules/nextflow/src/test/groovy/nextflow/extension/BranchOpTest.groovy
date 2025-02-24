@@ -48,14 +48,14 @@ class BranchOpTest extends Dsl2Spec  {
         then:
         result.size() == 3
         and:
-        result[0].val == 0
-        result[0].val == Channel.STOP
+        result[0].unwrap() == 0
+        result[0].unwrap() == Channel.STOP
         and:
-        result[1].val == 1
-        result[1].val == Channel.STOP
+        result[1].unwrap() == 1
+        result[1].unwrap() == Channel.STOP
         and:
-        result[2].val == 2
-        result[2].val == Channel.STOP
+        result[2].unwrap() == 2
+        result[2].unwrap() == Channel.STOP
     }
 
     def 'should branch and capture default' () {
@@ -71,12 +71,12 @@ class BranchOpTest extends Dsl2Spec  {
         then:
         result.size() == 2
         and:
-        result[0].val == 10
-        result[0].val == Channel.STOP
+        result[0].unwrap() == 10
+        result[0].unwrap() == Channel.STOP
         and:
-        result[1].val == 20
-        result[1].val == 30
-        result[1].val == Channel.STOP
+        result[1].unwrap() == 20
+        result[1].unwrap() == 30
+        result[1].unwrap() == Channel.STOP
 
     }
 
@@ -93,12 +93,12 @@ class BranchOpTest extends Dsl2Spec  {
         then:
         result.size() == 2
         and:
-        result[0].val == 1
-        result[0].val == 2
-        result[0].val == 3
-        result[0].val == Channel.STOP
+        result[0].unwrap() == 1
+        result[0].unwrap() == 2
+        result[0].unwrap() == 3
+        result[0].unwrap() == Channel.STOP
         and:
-        result[1].val == Channel.STOP
+        result[1].unwrap() == Channel.STOP
 
     }
 
@@ -164,14 +164,14 @@ class BranchOpTest extends Dsl2Spec  {
         then:
         result.size() == 3
         and:
-        result[0].val == 0
-        result[0].val == Channel.STOP
+        result[0].unwrap() == 0
+        result[0].unwrap() == Channel.STOP
         and:
-        result[1].val == 10
-        result[1].val == Channel.STOP
+        result[1].unwrap() == 10
+        result[1].unwrap() == Channel.STOP
         and:
-        result[2].val == 20
-        result[2].val == Channel.STOP
+        result[2].unwrap() == 20
+        result[2].unwrap() == Channel.STOP
     }
 
     def 'should handle complex nested return statement' () {
@@ -187,10 +187,10 @@ class BranchOpTest extends Dsl2Spec  {
                     }
         ''')
         then:
-        result.val == 'less than zero'
-        result.val == 'zero'
-        result.val == 'great than zero'
-        result.val == Channel.STOP
+        result.unwrap() == 'less than zero'
+        result.unwrap() == 'zero'
+        result.unwrap() == 'great than zero'
+        result.unwrap() == Channel.STOP
     }
 
     @Ignore // this is not supported and require explicit use of `return` 
@@ -207,10 +207,10 @@ class BranchOpTest extends Dsl2Spec  {
                     }
         ''')
         then:
-        result.val == 'less than zero'
-        result.val == 'zero'
-        result.val == 'great than zero'
-        result.val == Channel.STOP
+        result.unwrap() == 'less than zero'
+        result.unwrap() == 'zero'
+        result.unwrap() == 'great than zero'
+        result.unwrap() == Channel.STOP
     }
 
 
@@ -230,14 +230,14 @@ class BranchOpTest extends Dsl2Spec  {
         then:
         result.size() == 3
         and:
-        result[0].val == 0
-        result[0].val == Channel.STOP
+        result[0].unwrap() == 0
+        result[0].unwrap() == Channel.STOP
         and:
-        result[1].val == 3
-        result[1].val == Channel.STOP
+        result[1].unwrap() == 3
+        result[1].unwrap() == Channel.STOP
         and:
-        result[2].val == 6
-        result[2].val == Channel.STOP
+        result[2].unwrap() == 6
+        result[2].unwrap() == Channel.STOP
     }
 
     def 'should branch on pair argument' () {
@@ -254,11 +254,11 @@ class BranchOpTest extends Dsl2Spec  {
         then:
         result.size() == 2
         and:
-        result[0].val == 1
-        result[0].val == Channel.STOP
+        result[0].unwrap() == 1
+        result[0].unwrap() == Channel.STOP
         and:
-        result[1].val == ['b', 2]
-        result[1].val == Channel.STOP
+        result[1].unwrap() == ['b', 2]
+        result[1].unwrap() == Channel.STOP
     }
 
     def 'should pass criteria as argument' () {
@@ -362,10 +362,10 @@ class BranchOpTest extends Dsl2Spec  {
         result.size() == 2
         and:
         result[0] instanceof DataflowVariable
-        result[0].val == Channel.STOP
+        result[0].unwrap() == Channel.STOP
         and:
         result[1] instanceof DataflowVariable
-        result[1].val == 10
+        result[1].unwrap() == 10
 
     }
 }

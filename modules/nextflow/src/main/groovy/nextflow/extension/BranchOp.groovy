@@ -20,7 +20,9 @@ import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
+import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
+import nextflow.extension.op.Op
 import nextflow.script.ChannelOut
 import nextflow.script.TokenBranchChoice
 import nextflow.script.TokenBranchDef
@@ -50,20 +52,21 @@ class BranchOp {
 
     ChannelOut getOutput() { this.output }
 
-    protected void doNext(it) {
+    protected void doNext(DataflowProcessor dp, Object it) {
         TokenBranchChoice ret = switchDef.closure.call(it)
         if( ret ) {
-            targets[ret.choice].bind(ret.value)
+            Op.bind(dp, targets[ret.choice], ret.value)
         }
     }
 
-    protected void doComplete(nope) {
+    protected void doComplete(DataflowProcessor dp) {
         for( DataflowWriteChannel ch : targets.values() ) {
             if( ch instanceof DataflowExpression ) {
-                if( !ch.isBound()) ch.bind(Channel.STOP)
+                if( !ch.isBound() )
+                    Op.bind(dp, ch, Channel.STOP)
             }
             else {
-                ch.bind(Channel.STOP)
+                Op.bind(dp, ch, Channel.STOP)
             }
         }
     }
@@ -72,7 +75,10 @@ class BranchOp {
         def events = new HashMap<String,Closure>(2)
         events.put('onNext', this.&doNext)
         events.put('onComplete', this.&doComplete)
-        DataflowHelper.subscribeImpl(source, events)
+        new SubscribeOp()
+            .withInput(source)
+            .withEvents(events)
+            .apply()
         return this
     }
 
