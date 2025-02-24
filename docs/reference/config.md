@@ -12,7 +12,10 @@ This page lists all of the available settings in the {ref}`Nextflow configuratio
 : If `true`, on a successful completion of a run all files in *work* directory are automatically deleted.
 
   :::{warning}
-  The use of the `cleanup` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run. Also, be aware that deleting all scratch files can take a lot of time, especially when using a shared file system or remote cloud storage.
+  The use of the `cleanup` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run.
+  :::
+  :::{warning}
+  The `cleanup` option is not supported for remote work directories, such as Amazon S3, Google Cloud Storage, and Azure Blob Storage.
   :::
 
 `dumpHashes`
@@ -758,37 +761,37 @@ The `fusion` scope provides advanced configuration for the use of the {ref}`Fusi
 The following settings are available:
 
 `fusion.enabled`
-: Enable/disable the use of Fusion file system.
+: Enable/disable Fusion file system (default: `false`).
 
 `fusion.cacheSize`
 : :::{versionadded} 23.11.0-edge
   :::
-: The maximum size of the local cache used by the Fusion client.
+: Fusion client local cache size limit.
 
 `fusion.containerConfigUrl`
-: The URL from where the container layer provisioning the Fusion client is downloaded. This option is useful to specify a development Fusion version for debugging purposes. 
+: URL for downloading the container layer provisioning the Fusion client. 
 
 `fusion.exportStorageCredentials`
 : :::{versionadded} 23.05.0-edge
-  This option was previously named `fusion.exportAwsAccessKeys`.
+  Previously named `fusion.exportAwsAccessKeys`.
   :::
-: When `true` the access credentials required by the underlying object storage are exported to the task execution environment.
+: Enable access to credentials for the underlying object storage are exported to the task environment (default: false).
 
 `fusion.logLevel`
-: The level of logging emitted by the Fusion client.
+: Fusion client log level.
 
 `fusion.logOutput`
-: Where the logging output is written. 
+: Log output location.
 
 `fusion.privileged`
 : :::{versionadded} 23.10.0
   :::
-: Enables the use of privileged containers when using Fusion (default: `true`).
-: The use of Fusion without privileged containers is currently only supported for Kubernetes, and it requires the [k8s-fuse-plugin](https://github.com/nextflow-io/k8s-fuse-plugin) (or similar FUSE device plugin) to be installed in the cluster.
+: Enable privileged containers for Fusion (default: `true`)
+: Non-privileged use is supported only on Kubernetes with the [k8s-fuse-plugin](https://github.com/nextflow-io/k8s-fuse-plugin) or a similar FUSE device plugin.
 
 `fusion.tags`
-: The pattern that determines how tags are applied to files created via the Fusion client (default: `[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)`).
-: To disable tags set it to `false`.
+: Pattern for applying tags to files created via the Fusion client (default: `[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)`).
+: Set to `false` to disable.
 
 (config-google)=
 
