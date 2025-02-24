@@ -151,4 +151,31 @@ class NextflowDSLImplTest extends Dsl2Spec {
         ScriptMeta.get(parser.getScript()).getProcessNames() == ['alpha', 'beta'] as Set
     }
 
+    def 'should fetch variable names' () {
+
+        given:
+        def config = createCompilerConfig()
+
+        def SCRIPT = '''
+            process alpha {
+                input:
+                val foo
+
+                exec:
+                if( foo == 'a' )
+                    log.info "foo is 'a'"
+                def bar = foo
+            }
+
+            workflow {
+                alpha('a')
+            }
+            '''
+
+        when:
+        new GroovyShell(config).parse(SCRIPT)
+        then:
+        noExceptionThrown()
+    }
+
 }
