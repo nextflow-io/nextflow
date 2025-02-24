@@ -342,14 +342,14 @@ When Nextflow creates a pool of compute nodes, it selects:
 
 Together, these settings determine the Operating System and version installed on each node.
 
-By default, Nextflow creates pool nodes based on Ubuntu 20.04, but this behavior can be customised in the pool configuration. Below are configurations for image reference/SKU combinations to select two popular systems.
+By default, Nextflow creates pool nodes based on Ubuntu 22.04, but this behavior can be customised in the pool configuration. Below are configurations for image reference/SKU combinations to select two popular systems.
 
-- Ubuntu 20.04 (default):
+- Ubuntu 22.04 (default):
 
   ```groovy
-  azure.batch.pools.<name>.sku = "batch.node.ubuntu 20.04"
-  azure.batch.pools.<name>.offer = "ubuntu-server-container"
-  azure.batch.pools.<name>.publisher = "microsoft-azure-batch"
+  azure.batch.pools.<name>.sku = "batch.node.ubuntu 22.04"
+  azure.batch.pools.<name>.offer = "ubuntu-hpc"
+  azure.batch.pools.<name>.publisher = "microsoft-dsvm"
   ```
 
 - CentOS 8:
