@@ -40,7 +40,7 @@ class PublishOp {
 
     private DataflowReadChannel source
 
-    private Map opts
+    private Map publishOpts
 
     private String path
 
@@ -55,7 +55,7 @@ class PublishOp {
     PublishOp(Session session, DataflowReadChannel source, Map opts) {
         this.session = session
         this.source = source
-        this.opts = opts
+        this.publishOpts = opts
         this.path = opts.path as String
         if( opts.pathResolver instanceof Closure )
             this.pathResolver = opts.pathResolver as Closure
@@ -108,15 +108,14 @@ class PublishOp {
 
         // append record to index file
         if( indexOpts ) {
-            final record = indexOpts.mapper != null ? indexOpts.mapper.call(value) : value
-            final normalized = normalizePaths(record, targetResolver)
+            final normalized = normalizePaths(value, targetResolver)
             log.trace "Normalized record for index file: ${normalized}"
             indexRecords << normalized
         }
     }
 
     /**
-     * Compute the target directory for a published value:
+     * Compute the target directory for a published value.
      *
      * @param value
      * @return Path | Closure<Path>
@@ -130,24 +129,59 @@ class PublishOp {
 
         // if the publish path is a closure, invoke it on the
         // published value
-        final resolvedPath = pathResolver.call(value)
+        final dsl = new PublishDsl()
+        final cl = (Closure)pathResolver.clone()
+        cl.setResolveStrategy(Closure.DELEGATE_FIRST)
+        cl.setDelegate(dsl)
+        final resolvedPath = cl.call(value)
 
-        // if the resolved path is null, don't publish it
-        if( resolvedPath == null )
-            return null
+        // if the closure contained publish statements, use
+        // the resulting mapping to create a saveAs closure
+        final mapping = dsl.build()
+        if( mapping instanceof Map<String,String> )
+            return { filename -> outputDir.resolve(mapping[filename]) }
 
         // if the resolved publish path is a string, resolve it
         // against the base output directory
         if( resolvedPath instanceof String )
             return outputDir.resolve(resolvedPath)
 
-        // if the resolved publish path is a closure, use the closure
-        // to transform each published file and resolve it against
-        // the base output directory
-        if( resolvedPath instanceof Closure )
-            return { file -> outputDir.resolve(resolvedPath.call(file) as String) }
+        throw new ScriptRuntimeException("Invalid output `path` directive -- it should either return a string or use the `>>` operator to publish files")
+    }
 
-        throw new ScriptRuntimeException("Output `path` directive should return a string or closure, but instead returned a ${resolvedPath.class.name}")
+    private class PublishDsl {
+        private Map<String,String> mapping = null
+
+        void publish(Object source, String target) {
+            if( source == null )
+                return
+            if( source instanceof Path ) {
+                publish0(source, target)
+            }
+            else if( source instanceof Collection<Path> ) {
+                if( !target.endsWith('/') )
+                    throw new ScriptRuntimeException("Invalid publish target '${target}' -- should be a directory (end with a `/`) when publishing a collection of files")
+                for( final path : source )
+                    publish0(path, target)
+            }
+            else {
+                throw new ScriptRuntimeException("Publish source should be a file or collection of files, but received a ${source.class.name}")
+            }
+        }
+
+        private void publish0(Path source, String target) {
+            if( mapping == null )
+                mapping = [:]
+            final filename = getTaskDir(source).relativize(source).toString()
+            final resolved = target.endsWith('/')
+                ? target + filename
+                : target
+            mapping[filename] = resolved
+        }
+
+        Map<String,String> build() {
+            return mapping
+        }
     }
 
     /**
@@ -295,15 +329,12 @@ class PublishOp {
 
     static class IndexOpts {
         Path path
-        Closure mapper
         def /* boolean | List<String> */ header = false
         String sep = ','
 
         IndexOpts(Path targetDir, Map opts) {
             this.path = targetDir.resolve(opts.path as String)
 
-            if( opts.mapper )
-                this.mapper = opts.mapper as Closure
             if( opts.header != null )
                 this.header = opts.header
             if( opts.sep )

@@ -4,6 +4,14 @@
 
 In Nextflow, a **workflow** is a function that is specialized for composing processes and dataflow logic (i.e. channels and operators).
 
+See {ref}`syntax-workflow` for a full description of the workflow syntax.
+
+:::{note}
+Workflows were introduced in DSL2. If you are still using DSL1, see {ref}`dsl1-page` for more information about how to migrate your Nextflow pipelines to DSL2.
+:::
+
+## Entry workflow
+
 A script can define up to one *entry workflow*, which does not have a name and serves as the entrypoint of the script:
 
 ```nextflow
@@ -14,28 +22,7 @@ workflow {
 }
 ```
 
-A *named workflow*, on the other hand, is a workflow that can be called from other workflows:
-
-```nextflow
-workflow my_workflow {
-    foo()
-    bar( foo.out.collect() )
-}
-
-workflow {
-    my_workflow()
-}
-```
-
-The above example defines a workflow named `my_workflow` which can be called from another workflow as `my_workflow()`. Both `foo` and `bar` could be any other process or workflow.
-
-See {ref}`syntax-workflow` for a full description of the workflow syntax.
-
-:::{note}
-Workflows were introduced in DSL2. If you are still using DSL1, see {ref}`dsl1-page` for more information about how to migrate your Nextflow pipelines to DSL2.
-:::
-
-## Using parameters
+### Parameters
 
 Parameters can be defined in the script with a default value that can be overridden from the CLI, params file, or config file. Params should only be used by the entry workflow:
 
@@ -50,13 +37,26 @@ workflow {
 }
 ```
 
-:::{note}
-While params can also be used by named workflows, this practice is discouraged. Named workflows should receive their inputs explicitly through the `take:` section.
-:::
+## Named workflows
 
-## Workflow inputs (`take`)
+A *named workflow* is a workflow that can be called by other workflows:
 
-The `take:` section is used to declare workflow inputs:
+```nextflow
+workflow my_workflow {
+    foo()
+    bar( foo.out.collect() )
+}
+
+workflow {
+    my_workflow()
+}
+```
+
+The above example defines a workflow named `my_workflow` which can be called from another workflow as `my_workflow()`. Both `foo` and `bar` could be any other process or workflow.
+
+### Takes and emits
+
+The `take:` section is used to declare the inputs of a named workflow:
 
 ```nextflow
 workflow my_workflow {
@@ -78,9 +78,7 @@ workflow {
 }
 ```
 
-## Workflow outputs (`emit`)
-
-The `emit:` section is used to declare workflow outputs:
+The `emit:` section is used to declare the outputs of a named workflow:
 
 ```nextflow
 workflow my_workflow {
@@ -370,20 +368,24 @@ workflow {
 
 (workflow-output-def)=
 
-## Publishing outputs
+## Workflow outputs
 
 :::{versionadded} 24.04.0
 :::
 
 :::{versionchanged} 24.10.0
-A second preview version has been introduced. Read the [migration notes](#migrating-from-first-preview) for details.
+A second preview version was introduced. Read the [migration notes](#migrating-from-first-preview) for details.
+:::
+
+:::{versionchanged} 25.04.0
+A third preview version was introduced. Read the [migration notes](#migrating-from-second-preview) for details.
 :::
 
 :::{note}
 This feature requires the `nextflow.preview.output` feature flag to be enabled.
 :::
 
-A workflow can publish outputs by sending channels to "publish targets" in the workflow `publish` section. Any channel in the workflow can be published, including process and subworkflow outputs. This approach is intended to replace the {ref}`publishDir <process-publishdir>` directive.
+A script can define an *output block* which declares the top-level outputs of the workflow. Each output should be assigned in the `publish` section of the entry workflow. Any channel in the workflow can be assigned to an output, including process and subworkflow outputs. This approach is intended to replace the {ref}`publishDir <process-publishdir>` directive.
 
 Here is a basic example:
 
@@ -392,35 +394,29 @@ process foo {
     // ...
 
     output:
-    path 'result.txt', emit: results
+    path 'sample.txt'
 
-    // ...
-}
-
-process bar {
     // ...
 }
 
 workflow {
     main:
-    foo(data)
-    bar(foo.out)
+    foo(params.input)
 
     publish:
-    foo.out.results >> 'foo'
-    bar.out >> 'bar'
+    samples = foo.out
+}
+
+output {
+    samples {
+        path '.'
+    }
 }
 ```
 
-In the above example, the `results` output of process `foo` is published to the target `foo`, and all outputs of process `bar` are published to the target `bar`.
+In the above example, the output of process `foo` is assigned to the `samples` workflow output. How these outputs are published to a directory structure is described in the next section.
 
-A "publish target" is simply a name that identifies a group of related outputs. How these targets are saved into a directory structure is described in the next section.
-
-:::{tip}
-A workflow can override the publish targets of a subworkflow by "re-publishing" the same channels to a different target. However, the best practice is to define all publish targets in the entry workflow, so that all publish targets are defined in one place at the top-level.
-:::
-
-### Output directory
+### Publishing files
 
 The top-level output directory of a workflow run can be set using the `-output-dir` command-line option or the `outputDir` config option:
 
@@ -433,11 +429,9 @@ nextflow run main.nf -output-dir 'my-results'
 outputDir = 'my-results'
 ```
 
-It defaults to `results` in the launch directory. All published outputs will be saved into this directory.
+It defaults to `results` in the launch directory.
 
-Each publish target is saved into a subdirectory of the output directory. By default, the target name is used as the directory name.
-
-For example, given the following publish targets:
+By default, all output files are published to this directory. Each output in the output block can define where files are published using the `path` directive. For example:
 
 ```nextflow
 workflow {
@@ -446,8 +440,17 @@ workflow {
     ch_bar = bar(ch_foo)
 
     publish:
-    ch_foo >> 'foo'
-    ch_bar >> 'bar'
+    foo = ch_foo
+    bar = ch_bar
+}
+
+output {
+    foo {
+        path 'foo'
+    }
+    bar {
+        path 'bar'
+    }
 }
 ```
 
@@ -461,11 +464,7 @@ results/
     └── ...
 ```
 
-:::{warning}
-Target names cannot begin or end with a slash (`/`).
-:::
-
-By default, all files emitted by a published channel will be published into the specified directory. Lists and maps are recursively scanned for nested files. For example:
+All files received by an output will be published into the specified directory. Lists and maps are recursively scanned for nested files. For example:
 
 ```nextflow
 workflow {
@@ -475,60 +474,11 @@ workflow {
     )
 
     publish:
-    ch_samples >> 'samples' // 1.txt and 2.txt will be published
+    samples = ch_samples // 1.txt and 2.txt will be published
 }
 ```
 
-A workflow can also disable publishing for a specific channel by redirecting it to `null`:
-
-```nextflow
-workflow {
-    main:
-    ch_foo = foo()
-
-    publish:
-    ch_foo >> (params.save_foo ? 'foo' : null)
-}
-```
-
-### Customizing outputs
-
-The output directory structure can be customized further in the "output block", which can be defined alongside an entry workflow. The output block consists of "target" blocks, which can be used to customize specific targets.
-
-For example:
-
-```nextflow
-workflow {
-    // ...
-}
-
-output {
-    foo {
-        enabled params.save_foo
-        path 'intermediates/foo'
-    }
-
-    bar {
-        mode 'copy'
-    }
-}
-```
-
-This output block has the following effect:
-
-- The target `foo` will be published only if `params.save_foo` is enabled, and it will be published to a different path within the output directory.
-
-- The target `bar` will publish files via copy instead of symlink.
-
-See [Reference](#reference) for all available directives in the output block.
-
-:::{tip}
-The output block can be omitted if you are satisfied with the default behavior. However, as a best practice, you should declare each output in the output block, even if you don't need to customize the publish path or create any index files.
-:::
-
-### Dynamic publish path
-
-The `path` directive in a target block can also be a closure which defines a custom publish path for each channel value:
+The `path` directive can also be a closure which defines a custom publish path for each channel value:
 
 ```nextflow
 workflow {
@@ -538,35 +488,36 @@ workflow {
     )
 
     publish:
-    ch_samples >> 'samples'
+    samples = ch_samples
 }
 
 output {
     samples {
-        path { sample -> "fastq/${sample.id}" }
+        path { sample -> "fastq/${sample.id}/" }
     }
 }
 ```
 
 The above example will publish each channel value to a different subdirectory. In this case, each pair of FASTQ files will be published to a subdirectory based on the sample ID.
 
-The closure can even define a different path for each individual file by returning an inner closure, similar to the `saveAs` option of the {ref}`publishDir <process-publishdir>` directive:
+The closure can even define a different path for each individual file using the `>>` operator:
 
 ```nextflow
 output {
     samples {
         path { sample ->
-            { filename -> "fastq/${sample.id}/${filename}" }
+            sample.fastq_1 >> "fastq/${sample.id}/"
+            sample.fastq_2 >> "fastq/${sample.id}/"
         }
     }
 }
 ```
 
-The inner closure will be applied to each file in the channel value, in this case `sample.fastq_1` and `sample.fastq_2`.
+Each `>>` specifies a *source file* and *publish target*. The source file should be a file or collection of files, and the publish target should be a directory or file name. If the publish target ends with a slash, it is treated as the directory in which source files are published. Otherwise, it is treated as the target filename of a source file. Only files that are published with the `>>` operator are saved to the output directory.
 
 ### Index files
 
-A publish target can create an index file of the values that were published. An index file preserves the structure of channel values, including metadata, which is simpler than encoding this information with directories and file names. The index file can be CSV (`.csv`) or JSON (`.json`).
+An output can create an index file of the values that were published. An index file preserves the structure of channel values, including metadata, which is simpler than encoding this information with directories and file names. The index file can be CSV (`.csv`) or JSON (`.json`). The channel values should be files, lists, or maps.
 
 For example:
 
@@ -580,7 +531,7 @@ workflow {
     )
 
     publish:
-    ch_samples >> 'samples'
+    samples = ch_samples
 }
 
 output {
@@ -620,7 +571,62 @@ This example will produce the following index file:
 "3"|"sample 3"|"results/fastq/3a.fastq"|"results/fastq/3b.fastq"
 ```
 
-See [Reference](#reference) for the list of available index directives.
+See [Output directives](#output-directives) for the list of available index directives.
+
+### Output directives
+
+The following directives are available for each output in the output block:
+
+`index`
+: Create an index file which will contain a record of each published value.
+
+  The following directives are available in an index definition:
+
+  `header`
+  : When `true`, the keys of the first record are used as the column names (default: `false`). Can also be a list of column names. Only used for `csv` files.
+
+  `path`
+  : The name of the index file relative to the target path (required). Can be a `csv` or `json` file.
+
+  `sep`
+  : The character used to separate values (default: `','`). Only used for `csv` files.
+
+`path`
+: Specify the publish path relative to the output directory (default: `'.'`). Can be a path, a closure that defines a custom directory for each published value, or a closure that publishes individual files using the `>>` operator.
+
+Additionally, the following options from the {ref}`workflow <config-workflow>` config scope can be specified as directives:
+- `contentType`
+- `enabled`
+- `ignoreErrors`
+- `mode`
+- `overwrite`
+- `storageClass`
+- `tags`
+
+For example:
+
+```nextflow
+output {
+    foo {
+        enabled params.save_foo
+        mode 'copy'
+    }
+}
+```
+
+### Migrating from second preview
+
+The third preview, introduced in 25.04, made the following breaking changes:
+
+- The `publish:` section can only be specified in the entry workflow.
+
+- Workflow outputs in the `publish:` section are assigned instead of using the `>>` operator. The output name must be a valid identifier.
+
+- By default, output files are published to the base output directory, rather than a subdirectory corresponding to the output name.
+
+- The syntax for dynamic publish paths has changed. Instead of defining a closure that returns a closure with the `path` directive, the outer closure should use the `>>` operator to publish individual files.
+
+- The `mapper` index directive has been removed. Use a `map` operator on the published channel instead.
 
 ### Migrating from first preview
 
@@ -634,39 +640,3 @@ The first preview of workflow publishing was introduced in 24.04. The second pre
 
 - Target names cannot begin or end with a slash (`/`);
 
-### Reference
-
-The following directives are available in a target block:
-
-`index`
-: Create an index file which will contain a record of each published value.
-
-  The following directives are available in an index definition:
-
-  `header`
-  : When `true`, the keys of the first record are used as the column names (default: `false`). Can also be a list of column names. Only used for `csv` files.
-
-  `mapper`
-  : Closure which defines how to transform each published value into a record. The closure should return a list or map. By default, no transformation is applied.
-
-  `path`
-  : The name of the index file relative to the target path (required). Can be a `csv` or `json` file.
-
-  `sep`
-  : The character used to separate values (default: `','`). Only used for `csv` files.
-
-`path`
-: Specify the publish path relative to the output directory (default: the target name). Can be a path, a closure that defines a custom directory for each published value, or a closure that defines a custom path for each individual file.
-
-Additionally, the following options from the {ref}`workflow <config-workflow>` config scope can be specified as directives:
-- `contentType`
-- `enabled`
-- `ignoreErrors`
-- `mode`
-- `overwrite`
-- `storageClass`
-- `tags`
-
-:::{note}
-Similarly to process directives vs {ref}`process <config-process>` config options, directives in the `output` block are specified without an equals sign (`=`).
-:::
