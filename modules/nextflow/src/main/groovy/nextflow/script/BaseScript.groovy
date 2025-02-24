@@ -127,7 +127,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
         if( !NF.outputDefinitionEnabled )
             throw new IllegalStateException("Workflow output definition requires the `nextflow.preview.output` feature flag")
         if( !entryFlow )
-            throw new IllegalStateException("Workflow output definition must be defined after the anonymous workflow")
+            throw new IllegalStateException("Workflow output definition must be defined after the entry workflow")
         if( ExecutionStack.withinWorkflow() )
             throw new IllegalStateException("Workflow output definition is not allowed within a workflow")
 
