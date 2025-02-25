@@ -12,6 +12,30 @@ myFile = file('some/path/to/my_file.file')
 
 The `file()` method can reference both files and directories, depending on what the string path refers to in the file system.
 
+You can also verify file integrity by providing a hash value:
+
+```nextflow
+// Verify a file with MD5
+file('some/path/to/my_file.file', known_hash: 'md5:d41d8cd98f00b204e9800998ecf8427e')
+
+// Verify a file with SHA-256
+file('some/path/to/my_file.file', known_hash: 'sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855')
+```
+
+The following hash algorithms are supported:
+
+-   MD5 (`md5:`)
+-   SHA-1 (`sha1:`)
+-   SHA-256 (`sha256:`)
+-   SHA-384 (`sha384:`)
+-   SHA-512 (`sha512:`)
+
+If the file's hash doesn't match the expected value, an error will be thrown.
+
+:::{note}
+Hash verification is not supported when using glob patterns that match multiple files.
+:::
+
 When using the wildcard characters `*`, `?`, `[]` and `{}`, the argument is interpreted as a [glob](http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob) path matcher and the `file()` method returns a list object holding the paths of files whose names match the specified pattern, or an empty list if no match is found:
 
 ```nextflow
@@ -42,6 +66,7 @@ def sample2 = dir / 'sample.bam'
 def sample3 = file("$dir/sample.bam")           // correct (but verbose)
 def sample4 = "$dir/sample.bam"                 // incorrect
 ```
+
 :::
 
 ## Getting file attributes
@@ -230,10 +255,10 @@ In general, you should not need to manually copy files, because Nextflow will au
 
 Nextflow works with many types of remote files and objects using the same interface as for local files. The following protocols are supported:
 
-- HTTP(S)/FTP (`http://`, `https://`, `ftp://`)
-- Amazon S3 (`s3://`)
-- Azure Blob Storage (`az://`)
-- Google Cloud Storage (`gs://`)
+-   HTTP(S)/FTP (`http://`, `https://`, `ftp://`)
+-   Amazon S3 (`s3://`)
+-   Azure Blob Storage (`az://`)
+-   Google Cloud Storage (`gs://`)
 
 To reference a remote file, simply specify the URL when opening the file:
 

@@ -30,6 +30,7 @@ import nextflow.exception.StopSplitIterationException
 import nextflow.exception.WorkflowScriptErrorException
 import nextflow.extension.GroupKey
 import nextflow.extension.OperatorImpl
+import nextflow.file.FileHashVerifier
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
 import nextflow.mail.Mailer
@@ -111,6 +112,7 @@ class Nextflow {
      *      - hidden: When `true` includes hidden files in the resulting paths (default: `false`)
      *      - maxDepth: Maximum number of directory levels to visit (default: no limit)
      *      - followLinks: When `true` it follows symbolic links during directories tree traversal, otherwise they are managed as files (default: `true`)
+     *      - known_hash: When specified, verifies the file hash matches the expected value in format 'algorithm:hash'
      *
      * @param path A file path eventually including a glob pattern e.g. /some/path/file*.txt
      * @return An instance of {@link Path} when a single file is matched or a list of {@link Path}s
@@ -123,7 +125,8 @@ class Nextflow {
         final path = filePattern as Path
         final glob = options?.containsKey('glob') ? options.glob as boolean : isGlobAllowed(path)
         if( !glob ) {
-            return checkIfExists(path, options)
+            def result = checkIfExists(path, options)
+            return options?.known_hash ? FileHashVerifier.verifyHash(result, options.known_hash as String) : result
         }
 
         // if it isn't a glob pattern simply return it a normalized absolute Path object
@@ -131,11 +134,19 @@ class Nextflow {
         final splitter = FilePatternSplitter.glob().parse(strPattern)
         if( !splitter.isPattern() ) {
             final normalised = splitter.strip(strPattern)
-            return checkIfExists(asPath(normalised), options)
+            def result = checkIfExists(asPath(normalised), options)
+            return options?.known_hash ? FileHashVerifier.verifyHash(result, options.known_hash as String) : result
         }
 
         // revolve the glob pattern returning all matches
-        return fileNamePattern(splitter, options)
+        def results = fileNamePattern(splitter, options)
+        if (options?.known_hash) {
+            if (results instanceof List) {
+                throw new IllegalArgumentException("Hash verification is not supported for glob patterns that match multiple files")
+            }
+            return FileHashVerifier.verifyHash(results as Path, options.known_hash as String)
+        }
+        return results
     }
 
     static files( Map options=null, def path ) {
@@ -209,7 +220,7 @@ class Nextflow {
             log.debug "Ignoring exit because execution is already aborted -- message=$message"
             return
         }
-        
+
         if ( exitCode && message ) {
             log.error message
         }
