@@ -21,10 +21,27 @@ import java.lang.annotation.Retention
 import java.lang.annotation.RetentionPolicy
 import java.lang.annotation.Target
 
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.ast.ASTNode
+import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.control.CompilePhase
+import org.codehaus.groovy.control.SourceUnit
+import org.codehaus.groovy.transform.ASTTransformation
+import org.codehaus.groovy.transform.GroovyASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformationClass
 
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.METHOD)
 @GroovyASTTransformationClass(classes = [ClosureToStringXformImpl])
 @interface ClosureToStringXform {
+
+    @CompileStatic
+    @GroovyASTTransformation(phase = CompilePhase.CONVERSION)
+    class ClosureToStringXformImpl implements ASTTransformation {
+        @Override
+        void visit(ASTNode[] astNodes, SourceUnit sourceUnit) {
+            final clazz = (ClassNode)astNodes[1]
+            new ClosureToStringVisitor(sourceUnit).visitClass(clazz)
+        }
+    }
 }
