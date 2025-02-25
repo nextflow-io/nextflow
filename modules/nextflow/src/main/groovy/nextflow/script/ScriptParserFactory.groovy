@@ -21,8 +21,8 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.SysEnv
-import nextflow.script.parser.ScriptParserImpl
-import nextflow.script.parser.legacy.ScriptParserLegacy
+import nextflow.script.parser.v1.ScriptParserV1
+import nextflow.script.parser.v2.ScriptParserV2
 
 /**
  * Factory for creating an instance of {@link ScriptParser}.
@@ -36,11 +36,11 @@ class ScriptParserFactory {
     static ScriptParser create(Session session) {
         final parser = SysEnv.get('NXF_SYNTAX_PARSER', 'v1')
         if( parser == 'v1' ) {
-            return new ScriptParserLegacy(session)
+            return new ScriptParserV1(session)
         }
         if( parser == 'v2' ) {
             log.debug "Using script parser v2"
-            return new ScriptParserImpl(session)
+            return new ScriptParserV2(session)
         }
         throw new IllegalStateException("Invalid NXF_SYNTAX_PARSER setting -- should be either 'v1' or 'v2'")
     }

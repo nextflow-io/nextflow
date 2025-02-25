@@ -1,4 +1,4 @@
-package nextflow.script.parser
+package nextflow.script.parser.v1
 
 import java.nio.file.Paths
 
@@ -6,67 +6,87 @@ import nextflow.Session
 import nextflow.exception.ScriptCompilationException
 import nextflow.script.BaseScript
 import nextflow.script.ScriptBinding
-import nextflow.script.ScriptMeta
-import nextflow.script.WorkflowDef
 import spock.lang.Specification
 import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ScriptParserTest extends Specification {
+class ScriptParserV1Test extends Specification {
 
     def 'should run a file script' () {
 
         given:
         def session = new Session()
-        def parser = new ScriptParserImpl(session)
-        parser.setBinding(new ScriptBinding())
+        def parser = new ScriptParserV1(session)
+        def binding = new ScriptBinding(params:[foo:'Hello'])
 
         def file = TestHelper.createInMemTempFile('foo.nf')
         file.text = '''
-        println "Hello world!"
+        bar = "$params.foo world!"
         '''
 
         when:
+        parser.setBinding(binding)
         parser.runScript(file)
         then:
         parser.script instanceof BaseScript
+        parser.result == 'Hello world!'
+        parser.result == binding.getVariable('bar')
         parser.binding.getScriptPath() == file
         parser.binding.getSession() == session
-        and:
-        def definitions = ScriptMeta.get(parser.script).getDefinitions()
-        definitions.size() == 1
-        definitions.first() instanceof WorkflowDef
+        !session.binding.hasVariable('bar')
     }
 
     def 'should run a text script' () {
 
         given:
         def session = new Session()
-        def parser = new ScriptParserImpl(session)
-        parser.setBinding(new ScriptBinding())
+        def parser = new ScriptParserV1(session)
+        def binding = new ScriptBinding(params:[foo:'Hello'])
 
         def TEXT = '''
-        println "Hello world!"
+        bar = "$params.foo world!"
+        '''
+
+        when:
+        parser.setBinding(binding)
+        parser.runScript(TEXT)
+        then:
+        parser.script instanceof BaseScript
+        parser.result == 'Hello world!'
+        parser.result == binding.getVariable('bar')
+        parser.binding.getScriptPath() == null
+        parser.binding.getSession() == session
+        !session.binding.hasVariable('bar')
+    }
+
+    def 'should run a script with session binding' () {
+
+        given:
+        def session = new Session()
+        def parser = new ScriptParserV1(session)
+        session.binding.setVariable('foo', 'Hello')
+
+        def TEXT = '''
+        bar = "$foo world!"
         '''
 
         when:
         parser.runScript(TEXT)
         then:
         parser.script instanceof BaseScript
+        parser.result == 'Hello world!'
         parser.binding.getScriptPath() == null
         parser.binding.getSession() == session
-        and:
-        def definitions = ScriptMeta.get(parser.script).getDefinitions()
-        definitions.size() == 1
-        definitions.first() instanceof WorkflowDef
+        session.binding.getVariable('foo') == 'Hello'
+        session.binding.getVariable('bar') == 'Hello world!'
     }
 
-    def 'should normalise script name' () {
+    def 'should normalise script name'() {
 
         given:
-        def parser = new ScriptParserImpl(Mock(Session))
+        def parser = new ScriptParserV1(Mock(Session))
 
         expect:
         parser.computeClassName(Paths.get(SCRIPT)) == EXPECTED
@@ -82,7 +102,7 @@ class ScriptParserTest extends Specification {
     def 'should normalise script text' () {
 
         given:
-        def parser = new ScriptParserImpl(Mock(Session))
+        def parser = new ScriptParserV1(Mock(Session))
 
         when:
         def result = parser.computeClassName('process foo { etc } ')
@@ -97,17 +117,17 @@ class ScriptParserTest extends Specification {
         def SESS = Mock(Session) { getClassLoader() >> CL }
 
         when:
-        def parser = new ScriptParserImpl(SESS)
+        def parser = new ScriptParserV1(SESS)
         then:
         parser.getSession() == SESS
         parser.getClassLoader() == CL
 
     }
 
-    def 'should report compilation errors' () {
+    def 'should catch compilation errors' () {
         given:
         def session = new Session()
-        def parser = new ScriptParserImpl(session)
+        def parser = new ScriptParserV1(session)
 
         def file = TestHelper.createInMemTempFile('foo.nf')
         file.text = '''
@@ -119,7 +139,7 @@ class ScriptParserTest extends Specification {
         then:
         def e = thrown(ScriptCompilationException)
         e.message.startsWith('Script compilation error')
-        e.message.contains("- cause: Unexpected input: '{'")
+        e.message.contains("- cause: Unexpected input: ')'")
         e.message.contains('foo.nf\n')
     }
     

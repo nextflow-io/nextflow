@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.script.parser
+package nextflow.script.parser.v2
 
 import java.security.CodeSource
 

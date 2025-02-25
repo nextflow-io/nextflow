@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.script.parser
+package nextflow.script.parser.v1
 
 import java.nio.file.Path
 
@@ -23,38 +23,44 @@ import groovy.transform.CompileStatic
 import nextflow.Channel
 import nextflow.Nextflow
 import nextflow.Session
+import nextflow.ast.NextflowDSL
+import nextflow.ast.NextflowXform
+import nextflow.ast.OpXform
 import nextflow.exception.ScriptCompilationException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
+import nextflow.io.ValueObject
 import nextflow.script.BaseScript
 import nextflow.script.ScriptParser
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
+import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.control.CompilerConfiguration
+import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.ImportCustomizer
 /**
- * Script parser implementation based on the Nextflow formal grammar.
+ * Legacy script parser implement based on the Groovy parser.
  *
- * @author Ben Sherman <bentshermann@gmail.com>
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class ScriptParserImpl extends ScriptParser {
+class ScriptParserV1 extends ScriptParser {
 
     private CompilerConfiguration config
 
-    ScriptParserImpl(Session session) {
+    ScriptParserV1(Session session) {
         super(session)
     }
 
     @Override
     protected BaseScript parse0(String scriptText, Path scriptPath) {
-        final compiler = getCompiler()
+        final interpreter = getInterpreter()
         final className = computeClassName(scriptText)
         try {
             final parsed = scriptPath && session.debug
-                    ? compiler.compile(scriptPath.toFile())
-                    : compiler.compile(scriptText, className)
+                    ? interpreter.parse(scriptPath.toFile())
+                    : interpreter.parse(scriptText, className)
             if( parsed !instanceof BaseScript )
                throw new CompilationFailedException(0, null)
             return (BaseScript)parsed
@@ -66,17 +72,20 @@ class ScriptParserImpl extends ScriptParser {
             msg = msg != 'startup failed' ? msg : header
             msg = msg.replaceAll(/startup failed:\n/,'')
             msg = msg.replaceAll(~/$className(: \d+:\b*)?/, header+'\n- cause:')
+            if( msg.contains "Unexpected input: '{'" ) {
+                msg += "\nNOTE: If this is the beginning of a process or workflow, there may be a syntax error in the body, such as a missing or extra comma, for which a more specific error message could not be produced."
+            }
             throw new ScriptCompilationException(msg, e)
         }
     }
 
-    private ScriptCompiler getCompiler() {
+    private GroovyShell getInterpreter() {
         if( !binding && session )
             binding = session.binding
         if( !binding )
             throw new IllegalArgumentException("Missing Script binding object")
 
-        return new ScriptCompiler(classLoader, binding, getConfig())
+        return new GroovyShell(classLoader, binding, getConfig())
     }
 
     CompilerConfiguration getConfig() {
@@ -85,17 +94,21 @@ class ScriptParserImpl extends ScriptParser {
 
         // define the imports
         final importCustomizer = new ImportCustomizer()
+        importCustomizer.addImports( StringUtils.name, groovy.transform.Field.name )
         importCustomizer.addImports( Path.name )
         importCustomizer.addImports( Channel.name )
         importCustomizer.addImports( Duration.name )
         importCustomizer.addImports( MemoryUnit.name )
+        importCustomizer.addImports( ValueObject.name )
         importCustomizer.addImport( 'channel', Channel.name )
         importCustomizer.addStaticStars( Nextflow.name )
 
         config = new CompilerConfiguration()
         config.addCompilationCustomizers( importCustomizer )
-        config.setScriptBaseClass(BaseScript.class.getName())
-        config.setPluginFactory(new ScriptParserPluginFactory())
+        config.scriptBaseClass = BaseScript.class.name
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(OpXform))
 
         if( session?.debug )
             config.debug = true
