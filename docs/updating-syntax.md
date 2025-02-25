@@ -487,7 +487,13 @@ The process `when` section is deprecated. Use conditional logic, such as an `if`
 
 The process `shell` section is deprecated. Use the `script` block instead. The VS Code extension provides syntax highlighting and error checking to help distinguish between Nextflow variables and Bash variables.
 
+(updating-config-syntax)=
+
 ### Configuration syntax
+
+:::{versionadded} 25.02.0-edge
+The strict config syntax can be enabled in Nextflow by setting `NXF_SYNTAX_PARSER=v2`.
+:::
 
 See {ref}`Configuration <config-syntax>` for a comprehensive description of the configuration language.
 
@@ -544,6 +550,6 @@ There are two ways to preserve Groovy code:
  - Move the code to the `lib` directory
  - Create a plugin
 
-Any Groovy code can be moved into the `lib` directory, which supports the full Groovy language. This approach is useful for temporarily preserving some Groovy code until it can be updated later and incorporated into a Nextflow script. See {ref}`<lib-directory>` documentation for more information.
+Any Groovy code can be moved into the `lib` directory, which supports the full Groovy language. This approach is useful for temporarily preserving some Groovy code until it can be updated later and incorporated into a Nextflow script. See {ref}`lib-directory` documentation for more information.
 
 For Groovy code that is complicated or if it depends on third-party libraries, it may be better to create a plugin. Plugins can define custom functions that can be included by Nextflow scripts like a module. Furthermore, plugins can be easily re-used across different pipelines. See {ref}`plugins-dev-page` for more information on how to develop plugins.
