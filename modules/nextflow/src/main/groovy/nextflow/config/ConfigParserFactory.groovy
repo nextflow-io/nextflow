@@ -33,12 +33,15 @@ import nextflow.config.parser.v2.ConfigParserV2
 class ConfigParserFactory {
 
     static ConfigParser create() {
-        final strict = SysEnv.get('NXF_ENABLE_STRICT_SYNTAX')=='true'
-        if( strict )
-            log.debug "Using strict config parser"
-        return strict
-            ? new ConfigParserV2()
-            : new ConfigParserV1()
+        final parser = SysEnv.get('NXF_SYNTAX_PARSER', 'v1')
+        if( parser == 'v1' ) {
+            return new ConfigParserV1()
+        }
+        if( parser == 'v2' ) {
+            log.debug "Using config parser v2"
+            return new ConfigParserV2()
+        }
+        throw new IllegalStateException("Invalid NXF_SYNTAX_PARSER setting -- should be either 'v1' or 'v2'")
     }
 
 }

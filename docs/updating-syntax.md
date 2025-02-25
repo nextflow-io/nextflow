@@ -492,7 +492,7 @@ The process `shell` section is deprecated. Use the `script` block instead. The V
 ### Configuration syntax
 
 :::{versionadded} 25.02.0-edge
-The strict config syntax can be enabled in Nextflow by setting `NXF_ENABLE_STRICT_SYNTAX=true`.
+The strict config syntax can be enabled in Nextflow by setting `NXF_SYNTAX_PARSER=v2`.
 :::
 
 See {ref}`Configuration <config-syntax>` for a comprehensive description of the configuration language.
