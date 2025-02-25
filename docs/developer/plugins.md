@@ -98,7 +98,7 @@ class MyObserver implements TraceObserver {
 
     @Override
     void onFlowCreate(Session session) {
-        final message = session.config.navigate('myplugin.create.message')
+        final message = session.config.navigate('myplugin.createMessage')
         println message
     }
 }
@@ -108,15 +108,48 @@ You can then set this option in your config file:
 
 ```groovy
 // dot syntax
-myplugin.create.message = "I'm alive!"
+myplugin.createMessage = "I'm alive!"
 
-// closure syntax
+// block syntax
 myplugin {
-    create {
-        message = "I'm alive!"
-    }
+    createMessage = "I'm alive!"
 }
 ```
+
+:::{versionadded} 25.02.0-edge
+:::
+
+Plugins can declare their config options by implementing the `ConfigScope` interface and declaring each config option as a field with the `@ConfigOption` annotation:
+
+```groovy
+class MyPluginConfig implements ConfigScope {
+
+    MyPluginConfig() {}
+
+    MyPluginConfig(Map opts) {
+        this.createMessage = opts.createMessage
+    }
+
+    @Override
+    String name() {
+        return 'myplugin'
+    }
+
+    @Override
+    String description() {
+        return '''
+            The `myplugin` scope...
+            '''
+    }
+
+    @ConfigOption('''
+        Message to print to standard output when a run is initialized.
+        ''')
+    String createMessage
+}
+```
+
+While this approach is not required to support plugin config options, it is used by Nextflow to recognize plugin definitions when validating the config.
 
 ### Executors
 
