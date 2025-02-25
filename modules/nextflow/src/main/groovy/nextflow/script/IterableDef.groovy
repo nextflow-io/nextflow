@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ trait IterableDef {
      * To support component recursion, the feedback channels must be used as the channel instances
      * for the outputs instead of creating new ones
      * 
-     * @return A list of output channels brining the process feedback
+     * @return A list of output channels bringing the process feedback
      */
     List<DataflowWriteChannel> getFeedbackChannels() { outputChannels }
 

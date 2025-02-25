@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import nextflow.script.TokenVar
  */
 @Slf4j
 @InheritConstructors
-class FileInParam extends BaseInParam implements PathQualifier {
+class FileInParam extends BaseInParam implements ArityParam, PathQualifier {
 
     protected filePattern
 
@@ -51,13 +51,6 @@ class FileInParam extends BaseInParam implements PathQualifier {
         }
 
         if( obj instanceof GString ) {
-            filePattern = obj
-            return this
-        }
-
-        // the ability to pass a closure as file name has been replaced by
-        // lazy gstring -- this should be deprecated
-        if( obj instanceof Closure && !NF.dsl2 ) {
             filePattern = obj
             return this
         }

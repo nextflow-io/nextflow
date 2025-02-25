@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,9 @@
 
 package nextflow.processor
 
+import static nextflow.util.CacheHelper.*
+
+import java.nio.file.CopyOption
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
@@ -24,20 +27,29 @@ import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.PathMatcher
+import java.nio.file.StandardCopyOption
+import java.time.temporal.ChronoUnit
 import java.util.concurrent.ExecutorService
 
+import dev.failsafe.Failsafe
+import dev.failsafe.RetryPolicy
+import dev.failsafe.event.EventListener
+import dev.failsafe.event.ExecutionAttemptedEvent
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.NF
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.TagAwareFile
+import nextflow.util.HashBuilder
 import nextflow.util.PathTrie
 /**
  * Implements the {@code publishDir} directory. It create links or copies the output
@@ -55,15 +67,17 @@ class PublishDir {
 
     private Map<Path,Boolean> makeCache = new HashMap<>()
 
+    private Session session = Global.session as Session
+
     /**
      * The target path where create the links or copy the output files
      */
     Path path
 
     /**
-     * Whenever overwrite existing files
+     * Whether to overwrite existing files
      */
-    Boolean overwrite
+    def /* Boolean | String */ overwrite
 
     /**
      * The publish {@link Mode}
@@ -86,9 +100,9 @@ class PublishDir {
     boolean enabled = true
 
     /**
-     * Trow an exception in case publish fails
+     * Throw an exception in case publish fails
      */
-    boolean failOnError = false
+    boolean failOnError = SysEnv.getBool('NXF_PUBLISH_FAIL_ON_ERROR', true)
 
     /**
      * Tags to be associated to the target file
@@ -107,6 +121,8 @@ class PublishDir {
      */
     private String storageClass
 
+    private PublishRetryConfig retryConfig
+
     private PathMatcher matcher
 
     private FileSystem sourceFileSystem
@@ -117,10 +133,14 @@ class PublishDir {
 
     private boolean nullPathWarn
 
-    private String taskName
+    private TaskRun task
 
     @Lazy
-    private ExecutorService threadPool = { def sess = Global.session as Session; sess.publishDirExecutorService() }()
+    private ExecutorService threadPool = { session.publishDirExecutorService() }()
+
+    protected String getTaskName() {
+        return task?.getName()
+    }
 
     void setPath( def value ) {
         final resolved = value instanceof Closure ? value.call() : value
@@ -177,7 +197,7 @@ class PublishDir {
             result.pattern = params.pattern
 
         if( params.overwrite != null )
-            result.overwrite = Boolean.parseBoolean(params.overwrite.toString())
+            result.overwrite = params.overwrite
 
         if( params.saveAs )
             result.saveAs = (Closure) params.saveAs
@@ -202,9 +222,19 @@ class PublishDir {
         return result
     }
 
-    @CompileStatic
+    protected Map getRetryOpts() {
+        def result = session.config.navigate('nextflow.publish.retryPolicy') as Map
+        if( result != null )
+            log.warn 'The `nextflow.publish` config scope has been renamed to `workflow.output`'
+        else
+            result = session.config.navigate('workflow.output.retryPolicy') as Map ?: Collections.emptyMap()
+        return result
+    }
+
     protected void apply0(Set<Path> files) {
         assert path
+        // setup the retry policy config to be used
+        this.retryConfig = new PublishRetryConfig(getRetryOpts())
 
         createPublishDir()
         validatePublishMode()
@@ -266,7 +296,6 @@ class PublishDir {
      * @param files Set of output files
      * @param task The task whose output need to be published
      */
-    @CompileStatic
     void apply( Set<Path> files, TaskRun task ) {
 
         if( !files || !enabled )
@@ -281,13 +310,11 @@ class PublishDir {
         this.sourceDir = task.targetDir
         this.sourceFileSystem = sourceDir.fileSystem
         this.stageInMode = task.config.stageInMode
-        this.taskName = task.name
+        this.task = task
 
         apply0(files)
     }
 
-
-    @CompileStatic
     protected void apply1(Path source, boolean inProcess ) {
 
         def target = sourceDir ? sourceDir.relativize(source) : source.getFileName()
@@ -301,7 +328,7 @@ class PublishDir {
             return
         }
 
-        final destination = resolveDestination(target)
+        final destination = resolveDestination(target).normalize()
 
         // apply tags
         if( this.tags!=null && destination instanceof TagAwareFile ) {
@@ -328,7 +355,6 @@ class PublishDir {
 
     }
 
-    @CompileStatic
     protected Path resolveDestination(target) {
 
         if( target instanceof Path ) {
@@ -347,21 +373,41 @@ class PublishDir {
         throw new IllegalArgumentException("Not a valid publish target path: `$target` [${target?.class?.name}]")
     }
 
-    @CompileStatic
     protected void safeProcessFile(Path source, Path target) {
         try {
-            processFile(source, target)
+            retryableProcessFile(source, target)
         }
         catch( Throwable e ) {
-            log.warn "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- See log file for details", e
-            if( NF.strictMode || failOnError){
-                final session = Global.session as Session
+            final msg =  "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- See log file for details"
+            final shouldFail = NF.strictMode || failOnError
+            if( shouldFail ) {
+                log.error(msg,e)
                 session?.abort(e)
             }
+            else
+                log.warn(msg,e)
         }
     }
 
-    @CompileStatic
+    protected void retryableProcessFile(Path source, Path target) {
+        final listener = new EventListener<ExecutionAttemptedEvent>() {
+            @Override
+            void accept(ExecutionAttemptedEvent event) throws Throwable {
+                log.debug "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}"
+            }
+        }
+        final retryPolicy = RetryPolicy.builder()
+            .handle(Exception)
+            .withBackoff(retryConfig.delay.toMillis(), retryConfig.maxDelay.toMillis(), ChronoUnit.MILLIS)
+            .withMaxAttempts(retryConfig.maxAttempts)
+            .withJitter(retryConfig.jitter)
+            .onRetry(listener)
+            .build()
+        Failsafe
+            .with( retryPolicy )
+            .get({it-> processFile(source, target)})
+    }
+
     protected void processFile( Path source, Path destination ) {
 
         // create target dirs if required
@@ -371,18 +417,19 @@ class PublishDir {
             processFileImpl(source, destination)
         }
         catch( FileAlreadyExistsException e ) {
-            if( checkIsSameRealPath(source, destination) )
-                return 
+            // don't copy source path if target is identical, but still emit the publish event
+            // see also https://github.com/nextflow-io/nf-prov/issues/22
+            final sameRealPath = checkIsSameRealPath(source, destination)
+
             // make sure destination and source does not overlap
             // see https://github.com/nextflow-io/nextflow/issues/2177
-            if( checkSourcePathConflicts(destination))
+            if( !sameRealPath && checkSourcePathConflicts(destination))
                 return
             
-            if( !overwrite )
-                return
-
-            FileHelper.deletePath(destination)
-            processFileImpl(source, destination)
+            if( !sameRealPath && shouldOverwrite(source, destination) ) {
+                FileHelper.deletePath(destination)
+                processFileImpl(source, destination)
+            }
         }
 
         notifyFilePublish(destination, source)
@@ -423,8 +470,9 @@ class PublishDir {
         final s1 = real0(sourceDir)
         if( t1.startsWith(s1) ) {
             def msg = "Refusing to publish file since destination path conflicts with the task work directory!"
-            if( taskName )
-                msg += "\n- offending task  : $taskName"
+            def name0 = getTaskName()
+            if( name0 )
+                msg += "\n- offending task  : $name0"
             msg += "\n- offending file  : $target"
             if( t1 != target.toString() )
                 msg += "\n- real destination: $t1"
@@ -439,7 +487,17 @@ class PublishDir {
         return !mode || mode == Mode.SYMLINK || mode == Mode.RELLINK
     }
 
-    @CompileStatic
+    protected boolean shouldOverwrite(Path source, Path target) {
+        if( overwrite instanceof Boolean )
+            return overwrite
+
+        final hashMode = HashMode.of(overwrite) ?: HashMode.DEFAULT()
+        final sourceHash = HashBuilder.hashPath(source, source.parent, hashMode)
+        final targetHash = HashBuilder.hashPath(target, target.parent, hashMode)
+        log.trace "comparing source and target with mode=${overwrite}, source=${sourceHash}, target=${targetHash}, should overwrite=${sourceHash != targetHash}"
+        return sourceHash != targetHash
+    }
+
     protected void processFileImpl( Path source, Path destination ) {
         log.trace "publishing file: $source -[$mode]-> $destination"
 
@@ -454,26 +512,37 @@ class PublishDir {
             FilesEx.mklink(source, [hard:true], destination)
         }
         else if( mode == Mode.MOVE ) {
-            FileHelper.movePath(source, destination)
+            FileHelper.movePath(source, destination, copyOpts())
         }
         else if( mode == Mode.COPY ) {
-            FileHelper.copyPath(source, destination)
+            FileHelper.copyPath(source, destination, copyOpts())
         }
         else if( mode == Mode.COPY_NO_FOLLOW ) {
-            FileHelper.copyPath(source, destination, LinkOption.NOFOLLOW_LINKS)
+            FileHelper.copyPath(source, destination, copyOpts(LinkOption.NOFOLLOW_LINKS))
         }
         else {
             throw new IllegalArgumentException("Unknown file publish mode: ${mode}")
         }
     }
 
-    @CompileStatic
-    private void createPublishDir() {
-        makeDirs(this.path)
+    @Memoized
+    protected CopyOption[] copyOpts(CopyOption... opts) {
+        final copyAttributes = session.config.navigate('workflow.output.copyAttributes', false)
+        return copyAttributes
+            ? opts + StandardCopyOption.COPY_ATTRIBUTES
+            : opts
     }
 
-    @CompileStatic
-    private void makeDirs(Path dir) {
+    protected void createPublishDir() {
+        try {
+            makeDirs(path)
+        }
+        catch( Throwable e ) {
+            throw new IllegalStateException("Failed to create publish directory: ${path.toUriString()}", e)
+        }
+    }
+
+    protected void makeDirs(Path dir) {
         if( !dir || makeCache.containsKey(dir) )
             return
 
@@ -492,7 +561,6 @@ class PublishDir {
      * That valid publish mode has been selected
      * Note: link and symlinks are not allowed across different file system
      */
-    @CompileStatic
     @PackageScope
     void validatePublishMode() {
         if( log.isTraceEnabled() )
@@ -513,11 +581,7 @@ class PublishDir {
     }
 
     protected void notifyFilePublish(Path destination, Path source=null) {
-        final sess = Global.session
-        if (sess instanceof Session) {
-            sess.notifyFilePublish(destination, source)
-        }
+        session.notifyFilePublish(destination, source)
     }
-
 
 }

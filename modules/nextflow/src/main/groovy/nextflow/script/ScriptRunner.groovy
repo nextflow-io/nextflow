@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,10 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
+import nextflow.container.inspect.ContainerInspectMode
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
+import nextflow.plugin.Plugins
 import nextflow.util.HistoryFile
 /**
  * Run a nextflow script file
@@ -91,7 +93,7 @@ class ScriptRunner {
         return this
     }
 
-    ScriptRunner setPreview(boolean  value, Closure<Void> action) {
+    ScriptRunner setPreview(boolean value, Closure<Void> action) {
         this.preview = value
         this.previewAction = action
         return this
@@ -131,9 +133,14 @@ class ScriptRunner {
         session.start()
         try {
             // parse the script
-            parseScript(scriptFile, entryName)
-            // run the code
-            run()
+            try {
+                parseScript(scriptFile, entryName)
+                // run the code
+                run()
+            }
+            finally {
+                log.debug "Parsed script files:${scriptFiles0()}"
+            }
             // await completion
             await()
             // shutdown session
@@ -148,6 +155,13 @@ class ScriptRunner {
             throw new AbortRunException()
         }
 
+        return result
+    }
+
+    protected String scriptFiles0() {
+        def result = ''
+        for( Map.Entry<String,Path> it : ScriptMeta.allScriptNames() )
+            result += "\n  ${it.key}: ${it.value.toUriString()}"
         return result
     }
 
@@ -213,6 +227,8 @@ class ScriptRunner {
     protected void parseScript( ScriptFile scriptFile, String entryName ) {
         scriptParser = new ScriptParser(session)
                             .setEntryName(entryName)
+                            // setting module true when running in "inspect" mode to prevent the running the entry workflow
+                            .setModule(ContainerInspectMode.active())
                             .parse(scriptFile.main)
         session.script = scriptParser.script
     }
@@ -245,6 +261,7 @@ class ScriptRunner {
 
     protected shutdown() {
         session.destroy()
+        Plugins.stop()
         session.cleanup()
         Global.cleanUp()
         log.debug "> Execution complete -- Goodbye"

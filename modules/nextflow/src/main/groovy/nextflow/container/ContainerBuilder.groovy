@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -295,7 +295,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
         // -- append by default the current path -- this is needed when `scratch` is set to true
         if( mountWorkDir ) {
-            result << composeVolumePath('$PWD')
+            result << composeVolumePath('$NXF_TASK_WORKDIR')
             result << ' '
         }
 

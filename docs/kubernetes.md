@@ -16,7 +16,7 @@ Kubernetes abstracts also the storage provisioning through the definition of one
 
 When using the `k8s` executor Nextflow deploys the workflow execution as a Kubernetes pod. This pod orchestrates the workflow execution and submits a separate pod execution for each job that need to be carried out by the workflow application.
 
-```{image} /images/nextflow-k8s-min.png
+```{image} _static/nextflow-k8s-min.png
 ```
 
 ## Requirements
@@ -28,7 +28,7 @@ Such volume needs to be accessible through a [Persistent Volume Claim](https://k
 The workflow application has to be containerised using the usual Nextflow {ref}`container<process-container>` directive.
 
 :::{tip}
-When using {ref}`wave-page` and {ref}`fusion-page` there is no need to use a shared file system and configure a persistent volume claim for the deployment of Nextflow pipeline with Kubernetes. You can ignore this requirement when using the Fusion file system. See the {ref}`fusion-page` documentation for further details.
+When using {ref}`wave-page` and {ref}`fusion-page` there is no need to use a shared file system and configure a persistent volume claim for the deployment of Nextflow pipeline with Kubernetes. You can ignore this requirement when using the Fusion file system. See the {ref}`fusion-page` for further information.
 :::
 
 ## Execution
@@ -86,39 +86,7 @@ The use of {ref}`fusion-page` allows deploying a Nextflow pipeline to a remote (
 
 This also makes unnecessary the use of the special `kuberun` command for the pipeline execution.
 
-For this deployment scenario the following configuration can be used:
-
-```groovy
-wave {
-    enabled = true
-}
-
-fusion {
-    enabled = true
-}
-
-process {
-    executor = 'k8s'
-}
-
-k8s {
-    context = '<YOUR K8S CONFIGURATION CONTEXT>'
-    namespace = '<YOUR K8S NAMESPACE>'
-    serviceAccount = '<YOUR K8S SERVICE ACCOUNT>'
-}
-```
-
-The `k8s.context` represents the Kubernetes configuration context to be used for the pipeline execution. This setting can be omitted if Nextflow itself is run as a pod in the Kubernetes cluster.
-
-The `k8s.namespace` represents the Kubernetes namespace where the jobs submitted by the pipeline execution should be executed.
-
-The `k8s.serviceAccount` represents the Kubernetes service account that should be used to grant the execution permission to jobs launched by Nextflow. You can find more details how to configure it as the [following link](https://github.com/seqeralabs/wave-showcase/tree/master/example8).
-
-Then the pipeline execution can be launched using the usual run command and specifying a AWS S3 bucket work directory, for example:
-
-```bash
-nextflow run <YOUR PIPELINE> -work-dir s3://<YOUR-BUCKET>/scratch
-```
+See [Amazon EKS](https://docs.seqera.io/fusion/guide/aws-eks) for a guide to set up Fusion in Amazon EKS compute environments and [Google Kubernetes Engine (GKE)](https://docs.seqera.io/fusion/guide/gcp-gke) for a guide to set up Fusion in GKE compute environments.
 
 ### Running in a pod
 

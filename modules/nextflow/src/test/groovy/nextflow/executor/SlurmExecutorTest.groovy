@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,15 +15,16 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Paths
 
 import nextflow.Session
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import spock.lang.Specification
 import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -77,11 +78,12 @@ class SlurmExecutorTest extends Specification {
         '/some/path/job.sh'     | true      | ['sbatch']
     }
 
-    def testGetHeaders() {
+    def 'test job script headers' () {
 
         setup:
         // SLURM executor
         def executor = [:] as SlurmExecutor
+        executor.session = Mock(Session)
 
         // mock process
         def proc = Mock(TaskProcessor)
@@ -135,7 +137,6 @@ class SlurmExecutorTest extends Specification {
         task.config.time = '1h'
         task.config.memory = '50 M'
         task.config.clusterOptions = '-a 1 --signal=KILL'
-
         then:
         executor.getHeaders(task) == '''
                 #SBATCH -J nf-the_task_name
@@ -149,11 +150,27 @@ class SlurmExecutorTest extends Specification {
 
         when:
         task.config = new TaskConfig()
+        task.config.time = '1h'
+        task.config.memory = '50 M'
+        task.config.clusterOptions = ['-a 1','--signal=KILL']
+        then:
+        executor.getHeaders(task) == '''
+                #SBATCH -J nf-the_task_name
+                #SBATCH -o /work/path/.command.log
+                #SBATCH --no-requeue
+                #SBATCH -t 01:00:00
+                #SBATCH --mem 50M
+                #SBATCH -a 1
+                #SBATCH --signal=KILL
+                '''
+            .stripIndent().leftTrim()
+
+        when:
+        task.config = new TaskConfig()
         task.config.cpus = 2
         task.config.time = '2h'
         task.config.memory = '200 M'
         task.config.clusterOptions = '-b 2'
-
         then:
         executor.getHeaders(task) == '''
                 #SBATCH -J nf-the_task_name
@@ -173,7 +190,6 @@ class SlurmExecutorTest extends Specification {
         task.config.time = '2d 3h'
         task.config.memory = '3 G'
         task.config.clusterOptions = '-x 3'
-
         then:
         executor.getHeaders(task) == '''
                 #SBATCH -J nf-the_task_name
@@ -187,8 +203,7 @@ class SlurmExecutorTest extends Specification {
                 '''
                 .stripIndent().leftTrim()
 
-        // test perCpuMemAllocation
-        when:
+        when: 'with perCpuMemAllocation'
         executor.@perCpuMemAllocation = true
         task.config = new TaskConfig()
         task.config.cpus = 8
@@ -203,6 +218,23 @@ class SlurmExecutorTest extends Specification {
                 #SBATCH --mem-per-cpu 3072M
                 '''
                 .stripIndent().leftTrim()
+
+        when: 'with job array'
+        def taskArray = Mock(TaskArrayRun) {
+            config >> new TaskConfig()
+            name >> task.name
+            workDir >> task.workDir
+            getArraySize() >> 5
+        }
+        then:
+        executor.getHeaders(taskArray) == '''
+                #SBATCH --array 0-4
+                #SBATCH -J nf-the_task_name
+                #SBATCH -o /dev/null
+                #SBATCH --no-requeue
+                #SBATCH --signal B:USR2@30
+                '''
+                .stripIndent().leftTrim()
     }
 
     def testWorkDirWithBlanks() {
@@ -210,6 +242,7 @@ class SlurmExecutorTest extends Specification {
         setup:
         // LSF executor
         def executor = Spy(SlurmExecutor)
+        executor.session = Mock(Session)
 
         // mock process
         def proc = Mock(TaskProcessor)
@@ -273,6 +306,52 @@ class SlurmExecutorTest extends Specification {
         usr
         exec.queueStatusCommand(null) == ['squeue','--noheader','-o','%i %t','-t','all','-u', usr]
         exec.queueStatusCommand('xxx') == ['squeue','--noheader','-o','%i %t','-t','all','-p','xxx','-u', usr]
+    }
 
+    def 'should get array index name and start' () {
+        given:
+        def executor = Spy(SlurmExecutor)
+        expect:
+        executor.getArrayIndexName() == 'SLURM_ARRAY_TASK_ID'
+        executor.getArrayIndexStart() == 0
+    }
+
+    @Unroll
+    def 'should get array task id' () {
+        given:
+        def executor = Spy(SlurmExecutor)
+        expect:
+        executor.getArrayTaskId(JOB_ID, TASK_INDEX) == EXPECTED
+
+        where:
+        JOB_ID      | TASK_INDEX    | EXPECTED
+        'foo'       | 1             | 'foo_1'
+        'bar'       | 2             | 'bar_2'
+    }
+
+    @Unroll
+    def 'should set slurm account' () {
+        given:
+        // task
+        def task = new TaskRun()
+        task.workDir = Paths.get('/work/dir')
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> Mock(Session)
+        task.config = Mock(TaskConfig)
+        and:
+        def executor = Spy(SlurmExecutor)
+        executor.getJobNameFor(_) >> 'foo'
+        executor.getName() >> 'slurm'
+        executor.getSession() >> Mock(Session) { getExecConfigProp('slurm', 'account',null)>>ACCOUNT }
+
+        when:
+        def result = executor.getDirectives(task, [])
+        then:
+        result == EXPECTED
+
+        where:
+        ACCOUNT             | EXPECTED
+        null                | ['-J', 'foo', '-o', '/work/dir/.command.log', '--no-requeue', '', '--signal', 'B:USR2@30']
+        'project-123'       | ['-J', 'foo', '-o', '/work/dir/.command.log', '--no-requeue', '', '--signal', 'B:USR2@30', '-A', 'project-123']
     }
 }

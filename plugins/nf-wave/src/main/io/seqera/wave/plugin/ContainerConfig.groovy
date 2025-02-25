@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import nextflow.util.CacheHelper
  */
 @Canonical
 @CompileStatic
-@ToString(includePackage = false, includeNames = true)
+@ToString(includePackage = false, includeNames = true, ignoreNulls = true)
 class ContainerConfig {
 
     List<String> entrypoint
@@ -107,5 +107,17 @@ class ContainerConfig {
                 allMeta.add(it.fingerprint())
         }
         return CacheHelper.hasher(allMeta).hash().toString()
+    }
+
+    boolean asBoolean() {
+        return !empty()
+    }
+
+    boolean empty() {
+        return !entrypoint &&
+            !cmd &&
+            !env &&
+            !workingDir &&
+            !layers
     }
 }

@@ -106,6 +106,8 @@ class LocalSecretsProviderTest extends Specification {
         and:
         Files.write(secretFile, json.getBytes('utf-8'), StandardOpenOption.CREATE_NEW)
         and:
+        secretFile.setPermissions('rw-r-----')
+        and:
         def provider = new LocalSecretsProvider(storeFile: secretFile)
 
         when:
@@ -230,6 +232,33 @@ class LocalSecretsProviderTest extends Specification {
         then:
         result.count('alpha=a')==1
         result.count('omega=o')==1
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should handle dollar in secrets' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def secretFile = folder.resolve('secrets.json');
+        and:
+        def DOLLAR1 = new SecretImpl('dollar', '$foo')
+        def DOLLAR2 = new SecretImpl('dollar2', "\$foo")
+
+        def provider = new LocalSecretsProvider(storeFile: secretFile)
+        and:
+        provider.putSecret(DOLLAR1)
+        provider.putSecret(DOLLAR2)
+
+        when:
+        def file = provider.makeTempSecretsFile()
+        then:
+        file.permissions == 'rw-------'
+        and:
+        file.text == '''\
+                     export dollar="\\\$foo"
+                     export dollar2="\\\$foo"
+                     '''.stripIndent()
 
         cleanup:
         folder?.deleteDir()

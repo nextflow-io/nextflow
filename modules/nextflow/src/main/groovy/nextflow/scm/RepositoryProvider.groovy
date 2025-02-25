@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,13 +73,25 @@ abstract class RepositoryProvider {
         return this
     }
 
+    String getRevision() {
+        return this.revision
+    }
+
     RepositoryProvider setRevision(String revision) {
         this.revision = revision
         return this
     }
 
+    String getProject() {
+        return this.project
+    }
+
+    ProviderConfig getConfig() {
+        return this.config
+    }
+
     boolean hasCredentials() {
-        config ? config.user && config.password : false
+        getUser() && getPassword()
     }
 
     String getUser() { config?.user }
@@ -205,7 +217,7 @@ abstract class RepositoryProvider {
      */
     protected void auth( URLConnection connection ) {
         if( hasCredentials() ) {
-            String authString = "${config.user}:${config.password}".bytes.encodeBase64().toString()
+            String authString = "${getUser()}:${getPassword()}".bytes.encodeBase64().toString()
             connection.setRequestProperty("Authorization","Basic " + authString)
         }
     }
@@ -241,8 +253,15 @@ abstract class RepositoryProvider {
         }
     }
 
-    @Memoized
     protected <T> List<T> invokeAndResponseWithPaging(String request, Closure<T> parse) {
+        // this is needed because apparently bytebuddy used by testing framework is not able
+        // to handle properly this method signature using both generics and `@Memoized` annotation.
+        // therefore the `@Memoized` has been moved to the inner method invocation
+        return invokeAndResponseWithPaging0(request, parse)
+    }
+
+    @Memoized
+    protected List invokeAndResponseWithPaging0(String request, Closure parse) {
         int page = 0
         final result = new ArrayList()
         while( true ) {

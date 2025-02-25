@@ -1,0 +1,14 @@
+classDiagram
+    %%
+    %% nextflow.plugin
+    %%
+    CmdRun --> Plugins : run
+
+    Plugins --> PluginsFacade : init
+
+    PluginsFacade "1" --> "*" PluginSpec : load
+
+    class PluginSpec {
+        id : String
+        version : String
+    }

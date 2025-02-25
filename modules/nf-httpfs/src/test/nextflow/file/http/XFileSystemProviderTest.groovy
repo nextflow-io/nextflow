@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.nio.file.Path
 import com.github.tomakehurst.wiremock.junit.WireMockRule
 import com.github.tomjankes.wiremock.WireMockGroovy
 import org.junit.Rule
+import spock.lang.IgnoreIf
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -29,7 +30,7 @@ import spock.lang.Unroll
  */
 class XFileSystemProviderTest extends Specification {
 
-
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def "should return input stream"() {
         given:
         def fsp = new HttpFileSystemProvider()
@@ -42,6 +43,7 @@ class XFileSystemProviderTest extends Specification {
 
     def "should return input stream from path"() {
         given:
+        def DATA = 'Hello world'
         def fsp = Spy(new HttpFileSystemProvider())
         def path = fsp.getPath(new URI('http://host.com/index.html?query=123'))
         def connection = Mock(URLConnection)
@@ -54,7 +56,8 @@ class XFileSystemProviderTest extends Specification {
             return connection
         }
         and:
-        connection.getInputStream() >> new ByteArrayInputStream('Hello world'.bytes)
+        connection.getInputStream() >> new ByteArrayInputStream(DATA.bytes)
+        connection.getContentLengthLong() >> DATA.size()
         and:
         stream.text == 'Hello world'
     }
@@ -96,7 +99,7 @@ class XFileSystemProviderTest extends Specification {
         Locale.setDefault(Locale.Category.FORMAT, defLocale)
     }
 
-
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def "should read file attributes from HttpPath"() {
         given:
         def fsp = new HttpFileSystemProvider()
@@ -109,6 +112,7 @@ class XFileSystemProviderTest extends Specification {
         attrs.size() > 0
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def "should read file attributes from FtpPath"() {
         given:
         def fsp = new FtpFileSystemProvider()

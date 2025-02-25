@@ -365,7 +365,7 @@ class GoogleLifeSciencesHelper {
         final remoteTaskDir = getRemoteTaskDir(workDir)
         def result = 'set -x; '
         result += "trap 'err=\$?; exec 1>&2; gsutil -m -q cp -R $localTaskDir/${TaskRun.CMD_LOG} ${remoteTaskDir}/${TaskRun.CMD_LOG} || true; [[ \$err -gt 0 || \$GOOGLE_LAST_EXIT_STATUS -gt 0 || \$NXF_DEBUG -gt 0 ]] && { ls -lah $localTaskDir || true; gsutil -m -q cp -R /google/ ${remoteTaskDir}; } || rm -rf $localTaskDir; exit \$err' EXIT; "
-        result += "{ cd $localTaskDir; bash ${TaskRun.CMD_RUN} nxf_unstage; } >> $localTaskDir/${TaskRun.CMD_LOG} 2>&1"
+        result += "{ cd $localTaskDir; bash ${TaskRun.CMD_RUN} nxf_unstage;} >> $localTaskDir/${TaskRun.CMD_LOG} 2>&1"
         return result
     }
 

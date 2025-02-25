@@ -106,7 +106,7 @@ class ScriptParserTest extends Specification {
         when:
         def result = parser.computeClassName('process foo { etc } ')
         then:
-        result == 'Script_01af1441'
+        result == 'Script_dd540db41b3a8b2a'
     }
 
     def 'should set classpath' () {

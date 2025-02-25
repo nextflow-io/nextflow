@@ -1,19 +1,28 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This Source Code Form is "Incompatible With Secondary Licenses", as
- * defined by the Mozilla Public License, v. 2.0.
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
  */
 
 package io.seqera.tower.plugin
 
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.file.http.XAuthProvider
 import nextflow.file.http.XAuthRegistry
 import nextflow.trace.TraceObserver
@@ -32,28 +41,25 @@ class TowerFactory implements TraceObserverFactory {
     private Map<String,String> env
 
     TowerFactory(){
-        env = System.getenv()
+        env = SysEnv.get()
     }
 
     @Override
     Collection<TraceObserver> create(Session session) {
-        final config = session.config
-        Boolean isEnabled = config.navigate('tower.enabled') as Boolean || env.get('TOWER_WORKFLOW_ID')
-
-        if( !isEnabled )
+        final client = client(session, env)
+        if( !client )
             return Collections.emptyList()
 
         final result = new ArrayList(1)
         // create the tower client
-        final tower = createTowerClient(session, config)
-        result.add(tower)
+        result.add(client)
         // create the logs checkpoint
-        if( env.containsKey('NXF_CLOUDCACHE_PATH') )
+        if( session.cloudCachePath )
             result.add( new LogsCheckpoint() )
         return result
     }
 
-    protected TowerClient createTowerClient(Session session, Map config) {
+    static protected TowerClient createTowerClient0(Session session, Map config, Map env) {
         String endpoint = config.navigate('tower.endpoint') as String
         Duration requestInterval = config.navigate('tower.requestInterval') as Duration
         Duration aliveInterval = config.navigate('tower.aliveInterval') as Duration
@@ -84,11 +90,23 @@ class TowerFactory implements TraceObserverFactory {
         return tower
     }
 
-    protected XAuthProvider provider(String endpoint, String accessToken) {
+    static protected XAuthProvider provider(String endpoint, String accessToken) {
         if (endpoint.endsWith('/'))
-            throw new IllegalArgumentException("Tower endpoint URL should not end with a `/` character -- offending value: $endpoint")
-        final refreshToken = env.get('TOWER_REFRESH_TOKEN')
+            throw new IllegalArgumentException("Seqera Platform endpoint URL should not end with a `/` character -- offending value: $endpoint")
+        final refreshToken = SysEnv.get('TOWER_REFRESH_TOKEN')
         return new TowerXAuth(endpoint, accessToken, refreshToken)
     }
 
+    @Memoized
+    static TowerClient client(Session session, Map<String,String> env) {
+        final config = session.config
+        Boolean isEnabled = config.navigate('tower.enabled') as Boolean || env.get('TOWER_WORKFLOW_ID')
+        return isEnabled
+            ? createTowerClient0(session, config, env)
+            : null
+    }
+
+    static TowerClient client() {
+        client(Global.session as Session, SysEnv.get())
+    }
 }

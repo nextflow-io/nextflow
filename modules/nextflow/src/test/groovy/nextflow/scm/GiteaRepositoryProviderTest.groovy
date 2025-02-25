@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package nextflow.scm
 
+import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
 
@@ -76,6 +77,7 @@ class GiteaRepositoryProviderTest extends Specification {
 
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     @Requires({System.getenv('NXF_GITEA_ACCESS_TOKEN')})
     def 'should read file content'() {
 

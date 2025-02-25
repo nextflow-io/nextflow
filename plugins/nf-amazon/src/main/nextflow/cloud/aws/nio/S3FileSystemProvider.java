@@ -62,9 +62,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
-import com.amazonaws.auth.AnonymousAWSCredentials;
 import com.amazonaws.regions.Regions;
-import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
@@ -79,11 +77,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import nextflow.cloud.aws.AwsClientFactory;
+import nextflow.cloud.aws.config.AwsConfig;
 import nextflow.cloud.aws.nio.util.IOUtils;
 import nextflow.cloud.aws.nio.util.S3MultipartOptions;
 import nextflow.cloud.aws.nio.util.S3ObjectSummaryLookup;
-import nextflow.cloud.aws.AwsClientFactory;
-import nextflow.cloud.aws.config.AwsConfig;
 import nextflow.extension.FilesEx;
 import nextflow.file.CopyOptions;
 import nextflow.file.FileHelper;
@@ -95,29 +93,29 @@ import static java.lang.String.format;
 
 /**
  * Spec:
- * 
+ *
  * URI: s3://[endpoint]/{bucket}/{key} If endpoint is missing, it's assumed to
  * be the default S3 endpoint (s3.amazonaws.com)
- * 
+ *
  * FileSystem roots: /{bucket}/
- * 
+ *
  * Treatment of S3 objects: - If a key ends in "/" it's considered a directory
  * *and* a regular file. Otherwise, it's just a regular file. - It is legal for
  * a key "xyz" and "xyz/" to exist at the same time. The latter is treated as a
  * directory. - If a file "a/b/c" exists but there's no "a" or "a/b/", these are
  * considered "implicit" directories. They can be listed, traversed and deleted.
- * 
+ *
  * Deviations from FileSystem provider API: - Deleting a file or directory
  * always succeeds, regardless of whether the file/directory existed before the
  * operation was issued i.e. Files.delete() and Files.deleteIfExists() are
  * equivalent.
- * 
- * 
+ *
+ *
  * Future versions of this provider might allow for a strict mode that mimics
  * the semantics of the FileSystem provider API on a best effort basis, at an
  * increased processing cost.
- * 
- * 
+ *
+ *
  */
 public class S3FileSystemProvider extends FileSystemProvider implements FileSystemTransferAware {
 
@@ -204,7 +202,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		S3Path s3Path = (S3Path) path;
 
 		Preconditions.checkArgument(!s3Path.getKey().equals(""),
-				"cannot create InputStream for root directory: %s", s3Path);
+				"cannot create InputStream for root directory: %s", FilesEx.toUriString(s3Path));
 
 		InputStream result;
 		try {
@@ -215,13 +213,13 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 					.getObjectContent();
 
 			if (result == null)
-				throw new IOException(String.format("The specified path is a directory: %s", path));
+				throw new IOException(String.format("The specified path is a directory: %s", FilesEx.toUriString(s3Path)));
 		}
 		catch (AmazonS3Exception e) {
 			if (e.getStatusCode() == 404)
 				throw new NoSuchFileException(path.toString());
 			// otherwise throws a generic IO exception
-			throw new IOException(String.format("Cannot access file: %s", path),e);
+			throw new IOException(String.format("Cannot access file: %s", FilesEx.toUriString(s3Path)),e);
 		}
 
 		return result;
@@ -260,11 +258,11 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 			if (!(create && truncateExisting)) {
 				if (exists(s3Path)) {
 					if (createNew || !truncateExisting) {
-						throw new FileAlreadyExistsException(path.toString());
+						throw new FileAlreadyExistsException(FilesEx.toUriString(s3Path));
 					}
 				} else {
 					if (!createNew && !create) {
-						throw new NoSuchFileException(path.toString());
+						throw new NoSuchFileException(FilesEx.toUriString(s3Path));
 					}
 				}
 			}
@@ -405,7 +403,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
                 if (Files.exists(tempFile)) {
                     ObjectMetadata metadata = new ObjectMetadata();
                     metadata.setContentLength(Files.size(tempFile));
-                    // FIXME: #20 ServiceLoader cant load com.upplication.s3fs.util.FileTypeDetector when this library is used inside a ear :(
+                    // FIXME: #20 ServiceLoader can't load com.upplication.s3fs.util.FileTypeDetector when this library is used inside a ear :(
 					metadata.setContentType(Files.probeContentType(tempFile));
 
                     try (InputStream stream = Files.newInputStream(tempFile)) {
@@ -470,9 +468,9 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 	@Override
 	public void createDirectory(Path dir, FileAttribute<?>... attrs)
 			throws IOException {
-		
+
 		// FIXME: throw exception if the same key already exists at amazon s3
-		
+
 		S3Path s3Path = (S3Path) dir;
 
 		Preconditions.checkArgument(attrs.length == 0,
@@ -498,13 +496,13 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		S3Path s3Path = (S3Path) path;
 
         if (Files.notExists(path)){
-            throw new NoSuchFileException("the path: " + path + " not exists");
+            throw new NoSuchFileException("the path: " + FilesEx.toUriString(s3Path) + " does not exist");
         }
 
         if (Files.isDirectory(path)){
             try (DirectoryStream<Path> stream = Files.newDirectoryStream(path)){
                 if (stream.iterator().hasNext()){
-                    throw new DirectoryNotEmptyException("the path: " + path + " is a directory and is not empty");
+                    throw new DirectoryNotEmptyException("the path: " + FilesEx.toUriString(s3Path) + " is a directory and is not empty");
                 }
             }
         }
@@ -543,13 +541,13 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		if (!actualOptions.contains(StandardCopyOption.REPLACE_EXISTING)) {
 			if (exists(s3Target)) {
 				throw new FileAlreadyExistsException(format(
-						"target already exists: %s", target));
+						"target already exists: %s", FilesEx.toUriString(s3Target)));
 			}
 		}
 
 		S3Client client = s3Source.getFileSystem() .getClient();
 		Properties props = s3Target.getFileSystem().properties();
-		
+
 		final ObjectMetadata sourceObjMetadata = s3Source.getFileSystem().getClient().getObjectMetadata(s3Source.getBucket(), s3Source.getKey());
 		final S3MultipartOptions opts = props != null ? new S3MultipartOptions(props) : new S3MultipartOptions();
 		final long maxSize = opts.getMaxCopySize();
@@ -668,7 +666,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 				return (V) new S3FileAttributesView(readAttr0(s3Path));
 			}
 			catch (IOException e) {
-				throw new RuntimeException("Unable read attributes for file: " + s3Path.toUri(), e);
+				throw new RuntimeException("Unable read attributes for file: " + FilesEx.toUriString(s3Path), e);
 			}
 		}
 		throw new UnsupportedOperationException("Not a valid S3 file system provider file attribute view: " + type.getName());
@@ -681,7 +679,11 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 				"path must be an instance of %s", S3Path.class.getName());
 		S3Path s3Path = (S3Path) path;
 		if (type.isAssignableFrom(BasicFileAttributes.class)) {
-			return (A) readAttr0(s3Path);
+			return (A) ("".equals(s3Path.getKey())
+					// the root bucket is implicitly a directory
+					? new S3FileAttributes("/", null, 0, true, false)
+					// read the target path attributes
+					: readAttr0(s3Path));
 		}
 		// not support attribute class
 		throw new UnsupportedOperationException(format("only %s supported", BasicFileAttributes.class));
@@ -709,11 +711,11 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		boolean directory = false;
 		boolean regularFile = false;
 		String key = objectSummary.getKey();
-		// check if is a directory and exists the key of this directory at amazon s3
+		// check if is a directory and the key of this directory exists in amazon s3
 		if (objectSummary.getKey().equals(s3Path.getKey() + "/") && objectSummary.getKey().endsWith("/")) {
 			directory = true;
 		}
-		// is a directory but not exists at amazon s3
+		// is a directory but does not exist in amazon s3
 		else if ((!objectSummary.getKey().equals(s3Path.getKey()) || "".equals(s3Path.getKey())) && objectSummary.getKey().startsWith(s3Path.getKey())){
 			directory = true;
 			// no metadata, we fake one
@@ -833,16 +835,12 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		ClientConfiguration clientConfig = createClientConfig(props);
 
 		final String bucketName = S3Path.bucketName(uri);
-		final boolean anonymous = "true".equals(props.getProperty("anonymous"));
-		if( anonymous ) {
-			log.debug("Creating AWS S3 client with anonymous credentials");
-			client = new S3Client(new AmazonS3Client(new AnonymousAWSCredentials(), clientConfig));
-		}
-		else {
-			final boolean global = bucketName!=null;
-			final AwsClientFactory factory = new AwsClientFactory(awsConfig, Regions.US_EAST_1.getName());
-			client = new S3Client(factory.getS3Client(clientConfig, global));
-		}
+        // do not use `global` flag for custom endpoint because
+        // when enabling that flag, it overrides S3 endpoints with AWS global endpoint
+        // see https://github.com/nextflow-io/nextflow/pull/5779
+		final boolean global = bucketName!=null && !awsConfig.getS3Config().isCustomEndpoint();
+		final AwsClientFactory factory = new AwsClientFactory(awsConfig, globalRegion(awsConfig));
+		client = new S3Client(factory.getS3Client(clientConfig, global));
 
 		// set the client acl
 		client.setCannedAcl(getProp(props, "s_3_acl", "s3_acl", "s3Acl"));
@@ -850,12 +848,19 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		client.setKmsKeyId(props.getProperty("storage_kms_key_id"));
 		client.setUploadChunkSize(props.getProperty("upload_chunk_size"));
 		client.setUploadMaxThreads(props.getProperty("upload_max_threads"));
-		client.setGlacierAutoRetrieval(props.getProperty("glacier_auto_retrieval"));
-		client.setGlacierExpirationDays(props.getProperty("glacier_expiration_days"));
-		client.setGlacierRetrievalTier(props.getProperty("glacier_retrieval_tier"));
+        client.setRequesterPaysEnabled(props.getProperty("requester_pays_enabled"));
+
+		if( props.getProperty("glacier_auto_retrieval") != null )
+			log.warn("Glacier auto-retrieval is no longer supported, config option `aws.client.glacierAutoRetrieval` will be ignored");
 
 		return new S3FileSystem(this, client, uri, props);
 	}
+
+    protected String globalRegion(AwsConfig awsConfig) {
+        return awsConfig.getRegion() != null && awsConfig.getS3Config().isCustomEndpoint()
+                ? awsConfig.getRegion()
+                : Regions.US_EAST_1.getName();
+    }
 
 	protected String getProp(Properties props, String... keys) {
 		for( String k : keys ) {
@@ -865,7 +870,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		}
 		return null;
 	}
-	
+
 	/**
 	 * find /amazon.properties in the classpath
 	 * @return Properties amazon.properties
@@ -878,12 +883,12 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 			if (in != null){
 				props.load(in);
 			}
-			
+
 		} catch (IOException e) {}
-		
+
 		return props;
 	}
-	
+
 	// ~~~
 
 	private <T> void verifySupportedOptions(Set<? extends T> allowedOptions,
@@ -909,8 +914,8 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 	}
 
 	/**
-	 * Get the Control List, if the path not exists
-     * (because the path is a directory and this key isnt created at amazon s3)
+	 * Get the Control List, if the path does not exist
+     * (because the path is a directory and this key isn't created at amazon s3)
      * then return the ACL of the first child.
      *
 	 * @param path {@link S3Path}

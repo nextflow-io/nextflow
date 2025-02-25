@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,14 @@
 
 package nextflow.processor
 
+import java.nio.file.FileSystems
 import java.nio.file.Files
 
+import nextflow.Global
+import nextflow.Session
 import nextflow.cloud.aws.nio.S3Path
-import spock.lang.Specification
-
-import java.nio.file.FileSystems
-
 import nextflow.file.FileHelper
+import spock.lang.Specification
 
 /**
  *

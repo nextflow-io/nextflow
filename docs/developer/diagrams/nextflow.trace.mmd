@@ -1,0 +1,13 @@
+classDiagram
+    %%
+    %% nextflow.trace
+    %%
+    Session --> TraceObserverFactory : init
+
+    TraceObserverFactory "1" --> "*" TraceObserver : create
+    TraceObserver <|-- AnsiLogObserver
+    TraceObserver <|-- GraphObserver
+    TraceObserver <|-- ReportObserver
+    TraceObserver <|-- TimelineObserver
+    TraceObserver <|-- TraceFileObserver
+    TraceObserver <|-- WorkflowStatsObserver

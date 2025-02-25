@@ -1,5 +1,5 @@
 #
-#  Copyright 2013-2023, Seqera Labs
+#  Copyright 2013-2024, Seqera Labs
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -27,25 +27,26 @@ else
 mm = 
 endif 
 
+compile:
+	./gradlew compile exportClasspath
+	@echo "DONE `date`"
+
+assemble:
+	./gradlew buildInfo compile assemble
+
+check:
+	./gradlew check
+
 clean:
 	rm -rf .nextflow*
 	rm -rf work 
 	rm -rf modules/nextflow/.nextflow*
 	rm -rf modules/nextflow/work
 	rm -rf build
+	rm -rf buildSrc/build
 	rm -rf modules/*/build
 	rm -rf plugins/*/build
 	./gradlew clean
-
-compile:
-	./gradlew compile exportClasspath
-	@echo "DONE `date`"
-
-assemble:
-	./gradlew compile assemble
-
-check:
-	./gradlew check
 
 #
 # install compiled artifacts in Maven local dir
@@ -94,16 +95,7 @@ upload:
 # Create self-contained distribution package
 #
 pack:
-	BUILD_PACK=1 ./gradlew packAll
-
-packCore:
-	BUILD_PACK=1 ./gradlew packCore
-
-#
-# Create self-contained distribution package, including GA4GH support and associated dependencies
-#
-packGA4GH:
-	BUILD_PACK=1 ./gradlew -PGA4GH packAll
+	BUILD_PACK=1 ./gradlew pack
 
 #
 # Upload NF launcher to nextflow.io web site

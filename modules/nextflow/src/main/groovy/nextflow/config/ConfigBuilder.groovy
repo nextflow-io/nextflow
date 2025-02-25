@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,8 +32,6 @@ import nextflow.cli.CmdNode
 import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
-import nextflow.secret.SecretHolder
-import nextflow.secret.SecretsContext
 import nextflow.secret.SecretsLoader
 import nextflow.trace.GraphObserver
 import nextflow.trace.ReportObserver
@@ -77,6 +75,8 @@ class ConfigBuilder {
 
     boolean showClosures
 
+    boolean stripSecrets
+
     boolean showMissingVariables
 
     Map<ConfigObject, String> emptyVariables = new LinkedHashMap<>(10)
@@ -92,6 +92,11 @@ class ConfigBuilder {
 
     ConfigBuilder setShowClosures(boolean value) {
         this.showClosures = value
+        return this
+    }
+
+    ConfigBuilder setStripSecrets(boolean value) {
+        this.stripSecrets = value
         return this
     }
 
@@ -321,7 +326,7 @@ class ConfigBuilder {
     }
 
     protected Map configVars() {
-        // this is needed to make sure to re-use the same
+        // this is needed to make sure to reuse the same
         // instance of the config vars across different instances of the ConfigBuilder
         // and prevent multiple parsing of the same params file (which can even be remote resource)
         return cacheableConfigVars(baseDir)
@@ -333,8 +338,8 @@ class ConfigBuilder {
         binding.put('baseDir', base)
         binding.put('projectDir', base)
         binding.put('launchDir', Paths.get('.').toRealPath())
-        if( SecretsLoader.isEnabled() )
-            binding.put('secrets', new SecretsContext())
+        binding.put('outputDir', Paths.get('results').complete())
+        binding.put('secrets', SecretsLoader.secretContext())
         return binding
     }
 
@@ -344,6 +349,7 @@ class ConfigBuilder {
         final ignoreIncludes = options ? options.ignoreConfigIncludes : false
         final slurper = new ConfigParser()
                 .setRenderClosureAsString(showClosures)
+                .setStripSecrets(stripSecrets)
                 .setIgnoreIncludes(ignoreIncludes)
         ConfigObject result = new ConfigObject()
 
@@ -540,6 +546,13 @@ class ConfigBuilder {
         if( cmdRun.stubRun )
             config.stubRun = cmdRun.stubRun
 
+        // -- set the output directory
+        if( cmdRun.outputDir )
+            config.outputDir = cmdRun.outputDir
+
+        if( cmdRun.preview )
+            config.preview = cmdRun.preview
+
         // -- sets the working directory
         if( cmdRun.workDir )
             config.workDir = cmdRun.workDir
@@ -595,9 +608,10 @@ class ConfigBuilder {
         if( config.isSet('resume') )
             config.resume = normalizeResumeId(config.resume as String)
 
-        // -- sets `dumpKeys` option
-        if( cmdRun.dumpHashes )
-            config.dumpHashes = cmdRun.dumpHashes
+        // -- sets `dumpHashes` option
+        if( cmdRun.dumpHashes ) {
+            config.dumpHashes = cmdRun.dumpHashes != '-' ? cmdRun.dumpHashes : 'default'
+        }
 
         if( cmdRun.dumpChannels )
             config.dumpChannels = cmdRun.dumpChannels.tokenize(',')
@@ -671,6 +685,7 @@ class ConfigBuilder {
 
         // -- sets the messages options
         if( cmdRun.withWebLog ) {
+            log.warn "The command line option '-with-weblog' is deprecated - consider enabling this feature by setting 'weblog.enabled=true' in your configuration file"
             if( !(config.weblog instanceof Map) )
                 config.weblog = [:]
             config.weblog.enabled = true
@@ -688,7 +703,7 @@ class ConfigBuilder {
             if( cmdRun.withTower != '-' )
                 config.tower.endpoint = cmdRun.withTower
             else if( !config.tower.endpoint )
-                config.tower.endpoint = 'https://api.tower.nf'
+                config.tower.endpoint = 'https://api.cloud.seqera.io'
         }
 
         // -- set wave options
@@ -707,6 +722,19 @@ class ConfigBuilder {
             if( !(config.fusion instanceof Map) )
                 config.fusion = [:]
             config.fusion.enabled = cmdRun.withFusion == 'true'
+        }
+
+        // -- set cloudcache options
+        final envCloudPath = env.get('NXF_CLOUDCACHE_PATH')
+        if( cmdRun.cloudCachePath || envCloudPath ) {
+            if( !(config.cloudcache instanceof Map) )
+                config.cloudcache = [:]
+            if( !config.cloudcache.isSet('enabled') )
+                config.cloudcache.enabled = true
+            if( cmdRun.cloudCachePath && cmdRun.cloudCachePath != '-' )
+                config.cloudcache.path = cmdRun.cloudCachePath
+            else if( !config.cloudcache.isSet('path') && envCloudPath )
+                config.cloudcache.path = envCloudPath
         }
 
         // -- add the command line parameters to the 'taskConfig' object
@@ -827,10 +855,6 @@ class ConfigBuilder {
             }
             return result
         }
-        else if( config instanceof GString ) {
-            final holdSecrets = config.values.any { it instanceof SecretHolder }
-            return holdSecrets ? config : config.toString()
-        }
         else {
             return config
         }
@@ -886,6 +910,7 @@ class ConfigBuilder {
 
         final config = new ConfigBuilder()
                 .setShowClosures(true)
+                .setStripSecrets(true)
                 .setOptions(cmdRun.launcher.options)
                 .setCmdRun(cmdRun)
                 .setBaseDir(baseDir)

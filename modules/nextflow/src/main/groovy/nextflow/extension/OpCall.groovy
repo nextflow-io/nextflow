@@ -10,7 +10,6 @@ import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import nextflow.NF
 import nextflow.dag.NodeMarker
 import nextflow.exception.ScriptRuntimeException
 import nextflow.script.ChannelOut
@@ -155,7 +154,7 @@ class OpCall implements Callable {
     protected Object invoke() {
         if( methodName==SET_OP_hack ) {
             // well this is ugly, the problem is that `set` is not a real operator
-            // but it's exposed as such. let's live whit this for now
+            // but it's exposed as such. let's live with this for now
             return invoke1('set', [source, args[0]] as Object[])
         }
 
@@ -320,13 +319,6 @@ class OpCall implements Callable {
     protected void checkDeprecation(Method method) {
         if( method.getAnnotation(Deprecated) ) {
             def messg = "Operator `$methodName` is deprecated -- it will be removed in a future release"
-            if( NF.isDsl2() )
-                throw new DeprecationException(messg)
-            log.warn messg
-        }
-        else if( method.getAnnotation(DeprecatedDsl2) && NF.isDsl2() ) {
-            def annot = method.getAnnotation(DeprecatedDsl2)
-            def messg = annot.message() ?: "Operator `$methodName` has been deprecated -- it's not available in DSL2 syntax".toString()
             throw new DeprecationException(messg)
         }
     }

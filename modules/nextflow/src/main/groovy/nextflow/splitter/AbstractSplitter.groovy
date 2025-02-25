@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -180,7 +180,7 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      *      A non-empty list of objects
      * @return
      *      Returns the item at position defined by the attribute {@code #elem} in the list specified as parameter.
-     *      When {@code #elem} is equal to -1 find find out the first occourence of a file object.
+     *      When {@code #elem} is equal to -1 find find out the first occurrence of a file object.
      *      If no file is available the first item in the list is returned
      */
     @PackageScope

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -100,6 +100,7 @@ class HttpFilesTests extends Specification {
         server?.stop(0)
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def 'read a http file ' () {
         given:
         def uri = new URI('http://www.nextflow.io/index.html')
@@ -112,10 +113,11 @@ class HttpFilesTests extends Specification {
         def lines = Files.readAllLines(path, Charset.forName('UTF-8'))
         then:
         lines.size()>0
-        lines[0] == '<!DOCTYPE html>'
-
+        lines[0].startsWith('<!DOCTYPE html><html lang="en">')
+        
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def 'should check file properties' () {
         given:
         SysEnv.push([NXF_HTTPFS_MAX_ATTEMPTS: '1'])
@@ -152,8 +154,8 @@ class HttpFilesTests extends Specification {
         lines[1] == 'Disallow: /'
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def 'should read HTTPS file' () {
-
         given:
         def uri = new URI('https://www.nextflow.io/index.html')
         when:
@@ -165,12 +167,11 @@ class HttpFilesTests extends Specification {
         def lines = Files.readAllLines(path, Charset.forName('UTF-8'))
         then:
         lines.size()>0
-        lines[0] == '<!DOCTYPE html>'
-
+        lines[0].startsWith('<!DOCTYPE html><html lang="en">')
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def 'should copy a file' () {
-
         given:
         def uri = new URI('https://www.nextflow.io/index.html')
         def source = Paths.get(uri)
@@ -184,37 +185,25 @@ class HttpFilesTests extends Specification {
 
         cleanup:
         target?.parent?.deleteDir()
-
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
     def 'should read lines' () {
         given:
-        def path = Paths.get(new URI('ftp://ftp.ncbi.nlm.nih.gov/robots.txt'))
+        def uri = new URI('http://www.nextflow.io/index.html')
+        when:
+        def path = Paths.get(uri)
+        then:
+        path instanceof XPath
 
         when:
-        def lines = Files.readAllLines(path, Charset.forName('UTF-8'))
+        def str = new String(Files.readAllBytes(path), Charset.forName('UTF-8'))
         then:
-        lines[0] == 'User-agent: *'
-        lines[1] == 'Disallow: /'
-    }
-
-    @IgnoreIf({System.getenv('NXF_SMOKE')})
-    def 'should read all bytes' ( ) {
-        given:
-        def path = Paths.get(new URI('ftp://ftp.ncbi.nlm.nih.gov/robots.txt'))
-
-        when:
-        def bytes = Files.readAllBytes(path)
-        def lines = new String(bytes).readLines()
-        then:
-        lines[0] == 'User-agent: *'
-        lines[1] == 'Disallow: /'
-
+        str.size()>0
+        str.startsWith('<!DOCTYPE html><html lang="en">')
     }
 
     def 'should read with a newByteChannel' () {
-
         given:
         def wireMock = new WireMockGroovy(18080)
         wireMock.stub {
@@ -247,9 +236,7 @@ class HttpFilesTests extends Specification {
         then:
         buffer.toString() == path.text
         buffer.toString() == '01234567890123456789012345678901234567890123456789'
-
     }
-
 
     def 'should use basic auth' () {
         given:

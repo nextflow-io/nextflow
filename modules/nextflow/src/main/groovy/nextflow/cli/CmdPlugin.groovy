@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 
 package nextflow.cli
 
+import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
@@ -38,6 +39,9 @@ class CmdPlugin extends CmdBase {
         return 'plugin'
     }
 
+    @DynamicParameter(names = "--", description = "Custom plugin parameters go here", hidden = true)
+    private Map<String, String> params = new HashMap<>();
+
     @Parameter(hidden = true)
     List<String> args
 
@@ -46,7 +50,9 @@ class CmdPlugin extends CmdBase {
         if( !args )
             throw new AbortOperationException("Missing plugin command - usage: nextflow plugin install <pluginId,..>")
         // setup plugins system
-        Plugins.setup()
+        Plugins.init()
+        Runtime.addShutdownHook((it)-> Plugins.stop())
+        
         // check for the plugins install
         if( args[0] == 'install' ) {
             if( args.size()!=2 )
@@ -67,6 +73,12 @@ class CmdPlugin extends CmdBase {
                 throw new AbortOperationException("Cannot find target plugin: $target")
             final plugin = wrapper.getPlugin()
             if( plugin instanceof PluginExecAware ) {
+                def mapped = [] as List<String>
+                params.entrySet().each{
+                    mapped << "--$it.key".toString()
+                    mapped << "$it.value".toString()
+                }
+                args.addAll(mapped)
                 final ret = plugin.exec(getLauncher(), target, cmd, args)
                 // use explicit exit to invoke the system shutdown hooks
                 System.exit(ret)

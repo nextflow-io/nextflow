@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -170,7 +170,7 @@ class ClusterConfig  {
             return getClusterJoin().tokenize(':')[1]
         }
         catch (Throwable e) {
-            log.debug "Oops.. Cannot fetch cloud driver name", e
+            log.debug "Cannot fetch cloud driver name", e
             return null
         }
     }

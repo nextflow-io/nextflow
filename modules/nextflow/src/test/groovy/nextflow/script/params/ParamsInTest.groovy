@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -707,12 +707,12 @@ class ParamsInTest extends Dsl2Spec {
 
             process hola {
               input:
-              path x
-              path f1
-              path '*.fa' 
+              path x, arity: '1'
+              path f1, arity: '1..2'
+              path '*.fa', arity: '1..*'
               path 'file.txt'
               path f2, name: '*.fa'
-              path f3, stageAs: '*.txt' 
+              path f3, stageAs: '*.txt'
 
               return ''
             }
@@ -738,18 +738,21 @@ class ParamsInTest extends Dsl2Spec {
         in0.inChannel.val == FILE
         in0.index == 0
         in0.isPathQualifier()
+        in0.arity == new ArityParam.Range(1, 1)
 
         in1.name == 'f1'
         in1.filePattern == '*'
         in1.inChannel.val == FILE
         in1.index == 1
         in1.isPathQualifier()
+        in1.arity == new ArityParam.Range(1, 2)
 
         in2.name == '*.fa'
         in2.filePattern == '*.fa'
         in2.inChannel.val == FILE
         in2.index == 2
         in2.isPathQualifier()
+        in2.arity == new ArityParam.Range(1, Integer.MAX_VALUE)
 
         in3.name == 'file.txt'
         in3.filePattern == 'file.txt'

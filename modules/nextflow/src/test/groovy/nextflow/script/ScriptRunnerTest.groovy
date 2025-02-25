@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -248,6 +248,7 @@ class ScriptRunnerTest extends Dsl2Spec {
         runner.session.fault.error instanceof ProcessUnrecoverableException
         runner.session.fault.error.cause instanceof MissingPropertyException
         runner.session.fault.error.cause.message =~ /Unknown variable 'HELLO' -- .*/
+        // if this fails, likely there's something wrong in the LoggerHelper#getErrorLine method
         runner.session.fault.report =~ /No such variable: HELLO -- .*/
 
     }

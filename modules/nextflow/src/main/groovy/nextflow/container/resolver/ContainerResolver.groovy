@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,14 @@ interface ContainerResolver extends ExtensionPoint {
      * @return
      *      The resolved container image name
      */
-    abstract ContainerInfo resolveImage(TaskRun task, String imageName)
+    ContainerInfo resolveImage(TaskRun task, String imageName)
+
+    /**
+     * Check the availability of the specified container reference
+     *
+     * @param key The container reference
+     * @return {@code true} when the container is available for use, {@code false} otherwise
+     */
+    boolean isContainerReady(String key)
 
 }

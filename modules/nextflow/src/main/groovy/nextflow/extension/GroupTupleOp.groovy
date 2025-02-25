@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,6 @@ class GroupTupleOp {
     static private Map GROUP_TUPLE_PARAMS = [ by: [Integer, List], sort: [Boolean, 'true','natural','deep','hash',Closure,Comparator], size: Integer, remainder: Boolean ]
 
     static private List<Integer> GROUP_DEFAULT_INDEX = [0]
-
 
     /**
      * Comparator used to sort tuple entries (when required)
@@ -96,7 +95,7 @@ class GroupTupleOp {
         final len = tuple.size()
 
         final List items = groups.getOrCreate(key) {    // get the group for the specified key
-            def result = new ArrayList(len)             // create if does not exists
+            def result = new ArrayList(len)             // create if does not exist
             for( int i=0; i<len; i++ )
                 result[i] = (i in indices ? tuple[i] : new ArrayBag())
             return result

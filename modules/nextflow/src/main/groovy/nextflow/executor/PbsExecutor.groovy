@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskRun
 /**
  * Implements a executor for PBS/Torque cluster
@@ -29,7 +30,7 @@ import nextflow.processor.TaskRun
  */
 @Slf4j
 @CompileStatic
-class PbsExecutor extends AbstractGridExecutor {
+class PbsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
     private static Pattern OPTS_REGEX = ~/(?:^|\s)-l.+/
 
@@ -43,8 +44,14 @@ class PbsExecutor extends AbstractGridExecutor {
     protected List<String> getDirectives( TaskRun task, List<String> result ) {
         assert result !=null
 
+        if( task instanceof TaskArrayRun ) {
+            final arraySize = task.getArraySize()
+            result << '-t' << "0-${arraySize - 1}".toString()
+        }
+
         result << '-N' << getJobNameFor(task)
-        result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
+
+        result << '-o' << (task.isArray() ? '/dev/null' : quote(task.workDir.resolve(TaskRun.CMD_LOG)))
         result << '-j' << 'oe'
 
         // the requested queue name
@@ -54,7 +61,7 @@ class PbsExecutor extends AbstractGridExecutor {
 
         // task cpus
         if( task.config.getCpus() > 1 ) {
-            if( matchOptions(task.config.clusterOptions?.toString()) ) {
+            if( matchOptions(task.config.getClusterOptionsAsString()) ) {
                 log.warn1 'cpus directive is ignored when clusterOptions contains -l option\ntip: clusterOptions = { "-l nodes=1:ppn=${task.cpus}:..." }'
             }
             else {
@@ -74,10 +81,14 @@ class PbsExecutor extends AbstractGridExecutor {
             result << "-l" << "mem=${task.config.getMemory().toString().replaceAll(/[\s]/,'').toLowerCase()}".toString()
         }
 
-        // -- at the end append the command script wrapped file name
-        if( task.config.clusterOptions ) {
-            result << task.config.clusterOptions.toString() << ''
+        // add account from config
+        final account = session.getExecConfigProp(getName(), 'account', null) as String
+        if( account ) {
+            result << '-P' << account
         }
+
+        // -- at the end append the command script wrapped file name
+        addClusterOptionsDirective(task.config, result)
 
         return result
     }
@@ -174,4 +185,21 @@ class PbsExecutor extends AbstractGridExecutor {
     static protected boolean matchOptions(String value) {
         value ? OPTS_REGEX.matcher(value).find() : null
     }
+
+    @Override
+    String getArrayIndexName() {
+        return 'PBS_ARRAYID'
+    }
+
+    @Override
+    int getArrayIndexStart() {
+        return 0
+    }
+
+    @Override
+    String getArrayTaskId(String jobId, int index) {
+        assert jobId, "Missing 'jobId' argument"
+        return jobId.replace('[]', "[$index]")
+    }
+
 }

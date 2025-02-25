@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -78,10 +78,6 @@ class OpXformImpl implements ASTTransformation {
     static final public String MULTIMAP_METHOD_NAME = 'multiMap'
 
     static final public String MULTIMAP_CRITERIA_FUN = 'multiMapCriteria'
-
-    @Deprecated static final public String FORK_METHOD_NAME = 'fork'
-
-    @Deprecated static final public String FORK_CRITERIA_FUN = 'forkCriteria'
 
     SourceUnit unit
 
@@ -385,14 +381,6 @@ class OpXformImpl implements ASTTransformation {
                 return ret
             if( name==MULTIMAP_CRITERIA_FUN && args.size()==1 && m.objectExpression.text=='this')
                 return ret
-            if( name==FORK_METHOD_NAME && args.size()==1 ) {
-                log.debug "Operator `fork` has been renamed to `multiMap`"
-                return ret
-            }
-            if( name==FORK_CRITERIA_FUN && args.size()==1 && m.objectExpression.text=='this') {
-                log.warn "Function `forkCriteria` has been renamed to `multiMapCriteria`"
-                return ret
-            }
 
         }
         return null

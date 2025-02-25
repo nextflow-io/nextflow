@@ -38,6 +38,8 @@ class AwsS3ConfigTest extends Specification {
         !client.debug
         !client.s3Acl
         !client.pathStyleAccess
+        !client.anonymous
+        !client.isCustomEndpoint()
     }
 
     def 'should set config' () {
@@ -48,7 +50,8 @@ class AwsS3ConfigTest extends Specification {
                 storageKmsKeyId: 'key-1',
                 storageEncryption: 'AES256',
                 s3Acl: 'public-read',
-                s3PathStyleAccess: true
+                s3PathStyleAccess: true,
+                anonymous: true
         ]
 
         when:
@@ -60,6 +63,7 @@ class AwsS3ConfigTest extends Specification {
         client.storageEncryption == 'AES256'
         client.s3Acl == CannedAccessControlList.PublicRead
         client.pathStyleAccess
+        client.anonymous
     }
 
     def 'should use legacy upload storage class' () {
@@ -95,6 +99,21 @@ class AwsS3ConfigTest extends Specification {
         [AWS_S3_ENDPOINT: 'http://foo'] | [endpoint: 'http://bar']      | 'http://bar'  // <-- config should have priority
     }
 
+    @Unroll
+    def 'should fail with invalid endpoint protocol' () {
+        when:
+        new AwsS3Config(CONFIG)
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == EXPECTED
+
+        where:
+        CONFIG                          | EXPECTED
+        [endpoint: 'bar.com']           |  "S3 endpoint must begin with http:// or https:// prefix - offending value: 'bar.com'"
+        [endpoint: 'ftp://bar.com']     |  "S3 endpoint must begin with http:// or https:// prefix - offending value: 'ftp://bar.com'"
+
+    }
+
     def 'should get s3 legacy properties' () {
         given:
         SysEnv.push([:])
@@ -120,5 +139,20 @@ class AwsS3ConfigTest extends Specification {
         cleanup:
         SysEnv.pop()
 
+    }
+
+    @Unroll
+    def 'should check is custom endpoint' () {
+        given:
+        def config = new AwsS3Config(CONFIG)
+
+        expect:
+        config.isCustomEndpoint() == EXPECTED
+
+        where:
+        EXPECTED    | CONFIG
+        false       | [:]
+        false       | [endpoint: 'https://s3.us-east-2.amazonaws.com']
+        true        | [endpoint: 'https://foo.com']
     }
 }

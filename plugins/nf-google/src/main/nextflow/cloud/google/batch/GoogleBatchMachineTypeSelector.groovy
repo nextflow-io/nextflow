@@ -77,6 +77,12 @@ class GoogleBatchMachineTypeSelector {
 
     private static final List<String> DEFAULT_FAMILIES = ['n1-*', 'n2-*', 'n2d-*', 'c2-*', 'c2d-*', 'm1-*', 'm2-*', 'm3-*', 'e2-*']
 
+    /*
+     * Accelerator optimized families. See: https://cloud.google.com/compute/docs/accelerator-optimized-machines
+     * LAST UPDATE 2024-10-16
+     */
+    private static final List<String> ACCELERATOR_OPTIMIZED_FAMILIES = ['a2-*', 'a3-*', 'g2-*']
+
     @Immutable
     static class MachineType {
         String type
@@ -86,11 +92,11 @@ class GoogleBatchMachineTypeSelector {
         float onDemandPrice
         int cpusPerVm
         int memPerVm
+        int gpusPerVm
         PriceModel priceModel
     }
 
     MachineType bestMachineType(int cpus, int memoryMB, String region, boolean spot, boolean fusionEnabled, List<String> families) {
-        final machineTypes = getAvailableMachineTypes(region, spot)
         if (families == null)
             families = Collections.<String>emptyList()
 
@@ -98,9 +104,9 @@ class GoogleBatchMachineTypeSelector {
         if (families.size() == 1) {
             final familyOrType = families.get(0)
             if (familyOrType.contains("custom-"))
-                return new MachineType(type: familyOrType, family: 'custom', cpusPerVm: cpus, memPerVm: memoryMB, location: region, priceModel: spot ? PriceModel.spot : PriceModel.standard)
+                return new MachineType(type: familyOrType, family: 'custom', cpusPerVm: cpus, memPerVm: memoryMB, gpusPerVm: 0, location: region, priceModel: spot ? PriceModel.spot : PriceModel.standard)
 
-            final machineType = machineTypes.find { it.type == familyOrType }
+            final machineType = getAvailableMachineTypes(region, spot).find { it.type == familyOrType }
             if( machineType )
                 return machineType
         }
@@ -117,7 +123,7 @@ class GoogleBatchMachineTypeSelector {
         final matchMachineType = {String type -> !families || families.find { matchType(it, type) }}
 
         // find machines with enough resources and SSD local disk
-        final validMachineTypes = machineTypes.findAll {
+        final validMachineTypes = getAvailableMachineTypes(region, spot).findAll {
                     it.cpusPerVm >= cpus &&
                     it.memPerVm >= memoryGB &&
                     matchMachineType(it.type)
@@ -157,6 +163,7 @@ class GoogleBatchMachineTypeSelector {
                     onDemandPrice: it.onDemandPrice as float,
                     cpusPerVm: it.cpusPerVm as int,
                     memPerVm: it.memPerVm as int,
+                    gpusPerVm: it.gpusPerVm as int,
                     location: region,
                     priceModel: priceModel
             )
@@ -223,7 +230,38 @@ class GoogleBatchMachineTypeSelector {
             return findFirstValidSize(requested, [4,8])
         }
 
-        // other special families the user must provide a valid size
+        if( machineType.family == "a2" ) {
+            if ( machineType.type == 'a2-highgpu-1g' )
+                return findFirstValidSize(requested, [1, 2, 4, 8])
+            if ( machineType.type == 'a2-highgpu-2g' )
+                return findFirstValidSize(requested, [2, 4, 8])
+            if ( machineType.type == 'a2-highgpu-4g' )
+                return findFirstValidSize(requested, [4, 8])
+            if ( machineType.type == 'a2-highgpu-8g' || machineType.type == 'a2-megagpu-16g' )
+                return findFirstValidSize(requested, [8])
+        }
+
+        if( machineType.family == "g2" ) {
+            if( machineType.type == 'g2-standard-4' || machineType.type == 'g2-standard-8' ||
+                machineType.type == 'g2-standard-12' || machineType.type == 'g2-standard-16' ||
+                machineType.type == 'g2-standard-32' )
+                return findFirstValidSize(requested, [1])
+            if( machineType.type == 'g2-standard-24' )
+                return findFirstValidSize(requested, [2])
+            if( machineType.type == 'g2-standard-48' )
+                return findFirstValidSize(requested, [4])
+            if( machineType.type == 'g2-standard-96' )
+                return findFirstValidSize(requested, [8])
+        }
+
+        // These families have a local SSD already attached and is not configurable.
+        if( ((machineType.family == "c3" || machineType.family == "c3d") && machineType.type.endsWith("-lssd")) ||
+            machineType.family == "a3" ||
+            machineType.type.startsWith("a2-ultragpu-") )
+            return new MemoryUnit( 0 )
+
+        // For other special families, the user must provide a valid size. If a family does not
+        // support local disks, then Google Batch shall return an appropriate error.
         return requested
     }
 
@@ -248,6 +286,21 @@ class GoogleBatchMachineTypeSelector {
             numberOfDisks = allowedPartitions.last()
 
         return new MemoryUnit( numberOfDisks * 375L * (1<<30) )
+    }
+
+    /**
+     * Determine whether GPU drivers should be installed.
+     *
+     * @param machineType Machine type
+     * @return Boolean value indicating if GPU drivers should be installed.
+     */
+    protected boolean installGpuDrivers(MachineType machineType) {
+        if ( machineType.gpusPerVm > 0 ) {
+            return true
+        }
+        // Cloud Info service currently does not currently return gpusPerVm values (or the user
+        // could have disabled use of the service) so also check against a known set of families.
+        return ACCELERATOR_OPTIMIZED_FAMILIES.any { matchType(it, machineType.type) }
     }
 
 }

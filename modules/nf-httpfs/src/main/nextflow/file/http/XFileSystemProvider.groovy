@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 
 package nextflow.file.http
+
+import nextflow.file.CopyMoveHelper
 
 import static nextflow.file.http.XFileSystemConfig.*
 
@@ -245,7 +247,11 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         }
 
         final conn = toConnection(path)
-        final stream = new BufferedInputStream(conn.getInputStream())
+        final length = conn.getContentLengthLong()
+        final target = length>0
+                ? new FixedInputStream(conn.getInputStream(),length)
+                : conn.getInputStream()
+        final stream = new BufferedInputStream(target)
 
         new SeekableByteChannel() {
 
@@ -255,7 +261,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
             int read(ByteBuffer buffer) throws IOException {
                 def data=0
                 int len=0
-                while( len<buffer.capacity() && (data=stream.read())!=-1 ) {
+                while( buffer.hasRemaining() && (data=stream.read())!=-1 ) {
                     buffer.put((byte)data)
                     len++
                 }
@@ -346,7 +352,12 @@ abstract class XFileSystemProvider extends FileSystemProvider {
             }
         }
 
-        return toConnection(path).getInputStream()
+        final conn = toConnection(path)
+        final length = conn.getContentLengthLong()
+        // only apply the FixedInputStream check if staging files
+        return length>0 && CopyMoveHelper.IN_FOREIGN_COPY.get()
+            ? new FixedInputStream(conn.getInputStream(), length)
+            : conn.getInputStream()
     }
 
     /**
@@ -482,7 +493,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
     protected XFileAttributes readHttpAttributes(Map<String,List<String>> header) {
         final header0 = InsensitiveMap.<String,List<String>>of(header)
         def lastMod = header0.get("Last-Modified")?.get(0)
-        long contentLen = header0.get("Content-Length")?.get(0)?.toLong() ?: -1
+        long contentLen = header0.get("Content-Length")?.get(0)?.toLong() ?: -1L
         def dateFormat = new SimpleDateFormat('E, dd MMM yyyy HH:mm:ss Z', Locale.ENGLISH) // <-- make sure date parse is not language dependent (for the week day)
         def modTime = lastMod ? FileTime.from(dateFormat.parse(lastMod).time, TimeUnit.MILLISECONDS) : (FileTime)null
         new XFileAttributes(modTime, contentLen)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ class BasicCliOpts implements CliOpts {
             return result
         for( String item : cli ) {
             final p = item.indexOf('=')
-            if( p!==-1 ) {
+            if( p!=-1 ) {
                 result.options.put( item.substring(0,p), item.substring(p+1) )
             }
             else {

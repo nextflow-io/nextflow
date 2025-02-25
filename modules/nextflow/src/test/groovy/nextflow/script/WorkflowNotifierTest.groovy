@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package nextflow.script
 
+import java.nio.file.Files
 import java.nio.file.Paths
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -25,6 +26,8 @@ import nextflow.NextflowMeta
 import nextflow.mail.Attachment
 import nextflow.mail.Mail
 import nextflow.mail.Mailer
+import nextflow.script.FusionMetadata
+import nextflow.script.WaveMetadata
 import nextflow.trace.WorkflowStats
 import nextflow.util.Duration
 import spock.lang.Specification
@@ -63,6 +66,8 @@ class WorkflowNotifierTest extends Specification {
                 profile: 'my-cluster',
                 container: 'image/foo:tag',
                 containerEngine: 'docker',
+                wave: new WaveMetadata(true),
+                fusion: new FusionMetadata(true, '1.2.3'),
                 nextflow: new NextflowMeta('0.27.0', 333, '2017-12-12'),
                 stats: new WorkflowStats(succeedMillis: 4_000_000, succeededCount: 10, failedCount: 20, cachedCount: 30, ignoredCount: 0)
         )
@@ -102,6 +107,8 @@ class WorkflowNotifierTest extends Specification {
                   Workflow profile  : my-cluster
                   Workflow container: image/foo:tag
                   Container engine  : docker
+                  Wave enabled      : true
+                  Fusion enabled    : true, version 1.2.3
                   Nextflow version  : 0.27.0, build 333 (2017-12-12)
 
                 --
@@ -151,6 +158,8 @@ class WorkflowNotifierTest extends Specification {
                   Workflow profile  : my-cluster
                   Workflow container: image/foo:tag
                   Container engine  : docker
+                  Wave enabled      : true
+                  Fusion enabled    : true, version 1.2.3
                   Nextflow version  : 0.27.0, build 333 (2017-12-12)
 
                 --
@@ -190,6 +199,9 @@ class WorkflowNotifierTest extends Specification {
                 profile: 'my-cluster',
                 container: 'image/foo:tag',
                 containerEngine: 'docker',
+                wave: new WaveMetadata(true),
+                fusion: new FusionMetadata(true, '1.2.3'),
+
                 nextflow: new NextflowMeta('0.27.0', 333, '2017-12-12'),
                 stats: new WorkflowStats(succeedMillis: 4000)
         )
@@ -256,7 +268,7 @@ class WorkflowNotifierTest extends Specification {
         when:
         workflow.success = false
         workflow.runName = 'bar'
-        mail = notifier.createMail([to:'alpha@dot.com', from:'beta@dot.com', template: ['/some/file.txt', '/other/file.html'], binding: [one:1, two:2]])
+        mail = notifier.createMail([to:'alpha@dot.com', from:'beta@dot.com', template: ['/some/file.txt', '/other/file.html'], attributes: [one:1, two:2]])
         then:
         1 * notifier.loadMailTemplate(new File('/some/file.txt'), [one:1, two:2]) >> 'TEXT template'
         1 * notifier.loadMailTemplate(new File('/other/file.html'), [one:1, two:2]) >> 'HTML template'
@@ -266,6 +278,40 @@ class WorkflowNotifierTest extends Specification {
         mail.body == 'HTML template'
         mail.text == 'TEXT template'
 
+    }
+
+    def 'should create notification mail with custom template' () {
+        given:
+        def folder  = Files.createTempDirectory('test')
+        def template = folder.resolve('template.txt').toFile(); template.text = 'Hello world!'
+
+        and:
+        Mail mail
+        def workflow = new WorkflowMetadata()
+        def notifier = Spy(WorkflowNotifier)
+        notifier.@workflow = workflow
+
+        /*
+         * create success completion  *default* notification email
+         */
+        when:
+        workflow.success = true
+        workflow.runName = 'foo'
+        mail = notifier.createMail([to:'paolo@yo.com', from:'bot@nextflow.com', template: template])
+        then:
+        0 * notifier.loadDefaultTextTemplate()
+        0 * notifier.loadDefaultHtmlTemplate()
+        1 * notifier.loadMailTemplate(template, [:])
+        and:
+        mail.to == 'paolo@yo.com'
+        mail.from == 'bot@nextflow.com'
+        mail.subject == 'Workflow completion [foo] - SUCCEED'
+        mail.text == 'Hello world!'
+        !mail.body 
+        !mail.attachments
+
+        cleanup:
+        folder?.deleteDir()
     }
 
 

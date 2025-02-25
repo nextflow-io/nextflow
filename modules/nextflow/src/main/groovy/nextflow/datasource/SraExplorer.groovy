@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,12 @@
  */
 
 package nextflow.datasource
+
+import dev.failsafe.Failsafe
+import dev.failsafe.RetryPolicy
+import dev.failsafe.event.EventListener
+import dev.failsafe.event.ExecutionAttemptedEvent
+import dev.failsafe.function.CheckedSupplier
 
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -34,6 +40,11 @@ import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
+
+import java.time.temporal.ChronoUnit
+import java.util.function.Predicate
+import java.util.regex.Pattern
+
 /**
  * Query NCBI SRA database and returns the retrieved FASTQs to the specified
  * target channel. Inspired to SRA-Explorer by Phil Ewels -- https://ewels.github.io/sra-explorer/
@@ -43,7 +54,9 @@ import nextflow.util.Duration
 @Slf4j
 class SraExplorer {
 
-    static public Map PARAMS = [apiKey:[String,GString], cache: Boolean, max: Integer, protocol: ['ftp','http','https']]
+    static public Map PARAMS = [apiKey:[String,GString], cache: Boolean, max: Integer, protocol: ['ftp','http','https'], retryPolicy: Map]
+    final static public List<Integer> RETRY_CODES = List.of(408, 429, 500, 502, 503, 504)
+    final static private Pattern ERROR_PATTERN = ~/Server returned HTTP response code: (\d+) for URL.*/
 
     @ToString
     static class SearchRecord {
@@ -67,6 +80,7 @@ class SraExplorer {
     private List<String> missing = new ArrayList<>()
     private Path cacheFolder
     private String protocol = 'ftp'
+    private SraRetryConfig retryConfig = new SraRetryConfig()
 
     String apiKey
     boolean useCache = true
@@ -94,6 +108,8 @@ class SraExplorer {
             maxResults = opts.max as int
         if( opts.protocol )
             protocol = opts.protocol as String
+        if( opts.retryPolicy )
+            retryConfig = new SraRetryConfig(opts.retryPolicy as Map)
     }
 
     DataflowWriteChannel apply() {
@@ -181,7 +197,7 @@ class SraExplorer {
 
     protected Map makeDataRequest(String url) {
         log.debug "SRA data request url=$url"
-        final text = new URL(url).getText()
+        final text = runWithRetry(()->getTextFormUrl(url))
 
         log.trace "SRA data result:\n${pretty(text)?.indent()}"
         def response = jsonSlurper.parseText(text)
@@ -220,7 +236,7 @@ class SraExplorer {
 
     protected SearchRecord makeSearch(String url) {
         log.debug "SRA search url=$url"
-        final text = new URL(url).getText()
+        final text = runWithRetry(()-> getTextFormUrl(url))
 
         log.trace "SRA search result:\n${pretty(text)?.indent()}"
         final response = jsonSlurper.parseText(text)
@@ -265,10 +281,14 @@ class SraExplorer {
         return result
     }
 
+    protected static String getTextFormUrl(String url) {
+        new URI(url).toURL().getText()
+    }
+
     protected String readRunUrl(String acc) {
         final url = "https://www.ebi.ac.uk/ena/portal/api/filereport?result=read_run&fields=fastq_ftp&accession=$acc"
         log.debug "SRA fetch ftp fastq url=$url"
-        String result = new URL(url).text.trim()
+        String result = runWithRetry(() -> getTextFormUrl(url)).trim()
         log.trace "SRA fetch ftp fastq url result:\n${result?.indent()}"
 
         if( result.indexOf('\n')==-1 ) {
@@ -328,6 +348,66 @@ class SraExplorer {
             url += "&api_key=$apiKey"
 
         return url
+    }
+
+    /**
+     * Creates a retry policy using the SRA retry configuration
+     *
+     * @param cond A predicate that determines when a retry should be triggered
+     * @return The {@link dev.failsafe.RetryPolicy} instance
+     */
+    protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond) {
+        final EventListener<ExecutionAttemptedEvent> listener = new EventListener<ExecutionAttemptedEvent>() {
+            @Override
+            void accept(ExecutionAttemptedEvent event) throws Throwable {
+                log.debug("Retryable response error - attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}")
+            }
+        }
+        return RetryPolicy.<T>builder()
+            .handleIf(cond)
+            .withBackoff(retryConfig.delay.toMillis(), retryConfig.maxDelay.toMillis(), ChronoUnit.MILLIS)
+            .withMaxAttempts(retryConfig.maxAttempts)
+            .withJitter(retryConfig.jitter)
+            .onRetry(listener)
+            .build()
+    }
+
+    /**
+     * Carry out the invocation of the specified action using a retry policy
+     * when {@link java.io.IOException} is returned containing an error code.
+     *
+     * @param action A {@link dev.failsafe.function.CheckedSupplier} instance modeling the action to be performed in a safe manner
+     * @return The result of the supplied action
+     */
+    protected <T> T runWithRetry(CheckedSupplier<T> action) {
+        // define listener
+        final listener = new EventListener<ExecutionAttemptedEvent>() {
+            @Override
+            void accept(ExecutionAttemptedEvent event) throws Throwable {
+                log.debug("Retryable response error - attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}")
+            }
+        }
+        // define the retry condition
+        final cond = new Predicate<? extends Throwable>() {
+            @Override
+            boolean test(Throwable t) {
+                if( t instanceof IOException && containsErrorCodes(t.message, RETRY_CODES))
+                    return true
+                if(t.cause instanceof IOException && containsErrorCodes(t.cause.message, RETRY_CODES))
+                    return true
+                return false
+            }
+        }
+        // create the retry policy
+        def policy = retryPolicy(cond)
+        // apply the action with
+        return Failsafe.with(policy).get(action)
+    }
+
+    static boolean containsErrorCodes(String message, List<Integer> codes){
+        def matcher = (message =~ ERROR_PATTERN)
+        def httpCode = matcher ? matcher[0][1] as Integer : null
+        return httpCode != null && codes.contains(httpCode)
     }
 
 }

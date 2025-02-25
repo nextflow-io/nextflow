@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package nextflow.plugin
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.jar.Manifest
 
 import org.pf4j.ManifestPluginDescriptorFinder
 /**
@@ -30,12 +31,15 @@ import org.pf4j.ManifestPluginDescriptorFinder
 class TestPluginDescriptorFinder extends ManifestPluginDescriptorFinder {
 
     @Override
-    protected Path getManifestPath(Path pluginPath) {
-        if (Files.isDirectory(pluginPath)) {
-            final manifest = pluginPath.resolve('build/resources/testFixtures/META-INF/MANIFEST.MF')
-            return Files.exists(manifest) ? manifest : null
-        }
+    protected Manifest readManifestFromDirectory(Path pluginPath) {
+        if( !Files.isDirectory(pluginPath) )
+            return null
 
-        return null;
+        final manifestPath = pluginPath.resolve('build/resources/testFixtures/META-INF/MANIFEST.MF')
+        if( !Files.exists(manifestPath) )
+            return null
+
+        final input = Files.newInputStream(manifestPath)
+        return new Manifest(input)
     }
 }

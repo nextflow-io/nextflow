@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -186,7 +186,7 @@ class Throttle {
         assert closure != null
 
         def key = 17
-        key  = 31 * key + closure.class.hashCode()
+        key  = 31 * key + closure.class.name.hashCode()
         key  = 31 * key + closure.owner.hashCode()
         key  = 31 * key + closure.delegate?.hashCode() ?: 0
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -487,7 +487,7 @@ class K8sClient {
             if( status.conditions instanceof List ) {
                 final allConditions = status.conditions as List<Map>
                 final cond = allConditions.find { cond -> cond.type == 'PodScheduled' }
-                if( cond.reason == 'Unschedulable' ) {
+                if( cond?.reason == 'Unschedulable' ) {
                     def message = "K8s pod cannot be scheduled"
                     if( cond.message ) message += " -- $cond.message"
                     //def cause = new K8sResponseException(resp)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,8 @@ import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.exception.AbortOperationException
+import nextflow.secret.SecretsLoader
+
 /**
  * Any user defined script will extends this class, it provides the base execution context
  *
@@ -40,6 +42,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     private WorkflowDef entryFlow
 
+    private OutputDef publisher
+
     @Lazy InputStream stdin = { System.in }()
 
     BaseScript() {
@@ -54,6 +58,10 @@ abstract class BaseScript extends Script implements ExecutionContext {
     @Override
     ScriptBinding getBinding() {
         (ScriptBinding)super.getBinding()
+    }
+
+    Session getSession() {
+        session
     }
 
     /**
@@ -85,18 +93,14 @@ abstract class BaseScript extends Script implements ExecutionContext {
         binding.setVariable( 'workDir', session.workDir )
         binding.setVariable( 'workflow', session.workflowMetadata )
         binding.setVariable( 'nextflow', NextflowMeta.instance )
-        binding.setVariable('launchDir', Paths.get('./').toRealPath())
-        binding.setVariable('moduleDir', meta.moduleDir )
+        binding.setVariable( 'launchDir', Paths.get('./').toRealPath() )
+        binding.setVariable( 'moduleDir', meta.moduleDir )
+        binding.setVariable( 'secrets', SecretsLoader.secretContext() )
     }
 
     protected process( String name, Closure<BodyDef> body ) {
-        if( NF.isDsl2() ) {
-            def process = new ProcessDef(this,body,name)
-            meta.addDefinition(process)
-        }
-        else {
-            throw new UnsupportedOperationException("DSL1 is not supported anymore")
-        }
+        final process = new ProcessDef(this,body,name)
+        meta.addDefinition(process)
     }
 
     /**
@@ -117,6 +121,17 @@ abstract class BaseScript extends Script implements ExecutionContext {
     protected workflow(String name, Closure<BodyDef> workflowDef) {
         final workflow = new WorkflowDef(this,workflowDef,name)
         meta.addDefinition(workflow)
+    }
+
+    protected output(Closure closure) {
+        if( !NF.outputDefinitionEnabled )
+            throw new IllegalStateException("Workflow output definition requires the `nextflow.preview.output` feature flag")
+        if( !entryFlow )
+            throw new IllegalStateException("Workflow output definition must be defined after the anonymous workflow")
+        if( ExecutionStack.withinWorkflow() )
+            throw new IllegalStateException("Workflow output definition is not allowed within a workflow")
+
+        publisher = new OutputDef(closure)
     }
 
     protected IncludeDef include( IncludeDef include ) {
@@ -158,7 +173,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
         if( !entryFlow ) {
             if( meta.getLocalWorkflowNames() )
-                log.warn "No entry workflow specified"
+                throw new AbortOperationException("No entry workflow specified")
             if( meta.getLocalProcessNames() ) {
                 final msg = """\
                         =============================================================================
@@ -181,6 +196,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
         // invoke the entry workflow
         session.notifyBeforeWorkflowExecution()
         final ret = entryFlow.invoke_a(BaseScriptConsts.EMPTY_ARGS)
+        if( !publisher )
+            publisher = new OutputDef()
+        publisher.run(session)
         session.notifyAfterWorkflowExecution()
         return ret
     }

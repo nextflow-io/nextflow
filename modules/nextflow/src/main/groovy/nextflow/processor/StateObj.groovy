@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ class StateObj implements Serializable, Cloneable {
      */
     void incSubmitted() {
         if( poisoned )
-            log.debug "Oops.. Cannot process more messages after Poison-Pill was received"
+            log.debug "Cannot process more messages after Poison-Pill was received"
         else
             submitted++
     }
@@ -58,7 +58,7 @@ class StateObj implements Serializable, Cloneable {
      */
     void incCompleted() {
         if( completed >= submitted ) {
-            log.debug "Oops.. Processed messages ($submitted) should not overcome received messages ($submitted) count"
+            log.debug "Processed messages ($submitted) should not overcome received messages ($submitted) count"
         }
         completed++
     }

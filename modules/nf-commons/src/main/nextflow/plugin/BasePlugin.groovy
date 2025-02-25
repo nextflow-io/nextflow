@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package nextflow.plugin
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
-import nextflow.Const
+import nextflow.BuildInfo
 import nextflow.exception.AbortOperationException
 import org.pf4j.Plugin
 import org.pf4j.PluginWrapper
@@ -39,7 +39,7 @@ abstract class BasePlugin extends Plugin {
         super(wrapper)
     }
 
-    @PackageScope boolean verMatches(String requires, String current=Const.APP_VER) {
+    @PackageScope boolean verMatches(String requires, String current=BuildInfo.version) {
         return getWrapper()
                 .getPluginManager()
                 .getVersionManager()
@@ -51,7 +51,7 @@ abstract class BasePlugin extends Plugin {
         final desc = getWrapper().getDescriptor()
         final name = "${desc.pluginId}@${desc.version}"
         if( desc.requires && !verMatches(desc.requires)) {
-            throw new AbortOperationException("Failed requirement - Plugin $name requires Nextflow version $desc.requires (current $Const.APP_VER)")
+            throw new AbortOperationException("Failed requirement - Plugin $name requires Nextflow version $desc.requires (current $BuildInfo.version)")
         }
         log.debug "Plugin started $name"
     }

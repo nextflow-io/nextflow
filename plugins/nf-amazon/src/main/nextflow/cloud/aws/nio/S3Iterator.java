@@ -29,7 +29,7 @@ import com.google.common.base.Preconditions;
 
 /**
  * S3 iterator over folders at first level.
- * Future verions of this class should be return the elements
+ * Future versions of this class should be return the elements
  * in a incremental way when the #next() method is called.
  */
 public class S3Iterator implements Iterator<Path> {
@@ -122,7 +122,7 @@ public class S3Iterator implements Iterator<Path> {
 
     /**
      * The current #buildRequest() get all subdirectories and her content.
-     * This method filter the keyChild and check if is a inmediate
+     * This method filter the keyChild and check if is a immediate
      * descendant of the keyParent parameter
      * @param keyParent String
      * @param keyChild String

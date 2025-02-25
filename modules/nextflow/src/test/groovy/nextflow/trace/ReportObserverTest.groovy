@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,8 @@ import groovy.json.JsonSlurper
 import nextflow.NextflowMeta
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
+import nextflow.script.FusionMetadata
+import nextflow.script.WaveMetadata
 import nextflow.script.WorkflowMetadata
 import spock.lang.Specification
 import test.TestHelper
@@ -120,6 +122,8 @@ class ReportObserverTest extends Specification {
                 complete: OffsetDateTime.now(),
                 workDir: workDir,
                 stats: new WorkflowStats(),
+                wave: new WaveMetadata(true),
+                fusion: new FusionMetadata(true, '1.2.3'),
                 nextflow: new NextflowMeta('0.27.9', 3232, '2017-12-12')
         )
 

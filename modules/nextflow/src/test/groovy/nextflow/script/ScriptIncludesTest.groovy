@@ -148,7 +148,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         result.val == 'dlrow olleh'
     }
 
-    def 'should allows duplicate functions' () {
+    def 'should allow duplicate functions' () {
         given:
         NextflowMeta.instance.strictMode(true)
         and:
@@ -184,7 +184,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         NextflowMeta.instance.strictMode(false)
     }
 
-    def 'should allows multiple signatures of function' () {
+    def 'should allow multiple signatures of function' () {
         given:
         NextflowMeta.instance.strictMode(true)
         and:
@@ -221,7 +221,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         NextflowMeta.instance.strictMode(false)
     }
 
-    def 'should fails if no signatures of function founded' () {
+    def 'should fail if no signatures of function founded' () {
         given:
         NextflowMeta.instance.strictMode(true)
         and:
@@ -773,32 +773,6 @@ class ScriptIncludesTest extends Dsl2Spec {
         noExceptionThrown()
     }
 
-    def 'should allows duplicate import' () {
-        given:
-        def folder = TestHelper.createInMemTempDir();
-        def MOD1 = folder.resolve('mod1.nf')
-        def MOD2 = folder.resolve('mod2.nf')
-        def SCRIPT = folder.resolve('main.nf')
-
-        MOD1.text = MOD2.text = '''     
-        process foo {
-            /hello/ 
-        }      
-        '''
-
-        SCRIPT.text = """ 
-        include { foo } from './mod1' 
-        include { foo } from './mod2' 
-        println 'x'
-        """
-
-        when:
-        def runner = new MockScriptRunner()
-        runner.setScript(SCRIPT).execute()
-        then:
-        noExceptionThrown()
-    }
-
     def 'should include only named component' () {
         given:
         def folder = Files.createTempDirectory('test')
@@ -1189,6 +1163,31 @@ class ScriptIncludesTest extends Dsl2Spec {
         def e = thrown(IllegalStateException)
         e.message == "Include statement is not allowed within a workflow definition"
 
+    }
 
+    def 'should should allow invoking function passing gstring' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def MODULE = folder.resolve('module.nf')
+
+        MODULE.text = '''
+        def alpha(String str) {
+            return str.reverse()
+        }   
+        '''
+
+        when:
+        def SCRIPT = """
+        include { alpha } from "$MODULE"
+        
+        def x = "world"
+        def y = "Hello \$x"
+        
+        return alpha(y)
+        """
+        def runner = new MockScriptRunner()
+        def result = runner.setScript(SCRIPT).execute()
+        then:
+        result == 'dlrow olleH'
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,12 +48,12 @@ class DAGTest extends Specification {
         then:
         v1.label == 'Label A'
         v1.order == 0
-        v1.name == 'p0'
+        v1.name == 'v0'
         v1.type == DAG.Type.PROCESS
 
         v2.label == 'Label B'
         v2.order == 1
-        v2.name == 'p1'
+        v2.name == 'v1'
         v2.type == DAG.Type.OPERATOR
         v1.id != v2.id
     }

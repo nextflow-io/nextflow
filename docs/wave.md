@@ -9,20 +9,6 @@
 
 ## Getting started
 
-### Nextflow installation
-
-If you have already installed Nextflow, update to the latest version using this command:
-
-```bash
-nextflow -self-update
-```
-
-If you don't have Nextflow already installed, install it with the command below:
-
-```bash
-curl get.nextflow.io | bash
-```
-
 ### Wave configuration
 
 Wave can be used in any Nextflow pipeline by adding the following snippet to your `nextflow.config` file:
@@ -38,16 +24,18 @@ tower {
 ```
 
 :::{note}
-The Tower access token is not mandatory, but it is recommended in order to access private container repositories and pull public containers without being affected by service rate limits. Credentials should be made available to Wave using the [credentials manager](https://help.tower.nf/latest/credentials/overview) in Tower.
+The Seqera Platform access token is not mandatory, but it is recommended in order to access private container repositories and pull public containers without being affected by service rate limits. Credentials should be made available to Wave using the [credentials manager](https://docs.seqera.io/platform/latest/credentials/overview) in Seqera Platform.
 :::
 
 ## Use cases
 
+(wave-authenticate-private-repos)=
+
 ### Authenticate private repositories
 
-Wave allows the use of private repositories in your Nextflow pipelines. The repository access keys must be provided in the form of [Nextflow Tower credentials](https://help.tower.nf/22.2/credentials/overview/).
+Wave allows the use of private repositories in your Nextflow pipelines. The repository access keys must be provided in the form of [Seqera Platform credentials](https://docs.seqera.io/platform/latest/credentials/overview/).
 
-Once the credentials have been created, simply specify your [Tower account access token](https://help.tower.nf/22.2/api/overview/#authentication) in your pipeline configuration file. If the credentials were created in a Tower organization workspace, specify the workspace ID as well in the config file as shown below:
+Once the credentials have been created, simply specify your [personal access token](https://docs.seqera.io/platform/23.3.0/api/overview#authentication) in your pipeline configuration file. If the credentials were created in a Seqera Platform organization workspace, specify the workspace ID as well in the config file as shown below:
 
 ```groovy
 tower {
@@ -60,7 +48,7 @@ tower {
 
 Wave can build and provision container images on-demand for your Nextflow pipelines.
 
-To enable this feature, add the Dockerfile of the container to be built in the {ref}`module directory <dsl2-module-directory>` where the pipeline process is defined. When Wave is enabled, it automatically uses the Dockerfile to build the required container, upload to the registry, and it uses the container to carry out the tasks defined in the module.
+To enable this feature, add the Dockerfile of the container to be built in the {ref}`module directory <module-directory>` where the pipeline process is defined. When Wave is enabled, it automatically uses the Dockerfile to build the required container, upload to the registry, and it uses the container to carry out the tasks defined in the module.
 
 :::{tip}
 Make sure the process does not declare a `container` directive, otherwise it will take precedence over the Dockerfile definition.
@@ -92,32 +80,55 @@ wave.strategy = ['conda']
 
 The above setting instructs Wave to use the `conda` directive to provision the pipeline containers and ignore the `container` directive and any Dockerfile(s).
 
-### Build Spack based containers
-
-:::{warning}
-Spack based Wave containers are currently in beta testing. Functionality is still sub-optimal, due to long build times that may result in backend time-out and subsequent task failure.
-:::
-
-Wave allows the provisioning of containers based on the {ref}`process-spack` directive used by the processes in your
-pipeline. This is an alternative to building Spack packages in the local computer.
-Moreover, this enables to run optimised builds with almost no user intervention.
-
-Having Wave enabled in your pipeline, there's nothing else to do other than define the `spack` requirements in
-the pipeline processes provided the same process does not also specify a `container` or `conda` directive or a Dockerfile.
-
-In the latter case, add the following setting to your pipeline configuration:
+:::{tip}
+Some configuration options in the `conda` scope are used when Wave is used to build Conda-based containers.
+For example, the Conda channels and their priority can be set with `conda.channels`:
 
 ```groovy
-wave.strategy = ['spack']
+wave.strategy = 'conda'
+conda.channels = 'conda-forge,bioconda'
 ```
+:::
 
-The above setting instructs Wave to only use the `spack` directive to provision the pipeline containers, ignoring the use of
-the `container` directive and any Dockerfile(s).
+Packages from the [Python Package Index](https://pypi.org/) can also be added to a Conda `environment.yml` file. See {ref}`Conda and PyPI <conda-pypi>` for more information.
 
-In order to request the build of containers that are optimised for a specific CPU microarchitecture, the latter can be specified by means of the {ref}`process-arch` directive. The architecture must always be specified for processes that run on an ARM system. Otherwise, by default, Wave will build containers for the generic `x86_64` architecture family.
+(wave-singularity)=
+
+### Build Singularity native images
+
+:::{versionadded} 23.09.0-edge
+:::
+
+Nextflow can build Singularity native images on-demand either using `Singularityfile`,
+Conda packages or Spack packages. The Singularity images are automatically uploaded in a container registry OCI compliant
+of your choice and stored as a [ORAS artefact](https://oras.land/).
 
 :::{note}
-If using a Spack YAML file to provide the required packages, you should avoid editing the following sections, which are already configured by the Wave plugin: `packages`, `config`, `view` and `concretizer` (your edits may be ignored), and `compilers` (your edits will be considered, and may interfere with the setup by the Wave plugin).
+This feature requires of Singularity (or Apptainer) version supporting the pull of images using the `oras:` pseudo-protocol.
+:::
+
+For example to enable the provisioning of Singularity images in your pipeline use the following configuration snippet:
+
+```groovy
+singularity.enabled = true
+wave.enabled = true
+wave.freeze = true
+wave.strategy = ['conda']
+wave.build.repository = 'docker.io/user/repo'
+```
+
+In the above configuration replace `docker.io/user/repo` with a repository of your choice where Singularity image files
+should be uploaded.
+
+:::{note}
+When using a private repository, the repository access keys must be provided via the Seqera Platform credentials manager (see {ref}`above <wave-authenticate-private-repos>`).
+
+Moreover the access to the repository must be granted in the compute nodes by using the command `singularity remote login <registry>`.
+Please see Singularity documentation for further details.
+:::
+
+:::{note}
+In order to build Singularity native images, both `singularity.ociAutoPull` and `singularity.ociMode` need to be disabled in the configuration (see the {ref}`config-singularity` section).
 :::
 
 ### Push to a private repository
@@ -133,86 +144,73 @@ wave.build.cacheRepository = 'example.com/your/cache-repo'
 
 The first repository is used to store the built container images. The second one is used to store the individual image layers for caching purposes.
 
-The repository access keys must be provided as Tower credentials (see
+The repository access keys must be provided as Seqera Platform credentials (see
 [Authenticate private repositories](#authenticate-private-repositories) above).
+
+### Mirroring containers
+
+Wave allows mirroring, i.e., copying containers used by your pipeline into a container registry of your choice. This allows the pipeline to pull containers from the target registry rather than the original registry.
+
+Mirroring is useful to create an on-demand cache of container images that are co-located in the same region where the pipeline
+is executed, and therefore optimising cost and network efficiency.
+
+Include the following settings in your Nextflow configuration to enable this capability:
+
+```groovy
+wave.enabled = true
+wave.mirror = true
+wave.build.repository = '<YOUR REGISTRY>'
+tower.accessToken = '<YOUR ACCESS TOKEN>'
+```
+
+In the above snippet, replace `<YOUR REGISTRY>` with a container registry of your choice. For example, `quay.io` (no prefix or suffix is needed).
+The container will be copied with the same name, tag, and checksum in the specified registry. For example, if the source
+container is `quay.io/biocontainers/bwa:0.7.13--1` and the build repository setting is `foo.com`, the resulting container
+name is `foo.com/biocontainers/bwa:0.7.13--1`.
+
+:::{tip}
+When using a path prefix in the target registry name, it will be prepended to the resulting container name. For example,
+having `quay.io/biocontainers/bwa:0.7.13--1` as source container and `foo.com/bar` as build repository, the resulting
+container will be named `foo.com/bar/biocontainers/bwa:0.7.13--1`.
+:::
+
+The credentials to allow the push of  containers in the target repository need to be provided via the Seqera Platform
+credentials manager. The account used for this is specified by the `tower.accessToken` in the configuration above.
+
+### Container security scanning
+
+Wave enables the scanning of containers used in your pipelines for security vulnerabilities.
+If any issues are detected, it will trigger an execution error and provide a report.
+
+To enable this capability add the following settings to your Nextflow configuration file:
+
+```groovy
+wave.enabled = true
+wave.scan.mode = 'required'
+tower.accessToken = '<YOUR ACCESS TOKEN>'
+```
+
+Nextflow will only allow the use of containers with no security
+vulnerabilities when using these settings. You can define the level of accepted vulnerabilities using `wave.scan.allowedLevels`. For example:
+
+```
+wave.scan.allowedLevels = 'low,medium'
+```
+
+The above setting will allow the use of containers with *low* and *medium* vulnerabilities. Accepted values are `low`, `medium`, `high`, and `critical`. See [common vulnerabilities scoring system](https://en.wikipedia.org/wiki/Common_Vulnerability_Scoring_System) for more information about these levels.
+
+:::{note}
+Wave's security scanning applies to any container used in your pipeline, whether it was built by Wave or simply accessed through it. The security scan automatically expires after one week. If a container is accessed again after 7 days or more, the scan will be re-executed.
+:::
 
 ### Run pipelines using Fusion file system
 
-Wave containers allows you to run your containerised workflow with the {ref}`fusion-page`.
+Wave containers allows you to run your containerised workflow with {ref}`fusion-page`.
 
 This enables the use of an object storage bucket such as AWS S3 or Google Cloud Storage as your pipeline work directory, simplifying and speeding up many operations on local, AWS Batch, Google Batch or Kubernetes executions.
 
-See the {ref}`Fusion documentation <fusion-page>` for more details.
+See {ref}`Fusion <fusion-page>` for more details.
 
 ## Advanced settings
 
-The following configuration options are available:
-
-`wave.enabled`
-: Enable/disable the execution of Wave containers.
-
-`wave.endpoint`
-: The Wave service endpoint (default: `https://wave.seqera.io`).
-
-`wave.build.repository`
-: The container repository where images built by Wave are uploaded (note: the corresponding credentials must be provided in your Nextflow Tower account).
-
-`wave.build.cacheRepository`
-: The container repository used to cache image layers built by the Wave service (note: the corresponding credentials must be provided in your Nextflow Tower account).
-
-`wave.build.conda.basePackages`
-: One or more Conda packages to be always added in the resulting container e.g. `conda-forge::procps-ng`.
-
-`wave.build.conda.commands`
-: One or more commands to be added to the Dockerfile used to build a Conda based image.
-
-`wave.build.conda.mambaImage`
-: The Mamba container image is used to build Conda based container. This is expected to be [micromamba-docker](https://github.com/mamba-org/micromamba-docker) image.
-
-`wave.build.spack.basePackages`
-: :::{versionadded} 22.06.0-edge
-  :::
-: One or more Spack packages to be always added in the resulting container.
-
-`wave.build.spack.commands`
-: :::{versionadded} 22.06.0-edge
-  :::
-: One or more commands to be added to the Dockerfile used to build a Spack based image.
-
-`wave.httpClient.connectTime`
-: :::{versionadded} 22.06.0-edge
-  :::
-: Sets the connection timeout duration for the HTTP client connecting to the Wave service (default: `30s`).
-
-`wave.strategy`
-: The strategy to be used when resolving ambiguous Wave container requirements (default: `'container,dockerfile,conda,spack'`).
-
-`wave.report.enabled` (preview)
-: :::{versionadded} 23.06.0-edge
-  :::
-: Enable the reporting of the Wave containers used during the pipeline execution (default: `false`).
-
-`wave.report.file` (preview)
-: :::{versionadded} 23.06.0-edge
-  :::
-: The name of the containers report file (default: `'containers-<timestamp>.config'`).
-
-`wave.retryPolicy.delay`
-: :::{versionadded} 22.06.0-edge
-  :::
-: The initial delay when a failing HTTP request is retried (default: `150ms`). 
-
-`wave.retryPolicy.maxDelay`
-: :::{versionadded} 22.06.0-edge
-  :::
-: The max delay when a failing HTTP request is retried (default: `90 seconds`).
-
-`wave.retryPolicy.maxAttempts`
-: :::{versionadded} 22.06.0-edge
-  :::
-: The max number of attempts a failing HTTP request is retried (default: `5`).
-
-`wave.retryPolicy.jitter`
-: :::{versionadded} 22.06.0-edge
-  :::
-: Sets the jitterFactor to randomly vary retry delays by (default: `0.25`).
+Wave advanced configuration settings are described in the {ref}`Wave <config-wave>` section on the Nextflow configuration page.

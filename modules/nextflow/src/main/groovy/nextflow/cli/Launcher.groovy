@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.BuildInfo
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.exception.ConfigParseException
@@ -40,6 +41,9 @@ import nextflow.util.LoggerHelper
 import nextflow.util.ProxyConfig
 import nextflow.util.SpuriousDeps
 import org.eclipse.jgit.api.errors.GitAPIException
+
+import static nextflow.util.SysHelper.dumpThreads
+
 /**
  * Main application entry point. It parses the command line and
  * launch the pipeline execution.
@@ -101,7 +105,6 @@ class Launcher {
                 new CmdView(),
                 new CmdHelp(),
                 new CmdSelfUpdate(),
-                new CmdPlugins(),
                 new CmdPlugin(),
                 new CmdInspect()
         ]
@@ -180,7 +183,7 @@ class Launcher {
             colsString.toShort()
         }
         catch( Exception e ) {
-            log.debug "Oops.. not a valid \$COLUMNS value: $colsString"
+            log.debug "Unexpected terminal \$COLUMNS value: $colsString"
             return 0
         }
     }
@@ -222,6 +225,14 @@ class Launcher {
             }
             else if( current == '-test' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << '%all'
+            }
+
+            else if( current == '-dump-hashes' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '-'
+            }
+
+            else if( current == '-with-cloudcache' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '-'
             }
 
             else if( current == '-with-trace' && (i==args.size() || args[i].startsWith('-'))) {
@@ -293,10 +304,6 @@ class Launcher {
             }
 
             else if( current == '-with-fusion' && (i==args.size() || args[i].startsWith('-'))) {
-                normalized << 'true'
-            }
-
-            else if( (current == '-dsl2') && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << 'true'
             }
 
@@ -437,7 +444,8 @@ class Launcher {
 
         }
         catch ( AbortOperationException e ) {
-            System.err.println (e.message ?: "Unknown abort reason")
+            final msg = e.message ?: "Unknown abort reason"
+            System.err.println(LoggerHelper.formatErrMessage(msg, e))
             System.exit(1)
         }
         catch( Throwable e ) {
@@ -505,7 +513,8 @@ class Launcher {
 
         catch ( AbortOperationException e ) {
             def message = e.getMessage()
-            if( message ) System.err.println(message)
+            if( message )
+                System.err.println(LoggerHelper.formatErrMessage(message,e))
             log.debug ("Operation aborted", e.cause ?: e)
             return(1)
         }
@@ -548,24 +557,6 @@ class Launcher {
     }
 
     /**
-     * Dump th stack trace of current running threads
-     * @return
-     */
-    private String dumpThreads() {
-
-        def buffer = new StringBuffer()
-        Map<Thread, StackTraceElement[]> m = Thread.getAllStackTraces();
-        for(Map.Entry<Thread,  StackTraceElement[]> e : m.entrySet()) {
-            buffer.append('\n').append(e.getKey().toString()).append('\n')
-            for (StackTraceElement s : e.getValue()) {
-                buffer.append("  " + s).append('\n')
-            }
-        }
-
-        return buffer.toString()
-    }
-
-    /**
      * set up environment and system properties. It checks the following
      * environment variables:
      * <li>http_proxy</li>
@@ -578,15 +569,28 @@ class Launcher {
      */
     private void setupEnvironment() {
 
-        setProxy('HTTP',System.getenv())
-        setProxy('HTTPS',System.getenv())
-        setProxy('FTP',System.getenv())
+        final env = System.getenv()
+        setProxy('HTTP',env)
+        setProxy('HTTPS',env)
+        setProxy('FTP',env)
 
-        setProxy('http',System.getenv())
-        setProxy('https',System.getenv())
-        setProxy('ftp',System.getenv())
+        setProxy('http',env)
+        setProxy('https',env)
+        setProxy('ftp',env)
 
-        setNoProxy(System.getenv())
+        setNoProxy(env)
+
+        setHttpClientProperties(env)
+    }
+
+    static void setHttpClientProperties(Map<String,String> env) {
+        // Set the httpclient connection pool timeout to 10 seconds.
+        // This required because the default is 20 minutes, which cause the error
+        // "HTTP/1.1 header parser received no bytes" when in some circumstances
+        // https://github.com/nextflow-io/nextflow/issues/3983#issuecomment-1702305137
+        System.setProperty("jdk.httpclient.keepalive.timeout", env.getOrDefault("NXF_JDK_HTTPCLIENT_KEEPALIVE_TIMEOUT","10"))
+        if( env.get("NXF_JDK_HTTPCLIENT_CONNECTIONPOOLSIZE") )
+            System.setProperty("jdk.httpclient.connectionPoolSize", env.get("NXF_JDK_HTTPCLIENT_CONNECTIONPOOLSIZE"))
     }
 
     /**
@@ -650,7 +654,7 @@ class Launcher {
      * @param args The program options as specified by the user on the CLI
      */
     static void main(String... args)  {
-
+        LoggerHelper.bootstrapLogger()
         final status = new Launcher() .command(args) .run()
         if( status )
             System.exit(status)
@@ -668,10 +672,25 @@ class Launcher {
             SPLASH
         }
         else {
-            "${APP_NAME} version ${APP_VER}.${APP_BUILDNUM}"
+            "${APP_NAME} version ${BuildInfo.version}.${BuildInfo.buildNum}"
         }
 
     }
 
+    /*
+     * The application 'logo'
+     */
+    /*
+     * The application 'logo'
+     */
+    static public final String SPLASH =
+
+"""
+      N E X T F L O W
+      version ${BuildInfo.version} build ${BuildInfo.buildNum}
+      created ${BuildInfo.timestampUTC} ${BuildInfo.timestampDelta}
+      cite doi:10.1038/nbt.3820
+      http://nextflow.io
+"""
 
 }

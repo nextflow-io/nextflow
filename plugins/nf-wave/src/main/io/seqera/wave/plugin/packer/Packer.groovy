@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ package io.seqera.wave.plugin.packer
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.attribute.FileTime
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -49,6 +50,21 @@ class Packer {
      */
     private static final int FILE_MODE = 0100000;
 
+    /**
+     * Timestamp when {@link #preserveFileTimestamp} is false
+     */
+    private static final FileTime ZERO = FileTime.fromMillis(0)
+
+    /**
+     * Whenever the timestamp of compressed files should be preserved.
+     * By default it is used the timestamp ZERO to guarantee reproducible builds
+     */
+    private boolean preserveFileTimestamp
+
+    Packer withPreserveTimestamp(boolean value) {
+        this.preserveFileTimestamp = value
+        return this
+    }
 
     def <T extends OutputStream> T makeTar(Path root, List<Path> files, T target) {
         final entries = new HashMap<String,Path>()
@@ -64,12 +80,14 @@ class Packer {
             final sorted = new TreeSet<>(entries.keySet())
             for (String name : sorted ) {
                 final targetPath = entries.get(name)
-                final attrs = Files.readAttributes(targetPath, BasicFileAttributes)
+                final ftime = preserveFileTimestamp
+                    ? Files.readAttributes(targetPath, BasicFileAttributes.class).lastModifiedTime()
+                    : ZERO
                 final entry = new TarArchiveEntry(targetPath, name)
                 entry.setIds(0,0)
                 entry.setGroupName("root")
                 entry.setUserName("root")
-                entry.setModTime(attrs.lastModifiedTime())
+                entry.setModTime(ftime)
                 entry.setMode(getMode(targetPath))
                 // file permissions
                 archive.putArchiveEntry(entry)

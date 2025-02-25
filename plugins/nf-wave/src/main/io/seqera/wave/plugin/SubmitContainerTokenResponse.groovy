@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ package io.seqera.wave.plugin
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
-
 /**
  * Model a response for an augmented container
  *
@@ -30,6 +29,12 @@ import groovy.transform.ToString
 @ToString(includeNames = true, includePackage = false)
 @CompileStatic
 class SubmitContainerTokenResponse {
+
+    /**
+     * Unique Id for this request
+     */
+    String requestId
+
     /**
      * A unique authorization token assigned to this request
      */
@@ -49,5 +54,31 @@ class SubmitContainerTokenResponse {
      * The ID of the build associated with this request or null of the image already exists
      */
     String buildId
+
+    /**
+     * Whenever it's a cached build image. Only supported by API version v1alpha2
+     */
+    Boolean cached
+
+    /**
+     * When the result is a freeze container. Version v1alpha2 as later.
+     */
+    Boolean freeze;
+
+    /**
+     * When the result is a mirror container. Version v1alpha2 as later.
+     */
+    Boolean mirror
+
+    /**
+     * The id of the security scan associated with this container
+     */
+    String scanId
+
+    /**
+     * Whenever the container has been provisioned successfully or not. If false
+     * the current status needs the be check via container status API
+     */
+    Boolean succeeded
 
 }

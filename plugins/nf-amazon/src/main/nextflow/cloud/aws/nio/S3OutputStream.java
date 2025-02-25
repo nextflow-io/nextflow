@@ -235,7 +235,7 @@ public final class S3OutputStream extends OutputStream {
 
     /**
      * Writes a byte into the uploader buffer. When it is full starts the upload process
-     * in a asynchornous manner
+     * in a asynchronous manner
      *
      * @param b The byte to be written
      * @throws IOException
@@ -384,7 +384,7 @@ public final class S3OutputStream extends OutputStream {
     }
 
     /**
-     * Close the stream uploading any remaning buffered data
+     * Close the stream uploading any remaining buffered data
      *
      * @throws IOException
      */
@@ -663,24 +663,6 @@ public final class S3OutputStream extends OutputStream {
             executorSingleton = ThreadPoolManager.create("S3StreamUploader", maxThreads);
         }
         return executorSingleton;
-    }
-
-    /**
-     * Shutdown the executor and clear the singleton
-     */
-    static void shutdownExecutor(boolean hard) {
-        if( hard ) {
-            executorSingleton.shutdownNow();
-        }
-        else {
-            executorSingleton.shutdown();
-            log.trace("Uploader await completion");
-            final String waitMsg = "[AWS S3] Waiting stream uploader to complete (%d files)";
-            final String exitMsg = "[AWS S3] Exiting before stream uploader thread pool complete -- Some files maybe lost";
-            ThreadPoolHelper.await(executorSingleton, Duration.of("1h") ,waitMsg, exitMsg);
-            log.trace("Uploader shutdown completed");
-            executorSingleton = null;
-        }
     }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package nextflow.cli
 
 import java.nio.file.Files
 
+import nextflow.NextflowMeta
 import nextflow.SysEnv
 import nextflow.config.ConfigMap
 import nextflow.exception.AbortOperationException
@@ -49,9 +50,13 @@ class CmdRunTest extends Specification {
         'false'     | false
         'foo'       | 'foo'
         '10'        | 10i
+        '-10'       | -10i
         '20.00'     | 20i
+        '-20.00'    | -20i
         '3000000000'| 3000000000l
         '20.33'     | 20.33d
+        '-20.33'    | -20.33d
+        '-foo'      | '-foo'
         '--foo'     | '--foo'
         '20x0'      | '20x0'
         '20.d'      | '20.d'
@@ -90,6 +95,36 @@ class CmdRunTest extends Specification {
         [:]             | /x.y\.z/  | 'Hola'    | ['x': ['y.z': 'Hola']]
     }
 
+    def 'should convert cli params from kebab case to camel case' () {
+
+        when:
+        def params = [:]
+        CmdRun.addParam(params, 'alphaBeta', '1')
+        CmdRun.addParam(params, 'alpha-beta', '10')
+        then:
+        params['alphaBeta'] == 10
+        !params.containsKey('alpha-beta')
+
+        when:
+        params = [:]
+        CmdRun.addParam(params, 'aaa-bbb-ccc', '1')
+        CmdRun.addParam(params, 'aaaBbbCcc', '10')
+        then:
+        params['aaaBbbCcc'] == 10
+        !params.containsKey('aaa-bbb-ccc')
+
+    }
+
+    def 'should convert kebab case to camel case' () {
+
+        expect:
+        CmdRun.kebabToCamelCase('a') == 'a'
+        CmdRun.kebabToCamelCase('A') == 'A'
+        CmdRun.kebabToCamelCase('a-b-c-') == 'aBC'
+        CmdRun.kebabToCamelCase('aa-bb-cc') == 'aaBbCc'
+        CmdRun.kebabToCamelCase('alpha-beta-delta') == 'alphaBetaDelta'
+        CmdRun.kebabToCamelCase('Alpha-Beta-delta') == 'AlphaBetaDelta'
+    }
 
     @Unroll
     def 'should check run name #STR' () {
@@ -168,7 +203,7 @@ class CmdRunTest extends Specification {
         cmd.parsedParams()
         then:
         def e = thrown(AbortOperationException)
-        e.message == 'Specified params file does not exists: /missing/path.yml'
+        e.message == 'Specified params file does not exist: /missing/path.yml'
 
         cleanup:
         folder?.delete()
@@ -387,5 +422,56 @@ class CmdRunTest extends Specification {
                 .join('\n')
         and:
         !warning
+    }
+
+    @Unroll
+    def 'should detect moduleBinaries' () {
+        given:
+        NextflowMeta.instance.moduleBinaries(INITIAL)
+        CmdRun.detectModuleBinaryFeature(new ConfigMap(CONFIG))
+
+        expect:
+        NextflowMeta.instance.isModuleBinariesEnabled() == EXPECTED
+
+        cleanup:
+        NextflowMeta.instance.moduleBinaries(false)
+
+        where:
+        INITIAL | CONFIG                                          | EXPECTED
+        true    | [nextflow: [enable: [ moduleBinaries: true ]]]  | true
+        false   | [nextflow: [enable: [ moduleBinaries: true ]]]  | true
+        false   | [nextflow: [enable: [ moduleBinaries: false ]]] | false
+        true    | [nextflow: [enable: [ moduleBinaries: false ]]] | true
+        false   | [:]                                             | false
+        true    | [:]                                             | true
+    }
+
+    @Unroll
+    def 'should detect strict mode' () {
+        given:
+        NextflowMeta.instance.strictMode(INITIAL)
+        CmdRun.detectStrictFeature(new ConfigMap(CONFIG), ENV)
+
+        expect:
+        NextflowMeta.instance.isStrictModeEnabled() == EXPECTED
+
+        cleanup:
+        NextflowMeta.instance.strictMode(false)
+
+        where:
+        INITIAL | CONFIG                                  | ENV                        | EXPECTED
+        true    | [nextflow: [enable: [ strict: true ]]]  | [:]                        | true
+        false   | [nextflow: [enable: [ strict: true ]]]  | [:]                        | true
+        false   | [nextflow: [enable: [ strict: false ]]] | [:]                        | false
+        true    | [nextflow: [enable: [ strict: false ]]] | [:]                        | true
+        false   | [:]                                     | [:]                        | false
+        true    | [:]                                     | [:]                        | true
+        true    | [nextflow: [enable: [ strict: true ]]]  | [NXF_ENABLE_STRICT: true ] | true
+        false   | [nextflow: [enable: [ strict: true ]]]  | [NXF_ENABLE_STRICT: true ] | true
+        false   | [nextflow: [enable: [ strict: false ]]] | [NXF_ENABLE_STRICT: true ] | false
+        true    | [nextflow: [enable: [ strict: false ]]] | [NXF_ENABLE_STRICT: true ] | true
+        false   | [:]                                     | [NXF_ENABLE_STRICT: true ] | true
+        true    | [:]                                     | [NXF_ENABLE_STRICT: true ] | true
+
     }
 }

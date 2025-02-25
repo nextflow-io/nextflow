@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,4 +43,9 @@ class DiskResourceTest extends Specification {
         [request: _375_GB, type: 'local-ssd']  | _375_GB  | 'local-ssd'
     }
 
+    def 'should return a disk resource with the specified request' () {
+        expect:
+        new DiskResource(request: _100_GB).withRequest(_375_GB) == new DiskResource(request: _375_GB)
+        new DiskResource(request: _100_GB, type: 'ssd').withRequest(_375_GB) == new DiskResource(request: _375_GB, type: 'ssd')
+    }
 }

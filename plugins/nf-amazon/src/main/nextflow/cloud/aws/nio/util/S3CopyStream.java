@@ -150,7 +150,7 @@ public final class S3CopyStream extends OutputStream {
 
     /**
      * Writes a byte into the uploader buffer. When it is full starts the upload process
-     * in a asynchornous manner
+     * in a asynchronous manner
      *
      * @param b The byte to be written
      * @throws IOException
@@ -166,7 +166,7 @@ public final class S3CopyStream extends OutputStream {
 
 
     /**
-     * Close the stream uploading any remaning buffered data
+     * Close the stream uploading any remaining buffered data
      *
      * @throws IOException
      */

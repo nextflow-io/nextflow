@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,11 @@ package io.seqera.wave.plugin.config
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
+import io.seqera.wave.api.ScanLevel
+import io.seqera.wave.api.ScanMode
 import io.seqera.wave.config.CondaOpts
 import io.seqera.wave.config.SpackOpts
+import nextflow.file.FileHelper
 import nextflow.util.Duration
 /**
  * Model Wave client configuration
@@ -29,7 +32,7 @@ import nextflow.util.Duration
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@ToString(includeNames = true, includePackage = false)
+@ToString(includeNames = true, includePackage = false, includeFields = true)
 @CompileStatic
 class WaveConfig {
     final private static String DEF_ENDPOINT = 'https://wave.seqera.io'
@@ -44,17 +47,21 @@ class WaveConfig {
     final private Boolean bundleProjectResources
     final private String buildRepository
     final private String cacheRepository
-    final private ReportOpts reportOpts
     final private RetryOpts retryOpts
     final private HttpOpts httpClientOpts
     final private Boolean freezeMode
-    final private Boolean dryRunMode
+    final private Boolean preserveFileTimestamp
+    final private Duration buildMaxDuration
+    final private Boolean mirrorMode
+    final private ScanMode scanMode
+    final private List<ScanLevel> scanAllowedLevels
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
         this.endpoint = (opts.endpoint?.toString() ?: env.get('WAVE_API_ENDPOINT') ?: DEF_ENDPOINT)?.stripEnd('/')
-        this.freezeMode = opts.freeze as Boolean
-        this.dryRunMode = opts.navigate('dryRun', false)
+        this.freezeMode = opts.freeze
+        this.mirrorMode = opts.mirror
+        this.preserveFileTimestamp = opts.preserveFileTimestamp as Boolean
         this.containerConfigUrl = parseConfig(opts, env)
         this.tokensCacheMaxDuration = opts.navigate('tokens.cache.maxDuration', '30m') as Duration
         this.condaOpts = opts.navigate('build.conda', Collections.emptyMap()) as CondaOpts
@@ -63,11 +70,13 @@ class WaveConfig {
         this.cacheRepository = opts.navigate('build.cacheRepository') as String
         this.strategy = parseStrategy(opts.strategy)
         this.bundleProjectResources = opts.bundleProjectResources
-        this.reportOpts = new ReportOpts(opts.report as Map ?: Map.of())
         this.retryOpts = retryOpts0(opts)
         this.httpClientOpts = new HttpOpts(opts.httpClient as Map ?: Map.of())
-        if( !endpoint.startsWith('http://') && !endpoint.startsWith('https://') )
-            throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: $endpoint")
+        this.buildMaxDuration = opts.navigate('build.maxDuration', '40m') as Duration
+        this.scanMode = opts.navigate('scan.mode') as ScanMode
+        this.scanAllowedLevels = parseScanLevels(opts.navigate('scan.allowedLevels'))
+        // some validation
+        validateConfig()
     }
 
     Boolean enabled() { this.enabled }
@@ -86,13 +95,27 @@ class WaveConfig {
 
     boolean freezeMode() { return this.freezeMode }
 
-    boolean dryRun() { return this.dryRunMode }
+    boolean mirrorMode() { return this.mirrorMode }
+
+    boolean preserveFileTimestamp() { return this.preserveFileTimestamp }
 
     boolean bundleProjectResources() { bundleProjectResources }
 
     String buildRepository() { buildRepository }
 
     String cacheRepository() { cacheRepository }
+
+    Duration buildMaxDuration() { buildMaxDuration }
+
+    private void validateConfig() {
+        def scheme= FileHelper.getUrlProtocol(endpoint)
+        if( scheme !in ['http','https'] )
+            throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: '$endpoint'")
+        if( FileHelper.getUrlProtocol(buildRepository) )
+            throw new IllegalArgumentException("Config setting 'wave.build.repository' should not include any protocol prefix - offending value: '$buildRepository'")
+        if( FileHelper.getUrlProtocol(cacheRepository) )
+            throw new IllegalArgumentException("Config setting 'wave.build.cacheRepository' should not include any protocol prefix - offending value: '$cacheRepository'")
+    }
 
     private RetryOpts retryOpts0(Map opts) {
         if( opts.retryPolicy )
@@ -153,5 +176,24 @@ class WaveConfig {
         return tokensCacheMaxDuration 
     }
 
-    ReportOpts reportOpts() { reportOpts }
+    ScanMode scanMode() {
+        return scanMode
+    }
+
+    List<ScanLevel> scanAllowedLevels() {
+        return scanAllowedLevels
+    }
+
+    protected List<ScanLevel> parseScanLevels(value) {
+        if( !value )
+            return null
+        if( value instanceof CharSequence ) {
+            final str = value.toString()
+            value = str.tokenize(',').collect(it->it.trim())
+        }
+        if( value instanceof List ) {
+            return (value as List).collect(it-> ScanLevel.valueOf(it.toString().toUpperCase()))
+        }
+        throw new IllegalArgumentException("Invalid value for 'wave.scan.levels' setting - offending value: $value; type: ${value.getClass().getName()}")
+    }
 }

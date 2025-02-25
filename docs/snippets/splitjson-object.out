@@ -1,0 +1,3 @@
+Item: [key:A, value:1]
+Item: [key:B, value:[1, 2, 3]]
+Item: [key:C, value:[D:null]]

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,13 @@
 
 package nextflow.config
 
+import java.util.stream.Collectors
 
 import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
 import groovy.util.logging.Slf4j
-import static nextflow.Const.DEFAULT_BRANCH
+import nextflow.exception.AbortOperationException
+
 import static nextflow.Const.DEFAULT_MAIN_FILE_NAME
 /**
  * Models the nextflow config manifest settings
@@ -52,7 +55,7 @@ class Manifest {
 
 
     String getDefaultBranch() {
-        target.defaultBranch ?: DEFAULT_BRANCH
+        target.defaultBranch
     }
 
     String getDescription() {
@@ -61,6 +64,21 @@ class Manifest {
 
     String getAuthor() {
         target.author
+    }
+
+    List<Contributor> getContributors() {
+        if( !target.contributors )
+            return Collections.emptyList()
+
+        try {
+            final contributors = target.contributors as List<Map>
+            return contributors.stream()
+                .map(opts -> new Contributor(opts))
+                .collect(Collectors.toList())
+        }
+        catch( ClassCastException | IllegalArgumentException e ){
+            throw new AbortOperationException("Invalid config option `manifest.contributors` -- should be a list of maps")
+        }
     }
 
     String getMainScript() {
@@ -98,9 +116,28 @@ class Manifest {
         target.doi
     }
 
+    String getDocsUrl() {
+        target.docsUrl
+    }
+
+    String getIcon() {
+        target.icon
+    }
+
+    String getOrganization() {
+        target.organization
+    }
+
+    String getLicense() {
+        target.license
+    }
+
     Map toMap() {
-        final result = new HashMap(10)
+        final result = new HashMap(15)
         result.author = getAuthor()
+        result.contributors = getContributors().stream()
+            .map(c -> c.toMap())
+            .collect(Collectors.toList())
         result.defaultBranch = getDefaultBranch()
         result.description = getDescription()
         result.homePage = homePage
@@ -109,6 +146,51 @@ class Manifest {
         result.version = getVersion()
         result.nextflowVersion = getNextflowVersion()
         result.doi = getDoi()
+        result.docsUrl = getDocsUrl()
+        result.icon = getIcon()
+        result.organization = getOrganization()
+        result.license = getLicense()
         return result
+    }
+
+    @EqualsAndHashCode
+    static class Contributor {
+        String name
+        String affiliation
+        String email
+        String github
+        Set<ContributionType> contribution
+        String orcid
+
+        Contributor(Map opts) {
+            name = opts.name as String
+            affiliation = opts.affiliation as String
+            email = opts.email as String
+            github = opts.github as String
+            contribution = (opts.contribution as List<String>).stream()
+                .map(c -> ContributionType.valueOf(c.toUpperCase()))
+                .collect(Collectors.toSet())
+            orcid = opts.orcid as String
+        }
+
+        Map toMap() {
+            final result = new HashMap(6)
+            result.name = name
+            result.affiliation = affiliation
+            result.email = email
+            result.github = github
+            result.contribution = contribution.stream()
+                .map(c -> c.toString().toLowerCase())
+                .sorted()
+                .collect(Collectors.toList())
+            result.orcid = orcid
+            return result
+        }
+    }
+
+    static enum ContributionType {
+        AUTHOR,
+        MAINTAINER,
+        CONTRIBUTOR
     }
 }
