@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.config.parser
+package nextflow.config.parser.v2
 
 import java.nio.file.Path
 
@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 import nextflow.ast.NextflowXform
 import nextflow.config.ConfigParser
 import nextflow.config.StripSecretsXform
+import nextflow.config.parser.ConfigParserPluginFactory
 import nextflow.extension.Bolts
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
@@ -36,7 +37,7 @@ import org.codehaus.groovy.control.customizers.ImportCustomizer
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @CompileStatic
-class ConfigParserImpl implements ConfigParser {
+class ConfigParserV2 implements ConfigParser {
 
     private Map bindingVars = [:]
 
@@ -57,7 +58,7 @@ class ConfigParserImpl implements ConfigParser {
     private GroovyShell groovyShell
 
     @Override
-    ConfigParserImpl setProfiles(List<String> profiles) {
+    ConfigParserV2 setProfiles(List<String> profiles) {
         this.appliedProfiles = profiles
         return this
     }
@@ -68,19 +69,19 @@ class ConfigParserImpl implements ConfigParser {
     }
 
     @Override
-    ConfigParserImpl setIgnoreIncludes(boolean value) {
+    ConfigParserV2 setIgnoreIncludes(boolean value) {
         this.ignoreIncludes = value
         return this
     }
 
     @Override
-    ConfigParserImpl setRenderClosureAsString(boolean value) {
+    ConfigParserV2 setRenderClosureAsString(boolean value) {
         this.renderClosureAsString = value
         return this
     }
 
     @Override
-    ConfigParserImpl setStrict(boolean value) {
+    ConfigParserV2 setStrict(boolean value) {
         this.strict = value
         return this
     }
@@ -92,13 +93,13 @@ class ConfigParserImpl implements ConfigParser {
     }
 
     @Override
-    ConfigParserImpl setBinding(Map vars) {
+    ConfigParserV2 setBinding(Map vars) {
         this.bindingVars = vars
         return this
     }
 
     @Override
-    ConfigParserImpl setParams(Map vars) {
+    ConfigParserV2 setParams(Map vars) {
         // deep clone the map to prevent side-effect
         // see https://github.com/nextflow-io/nextflow/issues/1923
         this.paramVars = Bolts.deepClone(vars)

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.config.parser.legacy
+package nextflow.config.parser.v1
 
 
 import groovy.transform.CompileStatic

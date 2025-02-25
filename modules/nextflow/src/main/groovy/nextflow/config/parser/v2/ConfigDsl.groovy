@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.config.parser
+package nextflow.config.parser.v2
 
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -47,15 +47,15 @@ class ConfigDsl extends Script {
 
     private Map target = [:]
 
-    void setIgnoreIncludes( boolean value ) {
+    void setIgnoreIncludes(boolean value) {
         this.ignoreIncludes = value
     }
 
-    void setRenderClosureAsString( boolean value ) {
+    void setRenderClosureAsString(boolean value) {
         this.renderClosureAsString = value
     }
 
-    void setStrict( boolean value ) {
+    void setStrict(boolean value) {
         this.strict = value
     }
 
@@ -147,7 +147,7 @@ class ConfigDsl extends Script {
             includePath = configPath.resolveSibling(includeFile)
 
         final configText = readConfigFile(includePath)
-        final config = new ConfigParserImpl()
+        final config = new ConfigParserV2()
                 .setIgnoreIncludes(ignoreIncludes)
                 .setRenderClosureAsString(renderClosureAsString)
                 .setStrict(strict)

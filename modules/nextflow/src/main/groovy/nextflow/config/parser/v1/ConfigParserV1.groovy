@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.config.parser.legacy
+package nextflow.config.parser.v1
 
 import java.nio.file.Path
 
@@ -93,7 +93,7 @@ import org.codehaus.groovy.runtime.InvokerHelper
  * @author Andres Almiray
  * @since 1.5
  */
-class ConfigParserLegacy implements ConfigParser {
+class ConfigParserV1 implements ConfigParser {
     private Map bindingVars = [:]
     private Map paramVars = [:]
 

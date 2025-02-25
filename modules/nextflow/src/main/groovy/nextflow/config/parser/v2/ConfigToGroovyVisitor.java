@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.config.parser;
+package nextflow.config.parser.v2;
 
 import java.util.ArrayList;
 import java.util.stream.Collectors;

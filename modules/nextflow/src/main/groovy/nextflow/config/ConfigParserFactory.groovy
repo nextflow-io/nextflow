@@ -20,8 +20,8 @@ package nextflow.config
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
-import nextflow.config.parser.legacy.ConfigParserLegacy
-import nextflow.config.parser.ConfigParserImpl
+import nextflow.config.parser.v1.ConfigParserV1
+import nextflow.config.parser.v2.ConfigParserV2
 
 /**
  * Factory for creating an instance of {@link ConfigParser}.
@@ -37,8 +37,8 @@ class ConfigParserFactory {
         if( strict )
             log.debug "Using strict config parser"
         return strict
-            ? new ConfigParserImpl()
-            : new ConfigParserLegacy()
+            ? new ConfigParserV2()
+            : new ConfigParserV1()
     }
 
 }

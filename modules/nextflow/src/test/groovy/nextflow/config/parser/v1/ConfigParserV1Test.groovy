@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.config.parser.legacy
+package nextflow.config.parser.v1
 
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
@@ -37,7 +37,7 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ConfigParserLegacyTest extends Specification {
+class ConfigParserV1Test extends Specification {
 
     def 'should get an environment variable' () {
         given:
@@ -47,7 +47,7 @@ class ConfigParserLegacyTest extends Specification {
         def CONFIG = '''
         process.cpus = env('MAX_CPUS')
         '''
-        def config = new ConfigParserLegacy().parse(CONFIG)
+        def config = new ConfigParserV1().parse(CONFIG)
 
         then:
         config.process.cpus == '1'
@@ -72,7 +72,7 @@ class ConfigParserLegacyTest extends Specification {
         '''
 
         when:
-        def config = new ConfigParserLegacy().parse(CONFIG)
+        def config = new ConfigParserV1().parse(CONFIG)
 
         then:
         config.plugins == ['foo','bar'] as Set
@@ -91,7 +91,7 @@ class ConfigParserLegacyTest extends Specification {
         '''
 
         when:
-        def config = new ConfigParserLegacy().parse(CONFIG)
+        def config = new ConfigParserV1().parse(CONFIG)
 
         then:
         def e = thrown(ConfigParseException)
@@ -131,7 +131,7 @@ class ConfigParserLegacyTest extends Specification {
         '''
 
         when:
-        def config = new ConfigParserLegacy().parse(text)
+        def config = new ConfigParserV1().parse(text)
         then:
         config.process.name == 'alpha'
         config.process.resources.cpus == 4
@@ -195,7 +195,7 @@ class ConfigParserLegacyTest extends Specification {
         '''
 
         when:
-        def config = new ConfigParserLegacy().setBinding().parse(text)
+        def config = new ConfigParserV1().setBinding().parse(text)
         then:
         config.params.xxx == 'x'
         config.params.yyy == 'y'
@@ -253,7 +253,7 @@ class ConfigParserLegacyTest extends Specification {
         '''
 
         when:
-        def config = new ConfigParserLegacy().setBinding([MIN: 1, MAX: 32]).parse(main)
+        def config = new ConfigParserV1().setBinding([MIN: 1, MAX: 32]).parse(main)
         then:
         config.profiles.proc1.cpus == 4
         config.profiles.proc1.memory == '8GB'
@@ -310,7 +310,7 @@ class ConfigParserLegacyTest extends Specification {
         '''
 
         when:
-        def config = new ConfigParserLegacy().parse(main)
+        def config = new ConfigParserV1().parse(main)
         then:
         config.process.name == 'foo'
         config.process.resources.cpus == 4
@@ -374,7 +374,7 @@ class ConfigParserLegacyTest extends Specification {
         """
 
         when:
-        def config1 = new ConfigParserLegacy()
+        def config1 = new ConfigParserV1()
                         .setProfiles(['slow'])
                         .parse(configText)
         then:
@@ -384,7 +384,7 @@ class ConfigParserLegacyTest extends Specification {
         config1.process.disk == '100GB'
 
         when:
-        def config2 = new ConfigParserLegacy()
+        def config2 = new ConfigParserV1()
                         .setProfiles(['fast'])
                         .parse(configText)
         then:
@@ -414,13 +414,13 @@ class ConfigParserLegacyTest extends Specification {
         '''
 
         when:
-        def slurper = new ConfigParserLegacy().setProfiles(['alpha'])
+        def slurper = new ConfigParserV1().setProfiles(['alpha'])
         slurper.parse(text)
         then:
         slurper.getProfiles() == ['alpha','beta'] as Set
 
         when:
-        slurper = new ConfigParserLegacy().setProfiles(['omega'])
+        slurper = new ConfigParserV1().setProfiles(['omega'])
         slurper.parse(text)
         then:
         slurper.getProfiles() == ['alpha','beta'] as Set
@@ -438,12 +438,12 @@ class ConfigParserLegacyTest extends Specification {
         '''
 
         when:
-        def config = new ConfigParserLegacy().setIgnoreIncludes(true).parse(text)
+        def config = new ConfigParserV1().setIgnoreIncludes(true).parse(text)
         then:
         config.manifest.description == 'some text ..'
 
         when:
-        new ConfigParserLegacy().parse(text)
+        new ConfigParserV1().parse(text)
         then:
         thrown(NoSuchFileException)
 
@@ -456,7 +456,7 @@ class ConfigParserLegacyTest extends Specification {
         configFile.text = 'XXX.enabled = true'
 
         when:
-        new ConfigParserLegacy().parse(configFile)
+        new ConfigParserV1().parse(configFile)
         then:
         noExceptionThrown()
 
@@ -477,7 +477,7 @@ class ConfigParserLegacyTest extends Specification {
            '''
 
         when:
-        result = new ConfigParserLegacy()
+        result = new ConfigParserV1()
                 .parse(CONFIG)
         then:
         result.str1 instanceof String
@@ -486,7 +486,7 @@ class ConfigParserLegacyTest extends Specification {
         result.map1.bar instanceof Closure
 
         when:
-        result = new ConfigParserLegacy()
+        result = new ConfigParserV1()
                 .setRenderClosureAsString(false)
                 .parse(CONFIG)
         then:
@@ -496,7 +496,7 @@ class ConfigParserLegacyTest extends Specification {
         result.map1.bar instanceof Closure
 
         when:
-        result = new ConfigParserLegacy()
+        result = new ConfigParserV1()
                     .setRenderClosureAsString(true)
                     .parse(CONFIG)
         then:
@@ -522,7 +522,7 @@ class ConfigParserLegacyTest extends Specification {
            '''
 
         when:
-        result = new ConfigParserLegacy()
+        result = new ConfigParserV1()
                 .parse(CONFIG)
         then:
         result.mem1 instanceof MemoryUnit
@@ -596,7 +596,7 @@ class ConfigParserLegacyTest extends Specification {
         '''
 
         when:
-        def config = new ConfigParserLegacy().parse(CONFIG)
+        def config = new ConfigParserV1().parse(CONFIG)
 
         then:
         config.params.foo.bar == 'bar1'
@@ -614,7 +614,7 @@ class ConfigParserLegacyTest extends Specification {
             }
         '''
         and:
-        config = new ConfigParserLegacy().parse(CONFIG)
+        config = new ConfigParserV1().parse(CONFIG)
 
         then:
         config.params.foo.bar == 'bar1'
@@ -669,7 +669,7 @@ class ConfigParserLegacyTest extends Specification {
         """
 
         when:
-        def config1 = new ConfigParserLegacy()
+        def config1 = new ConfigParserV1()
                 .parse(configText)
         then:
         config1.workDir == '/my/scratch'
@@ -698,7 +698,7 @@ class ConfigParserLegacyTest extends Specification {
             '''
 
         when:
-        def config = new ConfigParserLegacy().setProfiles(['bar', 'foo']).parse(CONFIG)
+        def config = new ConfigParserV1().setProfiles(['bar', 'foo']).parse(CONFIG)
 
         then:
         config.params.input == 'bar'
