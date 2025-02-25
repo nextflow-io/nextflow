@@ -55,8 +55,8 @@ fi
 #
 # Integration tests (strict syntax)
 #
-if [[ $TEST_MODE == 'test_strict' ]]; then
-  export NXF_ENABLE_STRICT_SYNTAX=true
+if [[ $TEST_MODE == 'test_parser_v2' ]]; then
+  export NXF_SYNTAX_PARSER=v2
   test_integration
 fi
 

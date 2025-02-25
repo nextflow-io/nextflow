@@ -94,11 +94,6 @@ The following environment variables control the configuration of the Nextflow ru
   :::
 : Enable Nextflow *strict* execution mode (default: `false`)
 
-`NXF_ENABLE_STRICT_SYNTAX`
-: :::{versionadded} 25.02.0-edge
-  :::
-: Enable the {ref}`strict syntax <strict-syntax>` for Nextflow scripts.
-
 `NXF_ENABLE_VIRTUAL_THREADS`
 : :::{versionadded} 23.05.0-edge
   :::
@@ -186,6 +181,11 @@ The following environment variables control the configuration of the Nextflow ru
 : :::{versionadded} 23.02.0-edge
   :::
 : Enable the use of Spack recipes defined by using the {ref}`process-spack` directive. (default: `false`).
+
+`NXF_SYNTAX_PARSER`
+: :::{versionadded} 25.02.0-edge
+  :::
+: Set to `'v2'` to use the {ref}`strict syntax <updating-syntax-page>` for Nextflow scripts and config files (default: `'v1'`).
 
 `NXF_TEMP`
 : Directory where temporary files are stored
