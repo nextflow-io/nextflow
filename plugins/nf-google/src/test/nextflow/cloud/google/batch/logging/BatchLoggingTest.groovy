@@ -28,6 +28,7 @@ import com.google.cloud.logging.LogEntry
 import com.google.cloud.logging.Payload.StringPayload
 import com.google.cloud.logging.Severity
 import groovy.util.logging.Slf4j
+import nextflow.NF
 import nextflow.Session
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.client.BatchConfig
@@ -99,7 +100,7 @@ class BatchLoggingTest extends Specification {
 
         when:
         def imageUri = 'quay.io/nextflow/bash'
-        def cmd = ['/bin/bash','-c','echo "Hello world!" && echo "Oops something went wrong" >&2']
+        def cmd = [NF.bash(), '-c', 'echo "Hello world!" && echo "Oops something went wrong" >&2']
         def req = Job.newBuilder()
             .addTaskGroups(
                 TaskGroup.newBuilder()

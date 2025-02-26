@@ -26,6 +26,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.NF
 import nextflow.SysEnv
 import nextflow.container.ContainerBuilder
 import nextflow.container.DockerBuilder
@@ -84,8 +85,7 @@ class BashWrapperBuilder {
         catch( Exception e ) {
             log.warn "Invalid value for `NXF_DEBUG` variable: $str -- See http://www.nextflow.io/docs/latest/config.html#environment-variables"
         }
-        BASH = Collections.unmodifiableList( level > 0 ? ['/bin/bash','-uex'] : ['/bin/bash','-ue'] )
-
+        BASH = Collections.unmodifiableList( level > 0 ? [NF.bash(), '-uex'] : [NF.bash(), '-ue'] )
     }
 
 
@@ -567,7 +567,7 @@ class BashWrapperBuilder {
         // keep the shell path as "/bin/bash" when a non-custom "shell" attribute is specified
         // to not introduce unexpected changes due to the fact BASH is defined as "/bin/bash -eu" by default
         return shell.is(BASH)
-            ? "/bin/bash"
+            ? NF.bash()
             : shell.join(' ')
     }
 
@@ -600,7 +600,7 @@ class BashWrapperBuilder {
             if( (env || needChangeTaskWorkDir) && !containerConfig.entrypointOverride() ) {
                 if( needChangeTaskWorkDir )
                     cmd = 'cd $NXF_TASK_WORKDIR; ' + cmd
-                cmd = "/bin/bash -c \"$cmd\""
+                cmd = "${NF.bash()} -c \"$cmd\""
             }
             launcher = containerBuilder.getRunCommand(cmd)
         }
@@ -738,7 +738,7 @@ class BashWrapperBuilder {
             builder.params(readOnlyInputs: true)
 
         if( this.containerConfig.entrypointOverride() )
-            builder.params(entry: '/bin/bash')
+            builder.params(entry: NF.bash())
 
         // give a chance to override any option with process specific `containerOptions`
         if( containerOptions ) {
