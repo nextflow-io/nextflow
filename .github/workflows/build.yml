@@ -133,7 +133,7 @@ jobs:
       fail-fast: false
       matrix:
         java_version: [17, 23]
-        test_mode: ["test_integration", "test_docs", "test_aws", "test_azure", "test_google", "test_wave"]
+        test_mode: ["test_integration", "test_parser_v2", "test_docs", "test_aws", "test_azure", "test_google", "test_wave"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
