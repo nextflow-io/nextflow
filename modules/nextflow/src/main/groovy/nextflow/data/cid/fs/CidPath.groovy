@@ -80,6 +80,15 @@ class CidPath implements Path {
         this.filePath = filePath0(fs, storePath)
     }
 
+    private static void validateHash(Map cidObject) {
+        final hashedPath = Path.of(cidObject.path as String)
+        if( !hashedPath.exists() )
+            throw new FileNotFoundException("Target path $cidObject.path does not exists.")
+        if( cidObject.checksum && CacheHelper.hasher(hashedPath).hash().toString() != cidObject.checksum ) {
+            log.warn("Checksum of $hashedPath does not match with the one stored in the metadata")
+        }
+    }
+
     @TestOnly
     protected String getFilePath(){ this.filePath }
 
@@ -101,12 +110,10 @@ class CidPath implements Path {
             final type = DataType.valueOf(cidObject.type as String)
             if( type == DataType.TaskOutput || type == DataType.WorkflowOutput ) {
                 // return the real path stored in the metadata
+                validateHash(cidObject)
                 final realPath = Path.of(cidObject.path as String, childs)
                 if( !realPath.exists() )
                     throw new FileNotFoundException("Target path $realPath for $cidStorePath does not exists.")
-                if( cidObject.checksum && CacheHelper.hasher(realPath).hash().toString() != cidObject.checksum ) {
-                    log.warn("Checksum of $cidStorePath does not match with the one stored in the metadata")
-                }
                 return realPath
             }
         } else {
