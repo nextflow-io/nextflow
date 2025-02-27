@@ -122,34 +122,28 @@ myplugin {
 Plugins can declare their config options by implementing the `ConfigScope` interface and declaring each config option as a field with the `@ConfigOption` annotation:
 
 ```groovy
-class MyPluginConfig implements ConfigScope {
+import nextflow.config.dsl.ConfigOption
+import nextflow.config.dsl.ConfigScope
+import nextflow.config.dsl.ScopeName
+import nextflow.script.dsl.Description
 
-    MyPluginConfig() {}
+@ScopeName('myplugin')
+@Description('''
+    The `myplugin` scope allows you to configure the `nf-myplugin` plugin.
+''')
+class MyPluginConfig implements ConfigScope {
 
     MyPluginConfig(Map opts) {
         this.createMessage = opts.createMessage
     }
 
-    @Override
-    String name() {
-        return 'myplugin'
-    }
-
-    @Override
-    String description() {
-        return '''
-            The `myplugin` scope...
-            '''
-    }
-
-    @ConfigOption('''
-        Message to print to standard output when a run is initialized.
-        ''')
+    @ConfigOption
+    @Description('Message to print to standard output when a run is initialized.')
     String createMessage
 }
 ```
 
-While this approach is not required to support plugin config options, it is used by Nextflow to recognize plugin definitions when validating the config.
+While this approach is not required to support plugin config options, it allows Nextflow to recognize plugin definitions when validating the config.
 
 ### Executors
 

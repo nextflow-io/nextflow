@@ -20,7 +20,11 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.config.dsl.ConfigSchema
 import nextflow.config.dsl.ConfigScope
+import nextflow.config.dsl.SchemaNode
+import nextflow.config.dsl.ScopeName
+import nextflow.config.dsl.ScopeNode
 import nextflow.plugin.Plugins
+import nextflow.script.dsl.Description
 /**
  * Validate the Nextflow configuration
  *
@@ -30,12 +34,52 @@ import nextflow.plugin.Plugins
 @CompileStatic
 class ConfigValidator {
 
+    /**
+     * Hidden options added by ConfigBuilder
+     */
+    private static final List<String> hiddenOptions = List.of(
+        'bucketDir',
+        'cacheable',
+        'dumpChannels',
+        'libDir',
+        'poolSize',
+        'plugins',
+        'preview',
+        'runName',
+        'stubRun',
+    );
+
+    /**
+     * Additional config scopes added by third-party plugins
+     */
+    private ScopeNode pluginScopes
+
+    ConfigValidator() {
+        loadPluginScopes()
+    }
+
+    private void loadPluginScopes() {
+        final scopes = new HashMap<String, SchemaNode>()
+        for( final scope : Plugins.getExtensions(ConfigScope) ) {
+            final clazz = scope.getClass()
+            final name = clazz.getAnnotation(ScopeName)?.value()
+            final description = clazz.getAnnotation(Description)?.value()
+            if( !name )
+                continue
+            if( name in scopes ) {
+                log.warn "Plugin config scope `${clazz.name}` conflicts with existing scope: `${name}`"
+                continue
+            }
+            scopes.put(name, ScopeNode.of(clazz, description))
+        }
+        pluginScopes = new ScopeNode('', [:], scopes)
+    }
+
     void validate(ConfigMap config) {
         validate(config.toConfigObject())
     }
 
     void validate(ConfigObject config) {
-        final schema = getSchema()
         final flatConfig = config.flatten()
         for( String key : flatConfig.keySet() ) {
             final names = key.tokenize('.')
@@ -53,31 +97,26 @@ class ConfigValidator {
             final fqName = names.join('.')
             if( fqName.startsWith('process.ext.') )
                 return
-            if( fqName !in schema ) {
+            if( !isValid(names) ) {
                 log.warn "Unrecognized config option '${fqName}'"
                 continue
             }
         }
     }
 
-    protected Set<String> getSchema() {
-        final schema = new HashSet<String>()
-        schema.addAll(ConfigSchema.OPTIONS.keySet())
-        for( final scope : Plugins.getExtensions(ConfigScope) )
-            schema.addAll(ConfigSchema.getConfigOptions(scope).keySet())
-        // hidden options added by ConfigBuilder
-        schema.addAll(List.of(
-            'bucketDir',
-            'cacheable',
-            'dumpChannels',
-            'libDir',
-            'poolSize',
-            'plugins',
-            'preview',
-            'runName',
-            'stubRun',
-        ))
-        return schema
+    /**
+     * Determine whether a config option is defined in the schema.
+     *
+     * @param names
+     */
+    boolean isValid(List<String> names) {
+        if( names.size() == 1 && names.first() in hiddenOptions )
+            return true
+        if( ConfigSchema.ROOT.getOption(names) )
+            return true
+        if( pluginScopes.getOption(names) )
+            return true
+        return false
     }
 
     /**
@@ -85,7 +124,7 @@ class ConfigValidator {
      *
      * @param name
      */
-    protected void checkEnv(String name) {
+    private void checkEnv(String name) {
         if( name.startsWith('NXF_') && name!='NXF_DEBUG' )
             log.warn "Nextflow environment variables must be defined in the launch environment -- the following environment variable in the config will be ignored: `$name`"
     }
