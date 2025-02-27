@@ -74,7 +74,9 @@ class CidFileSystemProvider extends FileSystemProvider {
         if( !fileSystem ) {
             //Overwrite default values with provided configuration
             final defaultConfig = DataConfig.asMap()
-            config.each {defaultConfig.put(it.key, it.value)}
+            if (config) {
+                config.forEach {String key,value -> defaultConfig.put(key, value) }
+            }
             fileSystem = new CidFileSystem(this, new DataConfig(defaultConfig))
         }
         return fileSystem

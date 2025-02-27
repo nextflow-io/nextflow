@@ -76,6 +76,7 @@ class CidObserverTest extends Specification {
             '"sessionId": "' + uniqueId + '",' +
             '"name": "test_run", "params": []}'
         when:
+        observer.onFlowCreate(session)
         observer.onFlowBegin()
         then:
         folder.resolve(".meta/${observer.executionHash}/.data.json").text == JsonOutput.prettyPrint(expectedString)

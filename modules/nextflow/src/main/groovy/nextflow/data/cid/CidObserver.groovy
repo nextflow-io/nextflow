@@ -104,13 +104,17 @@ class CidObserver implements TraceObserver {
             normalizer.normalizePath(session.workflowMetadata.scriptFile.normalize()),
             session.workflowMetadata.scriptId
         )
+        List<DataPath> otherScripts  = new LinkedList<>()
+        for (Path p: ScriptMeta.allScriptNames().values()) {
+            if (p && p != session.workflowMetadata.scriptFile) {
+                otherScripts.add(new DataPath(normalizer.normalizePath(p.normalize()),
+                    CacheHelper.hasher(p.text).hash().toString()))
+            }
+        }
         final workflow = new Workflow(
             DataType.Workflow,
             mainScript,
-            ScriptMeta.allScriptNames().values().collect { new DataPath(
-                normalizer.normalizePath(it.normalize()),
-                CacheHelper.hasher(it.text).hash().toString())
-            },
+            otherScripts,
             session.workflowMetadata.repository,
             session.workflowMetadata.commitId
         )
