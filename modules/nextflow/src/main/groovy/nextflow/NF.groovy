@@ -72,6 +72,10 @@ class NF {
         NextflowMeta.instance.preview.output
     }
 
+    static boolean isParamsDefinitionEnabled() {
+        NextflowMeta.instance.preview.params
+    }
+
     static boolean isRecurseEnabled() {
         NextflowMeta.instance.preview.recursion
     }

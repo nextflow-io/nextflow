@@ -61,6 +61,8 @@ class ConfigBuilder {
 
     Path currentDir
 
+    Map<String,?> params
+
     boolean showAllProfiles
 
     String profile = DEFAULT_PROFILE
@@ -111,6 +113,11 @@ class ConfigBuilder {
     ConfigBuilder setCmdRun( CmdRun cmdRun ) {
         this.cmdRun = cmdRun
         setProfile(cmdRun.profile)
+        return this
+    }
+
+    ConfigBuilder setParams( Map<String,?> params ) {
+        this.params = params
         return this
     }
 
@@ -327,11 +334,11 @@ class ConfigBuilder {
         // this is needed to make sure to reuse the same
         // instance of the config vars across different instances of the ConfigBuilder
         // and prevent multiple parsing of the same params file (which can even be remote resource)
-        return cacheableConfigVars(baseDir)
+        return getConfigVars(baseDir)
     }
 
     @Memoized
-    static private Map cacheableConfigVars(Path base) {
+    static Map getConfigVars(Path base) {
         final binding = new HashMap(10)
         binding.put('baseDir', base)
         binding.put('projectDir', base)
@@ -351,8 +358,8 @@ class ConfigBuilder {
                 .setIgnoreIncludes(ignoreIncludes)
         ConfigObject result = new ConfigObject()
 
-        if( cmdRun && (cmdRun.hasParams()) )
-            slurper.setParams(cmdRun.parsedParams(configVars()))
+        if( params )
+            slurper.setParams(params)
 
         // add the user specified environment to the session env
         env.sort().each { name, value -> result.env.put(name,value) }
@@ -735,8 +742,8 @@ class ConfigBuilder {
         }
 
         // -- add the command line parameters to the 'taskConfig' object
-        if( cmdRun.hasParams() )
-            config.params = mergeMaps( (Map)config.params, cmdRun.parsedParams(configVars()), NF.strictMode )
+        if( params )
+            config.params = mergeMaps( (Map)config.params, params, NF.strictMode )
 
         if( cmdRun.withoutDocker && config.docker instanceof Map ) {
             // disable docker execution

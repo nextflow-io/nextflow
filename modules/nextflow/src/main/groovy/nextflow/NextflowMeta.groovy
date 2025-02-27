@@ -43,6 +43,7 @@ class NextflowMeta {
         @Deprecated volatile float dsl
         @Deprecated boolean strict
         boolean output
+        boolean params
         boolean recursion
         boolean topic
         boolean moduleBinaries
@@ -62,6 +63,12 @@ class NextflowMeta {
             if( output )
                 log.warn "WORKFLOW OUTPUT DSL IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
             this.output = output
+        }
+
+        void setParams(Boolean params) {
+            if( params )
+                log.warn "WORKFLOW PARAMS DEFINITION IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
+            this.params = params
         }
 
         void setRecursion(Boolean recursion) {

@@ -156,10 +156,12 @@ class NextflowDSLImpl implements ASTTransformation {
             final preCondition = methodCall.objectExpression?.getText() == 'this'
             final methodName = methodCall.getMethodAsString()
 
-            /*
-             * intercept the *process* method in order to transform the script closure
-             */
-            if( methodName == 'process' && preCondition ) {
+            if( methodName == 'params' && preCondition ) {
+                convertParamsDef(methodCall,sourceUnit)
+                super.visitMethodCallExpression(methodCall)
+            }
+
+            else if( methodName == 'process' && preCondition ) {
 
                 // clear block label
                 bodyLabel = null
@@ -274,6 +276,62 @@ class NextflowDSLImpl implements ASTTransformation {
             }
             else if( call.objectExpression instanceof MethodCallExpression ) {
                 convertIncludeDef((MethodCallExpression)call.objectExpression)
+            }
+        }
+
+        /**
+         * Transform parameter declarations in the workflow params definition:
+         *
+         *   params {
+         *     foo { ... }
+         *   }
+         *
+         * becomes:
+         *
+         *   params {
+         *     declare('foo') { ... }
+         *   }
+         *
+         * @param methodCall
+         * @param unit
+         */
+        protected void convertParamsDef(MethodCallExpression methodCall, SourceUnit unit) {
+            log.trace "Convert 'params' ${methodCall.arguments}"
+
+            assert methodCall.arguments instanceof ArgumentListExpression
+            final arguments = (ArgumentListExpression)methodCall.arguments
+
+            if( arguments.size() != 1 || arguments[0] !instanceof ClosureExpression ) {
+                syntaxError(methodCall, "Invalid params definition")
+                return
+            }
+
+            final closure = (ClosureExpression)arguments[0]
+            final block = (BlockStatement)closure.code
+            for( Statement stmt : block.statements ) {
+                if( stmt !instanceof ExpressionStatement ) {
+                    syntaxError(stmt, "Invalid parameter declaration")
+                    return
+                }
+
+                final stmtX = (ExpressionStatement)stmt
+                if( stmtX.expression !instanceof MethodCallExpression ) {
+                    syntaxError(stmt, "Invalid parameter declaration")
+                    return
+                }
+
+                final call = (MethodCallExpression)stmtX.expression
+                assert call.arguments instanceof ArgumentListExpression
+
+                final callArgs = (ArgumentListExpression)call.arguments
+                if( callArgs.size() != 1 || callArgs[0] !instanceof ClosureExpression ) {
+                    syntaxError(stmt, "Invalid parameter declaration")
+                    return
+                }
+
+                final name = call.method
+                final body = (ClosureExpression)callArgs[0]
+                stmtX.expression = callThisX('declare', args(name, body))
             }
         }
 

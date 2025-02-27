@@ -52,6 +52,12 @@ Feature flags are used to introduce experimental or other opt-in features. They 
 : *Experimental: may change in a future release.*
 : When `true`, enables the use of the {ref}`workflow output definition <workflow-output-def>`.
 
+`nextflow.preview.params`
+: :::{versionadded} 25.04.0
+  :::
+: *Experimental: may change in a future release.*
+: When `true`, enables the use of the {ref}`workflow params definition <workflow-params-def>`.
+
 `nextflow.preview.recursion`
 : :::{versionadded} 21.11.0-edge
   :::

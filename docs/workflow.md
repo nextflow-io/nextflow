@@ -35,24 +35,56 @@ See {ref}`syntax-workflow` for a full description of the workflow syntax.
 Workflows were introduced in DSL2. If you are still using DSL1, see {ref}`dsl1-page` for more information about how to migrate your Nextflow pipelines to DSL2.
 :::
 
-## Using parameters
+(workflow-params-def)=
 
-Parameters can be defined in the script with a default value that can be overridden from the CLI, params file, or config file. Params should only be used by the entry workflow:
+## Parameters
+
+:::{versionchanged} 25.04.0
+A new syntax for declaring parameters has been introduced. It requires the `nextflow.preview.params` feature flag to be used.
+
+See [Legacy syntax](#legacy-syntax) for details about the existing way to declare parameters.
+:::
+
+A script can declare parameters using the `params` block:
 
 ```nextflow
-params.data = '/some/data/file'
+params {
+    input {
+        defaultValue null
+        description 'Path to input data'
+        type 'file'
+    }
+}
+```
 
+Parameters can be used in the entry workflow:
+
+```nextflow
 workflow {
-    if( params.data )
-        bar(params.data)
+    if( params.input )
+        bar(params.input)
     else
         bar(foo())
 }
 ```
 
 :::{note}
-While params can also be used by named workflows, this practice is discouraged. Named workflows should receive their inputs explicitly through the `take:` section.
+Named workflows should not use params. They should receive their inputs explicitly through the `take:` section.
 :::
+
+The default value can be overridden by the command line, params file, or config file.
+
+### Legacy syntax
+
+Parameters can be declared by assigning a `params` property to a default value:
+
+```nextflow
+params.data = '/some/data/file'
+
+workflow {
+    // ...
+}
+```
 
 ## Workflow inputs (`take`)
 

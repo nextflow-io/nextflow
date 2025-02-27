@@ -98,6 +98,23 @@ abstract class BaseScript extends Script implements ExecutionContext {
         binding.setVariable( 'secrets', SecretsLoader.secretContext() )
     }
 
+    protected void params(Closure body) {
+        if( !NF.paramsDefinitionEnabled )
+            throw new IllegalStateException("Workflow params definition requires the `nextflow.preview.params` feature flag")
+        if( entryFlow )
+            throw new IllegalStateException("Workflow params definition must be defined before the entry workflow")
+        if( ExecutionStack.withinWorkflow() )
+            throw new IllegalStateException("Workflow params definition is not allowed within a workflow")
+
+        final dsl = new ParamsDsl()
+        final cl = (Closure)body.clone()
+        cl.setDelegate(dsl)
+        cl.setResolveStrategy(Closure.DELEGATE_FIRST)
+        cl.call()
+
+        dsl.validate(binding.params)
+    }
+
     protected process( String name, Closure<BodyDef> body ) {
         final process = new ProcessDef(this,body,name)
         meta.addDefinition(process)
@@ -162,6 +179,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
         }
 
         // if an `entryName` was specified via the command line, override the `entryFlow` to be executed
+        if( binding.entryName )
+            log.warn "The `-entry` command line option is deprecated -- use a pipeline parameter instead"
+
         if( binding.entryName && !(entryFlow=meta.getWorkflow(binding.entryName) ) ) {
             def msg = "Unknown workflow entry name: ${binding.entryName}"
             final allNames = meta.getWorkflowNames()

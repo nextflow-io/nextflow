@@ -14,9 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.preview.params = true
 nextflow.preview.output = true
 
-params.save_bam_bai = false
+params {
+  save_bam_bai {
+    defaultValue false
+    description "Whether to publish BAM and BAI files"
+    type "boolean"
+  }
+}
 
 process fastqc {
   input:

@@ -119,19 +119,21 @@ The following functions are globally available in a Nextflow configuration file:
 
 (config-params)=
 
-## Parameters
+## Config parameters
 
-Pipeline parameters can be defined in the config file using the `params` scope:
+The `params` scope can be used to define *config parameters* that can be used throughout the config file:
 
 ```groovy
-params.alpha = 123
-params.beta = 'string value .. '
-
 params {
-    gamma = true
-    delta = "params.alpha is ${params.alpha}"
+    global_config = "/opt/nextflow.config"
 }
+
+includeConfig params.global_config ?: "/dev/null" 
 ```
+
+:::{note}
+Parameters defined in config files are also made available in scripts, except when `nextflow.preview.params` is enabled.
+:::
 
 See {ref}`cli-params` for information about how to specify pipeline parameters.
 
