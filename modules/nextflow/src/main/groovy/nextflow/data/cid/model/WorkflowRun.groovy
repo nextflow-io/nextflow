@@ -21,6 +21,7 @@ import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 
 /**
+ * Models a Workflow Execution
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io
  */
@@ -31,5 +32,5 @@ class WorkflowRun {
     Workflow workflow
     String sessionId
     String name
-    Map params
+    List<Parameter> params
 }

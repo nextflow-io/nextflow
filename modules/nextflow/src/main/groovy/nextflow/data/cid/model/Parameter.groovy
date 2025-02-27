@@ -17,11 +17,18 @@
 
 package nextflow.data.cid.model
 
+import groovy.transform.Canonical
+import groovy.transform.CompileStatic
+
 /**
- * Possible metadata type entries.
+ * Model Workflow and Task Parameters.
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Jorge Ejarque <jorge.ejarque@seqera.io
  */
-enum DataType {
-    TaskRun, Workflow, WorkflowRun, TaskOutput, WorkflowOutput, WorkflowResults
+@Canonical
+@CompileStatic
+class Parameter {
+    String type
+    String name
+    Object value
 }

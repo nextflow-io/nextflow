@@ -19,7 +19,6 @@ package nextflow
 import nextflow.data.cid.CidStore
 import nextflow.data.cid.DefaultCidStore
 import nextflow.data.config.DataConfig
-import nextflow.util.CacheHelper
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -263,13 +262,9 @@ class Session implements ISession {
 
     boolean getCidEnabled() { cidEnabled }
 
-    private HashCode executionHash
-
     private CidStore cidStore
 
     CidStore getCidStore() { cidStore }
-
-    String getExecutionHash() { executionHash }
 
     private WorkflowMetadata workflowMetadata
 
@@ -410,12 +405,17 @@ class Session implements ISession {
         // -- file porter config
         this.filePorter = new FilePorter(this)
 
-        if (config.cid) {
+        if(config.navigate('workflow.data')) {
             this.cidEnabled = true
-            this.cidStore = new DefaultCidStore()
-            this.cidStore.open(DataConfig.create(this))
+            this.cidStore = createCidStore(this)
         }
 
+    }
+
+    protected static CidStore createCidStore(Session session){
+        final store = new DefaultCidStore()
+        store.open(DataConfig.create(session))
+        return store
     }
 
     protected Path cloudCachePath(Map cloudcache, Path workDir) {
@@ -428,32 +428,12 @@ class Session implements ISession {
         }
         return result
     }
-    private HashCode generateExecutionHash(ScriptFile scriptFile){
-        List keys = [generateScriptHash(scriptFile).toString(), scriptFile?.repository, scriptFile?.commitId, uniqueId, (Map)config.params]
-        return CacheHelper.hasher(keys).hash()
-    }
-
-    private HashCode generateScriptHash(ScriptFile scriptFile){
-        List keys = [ scriptFile?.scriptId ]
-        for( Path p : ScriptMeta.allScriptNames().values() ){
-            keys << CacheHelper.hasher(p.text).hash().toString()
-        }
-        return CacheHelper.hasher(keys).hash()
-    }
 
     /**
      * Initialize the session workDir, libDir, baseDir and scriptName variables
      */
     Session init( ScriptFile scriptFile, List<String> args=null ) {
 
-        if(cidEnabled) {
-            this.executionHash = generateExecutionHash(scriptFile)
-            this.outputDir = cidStore.getPath().resolve(executionHash.toString())
-            log.warn("CID store enabled. Defined output directory will be ignored and set to ${outputDir}.")
-            if( !HistoryFile.disabled() && HistoryFile.DEFAULT.exists() ) {
-                HistoryFile.DEFAULT.updateCidHash(runName,executionHash.toString())
-            }
-        }
         if(!workDir.mkdirs()) throw new AbortOperationException("Cannot create work-dir: $workDir -- Make sure you have write permissions or specify a different directory by using the `-w` command line option")
         log.debug "Work-dir: ${workDir.toUriString()} [${FileHelper.getPathFsType(workDir)}]"
 

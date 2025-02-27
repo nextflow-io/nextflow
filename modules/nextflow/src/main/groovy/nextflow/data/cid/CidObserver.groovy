@@ -18,11 +18,19 @@
 package nextflow.data.cid
 
 import groovy.util.logging.Slf4j
+import nextflow.data.cid.model.DataPath
+import nextflow.data.cid.model.Parameter
+import nextflow.data.cid.model.WorkflowResults
 import nextflow.data.cid.model.Workflow
 import nextflow.data.cid.model.WorkflowRun
 import nextflow.file.FileHelper
+import nextflow.file.FileHolder
 import nextflow.script.ScriptMeta
+import nextflow.script.params.DefaultInParam
+import nextflow.script.params.FileInParam
+import nextflow.script.params.InParam
 import nextflow.util.PathNormalizer
+import nextflow.util.TestOnly
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -40,35 +48,69 @@ import nextflow.trace.TraceObserver
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
 
+import static nextflow.data.cid.fs.CidPath.CID_PROT
+import static nextflow.data.cid.fs.CidPath.METADATA_FILE
 /**
+ * Observer to write the generated workflow metadata in a CID store.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
 class CidObserver implements TraceObserver {
-    public static final String METADATA_FILE = '.data.json'
-    public static final String CID_PROT = 'cid://'
+
+    private String executionHash
     private CidStore store
     private Session session
+    private WorkflowResults workflowResults
+    private Map<String,String> outputsStoreDirCid = new HashMap<String,String>(10)
 
-    @Override
-    void onFlowCreate(Session session) {
+    CidObserver(Session session){
         this.session = session
         this.store = session.cidStore
     }
 
-    void onFlowBegin() {
-        storeWorkflowRun()
+    @Override
+    void onFlowCreate(Session session) {
+        this.store.getHistoryFile().write(session.runName, session.uniqueId, '-')
     }
 
-    protected void storeWorkflowRun() {
+    @TestOnly
+    String getExecutionHash(){ executionHash }
+
+    @Override
+    void onFlowBegin() {
+        this.executionHash = storeWorkflowRun()
+        workflowResults = new WorkflowResults(
+            DataType.WorkflowResults,
+            "$CID_PROT${executionHash}",
+            new ArrayList<Parameter>())
+        this.store.getHistoryFile().update(session.uniqueId, "${CID_PROT}${this.executionHash}")
+    }
+
+    @Override
+    void onFlowComplete(){
+        if (this.workflowResults){
+            final content = JsonOutput.prettyPrint(JsonOutput.toJson(workflowResults))
+            final wfResultsHash = CacheHelper.hasher(content).hash().toString()
+            this.store.save("${wfResultsHash}/$METADATA_FILE", content)
+            this.store.getHistoryFile().update(session.uniqueId, "${CID_PROT}${wfResultsHash}")
+        }
+    }
+
+    protected String storeWorkflowRun() {
         final normalizer = new PathNormalizer(session.workflowMetadata)
-        final mainScript = normalizer.normalizePath(session.workflowMetadata.scriptFile.normalize())
+        final mainScript = new DataPath(
+            normalizer.normalizePath(session.workflowMetadata.scriptFile.normalize()),
+            session.workflowMetadata.scriptId
+        )
         final workflow = new Workflow(
             DataType.Workflow,
             mainScript,
-            ScriptMeta.allScriptNames().values().collect {normalizer.normalizePath(it.normalize())},
+            ScriptMeta.allScriptNames().values().collect { new DataPath(
+                normalizer.normalizePath(it.normalize()),
+                CacheHelper.hasher(it.text).hash().toString())
+            },
             session.workflowMetadata.repository,
             session.workflowMetadata.commitId
         )
@@ -79,20 +121,22 @@ class CidObserver implements TraceObserver {
             session.runName,
             getNormalizedParams(session.params, normalizer)
         )
+
         final content = JsonOutput.prettyPrint(JsonOutput.toJson(value))
-        store.save("${session.executionHash}/$METADATA_FILE", content)
+        final executionHash = CacheHelper.hasher(content).hash().toString()
+        store.save("${executionHash}/$METADATA_FILE", content)
+        return executionHash
     }
 
-    private static Map getNormalizedParams(Map<String, Object> params, PathNormalizer normalizer){
-        final normalizedParams = new HashMap<String,Object>()
+    private static List<Parameter> getNormalizedParams(Map<String, Object> params, PathNormalizer normalizer){
+        final normalizedParams = new LinkedList<Parameter>()
         params.each{String key, Object value ->
-            log.debug("Managing parameter $key , class ${value.class}")
-            if (value instanceof Path)
-                normalizedParams.put(key,normalizer.normalizePath(value as Path))
-            else if (value instanceof String || value instanceof GString)
-                normalizedParams.put(key,normalizer.normalizePath(value.toString()))
+            if( value instanceof Path )
+                normalizedParams.add( new Parameter( Path.class.simpleName, key, normalizer.normalizePath( value as Path ) ) )
+            else if ( value instanceof CharSequence )
+                normalizedParams.add( new Parameter( String.class.simpleName, key, normalizer.normalizePath( value.toString() ) ) )
             else
-                normalizedParams.put(key, value)
+                normalizedParams.add( new Parameter( value.class.simpleName, key, value) )
         }
         return normalizedParams
     }
@@ -109,53 +153,92 @@ class CidObserver implements TraceObserver {
         storeTaskRun(task, pathNormalizer)
         // store all task outputs files
         final outputs = task.getOutputsByType(FileOutParam)
-        for( Map.Entry entry : outputs ) {
-            final value = entry.value
-            if( value instanceof Path ) {
-                storeTaskOutput(task, (Path)value)
-            }
-            else if( value instanceof Collection<Path> ) {
-                for( Path it : value )
-                    storeTaskOutput(task, (Path)it)
+        outputs.forEach { FileOutParam key, Object value -> manageFileOutParams(value, task)}
+
+    }
+
+    private void manageFileOutParams( Object value, TaskRun task) {
+        if (value instanceof Path) {
+            storeTaskOutput(task, (Path) value)
+        } else if (value instanceof Collection<Path>) {
+            for (Path it : value) {
+                storeTaskOutput(task, (Path) it)
             }
         }
     }
 
-    protected void storeTaskRun(TaskRun task, PathNormalizer normalizer) {
+    protected String storeTaskRun(TaskRun task, PathNormalizer normalizer) {
         final value = new nextflow.data.cid.model.TaskRun(
             DataType.TaskRun,
             session.uniqueId.toString(),
             task.getName(),
-            session.stubRun ? task.stubSource: task.source,
-            task.inputFilesMap ? convertToReferences(task.inputFilesMap, normalizer): null,
+            CacheHelper.hasher(session.stubRun ? task.stubSource: task.source).hash().toString(),
+            task.inputs ? manageInputs(task.inputs, normalizer): null,
             task.isContainerEnabled() ? task.getContainerFingerprint(): null,
             normalizer.normalizePath(task.getCondaEnv()),
             normalizer.normalizePath(task.getSpackEnv()),
             task.config?.getArchitecture()?.toString(),
             task.processor.getTaskGlobalVars(task),
-            task.processor.getTaskBinEntries(task.source).collect { Path p -> normalizer.normalizePath(p.normalize()) }
-            )
+            task.processor.getTaskBinEntries(task.source).collect { Path p -> new DataPath(normalizer.normalizePath(p.normalize()),
+                CacheHelper.hasher(p).hash().toString() )}
+        )
+
         // store in the underlying persistence
         final key = "${task.hash}/$METADATA_FILE"
         store.save(key, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
+        return task.hash.toString()
     }
 
     protected void storeTaskOutput(TaskRun task, Path path) {
-        final attrs = readAttributes(path)
-        final rel = task.workDir.relativize(path).toString()
-        final cid = "${task.hash}/${rel}"
-        final key = "${cid}/$METADATA_FILE"
-        final hash = CacheHelper.hasher(path).hash().toString()
-        final value = new Output(
-            DataType.TaskOutput,
-            path.toString(),
-            hash,
-            "$CID_PROT$task.hash",
-            attrs.size(),
-            attrs.creationTime().toMillis(),
-            attrs.lastModifiedTime().toMillis() )
-        // store in the underlying persistence
-        store.save(key, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
+        try {
+            final attrs = readAttributes(path)
+            final rel = getTaskRelative(task, path)
+            final cid = "${task.hash}/${rel}"
+            final key = "${cid}/$METADATA_FILE"
+            final hash = CacheHelper.hasher(path).hash().toString()
+            final value = new Output(
+                DataType.TaskOutput,
+                path.toString(),
+                hash,
+                "$CID_PROT$task.hash",
+                attrs.size(),
+                attrs.creationTime().toMillis(),
+                attrs.lastModifiedTime().toMillis())
+            store.save(key, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
+        } catch (Throwable e) {
+            log.warn("Exception storing CID output $path for task ${task.name}. ${e.getLocalizedMessage()}")
+        }
+    }
+
+    protected String getTaskRelative(TaskRun task, Path path){
+        if (path.isAbsolute()) {
+            final rel = getTaskRelative0(task, path)
+            if (rel) return rel
+            throw new Exception("Cannot asses the relative path for output $path of ${task.name}")
+        } else {
+            //Check if contains workdir or storeDir
+            final rel = getTaskRelative0(task, path.toAbsolutePath())
+            if (rel) return rel
+            if (path.normalize().getName(0).toString() == "..")
+                throw new Exception("Cannot asses the relative path for output $path of ${task.name}" )
+            return path.normalize().toString()
+        }
+
+    }
+
+    private String getTaskRelative0(TaskRun task, Path path){
+        final workDirAbsolute = task.workDir.toAbsolutePath()
+            if (path.startsWith(workDirAbsolute)) {
+                return workDirAbsolute.relativize(path).toString()
+            }
+            //If task output is not in the workDir check if output is stored in the task's storeDir
+            final storeDir = task.getConfig().getStoreDir().toAbsolutePath()
+            if( storeDir && path.startsWith(storeDir)) {
+                final rel = storeDir.relativize(path)
+                //If output stored in storeDir, keep the path in case it is used as workflow output
+                this.outputsStoreDirCid.put(path.toString(), "$CID_PROT${task.hash}/$rel".toString())
+                return rel
+            }
     }
 
     protected BasicFileAttributes readAttributes(Path path) {
@@ -164,20 +247,25 @@ class CidObserver implements TraceObserver {
 
     @Override
     void onFilePublish(Path destination, Path source){
-        final hash = CacheHelper.hasher(destination).hash().toString()
-        final rel = session.outputDir.relativize(destination).toString()
-        final key = "$session.executionHash/${rel}/$METADATA_FILE"
-        final sourceReference = getSourceReference(source)
-        final attrs = readAttributes(destination)
-        final value = new Output(
-            DataType.WorkflowOutput,
-            destination.toString(),
-            hash,
-            sourceReference,
-            attrs.size(),
-            attrs.creationTime().toMillis(),
-            attrs.lastModifiedTime().toMillis() )
-        store.save(key, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
+        try {
+            final hash = CacheHelper.hasher(destination).hash().toString()
+            final rel = getWorkflowRelative(destination)
+            final key = "$executionHash/${rel}/$METADATA_FILE"
+            final sourceReference = getSourceReference(source)
+            final attrs = readAttributes(destination)
+            final value = new Output(
+                DataType.WorkflowOutput,
+                destination.toString(),
+                hash,
+                sourceReference,
+                attrs.size(),
+                attrs.creationTime().toMillis(),
+                attrs.lastModifiedTime().toMillis())
+            store.save(key, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
+            workflowResults.outputs.add("${CID_PROT}${executionHash}/${rel}")
+        } catch (Throwable e) {
+            log.warn("Exception storing CID output $destination for workflow ${executionHash}.", e)
+        }
     }
 
     String getSourceReference(Path source){
@@ -185,32 +273,75 @@ class CidObserver implements TraceObserver {
         if (hash) {
             final target = FileHelper.getWorkFolder(session.workDir, hash).relativize(source).toString()
             return "$CID_PROT$hash/$target"
+        } else {
+            final storeDirReference = outputsStoreDirCid.get(source.toString())
+            if (storeDirReference)
+                return "$CID_PROT$storeDirReference"
         }
         return null
     }
 
     @Override
     void onFilePublish(Path destination){
-        final hash = CacheHelper.hasher(destination).hash().toString()
-        final rel = session.outputDir.relativize(destination).toString()
-        final key = "$session.executionHash/${rel}/$METADATA_FILE"
-        final attrs = readAttributes(destination)
-        final value = new Output(
-            DataType.WorkflowOutput,
-            destination.toString(),
-            hash,
-            session.executionHash,
-            attrs.size(),
-            attrs.creationTime().toMillis(),
-            attrs.lastModifiedTime().toMillis() )
-        store.save(key, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
+        try {
+            final hash = CacheHelper.hasher(destination).hash().toString()
+            final rel = getWorkflowRelative(destination)
+            final key = "$executionHash/${rel}/$METADATA_FILE"
+            final attrs = readAttributes(destination)
+            final value = new Output(
+                DataType.WorkflowOutput,
+                destination.toString(),
+                hash,
+                "${CID_PROT}${executionHash}".toString(),
+                attrs.size(),
+                attrs.creationTime().toMillis(),
+                attrs.lastModifiedTime().toMillis())
+            store.save(key, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
+            workflowResults.outputs.add("${CID_PROT}${executionHash}/${rel}")
+        }catch (Throwable e) {
+            log.warn("Exception storing CID output $destination for workflow ${executionHash}. ${e.getLocalizedMessage()}")
+        }
     }
 
-    protected List<String> convertToReferences(Map<String, Path> inputs, PathNormalizer normalizer) {
-        List<String> references = new LinkedList<String>()
-        inputs.each { name, path ->
-            final ref = getSourceReference(path)
-            references.add(ref ? ref : normalizer.normalizePath(path))}
-        return references
+    protected String getWorkflowRelative(Path path){
+        final outputDirAbs = session.outputDir.toAbsolutePath()
+        if (path.isAbsolute()) {
+            if (path.startsWith(outputDirAbs)) {
+                return outputDirAbs.relativize(path).toString()
+            } else {
+                throw new Exception("Cannot asses the relative path for workflow output $path")
+            }
+        } else {
+            final pathAbs = path.toAbsolutePath()
+            if (pathAbs.startsWith(outputDirAbs)) {
+                return outputDirAbs.relativize(pathAbs).toString()
+            }
+            if (path.normalize().getName(0).toString() == "..")
+                throw new Exception("Cannot asses the relative path for workflow output $path")
+            return path.normalize().toString()
+        }
+
+    }
+
+    protected List<Parameter> manageInputs(Map<InParam, Object> inputs, PathNormalizer normalizer) {
+        List<Parameter> managedInputs = new LinkedList<Parameter>()
+        inputs.forEach{ param, value ->
+            final type = param.class.simpleName
+            final name = param.name
+            if( param instanceof FileInParam )
+                managedInputs.add( new Parameter( type, name, manageFileInParam( (List<FileHolder>)value , normalizer) ) )
+            else if( !(param instanceof DefaultInParam) )
+                managedInputs.add( new Parameter( type, name, value) )
+        }
+        return managedInputs
+    }
+
+    private List<Object> manageFileInParam(List<FileHolder> files, PathNormalizer normalizer){
+        final paths = new LinkedList<Object>();
+        for( FileHolder it : files ) {
+            final ref = getSourceReference(it.storePath)
+            paths.add(ref ? ref : new DataPath(normalizer.normalizePath(it.storePath), CacheHelper.hasher(it.storePath).hash().toString()))
+        }
+        return paths
     }
 }

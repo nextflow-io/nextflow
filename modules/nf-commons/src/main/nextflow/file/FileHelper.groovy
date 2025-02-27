@@ -1172,6 +1172,8 @@ class FileHelper {
     }
 
     public static HashCode getTaskHashFromPath(Path sourcePath, Path workPath) {
+        assert sourcePath
+        assert workPath
         if (sourcePath.startsWith(workPath)) {
             Path relativePath = workPath.relativize(sourcePath)
             if (relativePath.getNameCount() >= 2) {

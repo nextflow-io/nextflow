@@ -203,7 +203,6 @@ class CmdLog extends CmdBase implements CacheBase {
                     .head('STATUS')
                     .head('REVISION ID')
                     .head('SESSION ID')
-                    .head('CID HASH')
                     .head('COMMAND')
 
         history.eachRow { List<String> row ->

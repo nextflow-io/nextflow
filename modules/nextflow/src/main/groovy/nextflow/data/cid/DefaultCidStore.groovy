@@ -27,6 +27,7 @@ import nextflow.data.config.DataConfig
 import nextflow.exception.AbortOperationException
 
 /**
+ * Default Implementation for the a CID store.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -34,12 +35,13 @@ import nextflow.exception.AbortOperationException
 @CompileStatic
 class DefaultCidStore implements CidStore {
 
+    private static String HISTORY_FILE_NAME =".history"
     private Path metaLocation
     private Path location
 
     void open(DataConfig config) {
         location = config.store.location
-        metaLocation = location.resolve('.meta')
+        metaLocation = getMetadataPath(config)
         if( !Files.exists(metaLocation) && !Files.createDirectories(metaLocation) ) {
             throw new AbortOperationException("Unable to create CID store directory: $metaLocation")
         }
@@ -68,6 +70,13 @@ class DefaultCidStore implements CidStore {
 
     @Override
     Path getPath(){ location }
+
+    @Override
+    CidHistoryFile getHistoryFile(){
+        return new CidHistoryFile(metaLocation.resolve(HISTORY_FILE_NAME))
+    }
+
+    static Path getMetadataPath(DataConfig config){ config.store.location.resolve('.meta') }
 
 
 }

@@ -32,10 +32,10 @@ class HistoryFileTest extends Specification {
 b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98\tnextflow run examples/ampa.nf --in data/sample.fa
 b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98\tnextflow run examples/ampa.nf --in data/sample.fa -resume
 58d8dd16-ce77-4507-ba1a-ec1ccc9bd2e8\tnextflow run examples/basic.nf --in data/sample.fa
-2016-07-24 16:43:16\t-\tevil_pike\tOK\t6b9515aba6\te710da1b-ce06-482f-bbcf-987a507f85d1\t-\t.nextflow run hello
-2016-07-24 16:43:34\t-\tgigantic_keller\tOK\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t-\t.nextflow run hello
-2016-07-24 16:43:34\t-\tsmall_cirum\tOK\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t-\t.nextflow run hello -resume
-2016-07-25 09:58:01\t5 min\tmodest_bartik\tERR\t6b9515aba6\t5910a50f-8656-4765-aa79-f07cef912062\t-\t.nextflow run hello
+2016-07-24 16:43:16\t-\tevil_pike\tOK\t6b9515aba6\te710da1b-ce06-482f-bbcf-987a507f85d1\t.nextflow run hello
+2016-07-24 16:43:34\t-\tgigantic_keller\tOK\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t.nextflow run hello
+2016-07-24 16:43:34\t-\tsmall_cirum\tOK\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t.nextflow run hello -resume
+2016-07-25 09:58:01\t5 min\tmodest_bartik\tERR\t6b9515aba6\t5910a50f-8656-4765-aa79-f07cef912062\t.nextflow run hello
 '''
 
     def 'should support custom base dir' () {
@@ -66,9 +66,9 @@ b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98\tnextflow run examples/ampa.nf --in data/sa
         def d1 = new Date(now - 50_000)
         def d2 = new Date(now - 30_000)
         def d3 = new Date(now - 10_000)
-        history.write( 'hello_world', id1, 'abc', '-', [1,2,3], d1 )
-        history.write( 'super_star', id2, '123', '-', [1,2,3], d2 )
-        history.write( 'slow_food', id3, 'xyz', '-', [1,2,3], d3 )
+        history.write( 'hello_world', id1, 'abc', [1,2,3], d1 )
+        history.write( 'super_star', id2, '123', [1,2,3], d2 )
+        history.write( 'slow_food', id3, 'xyz', [1,2,3], d3 )
 
         then:
         history.getLast() == new HistoryRecord(sessionId: id3, runName: 'slow_food', timestamp: d3, command: '1 2 3')
@@ -243,9 +243,9 @@ b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98\tnextflow run examples/ampa.nf --in data/sa
         then:
         history.text == '''
                 58d8dd16-ce77-4507-ba1a-ec1ccc9bd2e8\tnextflow run examples/basic.nf --in data/sample.fa
-                2016-07-24 16:43:34\t-\tgigantic_keller\tOK\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t-\t.nextflow run hello
-                2016-07-24 16:43:34\t-\tsmall_cirum\tOK\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t-\t.nextflow run hello -resume
-                2016-07-25 09:58:01\t5 min\tmodest_bartik\tERR\t6b9515aba6\t5910a50f-8656-4765-aa79-f07cef912062\t-\t.nextflow run hello
+                2016-07-24 16:43:34\t-\tgigantic_keller\tOK\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t.nextflow run hello
+                2016-07-24 16:43:34\t-\tsmall_cirum\tOK\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t.nextflow run hello -resume
+                2016-07-25 09:58:01\t5 min\tmodest_bartik\tERR\t6b9515aba6\t5910a50f-8656-4765-aa79-f07cef912062\t.nextflow run hello
                 '''
                 .stripIndent()
     }
@@ -306,38 +306,14 @@ b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98\tnextflow run examples/ampa.nf --in data/sa
         history.findAllRunNames() == ['evil_pike', 'gigantic_keller', 'small_cirum', 'modest_bartik'] as Set
     }
 
-    def 'should update cid hash ' () {
-        given:
-        def source = '''
-2016-07-24 16:43:16\t-\tevil_pike\t-\t6b9515aba6\te710da1b-ce06-482f-bbcf-987a507f85d1\t-\t.nextflow run hello
-2016-07-24 16:43:34\t-\tgigantic_keller\t-\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t-\t.nextflow run hello
-2016-07-24 16:43:34\t-\tsmall_cirum\t-\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t-\t.nextflow run hello -resume
-2016-07-25 09:58:01\t5 min\tmodest_bartik\tERR\t6b9515aba6\t5910a50f-8656-4765-aa79-f07cef912062\t-\t.nextflow run hello
-'''
-        def file = Files.createTempFile('test',null)
-        file.deleteOnExit()
-        file.text = source
-        def history = new HistoryFile(file)
-
-
-        when:
-        history.updateCidHash('evil_pike','cid_hash')
-        then:
-        history.text == '''
-2016-07-24 16:43:16\t-\tevil_pike\t-\t6b9515aba6\te710da1b-ce06-482f-bbcf-987a507f85d1\tcid_hash\t.nextflow run hello
-2016-07-24 16:43:34\t-\tgigantic_keller\t-\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t-\t.nextflow run hello
-2016-07-24 16:43:34\t-\tsmall_cirum\t-\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t-\t.nextflow run hello -resume
-2016-07-25 09:58:01\t5 min\tmodest_bartik\tERR\t6b9515aba6\t5910a50f-8656-4765-aa79-f07cef912062\t-\t.nextflow run hello
-'''
-    }
     def 'should update the history entries ' () {
 
         given:
         def source = '''
-2016-07-24 16:43:16\t-\tevil_pike\t-\t6b9515aba6\te710da1b-ce06-482f-bbcf-987a507f85d1\t-\t.nextflow run hello
-2016-07-24 16:43:34\t-\tgigantic_keller\t-\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t-\t.nextflow run hello
-2016-07-24 16:43:34\t-\tsmall_cirum\t-\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t-\t.nextflow run hello -resume
-2016-07-25 09:58:01\t5 min\tmodest_bartik\tERR\t6b9515aba6\t5910a50f-8656-4765-aa79-f07cef912062\t-\t.nextflow run hello
+2016-07-24 16:43:16\t-\tevil_pike\t-\t6b9515aba6\te710da1b-ce06-482f-bbcf-987a507f85d1\t.nextflow run hello
+2016-07-24 16:43:34\t-\tgigantic_keller\t-\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t.nextflow run hello
+2016-07-24 16:43:34\t-\tsmall_cirum\t-\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t.nextflow run hello -resume
+2016-07-25 09:58:01\t5 min\tmodest_bartik\tERR\t6b9515aba6\t5910a50f-8656-4765-aa79-f07cef912062\t.nextflow run hello
 '''
         def file = Files.createTempFile('test',null)
         file.deleteOnExit()
@@ -350,10 +326,10 @@ b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98\tnextflow run examples/ampa.nf --in data/sa
         history.update('evil_pike',true,when)
         then:
         history.text == '''
-2016-07-24 16:43:16\t10m\tevil_pike\tOK\t6b9515aba6\te710da1b-ce06-482f-bbcf-987a507f85d1\t-\t.nextflow run hello
-2016-07-24 16:43:34\t-\tgigantic_keller\t-\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t-\t.nextflow run hello
-2016-07-24 16:43:34\t-\tsmall_cirum\t-\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t-\t.nextflow run hello -resume
-2016-07-25 09:58:01\t5 min\tmodest_bartik\tERR\t6b9515aba6\t5910a50f-8656-4765-aa79-f07cef912062\t-\t.nextflow run hello
+2016-07-24 16:43:16\t10m\tevil_pike\tOK\t6b9515aba6\te710da1b-ce06-482f-bbcf-987a507f85d1\t.nextflow run hello
+2016-07-24 16:43:34\t-\tgigantic_keller\t-\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t.nextflow run hello
+2016-07-24 16:43:34\t-\tsmall_cirum\t-\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t.nextflow run hello -resume
+2016-07-25 09:58:01\t5 min\tmodest_bartik\tERR\t6b9515aba6\t5910a50f-8656-4765-aa79-f07cef912062\t.nextflow run hello
 '''
 
         when:
@@ -361,10 +337,10 @@ b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98\tnextflow run examples/ampa.nf --in data/sa
         history.update('small_cirum',false,when)
         then:
         history.text == '''
-2016-07-24 16:43:16\t10m\tevil_pike\tOK\t6b9515aba6\te710da1b-ce06-482f-bbcf-987a507f85d1\t-\t.nextflow run hello
-2016-07-24 16:43:34\t-\tgigantic_keller\t-\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t-\t.nextflow run hello
-2016-07-24 16:43:34\t1h\tsmall_cirum\tERR\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t-\t.nextflow run hello -resume
-2016-07-25 09:58:01\t5 min\tmodest_bartik\tERR\t6b9515aba6\t5910a50f-8656-4765-aa79-f07cef912062\t-\t.nextflow run hello
+2016-07-24 16:43:16\t10m\tevil_pike\tOK\t6b9515aba6\te710da1b-ce06-482f-bbcf-987a507f85d1\t.nextflow run hello
+2016-07-24 16:43:34\t-\tgigantic_keller\t-\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t.nextflow run hello
+2016-07-24 16:43:34\t1h\tsmall_cirum\tERR\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t.nextflow run hello -resume
+2016-07-25 09:58:01\t5 min\tmodest_bartik\tERR\t6b9515aba6\t5910a50f-8656-4765-aa79-f07cef912062\t.nextflow run hello
 '''
 
         when:
@@ -372,10 +348,10 @@ b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98\tnextflow run examples/ampa.nf --in data/sa
         history.update('gigantic_keller',true,when)
         then:
         history.text == '''
-2016-07-24 16:43:16\t10m\tevil_pike\tOK\t6b9515aba6\te710da1b-ce06-482f-bbcf-987a507f85d1\t-\t.nextflow run hello
-2016-07-24 16:43:34\t16s\tgigantic_keller\tOK\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t-\t.nextflow run hello
-2016-07-24 16:43:34\t1h\tsmall_cirum\tERR\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t-\t.nextflow run hello -resume
-2016-07-25 09:58:01\t5 min\tmodest_bartik\tERR\t6b9515aba6\t5910a50f-8656-4765-aa79-f07cef912062\t-\t.nextflow run hello
+2016-07-24 16:43:16\t10m\tevil_pike\tOK\t6b9515aba6\te710da1b-ce06-482f-bbcf-987a507f85d1\t.nextflow run hello
+2016-07-24 16:43:34\t16s\tgigantic_keller\tOK\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t.nextflow run hello
+2016-07-24 16:43:34\t1h\tsmall_cirum\tERR\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t.nextflow run hello -resume
+2016-07-25 09:58:01\t5 min\tmodest_bartik\tERR\t6b9515aba6\t5910a50f-8656-4765-aa79-f07cef912062\t.nextflow run hello
 '''
 
     }

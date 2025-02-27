@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 
 
 /**
+ * Models a workflow definition.
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io
  */
@@ -29,8 +30,8 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class Workflow {
     DataType type
-    String mainScriptFile
-    List<String> otherScriptFiles
+    DataPath mainScriptFile
+    List<DataPath> otherScriptFiles
     String repository
     String commitId
 }

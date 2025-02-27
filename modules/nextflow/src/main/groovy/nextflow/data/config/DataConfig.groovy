@@ -32,12 +32,16 @@ class DataConfig {
     final DataStoreOpts store
 
     DataConfig(Map opts) {
-        this.store = new DataStoreOpts(opts.store as Map ?: Map.of())
+        this.store = new DataStoreOpts(opts.store as Map ?: [:])
+    }
+
+    static Map<String,Object> asMap() {
+        session ? (Map)session.config.navigate('workflow.data') : [:]
     }
 
     static DataConfig create(Session session) {
         if( session ) {
-            return new DataConfig(session.config.navigate('cid') as Map ?: Map.of())
+            return new DataConfig(session.config.navigate('workflow.data') as Map ?: [:])
         }
         else
             throw new IllegalStateException("Missing Nextflow session")

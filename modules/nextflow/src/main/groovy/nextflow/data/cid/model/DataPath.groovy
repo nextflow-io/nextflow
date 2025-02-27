@@ -17,11 +17,17 @@
 
 package nextflow.data.cid.model
 
+import groovy.transform.Canonical
+import groovy.transform.CompileStatic
+
 /**
- * Possible metadata type entries.
+ * Models a data path which includes the path and a checksum to validate the content of the path.
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Jorge Ejarque <jorge.ejarque@seqera.io
  */
-enum DataType {
-    TaskRun, Workflow, WorkflowRun, TaskOutput, WorkflowOutput, WorkflowResults
+@Canonical
+@CompileStatic
+class DataPath {
+    String path
+    String checksum
 }

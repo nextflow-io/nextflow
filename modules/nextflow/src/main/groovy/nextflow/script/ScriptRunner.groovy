@@ -284,8 +284,7 @@ class ScriptRunner {
         }
 
         def revisionId = scriptFile.commitId ?: scriptFile.scriptId
-        def executionHash = session.executionHash ?: '-'
-        HistoryFile.DEFAULT.write( name, session.uniqueId, revisionId, executionHash, cli )
+        HistoryFile.DEFAULT.write( name, session.uniqueId, revisionId, cli )
     }
 
 

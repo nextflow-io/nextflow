@@ -24,17 +24,18 @@ import groovy.transform.CompileStatic
 import nextflow.Session
 import nextflow.config.ConfigBuilder
 import nextflow.dag.MermaidHtmlRenderer
+import nextflow.data.cid.CidHistoryFile
 import nextflow.data.cid.CidStore
-import nextflow.data.cid.DefaultCidStore
 import nextflow.data.cid.model.DataType
-import nextflow.data.config.DataConfig
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
+import nextflow.ui.TableBuilder
 
 import java.nio.file.Path
 import java.nio.file.Paths
 
-import static nextflow.data.cid.CidObserver.*
+import static nextflow.data.cid.fs.CidPath.CID_PROT
+import static nextflow.data.cid.fs.CidPath.METADATA_FILE
 
 /**
  *
@@ -54,8 +55,10 @@ class CmdCid extends CmdBase {
     private List<SubCmd> commands = new ArrayList<>()
 
     CmdCid() {
+        commands << new CmdLog()
         commands << new CmdShow()
         commands << new CmdLineage()
+
 
     }
 
@@ -92,6 +95,51 @@ class CmdCid extends CmdBase {
         throw new AbortOperationException(msg)
     }
 
+    class CmdLog implements SubCmd {
+
+        @Override
+        String getName() {
+            return 'log'
+        }
+
+        @Override
+        void apply(List<String> args) {
+            if (args.size() != 0) {
+                println("ERROR: Incorrect number of parameters")
+                usage()
+                return
+            }
+            final config = new ConfigBuilder()
+                    .setOptions(getLauncher().getOptions())
+                    .setBaseDir(Paths.get('.'))
+                    .build()
+            final session = new Session(config)
+            printHistory(session.cidStore)
+
+        }
+
+        private void printHistory(CidStore store) {
+
+
+            final historyFile = store.getHistoryFile()
+            if (historyFile.exists()) {
+                def table = new TableBuilder(cellSeparator: '\t')
+                    .head('TIMESTAMP')
+                    .head('RUN NAME')
+                    .head('SESSION ID')
+                    .head('RUN CID')
+                historyFile.eachLine { table.append(CidHistoryFile.CidRecord.parse(it).toList()) }
+                println table.toString()
+            } else {
+                println("No workflow runs CIDs found.")
+            }
+        }
+
+        @Override
+        void usage() {
+            println 'Usage: nextflow cid log'
+        }
+    }
     class CmdShow implements SubCmd{
 
         @Override
@@ -106,13 +154,20 @@ class CmdCid extends CmdBase {
                 usage()
                 return
             }
+            if (!args[0].startsWith(CID_PROT))
+                throw new Exception("Identifier is not a CID URL")
+            final key = args[0].substring(CID_PROT.size()) + "/$METADATA_FILE"
             final config = new ConfigBuilder()
                     .setOptions(getLauncher().getOptions())
                     .setBaseDir(Paths.get('.'))
                     .build()
             final session = new Session(config)
             final store = session.cidStore
-            println store.load("${args[0]}/$METADATA_FILE").toString()
+            try {
+                println store.load(key).toString()
+            }catch (Throwable e){
+                println "Error loading ${args[0]}."
+            }
         }
 
         @Override
@@ -154,7 +209,7 @@ class CmdCid extends CmdBase {
                 file.text = template.replace('REPLACE_WITH_NETWORK_DATA', network)
                 println("Linage graph for ${args[0]} rendered in ${args[1]}")
             } catch (Throwable e) {
-                println("ERROR: rendering lineage graph. ${e.getLocalizedMessage()}")
+                println("ERROR: rendering lineage graph. ${e.message}")
             }
         }
 
@@ -176,8 +231,11 @@ class CmdCid extends CmdBase {
         }
 
         private void processNode(List<String> lines, String nodeToRender, LinkedList<String> nodes, LinkedList<Edge> edges, CidStore store) {
+            if (!nodeToRender.startsWith(CID_PROT))
+                throw new Exception("Identifier is not a CID URL")
             final slurper = new JsonSlurper()
-            final cidObject = slurper.parse(store.load("$nodeToRender/$METADATA_FILE").toString().toCharArray()) as Map
+            final key = nodeToRender.substring(CID_PROT.size()) + "/$METADATA_FILE"
+            final cidObject = slurper.parse(store.load(key).toString().toCharArray()) as Map
             switch (DataType.valueOf(cidObject.type as String)) {
                 case DataType.TaskOutput:
                 case DataType.WorkflowOutput:
@@ -185,11 +243,11 @@ class CmdCid extends CmdBase {
                     final source = cidObject.source as String
                     if (source) {
                         if (source.startsWith(CID_PROT)) {
-                            final cid = source.substring(CID_PROT.size())
-                            nodes.add(cid)
-                            edges.add(new Edge(cid, nodeToRender))
+                            nodes.add(source)
+                            edges.add(new Edge(source, nodeToRender))
                         } else {
-                            lines << "    ${source}@{shape: document, label: \"${source}\"}".toString();
+                            final label = convertToLabel(source)
+                            lines << "    ${source}@{shape: document, label: \"${label}\"}".toString();
                             edges.add(new Edge(source, nodeToRender))
                         }
                     }
@@ -197,23 +255,23 @@ class CmdCid extends CmdBase {
                     break;
                 case DataType.WorkflowRun:
                     lines << "${nodeToRender}@{shape: processes, label: \"${cidObject.runName}\"}".toString()
-                    final parameters = cidObject.params as Map
-                    parameters.values().each {
-                        lines << "    ${it}@{shape: document, label: \"${it}\"}".toString();
-                        edges.add(new Edge(it.toString(), nodeToRender))
+                    final parameters = cidObject.params as List<nextflow.data.cid.model.Parameter>
+                    parameters.each {
+                        final label = convertToLabel(it.value.toString())
+                        lines << "    ${it.value.toString()}@{shape: document, label: \"${label}\"}".toString();
+                        edges.add(new Edge(it.value.toString(), nodeToRender))
                     }
                     break;
                 case DataType.TaskRun:
                     lines << "    ${nodeToRender}@{shape: process, label: \"${cidObject.name}\"}".toString()
-                    final parameters = cidObject.inputs as List<String>
-                    parameters.each { String source ->
-                        if (source.startsWith(CID_PROT)) {
-                            final cid = source.substring(CID_PROT.size())
-                            nodes.add(cid)
-                            edges.add(new Edge(cid, nodeToRender))
+                    final parameters = cidObject.inputs as List<nextflow.data.cid.model.Parameter>
+                    for (nextflow.data.cid.model.Parameter source: parameters){
+                        if (source.type.equals(nextflow.script.params.FileInParam.simpleName)) {
+                            manageFileInParam(lines, nodeToRender, nodes, edges, source.value)
                         } else {
-                            lines << "    ${source}@{shape: document, label: \"${source}\"}".toString();
-                            edges.add(new Edge(source, nodeToRender))
+                            final label = convertToLabel(source.value.toString())
+                            lines << "    ${source.value.toString()}@{shape: document, label: \"${label}\"}".toString();
+                            edges.add(new Edge(source.value.toString(), nodeToRender))
                         }
                     }
                     break;
@@ -222,7 +280,37 @@ class CmdCid extends CmdBase {
             }
         }
 
-        private String readTemplate() {
+        private String convertToLabel(String label){
+            return label.replace('http', 'h\u200Ettp')
+        }
+
+        private void manageFileInParam(List<String> lines, String nodeToRender, LinkedList<String> nodes, LinkedList<Edge> edges, value){
+            if (value instanceof Collection) {
+                value.each { manageFileInParam(lines, nodeToRender, nodes, edges, it) }
+                return
+            }
+            if (value instanceof CharSequence) {
+                final source = value.toString()
+                if (source.startsWith(CID_PROT)) {
+                    nodes.add(source)
+                    edges.add(new Edge(source, nodeToRender))
+                    return
+                }
+            }
+            if (value instanceof Map) {
+                if (value.path) {
+                    final label = convertToLabel(value.path.toString())
+                    lines << "    ${value.path}@{shape: document, label: \"${label}\"}".toString();
+                    edges.add(new Edge(value.path.toString(), nodeToRender))
+                    return
+                }
+            }
+            final label = convertToLabel(value.toString())
+            lines << "    ${value.toString()}@{shape: document, label: \"${label}\"}".toString();
+            edges.add(new Edge(value.toString(), nodeToRender))
+        }
+
+        protected static String readTemplate() {
             final writer = new StringWriter()
             final res = MermaidHtmlRenderer.class.getResourceAsStream('mermaid.dag.template.html')
             int ch
