@@ -17,6 +17,7 @@
 package nextflow
 
 import nextflow.data.cid.CidStore
+import nextflow.data.cid.CidStoreFactory
 import nextflow.data.cid.DefaultCidStore
 import nextflow.data.config.DataConfig
 
@@ -407,15 +408,9 @@ class Session implements ISession {
 
         if(config.navigate('workflow.data')) {
             this.cidEnabled = true
-            this.cidStore = createCidStore(this)
+            this.cidStore = CidStoreFactory.create(DataConfig.create(this))
         }
 
-    }
-
-    protected static CidStore createCidStore(Session session){
-        final store = new DefaultCidStore()
-        store.open(DataConfig.create(session))
-        return store
     }
 
     protected Path cloudCachePath(Map cloudcache, Path workDir) {
