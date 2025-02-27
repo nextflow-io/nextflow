@@ -14,7 +14,7 @@ Some classes may be excluded from the above diagram for brevity.
 
 ## Notes
 
-The `Nextflow` class implements several methods that are exposed to Nextflow scripts. See {ref}`implicit-functions` for details.
+The `Nextflow` class implements several methods that are exposed to Nextflow scripts. See {ref}`stdlib-functions` for details.
 
 The `Channel` class implements the channel factory methods, and it is exposed directly to Nextflow scripts. See {ref}`channel-page` for details.
 

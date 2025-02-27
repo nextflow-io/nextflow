@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,6 @@ package nextflow.config
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
-import groovy.transform.PackageScope
-
 /**
  * Placeholder class that replacing closure definitions in the nextflow configuration
  * file in order to print the closure content itself
@@ -28,7 +26,6 @@ import groovy.transform.PackageScope
  */
 @EqualsAndHashCode
 @CompileStatic
-@PackageScope
 class ConfigClosurePlaceholder {
 
     private String str

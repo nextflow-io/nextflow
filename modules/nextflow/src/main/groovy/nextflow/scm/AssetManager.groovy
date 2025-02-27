@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import nextflow.cli.HubOptions
-import nextflow.config.ConfigParser
+import nextflow.config.ConfigParserFactory
 import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AmbiguousPipelineNameException
@@ -55,6 +55,8 @@ import org.eclipse.jgit.merge.MergeStrategy
 @Slf4j
 @CompileStatic
 class AssetManager {
+    private static final String REMOTE_REFS_ROOT = "refs/remotes/origin/"
+    private static final String REMOTE_DEFAULT_HEAD = REMOTE_REFS_ROOT + "HEAD"
 
     /**
      * The folder all pipelines scripts are installed
@@ -64,7 +66,7 @@ class AssetManager {
 
     /**
      * The pipeline name. It must be in the form {@code username/repo} where 'username'
-     * is a valid user name or organisation account, while 'repo' is the repository name
+     * is a valid user name or organization account, while 'repo' is the repository name
      * containing the pipeline code
      */
     private String project
@@ -242,6 +244,7 @@ class AssetManager {
      * @param name A project name or URL e.g. {@code cbcrg/foo} or {@code https://github.com/cbcrg/foo.git}
      * @return The fully qualified project name e.g. {@code cbcrg/foo}
      */
+    @PackageScope
     String resolveName( String name ) {
         assert name
 
@@ -362,11 +365,6 @@ class AssetManager {
         return this
     }
 
-    AssetManager setForce( boolean value ) {
-        this.force = value
-        return this
-    }
-
     AssetManager checkValidRemoteRepo(String revision=null) {
         // Configure the git provider to use the required revision as source for all needed remote resources:
         // - config if present in repo (nextflow.config by default)
@@ -426,7 +424,16 @@ class AssetManager {
     }
 
     String getDefaultBranch() {
-        getManifest().getDefaultBranch()
+        // if specified in manifest, that takes priority
+        // otherwise look for a symbolic ref (refs/remotes/origin/HEAD)
+        return getManifest().getDefaultBranch()
+                ?: getRemoteBranch()
+                ?: DEFAULT_BRANCH
+    }
+
+    protected String getRemoteBranch() {
+        Ref remoteHead = git.getRepository().findRef(REMOTE_DEFAULT_HEAD)
+        return remoteHead?.getTarget()?.getName()?.substring(REMOTE_REFS_ROOT.length())
     }
 
     @Memoized
@@ -448,7 +455,7 @@ class AssetManager {
         }
 
         if( text ) try {
-            def config = new ConfigParser().setIgnoreIncludes(true).parse(text)
+            def config = ConfigParserFactory.create().setIgnoreIncludes(true).setStrict(false).parse(text)
             result = (ConfigObject)config.manifest
         }
         catch( Exception e ) {
@@ -586,7 +593,7 @@ class AssetManager {
             final cloneURL = getGitRepositoryUrl()
             log.debug "Pulling $project -- Using remote clone url: ${cloneURL}"
 
-            // clone it
+            // clone it, but don't specify a revision - jgit will checkout the default branch
             def clone = Git.cloneRepository()
             if( provider.hasCredentials() )
                 clone.setCredentialsProvider( provider.getGitCredentials() )
@@ -599,9 +606,25 @@ class AssetManager {
                 clone.setDepth(deep)
             clone.call()
 
+            // git cli would automatically create a 'refs/remotes/origin/HEAD' symbolic ref pointing at the remote's
+            // default branch. jgit doesn't do this, but since it automatically checked out the default branch on clone
+            // we can create the symbolic ref ourselves using the current head
+            def head = git.getRepository().findRef(Constants.HEAD)
+            if( head ) {
+                def headName = head.isSymbolic()
+                    ? Repository.shortenRefName(head.getTarget().getName())
+                    : head.getName()
+
+                git.repository.getRefDatabase()
+                    .newUpdate(REMOTE_DEFAULT_HEAD, true)
+                    .link(REMOTE_REFS_ROOT + headName)
+            } else {
+                log.debug "Unable to determine default branch of repo ${cloneURL}, symbolic ref not created"
+            }
+
+            // now the default branch is recorded in the repo, explicitly checkout the revision (if specified).
+            // this also allows 'revision' to be a SHA commit id, which isn't supported by the clone command
             if( revision ) {
-                // use an explicit checkout command *after* the clone instead of cloning a specific branch
-                // because the clone command does not allow the use of SHA commit id (only branch and tag names)
                 try { git.checkout() .setName(revision) .call() }
                 catch ( RefNotFoundException e ) { checkoutRemoteBranch(revision) }
             }
@@ -733,6 +756,9 @@ class AssetManager {
         }
     }
 
+    static boolean isRemoteBranch(Ref ref) {
+        return ref.name.startsWith(REMOTE_REFS_ROOT) && ref.name != REMOTE_DEFAULT_HEAD
+    }
 
     /**
      * @return A list of existing branches and tags names. For example
@@ -754,7 +780,7 @@ class AssetManager {
         def master = getDefaultBranch()
 
         List<String> branches = getBranchList()
-            .findAll { it.name.startsWith('refs/heads/') || it.name.startsWith('refs/remotes/origin/') }
+            .findAll { it.name.startsWith('refs/heads/') || isRemoteBranch(it) }
             .unique { shortenRefName(it.name) }
             .collect { Ref it -> refToString(it,current,master,false,level) }
 
@@ -789,7 +815,7 @@ class AssetManager {
 
         Map<String, Ref> remote = checkForUpdates ? git.lsRemote().callAsMap() : null
         getBranchList()
-                .findAll { it.name.startsWith('refs/heads/') || it.name.startsWith('refs/remotes/origin/') }
+                .findAll { it.name.startsWith('refs/heads/') || isRemoteBranch(it) }
                 .unique { shortenRefName(it.name) }
                 .each { Ref it -> branches << refToMap(it,remote)  }
 
@@ -801,13 +827,13 @@ class AssetManager {
         result.current = current    // current branch name
         result.master = master      // master branch name
         result.branches = branches  // collection of branches
-        result.tags = tags          // collect of tags 
+        result.tags = tags          // collect of tags
         return result
     }
 
     protected Map refToMap(Ref ref, Map<String,Ref> remote) {
         final entry = new HashMap(2)
-        final peel = git.getRepository().peel(ref)
+        final peel = git.getRepository().getRefDatabase().peel(ref)
         final objId = peel.getPeeledObjectId() ?: peel.getObjectId()
         // the branch or tag name
         entry.name = shortenRefName(ref.name)
@@ -841,7 +867,7 @@ class AssetManager {
         result << (name == current ? '*' : ' ')
 
         if( level ) {
-            def peel = git.getRepository().peel(ref)
+            def peel = git.getRepository().getRefDatabase().peel(ref)
             def obj = peel.getPeeledObjectId() ?: peel.getObjectId()
             result << ' '
             result << formatObjectId(obj, level == 1)
@@ -886,7 +912,7 @@ class AssetManager {
 
         def remote = git.lsRemote().callAsMap()
         List<String> branches = getBranchList()
-                .findAll { it.name.startsWith('refs/heads/') || it.name.startsWith('refs/remotes/origin/') }
+                .findAll { it.name.startsWith('refs/heads/') || isRemoteBranch(it) }
                 .unique { shortenRefName(it.name) }
                 .findAll { Ref ref -> hasRemoteChange(ref,remote) }
                 .collect { Ref ref -> formatUpdate(remote.get(ref.name),level) }
@@ -913,7 +939,7 @@ class AssetManager {
         def current = getCurrentRevision()
         if( current != defaultBranch ) {
             if( !revision ) {
-                throw new AbortOperationException("Project `$project` is currently stickied on revision: $current -- you need to explicitly specify a revision with the option `-r` in order to use it")
+                throw new AbortOperationException("Project `$project` is currently stuck on revision: $current -- you need to explicitly specify a revision with the option `-r` in order to use it")
             }
         }
         if( !revision || revision == current ) {
@@ -980,11 +1006,11 @@ class AssetManager {
             return
 
         List<String> filter = []
-        if( modules instanceof List ) {
-            filter.addAll(modules as List)
+        if( modules instanceof List<String> ) {
+            filter.addAll(modules)
         }
         else if( modules instanceof String ) {
-            filter.addAll( (modules as String).tokenize(', ') )
+            filter.addAll( modules.tokenize(', ') )
         }
 
         final init = git.submoduleInit()
@@ -1086,7 +1112,7 @@ class AssetManager {
 
     protected String guessHubProviderFromGitConfig(boolean failFast=false) {
         assert localPath
-        
+
         // find the repository remote URL from the git project config file
         final domain = getGitConfigRemoteDomain()
         if( !domain && failFast ) {

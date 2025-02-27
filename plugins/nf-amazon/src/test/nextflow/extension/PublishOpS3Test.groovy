@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,9 +40,8 @@ class PublishOpS3Test extends BaseSpec {
             getWorkDir() >> BASE
             getBucketDir() >> BUCKET_DIR
         }
-        Global.session = sess
 
-        def op = new PublishOp(Mock(DataflowReadChannel), [to:'/target'])
+        def op = new PublishOp(sess, Mock(DataflowReadChannel), [to:'/target'])
 
         when:
         def result = op.getTaskDir( BASE.resolve('xx/yyyy/this/and/that.txt') )

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,6 +71,7 @@ class CmdInfoTest extends Specification {
         screen.contains(" main script : main.nf")
         screen.contains(" revisions   : ")
         screen.contains(" * master (default)")
+        !screen.contains("   HEAD")
     }
 
     def 'should print json info' () {
@@ -89,11 +90,12 @@ class CmdInfoTest extends Specification {
         json.repository == "https://github.com/nextflow-io/hello"
         json.localPath == "$tempDir/nextflow-io/hello"
         json.manifest.mainScript == 'main.nf'
-        json.manifest.defaultBranch == 'master'
+        json.manifest.defaultBranch == null
         json.revisions.current == 'master'
         json.revisions.master == 'master'
         json.revisions.branches.size()>1
         json.revisions.branches.any { it.name == 'master' }
+        !json.revisions.branches.any { it.name == 'HEAD' }
         json.revisions.tags.size()>1
         json.revisions.tags.any { it.name == 'v1.1' }
 
@@ -115,11 +117,12 @@ class CmdInfoTest extends Specification {
         json.repository == "https://github.com/nextflow-io/hello"
         json.localPath == "$tempDir/nextflow-io/hello"
         json.manifest.mainScript == 'main.nf'
-        json.manifest.defaultBranch == 'master'
+        json.manifest.defaultBranch == null
         json.revisions.current == 'master'
         json.revisions.master == 'master'
         json.revisions.branches.size()>1
         json.revisions.branches.any { it.name == 'master' }
+        !json.revisions.branches.any { it.name == 'HEAD' }
         json.revisions.tags.size()>1
         json.revisions.tags.any { it.name == 'v1.1' }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,6 +69,8 @@ class PodOptions {
     private Boolean privileged
 
     private String schedulerName
+
+    private Integer ttlSecondsAfterFinished
     
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
@@ -161,6 +163,9 @@ class PodOptions {
         else if( entry.schedulerName ) {
             this.schedulerName = entry.schedulerName
         }
+        else if( entry.ttlSecondsAfterFinished instanceof Integer ) {
+            this.ttlSecondsAfterFinished = entry.ttlSecondsAfterFinished as Integer
+        }
         else
             throw new IllegalArgumentException("Unknown pod options: $entry")
     }
@@ -228,7 +233,9 @@ class PodOptions {
     List<Map> getTolerations() { tolerations }
 
     Boolean getPrivileged() { privileged }
-    
+
+    Integer getTtlSecondsAfterFinished() { ttlSecondsAfterFinished }
+
     PodOptions plus( PodOptions other ) {
         def result = new PodOptions()
 
@@ -261,10 +268,7 @@ class PodOptions {
         result.volumeClaims.addAll( other.volumeClaims )
 
         // sec context
-        if( other.securityContext )
-            result.securityContext = other.securityContext
-        else
-            result.securityContext = securityContext
+        result.securityContext = other.securityContext ?: this.securityContext
 
         // node selector
         result.nodeSelector = other.nodeSelector ?: this.nodeSelector
@@ -273,16 +277,10 @@ class PodOptions {
         result.affinity = other.affinity ?: this.affinity
 
         // pull policy
-        if (other.imagePullPolicy)
-            result.imagePullPolicy = other.imagePullPolicy
-        else
-            result.imagePullPolicy = imagePullPolicy
+        result.imagePullPolicy = other.imagePullPolicy ?: this.imagePullPolicy
 
         // image secret
-        if (other.imagePullSecret)
-            result.imagePullSecret = other.imagePullSecret
-        else
-            result.imagePullSecret = imagePullSecret
+        result.imagePullSecret = other.imagePullSecret ?: this.imagePullSecret
 
         // labels
         result.labels.putAll(labels)
@@ -306,6 +304,9 @@ class PodOptions {
 
         // scheduler name
         result.schedulerName = other.schedulerName ?: this.schedulerName
+
+        // ttl seconds after finished (job)
+        result.ttlSecondsAfterFinished = other.ttlSecondsAfterFinished!=null ? other.ttlSecondsAfterFinished : this.ttlSecondsAfterFinished
 
         return result
     }

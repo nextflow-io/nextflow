@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,6 +41,8 @@ import nextflow.util.Duration
 @Slf4j
 @CompileStatic
 class K8sConfig implements Map<String,Object> {
+
+    static final private Map<String,?> DEFAULT_FUSE_PLUGIN = Map.of('nextflow.io/fuse', 1)
 
     @Delegate
     private Map<String,Object> target
@@ -114,6 +116,15 @@ class K8sConfig implements Map<String,Object> {
 
     String getStorageSubPath() {
         target.storageSubPath
+    }
+
+    Map<String,?> fuseDevicePlugin() {
+        final result = target.fuseDevicePlugin
+        if( result instanceof Map && result.size()==1 )
+            return result as Map<String,?>
+        if( result )
+            log.warn1 "Setting 'fuseDevicePlugin' should be a map object providing exactly one entry - offending value: $result"
+        return DEFAULT_FUSE_PLUGIN
     }
 
     /**
@@ -191,6 +202,10 @@ class K8sConfig implements Map<String,Object> {
 
     Collection<String> getClaimPaths() {
         podOptions.volumeClaims.collect { it.mountPath }
+    }
+
+    boolean cpuLimitsEnabled() {
+        target.cpuLimits ?: false
     }
 
     /**

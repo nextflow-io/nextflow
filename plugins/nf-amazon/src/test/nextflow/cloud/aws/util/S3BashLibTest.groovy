@@ -770,7 +770,7 @@ class S3BashLibTest extends Specification {
                 local source=$1
                 local target=$2
                 local file_name=$(basename $1)
-                local is_dir=$(s5cmd ls $source | grep -F "DIR ${file_name}/" -c)
+                local is_dir=$(s5cmd ls $source | grep -F "DIR  ${file_name}/" -c)
                 if [[ $is_dir == 1 ]]; then
                     s5cmd cp "$source/*" "$target"
                 else 
@@ -807,7 +807,7 @@ class S3BashLibTest extends Specification {
                 local source=$1
                 local target=$2
                 local file_name=$(basename $1)
-                local is_dir=$(s5cmd ls $source | grep -F "DIR ${file_name}/" -c)
+                local is_dir=$(s5cmd ls $source | grep -F "DIR  ${file_name}/" -c)
                 if [[ $is_dir == 1 ]]; then
                     s5cmd cp "$source/*" "$target"
                 else 

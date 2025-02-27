@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,6 +60,7 @@ class ProgressRecordTest extends Specification {
         def FAILED =5
         def CACHED =6
         def STORED =7
+        def ABORTED = 8
         and:
         def rec = new ProgressRecord(10, 'foo')
 
@@ -71,10 +72,11 @@ class ProgressRecordTest extends Specification {
         rec.failed =FAILED
         rec.cached =CACHED
         rec.stored =STORED
+        rec.aborted = ABORTED
 
         then:
         rec.getCompletedCount() == SUCCEEDED+ FAILED+ CACHED+ STORED
-        rec.getTotalCount() == PENDING+ SUBMITTED+ RUNNING + SUCCEEDED+ FAILED+ CACHED+ STORED
+        rec.getTotalCount() == PENDING+ SUBMITTED+ RUNNING + SUCCEEDED+ FAILED+ CACHED+ STORED+ ABORTED
     }
 
 

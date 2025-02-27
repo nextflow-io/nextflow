@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,10 +20,10 @@ package nextflow.plugin
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.Const
 import nextflow.extension.FilesEx
 import org.pf4j.DefaultPluginLoader
 import org.pf4j.DefaultPluginManager
@@ -42,7 +42,8 @@ import org.pf4j.PluginWrapper
 @CompileStatic
 class LocalPluginManager extends CustomPluginManager {
 
-    static private Path PLUGINS_LOCAL_ROOT = Paths.get('.nextflow/plr')
+    static private Path PLUGINS_LOCAL_ROOT = Const.appCacheDir.resolve('plr')
+
     private Path repository
 
     LocalPluginManager(Path repository) {

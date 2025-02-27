@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,12 +22,14 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ExecutorService
 
+import com.google.common.hash.HashCode
 import groovyx.gpars.agent.Agent
 import nextflow.Global
 import nextflow.ISession
 import nextflow.Session
 import nextflow.exception.IllegalArityException
 import nextflow.exception.MissingFileException
+import nextflow.exception.ProcessEvalException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
@@ -400,9 +402,7 @@ class TaskProcessorTest extends Specification {
 
     }
 
-
     def 'should update agent state'() {
-
         when:
         def state = new Agent<StateObj>(new StateObj())
         int i = 0
@@ -944,18 +944,50 @@ class TaskProcessorTest extends Specification {
         def envFile = workDir.resolve(TaskRun.CMD_ENV)
         envFile.text =  '''
                         ALPHA=one
+                        /ALPHA/
                         DELTA=x=y
+                        /DELTA/
                         OMEGA=
+                        /OMEGA/
+                        LONG=one
+                        two
+                        three
+                        /LONG/=exit:0
                         '''.stripIndent()
         and:
         def processor = Spy(TaskProcessor)
 
         when:
-        def result = processor.collectOutEnvMap(workDir)
+        def result = processor.collectOutEnvMap(workDir, Map.of())
         then:
-        result == [ALPHA:'one', DELTA: "x=y", OMEGA: '']
+        result == [ALPHA:'one', DELTA: "x=y", OMEGA: '', LONG: 'one\ntwo\nthree']
     }
 
+    def 'should parse env map with command error' () {
+        given:
+        def workDir = TestHelper.createInMemTempDir()
+        def envFile = workDir.resolve(TaskRun.CMD_ENV)
+        envFile.text =  '''
+                        ALPHA=one
+                        /ALPHA/
+                        cmd_out_1=Hola
+                        /cmd_out_1/=exit:0
+                        cmd_out_2=This is an error message
+                        for unknown reason
+                        /cmd_out_2/=exit:100
+                        '''.stripIndent()
+        and:
+        def processor = Spy(TaskProcessor)
+
+        when:
+        processor.collectOutEnvMap(workDir, [cmd_out_1: 'foo --this', cmd_out_2: 'bar --that'])
+        then:
+        def e = thrown(ProcessEvalException)
+        e.message == 'Unable to evaluate output'
+        e.command == 'bar --that'
+        e.output == 'This is an error message\nfor unknown reason'
+        e.status == 100
+    }
     def 'should create a task preview' () {
         given:
         def config = new ProcessConfig([cpus: 10, memory: '100 GB'])
@@ -1139,4 +1171,51 @@ class TaskProcessorTest extends Specification {
 
     }
 
+    def 'should submit a task' () {
+        given:
+        def exec = Mock(Executor)
+        def proc = Spy(new TaskProcessor(executor: exec))
+        and:
+        def task = Mock(TaskRun)
+        def hash = Mock(HashCode)
+        def path = Mock(Path)
+
+        when:
+        proc.submitTask(task, hash, path)
+        then:
+        1 * proc.makeTaskContextStage3(task, hash, path) >> null
+        and:
+        1 * exec.submit(task)
+    }
+
+    def 'should collect a task' () {
+        given:
+        def exec = Mock(Executor)
+        def collector = Mock(TaskArrayCollector)
+        def proc = Spy(new TaskProcessor(executor: exec, arrayCollector: collector))
+        and:
+        def task = Mock(TaskRun)
+        def hash = Mock(HashCode)
+        def path = Mock(Path)
+
+        when:
+        proc.submitTask(task, hash, path)
+        then:
+        task.getConfig()>>Mock(TaskConfig) { getAttempt()>>1 }
+        and:
+        1 * proc.makeTaskContextStage3(task, hash, path) >> null
+        and:
+        1 * collector.collect(task)
+        0 * exec.submit(task)
+
+        when:
+        proc.submitTask(task, hash, path)
+        then:
+        task.getConfig()>>Mock(TaskConfig) { getAttempt()>>2 }
+        and:
+        1 * proc.makeTaskContextStage3(task, hash, path) >> null
+        and:
+        0 * collector.collect(task)
+        1 * exec.submit(task)
+    }
 }

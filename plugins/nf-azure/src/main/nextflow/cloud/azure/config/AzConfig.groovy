@@ -40,6 +40,8 @@ class AzConfig {
 
     private AzActiveDirectoryOpts activeDirectoryOpts
 
+    private AzManagedIdentityOpts managedIdentityOpts
+
     AzConfig(Map azure) {
         this.batchOpts = new AzBatchOpts( (Map)azure.batch ?: Collections.emptyMap() )
         this.storageOpts = new AzStorageOpts( (Map)azure.storage ?: Collections.emptyMap() )
@@ -47,6 +49,7 @@ class AzConfig {
         this.azcopyOpts = new AzCopyOpts( (Map)azure.azcopy ?: Collections.emptyMap() )
         this.retryConfig = new AzRetryConfig( (Map)azure.retryPolicy ?: Collections.emptyMap() )
         this.activeDirectoryOpts = new AzActiveDirectoryOpts((Map) azure.activeDirectory ?: Collections.emptyMap())
+        this.managedIdentityOpts = new AzManagedIdentityOpts((Map) azure.managedIdentity ?: Collections.emptyMap())
     }
 
     AzCopyOpts azcopy() { azcopyOpts }
@@ -60,6 +63,8 @@ class AzConfig {
     AzRetryConfig retryConfig() { retryConfig }
 
     AzActiveDirectoryOpts activeDirectory() { activeDirectoryOpts }
+
+    AzManagedIdentityOpts managedIdentity() { managedIdentityOpts }
 
     static AzConfig getConfig(Session session) {
         if( !session )

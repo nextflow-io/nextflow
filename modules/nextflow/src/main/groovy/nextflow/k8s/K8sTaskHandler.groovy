@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -124,9 +124,9 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         // get input files paths
-        final paths = DockerBuilder.inputFilesToPaths(builder.getInputFiles())
-        final binDirs = builder.binDirs
-        final workDir = builder.workDir
+        final List<Path> paths = DockerBuilder.inputFilesToPaths(builder.getInputFiles())
+        final List<Path> binDirs = builder.binDirs
+        final Path workDir = builder.workDir
         // add standard paths
         if( binDirs )
             paths.addAll(binDirs)
@@ -159,7 +159,8 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected String getSyntheticPodName(TaskRun task) {
-        "nf-${task.hash}"
+        final suffix = System.currentTimeMillis().toString().md5()[-5..-1]
+        return "nf-${task.hash}-${suffix}"
     }
 
     protected String getOwner() { OWNER }
@@ -192,6 +193,10 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         return executor.getK8sConfig().entrypointOverride()
     }
 
+    protected boolean cpuLimitsEnabled() {
+        return executor.getK8sConfig().cpuLimitsEnabled()
+    }
+
     protected Map newSubmitRequest0(TaskRun task, String imageName) {
 
         final launcher = getSubmitCommand(task)
@@ -206,6 +211,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
             .withLabels(getLabels(task))
             .withAnnotations(getAnnotations())
             .withPodOptions(getPodOptions())
+            .withCpuLimits(cpuLimitsEnabled())
 
         // when `entrypointOverride` is false the launcher is run via `args` instead of `command`
         // to not override the container entrypoint
@@ -252,7 +258,8 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
             if( fusionConfig().privileged() )
                 builder.withPrivileged(true)
             else {
-                builder.withResourcesLimits(["nextflow.io/fuse": 1])
+                final device= k8sConfig.fuseDevicePlugin()
+                builder.withResourcesLimits(device)
             }
 
             final env = fusionLauncher().fusionEnv()
@@ -465,7 +472,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
      * Terminates the current task execution
      */
     @Override
-    void kill() {
+    protected void killTask() {
         if( cleanupDisabled() )
             return
         

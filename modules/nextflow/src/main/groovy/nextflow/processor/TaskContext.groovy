@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -128,8 +128,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
         "DelegateMap[process: $name; script: ${script?.class?.name}; holder: ${holder}]"
     }
 
-    @Override
-    Object get(Object property) {
+    private Object get0(Object property, boolean throwMissingProperty) {
         assert property
 
         if( holder.containsKey(property) ) {
@@ -140,7 +139,14 @@ class TaskContext implements Map<String,Object>, Cloneable {
             return script.getBinding().getVariable(property.toString())
         }
 
-        throw new MissingPropertyException("Unknown variable '$property' -- Make sure it is not misspelled or defined later in the script", property as String, null)
+        if( throwMissingProperty )
+            throw new MissingPropertyException("Unknown variable '$property' -- Make sure it is not misspelled or defined later in the script", property as String, null)
+        return null
+    }
+
+    @Override
+    Object get(Object property) {
+        return get0(property, false)
     }
 
     /**
@@ -162,7 +168,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
 
     @Override
     def getProperty( String name ) {
-        get((String)name)
+        get0((String)name, true)
     }
 
     @Override
@@ -171,7 +177,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
     }
 
     @Override
-    put(String property, Object newValue) {
+    Object put(String property, Object newValue) {
 
         if( property == 'task' && !(newValue instanceof TaskConfig ) && !overrideWarnShown.getAndSet(true) ) {
             log.warn "Process $name overrides reserved variable `task`"

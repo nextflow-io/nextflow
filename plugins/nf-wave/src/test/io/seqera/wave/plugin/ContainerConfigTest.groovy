@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -160,5 +160,21 @@ class ContainerConfigTest extends Specification {
         // makes the config to ignore it
         fusion1.fingerprint() != fusion2.fingerprint()
         config1.fingerprint() == config2.fingerprint()
+    }
+
+    def 'should validate empty' () {
+        expect:
+        new ContainerConfig().empty()
+        new ContainerConfig([], null, null, null, null).empty()
+        new ContainerConfig(null, [], null, null, null).empty()
+        new ContainerConfig(null, null, [], null, null).empty()
+        new ContainerConfig(null, null, null, '', null).empty()
+        new ContainerConfig(null, null, null, null, []).empty()
+        and:
+        !new ContainerConfig(['x'], null, null, null, null).empty()
+        !new ContainerConfig(null, ['x'], null, null, null).empty()
+        !new ContainerConfig(null, null, ['x'], null, null).empty()
+        !new ContainerConfig(null, null, null, 'x', null).empty()
+        !new ContainerConfig(null, null, null, null, [new ContainerLayer()]).empty()
     }
 }

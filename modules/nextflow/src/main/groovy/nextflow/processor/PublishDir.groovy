@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,9 @@
 
 package nextflow.processor
 
+import static nextflow.util.CacheHelper.*
+
+import java.nio.file.CopyOption
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
@@ -24,9 +27,14 @@ import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.PathMatcher
+import java.nio.file.StandardCopyOption
+import java.time.temporal.ChronoUnit
 import java.util.concurrent.ExecutorService
-import java.util.regex.Pattern
 
+import dev.failsafe.Failsafe
+import dev.failsafe.RetryPolicy
+import dev.failsafe.event.EventListener
+import dev.failsafe.event.ExecutionAttemptedEvent
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
@@ -37,10 +45,11 @@ import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.NF
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.TagAwareFile
-import nextflow.fusion.FusionHelper
+import nextflow.util.HashBuilder
 import nextflow.util.PathTrie
 /**
  * Implements the {@code publishDir} directory. It create links or copies the output
@@ -54,8 +63,6 @@ import nextflow.util.PathTrie
 @CompileStatic
 class PublishDir {
 
-    final static private Pattern FUSION_PATH_REGEX = ~/^\/fusion\/([^\/]+)\/(.*)/
-
     enum Mode { SYMLINK, LINK, COPY, MOVE, COPY_NO_FOLLOW, RELLINK }
 
     private Map<Path,Boolean> makeCache = new HashMap<>()
@@ -68,9 +75,9 @@ class PublishDir {
     Path path
 
     /**
-     * Whenever overwrite existing files
+     * Whether to overwrite existing files
      */
-    Boolean overwrite
+    def /* Boolean | String */ overwrite
 
     /**
      * The publish {@link Mode}
@@ -93,9 +100,9 @@ class PublishDir {
     boolean enabled = true
 
     /**
-     * Trow an exception in case publish fails
+     * Throw an exception in case publish fails
      */
-    boolean failOnError = false
+    boolean failOnError = SysEnv.getBool('NXF_PUBLISH_FAIL_ON_ERROR', true)
 
     /**
      * Tags to be associated to the target file
@@ -114,6 +121,8 @@ class PublishDir {
      */
     private String storageClass
 
+    private PublishRetryConfig retryConfig
+
     private PathMatcher matcher
 
     private FileSystem sourceFileSystem
@@ -131,10 +140,6 @@ class PublishDir {
 
     protected String getTaskName() {
         return task?.getName()
-    }
-
-    protected Map<String,Path> getTaskInputs() {
-        return task ? task.getInputFilesMap() : Map.<String,Path>of()
     }
 
     void setPath( def value ) {
@@ -192,7 +197,7 @@ class PublishDir {
             result.pattern = params.pattern
 
         if( params.overwrite != null )
-            result.overwrite = Boolean.parseBoolean(params.overwrite.toString())
+            result.overwrite = params.overwrite
 
         if( params.saveAs )
             result.saveAs = (Closure) params.saveAs
@@ -217,8 +222,19 @@ class PublishDir {
         return result
     }
 
+    protected Map getRetryOpts() {
+        def result = session.config.navigate('nextflow.publish.retryPolicy') as Map
+        if( result != null )
+            log.warn 'The `nextflow.publish` config scope has been renamed to `workflow.output`'
+        else
+            result = session.config.navigate('workflow.output.retryPolicy') as Map ?: Collections.emptyMap()
+        return result
+    }
+
     protected void apply0(Set<Path> files) {
         assert path
+        // setup the retry policy config to be used
+        this.retryConfig = new PublishRetryConfig(getRetryOpts())
 
         createPublishDir()
         validatePublishMode()
@@ -312,7 +328,7 @@ class PublishDir {
             return
         }
 
-        final destination = resolveDestination(target)
+        final destination = resolveDestination(target).normalize()
 
         // apply tags
         if( this.tags!=null && destination instanceof TagAwareFile ) {
@@ -359,24 +375,40 @@ class PublishDir {
 
     protected void safeProcessFile(Path source, Path target) {
         try {
-            processFile(source, target)
+            retryableProcessFile(source, target)
         }
         catch( Throwable e ) {
-            log.warn "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- See log file for details", e
-            if( NF.strictMode || failOnError){
+            final msg =  "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- See log file for details"
+            final shouldFail = NF.strictMode || failOnError
+            if( shouldFail ) {
+                log.error(msg,e)
                 session?.abort(e)
             }
+            else
+                log.warn(msg,e)
         }
     }
 
-    protected void processFile( Path source, Path destination ) {
-
-        // resolve Fusion symlink if applicable
-        if( FusionHelper.isFusionEnabled(session) ) {
-            final inputs = getTaskInputs()
-            if( source.name in inputs )
-                source = resolveFusionLink(inputs[source.name])
+    protected void retryableProcessFile(Path source, Path target) {
+        final listener = new EventListener<ExecutionAttemptedEvent>() {
+            @Override
+            void accept(ExecutionAttemptedEvent event) throws Throwable {
+                log.debug "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}"
+            }
         }
+        final retryPolicy = RetryPolicy.builder()
+            .handle(Exception)
+            .withBackoff(retryConfig.delay.toMillis(), retryConfig.maxDelay.toMillis(), ChronoUnit.MILLIS)
+            .withMaxAttempts(retryConfig.maxAttempts)
+            .withJitter(retryConfig.jitter)
+            .onRetry(listener)
+            .build()
+        Failsafe
+            .with( retryPolicy )
+            .get({it-> processFile(source, target)})
+    }
+
+    protected void processFile( Path source, Path destination ) {
 
         // create target dirs if required
         makeDirs(destination.parent)
@@ -385,43 +417,22 @@ class PublishDir {
             processFileImpl(source, destination)
         }
         catch( FileAlreadyExistsException e ) {
-            if( checkIsSameRealPath(source, destination) )
-                return 
+            // don't copy source path if target is identical, but still emit the publish event
+            // see also https://github.com/nextflow-io/nf-prov/issues/22
+            final sameRealPath = checkIsSameRealPath(source, destination)
+
             // make sure destination and source does not overlap
             // see https://github.com/nextflow-io/nextflow/issues/2177
-            if( checkSourcePathConflicts(destination))
+            if( !sameRealPath && checkSourcePathConflicts(destination))
                 return
             
-            if( overwrite ) {
+            if( !sameRealPath && shouldOverwrite(source, destination) ) {
                 FileHelper.deletePath(destination)
                 processFileImpl(source, destination)
             }
         }
 
         notifyFilePublish(destination, source)
-    }
-
-    /**
-     * Resolve a Fusion symlink by following the .fusion.symlinks
-     * file in the task directory until the original file is reached.
-     *
-     * @param file
-     */
-    protected Path resolveFusionLink(Path file) {
-        while( file.name in getFusionLinks(file.parent) )
-            file = file.text.replaceFirst(FUSION_PATH_REGEX) { _, scheme, path -> "${scheme}://${path}" } as Path
-        return file
-    }
-
-    @Memoized
-    protected List<String> getFusionLinks(Path workDir) {
-        try {
-            final file = workDir.resolve('.fusion.symlinks')
-            return file.text.tokenize('\n')
-        }
-        catch( NoSuchFileException e ) {
-            return List.of()
-        }
     }
 
     private String real0(Path p) {
@@ -476,6 +487,17 @@ class PublishDir {
         return !mode || mode == Mode.SYMLINK || mode == Mode.RELLINK
     }
 
+    protected boolean shouldOverwrite(Path source, Path target) {
+        if( overwrite instanceof Boolean )
+            return overwrite
+
+        final hashMode = HashMode.of(overwrite) ?: HashMode.DEFAULT()
+        final sourceHash = HashBuilder.hashPath(source, source.parent, hashMode)
+        final targetHash = HashBuilder.hashPath(target, target.parent, hashMode)
+        log.trace "comparing source and target with mode=${overwrite}, source=${sourceHash}, target=${targetHash}, should overwrite=${sourceHash != targetHash}"
+        return sourceHash != targetHash
+    }
+
     protected void processFileImpl( Path source, Path destination ) {
         log.trace "publishing file: $source -[$mode]-> $destination"
 
@@ -490,21 +512,34 @@ class PublishDir {
             FilesEx.mklink(source, [hard:true], destination)
         }
         else if( mode == Mode.MOVE ) {
-            FileHelper.movePath(source, destination)
+            FileHelper.movePath(source, destination, copyOpts())
         }
         else if( mode == Mode.COPY ) {
-            FileHelper.copyPath(source, destination)
+            FileHelper.copyPath(source, destination, copyOpts())
         }
         else if( mode == Mode.COPY_NO_FOLLOW ) {
-            FileHelper.copyPath(source, destination, LinkOption.NOFOLLOW_LINKS)
+            FileHelper.copyPath(source, destination, copyOpts(LinkOption.NOFOLLOW_LINKS))
         }
         else {
             throw new IllegalArgumentException("Unknown file publish mode: ${mode}")
         }
     }
 
+    @Memoized
+    protected CopyOption[] copyOpts(CopyOption... opts) {
+        final copyAttributes = session.config.navigate('workflow.output.copyAttributes', false)
+        return copyAttributes
+            ? opts + StandardCopyOption.COPY_ATTRIBUTES
+            : opts
+    }
+
     protected void createPublishDir() {
-        makeDirs(this.path)
+        try {
+            makeDirs(path)
+        }
+        catch( Throwable e ) {
+            throw new IllegalStateException("Failed to create publish directory: ${path.toUriString()}", e)
+        }
     }
 
     protected void makeDirs(Path dir) {

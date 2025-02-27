@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
     private String retryMode
     private String s5cmdPath
     private String acl = ''
+    private String requesterPays = ''
 
     S3BashLib withCliPath(String cliPath) {
         if( cliPath )
@@ -77,10 +78,15 @@ class S3BashLib extends BashFunLib<S3BashLib> {
         this.s5cmdPath = value
         return this
     }
-    
+
     S3BashLib withAcl(CannedAccessControlList value) {
         if( value )
             this.acl = "--acl $value "
+        return this
+    }
+
+    S3BashLib withRequesterPays(Boolean value) {
+        this.requesterPays = value ? "--request-payer requester " : ''
         return this
     }
 
@@ -106,11 +112,11 @@ class S3BashLib extends BashFunLib<S3BashLib> {
             local name=\$1
             local s3path=\$2
             if [[ "\$name" == - ]]; then
-              $cli s3 cp --only-show-errors ${debug}${acl}${storageEncryption}${storageKmsKeyId}--storage-class $storageClass - "\$s3path"
+              $cli s3 cp --only-show-errors ${debug}${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}--storage-class $storageClass - "\$s3path"
             elif [[ -d "\$name" ]]; then
-              $cli s3 cp --only-show-errors --recursive ${debug}${acl}${storageEncryption}${storageKmsKeyId}--storage-class $storageClass "\$name" "\$s3path/\$name"
+              $cli s3 cp --only-show-errors --recursive ${debug}${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}--storage-class $storageClass "\$name" "\$s3path/\$name"
             else
-              $cli s3 cp --only-show-errors ${debug}${acl}${storageEncryption}${storageKmsKeyId}--storage-class $storageClass "\$name" "\$s3path/\$name"
+              $cli s3 cp --only-show-errors ${debug}${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}--storage-class $storageClass "\$name" "\$s3path/\$name"
             fi
         }
         
@@ -144,11 +150,11 @@ class S3BashLib extends BashFunLib<S3BashLib> {
             if [[ "\$name" == - ]]; then
               local tmp=\$(nxf_mktemp)
               cp /dev/stdin \$tmp/\$name
-              $cli cp ${acl}${storageEncryption}${storageKmsKeyId}--storage-class $storageClass \$tmp/\$name "\$s3path"
+              $cli cp ${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}--storage-class $storageClass \$tmp/\$name "\$s3path"
             elif [[ -d "\$name" ]]; then
-              $cli cp ${acl}${storageEncryption}${storageKmsKeyId}--storage-class $storageClass "\$name/" "\$s3path/\$name/"
+              $cli cp ${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}--storage-class $storageClass "\$name/" "\$s3path/\$name/"
             else
-              $cli cp ${acl}${storageEncryption}${storageKmsKeyId}--storage-class $storageClass "\$name" "\$s3path/\$name"
+              $cli cp ${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}--storage-class $storageClass "\$name" "\$s3path/\$name"
             fi
         }
         
@@ -156,7 +162,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
             local source=\$1
             local target=\$2
             local file_name=\$(basename \$1)
-            local is_dir=\$($cli ls \$source | grep -F "DIR \${file_name}/" -c)
+            local is_dir=\$($cli ls \$source | grep -F "DIR  \${file_name}/" -c)
             if [[ \$is_dir == 1 ]]; then
                 $cli cp "\$source/*" "\$target"
             else 
@@ -187,6 +193,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
                 .withDebug( opts.debug )
                 .withS5cmdPath( opts.s5cmdPath )
                 .withAcl( opts.s3Acl )
+                .withRequesterPays( opts.requesterPays )
     }
 
     static String script(AwsOptions opts) {

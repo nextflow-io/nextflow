@@ -1,9 +1,9 @@
 Channel.of( 1, 2, 3, 4 )
-    .multiMap { it ->
-        foo: it + 1
-        bar: it * it
+    .multiMap { v ->
+        foo: v + 1
+        bar: v * v
     }
     .set { result }
 
-result.foo.view { "foo $it" }
-result.bar.view { "bar $it" }
+result.foo.view { v -> "foo $v" }
+result.bar.view { v -> "bar $v" }

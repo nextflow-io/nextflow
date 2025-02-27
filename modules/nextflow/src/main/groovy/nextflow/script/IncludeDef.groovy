@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,11 +80,13 @@ class IncludeDef {
     }
 
     IncludeDef params(Map args) {
+        log.warn "Include with `params()` is deprecated -- pass params as a workflow or process input instead"
         this.params = args != null ? new HashMap(args) : null
         return this
     }
 
     IncludeDef addParams(Map args) {
+        log.warn "Include with `addParams()` is deprecated -- pass params as a workflow or process input instead"
         this.addedParams = args
         return this
     }

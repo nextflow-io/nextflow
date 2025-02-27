@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package nextflow.processor
 import static nextflow.processor.TaskStatus.*
 
 import java.nio.file.NoSuchFileException
+import java.util.concurrent.atomic.AtomicBoolean
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
@@ -37,6 +38,8 @@ import nextflow.trace.TraceRecord
 @CompileStatic
 abstract class TaskHandler {
 
+    private AtomicBoolean killed = new AtomicBoolean()
+
     protected TaskHandler(TaskRun task) {
         this.task = task
     }
@@ -53,6 +56,16 @@ abstract class TaskHandler {
      * The task managed by this handler
      */
     TaskRun getTask() { task }
+
+    /**
+     * Whenever this handle reference a job array task child
+     */
+    boolean isArrayChild
+
+    TaskHandler withArrayChild(boolean child) {
+        this.isArrayChild = child
+        return this
+    }
 
     /**
      * Task current status
@@ -77,16 +90,36 @@ abstract class TaskHandler {
     abstract boolean checkIfCompleted()
 
     /**
-     * Force the submitted job to quit
+     * Template method implementing the termination of a task execution.
+     * This is not mean to be invoked directly. See also {@link #kill()}
      */
-    abstract void kill()
+    abstract protected void killTask()
 
+    /**
+     * Kill a job execution.
+     *
+     * @see #killTask()
+     */
+    void kill() {
+        if (!killed.getAndSet(true)) {
+            killTask()
+        }
+    }
+    
     /**
      * Submit the task for execution.
      *
      * Note: the underlying execution platform may schedule it in its own queue
      */
     abstract void submit()
+
+    /**
+     * Prepare the launcher script.
+     *
+     * This method is optional. If it is not implemented, the launcher script should
+     * be prepared in the submit() method.
+     */
+    void prepareLauncher() {}
 
     /**
      * Task status attribute setter.
@@ -152,7 +185,7 @@ abstract class TaskHandler {
             return getTraceRecord()
         }
         catch (Exception e) {
-                log.debug "Unable to get task trace record -- cause: ${e.message}", e
+            log.debug "Unable to get task trace record -- cause: ${e.message}", e
             return null
         }
     }
@@ -204,7 +237,7 @@ abstract class TaskHandler {
                 }
             }
 
-            def file = task.workDir?.resolve(TaskRun.CMD_TRACE)
+            final file = task.workDir?.resolve(TaskRun.CMD_TRACE)
             try {
                 if(file) record.parseTraceFile(file)
             }
@@ -232,6 +265,16 @@ abstract class TaskHandler {
     boolean canForkProcess() {
         final max = task.processor.maxForks
         return !max ? true : task.processor.forksCount < max
+    }
+
+    /**
+     * Determine if a task is ready for execution or it depends on resources
+     * e.g. container that needs to be provisioned
+     *
+     * @return {@code true} when the task is ready for execution, {@code false} otherwise
+     */
+    boolean isReady() {
+        task.isContainerReady()
     }
 
     /**
@@ -265,4 +308,22 @@ abstract class TaskHandler {
             return true
         return false
     }
+
+    /**
+     * Prepend the workflow Id to the job/task name. The workflow id is defined
+     * by the environment variable {@code TOWER_WORKFLOW_ID}
+     *
+     * @param name
+     *      The desired job name
+     * @param env
+     *      A map representing the variables in the host environment
+     * @return
+     *  The job having the prefix {@code tw-<ID>} when the variable {@code TOWER_WORKFLOW_ID}
+     *  is defined in the host environment or just {@code name} otherwise
+     */
+    static String prependWorkflowPrefix(String name, Map<String,String> env) {
+        final workflowId = env.get("TOWER_WORKFLOW_ID")
+        return workflowId ? "tw-${workflowId}-${name}" : name
+    }
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 
 plugins {
-    id "io.codearte.nexus-staging" version "0.21.2"
+    id "io.codearte.nexus-staging" version "0.30.0"
     id 'java'
     id 'idea'
 }
@@ -32,7 +32,7 @@ if (groovyVer) {
 
         configurations.all {
             resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-                if (details.requested.group == 'org.codehaus.groovy') {
+                if (details.requested.group == 'org.apache.groovy') {
                     if( groovyVer.contains(':') )
                         details.useTarget(groovyVer)
                     else
@@ -67,18 +67,12 @@ allprojects {
     apply plugin: 'jacoco'
 
     java {
+        // these settings apply to all jvm tooling, including groovy
         toolchain {
-            languageVersion = JavaLanguageVersion.of(19)
+            languageVersion = JavaLanguageVersion.of(21)
         }
-    }
-
-    compileJava {
-        options.release.set(11)
-    }
-
-    tasks.withType(GroovyCompile) {
-        sourceCompatibility = '11'
-        targetCompatibility = '11'
+        sourceCompatibility = 17
+        targetCompatibility = 17
     }
 
     idea {
@@ -91,12 +85,16 @@ allprojects {
         maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
         maven { url = "https://s3-eu-west-1.amazonaws.com/maven.seqera.io/releases" }
         maven { url = "https://s3-eu-west-1.amazonaws.com/maven.seqera.io/snapshots" }
+        maven {
+            url 'https://jitpack.io'
+            content { includeGroup 'com.github.nextflow-io.language-server' }
+        }
     }
 
     configurations {
         // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
-        all*.exclude group: 'org.codehaus.groovy', module: 'groovy-all'
-        all*.exclude group: 'org.codehaus.groovy', module: 'groovy-cli-picocli'
+        all*.exclude group: 'org.apache.groovy', module: 'groovy-all'
+        all*.exclude group: 'org.apache.groovy', module: 'groovy-cli-picocli'
         // groovydoc libs
         groovyDoc.extendsFrom runtime
     }
@@ -108,15 +106,15 @@ allprojects {
         }
 
         // Documentation required libraries
-        groovyDoc 'org.fusesource.jansi:jansi:1.11'
-        groovyDoc "org.codehaus.groovy:groovy-groovydoc:3.0.19"
-        groovyDoc "org.codehaus.groovy:groovy-ant:3.0.19"
+        groovyDoc 'org.fusesource.jansi:jansi:2.4.0'
+        groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.25"
+        groovyDoc "org.apache.groovy:groovy-ant:4.0.25"
     }
 
     test {
         useJUnitPlatform()
     }
-    
+
     // this is required due to this IDEA bug
     // https://youtrack.jetbrains.com/issue/IDEA-129282
     sourceSets {
@@ -145,28 +143,26 @@ allprojects {
     }
 
     // Required to run tests on Java 9 and higher in compatibility mode
-    if (JavaVersion.current() >= JavaVersion.VERSION_1_9) {
-        tasks.withType(Test) {
-            jvmArgs ([
-                    '--enable-preview',
-                    '--add-opens=java.base/java.lang=ALL-UNNAMED',
-                    '--add-opens=java.base/java.io=ALL-UNNAMED',
-                    '--add-opens=java.base/java.nio=ALL-UNNAMED',
-                    '--add-opens=java.base/java.nio.file.spi=ALL-UNNAMED',
-                    '--add-opens=java.base/java.net=ALL-UNNAMED',
-                    '--add-opens=java.base/java.util=ALL-UNNAMED',
-                    '--add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED',
-                    '--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED',
-                    '--add-opens=java.base/sun.nio.ch=ALL-UNNAMED',
-                    '--add-opens=java.base/sun.nio.fs=ALL-UNNAMED',
-                    '--add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED',
-                    '--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED',
-                    '--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED',
-                    '--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED',
-                    '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED',
-                    '--add-opens=java.base/jdk.internal.vm=ALL-UNNAMED',
-            ])
-        }
+    tasks.withType(Test) {
+        jvmArgs ([
+            '--enable-preview',
+            '--add-opens=java.base/java.lang=ALL-UNNAMED',
+            '--add-opens=java.base/java.io=ALL-UNNAMED',
+            '--add-opens=java.base/java.nio=ALL-UNNAMED',
+            '--add-opens=java.base/java.nio.file.spi=ALL-UNNAMED',
+            '--add-opens=java.base/java.net=ALL-UNNAMED',
+            '--add-opens=java.base/java.util=ALL-UNNAMED',
+            '--add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED',
+            '--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED',
+            '--add-opens=java.base/sun.nio.ch=ALL-UNNAMED',
+            '--add-opens=java.base/sun.nio.fs=ALL-UNNAMED',
+            '--add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED',
+            '--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED',
+            '--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED',
+            '--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED',
+            '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED',
+            '--add-opens=java.base/jdk.internal.vm=ALL-UNNAMED',
+        ])
     }
 
     /**
@@ -213,19 +209,11 @@ task buildInfo { doLast {
     timestamp=${System.currentTimeMillis()}
     commitId=${project.property('commitId')}
     """.stripIndent()
-    
+
     // -- update 'nextflow' wrapper
     file0 = file('nextflow')
     src = file0.text
     src = src.replaceAll(/NXF_VER\=\$\{NXF_VER:-'.*'\}/, 'NXF_VER=\\${NXF_VER:-\'' + version + '\'}')
-    file0.text = src
-
-    // -- update sphynx
-    def major = version.split(/\./)[0..1].join('.')
-    file0 = file('docs/conf.py')
-    src = file0.text
-    src = src.replaceAll(/version *= *'[0-9a-zA-Z_\-\.]+'/, "version = '$major'" as String)
-    src = src.replaceAll(/release *= *'[0-9a-zA-Z_\-\.]+'/, "release = '$version'" as String)
     file0.text = src
 
     // -- update dockerfile

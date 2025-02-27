@@ -47,30 +47,29 @@ class BatchLogging implements Closeable {
         this.opts = LoggingOptions .newBuilder() .setCredentials(creds) .setProjectId(this.projectId) .build()
     }
 
-    String stdout(String jobId) {
-        return safeLogs(jobId,0)
+    String stdout(String uid, String taskId) {
+        return safeLogs(uid, taskId, 0)
     }
 
-    String stderr(String jobId) {
-        return safeLogs(jobId,1)
+    String stderr(String uid, String taskId) {
+        return safeLogs(uid, taskId, 1)
     }
 
-    protected String safeLogs(String jobId, int index) {
+    protected String safeLogs(String uid, String taskId, int index) {
         try {
-            return fetchLogs(jobId)[index]
+            return fetchLogs(uid, taskId)[index]
         }
         catch (Exception e) {
-            log.warn("Cannot read logs for Batch job '$jobId' - cause: ${e.message}", e)
+            log.warn("Cannot read logs for Batch job '$uid/$taskId' - cause: ${e.message}", e)
             return null
         }
     }
 
     @Memoized(maxCacheSize = 1000)
-    @PackageScope List<String> fetchLogs(String uid) {
+    @PackageScope List<String> fetchLogs(String uid, String taskId) {
         final stdout = new StringBuilder()
         final stderr = new StringBuilder()
-        // use logging here
-        final filter = "resource.type=generic_task OR resource.type=\"batch.googleapis.com/Job\" AND logName=\"projects/${projectId}/logs/batch_task_logs\" AND labels.job_uid=$uid"
+        final filter = "resource.type=generic_task OR resource.type=\"batch.googleapis.com/Job\" AND logName=\"projects/${projectId}/logs/batch_task_logs\" AND labels.job_uid=$uid AND labels.task_id=$uid-group0-$taskId"
         final entries = loggingService().listLogEntries(
                 Logging.EntryListOption.filter(filter),
                 Logging.EntryListOption.pageSize(1000) )

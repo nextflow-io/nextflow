@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -127,6 +127,18 @@ class K8sConfigTest extends Specification {
         cfg.getStorageSubPath() == '/bar'
         cfg.getPodOptions().getVolumeClaims() == [ new PodVolumeClaim('pvc-3', '/some/path', '/bar') ] as Set
 
+    }
+
+    def 'should set device plugin' () {
+        when:
+        def cfg = new K8sConfig([:])
+        then:
+        cfg.fuseDevicePlugin() == ['nextflow.io/fuse':1]
+
+        when:
+        cfg = new K8sConfig([fuseDevicePlugin:['foo/fuse':10]])
+        then:
+        cfg.fuseDevicePlugin() == ['foo/fuse':10]
     }
 
     def 'should create client config' () {

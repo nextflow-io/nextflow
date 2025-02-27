@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,7 +70,7 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
             addRunOptions(params.runOptions.toString())
 
         if ( params.userEmulation?.toString() == 'true' )
-            log.warn1("Undocumented setting `docker.userEmulation` is not supported any more - consider to remove it from your config")
+            log.warn1("Undocumented setting `docker.userEmulation` is not supported any more - please remove it from your config")
 
         if ( params.containsKey('remove') )
             this.remove = params.remove?.toString() == 'true'

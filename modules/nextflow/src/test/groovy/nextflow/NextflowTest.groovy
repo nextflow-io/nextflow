@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,17 @@ class NextflowTest extends Specification {
     def 'should match CI groovy version'() {
         expect:
         System.getenv('CI_GROOVY_VERSION') == GroovySystem.getVersion()
+    }
+
+    def 'should get an environment variable' () {
+        given:
+        SysEnv.push(FOO: 'FOO_VALUE')
+
+        expect:
+        Nextflow.env('FOO') == 'FOO_VALUE'
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def testFile() {
@@ -336,6 +347,12 @@ class NextflowTest extends Specification {
         then:
         def e = thrown(NoSuchFileException)
         e.message == foo.toString()
+
+        when:
+        Nextflow.file("$folder/*.txt", checkIfExists: true)
+        then:
+        e = thrown(NoSuchFileException)
+        e.message == "$folder/*.txt"
 
         cleanup:
         folder?.deleteDir()

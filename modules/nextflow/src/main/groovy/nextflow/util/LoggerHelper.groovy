@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import java.nio.file.FileAlreadyExistsException
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.regex.Pattern
 
 import ch.qos.logback.classic.Level
@@ -38,13 +39,16 @@ import ch.qos.logback.core.ConsoleAppender
 import ch.qos.logback.core.CoreConstants
 import ch.qos.logback.core.FileAppender
 import ch.qos.logback.core.LayoutBase
+import ch.qos.logback.core.encoder.Encoder
 import ch.qos.logback.core.encoder.LayoutWrappingEncoder
 import ch.qos.logback.core.filter.Filter
 import ch.qos.logback.core.joran.spi.NoAutoStart
 import ch.qos.logback.core.rolling.FixedWindowRollingPolicy
 import ch.qos.logback.core.rolling.RollingFileAppender
 import ch.qos.logback.core.rolling.TriggeringPolicyBase
+import ch.qos.logback.core.spi.FilterAttachable
 import ch.qos.logback.core.spi.FilterReply
+import ch.qos.logback.core.spi.LifeCycle
 import ch.qos.logback.core.util.FileSize
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -80,6 +84,10 @@ import org.slf4j.MarkerFactory
  */
 @CompileStatic
 class LoggerHelper {
+
+    static volatile boolean aborted
+
+    static final AtomicInteger errCount = new AtomicInteger()
 
     static private Logger log = LoggerFactory.getLogger(LoggerHelper)
 
@@ -175,7 +183,7 @@ class LoggerHelper {
 
         // -- add the S3 uploader by default
         if( !containsClassName(debugConf,traceConf, 'nextflow.cloud.aws.nio') )
-            debugConf << S3_UPLOADER_CLASS
+            debugConf << 'nextflow.cloud.aws.nio'
         if( !containsClassName(debugConf,traceConf, 'io.seqera') )
             debugConf << 'io.seqera'
 
@@ -205,8 +213,8 @@ class LoggerHelper {
             root.addAppender(syslogAppender)
 
         // -- main package logger
-        def mainLevel = packages[MAIN_PACKAGE] == Level.TRACE ? Level.TRACE : Level.DEBUG
-        def logger = createLogger(MAIN_PACKAGE, mainLevel)
+        final mainLevel = packages[MAIN_PACKAGE] == Level.TRACE ? Level.TRACE : Level.DEBUG
+        final logger = createLogger(MAIN_PACKAGE, mainLevel)
 
         // -- set AWS lib level to WARN to reduce noise in the log file
         final AWS = 'com.amazonaws'
@@ -261,8 +269,8 @@ class LoggerHelper {
             result.setContext(loggerContext)
             if( result instanceof ConsoleAppender )
                 result.setEncoder( new LayoutWrappingEncoder( layout: new PrettyConsoleLayout() ) )
-            result.addFilter(filter)
-            result.start()
+            (result as FilterAttachable).addFilter(filter)
+            (result as LifeCycle).start()
         }
 
         return result
@@ -304,9 +312,9 @@ class LoggerHelper {
             rollingPolicy.start()
 
             result.rollingPolicy = rollingPolicy
-            result.encoder = createEncoder()
+            result.encoder = createEncoder() as Encoder
             result.setContext(loggerContext)
-            result.setTriggeringPolicy(new RollOnStartupPolicy())
+            result.setTriggeringPolicy(new RollOnStartupPolicy<ILoggingEvent>())
             result.triggeringPolicy.start()
             result.start()
         }
@@ -319,7 +327,7 @@ class LoggerHelper {
         FileAppender<ILoggingEvent> result = logFileName ? new FileAppender<ILoggingEvent>() : null
         if( result ) {
             result.file = logFileName
-            result.encoder = createEncoder()
+            result.encoder = createEncoder() as Encoder
             result.setContext(loggerContext)
             result.bufferSize = FileSize.valueOf('64KB')
             result.start()
@@ -363,6 +371,36 @@ class LoggerHelper {
         INSTANCE.setQuiet0(quiet)
     }
 
+    /**
+     * Setup a minimal logger that redirect log events to stderr only used during app bootstrap
+     */
+    static void bootstrapLogger() {
+        LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+
+        // Reset the logger context (this clears any existing loggers)
+        context.reset();
+
+        // Create a console appender that writes to stderr
+        final consoleAppender = new ConsoleAppender<ILoggingEvent>();
+        consoleAppender.setContext(context);
+        consoleAppender.setTarget("System.err");
+
+        // Set a simple pattern for the log output
+        final encoder = new PatternLayoutEncoder();
+        encoder.setContext(context);
+        encoder.setPattern("%d{HH:mm:ss.SSS} %-5level - %msg%n");
+        encoder.start();
+
+        // Attach the encoder to the appender
+        consoleAppender.setEncoder(encoder);
+        consoleAppender.start();
+
+        // Get the root logger and set its level to DEBUG
+        Logger rootLogger = context.getLogger(Logger.ROOT_LOGGER_NAME);
+        rootLogger.addAppender(consoleAppender)
+        rootLogger.setLevel(Level.DEBUG)
+    }
+
     /*
      * Filters the logging event based on the level assigned to a specific 'package'
      */
@@ -384,6 +422,10 @@ class LoggerHelper {
             if (!isStarted()) {
                 return FilterReply.NEUTRAL;
             }
+
+            // print to console only the very first error log and ignore the others
+            if( aborted && event.level==Level.ERROR && errCount.getAndIncrement()>0 )
+                return FilterReply.DENY;
 
             def logger = event.getLoggerName()
             def level = event.getLevel()
@@ -697,10 +739,10 @@ class LoggerHelper {
     static private char OPEN_CH = '[' as char
     static private char CLOSE_CH = ']' as char
     static private char SLASH_CH = '/' as char
-    static private int ZERO_CH = '0' as char
-    static private int NINE_CH = '9' as char
-    static private int ALPHA_CH = 'a' as char
-    static private int EFFE_CH = 'f' as char
+    static private char ZERO_CH = '0' as char
+    static private char NINE_CH = '9' as char
+    static private char ALPHA_CH = 'a' as char
+    static private char EFFE_CH = 'f' as char
 
     static boolean isHashLogPrefix(String str) {
         if( str?.length()<10 )

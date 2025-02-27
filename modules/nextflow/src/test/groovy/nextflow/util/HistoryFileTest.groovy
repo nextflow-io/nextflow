@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,11 @@
  */
 
 package nextflow.util
-import static nextflow.util.HistoryFile.Record
+import static nextflow.util.HistoryFile.Record as HistoryRecord
 
 import java.nio.file.Files
 
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import spock.lang.Specification
 /**
@@ -36,6 +37,15 @@ b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98\tnextflow run examples/ampa.nf --in data/sa
 2016-07-24 16:43:34\t-\tsmall_cirum\tOK\t6b9515aba6\t5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9\t.nextflow run hello -resume
 2016-07-25 09:58:01\t5 min\tmodest_bartik\tERR\t6b9515aba6\t5910a50f-8656-4765-aa79-f07cef912062\t.nextflow run hello
 '''
+
+    def 'should support custom base dir' () {
+        given:
+        SysEnv.push([NXF_CACHE_DIR: '/.nextflow'])
+        expect:
+        HistoryFile.defaultFileName() == '/.nextflow/history'
+        cleanup:
+        SysEnv.pop()
+    }
 
     def 'test add and get and find' () {
 
@@ -61,7 +71,7 @@ b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98\tnextflow run examples/ampa.nf --in data/sa
         history.write( 'slow_food', id3, 'xyz', [1,2,3], d3 )
 
         then:
-        history.getLast() == new Record(sessionId: id3, runName: 'slow_food', timestamp: d3, command: '1 2 3')
+        history.getLast() == new HistoryRecord(sessionId: id3, runName: 'slow_food', timestamp: d3, command: '1 2 3')
         history.checkExistsById( id1.toString() )
         history.checkExistsById( id2.toString() )
         history.checkExistsById( id3.toString() )
@@ -80,11 +90,11 @@ b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98\tnextflow run examples/ampa.nf --in data/sa
         when:
         def history = new HistoryFile(file)
         then:
-        history.findById('b8a3c4cf') == [new Record('b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98')]
-        history.findById('b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98') ==  [new Record('b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98')]
-        history.findById('58d8dd16-ce77-4507-ba1a-ec1ccc9bd2e8') == [new Record('58d8dd16-ce77-4507-ba1a-ec1ccc9bd2e8')]
-        history.findById('5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9') == [new Record('5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9','gigantic_keller'), new Record('5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9','small_cirum')]
-        history.findById('5910a50f') == [new Record('5910a50f-8656-4765-aa79-f07cef912062','modest_bartik')]
+        history.findById('b8a3c4cf') == [new HistoryRecord('b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98')]
+        history.findById('b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98') ==  [new HistoryRecord('b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98')]
+        history.findById('58d8dd16-ce77-4507-ba1a-ec1ccc9bd2e8') == [new HistoryRecord('58d8dd16-ce77-4507-ba1a-ec1ccc9bd2e8')]
+        history.findById('5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9') == [new HistoryRecord('5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9','gigantic_keller'), new HistoryRecord('5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9','small_cirum')]
+        history.findById('5910a50f') == [new HistoryRecord('5910a50f-8656-4765-aa79-f07cef912062','modest_bartik')]
         history.findById('5910a50x') == []
 
         history.checkExistsById('5910a50f')
@@ -115,8 +125,8 @@ b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98\tnextflow run examples/ampa.nf --in data/sa
         def history = new HistoryFile(file)
         then:
         history.getByName('lazy_pike') == null
-        history.getByName('evil_pike') == new Record('e710da1b-ce06-482f-bbcf-987a507f85d1', 'evil_pike')
-        history.getByName('gigantic_keller') == new Record('5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9', 'gigantic_keller')
+        history.getByName('evil_pike') == new HistoryRecord('e710da1b-ce06-482f-bbcf-987a507f85d1', 'evil_pike')
+        history.getByName('gigantic_keller') == new HistoryRecord('5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9', 'gigantic_keller')
 
         cleanup:
         file?.delete()
@@ -155,9 +165,9 @@ b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98\tnextflow run examples/ampa.nf --in data/sa
 
         expect:
         history.findBefore('5a6d3877') == [
-                new Record('b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98'),
-                new Record('58d8dd16-ce77-4507-ba1a-ec1ccc9bd2e8'),
-                new Record('e710da1b-ce06-482f-bbcf-987a507f85d1', 'evil_pike')
+                new HistoryRecord('b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98'),
+                new HistoryRecord('58d8dd16-ce77-4507-ba1a-ec1ccc9bd2e8'),
+                new HistoryRecord('e710da1b-ce06-482f-bbcf-987a507f85d1', 'evil_pike')
         ]
 
         history.findBefore('unknown') == []
@@ -174,9 +184,9 @@ b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98\tnextflow run examples/ampa.nf --in data/sa
 
         expect:
         history.findAfter('evil_pike') == [
-                new Record('5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9', 'gigantic_keller'),
-                new Record('5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9', 'small_cirum'),
-                new Record('5910a50f-8656-4765-aa79-f07cef912062', 'modest_bartik'),
+                new HistoryRecord('5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9', 'gigantic_keller'),
+                new HistoryRecord('5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9', 'small_cirum'),
+                new HistoryRecord('5910a50f-8656-4765-aa79-f07cef912062', 'modest_bartik'),
         ]
 
 
@@ -194,12 +204,12 @@ b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98\tnextflow run examples/ampa.nf --in data/sa
 
         expect:
         history.findAll() == [
-                new Record('b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98'),
-                new Record('58d8dd16-ce77-4507-ba1a-ec1ccc9bd2e8'),
-                new Record('e710da1b-ce06-482f-bbcf-987a507f85d1', 'evil_pike'),
-                new Record('5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9', 'gigantic_keller'),
-                new Record('5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9', 'small_cirum'),
-                new Record('5910a50f-8656-4765-aa79-f07cef912062', 'modest_bartik')
+                new HistoryRecord('b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98'),
+                new HistoryRecord('58d8dd16-ce77-4507-ba1a-ec1ccc9bd2e8'),
+                new HistoryRecord('e710da1b-ce06-482f-bbcf-987a507f85d1', 'evil_pike'),
+                new HistoryRecord('5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9', 'gigantic_keller'),
+                new HistoryRecord('5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9', 'small_cirum'),
+                new HistoryRecord('5910a50f-8656-4765-aa79-f07cef912062', 'modest_bartik')
         ]
     }
 
@@ -212,10 +222,10 @@ b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98\tnextflow run examples/ampa.nf --in data/sa
         def history = new HistoryFile(file)
 
         expect:
-        history.findByIdOrName('last') == [new Record('5910a50f-8656-4765-aa79-f07cef912062', 'modest_bartik')]
-        history.findByIdOrName('evil_pike') == [new Record('e710da1b-ce06-482f-bbcf-987a507f85d1', 'evil_pike')]
-        history.findByIdOrName('b8a3c4cf') ==  [new Record('b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98')]
-        history.findByIdOrName('5a6d3877') == [new Record('5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9','gigantic_keller'), new Record('5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9','small_cirum')]
+        history.findByIdOrName('last') == [new HistoryRecord('5910a50f-8656-4765-aa79-f07cef912062', 'modest_bartik')]
+        history.findByIdOrName('evil_pike') == [new HistoryRecord('e710da1b-ce06-482f-bbcf-987a507f85d1', 'evil_pike')]
+        history.findByIdOrName('b8a3c4cf') ==  [new HistoryRecord('b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98')]
+        history.findByIdOrName('5a6d3877') == [new HistoryRecord('5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9','gigantic_keller'), new HistoryRecord('5a6d3877-8823-4ed6-b7fe-2b6748ed4ff9','small_cirum')]
         history.findByIdOrName('unknown') == []
     }
 
@@ -228,8 +238,8 @@ b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98\tnextflow run examples/ampa.nf --in data/sa
         def history = new HistoryFile(file)
 
         when:
-        history.deleteEntry( new Record('b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98') )
-        history.deleteEntry( new Record('e710da1b-ce06-482f-bbcf-987a507f85d1', 'evil_pike') )
+        history.deleteEntry( new HistoryRecord('b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98') )
+        history.deleteEntry( new HistoryRecord('e710da1b-ce06-482f-bbcf-987a507f85d1', 'evil_pike') )
         then:
         history.text == '''
                 58d8dd16-ce77-4507-ba1a-ec1ccc9bd2e8\tnextflow run examples/basic.nf --in data/sample.fa
@@ -249,8 +259,8 @@ b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98\tnextflow run examples/ampa.nf --in data/sa
         def history = new HistoryFile(file)
 
         expect:
-        history.findById('b8a3c4cf') == [ new Record('b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98') ]
-        history.findById('e710da1b') == [ new Record('e710da1b-ce06-482f-bbcf-987a507f85d1', 'evil_pike') ]
+        history.findById('b8a3c4cf') == [ new HistoryRecord('b8a3c4cf-17e4-49c6-a4cf-4fd8ddbeef98') ]
+        history.findById('e710da1b') == [ new HistoryRecord('e710da1b-ce06-482f-bbcf-987a507f85d1', 'evil_pike') ]
         history.findById('e710dadd') == []
     }
 

@@ -18,11 +18,13 @@
 package nextflow.cloud.google.batch
 
 import java.nio.file.Path
+import java.util.regex.Pattern
 
 import com.google.cloud.batch.v1.AllocationPolicy
 import com.google.cloud.batch.v1.ComputeResource
 import com.google.cloud.batch.v1.Environment
 import com.google.cloud.batch.v1.Job
+import com.google.cloud.batch.v1.JobStatus
 import com.google.cloud.batch.v1.LifecyclePolicy
 import com.google.cloud.batch.v1.LogsPolicy
 import com.google.cloud.batch.v1.Runnable
@@ -37,13 +39,16 @@ import groovy.util.logging.Slf4j
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
+import nextflow.exception.ProcessException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.DiskResource
 import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionScriptLauncher
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
@@ -56,6 +61,10 @@ import nextflow.trace.TraceRecord
 @CompileStatic
 class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
+    private static final Pattern EXIT_CODE_REGEX = ~/exit code 500(\d\d)/
+
+    private static final Pattern BATCH_ERROR_REGEX = ~/Batch Error: code/
+
     private GoogleBatchExecutor executor
 
     private Path exitFile
@@ -66,10 +75,17 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private BatchClient client
 
+    private BashWrapperBuilder launcher
+
     /**
      * Job Id assigned by Nextflow
      */
     private String jobId
+
+    /**
+     * Task id assigned by Google Batch service
+     */
+    private String taskId
 
     /**
      * Job unique id assigned by Google Batch service
@@ -77,23 +93,49 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     private String uid
 
     /**
-     * Job state assigned by Google Batch service
+     * Task state assigned by Google Batch service
      */
-    private String jobState
+    private String taskState
 
     private volatile CloudMachineInfo machineInfo
 
     private volatile long timestamp
 
+    /**
+     * A flag to indicate that the job has failed without launching any tasks
+     */
+    private volatile boolean noTaskJobfailure
+
     GoogleBatchTaskHandler(TaskRun task, GoogleBatchExecutor executor) {
         super(task)
         this.client = executor.getClient()
-        this.jobId = "nf-${task.hashLog.replace('/','')}-${System.currentTimeMillis()}"
         this.executor = executor
+        this.jobId = customJobName(task) ?: "nf-${task.hashLog.replace('/','')}-${System.currentTimeMillis()}"
         // those files are access via NF runtime, keep based on CloudStoragePath
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
+    }
+
+    /**
+     * Resolve the `jobName` property defined in the nextflow config file
+     *
+     * @param task The underlying task to be executed
+     * @return The custom job name for the specified task or {@code null} if the `jobName` attribute has been specified
+     */
+    protected String customJobName(TaskRun task) {
+        try {
+            final custom = (Closure)executor.session?.getExecConfigProp(executor.name, 'jobName', null)
+            if( !custom )
+                return null
+
+            final ctx = [ (TaskProcessor.TASK_CONTEXT_PROPERTY_NAME): task.config ]
+            return custom.cloneWith(ctx).call()?.toString()
+        }
+        catch( Exception e ) {
+            log.debug "Unable to resolve job custom name", e
+            return null
+        }
     }
 
     protected BashWrapperBuilder createTaskWrapper() {
@@ -103,6 +145,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         else {
             final taskBean = task.toTaskBean()
             return new GoogleBatchScriptLauncher(taskBean, executor.remoteBinDir)
+                .withConfig(executor.config)
+                .withIsArray(task.isArray())
         }
     }
 
@@ -120,22 +164,39 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     @Override
-    void submit() {
-        /*
-         * create the task runner script
-         */
-        final launcher = createTaskWrapper()
+    void prepareLauncher() {
+        launcher = createTaskWrapper()
         launcher.build()
+    }
 
+    @Override
+    void submit() {
         /*
          * create submit request
          */
         final req = newSubmitRequest(task, spec0(launcher))
         log.trace "[GOOGLE BATCH] new job request > $req"
         final resp = client.submitJob(jobId, req)
-        this.uid = resp.getUid()
-        this.status = TaskStatus.SUBMITTED
+        final uid = resp.getUid()
+        updateStatus(jobId, '0', uid)
         log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` submitted > job=$jobId; uid=$uid; work-dir=${task.getWorkDirStr()}"
+    }
+
+    protected void updateStatus(String jobId, String taskId, String uid) {
+        if( task instanceof TaskArrayRun ) {
+            // update status for children
+            for( int i=0; i<task.children.size(); i++ ) {
+                final handler = task.children[i] as GoogleBatchTaskHandler
+                final arrayTaskId = executor.getArrayTaskId(jobId, i)
+                handler.updateStatus(jobId, arrayTaskId, uid)
+            }
+        }
+        else {
+            this.jobId = jobId
+            this.taskId = taskId
+            this.uid = uid
+            this.status = TaskStatus.SUBMITTED
+        }
     }
 
     protected Job newSubmitRequest(TaskRun task, GoogleBatchLauncherSpec launcher) {
@@ -172,19 +233,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             .addAllCommands( cmd )
             .addAllVolumes( launcher.getContainerMounts() )
 
-        final accel = task.config.getAccelerator()
-        // add nvidia specific driver paths
-        // see https://cloud.google.com/batch/docs/create-run-job#create-job-gpu
-        if( accel && accel.type.toLowerCase().startsWith('nvidia-') ) {
-            container
-                .addVolumes('/var/lib/nvidia/lib64:/usr/local/nvidia/lib64')
-                .addVolumes('/var/lib/nvidia/bin:/usr/local/nvidia/bin')
-        }
-
         def containerOptions = task.config.getContainerOptions() ?: ''
-        // accelerator requires privileged option
-        // https://cloud.google.com/batch/docs/create-run-job#create-job-gpu
-        if( task.config.getAccelerator() || fusionEnabled() ) {
+        if( fusionEnabled() ) {
             if( containerOptions ) containerOptions += ' '
             containerOptions += '--privileged'
         }
@@ -251,6 +301,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             if( task.config.getDisk() )
                 log.warn1 'Process directive `disk` ignored because an instance template was specified'
 
+            if( executor.config.getBootDiskImage() )
+                log.warn1 'Config option `google.batch.bootDiskImage` ignored because an instance template was specified'
+
             if( executor.config.cpuPlatform )
                 log.warn1 'Config option `google.batch.cpuPlatform` ignored because an instance template was specified'
 
@@ -269,6 +322,28 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         else {
             final instancePolicy = AllocationPolicy.InstancePolicy.newBuilder()
 
+            if( executor.config.getBootDiskImage() )
+                instancePolicy.setBootDisk( AllocationPolicy.Disk.newBuilder().setImage( executor.config.getBootDiskImage() ) )
+
+            if( fusionEnabled() && !disk ) {
+                disk = new DiskResource(request: '375 GB', type: 'local-ssd')
+                log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - adding local volume as fusion scratch: $disk"
+            }
+
+            final machineType = findBestMachineType(task.config, disk?.type == 'local-ssd')
+
+            if( machineType ) {
+                instancePolicy.setMachineType(machineType.type)
+                instancePolicyOrTemplate.setInstallGpuDrivers(
+                        GoogleBatchMachineTypeSelector.INSTANCE.installGpuDrivers(machineType)
+                )
+                machineInfo = new CloudMachineInfo(
+                        type: machineType.type,
+                        zone: machineType.location,
+                        priceModel: machineType.priceModel
+                )
+            }
+
             if( task.config.getAccelerator() ) {
                 final accelerator = AllocationPolicy.Accelerator.newBuilder()
                     .setCount( task.config.getAccelerator().getRequest() )
@@ -280,25 +355,13 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 instancePolicyOrTemplate.setInstallGpuDrivers(true)
             }
 
-            if( fusionEnabled() && !disk ) {
-                disk = new DiskResource(request: '375 GB', type: 'local-ssd')
-                log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - adding local volume as fusion scratch: $disk"
-            }
-
-            final machineType = findBestMachineType(task.config, disk?.type == 'local-ssd')
-
-            if( machineType ) {
-                instancePolicy.setMachineType(machineType.type)
-                machineInfo = new CloudMachineInfo(
-                        type: machineType.type,
-                        zone: machineType.location,
-                        priceModel: machineType.priceModel
-                )
-            }
-
             // When using local SSD not all the disk sizes are valid and depends on the machine type
             if( disk?.type == 'local-ssd' && machineType ) {
                 final validSize = GoogleBatchMachineTypeSelector.INSTANCE.findValidLocalSSDSize(disk.request, machineType)
+                if( validSize.toBytes() == 0 ) {
+                    disk = new DiskResource(request: 0)
+                    log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - ${machineType.type} does not allow configuring local disks"
+                }
                 if( validSize != disk.request ) {
                     disk = new DiskResource(request: validSize, type: 'local-ssd')
                     log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - adjusting local disk size to: $validSize"
@@ -361,12 +424,18 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                     .addNetworkInterfaces(networkInterface)
             )
 
+        // task group
+        final taskGroup = TaskGroup.newBuilder()
+            .setTaskSpec(taskSpec)
+
+        if( task instanceof TaskArrayRun ) {
+            final arraySize = task.getArraySize()
+            taskGroup.setTaskCount(arraySize)
+        }
+
         // create the job
         return Job.newBuilder()
-            .addTaskGroups(
-                TaskGroup.newBuilder()
-                    .setTaskSpec(taskSpec)
-            )
+            .addTaskGroups(taskGroup)
             .setAllocationPolicy(allocationPolicy)
             .setLogsPolicy(
                 LogsPolicy.newBuilder()
@@ -377,38 +446,82 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     /**
-     * @return Retrieve the submitted job state
+     * @return Retrieve the submitted task state
      */
-    protected String getJobState() {
-        final now = System.currentTimeMillis()
-        final delta =  now - timestamp;
-        if( !jobState || delta >= 1_000) {
-            final status = client.getJobStatus(jobId)
-            final newState = status?.state as String
-            if( newState ) {
-                log.trace "[GOOGLE BATCH] Get job=$jobId state=$newState"
-                jobState = newState
-                timestamp = now
-            }
-            if( newState == 'SCHEDULED' ) {
-                final eventsCount = status.getStatusEventsCount()
-                final lastEvent = eventsCount > 0 ? status.getStatusEvents(eventsCount - 1) : null
-                if( lastEvent?.getDescription()?.contains('CODE_GCE_QUOTA_EXCEEDED') )
-                    log.warn1 "Batch job cannot be run: ${lastEvent.getDescription()}"
-            }
-        }
-        return jobState
+    protected String getTaskState() {
+        return isArrayChild
+            ? getStateFromTaskStatus()
+            : getStateFromJobStatus()
     }
 
-    static private List<String> RUNNING_AND_TERMINATED = ['RUNNING', 'SUCCEEDED', 'FAILED', 'DELETION_IN_PROGRESS']
+    protected String getStateFromTaskStatus() {
+        final now = System.currentTimeMillis()
+        final delta =  now - timestamp;
+        if( !taskState || delta >= 1_000) {
+            final status = client.getTaskInArrayStatus(jobId, taskId)
+            if( status ) {
+                inspectTaskStatus(status)
+            } else {
+                // If no task status retrieved check job status
+                final jobStatus = client.getJobStatus(jobId)
+                inspectJobStatus(jobStatus)
+            }
+        }
+        return taskState
+    }
 
-    static private List<String> TERMINATED = ['SUCCEEDED', 'FAILED', 'DELETION_IN_PROGRESS']
+    protected String getStateFromJobStatus() {
+        final now = System.currentTimeMillis()
+        final delta =  now - timestamp;
+        if( !taskState || delta >= 1_000) {
+            final status = client.getJobStatus(jobId)
+            inspectJobStatus(status)
+        }
+        return taskState
+    }
+
+    private void inspectTaskStatus(com.google.cloud.batch.v1.TaskStatus status) {
+        final newState = status?.state as String
+        if (newState) {
+            log.trace "[GOOGLE BATCH] Get job=$jobId task=$taskId state=$newState"
+            taskState = newState
+            timestamp = System.currentTimeMillis()
+        }
+        if (newState == 'PENDING') {
+            final eventsCount = status.getStatusEventsCount()
+            final lastEvent = eventsCount > 0 ? status.getStatusEvents(eventsCount - 1) : null
+            if (lastEvent?.getDescription()?.contains('CODE_GCE_QUOTA_EXCEEDED'))
+                log.warn1 "Batch job cannot be run: ${lastEvent.getDescription()}"
+        }
+    }
+
+    protected String inspectJobStatus(JobStatus status) {
+        final newState = status?.state as String
+        if (newState) {
+            log.trace "[GOOGLE BATCH] Get job=$jobId state=$newState"
+            taskState = newState
+            timestamp = System.currentTimeMillis()
+            if (newState == "FAILED") {
+                noTaskJobfailure = true
+            }
+        }
+        if (newState == 'SCHEDULED') {
+            final eventsCount = status.getStatusEventsCount()
+            final lastEvent = eventsCount > 0 ? status.getStatusEvents(eventsCount - 1) : null
+            if (lastEvent?.getDescription()?.contains('CODE_GCE_QUOTA_EXCEEDED'))
+                log.warn1 "Batch job cannot be run: ${lastEvent.getDescription()}"
+        }
+    }
+
+    static private final List<String> RUNNING_OR_COMPLETED = ['RUNNING', 'SUCCEEDED', 'FAILED', 'DELETION_IN_PROGRESS']
+
+    static private final List<String> COMPLETED = ['SUCCEEDED', 'FAILED', 'DELETION_IN_PROGRESS']
 
     @Override
     boolean checkIfRunning() {
         if(isSubmitted()) {
             // include `terminated` state to allow the handler status to progress
-            if (getJobState() in RUNNING_AND_TERMINATED) {
+            if( getTaskState() in RUNNING_OR_COMPLETED ) {
                 status = TaskStatus.RUNNING
                 return true
             }
@@ -418,37 +531,41 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     @Override
     boolean checkIfCompleted() {
-        final state = getJobState()
-        if( state in TERMINATED ) {
-            log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - terminated job=$jobId; state=$state"
+        final state = getTaskState()
+        if( state in COMPLETED ) {
+            log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - terminated job=$jobId; task=$taskId; state=$state"
             // finalize the task
-            task.exitStatus = getJobExitCode()
-            if( task.exitStatus == null )
-                task.exitStatus = readExitFile()
+            task.exitStatus = readExitFile()
             if( state == 'FAILED' ) {
-                task.stdout = executor.logging.stdout(uid) ?: outputFile
-                task.stderr = executor.logging.stderr(uid) ?: errorFile
+                if( task.exitStatus == Integer.MAX_VALUE )
+                    task.error = getJobError()
+                task.stdout = executor.logging.stdout(uid, taskId) ?: outputFile
+                task.stderr = executor.logging.stderr(uid, taskId) ?: errorFile
             }
             else {
                 task.stdout = outputFile
                 task.stderr = errorFile
             }
             status = TaskStatus.COMPLETED
+            if( isArrayChild )
+                client.removeFromArrayTasks(jobId, taskId)
             return true
         }
 
         return false
     }
 
-    protected Integer getJobExitCode() {
+    protected Throwable getJobError() {
         try {
-            final status = client.getJobStatus(jobId)
-            final eventsCount = status.getStatusEventsCount()
-            final lastEvent = eventsCount > 0 ? status.getStatusEvents(eventsCount - 1) : null
-            log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - last event: ${lastEvent}"
+            final events = noTaskJobfailure
+                ? client.getJobStatus(jobId).getStatusEventsList()
+                : client.getTaskStatus(jobId, taskId).getStatusEventsList()
+            final lastEvent = events?.get(events.size() - 1)
+            log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - last event: ${lastEvent}; exit code: ${lastEvent?.taskExecution?.exitCode}"
 
-            if( lastEvent?.getDescription()?.contains('due to Spot VM preemption with exit code 50001') ) {
-                return 50001
+            final error = lastEvent?.description
+            if( error && (EXIT_CODE_REGEX.matcher(error).find() || BATCH_ERROR_REGEX.matcher(error).find()) ) {
+                return new ProcessException(error)
             }
         }
         catch (Throwable t) {
@@ -470,10 +587,11 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     @Override
-    void kill() {
+    protected void killTask() {
         if( isActive() ) {
             log.trace "[GOOGLE BATCH] Process `${task.lazyName()}` - deleting job name=$jobId"
-            client.deleteJob(jobId)
+            if( executor.shouldDeleteJob(jobId) )
+                client.deleteJob(jobId)
         }
         else {
             log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - invalid delete action"
@@ -487,9 +605,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     @Override
     TraceRecord getTraceRecord() {
         def result = super.getTraceRecord()
-        if( jobId && uid ) {
-            result.put('native_id', "$jobId/$uid")
-        }
+        if( jobId && uid )
+            result.put('native_id', "$jobId/$taskId/$uid")
         result.machineInfo = getMachineInfo()
         return result
     }
@@ -513,7 +630,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             }
         }
         catch (Exception e) {
-            log.debug "[GOOGLE BATCH] Cannot select machine type using Seqera Cloudinfo for task: `${task.lazyName()}` - ${e.message}"
+            log.warn "Cannot determine the machine type to be used for task: `${task.lazyName()}` - If this problem persists disable disable the Cloudinfo service by setting the variable NXF_CLOUDINFO_ENABLED=false in your environment", e
         }
 
         // Check if a specific machine type was provided by the user

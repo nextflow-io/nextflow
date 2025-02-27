@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskProcessor
@@ -40,7 +41,7 @@ abstract class AbstractGridExecutor extends Executor {
 
     protected Duration queueInterval
 
-    private final static List<String> INVALID_NAME_CHARS = [ " ", "/", ":", "@", "*", "?", "\\n", "\\t", "\\r" ]
+    private final static List<String> INVALID_NAME_CHARS = [ " ", "/", ":", "@", "*", "?", "\\n", "\\t", "\\r", "=" ]
 
     private Map lastQueueStatus
 
@@ -134,6 +135,23 @@ abstract class AbstractGridExecutor extends Executor {
      * @return A list of directives for this task used for the job submission
      */
     abstract protected List<String> getDirectives(TaskRun task, List<String> initial)
+
+    protected void addClusterOptionsDirective(TaskConfig config, List<String> result) {
+        final opts = config.getClusterOptions()
+        if( opts instanceof Collection ) {
+            for( String it : opts ) {
+                result.add(it)
+                result.add('')
+            }
+        }
+        else if( opts instanceof CharSequence ) {
+            result.add(opts.toString())
+            result.add('')
+        }
+        else if( opts != null ) {
+            throw new IllegalArgumentException("Unexpected value for clusterOptions process directive - offending value: $opts")
+        }
+    }
 
     /**
      * Given a task returns a *clean* name used to submit the job to the grid engine.

@@ -1,6 +1,6 @@
-def criteria = multiMapCriteria {
-    small: [it, it < 10]
-    large: [it, it > 10]
+def criteria = multiMapCriteria { v ->
+    small: [v, v < 10]
+    large: [v, v > 10]
 }
 
 Channel.of(1, 2, 30).multiMap(criteria).set { ch1 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,10 +29,9 @@ import groovy.transform.EqualsAndHashCode
 
 @CompileStatic
 @EqualsAndHashCode
-class BlankSeparatedList implements KryoSerializable, PathEscapeAware {
+class BlankSeparatedList implements KryoSerializable, PathEscapeAware, List {
 
-    @Delegate
-    List target
+    private List target
 
     // note: this constructor is needed by kryo serialization
     private BlankSeparatedList() { }
@@ -71,4 +70,118 @@ class BlankSeparatedList implements KryoSerializable, PathEscapeAware {
         target.getAt(index)
     }
 
+    @Override
+    int size() {
+        return target.size()
+    }
+
+    @Override
+    boolean isEmpty() {
+        return target.isEmpty()
+    }
+
+    @Override
+    boolean contains(Object o) {
+        return target.contains(o)
+    }
+
+    @Override
+    Iterator iterator() {
+        return target.iterator()
+    }
+
+    @Override
+    Object[] toArray() {
+        return target.toArray()
+    }
+
+    @Override
+    boolean add(Object object) {
+        return target.add(object)
+    }
+
+    @Override
+    boolean remove(Object o) {
+        return target.remove(o)
+    }
+
+    @Override
+    boolean addAll(Collection c) {
+        return target.addAll(c)
+    }
+
+    @Override
+    boolean addAll(int index, Collection c) {
+        return target.addAll(index, c)
+    }
+
+    @Override
+    void clear() {
+        target.clear()
+    }
+
+    @Override
+    Object get(int index) {
+        return target.get(index)
+    }
+
+    @Override
+    Object set(int index, Object element) {
+        return target.set(index, element)
+    }
+
+    @Override
+    void add(int index, Object element) {
+        target.add(index, element)
+    }
+
+    @Override
+    Object remove(int index) {
+        return target.remove(index)
+    }
+
+    @Override
+    int indexOf(Object o) {
+        return target.indexOf(o)
+    }
+
+    @Override
+    int lastIndexOf(Object o) {
+        return target.lastIndexOf(o)
+    }
+
+    @Override
+    ListIterator listIterator() {
+        return target.listIterator()
+    }
+
+    @Override
+    ListIterator listIterator(int index) {
+        return target.listIterator(index)
+    }
+
+    @Override
+    List subList(int fromIndex, int toIndex) {
+        return target.subList(fromIndex, toIndex)
+    }
+
+    @Override
+    boolean retainAll(Collection c) {
+        return target.retainAll(c)
+    }
+
+    @Override
+    boolean removeAll(Collection c) {
+        return target.remove(c)
+    }
+
+    @Override
+    boolean containsAll(Collection c) {
+        return target.containsAll(c)
+    }
+
+    @Override
+    Object[] toArray(Object[] a) {
+        return target.toArray(a)
+    }
 }
