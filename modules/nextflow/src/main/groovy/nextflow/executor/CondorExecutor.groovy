@@ -1,6 +1,4 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,13 +15,12 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
-import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskRun
+import nextflow.fusion.FusionHelper
 /**
  * HTCondor executor
  *
@@ -31,13 +28,14 @@ import nextflow.processor.TaskRun
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CondorExecutor extends AbstractGridExecutor {
+@Co
+mpileStaticclass CondorExecutor extends AbstractGridExecutor {
 
     static final public String CMD_CONDOR = '.command.condor'
 
     final protected BashWrapperBuilder createBashWrapperBuilder(TaskRun task) {
         // creates the wrapper script
-        final builder = new BashWrapperBuilder(task)
+        final builder = new CondorWrapperBuilder(task)
         builder.manifest = getDirectivesText(task)
         return builder
     }
@@ -46,6 +44,11 @@ class CondorExecutor extends AbstractGridExecutor {
         def lines = getDirectives(task)
         lines << ''
         lines.join('\n')
+    }
+
+    @Override
+    protected String getHeaderToken() {
+        throw new UnsupportedOperationException()
     }
 
 
@@ -84,7 +87,7 @@ class CondorExecutor extends AbstractGridExecutor {
             result << "error = ${TaskRun.CMD_ERRFILE}"
             result << "stream_out = true"
             result << "stream_error = true"
-            result << "executable = ${TaskRun.CMD_RUN}"
+            result << "executable = ${TaskRun.CMD_RUN}".toString()
             // result << "transfer_files = NO" // note: this will result in jobs only being run in shared file systems, as God and Nextflow intended. HT Condor will only work with Nextflow and a shared filesystem, either a physical one (this case) or one provided by Fusion (in which case, Fusion's s3 filesystem will prov)
         } else {
             result << "getenv = true"
@@ -95,29 +98,29 @@ class CondorExecutor extends AbstractGridExecutor {
 
         if( task.isContainerEnabled() ) {
             result << "universe = container"
-            result << "container_image = ${task.getContainer()}"
+            result << "container_image = ${task.getContainer()}".toString()
         } else {
             result << "universe = vanilla"
-            result << "initialdir = ${TaskRun.workDir}"
+            result << "initialdir = ${TaskRun.workDir}".toString()
         }
 
-        if( task.config.getCpus() > 1 ) {
-            result << "request_cpus = ${task.config.getCpus()}"
+        if( task.config.getCpus()>1 ) {
+            result << "request_cpus = ${task.config.getCpus()}".toString()
             result << "machine_count = 1"
         }
 
         if( task.config.getMemory() ) {
-            result << "request_memory = ${task.config.getMemory()}"
+            result << "request_memory = ${task.config.getMemory()}".toString()
         }
 
         if( task.config.getDisk() ) {
-            result << "request_disk = ${task.config.getDisk()}"
+            result << "request_disk = ${task.config.getDisk()}".toString()
         } else {
             result << "request_disk = 1 GB" // need minimum 1GB to run on CHTC servers
         }
 
         if( task.config.getTime() ) {
-            result << "periodic_remove = (RemoteWallClockTime - CumulativeSuspensionTime) > ${task.config.getTime().toSeconds()}"
+            result << "periodic_remove = (RemoteWallClockTime - CumulativeSuspensionTime) > ${task.config.getTime().toSeconds()}".toString()
         }
 
         if( task.config.getClusterOptions() ) {
@@ -130,20 +133,13 @@ class CondorExecutor extends AbstractGridExecutor {
             }
         }
 
-        // if (requirements.size() > 0){
-        //     result << "requirements = \"" + requirements.join(' && ') + "\""
-        // }
-        // if (rank.size() > 0){
-        //     result << "rank = \"" + rank.join(' && ') + "\""
-        // }
-
         result << "queue"
         result << ''
     }
 
     @Override
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile) {
-        return pipeLauncherScript()
+        return pipeLauncherScriptd()
                 ? List.of('condor_submit', '-', '-terse',)
                 : List.of('condor_submit', '-terse', CMD_CONDOR)
     }
@@ -164,7 +160,7 @@ class CondorExecutor extends AbstractGridExecutor {
     }
 
 
-    static protected Map DECODE_STATUS = [
+    static protected Map<String,QueueStatus> DECODE_STATUS = [
             'U': QueueStatus.PENDING,   // Unexpanded
             'I': QueueStatus.PENDING,   // Idle
             'R': QueueStatus.RUNNING,   // Running
@@ -177,7 +173,7 @@ class CondorExecutor extends AbstractGridExecutor {
 
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
-        def result = [:]
+        final result = new LinkedHashMap<String, QueueStatus>()
         if( !text ) return result
 
         boolean started = false
@@ -225,8 +221,21 @@ class CondorExecutor extends AbstractGridExecutor {
 
 
 
-
     @InheritConstructors
+    static class CondorWrapperBuilder extends BashWrapperBuilder {
+
+        String manifest
+
+        Path build() {
+            final wrapper = super.build()
+            // give execute permission to wrapper file
+            wrapper.setExecutable(true)
+            // save the condor manifest
+            this.workDir.resolve(CMD_CONDOR).text = manifest
+            return wrapper
+        }
+
+
     @CompileStatic
     class CondorTaskHandler extends GridTaskHandler {
         // Prior code, and context this will be launched in:
@@ -250,74 +259,74 @@ class CondorExecutor extends AbstractGridExecutor {
         //     return '#!/bin/bash\n' + submitDirective(task) + cmd + '\n'
         // }
 
-        protected String stdinLauncherScript() {
-            FusionHelper.runWithContainer(fusionLauncher(), task.getContainerConfig(), task.getContainer(), task.config.getContainerOptions(), fusionSubmitCli())
-            final submit = fusionSubmitCli()
-            final launcher = fusionLauncher()
-            final config = task.getContainerConfig()
-            final containerConfig = task.getContainerConfig()
-            final containerOpts = task.config.getContainerOptions()
-            final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), containerOpts, submit)
-            println ('launcher:\n')
-            println (fusionLauncher())
-            println ('task.getContainerConfig():\n')
-            println (task.getContainerConfig())
-            println ('task.getContainer():\n')
-            println (task.getContainer())
-            println ('task.config.getContainerOptions():\n')
-            println (containerOpts)
-            println ('fusionSubmitCli():\n')
-            println (submit)
-            println ('FusionHelper.runWithContainer(launcher, config, task.getContainer(), containerOpts, submit):')
-            println (cmd)
-            println ("containerConfig.getEnvWhitelist():")
-            println (containerConfig.getEnvWhitelist())
-            println ("task.getContainerConfig().getEnvWhitelist():")
-            println (task.getContainerConfig().getEnvWhitelist())
-            println (task.getContainerConfig().getEnvWhitelist().getClass())
-            println ("launcher.fusionEnv()")
-            println (launcher.fusionEnv())
-            println (launcher.fusionEnv()[1])
-            println (launcher.fusionEnv().getClass())
-            println ("containerConfig.runOptions as String")
-            println (containerConfig.runOptions as String)
-            println ("containerConfig.fusionOptions()")
-            println (containerConfig.fusionOptions())
+        // protected String stdinLauncherScript() {
+        //     FusionHelper.runWithContainer(fusionLauncher(), task.getContainerConfig(), task.getContainer(), task.config.getContainerOptions(), fusionSubmitCli())
+        //     final submit = fusionSubmitCli()
+        //     final launcher = fusionLauncher()
+        //     final config = task.getContainerConfig()
+        //     final containerConfig = task.getContainerConfig()
+        //     final containerOpts = task.config.getContainerOptions()
+        //     final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), containerOpts, submit)
+        //     println ('launcher:\n')
+        //     println (fusionLauncher())
+        //     println ('task.getContainerConfig():\n')
+        //     println (task.getContainerConfig())
+        //     println ('task.getContainer():\n')
+        //     println (task.getContainer())
+        //     println ('task.config.getContainerOptions():\n')
+        //     println (containerOpts)
+        //     println ('fusionSubmitCli():\n')
+        //     println (submit)
+        //     println ('FusionHelper.runWithContainer(launcher, config, task.getContainer(), containerOpts, submit):')
+        //     println (cmd)
+        //     println ("containerConfig.getEnvWhitelist():")
+        //     println (containerConfig.getEnvWhitelist())
+        //     println ("task.getContainerConfig().getEnvWhitelist():")
+        //     println (task.getContainerConfig().getEnvWhitelist())
+        //     println (task.getContainerConfig().getEnvWhitelist().getClass())
+        //     println ("launcher.fusionEnv()")
+        //     println (launcher.fusionEnv())
+        //     println (launcher.fusionEnv()[1])
+        //     println (launcher.fusionEnv().getClass())
+        //     println ("containerConfig.runOptions as String")
+        //     println (containerConfig.runOptions as String)
+        //     println ("containerConfig.fusionOptions()")
+        //     println (containerConfig.fusionOptions())
 
 
-            // create an inline script to launch the job execution
-            // println('#!/bin/bash\n' + submitDirective(task) + cmd + '\n')
-            // return List.of('condor_submit', '.condor.submit', '-terse', '-queue', '1')
-            println( '#!/bin/bash\n' + submitDirective(task) + cmd + '\n')
-            // return '#!/bin/bash\n' + submitDirective(task) + cmd + '\n'
+        //     // create an inline script to launch the job execution
+        //     // println('#!/bin/bash\n' + submitDirective(task) + cmd + '\n')
+        //     // return List.of('condor_submit', '.condor.submit', '-terse', '-queue', '1')
+        //     println( '#!/bin/bash\n' + submitDirective(task) + cmd + '\n')
+        //     // return '#!/bin/bash\n' + submitDirective(task) + cmd + '\n'
 
-            def result = []
+        //     def result = []
 
-            result << "container_image = ${task.getContainer()}"
-            //  containerConfig.getEnvWhitelist() +
-            def environment = [:]
-            environment += launcher.fusionEnv()
-            environment = environment.each { key, val -> "${key}=${val}" }.collect().join(' ').toString()
-            environment += task.getContainerConfig().getEnvWhitelist().join(' ')
-            result << "env = \"" + environment + "\""
+        //     result << "container_image = ${task.getContainer()}"
+        //     //  containerConfig.getEnvWhitelist() +
+        //     def environment = [:]
+        //     environment += launcher.fusionEnv()
+        //     environment = environment.each { key, val -> "${key}=${val}" }.collect().join(' ').toString()
+        //     environment += task.getContainerConfig().getEnvWhitelist().join(' ')
+        //     result << "env = \"" + environment + "\""
 
-            def submit_list = fusionSubmitCli()
-            def executable = submit_list[0]
-            def arguments = submit_list.drop(1).join(' ')
+        //     def submit_list = fusionSubmitCli()
+        //     def executable = submit_list[0]
+        //     def arguments = submit_list.drop(1).join(' ')
 
-            result << "executable = ${executable}"
-            result << "arguments = ${arguments}"
-            // result << "container_target_dir = "
-            // result << "container_options = ${options}" // simply do not get to specify these in htcondor
-            result = result.join('\n')
-            println(result + '\n' + submitDirective(task))
-            return result + '\n' + submitDirective(task)
+        //     result << "executable = ${executable}"
+        //     result << "arguments = ${arguments}"
+        //     // result << "container_target_dir = "
+        //     // result << "container_options = ${options}" // simply do not get to specify these in htcondor
+        //     result = result.join('\n')
+        //     println(result + '\n' + submitDirective(task))
+        //     return result + '\n' + submitDirective(task)
 
-            // create an inline script to launch the job execution
-            // println('#!/bin/bash\n' + submitDirective(task) + cmd + '\n')
-            // return List.of('condor_submit', '.condor.submit', '-terse', '-queue', '1')
-            // println( '#!/bin/bash\n' + submitDirective(task) + cmd + '\n')
-            // return '#!/bin/bash\n' + submitDirective(task) + cmd + '\n'
-        }
+        //     // create an inline script to launch the job execution
+        //     // println('#!/bin/bash\n' + submitDirective(task) + cmd + '\n')
+        //     // return List.of('condor_submit', '.condor.submit', '-terse', '-queue', '1')
+        //     // println( '#!/bin/bash\n' + submitDirective(task) + cmd + '\n')
+        //     // return '#!/bin/bash\n' + submitDirective(task) + cmd + '\n'
+        // }
     }
 }
