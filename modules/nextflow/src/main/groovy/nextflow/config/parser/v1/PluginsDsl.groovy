@@ -13,23 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package nextflow.config.parser.v1
 
-echo = true
+import groovy.transform.CompileStatic
 
-includeConfig "${'delta'}.config"
+/**
+ * Model a mini-dsl for plugins configuration
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@CompileStatic
+class PluginsDsl {
 
-profiles {
+    private Set<String> plugins = []
 
-	standard {
-	  	process {
-	  		cpus = 2 
-	  		memory = '2GB'
-	  	}
-	}
-	
-	
-	advanced {
-		includeConfig "omega.config"
-	}
+    Set<String> getPlugins() { plugins }
+
+    void id( String plg ) {
+        if( !plg )
+            throw new IllegalArgumentException("Plugin id cannot be empty or null")
+        plugins << plg
+    }
 
 }

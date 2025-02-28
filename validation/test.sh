@@ -11,11 +11,7 @@ export NXF_CMD=${NXF_CMD:-$(get_abs_filename ../launch.sh)}
 export NXF_ANSI_LOG=false
 export NXF_DISABLE_CHECK_LATEST=true
 
-#
-# Integration tests
-#
-if [[ $TEST_MODE == 'test_integration' ]]; then
-
+test_integration() {
     (
       cd ../tests/
       sudo bash cleanup.sh
@@ -47,6 +43,21 @@ if [[ $TEST_MODE == 'test_integration' ]]; then
     $NXF_CMD run nextflow-io/rnaseq-nf -with-docker $OPTS -resume
 
     exit 0
+}
+
+#
+# Integration tests
+#
+if [[ $TEST_MODE == 'test_integration' ]]; then
+  test_integration
+fi
+
+#
+# Integration tests (strict syntax)
+#
+if [[ $TEST_MODE == 'test_parser_v2' ]]; then
+  export NXF_SYNTAX_PARSER=v2
+  test_integration
 fi
 
 #
