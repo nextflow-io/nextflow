@@ -15,37 +15,28 @@
  * limitations under the License.
  */
 
-process touch {
-  input:
-    tuple val(id), val(fileName)
-  output:
-    tuple val(id), path('file*')
-
-  script:
-  """
-  echo Creating $id
-  touch $fileName
-  """
-}
-
-process makeFiles {
-  input:
-    tuple val(id), path('file_x')
-
-  output:
-    tuple val(id), path('*')
-
-  script:
-  """
-   cp file_x copy_$id
-   touch beta_$id
-  """
-}
-
-
 workflow {
-  def x = Channel.from( ['a', 'file1'], ['b','file2'] )
-  touch(x)
-  makeFiles(touch.out)
-  makeFiles.out.view()
+  foo()
+}
+
+process foo {
+    debug true
+    time { 1.h * task.attempt }
+    memory { 1.GB * task.attempt }
+    errorStrategy { task.exitStatus == 5 && task.attempt<3 ? 'retry' : 'terminate' }
+    maxErrors 10
+    maxRetries 10
+
+    script:
+    """
+    if [[ -f $PWD/marker ]]; then
+    	echo DONE - mem: $task.memory - time: $task.time
+    	exit 0
+    else
+    	echo FAIL
+    	touch $PWD/marker
+    	exit 5;
+    fi
+    """
+
 }

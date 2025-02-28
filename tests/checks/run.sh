@@ -24,6 +24,7 @@ function echo_yellow() {
 # Some vars 
 #
 NXF_CMD=${NXF_CMD:-nextflow}
+NXF_SYNTAX_PARSER=${NXF_SYNTAX_PARSER:-v1}
 REPORT=$PWD/.report
 WITH_DOCKER=${WITH_DOCKER:=''}
 TRAVIS_PULL_REQUEST=${TRAVIS_PULL_REQUEST:=false}
@@ -73,14 +74,15 @@ rm -rf $REPORT
 list=${1:-'../*.nf'}
 
 function can_run() {
-    if [[ `grep -c "$1" .IGNORE` != 0 ]]; then
+    if [[ $(grep -c "$1" .IGNORE) != 0 ]]; then
         echo 'no'
-    elif [[ ! $WITH_DOCKER && `grep -c "$1" .IGNORE-DOCKER` != 0 ]]; then
+    elif [[ ! $WITH_DOCKER && $(grep -c "$1" .IGNORE-DOCKER) != 0 ]]; then
         echo 'no'
-    elif [[ $TRAVIS_PULL_REQUEST != false && `grep -c "$1" .IGNORE-TRAVIS-PR` != 0 ]]; then 
-        # https://docs.travis-ci.com/user/pull-requests/#Pull-Requests-and-Security-Restrictions
-        echo 'no'    
-    elif [[ -f .IGNORE-JAVA-$TEST_JDK && `grep -c "$1" .IGNORE-JAVA-$TEST_JDK` != 0 ]]; then
+    elif [[ -f .IGNORE-JAVA-$TEST_JDK && $(grep -c "$1" ".IGNORE-JAVA-$TEST_JDK") != 0 ]]; then
+        echo 'no'
+    elif [[ $NXF_SYNTAX_PARSER == 'v1' && $1 =~ -v2\.nf ]]; then
+        echo 'no'
+    elif [[ $NXF_SYNTAX_PARSER == 'v2' && $1 =~ -v1\.nf ]]; then
         echo 'no'
     else
         echo 'yes'

@@ -15,18 +15,42 @@
  * limitations under the License.
  */
 
-process printEnv {
-    debug true
-
-    input:
-    env 'HELLO'
-
-    script:
-    '''
-    echo $HELLO world!
-    '''
-}
+items = [0,1,2,3,4]
+decode = ['zero','one','two','three','fourth']
 
 workflow {
-    Channel.of('hello', 'hola', 'bonjour', 'ciao') | printEnv
+  channel.fromList(items) | foo
+  channel.fromList(items) | bar
+}
+
+process foo {
+    debug true
+    tag "${decode[x]}"
+
+    input:
+    val x
+
+    when:
+    x >= 3
+
+    script:
+    """
+    echo Foo $x
+    """
+}
+
+process bar {
+    debug true
+    tag "${decode[x]}"
+
+    input:
+    val x
+
+    when:
+    x < 3
+
+    script:
+    """
+    echo Bar $x
+    """
 }

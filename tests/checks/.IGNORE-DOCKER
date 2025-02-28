@@ -1,8 +1,9 @@
 # TESTS TO BE IGNORED WHEN A DOCKER ENGINE 
 # IS NOT AVAILABLE
-ampa.nf
-blast-parallel.nf
-blast.nf
-workdir-with-blank.nf
-stress.nf
+ampa-dsl2.nf
+blast-dsl2.nf
+blast-parallel-dsl2.nf
 env-container.nf
+env-container-with(special)chars.nf
+stress.nf
+workdir-with-blank.nf

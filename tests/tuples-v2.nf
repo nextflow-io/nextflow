@@ -23,8 +23,8 @@ process makeFiles {
 
   script:
   """
-   cp file_x copy_$id
-   touch beta_$id
+  cp file_x copy_$id
+  touch beta_$id
   """
 }
 
