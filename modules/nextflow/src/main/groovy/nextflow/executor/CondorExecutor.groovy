@@ -246,9 +246,9 @@ class CondorExecutor extends AbstractGridExecutor {
                 : executor.createBashWrapperBuilder(task)
         }
 
-        protected String stdinLauncherScript() {
-            return fusionEnabled() ? fusionStdinWrapper() : wrapperFile.text
-        }
+        // protected String stdinLauncherScript() {
+        //     return fusionEnabled() ? fusionStdinWrapper() : wrapperFile.text
+        // }
 
         protected String fusionStdinWrapper() {
             final submit = fusionSubmitCli()
