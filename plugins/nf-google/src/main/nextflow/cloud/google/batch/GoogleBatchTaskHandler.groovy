@@ -17,8 +17,6 @@
 
 package nextflow.cloud.google.batch
 
-import nextflow.cloud.google.batch.client.BatchConfig
-
 import java.nio.file.Path
 import java.util.regex.Pattern
 
