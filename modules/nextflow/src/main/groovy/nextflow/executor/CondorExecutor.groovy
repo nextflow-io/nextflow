@@ -46,10 +46,10 @@ class CondorExecutor extends AbstractGridExecutor {
         lines.join('\n')
     }
 
-    @Override
-    protected String getHeaderToken() {
-        throw new UnsupportedOperationException()
-    }
+    // @Override
+    // protected String getHeaderToken() {
+    //     throw new UnsupportedOperationException()
+    // }
 
 
     // Condor does not require a special token or header
