@@ -80,9 +80,7 @@ function can_run() {
         echo 'no'
     elif [[ -f .IGNORE-JAVA-$TEST_JDK && $(grep -c "$1" ".IGNORE-JAVA-$TEST_JDK") != 0 ]]; then
         echo 'no'
-    elif [[ $NXF_SYNTAX_PARSER == 'v1' && $1 =~ -v2\.nf ]]; then
-        echo 'no'
-    elif [[ $NXF_SYNTAX_PARSER == 'v2' && $1 =~ -v1\.nf ]]; then
+    elif [[ $NXF_SYNTAX_PARSER == 'v2' && $1 == v1-*.nf ]]; then
         echo 'no'
     else
         echo 'yes'
