@@ -19,15 +19,19 @@ package nextflow.script.parser.v2
 import java.security.CodeSource
 
 import groovy.transform.CompileStatic
+import nextflow.Session
 import nextflow.ast.NextflowXformImpl
 import nextflow.ast.OpXformImpl
+import nextflow.script.BaseScript
 import nextflow.script.control.ResolveVisitor
+import nextflow.script.parser.ScriptParserPluginFactory
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.Phases
+import org.codehaus.groovy.control.customizers.ImportCustomizer
 import org.codehaus.groovy.runtime.InvokerHelper
 
 /**
@@ -45,6 +49,10 @@ public class ScriptCompiler {
     private final Binding context
     private final CompilerConfiguration config
     private final ScriptClassLoader loader
+
+    public ScriptCompiler(Session session, Binding binding) {
+        this(session.classLoader, binding, getConfig(session))
+    }
 
     public ScriptCompiler(ClassLoader parent, Binding binding, CompilerConfiguration config) {
         this.loader = new ScriptClassLoader(parent, config)
@@ -65,6 +73,29 @@ public class ScriptCompiler {
     private Class parseClass(GroovyCodeSource codeSource) throws CompilationFailedException {
         // Don't cache scripts
         return loader.parseClass(codeSource, false)
+    }
+
+    private static CompilerConfiguration getConfig(Session session) {
+        final importCustomizer = new ImportCustomizer()
+        importCustomizer.addImports( java.nio.file.Path.name )
+        importCustomizer.addImports( nextflow.Channel.name )
+        importCustomizer.addImports( nextflow.util.Duration.name )
+        importCustomizer.addImports( nextflow.util.MemoryUnit.name )
+        importCustomizer.addImport( 'channel', nextflow.Channel.name )
+        importCustomizer.addStaticStars( nextflow.Nextflow.name )
+
+        final config = new CompilerConfiguration()
+        config.addCompilationCustomizers( importCustomizer )
+        config.setScriptBaseClass(BaseScript.class.getName())
+        config.setPluginFactory(new ScriptParserPluginFactory())
+
+        if( session?.debug )
+            config.debug = true
+
+        if( session?.classesDir )
+            config.setTargetDirectory(session.classesDir.toFile())
+
+        return config
     }
 
     private static class ScriptClassLoader extends GroovyClassLoader {

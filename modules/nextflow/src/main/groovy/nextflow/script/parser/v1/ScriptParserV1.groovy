@@ -47,11 +47,23 @@ import org.codehaus.groovy.control.customizers.ImportCustomizer
 @CompileStatic
 class ScriptParserV1 extends ScriptParser {
 
+    private ClassLoader classLoader
+
     private CompilerConfiguration config
 
     ScriptParserV1(Session session) {
         super(session)
+        this.classLoader = session.classLoader
     }
+
+    @Override
+    ScriptParserV1 setSession(Session session) {
+        super.setSession(session)
+        this.classLoader = session.classLoader
+        return this
+    }
+
+    protected ClassLoader getClassLoader() { classLoader }
 
     @Override
     protected BaseScript parse0(String scriptText, Path scriptPath) {

@@ -90,20 +90,6 @@ class ScriptParserV2Test extends Specification {
         result == 'Script_dd540db41b3a8b2a'
     }
 
-    def 'should set classpath' () {
-
-        given:
-        def CL = Mock(ClassLoader)
-        def SESS = Mock(Session) { getClassLoader() >> CL }
-
-        when:
-        def parser = new ScriptParserV2(SESS)
-        then:
-        parser.getSession() == SESS
-        parser.getClassLoader() == CL
-
-    }
-
     def 'should report compilation errors' () {
         given:
         def session = new Session()

@@ -29,8 +29,6 @@ import nextflow.exception.ScriptCompilationException
 @CompileStatic
 abstract class ScriptParser {
 
-    private ClassLoader classLoader
-
     private Session session
 
     private boolean module
@@ -47,12 +45,10 @@ abstract class ScriptParser {
 
     ScriptParser(Session session) {
         this.session = session
-        this.classLoader = session.classLoader
     }
 
     ScriptParser setSession(Session session) {
         this.session = session
-        this.classLoader = session.classLoader
         return this
     }
 
@@ -70,8 +66,6 @@ abstract class ScriptParser {
         this.binding = binding
         return this
     }
-
-    protected ClassLoader getClassLoader() { classLoader }
 
     protected Session getSession() { session }
 

@@ -20,20 +20,13 @@ import java.nio.file.Path
 
 import com.google.common.hash.Hashing
 import groovy.transform.CompileStatic
-import nextflow.Channel
-import nextflow.Nextflow
 import nextflow.Session
 import nextflow.exception.ScriptCompilationException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.script.BaseScript
 import nextflow.script.ScriptParser
-import nextflow.script.parser.ScriptParserPluginFactory
-import nextflow.util.Duration
-import nextflow.util.MemoryUnit
 import org.codehaus.groovy.control.CompilationFailedException
-import org.codehaus.groovy.control.CompilerConfiguration
-import org.codehaus.groovy.control.customizers.ImportCustomizer
 /**
  * Script parser implementation based on the Nextflow formal grammar.
  *
@@ -42,7 +35,7 @@ import org.codehaus.groovy.control.customizers.ImportCustomizer
 @CompileStatic
 class ScriptParserV2 extends ScriptParser {
 
-    private CompilerConfiguration config
+    private ScriptCompiler compiler
 
     ScriptParserV2(Session session) {
         super(session)
@@ -72,39 +65,15 @@ class ScriptParserV2 extends ScriptParser {
     }
 
     private ScriptCompiler getCompiler() {
-        if( !binding && session )
-            binding = session.binding
-        if( !binding )
-            throw new IllegalArgumentException("Missing Script binding object")
+        if( !compiler ) {
+            if( !binding && session )
+                binding = session.binding
+            if( !binding )
+                throw new IllegalArgumentException("Missing Script binding object")
+            compiler = new ScriptCompiler(session, binding)
+        }
 
-        return new ScriptCompiler(classLoader, binding, getConfig())
-    }
-
-    CompilerConfiguration getConfig() {
-        if( config )
-            return config
-
-        // define the imports
-        final importCustomizer = new ImportCustomizer()
-        importCustomizer.addImports( Path.name )
-        importCustomizer.addImports( Channel.name )
-        importCustomizer.addImports( Duration.name )
-        importCustomizer.addImports( MemoryUnit.name )
-        importCustomizer.addImport( 'channel', Channel.name )
-        importCustomizer.addStaticStars( Nextflow.name )
-
-        config = new CompilerConfiguration()
-        config.addCompilationCustomizers( importCustomizer )
-        config.setScriptBaseClass(BaseScript.class.getName())
-        config.setPluginFactory(new ScriptParserPluginFactory())
-
-        if( session?.debug )
-            config.debug = true
-
-        if( session?.classesDir )
-            config.setTargetDirectory(session.classesDir.toFile())
-
-        return config
+        return compiler
     }
 
     /**
