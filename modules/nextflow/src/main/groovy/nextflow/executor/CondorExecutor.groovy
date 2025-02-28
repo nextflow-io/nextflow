@@ -102,7 +102,7 @@ class CondorExecutor extends AbstractGridExecutor {
             result << "container_image = ${task.getContainer()}".toString()
         } else {
             result << "universe = vanilla"
-            result << "initialdir = ${TaskRun.workDir}".toString()
+            // result << "initialdir = ${TaskRun.workDir}".toString()
         }
 
         if( task.config.getCpus()>1 ) {
@@ -140,7 +140,7 @@ class CondorExecutor extends AbstractGridExecutor {
 
     @Override
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile) {
-        return pipeLauncherScriptd()
+        return pipeLauncherScript()
                 ? List.of('condor_submit', '-', '-terse',)
                 : List.of('condor_submit', '-terse', CMD_CONDOR)
     }
@@ -209,16 +209,6 @@ class CondorExecutor extends AbstractGridExecutor {
         return FusionHelper.isFusionEnabled(session)
     }
 
-    /*
-     * Prepare and launch the task in the underlying execution platform
-     */
-    @Override
-    GridTaskHandler createTaskHandler(TaskRun task) {
-        assert task
-        assert task.workDir
-
-        new CondorTaskHandler(task, this)
-    }
 
 
 
@@ -330,4 +320,15 @@ class CondorExecutor extends AbstractGridExecutor {
             // return '#!/bin/bash\n' + submitDirective(task) + cmd + '\n'
         }
     }
+    /*
+     * Prepare and launch the task in the underlying execution platform
+     */
+    @Override
+    GridTaskHandler createTaskHandler(TaskRun task) {
+        assert task
+        assert task.workDir
+
+        new CondorTaskHandler(task, this)
+    }
+
 }
