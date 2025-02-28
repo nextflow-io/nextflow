@@ -348,6 +348,12 @@ class NextflowTest extends Specification {
         def e = thrown(NoSuchFileException)
         e.message == foo.toString()
 
+        when:
+        Nextflow.file("$folder/*.txt", checkIfExists: true)
+        then:
+        e = thrown(NoSuchFileException)
+        e.message == "$folder/*.txt"
+
         cleanup:
         folder?.deleteDir()
     }

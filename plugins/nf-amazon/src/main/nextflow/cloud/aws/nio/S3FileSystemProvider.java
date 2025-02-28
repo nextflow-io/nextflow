@@ -835,7 +835,10 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		ClientConfiguration clientConfig = createClientConfig(props);
 
 		final String bucketName = S3Path.bucketName(uri);
-		final boolean global = bucketName!=null;
+        // do not use `global` flag for custom endpoint because
+        // when enabling that flag, it overrides S3 endpoints with AWS global endpoint
+        // see https://github.com/nextflow-io/nextflow/pull/5779
+		final boolean global = bucketName!=null && !awsConfig.getS3Config().isCustomEndpoint();
 		final AwsClientFactory factory = new AwsClientFactory(awsConfig, globalRegion(awsConfig));
 		client = new S3Client(factory.getS3Client(clientConfig, global));
 

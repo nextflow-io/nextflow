@@ -56,7 +56,7 @@ class OutputDslTest extends Specification {
 
         when:
         dsl.target('bar') {
-            path('barbar')
+            path { v -> "${'barbar'}" }
             index {
                 path 'index.csv'
             }

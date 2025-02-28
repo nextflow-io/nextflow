@@ -71,8 +71,6 @@ class ConfigBuilder {
 
     List<Path> parsedConfigFiles = []
 
-    List<String> parsedProfileNames
-
     boolean showClosures
 
     boolean stripSecrets
@@ -347,7 +345,7 @@ class ConfigBuilder {
         assert env != null
 
         final ignoreIncludes = options ? options.ignoreConfigIncludes : false
-        final slurper = new ConfigParser()
+        final slurper = ConfigParserFactory.create()
                 .setRenderClosureAsString(showClosures)
                 .setStripSecrets(stripSecrets)
                 .setIgnoreIncludes(ignoreIncludes)
@@ -384,9 +382,8 @@ class ConfigBuilder {
                 }
             }
 
-            this.parsedProfileNames = new ArrayList<>(slurper.getProfileNames())
             if( validateProfile ) {
-                checkValidProfile(slurper.getConditionalBlockNames())
+                checkValidProfile(slurper.getProfiles())
             }
 
         }
@@ -421,7 +418,7 @@ class ConfigBuilder {
 
         log.debug "Applying config profile: `${profile}`"
         def allNames = profile.tokenize(',')
-        slurper.registerConditionalBlock('profiles', allNames)
+        slurper.setProfiles(allNames)
 
         def config = parse0(slurper,entry)
         validate(config,entry)

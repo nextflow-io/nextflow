@@ -17,7 +17,7 @@
 package nextflow.script
 
 import groovyx.gpars.dataflow.DataflowVariable
-import nextflow.config.ConfigParser
+import nextflow.config.ConfigParserFactory
 import nextflow.exception.AbortRunException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.processor.TaskProcessor
@@ -330,7 +330,7 @@ class ScriptRunnerTest extends Dsl2Spec {
             '''
 
         and:
-        def session = new MockSession(new ConfigParser().parse(config))
+        def session = new MockSession(ConfigParserFactory.create().parse(config))
 
         when:
         new MockScriptRunner(session).setScript(script).execute()
@@ -378,7 +378,7 @@ class ScriptRunnerTest extends Dsl2Spec {
             '''
 
         and:
-        def session = new MockSession(new ConfigParser().parse(config))
+        def session = new MockSession(ConfigParserFactory.create().parse(config))
 
         when:
         new MockScriptRunner(session).setScript(script).execute()
@@ -413,7 +413,7 @@ class ScriptRunnerTest extends Dsl2Spec {
             workflow { hola() }               
             '''
         and:
-        def session = new MockSession(new ConfigParser().parse(config))
+        def session = new MockSession(ConfigParserFactory.create().parse(config))
 
         when:
         new MockScriptRunner(session).setScript(script).execute()
@@ -451,7 +451,7 @@ class ScriptRunnerTest extends Dsl2Spec {
             '''
 
         and:
-        def session = new MockSession(new ConfigParser().parse(config))
+        def session = new MockSession(ConfigParserFactory.create().parse(config))
 
         when:
         new MockScriptRunner(session).setScript(script).execute()
@@ -482,7 +482,7 @@ class ScriptRunnerTest extends Dsl2Spec {
             workflow { hola() }
             '''
         and:
-        def session = new MockSession(new ConfigParser().parse(config))
+        def session = new MockSession(ConfigParserFactory.create().parse(config))
 
         when:
         new MockScriptRunner(session).setScript(script).execute()
@@ -530,7 +530,7 @@ class ScriptRunnerTest extends Dsl2Spec {
             }
             '''
         and:
-        def session = new MockSession(new ConfigParser().parse(config))
+        def session = new MockSession(ConfigParserFactory.create().parse(config))
 
         when:
         def result = new MockScriptRunner(session)
@@ -684,7 +684,7 @@ class ScriptRunnerTest extends Dsl2Spec {
             '''
 
         and:
-        def session = new MockSession(new ConfigParser().parse(config))
+        def session = new MockSession(ConfigParserFactory.create().parse(config))
 
         when:
         def result = new MockScriptRunner(session).setScript(script).execute()
@@ -721,7 +721,7 @@ class ScriptRunnerTest extends Dsl2Spec {
             '''
 
         and:
-        def session = new MockSession(new ConfigParser().parse(config))
+        def session = new MockSession(ConfigParserFactory.create().parse(config))
 
         when:
         def result = new MockScriptRunner(session).setScript(script).execute()
@@ -759,7 +759,7 @@ class ScriptRunnerTest extends Dsl2Spec {
             '''
 
         and:
-        def session = new MockSession(new ConfigParser().parse(config))
+        def session = new MockSession(ConfigParserFactory.create().parse(config))
 
         when:
         def result = new MockScriptRunner(session).setScript(script).execute()

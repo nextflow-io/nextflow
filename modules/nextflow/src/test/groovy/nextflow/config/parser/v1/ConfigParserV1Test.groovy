@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.config
+package nextflow.config.parser.v1
 
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
@@ -25,6 +25,8 @@ import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
 import nextflow.SysEnv
+import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigClosurePlaceholder
 import nextflow.exception.ConfigParseException
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
@@ -35,7 +37,7 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ConfigParserTest extends Specification {
+class ConfigParserV1Test extends Specification {
 
     def 'should get an environment variable' () {
         given:
@@ -45,7 +47,7 @@ class ConfigParserTest extends Specification {
         def CONFIG = '''
         process.cpus = env('MAX_CPUS')
         '''
-        def config = new ConfigParser().parse(CONFIG)
+        def config = new ConfigParserV1().parse(CONFIG)
 
         then:
         config.process.cpus == '1'
@@ -61,16 +63,16 @@ class ConfigParserTest extends Specification {
             id 'foo'
             id 'bar'
             id 'bar'
-        } 
-             
+        }
+
         process {
             cpus = 1
-            mem = 2 
+            mem = 2
         }
         '''
 
         when:
-        def config = new ConfigParser().parse(CONFIG)
+        def config = new ConfigParserV1().parse(CONFIG)
 
         then:
         config.plugins == ['foo','bar'] as Set
@@ -84,12 +86,12 @@ class ConfigParserTest extends Specification {
         profiles {
             plugins {
                 id 'foo'
-            } 
+            }
         }
         '''
 
         when:
-        def config = new ConfigParser().parse(CONFIG)
+        def config = new ConfigParserV1().parse(CONFIG)
 
         then:
         def e = thrown(ConfigParseException)
@@ -129,7 +131,7 @@ class ConfigParserTest extends Specification {
         '''
 
         when:
-        def config = new ConfigParser().parse(text)
+        def config = new ConfigParserV1().parse(text)
         then:
         config.process.name == 'alpha'
         config.process.resources.cpus == 4
@@ -141,20 +143,20 @@ class ConfigParserTest extends Specification {
         when:
         def buffer = new StringWriter()
         config.writeTo(buffer)
-        def str = buffer.toString()
+        def str = buffer.toString().replaceAll('\t', '    ')
         then:
         str == '''
         process {
-        	name='alpha'
-        	resources {
-        		disk='1TB'
-        		cpus=4
-        		memory='8GB'
-        		nested {
-        			foo=1
-        			bar=2
-        		}
-        	}
+            name='alpha'
+            resources {
+                disk='1TB'
+                cpus=4
+                memory='8GB'
+                nested {
+                    foo=1
+                    bar=2
+                }
+            }
         }
         '''.stripIndent().leftTrim()
 
@@ -193,7 +195,7 @@ class ConfigParserTest extends Specification {
         '''
 
         when:
-        def config = new ConfigParser().setBinding().parse(text)
+        def config = new ConfigParserV1().setBinding().parse(text)
         then:
         config.params.xxx == 'x'
         config.params.yyy == 'y'
@@ -251,7 +253,7 @@ class ConfigParserTest extends Specification {
         '''
 
         when:
-        def config = new ConfigParser().setBinding([MIN: 1, MAX: 32]).parse(main)
+        def config = new ConfigParserV1().setBinding([MIN: 1, MAX: 32]).parse(main)
         then:
         config.profiles.proc1.cpus == 4
         config.profiles.proc1.memory == '8GB'
@@ -308,7 +310,7 @@ class ConfigParserTest extends Specification {
         '''
 
         when:
-        def config = new ConfigParser().parse(main)
+        def config = new ConfigParserV1().parse(main)
         then:
         config.process.name == 'foo'
         config.process.resources.cpus == 4
@@ -372,8 +374,8 @@ class ConfigParserTest extends Specification {
         """
 
         when:
-        def config1 = new ConfigParser()
-                        .registerConditionalBlock('profiles','slow')
+        def config1 = new ConfigParserV1()
+                        .setProfiles(['slow'])
                         .parse(configText)
         then:
         config1.workDir == '/my/scratch'
@@ -382,8 +384,8 @@ class ConfigParserTest extends Specification {
         config1.process.disk == '100GB'
 
         when:
-        def config2 = new ConfigParser()
-                        .registerConditionalBlock('profiles','fast')
+        def config2 = new ConfigParserV1()
+                        .setProfiles(['fast'])
                         .parse(configText)
         then:
         config2.workDir == '/fast/scratch'
@@ -409,77 +411,19 @@ class ConfigParserTest extends Specification {
                 b = 2
             }
         }
-
-        servers {
-            local {
-                x = 1
-            }
-            test {
-                y = 2
-            }
-            prod {
-                z = 3
-            }
-        }
         '''
 
         when:
-        def slurper = new ConfigParser().registerConditionalBlock('profiles','alpha')
+        def slurper = new ConfigParserV1().setProfiles(['alpha'])
         slurper.parse(text)
         then:
-        slurper.getConditionalBlockNames() == ['alpha','beta'] as Set
+        slurper.getProfiles() == ['alpha','beta'] as Set
 
         when:
-        slurper = new ConfigParser().registerConditionalBlock('profiles','omega')
+        slurper = new ConfigParserV1().setProfiles(['omega'])
         slurper.parse(text)
         then:
-        slurper.getConditionalBlockNames() == ['alpha','beta'] as Set
-
-        when:
-        slurper = new ConfigParser().registerConditionalBlock('servers','xxx')
-        slurper.parse(text)
-        then:
-        slurper.getConditionalBlockNames() == ['local','test','prod'] as Set
-
-        when:
-        slurper = new ConfigParser().registerConditionalBlock('foo','bar')
-        slurper.parse(text)
-        then:
-        slurper.getConditionalBlockNames() == [] as Set
-    }
-
-    def 'should return the profile names' () {
-        given:
-        def text = '''
-        profiles {
-            alpha {
-                a = 1
-            }
-            beta {
-                b = 2
-            }
-        }
-
-        servers {
-            local {
-                x = 1
-            }
-            test {
-                y = 2
-            }
-            prod {
-                z = 3
-            }
-        }
-        '''
-
-        when:
-        def slurper = new ConfigParser()
-        slurper.parse(text)
-        then:
-        slurper.getProfileNames() == ['alpha','beta'] as Set
-        slurper.getConditionalBlockNames() == [] as Set
-
+        slurper.getProfiles() == ['alpha','beta'] as Set
     }
 
     def 'should disable includeConfig parsing' () {
@@ -494,12 +438,12 @@ class ConfigParserTest extends Specification {
         '''
 
         when:
-        def config = new ConfigParser().setIgnoreIncludes(true).parse(text)
+        def config = new ConfigParserV1().setIgnoreIncludes(true).parse(text)
         then:
         config.manifest.description == 'some text ..'
 
         when:
-        new ConfigParser().parse(text)
+        new ConfigParserV1().parse(text)
         then:
         thrown(NoSuchFileException)
 
@@ -512,7 +456,7 @@ class ConfigParserTest extends Specification {
         configFile.text = 'XXX.enabled = true'
 
         when:
-        new ConfigParser().parse(configFile)
+        new ConfigParserV1().parse(configFile)
         then:
         noExceptionThrown()
 
@@ -525,7 +469,7 @@ class ConfigParserTest extends Specification {
 
         given:
         ConfigObject result
-        def CONFIG = '''   
+        def CONFIG = '''
            str1 = 'hello'
            str2 = "${str1} world"
            closure1 = { "$str" }
@@ -533,7 +477,7 @@ class ConfigParserTest extends Specification {
            '''
 
         when:
-        result = new ConfigParser()
+        result = new ConfigParserV1()
                 .parse(CONFIG)
         then:
         result.str1 instanceof String
@@ -542,7 +486,7 @@ class ConfigParserTest extends Specification {
         result.map1.bar instanceof Closure
 
         when:
-        result = new ConfigParser()
+        result = new ConfigParserV1()
                 .setRenderClosureAsString(false)
                 .parse(CONFIG)
         then:
@@ -552,7 +496,7 @@ class ConfigParserTest extends Specification {
         result.map1.bar instanceof Closure
 
         when:
-        result = new ConfigParser()
+        result = new ConfigParserV1()
                     .setRenderClosureAsString(true)
                     .parse(CONFIG)
         then:
@@ -567,19 +511,19 @@ class ConfigParserTest extends Specification {
 
     def 'should handle extend mem and duration units' () {
         ConfigObject result
-        def CONFIG = '''   
+        def CONFIG = '''
             mem1 = 1.GB
             mem2 = 1_000_000.toMemory()
             mem3 = MemoryUnit.of(2_000)
             time1 = 2.hours
             time2 = 60_000.toDuration()
             time3 = Duration.of(120_000)
-            flag = 10000 < 1.GB 
+            flag = 10000 < 1.GB
            '''
 
         when:
-        result = new ConfigParser()
-                .parse(CONFIG)   
+        result = new ConfigParserV1()
+                .parse(CONFIG)
         then:
         result.mem1 instanceof MemoryUnit
         result.mem1 == MemoryUnit.of('1 GB')
@@ -615,11 +559,11 @@ class ConfigParserTest extends Specification {
 
         folder.resolve('conf/remote.config').text = '''
         process {
-            cpus = 4 
+            cpus = 4
             memory = '10GB'
         }
         '''
-        
+
         when:
         def url = 'http://localhost:9900/nextflow.config' as Path
         def cfg = new ConfigBuilder().buildGivenFiles(url)
@@ -652,7 +596,7 @@ class ConfigParserTest extends Specification {
         '''
 
         when:
-        def config = new ConfigParser().parse(CONFIG)
+        def config = new ConfigParserV1().parse(CONFIG)
 
         then:
         config.params.foo.bar == 'bar1'
@@ -670,7 +614,7 @@ class ConfigParserTest extends Specification {
             }
         '''
         and:
-        config = new ConfigParser().parse(CONFIG)
+        config = new ConfigParserV1().parse(CONFIG)
 
         then:
         config.params.foo.bar == 'bar1'
@@ -725,7 +669,7 @@ class ConfigParserTest extends Specification {
         """
 
         when:
-        def config1 = new ConfigParser()
+        def config1 = new ConfigParserV1()
                 .parse(configText)
         then:
         config1.workDir == '/my/scratch'
@@ -739,6 +683,26 @@ class ConfigParserTest extends Specification {
 
     }
 
+    def 'should apply profiles in the order they were defined' () {
+        given:
+        def CONFIG = '''
+            profiles {
+                foo {
+                    params.input = 'foo'
+                }
+
+                bar {
+                    params.input = 'bar'
+                }
+            }
+            '''
+
+        when:
+        def config = new ConfigParserV1().setProfiles(['bar', 'foo']).parse(CONFIG)
+
+        then:
+        config.params.input == 'bar'
+    }
 
     static class ConfigFileHandler implements HttpHandler {
 

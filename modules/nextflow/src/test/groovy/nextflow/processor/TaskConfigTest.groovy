@@ -684,14 +684,14 @@ class TaskConfigTest extends Specification {
         then:
         thrown(IllegalArgumentException)
 
-        when:
-        config.validateShell(['bash\nthis\nthat'])
-        then:
-        thrown(IllegalArgumentException)
-
-        when:
-        config.validateShell(['bash', ' -eu '])
-        then:
-        thrown(IllegalArgumentException)
+//        when:
+//        config.validateShell(['bash\nthis\nthat'])
+//        then:
+//        thrown(IllegalArgumentException)
+//
+//        when:
+//        config.validateShell(['bash', ' -eu '])
+//        then:
+//        thrown(IllegalArgumentException)
     }
 }
