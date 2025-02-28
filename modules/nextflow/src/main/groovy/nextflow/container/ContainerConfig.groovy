@@ -124,11 +124,14 @@ class ContainerConfig extends LinkedHashMap {
         final eng = getEngine()
         if( !eng )
             return null
-        if( eng=='docker' )
-            return '--rm --device /dev/fuse --security-opt apparmor=unconfined --security-opt seccomp=unconfined'
-        if( eng=='podman' )
-            return '--rm --device /dev/fuse'
-        if( singularityOciMode() )
+        // JLL code to implement docker/podman rootless fuse access. I don't think it works. I am currently trying to identify the source of another bug, and this code is currently not being used. Reverting to nextflow standard.
+        // if( eng=='docker' )
+        //     return '--rm --device /dev/fuse --security-opt apparmor=unconfined --security-opt seccomp=unconfined'
+        // if( eng=='podman' )
+        //     return '--rm --device /dev/fuse'
+        if( eng=='docker' || eng=='podman' )
+            return '--rm --privileged'
+        if( isSingularityOciMode() )
             return '-B /dev/fuse'
         if( eng=='singularity' || eng=='apptainer' )
             return null

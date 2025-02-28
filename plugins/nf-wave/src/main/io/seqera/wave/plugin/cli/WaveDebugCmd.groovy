@@ -118,7 +118,7 @@ class WaveDebugCmd {
 
     protected WaveRunCmd buildWaveRunCmd(String scheme) {
         final result = new WaveRunCmd(session)
-        result.withContainerParams([tty:true])
+        result.withContainerParams([tty:true, privileged: true])
         if( scheme=='s3' ) {
             result.withEnvironment('AWS_ACCESS_KEY_ID')
             result.withEnvironment('AWS_SECRET_ACCESS_KEY')
