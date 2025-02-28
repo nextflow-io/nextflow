@@ -170,6 +170,7 @@ class PublishOp {
         }
 
         private void publish0(Path source, String target) {
+            log.trace "Publishing ${source} to ${target}"
             if( mapping == null )
                 mapping = [:]
             final filename = getTaskDir(source).relativize(source).toString()
@@ -198,10 +199,13 @@ class PublishOp {
                 new CsvWriter(header: indexOpts.header, sep: indexOpts.sep).apply(indexRecords, indexPath)
             }
             else if( ext == 'json' ) {
-                indexPath.text = DumpHelper.prettyPrint(indexRecords)
+                indexPath.text = DumpHelper.prettyPrintJson(indexRecords)
+            }
+            else if( ext == 'yaml' || ext == 'yml' ) {
+                indexPath.text = DumpHelper.prettyPrintYaml(indexRecords)
             }
             else {
-                log.warn "Invalid extension '${ext}' for index file '${indexPath}' -- should be 'csv' or 'json'"
+                log.warn "Invalid extension '${ext}' for index file '${indexPath}' -- should be CSV, JSON, or YAML"
             }
             session.notifyFilePublish(indexPath)
         }

@@ -586,7 +586,7 @@ The following directives are available for each output in the output block:
   : When `true`, the keys of the first record are used as the column names (default: `false`). Can also be a list of column names. Only used for `csv` files.
 
   `path`
-  : The name of the index file relative to the target path (required). Can be a `csv` or `json` file.
+  : The name of the index file relative to the base output directory (required). Can be a CSV, JSON, or YAML file.
 
   `sep`
   : The character used to separate values (default: `','`). Only used for `csv` files.
