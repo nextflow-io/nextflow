@@ -78,5 +78,4 @@ class DefaultCidStore implements CidStore {
 
     static Path getMetadataPath(DataConfig config){ config.store.location.resolve('.meta') }
 
-
 }

@@ -41,9 +41,6 @@ abstract class CidStoreFactory implements ExtensionPoint {
         final factory = all.first()
         log.debug "Using Nextflow CID store factory: ${factory.getClass().getName()}"
         return factory.newInstance(config)
-
-
     }
-
 
 }

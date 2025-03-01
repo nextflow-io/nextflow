@@ -43,8 +43,8 @@ class CidFileSystem extends FileSystem {
     private Path basePath
 
     /*
-    * Only needed to prevent serialization issues - see https://github.com/nextflow-io/nextflow/issues/5208
-    */
+     * Only needed to prevent serialization issues - see https://github.com/nextflow-io/nextflow/issues/5208
+     */
     protected CidFileSystem(){}
 
     CidFileSystem(CidFileSystemProvider provider, DataConfig config) {

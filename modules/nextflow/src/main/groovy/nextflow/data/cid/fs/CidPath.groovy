@@ -45,11 +45,11 @@ import nextflow.file.FileHelper
 @CompileStatic
 class CidPath implements Path {
 
-    static public String SEPARATOR = '/'
+    static public final String SEPARATOR = '/'
     public static final String METADATA_FILE = '.data.json'
-    public static final String CID_PROT = "${SCHEME}://".toString()
+    public static final String CID_PROT = "${SCHEME}://"
 
-    static private String[] EMPTY = new String[] {}
+    static private final String[] EMPTY = new String[] {}
 
     private CidFileSystem fileSystem
 
@@ -161,7 +161,6 @@ class CidPath implements Path {
             default:
                 return resolve0(fs, more[0], more[1..-1] as String[])
         }
-
     }
 
     static private String norm0(String path) {
@@ -298,7 +297,6 @@ class CidPath implements Path {
         return resolve(that)
     }
 
-
     @Override
     Path relativize(Path other) {
         if( CidPath.class != other.class ) {
@@ -383,6 +381,5 @@ class CidPath implements Path {
     String toString() {
         filePath
     }
-
 
 }

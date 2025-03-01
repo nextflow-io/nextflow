@@ -35,4 +35,5 @@ class DefaultCidStoreFactory extends CidStoreFactory{
         cidStore.open(config)
         return cidStore
     }
+
 }

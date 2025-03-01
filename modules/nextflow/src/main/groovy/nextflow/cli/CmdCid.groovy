@@ -58,8 +58,6 @@ class CmdCid extends CmdBase {
         commands << new CmdLog()
         commands << new CmdShow()
         commands << new CmdLineage()
-
-
     }
 
     @Parameter(hidden = true)
@@ -115,12 +113,9 @@ class CmdCid extends CmdBase {
                     .build()
             final session = new Session(config)
             printHistory(session.cidStore)
-
         }
 
         private void printHistory(CidStore store) {
-
-
             final historyFile = store.getHistoryFile()
             if (historyFile.exists()) {
                 def table = new TableBuilder(cellSeparator: '\t')
@@ -140,6 +135,7 @@ class CmdCid extends CmdBase {
             println 'Usage: nextflow cid log'
         }
     }
+
     class CmdShow implements SubCmd{
 
         @Override
@@ -175,7 +171,6 @@ class CmdCid extends CmdBase {
             println 'Usage: nextflow cid show <cid reference>'
         }
     }
-
 
     class CmdLineage implements SubCmd {
 

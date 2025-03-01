@@ -136,7 +136,7 @@ class CidFileSystemProvider extends FileSystemProvider {
 
             @Override
             int read(ByteBuffer dst) throws IOException {
-                channel.read(dst)
+                return channel.read(dst)
             }
 
             @Override
@@ -146,7 +146,7 @@ class CidFileSystemProvider extends FileSystemProvider {
 
             @Override
             long position() throws IOException {
-                channel.position()
+                return channel.position()
             }
 
             @Override
@@ -156,7 +156,7 @@ class CidFileSystemProvider extends FileSystemProvider {
 
             @Override
             long size() throws IOException {
-                channel.size()
+                return channel.size()
             }
 
             @Override
@@ -166,7 +166,7 @@ class CidFileSystemProvider extends FileSystemProvider {
 
             @Override
             boolean isOpen() {
-                channel.isOpen()
+                return channel.isOpen()
             }
 
             @Override
