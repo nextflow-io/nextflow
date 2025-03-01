@@ -65,9 +65,9 @@ class CidObserver implements TraceObserver {
     private WorkflowResults workflowResults
     private Map<String,String> outputsStoreDirCid = new HashMap<String,String>(10)
 
-    CidObserver(Session session){
+    CidObserver(Session session, CidStore store){
         this.session = session
-        this.store = session.cidStore
+        this.store = store
     }
 
     @Override

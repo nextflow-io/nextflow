@@ -4,6 +4,7 @@ import java.nio.file.Path
 
 import nextflow.Session
 import nextflow.data.cid.CidObserver
+import nextflow.data.cid.CidStoreFactory
 
 /**
  * Creates Nextflow observes object
@@ -26,14 +27,14 @@ class DefaultObserverFactory implements TraceObserverFactory {
         createTimelineObserver(result)
         createDagObserver(result)
         createAnsiLogObserver(result)
-        if( session.cidEnabled ){
-            createCidObserver(result)
-        }
+        createCidObserver(result)
         return result
     }
 
     protected void createCidObserver(Collection<TraceObserver> result) {
-        result.add( new CidObserver(this.session) )
+        final store = CidStoreFactory.getOrCreate(session)
+        if( store )
+            result.add( new CidObserver(this.session, store) )
     }
 
     protected void createAnsiLogObserver(Collection<TraceObserver> result) {

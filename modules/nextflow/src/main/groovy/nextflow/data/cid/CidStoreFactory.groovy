@@ -19,6 +19,7 @@ package nextflow.data.cid
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.Session
 import nextflow.data.config.DataConfig
 import nextflow.plugin.Plugins
 import org.pf4j.ExtensionPoint
@@ -32,6 +33,10 @@ import org.pf4j.ExtensionPoint
 @CompileStatic
 abstract class CidStoreFactory implements ExtensionPoint {
 
+    private static CidStore instance
+
+    private static boolean initialized
+
     protected abstract CidStore newInstance(DataConfig config)
 
     static CidStore create(DataConfig config){
@@ -41,6 +46,20 @@ abstract class CidStoreFactory implements ExtensionPoint {
         final factory = all.first()
         log.debug "Using Nextflow CID store factory: ${factory.getClass().getName()}"
         return factory.newInstance(config)
+    }
+
+    static CidStore getOrCreate(Session session) {
+        if( instance || initialized )
+            return instance
+        synchronized (session) {
+            if( instance || initialized )
+                return instance
+            initialized = true
+            final config = DataConfig.create(session)
+            if( !config.enabled )
+                return null
+            return instance = create(config)
+        }
     }
 
 }
