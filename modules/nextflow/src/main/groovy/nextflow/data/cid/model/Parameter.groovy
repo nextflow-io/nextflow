@@ -21,18 +21,14 @@ import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 
 /**
+ * Model Workflow and Task Parameters.
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Jorge Ejarque <jorge.ejarque@seqera.io
  */
 @Canonical
 @CompileStatic
-class TaskOutput {
-    DataType type
-    String uri
-    String realPath
-    String hash
-    long size
-    long createdAt
-    long modifiedAt
-    List<String> annotations
+class Parameter {
+    String type
+    String name
+    Object value
 }

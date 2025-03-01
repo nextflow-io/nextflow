@@ -27,6 +27,7 @@ import nextflow.data.config.DataConfig
 import nextflow.exception.AbortOperationException
 
 /**
+ * Default Implementation for the a CID store.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -34,18 +35,21 @@ import nextflow.exception.AbortOperationException
 @CompileStatic
 class DefaultCidStore implements CidStore {
 
+    private static String HISTORY_FILE_NAME =".history"
+    private Path metaLocation
     private Path location
 
     void open(DataConfig config) {
-        location = config.store.location.resolve('.meta')
-        if( !Files.exists(location) && !Files.createDirectories(location) ) {
-            throw new AbortOperationException("Unable to create CID store directory: $location")
+        location = config.store.location
+        metaLocation = getMetadataPath(config)
+        if( !Files.exists(metaLocation) && !Files.createDirectories(metaLocation) ) {
+            throw new AbortOperationException("Unable to create CID store directory: $metaLocation")
         }
     }
 
     @Override
     void save(String key, Object value) {
-        final path = location.resolve(key)
+        final path = metaLocation.resolve(key)
         Files.createDirectories(path.parent)
         log.debug "Save CID file path: $path"
         path.text = value
@@ -53,15 +57,26 @@ class DefaultCidStore implements CidStore {
 
     @Override
     void list(String key, Consumer<String> consumer) {
-        for( Path it : Files.walk(location.resolve(key)) ) {
-            final fileKey = location.relativize(it).toString()
+        for( Path it : Files.walk(metaLocation.resolve(key)) ) {
+            final fileKey = metaLocation.relativize(it).toString()
             consumer.accept(fileKey)
         }
     }
 
     @Override
     Object load(String key) {
-        location.resolve(key).text
+        metaLocation.resolve(key).text
     }
+
+    @Override
+    Path getPath(){ location }
+
+    @Override
+    CidHistoryFile getHistoryFile(){
+        return new CidHistoryFile(metaLocation.resolve(HISTORY_FILE_NAME))
+    }
+
+    static Path getMetadataPath(DataConfig config){ config.store.location.resolve('.meta') }
+
 
 }

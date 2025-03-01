@@ -14,14 +14,25 @@
  * limitations under the License.
  *
  */
+package nextflow.data.cid
 
-package nextflow.data.cid.model
+import groovy.transform.CompileStatic
+import nextflow.data.config.DataConfig
+import nextflow.plugin.Priority
 
 /**
- * Possible metadata type entries.
+ * Default Factory for CidStore
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
-enum DataType {
-    TaskRun, Workflow, WorkflowRun, TaskOutput, WorkflowOutput, WorkflowResults
+@CompileStatic
+@Priority(0)
+class DefaultCidStoreFactory extends CidStoreFactory{
+
+    @Override
+    protected CidStore newInstance(DataConfig config) {
+        final cidStore = new DefaultCidStore()
+        cidStore.open(config)
+        return cidStore
+    }
 }

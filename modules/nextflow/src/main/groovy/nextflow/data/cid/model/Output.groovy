@@ -17,11 +17,22 @@
 
 package nextflow.data.cid.model
 
+import groovy.transform.Canonical
+import groovy.transform.CompileStatic
+
 /**
- * Possible metadata type entries.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-enum DataType {
-    TaskRun, Workflow, WorkflowRun, TaskOutput, WorkflowOutput, WorkflowResults
+@Canonical
+@CompileStatic
+class Output {
+    DataType type
+    String path
+    String checksum
+    String source
+    long size
+    long createdAt
+    long modifiedAt
+    List<String> annotations
 }

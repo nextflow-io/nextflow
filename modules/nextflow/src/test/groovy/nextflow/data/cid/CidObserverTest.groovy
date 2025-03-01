@@ -17,41 +17,117 @@
 
 package nextflow.data.cid
 
+import groovy.json.JsonOutput
+import nextflow.data.config.DataConfig
+import nextflow.processor.TaskConfig
+import nextflow.processor.TaskProcessor
+import nextflow.script.ScriptBinding
+import nextflow.script.WorkflowMetadata
+import nextflow.util.CacheHelper
+import nextflow.util.PathNormalizer
+
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
-import java.nio.file.attribute.FileTime
-import java.time.Instant
 
 import com.google.common.hash.HashCode
 import nextflow.Session
 import nextflow.processor.TaskId
 import nextflow.processor.TaskRun
 import spock.lang.Specification
+
+import static nextflow.data.cid.fs.CidPath.CID_PROT
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class CidObserverTest extends Specification {
 
+    def 'should save workflow' (){
+        given:
+        def folder = Files.createTempDirectory('test')
+        def config = [workflow:[data:[store:[location:folder.toString()]]]]
+        def store = new DefaultCidStore();
+        def uniqueId = UUID.randomUUID()
+        def scriptFile = folder.resolve("main.nf")
+        def metadata = Mock(WorkflowMetadata){
+            getRepository() >> "https://nextflow.io/nf-test/"
+            getCommitId() >> "123456"
+            getScriptId() >> "78910"
+            getScriptFile() >> scriptFile
+            getProjectDir() >> folder.resolve("projectDir")
+            getWorkDir() >> folder.resolve("workDir")
+        }
+        def session = Mock(Session) {
+            getConfig() >> config
+            getCidStore() >> store
+            getUniqueId() >> uniqueId
+            getRunName() >> "test_run"
+            getWorkflowMetadata() >> metadata
+            getParams() >> new ScriptBinding.ParamsMap()
+        }
+        store.open(DataConfig.create(session))
+        def observer = new CidObserver(session)
+        def expectedString = '{"type":"WorkflowRun","workflow":{"type": "Workflow",' +
+            '"mainScriptFile":{"path":"file://' + scriptFile.toString() + '", "checksum": "78910"},' +
+            '"otherScriptFiles": [], "repository": "https://nextflow.io/nf-test/",' +
+            '"commitId": "123456" },' +
+            '"sessionId": "' + uniqueId + '",' +
+            '"name": "test_run", "params": []}'
+        when:
+        observer.onFlowCreate(session)
+        observer.onFlowBegin()
+        then:
+        folder.resolve(".meta/${observer.executionHash}/.data.json").text == JsonOutput.prettyPrint(expectedString)
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should save task run' () {
         given:
         def folder = Files.createTempDirectory('test')
         def config = [workflow:[data:[store:[location:folder.toString()]]]]
-        def session = Mock(Session) { getConfig()>>config }
-        def observer = new CidObserver()
-        observer.onFlowCreate(session)
+        def store = new DefaultCidStore();
+        def uniqueId = UUID.randomUUID()
+        def session = Mock(Session) {
+            getConfig()>>config
+            getCidStore()>>store
+            getUniqueId()>>uniqueId
+            getRunName()>>"test_run"
+        }
+        store.open(DataConfig.create(session))
+        def observer = new CidObserver(session)
         and:
         def hash = HashCode.fromInt(123456789)
         and:
+        def processor = Mock(TaskProcessor){
+            getTaskGlobalVars(_) >> [:]
+            getTaskBinEntries(_) >> []
+        }
         def task = Mock(TaskRun) {
             getId() >> TaskId.of(100)
             getName() >> 'foo'
             getHash() >> hash
+            getProcessor() >> processor
+            getSource() >> 'echo task source'
         }
+        def sourceHash =CacheHelper.hasher('echo task source').hash().toString()
+        def normalizer = Mock(PathNormalizer.class) {
+            normalizePath( _ as Path) >> {Path p -> p?.toString()}
+            normalizePath( _ as String) >> {String p -> p}
+        }
+        def expectedString = '{"type":"TaskRun",' +
+            '"sessionId":"'+uniqueId.toString() + '",' +
+            '"name":"foo","code":"' + sourceHash + '",' +
+            '"inputs": null,"container": null,"conda": null,' +
+            '"spack": null,"architecture": null,' +
+            '"globalVars": {},"binEntries": [],"annotations":null}'
         when:
-        observer.storeTaskRun(task)
+        observer.storeTaskRun(task, normalizer)
         then:
-        folder.resolve(hash.toString()).text == '{"id":100,"name":"foo","hash":"15cd5b07","annotations":null}'
+        folder.resolve(".meta/${hash.toString()}/.data.json").text == JsonOutput.prettyPrint(expectedString)
 
         cleanup:
         folder?.deleteDir()
@@ -61,9 +137,13 @@ class CidObserverTest extends Specification {
         given:
         def folder = Files.createTempDirectory('test')
         def config = [workflow:[data:[store:[location:folder.toString()]]]]
-        def session = Mock(Session) { getConfig()>>config }
-        def observer = Spy(new CidObserver())
-        observer.onFlowCreate(session)
+        def store = new DefaultCidStore();
+        def session = Mock(Session) {
+            getConfig()>>config
+            getCidStore()>>store
+        }
+        store.open(DataConfig.create(session))
+        def observer = Spy(new CidObserver(session))
         and:
         def workDir = folder.resolve('12/34567890')
         Files.createDirectories(workDir)
@@ -71,6 +151,7 @@ class CidObserverTest extends Specification {
         def outFile = workDir.resolve('foo/bar/file.bam')
         Files.createDirectories(outFile.parent)
         outFile.text = 'some data'
+        def fileHash = CacheHelper.hasher(outFile).hash().toString()
         and:
         def hash = HashCode.fromInt(123456789)
         and:
@@ -81,24 +162,228 @@ class CidObserverTest extends Specification {
             getWorkDir() >> workDir
         }
         and:
-        def ts1 = Instant.ofEpochMilli(1737914400)
-        def ts2 = Instant.ofEpochMilli(1737914500)
-        def attrs = Mock(BasicFileAttributes) {
-            size() >> 100
-            creationTime() >> FileTime.from(ts1)
-            lastModifiedTime() >> FileTime.from(ts2)
-        }
+        def attrs = Files.readAttributes(outFile, BasicFileAttributes)
+        def expectedString = '{"type":"TaskOutput",' +
+            '"path":"' + outFile.toString() + '",' +
+            '"checksum":"'+ fileHash + '",' +
+            '"source":"cid://15cd5b07",' +
+            '"size":'+attrs.size() + ',' +
+            '"createdAt":' + attrs.creationTime().toMillis() + ',' +
+            '"modifiedAt":'+ attrs.lastModifiedTime().toMillis() + ',' +
+            '"annotations":null}'
+
         and:
         observer.readAttributes(outFile) >> attrs
 
         when:
         observer.storeTaskOutput(task, outFile)
         then:
-        folder.resolve("${hash}/foo/bar/file.bam").text
-            == '{"uri":"cid://15cd5b07/foo/bar/file.bam","size":100,"createdAt":1737914400,"modifiedAt":1737914500,"annotations":null}'
+        folder.resolve(".meta/${hash}/foo/bar/file.bam/.data.json").text
+            == JsonOutput.prettyPrint(expectedString)
 
         cleanup:
         folder?.deleteDir()
+    }
+
+    def 'should relativise task output dirs' (){
+        when:
+        def config = [workflow:[data:[store:[location:'cid']]]]
+        def store = new DefaultCidStore();
+        def session = Mock(Session) {
+            getConfig()>>config
+            getCidStore()>>store
+        }
+        def hash = HashCode.fromInt(123456789)
+        def taskConfig = Mock(TaskConfig){
+            getStoreDir() >> STORE_DIR
+        }
+        def task = Mock(TaskRun) {
+            getId() >> TaskId.of(100)
+            getName() >> 'foo'
+            getHash() >> hash
+            getWorkDir() >> WORK_DIR
+            getConfig() >> taskConfig
+        }
+        store.open(DataConfig.create(session))
+        def observer = new CidObserver(session)
+        then:
+        observer.getTaskRelative(task, PATH) == EXPECTED
+        where:
+        WORK_DIR                            | STORE_DIR                         | PATH                                          | EXPECTED
+        Path.of('/path/to/work/12/3456789') | Path.of('/path/to/storeDir')      | Path.of('/path/to/work/12/3456789/relative')  | "relative"
+        Path.of('/path/to/work/12/3456789') | Path.of('/path/to/storeDir')      | Path.of('/path/to/storeDir/relative')         | "relative"
+        Path.of('work/12/3456789')          | Path.of('storeDir')               | Path.of('work/12/3456789/relative')           | "relative"
+        Path.of('work/12/3456789')          | Path.of('storeDir')               | Path.of('storeDir/relative')                  | "relative"
+        Path.of('work/12/3456789')          | Path.of('storeDir')               | Path.of('results/relative')                   | "results/relative"
+        Path.of('/path/to/work/12/3456789') | Path.of('storeDir')               | Path.of('./relative')                         | "relative"
+    }
+
+    def 'should return exception when relativize task output dirs' (){
+        when:
+            def config = [workflow:[data:[store:[location:'cid']]]]
+            def store = new DefaultCidStore();
+            def session = Mock(Session) {
+                getConfig()>>config
+                getCidStore()>>store
+            }
+        def hash = HashCode.fromInt(123456789)
+        def taskConfig = Mock(TaskConfig){
+            getStoreDir() >> STORE_DIR
+        }
+        def task = Mock(TaskRun) {
+            getId() >> TaskId.of(100)
+            getName() >> 'foo'
+            getHash() >> hash
+            getWorkDir() >> WORK_DIR
+            getConfig() >> taskConfig
+        }
+        store.open(DataConfig.create(session))
+        def observer = new CidObserver(session)
+        observer.getTaskRelative(task, PATH)
+        then:
+            def e = thrown(Exception)
+            e.message == "Cannot asses the relative path for output $PATH of ${task.name}".toString()
+
+        where:
+        WORK_DIR                            | STORE_DIR                         | PATH
+        Path.of('/path/to/work/12/3456789') | Path.of('/path/to/storeDir')      | Path.of('/another/path/relative')
+        Path.of('/path/to/work/12/3456789') | Path.of('/path/to/storeDir')      | Path.of('../path/to/storeDir/relative')
+    }
+
+    def 'should relativise workflow output dirs' (){
+        when:
+            def config = [workflow:[data:[store:[location:'cid']]]]
+            def store = new DefaultCidStore();
+            def session = Mock(Session) {
+                getOutputDir()>>OUTPUT_DIR
+                getConfig()>>config
+                getCidStore()>>store
+            }
+            store.open(DataConfig.create(session))
+            def observer = new CidObserver(session)
+        then:
+            observer.getWorkflowRelative(PATH) == EXPECTED
+        where:
+        OUTPUT_DIR                      | PATH                                  | EXPECTED
+        Path.of('/path/to/outDir')      | Path.of('/path/to/outDir/relative')   | "relative"
+        Path.of('outDir')               | Path.of('outDir/relative')            | "relative"
+        Path.of('/path/to/outDir')      | Path.of('results/relative')           | "results/relative"
+        Path.of('/path/to/outDir')      | Path.of('./relative')                 | "relative"
+
+
+    }
+
+    def 'should return exception when relativise workflow output dirs' (){
+        when:
+            def config = [workflow:[data:[store:[location:'cid']]]]
+            def store = new DefaultCidStore();
+            def session = Mock(Session) {
+                getOutputDir()>>OUTPUT_DIR
+                getConfig()>>config
+                getCidStore()>>store
+            }
+            def observer = new CidObserver(session)
+            observer.getWorkflowRelative(PATH)
+        then:
+            def e = thrown(Exception)
+            e.message == "Cannot asses the relative path for workflow output $PATH"
+        where:
+        OUTPUT_DIR                      | PATH                                  | EXPECTED
+        Path.of('/path/to/outDir')      | Path.of('/another/path/')             | "relative"
+        Path.of('/path/to/outDir')      | Path.of('../relative')                | "relative"
+
+
+    }
+
+    def 'should save workflow output' (){
+        given:
+        def folder = Files.createTempDirectory('test')
+        def config = [workflow:[data:[store:[location:folder.toString()]]]]
+        def store = new DefaultCidStore();
+        def outputDir = folder.resolve('results')
+        def uniqueId = UUID.randomUUID()
+        def scriptFile = folder.resolve("main.nf")
+        def workDir= folder.resolve("work")
+        def metadata = Mock(WorkflowMetadata){
+            getRepository() >> "https://nextflow.io/nf-test/"
+            getCommitId() >> "123456"
+            getScriptId() >> "78910"
+            getScriptFile() >> scriptFile
+            getProjectDir() >> folder.resolve("projectDir")
+            getWorkDir() >> workDir
+        }
+        def session = Mock(Session) {
+            getConfig()>>config
+            getCidStore()>>store
+            getOutputDir()>>outputDir
+            getWorkDir() >> workDir
+            getWorkflowMetadata()>>metadata
+            getUniqueId()>>uniqueId
+            getRunName()>>"test_run"
+            getParams() >> new ScriptBinding.ParamsMap()
+        }
+        store.open(DataConfig.create(session))
+        def observer = new CidObserver(session)
+
+        when: 'Starting workflow'
+            observer.onFlowCreate(session)
+            observer.onFlowBegin()
+        then: 'History file should contain execution hash'
+            def cid = store.getHistoryFile().getRunCid(uniqueId).substring(CID_PROT.size())
+            cid == observer.executionHash
+
+        when: ' publish output with source file'
+            def outFile1 = outputDir.resolve('foo/file.bam')
+            Files.createDirectories(outFile1.parent)
+            outFile1.text = 'some data1'
+            def sourceFile1 = workDir.resolve('12/3987/file.bam')
+            Files.createDirectories(sourceFile1.parent)
+            sourceFile1.text = 'some data1'
+            observer.onFilePublish(outFile1, sourceFile1)
+        then: 'check file 1 output metadata in cid store'
+            def attrs1 = Files.readAttributes(outFile1, BasicFileAttributes)
+            def fileHash1 = CacheHelper.hasher(outFile1).hash().toString()
+            def expectedString1 =  '{"type":"WorkflowOutput",' +
+                '"path":"' + outFile1.toString() + '",' +
+                '"checksum":"'+ fileHash1 + '",' +
+                '"source":"cid://123987/file.bam",' +
+                '"size":'+attrs1.size() + ',' +
+                '"createdAt":' + attrs1.creationTime().toMillis() + ',' +
+                '"modifiedAt":'+ attrs1.lastModifiedTime().toMillis() + ',' +
+                '"annotations":null}'
+            folder.resolve(".meta/${observer.executionHash}/foo/file.bam/.data.json").text == JsonOutput.prettyPrint(expectedString1)
+
+        when: 'publish without source path'
+        def outFile2 = outputDir.resolve('foo/file2.bam')
+            Files.createDirectories(outFile2.parent)
+            outFile2.text = 'some data2'
+            def attrs2 = Files.readAttributes(outFile2, BasicFileAttributes)
+            def fileHash2 = CacheHelper.hasher(outFile2).hash().toString()
+            observer.onFilePublish(outFile2)
+        then: 'Check outFile2 metadata in cid store'
+            def expectedString2 =  '{"type":"WorkflowOutput",' +
+                '"path":"' + outFile2.toString() + '",' +
+                '"checksum":"'+ fileHash2 + '",' +
+                '"source":"cid://' + observer.executionHash +'",' +
+                '"size":'+attrs2.size() + ',' +
+                '"createdAt":' + attrs2.creationTime().toMillis() + ',' +
+                '"modifiedAt":'+ attrs2.lastModifiedTime().toMillis() + ',' +
+                '"annotations":null}'
+            folder.resolve(".meta/${observer.executionHash}/foo/file2.bam/.data.json").text == JsonOutput.prettyPrint(expectedString2)
+
+        when: 'Workflow complete'
+            observer.onFlowComplete()
+        then: 'Check history file is updated and Workflow Result is written in the cid store'
+            def expectedString3 =  '{"type":"WorkflowResults",' +
+                '"run":"cid://' + observer.executionHash +'",' +
+                '"outputs": [ "cid://'+ observer.executionHash + '/foo/file.bam",' +
+                '"cid://'+ observer.executionHash + '/foo/file2.bam" ]}'
+            def finalCid = store.getHistoryFile().getRunCid(uniqueId).substring(CID_PROT.size())
+            finalCid != observer.executionHash
+            folder.resolve(".meta/${finalCid}/.data.json").text == JsonOutput.prettyPrint(expectedString3)
+
+        cleanup:
+            folder?.deleteDir()
     }
 
 }

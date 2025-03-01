@@ -21,6 +21,7 @@ import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 
 /**
+ * Models a task execution.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -28,8 +29,15 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class TaskRun {
     DataType type
-    int id
+    String sessionId
     String name
-    String hash
+    String code
+    List<Parameter> inputs
+    String container
+    String conda
+    String spack
+    String architecture
+    Map globalVars
+    List<DataPath> binEntries
     List<String> annotations
 }

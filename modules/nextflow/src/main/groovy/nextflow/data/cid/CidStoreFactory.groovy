@@ -17,28 +17,33 @@
 
 package nextflow.data.cid
 
-import java.nio.file.Path
-import java.util.function.Consumer
-
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import nextflow.data.config.DataConfig
+import nextflow.plugin.Plugins
+import org.pf4j.ExtensionPoint
+
 /**
+ * Factory for CidStore
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
+@Slf4j
 @CompileStatic
-interface CidStore {
+abstract class CidStoreFactory implements ExtensionPoint {
 
-    void open(DataConfig config)
+    protected abstract CidStore newInstance(DataConfig config)
 
-    void save(String key, Object value)
+    static CidStore create(DataConfig config){
+        final all = Plugins.getPriorityExtensions(CidStoreFactory)
+        if( !all )
+            throw new IllegalStateException("Unable to find Nextflow CID store factory")
+        final factory = all.first()
+        log.debug "Using Nextflow CID store factory: ${factory.getClass().getName()}"
+        return factory.newInstance(config)
 
-    void list(String key, Consumer<String> consumer)
 
-    Object load(String key)
+    }
 
-    Path getPath()
-
-    CidHistoryFile getHistoryFile()
 
 }
