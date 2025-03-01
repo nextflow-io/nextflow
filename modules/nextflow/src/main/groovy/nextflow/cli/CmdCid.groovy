@@ -26,6 +26,7 @@ import nextflow.config.ConfigBuilder
 import nextflow.dag.MermaidHtmlRenderer
 import nextflow.data.cid.CidHistoryFile
 import nextflow.data.cid.CidStore
+import nextflow.data.cid.CidStoreFactory
 import nextflow.data.cid.model.DataType
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
@@ -112,7 +113,8 @@ class CmdCid extends CmdBase {
                     .setBaseDir(Paths.get('.'))
                     .build()
             final session = new Session(config)
-            printHistory(session.cidStore)
+            final store = CidStoreFactory.getOrCreate(session)
+            printHistory(store)
         }
 
         private void printHistory(CidStore store) {
@@ -157,8 +159,7 @@ class CmdCid extends CmdBase {
                     .setOptions(getLauncher().getOptions())
                     .setBaseDir(Paths.get('.'))
                     .build()
-            final session = new Session(config)
-            final store = session.cidStore
+            final store = CidStoreFactory.getOrCreate(new Session(config))
             try {
                 println store.load(key).toString()
             }catch (Throwable e){
@@ -196,8 +197,7 @@ class CmdCid extends CmdBase {
                     .setOptions(getLauncher().getOptions())
                     .setBaseDir(Paths.get('.'))
                     .build()
-                final session = new Session(config)
-                final store = session.cidStore
+                final store = CidStoreFactory.getOrCreate(new Session(config))
                 final template = readTemplate()
                 final network = getLineage(store, args[0])
                 Path file = Path.of(args[1])

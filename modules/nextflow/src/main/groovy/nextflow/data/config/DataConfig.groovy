@@ -31,8 +31,11 @@ class DataConfig {
 
     final DataStoreOpts store
 
+    final boolean enabled
+
     DataConfig(Map opts) {
         this.store = new DataStoreOpts(opts.store as Map ?: Map.of())
+        this.enabled = opts.store != null
     }
 
     static Map<String,Object> asMap() {

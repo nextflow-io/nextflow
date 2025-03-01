@@ -16,11 +16,6 @@
 
 package nextflow
 
-import nextflow.data.cid.CidStore
-import nextflow.data.cid.CidStoreFactory
-import nextflow.data.cid.DefaultCidStore
-import nextflow.data.config.DataConfig
-
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -259,14 +254,6 @@ class Session implements ISession {
 
     private boolean statsEnabled
 
-    private volatile boolean cidEnabled
-
-    boolean getCidEnabled() { cidEnabled }
-
-    private CidStore cidStore
-
-    CidStore getCidStore() { cidStore }
-
     private WorkflowMetadata workflowMetadata
 
     private WorkflowStatsObserver statsObserver
@@ -405,11 +392,6 @@ class Session implements ISession {
 
         // -- file porter config
         this.filePorter = new FilePorter(this)
-
-        if(config.navigate('workflow.data')) {
-            this.cidEnabled = true
-            this.cidStore = CidStoreFactory.create(DataConfig.create(this))
-        }
 
     }
 
