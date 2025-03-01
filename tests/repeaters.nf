@@ -23,6 +23,7 @@ process hola {
     each y
     each z
 
+    script:
     """
     echo 'x: $x; y: $y; z: $z'
     """
@@ -35,6 +36,7 @@ process foo {
     input:
     each v
 
+    script:
     """
     echo foo $v
     """

@@ -8,6 +8,7 @@ process stress_1cpu {
 
 process stress_2cpu {
   cpus 2
+  script:
   """
   stress -c 2 -t 10
   """
@@ -15,6 +16,7 @@ process stress_2cpu {
 
 process stress_100mega {
   memory 150.MB
+  script:
   """
   stress -m 1 --vm-bytes 100000000 -t 10
   """
@@ -23,6 +25,7 @@ process stress_100mega {
 process stress_200mega {
   memory 250.MB
   // note: mem usage should not be aggregated 
+  script:
   """
   stress -m 1 --vm-bytes 200000000 -t 5
   stress -m 1 --vm-bytes 100000000 -t 5
@@ -33,6 +36,7 @@ process stress_300mega {
   memory 350.MB
   cpus 2
   // note: two parallel workers of 150MB => 300 MB
+  script:
   """
   stress -m 2 --vm-bytes 150000000 -t 5
   """
@@ -46,6 +50,7 @@ process io_write_100mega {
 
 process io_write_200mega {
   cpus 2
+  script:
   """
   write.pl file1.txt 104857600 &
   pid=\$!

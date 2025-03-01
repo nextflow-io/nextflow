@@ -20,6 +20,7 @@ process foo {
     val shell
     output:
     eval "$shell --version | cat -", emit: shell_version
+    script:
     '''
     echo Hello
     '''

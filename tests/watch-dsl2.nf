@@ -9,8 +9,9 @@ process align {
   path fasta
 
   output:
-  path aln
+  path 'aln'
 
+  script:
   """
   t_coffee -in $fasta 1> aln
   """

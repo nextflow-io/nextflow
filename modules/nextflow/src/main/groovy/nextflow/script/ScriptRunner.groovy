@@ -225,7 +225,7 @@ class ScriptRunner {
     }
 
     protected void parseScript( ScriptFile scriptFile, String entryName ) {
-        scriptParser = new ScriptParser(session)
+        scriptParser = ScriptParserFactory.create(session)
                             .setEntryName(entryName)
                             // setting module true when running in "inspect" mode to prevent the running the entry workflow
                             .setModule(ContainerInspectMode.active())

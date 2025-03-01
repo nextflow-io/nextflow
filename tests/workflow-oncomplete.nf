@@ -29,6 +29,7 @@ process sayHello {
   input:
   val x
   
+  script:
   """
   ${params.command} '$x world!'
   """

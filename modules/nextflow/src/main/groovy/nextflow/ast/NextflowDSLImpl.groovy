@@ -356,44 +356,27 @@ class NextflowDSLImpl implements ASTTransformation {
             MethodCallExpression callx
             VariableExpression varx
 
-            if( (callx=isMethodCallX(stat.expression)) && isThisX(callx.objectExpression) ) {
-                final name = "_${type}_${callx.methodAsString}"
-                return stmt( callThisX(name, callx.arguments) )
-            }
-
             if( (varx=isVariableX(stat.expression)) ) {
-                final name = "_${type}_${varx.name}"
-                return stmt( callThisX(name) )
+                return stmt( callThisX("_${type}_", args(constX(varx.name))) )
             }
 
             if( type == WORKFLOW_EMIT ) {
                 return createAssignX(stat, body, type, uniqueNames)
             }
 
-            syntaxError(stat, "Workflow malformed parameter definition")
+            syntaxError(stat, "Invalid workflow ${type}")
             return stat
         }
 
         protected Statement createAssignX(ExpressionStatement stat, List<Statement> body, String type, Set<String> uniqueNames) {
             BinaryExpression binx
-            MethodCallExpression callx
-            Expression args=null
 
             if( (binx=isAssignX(stat.expression)) ) {
                 // keep the statement in body to allow it to be evaluated
                 body.add(stat)
                 // and create method call expr to capture the var name in the emission
                 final left = (VariableExpression)binx.leftExpression
-                final name = "_${type}_${left.name}"
-                return stmt( callThisX(name) )
-            }
-
-            if( (callx=isMethodCallX(stat.expression)) && callx.objectExpression.text!='this' && hasTo(callx)) {
-                // keep the args
-                args = callx.arguments
-                // replace the method call expression with a property
-                stat.expression = new PropertyExpression(callx.objectExpression, callx.method)
-                // then, fallback to default case
+                return stmt( callThisX("_${type}_", args(constX(left.name))) )
             }
 
             // wrap the expression into a assignment expression
@@ -405,19 +388,7 @@ class NextflowDSLImpl implements ASTTransformation {
             body.add(stmt(assign))
 
             // the call method statement for the emit declaration
-            final name="_${type}_${var}"
-            callx =  args ? callThisX(name, args) : callThisX(name)
-            return stmt(callx)
-        }
-
-        protected boolean hasTo(MethodCallExpression callX) {
-            def tupleX = isTupleX(callX.arguments)
-            if( !tupleX ) return false
-            if( !tupleX.expressions ) return false
-            def mapX = isMapX(tupleX.expressions[0])
-            if( !mapX ) return false
-            def entry = mapX.getMapEntryExpressions().find { isConstX(it.keyExpression).text=='to' }
-            return entry != null
+            return stmt( callThisX("_${type}_", args(constX(var))) )
         }
 
         protected String getNextName(Set<String> allNames) {
