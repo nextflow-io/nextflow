@@ -63,7 +63,7 @@ A hash for an input file is calculated from the complete file path, the last mod
 
 ### Inconsistent file attributes
 
-Some shared file systems, such as NFS, may report inconsistent file timestamps. If you encounter this problem, use the `'lenient'` {ref}`caching mode <process-cache>` to ignore the last modified timestamp and use only the file path.
+Some shared file systems, such as NFS, may report inconsistent file timestamps. If you encounter this problem, use the `'lenient'` {ref}`caching mode <process-cache>` to ignore the last modified timestamp and only use the file path.
 
 (cache-failure-race-condition)=
 
