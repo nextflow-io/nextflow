@@ -22,6 +22,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.data.config.DataConfig
 import nextflow.plugin.Plugins
+import nextflow.util.TestOnly
 import org.pf4j.ExtensionPoint
 
 /**
@@ -62,7 +63,8 @@ abstract class CidStoreFactory implements ExtensionPoint {
         }
     }
 
-    static void clean(){
+    @TestOnly
+    static void reset(){
         synchronized (CidStoreFactory.class) {
             instance = null
             initialized = false

@@ -38,11 +38,11 @@ class CmdCidTest extends Specification {
 
     def cleanup() {
         Plugins.stop()
-        CidStoreFactory.clean()
+        CidStoreFactory.reset()
     }
 
     def setupSpec() {
-        CidStoreFactory.clean()
+        CidStoreFactory.reset()
     }
 
     /*
