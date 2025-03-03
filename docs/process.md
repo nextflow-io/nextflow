@@ -566,7 +566,7 @@ path('pair_*.txt', arity: '2')      // exactly two files are expected
 path('many_*.txt', arity: '1..*')   // one or more files are expected
 ```
 
-When a task is executed, Nextflow will check whether the received files for each path input match the declared arity, and fail if they do not. When the arity is `'1'`, the corresponding input or output variable will be a single file; otherwise, it will be a list of files.
+When a task is executed, Nextflow will check whether the received files for each path input match the declared arity, and fail if they do not. When the arity is `'1'`, the corresponding input variable will be a single file; otherwise, it will be a list of files.
 
 ### Dynamic input file names
 
@@ -921,22 +921,6 @@ In the above example, the `randomNum` process creates a file named `result.txt` 
 
 Refer to the {ref}`process reference <process-reference-outputs>` for the list of available options for `path` outputs.
 
-:::{versionadded} 23.09.0-edge
-:::
-
-By default, `path` outputs will accept any number of matching files from the task directory. The `arity` option can be used to enforce the expected number of files, either as a number or a range.
-
-For example:
-
-```nextflow
-output:
-path('one.txt', arity: '1')         // exactly one file is expected
-path('pair_*.txt', arity: '2')      // exactly two files are expected
-path('many_*.txt', arity: '1..*')   // one or more files are expected
-```
-
-When a task completes, Nextflow will check whether the produced files for each path output match the declared arity, and fail if they do not.
-
 ### Multiple output files
 
 When an output file name contains a `*` or `?` wildcard character, it is interpreted as a [glob][glob] path matcher. This allows you to capture multiple files into a list and emit the list as a single value. For example:
@@ -980,6 +964,22 @@ Although the input files matching a glob output declaration are not included in 
 :::
 
 Read more about glob syntax at the following link [What is a glob?][glob]
+
+:::{versionadded} 23.09.0-edge
+:::
+
+The `arity` option can be used to enforce the expected number of files, either as a number or a range.
+
+For example:
+
+```nextflow
+output:
+path('one.txt', arity: '1')         // exactly one file is expected
+path('pair_*.txt', arity: '2')      // exactly two files are expected
+path('many_*.txt', arity: '1..*')   // one or more files are expected
+```
+
+When a task completes, Nextflow will check whether the produced files for each path output match the declared arity, and fail if they do not. When the arity is `'1'`, the corresponding output will be a single file; otherwise, it will be a list of files.
 
 ### Dynamic output file names
 
