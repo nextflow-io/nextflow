@@ -83,14 +83,18 @@ class CondorExecutor extends AbstractGridExecutor {
         result << "log = ${TaskRun.CMD_LOG}".toString()
 
         if ( ! isFusionEnabled() ) {
-            result << "out = ${TaskRun.CMD_OUTFILE}".toString()
-            result << "error = ${TaskRun.CMD_ERRFILE}".toString()
+            result << "out = ${TaskRun.workDir}/${TaskRun.CMD_OUTFILE}".toString()
+            result << "error = ${TaskRun.workDir}/${TaskRun.CMD_ERRFILE}".toString()
             result << "stream_out = true"
             result << "stream_error = true"
-            result << "executable = ${TaskRun.CMD_RUN}".toString()
+            result << "executable = ${TaskRun.workDir}/${TaskRun.CMD_RUN}".toString()
 
             // result << "transfer_files = NO" // note: this will result in jobs only being run in shared file systems, as God and Nextflow intended. HT Condor will only work with Nextflow and a shared filesystem, either a physical one (this case) or one provided by Fusion (in which case, Fusion's s3 filesystem will prov)
         } else {
+            result << "out = ${TaskRun.workDir}/${TaskRun.CMD_OUTFILE}".toString()
+            result << "error = ${TaskRun.workDir}/${TaskRun.CMD_ERRFILE}".toString()
+            result << "stream_out = true"
+            result << "stream_error = true"
             result << "getenv = true"
             // executable will be added by CondorTaskHandler in Fusion setups
         }
