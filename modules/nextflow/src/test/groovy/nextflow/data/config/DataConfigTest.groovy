@@ -31,12 +31,22 @@ class DataConfigTest extends Specification {
         def config = new DataConfig(Map.of())
         then:
         config.store.location == Path.of('.').resolve('data').toAbsolutePath().normalize()
+        !config.enabled
+    }
+
+    def 'should create default with enable' () {
+        when:
+        def config = new DataConfig([enabled: true])
+        then:
+        config.store.location == Path.of('.').resolve('data').toAbsolutePath().normalize()
+        config.enabled
     }
 
     def 'should create data config' () {
         when:
-        def config = new DataConfig(store: [location: "/some/data/store"])
+        def config = new DataConfig(enabled: true, store: [location: "/some/data/store"])
         then:
         config.store.location == Path.of("/some/data/store")
+        config.enabled
     }
 }

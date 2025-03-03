@@ -47,7 +47,7 @@ class CidObserverTest extends Specification {
     def 'should save workflow' (){
         given:
         def folder = Files.createTempDirectory('test')
-        def config = [workflow:[data:[store:[location:folder.toString()]]]]
+        def config = [workflow:[data:[enabled: true, store:[location:folder.toString()]]]]
         def store = new DefaultCidStore();
         def uniqueId = UUID.randomUUID()
         def scriptFile = folder.resolve("main.nf")
@@ -87,7 +87,7 @@ class CidObserverTest extends Specification {
     def 'should save task run' () {
         given:
         def folder = Files.createTempDirectory('test')
-        def config = [workflow:[data:[store:[location:folder.toString()]]]]
+        def config = [workflow:[data:[enabled: true, store:[location:folder.toString()]]]]
         def store = new DefaultCidStore();
         def uniqueId = UUID.randomUUID()
         def session = Mock(Session) {
@@ -134,7 +134,7 @@ class CidObserverTest extends Specification {
     def 'should save task output' () {
         given:
         def folder = Files.createTempDirectory('test')
-        def config = [workflow:[data:[store:[location:folder.toString()]]]]
+        def config = [workflow:[data:[enabled: true, store:[location:folder.toString()]]]]
         def store = new DefaultCidStore();
         def session = Mock(Session) {
             getConfig()>>config
@@ -184,7 +184,7 @@ class CidObserverTest extends Specification {
 
     def 'should relativise task output dirs' (){
         when:
-        def config = [workflow:[data:[store:[location:'cid']]]]
+        def config = [workflow:[data:[enabled: true, store:[location:'cid']]]]
         def store = new DefaultCidStore();
         def session = Mock(Session) {
             getConfig()>>config
@@ -216,7 +216,7 @@ class CidObserverTest extends Specification {
 
     def 'should return exception when relativize task output dirs' (){
         when:
-            def config = [workflow:[data:[store:[location:'cid']]]]
+            def config = [workflow:[data:[enabled: true, store:[location:'cid']]]]
             def store = new DefaultCidStore();
             def session = Mock(Session) {
                 getConfig()>>config
@@ -247,7 +247,7 @@ class CidObserverTest extends Specification {
 
     def 'should relativise workflow output dirs' (){
         when:
-            def config = [workflow:[data:[store:[location:'cid']]]]
+            def config = [workflow:[data:[enabled: true, store:[location:'cid']]]]
             def store = new DefaultCidStore();
             def session = Mock(Session) {
                 getOutputDir()>>OUTPUT_DIR
@@ -269,7 +269,7 @@ class CidObserverTest extends Specification {
 
     def 'should return exception when relativise workflow output dirs' (){
         when:
-            def config = [workflow:[data:[store:[location:'cid']]]]
+            def config = [workflow:[data:[enabled: true, store:[location:'cid']]]]
             def store = new DefaultCidStore();
             def session = Mock(Session) {
                 getOutputDir()>>OUTPUT_DIR
@@ -291,7 +291,7 @@ class CidObserverTest extends Specification {
     def 'should save workflow output' (){
         given:
         def folder = Files.createTempDirectory('test')
-        def config = [workflow:[data:[store:[location:folder.toString()]]]]
+        def config = [workflow:[data:[enabled: true, store:[location:folder.toString()]]]]
         def store = new DefaultCidStore();
         def outputDir = folder.resolve('results')
         def uniqueId = UUID.randomUUID()

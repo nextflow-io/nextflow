@@ -20,6 +20,7 @@ package nextflow.data.config
 import groovy.transform.CompileStatic
 import nextflow.Global
 import nextflow.Session
+import nextflow.util.TestOnly
 
 /**
  * Model workflow data config
@@ -35,7 +36,7 @@ class DataConfig {
 
     DataConfig(Map opts) {
         this.store = new DataStoreOpts(opts.store as Map ?: Map.of())
-        this.enabled = opts.store != null
+        this.enabled = opts.enabled as boolean ?: false
     }
 
     static Map<String,Object> asMap() {

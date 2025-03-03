@@ -55,7 +55,7 @@ class CmdCidTest extends Specification {
         given:
             def folder = Files.createTempDirectory('test').toAbsolutePath()
             def configFile = folder.resolve('nextflow.config')
-            configFile.text = "workflow.data.store.location = '$folder'".toString()
+            configFile.text = "workflow.data.enabled = true\nworkflow.data.store.location = '$folder'".toString()
             def historyFile = folder.resolve(".meta/.history")
             Files.createDirectories(historyFile.parent)
             def uniqueId = UUID.randomUUID()
@@ -79,15 +79,15 @@ class CmdCidTest extends Specification {
             stdout.size() == 2
             stdout[1] == recordEntry
 
-        cleanup:
-            folder?.deleteDir()
+        //cleanup:
+            //folder?.deleteDir()
     }
 
     def 'should print no history' (){
         given:
         def folder = Files.createTempDirectory('test').toAbsolutePath()
         def configFile = folder.resolve('nextflow.config')
-        configFile.text = "workflow.data.store.location = '$folder'".toString()
+        configFile.text = "workflow.data.enabled = true\nworkflow.data.store.location = '$folder'".toString()
         def historyFile = folder.resolve(".meta/.history")
         Files.createDirectories(historyFile.parent)
         def launcher = Mock(Launcher){
@@ -115,7 +115,7 @@ class CmdCidTest extends Specification {
         given:
         def folder = Files.createTempDirectory('test').toAbsolutePath()
         def configFile = folder.resolve('nextflow.config')
-        configFile.text = "workflow.data.store.location = '$folder'".toString()
+        configFile.text = "workflow.data.enabled = true\nworkflow.data.store.location = '$folder'".toString()
         def cidFile = folder.resolve(".meta/12345/.data.json")
         Files.createDirectories(cidFile.parent)
         def launcher = Mock(Launcher){
@@ -153,7 +153,7 @@ class CmdCidTest extends Specification {
         given:
         def folder = Files.createTempDirectory('test').toAbsolutePath()
         def configFile = folder.resolve('nextflow.config')
-        configFile.text = "workflow.data.store.location = '$folder'".toString()
+        configFile.text = "workflow.data.enabled = true\nworkflow.data.store.location = '$folder'".toString()
         def launcher = Mock(Launcher){
             getOptions() >> new CliOptions(config: [configFile.toString()])
         }
@@ -181,7 +181,7 @@ class CmdCidTest extends Specification {
         def folder = Files.createTempDirectory('test').toAbsolutePath()
         def configFile = folder.resolve('nextflow.config')
         def outputHtml = folder.resolve('lineage.html')
-        configFile.text = "workflow.data.store.location = '$folder'".toString()
+        configFile.text = "workflow.data.enabled = true\nworkflow.data.store.location = '$folder'".toString()
         def launcher = Mock(Launcher){
             getOptions() >> new CliOptions(config: [configFile.toString()])
         }
@@ -257,10 +257,5 @@ class CmdCidTest extends Specification {
         folder?.deleteDir()
 
     }
-
-
-
-
-
 
 }
