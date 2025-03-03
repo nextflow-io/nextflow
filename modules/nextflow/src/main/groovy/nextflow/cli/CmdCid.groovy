@@ -114,7 +114,11 @@ class CmdCid extends CmdBase {
                     .build()
             final session = new Session(config)
             final store = CidStoreFactory.getOrCreate(session)
-            printHistory(store)
+            if (store) {
+                printHistory(store)
+            } else {
+                println "Error CID store not loaded. Check Nextflow configuration."
+            }
         }
 
         private void printHistory(CidStore store) {
@@ -160,10 +164,14 @@ class CmdCid extends CmdBase {
                     .setBaseDir(Paths.get('.'))
                     .build()
             final store = CidStoreFactory.getOrCreate(new Session(config))
-            try {
-                println store.load(key).toString()
-            }catch (Throwable e){
-                println "Error loading ${args[0]}."
+            if (store) {
+                try {
+                    println store.load(key).toString()
+                } catch (Throwable e) {
+                    println "Error loading ${args[0]}."
+                }
+            } else {
+                println "Error CID store not loaded. Check Nextflow configuration."
             }
         }
 

@@ -51,7 +51,7 @@ abstract class CidStoreFactory implements ExtensionPoint {
     static CidStore getOrCreate(Session session) {
         if( instance || initialized )
             return instance
-        synchronized (session) {
+        synchronized (CidStoreFactory.class) {
             if( instance || initialized )
                 return instance
             initialized = true
@@ -59,6 +59,13 @@ abstract class CidStoreFactory implements ExtensionPoint {
             if( !config.enabled )
                 return null
             return instance = create(config)
+        }
+    }
+
+    static void clean(){
+        synchronized (CidStoreFactory.class) {
+            instance = null
+            initialized = false
         }
     }
 

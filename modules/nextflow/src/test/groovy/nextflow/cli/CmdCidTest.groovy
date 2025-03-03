@@ -17,7 +17,7 @@
 package nextflow.cli
 
 import groovy.json.JsonOutput
-import spock.lang.Shared
+import nextflow.data.cid.CidStoreFactory
 
 import java.nio.file.Files
 
@@ -28,7 +28,6 @@ import org.junit.Rule
 import spock.lang.Specification
 import test.OutputCapture
 
-import java.nio.file.Path
 
 /**
  * CLI cid Tests
@@ -39,17 +38,11 @@ class CmdCidTest extends Specification {
 
     def cleanup() {
         Plugins.stop()
+        CidStoreFactory.clean()
     }
 
-    @Shared
-    Path folder
-
-    def setupSpec(){
-        folder = Files.createTempDirectory('test').toAbsolutePath()
-    }
-
-    def cleanupSpec() {
-        folder?.deleteDir()
+    def setupSpec() {
+        CidStoreFactory.clean()
     }
 
     /*
@@ -60,6 +53,7 @@ class CmdCidTest extends Specification {
 
     def 'should print executions cids' (){
         given:
+            def folder = Files.createTempDirectory('test').toAbsolutePath()
             def configFile = folder.resolve('nextflow.config')
             configFile.text = "workflow.data.store.location = '$folder'".toString()
             def historyFile = folder.resolve(".meta/.history")
@@ -86,12 +80,12 @@ class CmdCidTest extends Specification {
             stdout[1] == recordEntry
 
         cleanup:
-            historyFile.delete()
-            configFile.delete()
+            folder?.deleteDir()
     }
 
     def 'should print no history' (){
         given:
+        def folder = Files.createTempDirectory('test').toAbsolutePath()
         def configFile = folder.resolve('nextflow.config')
         configFile.text = "workflow.data.store.location = '$folder'".toString()
         def historyFile = folder.resolve(".meta/.history")
@@ -114,12 +108,12 @@ class CmdCidTest extends Specification {
         stdout[0] == "No workflow runs CIDs found."
 
         cleanup:
-        historyFile.delete()
-        configFile.delete()
+        folder?.deleteDir()
     }
 
     def 'should show cid content' (){
         given:
+        def folder = Files.createTempDirectory('test').toAbsolutePath()
         def configFile = folder.resolve('nextflow.config')
         configFile.text = "workflow.data.store.location = '$folder'".toString()
         def cidFile = folder.resolve(".meta/12345/.data.json")
@@ -152,12 +146,12 @@ class CmdCidTest extends Specification {
             stdout.join('\n') == recordEntry
 
         cleanup:
-            configFile.delete()
-            cidFile.delete()
+            folder?.deleteDir()
     }
 
     def 'should warn if no cid content' (){
         given:
+        def folder = Files.createTempDirectory('test').toAbsolutePath()
         def configFile = folder.resolve('nextflow.config')
         configFile.text = "workflow.data.store.location = '$folder'".toString()
         def launcher = Mock(Launcher){
@@ -179,11 +173,12 @@ class CmdCidTest extends Specification {
             stdout[0] == "Error loading cid://12345."
 
         cleanup:
-            configFile.delete()
+            folder?.deleteDir()
     }
 
     def 'should get lineage cid content' (){
         given:
+        def folder = Files.createTempDirectory('test').toAbsolutePath()
         def configFile = folder.resolve('nextflow.config')
         def outputHtml = folder.resolve('lineage.html')
         configFile.text = "workflow.data.store.location = '$folder'".toString()
@@ -258,15 +253,8 @@ class CmdCidTest extends Specification {
         outputHtml.exists()
         outputHtml.text == expectedOutput
 
-
         cleanup:
-        configFile.delete()
-        cidFile.delete()
-        cidFile2.delete()
-        cidFile3.delete()
-        cidFile4.delete()
-        cidFile5.delete()
-        outputHtml.delete()
+        folder?.deleteDir()
 
     }
 
