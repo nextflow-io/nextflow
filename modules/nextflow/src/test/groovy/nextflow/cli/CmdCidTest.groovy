@@ -17,6 +17,7 @@
 package nextflow.cli
 
 import groovy.json.JsonOutput
+import nextflow.data.cid.CidStoreFactory
 
 import java.nio.file.Files
 
@@ -27,6 +28,7 @@ import org.junit.Rule
 import spock.lang.Specification
 import test.OutputCapture
 
+
 /**
  * CLI cid Tests
  *
@@ -36,7 +38,13 @@ class CmdCidTest extends Specification {
 
     def cleanup() {
         Plugins.stop()
+        CidStoreFactory.reset()
     }
+
+    def setupSpec() {
+        CidStoreFactory.reset()
+    }
+
     /*
      * Read more http://mrhaki.blogspot.com.es/2015/02/spocklight-capture-and-assert-system.html
      */
@@ -45,9 +53,9 @@ class CmdCidTest extends Specification {
 
     def 'should print executions cids' (){
         given:
-            def folder = Files.createTempDirectory('test')
+            def folder = Files.createTempDirectory('test').toAbsolutePath()
             def configFile = folder.resolve('nextflow.config')
-            configFile.text = "workflow.data.store.location = '$folder'".toString()
+            configFile.text = "workflow.data.enabled = true\nworkflow.data.store.location = '$folder'".toString()
             def historyFile = folder.resolve(".meta/.history")
             Files.createDirectories(historyFile.parent)
             def uniqueId = UUID.randomUUID()
@@ -71,15 +79,15 @@ class CmdCidTest extends Specification {
             stdout.size() == 2
             stdout[1] == recordEntry
 
-        cleanup:
-            folder?.deleteDir()
+        //cleanup:
+            //folder?.deleteDir()
     }
 
     def 'should print no history' (){
         given:
-        def folder = Files.createTempDirectory('test')
+        def folder = Files.createTempDirectory('test').toAbsolutePath()
         def configFile = folder.resolve('nextflow.config')
-        configFile.text = "workflow.data.store.location = '$folder'".toString()
+        configFile.text = "workflow.data.enabled = true\nworkflow.data.store.location = '$folder'".toString()
         def historyFile = folder.resolve(".meta/.history")
         Files.createDirectories(historyFile.parent)
         def launcher = Mock(Launcher){
@@ -105,9 +113,9 @@ class CmdCidTest extends Specification {
 
     def 'should show cid content' (){
         given:
-        def folder = Files.createTempDirectory('test')
+        def folder = Files.createTempDirectory('test').toAbsolutePath()
         def configFile = folder.resolve('nextflow.config')
-        configFile.text = "workflow.data.store.location = '$folder'".toString()
+        configFile.text = "workflow.data.enabled = true\nworkflow.data.store.location = '$folder'".toString()
         def cidFile = folder.resolve(".meta/12345/.data.json")
         Files.createDirectories(cidFile.parent)
         def launcher = Mock(Launcher){
@@ -143,9 +151,9 @@ class CmdCidTest extends Specification {
 
     def 'should warn if no cid content' (){
         given:
-        def folder = Files.createTempDirectory('test')
+        def folder = Files.createTempDirectory('test').toAbsolutePath()
         def configFile = folder.resolve('nextflow.config')
-        configFile.text = "workflow.data.store.location = '$folder'".toString()
+        configFile.text = "workflow.data.enabled = true\nworkflow.data.store.location = '$folder'".toString()
         def launcher = Mock(Launcher){
             getOptions() >> new CliOptions(config: [configFile.toString()])
         }
@@ -170,10 +178,10 @@ class CmdCidTest extends Specification {
 
     def 'should get lineage cid content' (){
         given:
-        def folder = Files.createTempDirectory('test')
+        def folder = Files.createTempDirectory('test').toAbsolutePath()
         def configFile = folder.resolve('nextflow.config')
         def outputHtml = folder.resolve('lineage.html')
-        configFile.text = "workflow.data.store.location = '$folder'".toString()
+        configFile.text = "workflow.data.enabled = true\nworkflow.data.store.location = '$folder'".toString()
         def launcher = Mock(Launcher){
             getOptions() >> new CliOptions(config: [configFile.toString()])
         }
@@ -245,14 +253,9 @@ class CmdCidTest extends Specification {
         outputHtml.exists()
         outputHtml.text == expectedOutput
 
-
         cleanup:
         folder?.deleteDir()
+
     }
-
-
-
-
-
 
 }
