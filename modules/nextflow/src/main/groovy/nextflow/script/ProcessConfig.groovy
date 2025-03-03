@@ -677,10 +677,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         return true
     }
 
-    HashMode getHashMode() {
-        HashMode.of(configProperties.cache) ?: HashMode.DEFAULT()
-    }
-
     protected boolean isValidLabel(String lbl) {
         def p = lbl.indexOf('=')
         if( p==-1 )
