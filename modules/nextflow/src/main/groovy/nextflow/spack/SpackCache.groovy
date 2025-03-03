@@ -32,6 +32,7 @@ import nextflow.file.FileMutex
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import nextflow.util.Escape
+import nextflow.util.TestOnly
 import org.yaml.snakeyaml.Yaml
 /**
  * Handle Spack environment creation and caching
@@ -71,9 +72,8 @@ class SpackCache {
 
     @PackageScope Path getConfigCacheDir0() { configCacheDir0 }
 
-    /** Only for testing purpose - do not use */
-    @PackageScope
-    SpackCache() {}
+    @TestOnly
+    protected SpackCache() {}
 
     /**
      * Create a Spack env cache object

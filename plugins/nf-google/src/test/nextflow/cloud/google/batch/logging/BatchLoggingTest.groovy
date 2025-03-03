@@ -49,7 +49,9 @@ class BatchLoggingTest extends Specification {
         def ERR_ENTRY1 = LogEntry.newBuilder(StringPayload.of('Oops something has failed. We are sorry.\n')).setSeverity(Severity.ERROR).build()
         def ERR_ENTRY2 = LogEntry.newBuilder(StringPayload.of('blah blah')).setSeverity(Severity.ERROR).build()
         and:
-        def client = new BatchLogging()
+        def sess = Mock(Session) { getConfig() >> [:] }
+        def config = BatchConfig.create(sess)
+        def client = new BatchLogging(config)
 
         when:
         def stdout = new StringBuilder()

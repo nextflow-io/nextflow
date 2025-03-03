@@ -27,6 +27,7 @@ import java.nio.file.WatchEvent
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.util.Duration
+import nextflow.util.TestOnly
 import org.apache.commons.io.monitor.FileAlterationListener
 import org.apache.commons.io.monitor.FileAlterationMonitor
 import org.apache.commons.io.monitor.FileAlterationObserver
@@ -73,7 +74,8 @@ class DirWatcherV2 implements DirListener, FileAlterationListener {
 
     private FileAlterationMonitor monitor
 
-    protected DirWatcherV2() { }
+    @TestOnly
+    protected DirWatcherV2() {}
 
     DirWatcherV2(String syntax, String folder, String pattern, boolean skipHidden, String events, FileSystem fs) {
         assert syntax in ['regex','glob']

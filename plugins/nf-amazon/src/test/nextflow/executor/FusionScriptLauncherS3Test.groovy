@@ -13,6 +13,7 @@ import nextflow.Global
 import nextflow.SysEnv
 import nextflow.cloud.aws.util.S3PathFactory
 import nextflow.fusion.FusionScriptLauncher
+import nextflow.processor.TaskBean
 import spock.lang.Specification
 /**
  *
@@ -24,7 +25,7 @@ class FusionScriptLauncherS3Test extends Specification {
         given:
         Global.config = Collections.emptyMap()
         and:
-        def fusion = new FusionScriptLauncher(scheme: 's3')
+        def fusion = new FusionScriptLauncher(Mock(TaskBean), 's3', null)
 
         when:
         def result = fusion.toContainerMount(S3PathFactory.parse('s3://foo/a/b/c.txt'))
@@ -50,9 +51,7 @@ class FusionScriptLauncherS3Test extends Specification {
         and:
         SysEnv.push([AWS_S3_ENDPOINT: 'http://foo.com'])
         and:
-        def fusion = new FusionScriptLauncher(
-                scheme: 's3',
-                remoteWorkDir: S3PathFactory.parse('s3://foo/work'))
+        def fusion = new FusionScriptLauncher(Mock(TaskBean), 's3', S3PathFactory.parse('s3://foo/work'))
 
         expect:
         fusion.fusionEnv() == [AWS_S3_ENDPOINT: 'http://foo.com',
@@ -70,9 +69,7 @@ class FusionScriptLauncherS3Test extends Specification {
         and:
         Global.config = [fusion: [exportAwsAccessKeys: true]]
         and:
-        def fusion = new FusionScriptLauncher(
-                scheme: 's3',
-                remoteWorkDir: S3PathFactory.parse('s3://foo/work'))
+        def fusion = new FusionScriptLauncher(Mock(TaskBean), 's3', S3PathFactory.parse('s3://foo/work'))
 
         expect:
         fusion.fusionEnv() == [AWS_ACCESS_KEY_ID: 'xxx',
@@ -93,9 +90,7 @@ class FusionScriptLauncherS3Test extends Specification {
         def CONFIG = [fusion: [exportAwsAccessKeys: true], aws: [accessKey: 'k1', secretKey: 's1', client: [endpoint: 'http://minio.com']]]
         Global.config = CONFIG
         and:
-        def fusion = new FusionScriptLauncher(
-                scheme: 's3',
-                remoteWorkDir: S3PathFactory.parse('s3://foo/work'))
+        def fusion = new FusionScriptLauncher(Mock(TaskBean), 's3', S3PathFactory.parse('s3://foo/work'))
 
         expect:
         fusion.fusionEnv() == [AWS_ACCESS_KEY_ID: 'k1',
