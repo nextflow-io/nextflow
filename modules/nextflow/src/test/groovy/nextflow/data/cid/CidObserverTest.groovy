@@ -61,14 +61,13 @@ class CidObserverTest extends Specification {
         }
         def session = Mock(Session) {
             getConfig() >> config
-            getCidStore() >> store
             getUniqueId() >> uniqueId
             getRunName() >> "test_run"
             getWorkflowMetadata() >> metadata
             getParams() >> new ScriptBinding.ParamsMap()
         }
         store.open(DataConfig.create(session))
-        def observer = new CidObserver(session)
+        def observer = new CidObserver(session, store)
         def expectedString = '{"type":"WorkflowRun","workflow":{"type": "Workflow",' +
             '"mainScriptFile":{"path":"file://' + scriptFile.toString() + '", "checksum": "78910"},' +
             '"otherScriptFiles": [], "repository": "https://nextflow.io/nf-test/",' +
@@ -93,12 +92,11 @@ class CidObserverTest extends Specification {
         def uniqueId = UUID.randomUUID()
         def session = Mock(Session) {
             getConfig()>>config
-            getCidStore()>>store
             getUniqueId()>>uniqueId
             getRunName()>>"test_run"
         }
         store.open(DataConfig.create(session))
-        def observer = new CidObserver(session)
+        def observer = new CidObserver(session, store)
         and:
         def hash = HashCode.fromInt(123456789)
         and:
@@ -140,10 +138,9 @@ class CidObserverTest extends Specification {
         def store = new DefaultCidStore();
         def session = Mock(Session) {
             getConfig()>>config
-            getCidStore()>>store
         }
         store.open(DataConfig.create(session))
-        def observer = Spy(new CidObserver(session))
+        def observer = Spy(new CidObserver(session, store))
         and:
         def workDir = folder.resolve('12/34567890')
         Files.createDirectories(workDir)
@@ -191,7 +188,6 @@ class CidObserverTest extends Specification {
         def store = new DefaultCidStore();
         def session = Mock(Session) {
             getConfig()>>config
-            getCidStore()>>store
         }
         def hash = HashCode.fromInt(123456789)
         def taskConfig = Mock(TaskConfig){
@@ -205,7 +201,7 @@ class CidObserverTest extends Specification {
             getConfig() >> taskConfig
         }
         store.open(DataConfig.create(session))
-        def observer = new CidObserver(session)
+        def observer = new CidObserver(session, store)
         then:
         observer.getTaskRelative(task, PATH) == EXPECTED
         where:
@@ -224,7 +220,6 @@ class CidObserverTest extends Specification {
             def store = new DefaultCidStore();
             def session = Mock(Session) {
                 getConfig()>>config
-                getCidStore()>>store
             }
         def hash = HashCode.fromInt(123456789)
         def taskConfig = Mock(TaskConfig){
@@ -238,7 +233,7 @@ class CidObserverTest extends Specification {
             getConfig() >> taskConfig
         }
         store.open(DataConfig.create(session))
-        def observer = new CidObserver(session)
+        def observer = new CidObserver(session, store)
         observer.getTaskRelative(task, PATH)
         then:
             def e = thrown(Exception)
@@ -257,10 +252,9 @@ class CidObserverTest extends Specification {
             def session = Mock(Session) {
                 getOutputDir()>>OUTPUT_DIR
                 getConfig()>>config
-                getCidStore()>>store
             }
             store.open(DataConfig.create(session))
-            def observer = new CidObserver(session)
+            def observer = new CidObserver(session, store)
         then:
             observer.getWorkflowRelative(PATH) == EXPECTED
         where:
@@ -280,9 +274,8 @@ class CidObserverTest extends Specification {
             def session = Mock(Session) {
                 getOutputDir()>>OUTPUT_DIR
                 getConfig()>>config
-                getCidStore()>>store
             }
-            def observer = new CidObserver(session)
+            def observer = new CidObserver(session, store)
             observer.getWorkflowRelative(PATH)
         then:
             def e = thrown(Exception)
@@ -314,7 +307,6 @@ class CidObserverTest extends Specification {
         }
         def session = Mock(Session) {
             getConfig()>>config
-            getCidStore()>>store
             getOutputDir()>>outputDir
             getWorkDir() >> workDir
             getWorkflowMetadata()>>metadata
@@ -323,7 +315,7 @@ class CidObserverTest extends Specification {
             getParams() >> new ScriptBinding.ParamsMap()
         }
         store.open(DataConfig.create(session))
-        def observer = new CidObserver(session)
+        def observer = new CidObserver(session, store)
 
         when: 'Starting workflow'
             observer.onFlowCreate(session)
