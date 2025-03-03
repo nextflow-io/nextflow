@@ -1,4 +1,5 @@
 #!/usr/bin/env nextflow
+// parser_v1: mixing script declarations and statements
 
 x = 100
 y = 200

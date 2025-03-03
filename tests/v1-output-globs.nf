@@ -1,3 +1,4 @@
+// parser_v1: mixing script declarations and statements
 
 def CMD =  """
     mkdir -p a/a b/b c/c

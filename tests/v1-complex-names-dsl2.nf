@@ -1,4 +1,5 @@
 #!/usr/bin/env nextflow
+// parser_v1: dollar slashy strings
 
 process foo {
   publishDir 'foo', mode: 'copy'

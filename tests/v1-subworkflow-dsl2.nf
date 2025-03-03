@@ -1,4 +1,5 @@
 #!/bin/bash nextflow
+// parser_v1: implicit workflow main section
 
 process foo {
     output: stdout

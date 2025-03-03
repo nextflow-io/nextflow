@@ -1,4 +1,5 @@
 #!/usr/bin/env nextflow
+// parser_v1: multi-line slashy strings
 
 process touch {
 
