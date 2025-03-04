@@ -241,12 +241,13 @@ class LocalPollingMonitor extends TaskPollingMonitor {
      *      {@code true} when the task is successfully removed from polling queue,
      *      {@code false} otherwise
      */
+    @Override
     protected boolean remove(TaskHandler handler) {
         final result = super.remove(handler)
         if( result ) {
             availCpus += cpus(handler)
             availMemory += mem(handler)
-            availGpus.release(((LocalTaskHandler) handler).gpuSlots)
+            availGpus.release(((LocalTaskHandler) handler).gpuSlots ?: [])
         }
         return result
     }
