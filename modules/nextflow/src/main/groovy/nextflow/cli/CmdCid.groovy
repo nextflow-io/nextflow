@@ -18,6 +18,7 @@
 package nextflow.cli
 
 import com.beust.jcommander.Parameter
+import com.beust.jcommander.Parameters
 import groovy.json.JsonSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
@@ -43,12 +44,14 @@ import static nextflow.data.cid.fs.CidPath.METADATA_FILE
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class CmdCid extends CmdBase {
+@Parameters(commandDescription = "Explore workflows CID metadata.")
+class CmdCid extends CmdBase implements UsageAware{
 
     private static final String NAME = 'cid'
 
     interface SubCmd {
         String getName()
+        String getDescription()
         void apply(List<String> args)
         void usage()
     }
@@ -80,6 +83,41 @@ class CmdCid extends CmdBase {
         getCmd(args).apply(args.drop(1))
     }
 
+    /**
+     * Print the command usage help
+     */
+    void usage() {
+        usage(args)
+    }
+
+    /**
+     * Print the command usage help
+     *
+     * @param args The arguments as entered by the user
+     */
+    void usage(List<String> args) {
+        if( !args ) {
+            List<String> result = []
+            result << this.getClass().getAnnotation(Parameters).commandDescription()
+            result << "Usage: nextflow $NAME <sub-command> [options]".toString()
+            result << ''
+            result << 'Commands:'
+            int len = 0
+            commands.forEach {len = it.name.size() > len ? it.name.size() : len }
+            commands.sort(){it.name}.each { result << "  ${it.name.padRight(len)}\t${it.description}".toString()  }
+            result << ''
+            println result.join('\n').toString()
+        }
+        else {
+            def sub = commands.find { it.name == args[0] }
+            if( sub )
+                sub.usage()
+            else {
+                throw new AbortOperationException("Unknown $NAME sub-command: ${args[0]}")
+            }
+        }
+    }
+
     protected SubCmd getCmd(List<String> args) {
 
         def cmd = commands.find { it.name == args[0] }
@@ -99,6 +137,11 @@ class CmdCid extends CmdBase {
         @Override
         String getName() {
             return 'log'
+        }
+
+        @Override
+        String getDescription() {
+            return 'Print the CID execution log'
         }
 
         @Override
@@ -138,7 +181,8 @@ class CmdCid extends CmdBase {
 
         @Override
         void usage() {
-            println 'Usage: nextflow cid log'
+            println description
+            println "Usage: nextflow $NAME $name"
         }
     }
 
@@ -147,6 +191,11 @@ class CmdCid extends CmdBase {
         @Override
         String getName() {
             return 'show'
+        }
+
+        @Override
+        String getDescription() {
+            return 'Print the description of a CID reference'
         }
 
         @Override
@@ -177,7 +226,8 @@ class CmdCid extends CmdBase {
 
         @Override
         void usage() {
-            println 'Usage: nextflow cid show <cid reference>'
+            println description
+            println "Usage: nextflow $NAME $name <CID reference> "
         }
     }
 
@@ -192,6 +242,11 @@ class CmdCid extends CmdBase {
 
         @Override
         String getName() { 'lineage' }
+
+        @Override
+        String getDescription() {
+            return 'Render a lineage graph for a workflow output'
+        }
 
         @Override
         void apply(List<String> args) {
@@ -325,7 +380,8 @@ class CmdCid extends CmdBase {
 
         @Override
         void usage() {
-            println 'Usage: nextflow cid lineage <cid workflow output > <html output file>'
+            println description
+            println "Usage: nextflow $NAME $name <workflow output CID> <html output file>"
         }
 
     }
