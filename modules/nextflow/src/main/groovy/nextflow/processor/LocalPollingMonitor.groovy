@@ -247,7 +247,7 @@ class LocalPollingMonitor extends TaskPollingMonitor {
         if( result ) {
             availCpus += cpus(handler)
             availMemory += mem(handler)
-            availGpus.release(((LocalTaskHandler) handler).gpuSlots ?: [])
+            availGpus.release(((LocalTaskHandler) handler).gpuSlots ?: Collections.<Integer>emptyList())
         }
         return result
     }
