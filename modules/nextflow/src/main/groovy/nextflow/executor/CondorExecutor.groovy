@@ -104,6 +104,7 @@ class CondorExecutor extends AbstractGridExecutor {
             result << "stream_out = true"
             result << "stream_error = true"
             result << "getenv = true"
+            result << "universe = vanilla"
             // executable will be added to manifest by CondorTaskHandler in Fusion setups
         }
         result << "transfer_executable = False" // handled by nextflow
