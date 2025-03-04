@@ -21,12 +21,12 @@ dependencies {
     api(project(':nf-commons'))
     api(project(':nf-httpfs'))
     api 'com.github.nextflow-io.language-server:compiler:main-SNAPSHOT'
-    api "org.apache.groovy:groovy:4.0.25"
-    api "org.apache.groovy:groovy-nio:4.0.25"
-    api "org.apache.groovy:groovy-xml:4.0.25"
-    api "org.apache.groovy:groovy-json:4.0.25"
-    api "org.apache.groovy:groovy-templates:4.0.25"
-    api "org.apache.groovy:groovy-yaml:4.0.25"
+    api "org.apache.groovy:groovy:4.0.26"
+    api "org.apache.groovy:groovy-nio:4.0.26"
+    api "org.apache.groovy:groovy-xml:4.0.26"
+    api "org.apache.groovy:groovy-json:4.0.26"
+    api "org.apache.groovy:groovy-templates:4.0.26"
+    api "org.apache.groovy:groovy-yaml:4.0.26"
     api "org.slf4j:jcl-over-slf4j:2.0.16"
     api "org.slf4j:jul-to-slf4j:2.0.16"
     api "org.slf4j:log4j-over-slf4j:2.0.16"
@@ -55,7 +55,7 @@ dependencies {
     testImplementation 'org.subethamail:subethasmtp:3.1.7'
 
     // test configuration
-    testFixturesApi ("org.apache.groovy:groovy-test:4.0.25") { exclude group: 'org.apache.groovy' }
+    testFixturesApi ("org.apache.groovy:groovy-test:4.0.26") { exclude group: 'org.apache.groovy' }
     testFixturesApi ("org.objenesis:objenesis:3.4")
     testFixturesApi ("net.bytebuddy:byte-buddy:1.14.17")
     testFixturesApi ("org.spockframework:spock-core:2.3-groovy-4.0") { exclude group: 'org.apache.groovy' }

@@ -59,7 +59,7 @@ In the above example replace `/path/to/apptainer.img` with any Apptainer image o
 Read the {ref}`config-page` page to learn more about the `nextflow.config` file and how to use it to configure your pipeline execution.
 
 :::{note}
-Unlike Docker, Nextflow does not automatically mount host paths in the container when using Apptainer. It expects that the paths are configure and mounted system wide by the Apptainer runtime. If your Apptainer installation allows user defined bind points, read the {ref}`Apptainer configuration <config-apptainer>` section to learn how to enable Nextflow auto mounts.
+Unlike Docker, Nextflow does not automatically mount host paths in the container when using Apptainer. It expects that the paths are configured and mounted system wide by the Apptainer runtime. If your Apptainer installation allows user defined bind points, read the {ref}`Apptainer configuration <config-apptainer>` section to learn how to enable Nextflow auto mounts.
 :::
 
 :::{warning}
