@@ -80,6 +80,8 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private volatile TaskResult result
 
+    List<Integer> gpuSlots
+
     LocalTaskHandler(TaskRun task, LocalExecutor executor) {
         super(task)
         // create the task handler
@@ -142,11 +144,13 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
         final workDir = task.workDir.toFile()
         final logFile = new File(workDir, TaskRun.CMD_LOG)
 
-        return new ProcessBuilder()
+        final pb = new ProcessBuilder()
                 .redirectErrorStream(true)
                 .redirectOutput(logFile)
                 .directory(workDir)
                 .command(cmd)
+        applyGpuSlots(pb)
+        return pb
     }
 
     protected ProcessBuilder fusionProcessBuilder() {
@@ -162,10 +166,18 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
 
         final logPath = Files.createTempFile('nf-task','.log')
 
-        return new ProcessBuilder()
+        final pb = new ProcessBuilder()
                 .redirectErrorStream(true)
                 .redirectOutput(logPath.toFile())
                 .command(List.of('sh','-c', cmd))
+        applyGpuSlots(pb)
+        return pb
+    }
+
+    protected void applyGpuSlots(ProcessBuilder pb) {
+        if( !gpuSlots )
+            return
+        pb.environment().put('CUDA_VISIBLE_DEVICES', gpuSlots.join(','))
     }
 
     protected ProcessBuilder createLaunchProcessBuilder() {

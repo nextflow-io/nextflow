@@ -645,6 +645,12 @@ The following settings are available:
 `executor.exitReadTimeout`
 : Determines how long to wait before returning an error status when a process is terminated but the `.exitcode` file does not exist or is empty (default: `270 sec`). Used only by grid executors.
 
+`executor.gpus`
+: :::{versionadded} 25.04.0
+  :::
+: *Used only by the `local` executor.*
+: The maximum number of NVIDIA GPUs made available by the underlying system. When this setting is enabled, each local task is assigned GPUs based on their `accelerator` request, using the `CUDA_VISIBLE_DEVICES` environment variable.
+
 `executor.jobName`
 : Determines the name of jobs submitted to the underlying cluster executor e.g. `executor.jobName = { "$task.name - $task.hash" }`. Make sure the resulting job name matches the validation constraints of the underlying batch scheduler.
 : This setting is supported by the following executors: Bridge, Condor, Flux, HyperQueue, Lsf, Moab, Nqsii, Oar, PBS, PBS Pro, SGE, SLURM and Google Batch.

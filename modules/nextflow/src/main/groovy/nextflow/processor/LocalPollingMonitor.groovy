@@ -23,8 +23,10 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.executor.local.LocalTaskHandler
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
+import nextflow.util.TrackingSemaphore
 
 /**
  * Task polling monitor specialized for local execution. It manages tasks scheduling
@@ -59,6 +61,16 @@ class LocalPollingMonitor extends TaskPollingMonitor {
     private final long maxMemory
 
     /**
+     * Number of `free` GPUs available to execute pending tasks
+     */
+    private TrackingSemaphore availGpus
+
+    /**
+     * Total number of CPUs available in the system
+     */
+    private final int maxGpus
+
+    /**
      * Create the task polling monitor with the provided named parameters object.
      * <p>
      * Valid parameters are:
@@ -74,6 +86,8 @@ class LocalPollingMonitor extends TaskPollingMonitor {
         super(params)
         this.availCpus = maxCpus = params.cpus as int
         this.availMemory = maxMemory = params.memory as long
+        this.maxGpus = params.gpus as int
+        this.availGpus = new TrackingSemaphore(maxGpus)
         assert availCpus>0, "Local avail `cpus` attribute cannot be zero"
         assert availMemory>0, "Local avail `memory` attribute cannot zero"
     }
@@ -98,14 +112,16 @@ class LocalPollingMonitor extends TaskPollingMonitor {
 
         final int cpus = configCpus(session,name)
         final long memory = configMem(session,name)
+        final int gpus = configGpus(session,name)
         final int size = session.getQueueSize(name, OS.getAvailableProcessors())
 
-        log.debug "Creating local task monitor for executor '$name' > cpus=$cpus; memory=${new MemoryUnit(memory)}; capacity=$size; pollInterval=$pollInterval; dumpInterval=$dumpInterval"
+        log.debug "Creating local task monitor for executor '$name' > cpus=$cpus; memory=${new MemoryUnit(memory)}; gpus=$gpus; capacity=$size; pollInterval=$pollInterval; dumpInterval=$dumpInterval"
 
         new LocalPollingMonitor(
                 name: name,
                 cpus: cpus,
                 memory: memory,
+                gpus: gpus,
                 session: session,
                 capacity: size,
                 pollInterval: pollInterval,
@@ -128,6 +144,11 @@ class LocalPollingMonitor extends TaskPollingMonitor {
         (session.getExecConfigProp(name, 'memory', OS.getTotalPhysicalMemorySize()) as MemoryUnit).toBytes()
     }
 
+    @PackageScope
+    static int configGpus(Session session, String name) {
+        return session.getExecConfigProp(name, 'gpus', 0) as int
+    }
+
     /**
      * @param handler
      *      A {@link TaskHandler} instance
@@ -147,6 +168,16 @@ class LocalPollingMonitor extends TaskPollingMonitor {
      */
     private static long mem(TaskHandler handler) {
         handler.task.getConfig()?.getMemory()?.toBytes() ?: 1L
+    }
+
+    /**
+     * @param handler
+     *      A {@link TaskHandler} instance
+     * @return
+     *      The number of gpus requested to execute the specified task
+     */
+    private static int gpus(TaskHandler handler) {
+        handler.task.getConfig()?.getAccelerator()?.getRequest() ?: 0
     }
 
     /**
@@ -174,9 +205,14 @@ class LocalPollingMonitor extends TaskPollingMonitor {
         if( taskMemory>maxMemory)
             throw new ProcessUnrecoverableException("Process requirement exceeds available memory -- req: ${new MemoryUnit(taskMemory)}; avail: ${new MemoryUnit(maxMemory)}")
 
-        final result = super.canSubmit(handler) && taskCpus <= availCpus && taskMemory <= availMemory
+        final taskGpus = gpus(handler)
+        if( taskGpus>maxGpus )
+            throw new ProcessUnrecoverableException("Process requirement exceeds available GPUs -- req: $taskGpus; avail: $maxGpus")
+
+        final availGpus0 = availGpus.availablePermits()
+        final result = super.canSubmit(handler) && taskCpus <= availCpus && taskMemory <= availMemory && taskGpus <= availGpus0
         if( !result && log.isTraceEnabled( ) ) {
-            log.trace "Task `${handler.task.name}` cannot be scheduled -- taskCpus: $taskCpus <= availCpus: $availCpus && taskMemory: ${new MemoryUnit(taskMemory)} <= availMemory: ${new MemoryUnit(availMemory)}"
+            log.trace "Task `${handler.task.name}` cannot be scheduled -- taskCpus: $taskCpus <= availCpus: $availCpus && taskMemory: ${new MemoryUnit(taskMemory)} <= availMemory: ${new MemoryUnit(availMemory)} && taskGpus: $taskGpus <= availGpus: ${availGpus0}"
         }
         return result
     }
@@ -192,6 +228,7 @@ class LocalPollingMonitor extends TaskPollingMonitor {
         super.submit(handler)
         availCpus -= cpus(handler)
         availMemory -= mem(handler)
+        ((LocalTaskHandler) handler).gpuSlots = availGpus.acquire(gpus(handler))
     }
 
     /**
@@ -209,6 +246,7 @@ class LocalPollingMonitor extends TaskPollingMonitor {
         if( result ) {
             availCpus += cpus(handler)
             availMemory += mem(handler)
+            availGpus.release(((LocalTaskHandler) handler).gpuSlots)
         }
         return result
     }
