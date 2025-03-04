@@ -1,5 +1,10 @@
 nf-google changelog
 ===================
+1.15.4 - 4 Mar 2025
+- Improve Google Batch executor stability and error handling (#5690) [1a9e8bf5]
+- Fix Mount input file buckets in task arrays for Google Batch (#5739) [0d98442d]
+- Fix Google Batch task array causes process to fail (#5780) [ci fast] [d4c1ba12]
+
 1.15.3 - 16 Dec 2024
 - Fix Google Batch hang when internal error during scheduling (#5567)
 
