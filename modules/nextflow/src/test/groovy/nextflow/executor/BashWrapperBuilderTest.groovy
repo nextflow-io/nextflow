@@ -93,7 +93,6 @@ class BashWrapperBuilderTest extends Specification {
 
 
     def 'should create bash launcher files' () {
-
         given:
         def folder = Files.createTempDirectory('test')
 
@@ -124,7 +123,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should create bash launcher files with trace' () {
-
         given:
         def folder = Files.createTempDirectory('test')
 
@@ -195,7 +193,6 @@ class BashWrapperBuilderTest extends Specification {
         wrapper.moduleLoad('foo/bar/')  == 'nxf_module_load foo/bar '
     }
 
-
     def 'should create container env' () {
         given:
         def bash = Spy(BashWrapperBuilder)
@@ -224,7 +221,6 @@ class BashWrapperBuilderTest extends Specification {
         builder.env == ['NXF_TASK_WORKDIR', 'FOO','BAR']
         builder.workDir == Paths.get('/my/work/dir')
         builder.mounts == [ Paths.get('/my/bin') ]
-        
     }
 
     def 'should add resolved inputs'() {
@@ -254,7 +250,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should render launcher script' () {
-
         given:
         def folder = Files.createTempDirectory('test')
 
@@ -278,7 +273,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should render launcher script with trace' () {
-
         given:
         def folder = Files.createTempDirectory('test')
 
@@ -300,7 +294,6 @@ class BashWrapperBuilderTest extends Specification {
 
     @Unroll
     def 'test change to scratchDir' () {
-
         setup:
         def builder = newBashWrapperBuilder()
 
@@ -317,7 +310,6 @@ class BashWrapperBuilderTest extends Specification {
         '$SOME_DIR' | 'NXF_SCRATCH="$(set +u; nxf_mktemp $SOME_DIR)"'
         '/my/temp'  | 'NXF_SCRATCH="$(set +u; nxf_mktemp /my/temp)"'
         'ram-disk'  | 'NXF_SCRATCH="$(nxf_mktemp /dev/shm)"'
-
     }
 
     def 'should return task name' () {
@@ -337,7 +329,6 @@ class BashWrapperBuilderTest extends Specification {
         bash = newBashWrapperBuilder(headerScript: '#BSUB -x 1\n#BSUB -y 2')
         then:
         bash.makeBinding().header_script == '#BSUB -x 1\n#BSUB -y 2'
-
     }
 
     def 'should create task metadata string' () {
@@ -429,7 +420,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should copy control files' () {
-
         when:
         def binding = newBashWrapperBuilder(scratch: false).makeBinding()
         then:
@@ -452,11 +442,9 @@ class BashWrapperBuilderTest extends Specification {
                 cp .command.err /work/dir/.command.err || true
                 cp .command.trace /work/dir/.command.trace || true
                 '''.stripIndent()
-
     }
 
     def 'should stage inputs' () {
-
         given:
         def folder = Paths.get('/work/dir')
         def inputs = [
@@ -532,7 +520,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should unstage outputs' () {
-
         given:
         def folder = Paths.get('/work/dir')
         def outputs = ['test.bam','test.bai']
@@ -584,7 +571,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should create env' () {
-
         when:
         def binding = newBashWrapperBuilder().makeBinding()
         then:
@@ -633,7 +619,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should create secret env' () {
-
         when:
         def binding0 = newBashWrapperBuilder().makeBinding()
         then:
@@ -661,7 +646,6 @@ class BashWrapperBuilderTest extends Specification {
         binding2.secrets_env == null
     }
 
-
     def 'should enable trace feature' () {
         when:
         def binding = newBashWrapperBuilder(statsEnabled: false).makeBinding()
@@ -686,7 +670,6 @@ class BashWrapperBuilderTest extends Specification {
                         cp .command.err /work/dir/.command.err || true
                         cp .command.trace /work/dir/.command.trace || true
                         '''.stripIndent()
-
     }
 
     def 'should enable trace feature with custom shell' () {
@@ -718,11 +701,9 @@ class BashWrapperBuilderTest extends Specification {
         binding = newBashWrapperBuilder(statsEnabled: true, shell: ['/usr/local/bin/bash', '-ue']).makeBinding()
         then:
         binding.launch_cmd == '/usr/local/bin/bash -ue /work/dir/.command.run nxf_trace'
-
     }
 
     def 'should create launcher command with input' () {
-
         when:
         def binding = newBashWrapperBuilder().makeBinding()
         then:
@@ -763,7 +744,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should create module load snippet' () {
-
         when:
         def binding = newBashWrapperBuilder().makeBinding()
         then:
@@ -795,11 +775,9 @@ class BashWrapperBuilderTest extends Specification {
                 }
                 
                 '''.stripIndent()
-
     }
 
     def 'should create conda activate snippet' () {
-
         when:
         def binding = newBashWrapperBuilder().makeBinding()
         then:
@@ -817,7 +795,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should create micromamba activate snippet' () {
-
         when:
         def binding = newBashWrapperBuilder().makeBinding()
         then:
@@ -835,7 +812,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should create spack activate snippet' () {
-
         when:
         def binding = newBashWrapperBuilder().makeBinding()
         then:
@@ -854,7 +830,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should cleanup scratch dir' () {
-
         when:
         def binding = newBashWrapperBuilder().makeBinding()
         then:
@@ -1023,6 +998,20 @@ class BashWrapperBuilderTest extends Specification {
         binding.launch_cmd == 'docker run -i -e "NXF_TASK_WORKDIR" -v /work/dir:/work/dir -w "$NXF_TASK_WORKDIR" -v /foo:/bar --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
         binding.kill_cmd == 'docker stop $NXF_BOXID'
         binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
+    }
+
+    def 'should create wrapper with container platform' () {
+        when:
+        def binding = newBashWrapperBuilder(
+            containerImage: 'busybox',
+            containerEnabled: true,
+            containerPlatform: 'linux/arm64',
+            containerConfig: [engine: 'docker', temp: 'auto', enabled: true] ).makeBinding()
+
+        then:
+        binding.launch_cmd == 'docker run -i --platform linux/arm64 -e "NXF_TASK_WORKDIR" -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$NXF_TASK_WORKDIR" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
+        binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
+        binding.kill_cmd == 'docker stop $NXF_BOXID'
     }
 
     def 'should create wrapper with sarus'() {
@@ -1221,7 +1210,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should include fix ownership command' () {
-
         given:
         def bean = Mock(TaskBean) {
             inputFiles >> [:]
@@ -1260,7 +1248,6 @@ class BashWrapperBuilderTest extends Specification {
         binding.after_script == null
         binding.containsKey('after_script')
     }
-
 
     def 'should get output env capture snippet' () {
         given:
@@ -1356,7 +1343,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should get stage and unstage commands' () {
-
         when:
         def builder = newBashWrapperBuilder()
         then:
@@ -1368,7 +1354,6 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.stage_cmd == 'nxf_stage'
         binding.unstage_cmd == 'nxf_unstage'
-        
     }
 
     def 'should get unstage control script'(){
@@ -1410,7 +1395,6 @@ class BashWrapperBuilderTest extends Specification {
                 cp .command.env /work/dir/.command.env || true
                 '''.stripIndent()
     }
-
 
     def 'should create wrapper with podman' () {
         when:
