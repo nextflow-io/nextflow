@@ -84,7 +84,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
     protected boolean privileged
 
-    protected  String platform
+    protected String platform
 
     String getImage() { image }
 
