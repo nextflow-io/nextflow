@@ -177,7 +177,7 @@ You can then use this filesystem in your pipeline:
 input = file('myfs://path/to/input/file.txt')
 ```
 
-Refer to the `nf-https` module (`XFileSystemProvider`) or `nf-amazon` plugin (`S3FileSystemProvider`) in the Nextflow source code for examples of custom filesystems.
+See [this guide](https://docs.oracle.com/javase/8/docs/technotes/guides/io/fsp/filesystemprovider.html) for more details. Refer to the `nf-https` module (`XFileSystemProvider`) or `nf-amazon` plugin (`S3FileSystemProvider`) in the Nextflow source code for examples of custom filesystems.
 
 :::{tip}
 Custom filesystems are an advanced type of plugin extension. Before creating a new filesystem, make sure that your use case can't already be supported through an existing filesystem such as HTTP or S3.
