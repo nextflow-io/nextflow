@@ -410,9 +410,6 @@ The following settings are available:
 `azure.managedIdentity.system`
 : When `true`, use the system-assigned [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) to authenticate Azure resources. See {ref}`azure-managed-identities` for more details.
 
-`azure.managedIdentity.tenantId`
-: The Azure tenant ID
-
 `azure.registry.server`
 : Specify the container registry from which to pull the Docker images (default: `docker.io`).
 
