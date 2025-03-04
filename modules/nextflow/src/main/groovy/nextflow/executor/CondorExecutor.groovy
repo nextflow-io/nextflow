@@ -110,7 +110,6 @@ class CondorExecutor extends AbstractGridExecutor {
         result << "transfer_output_files=\"\""  // ditto
 
             // result << "initialdir = ${task.getWorkDirStr()}".toString()
-        }
 
         if( task.config.getCpus()>1 ) {
             result << "request_cpus = ${task.config.getCpus()}".toString()
