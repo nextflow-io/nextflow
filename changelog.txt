@@ -1,5 +1,15 @@
 NEXTFLOW CHANGE-LOG
 ===================
+
+24.10.5 - 4 Mar 2025
+- Improve Google Batch executor stability and error handling (#5690) [1a9e8bf5]
+- Fix Mount input file buckets in task arrays for Google Batch (#5739) [0d98442d]
+- Fix Google Batch task array causes process to fail (#5780) [d4c1ba12]
+- Fixing bug when execution with stub and no stub defined (#5473) [ba5ab069]
+- Fix Conda directive is not honoured by task array (#5704) [63124eb8]
+- Fix Use unbound queue for transfer thread pool (#5700) [d57a85d0]
+- Bump nf-google@1.15.4 [ee9c1fd4]
+
 25.01.0-edge - 12 Feb 2025
 - Add DeadlineExceededException to Google Batch retryable exceptions [944f48f9]
 - Add Fusion token validation (#5614) [1dcb18d6]
@@ -34,6 +44,11 @@ NEXTFLOW CHANGE-LOG
 - Bump io.netty:netty-handler:4.1.118.Final [db4a9037]
 - Bump net.minidev:json-smart:2.5.2 [b5c4faf4]
 - Bump netty-common:4.1.118.Final [8574e243]
+
+24.10.4 - 20 Jan 2025
+- Fix CLI params normalization (#5661) [42a9d8a0]
+- Fix azure repos when clone URL is used (#5667) [eb092c9f]
+- Fix Prevent the use existing work dir (#5682) [7ed233ea]
 
 24.12.0-edge - 20 Jan 2025
 - Add Warning when Cloudinfo fails in Google Batch machine type selection (#5649) [5aef532f]
