@@ -53,7 +53,7 @@ class ConfigParserV2 implements ConfigParser {
 
     private List<String> appliedProfiles
 
-    private Set<String> parsedProfiles = []
+    private Set<String> parsedProfiles
 
     private GroovyShell groovyShell
 
@@ -129,20 +129,14 @@ class ConfigParserV2 implements ConfigParser {
 
         script.setBinding(new Binding(bindingVars))
         script.setParams(paramVars)
+        script.setProfiles(appliedProfiles)
         script.run()
 
-        final result = Bolts.toConfigObject(script.getTarget())
-        final profiles = (result.profiles ?: [:]) as ConfigObject
-        parsedProfiles.addAll(profiles.keySet())
-        if( appliedProfiles ) {
-            for( final profile : appliedProfiles ) {
-                if( profile in profiles.keySet() )
-                    result.merge(profiles[profile] as ConfigObject)
-            }
-            result.remove('profiles')
-        }
-
-        return result
+        final target = script.getTarget()
+        if( !target.params )
+            target.remove('params')
+        parsedProfiles = script.getParsedProfiles()
+        return Bolts.toConfigObject(target)
     }
 
     @Override

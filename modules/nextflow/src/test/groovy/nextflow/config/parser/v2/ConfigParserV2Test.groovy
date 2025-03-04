@@ -29,6 +29,7 @@ import nextflow.config.ConfigBuilder
 import nextflow.config.ConfigClosurePlaceholder
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
+import org.codehaus.groovy.control.CompilationFailedException
 import spock.lang.Specification
 
 /**
@@ -202,31 +203,31 @@ class ConfigParserV2Test extends Specification {
 
         main. text = '''
             profiles {
-                includeConfig 'dir1/config'
-                includeConfig 'dir2/config'
-                includeConfig 'dir3/config'
+                proc1 {
+                    includeConfig 'dir1/config'
+                }
+                proc2 {
+                    includeConfig 'dir2/config'
+                }
+                proc3 {
+                    includeConfig 'dir3/config'
+                }
             }
             '''
 
         new File(folder,'dir1/config').text = '''
-            proc1 {
-                cpus = 4
-                memory = '8GB'
-            }
+            cpus = 4
+            memory = '8GB'
             '''
 
         new File(folder, 'dir2/config').text = '''
-            proc2 {
-                cpus = MIN
-                memory = '6GB'
-            }
+            cpus = MIN
+            memory = '6GB'
             '''
 
         new File(folder, 'dir3/config').text = '''
-            proc3 {
-                cpus = MAX
-                disk = '500GB'
-            }
+            cpus = MAX
+            disk = '500GB'
             '''
 
         when:
@@ -612,8 +613,12 @@ class ConfigParserV2Test extends Specification {
             '''
 
         when:
-        def config = new ConfigParserV2().setProfiles(['bar', 'foo']).parse(CONFIG)
+        def config = new ConfigParserV2().setProfiles(['foo', 'bar']).parse(CONFIG)
+        then:
+        config.params.input == 'bar'
 
+        when:
+        config = new ConfigParserV2().setProfiles(['bar', 'foo']).parse(CONFIG)
         then:
         config.params.input == 'foo'
     }
@@ -637,6 +642,75 @@ class ConfigParserV2Test extends Specification {
         then:
         config.process.memory == '2 GB'
         config.process.cpus == 2
+    }
+
+    def 'should share params with included config files' () {
+
+        given:
+        def folder = File.createTempDir()
+        def main = new File(folder, 'nextflow.config')
+        def included = new File(folder, 'included.config')
+
+        main.text = """
+            params.repo = 'foo/bar'
+
+            includeConfig 'included.config'
+            """
+
+        included.text = '''
+            params.url = "http://github.com/${params.repo}"
+            '''
+
+        when:
+        def config = new ConfigParserV2().parse(main)
+        then:
+        config.params.repo == 'foo/bar'
+        config.params.url == 'http://github.com/foo/bar'
+
+        cleanup:
+        folder?.deleteDir()
+
+    }
+
+    def 'should not evaluate profile blocks that were not selected' () {
+
+        given:
+        def folder = File.createTempDir()
+        def main = new File(folder, 'nextflow.config')
+        def included = new File(folder, 'included.config')
+
+        main.text = """
+            profiles {
+                bar {
+                    includeConfig 'included.config'
+                }
+            }
+            """
+
+        included.text = '''
+            // syntax error
+            if( params )
+                params.name = 'bar'
+            '''
+
+        when:
+        new ConfigParserV2().setProfiles([]).parse(main)
+        then:
+        noExceptionThrown()
+
+        when:
+        new ConfigParserV2().setProfiles(['bar']).parse(main)
+        then:
+        thrown(CompilationFailedException)
+
+        when:
+        new ConfigParserV2().parse(main)
+        then:
+        thrown(CompilationFailedException)
+
+        cleanup:
+        folder?.deleteDir()
+
     }
 
     static class ConfigFileHandler implements HttpHandler {

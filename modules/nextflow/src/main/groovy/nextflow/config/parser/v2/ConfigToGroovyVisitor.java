@@ -69,8 +69,8 @@ public class ConfigToGroovyVisitor extends ConfigVisitorSupport {
 
     protected Statement transformConfigAssign(ConfigAssignNode node) {
         if( node instanceof ConfigAppendNode ) {
-            var name = node.names.get(0);
-            return stmt(callThisX("append", args(constX(name), node.value)));
+            var method = node.names.get(0);
+            return stmt(callThisX(method, args(node.value)));
         }
         var names = listX(
             node.names.stream()
