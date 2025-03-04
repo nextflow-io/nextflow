@@ -91,8 +91,8 @@ class CondorExecutor extends AbstractGridExecutor {
             result << "stream_error = true"
             result << "executable = ${task.CMD_RUN}".toString()
             if( task.isContainerEnabled() ) {
-                result << "universe = container"
-                result << "container_image = ${task.getContainer()}".toString()
+                result << "universe = vanilla"
+                // result << "container_image = ${task.getContainer()}".toString()
             } else {
                 result << "universe = vanilla"
             }
