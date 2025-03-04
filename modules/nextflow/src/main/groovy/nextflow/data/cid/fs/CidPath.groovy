@@ -81,7 +81,7 @@ class CidPath implements Path {
     }
 
     private static void validateHash(Map cidObject) {
-        final hashedPath = Path.of(cidObject.path as String)
+        final hashedPath = FileHelper.toCanonicalPath(cidObject.path as String)
         if( !hashedPath.exists() )
             throw new FileNotFoundException("Target path $cidObject.path does not exists.")
         if( cidObject.checksum && CacheHelper.hasher(hashedPath).hash().toString() != cidObject.checksum ) {
@@ -111,7 +111,9 @@ class CidPath implements Path {
             if( type == DataType.TaskOutput || type == DataType.WorkflowOutput ) {
                 // return the real path stored in the metadata
                 validateHash(cidObject)
-                final realPath = Path.of(cidObject.path as String, childs)
+                def realPath = FileHelper.toCanonicalPath(cidObject.path as String)
+                if (childs && childs.size() > 0)
+                    realPath = realPath.resolve(childs.join(SEPARATOR))
                 if( !realPath.exists() )
                     throw new FileNotFoundException("Target path $realPath for $cidStorePath does not exists.")
                 return realPath
@@ -212,7 +214,7 @@ class CidPath implements Path {
         if( c>1 )
             return subpath(0,c-1)
         if( c==1 )
-            return new CidPath(fileSystem,"/")
+            return new CidPath(fileSystem,SEPARATOR)
         return null
     }
 

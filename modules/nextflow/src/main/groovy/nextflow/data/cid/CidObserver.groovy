@@ -202,7 +202,7 @@ class CidObserver implements TraceObserver {
             final hash = CacheHelper.hasher(path).hash().toString()
             final value = new Output(
                 DataType.TaskOutput,
-                path.toString(),
+                path.toUriString(),
                 hash,
                 "$CID_PROT$task.hash",
                 attrs.size(),
@@ -259,7 +259,7 @@ class CidObserver implements TraceObserver {
             final attrs = readAttributes(destination)
             final value = new Output(
                 DataType.WorkflowOutput,
-                destination.toString(),
+                destination.toUriString(),
                 hash,
                 sourceReference,
                 attrs.size(),
@@ -294,7 +294,7 @@ class CidObserver implements TraceObserver {
             final attrs = readAttributes(destination)
             final value = new Output(
                 DataType.WorkflowOutput,
-                destination.toString(),
+                destination.toUriString(),
                 hash,
                 "${CID_PROT}${executionHash}".toString(),
                 attrs.size(),
