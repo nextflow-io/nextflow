@@ -71,6 +71,8 @@ import nextflow.util.SysHelper
 import nextflow.util.Threads
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import static nextflow.util.SysHelper.DEFAULT_DOCKER_PLATFORM
+
 /**
  * Wave client service
  *
@@ -92,8 +94,6 @@ class WaveClient {
     private static Logger log = LoggerFactory.getLogger(WaveClient)
 
     public static final List<String> DEFAULT_CONDA_CHANNELS = ['conda-forge','bioconda']
-
-    private static final String DEFAULT_DOCKER_PLATFORM = 'linux/amd64'
 
     final private HttpClient httpClient
 
@@ -473,8 +473,7 @@ class WaveClient {
         // get the bundle
         final bundle = task.getModuleBundle()
         // get the architecture
-        final arch = task.config.getArchitecture()
-        final dockerArch = arch? arch.dockerArch : DEFAULT_DOCKER_PLATFORM
+        final dockerArch = task.config.getContainerPlatform()
         // compose the request attributes
         def attrs = new HashMap<String,String>()
         attrs.container = containerImage

@@ -213,6 +213,7 @@ class BashWrapperBuilderTest extends Specification {
         bash.getContainerCpus() >> null
         bash.getContainerCpuset() >> null
         bash.getContainerOptions() >> null
+        bash.getContainerPlatform() >> 'amd64'
         bash.isSecretNative() >> false
         bash.getSecretNames() >> []
 
