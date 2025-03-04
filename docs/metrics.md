@@ -2,11 +2,11 @@
 
 # Understanding task resource metrics
 
-This tutorial explains how the resource usage metrics from the {ref}`Execution report <execution-report>` are computed. See {ref}`Execution report <execution-report>` for more information about how to generate an execution report.
+This tutorial explains how the resource usage metrics from the execution report are computed. See {ref}`Execution report <execution-report>` for more information about the execution report and how to generate it.
 
 ## CPU Usage
 
-The CPU Usage plot reports how CPU resources are used by each process.
+The **CPU Usage** plot reports how CPU resources are used by each process.
 
 ```{image} _static/report-resource-cpu.png
 ```
@@ -87,7 +87,7 @@ The [stress](https://people.seas.harvard.edu/~apw/stress/) program can be instal
 
 ## Memory Usage
 
-The Memory Usage plot reports how memory was used by each process. It has three tabs, **Physical (RAM)**, **Virtual (RAM + Disk swap)**, and **% RAM Allocated**, showing the usage of the physical memory (RAM), the virtual memory (`vmem`), and the percentage of RAM used by the process relative to the memory that the `memory` directive set, respectively.
+The **Memory Usage** plot reports how memory was used by each process. It has three tabs, **Physical (RAM)**, **Virtual (RAM + Disk swap)**, and **% RAM Allocated**, showing the usage of the physical memory (RAM), the virtual memory (`vmem`), and the percentage of RAM used by the process relative to the memory that the `memory` directive set, respectively.
 
 The peak usage during the execution of the process is reported for both physical and virtual memories. The total amount of memory used by a process is the `virtual memory (vmem)`. The `vmem` contains all memory areas, including in the physical memory (RAM), in the swap space, on the disk, or shared with other processes. The `resident set size (RSS)` is the amount of `physical memory (RAM)` held by a process.
 
@@ -97,7 +97,7 @@ $$
 vmem \geq RSS + Swap
 $$
 
-The behavior of the memory usage plot can be examined using two programs written in C. The first program allocates a variable of 1 GiB:
+The behavior of the **Memory Usage** plot can be examined using two programs written in C. The first program allocates a variable of 1 GiB:
 
 ```{code-block} c
 :emphasize-lines: 31,43
@@ -278,18 +278,18 @@ Memory and storage metrics are reported in bytes. For example, 1 KB = $1024$ byt
 
 ## Job Duration
 
-The Job Duration plot reports how long each process took to run. It has two tabs. The **Raw Usage** tab shows the job duration (a.k.a. elapsed real time, real time or wall time ) and the **% Allocated** tab shows the time that was requested relative to what was requested using the `time` directive.
+The **Job Duration** plot reports how long each process took to run. It has two tabs. The **Raw Usage** tab shows the job duration, sometimes known as elapsed real time, real time or wall time, and the **% Allocated** tab shows the time that was requested relative to what was requested using the `time` directive.
 
 ```{image} _static/report-resource-job-duration.png
 ```
 
 ## I/O Usage
 
-The I/O Usage plot shows how much data was read and written by a processes.
+The **I/O Usage** plot shows how much data was read and written by a processes.
 
 The amount of data that was read by a process (`rchar` in the trace file) is the number of bytes the process read, using any read-like system calls. For example, from files, pipes, and tty. The amount of data that was written by a process (`wchar` in the trace file) is the number of bytes the process wrote, using any write-like system call.
 
-The I/O plot **Read** tab shows how much data was read and the **Write** tab shows how much data was written by each process. For example, the following script reads and writes different data volumes:
+The **Read** tab shows how much data was read and the **Write** tab shows how much data was written by each process. For example, the following script reads and writes different data volumes:
 
 ```nextflow
 process io_read_write_1G {
