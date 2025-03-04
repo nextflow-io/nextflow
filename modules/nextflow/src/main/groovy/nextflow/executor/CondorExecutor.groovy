@@ -369,11 +369,11 @@ class CondorExecutor extends AbstractGridExecutor {
     // /*
     //  * Prepare and launch the task in the underlying execution platform
     //  */
-    // @Override
-    // GridTaskHandler createTaskHandler(TaskRun task) {
-    //     assert task
-    //     assert task.workDir
+    @Override
+    GridTaskHandler createTaskHandler(TaskRun task) {
+        assert task
+        assert task.workDir
 
-    //     new CondorTaskHandler(task)//, this)
-    // }
+        new CondorTaskHandler(task)//, this)
+    }
 }
