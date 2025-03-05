@@ -6,7 +6,7 @@ This tutorial explains how resource usage metrics are computed from execution re
 
 ## CPU Usage
 
-The **CPU Usage** plot reports how CPU resources are used by each process.
+CPU Usage plots report how CPU resources are used by each process.
 
 ```{image} _static/report-resource-cpu.png
 ```
@@ -87,7 +87,7 @@ However, the **% Allocated** tab would report 50%. It would not be relevant to c
 
 ## Memory Usage
 
-**Memory Usage** plots report how memory was used by each process. It has three tabs, **Physical (RAM)**, **Virtual (RAM + Disk swap)**, and **% RAM Allocated**, showing the usage of the physical memory (RAM), the virtual memory (vmem), and the percentage of RAM used by the process relative to the memory that the `memory` directive set, respectively.
+Memory Usage plots report how memory was used by each process. It has three tabs, **Physical (RAM)**, **Virtual (RAM + Disk swap)**, and **% RAM Allocated**, showing the usage of the physical memory (RAM), the virtual memory (vmem), and the percentage of RAM used by the process relative to the memory that the `memory` directive set, respectively.
 
 Peak usage during process executions is reported for both physical and virtual memories. The total amount of memory used by a process is the `virtual memory (vmem)`. The `vmem` contains all memory areas, including in the physical memory (RAM), in the swap space, on the disk, or shared with other processes. The `resident set size (RSS)` is the amount of `physical memory (RAM)` held by a process.
 
@@ -279,7 +279,7 @@ Memory and storage metrics are reported in bytes. For example, 1 KB = $1024$ byt
 
 ## I/O Usage
 
-**I/O Usage** plots show how much data was read and written by processes. The amount of data that was read by a process (`rchar` in trace files) is the number of bytes the process read using any read-like system calls. The amount of data that was written by a process (`wchar` in trace files) is the number of bytes the process wrote using any write-like system call. Read and write data is read from the file `/proc/$pid/io`.
+I/O Usage plots show how much data was read and written by processes. The amount of data that was read by a process (`rchar` in trace files) is the number of bytes the process read using any read-like system calls. The amount of data that was written by a process (`wchar` in trace files) is the number of bytes the process wrote using any write-like system call. Read and write data is read from the file `/proc/$pid/io`.
 
 **Read** tabs shows how much data was read and **Write** tabs shows how much data was written by each process. For example, the following script reads and writes different data volumes:
 
