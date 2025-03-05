@@ -14,16 +14,4 @@
 # limitations under the License.
 #
 
-nextflow.trace.DefaultObserverFactory
-nextflow.util.DefaultSerializers
-nextflow.secret.LocalSecretsProvider
-nextflow.cache.DefaultCacheFactory
-nextflow.scm.RepositoryFactory
-nextflow.container.resolver.DefaultContainerResolver
-nextflow.mail.SendMailProvider
-nextflow.mail.SimpleMailProvider
-nextflow.mail.JavaMailProvider
-nextflow.processor.tip.DefaultTaskTipProvider
-nextflow.fusion.FusionTokenDefault
-nextflow.data.cid.DefaultCidStoreFactory
-
+nextflow.data.cid.fs.CidFileSystemProvider

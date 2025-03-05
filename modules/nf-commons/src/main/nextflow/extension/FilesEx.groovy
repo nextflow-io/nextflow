@@ -494,6 +494,7 @@ class FilesEx {
             return true
         }
         catch(IOException e) {
+            log.debug "Failed to create directory '$self'", e
             return false
         }
     }

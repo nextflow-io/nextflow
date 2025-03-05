@@ -2274,7 +2274,7 @@ class TaskProcessor {
      * @return The list of paths of scripts in the project bin folder referenced in the task command
      */
     @Memoized
-    protected List<Path> getTaskBinEntries(String script) {
+    public List<Path> getTaskBinEntries(String script) {
         List<Path> result = []
         def tokenizer = new StringTokenizer(script," \t\n\r\f()[]{};&|<>`")
         while( tokenizer.hasMoreTokens() ) {
@@ -2307,7 +2307,7 @@ class TaskProcessor {
         log.info(buffer.toString())
     }
 
-    protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
+    public Map<String,Object> getTaskGlobalVars(TaskRun task) {
         final result = task.getGlobalVars(ownerScript.binding)
         final directives = getTaskExtensionDirectiveVars(task)
         result.putAll(directives)
