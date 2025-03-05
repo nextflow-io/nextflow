@@ -427,7 +427,7 @@ Nextflow will automatically manage the transfer of input and output files betwee
 
 - Currently, it's not possible to specify a disk type different from the default one assigned by the service depending on the chosen instance type.
 
-### Troubleshooting
+### Configuration tips
 
 - Make sure to enable the Compute Engine API, Life Sciences API and Cloud Storage API in the [APIs & Services Dashboard](https://console.cloud.google.com/apis/dashboard) page.
 
