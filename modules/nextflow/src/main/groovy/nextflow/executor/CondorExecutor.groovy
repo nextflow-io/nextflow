@@ -105,6 +105,11 @@ class CondorExecutor extends AbstractGridExecutor {
     }
 
     @Override
+    List<String> queueJobStatusReportCommand(Object jobId, Object queue) {
+        return null
+    }
+
+    @Override
     protected List<String> queueStatusCommand(Object queue) {
         ["condor_q", "-nobatch"]
     }
