@@ -10,9 +10,9 @@ This page describes common compute and storage errors and strategies to resolve 
 
 ### Job queue not found
 
-**`JobQueue <YOUR_QUEUE> not found`**
+**`JobQueue <QUEUE> not found`**
 
-This error occurs when Nextflow cannot locate the specified AWS Batch job queue. It usually happens when the job queue does not exist, is not enabled, or there is a region mismatch between the configuration and the AWS Batch environment.
+This error occurs when Nextflow cannot locate the specified AWS Batch job queue. It usually happens when job queues do not exist, are not enabled, or there is a region mismatch between the configuration and the AWS Batch environment.
 
 To resolve this error, ensure you have defined an AWS region in your `nextflow.config` file and that it matches your Batch environment region.
 
@@ -26,9 +26,9 @@ To resolve this error, ensure the Docker container image used for the job does n
 
 Check the following logs for more detailed error information:
 
-- The `.nextflow.log` file
-- The Job execution log in the AWS Batch dashboard
-- The CloudWatch logs found in the `/aws/batch/job` log group
+- `.nextflow.log` file
+- Job execution log in the AWS Batch dashboard
+- CloudWatch logs found in the `/aws/batch/job` log group
 
 ### Process stalled in RUNNABLE status
 

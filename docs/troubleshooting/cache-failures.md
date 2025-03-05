@@ -17,7 +17,7 @@ Common causes of cache failures include:
 - {ref}`Race condition on a global variable <cache-failure-race-condition>`
 - {ref}`Non-deterministic process inputs <cache-failure-nondeterministic>`
 
-The causes of these cache failure and solutions to resolve them are described in detail below.
+Causes of these cache failures and solutions to resolve them are described in detail below.
 
 (cache-failure-resume)=
 
@@ -57,7 +57,7 @@ Modifying inputs that are used in the task hash will invalidate the cache. Commo
 Changing the value of any directive, except {ref}`process-ext`, will not inactivate the task cache.
 :::
 
-A hash for an input file is calculated from the complete file path, the last modified timestamp, and the file size to calculate. If any of these attributes change the task will be re-executed. If a process modifies its input files it cannot be resumed. Processes that modify their own input files are considered to be an anti-pattern and should be avoided.
+Hashes for input files are calculated from the complete file path, the last modified timestamp, and the file size to calculate. If any of these attributes change, tasks will be re-executed. If a process modifies its input files it cannot be resumed. Processes that modify their own input files are considered to be an anti-pattern and should be avoided.
 
 (cache-failure-inconsistent)=
 
@@ -76,15 +76,15 @@ Channel.of(1,2,3) | map { v -> X=v; X+=2 } | view { v -> "ch1 = $v" }
 Channel.of(1,2,3) | map { v -> X=v; X*=2 } | view { v -> "ch2 = $v" }
 ```
 
-In the above example, `X` is declared in each `map` closure. Without the `def` keyword, or other type qualifier, the variable `X` is global to the entire script. Operators and executed concurrently and, as `X` is global, there is a *race condition* that causes the emitted values to vary depending on the order of the concurrent operations. If these values were passed to a process as inputs the process would execute different tasks during each run due to the race condition.
+In the above example, `X` is declared in each `map` closure. Without the `def` keyword, or other type qualifier, the variable `X` is global to the entire script. Operators and executed concurrently and, as `X` is global, there is a *race condition* that causes emitted values to vary depending on the order of concurrent operations. If these values were passed to a process as inputs the process would execute different tasks during each run due to race conditions.
 
-To resolve this failure type, ensure the variable is not global by using a local variable:
+To resolve this failure type, ensure variables are not global by using local variables:
     
 ```nextflow
 Channel.of(1,2,3) | map { v -> def X=v; X+=2 } | view { v -> "ch1 = $v" }
 ```
 
-Alternatively, remove the variable:
+Alternatively, remove the variables:
 
 ```nextflow
 Channel.of(1,2,3) | map { v -> v * 2 } | view { v -> "ch2 = $v" }
@@ -94,7 +94,7 @@ Channel.of(1,2,3) | map { v -> v * 2 } | view { v -> "ch2 = $v" }
 
 ### Non-deterministic process inputs
 
-A process that merges inputs from different sources non-deterministically may invalidate the cache. For example:
+Processes that merge inputs from different sources non-deterministically may invalidate the cache. For example:
 
 ```nextflow
 workflow {
@@ -115,7 +115,7 @@ process gather {
 }
 ```
 
-In the above example, the inputs will be merged without matching. This is the same way method used by the {ref}`operator-merge` operator. When merged, the inputs are incorrect, non-deterministic, and invalidate the cache.
+In the above example, inputs will be merged without matching. This is the same way method used by the {ref}`operator-merge` operator. When merged, the inputs are incorrect, non-deterministic, and invalidate the cache.
 
 To resolve this failure type, ensure channels are deterministic by joining them before invoking the process:
 
