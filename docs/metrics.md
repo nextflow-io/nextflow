@@ -2,7 +2,7 @@
 
 # Understanding task resource metrics
 
-This tutorial explains how resource usage metrics are computed from execution reports. See {ref}`Execution report <execution-report>` for more information about execution reports and how to generate them.
+This tutorial explains how resource usage metrics are computed from execution reports. See {ref}`Execution report <execution-report>` for more information about how to enable them.
 
 ## CPU Usage
 
@@ -279,7 +279,7 @@ Memory and storage metrics are reported in bytes. For example, 1 KB = $1024$ byt
 
 ## I/O Usage
 
-I/O Usage plots show how much data was read and written by processes. The amount of data that was read by a process (`rchar` in trace files) is the number of bytes the process read using any read-like system calls. The amount of data that was written by a process (`wchar` in trace files) is the number of bytes the process wrote using any write-like system call. Read and write data is read from the file `/proc/$pid/io`.
+I/O Usage plots show how much data was read and written by processes. The amount of data that was read by a process (`rchar` in trace files) is the number of bytes the process read using read-like system calls. The amount of data that was written by a process (`wchar` in trace files) is the number of bytes the process wrote using write-like system call. Read and write data is read from the file `/proc/$pid/io`.
 
 **Read** tabs shows how much data was read and **Write** tabs shows how much data was written by each process. For example, the following script reads and writes different data volumes:
 
