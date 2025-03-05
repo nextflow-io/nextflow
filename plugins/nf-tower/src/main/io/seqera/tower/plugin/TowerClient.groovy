@@ -383,7 +383,7 @@ class TowerClient implements TraceObserver {
                 ? env.get('TOWER_ACCESS_TOKEN')
                 : session.config.navigate('tower.accessToken', env.get('TOWER_ACCESS_TOKEN'))
         if( !token )
-            throw new AbortOperationException("Missing personal access token -- Make sure there's a variable TOWER_ACCESS_TOKEN in your environment")
+            throw new AbortOperationException("Missing Seqera Platform access token -- Make sure there's a variable TOWER_ACCESS_TOKEN in your environment")
         return token
     }
 

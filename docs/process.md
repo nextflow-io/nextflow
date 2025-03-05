@@ -1276,7 +1276,7 @@ Note, however, that the latter syntax can be used both for a directive's main ar
 
 It's a very common scenario that different instances of the same process may have very different needs in terms of computing resources. In such situations requesting, for example, an amount of memory too low will cause some tasks to fail. Instead, using a higher limit that fits all the tasks in your execution could significantly decrease the execution priority of your jobs.
 
-The [Dynamic directives](#dynamic-directives) evaluation feature can be used to modify the amount of computing resources requested in case of a process failure and try to re-execute it using a higher limit. For example:
+[Dynamic directives](#dynamic-directives) can be used to adjust the requested task resources when a task fails and is re-executed. For example:
 
 ```nextflow
 process foo {
@@ -1293,13 +1293,39 @@ process foo {
 }
 ```
 
-In the above example the {ref}`process-memory` and execution {ref}`process-time` limits are defined dynamically. The first time the process is executed the `task.attempt` is set to `1`, thus it will request a two GB of memory and one hour of maximum execution time.
+In the above example the {ref}`process-memory` and execution {ref}`process-time` limits are defined dynamically. The first time the process is executed the `task.attempt` is set to `1`, thus it will request 2 GB of memory and 1 hour of walltime.
 
-If the task execution fail reporting an exit status in the range between 137 and 140, the task is re-submitted (otherwise terminates immediately). This time the value of `task.attempt` is `2`, thus increasing the amount of the memory to four GB and the time to 2 hours, and so on.
+If the task execution fails with an exit status between 137 and 140, the task is re-executed; otherwise, the run is terminated immediately. The re-executed task will have `task.attempt` set to `2`, and will request 4 GB of memory and 2 hours of walltime.
 
-The directive {ref}`process-maxretries` set the maximum number of time the same task can be re-executed.
+The {ref}`process-maxretries` directive sets the maximum number of times the same task can be re-executed.
+
+:::{tip}
+Directives with named arguments, such as `accelerator` and `disk`, must use a more verbose syntax when they are dynamic. For example:
+
+```nextflow
+// static request
+disk 375.GB, type: 'local-ssd'
+
+// dynamic request
+disk { [request: 375.GB * task.attempt, type: 'local-ssd'] }
+```
+:::
+
+Task resources can also be defined in terms of task inputs. For example:
+
+```nextflow
+process foo {
+    memory { 8.GB + 1.GB * Math.ceil(input_file.size() / 1024 ** 3) }
+
+    input:
+    path input_file
+}
+```
+
+In this example, each task requests 8 GB of memory, plus the size of the input file rounded up to the next GB. This way, each task requests only as much memory as it needs based on the size of the inputs. The specific function that you use should be tuned for each process.
 
 ### Dynamic task resources with previous execution trace
+
 :::{versionadded} 24.10.0
 :::
 
@@ -1317,8 +1343,8 @@ process foo {
     """
 }
 ```
-In the above example, the {ref}`process-memory` is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to one GB. In the subsequent attempts, it doubles the previously allocated memory. See {ref}`trace-report` for more information about trace records.
 
+In the above example, the {ref}`process-memory` is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to 1 GB. In each subsequent attempt, the requested memory is doubled. See {ref}`trace-report` for more information about trace records.
 
 ### Dynamic retry with backoff
 
