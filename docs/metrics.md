@@ -11,9 +11,9 @@ The **CPU Usage** plot reports how CPU resources are used by each process.
 ```{image} _static/report-resource-cpu.png
 ```
 
-**Raw Usage** tabs are expected to show 100% core usage if processes perform one task of pure computation. If tasks are distributed over, 2, 3, or 4 CPUs, the raw usage will be 200%, 300%, or 400%, respectively. **% Allocated** tabs rescale raw usage values relative to the number of CPUs that are set with the `cpus` directive. If the `cpus` directive is not set, CPUs are set to `1` and **% Allocated** tabs will show the same values the **Raw Usage** tab.
+**Raw Usage** tabs are expected to show 100% core usage if processes perform one task of pure computation. If tasks are distributed over, 2, 3, or 4 CPUs, the raw usage will be 200%, 300%, or 400%, respectively. **% Allocated** tabs rescale raw usage values relative to the number of CPUs that are set with the `cpus` directive. If the `cpus` directive is not set, CPUs are set to `1` and **% Allocated** tabs will show the same values **Raw Usage** tabs.
 
-For example, using the program [stress](https://people.seas.harvard.edu/~apw/stress/), the following script would report 100% CPU usage in **Raw Usage** tabs and 50% CPU usage in **% Allocated** tabs as the process requested double the number of CPUs that are required:
+For example, using the [stress](https://people.seas.harvard.edu/~apw/stress/) program, the following script would report 100% CPU usage in the **Raw Usage** tab and 50% CPU usage in the **% Allocated** tab as the process requested double the number of CPUs that are required:
 
 ```nextflow
 process cpuUsageEx1 {
@@ -34,7 +34,7 @@ workflow{
 See [Linux stress command With Examples](https://www.geeksforgeeks.org/linux-stress-command-with-examples/) for more information about the stress command.
 :::
 
-CPU usage decreases if processes spend some time performing pure computation and some time waiting for CPUs. For example, using `stress` and `sleep`, the following script would report 75% CPU usage in the **Raw Usage** tab:
+CPU usage decreases if processes spend some time performing pure computation and some time waiting for CPUs. For example, using the `stress` and `sleep` commands, the following script would report 75% CPU usage in the **Raw Usage** tab:
 
 ```nextflow
 process cpuUsageEx2 {
@@ -279,7 +279,7 @@ Memory and storage metrics are reported in bytes. For example, 1 KB = $1024$ byt
 
 ## I/O Usage
 
-**I/O Usage** plots show how much data was read and written by a processes. The amount of data that was read by a process (`rchar` in trace files) is the number of bytes the process read using any read-like system calls. The amount of data that was written by a process (`wchar` in trace files) is the number of bytes the process wrote, using any write-like system call.
+**I/O Usage** plots show how much data was read and written by processes. The amount of data that was read by a process (`rchar` in trace files) is the number of bytes the process read using any read-like system calls. The amount of data that was written by a process (`wchar` in trace files) is the number of bytes the process wrote using any write-like system call. Read and write data is read from the file `/proc/$pid/io`.
 
 **Read** tabs shows how much data was read and **Write** tabs shows how much data was written by each process. For example, the following script reads and writes different data volumes:
 
