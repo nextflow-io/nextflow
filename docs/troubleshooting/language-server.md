@@ -1,4 +1,6 @@
-# Language server
+(language-server-errors-page)=
+
+# Language server errors
 
 This page describes common language server errors and strategies to resolve them.
 
@@ -22,10 +24,12 @@ To resolve this issue, edit or close and re-open the Nextflow script to refresh 
 
 ## Stop and restart
 
-In the event of an error, you can stop or restart the language server from the Command Palette. The following commands are available:
+In the event of an error, stop or restart the language server from the Command Palette. The following stop and restart commands are available:
 
 - `Nextflow: Stop language server`
 - `Nextflow: Restart language server`
+
+See {ref}`vscode-commands` for a fill list of Nextflow VS Code extension commands.
 
 ## View logs
 

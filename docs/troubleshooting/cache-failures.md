@@ -29,7 +29,7 @@ The `-resume` option is required to resume a pipeline. Ensure `-resume` has been
 
 ### Non-default cache directives
 
-The `cache` directive is enabled by default. However, you can disable or modify it's behavior for a specific process. For example:
+The `cache` directive is enabled by default. However, you can disable or modify its behavior for a specific process. For example:
 
 ```nextflow
 process FOO {
@@ -177,7 +177,7 @@ To compare the task hashes for a resumed run:
 :::{versionadded} 23.10.0
 :::
 
-Task hashes can also be extracted into a diff using `-dump-hashes json`. See an example Bash script to compare two runs and produce a diff here:
+Task hashes can also be extracted into a diff using `-dump-hashes json`. The following is an example Bash script to compare two runs and produce a diff:
 
 ```bash
 nextflow -log run_1.log run $pipeline -dump-hashes json
