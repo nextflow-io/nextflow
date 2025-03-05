@@ -596,7 +596,6 @@ output {
 The above example will write the following CSV file to `results/samples.csv`:
 
 ```
-"id","name","fastq_1","fastq_2"
 "1","sample 1","results/fastq/1a.fastq","results/fastq/1b.fastq"
 "2","sample 2","results/fastq/2a.fastq","results/fastq/2b.fastq"
 "3","sample 3","results/fastq/3a.fastq","results/fastq/3b.fastq"
