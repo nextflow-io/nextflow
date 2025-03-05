@@ -10,6 +10,7 @@ package nextflow.cloud.google.batch
 import java.nio.file.Path
 
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
+import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.processor.TaskHandler
@@ -21,6 +22,10 @@ import spock.lang.Unroll
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class GoogleBatchExecutorTest extends Specification {
+
+    def setup() {
+        Global.session = Mock(Session) { getConfig()>>[:] }
+    }
 
     def 'should check is fusion' () {
         given:
