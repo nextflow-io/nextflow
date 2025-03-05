@@ -22,6 +22,7 @@ import com.azure.compute.batch.models.BatchTaskState
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.types.CloudMachineInfo
+import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.fusion.FusionAwareTask
@@ -76,8 +77,8 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
     }
 
-    protected BashWrapperBuilder createBashWrapper() {
-        fusionEnabled()
+    protected BashWrapperBuilder createTaskWrapper() {
+        return fusionEnabled()
                 ? fusionLauncher()
                 : new AzBatchScriptLauncher(task.toTaskBean(), executor)
     }
@@ -85,7 +86,7 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     @Override
     void submit() {
         log.debug "[AZURE BATCH] Submitting task $task.name - work-dir=${task.workDirStr}"
-        createBashWrapper().build()
+        createTaskWrapper().build()
         // submit the task execution
         this.taskKey = batchService.submitTask(task)
         log.debug "[AZURE BATCH] Submitted task $task.name with taskId=$taskKey"
@@ -120,8 +121,15 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             task.stderr = errorFile
             status = TaskStatus.COMPLETED
             final info = batchService.getTask(taskKey).executionInfo
-            if (info.result == BatchTaskExecutionResult.FAILURE)
-                task.error = new ProcessUnrecoverableException(info.failureInfo.message)
+            if (info.result == BatchTaskExecutionResult.FAILURE) {
+                if (task.exitStatus != 0) {
+                    // If the exit status is not 0, throw a process failed exception and Nextflow will handle it with errorStrategy
+                    task.error = new ProcessFailedException("Task failed with exit code ${task.exitStatus}".toString())
+                } else {
+                    // Else use the existing error handling
+                    task.error = new ProcessUnrecoverableException(info.failureInfo.message)
+                }
+            }
             deleteTask(taskKey, task)
             return true
         }
@@ -202,4 +210,5 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
         return machineInfo
     }
+
 }
