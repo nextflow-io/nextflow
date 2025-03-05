@@ -16,8 +16,6 @@
 
 package nextflow.processor
 
-import nextflow.conda.CondaConfig
-
 import java.nio.file.FileSystems
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -29,6 +27,7 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.conda.CondaCache
+import nextflow.conda.CondaConfig
 import nextflow.container.ContainerConfig
 import nextflow.container.resolver.ContainerInfo
 import nextflow.container.resolver.ContainerResolver
@@ -52,6 +51,7 @@ import nextflow.script.params.OutParam
 import nextflow.script.params.StdInParam
 import nextflow.script.params.ValueOutParam
 import nextflow.spack.SpackCache
+import nextflow.util.SysHelper
 /**
  * Models a task instance
  *
@@ -670,7 +670,7 @@ class TaskRun implements Cloneable {
 
     protected ContainerInfo containerInfo() {
         // note: use an explicit function instead of a closure or lambda syntax, otherwise
-        // when calling this method from a subclass it will result into a MissingMethodExeception
+        // when calling this method from a subclass it will result into a MissingMethodException
         // see  https://issues.apache.org/jira/browse/GROOVY-2433
         cache0.computeIfAbsent('containerInfo', new Function<String,ContainerInfo>() {
             @Override
@@ -682,6 +682,11 @@ class TaskRun implements Cloneable {
     @Memoized
     private ContainerResolver containerResolver() {
         ContainerResolverProvider.load()
+    }
+
+    @Memoized
+    protected boolean isWaveResolver() {
+        containerResolver().getClass().getName().toLowerCase().contains('wave')
     }
 
     private ContainerInfo containerInfo0() {
@@ -719,6 +724,15 @@ class TaskRun implements Cloneable {
        return containerKey
             ? containerResolver().isContainerReady(containerKey)
             : true
+    }
+
+    String getContainerPlatform() {
+        final result = config.getArchitecture()
+        if( result )
+            return result.getDockerArch()
+        return isWaveResolver()
+            ? SysHelper.DEFAULT_DOCKER_PLATFORM
+            : null
     }
 
     ResourcesBundle getModuleBundle() {

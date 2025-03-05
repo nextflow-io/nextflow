@@ -655,14 +655,13 @@ class TaskConfigTest extends Specification {
         def config = new TaskConfig(CONFIG)
 
         expect:
-        config.getArchitecture()?.arch == ARCH
-        config.getContainerPlatform() == PLAT
+        config.getArchitecture() == ARCH
 
         where:
-        CONFIG              | ARCH       | PLAT
-        [:]                 | null       | 'linux/amd64'
-        [arch:'amd64']      | 'amd64'    | 'linux/amd64'
-        [arch:'arm64']      | 'arm64'    | 'linux/arm64'
+        CONFIG              | ARCH
+        [:]                 | null
+        [arch:'amd64']      | new Architecture(name:'amd64')
+        [arch:'arm64']      | new Architecture(name:'arm64')
     }
 
 }

@@ -18,12 +18,11 @@
 package io.seqera.wave.plugin
 
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
-import nextflow.trace.TraceObserver
-import nextflow.trace.TraceObserverFactory
 /**
  * Factory class for wave session
  *
@@ -31,10 +30,10 @@ import nextflow.trace.TraceObserverFactory
  */
 @Slf4j
 @CompileStatic
-class WaveFactory implements TraceObserverFactory {
+class WaveLoader {
 
-    @Override
-    Collection<TraceObserver> create(Session session) {
+    @Memoized
+    static boolean enabled(Session session) {
         final config = session.config
         final wave = (Map)config.wave ?: new HashMap<>(1)
         final fusion = (Map)config.fusion ?: new HashMap<>(1)
@@ -42,7 +41,7 @@ class WaveFactory implements TraceObserverFactory {
         if( SysEnv.get('NXF_DISABLE_WAVE_SERVICE') ) {
             log.debug "Detected NXF_DISABLE_WAVE_SERVICE environment variable - Turning off Wave service"
             wave.enabled = false
-            return List.of()
+            return false
         }
         
         if( fusion.enabled ) {
@@ -52,10 +51,10 @@ class WaveFactory implements TraceObserverFactory {
             checkWaveRequirement(session, wave, 'Fargate')
         }
 
-        return List.<TraceObserver>of()
+        return wave.enabled == true
     }
 
-    protected void checkWaveRequirement(Session session, Map wave, String feature) {
+    static protected void checkWaveRequirement(Session session, Map wave, String feature) {
         if( !wave.enabled ) {
             throw new AbortOperationException("$feature feature requires enabling Wave service")
         }

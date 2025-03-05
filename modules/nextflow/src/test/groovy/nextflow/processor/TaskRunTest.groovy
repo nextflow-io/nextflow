@@ -844,7 +844,6 @@ class TaskRunTest extends Specification {
         and:
         config == new ContainerConfig(engine:'docker')
 
-
         when:
         config = task.getContainerConfig()
         then:

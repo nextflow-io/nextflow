@@ -17,6 +17,7 @@
 
 package io.seqera.wave.plugin
 
+
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
@@ -27,16 +28,15 @@ import spock.lang.Unroll
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class WaveFactoryTest extends Specification {
+class WaveLoaderTest extends Specification {
 
     @Unroll
     def 'should not change config' () {
         given:
         def session = Mock(Session) { getConfig() >> CONFIG }
-        def factory = new WaveFactory()
 
         when:
-        factory.create(session)
+        WaveLoader.enabled(session)
         then:
         CONFIG == EXPECTED
         and:
@@ -52,7 +52,7 @@ class WaveFactoryTest extends Specification {
     @Unroll
     def 'should check s5cmd is enabled' () {
         given:
-        def factory = new WaveFactory()
+        def factory = new WaveLoader()
 
         expect:
         factory.isAwsBatchFargateMode(CONFIG) == EXPECTED
@@ -69,10 +69,9 @@ class WaveFactoryTest extends Specification {
         given:
         def CONFIG = [wave:[:], fusion:[enabled:true]]
         def session = Mock(Session) { getConfig() >> CONFIG }
-        def factory = new WaveFactory()
 
         when:
-        factory.create(session)
+        WaveLoader.enabled(session)
         then:
         def e = thrown(AbortOperationException)
         e.message == 'Fusion feature requires enabling Wave service'
@@ -83,10 +82,9 @@ class WaveFactoryTest extends Specification {
         SysEnv.push(NXF_DISABLE_WAVE_SERVICE: 'true')
         def CONFIG = [wave:[:], fusion:[enabled:true]]
         def session = Mock(Session) { getConfig() >> CONFIG }
-        def factory = new WaveFactory()
 
         when:
-        factory.create(session)
+        WaveLoader.enabled(session)
         then:
         noExceptionThrown()
         and:

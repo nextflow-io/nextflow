@@ -134,7 +134,7 @@ class WaveClient {
         this.config = new WaveConfig(session.config.wave as Map ?: Collections.emptyMap(), SysEnv.get())
         this.fusion = new FusionConfig(session.config.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
         this.tower = new TowerConfig(session.config.tower as Map ?: Collections.emptyMap(), SysEnv.get())
-        this.awsFargate = WaveFactory.isAwsBatchFargateMode(session.config)
+        this.awsFargate = WaveLoader.isAwsBatchFargateMode(session.config)
         this.s5cmdConfigUrl = session.config.navigate('wave.s5cmdConfigUrl') as URL
         this.endpoint = config.endpoint()
         this.condaChannels = session.getCondaConfig()?.getChannels() ?: DEFAULT_CONDA_CHANNELS
@@ -170,8 +170,6 @@ class WaveClient {
     }
 
     WaveConfig config() { return config }
-
-    Boolean enabled() { return config.enabled() }
 
     protected ContainerLayer makeLayer(ResourcesBundle bundle) {
         final result = packer.layer(bundle.content())
@@ -473,7 +471,7 @@ class WaveClient {
         // get the bundle
         final bundle = task.getModuleBundle()
         // get the architecture
-        final dockerArch = task.config.getContainerPlatform()
+        final dockerArch = task.getContainerPlatform()
         // compose the request attributes
         def attrs = new HashMap<String,String>()
         attrs.container = containerImage
