@@ -980,7 +980,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-dump-hashes`
 : Dump task hash keys for debugging purposes.
 : :::{versionadded} 23.10.0
-  You can use `-dump-hashes json` to dump the task hash keys as JSON for easier post-processing. See the {ref}`caching and resuming tips <cache-compare-hashes>` for more details.
+  You can use `-dump-hashes json` to dump the task hash keys as JSON for easier post-processing. See the {ref}`cache-failure-compare` for more details.
   :::
 
 `-e.<key>=<value>`

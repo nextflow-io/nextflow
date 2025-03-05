@@ -476,42 +476,7 @@ The above snippet defines two volume mounts for the jobs executed in your pipeli
 
 ### Troubleshooting
 
-**Problem**: The Pipeline execution terminates with an AWS error message similar to the one shown below:
-
-```
-JobQueue <your queue> not found
-```
-
-Make sure you have defined a AWS region in the Nextflow configuration file and it matches the region in which your Batch environment has been created.
-
-**Problem**: A process execution fails reporting the following error message:
-
-```
-Process <your task> terminated for an unknown reason -- Likely it has been terminated by the external system
-```
-
-This may happen when Batch is unable to execute the process script. A common cause of this problem is that the Docker container image you have specified uses a non standard [entrypoint](https://docs.docker.com/engine/reference/builder/#entrypoint) which does not allow the execution of the Bash launcher script required by Nextflow to run the job.
-
-This may also happen if the AWS CLI doesn't run correctly.
-
-Other places to check for error information:
-
-- The `.nextflow.log` file.
-- The Job execution log in the AWS Batch dashboard.
-- The [CloudWatch](https://aws.amazon.com/cloudwatch/) logs found in the `/aws/batch/job` log group.
-
-**Problem**: A process execution is stalled in the `RUNNABLE` status and the pipeline output is similar to the one below:
-
-```
-executor >  awsbatch (1)
-process > <your process> (1) [  0%] 0 of ....
-```
-
-It may happen that the pipeline execution hangs indefinitely because one of the jobs is held in the queue and never gets executed. In AWS Console, the queue reports the job as `RUNNABLE` but it never moves from there.
-
-There are multiple reasons why this can happen. They are mainly related to the Compute Environment workload/configuration, the docker service or container configuration, network status, etc.
-
-This [AWS page](https://aws.amazon.com/premiumsupport/knowledge-center/batch-job-stuck-runnable-status/) provides several resolutions and tips to investigate and work around the issue.
+See {ref}`aws-compute-storage` for common AWS compute and storage errors and strategies to resolve them.
 
 ## AWS Fargate
 
