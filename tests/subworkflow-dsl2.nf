@@ -33,15 +33,16 @@ workflow flow2 {
 }
 
 workflow test1 {
+    main:
     flow1()
     flow2()
     ch1 = flow1.out.result
     ch2 = flow2.out.result
-    emit: ch1.mix(ch2).collectFile(name:"$PWD/test1.txt")
+    emit: ch1.mix(ch2).collectFile(name:"${env('PWD')}/test1.txt")
 }
 
 workflow test2 {
-    emit: ( flow1 & flow2 ) | mix | collectFile(name:"$PWD/test2.txt")
+    emit: ( flow1 & flow2 ) | mix | collectFile(name:"${env('PWD')}/test2.txt")
 }
 
 workflow {

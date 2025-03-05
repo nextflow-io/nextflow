@@ -6,6 +6,7 @@ process blastThemAll {
     input:
     path x
 
+    script:
     """
     echo $x
     """

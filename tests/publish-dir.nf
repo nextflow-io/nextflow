@@ -26,6 +26,7 @@ process align {
     path("*.bam")
     path("${x}.bai")
 
+    script:
     """
     echo ${x} > ${x}.bam
     echo ${x} | rev > ${x}.bai
@@ -43,6 +44,7 @@ process my_combine {
     output:
     path 'result.txt'
 
+    script:
     """
     cat $bamfile > result.txt
     cat $baifile >> result.txt
@@ -54,6 +56,7 @@ process foo {
   output:
   file 'xxx'
 
+  script:
   '''
   mkdir xxx
   touch xxx/A

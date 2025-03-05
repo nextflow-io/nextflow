@@ -1,0 +1,28 @@
+set -e
+
+#
+# run normal mode
+#
+echo ''
+$NXF_RUN | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > foo'` == 1 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > bar'` == 1 ]] || false
+
+[[ `< stdout grep -E 'foo.*/a/a/2\.txt' ` ]] || false
+[[ `< stdout grep -E 'bar.*/a/a/2\.txt' ` ]] || false
+
+
+
+#
+# RESUME mode
+#
+echo ''
+$NXF_RUN -resume | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Cached process > foo'` == 1 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Cached process > bar'` == 1 ]] || false
+
+[[ `< stdout grep -E 'foo.*/a/a/2\.txt' ` ]] || false
+[[ `< stdout grep -E 'bar.*/a/a/2\.txt' ` ]] || false
+

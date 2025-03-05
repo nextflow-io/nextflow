@@ -1,5 +1,6 @@
 #!/usr/bin/env nextflow
 
+params.input = null
 params.chunkSize = 1
 
 process foo {
@@ -8,11 +9,12 @@ process foo {
     input:
     stdin()
 
+    script:
     "cat -"
 }
 
 workflow {
-    Channel.from(stdin) \
-            | splitFasta( by: params.chunkSize) \
-            | foo
+    Channel.fromPath(params.input)
+        | splitFasta(by: params.chunkSize)
+        | foo
 }
