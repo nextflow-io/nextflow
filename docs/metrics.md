@@ -31,7 +31,7 @@ workflow{
 ```
 
 :::{tip}
-See [Linux stress command With Examples](https://www.geeksforgeeks.org/linux-stress-command-with-examples/) for more information about the stress command.
+See [Linux stress command with examples](https://www.geeksforgeeks.org/linux-stress-command-with-examples/) for more information about the stress command.
 :::
 
 CPU usage decreases if processes spend some time performing pure computation and some time waiting for CPUs. For example, using the `stress` and `sleep` commands, the following script would report 75% CPU usage in the **Raw Usage** tab:
@@ -224,7 +224,7 @@ int main(int argc, char **argv) {
 }
 ```
 
-The first and second programs are executed as `foo` and `bar` in the following script:
+The first and second programs are executed as `foo` and `bar`, respectively, in the following script:
 
 ```nextflow
 process foo {
@@ -256,12 +256,12 @@ The **Virtual (RAM + Disk swap)** tab shows that both `foo` and `bar` use the sa
 ```{image} _static/report-resource-memory-vmem.png
 ```
 
-However, the **Physical (RAM)** tab shows that the `bar` uses ~1 GiB of RAM while `foo` uses ~0 GiB:
+However, the **Physical (RAM)** tab shows that `bar` uses ~1 GiB of RAM while `foo` uses ~0 GiB of RAM:
 
 ```{image} _static/report-resource-memory-ram.png
 ```
 
-The **% RAM Allocated** tab shows that 0% of resources set in the `memory` directive were used for `foo` and 67% of resource were used for `bar`:
+The **% RAM Allocated** tab shows that `foo` and `bar` used 0% and 67% of resources set in the `memory` directive, respectively:
 
 ```{image} _static/report-resource-memory-pctram.png
 ```
@@ -272,7 +272,7 @@ Memory and storage metrics are reported in bytes. For example, 1 KB = $1024$ byt
 
 ## Job Duration
 
-**Job Duration** plots report how long each process took to run. It has two tabs. The **Raw Usage** tab shows the job duration, sometimes known as elapsed real time, real time or wall time, and the **% Allocated** tab shows the time that was requested relative to what was requested using the `time` directive.
+**Job Duration** plots report how long each process took to run. It has two tabs. The **Raw Usage** tab shows the job duration and the **% Allocated** tab shows the time that was requested relative to what was requested using the `time` directive. Job duration is sometimes known as elapsed real time, real time or wall time.
 
 ```{image} _static/report-resource-job-duration.png
 ```
