@@ -1,6 +1,10 @@
+(compute-storage-page)=
+
 # Compute and storage
 
 This page describes common compute and storage errors and strategies to resolve them.
+
+(aws-compute-storage)=
 
 ## Amazon Web Services
 
