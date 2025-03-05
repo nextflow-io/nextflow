@@ -23,7 +23,7 @@ import nextflow.Session
 import nextflow.ast.NextflowXformImpl
 import nextflow.ast.OpXformImpl
 import nextflow.script.BaseScript
-import nextflow.script.control.ResolveVisitor
+import nextflow.script.control.ScriptResolveVisitor
 import nextflow.script.parser.ScriptParserPluginFactory
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassNode
@@ -127,7 +127,7 @@ public class ScriptCompiler {
                 final cn = source.getAST().getClasses().get(0)
                 final astNodes = new ASTNode[] { cn, cn }
 
-                new ResolveVisitor(source, this, DEFAULT_IMPORTS, new ArrayList<>()).visit()
+                new ScriptResolveVisitor(source, this, DEFAULT_IMPORTS, new ArrayList<>()).visit()
                 new ScriptToGroovyVisitor(source).visit()
                 new NextflowXformImpl().visit(astNodes, source)
                 new OpXformImpl().visit(astNodes, source)
