@@ -23,6 +23,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.wave.plugin.WaveClient
+import io.seqera.wave.plugin.WaveLoader
 import nextflow.Global
 import nextflow.Session
 import nextflow.container.ContainerConfig
@@ -62,11 +63,19 @@ class WaveContainerResolver implements ContainerResolver {
         return 'docker'
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    boolean enabled() {
+        return WaveLoader.enabled(Global.session as Session)
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     @Override
     ContainerInfo resolveImage(TaskRun task, String imageName) {
-        if( !client().enabled() )
-            return defaultResolver.resolveImage(task, imageName)
-
         final freeze = client().config().freezeMode()
         final config = task.getContainerConfig()
         final engine = getContainerEngine0(config)
@@ -127,11 +136,11 @@ class WaveContainerResolver implements ContainerResolver {
         return null
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     boolean isContainerReady(String key) {
-        final c=client()
-        return c.enabled()
-            ? c.isContainerReady(key)
-            : defaultResolver.isContainerReady(key)
+        return client().isContainerReady(key)
     }
 }

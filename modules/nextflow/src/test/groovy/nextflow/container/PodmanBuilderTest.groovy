@@ -240,4 +240,21 @@ class PodmanBuilderTest extends Specification {
                 .runCommand == 'podman run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --cpu-shares 1024 --memory 400m fedora'
 
     }
+
+    def 'test container platform' () {
+        expect:
+        new PodmanBuilder('fedora')
+            .build()
+            .runCommand == 'podman run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
+
+        new PodmanBuilder('fedora')
+            .setPlatform('amd64')
+            .build()
+            .runCommand == 'podman run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --platform amd64 fedora'
+
+        new PodmanBuilder('fedora')
+            .setPlatform('linux/arm64')
+            .build()
+            .runCommand == 'podman run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --platform linux/arm64 fedora'
+    }
 }

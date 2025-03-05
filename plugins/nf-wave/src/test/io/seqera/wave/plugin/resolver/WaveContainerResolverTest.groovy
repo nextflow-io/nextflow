@@ -52,7 +52,7 @@ class WaveContainerResolverTest extends Specification {
         when:
         def result = resolver.resolveImage(task, CONTAINER_NAME)
         then:
-        resolver.client() >> Mock(WaveClient) { enabled()>>true; config()>>Mock(WaveConfig) }
+        resolver.client() >> Mock(WaveClient) { config()>>Mock(WaveConfig) }
         _ * task.getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'docker' }
         and:
         1 * resolver.waveContainer(task, CONTAINER_NAME, false) >> WAVE_CONTAINER
@@ -63,7 +63,7 @@ class WaveContainerResolverTest extends Specification {
         when:
         result = resolver.resolveImage(task, CONTAINER_NAME)
         then:
-        resolver.client() >> Mock(WaveClient) { enabled()>>true; config()>>Mock(WaveConfig) }
+        resolver.client() >> Mock(WaveClient) { config()>>Mock(WaveConfig) }
         _ * task.getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'singularity'; isEnabled()>>true }
         and:
         1 * resolver.waveContainer(task, CONTAINER_NAME, false) >> WAVE_CONTAINER
@@ -75,7 +75,7 @@ class WaveContainerResolverTest extends Specification {
         when:
         result = resolver.resolveImage(task, CONTAINER_NAME)
         then:
-        resolver.client() >> Mock(WaveClient) { enabled()>>true; config()>>Mock(WaveConfig) { freezeMode()>>true } }
+        resolver.client() >> Mock(WaveClient) { config()>>Mock(WaveConfig) { freezeMode()>>true } }
         _ * task.getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'singularity'; isEnabled()>>true }
         and:
         1 * resolver.waveContainer(task, CONTAINER_NAME, true) >> ORAS_CONTAINER
