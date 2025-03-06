@@ -6,21 +6,22 @@ if [ -z "$AWS_ACCESS_KEY_ID" ]; then
   exit 0
 fi
 
+OUTDIR="s3://nextflow-ci/work/ci-test/fusion-symlink/$(uuidgen)"
+
 #
 # normal run
 #
 echo initial run
-$NXF_RUN -c .config
-RUN_ID=$($NXF_CMD log | tail -n1 | awk '{ print $7 }')
+$NXF_RUN -c .config --outdir "$OUTDIR"
 
-$NXF_CMD fs cp "s3://nextflow-ci/work/ci-test/fusion-symlink/${RUN_ID}/data.txt" data.txt
+$NXF_CMD fs cp "$OUTDIR/data.txt" data.txt
 cmp data.txt .expected || false
 
 #
 # resume run
 #
 echo resumed run
-$NXF_RUN -c .config -resume
+$NXF_RUN -c .config --outdir "$OUTDIR" -resume
 
-$NXF_CMD fs cp "s3://nextflow-ci/work/ci-test/fusion-symlink/${RUN_ID}/data.txt" data.txt
+$NXF_CMD fs cp "$OUTDIR/data.txt" data.txt
 cmp data.txt .expected || false
