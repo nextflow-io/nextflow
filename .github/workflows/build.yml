@@ -189,7 +189,7 @@ jobs:
       - name: Tar integration tests
         if: always()
         run: | 
-            tar -cvf integration-tests.tar.gz tests/checks
+            tar -cvf integration-tests.tar.gz tests-{v1,v2}/checks
             tar -cvf validation-tests.tar.gz validation
 
       - name: Publish tests report
