@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+params.outdir = 'results'
 
 process CREATE {
 
@@ -42,7 +43,7 @@ process FORWARD {
 }
 
 process PUBLISH {
-    publishDir "s3://nextflow-ci/work/ci-test/fusion-symlink"
+    publishDir params.outdir
 
     input:
     path "data.txt"
