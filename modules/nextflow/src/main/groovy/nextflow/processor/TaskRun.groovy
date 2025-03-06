@@ -720,7 +720,6 @@ class TaskRun implements Cloneable {
             : true
     }
 
-    @Memoized
     String getContainerPlatform() {
         final result = config.getArchitecture()
         return result ? result.dockerArch : containerResolver().defaultContainerPlatform()
