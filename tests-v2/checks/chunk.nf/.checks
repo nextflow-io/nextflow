@@ -1,0 +1,15 @@
+set -e
+
+#
+# run normal mode
+#
+$NXF_RUN --chunkSize 3 < .data.fa | tee .stdout
+
+[[ `grep -c 'Submitted process > foo' .nextflow.log` == 2 ]] || false
+
+#
+# run resume mode
+#
+$NXF_RUN -resume --chunkSize 3 < .data.fa | tee .stdout
+
+[[ `grep -c 'Cached process > foo' .nextflow.log` == 2 ]] || false

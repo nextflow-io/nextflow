@@ -1,0 +1,28 @@
+#
+# run normal mode 
+#
+$NXF_RUN -c ../../template.config | tee stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process'` == 6 ]] || false
+< stdout grep "Foo alpha" || false
+< stdout grep "Foo delta" || false
+< stdout grep "Foo gamma" || false
+< stdout grep "Bar alpha" || false
+< stdout grep "Bar delta" || false
+< stdout grep "Bar gamma" || false
+
+
+#
+# run resume mode 
+#
+$NXF_RUN -c ../../template.config  -resume | tee stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Cached process'` == 6 ]] || false
+< stdout grep "Foo alpha" || false
+< stdout grep "Foo delta" || false
+< stdout grep "Foo gamma" || false
+< stdout grep "Bar alpha" || false
+< stdout grep "Bar delta" || false
+< stdout grep "Bar gamma" || false
+
+

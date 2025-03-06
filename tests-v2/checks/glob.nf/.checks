@@ -1,0 +1,27 @@
+set -e
+
+#
+# run normal mode
+#
+echo ''
+$NXF_RUN | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > recurseDir'` == 1 ]] || false
+
+grep 'result1: file2.fa' stdout
+grep 'result1: file3.fa' stdout
+grep 'result1: file4.fa' stdout
+grep 'result2: file5.txt' stdout
+
+#
+# run resume mode
+#
+echo ''
+$NXF_RUN -resume | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Cached process > recurseDir'` == 1 ]] || false
+
+grep 'result1: file2.fa' stdout
+grep 'result1: file3.fa' stdout
+grep 'result1: file4.fa' stdout
+grep 'result2: file5.txt' stdout

@@ -1,0 +1,17 @@
+#
+# run normal mode 
+#
+$NXF_RUN $WITH_DOCKER --out result.txt | tee .stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process'` == 5 ]] || false
+cmp .expected <(sort .stdout) || false
+
+
+#
+# run resume mode 
+#
+$NXF_RUN $WITH_DOCKER --out result.txt -resume | tee .stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Cached process'` == 5 ]] || false
+cmp .expected <(sort .stdout) || false
+

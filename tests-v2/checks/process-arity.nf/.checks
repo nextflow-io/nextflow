@@ -1,0 +1,16 @@
+set +e
+
+#
+# run normal mode
+#
+echo ''
+$NXF_RUN 
+[[ $? == 0 ]] || false
+
+
+#
+# RESUME mode
+#
+echo ''
+$NXF_RUN -resume 
+[[ $? == 0 ]] || false

@@ -1,0 +1,24 @@
+set -e
+
+mkdir \[work-dir\]
+
+#
+# run normal mode 
+#
+$NXF_RUN -w \[work-dir\] | tee stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process'` == 1 ]] || false
+[[ `< stdout grep -c -F 'match: file[a-b].txt'` == 1 ]] || false
+[[ `< stdout grep -c -F 'match: file-*.txt'` == 1 ]] || false
+[[ `< stdout grep -c -F 'match: file-?.txt'` == 1 ]] || false
+
+#
+# run resume mode 
+#
+$NXF_RUN -w \[work-dir\] -resume | tee stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Cached process'` == 1 ]] || false
+[[ `< stdout grep -c -F 'match: file[a-b].txt'` == 1 ]] || false
+[[ `< stdout grep -c -F 'match: file-*.txt'` == 1 ]] || false
+[[ `< stdout grep -c -F 'match: file-?.txt'` == 1 ]] || false
+

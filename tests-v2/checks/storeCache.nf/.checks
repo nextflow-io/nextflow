@@ -1,0 +1,39 @@
+set -e
+
+#
+# run normal mode
+#
+echo ''
+$NXF_RUN | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > storeCache'` == 3 ]] || false
+
+grep 'cache/Ciao.txt' stdout
+grep 'cache/Hola.txt' stdout
+grep 'cache/Hello.txt' stdout
+
+
+#
+# run normal mode 
+#
+echo ''
+$NXF_RUN | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Stored process > storeCache'` == 3 ]] || false
+
+grep 'cache/Ciao.txt' stdout
+grep 'cache/Hola.txt' stdout
+grep 'cache/Hello.txt' stdout
+
+
+#
+# run resume mode 
+#
+echo ''
+$NXF_RUN -resume| tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Stored process > storeCache'` == 3 ]] || false
+
+grep 'cache/Ciao.txt' stdout
+grep 'cache/Hola.txt' stdout
+grep 'cache/Hello.txt' stdout

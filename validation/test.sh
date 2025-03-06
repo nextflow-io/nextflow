@@ -13,7 +13,7 @@ export NXF_DISABLE_CHECK_LATEST=true
 
 test_integration() {
     (
-      cd ../tests/
+      cd ../tests-$1/
       sudo bash cleanup.sh
       cd checks
       bash run.sh
@@ -49,15 +49,17 @@ test_integration() {
 # Integration tests
 #
 if [[ $TEST_MODE == 'test_integration' ]]; then
-  test_integration
+  test_integration v1
 fi
 
 #
 # Integration tests (strict syntax)
 #
 if [[ $TEST_MODE == 'test_parser_v2' ]]; then
-  export NXF_SYNTAX_PARSER=v2
-  test_integration
+  # runs tests-v2 with parser v1
+  NXF_SYNTAX_PARSER=v1 test_integration 'v2'
+  # runs test-v2 with parser v2
+  NXF_SYNTAX_PARSER=v2 test_integration 'v2'
 fi
 
 #

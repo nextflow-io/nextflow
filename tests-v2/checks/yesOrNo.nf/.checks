@@ -1,0 +1,25 @@
+set -e
+
+#
+# run normal mode
+#
+echo ''
+$NXF_RUN | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > yesOrNo'` == 2 ]] || false
+
+< stdout grep 'YES'
+< stdout grep 'NO'
+
+
+
+#
+# RESUME mode
+#
+echo ''
+$NXF_RUN -resume | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Cached process > yesOrNo'` == 2 ]] || false
+
+< stdout grep 'YES'
+< stdout grep 'NO'

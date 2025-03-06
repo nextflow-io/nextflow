@@ -1,0 +1,34 @@
+set -e
+
+#
+# run normal mode
+#
+echo ''
+echo \$ $NXF_RUN
+$NXF_RUN | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > algn'` == 6 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > merge'` == 2 ]] || false
+
+[[ `grep -c 'barcode: alpha' stdout` == 1 ]] || false
+[[ `grep -c 'barcode: gamma' stdout` == 1 ]] || false
+[[ `grep -c 'bam : bam1 bam2 bam3' stdout` == 2 ]] || false
+[[ `grep -c 'bai : bai1 bai2 bai3' stdout` == 2 ]] || false
+[[ `grep -c 'seq_ids' stdout` == 2 ]] || false
+
+
+#
+# RESUME mode
+#
+echo ''
+echo \$ $NXF_RUN -resume
+$NXF_RUN -resume | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Cached process > algn'` == 6 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Cached process > merge'` == 2 ]] || false
+
+[[ `grep -c 'barcode: alpha' stdout` == 1 ]] || false
+[[ `grep -c 'barcode: gamma' stdout` == 1 ]] || false
+[[ `grep -c 'bam : bam1 bam2 bam3' stdout` == 2 ]] || false
+[[ `grep -c 'bai : bai1 bai2 bai3' stdout` == 2 ]] || false
+[[ `grep -c 'seq_ids' stdout` == 2 ]] || false

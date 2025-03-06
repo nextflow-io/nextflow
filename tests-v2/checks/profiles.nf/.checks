@@ -1,0 +1,43 @@
+#
+# verify default profile
+#
+$NXF_CMD -C ../../profiles.config config | tee stdout
+cmp stdout .expected_profile_standard.txt || false
+
+#
+# verify advanced profile
+#
+$NXF_CMD -C ../../profiles.config config -profile advanced | tee stdout
+cmp stdout .expected_profile_advanced.txt || false
+
+#
+# verify *all* profile
+#
+$NXF_CMD -C ../../profiles.config config -a | tee stdout
+cmp stdout .expected_profile_all.txt || false
+
+#
+# verify return error
+#
+$NXF_CMD -C ../../profiles.config config -profile xxx 2>&1| tee stdout
+[[ ${PIPESTATUS[0]} == 0 ]] && exit 1
+< stdout grep "Unknown configuration profile: 'xxx'" || false
+
+#
+# Verify run uses the default profile
+#
+$NXF_CMD -C ../../profiles.config run $NXF_SCRIPT | tee stdout
+< stdout grep "cpus: 2 memory: 2 GB" || false
+
+#
+# Verify run uses the *advanced* profile
+#
+$NXF_CMD -C ../../profiles.config run $NXF_SCRIPT -profile advanced | tee stdout
+< stdout grep "cpus: 8 memory: 10 GB" || false
+
+#
+# Verify that return an error code
+#
+$NXF_CMD -C ../../profiles.config run $NXF_SCRIPT -profile foo 2>&1| tee stdout
+[[ ${PIPESTATUS[0]} == 0 ]] && exit 1
+< stdout grep "Unknown configuration profile: 'foo'" || false
