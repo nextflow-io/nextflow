@@ -171,8 +171,6 @@ class WaveClient {
 
     WaveConfig config() { return config }
 
-    Boolean enabled() { return config.enabled() }
-
     protected ContainerLayer makeLayer(ResourcesBundle bundle) {
         final result = packer.layer(bundle.content())
         return result
@@ -473,7 +471,7 @@ class WaveClient {
         // get the bundle
         final bundle = task.getModuleBundle()
         // get the architecture
-        final dockerArch = task.config.getContainerPlatform()
+        final dockerArch = task.getContainerPlatform()
         // compose the request attributes
         def attrs = new HashMap<String,String>()
         attrs.container = containerImage

@@ -36,8 +36,6 @@ import nextflow.util.CmdLineHelper
 import nextflow.util.CmdLineOptionMap
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
-import nextflow.util.SysHelper
-
 /**
  * Task local configuration properties
  *
@@ -450,11 +448,6 @@ class TaskConfig extends LazyMap implements Cloneable {
         if( value != null )
             throw new IllegalArgumentException("Invalid `arch` directive value: $value [${value.getClass().getName()}]")
         return null
-    }
-
-    String getContainerPlatform() {
-        final result = getArchitecture()
-        return result ? result.getDockerArch() : SysHelper.DEFAULT_DOCKER_PLATFORM
     }
 
     def getClusterOptions() {
