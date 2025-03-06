@@ -1,0 +1,35 @@
+set -e
+
+#
+# run normal mode
+#
+echo ''
+$NXF_RUN | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > foo (p1.fa)'` == 1 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > foo (p2.fa)'` == 1 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > foo (p3.fa)'` == 1 ]] || false
+
+[[ `< stdout grep -c '>1ycsB'` == 2 ]] || false
+[[ `< stdout grep -c '>1pht'` == 2 ]]  || false
+[[ `< stdout grep -c '>1aboA'` == 1 ]] || false
+[[ `< stdout grep -c '>1ihvA'` == 1 ]] || false
+[[ `< stdout grep -c '>1vie'` == 1 ]]  || false
+
+
+
+#
+# run resume mode
+#
+echo ''
+$NXF_RUN -resume | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Cached process > foo (p1.fa)'` == 1 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Cached process > foo (p2.fa)'` == 1 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Cached process > foo (p3.fa)'` == 1 ]] || false
+
+[[ `< stdout grep -c '>1ycsB'` == 2 ]] || false
+[[ `< stdout grep -c '>1pht'` == 2 ]]  || false
+[[ `< stdout grep -c '>1aboA'` == 1 ]] || false
+[[ `< stdout grep -c '>1ihvA'` == 1 ]] || false
+[[ `< stdout grep -c '>1vie'` == 1 ]]  || false

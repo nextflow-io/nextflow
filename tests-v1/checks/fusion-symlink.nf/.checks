@@ -1,0 +1,72 @@
+#!/bin/bash
+
+# Retry a command with exponential backoff. The function returns 0 if the command was successful
+# on its first attempt, 1 if the command failed after all attempts, and 2 if the command was successful
+# after one or more retries.
+function _retry {
+
+  if [[ $# -lt 4 ]]; then
+    echo "Usage: _retry <max_attempts> <initial_delay> <max_delay> <cmd>"
+    return 1
+  fi
+
+  local max_attempts="$1"; shift
+  local initial_delay="$1"; shift
+  local max_delay="$1"; shift
+  local cmd=( "$@" )
+  local attempt_num=1
+  local max_attempts=${max_attempts}
+  local max_delay=${max_delay}
+  local initial_delay=${initial_delay}
+  local exit_code=0
+
+  until "${cmd[@]}"; do
+    exit_code=2
+    if (( attempt_num == max_attempts )); then
+      echo "-- [$attempt_num/$max_attempts] attempt failed! No more attempts left."
+      return 1
+    fi
+    echo "-- [$attempt_num/$max_attempts] attempt failed! Retrying in ${initial_delay}s..."
+    sleep "$initial_delay"
+    (( attempt_num++ ))
+    (( initial_delay *= 2 ))
+    if (( initial_delay > max_delay )); then
+      initial_delay=$max_delay
+    fi
+  done
+  echo "-- [$attempt_num/$max_attempts] attempt succeeded!"
+  return $exit_code
+}
+
+# Skip test if AWS keys are missing
+if [ -z "$AWS_ACCESS_KEY_ID" ]; then 
+  echo "Missing AWS credentials -- Skipping test"
+  exit 0
+fi
+
+#
+# normal run
+#
+echo initial run
+$NXF_RUN -c .config
+
+_retry 5 1 16 "$NXF_CMD" fs cp s3://nextflow-ci/work/ci-test/fusion-symlink/data.txt data.txt
+if [ $? -eq 2 ]; then
+  echo "succeeded on retry"
+  false
+fi
+cmp data.txt .expected || false
+
+#
+# resume run
+#
+echo resumed run
+$NXF_RUN -c .config -resume
+
+_retry 5 1 16 "$NXF_CMD" fs cp s3://nextflow-ci/work/ci-test/fusion-symlink/data.txt data.txt
+if [ $? -eq 2 ]; then
+  echo "succeeded on retry"
+  false
+
+fi
+cmp data.txt .expected || false
