@@ -59,6 +59,7 @@ class MermaidRenderer implements DagRenderer {
     }
 
     String renderNetwork(DAG dag) {
+        log.info "Customized DAG export"
         // construct node lookup from DAG
         def nodeLookup = getNodeLookup(dag)
 
@@ -320,12 +321,53 @@ class MermaidRenderer implements DagRenderer {
                 .values()
                 .findAll( n -> n.vertex.type == DAG.Type.OPERATOR ) as List<Node>
 
+        def topo_order = nodeLookup.keySet().sort { 
+            a,b -> a.getOrder() <=> b.getOrder()
+        }  as List<DAG.Vertex>
+
+         
+        for(def n : topo_order){
+            log.info("l: " + n.label + " i: " + n.getOrder())
+        }
+        
+
         while( !queue.isEmpty() ) {
             // find subgraph of operator nodes
             final node = queue.pop()
-            final subgraph = findSubgraph(node, (Node n) -> n.vertex.type == DAG.Type.OPERATOR)
+            // K: REMOVE subgraph consideration, as it considers together nodes that shouldn't
+            // final subgraph = findSubgraph(node, (Node n) -> n.vertex.type == DAG.Type.OPERATOR)
+            final subgraph = findSubgraph(node, (Node n) -> false)
 
             // select a neighboring process
+            // from topo order, if feasible
+
+            // Find topo index of the vertex
+            def vertexTopoIndex = topo_order.indexOf(node.vertex)
+            log.info("Order:" + vertexTopoIndex)
+            // find previous and next process in the list
+            def idx = vertexTopoIndex - 1
+            while(idx >= 0 && topo_order[idx].type != DAG.Type.PROCESS){
+                idx--
+            }
+            def prevIdx = idx
+
+            idx = vertexTopoIndex + 1
+            while(idx < topo_order.size() && topo_order[idx].type != DAG.Type.PROCESS){
+                idx++
+            }
+            def nextIdx = idx
+
+            if(prevIdx > -1 && nextIdx < topo_order.size()){
+                // Two processes were found in topological order before and after the operator. 
+                log.info("prev: " + topo_order[prevIdx].label + " next:" + topo_order[nextIdx].label)
+
+                // Do share a common path?
+                def prevPath = getSubgraphKeys(topo_order[prevIdx].label)[0] as List
+                def nextPath = getSubgraphKeys(topo_order[nextIdx].label)[0] as List
+                log.info("Res:" + (prevPath.join(':') == nextPath.join(':')))
+            }
+
+            // within input and output processes
             final inputs = subgraph.inputs.findAll( n -> n.vertex.type == DAG.Type.PROCESS )
             final outputs = subgraph.outputs.findAll( n -> n.vertex.type == DAG.Type.PROCESS )
 
