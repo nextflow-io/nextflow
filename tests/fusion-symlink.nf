@@ -42,7 +42,7 @@ process FORWARD {
 }
 
 process PUBLISH {
-    publishDir "s3://nextflow-ci/work/ci-test/fusion-symlink"
+    publishDir "s3://nextflow-ci/work/ci-test/fusion-symlink/${workflow.sessionId}"
 
     input:
     path "data.txt"
