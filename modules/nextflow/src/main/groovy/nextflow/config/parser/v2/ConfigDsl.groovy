@@ -45,7 +45,11 @@ class ConfigDsl extends Script {
 
     private Path configPath
 
+    private List<String> profiles
+
     private Map target = [:]
+
+    private Set<String> parsedProfiles = []
 
     void setIgnoreIncludes(boolean value) {
         this.ignoreIncludes = value
@@ -67,9 +71,19 @@ class ConfigDsl extends Script {
         target.params = params
     }
 
+    void setProfiles(List<String> profiles) {
+        this.profiles = profiles
+    }
+
+    void addParsedProfile(String profile) {
+        parsedProfiles.add(profile)
+    }
+
+    Set<String> getParsedProfiles() {
+        return parsedProfiles
+    }
+
     Map getTarget() {
-        if( !target.params )
-            target.remove('params')
         return target
     }
 
@@ -91,11 +105,6 @@ class ConfigDsl extends Script {
         }
     }
 
-    void append(List<String> names, Object right) {
-        final values = (Set) navigate(names.init()).computeIfAbsent(names.last(), (k) -> new HashSet<>())
-        values.add(right)
-    }
-
     void assign(List<String> names, Object right) {
         navigate(names.init()).put(names.last(), right)
     }
@@ -114,11 +123,25 @@ class ConfigDsl extends Script {
     }
 
     void block(List<String> names, Closure closure) {
-        final delegate = new ConfigBlockDsl(this, names)
+        final dsl = blockDsl(names)
         final cl = (Closure)closure.clone()
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
-        cl.setDelegate(delegate)
+        cl.setDelegate(dsl)
         cl.call()
+        dsl.apply()
+    }
+
+    private ConfigBlockDsl blockDsl(List<String> names) {
+        if( names.size() == 1 && names.first() == 'plugins' )
+            return new PluginsDsl(this)
+
+        if( names.size() == 1 && names.first() == 'process' )
+            return new ProcessDsl(this, names)
+
+        if( names.size() == 1 && names.first() == 'profiles' )
+            return new ProfilesDsl(this, profiles)
+
+        return new ConfigBlockDsl(this, names)
     }
 
     /**
@@ -147,12 +170,15 @@ class ConfigDsl extends Script {
             includePath = configPath.resolveSibling(includeFile)
 
         final configText = readConfigFile(includePath)
-        final config = new ConfigParserV2()
+        final parser = new ConfigParserV2()
                 .setIgnoreIncludes(ignoreIncludes)
                 .setRenderClosureAsString(renderClosureAsString)
                 .setStrict(strict)
                 .setBinding(binding.getVariables())
-                .parse(configText, includePath)
+                .setParams(target.params as Map)
+                .setProfiles(profiles)
+        final config = parser.parse(configText, includePath)
+        parsedProfiles.addAll(parser.getProfiles())
 
         final ctx = navigate(names)
         ctx.putAll(Bolts.deepMerge(ctx, config))
@@ -177,17 +203,13 @@ class ConfigDsl extends Script {
         }
     }
 
-    static class ConfigBlockDsl {
-        private ConfigDsl dsl
-        private List<String> scope
+    private static class ConfigBlockDsl {
+        protected ConfigDsl dsl
+        protected List<String> scope
 
         ConfigBlockDsl(ConfigDsl dsl, List<String> scope) {
             this.dsl = dsl
             this.scope = scope
-        }
-
-        void append(String name, Object right) {
-            dsl.append(scope, right)
         }
 
         void assign(List<String> names, Object right) {
@@ -199,27 +221,91 @@ class ConfigDsl extends Script {
         }
 
         void withLabel(String label, Closure closure) {
-            if( !isWithinProcessScope() )
-                throw new ConfigParseException("Process selectors are only allowed in the `process` scope (offending scope: `${scope.join('.')}`)")
-            dsl.block(scope + ["withLabel:${label}".toString()], closure)
+            throw new ConfigParseException("Process selectors are only allowed in the `process` scope (offending scope: `${scope.join('.')}`)")
         }
 
         void withName(String selector, Closure closure) {
-            if( !isWithinProcessScope() )
-                throw new ConfigParseException("Process selectors are only allowed in the `process` scope (offending scope: `${scope.join('.')}`)")
-            dsl.block(scope + ["withName:${selector}".toString()], closure)
-        }
-
-        private boolean isWithinProcessScope() {
-            if( scope.size() == 1 )
-                return scope.first() == 'process'
-            if( scope.size() == 3 )
-                return scope.first() == 'profiles' && scope.last() == 'process'
-            return false
+            throw new ConfigParseException("Process selectors are only allowed in the `process` scope (offending scope: `${scope.join('.')}`)")
         }
 
         void includeConfig(String includeFile) {
             dsl.includeConfig(scope, includeFile)
+        }
+
+        void apply() {
+        }
+    }
+
+    private static class PluginsDsl extends ConfigBlockDsl {
+        PluginsDsl(ConfigDsl dsl) {
+            super(dsl, Collections.emptyList())
+        }
+
+        void id(String value) {
+            final target = dsl.getTarget()
+            final plugins = (Set) target.computeIfAbsent('plugins', (k) -> new HashSet<>())
+            plugins.add(value)
+        }
+    }
+
+    private static class ProcessDsl extends ConfigBlockDsl {
+        ProcessDsl(ConfigDsl dsl, List<String> scope) {
+            super(dsl, scope)
+        }
+
+        @Override
+        void withLabel(String label, Closure closure) {
+            dsl.block(scope + ["withLabel:${label}".toString()], closure)
+        }
+
+        @Override
+        void withName(String selector, Closure closure) {
+            dsl.block(scope + ["withName:${selector}".toString()], closure)
+        }
+    }
+
+    private static class ProfilesDsl extends ConfigBlockDsl {
+        private List<String> profiles
+        private Map<String,Closure> blocks = [:]
+
+        ProfilesDsl(ConfigDsl dsl, List<String> profiles) {
+            super(dsl, Collections.emptyList())
+            this.profiles = profiles
+        }
+
+        @Override
+        void assign(List<String> names, Object right) {
+            throw new ConfigParseException("Only profile blocks are allowed in the `profiles` scope")
+        }
+
+        @Override
+        void block(String name, Closure closure) {
+            blocks[name] = closure
+            dsl.addParsedProfile(name)
+        }
+
+        @Override
+        void includeConfig(String includeFile) {
+            throw new ConfigParseException("Only profile blocks are allowed in the `profiles` scope")
+        }
+
+        @Override
+        void apply() {
+            if( profiles != null ) {
+                // apply profiles in the order they were specified
+                for( final name : profiles ) {
+                    final closure = blocks[name]
+                    if( closure )
+                        dsl.block(scope, closure)
+                }
+            }
+            else {
+                // append all profiles to the config map
+                for( final name : blocks.keySet() ) {
+                    final closure = blocks[name]
+                    dsl.block(['profiles', name], closure)
+                }
+            }
         }
     }
 
