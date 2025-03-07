@@ -62,16 +62,19 @@ class MermaidRenderer implements DagRenderer {
         // construct node lookup from DAG
         def nodeLookup = getNodeLookup(dag)
 
+        // infer operator subgraph keys
+        def operatorSubgraphKeys = inferSubgraphKeys(nodeLookup)
+
         // collapse operator nodes
         if( !verbose )
-            collapseOperators(nodeLookup)
+            collapseOperators(nodeLookup, operatorSubgraphKeys)
 
         // remove empty workflow inputs
         if( !verbose )
             removeEmptyInputs(nodeLookup)
 
         // construct node tree
-        final nodeTree = getNodeTree(nodeLookup)
+        final nodeTree = getNodeTree(nodeLookup, operatorSubgraphKeys)
 
         // collapse node tree to desired depth
         if( depth >= 0 )
@@ -148,16 +151,22 @@ class MermaidRenderer implements DagRenderer {
      * with a summary node.
      *
      * @param nodeLookup
+     * @param operatorSubgraphKeys Infered subgraphs of operators. (updated by the method)
      */
-    private void collapseOperators(Map<DAG.Vertex,Node> nodeLookup) {
+    private void collapseOperators(Map<DAG.Vertex,Node> nodeLookup, Map<Node,List> operatorSubgraphKeys) {
         def queue = nodeLookup
                 .values()
                 .findAll( n -> n.vertex.type == DAG.Type.OPERATOR ) as List<Node>
 
         while( !queue.isEmpty() ) {
             final node = queue.pop()
-            final subgraph = findSubgraph(node, (Node n) -> n.vertex.type == DAG.Type.OPERATOR)
-            collapseSubgraph(nodeLookup, subgraph, node.vertex)
+            final subgraphKey = operatorSubgraphKeys[node]
+            // Only merge operator nodes within the same subgraph
+            final subgraph = findSubgraph(node, (Node n) -> 
+                    n.vertex.type == DAG.Type.OPERATOR && operatorSubgraphKeys[n]==subgraphKey )
+            def summaryNode = collapseSubgraph(nodeLookup, subgraph, node.vertex)    
+            operatorSubgraphKeys[summaryNode]=subgraphKey
+            operatorSubgraphKeys.keySet().removeAll(subgraph.nodes)
             queue.removeAll(subgraph.nodes)
         }
     }
@@ -225,8 +234,9 @@ class MermaidRenderer implements DagRenderer {
      * @param nodeLookup
      * @param subgraph
      * @param vertex
+     * @return the created summary node
      */
-    private void collapseSubgraph(Map<DAG.Vertex,Node> nodeLookup, Subgraph subgraph, DAG.Vertex vertex) {
+    private Node collapseSubgraph(Map<DAG.Vertex,Node> nodeLookup, Subgraph subgraph, DAG.Vertex vertex) {
         // remove subgraph
         removeSubgraph(nodeLookup, subgraph)
 
@@ -239,6 +249,8 @@ class MermaidRenderer implements DagRenderer {
 
         for( def w : subgraph.outputs )
             w.inputs << summaryNode
+
+        return summaryNode
     }
 
     /**
@@ -262,11 +274,9 @@ class MermaidRenderer implements DagRenderer {
      * Construct a node tree with a subgraph for each subworkflow.
      *
      * @param nodeLookup
+     * @param inferredKeys Inferred subgraph of operator nodes
      */
-    private Map<String,Object> getNodeTree(Map<DAG.Vertex,Node> nodeLookup) {
-        // infer subgraphs of operator nodes
-        final inferredKeys = inferSubgraphKeys(nodeLookup)
-
+    private Map<String,Object> getNodeTree(Map<DAG.Vertex,Node> nodeLookup, Map<Node,List> inferredKeys) {
         // construct node tree
         def nodeTree = [:] as Map<String,Object>
 
