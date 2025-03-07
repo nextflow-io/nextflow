@@ -24,10 +24,9 @@ function echo_yellow() {
 # Some vars 
 #
 NXF_CMD=${NXF_CMD:-nextflow}
-NXF_SYNTAX_PARSER=${NXF_SYNTAX_PARSER:-v1}
+NXF_SYNTAX_PARSER=${NXF_SYNTAX_PARSER:-v2}
 REPORT=$PWD/.report
 WITH_DOCKER=${WITH_DOCKER:=''}
-TRAVIS_PULL_REQUEST=${TRAVIS_PULL_REQUEST:=false}
 
 #
 # Clean scratch dir 
@@ -80,7 +79,7 @@ function can_run() {
         echo 'no'
     elif [[ -f .IGNORE-JAVA-$TEST_JDK && $(grep -c "$1" ".IGNORE-JAVA-$TEST_JDK") != 0 ]]; then
         echo 'no'
-    elif [[ $NXF_SYNTAX_PARSER == 'v2' && $1 == v1-*.nf ]]; then
+    elif [[ $NXF_SYNTAX_PARSER == 'v1' && $(grep -c "$1" .IGNORE-PARSER-V2) != 0 ]]; then
         echo 'no'
     else
         echo 'yes'
