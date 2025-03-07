@@ -17,7 +17,6 @@
 package nextflow.data.cid
 
 import spock.lang.Specification
-import spock.lang.TempDir
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -29,16 +28,19 @@ import java.nio.file.Path
  */
 class CidHistoryFileTest extends Specification {
 
-    @TempDir
     Path tempDir
-
     Path historyFile
     CidHistoryFile cidHistoryFile
 
     def setup() {
+        tempDir = Files.createTempDirectory("wdir")
         historyFile = tempDir.resolve("cid-history.txt")
         Files.createFile(historyFile)
         cidHistoryFile = new CidHistoryFile(historyFile)
+    }
+
+    def cleanup(){
+        tempDir?.deleteDir()
     }
 
     def "write should append a new record to the file"() {
@@ -53,7 +55,7 @@ class CidHistoryFileTest extends Specification {
         then:
         def lines = Files.readAllLines(historyFile)
         lines.size() == 1
-        def parsedRecord = CidHistoryFile.CidRecord.parse(lines[0])
+        def parsedRecord = CidHistoryRecord.parse(lines[0])
         parsedRecord.sessionId == sessionId
         parsedRecord.runName == runName
         parsedRecord.runCid == runCid
@@ -93,7 +95,7 @@ class CidHistoryFileTest extends Specification {
         then:
         def lines = Files.readAllLines(historyFile)
         lines.size() == 1
-        def parsedRecord = CidHistoryFile.CidRecord.parse(lines[0])
+        def parsedRecord = CidHistoryRecord.parse(lines[0])
         parsedRecord.runCid == updatedCid
     }
 
@@ -113,46 +115,24 @@ class CidHistoryFileTest extends Specification {
         then:
         def lines = Files.readAllLines(historyFile)
         lines.size() == 1
-        def parsedRecord = CidHistoryFile.CidRecord.parse(lines[0])
+        def parsedRecord = CidHistoryRecord.parse(lines[0])
         parsedRecord.runCid == runCid
     }
 
-    def "CidRecord parse should throw for invalid record"() {
-        when:
-        CidHistoryFile.CidRecord.parse("invalid-record")
-
-        then:
-        thrown(IllegalArgumentException)
-    }
-
-    def "CidRecord parse should handle 4-column record"() {
-        given:
-        def timestamp = new Date()
-        def formattedTimestamp = CidHistoryFile.TIMESTAMP_FMT.format(timestamp)
-        def line = "${formattedTimestamp}\trun-1\t${UUID.randomUUID()}\tcid://123"
-
-        when:
-        def record = CidHistoryFile.CidRecord.parse(line)
-
-        then:
-        record.timestamp != null
-        record.runName == "run-1"
-        record.runCid == "cid://123"
-    }
-
-    def "CidRecord toString should produce tab-separated format"() {
+    def 'should get records' () {
         given:
         UUID sessionId = UUID.randomUUID()
-        def record = new CidHistoryFile.CidRecord(sessionId, "TestRun")
-        record.timestamp = new Date()
-        record.runCid = "cid://123"
-
+        String runName = "Run1"
+        String runCid = "cid://123"
+        and:
+        cidHistoryFile.write(runName, sessionId, runCid)
         when:
-        def line = record.toString()
-
+        def records = cidHistoryFile.getRecords()
         then:
-        line.contains("\t")
-        line.split("\t").size() == 4
+        records.size() == 1
+        records[0].sessionId == sessionId
+        records[0].runName == runName
+        records[0].runCid == runCid
     }
 }
 

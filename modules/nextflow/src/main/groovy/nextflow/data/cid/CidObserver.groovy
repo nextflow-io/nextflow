@@ -49,7 +49,7 @@ import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
 
 import static nextflow.data.cid.fs.CidPath.CID_PROT
-import static nextflow.data.cid.fs.CidPath.METADATA_FILE
+
 /**
  * Observer to write the generated workflow metadata in a CID store.
  *
@@ -72,7 +72,7 @@ class CidObserver implements TraceObserver {
 
     @Override
     void onFlowCreate(Session session) {
-        this.store.getHistoryFile().write(session.runName, session.uniqueId, '-')
+        this.store.getHistoryLog().write(session.runName, session.uniqueId, '-')
     }
 
     @TestOnly
@@ -85,7 +85,7 @@ class CidObserver implements TraceObserver {
             DataType.WorkflowResults,
             "$CID_PROT${executionHash}",
             new ArrayList<Parameter>())
-        this.store.getHistoryFile().update(session.uniqueId, "${CID_PROT}${this.executionHash}")
+        this.store.getHistoryLog().update(session.uniqueId, "${CID_PROT}${this.executionHash}")
     }
 
     @Override
@@ -93,8 +93,8 @@ class CidObserver implements TraceObserver {
         if (this.workflowResults){
             final content = JsonOutput.prettyPrint(JsonOutput.toJson(workflowResults))
             final wfResultsHash = CacheHelper.hasher(content).hash().toString()
-            this.store.save("${wfResultsHash}/$METADATA_FILE", content)
-            this.store.getHistoryFile().update(session.uniqueId, "${CID_PROT}${wfResultsHash}")
+            this.store.save(wfResultsHash, content)
+            this.store.getHistoryLog().update(session.uniqueId, "${CID_PROT}${wfResultsHash}")
         }
     }
 
@@ -128,7 +128,7 @@ class CidObserver implements TraceObserver {
 
         final content = JsonOutput.prettyPrint(JsonOutput.toJson(value))
         final executionHash = CacheHelper.hasher(content).hash().toString()
-        store.save("${executionHash}/$METADATA_FILE", content)
+        store.save(executionHash, content)
         return executionHash
     }
 
@@ -188,9 +188,9 @@ class CidObserver implements TraceObserver {
         )
 
         // store in the underlying persistence
-        final key = "${task.hash}/$METADATA_FILE"
+        final key = task.hash.toString()
         store.save(key, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
-        return task.hash.toString()
+        return key
     }
 
     protected void storeTaskOutput(TaskRun task, Path path) {
@@ -198,7 +198,7 @@ class CidObserver implements TraceObserver {
             final attrs = readAttributes(path)
             final rel = getTaskRelative(task, path)
             final cid = "${task.hash}/${rel}"
-            final key = "${cid}/$METADATA_FILE"
+            final key = cid.toString()
             final hash = CacheHelper.hasher(path).hash().toString()
             final value = new Output(
                 DataType.TaskOutput,
@@ -254,7 +254,7 @@ class CidObserver implements TraceObserver {
         try {
             final hash = CacheHelper.hasher(destination).hash().toString()
             final rel = getWorkflowRelative(destination)
-            final key = "$executionHash/${rel}/$METADATA_FILE"
+            final key = "$executionHash/${rel}"
             final sourceReference = getSourceReference(source)
             final attrs = readAttributes(destination)
             final value = new Output(
@@ -266,7 +266,7 @@ class CidObserver implements TraceObserver {
                 attrs.creationTime().toMillis(),
                 attrs.lastModifiedTime().toMillis())
             store.save(key, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
-            workflowResults.outputs.add("${CID_PROT}${executionHash}/${rel}")
+            workflowResults.outputs.add("${CID_PROT}${key}")
         } catch (Throwable e) {
             log.warn("Exception storing CID output $destination for workflow ${executionHash}.", e)
         }
@@ -290,7 +290,7 @@ class CidObserver implements TraceObserver {
         try {
             final hash = CacheHelper.hasher(destination).hash().toString()
             final rel = getWorkflowRelative(destination)
-            final key = "$executionHash/${rel}/$METADATA_FILE"
+            final key = "$executionHash/${rel}"
             final attrs = readAttributes(destination)
             final value = new Output(
                 DataType.WorkflowOutput,
@@ -301,7 +301,7 @@ class CidObserver implements TraceObserver {
                 attrs.creationTime().toMillis(),
                 attrs.lastModifiedTime().toMillis())
             store.save(key, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
-            workflowResults.outputs.add("${CID_PROT}${executionHash}/${rel}")
+            workflowResults.outputs.add("${CID_PROT}${key}")
         }catch (Throwable e) {
             log.warn("Exception storing CID output $destination for workflow ${executionHash}. ${e.getLocalizedMessage()}")
         }

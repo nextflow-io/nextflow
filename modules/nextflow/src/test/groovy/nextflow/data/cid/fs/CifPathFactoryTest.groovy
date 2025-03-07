@@ -17,6 +17,7 @@
 
 package nextflow.data.cid.fs
 
+import java.nio.file.Files
 import java.nio.file.Path
 
 import nextflow.Global
@@ -31,12 +32,16 @@ import spock.lang.Unroll
  */
 class CifPathFactoryTest extends Specification {
 
+    Path tmp
+
     def setup() {
-        Global.session = Mock(Session) { getConfig()>> [workflow:[data:[store:[location: '/some/data']]]] }
+        tmp = Files.createTempDirectory("data")
+        Global.session = Mock(Session) { getConfig()>> [workflow:[data:[store:[location: tmp.toString()]]]] }
     }
 
     def cleanup() {
         Global.session = null
+        tmp.deleteDir()
     }
 
     def 'should create cid path' () {
@@ -49,20 +54,17 @@ class CifPathFactoryTest extends Specification {
         when:
         def p1 = factory.parseUri('cid://12345')
         then:
-        p1.getTargetPath()  == Path.of('/some/data/.meta/12345')
         p1.toUriString() == 'cid://12345'
 
         when:
         def p2 = factory.parseUri('cid://12345/x/y/z')
         then:
-        p2.getTargetPath() == Path.of('/some/data/.meta/12345/x/y/z')
         p2.toUriString() == 'cid://12345/x/y/z'
 
         when:
         def p3 = factory.parseUri('cid://12345//x///y/z//')
         then:
-        p3.getTargetPath() == Path.of('/some/data/.meta/12345/x/y/z')
-        p2.toUriString() == 'cid://12345/x/y/z'
+        p3.toUriString() == 'cid://12345/x/y/z'
 
         when:
         factory.parseUri('cid:///12345')

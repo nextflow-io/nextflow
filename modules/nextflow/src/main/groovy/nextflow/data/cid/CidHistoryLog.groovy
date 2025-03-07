@@ -14,28 +14,19 @@
  * limitations under the License.
  *
  */
+package nextflow.data.cid
 
-package nextflow.data.config
-
-import nextflow.file.FileHelper
-
-import java.nio.file.Path
-
-import groovy.transform.CompileStatic
 /**
- * Model data store options
+ * Interface to log workflow executions and their corresponding CIDs
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
-@CompileStatic
-class DataStoreOpts {
+interface CidHistoryLog {
+    void write(String name, UUID key, String runCid)
 
-    final Path location
+    void update(UUID sessionId, String runCid)
 
-    DataStoreOpts(Map opts) {
-        this.location = opts.location
-            ? FileHelper.toCanonicalPath(opts.location as String)
-            : Path.of('.').toAbsolutePath().normalize().resolve('data')
-    }
+    List<CidHistoryRecord> getRecords()
 
+    String getRunCid(UUID ke)
 }

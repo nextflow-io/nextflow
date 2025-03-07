@@ -321,7 +321,7 @@ class CidObserverTest extends Specification {
             observer.onFlowCreate(session)
             observer.onFlowBegin()
         then: 'History file should contain execution hash'
-            def cid = store.getHistoryFile().getRunCid(uniqueId).substring(CID_PROT.size())
+            def cid = store.getHistoryLog().getRunCid(uniqueId).substring(CID_PROT.size())
             cid == observer.executionHash
 
         when: ' publish output with source file'
@@ -370,7 +370,7 @@ class CidObserverTest extends Specification {
                 '"run":"cid://' + observer.executionHash +'",' +
                 '"outputs": [ "cid://'+ observer.executionHash + '/foo/file.bam",' +
                 '"cid://'+ observer.executionHash + '/foo/file2.bam" ]}'
-            def finalCid = store.getHistoryFile().getRunCid(uniqueId).substring(CID_PROT.size())
+            def finalCid = store.getHistoryLog().getRunCid(uniqueId).substring(CID_PROT.size())
             finalCid != observer.executionHash
             folder.resolve(".meta/${finalCid}/.data.json").text == JsonOutput.prettyPrint(expectedString3)
 

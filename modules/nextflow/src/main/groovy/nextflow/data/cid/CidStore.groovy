@@ -39,6 +39,6 @@ interface CidStore {
 
     Path getPath()
 
-    CidHistoryFile getHistoryFile()
+    CidHistoryLog getHistoryLog()
 
 }

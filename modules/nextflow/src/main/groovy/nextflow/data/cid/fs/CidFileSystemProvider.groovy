@@ -208,20 +208,19 @@ class CidFileSystemProvider extends FileSystemProvider {
 
         @Override
         boolean accept(Path entry) throws IOException {
-            if( entry.startsWith(fs.getBasePath()) && entry.getFileName().toString() == CidPath.METADATA_FILE ) {
-                return false
-            }
             return true
         }
     }
 
     private static CidPath fromRealToCidPath(Path toConvert, Path realBase, CidPath cidBase){
-        final fs = cidBase.fileSystem as CidFileSystem
-        if (toConvert.startsWith(fs.basePath)) {
-            return new CidPath(fs, toConvert)
-        } else {
+        if (toConvert.isAbsolute()) {
+            if (toConvert.class != realBase.class){
+                throw new ProviderMismatchException()
+            }
             final relative = realBase.relativize(toConvert)
             return (CidPath) cidBase.resolve(relative.toString())
+        } else {
+            return (CidPath) cidBase.resolve(toConvert.toString())
         }
     }
 

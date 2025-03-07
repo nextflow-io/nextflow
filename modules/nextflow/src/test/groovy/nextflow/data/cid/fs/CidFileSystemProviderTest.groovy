@@ -74,18 +74,18 @@ class CidFileSystemProviderTest extends Specification {
     def 'should create new file system' () {
         given:
         def provider = new CidFileSystemProvider()
-        def config = [store:[location:'/data']]
+        def config = [store:[location:data.toString()]]
         def cid = CidPath.asUri('cid://12345')
         when:
         def fs = provider.newFileSystem(cid, config) as CidFileSystem
         then:
-        fs.basePath == Path.of('/data/.meta')
+        fs.cidStore.path == data
     }
 
     def 'should get a file system' () {
         given:
         def provider = new CidFileSystemProvider()
-        def config = [store:[location:'/data']]
+        def config = [store:[location: data.toString()]]
         def uri = CidPath.asUri('cid://12345')
         when:
         provider.getFileSystem(uri)
@@ -97,12 +97,12 @@ class CidFileSystemProviderTest extends Specification {
         and:
         def result = provider.getFileSystem(uri) as CidFileSystem
         then:
-        result.basePath == Path.of('/data/.meta')
+        result.cidStore.path == data
     }
 
     def 'should get or create a file system' () {
         given:
-        def config = [workflow:[data:[store:[location:'/this/that']]]]
+        def config = [workflow:[data:[store:[location: data.toString()]]]]
         Global.session = Mock(Session) { getConfig()>>config }
         and:
         def uri = CidPath.asUri('cid://12345')
@@ -111,32 +111,12 @@ class CidFileSystemProviderTest extends Specification {
         when:
         def fs = provider.getFileSystemOrCreate(uri) as CidFileSystem
         then:
-        fs.basePath == Path.of('/this/that/.meta')
+        fs.cidStore.path == data
 
         when:
         def fs2 = provider.getFileSystemOrCreate(uri) as CidFileSystem
         then:
         fs2.is(fs)
-    }
-
-    def 'should get a path' () {
-       given:
-       def config = [workflow:[data:[store:[location:'/data']]]]
-       Global.session = Mock(Session) { getConfig()>>config }
-       and:
-       def provider = new CidFileSystemProvider()
-       def uri1 = CidPath.asUri('cid://12345')
-       def uri2 = CidPath.asUri('cid://12345/foo/bar')
-
-        when:
-        def cid1 = provider.getPath(uri1)
-        then:
-        cid1.getTargetPath() == Path.of('/data/.meta/12345')
-
-        when:
-        def cid2 = provider.getPath(uri2)
-        then:
-        cid2.getTargetPath() == Path.of('/data/.meta/12345/foo/bar')
     }
 
     def 'should create new byte channel' () {
@@ -234,25 +214,24 @@ class CidFileSystemProviderTest extends Specification {
         Files.exists(cid.resolve('file3.txt'))
 
         when:
-        def stream = provider.newDirectoryStream(cid2, (p) -> true)
+        provider.newDirectoryStream(cid2, (p) -> true)
+        then:
+        thrown(FileNotFoundException)
+
+        when:
+        def stream = provider.newDirectoryStream(cid, (p) -> true)
         and:
         def result = stream.toList()
         then:
         result.toSet() == [
-            cid2.resolve('output1'),
-            cid2.resolve('output2'),
-        ] as Set
-
-        when:
-        def stream2 = provider.newDirectoryStream(cid, (p) -> true)
-        and:
-        def result2 = stream2.toList()
-        then:
-        result2.toSet() == [
             cid.resolve('file1.txt'),
             cid.resolve('file2.txt'),
             cid.resolve('file3.txt')
         ] as Set
+
+        cleanup:
+        meta.resolve('12345').deleteDir()
+        output1.deleteDir()
 
     }
 
@@ -325,12 +304,19 @@ class CidFileSystemProviderTest extends Specification {
     def 'should check is hidden file' () {
         given:
         def folder = Files.createTempDirectory('test')
-        def config = [workflow:[data:[store:[location:folder.toString()]]]]
+        def config = [workflow:[data:[store:[location:wdir.toString()]]]]
         Global.session = Mock(Session) { getConfig()>>config }
         and:
+        def output = folder.resolve('path')
+        output.mkdir()
+        output.resolve('abc').text = 'file1'
+        output.resolve('.foo').text = 'file2'
+        meta.resolve('12345/output').mkdirs()
+        meta.resolve('12345/output/.data.json').text = '{"type":"TaskOutput", "path": "' + output.toString() + '"}'
+        and:
         def provider = new CidFileSystemProvider()
-        def cid1 = provider.getPath(CidPath.asUri('cid://12345/abc'))
-        def cid2 = provider.getPath(CidPath.asUri('cid://54321/.foo'))
+        def cid1 = provider.getPath(CidPath.asUri('cid://12345/output/abc'))
+        def cid2 = provider.getPath(CidPath.asUri('cid://12345/output/.foo'))
 
         expect:
         !provider.isHidden(cid1)
