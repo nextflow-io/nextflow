@@ -334,17 +334,14 @@ class MermaidRenderer implements DagRenderer {
         while( !queue.isEmpty() ) {
             // find subgraph of operator nodes
             final node = queue.pop()
-            // K: REMOVE subgraph consideration, as it considers together nodes that shouldn't
-            // final subgraph = findSubgraph(node, (Node n) -> n.vertex.type == DAG.Type.OPERATOR)
-            final subgraph = findSubgraph(node, (Node n) -> false)
 
             // select a neighboring process
             // from topo order, if feasible
-
             // Find topo index of the vertex
             def vertexTopoIndex = topo_order.indexOf(node.vertex)
             log.info("Order:" + vertexTopoIndex)
-            // find previous and next process in the list
+
+            // find previous and next process in the topo_order list
             def idx = vertexTopoIndex - 1
             while(idx >= 0 && topo_order[idx].type != DAG.Type.PROCESS){
                 idx--
@@ -359,18 +356,55 @@ class MermaidRenderer implements DagRenderer {
 
             if(prevIdx > -1 && nextIdx < topo_order.size()){
                 // Two processes were found in topological order before and after the operator. 
-                log.info("prev: " + topo_order[prevIdx].label + " next:" + topo_order[nextIdx].label)
-
-                // Do share a common path?
+                // Do they share a common path?
                 def prevPath = getSubgraphKeys(topo_order[prevIdx].label)[0] as List
                 def nextPath = getSubgraphKeys(topo_order[nextIdx].label)[0] as List
-                log.info("Res:" + (prevPath.join(':') == nextPath.join(':')))
+                if(prevPath.join(':') == nextPath.join(':')) {
+                    // Paths matching, save it as infered key
+                    inferredKeys[node] = prevPath
+                    continue // go to next node
+                }
             }
 
-            // within input and output processes
-            final inputs = subgraph.inputs.findAll( n -> n.vertex.type == DAG.Type.PROCESS )
-            final outputs = subgraph.outputs.findAll( n -> n.vertex.type == DAG.Type.PROCESS )
+            // Previous and next processes in the topo_order list didn't have matching paths.
+            // Look for neighbors within input and output processes
+            final inputs = node.inputs.findAll( n -> n.vertex.type == DAG.Type.PROCESS )
+            final outputs = node.outputs.findAll( n -> n.vertex.type == DAG.Type.PROCESS )
 
+            // Find all path appearing in neighbors
+            def neighborPaths = [:] as Map<List<String>,List<Integer>>
+            for (def n : inputs){
+                def key = getSubgraphKeys(n.vertex.label)[0] as List<String>
+                if(neighborPaths[key])
+                    neighborPaths[key][0]++
+                else    
+                    neighborPaths[key] = [1, 0]
+            }
+
+            for (def n : outputs){
+                def key = getSubgraphKeys(n.vertex.label)[0] as List<String>
+                if(neighborPaths[key])
+                    neighborPaths[key][1]++
+                else    
+                    neighborPaths[key] = [0, 1]
+            }
+            
+            log.info("be: ${neighborPaths}")
+            // Remove all path with only inputs or only outputs
+            neighborPaths.removeAll{ k,v -> v[0] == 0 || v[1] == 0}
+            log.info("af: ${neighborPaths}")
+            // Was such a path found?
+            if(neighborPaths.size() > 0){
+                // In case several paths remains, they must be nested
+                // Select the innermost path, i.e. the longest
+                def key = Collections.max(neighborPaths.keySet(), Comparator.comparing((List path) -> path? path.size():0))
+                log.info("path: ${key}")
+                // save it as infered key
+                inferredKeys[node] = key
+                continue // go to next node
+            }
+
+            // If previous method failed, keep
             Node process = null
             if( inputs.size() == 1 )
                 process = inputs[0]
@@ -380,6 +414,10 @@ class MermaidRenderer implements DagRenderer {
                 process = inputs[0]
             else if( outputs.size() > 0 )
                 process = outputs[0]
+            else { 
+                // No inputs and no outputs with identified path.
+                // No subgraph associated to this process.
+            }
 
             // extract keys from fully qualified process name
             final keys = process
@@ -387,11 +425,7 @@ class MermaidRenderer implements DagRenderer {
                 : []
 
             // save inferred keys
-            for( def w : subgraph.nodes )
-                inferredKeys[w] = keys
-
-            // update queue
-            queue.removeAll(subgraph.nodes)
+            inferredKeys[node] = keys
         }
 
         return inferredKeys
