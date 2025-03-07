@@ -37,6 +37,7 @@ import nextflow.exception.ProcessTemplateException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
+import nextflow.prov.ProvLink
 import nextflow.script.BodyDef
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
@@ -58,7 +59,7 @@ import nextflow.spack.SpackCache
  */
 
 @Slf4j
-class TaskRun implements Cloneable {
+class TaskRun implements Cloneable, ProvLink {
 
     final private ConcurrentHashMap<String,?> cache0 = new ConcurrentHashMap()
 
@@ -97,6 +98,11 @@ class TaskRun implements Cloneable {
      */
     Map<OutParam,Object> outputs = [:]
 
+    /**
+     * Holds the IDs of the upstream tasks that contributed to trigger
+     * the execution of this task run
+     */
+    Set<TaskId> upstreamTasks
 
     void setInput( InParam param, Object value = null ) {
         assert param
@@ -114,7 +120,6 @@ class TaskRun implements Cloneable {
         assert param
         outputs[param] = value
     }
-
 
     /**
      * The value to be piped to the process stdin
@@ -572,8 +577,8 @@ class TaskRun implements Cloneable {
     static final public String CMD_ENV = '.command.env'
 
 
-    String toString( ) {
-        "id: $id; name: $name; type: $type; exit: ${exitStatus==Integer.MAX_VALUE ? '-' : exitStatus}; error: $error; workDir: $workDir"
+    String toString() {
+        "TaskRun[id: $id; name: $name; type: $type; upstreams: ${upstreamTasks} exit: ${exitStatus==Integer.MAX_VALUE ? '-' : exitStatus}; error: $error; workDir: $workDir]"
     }
 
 

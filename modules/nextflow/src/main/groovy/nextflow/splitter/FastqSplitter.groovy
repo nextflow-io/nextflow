@@ -59,7 +59,7 @@ class FastqSplitter extends AbstractTextSplitter {
 
     @Override
     protected Map<String,Object> validOptions() {
-        def result = super.validOptions()
+        final result = super.validOptions()
         result.record = [ Boolean, Map ]
         return result
     }
@@ -83,7 +83,7 @@ class FastqSplitter extends AbstractTextSplitter {
     }
 
     static Map recordToMap( String l1, String l2, String l3, String l4, Map fields ) {
-        def result = [:]
+        final result = [:]
 
         if( !fields || fields.containsKey('readHeader'))
             result.readHeader = l1.substring(1)
@@ -101,7 +101,7 @@ class FastqSplitter extends AbstractTextSplitter {
     }
 
 
-    def private StringBuilder buffer = new StringBuilder()
+    private StringBuilder buffer = new StringBuilder()
 
     private String errorMessage = "Invalid FASTQ format"
 
@@ -161,7 +161,7 @@ class FastqSplitter extends AbstractTextSplitter {
      *
      * @param quality A fastq quality string
      */
-    def int qualityScore(Map opts=null) {
+    int qualityScore(Map opts=null) {
 
         if( opts ) options(opts)
 

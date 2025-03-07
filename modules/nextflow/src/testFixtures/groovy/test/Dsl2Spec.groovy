@@ -46,10 +46,13 @@ class Dsl2Spec extends BaseSpec {
         new MockScriptRunner().setScript(str).execute()
     }
 
+    def dsl_eval(Map config, String str) {
+        new MockScriptRunner(config).setScript(str).execute()
+    }
+
     def dsl_eval(Path path) {
         new MockScriptRunner().setScript(path).execute()
     }
-
 
     def dsl_eval(String entry, String str) {
         new MockScriptRunner()

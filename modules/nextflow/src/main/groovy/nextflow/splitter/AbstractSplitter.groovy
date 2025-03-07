@@ -26,9 +26,11 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 import nextflow.exception.StopSplitIterationException
 import nextflow.extension.CH
+import nextflow.extension.op.Op
 import nextflow.util.CheckHelper
 /**
  * Generic data splitter, provide main methods/interfaces
@@ -41,7 +43,7 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
 
     protected Map fOptionsMap
 
-    protected def into
+    protected Object into
 
     protected Closure closure
 
@@ -53,7 +55,7 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
 
     protected Path sourceFile
 
-    protected decompress
+    protected Object decompress
 
     protected String operatorName
 
@@ -61,7 +63,9 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
 
     protected Integer elem
 
-    private targetObj
+    private Object targetObj
+
+    private DataflowProcessor processor
 
     private CollectorStrategy collector
 
@@ -332,6 +336,11 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
         return this
     }
 
+    AbstractSplitter processor(DataflowProcessor processor) {
+        this.processor = processor
+        return this
+    }
+
     /**
      * Start the slitting
      */
@@ -420,12 +429,14 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
     protected void append( into, value ) {
         log.trace "Splitter value: ${debugCount++}"
 
-        if( into instanceof Collection )
+        if( into instanceof Collection ) {
             into.add(value)
-
-        else if( into instanceof DataflowWriteChannel )
-            into.bind(value)
-
+        }
+        else if( into instanceof DataflowWriteChannel ) {
+            processor!=null
+                ? Op.bind(processor, into, value)
+                : into.bind(value)
+        }
         else
             throw new IllegalArgumentException("Not a valid 'into' target object: ${into?.class?.name}")
     }
@@ -467,7 +478,7 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      * @return The current {@link CollectorStrategy} object
      */
     final protected CollectorStrategy getCollector() {
-        collector
+        return collector
     }
 
     /**
