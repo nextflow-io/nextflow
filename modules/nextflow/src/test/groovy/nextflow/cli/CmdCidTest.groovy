@@ -17,6 +17,7 @@
 package nextflow.cli
 
 import groovy.json.JsonOutput
+import nextflow.data.cid.CidHistoryRecord
 import nextflow.data.cid.CidStoreFactory
 
 import java.nio.file.Files
@@ -63,7 +64,7 @@ class CmdCidTest extends Specification {
             def launcher = Mock(Launcher){
                 getOptions() >> new CliOptions(config: [configFile.toString()])
             }
-            def recordEntry = "${CidHistoryFile.TIMESTAMP_FMT.format(date)}\trun_name\t${uniqueId}\tcid://1234".toString()
+            def recordEntry = "${CidHistoryRecord.TIMESTAMP_FMT.format(date)}\trun_name\t${uniqueId}\tcid://1234".toString()
             historyFile.text = recordEntry
         when:
             def cidCmd = new CmdCid(launcher: launcher, args: ["log"])
@@ -79,8 +80,8 @@ class CmdCidTest extends Specification {
             stdout.size() == 2
             stdout[1] == recordEntry
 
-        //cleanup:
-            //folder?.deleteDir()
+        cleanup:
+            folder?.deleteDir()
     }
 
     def 'should print no history' (){
@@ -101,6 +102,7 @@ class CmdCidTest extends Specification {
             .readLines()// remove the log part
             .findResults { line -> !line.contains('DEBUG') ? line : null }
             .findResults { line -> !line.contains('INFO') ? line : null }
+            .findResults { line -> !line.contains('WARN') ? line : null }
             .findResults { line -> !line.contains('plugin') ? line : null }
 
         then:
@@ -170,7 +172,7 @@ class CmdCidTest extends Specification {
 
         then:
             stdout.size() == 1
-            stdout[0] == "Error loading cid://12345."
+            stdout[0] == "No entry found for cid://12345."
 
         cleanup:
             folder?.deleteDir()
