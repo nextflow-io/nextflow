@@ -2,23 +2,21 @@
 
 # Understanding task resource metrics
 
-This tutorial explains how the resource usage metrics from the {ref}`Execution report <execution-report>` are computed.
+This tutorial explains how resource usage metrics are computed from execution reports. See {ref}`Execution report <execution-report>` for more information about how to enable them.
 
 ## CPU Usage
 
-The plot reports how much CPU resources were used by each process.
+CPU Usage plots report how CPU resources are used by each process.
 
 ```{image} _static/report-resource-cpu.png
 ```
 
-Let's illustrate how this plot behaves with several examples.
+**Raw Usage** tabs are expected to show 100% core usage if processes perform one task of pure computation. If tasks are distributed over, 2, 3, or 4 CPUs, the raw usage will be 200%, 300%, or 400%, respectively. **% Allocated** tabs rescale raw usage values relative to the number of CPUs that are set with the `cpus` directive. If the `cpus` directive is not set, CPUs are set to `1` and **% Allocated** tabs will show the same values **Raw Usage** tabs.
 
-In the first example, let's consider the simple use case in which a process performs one task of pure computation using one CPU. Then, you expect the `Raw Usage` tab to report 100%. If the task is distributed over, 2, 3, 4, `etc.` CPUs, then the `Raw Usage` will be 200%, 300%, 400%, `etc.` respectively. The `% Allocated` tab just rescales the raw value usage with respect to the number of CPUs set with the `cpus` directive (if not set with the directive, the number of CPUs is set to 1, thus showing the same values as in the `Raw Usage` tab). Using the program [stress](https://people.seas.harvard.edu/~apw/stress/) as follows would report 100% in the `Raw Usage` tab and 50% in the `% Allocated` tab since the process asked twice the number of CPUs needed by the process:
+For example, using the [stress](https://people.seas.harvard.edu/~apw/stress/) program, the following script would report 100% CPU usage in the **Raw Usage** tab and 50% CPU usage in the **% Allocated** tab as the process requested double the number of CPUs that are required:
 
 ```nextflow
-#!/usr/bin/env nextflow
-
-process CpuUsageEx1 {
+process cpuUsageEx1 {
   cpus 2
 
   script:
@@ -26,14 +24,20 @@ process CpuUsageEx1 {
   stress -c 1 -t 10 # compute square-root of random numbers during 10s using 1 CPU
   """
 }
+
+workflow{
+    cpuUsageEx1() // Stress using 1 CPU
+}
 ```
 
-In the second example, some time will be spent performing pure computation and some time just waiting. Using the program [stress](https://people.seas.harvard.edu/~apw/stress/) and `sleep` as follows would report 75% in the `Raw Usage` tab:
+:::{tip}
+See [Linux stress command with examples](https://www.geeksforgeeks.org/linux-stress-command-with-examples/) for more information about the stress command.
+:::
+
+CPU usage decreases if processes spend some time performing pure computation and some time waiting for CPUs. For example, using the `stress` and `sleep` commands, the following script would report 75% CPU usage in the **Raw Usage** tab:
 
 ```nextflow
-#!/usr/bin/env nextflow
-
-process CpuUsageEx2 {
+process cpuUsageEx2 {
   cpus 1
 
   script:
@@ -43,63 +47,59 @@ process CpuUsageEx2 {
   sleep 5 # use no CPU during 5s
   """
 }
+
+workflow{
+    cpuUsageEx2() // Stress using 1 CPU and sleep
+}
 ```
 
-Indeed, the percentage of the CPU that this process got is a weighted average taking into account the percentage of the CPU and duration of each individual program over the job duration (a.k.a. elapsed real time, real time or wall time ) as follows:
+In the above example, CPU usage is a weighted average that accounts for the percentage of the CPU used and duration of each individual program over the job duration:
 
 $$
 \frac{ 100\% \times 10s + 100\% \times 5s + 0\% \times 5s }{10s+5s+5s} = 75\%
 $$
 
-The third example is similar to the second one except that the pure computation stage is performed in a single step forked on 2 CPUs:
+CPU usage increases if a single step is forked on multiple CPUs:
 
 ```nextflow
-#!/usr/bin/env nextflow
-
-process CpuUsageEx3 {
+process cpuUsageEx3 {
   cpus 2
 
   script:
   """
-  stress -c 2 -t 10 # compute square-root of random numbers during 10s using 2 CPUs
+  stress -c 2 -t 10 # compute square-root of random numbers during 10 s using 2 CPUs
   sleep 10 # use no CPU during 10s
   """
 }
+
+workflow{
+    cpuUsageEx3() // Stress using 2 CPUs and sleep
+}
 ```
 
-The `Raw Usage` tab would report 100% in the `Raw Usage` tab:
+In the above example, the **Raw Usage** tab would report 100%:
 
 $$
-\frac{ 200\% \times 10s }{10s+10s} = 100\%
+\frac{ 200\% \times 10s + 0\% \times 10s }{10s+10s} = 100\%
 $$
 
-The `% Allocated` tab would report 50%, however, it would not be relevant to change the `cpus` directive from 2 to 1 as the process really uses 2 CPUs at it peak load.
-
-:::{tip}
-The [stress](https://people.seas.harvard.edu/~apw/stress/) program can be installed with `sudo apt-get install stress` or `sudo yum install stress` depending on your Linux distribution.
-:::
+However, the **% Allocated** tab would report 50%. It would not be relevant to change the `cpus` directive from `2` to `1` as the process uses 2 CPUs at it peak load.
 
 ## Memory Usage
 
-The plot has three tabs showing the usage of the physical memory (RAM), the virtual memory (vmem) and the percentage of RAM used by the process with respect to what was set in the `memory` directive. The peak usage during the execution of the process is reported for both physical and virtual memories.
+Memory Usage plots report how memory was used by each process. It has three tabs, **Physical (RAM)**, **Virtual (RAM + Disk swap)**, and **% RAM Allocated**, showing the usage of the physical memory (RAM), the virtual memory (vmem), and the percentage of RAM used by the process relative to the memory that the `memory` directive set, respectively.
 
-:::{note}
-To better understand the memory usage plot, it is important to know that:
+Peak usage during process executions is reported for both physical and virtual memories. The total amount of memory used by a process is the `virtual memory (vmem)`. The `vmem` contains all memory areas, including in the physical memory (RAM), in the swap space, on the disk, or shared with other processes. The `resident set size (RSS)` is the amount of `physical memory (RAM)` held by a process.
 
-- the total amount of memory used by a process is the `virtual memory (vmem)`. The `vmem` contains all memory areas whether they are in the physical memory (RAM), in the Swap space, on the disk or shared with other processes,
-- the `resident set size (RSS)` is the amount of space of `physical memory (RAM)` held by a process,
-- the relationship is: vmem $\geq$ RSS + Swap,
-- the `memory` directive sets the RAM requested by the process.
-:::
+The relationship is:
 
-Let's illustrate how this plot behaves with one example which relies on two C programs.
+$$
+vmem \geq RSS + Swap
+$$
 
-The first program just allocates a variable of 1 GiB:
+The behavior of **Memory Usage** plots can be examined using two programs written in C. The first program allocates a variable of 1 GiB:
 
 ```{code-block} c
-:emphasize-lines: 31,43
-:linenos: true
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/resource.h>
@@ -159,9 +159,6 @@ int main(int argc, char **argv) {
 The second program allocates a variable of 1 GiB and fills it with data:
 
 ```{code-block} c
-:emphasize-lines: 31,43,49-53
-:linenos: true
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/resource.h>
@@ -227,11 +224,9 @@ int main(int argc, char **argv) {
 }
 ```
 
-The first and second programs are executed in `foo` and `bar` processes respectively as follows:
+The first and second programs are executed as `foo` and `bar`, respectively, in the following script:
 
 ```nextflow
-#!/usr/bin/env nextflow
-
 process foo {
     memory '1.5 GB'
 
@@ -249,60 +244,72 @@ process bar {
     memory_vmem_1GiB_ram_1Gib
     """
 }
+
+workflow{
+    foo() // Allocates a variable of 1 GiB
+    bar() // Allocates a variable of 1 GiB and fills it with data
+}
 ```
 
-The `Virtual (RAM + Disk swap)` tab shows that both `foo` and `bar` processes use the same amount of virtual memory (~1 GiB):
+The **Virtual (RAM + Disk swap)** tab shows that both `foo` and `bar` use the same amount of virtual memory (~1 GiB):
 
 ```{image} _static/report-resource-memory-vmem.png
 ```
 
-However, the `Physical (RAM)` tab shows that only the `bar` process uses ~1 GiB of RAM while `foo` process uses ~0 GiB:
+However, the **Physical (RAM)** tab shows that `bar` uses ~1 GiB of RAM while `foo` uses ~0 GiB of RAM:
 
 ```{image} _static/report-resource-memory-ram.png
 ```
 
-As expected, the `% RAM Allocated` tab shows that 0% of the resource set in the `memory` directive was used for `foo` process while 67% (= 1 / 1.5) of the resource were used for `bar` process:
+The **% RAM Allocated** tab shows that `foo` and `bar` used 0% and 67% of resources set in the `memory` directive, respectively:
 
 ```{image} _static/report-resource-memory-pctram.png
 ```
 
 :::{warning}
-Memory and storage metrics are reported in bytes. This means that 1KB = $1024$ bytes, 1 MB = $1024^2$ bytes, 1 GB = $1024^3$ bytes, etc.
+Memory and storage metrics are reported in bytes. For example, 1 KB = $1024$ bytes, 1 MB = $1024^2$ bytes, and 1 GB = $1024^3$ bytes.
 :::
 
 ## Job Duration
 
-The plot has two tabs the job duration (a.k.a. elapsed real time, real time or wall time ) in the `Raw Usage` tag and the percentage of requested time used in the `% Allocated` tab with respect to the duration set in the `time` directive of the process.
+**Job Duration** plots report how long each process took to run. It has two tabs. The **Raw Usage** tab shows the job duration and the **% Allocated** tab shows the time that was requested relative to what was requested using the `time` directive. Job duration is sometimes known as elapsed real time, real time or wall time.
 
 ```{image} _static/report-resource-job-duration.png
 ```
 
 ## I/O Usage
 
-The plot has two tabs showing how many data were read and/or written each process. For example, the following processes read and write 1GB and 256MB of data respectively:
+I/O Usage plots show how much data was read and written by processes. The amount of data that was read by a process (`rchar` in trace files) is the number of bytes the process read using read-like system calls. The amount of data that was written by a process (`wchar` in trace files) is the number of bytes the process wrote using write-like system call. Read and write data is read from the file `/proc/$pid/io`.
+
+**Read** tabs shows how much data was read and **Write** tabs shows how much data was written by each process. For example, the following script reads and writes different data volumes:
 
 ```nextflow
-#!/usr/bin/env nextflow
-
 process io_read_write_1G {
-  """
-  dd if=/dev/zero of=/dev/null bs=1G count=1
-  """
+    script:
+    """
+    dd if=/dev/zero of=/dev/null bs=1G count=1
+    """
 }
 
 process io_read_write_256M {
-  """
-  dd if=/dev/zero of=/dev/null bs=256M count=1
-  """
+    script:
+    """
+    dd if=/dev/zero of=/dev/null bs=256M count=1
+    """
+}
+
+workflow{
+    io_read_write_1G()   // Read and write 1 GiB
+    io_read_write_256M() // Read and write 256 Mb
 }
 ```
 
-`Read` tab:
+The **Read** tab shows that ~1 Gib and ~256 Mb are read:
 
 ```{image} _static/report-resource-io-read.png
 ```
 
-`Write` tab:
+The **Write** tab shows that ~1 Gib and ~256 Mb are written:
 
 ```{image} _static/report-resource-io-write.png
 ```
