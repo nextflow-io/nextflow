@@ -420,7 +420,7 @@ class MermaidRenderer implements DagRenderer {
                 process = outputs[0]
             else { 
                 // No inputs and no outputs processes with identified path.
-                // No subgraph associated to this process.
+                // No subgraph associated to this operator.
             }
 
             // extract keys from fully qualified process name
