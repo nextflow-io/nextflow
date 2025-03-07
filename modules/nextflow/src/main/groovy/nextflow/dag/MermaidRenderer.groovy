@@ -59,7 +59,6 @@ class MermaidRenderer implements DagRenderer {
     }
 
     String renderNetwork(DAG dag) {
-        log.info "Customized DAG export"
         // construct node lookup from DAG
         def nodeLookup = getNodeLookup(dag)
 
@@ -321,25 +320,21 @@ class MermaidRenderer implements DagRenderer {
                 .values()
                 .findAll( n -> n.vertex.type == DAG.Type.OPERATOR ) as List<Node>
 
+        // Get nodes of the DAG in creation order (which should be mostly topological).
         def topo_order = nodeLookup.keySet().sort { 
             a,b -> a.getOrder() <=> b.getOrder()
         }  as List<DAG.Vertex>
 
-         
-        for(def n : topo_order){
-            log.info("l: " + n.label + " i: " + n.getOrder())
-        }
-        
-
+        // Process operator nodes one by one.
         while( !queue.isEmpty() ) {
             // find subgraph of operator nodes
             final node = queue.pop()
 
-            // select a neighboring process
-            // from topo order, if feasible
-            // Find topo index of the vertex
+            // Three successive strategies are used to find the appropriate subgraph key.
+
+            // Strategy 1: from topological order.
+            // Find topo index of the node
             def vertexTopoIndex = topo_order.indexOf(node.vertex)
-            log.info("Order:" + vertexTopoIndex)
 
             // find previous and next process in the topo_order list
             def idx = vertexTopoIndex - 1
@@ -365,9 +360,10 @@ class MermaidRenderer implements DagRenderer {
                     continue // go to next node
                 }
             }
-
             // Previous and next processes in the topo_order list didn't have matching paths.
-            // Look for neighbors within input and output processes
+
+            // Stragegy 2: Look for subgraphs of neighbor processes present both
+            // in inputs and outputs of the node.
             final inputs = node.inputs.findAll( n -> n.vertex.type == DAG.Type.PROCESS )
             final outputs = node.outputs.findAll( n -> n.vertex.type == DAG.Type.PROCESS )
 
@@ -389,22 +385,20 @@ class MermaidRenderer implements DagRenderer {
                     neighborPaths[key] = [0, 1]
             }
             
-            log.info("be: ${neighborPaths}")
             // Remove all path with only inputs or only outputs
             neighborPaths.removeAll{ k,v -> v[0] == 0 || v[1] == 0}
-            log.info("af: ${neighborPaths}")
             // Was such a path found?
             if(neighborPaths.size() > 0){
                 // In case several paths remains, they must be nested
                 // Select the innermost path, i.e. the longest
                 def key = Collections.max(neighborPaths.keySet(), Comparator.comparing((List path) -> path? path.size():0))
-                log.info("path: ${key}")
+
                 // save it as infered key
                 inferredKeys[node] = key
                 continue // go to next node
             }
 
-            // If previous method failed, keep
+            // Strategy 3: Pick an input or output process
             Node process = null
             if( inputs.size() == 1 )
                 process = inputs[0]
@@ -415,7 +409,7 @@ class MermaidRenderer implements DagRenderer {
             else if( outputs.size() > 0 )
                 process = outputs[0]
             else { 
-                // No inputs and no outputs with identified path.
+                // No inputs and no outputs processes with identified path.
                 // No subgraph associated to this process.
             }
 
