@@ -30,12 +30,29 @@ import groovy.transform.ToString
 @CompileStatic
 class PodHostMount {
 
+    private static Set<String> VALID_TYPES = [
+        'DirectoryOrCreate', 'Directory', 'FileOrCreate', 'File', 'Socket', 'CharDevice', 'BlockDevice'
+    ]
+
     String hostPath
 
     String mountPath
 
-    PodHostMount(String host, String container) {
+    boolean readOnly
+
+    String type // must be empty or a value from VALID_TYPES
+
+    PodHostMount(String host, String container, boolean readOnly=false, String type=null) {
         this.hostPath = host
         this.mountPath = container
+        this.readOnly = readOnly
+        this.type = type
+        validateTypeEnum(type)
     }
+
+    private static validateTypeEnum(String type) {
+        if( type && !(type in VALID_TYPES) )
+            throw new IllegalArgumentException("K8s invalid hostPath type: $type - must be empty or one of $VALID_TYPES")
+    }
+
 }

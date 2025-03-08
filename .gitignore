@@ -40,3 +40,4 @@ plugins-prod
 sandbox
 wave-tests
 x/*
+.DS_Store
