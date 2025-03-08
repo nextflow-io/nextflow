@@ -268,19 +268,22 @@ class CondorExecutor extends AbstractGridExecutor {
         println("parsing Queue Status")
         println(text)
         final result = new LinkedHashMap<String, QueueStatus>()
-        if( !text ) return result
-
-        boolean started = false
+        if( !text ) {
+            println("escaping because !text")
+            return result
+        }
+        println("condor_history -userlog .condor_runlog.uuid-${session.uniqueId}.log -wide -af:j JobStatus")
+        // boolean started = false
         def itr = text.readLines().iterator()
         while( itr.hasNext() ) {
             String line = itr.next()
             println(line)
-            print (started)
+            // print (started)
             print (line.trim())
-            if( !started ) {
-                started = line.startsWith(' ID ')
-                continue
-            }
+            // if( !started ) {
+            //     started = line.startsWith(' ID ')
+            //     continue
+            // }
 
             if( !line.trim() ) {
                 break
