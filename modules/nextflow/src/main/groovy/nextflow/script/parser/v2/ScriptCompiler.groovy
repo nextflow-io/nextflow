@@ -28,6 +28,7 @@ import nextflow.script.control.Compiler
 import nextflow.script.control.ModuleResolver
 import nextflow.script.control.ResolveIncludeVisitor
 import nextflow.script.control.ScriptResolveVisitor
+import nextflow.script.control.TypeCheckingVisitor
 import nextflow.script.parser.ScriptParserPluginFactory
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassNode
@@ -241,6 +242,11 @@ public class ScriptCompiler {
             for( final error : includeResolver.getErrors() )
                 source.getErrorCollector().addErrorAndContinue(error)
             new ScriptResolveVisitor(source, this, DEFAULT_IMPORTS, Collections.emptyList()).visit()
+            if( source.getErrorCollector().hasErrors() )
+                return
+            new TypeCheckingVisitor(source).visit()
+            if( source.getErrorCollector().hasErrors() )
+                return
 
             // convert to Groovy
             final astNodes = new ASTNode[] { cn, cn }
