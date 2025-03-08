@@ -275,6 +275,8 @@ class CondorExecutor extends AbstractGridExecutor {
         while( itr.hasNext() ) {
             String line = itr.next()
             println(line)
+            print (started)
+            print (line.trim())
             if( !started ) {
                 started = line.startsWith(' ID ')
                 continue
@@ -285,6 +287,7 @@ class CondorExecutor extends AbstractGridExecutor {
             }
 
             def cols = line.tokenize(' ')
+            print (cols)
             def id = cols[0]
             def st = cols[1]
             println("id: ${id}")
