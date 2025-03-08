@@ -1,0 +1,9 @@
+.cache
+.nextflow.*
+.vagrant
+Vagrantfile
+scratch
+results
+work
+**/checks.out
+**/stdout

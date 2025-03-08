@@ -1,0 +1,34 @@
+set -e
+
+#
+# run normal mode
+#
+echo ''
+$NXF_RUN | tee stdout
+
+grep -c 'Submitted process > foo (alpha.fastq)' .nextflow.log
+grep -c 'Submitted process > foo (delta.fastq)' .nextflow.log
+grep -c 'Submitted process > foo (gamma.fastq)' .nextflow.log
+grep -c 'Submitted process > foo (omega.fastq)' .nextflow.log
+
+grep 'alpha' stdout
+grep 'delta' stdout
+grep 'gamma' stdout
+grep 'omega' stdout
+
+
+#
+# run resume mode
+#
+echo ''
+$NXF_RUN -resume| tee stdout
+
+grep -c 'Cached process > foo (alpha.fastq)' .nextflow.log
+grep -c 'Cached process > foo (delta.fastq)' .nextflow.log
+grep -c 'Cached process > foo (gamma.fastq)' .nextflow.log
+grep -c 'Cached process > foo (omega.fastq)' .nextflow.log
+
+grep 'alpha' stdout
+grep 'delta' stdout
+grep 'gamma' stdout
+grep 'omega' stdout

@@ -3,7 +3,7 @@ package nextflow.ast
 import nextflow.Session
 import nextflow.script.BaseScript
 import nextflow.script.ScriptMeta
-import nextflow.script.ScriptParser
+import nextflow.script.ScriptLoaderFactory
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -129,7 +129,7 @@ class NextflowDSLImplTest extends Dsl2Spec {
         def session = new Session()
         session.executorFactory = new MockExecutorFactory()
         and:
-        def parser = new ScriptParser(session)
+        def parser = ScriptLoaderFactory.create(session)
 
         def SCRIPT = '''
             process alpha {

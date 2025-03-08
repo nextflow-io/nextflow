@@ -24,6 +24,7 @@ process foo {
     output:
     file 'dir2/*' 
 
+    script:
     '''
     ls dir1 | sort
     mkdir dir2

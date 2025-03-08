@@ -1,0 +1,12 @@
+# ADDITIONAL TESTS TO VERIFY THE V1 PARSER
+complex-names.nf
+env.nf
+error-finish.nf
+output-globs.nf
+output-val.nf
+publish-saveas.nf
+singleton.nf
+subworkflow.nf
+task-retry.nf
+tuples.nf
+when-block.nf

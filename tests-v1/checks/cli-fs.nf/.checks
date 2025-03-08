@@ -1,0 +1,20 @@
+# Skip test if AWS keys are missing
+if [ -z "$AWS_ACCESS_KEY_ID" ]; then
+  echo "Missing AWS credentials -- Skipping test"
+  exit 0
+fi
+
+## random file name
+NAME=test-cmd-$(basename `mktemp`).file
+
+## create random file
+head -c 1000000 </dev/urandom >myfile
+
+## upload it
+$NXF_CMD -log cmd-fs-1.log fs cp myfile s3://nextflow-ci/$NAME
+
+## download it
+$NXF_CMD -log cmd-fs-2.log fs cp s3://nextflow-ci/$NAME $NAME
+
+## check they are equals
+diff myfile $NAME || false

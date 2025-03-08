@@ -24,6 +24,7 @@ process foo {
   input:
   each barcode
 
+  script:
   """
   echo $barcode
   """

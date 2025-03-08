@@ -2,11 +2,12 @@ process python_version {
     array 3
     input:
     val x
-    path 'input_file'
+    path input_file
 
     output:
     stdout
 
+    script:
     """
     echo $x
     cat $input_file
