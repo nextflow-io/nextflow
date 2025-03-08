@@ -16,13 +16,17 @@
 
 package nextflow.script.parser.v2
 
-import java.security.CodeSource
+import java.nio.file.Path
 
+import com.google.common.hash.Hashing
 import groovy.transform.CompileStatic
 import nextflow.Session
 import nextflow.ast.NextflowXformImpl
 import nextflow.ast.OpXformImpl
 import nextflow.script.BaseScript
+import nextflow.script.control.Compiler
+import nextflow.script.control.ModuleResolver
+import nextflow.script.control.ResolveIncludeVisitor
 import nextflow.script.control.ScriptResolveVisitor
 import nextflow.script.parser.ScriptParserPluginFactory
 import org.codehaus.groovy.ast.ASTNode
@@ -31,13 +35,18 @@ import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.Phases
+import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.control.customizers.ImportCustomizer
-import org.codehaus.groovy.runtime.InvokerHelper
+import org.codehaus.groovy.control.io.FileReaderSource
+import org.codehaus.groovy.control.io.ReaderSource
+import org.codehaus.groovy.control.io.StringReaderSource
+import org.codehaus.groovy.control.messages.SyntaxErrorMessage
 
 /**
  * Compile a Nextflow script into a Groovy class.
  *
- * @see groovy.lang.GroovyShell
+ * @see groovy.lang.GroovyShell::parse()
+ * @see groovy.lang.GroovyClassLoader::doParseClass()
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
@@ -45,34 +54,20 @@ import org.codehaus.groovy.runtime.InvokerHelper
 public class ScriptCompiler {
 
     public static final String DEFAULT_CODE_BASE = "/groovy/shell"
+    public static final String MAIN_CLASS_NAME = "Main"
 
-    private final Binding context
     private final CompilerConfiguration config
-    private final ScriptClassLoader loader
+    private final GroovyClassLoader loader
 
-    public ScriptCompiler(Session session, Binding binding) {
-        this(session.classLoader, binding, getConfig(session))
+    private Compiler compiler
+
+    public ScriptCompiler(Session session) {
+        this(getConfig(session), session.classLoader)
     }
 
-    public ScriptCompiler(ClassLoader parent, Binding binding, CompilerConfiguration config) {
-        this.loader = new ScriptClassLoader(parent, config)
-        this.context = binding
+    public ScriptCompiler(CompilerConfiguration config, ClassLoader parent) {
         this.config = config
-    }
-
-    public Script compile(String scriptText, String fileName) throws CompilationFailedException {
-        GroovyCodeSource gcs = new GroovyCodeSource(scriptText, fileName, DEFAULT_CODE_BASE)
-        return InvokerHelper.createScript(parseClass(gcs), context)
-    }
-
-    public Script compile(File file) throws CompilationFailedException, IOException {
-        GroovyCodeSource gcs = new GroovyCodeSource(file, config.getSourceEncoding())
-        return InvokerHelper.createScript(parseClass(gcs), context)
-    }
-
-    private Class parseClass(GroovyCodeSource codeSource) throws CompilationFailedException {
-        // Don't cache scripts
-        return loader.parseClass(codeSource, false)
+        this.loader = new GroovyClassLoader(parent, config)
     }
 
     private static CompilerConfiguration getConfig(Session session) {
@@ -81,7 +76,7 @@ public class ScriptCompiler {
         importCustomizer.addImports( nextflow.Channel.name )
         importCustomizer.addImports( nextflow.util.Duration.name )
         importCustomizer.addImports( nextflow.util.MemoryUnit.name )
-        importCustomizer.addImport( 'channel', nextflow.Channel.name )
+        importCustomizer.addImport( "channel", nextflow.Channel.name )
         importCustomizer.addStaticStars( nextflow.Nextflow.name )
 
         final config = new CompilerConfiguration()
@@ -98,19 +93,91 @@ public class ScriptCompiler {
         return config
     }
 
-    private static class ScriptClassLoader extends GroovyClassLoader {
+    public CompileResult compile(String scriptText) {
+        return compile0(new GroovyCodeSource(scriptText, MAIN_CLASS_NAME, DEFAULT_CODE_BASE))
+    }
 
-        public ScriptClassLoader(ClassLoader loader, CompilerConfiguration config) {
-            super(loader, config)
+    public CompileResult compile(File file) {
+        return compile0(new GroovyCodeSource(file, config.getSourceEncoding()))
+    }
+
+    public Collection<SourceUnit> getSources() {
+        if( !compiler )
+            return null
+        return compiler.getSources().values()
+    }
+
+    public List<SyntaxErrorMessage> getErrors() {
+        if( !compiler )
+            return null
+        return compiler.compilationUnit()
+            .getErrorCollector()
+            .getErrors()
+            .stream()
+            .filter(e -> e instanceof SyntaxErrorMessage)
+            .map(e -> (SyntaxErrorMessage) e)
+            .toList()
+    }
+
+    private CompileResult compile0(GroovyCodeSource codeSource) {
+        // compile main script and included modules
+        final unit = new ScriptCompilationUnit(config, loader)
+        final su = codeSource.getFile()
+            ? unit.getSource(MAIN_CLASS_NAME, codeSource.getFile())
+            : unit.getSource(codeSource.getName(), codeSource.getScriptText())
+        final collector = new ScriptClassLoader(loader).createCollector(unit, su)
+
+        compiler = new Compiler(unit)
+        compiler.addSource(su)
+
+        unit.addSource(su)
+        unit.setClassgenCallback(collector)
+        unit.compile(Phases.CLASS_GENERATION)
+
+        // collect script classes
+        final classes = collector.getLoadedClasses().stream()
+            .map((o) -> (Class) o)
+            .filter((c) -> c.getSuperclass() == BaseScript.class)
+            .toList()
+
+        // extract main script class
+        final main = classes.stream()
+            .filter(c -> c.getSimpleName() == MAIN_CLASS_NAME)
+            .findFirst()
+            .get()
+
+        // match each module script class to the source path
+        // using the class name
+        final modules = new HashMap<Path,Class>()
+        for( final c : classes ) {
+            for( final source : unit.getModules() ) {
+                if( source.getName() == c.getSimpleName() ) {
+                    final path = Path.of(source.getSource().getURI())
+                    modules.put(path, c)
+                    break
+                }
+            }
+        }
+        return new CompileResult(main, modules)
+    }
+
+    public static record CompileResult(
+        Class main,
+        Map<Path,Class> modules
+    ) {}
+
+    private static class ScriptClassLoader extends GroovyClassLoader {
+        public ScriptClassLoader(GroovyClassLoader parent) {
+            super(parent)
         }
 
         @Override
-        protected CompilationUnit createCompilationUnit(CompilerConfiguration config, CodeSource source) {
-            return new ScriptCompilationUnit(config, source, this)
+        public ClassCollector createCollector(CompilationUnit unit, SourceUnit su) {
+            return super.createCollector(unit, su)
         }
     }
 
-    private static class ScriptCompilationUnit extends CompilationUnit {
+    private class ScriptCompilationUnit extends CompilationUnit {
 
         private static final List<ClassNode> DEFAULT_IMPORTS = List.of(
             new ClassNode( java.nio.file.Path ),
@@ -119,19 +186,103 @@ public class ScriptCompiler {
             new ClassNode( nextflow.util.MemoryUnit ),
         )
 
-        public ScriptCompilationUnit(CompilerConfiguration configuration, CodeSource codeSource, GroovyClassLoader loader) {
-            super(configuration, codeSource, loader)
+        private SourceUnit entry
 
-            addPhaseOperation(source -> {
-                // initialize script class
-                final cn = source.getAST().getClasses().get(0)
-                final astNodes = new ASTNode[] { cn, cn }
+        private Set<SourceUnit> modules
 
-                new ScriptResolveVisitor(source, this, DEFAULT_IMPORTS, new ArrayList<>()).visit()
-                new ScriptToGroovyVisitor(source).visit()
-                new NextflowXformImpl().visit(astNodes, source)
-                new OpXformImpl().visit(astNodes, source)
-            }, Phases.CONVERSION)
+        public ScriptCompilationUnit(CompilerConfiguration configuration, GroovyClassLoader loader) {
+            super(configuration, null, loader)
+            super.addPhaseOperation(source -> analyze(source), Phases.CONVERSION)
+        }
+
+        public Set<SourceUnit> getModules() {
+            return modules
+        }
+
+        @Override
+        public void addPhaseOperation(final ISourceUnitOperation op, final int phase) {
+            super.addPhaseOperation((source) -> {
+                // skip main script on second conversion pass
+                if( phase == Phases.CONVERSION && source == entry )
+                    return
+                op.call(source)
+            }, phase)
+        }
+
+        @Override
+        public void addPhaseOperation(final IPrimaryClassNodeOperation op, final int phase) {
+            super.addPhaseOperation((source, context, classNode) -> {
+                // skip main script on second conversion pass
+                if( phase == Phases.CONVERSION && source == entry )
+                    return
+                op.call(source, context, classNode)
+            }, phase)
+        }
+
+        private void analyze(SourceUnit source) {
+            // on first pass, recursively add included modules to queue
+            if( entry == null ) {
+                modules = new ModuleResolver(compiler).resolve(source, uri -> getSource(uri))
+                for( final su : modules )
+                    addSource(su)
+                entry = source
+                // wait for modules to be parsed before analyzing main script
+                if( !modules.isEmpty() )
+                    return
+            }
+
+            // on second pass, all source files have been parsed
+            // initialize script class
+            final cn = source.getAST().getClasses().get(0)
+
+            // perform strict syntax checking
+            final includeResolver = new ResolveIncludeVisitor(source, compiler, Collections.emptySet())
+            includeResolver.visit()
+            for( final error : includeResolver.getErrors() )
+                source.getErrorCollector().addErrorAndContinue(error)
+            new ScriptResolveVisitor(source, this, DEFAULT_IMPORTS, Collections.emptyList()).visit()
+
+            // convert to Groovy
+            final astNodes = new ASTNode[] { cn, cn }
+            new ScriptToGroovyVisitor(source).visit()
+            new NextflowXformImpl().visit(astNodes, source)
+            new OpXformImpl().visit(astNodes, source)
+        }
+
+        SourceUnit getSource(URI uri) {
+            return getSource(uniqueClassName(uri), new File(uri))
+        }
+
+        SourceUnit getSource(String name, File file) {
+            return getSource(name, new FileReaderSource(file, getConfiguration()))
+        }
+
+        SourceUnit getSource(String name, String source) {
+            return getSource(name, new StringReaderSource(source, getConfiguration()))
+        }
+
+        SourceUnit getSource(String name, ReaderSource source) {
+            return new SourceUnit(
+                    name,
+                    source,
+                    getConfiguration(),
+                    getClassLoader(),
+                    getErrorCollector())
+        }
+
+        /**
+         * Create a unique name for a script class in order to avoid collisions
+         * between scripts with the same base name.
+         *
+         * @param uri
+         */
+        private String uniqueClassName(URI uri) {
+            final hash = Hashing
+                    .sipHash24()
+                    .newHasher()
+                    .putUnencodedChars(uri.toString())
+                    .hash()
+            return "_nf_script_$hash"
         }
     }
 

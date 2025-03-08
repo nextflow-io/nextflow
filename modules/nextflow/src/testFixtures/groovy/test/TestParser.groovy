@@ -26,7 +26,7 @@ import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ProcessFactory
 import nextflow.script.ScriptBinding
-import nextflow.script.ScriptParserFactory
+import nextflow.script.ScriptLoaderFactory
 /**
  * An helper class to parse nextflow script snippets
  *
@@ -50,7 +50,7 @@ class TestParser {
         }
 
         session.init(null,null)
-        ScriptParserFactory.create(session) .runScript(scriptText)
+        ScriptLoaderFactory.create(session) .runScript(scriptText)
         session.fireDataflowNetwork(false)
         return TaskProcessor.currentProcessor()
     }

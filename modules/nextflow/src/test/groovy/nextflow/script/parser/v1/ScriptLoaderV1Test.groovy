@@ -12,13 +12,13 @@ import test.TestHelper
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ScriptParserV1Test extends Specification {
+class ScriptLoaderV1Test extends Specification {
 
     def 'should run a file script' () {
 
         given:
         def session = new Session()
-        def parser = new ScriptParserV1(session)
+        def parser = new ScriptLoaderV1(session)
         def binding = new ScriptBinding(params:[foo:'Hello'])
 
         def file = TestHelper.createInMemTempFile('foo.nf')
@@ -42,7 +42,7 @@ class ScriptParserV1Test extends Specification {
 
         given:
         def session = new Session()
-        def parser = new ScriptParserV1(session)
+        def parser = new ScriptLoaderV1(session)
         def binding = new ScriptBinding(params:[foo:'Hello'])
 
         def TEXT = '''
@@ -65,7 +65,7 @@ class ScriptParserV1Test extends Specification {
 
         given:
         def session = new Session()
-        def parser = new ScriptParserV1(session)
+        def parser = new ScriptLoaderV1(session)
         session.binding.setVariable('foo', 'Hello')
 
         def TEXT = '''
@@ -86,7 +86,7 @@ class ScriptParserV1Test extends Specification {
     def 'should normalise script name'() {
 
         given:
-        def parser = new ScriptParserV1(Mock(Session))
+        def parser = new ScriptLoaderV1(Mock(Session))
 
         expect:
         parser.computeClassName(Paths.get(SCRIPT)) == EXPECTED
@@ -102,7 +102,7 @@ class ScriptParserV1Test extends Specification {
     def 'should normalise script text' () {
 
         given:
-        def parser = new ScriptParserV1(Mock(Session))
+        def parser = new ScriptLoaderV1(Mock(Session))
 
         when:
         def result = parser.computeClassName('process foo { etc } ')
@@ -117,7 +117,7 @@ class ScriptParserV1Test extends Specification {
         def SESS = Mock(Session) { getClassLoader() >> CL }
 
         when:
-        def parser = new ScriptParserV1(SESS)
+        def parser = new ScriptLoaderV1(SESS)
         then:
         parser.getSession() == SESS
         parser.getClassLoader() == CL
@@ -127,7 +127,7 @@ class ScriptParserV1Test extends Specification {
     def 'should catch compilation errors' () {
         given:
         def session = new Session()
-        def parser = new ScriptParserV1(session)
+        def parser = new ScriptLoaderV1(session)
 
         def file = TestHelper.createInMemTempFile('foo.nf')
         file.text = '''
