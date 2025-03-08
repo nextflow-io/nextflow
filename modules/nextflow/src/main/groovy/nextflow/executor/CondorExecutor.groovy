@@ -273,19 +273,15 @@ class CondorExecutor extends AbstractGridExecutor {
             return result
         }
         println("condor_history -userlog .condor_runlog.uuid-${session.uniqueId}.log -wide -af:j JobStatus")
-        // boolean started = false
         def itr = text.readLines().iterator()
         while( itr.hasNext() ) {
             String line = itr.next()
             println(line)
-            // print (started)
-            print (line.trim())
-            // if( !started ) {
-            //     started = line.startsWith(' ID ')
-            //     continue
-            // }
+            println(line.trim())
+            if( line.startsWith(' ID ') ) continue
 
             if( !line.trim() ) {
+                println('!line.trim')
                 break
             }
 
