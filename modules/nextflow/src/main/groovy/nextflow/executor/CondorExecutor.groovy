@@ -91,17 +91,9 @@ class CondorExecutor extends AbstractGridExecutor {
 
         result << "universe = vanilla"
 
-        // result << "out = ${task.workDir.resolve(TaskRun.CMD_OUTFILE)}".toString()
-        // result << "error = ${task.workDir.resolve(TaskRun.CMD_ERRFILE)}".toString()
-        // result << "log = ${task.workDir.resolve(TaskRun.CMD_LOG)}".toString()
         result << "out = ${TaskRun.CMD_OUTFILE}".toString()
         result << "error = ${TaskRun.CMD_ERRFILE}".toString()
-        // result << "log = ${TaskRun.CMD_LOG}".toString()
-        // result << "output = /home/lalli/chtc_nf/${task.id}.out".toString()
-        // result << "error = /home/lalli/chtc_nf/${task.id}.err".toString()
         result << "log = .condor_runlog.uuid-${session.uniqueId}.log".toString()
-        // result << "stream_out = true"
-        // result << "stream_error = true"
         result << "getenv = true"
 
         result << "transfer_executable = False" // handled by nextflow
@@ -149,77 +141,6 @@ class CondorExecutor extends AbstractGridExecutor {
         return result
     }
 
-    // @Override
-    // protected List<String> getDirectives(TaskRun task, List<String> result) {
-    //     // better handled as cluster options.
-    //     // That being said, I'll preserve here the sorts of things I was thinking of for UWisc systems.
-    //     // def requirements = []
-    //     // def rank = []
-    //     //     rank << "(TARGET.HasRotationalScratch == false)"
-    //     // requirements << "(OpSys != WINDOWS)"
-
-    //     // result << "log = ${task.getWorkDirStr()}/${task.CMD_LOG}".toString()
-    //     result << "log = ${task.CMD_LOG}".toString()
-
-    //     if ( ! isFusionEnabled() ) {
-    //         // result << "out = ${task.getWorkDirStr()}/${task.CMD_OUTFILE}".toString()
-    //         // result << "error = ${task.getWorkDirStr()}/${task.CMD_ERRFILE}".toString()
-    //         result << "out = ${task.CMD_OUTFILE}".toString()
-    //         result << "error = ${task.CMD_ERRFILE}".toString()
-    //         result << "stream_out = true"
-    //         result << "stream_error = true"
-    //         result << "executable = ${task.CMD_RUN}".toString()
-    //         if( task.isContainerEnabled() ) {
-    //             result << "universe = vanilla"
-    //             // result << "container_image = ${task.getContainer()}".toString()
-    //         } else {
-    //             result << "universe = vanilla"
-    //         }
-
-    //         // result << "transfer_files = NO" // note: this will result in jobs only being run in shared file systems, as God and Nextflow intended. HT Condor will only work with Nextflow and a shared filesystem, either a physical one (this case) or one provided by Fusion (in which case, Fusion's s3 filesystem will prov)
-    //     } else {
-    //         // result << "out = ${task.getWorkDirStr()}/${task.CMD_OUTFILE}".toString()
-    //         // result << "error = ${task.getWorkDirStr()}/${task.CMD_ERRFILE}".toString()
-    //         result << "out = ${task.CMD_OUTFILE}".toString()
-    //         result << "error = ${task.CMD_ERRFILE}".toString()
-    //         result << "stream_out = true"
-    //         result << "stream_error = true"
-    //         result << "getenv = true"
-    //         result << "universe = vanilla"
-    //         // executable will be added to manifest by CondorTaskHandler in Fusion setups
-    //     }
-    //     result << "transfer_executable = False" // handled by nextflow
-    //     result << "transfer_output_files=\"\""  // ditto
-
-    //         // result << "initialdir = ${task.getWorkDirStr()}".toString()
-
-    //     if( task.config.getCpus()>1 ) {
-    //         result << "request_cpus = ${task.config.getCpus()}".toString()
-    //         result << "machine_count = 1"
-    //     }
-
-    //     if( task.config.getMemory() ) {
-    //         result << "request_memory = ${task.config.getMemory()}".toString()
-    //     }
-
-    //     if( task.config.getDisk() ) {
-    //         result << "request_disk = ${task.config.getDisk()}".toString()
-    //     }
-
-    //     if( task.config.getTime() ) {
-    //         result << "periodic_remove = (RemoteWallClockTime - CumulativeSuspensionTime) > ${task.config.getTime().toSeconds()}".toString()
-    //     }
-
-    //     if( task.config.getClusterOptions() ) {
-    //         def opts = task.config.getClusterOptions()
-    //         if( opts instanceof Collection ) {
-    //             result.addAll(opts as Collection)
-    //         }
-    //         else {
-    //             result.addAll( opts.toString().tokenize('\n').collect{ it.trim() })
-    //         }
-    //     }
-    // }
 
     @Override
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile) {
@@ -265,33 +186,24 @@ class CondorExecutor extends AbstractGridExecutor {
 
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
-        println("parsing Queue Status")
-        println(text)
         final result = new LinkedHashMap<String, QueueStatus>()
         if( !text ) {
             println("escaping because !text")
             return result
         }
-        println("condor_history -userlog .condor_runlog.uuid-${session.uniqueId}.log -wide -af:j JobStatus")
+
         def itr = text.readLines().iterator()
         while( itr.hasNext() ) {
             String line = itr.next()
-            println(line)
-            println(line.trim())
             if( line.startsWith(' ID ') ) continue
 
             if( !line.trim() ) {
-                println('!line.trim')
                 break
             }
 
             def cols = line.tokenize(' ')
-            print (cols)
             def id = cols[0]
             def st = cols[1]
-            println("id: ${id}")
-            println("status: ${st}")
-            println(cols)
             result[id] = DECODE_STATUS[st]
         }
 
@@ -340,129 +252,19 @@ class CondorExecutor extends AbstractGridExecutor {
         // creates condor submit file that is fed to stdin. The submit file specifies an executable
         protected String fusionStdinWrapper() {
             final fusionBashWrapperText = generateFusionBashWrapperCommand()
-            final submit = fusionSubmitCli()
-            final launcher = fusionLauncher()
-            final containerConfig = task.getContainerConfig()
-            final containerOpts = task.config.getContainerOptions()
-            final container_executable = containerConfig.getEngine()
-            final cmd = FusionHelper.runWithContainer(launcher, containerConfig, task.getContainer(), containerOpts, submit)
 
             final String tmp_launch_script = ".condor.${task.id}.${task.hash}.sh"
             final Path executable_file_name = FileHelper.getLocalTempPath().resolve(tmp_launch_script)
-                        // save the condor manifest
+            // save the bash command to a script on disk
             executable_file_name.text = fusionBashWrapperText
 
-            // final executable_object = this.write0(executable_file_name, fusionBashWrapperText)
             FilesEx.setExecutable(executable_file_name, true)
-            // local_condor_script_location/
-
-            // for tomorrow Joe:
-            // need to specify that image file, if cached, should be transferred to execution computer
-            // tomorrow Joe says: Nextflow already recommends placing the image cache in a shared directory. We can also specify that the image should be transfered, but that seems unnecessary atthemmoment
-            // therefore the image file should be a relative path in the command line, not the absolute path that it currently is.
-            // tomorrow Joe says: Don't touch anything. Maybe in the future, implement a relative image path w/ an img file being transfered to working dir. 
-            // alternatively, require a shared cache location
-            // tomorrow Joe says: Nextflow says do that ^
-            // It works if you just run the command as specified in this code, with the cached image changed to reflect the above comment.
-            // We need to export the bash script to a local tmp file that is then the executable.
-            // No arguments or enviornemnt, that is all handled in the cmd bash script.
-            // tomorrow Joe says: Let's write the files in $NXF_TEMP.
-            // tomorrow Joe:
-            // is there a function to make tmp files?
-
-            // replicate some code from runWithContainer to get access to final environments in a easily processable manner
-                // final engine = containerConfig.getEngine()
-                // final containerBuilder = ContainerBuilder.create(engine, containerName)
-                //     .addMountWorkDir(false)
-                //     .addRunOptions(containerConfig.runOptions as String)
-                //     .addRunOptions(containerOpts)
-                //     .addRunOptions(containerConfig.fusionOptions())
-                //     .params(containerConfig)
-
-                // add fusion env vars
-                // for(Map.Entry<String,String> it : launcher.fusionEnv()) {
-                //     containerBuilder.addEnv("$it.key=$it.value")
-                // }
-
-                // // add env variables
-                // for( String env : containerConfig.getEnvWhitelist())
-                //     containerBuilder.addEnv(env)
-
-            // // println(this.getTempDir())
-            // println(FileHelper.getTempDir().toString())
-            println('\n')
-            println('submit:')
-            println(submit)
-            println('\n')
-            println('launcher:')
-            println(launcher)
-            println('\n')
-            println('containerConfig:')
-            println(containerConfig)
-            println('\n')
-            println('containerOpts:')
-            println(containerOpts)
-            println('\n')
-            println('task.getContainer():')
-            println(task.getContainer())
-            println('\n')
-            println('hash')
-            println(task.hash.toString())
             def submit_file_commands = getDirectives(task)
-            // result << "container_image = ${task.getContainer()}".toString()
-            //  containerConfig.getEnvWhitelist() +
-            // def environment = [:]
-            // println('task.getEnvironment()')
-            // println(task.getEnvironment())
-            // println('launcher.fusionEnv()')
-            // println(launcher.fusionEnv())
-            // println('task.getContainerConfig().getEnvWhitelist()')
-            // println(task.getContainerConfig().getEnvWhitelist())
-            // def env_map = [:]
-            // env_map.putAll(task.getEnvironment())
-            // env_map.putAll( launcher.fusionEnv() )
-            // // println('env_map')
-            // // println(env_map)
-            // def env_list = env_map.each { key, val -> "${key}='${val.toString().replaceAll("\"", "\"\"").replaceAll("'", "''")}'" }.collect()
-            // env_list += containerConfig.getEnvWhitelist()
-            // def env_string = env_list.join(' ').toString()
-            // // println('env_list')
-            // // println(env_list)
-
-
-            // // This will always be a container, so the executable will always be the container command.
-            // // We can always split on the container command.
-            // // if not containerized, the executable is .command.run, which we will specify in the get directives portion.
-            // env_string += ' PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"}'
-            // submit_file_commands << "environment = \"" + env_string + "\""
-            // println('cmd:')
-            // println(cmd)
-            // println('')
-            // def shell_command = submit //cmd.split(env_string)[1].split(' ')
-
-            // def executable = submit[0].toString()
-            // def arguments = submits[1:].join(' ').toString()
-
-            // def condor_executable = container_executable
-            // def arguments = cmd.split(container_executable).drop(1).join(container_executable).toString()
-            // wrapper.setExecutable(true)
-
-            // return '#!/bin/bash\n' + cmd + '\n'
-
-            // println('container_executable')
-            // println(container_executable)
-            // submit_file_commands << "executable = ${executable}".toString()
-            // submit_file_commands << "arguments = ${arguments}".toString()
             submit_file_commands << "executable = ${executable_file_name}".toString()
             submit_file_commands << "transfer_executable = True"
-            // submit_file_commands << "arguments = ${arguments}".toString()
             submit_file_commands << "queue"
             submit_file_commands << ""
 
-            // println('submit_file_commands')
-            // println(submit_file_commands)
-            println('submitfile')
-            println(submit_file_commands.join('\n'))
             return submit_file_commands.join('\n')
 
         }
