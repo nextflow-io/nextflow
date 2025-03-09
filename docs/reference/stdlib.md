@@ -272,21 +272,21 @@ println groovy.json.JsonOutput.toJson(vals)
 
 The following sections describe the standard types provided by Nextflow.
 
-## Bag
+## Bag\<E\>
 
 A bag is an unordered collection.
 
 The following operators are supported for bags:
 
-`+ : (Bag, Bag) -> Bag`
+`+ : (Bag<E>, Bag<E>) -> Bag<E>`
 : Concatenates two bags.
 
-`in, !in : (?, Bag) -> boolean`
+`in, !in : (E, Bag<E>) -> boolean`
 : Given a value and a bag, returns `true` if the bag contains the value (or not).
 
-See also: [Iterable](#iterable)
+Bags inherit all methods from the [Iterable](#iterablee) trait.
 
-## Channel
+## Channel\<E\>
 
 See {ref}`channel-page` for an overview of channels. See {ref}`channel-factory` and {ref}`operator-page` for the available functions for creating and manipulating channels.
 
@@ -352,99 +352,109 @@ The following methods are available for a Duration:
 `toSeconds() -> long`
 : Get the duration value in seconds (rounded down).
 
-## Iterable
+## Iterable\<E\>
 
-An iterable is a common interface for collections that support iteration. The following types are iterables:
+An iterable is a trait shared by collections that support iteration. The following types are iterables:
 
-- [Bag](#bag)
-- [List](#list)
-- [Set](#set)
+- [Bag\<E\>](#bage)
+- [List\<E\>](#liste)
+- [Set\<E\>](#sete)
 
 Values of these types can be passed to any parameter of type `Iterable`, and they can use all of the methods described below.
 
 The following methods are available for iterables:
 
-`any( condition: Closure ) -> boolean`
-: Returns `true` if any value in the iterable satisfies the given condition.
+`any( condition: (E) -> boolean ) -> boolean`
+: Returns `true` if any element in the iterable satisfies the given condition.
 
-`collect( transform: Closure ) -> Iterable`
-: Returns a new iterable with each value transformed by the given closure.
+`collect( transform: (E) -> R ) -> Iterable<R>`
+: Returns a new iterable with each element transformed by the given closure.
 
-`collectMany( transform: Closure ) -> Iterable`
-: Transforms each value in the iterable into a collection with the given closure and concatenates the resulting collections into a list.
+`collectMany( transform: (E) -> Iterable<R> ) -> Iterable<R>`
+: Transforms each element in the iterable into a collection with the given closure and concatenates the resulting collections into a list.
 
-`contains( value ) -> boolean`
+`contains( value: E ) -> boolean`
 : Returns `true` if the iterable contains the given value.
 
-`each( action: Closure )`
-: Invoke the given closure for each value in the iterable.
+`each( action: (E) -> () )`
+: Invoke the given closure for each element in the iterable.
 
-`every( condition: Closure ) -> boolean`
-: Returns `true` if every value in the iterable satisfies the given condition.
+`every( condition: (E) -> boolean ) -> boolean`
+: Returns `true` if every element in the iterable satisfies the given condition.
 
-`findAll( condition: Closure ) -> Iterable`
-: Returns the values in the iterable that satisfy the given condition.
+`findAll( condition: (E) -> boolean ) -> Iterable<E>`
+: Returns the elements in the iterable that satisfy the given condition.
 
-`groupBy( transform: Closure ) -> Map`
-: Collect the values of an iterable into groups based on a matching key. The closure should return the key for a given value.
+`groupBy( transform: (E) -> K ) -> Map<K,Iterable<E>>`
+: Collect the elements of an iterable into groups based on a matching key. The closure should return the key for a given element.
 
-`inject( accumulator: Closure ) -> ?`
-: Apply the given accumulator to each value in the iterable and return the final accumulated value. The closure should accept two parameters, corresponding to the current accumulated value and the current iterable value, and return the next accumulated value.
-: The first value from the iterable is used as the initial accumulated value.
+`inject( accumulator: (E,E) -> E ) -> E`
+: Apply the given accumulator to each element in the iterable and return the final accumulated value. The closure should accept two parameters, corresponding to the current accumulated value and the current iterable element, and return the next accumulated value.
+: The first element from the iterable is used as the initial accumulated value.
 
-`inject( initialValue: ?, accumulator: Closure ) -> ?`
-: Apply the given accumulator to each value in the iterable and return the final accumulated value. The closure should accept two parameters, corresponding to the current accumulated value and the current iterable value, and return the next accumulated value.
+`inject( initialValue: R, accumulator: (R,E) -> R ) -> R`
+: Apply the given accumulator to each element in the iterable and return the final accumulated value. The closure should accept two parameters, corresponding to the current accumulated value and the current iterable element, and return the next accumulated value.
 
 `isEmpty() -> boolean`
 : Returns `true` if the iterable is empty.
 
 `join( separator: String = '' ) -> String`
-: Concatenates the string representation of each value in the iterable, with the given string as the separator between each value.
+: Concatenates the string representation of each element in the iterable, with the given string as the separator between each element.
 
-`max() -> ?`
-: Returns the maximum value in the iterable.
+`max() -> E`
+: Returns the maximum element in the iterable.
 
-`max( comparator: Closure ) -> ?`
-: Returns the maximum value in the iterable according to the given closure.
+**`max( comparator: (E) -> R ) -> E`**
+
+`max( comparator: (E,E) -> int ) -> E`
+: Returns the maximum element in the iterable according to the given closure.
 : The closure should follow the same semantics as the closure parameter of `toSorted()`.
 
-`min() -> ?`
-: Returns the maximum value in the iterable.
+`min() -> E`
+: Returns the maximum element in the iterable.
 
-`min( comparator: Closure ) -> ?`
-: Returns the maximum value in the iterable according to the given closure.
+**`min( comparator: (E) -> R ) -> E`**
+
+`min( comparator: (E,E) -> int ) -> E`
+: Returns the maximum element in the iterable according to the given closure.
 : The closure should follow the same semantics as the closure parameter of `toSorted()`.
 
 `size() -> int`
-: Returns the number of values in the iterable.
+: Returns the number of elements in the iterable.
 
-`sum() -> ?`
-: Returns the sum of the values in the iterable. The values should support the `+` operator.
+`sum() -> E`
+: Returns the sum of the elements in the iterable. The elements should support the `+` operator.
 
-`sum( mapper: Closure ) -> ?`
-: Transforms each value in the iterable with the given closure and returns the sum. The values returned by the closure should support the `+` operator.
+`sum( mapper: (E) -> R ) -> R`
+: Transforms each element in the iterable with the given closure and returns the sum. The values returned by the closure should support the `+` operator.
 
-`toList() -> List`
+`toList() -> List<E>`
 : Converts the iterable to a list.
 : :::{danger}
   Converting an unordered collection to a list can lead to non-deterministic behavior. Consider using `toSorted()` instead to ensure a deterministic ordering. See {ref}`cache-nondeterministic-inputs` for more information.
   :::
 
-`toSet() -> Set`
-: Converts the iterable to a set. Duplicate values are excluded.
+`toSet() -> Set<E>`
+: Converts the iterable to a set. Duplicate elements are excluded.
 
-`toSorted() -> List`
-: Returns a sorted list of the iterable's values.
+`toSorted() -> List<E>`
+: Returns a sorted list of the iterable's elements.
 
-`toSorted( comparator: Closure ) -> List`
-: Returns a list of the iterable's values, sorted according to the given closure.
-: The closure should either accept one parameter and transform each value into the value that will be used for comparisons, or accept two parameters and define how to compare two values.
+`toSorted( comparator: (E) -> R ) -> List<E>`
+: Returns the iterable as a list sorted according to the given closure.
+: The closure should accept one parameter and transform each element into the value that will be used for comparisons.
 
-`toUnique() -> Iterable`
-: Returns a shallow copy of the iterable with duplicate values excluded.
+`toSorted( comparator: (E,E) -> int ) -> List<E>`
+: Returns the iterable as a list sorted according to the given closure.
+: The closure should accept two parameters and return a negative integer, zero, or a positive integer to denote whether the first argument is less than, equal to, or greater than the second.
 
-`toUnique( comparator: Closure ) -> Iterable`
-: Returns a shallow copy of the iterable with duplicate values excluded.
+`toUnique() -> Iterable<E>`
+: Returns a shallow copy of the iterable with duplicate elements excluded.
+
+**`toUnique( comparator: (E) -> R ) -> Iterable<E>`**
+
+`toUnique( comparator: (E,E) -> int ) -> Iterable<E>`
+: Returns a shallow copy of the iterable with duplicate elements excluded.
 : The closure should follow the same semantics as the closure parameter of `toSorted()`.
 
 :::{note}
@@ -453,27 +463,27 @@ Iterables in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/j
 
 (stdlib-types-list)=
 
-## List
+## List\<E\>
 
-A list is an unordered collection of elements. See {ref}`script-list` for an overview of lists.
+A list is an ordered collection of elements. See {ref}`script-list` for an overview of lists.
 
 The following operators are supported for lists:
 
-`+ : (List, List) -> List`
+`+ : (List<E>, List<E>) -> List<E>`
 : Concatenates two lists.
 
-`* : (List, int) -> List`
+`* : (List<E>, int) -> List<E>`
 : Given a list and an integer *n*, repeats the list *n* times.
 
-`[] : (List, int) -> char`
+`[] : (List<E>, int) -> E`
 : Given a list and an index, returns the element at the given index in the list, or `null` if the index is out of range.
 
-`in, !in : (?, List) -> boolean`
+`in, !in : (E, List<E>) -> boolean`
 : Given a value and a list, returns `true` if the list contains the value (or not).
 
 The following methods are available for a list:
 
-`collate( size: int, keepRemainder: boolean = true ) -> List`
+`collate( size: int, keepRemainder: boolean = true ) -> List<List<E>>`
 : Collates the list into a list of sub-lists of length `size`. If `keepRemainder` is `true`, any remaining elements are included as a partial sub-list, otherwise they are excluded.
 
 : For example:
@@ -482,7 +492,7 @@ The following methods are available for a list:
   assert [1, 2, 3, 4, 5, 6, 7].collate(3, false) == [[1, 2, 3], [4, 5, 6]]
   ```
 
-`collate( size: int, step: int, keepRemainder: boolean = true ) -> List`
+`collate( size: int, step: int, keepRemainder: boolean = true ) -> List<List<E>>`
 : Collates the list into a list of sub-lists of length `size`, stepping through the list `step` elements for each sub-list. If `keepRemainder` is `true`, any remaining elements are included as a partial sub-list, otherwise they are excluded.
 
 : For example:
@@ -491,46 +501,46 @@ The following methods are available for a list:
   assert [1, 2, 3, 4].collate(3, 1, false) == [[1, 2, 3], [2, 3, 4]]
   ```
 
-`find( condition: Closure ) -> ?`
+`find( condition: (E) -> boolean ) -> E`
 : Returns the first value in the list that satisfies the given condition.
 
-`first() -> ?`
+`first() -> E`
 : Returns the first element in the list. Raises an error if the list is empty.
 
-`getIndices() -> List`
+`getIndices() -> List<Integer>`
 : Returns the list of integers from 0 to *n - 1*, where *n* is the number of elements in the list.
 
-`head() -> ?`
+`head() -> E`
 : Equivalent to `first()`.
 
-`indexOf( value ) -> int`
+`indexOf( value: E ) -> int`
 : Returns the index of the first occurrence of the given value in the list, or -1 if the list does not contain the value.
 
-`init() -> List`
+`init() -> List<E>`
 : Returns a shallow copy of the list with the last element excluded.
 
-`last() -> ?`
+`last() -> E`
 : Returns the last element in the list. Raises an error if the list is empty.
 
-`reverse() -> List`
+`reverse() -> List<E>`
 : Returns a shallow copy of the list with the elements reversed.
 
-`subList( fromIndex: int, toIndex: int ) -> List`
+`subList( fromIndex: int, toIndex: int ) -> List<E>`
 : Returns the portion of the list between the given `fromIndex` (inclusive) and `toIndex` (exclusive).
 
-`tail() -> List`
+`tail() -> List<E>`
 : Returns a shallow copy of the list with the first element excluded.
 
-`take( n: int ) -> List`
+`take( n: int ) -> List<E>`
 : Returns the first *n* elements of the list.
 
-`takeWhile( condition: Closure ) -> List`
+`takeWhile( condition: (E) -> boolean ) -> List`
 : Returns the longest prefix of the list where each element satisfies the given condition.
 
-`withIndex() -> List`
+`withIndex() -> List<(E,Integer)>`
 : Returns a list of 2-tuples corresponding to the value and index of each element in the list.
 
-See also: [Iterable](#iterable)
+Lists inherit all methods from the [Iterable](#iterablee) trait.
 
 :::{note}
 Lists in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/List.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
@@ -538,54 +548,54 @@ Lists in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javas
 
 (stdlib-types-map)=
 
-## Map
+## Map\<K,V\>
 
-A map "maps" keys to values. Each key can map to at most one value -- a map cannot contain duplicate keys. See {ref}`script-map` for an overview of maps.
+A map associates or "maps" keys to values. Each key can map to at most one value -- a map cannot contain duplicate keys. See {ref}`script-map` for an overview of maps.
 
 The following operators are supported for maps:
 
-`+ : (Map, Map) -> Map`
+`+ : (Map<K,V>, Map<K,V>) -> Map<K,V>`
 : Concatenates two maps. If a key exists in both maps, the mapping from the right-hand side is used.
 
-`[] : (Map, ?) -> ?`
+`[] : (Map<K,V>, K) -> V`
 : Given a map and a key, returns the value for the given key in the map, or `null` if the key is not in the map.
 
-`in, !in : (?, Map) -> boolean`
+`in, !in : (K, Map<K,V>) -> boolean`
 : Given a key and a map, returns `true` if the map contains the key (or not).
 
 The following methods are available for a map:
 
-`any( condition: Closure ) -> boolean`
+`any( condition: (K,V) -> boolean ) -> boolean`
 : Returns `true` if any key-value pair in the map satisfies the given condition. The closure should accept two parameters corresponding to the key and value of an entry.
 
-`containsKey( key ) -> boolean`
+`containsKey( key: K ) -> boolean`
 : Returns `true` if the map contains a mapping for the given key.
 
-`containsValue( value ) -> boolean`
+`containsValue( value: V ) -> boolean`
 : Returns `true` if the map maps one or more keys to the given value.
 
-`each( action: Closure )`
+`each( action: (K,V) -> () )`
 : Invoke the given closure for each key-value pair in the map. The closure should accept two parameters corresponding to the key and value of an entry.
 
-`entrySet() -> Set`
+`entrySet() -> Set<(K,V)>`
 : Returns a set of the key-value pairs in the map.
 
-`every( condition: Closure ) -> boolean`
+`every( condition: (K,V) -> boolean ) -> boolean`
 : Returns `true` if every key-value pair in the map satisfies the given condition. The closure should accept two parameters corresponding to the key and value of an entry.
 
 `isEmpty() -> boolean`
 : Returns `true` if the map is empty.
 
-`keySet() -> Set`
+`keySet() -> Set<K>`
 : Returns a set of the keys in the map.
 
 `size() -> int`
 : Returns the number of key-value pairs in the map.
 
-`subMap( keys: Iterable ) -> Map`
+`subMap( keys: Iterable<K> ) -> Map<K,V>`
 : Returns a sub-map containing the given keys.
 
-`values() -> Bag`
+`values() -> Bag<V>`
 : Returns a collection of the values in the map.
 
 :::{note}
@@ -694,7 +704,7 @@ The following operators are supported for paths:
 : Resolve a relative file name against a directory path.
 
 `<< : (Path, String)`
-: Appends a string value to a file without replacing existing content. Equivalent to `append()`.
+: Appends text to a file without replacing existing content. Equivalent to `append()`.
 
 ### Getting attributes
 
@@ -756,17 +766,17 @@ The following methods are useful for getting attributes of a file:
 
 The following methods are available for reading files:
 
-`eachByte( action: Closure )`
+`eachByte( action: (byte) -> () )`
 : Iterates over the file byte by byte, applying the specified {ref}`closure <script-closure>`.
 
-`eachLine( action: Closure )`
+`eachLine( action: (String) -> () )`
 : Iterates over the file line by line, applying the specified {ref}`closure <script-closure>`.
 
 `getBytes() -> byte[]`
 : Returns the file content as a byte array.
 
 `getText() -> String`
-: Returns the file content as a string value.
+: Returns the file content as a string.
 
 `newInputStream() -> InputStream`
 : Returns an [InputStream](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/InputStream.html) object to read a binary file.
@@ -777,10 +787,10 @@ The following methods are available for reading files:
 `readLines() -> List<String>`
 : Reads the file line by line and returns the content as a list of strings.
 
-`withInputStream( action: Closure )`
+`withInputStream( action: (InputStream) -> () )`
 : Opens a file for reading and lets you access it with an [InputStream](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/InputStream.html) object.
 
-`withReader( action: Closure )`
+`withReader( action: (Reader) -> () )`
 : Opens a file for reading and lets you access it with a [Reader](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/Reader.html) object.
 
 ### Writing
@@ -788,7 +798,7 @@ The following methods are available for reading files:
 The following methods are available for writing to files:
 
 `append( text: String )`
-: Appends a string value to a file without replacing existing content.
+: Appends text to a file without replacing existing content.
 
 `newOutputStream() -> OutputStream`
 : Creates an [OutputStream](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/OutputStream.html) object that allows you to write binary data to a file.
@@ -803,15 +813,15 @@ The following methods are available for writing to files:
 : Writes a byte array to a file. Equivalent to setting the `bytes` property.
 
 `setText( text: String )`
-: Writes a string value to a file. Equivalent to setting the `text` property.
+: Writes text to a file. Equivalent to setting the `text` property.
 
-`withOutputStream( action: Closure )`
+`withOutputStream( action: (OutputStream) -> () )`
 : Applies the specified closure to an [OutputStream](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/OutputStream.html) object, closing it when finished.
 
-`withPrintWriter( action: Closure )`
+`withPrintWriter( action: (PrintWriter) -> () )`
 : Applies the specified closure to a [PrintWriter](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/PrintWriter.html) object, closing it when finished.
 
-`withWriter( action: Closure )`
+`withWriter( action: (Writer) -> () )`
 : Applies the specified closure to a [Writer](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/Writer.html) object, closing it when finished.
 
 `write( text: String )`
@@ -937,22 +947,22 @@ The following methods are available for manipulating files and directories in a 
 
 The following methods are available for listing and traversing directories:
 
-`eachDir( action: Closure )`
+`eachDir( action: (Path) -> () )`
 : Iterates through first-level directories only.
 
-`eachDirMatch( nameFilter: String, action: Closure )`
+`eachDirMatch( nameFilter: String, action: (Path) -> () )`
 : Iterates through directories whose names match the given filter.
 
-`eachDirRecurse( action: Closure )`
+`eachDirRecurse( action: (Path) -> () )`
 : Iterates through directories depth-first (regular files are ignored).
 
-`eachFile( action: Closure )`
+`eachFile( action: (Path) -> () )`
 : Iterates through first-level files and directories.
 
-`eachFileMatch( nameFilter: String, action: Closure )`
+`eachFileMatch( nameFilter: String, action: (Path) -> () )`
 : Iterates through files and directories whose names match the given filter.
 
-`eachFileRecurse( action: Closure )`
+`eachFileRecurse( action: (Path) -> () )`
 : Iterates through files and directories depth-first.
 
 ### Splitting files
@@ -971,16 +981,16 @@ The following methods are available for splitting and counting the records in fi
 `countLines() -> long`
 : Counts the number of lines in a text file. See the {ref}`operator-splittext` operator for available options.
 
-`splitCsv() -> List`
+`splitCsv() -> List<?>`
 : Splits a CSV file into a list of records. See the {ref}`operator-splitcsv` operator for available options.
 
-`splitFasta() -> List`
+`splitFasta() -> List<?>`
 : Splits a [FASTA](https://en.wikipedia.org/wiki/FASTA_format) file into a list of records. See the {ref}`operator-splitfasta` operator for available options.
 
-`splitFastq() -> List`
+`splitFastq() -> List<?>`
 : Splits a [FASTQ](https://en.wikipedia.org/wiki/FASTQ_format) file into a list of records. See the {ref}`operator-splitfastq` operator for available options.
 
-`splitJson() -> List`
+`splitJson() -> List<?>`
 : Splits a JSON file into a list of records. See the {ref}`operator-splitjson` operator for available options.
 
 `splitText() -> List<String>`
@@ -988,7 +998,7 @@ The following methods are available for splitting and counting the records in fi
 
 (stdlib-types-set)=
 
-## Set
+## Set\<E\>
 
 A set is an unordered collection that cannot contain duplicate elements.
 
@@ -1001,21 +1011,21 @@ As set literal can be created from a list:
 
 The following operators are supported for sets:
 
-`+ : (Set, Iterable) -> Set`
-: Returns the union of a set and an iterable.
+`+ : (Set<E>, Iterable<E>) -> Set<E>`
+: Given a set and an iterable, returns a new set containing the elements of both collections.
 
-`- : (Set, Iterable) -> Set`
-: Given a set and an iterable, returns a new set with the elements of the first set minus the elements of the iterable.
+`- : (Set<E>, Iterable<E>) -> Set<E>`
+: Given a set and an iterable, returns a shallow copy of the set minus the elements of the iterable.
 
-`in, !in : (?, Set) -> boolean`
+`in, !in : (E, Set<E>) -> boolean`
 : Given a value and a set, returns `true` if the set contains the value (or not).
 
 The following methods are available for a set:
 
-`intersect( right: Iterable ) -> Set`
+`intersect( right: Iterable<E> ) -> Set<E>`
 : Returns the intersection of the set and the given iterable.
 
-See also: [Iterable](#iterable)
+Sets inherit all methods from the [Iterable](#iterablee) trait.
 
 :::{note}
 Sets in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Set.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/Set.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
