@@ -125,17 +125,10 @@ class CondorExecutor extends AbstractGridExecutor {
                 result.addAll( opts.toString().tokenize(';\n').collect{ it.trim() })
             }
         }
-        if ( ! pipeLauncherScript() ) {
-            if ( task.isContainerEnabled() ){
-
-            } else {
+        if ( ! pipeLauncherScript() && ! task.isContainerEnabled() ) {
                 result << "executable = ${task.CMD_RUN}".toString()
                 result << "environment = ${task.getEnvironment()}".toString()
             }
-            // if not containerized, the executable is .command.run, which we will specify in the get directives portion.
-            // result << "executable = placeholder"
-            // result << "arguments = placeholder"
-            // result << "environment = placeholder"
             result << 'queue'
         }
         return result
@@ -173,7 +166,8 @@ class CondorExecutor extends AbstractGridExecutor {
             'C': QueueStatus.DONE,      // Completed
             'H': QueueStatus.HOLD,      // Held
             'E': QueueStatus.ERROR,      // Error
-            // numeric options
+
+            // numeric encoding
             '0': QueueStatus.PENDING,   // Unexpanded
             '1': QueueStatus.PENDING,   // Idle
             '2': QueueStatus.RUNNING,   // Running
@@ -269,6 +263,8 @@ class CondorExecutor extends AbstractGridExecutor {
 
         }
 
+
+        // code copied from BashWrapperBuilder to allow for writing a wrapper script to give to condor
         private static MemoryUnit DEFAULT_STAGE_FILE_THRESHOLD = MemoryUnit.of('1 MB')
         private static int DEFAULT_WRITE_BACK_OFF_BASE = 3
         private static int DEFAULT_WRITE_BACK_OFF_DELAY = 250
