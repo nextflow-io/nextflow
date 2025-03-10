@@ -20,9 +20,7 @@ import java.util.stream.Collectors
 import groovy.transform.CompileStatic
 import nextflow.ast.GStringToLazyVisitor
 import nextflow.ast.TaskCmdXformVisitor
-import nextflow.script.BaseScript
 import nextflow.script.BodyDef
-import nextflow.script.IncludeDef
 import nextflow.script.TaskClosure
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenEvalCall
@@ -43,10 +41,12 @@ import nextflow.script.ast.ScriptNode
 import nextflow.script.ast.ScriptVisitorSupport
 import nextflow.script.ast.WorkflowNode
 import org.codehaus.groovy.ast.ASTNode
+import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.VariableScope
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.BinaryExpression
 import org.codehaus.groovy.ast.expr.ClosureExpression
+import org.codehaus.groovy.ast.expr.ConstructorCallExpression
 import org.codehaus.groovy.ast.expr.DeclarationExpression
 import org.codehaus.groovy.ast.expr.EmptyExpression
 import org.codehaus.groovy.ast.expr.Expression
@@ -74,16 +74,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.*
 @CompileStatic
 public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
-    private static Set<String> RESERVED_NAMES
-
-    static {
-        // internal groovy shell methods
-        RESERVED_NAMES = ["main", "run", "runScript"] as Set
-        // internal script dsl methods
-        for( final method : BaseScript.class.getMethods() ) {
-            RESERVED_NAMES.add(method.getName())
-        }
-    }
+    private static Set<String> RESERVED_NAMES = Set.of("main", "run", "runScript")
 
     private SourceUnit sourceUnit
 
@@ -124,15 +115,19 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             .map((module) -> {
                 final name = constX(module.name)
                 return module.alias != null
-                    ? createX(IncludeDef.Module.class, name, constX(module.alias))
-                    : createX(IncludeDef.Module.class, name)
+                    ? constructorX("nextflow.script.IncludeDef.Module", args(name, constX(module.alias)))
+                    : constructorX("nextflow.script.IncludeDef.Module", args(name))
             })
             .collect(Collectors.toList())
 
-        final include = callThisX("include", args(createX(IncludeDef.class, (Expression) listX(moduleArgs))))
+        final include = callThisX("include", args(constructorX("nextflow.script.IncludeDef", args(listX(moduleArgs)))))
         final from = callX(include, "from", args(node.source))
         final result = stmt(callX(from, "load0", args(varX("params"))))
         moduleNode.addStatement(result)
+    }
+
+    private ConstructorCallExpression constructorX(String name, TupleExpression args) {
+        new ConstructorCallExpression( ClassHelper.makeWithoutCaching(name), args )
     }
 
     @Override
