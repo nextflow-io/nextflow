@@ -18,11 +18,9 @@ package nextflow.config
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.config.dsl.ConfigSchema
-import nextflow.config.dsl.ConfigScope
-import nextflow.config.dsl.SchemaNode
-import nextflow.config.dsl.ScopeName
-import nextflow.config.dsl.ScopeNode
+import nextflow.config.schema.ConfigScope
+import nextflow.config.schema.SchemaNode
+import nextflow.config.schema.ScopeName
 import nextflow.plugin.Plugins
 import nextflow.script.dsl.Description
 /**
@@ -43,7 +41,6 @@ class ConfigValidator {
         'dumpChannels',
         'libDir',
         'poolSize',
-        'plugins',
         'preview',
         'runName',
         'stubRun',
@@ -52,7 +49,7 @@ class ConfigValidator {
     /**
      * Additional config scopes added by third-party plugins
      */
-    private ScopeNode pluginScopes
+    private SchemaNode.Scope pluginScopes
 
     ConfigValidator() {
         loadPluginScopes()
@@ -70,9 +67,9 @@ class ConfigValidator {
                 log.warn "Plugin config scope `${clazz.name}` conflicts with existing scope: `${name}`"
                 continue
             }
-            scopes.put(name, ScopeNode.of(clazz, description))
+            scopes.put(name, SchemaNode.Scope.of(clazz, description))
         }
-        pluginScopes = new ScopeNode('', [:], scopes)
+        pluginScopes = new SchemaNode.Scope('', scopes)
     }
 
     void validate(ConfigMap config) {
@@ -112,7 +109,8 @@ class ConfigValidator {
     boolean isValid(List<String> names) {
         if( names.size() == 1 && names.first() in hiddenOptions )
             return true
-        if( ConfigSchema.ROOT.getOption(names) )
+        final child = SchemaNode.ROOT.getChild(names)
+        if( child instanceof SchemaNode.Option || child instanceof SchemaNode.DslOption )
             return true
         if( pluginScopes.getOption(names) )
             return true

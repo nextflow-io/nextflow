@@ -122,9 +122,9 @@ myplugin {
 Plugins can declare their config options by implementing the `ConfigScope` interface and declaring each config option as a field with the `@ConfigOption` annotation:
 
 ```groovy
-import nextflow.config.dsl.ConfigOption
-import nextflow.config.dsl.ConfigScope
-import nextflow.config.dsl.ScopeName
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.config.schema.ScopeName
 import nextflow.script.dsl.Description
 
 @ScopeName('myplugin')
