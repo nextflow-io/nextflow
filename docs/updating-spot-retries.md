@@ -1,4 +1,4 @@
-(spot-retry-page)
+(spot-retry-page)=
 
 # Spot instance failures and retries
 
@@ -8,17 +8,17 @@ This page describes recent changes in how Nextflow handles spot instance failure
 
 Previously, Nextflow silently retried spot instance failures when using AWS or Google Batch. These retries were controlled by cloud-specific configuration parameters (for example, `aws.batch.maxSpotAttempts`), and occurred in cloud infrastructure without explicit visibility to Nextflow.
 
-<h3>Before Nextflow v24.10<h3>
+<h3>Before Nextflow v24.10/h3>
 
-By default, Nextflow would instruct AWS and Google Batch to automatically retry jobs lost to spot reclamation up to `5` times. Retries were handled by the cloud provider _within_ a Nextflow task. It was often unclear that tasks were restarted because there was no explicit message. Task runtimes and associated costs were increased because they included the runtime of the reclaimed and retried tasks.
+By default, Nextflow would instruct AWS and Google to automatically retry jobs lost to spot reclamation up to `5` times. Retries were handled by the cloud provider _within_ a Nextflow task. It was often unclear that tasks were restarted because there was no explicit message. Task runtimes and associated costs were increased because they included the runtime of the reclaimed and retried tasks.
 
-<h3>After Nextflow v24.10<h3>
+<h3>After Nextflow v24.10</h3>
 
-The default spot reclamation retry setting changed to `0` on AWS and Google Batch. By default, no _internal_ retries are attempted on these platforms. Spot reclamations leads to an immediate failure that is exposed to Nextflow in the same way as other generic failures (for example, returning `exit code 1` on AWS). Nextflow treats these failures like any other job failure unless a retry strategy is configured.
+The default spot reclamation retry setting changed to `0` on AWS and Google. By default, no _internal_ retries are attempted on these platforms. Spot reclamations leads to an immediate failure that is exposed to Nextflow in the same way as other generic failures (for example, returning `exit code 1` on AWS). Nextflow treats these failures like any other job failure unless a retry strategy is configured.
 
 ## Impact on Existing Workflows
 
-If you have been relying on silent Spot retries (the previous default behavior), you may now see more tasks fail with the following characteristics:
+If you have been relying on silent spot retries (the previous default behavior), you may now see more tasks fail with the following characteristics:
 
 - **AWS**: Generic failure with `exit code 1`. You may see messages indicating the host machine was terminated.
 - **Google**: Spot reclamation typically produces a specific code, but is now surfaced as a recognizable task failure in Nextflow logs.
@@ -41,8 +41,8 @@ Cons:
 - Potentially higher failure rate if tasks are frequently reclaimed.
 - Manual intervention needed each time.
 
-:::note
-If you resume the pipeline using the resume feature of Nextflow, it will pick up at the point the pipeline was interrupted, starting with a retry of that task.
+:::{note}
+If you resume the pipeline using the resume option, it will pick up at the point the pipeline was interrupted and start with a retry of that task.
 :::
 
 ### Re-enable spot retries
@@ -64,7 +64,7 @@ google {
 }
 ```
 
-The above example sets the maximum number of spot retries to `5` for both AWS and Google Batch.
+The above example sets the maximum number of spot retries to `5` for both AWS and Google.
 
 ## Make spot failures visible but retry them
 
@@ -82,7 +82,7 @@ The above example sets retries to `5` for any failures, not just failures at the
 
 If you have long-running tasks where losing progress due to spot reclamation is costly, consider [Fusion snapshots](https://docs.seqera.io/fusion/guide/snapshots). Fusion snapshots allows you to resume a partially completed task on a new machine if a spot instance is reclaimed and reduce wasted compute time.
 
-Key points for Fusion snapshots:
+Key features of Fusion snapshots:
 
 - Jobs do not need to start from scratch after reclamation.
 - Especially useful for tasks that take many hours or days to complete.
