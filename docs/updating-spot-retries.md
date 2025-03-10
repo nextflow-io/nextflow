@@ -29,7 +29,7 @@ Since the default for spot retries is now `0`, you must actively enable a retry 
 
 ### Do nothing
 
-If you do not to configure anything you will observe more pipeline failures when spot instances are reclaimed.
+If you do not configure anything, you will observe more pipeline failures when spot instances are reclaimed.
 
 Pros:
 
