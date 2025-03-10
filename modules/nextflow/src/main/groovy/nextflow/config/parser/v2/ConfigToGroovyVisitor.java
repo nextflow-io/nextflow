@@ -18,7 +18,8 @@ package nextflow.config.parser.v2;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 
-import nextflow.config.ast.ConfigAppendNode;
+import nextflow.config.ast.ConfigApplyNode;
+import nextflow.config.ast.ConfigApplyBlockNode;
 import nextflow.config.ast.ConfigAssignNode;
 import nextflow.config.ast.ConfigBlockNode;
 import nextflow.config.ast.ConfigIncludeNode;
@@ -63,15 +64,24 @@ public class ConfigToGroovyVisitor extends ConfigVisitorSupport {
     }
 
     @Override
+    public void visitConfigApplyBlock(ConfigApplyBlockNode node) {
+        moduleNode.addStatement(transformConfigApplyBlock(node));
+    }
+
+    protected Statement transformConfigApplyBlock(ConfigApplyBlockNode node) {
+        var statements = new ArrayList<Statement>();
+        for( var call : node.statements )
+            statements.add(stmt(call));
+        var code = block(new VariableScope(), statements);
+        return stmt(callThisX("block", args(constX(node.name), closureX(code))));
+    }
+
+    @Override
     public void visitConfigAssign(ConfigAssignNode node) {
         moduleNode.addStatement(transformConfigAssign(node));
     }
 
     protected Statement transformConfigAssign(ConfigAssignNode node) {
-        if( node instanceof ConfigAppendNode ) {
-            var method = node.names.get(0);
-            return stmt(callThisX(method, args(node.value)));
-        }
         var names = listX(
             node.names.stream()
                 .map(name -> (Expression) constX(name))
