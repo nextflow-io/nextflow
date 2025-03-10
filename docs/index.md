@@ -13,51 +13,30 @@
 
 Nextflow is a workflow system for creating scalable, portable, and reproducible workflows. It is based on the dataflow programming model that simplifies writing parallel and distributed pipelines and allows you to focus on data flow and computation.
 
-By abstracting compute environments from from pipeline logic, Nextflow workflows are portable and can scale without modification. Available platforms include:
-
-- Local machines
-- HPC schedulers
-- AWS Batch
-- Azure Batch
-- Google Cloud Batch
-- Kubernetes
-
-Nextflow supports a wide range of software dependency management tools, allowing users to integrate different package managers. Available Dependency management software include:
-
-- Apptainer
-- Charliecloud
-- Conda
-- Docker
-- Mamba
-- Podman
-- Sarus
-- Shifter
-- Singularity
-
-Nextflow is also integrated with [Wave](https://seqera.io/wave/), a container provisioning service that can build, upload, and manage container images required by workflows automatically and on demand during pipeline execution. See {ref}`wave-page` for more information and to get started with Wave.
+Nextflow can deploy workflows on a variety of execution platforms, including your local machine, HPC schedulers, and the cloud. Additionally, Nextflow supports a wide range of software dependency management tools, allowing users to integrate different environment and package managers. Nextflow is integrated with [Wave](https://seqera.io/wave/), a container provisioning service that can build, upload, and manage container images required by workflows automatically and on demand during pipeline execution. See {ref}`wave-page` for more information and to get started with Wave.
 
 ## Get started
 
 To get started with Nextflow:
 
-1. Read an {ref}`Overview <overview-page>` to learn about key Nextflow concepts.
+1. Read an {ref}`overview <overview-page>` to learn about key Nextflow concepts.
 2. {ref}`Install <install-page>` Nextflow.
 3. Set up a {ref}`development environment <devenv-page>` with the {ref}`Nextflow VS Code extension <devenv-nextflow>`.
 4. Run {ref}`your first script <your-first-script>`.
 
-To continue learning Nextflow, visit the [Nextflow community training portal](https://training.nextflow.io/latest/) and find a training course that is right for you.
+To continue learning how to run and write Nextflow workflows, visit the [Nextflow community training portal](https://training.nextflow.io/latest/) and find a training course that is right for you.
 
 ## Community
 
-You can post questions and get help in the [Nextflow community forum](https://community.seqera.io) or the [Nextflow Slack](https://www.nextflow.io/slack-invite.html). Bugs and feature requests should be reported as [GitHub issues](https://github.com/nextflow-io/nextflow/issues/new/choose).
+You can post questions in the [Nextflow community forum](https://community.seqera.io) or the [Nextflow Slack](https://www.nextflow.io/slack-invite.html). Bugs and feature requests should be reported as [GitHub issues](https://github.com/nextflow-io/nextflow/issues/new/choose).
 
-The Nextflow community is highly active with regular community meetings, events, a podcast, and more. You can view this material on the [Nextflow](https://www.youtube.com/@Nextflow) and [nf-core](https://www.youtube.com/@nf-core) YouTube channels.
+The Nextflow community is highly active with regular community meetings, events, a podcast, and more. You can view this material on the [Nextflow](https://www.youtube.com/@Nextflow).
 
 The [nf-core](https://nf-co.re/) project is a community effort aggregating high-quality Nextflow workflows that can be used by everyone.
 
 ## Contributing
 
-Contributions are more than welcome. See {ref}`Contributing <contributing-page>` for more details.
+Contributions to Nextflow are welcome. See {ref}`Contributing <contributing-page>` for more details.
 
 ## License
 
