@@ -59,6 +59,16 @@ abstract class TaskHandler {
     TaskRun getTask() { task }
 
     /**
+     * Whenever this handle reference a job array task child
+     */
+    boolean isArrayChild
+
+    TaskHandler withArrayChild(boolean child) {
+        this.isArrayChild = child
+        return this
+    }
+
+    /**
      * Task current status
      */
     volatile TaskStatus status = NEW
@@ -176,7 +186,7 @@ abstract class TaskHandler {
             return getTraceRecord()
         }
         catch (Exception e) {
-                log.debug "Unable to get task trace record -- cause: ${e.message}", e
+            log.debug "Unable to get task trace record -- cause: ${e.message}", e
             return null
         }
     }
@@ -260,7 +270,7 @@ abstract class TaskHandler {
 
     /**
      * Determine if a task is ready for execution or it depends on resources
-     * e.g. container that needs to be provisionied
+     * e.g. container that needs to be provisioned
      *
      * @return {@code true} when the task is ready for execution, {@code false} otherwise
      */

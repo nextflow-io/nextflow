@@ -702,6 +702,9 @@ class BashWrapperBuilder {
         if( this.containerCpuset )
             builder.addRunOptions(containerCpuset)
 
+        if( this.containerPlatform )
+            builder.setPlatform(this.containerPlatform)
+
         // export task work directory
         builder.addEnv('NXF_TASK_WORKDIR')
         // export the nextflow script debug variable
