@@ -15,30 +15,27 @@
  *
  */
 
-package nextflow.data.cid
-
-import java.nio.file.Path
-import java.util.function.Consumer
+package nextflow.data.cid.h2
 
 import groovy.transform.CompileStatic
+import nextflow.data.cid.CidStore
+import nextflow.data.cid.CidStoreFactory
 import nextflow.data.config.DataConfig
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-interface CidStore extends Closeable {
+class H2CidStoreFactory extends CidStoreFactory {
 
-    void open(DataConfig config)
+    @Override
+    boolean canOpen(DataConfig config) {
+        return config.store.location.startsWith('jdbc:h2:')
+    }
 
-    void save(String key, Object value)
-
-    void list(String key, Consumer<String> consumer)
-
-    Object load(String key)
-
-    Path getPath()
-
-    CidHistoryLog getHistoryLog()
-
+    @Override
+    protected CidStore newInstance(DataConfig config) {
+        return new H2CidStore()
+    }
 }

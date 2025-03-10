@@ -88,4 +88,8 @@ class DefaultCidStore implements CidStore {
     @Override
     CidHistoryLog getHistoryLog(){ historyLog }
 
+    @Override
+    void close() {
+        // nothing to do
+    }
 }

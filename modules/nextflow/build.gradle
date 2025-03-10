@@ -51,6 +51,10 @@ dependencies {
     api 'org.bouncycastle:bcprov-ext-jdk18on:1.78.1'
     api 'org.bouncycastle:bcpkix-jdk18on:1.78.1'
     api 'io.seqera:lib-trace:0.1.0'
+    // --
+    api 'com.h2database:h2:2.2.224'
+    api 'com.zaxxer:HikariCP:5.0.1'
+    api "org.apache.groovy:groovy-sql:4.0.26"
 
     testImplementation 'org.subethamail:subethasmtp:3.1.7'
 

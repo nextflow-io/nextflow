@@ -27,7 +27,13 @@ import nextflow.plugin.Priority
  */
 @CompileStatic
 @Priority(0)
-class DefaultCidStoreFactory extends CidStoreFactory{
+class DefaultCidStoreFactory extends CidStoreFactory {
+
+    @Override
+    boolean canOpen(DataConfig config) {
+        final loc = config.store.location
+        return loc && (loc.startsWith('file:/') || !loc.contains('://'))
+    }
 
     @Override
     protected CidStore newInstance(DataConfig config) {
