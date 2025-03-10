@@ -115,6 +115,8 @@ For example, shebang definitions `#!/usr/bin/python` and `#!/usr/local/bin/pytho
 ```
 :::
 
+(lib-directory)=
+
 #### The `lib` directory
 
 The `lib` directory can be used to add utility code or external libraries without cluttering the pipeline scripts. The `lib` directory in the Nextflow project root is added to the classpath by default. Classes defined in the `lib` directory will be available in pipeline scripts. Functions defined outside of classes will not be available in pipeline scripts.

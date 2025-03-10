@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package nextflow.config
+package nextflow.config.parser.v1
 
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.config.ConfigClosurePlaceholder
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport

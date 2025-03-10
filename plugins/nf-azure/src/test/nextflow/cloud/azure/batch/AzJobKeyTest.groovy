@@ -12,29 +12,37 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package nextflow.config
+package nextflow.cloud.azure.batch
 
-import java.lang.annotation.ElementType
-import java.lang.annotation.Retention
-import java.lang.annotation.RetentionPolicy
-import java.lang.annotation.Target
+import nextflow.processor.TaskProcessor
+import spock.lang.Specification
 
-import org.codehaus.groovy.transform.GroovyASTTransformationClass
 /**
- * Nextflow configuration file AST xform marker interface
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Retention(RetentionPolicy.SOURCE)
-@Target(ElementType.METHOD)
-@GroovyASTTransformationClass(classes = [ConfigTransformImpl])
-@interface ConfigTransform {
-    /**
-     * hack to pass a parameter in the {@link ConfigTransformImpl} class -- do not remove
-     *
-     * See {@link ConfigTransformImpl#renderClosureAsString}
-     */
-    boolean renderClosureAsString()
+class AzJobKeyTest extends Specification {
+
+    def 'should validate equals and hashcode' () {
+        given:
+        def p1 = Mock(TaskProcessor)
+        def p2 = Mock(TaskProcessor)
+        def k1 = new AzJobKey(p1, 'foo')
+        def k2 = new AzJobKey(p1, 'foo')
+        def k3 = new AzJobKey(p2, 'foo')
+        def k4 = new AzJobKey(p1, 'bar')
+
+        expect:
+        k1 == k2
+        k1 != k3
+        k1 != k4
+        and:
+        k1.hashCode() == k2.hashCode()
+        k1.hashCode() != k3.hashCode()
+        k1.hashCode() != k4.hashCode()
+    }
+
 }

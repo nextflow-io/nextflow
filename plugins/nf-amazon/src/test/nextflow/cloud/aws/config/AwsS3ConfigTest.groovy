@@ -154,5 +154,8 @@ class AwsS3ConfigTest extends Specification {
         false       | [:]
         false       | [endpoint: 'https://s3.us-east-2.amazonaws.com']
         true        | [endpoint: 'https://foo.com']
+        // consider AWS china as custom ednpoint
+        // see https://github.com/nextflow-io/nextflow/issues/5836
+        true        | [endpoint: 'https://xxxx.s3.cn-north-1.vpce.amazonaws.com.cn']
     }
 }

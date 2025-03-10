@@ -844,7 +844,6 @@ class TaskRunTest extends Specification {
         and:
         config == new ContainerConfig(engine:'docker')
 
-
         when:
         config = task.getContainerConfig()
         then:
@@ -940,5 +939,30 @@ class TaskRunTest extends Specification {
         then:
         1 * task.resolveStub(stub) >> null
         0 * task.resolveBody(_) >> null
+    }
+
+    def 'should resolve task stub from template' () {
+
+        given:
+        def task = new TaskRun()
+        task.processor = [:] as TaskProcessor
+        task.processor.grengine = new Grengine()
+
+        // create a file template
+        def file = TestHelper.createInMemTempFile('template.sh')
+        file.text = 'echo ${say_hello}'
+        // create the task context with two variables
+        // - my_file
+        // - say_hello
+        task.context = new TaskContext(Mock(Script),[say_hello: 'Ciao mondo', my_file: file],'foo')
+        task.config = new TaskConfig().setContext(task.context)
+
+        when:
+        task.resolveStub(new TaskClosure({-> template(my_file)}, 'template($file)'))
+        then:
+        task.script == 'echo Ciao mondo'
+        task.source == 'echo ${say_hello}'
+        task.template == file
+        task.traceScript == 'echo Ciao mondo'
     }
 }

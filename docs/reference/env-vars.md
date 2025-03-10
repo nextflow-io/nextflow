@@ -12,6 +12,8 @@ The following environment variables control the configuration of the Nextflow ru
 `JAVA_HOME`
 : Defines the path location of the Java VM installation used to run Nextflow.
 
+(nxf-env-vars)=
+
 ## Nextflow settings
 
 `NXF_ANSI_LOG`
@@ -179,6 +181,11 @@ The following environment variables control the configuration of the Nextflow ru
 : :::{versionadded} 23.02.0-edge
   :::
 : Enable the use of Spack recipes defined by using the {ref}`process-spack` directive. (default: `false`).
+
+`NXF_SYNTAX_PARSER`
+: :::{versionadded} 25.02.0-edge
+  :::
+: Set to `'v2'` to use the {ref}`strict syntax <updating-syntax-page>` for Nextflow config files (default: `'v1'`).
 
 `NXF_TEMP`
 : Directory where temporary files are stored

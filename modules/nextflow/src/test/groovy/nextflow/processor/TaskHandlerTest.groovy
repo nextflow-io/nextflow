@@ -277,4 +277,20 @@ class TaskHandlerTest extends Specification {
         then:
         0 * handler.killTask()
     }
+
+    @Unroll
+    def 'should set isChildArray flag'() {
+        given:
+        def handler = Spy(TaskHandler)
+
+        expect:
+        !handler.isArrayChild
+        and:
+        handler.withArrayChild(VALUE).isArrayChild == VALUE
+
+        where:
+        VALUE   | _
+        false   | _
+        true    | _
+    }
 }
