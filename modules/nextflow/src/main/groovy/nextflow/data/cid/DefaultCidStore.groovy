@@ -17,6 +17,8 @@
 
 package nextflow.data.cid
 
+import nextflow.util.TestOnly
+
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.function.Consumer
@@ -48,7 +50,7 @@ class DefaultCidStore implements CidStore {
         if( !Files.exists(metaLocation) && !Files.createDirectories(metaLocation) ) {
             throw new AbortOperationException("Unable to create CID store directory: $metaLocation")
         }
-        historyLog = new CidHistoryFile(metaLocation.resolve(HISTORY_FILE_NAME))
+        historyLog = new CidHistoryFile(config.store.logLocation ?: metaLocation.resolve(HISTORY_FILE_NAME))
     }
 
     @Override
@@ -79,6 +81,9 @@ class DefaultCidStore implements CidStore {
 
     @Override
     Path getPath(){ location }
+
+    @TestOnly
+    Path getMetadataPath() {metaLocation}
 
     @Override
     CidHistoryLog getHistoryLog(){ historyLog }

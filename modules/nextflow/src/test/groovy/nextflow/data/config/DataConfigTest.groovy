@@ -31,6 +31,7 @@ class DataConfigTest extends Specification {
         def config = new DataConfig(Map.of())
         then:
         config.store.location == Path.of('.').resolve('data').toAbsolutePath().normalize()
+        config.store.logLocation == null
         !config.enabled
     }
 
@@ -39,14 +40,16 @@ class DataConfigTest extends Specification {
         def config = new DataConfig([enabled: true])
         then:
         config.store.location == Path.of('.').resolve('data').toAbsolutePath().normalize()
+        config.store.logLocation == null
         config.enabled
     }
 
-    def 'should create data config' () {
+    def 'should create data config with location' () {
         when:
-        def config = new DataConfig(enabled: true, store: [location: "/some/data/store"])
+        def config = new DataConfig(enabled: true, store: [location: "/some/data/store", logLocation: "/some/data/.history"])
         then:
         config.store.location == Path.of("/some/data/store")
+        config.store.logLocation == Path.of("/some/data/.history")
         config.enabled
     }
 }
