@@ -22,7 +22,7 @@ By abstracting compute environments from from pipeline logic, Nextflow workflows
 - Google Cloud Batch
 - Kubernetes
 
-Nextflow supports many software dependency management software:
+Nextflow supports a wide range of software dependency management tools, allowing users to integrate different package managers. Available Dependency management software include:
 
 - Apptainer
 - Charliecloud
@@ -34,17 +34,18 @@ Nextflow supports many software dependency management software:
 - Shifter
 - Singularity
 
-Nextflow is also integrated with [Wave](https://seqera.io/wave/), a container provisioning service that can build, upload, and manage container images required by workflows automatically and on demand during pipeline execution. 
+Nextflow is also integrated with [Wave](https://seqera.io/wave/), a container provisioning service that can build, upload, and manage container images required by workflows automatically and on demand during pipeline execution. See {ref}`wave-page` for more information and to get started with Wave.
 
 ## Get started
 
 To get started with Nextflow:
 
-- See {ref}`Overview <overview-page>` to learn about key Nextflow concepts.
-- {ref}`Install <install-page>` Nextflow.
-- Set up a {ref}`development environment <devenv-page>` with the {ref}`Nextflow VS Code extension <devenv-nextflow>`.
-- Run {ref}`your first script <your-first-script>`.
-- Continue learning [Nextflow Training](https://training.nextflow.io/).
+1. Read an {ref}`Overview <overview-page>` to learn about key Nextflow concepts.
+2. {ref}`Install <install-page>` Nextflow.
+3. Set up a {ref}`development environment <devenv-page>` with the {ref}`Nextflow VS Code extension <devenv-nextflow>`.
+4. Run {ref}`your first script <your-first-script>`.
+
+To continue learning Nextflow, visit the [Nextflow community training portal](https://training.nextflow.io/latest/) and find a training course that is right for you.
 
 ## Community
 
