@@ -146,6 +146,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
                 getBootDiskImage() >> BOOT_IMAGE
                 getCpuPlatform() >> CPU_PLATFORM
                 getMaxSpotAttempts() >> 5
+                getAutoRetryExitCodes() >> [50001,50002]
                 getSpot() >> true
                 getNetwork() >> 'net-1'
                 getServiceAccountEmail() >> 'foo@bar.baz'
@@ -198,7 +199,9 @@ class GoogleBatchTaskHandlerTest extends Specification {
         taskSpec.getMaxRunDuration().getSeconds() == TIMEOUT.seconds
         taskSpec.getVolumes(0).getMountPath() == '/tmp'
         taskSpec.getMaxRetryCount() == 5
+        taskSpec.getLifecyclePolicies(0).getActionCondition().getExitCodesCount() == 2
         taskSpec.getLifecyclePolicies(0).getActionCondition().getExitCodes(0) == 50001
+        taskSpec.getLifecyclePolicies(0).getActionCondition().getExitCodes(1) == 50002
         taskSpec.getLifecyclePolicies(0).getAction().toString() == 'RETRY_TASK'
         and:
         runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c bash .command.run'

@@ -138,8 +138,8 @@ class PublishOp {
 
         // if the resolved publish path is a string, resolve it
         // against the base output directory
-        if( resolvedPath instanceof String )
-            return outputDir.resolve(resolvedPath)
+        if( resolvedPath instanceof CharSequence )
+            return outputDir.resolve(resolvedPath.toString())
 
         // if the resolved publish path is a closure, use the closure
         // to transform each published file and resolve it against
