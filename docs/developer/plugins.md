@@ -389,6 +389,10 @@ Here is an example meta file for a plugin release:
 }
 ```
 
+:::{note}
+The plugin version should be a valid [semantic version](https://semver.org/).
+:::
+
 (testing-plugins)=
 
 ## Testing plugins
