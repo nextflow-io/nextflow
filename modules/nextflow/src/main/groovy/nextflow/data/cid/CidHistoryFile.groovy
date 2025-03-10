@@ -20,7 +20,9 @@ import groovy.util.logging.Slf4j
 
 import java.nio.channels.FileChannel
 import java.nio.channels.FileLock
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 
 /**
  * File to store a history of the workflow executions and their corresponding CIDs
@@ -119,10 +121,11 @@ class CidHistoryFile implements CidHistoryLog {
         def rnd = new Random()
         long ts = System.currentTimeMillis()
         final parent = this.path.parent ?: Path.of('.').toAbsolutePath()
+        Files.createDirectories(parent)
         def file = parent.resolve("${this.path.name}.lock".toString())
         FileChannel fos
         try {
-            fos = FileChannel.open(file)
+            fos = FileChannel.open(file, StandardOpenOption.WRITE, StandardOpenOption.CREATE)
         } catch (UnsupportedOperationException e){
             log.warn("File System Provider for ${this.path} do not support file locking. Continuing without lock...")
             return action.call()
