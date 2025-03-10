@@ -1132,7 +1132,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         def result = runner.setScript(SCRIPT).execute()
         then:
         def e = thrown(DeprecationException)
-        e.message.contains "Invalid include declaration -- Replace `include foo from './MODULE/PATH'` with `include { foo } from './MODULE/PATH'`"
+        e.message == "Unwrapped module inclusion is deprecated -- Replace `include foo from './MODULE/PATH'` with `include { foo } from './MODULE/PATH'`"
 
     }
 
