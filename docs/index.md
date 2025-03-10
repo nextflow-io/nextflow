@@ -11,7 +11,7 @@
 [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?colorB=58bd9f&style=popout)](http://bioconda.github.io/recipes/nextflow/README.html)
 [![Nextflow license](https://img.shields.io/github/license/nextflow-io/nextflow.svg?colorB=58bd9f&style=popout)](https://github.com/nextflow-io/nextflow/blob/master/COPYING)
 
-Nextflow is a workflow system for creating scalable, portable, and reproducible workflows. It is based on the dataflow programming model that simplifies writing parallel and distributed pipelines and allows you to focus on data flow and computation. Nextflow can deploy workflows on a variety of execution platforms, including your local machine, HPC schedulers, and cloud. Additionally, Nextflow supports a range of software environment and package managers, allowing workflows to be executed in reproducible and isolated environments.
+Nextflow is a workflow system for creating scalable, portable, and reproducible workflows. It is based on the dataflow programming model that simplifies writing parallel and distributed pipelines and allows you to focus on data flow and computation. Nextflow can deploy workflows on a variety of execution platforms, including your local machine, HPC schedulers, and cloud. Additionally, Nextflow supports a range of software environment and package managers and allows workflows to be executed in reproducible and isolated environments.
 
 ## Get started
 
@@ -22,7 +22,7 @@ To get started with Nextflow:
 3. Set up an {ref}`environment <devenv-page>` with the {ref}`Nextflow VS Code extension <devenv-nextflow>`.
 4. Run {ref}`your first script <your-first-script>`.
 
-To continue learning how to run and write Nextflow workflows, visit the [Nextflow community training portal](https://training.nextflow.io/latest/) and find a training course that is right for you.
+To continue learning about Nextflow, visit the [Nextflow community training portal](https://training.nextflow.io/latest/) and find a training course that is right for you. Seqera, the company that develops Nextflow, also runs a variety of training events. See [Seqera Events](https://seqera.io/events/) for more information.
 
 ## Community
 
