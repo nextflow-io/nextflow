@@ -867,7 +867,7 @@ The `merge` operator may return a queue channel or value channel depending on th
 - If the first argument is a value channel, the `merge` operator will return a value channel merging the first value from each input, regardless of whether there are queue channel inputs with additional values.
 
 :::{danger}
-In general, the use of the `merge` operator is discouraged. Processes and channel operators are not guaranteed to emit items in the order that they were received, as they are executed concurrently. Therefore, if you try to merge output channels from different processes, the resulting channel may be different on each run, which will cause resumed runs to {ref}`not work properly <cache-failure-nondeterministic>`.
+In general, the use of the `merge` operator is discouraged. Processes and channel operators are not guaranteed to emit items in the order that they were received, as they are executed concurrently. Therefore, if you try to merge output channels from different processes, the resulting channel may be different on each run, which will cause resumed runs to {ref}`not work properly <cache-nondeterministic-inputs>`.
 
 You should always use a matching key (e.g. sample ID) to merge multiple channels, so that they are combined in a deterministic way. For this purpose, you can use the [join](#join) operator.
 :::

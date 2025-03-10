@@ -146,15 +146,6 @@ developer/plugins
 
 ```{toctree}
 :hidden:
-:caption: Troubleshooting
-:maxdepth: 1
-troubleshooting/cache-failures.md
-troubleshooting/compute-storage.md
-troubleshooting/language-server.md
-```
-
-```{toctree}
-:hidden:
 :caption: Tutorials
 :maxdepth: 1
 

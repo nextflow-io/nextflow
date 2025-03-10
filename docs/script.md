@@ -45,7 +45,7 @@ println str
 ```
 
 :::{warning}
-Variables can also be declared without `def` in some cases. However, this practice is discouraged outside of simple code snippets because it can lead to a {ref}`race condition <cache-failure-race-condition>`.
+Variables can also be declared without `def` in some cases. However, this practice is discouraged outside of simple code snippets because it can lead to a {ref}`race condition <cache-global-var-race-condition>`.
 :::
 
 ## Lists
