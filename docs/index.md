@@ -17,7 +17,7 @@ Nextflow is a workflow system for creating scalable, portable, and reproducible 
 
 To get started with Nextflow:
 
-1. Read an {ref}`overview <overview-page>` to learn about key Nextflow concepts.
+1. See the Nextflow {ref}`overview <overview-page>` to learn key concepts.
 2. Download and {ref}`install <install-page>` Nextflow.
 3. Set up an {ref}`environment <devenv-page>` with the {ref}`Nextflow VS Code extension <devenv-nextflow>`.
 4. Run {ref}`your first script <your-first-script>`.
