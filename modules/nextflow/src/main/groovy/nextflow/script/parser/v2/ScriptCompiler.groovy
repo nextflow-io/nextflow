@@ -52,21 +52,21 @@ import org.codehaus.groovy.control.messages.SyntaxErrorMessage
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @CompileStatic
-public class ScriptCompiler {
+class ScriptCompiler {
 
-    public static final String DEFAULT_CODE_BASE = "/groovy/shell"
-    public static final String MAIN_CLASS_NAME = "Main"
+    static final String DEFAULT_CODE_BASE = "/groovy/shell"
+    static final String MAIN_CLASS_NAME = "Main"
 
     private final CompilerConfiguration config
     private final GroovyClassLoader loader
 
     private Compiler compiler
 
-    public ScriptCompiler(Session session) {
+    ScriptCompiler(Session session) {
         this(getConfig(session), session.classLoader)
     }
 
-    public ScriptCompiler(CompilerConfiguration config, ClassLoader parent) {
+    ScriptCompiler(CompilerConfiguration config, ClassLoader parent) {
         this.config = config
         this.loader = new GroovyClassLoader(parent, config)
     }
@@ -94,21 +94,21 @@ public class ScriptCompiler {
         return config
     }
 
-    public CompileResult compile(String scriptText) {
+    CompileResult compile(String scriptText) {
         return compile0(new GroovyCodeSource(scriptText, MAIN_CLASS_NAME, DEFAULT_CODE_BASE))
     }
 
-    public CompileResult compile(File file) {
+    CompileResult compile(File file) {
         return compile0(new GroovyCodeSource(file, config.getSourceEncoding()))
     }
 
-    public Collection<SourceUnit> getSources() {
+    Collection<SourceUnit> getSources() {
         if( !compiler )
             return null
         return compiler.getSources().values()
     }
 
-    public List<SyntaxErrorMessage> getErrors() {
+    List<SyntaxErrorMessage> getErrors() {
         if( !compiler )
             return null
         return compiler.compilationUnit()
@@ -162,18 +162,18 @@ public class ScriptCompiler {
         return new CompileResult(main, modules)
     }
 
-    public static record CompileResult(
+    static record CompileResult(
         Class main,
         Map<Path,Class> modules
     ) {}
 
     private static class ScriptClassLoader extends GroovyClassLoader {
-        public ScriptClassLoader(GroovyClassLoader parent) {
+        ScriptClassLoader(GroovyClassLoader parent) {
             super(parent)
         }
 
         @Override
-        public ClassCollector createCollector(CompilationUnit unit, SourceUnit su) {
+        ClassCollector createCollector(CompilationUnit unit, SourceUnit su) {
             return super.createCollector(unit, su)
         }
     }
@@ -191,17 +191,17 @@ public class ScriptCompiler {
 
         private Set<SourceUnit> modules
 
-        public ScriptCompilationUnit(CompilerConfiguration configuration, GroovyClassLoader loader) {
+        ScriptCompilationUnit(CompilerConfiguration configuration, GroovyClassLoader loader) {
             super(configuration, null, loader)
             super.addPhaseOperation(source -> analyze(source), Phases.CONVERSION)
         }
 
-        public Set<SourceUnit> getModules() {
+        Set<SourceUnit> getModules() {
             return modules
         }
 
         @Override
-        public void addPhaseOperation(final ISourceUnitOperation op, final int phase) {
+        void addPhaseOperation(final ISourceUnitOperation op, final int phase) {
             super.addPhaseOperation((source) -> {
                 // skip main script on second conversion pass
                 if( phase == Phases.CONVERSION && source == entry )
@@ -211,7 +211,7 @@ public class ScriptCompiler {
         }
 
         @Override
-        public void addPhaseOperation(final IPrimaryClassNodeOperation op, final int phase) {
+        void addPhaseOperation(final IPrimaryClassNodeOperation op, final int phase) {
             super.addPhaseOperation((source, context, classNode) -> {
                 // skip main script on second conversion pass
                 if( phase == Phases.CONVERSION && source == entry )
