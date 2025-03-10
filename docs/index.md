@@ -130,6 +130,7 @@ reference/operator
 
 updating-nextflow
 updating-syntax
+updating-spot-retries
 dsl1
 ```
 
