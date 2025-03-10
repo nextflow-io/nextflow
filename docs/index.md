@@ -11,17 +11,15 @@
 [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?colorB=58bd9f&style=popout)](http://bioconda.github.io/recipes/nextflow/README.html)
 [![Nextflow license](https://img.shields.io/github/license/nextflow-io/nextflow.svg?colorB=58bd9f&style=popout)](https://github.com/nextflow-io/nextflow/blob/master/COPYING)
 
-Nextflow is a workflow system for creating scalable, portable, and reproducible workflows. It is based on the dataflow programming model that simplifies writing parallel and distributed pipelines and allows you to focus on data flow and computation.
-
-Nextflow can deploy workflows on a variety of execution platforms, including your local machine, HPC schedulers, and the cloud. Additionally, Nextflow supports a wide range of software dependency management tools, allowing users to integrate different environment and package managers. Nextflow is integrated with [Wave](https://seqera.io/wave/), a container provisioning service that can build, upload, and manage container images required by workflows automatically and on demand during pipeline execution. See {ref}`wave-page` for more information and to get started with Wave.
+Nextflow is a workflow system for creating scalable, portable, and reproducible workflows. It is based on the dataflow programming model that simplifies writing parallel and distributed pipelines and allows you to focus on data flow and computation. Nextflow can deploy workflows on a variety of execution platforms, including your local machine, HPC schedulers, and cloud. Additionally, Nextflow supports a range of software environment and package managers, allowing workflows to be executed in reproducible and isolated environments.
 
 ## Get started
 
 To get started with Nextflow:
 
 1. Read an {ref}`overview <overview-page>` to learn about key Nextflow concepts.
-2. {ref}`Install <install-page>` Nextflow.
-3. Set up a {ref}`development environment <devenv-page>` with the {ref}`Nextflow VS Code extension <devenv-nextflow>`.
+2. Download and {ref}`install <install-page>` Nextflow.
+3. Set up an {ref}`environment <devenv-page>` with the {ref}`Nextflow VS Code extension <devenv-nextflow>`.
 4. Run {ref}`your first script <your-first-script>`.
 
 To continue learning how to run and write Nextflow workflows, visit the [Nextflow community training portal](https://training.nextflow.io/latest/) and find a training course that is right for you.
@@ -30,7 +28,7 @@ To continue learning how to run and write Nextflow workflows, visit the [Nextflo
 
 You can post questions in the [Nextflow community forum](https://community.seqera.io) or the [Nextflow Slack](https://www.nextflow.io/slack-invite.html). Bugs and feature requests should be reported as [GitHub issues](https://github.com/nextflow-io/nextflow/issues/new/choose).
 
-The Nextflow community is highly active with regular community meetings, events, a podcast, and more. You can view this material on the [Nextflow](https://www.youtube.com/@Nextflow).
+The Nextflow community is highly active with regular community meetings, events, a podcast, and more. You can view this material on the [Nextflow](https://www.youtube.com/@Nextflow) YouTube channel.
 
 The [nf-core](https://nf-co.re/) project is a community effort aggregating high-quality Nextflow workflows that can be used by everyone.
 
