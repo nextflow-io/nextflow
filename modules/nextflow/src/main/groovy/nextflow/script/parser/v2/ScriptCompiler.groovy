@@ -244,7 +244,7 @@ public class ScriptCompiler {
             new ScriptResolveVisitor(source, this, DEFAULT_IMPORTS, Collections.emptyList()).visit()
             if( source.getErrorCollector().hasErrors() )
                 return
-            new TypeCheckingVisitor(source).visit()
+            new TypeCheckingVisitor(source, false).visit()
             if( source.getErrorCollector().hasErrors() )
                 return
 
