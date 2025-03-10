@@ -18,12 +18,12 @@ The default spot reclamation retry setting changed to `0` on AWS and Google Batc
 
 ## Impact on Existing Workflows
 
-If you have been relying on silent spot retries (the default behavior before Nextflow v24.10), you may see more tasks fail with the following characteristics:
+If you have been relying on silent Spot retries (the previous default behavior), you may now see more tasks fail with the following characteristics:
 
-- **AWS:** Generic failures with `exit code 1` and a messages indicating the host machine was terminated.
-- **Google:** A specific code that is recognizable as a spot reclamation task failure in Nextflow logs.
+- **AWS**: Generic failure with `exit code 1`. You may see messages indicating the host machine was terminated.
+- **Google**: Spot reclamation typically produces a specific code, but is now surfaced as a recognizable task failure in Nextflow logs.
 
-As the default for spot retries is now `0`, you must enable a Nextflow retry strategy to handle reclaimed spot instances.
+Since the default for spot retries is now `0`, you must actively enable a retry strategy if you want Nextflow to handle reclaimed spot instances automatically.
 
 ## Possible actions
 
