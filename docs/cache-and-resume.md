@@ -194,7 +194,7 @@ process gather {
 }
 ```
 
-(cache-failure-compare)=
+(cache-compare-hashes)=
 
 ## Compare task hashes
 
