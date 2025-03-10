@@ -31,11 +31,13 @@ import groovy.transform.CompileStatic
 class DataStoreOpts {
 
     final Path location
+    final Path logLocation
 
     DataStoreOpts(Map opts) {
         this.location = opts.location
             ? FileHelper.toCanonicalPath(opts.location as String)
             : Path.of('.').toAbsolutePath().normalize().resolve('data')
+        this.logLocation = opts.logLocation ? FileHelper.toCanonicalPath(opts.logLocation as String) : null
     }
 
 }

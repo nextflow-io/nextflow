@@ -315,7 +315,7 @@ class CidPath implements Path {
 
     @Override
     Path toRealPath(LinkOption... options) throws IOException {
-        return this
+        return this.getTargetPath()
     }
 
     protected Path getTargetPath(){
