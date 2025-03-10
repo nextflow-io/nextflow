@@ -165,62 +165,82 @@ class TransposeOpTest extends Specification {
     }
 
     def 'should transpose a tuple' () {
-        when:
-        def result = new TransposeOp( Channel.of(['a','b',['p','q']]) ).apply()
-        then:
-        result.val == ['a','b','p']
-        result.val == ['a','b','q']
-        result.val == Channel.STOP
+        given:
+        def target = Mock(DataflowWriteChannel)
+        def op = new TransposeOp(target:target)
 
         when:
-        result = new TransposeOp( Channel.of(['a', 'b', ['p','q'], 'c', ['x','y','z']]) ).apply()
+        op.transpose0(['a','b','c'])
         then:
-        result.val == ['a','b','p','c','x']
-        result.val == ['a','b','q','c','y']
-        result.val == Channel.STOP
+        1 * target.bind(['a','b','c'])
 
         when:
-        result = new TransposeOp( Channel.of(['a','b', [], ['p','q']]) ).apply()
+        op.transpose0(['a','b',['p','q']])
         then:
-        result.val == Channel.STOP
+        1 * target.bind(['a','b','p'])
+        then:
+        1 * target.bind(['a','b','q'])
+
+        when:
+        op.transpose0(['a', 'b', ['p','q'], 'c', ['x','y','z']])
+        then:
+        1 * target.bind(['a','b','p','c','x'])
+        then:
+        1 * target.bind(['a','b','q','c','y'])
+
+        when:
+        op.transpose0(['a','b',[], ['p','q']])
+        then:
+        0 * target.bind(_)
 
     }
 
     def 'should raise an exception' () {
+        given:
+        def target = Mock(DataflowWriteChannel)
+        def op = new TransposeOp(target:target, cols:[0])
+
         when:
-        new TransposeOp( Channel.of(['a',['b','c']]), [cols:[0]]).apply()
+        op.transpose0(['a',['b','c']])
         then:
         thrown(IllegalArgumentException)
     }
 
     @Timeout(1)
     def 'should transpose a tuple with reminder' () {
-        when:
-        def result = new TransposeOp(Channel.of(['a', 'b', ['p','q'], 'c', ['x','y','z']]), [remainder: true]).apply()
-        then:
-        result.val == ['a','b', 'p', 'c','x']
-        result.val == ['a','b', 'q', 'c','y']
-        result.val == ['a','b', null,'c','z']
-        result.val == Channel.STOP
+        given:
+        def target = Mock(DataflowWriteChannel)
+        def op = new TransposeOp(target:target, remainder: true)
 
         when:
-        result = new TransposeOp(Channel.of(['a', 'b', ['p'], 'c', ['x','y','z']]), [remainder: true]).apply()
+        op.transpose0(['a', 'b', ['p','q'], 'c', ['x','y','z']])
         then:
-        result.val == ['a','b', 'p',  'c', 'x']
-        result.val == ['a','b', null, 'c', 'y']
-        result.val == ['a','b', null, 'c', 'z']
-        result.val == Channel.STOP
+        1 * target.bind(['a','b', 'p', 'c','x'])
+        then:
+        1 * target.bind(['a','b', 'q', 'c','y'])
+        then:
+        1 * target.bind(['a','b', null,'c','z'])
 
         when:
-        result = new TransposeOp(Channel.of(['a', 'b', [], 'c', ['x','y','z']]), [remainder: true]).apply()
+        op.transpose0(['a', 'b', ['p'], 'c', ['x','y','z']])
         then:
-        result.val == ['a','b', null, 'c', 'x']
-        result.val == ['a','b', null, 'c', 'y']
-        result.val == ['a','b', null, 'c', 'z']
-        result.val == Channel.STOP
+        1 * target.bind(['a','b', 'p',  'c', 'x'])
+        then:
+        1 * target.bind(['a','b', null, 'c', 'y'])
+        then:
+        1 * target.bind(['a','b', null, 'c', 'z'])
+
+        when:
+        op.transpose0(['a', 'b', [], 'c', ['x','y','z']])
+        then:
+        1 * target.bind(['a','b', null, 'c', 'x'])
+        then:
+        1 * target.bind(['a','b', null, 'c', 'y'])
+        then:
+        1 * target.bind(['a','b', null, 'c', 'z'])
     }
 
-    @Timeout(5)
+    @Timeout(1)
     def 'should fetch indexes from a tuple' () {
         given:
         def ch = Mock(DataflowQueue)

@@ -22,6 +22,7 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.util.CheckHelper
+import nextflow.util.TestOnly
 /**
  * Implements channel transpose operator
  *
@@ -47,6 +48,10 @@ class TransposeOp {
         this.cols = parseByParam(params?.by)
         this.remainder = params?.remainder as Boolean
     }
+
+    @TestOnly
+    @PackageScope
+    TransposeOp() {}
 
     private List<Integer> parseByParam(value) {
         if( value == null )
