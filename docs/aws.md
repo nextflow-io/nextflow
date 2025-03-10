@@ -478,7 +478,7 @@ The above snippet defines two volume mounts for the jobs executed in your pipeli
 
 <h4>Job queue not found</h4>
 
-**`JobQueue <YOUR_QUEUE> not found`**
+**`JobQueue <QUEUE> not found`**
 
 This error occurs when Nextflow cannot locate the specified AWS Batch job queue. It usually happens when the job queue does not exist, is not enabled, or there is a region mismatch between the configuration and the AWS Batch environment.
 
