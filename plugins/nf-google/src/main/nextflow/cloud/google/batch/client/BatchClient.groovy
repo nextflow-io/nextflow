@@ -44,6 +44,7 @@ import dev.failsafe.event.ExecutionAttemptedEvent
 import dev.failsafe.function.CheckedSupplier
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.util.TestOnly
 /**
  * Implements Google Batch HTTP client
  *
@@ -65,6 +66,9 @@ class BatchClient {
         this.location = config.googleOpts.location
         this.batchServiceClient = createBatchService(config)
     }
+
+    @TestOnly
+    protected BatchClient() {}
 
     protected CredentialsProvider createCredentialsProvider(BatchConfig config) {
         if( !config.getCredentials() )

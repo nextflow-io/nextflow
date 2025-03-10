@@ -29,6 +29,7 @@ import groovyx.gpars.dataflow.LazyDataflowVariable
 import nextflow.Global
 import nextflow.file.FileMutex
 import nextflow.util.Duration
+import nextflow.util.TestOnly
 /**
  * Handle caching of remote Charliecloud images
  *
@@ -51,6 +52,10 @@ class CharliecloudCache {
     private Duration pullTimeout = Duration.of('20min')
 
     private String registry
+
+    @TestOnly
+    @PackageScope
+    CharliecloudCache() {}
 
     /**
      * Create a Charliecloud cache object
