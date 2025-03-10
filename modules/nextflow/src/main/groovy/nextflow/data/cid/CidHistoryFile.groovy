@@ -18,6 +18,7 @@ package nextflow.data.cid
 
 import groovy.util.logging.Slf4j
 
+import java.nio.channels.FileChannel
 import java.nio.channels.FileLock
 import java.nio.file.Path
 
@@ -118,15 +119,24 @@ class CidHistoryFile implements CidHistoryLog {
         def rnd = new Random()
         long ts = System.currentTimeMillis()
         final parent = this.path.parent ?: Path.of('.').toAbsolutePath()
-        def file = parent.resolve("${this.path.name}.lock".toString()).toFile()
-        def fos = new FileOutputStream(file)
+        def file = parent.resolve("${this.path.name}.lock".toString())
+        FileChannel fos
+        try {
+            fos = FileChannel.open(file)
+        } catch (UnsupportedOperationException e){
+            log.warn("File System Provider for ${this.path} do not support file locking. Continuing without lock...")
+            return action.call()
+        }
+        if (!fos){
+            throw new IllegalStateException("Can't create a file channel for ${this.path.toAbsolutePath()}")
+        }
         try {
             Throwable error
             FileLock lock = null
 
             try {
                 while (true) {
-                    lock = fos.getChannel().tryLock()
+                    lock = fos.tryLock()
                     if (lock) break
                     if (System.currentTimeMillis() - ts < 1_000)
                         sleep rnd.nextInt(75)
