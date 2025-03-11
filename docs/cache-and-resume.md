@@ -196,7 +196,19 @@ process gather {
 
 (cache-compare-hashes)=
 
-## Compare task hashes
+## Tips
+
+## Resume from a specific run
+
+Nextflow resumes from the previous run by default. If you want to resume from an earlier run, simply specify the session ID for that run with the `-resume` option:
+
+```bash
+nextflow run rnaseq-nf -resume 4dc656d2-c410-44c8-bc32-7dd0ea87bebf
+```
+
+You can use the {ref}`cli-log` command to view all previous runs as well as the task executions for each run.
+
+### Compare task hashes
 
 By identifying differences between hashes you can detect changes that may be causing cache failures.
 
@@ -250,13 +262,3 @@ get_hashes run_1.log > run_1.tasks.log
 get_hashes run_2.log > run_2.tasks.log
 diff run_1.tasks.log run_2.tasks.log
 ```
-
-## Resume from a specific run
-
-Nextflow resumes from the previous run by default. If you want to resume from an earlier run, simply specify the session ID for that run with the `-resume` option:
-
-```bash
-nextflow run rnaseq-nf -resume 4dc656d2-c410-44c8-bc32-7dd0ea87bebf
-```
-
-You can use the {ref}`cli-log` command to view all previous runs as well as the task executions for each run.
