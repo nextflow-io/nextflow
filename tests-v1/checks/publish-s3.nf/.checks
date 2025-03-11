@@ -1,0 +1,24 @@
+function count_hello() {
+  rm -rf hello
+  aws s3 cp --only-show-errors s3://nextflow-ci/work/ci-test/publish-s3/HELLO.tsv hello && < hello grep 'Hello, world' -c
+}
+
+# Skip test if AWS keys are missing
+if [ -z "$AWS_ACCESS_KEY_ID" ]; then 
+  echo "Missing AWS credentials -- Skipping test"
+  exit 0
+fi
+
+#
+# run normal mode 
+#
+$NXF_RUN | tee .stdout
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process'` == 1 ]] || false
+
+#
+# run resume mode 
+#
+$NXF_RUN -resume | tee .stdout
+[[ `grep INFO .nextflow.log | grep -c 'Cached process'` == 1 ]] || false
+
+
