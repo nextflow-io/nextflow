@@ -425,7 +425,7 @@ The following methods are available for iterables:
 `sum() -> E`
 : Returns the sum of the elements in the iterable. The elements should support addition (`+`).
 
-`sum( mapper: (E) -> R ) -> R`
+`sum( transform: (E) -> R ) -> R`
 : Transforms each element in the iterable with the given closure and returns the sum. The values returned by the closure should support addition (`+`).
 
 `toList() -> List<E>`
@@ -502,7 +502,7 @@ The following methods are available for a list:
   ```
 
 `find( condition: (E) -> boolean ) -> E`
-: Returns the first value in the list that satisfies the given condition.
+: Returns the first element in the list that satisfies the given condition.
 
 `first() -> E`
 : Returns the first element in the list. Raises an error if the list is empty.
@@ -767,10 +767,10 @@ The following methods are useful for getting attributes of a file:
 The following methods are available for reading files:
 
 `eachByte( action: (byte) -> () )`
-: Iterates over the file byte by byte, applying the specified {ref}`closure <script-closure>`.
+: Iterates over the file, applying the specified closure to each byte.
 
 `eachLine( action: (String) -> () )`
-: Iterates over the file line by line, applying the specified {ref}`closure <script-closure>`.
+: Iterates over the file, applying the specified closure to each line.
 
 `getBytes() -> byte[]`
 : Returns the file content as a byte array.
@@ -1128,10 +1128,10 @@ The following methods are available for a string:
 `stripTrailing() -> String`
 : Returns a copy of the string with all trailing whitespace removed.
 
-`substring​( beginIndex: int ) -> String`
+`substring( beginIndex: int ) -> String`
 : Returns a substring of this string.
 
-`substring​( beginIndex: int, endIndex: int ) -> String`
+`substring( beginIndex: int, endIndex: int ) -> String`
 : Returns a substring of this string.
 
 `toBoolean() -> Boolean`
