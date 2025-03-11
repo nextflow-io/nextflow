@@ -19,8 +19,8 @@ compileGroovy {
 
 dependencies {
     api(project(':nf-commons'))
+    api(project(':nf-compiler'))
     api(project(':nf-httpfs'))
-    api 'com.github.nextflow-io.language-server:compiler:main-SNAPSHOT'
     api "org.apache.groovy:groovy:4.0.26"
     api "org.apache.groovy:groovy-nio:4.0.26"
     api "org.apache.groovy:groovy-xml:4.0.26"
