@@ -439,6 +439,7 @@ class Session implements ISession {
         binding.setArgs( new ScriptRunner.ArgsList(args) )
 
         cache = CacheFactory.create(uniqueId,runName).open()
+
         return this
     }
 
