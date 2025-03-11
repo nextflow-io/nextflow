@@ -1160,7 +1160,7 @@ Strings in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/jav
 
 ## VersionNumber
 
-A VersionNumber represents a semantic version number.
+A VersionNumber represents a semantic or calendar version number.
 
 The following methods are available for a VersionNumber:
 
