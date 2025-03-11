@@ -6,9 +6,9 @@ This page describes recent changes in how Nextflow handles spot instance failure
 
 ## Retry behavior
 
-Previously, Nextflow silently retried spot instance failures when using AWS or Google Batch. These retries were controlled by cloud-specific configuration parameters (for example, `aws.batch.maxSpotAttempts`), and occurred in cloud infrastructure without explicit visibility to Nextflow.
+Up to version 24.10, Nextflow silently retried spot instance failures up to `5` times when using AWS Batch or Google Batch. These retries were controlled by cloud-specific configuration parameters (e.g., `aws.batch.maxSpotAttempts`) and happened in cloud infrastructure without explicit visibility to Nextflow.
 
-<h3>Before Nextflow v24.10/h3>
+<h3>Before Nextflow v24.10</h3>
 
 By default, Nextflow would instruct AWS and Google to automatically retry jobs lost to spot reclamation up to `5` times. Retries were handled by the cloud provider _within_ a Nextflow task. It was often unclear that tasks were restarted because there was no explicit message. Task runtimes and associated costs were increased because they included the runtime of the reclaimed and retried tasks.
 
@@ -66,7 +66,7 @@ google {
 
 The above example sets the maximum number of spot retries to `5` for both AWS and Google.
 
-## Make spot failures visible but retry them
+### Make spot failures visible but retry them
 
 You can set `maxRetries` to enable Nextflow-level retries for any failure:
 
