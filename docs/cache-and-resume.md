@@ -198,7 +198,7 @@ process gather {
 
 ## Tips
 
-## Resume from a specific run
+### Resume from a specific run
 
 Nextflow resumes from the previous run by default. If you want to resume from an earlier run, simply specify the session ID for that run with the `-resume` option:
 
