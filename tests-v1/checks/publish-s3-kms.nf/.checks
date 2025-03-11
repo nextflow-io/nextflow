@@ -1,0 +1,30 @@
+#!/bin/bash
+
+BUCKET="nf-kms-xyz"
+PREFIX="work/ci-test/publish-s3/$(uuidgen)"
+OUTDIR="s3://$BUCKET/$PREFIX"
+
+function check_kms_key() {
+  aws s3api head-object --bucket "$BUCKET" --key "$PREFIX/HELLO.tsv" | grep -c e5109f93-b42d-4c26-89ee-8b251029a41d
+}
+
+# Skip test if AWS keys are missing
+if [ -z "$AWS_ACCESS_KEY_ID" ]; then
+  echo "Missing AWS credentials -- Skipping test"
+  exit 0
+fi
+
+#
+# run normal mode 
+#
+$NXF_RUN -c .config --outdir "$OUTDIR" | tee .stdout
+[[ $(grep INFO .nextflow.log | grep -c 'Submitted process') == 1 ]] || false
+[[ $(check_kms_key) == 1 ]] || false
+
+#
+# run resume mode 
+#
+$NXF_RUN -c .config --outdir "$OUTDIR"  -resume | tee .stdout
+[[ $(grep INFO .nextflow.log | grep -c 'Cached process') == 1 ]] || false
+[[ $(check_kms_key) == 1 ]] || false
+

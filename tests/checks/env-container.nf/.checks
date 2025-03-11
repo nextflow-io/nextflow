@@ -21,9 +21,10 @@ EOF
 #
 cat << EOF > foo.nf
 process foo {
-  echo true
+  debug true
   input: 
-  env BAR
+  env 'BAR'
+  script:
   '''
   env | sort 
   hello.sh
