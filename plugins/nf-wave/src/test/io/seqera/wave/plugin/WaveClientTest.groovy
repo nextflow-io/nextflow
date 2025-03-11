@@ -465,7 +465,7 @@ class WaveClientTest extends Specification {
     def 'should create asset with image' () {
         given:
         def session = Mock(Session) { getConfig() >> [:]}
-        def task = Mock(TaskRun) { getConfig() >> [arch:'amd64'] }
+        def task = Mock(TaskRun) { getConfig()>>[:]; getContainerPlatform()>>'linux/amd64' }
         def IMAGE = 'foo:latest'
         and:
         def client = new WaveClient(session)
@@ -474,28 +474,8 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, IMAGE, false)
         then:
         assets.containerImage == IMAGE
-        !assets.moduleResources
-        !assets.containerFile
-        !assets.containerConfig
-        !assets.packagesSpec
-        !assets.projectResources
         assets.containerPlatform == 'linux/amd64'
-    }
-
-    def 'should create asset with image and platform' () {
-        given:
-        def ARCH = 'linux/arm64'
-        def session = Mock(Session) { getConfig() >> [:] }
-        def task = Mock(TaskRun) { getConfig() >> [arch:ARCH.toString()] }
-        def IMAGE = 'foo:latest'
         and:
-        def client = new WaveClient(session)
-
-        when:
-        def assets = client.resolveAssets(task, IMAGE, false)
-        then:
-        assets.containerImage == IMAGE
-        assets.containerPlatform == 'linux/arm64'
         !assets.moduleResources
         !assets.containerFile
         !assets.containerConfig
@@ -532,7 +512,7 @@ class WaveClientTest extends Specification {
         def CONTAINER_CONFIG = new ContainerConfig(entrypoint: ['entry.sh'], layers: [new ContainerLayer(location: 'http://somewhere')])
         and:
         def session = Mock(Session) { getConfig() >> [:]}
-        def task = Mock(TaskRun) { getConfig() >> [arch:ARCH.toString()]; getModuleBundle() >> BUNDLE }
+        def task = Mock(TaskRun) { getConfig() >> [:]; getContainerPlatform()>>ARCH; getModuleBundle() >> BUNDLE }
         and:
         WaveClient client = Spy(WaveClient, constructorArgs:[session])
 
@@ -737,7 +717,7 @@ class WaveClientTest extends Specification {
         def BIN_DIR = Path.of('/something/bin')
         def ARCH = 'linux/arm64'
         and:
-        def task = Mock(TaskRun) {getModuleBundle() >> MODULE_RES; getConfig() >> [arch:ARCH.toString()] }
+        def task = Mock(TaskRun) {getModuleBundle() >> MODULE_RES; getConfig()>>[:]; getContainerPlatform()>>ARCH }
         and:
         def session = Mock(Session) {
             getConfig() >> [wave: [bundleProjectResources: true]]

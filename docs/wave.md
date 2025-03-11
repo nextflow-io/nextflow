@@ -205,11 +205,11 @@ Wave's security scanning applies to any container used in your pipeline, whether
 
 ### Run pipelines using Fusion file system
 
-Wave containers allows you to run your containerised workflow with the {ref}`fusion-page`.
+Wave containers allows you to run your containerised workflow with {ref}`fusion-page`.
 
 This enables the use of an object storage bucket such as AWS S3 or Google Cloud Storage as your pipeline work directory, simplifying and speeding up many operations on local, AWS Batch, Google Batch or Kubernetes executions.
 
-See the {ref}`Fusion documentation <fusion-page>` for more details.
+See {ref}`Fusion <fusion-page>` for more details.
 
 ## Advanced settings
 

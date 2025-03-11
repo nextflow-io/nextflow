@@ -32,6 +32,16 @@ import org.pf4j.ExtensionPoint
 interface ContainerResolver extends ExtensionPoint {
 
     /**
+     * @return {@code true} when this resolved is enabled, or {@code false} otherwise
+     */
+    boolean enabled()
+
+    /**
+     * @return The default container platform define by this provider or {@code null} if not default is defined
+     */
+    String defaultContainerPlatform()
+
+    /**
      * Resolve a container name to the fully qualified name. This method
      * can extend the specified container name with engine specific
      * protocol prefixes and container registry specified in the

@@ -1,3 +1,4 @@
+(plugins-dev-page)=
 
 # Plugins
 
@@ -148,6 +149,38 @@ process foo {
 
 :::{tip}
 Refer to the source code of Nextflow's built-in executors to see how to implement the various components of an executor. You might be able to implement most of your executor by simply reusing existing code.
+:::
+
+### Filesystems
+
+Plugins can define custom filesystems that can be used by Nextflow to interact with external storage systems using a single interface. For more information about accessing remote files, see {ref}`remote-files`.
+
+To implement a custom filesystem, create a class in your plugin that extends [`FileSystemProvider`](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/spi/FileSystemProvider.html). Implement the `getScheme()` method to define the URI scheme for your filesystem:
+
+```groovy
+import java.nio.file.spi.FileSystemProvider
+
+class MyFileSystemProvider extends FileSystemProvider {
+
+    @Override
+    String getScheme() {
+        return 'myfs'
+    }
+
+    // ...
+}
+```
+
+You can then use this filesystem in your pipeline:
+
+```nextflow
+input = file('myfs://path/to/input/file.txt')
+```
+
+See [Developing a Custom File System Provider](https://docs.oracle.com/javase/8/docs/technotes/guides/io/fsp/filesystemprovider.html) for more information. Refer to the `nf-https` module (`XFileSystemProvider`) or `nf-amazon` plugin (`S3FileSystemProvider`) in the Nextflow source code for examples of custom filesystems.
+
+:::{tip}
+Custom filesystems are an advanced type of plugin extension. Before creating a new filesystem, make sure that your use case can't already be supported through an existing filesystem such as HTTP or S3.
 :::
 
 ### Functions
