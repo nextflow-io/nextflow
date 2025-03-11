@@ -22,7 +22,6 @@ import nextflow.data.cid.CidStoreFactory
 
 import java.nio.file.Files
 
-import nextflow.data.cid.CidHistoryFile
 import nextflow.plugin.Plugins
 
 import org.junit.Rule
@@ -64,7 +63,7 @@ class CmdCidTest extends Specification {
             def launcher = Mock(Launcher){
                 getOptions() >> new CliOptions(config: [configFile.toString()])
             }
-            def recordEntry = "${CidHistoryRecord.TIMESTAMP_FMT.format(date)}\trun_name\t${uniqueId}\tcid://1234".toString()
+            def recordEntry = "${CidHistoryRecord.TIMESTAMP_FMT.format(date)}\trun_name\t${uniqueId}\tcid://123456\tcid://456789".toString()
             historyFile.text = recordEntry
         when:
             def cidCmd = new CmdCid(launcher: launcher, args: ["log"])

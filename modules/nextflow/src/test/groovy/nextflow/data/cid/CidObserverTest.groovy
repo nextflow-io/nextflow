@@ -69,7 +69,8 @@ class CidObserverTest extends Specification {
         store.open(DataConfig.create(session))
         def observer = new CidObserver(session, store)
         def expectedString = '{"type":"WorkflowRun","workflow":{"type": "Workflow",' +
-            '"mainScriptFile":{"path":"file://' + scriptFile.toString() + '", "checksum": "78910"},' +
+            '"mainScriptFile":{"path":"file://' + scriptFile.toString() +
+            '", "checksum": {"value": "78910", "algorithm": "nextflow", "mode": "STANDARD"}},' +
             '"otherScriptFiles": [], "repository": "https://nextflow.io/nf-test/",' +
             '"commitId": "123456" },' +
             '"sessionId": "' + uniqueId + '",' +
@@ -118,7 +119,8 @@ class CidObserverTest extends Specification {
         }
         def expectedString = '{"type":"TaskRun",' +
             '"sessionId":"'+uniqueId.toString() + '",' +
-            '"name":"foo","code":"' + sourceHash + '",' +
+            '"name":"foo", "codeChecksum": {' +
+            '"value": "' + sourceHash + '", "algorithm": "nextflow", "mode": "STANDARD"},' +
             '"inputs": null,"container": null,"conda": null,' +
             '"spack": null,"architecture": null,' +
             '"globalVars": {},"binEntries": [],"annotations":null}'
@@ -162,7 +164,8 @@ class CidObserverTest extends Specification {
         def attrs = Files.readAttributes(outFile, BasicFileAttributes)
         def expectedString = '{"type":"TaskOutput",' +
             '"path":"' + outFile.toString() + '",' +
-            '"checksum":"'+ fileHash + '",' +
+            '"checksum": { "value":"'+ fileHash + '",' +
+            '"algorithm": "nextflow", "mode": "STANDARD"},' +
             '"source":"cid://15cd5b07",' +
             '"size":'+attrs.size() + ',' +
             '"createdAt":' + attrs.creationTime().toMillis() + ',' +
@@ -321,7 +324,7 @@ class CidObserverTest extends Specification {
             observer.onFlowCreate(session)
             observer.onFlowBegin()
         then: 'History file should contain execution hash'
-            def cid = store.getHistoryLog().getRunCid(uniqueId).substring(CID_PROT.size())
+            def cid = store.getHistoryLog().getRecord(uniqueId).runCid.substring(CID_PROT.size())
             cid == observer.executionHash
 
         when: ' publish output with source file'
@@ -337,7 +340,8 @@ class CidObserverTest extends Specification {
             def fileHash1 = CacheHelper.hasher(outFile1).hash().toString()
             def expectedString1 =  '{"type":"WorkflowOutput",' +
                 '"path":"' + outFile1.toString() + '",' +
-                '"checksum":"'+ fileHash1 + '",' +
+                '"checksum": {"value": "'+ fileHash1 + '",' +
+                '"algorithm": "nextflow", "mode": "STANDARD"},' +
                 '"source":"cid://123987/file.bam",' +
                 '"size":'+attrs1.size() + ',' +
                 '"createdAt":' + attrs1.creationTime().toMillis() + ',' +
@@ -355,7 +359,8 @@ class CidObserverTest extends Specification {
         then: 'Check outFile2 metadata in cid store'
             def expectedString2 =  '{"type":"WorkflowOutput",' +
                 '"path":"' + outFile2.toString() + '",' +
-                '"checksum":"'+ fileHash2 + '",' +
+                '"checksum": { "value": "'+ fileHash2 + '",' +
+                '"algorithm": "nextflow", "mode": "STANDARD"},' +
                 '"source":"cid://' + observer.executionHash +'",' +
                 '"size":'+attrs2.size() + ',' +
                 '"createdAt":' + attrs2.creationTime().toMillis() + ',' +
@@ -370,7 +375,7 @@ class CidObserverTest extends Specification {
                 '"run":"cid://' + observer.executionHash +'",' +
                 '"outputs": [ "cid://'+ observer.executionHash + '/foo/file.bam",' +
                 '"cid://'+ observer.executionHash + '/foo/file2.bam" ]}'
-            def finalCid = store.getHistoryLog().getRunCid(uniqueId).substring(CID_PROT.size())
+            def finalCid = store.getHistoryLog().getRecord(uniqueId).resultsCid.substring(CID_PROT.size())
             finalCid != observer.executionHash
             folder.resolve(".meta/${finalCid}/.data.json").text == JsonOutput.prettyPrint(expectedString3)
 

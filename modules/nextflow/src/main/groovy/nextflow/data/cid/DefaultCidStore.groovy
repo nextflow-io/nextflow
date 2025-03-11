@@ -21,7 +21,6 @@ import nextflow.util.TestOnly
 
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.function.Consumer
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -59,14 +58,6 @@ class DefaultCidStore implements CidStore {
         Files.createDirectories(path.parent)
         log.debug "Save CID file path: $path"
         path.text = value
-    }
-
-    @Override
-    void list(String key, Consumer<String> consumer) {
-        for( Path it : Files.walk(metaLocation.resolve(key)) ) {
-            final fileKey = metaLocation.relativize(it).toString()
-            consumer.accept(fileKey)
-        }
     }
 
     @Override

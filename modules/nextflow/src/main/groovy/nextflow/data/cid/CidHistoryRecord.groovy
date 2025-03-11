@@ -16,6 +16,7 @@
  */
 package nextflow.data.cid
 
+import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 
 import java.text.DateFormat
@@ -26,6 +27,7 @@ import java.text.SimpleDateFormat
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
+@CompileStatic
 @EqualsAndHashCode(includes = 'runName,sessionId')
 class CidHistoryRecord {
     public static final DateFormat TIMESTAMP_FMT = new SimpleDateFormat('yyyy-MM-dd HH:mm:ss')
@@ -33,6 +35,15 @@ class CidHistoryRecord {
     String runName
     UUID sessionId
     String runCid
+    String resultsCid
+
+    CidHistoryRecord(Date timestamp, String name, UUID sessionId, String runCid, String resultsCid = null) {
+        this.timestamp = timestamp
+        this.runName = name
+        this.sessionId = sessionId
+        this.runCid = runCid
+        this.resultsCid = resultsCid
+    }
 
     CidHistoryRecord(UUID sessionId, String name = null) {
         this.runName = name
@@ -47,6 +58,7 @@ class CidHistoryRecord {
         line << (runName ?: '-')
         line << (sessionId.toString())
         line << (runCid ?: '-')
+        line << (resultsCid ?: '-')
     }
 
     @Override
@@ -59,14 +71,8 @@ class CidHistoryRecord {
         if (cols.size() == 2)
             return new CidHistoryRecord(UUID.fromString(cols[0]))
 
-        if (cols.size() == 4) {
-
-            return new CidHistoryRecord(
-                timestamp: TIMESTAMP_FMT.parse(cols[0]),
-                runName: cols[1],
-                sessionId: UUID.fromString(cols[2]),
-                runCid: cols[3]
-            )
+        if (cols.size() == 5) {
+            return new CidHistoryRecord(TIMESTAMP_FMT.parse(cols[0]), cols[1], UUID.fromString(cols[2]), cols[3], cols[4])
         }
 
         throw new IllegalArgumentException("Not a valid history entry: `$line`")

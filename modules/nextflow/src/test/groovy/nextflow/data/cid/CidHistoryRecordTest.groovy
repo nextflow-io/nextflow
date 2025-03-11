@@ -36,7 +36,7 @@ class CidHistoryRecordTest extends Specification {
         given:
         def timestamp = new Date()
         def formattedTimestamp = CidHistoryRecord.TIMESTAMP_FMT.format(timestamp)
-        def line = "${formattedTimestamp}\trun-1\t${UUID.randomUUID()}\tcid://123"
+        def line = "${formattedTimestamp}\trun-1\t${UUID.randomUUID()}\tcid://123\tcid://456"
 
         when:
         def record = CidHistoryRecord.parse(line)
@@ -45,6 +45,7 @@ class CidHistoryRecordTest extends Specification {
         record.timestamp != null
         record.runName == "run-1"
         record.runCid == "cid://123"
+        record.resultsCid == "cid://456"
     }
 
     def "CidRecord toString should produce tab-separated format"() {
@@ -53,12 +54,13 @@ class CidHistoryRecordTest extends Specification {
         def record = new CidHistoryRecord(sessionId, "TestRun")
         record.timestamp = new Date()
         record.runCid = "cid://123"
+        record.resultsCid = "cid://456"
 
         when:
         def line = record.toString()
 
         then:
         line.contains("\t")
-        line.split("\t").size() == 4
+        line.split("\t").size() == 5
     }
 }
