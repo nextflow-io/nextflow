@@ -51,10 +51,7 @@ class CidHistoryRecordTest extends Specification {
     def "CidRecord toString should produce tab-separated format"() {
         given:
         UUID sessionId = UUID.randomUUID()
-        def record = new CidHistoryRecord(sessionId, "TestRun")
-        record.timestamp = new Date()
-        record.runCid = "cid://123"
-        record.resultsCid = "cid://456"
+        def record = new CidHistoryRecord(new Date(), "TestRun", sessionId, "cid://123", "cid://456")
 
         when:
         def line = record.toString()

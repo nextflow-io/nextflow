@@ -31,11 +31,11 @@ import java.text.SimpleDateFormat
 @EqualsAndHashCode(includes = 'runName,sessionId')
 class CidHistoryRecord {
     public static final DateFormat TIMESTAMP_FMT = new SimpleDateFormat('yyyy-MM-dd HH:mm:ss')
-    Date timestamp
-    String runName
-    UUID sessionId
-    String runCid
-    String resultsCid
+    final Date timestamp
+    final String runName
+    final UUID sessionId
+    final String runCid
+    final String resultsCid
 
     CidHistoryRecord(Date timestamp, String name, UUID sessionId, String runCid, String resultsCid = null) {
         this.timestamp = timestamp

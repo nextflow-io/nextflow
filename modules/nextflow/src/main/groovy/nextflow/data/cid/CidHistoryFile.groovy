@@ -105,8 +105,8 @@ class CidHistoryFile implements CidHistoryLog {
                 def current = line ? CidHistoryRecord.parse(line) : null
                 if (current.sessionId == id) {
                     log.trace("Updating record for $id in CID history file $this")
-                    current.runCid = runCid
-                    newHistory << current.toString() << '\n'
+                    final newRecord = new CidHistoryRecord(current.timestamp, current.runName, current.sessionId, runCid, current.resultsCid)
+                    newHistory << newRecord.toString() << '\n'
                 } else {
                     newHistory << line << '\n'
                 }
@@ -129,8 +129,8 @@ class CidHistoryFile implements CidHistoryLog {
                 def current = line ? CidHistoryRecord.parse(line) : null
                 if (current.sessionId == id) {
                     log.trace("Updating record for $id in CID history file $this")
-                    current.resultsCid = resultsCid
-                    newHistory << current.toString() << '\n'
+                    final newRecord = new CidHistoryRecord(current.timestamp, current.runName, current.sessionId, current.runCid, resultsCid)
+                    newHistory << newRecord.toString() << '\n'
                 } else {
                     newHistory << line << '\n'
                 }
