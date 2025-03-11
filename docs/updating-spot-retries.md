@@ -6,7 +6,7 @@ This page describes changes in how Nextflow handles spot instance failures on AW
 
 ## Retry behavior
 
-Up to version 24.10, Nextflow silently retried spot instance failures up to `5` times when using AWS Batch or Google Batch. These retries were controlled by cloud-specific configuration parameters (e.g., `aws.batch.maxSpotAttempts`) and happened in cloud infrastructure without explicit visibility to Nextflow.
+Up to version 24.10, Nextflow silently retries spot instance failures up to `5` times when using AWS Batch or Google Batch. These retries were controlled by cloud-specific configuration parameters (e.g., `aws.batch.maxSpotAttempts`) and happened in cloud infrastructure without explicit visibility to Nextflow.
 
 <h3>Before Nextflow 24.10</h3>
 
