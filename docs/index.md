@@ -135,7 +135,6 @@ reference/operator
 
 updating-nextflow
 updating-syntax
-updating-spot-retries
 dsl1
 ```
 
@@ -152,9 +151,10 @@ developer/plugins
 
 ```{toctree}
 :hidden:
-:caption: Tutorials
+:caption: Guides
 :maxdepth: 1
 
-flux
+runtime-behavior
 metrics
+flux
 ```
