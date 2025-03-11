@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2025, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,26 +14,28 @@
  * limitations under the License.
  *
  */
+
 package nextflow.data.cid
 
 import groovy.transform.CompileStatic
-import nextflow.data.config.DataConfig
-import nextflow.plugin.Priority
+import nextflow.Session
+import nextflow.trace.TraceObserver
+import nextflow.trace.TraceObserverFactory
 
 /**
- * Default Factory for CidStore
  *
- * @author Jorge Ejarque <jorge.ejarque@seqera.io>
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-@Priority(0)
-class DefaultCidStoreFactory extends CidStoreFactory{
+class CidObserverFactory implements TraceObserverFactory {
 
     @Override
-    protected CidStore newInstance(DataConfig config) {
-        final cidStore = new DefaultCidStore()
-        cidStore.open(config)
-        return cidStore
+    Collection<TraceObserver> create(Session session) {
+        final result = new ArrayList<TraceObserver>(1)
+        final store = CidStoreFactory.getOrCreate(session)
+        if( store )
+            result.add( new CidObserver(session, store) )
+        return result
     }
 
 }

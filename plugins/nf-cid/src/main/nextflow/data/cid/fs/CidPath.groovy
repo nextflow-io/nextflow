@@ -20,6 +20,7 @@ package nextflow.data.cid.fs
 import groovy.json.JsonSlurper
 import groovy.util.logging.Slf4j
 import nextflow.data.cid.model.DataType
+import nextflow.file.RealPathAware
 import nextflow.util.CacheHelper
 import nextflow.util.TestOnly
 
@@ -43,7 +44,9 @@ import nextflow.file.FileHelper
  */
 @Slf4j
 @CompileStatic
-class CidPath implements Path {
+
+class CidPath implements Path, RealPathAware {
+
     static public final List<String> SUPPORTED_CHECKSUM_ALGORITHMS=["nextflow"]
     static public final String SEPARATOR = '/'
     public static final String CID_PROT = "${SCHEME}://"

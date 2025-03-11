@@ -380,6 +380,9 @@ class PluginsFacade implements PluginStateListener {
         if( (Bolts.navigate(config,'wave.enabled') || Bolts.navigate(config,'fusion.enabled')) && !specs.find {it.id == 'nf-wave' } ) {
             specs << defaultPlugins.getPlugin('nf-wave')
         }
+        if( Bolts.navigate(config,'workflow.data.enabled') && !specs.find {it.id == 'nf-cid' } ) {
+            specs << defaultPlugins.getPlugin('nf-cid')
+        }
 
         // add cloudcache plugin when cloudcache is enabled in the config
         if( Bolts.navigate(config, 'cloudcache.enabled')==true ) {
