@@ -27,6 +27,8 @@ Since the default for spot retries is now `0`, you must actively enable a retry 
 
 ## Possible actions
 
+There are four possible actions.
+
 ### Do nothing
 
 If you do not configure anything, you will observe more pipeline failures when spot instances are reclaimed. This approach provides clearer visibility into failures. Failed tasks can be re-run with the `-resume` option. However, frequent task reclamation may lead to a higher failure rate and each retry requires manual intervention.
