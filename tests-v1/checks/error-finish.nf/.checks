@@ -1,0 +1,21 @@
+set -e
+export NXF_ASSETS=$PWD/assets
+
+#
+# First run test `success` is `true` 
+#
+set +e
+echo ''
+$NXF_RUN > stdout
+status=$?
+set -e
+# the exit status must NOT be zero because the pipeline throws an error
+[ $status -ne 0 ] || false
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > foo'` == 3 ]] || false
+
+[[ `grep -c 'success: false' stdout` == 1 ]] || false
+[[ `grep -c 'exitStatus: 99' stdout` == 1 ]] || false
+
+[[ `grep -c 'run_1' stdout` == 1 ]] || false
+[[ `grep -c 'run_2' stdout` == 1 ]] || false
