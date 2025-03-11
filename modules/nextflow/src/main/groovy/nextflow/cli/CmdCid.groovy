@@ -26,18 +26,17 @@ import nextflow.config.ConfigBuilder
 import nextflow.config.ConfigMap
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
-import org.pf4j.ExtensionPoint
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
 @Parameters(commandDescription = "Explore workflows CID metadata")
-class CmdCid extends CmdBase implements UsageAware, ExtensionPoint {
+class CmdCid extends CmdBase implements UsageAware {
 
     private static final String NAME = 'cid'
 
-    interface CidOperation extends ExtensionPoint {
+    interface CidOperation {
         void log(ConfigMap config)
         void show(ConfigMap config, List<String> args)
         void lineage(ConfigMap config, List<String> args)
@@ -82,10 +81,8 @@ class CmdCid extends CmdBase implements UsageAware, ExtensionPoint {
             .setOptions(launcher.options)
             .setBaseDir(Paths.get('.'))
             .build()
-        // load the plugins
-        Plugins.load(config)
         // load the command operations
-        this.operations = Plugins.getExtension(CidOperation)
+        this.operations = ServiceLoader.load(CidOperation.class).findFirst().orElse(null)
         if( !operations )
             throw new IllegalStateException("Unable to load CID plugin")
         // consume the first argument

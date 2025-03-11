@@ -1,6 +1,0 @@
-Manifest-Version: 1.0
-Plugin-Class: nextflow.data.cid.CidPlugin
-Plugin-Id: nf-cid
-Plugin-Version: 1.0.0
-Plugin-Provider: Seqera Labs
-Plugin-Requires: >=25.01.0-edge

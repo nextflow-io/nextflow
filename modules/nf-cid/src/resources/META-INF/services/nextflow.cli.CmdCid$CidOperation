@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+#
 
-nextflow.data.cid.CidStoreFactory
-nextflow.data.cid.CidObserverFactory
 nextflow.data.cid.operation.CidOperationImpl
