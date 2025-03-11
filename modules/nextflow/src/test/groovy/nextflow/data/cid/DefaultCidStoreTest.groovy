@@ -1,3 +1,20 @@
+/*
+ * Copyright 2013-2024, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package nextflow.data.cid
 
 import nextflow.data.config.DataConfig
@@ -8,6 +25,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.function.Consumer
 
+/**
+ *
+ * @author Jorge Ejarque <jorge.ejarque@seqera.io>
+ */
 class DefaultCidStoreTest extends Specification {
 
     @TempDir
@@ -23,7 +44,6 @@ class DefaultCidStoreTest extends Specification {
         def configMap = [enabled: true, store: [location: storeLocation.toString(), logLocation: storeLocation.resolve(".log").toString()]]
         config = new DataConfig(configMap)
     }
-
 
     def 'should open store'() {
         given:
@@ -73,22 +93,5 @@ class DefaultCidStoreTest extends Specification {
 
         expect:
         cidStore.load("nonexistentKey") == null
-    }
-
-    def "list should invoke consumer for each stored key"() {
-        given:
-        def cidStore = new DefaultCidStore()
-        cidStore.open(config)
-        cidStore.save("key1", "value1")
-        cidStore.save("key2", "value2")
-
-        def collectedKeys = []
-        Consumer<String> consumer = { collectedKeys << it }
-
-        when:
-        cidStore.list("key1", consumer)
-
-        then:
-        collectedKeys.contains("key1/.data.json")
     }
 }

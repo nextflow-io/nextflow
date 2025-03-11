@@ -17,9 +17,7 @@
 
 package nextflow.data.cid.h2
 
-
 import java.nio.file.Path
-import java.util.function.Consumer
 
 import com.zaxxer.hikari.HikariDataSource
 import groovy.sql.Sql
@@ -73,14 +71,9 @@ class H2CidStore implements CidStore {
     }
 
     @Override
-    void list(String key, Consumer<String> consumer) {
-
-    }
-
-    @Override
     Object load(String key) {
         try(final sql=new Sql(dataSource)) {
-            return sql.firstRow("SELECT * FROM files WHERE path = ?", List.of(key))
+            return sql.firstRow("SELECT * FROM files WHERE path = ?", List.<Object>of(key))
         }
     }
 

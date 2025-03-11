@@ -22,11 +22,44 @@ package nextflow.data.cid
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
 interface CidHistoryLog {
-    void write(String name, UUID key, String runCid)
+    /**
+     * Write a workflow execution CidHistoryLog record.
+     *
+     * @param name Workflow execution name.
+     * @param sessionId Workflow session ID.
+     * @param runCid Workflow run CID.
+     * @param resultsCid Workflow results CID.
+     */
+    void write(String name, UUID sessionId, String runCid, String resultsCid)
 
-    void update(UUID sessionId, String runCid)
+    /**
+     * Updates the run CID for a given session ID.
+     *
+     * @param sessionId Workflow session ID.
+     * @param runCid Workflow run CID.
+     */
+    void updateRunCid(UUID sessionId, String runCid)
 
+    /**
+     * Updates the results CID for a given session ID.
+     *
+     * @param sessionId Workflow session ID.
+     * @param resultsCid Workflow results CID.
+     */
+    void updateResultsCid(UUID sessionId, String resultsCid)
+
+    /**
+     * Get the store records in the CidHistoryLog.
+     *
+     * @return List stored CIDHistoryRecords.
+     */
     List<CidHistoryRecord> getRecords()
 
-    String getRunCid(UUID ke)
+    /**
+     * Get the record for a given
+     * @param sessionId Workflow session ID.
+     * @return CIDHistoryRecord for the given ID.
+     */
+    CidHistoryRecord getRecord(UUID sessionId)
+
 }

@@ -25,6 +25,7 @@ import groovy.transform.CompileStatic
 import nextflow.Session
 import nextflow.config.ConfigBuilder
 import nextflow.dag.MermaidHtmlRenderer
+import nextflow.data.cid.CidHistoryRecord
 import nextflow.data.cid.CidStore
 import nextflow.data.cid.CidStoreFactory
 import nextflow.data.cid.model.DataType
@@ -164,13 +165,16 @@ class CmdCid extends CmdBase implements UsageAware{
 
         private void printHistory(CidStore store) {
             final records = store.historyLog?.records
-            if (records) {
+            if( records ) {
                 def table = new TableBuilder(cellSeparator: '\t')
                     .head('TIMESTAMP')
                     .head('RUN NAME')
                     .head('SESSION ID')
                     .head('RUN CID')
-                records.forEach { table.append(it.toList()) }
+                    .head('RESULT CID')
+                for( CidHistoryRecord record: records ){
+                    table.append(record.toList())
+                }
                 println table.toString()
             } else {
                 println("No workflow runs CIDs found.")
@@ -359,10 +363,17 @@ class CmdCid extends CmdBase implements UsageAware{
             }
             if (value instanceof Map) {
                 if (value.path) {
-                    final label = convertToLabel(value.path.toString())
-                    lines << "    ${value.path}@{shape: document, label: \"${label}\"}".toString();
-                    edges.add(new Edge(value.path.toString(), nodeToRender))
-                    return
+                    final path = value.path.toString()
+                    if (path.startsWith(CID_PROT)) {
+                        nodes.add(path)
+                        edges.add(new Edge(path, nodeToRender))
+                        return
+                    } else {
+                        final label = convertToLabel(path)
+                        lines << "    ${path}@{shape: document, label: \"${label}\"}".toString();
+                        edges.add(new Edge(path, nodeToRender))
+                        return
+                    }
                 }
             }
             final label = convertToLabel(value.toString())

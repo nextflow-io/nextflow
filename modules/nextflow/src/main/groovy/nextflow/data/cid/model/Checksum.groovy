@@ -21,13 +21,14 @@ import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 
 /**
- * Models a data path which includes the path and a checksum to validate the content of the path.
+ * Models a checksum including the value as well as the algortihm and mode used to compute it.
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io
  */
 @Canonical
 @CompileStatic
-class DataPath {
-    String path
-    Checksum checksum
+class Checksum {
+    String value
+    String algorithm
+    String mode
 }

@@ -35,25 +35,35 @@ class CidHistoryFile implements CidHistoryLog {
     Path path
 
     CidHistoryFile(Path file) {
-        log.debug("History file $file")
         this.path = file
     }
 
-    void write(String name, UUID key, String runCid, Date date = null) {
+    void write(String name, UUID key, String runCid, String resultsCid, Date date = null) {
         assert key
 
         withFileLock {
             def timestamp = date ?: new Date()
-            log.debug("Writting record for $key in CID history file $this")
-            path << new CidHistoryRecord(timestamp: timestamp, runName: name, sessionId: key, runCid: runCid).toString() << '\n'
+            log.trace("Writting record for $key in CID history file $this")
+            path << new CidHistoryRecord(timestamp, name, key, runCid, resultsCid).toString() << '\n'
         }
     }
 
-    void update(UUID sessionId, String runCid) {
+    void updateRunCid(UUID sessionId, String runCid) {
         assert sessionId
 
         try {
-            withFileLock { update0(sessionId, runCid) }
+            withFileLock { updateRunCid0(sessionId, runCid) }
+        }
+        catch (Throwable e) {
+            log.warn "Can't update CID history file: $this", e.message
+        }
+    }
+
+    void updateResultsCid(UUID sessionId, String resultsCid) {
+        assert sessionId
+
+        try {
+            withFileLock { updateResultsCid0(sessionId, resultsCid) }
         }
         catch (Throwable e) {
             log.warn "Can't update CID history file: $this", e.message
@@ -69,24 +79,24 @@ class CidHistoryFile implements CidHistoryLog {
             log.warn "Can't read records from CID history file: $this", e.message
         }
         return list
-
     }
 
 
-    String getRunCid(UUID id) {
+    CidHistoryRecord getRecord(UUID id) {
         assert id
 
         for (String line : this.path.readLines()) {
             def current = line ? CidHistoryRecord.parse(line) : null
             if (current.sessionId == id) {
-                return current.runCid
+                return current
             }
         }
         log.warn("Can't find session $id in CID history file $this")
         return null
     }
 
-    private void update0(UUID id, String runCid) {
+
+    private void updateRunCid0(UUID id, String runCid) {
         assert id
         def newHistory = new StringBuilder()
 
@@ -94,9 +104,33 @@ class CidHistoryFile implements CidHistoryLog {
             try {
                 def current = line ? CidHistoryRecord.parse(line) : null
                 if (current.sessionId == id) {
-                    log.debug("Updating record for $id in CID history file $this")
-                    current.runCid = runCid
-                    newHistory << current.toString() << '\n'
+                    log.trace("Updating record for $id in CID history file $this")
+                    final newRecord = new CidHistoryRecord(current.timestamp, current.runName, current.sessionId, runCid, current.resultsCid)
+                    newHistory << newRecord.toString() << '\n'
+                } else {
+                    newHistory << line << '\n'
+                }
+            }
+            catch (IllegalArgumentException e) {
+                log.warn("Can't read CID history file: $this", e.message)
+            }
+        }
+
+        // rewrite the history content
+        this.path.setText(newHistory.toString())
+    }
+
+    private void updateResultsCid0(UUID id, String resultsCid) {
+        assert id
+        def newHistory = new StringBuilder()
+
+        this.path.readLines().each { line ->
+            try {
+                def current = line ? CidHistoryRecord.parse(line) : null
+                if (current.sessionId == id) {
+                    log.trace("Updating record for $id in CID history file $this")
+                    final newRecord = new CidHistoryRecord(current.timestamp, current.runName, current.sessionId, current.runCid, resultsCid)
+                    newHistory << newRecord.toString() << '\n'
                 } else {
                     newHistory << line << '\n'
                 }

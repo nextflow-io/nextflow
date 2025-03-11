@@ -22,23 +22,44 @@ import java.util.function.Consumer
 
 import groovy.transform.CompileStatic
 import nextflow.data.config.DataConfig
+
 /**
- *
+ * Interface for the CID store
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
 interface CidStore extends Closeable {
 
+    /**
+     * Open the CID store.
+     * @param config Configuration to open the CID store.
+     */
     void open(DataConfig config)
 
+    /**
+     * Save a CID entry in the store for in a given key.
+     * @param key Entry key.
+     * @param value Entry object.
+     */
     void save(String key, Object value)
 
-    void list(String key, Consumer<String> consumer)
-
+    /**
+     * Load an entry for a given CID key.
+     * @param key CID key.
+     * @return entry value, or null if key does not exists
+     */
     Object load(String key)
 
+    /**
+     * Get the CID store location path.
+     * @return CID store location path.
+     */
     Path getPath()
 
+    /**
+     * Get the {@link CidHistoryLog} object associated to the CidStore.
+     * @return {@link CidHistoryLog} object
+     */
     CidHistoryLog getHistoryLog()
 
 }
