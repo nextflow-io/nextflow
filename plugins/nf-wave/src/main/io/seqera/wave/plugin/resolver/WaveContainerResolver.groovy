@@ -157,9 +157,6 @@ class WaveContainerResolver implements ContainerResolver {
 
     @Override
     ContainerMeta getContainerMeta(String key) {
-        final c=client()
-        return c.enabled()
-            ? c.getContainerMeta(key)
-            : defaultResolver.getContainerMeta(key)
+        return client().getContainerMeta(key)
     }
 }
