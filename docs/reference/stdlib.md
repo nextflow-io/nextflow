@@ -276,7 +276,7 @@ The following sections describe the standard types provided by Nextflow.
 
 A bag is an unordered collection.
 
-The following operators are supported for bags:
+The following operations are supported for bags:
 
 `+ : (Bag<E>, Bag<E>) -> Bag<E>`
 : Concatenates two bags.
@@ -423,10 +423,10 @@ The following methods are available for iterables:
 : Returns the number of elements in the iterable.
 
 `sum() -> E`
-: Returns the sum of the elements in the iterable. The elements should support the `+` operator.
+: Returns the sum of the elements in the iterable. The elements should support addition (`+`).
 
 `sum( mapper: (E) -> R ) -> R`
-: Transforms each element in the iterable with the given closure and returns the sum. The values returned by the closure should support the `+` operator.
+: Transforms each element in the iterable with the given closure and returns the sum. The values returned by the closure should support addition (`+`).
 
 `toList() -> List<E>`
 : Converts the iterable to a list.
@@ -467,7 +467,7 @@ Iterables in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/j
 
 A list is an ordered collection of elements. See {ref}`script-list` for an overview of lists.
 
-The following operators are supported for lists:
+The following operations are supported for lists:
 
 `+ : (List<E>, List<E>) -> List<E>`
 : Concatenates two lists.
@@ -552,7 +552,7 @@ Lists in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javas
 
 A map associates or "maps" keys to values. Each key can map to at most one value -- a map cannot contain duplicate keys. See {ref}`script-map` for an overview of maps.
 
-The following operators are supported for maps:
+The following operations are supported for maps:
 
 `+ : (Map<K,V>, Map<K,V>) -> Map<K,V>`
 : Concatenates two maps. If a key exists in both maps, the mapping from the right-hand side is used.
@@ -696,9 +696,9 @@ The following sections describe the methods that are available for paths.
 Paths in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/Path.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/nio/file/Path.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
 :::
 
-### Operators
+### Operations
 
-The following operators are supported for paths:
+The following operations are supported for paths:
 
 `/ : (Path, String) -> Path`
 : Resolve a relative file name against a directory path.
@@ -1009,7 +1009,7 @@ As set literal can be created from a list:
 // -> [1, 2, 3]
 ```
 
-The following operators are supported for sets:
+The following operations are supported for sets:
 
 `+ : (Set<E>, Iterable<E>) -> Set<E>`
 : Given a set and an iterable, returns a new set containing the elements of both collections.
@@ -1035,9 +1035,9 @@ Sets in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase
 
 ## String
 
-A string is an immutable array of characters. See {ref}`script-string` for an overview of strings.
+A string is an immutable sequence of characters. See {ref}`script-string` for an overview of strings.
 
-The following operators are supported for strings:
+The following operations are supported for strings:
 
 `+ : (String, String) -> String`
 : Concatenates two strings.
