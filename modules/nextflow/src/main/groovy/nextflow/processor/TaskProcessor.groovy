@@ -15,6 +15,7 @@
  */
 package nextflow.processor
 
+import nextflow.data.cid.fs.CidPath
 import nextflow.trace.TraceRecord
 
 import static nextflow.processor.ErrorStrategy.*
@@ -1939,6 +1940,9 @@ class TaskProcessor {
 
             if( item instanceof Path || coerceToPath ) {
                 def path = normalizeToPath(item)
+                if (path instanceof CidPath){
+                    path = path.toRealPath()
+                }
                 def target = executor.isForeignFile(path) ? batch.addToForeign(path) : path
                 def holder = new FileHolder(target)
                 files << holder

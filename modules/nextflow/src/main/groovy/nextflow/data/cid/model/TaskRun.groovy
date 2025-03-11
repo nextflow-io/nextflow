@@ -31,7 +31,7 @@ class TaskRun {
     DataType type
     String sessionId
     String name
-    String code
+    Checksum codeChecksum
     List<Parameter> inputs
     String container
     String conda

@@ -17,6 +17,9 @@
 
 package nextflow.data.cid.fs
 
+import nextflow.data.cid.DefaultCidStore
+import nextflow.data.config.DataConfig
+
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -30,11 +33,10 @@ import spock.lang.Unroll
  */
 class CidPathTest extends Specification {
 
-    @Shared def BASE = Path.of('/some/base/data')
-    @Shared def fs = Mock(CidFileSystem){ getBasePath() >> BASE }
     @Shared def wdir = Files.createTempDirectory('wdir')
     @Shared def cid = wdir.resolve('.meta')
     @Shared def data = wdir.resolve('work')
+    @Shared def fs = Mock(CidFileSystem)
 
     def cleanupSpec(){
         wdir.deleteDir()
@@ -44,56 +46,97 @@ class CidPathTest extends Specification {
         when:
             def cid = new CidPath(FS, PATH, MORE)
         then:
-            cid.storePath == EXPECTED_STORE
             cid.filePath == EXPECTED_FILE
         where:
-        FS      | PATH                  | MORE                  | EXPECTED_STORE                | EXPECTED_FILE
-        fs      | '/'                   | [] as String[]        | BASE                          | '/'
-        null    | '/'                   | [] as String[]        | Path.of('/')                  | '/'
-        fs      | '/'                   | ['a','b'] as String[] | BASE.resolve('a/b')           | 'a/b'
-        null    | '/'                   | ['a','b'] as String[] | Path.of('a/b')                | 'a/b'
-        fs      | ''                    | [] as String[]        | BASE                          | '/'
-        null    | ''                    | [] as String[]        | Path.of('/')                  | '/'
-        fs      | ''                    | ['a','b'] as String[] | BASE.resolve('a/b')           | 'a/b'
-        null    | ''                    | ['a','b'] as String[] | Path.of('a/b')                | 'a/b'
-        fs      | '1234'                | [] as String[]        | BASE.resolve('1234')          | '1234'
-        null    | '1234'                | [] as String[]        | Path.of('1234')               | '1234'
-        fs      | '1234'                | ['a','b'] as String[] | BASE.resolve('1234/a/b')      | '1234/a/b'
-        null    | '1234'                | ['a','b'] as String[] | Path.of('1234/a/b')           | '1234/a/b'
-        fs      | '1234/c'              | [] as String[]        | BASE.resolve('1234/c')        | '1234/c'
-        null    | '1234/c'              | [] as String[]        | Path.of('1234/c')             | '1234/c'
-        fs      | '1234/c'              | ['a','b'] as String[] | BASE.resolve('1234/c/a/b')    | '1234/c/a/b'
-        null    | '1234/c'              | ['a','b'] as String[] | Path.of('1234/c/a/b')         | '1234/c/a/b'
-        fs      | '/1234/c'             | [] as String[]        | BASE.resolve('1234/c')        | '1234/c'
-        null    | '/1234/c'             | [] as String[]        | Path.of('1234/c')             | '1234/c'
-        fs      | '/1234/c'             | ['a','b'] as String[] | BASE.resolve('1234/c/a/b')    | '1234/c/a/b'
-        null    | '/1234/c'             | ['a','b'] as String[] | Path.of('1234/c/a/b')         | '1234/c/a/b'
+        FS      | PATH                  | MORE                      | EXPECTED_FILE
+        fs      | '/'                   | [] as String[]            | '/'
+        null    | '/'                   | [] as String[]            | '/'
+        fs      | '/'                   | ['a','b'] as String[]     | 'a/b'
+        null    | '/'                   | ['a','b'] as String[]     | 'a/b'
+        fs      | ''                    | [] as String[]            | '/'
+        null    | ''                    | [] as String[]            | '/'
+        fs      | ''                    | ['a','b'] as String[]     | 'a/b'
+        null    | ''                    | ['a','b'] as String[]     | 'a/b'
+        fs      | '1234'                | [] as String[]            | '1234'
+        null    | '1234'                | [] as String[]            | '1234'
+        fs      | '1234'                | ['a','b'] as String[]     | '1234/a/b'
+        null    | '1234'                | ['a','b'] as String[]     | '1234/a/b'
+        fs      | '1234/c'              | [] as String[]            | '1234/c'
+        null    | '1234/c'              | [] as String[]            | '1234/c'
+        fs      | '1234/c'              | ['a','b'] as String[]     | '1234/c/a/b'
+        null    | '1234/c'              | ['a','b'] as String[]     | '1234/c/a/b'
+        fs      | '/1234/c'             | [] as String[]            | '1234/c'
+        null    | '/1234/c'             | [] as String[]            | '1234/c'
+        fs      | '/1234/c'             | ['a','b'] as String[]     | '1234/c/a/b'
+        null    | '/1234/c'             | ['a','b'] as String[]     | '1234/c/a/b'
+        fs      | '../c'                | ['a','b'] as String[]     | 'c/a/b'
+        null    | '../c'                | ['a','b'] as String[]     | '../c/a/b'
+        fs      | '../c'                | [] as String[]            | 'c'
+        null    | '../c'                | [] as String[]            | '../c'
+        fs      | '..'                  | [] as String[]            | '/'
+        null    | '..'                  | [] as String[]            | '..'
+        fs      | '/..'                 | [] as String[]            | '/'
+        null    | '/..'                 | [] as String[]            | '/'
+        fs      | './1234/c'            | ['a','b'] as String[]     | '1234/c/a/b'
+        null    | './1234/c'            | ['a','b'] as String[]     | '1234/c/a/b'
+        fs      | './1234/c'            | [] as String[]            | '1234/c'
+        null    | './1234/c'            | [] as String[]            | '1234/c'
+        fs      | '1234'                | ['/'] as String[]         | '1234'
+        null    | '1234'                | ['/'] as String[]         | '1234'
     }
 
     def 'should get target path' () {
         given:
-        def output1 = data.resolve('output')
-        output1.resolve('some/path').mkdirs()
-        output1.resolve('some/path/file1.txt').text = "this is file1"
-        def output2 = data.resolve('file2.txt')
-        output2.text = "this is file2"
-        def cidFs = Mock(CidFileSystem){ getBasePath() >> cid }
+        def outputFolder = data.resolve('output')
+        def outputSubFolder = outputFolder.resolve('some/path')
+        outputSubFolder.mkdirs()
+        def outputSubFolderFile = outputSubFolder.resolve('file1.txt')
+        outputSubFolderFile.text = "this is file1"
+        def outputFile = data.resolve('file2.txt')
+        outputFile.text = "this is file2"
+        def store = new DefaultCidStore()
+        store.open(new DataConfig(enabled: true, store: [location: cid.parent.toString()]))
+        def cidFs = Mock(CidFileSystem){ getCidStore() >> store }
         cid.resolve('12345/output1').mkdirs()
         cid.resolve('12345/path/to/file2.txt').mkdirs()
         cid.resolve('12345/.data.json').text = '{"type":"TaskRun"}'
-        cid.resolve('12345/output1/.data.json').text = '{"type":"TaskOutput", "path": "' + output1.toString() + '"}'
-        cid.resolve('12345/path/to/file2.txt/.data.json').text = '{"type":"TaskOutput", "path": "' + output2.toString() + '"}'
+        cid.resolve('12345/output1/.data.json').text = '{"type":"TaskOutput", "path": "' + outputFolder.toString() + '"}'
+        cid.resolve('12345/path/to/file2.txt/.data.json').text = '{"type":"TaskOutput", "path": "' + outputFile.toString() + '"}'
 
-        expect:
-        new CidPath(cidFs, PATH).getTargetPath() == EXPECTED
-        where:
-        PATH                               | EXPECTED
-        '/'                                | cid
-        '12345'                            | cid.resolve('12345')
-        '12345/output1'                    | data.resolve('output')
-        '12345/output1/some/path'          | data.resolve('output/some/path')
-        '12345/path/to/'                   | cid.resolve('12345/path/to/')
-        '12345/path/to/file2.txt/'         | data.resolve('file2.txt')
+        expect: 'Get real path when CidPath is the output data or a subfolder'
+        new CidPath(cidFs,'12345/output1' ).getTargetPath() == outputFolder
+        new CidPath(cidFs,'12345/output1/some/path' ).getTargetPath() == outputSubFolder
+        new CidPath(cidFs,'12345/output1/some/path/file1.txt').getTargetPath().text == outputSubFolderFile.text
+        new CidPath(cidFs, '12345/path/to/file2.txt').getTargetPath().text == outputFile.text
+
+        when: 'CidPath fs is null'
+        new CidPath(null, '12345').getTargetPath()
+        then:
+        thrown(IllegalArgumentException)
+
+        when: 'CidPath is empty'
+        new CidPath(cidFs, '/').getTargetPath()
+        then:
+        thrown(IllegalArgumentException)
+
+        when: 'CidPath is not an output data description'
+        new CidPath(cidFs, '12345').getTargetPath()
+        then:
+        thrown(FileNotFoundException)
+
+        when: 'CidPath is not subfolder of an output data description'
+        new CidPath(cidFs, '12345/path').getTargetPath()
+        then:
+        thrown(FileNotFoundException)
+
+        when: 'Cid does not exist'
+        new CidPath(cidFs, '23456').getTargetPath()
+        then:
+        thrown(FileNotFoundException)
+
+        cleanup:
+        cid.resolve('12345').deleteDir()
+
     }
 
     def 'should get file name' () {
@@ -214,6 +257,37 @@ class CidPathTest extends Specification {
         '12345/a'       | '/'
     }
 
+    def 'should relativize path' () {
+        expect:
+        BASE_PATH.relativize(PATH) == EXPECTED
+        where :
+        BASE_PATH                       | PATH                              | EXPECTED
+        new CidPath(fs, '/')            | new CidPath(fs, '123/a/b/c')      | new CidPath(null, '123/a/b/c')
+        new CidPath(fs,'123/a/')        | new CidPath(fs, '123/a/b/c')      | new CidPath(null, 'b/c')
+        new CidPath(fs,'123/a/')        | new CidPath(fs, '321/a/')         | new CidPath(null, '../../321/a')
+        new CidPath(null,'123/a')       | new CidPath(null, '123/a/b/c')    | new CidPath(null, 'b/c')
+        new CidPath(null,'123/a')       | new CidPath(null, '321/a')        | new CidPath(null, '../../321/a')
+        new CidPath(fs,'../a/')         | new CidPath(fs, '321/a')          | new CidPath(null, '../321/a')
+        new CidPath(fs,'321/a/')        | new CidPath(fs, '../a')           | new CidPath(null, '../../a')
+        new CidPath(null,'321/a/')      | new CidPath(null, '../a')         | new CidPath(null, '../../../a')
+    }
+
+    def 'relativize should throw exception' () {
+        given:
+        def cid1 = new CidPath(fs,'123/a/')
+        def cid2 = new CidPath(null,'123/a/')
+        def cid3 = new CidPath(null, '../a/b')
+        when: 'comparing relative with absolute'
+            cid1.relativize(cid2)
+        then:
+            thrown(IllegalArgumentException)
+
+        when: 'undefined base path'
+            cid3.relativize(cid2)
+        then:
+            thrown(IllegalArgumentException)
+    }
+
     def 'should resolve path' () {
         when:
         def cid1 = new CidPath(fs, '123/a/b/c')
@@ -236,7 +310,6 @@ class CidPathTest extends Specification {
         given:
         def pr = Mock(CidFileSystemProvider)
         def cidfs = Mock(CidFileSystem){
-            getBasePath() >> BASE
             provider() >> pr}
 
 

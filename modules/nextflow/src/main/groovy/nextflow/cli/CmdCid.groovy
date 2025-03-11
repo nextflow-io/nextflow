@@ -25,7 +25,7 @@ import groovy.transform.CompileStatic
 import nextflow.Session
 import nextflow.config.ConfigBuilder
 import nextflow.dag.MermaidHtmlRenderer
-import nextflow.data.cid.CidHistoryFile
+import nextflow.data.cid.CidHistoryRecord
 import nextflow.data.cid.CidStore
 import nextflow.data.cid.CidStoreFactory
 import nextflow.data.cid.model.DataType
@@ -37,7 +37,6 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import static nextflow.data.cid.fs.CidPath.CID_PROT
-import static nextflow.data.cid.fs.CidPath.METADATA_FILE
 
 /**
  *
@@ -165,14 +164,17 @@ class CmdCid extends CmdBase implements UsageAware{
         }
 
         private void printHistory(CidStore store) {
-            final historyFile = store.getHistoryFile()
-            if (historyFile.exists()) {
+            final records = store.historyLog?.records
+            if( records ) {
                 def table = new TableBuilder(cellSeparator: '\t')
                     .head('TIMESTAMP')
                     .head('RUN NAME')
                     .head('SESSION ID')
                     .head('RUN CID')
-                historyFile.eachLine { table.append(CidHistoryFile.CidRecord.parse(it).toList()) }
+                    .head('RESULT CID')
+                for( CidHistoryRecord record: records ){
+                    table.append(record.toList())
+                }
                 println table.toString()
             } else {
                 println("No workflow runs CIDs found.")
@@ -207,7 +209,7 @@ class CmdCid extends CmdBase implements UsageAware{
             }
             if (!args[0].startsWith(CID_PROT))
                 throw new Exception("Identifier is not a CID URL")
-            final key = args[0].substring(CID_PROT.size()) + "/$METADATA_FILE"
+            final key = args[0].substring(CID_PROT.size())
             final config = new ConfigBuilder()
                     .setOptions(getLauncher().getOptions())
                     .setBaseDir(Paths.get('.'))
@@ -215,7 +217,11 @@ class CmdCid extends CmdBase implements UsageAware{
             final store = CidStoreFactory.getOrCreate(new Session(config))
             if (store) {
                 try {
-                    println store.load(key).toString()
+                    final entry = store.load(key)
+                    if( entry )
+                        println entry.toString()
+                    else
+                        println "No entry found for ${args[0]}."
                 } catch (Throwable e) {
                     println "Error loading ${args[0]}."
                 }
@@ -292,7 +298,7 @@ class CmdCid extends CmdBase implements UsageAware{
             if (!nodeToRender.startsWith(CID_PROT))
                 throw new Exception("Identifier is not a CID URL")
             final slurper = new JsonSlurper()
-            final key = nodeToRender.substring(CID_PROT.size()) + "/$METADATA_FILE"
+            final key = nodeToRender.substring(CID_PROT.size())
             final cidObject = slurper.parse(store.load(key).toString().toCharArray()) as Map
             switch (DataType.valueOf(cidObject.type as String)) {
                 case DataType.TaskOutput:
@@ -357,10 +363,17 @@ class CmdCid extends CmdBase implements UsageAware{
             }
             if (value instanceof Map) {
                 if (value.path) {
-                    final label = convertToLabel(value.path.toString())
-                    lines << "    ${value.path}@{shape: document, label: \"${label}\"}".toString();
-                    edges.add(new Edge(value.path.toString(), nodeToRender))
-                    return
+                    final path = value.path.toString()
+                    if (path.startsWith(CID_PROT)) {
+                        nodes.add(path)
+                        edges.add(new Edge(path, nodeToRender))
+                        return
+                    } else {
+                        final label = convertToLabel(path)
+                        lines << "    ${path}@{shape: document, label: \"${label}\"}".toString();
+                        edges.add(new Edge(path, nodeToRender))
+                        return
+                    }
                 }
             }
             final label = convertToLabel(value.toString())

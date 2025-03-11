@@ -46,15 +46,11 @@ import nextflow.file.FileHelper
 class CidPath implements Path {
 
     static public final String SEPARATOR = '/'
-    public static final String METADATA_FILE = '.data.json'
     public static final String CID_PROT = "${SCHEME}://"
 
     static private final String[] EMPTY = new String[] {}
 
     private CidFileSystem fileSystem
-
-    // Path of the file in the metadata cid store
-    private Path storePath
 
     // String with the cid file path
     private String filePath
@@ -64,20 +60,13 @@ class CidPath implements Path {
      */
     protected CidPath(){}
 
-    protected CidPath(CidFileSystem fs, Path target) {
-        this.fileSystem = fs
-        this.storePath = target
-        this.filePath = filePath0(fs, target)
-    }
-
     CidPath(CidFileSystem fs, String path) {
         this(fs, path, EMPTY)
     }
 
     CidPath(CidFileSystem fs, String path, String[] more) {
         this.fileSystem = fs
-        this.storePath = resolve0(fs, norm0(path), norm0(more))
-        this.filePath = filePath0(fs, storePath)
+        this.filePath = resolve0(fs, norm0(path), norm0(more))
     }
 
     private static void validateHash(Map cidObject) {
@@ -92,21 +81,22 @@ class CidPath implements Path {
     @TestOnly
     protected String getFilePath(){ this.filePath }
 
-    @TestOnly
-    protected Path getStorePath(){ this.storePath }
-
 
     /**
      * Finds the target path of a CID path
      **/
-    protected static Path findTarget(Path cidStorePath, CidFileSystem fs, String[] childs=[]){
-        assert fs
-        if( fs.basePath == cidStorePath )
-            return null
-        final metadata = cidStorePath.resolve(METADATA_FILE).toFile()
-        if ( metadata.exists() ){
-            final slurper = new JsonSlurper()
-            final cidObject = slurper.parse(metadata.text.toCharArray()) as Map
+    protected static Path findTarget(CidFileSystem fs, String filePath, String[] childs=[]) throws Exception{
+        if( !fs )
+            throw new IllegalArgumentException("Cannot get target path for a relative CidPath")
+        if( filePath.isEmpty() || filePath == SEPARATOR )
+            throw new IllegalArgumentException("Cannot get target path for an empty CidPath")
+        final store = fs.getCidStore()
+        if( !store )
+            throw new Exception("CID store not found. Check Nextflow configuration.")
+        final slurper = new JsonSlurper()
+        final object = store.load(filePath)
+        if ( object ){
+            final cidObject = slurper.parse(object.toString().toCharArray()) as Map
             final type = DataType.valueOf(cidObject.type as String)
             if( type == DataType.TaskOutput || type == DataType.WorkflowOutput ) {
                 // return the real path stored in the metadata
@@ -115,32 +105,29 @@ class CidPath implements Path {
                 if (childs && childs.size() > 0)
                     realPath = realPath.resolve(childs.join(SEPARATOR))
                 if( !realPath.exists() )
-                    throw new FileNotFoundException("Target path $realPath for $cidStorePath does not exists.")
+                    throw new FileNotFoundException("Target path $realPath for $filePath does not exists.")
                 return realPath
             }
         } else {
             // If there isn't metadata check the parent to check if it is a subfolder of a task/workflow output
-            final parent = cidStorePath.getParent()
+            final currentPath = Path.of(filePath)
+            final parent = Path.of(filePath).getParent()
             if( parent) {
                 ArrayList<String> newChilds = new ArrayList<String>()
-                newChilds.add(cidStorePath.getFileName().toString())
+                newChilds.add(currentPath.getFileName().toString())
                 newChilds.addAll(childs)
-                return findTarget(parent, fs, newChilds as String[])
+                return findTarget(fs, parent.toString(), newChilds as String[])
             }
         }
-        return null
+        throw new FileNotFoundException("Target path $filePath does not exists.")
     }
 
-    private static String filePath0(CidFileSystem fs, Path target) {
-        if( !fs )
-            return target.toString()
-        return fs.basePath != target
-                ? fs.basePath.relativize(target).toString()
-                : SEPARATOR
+    private static boolean isEmptyBase(CidFileSystem fs, String base){
+        return !base || base == SEPARATOR || (fs && base == "..")
     }
 
-    private static Path resolve0(CidFileSystem fs, String base, String[] more) {
-        if( !base || base == SEPARATOR ) {
+    private static String resolve0(CidFileSystem fs, String base, String[] more) {
+        if( isEmptyBase(fs,base) ) {
             return resolveEmptyPathCase(fs, more as List)
         }
         if( base.contains(SEPARATOR) ) {
@@ -148,16 +135,14 @@ class CidPath implements Path {
             final remain = parts[1..-1] + more.toList()
             return resolve0(fs, parts[0], remain as String[])
         }
-        final result = fs ? fs.basePath.resolve(base) : Path.of(base)
-        return more
-            ? result.resolve(more.join(SEPARATOR))
-            : result
+        def result = Path.of(base)
+        return more ? result.resolve(more.join(SEPARATOR)).toString() : result.toString()
     }
 
-    private static Path resolveEmptyPathCase(CidFileSystem fs, List<String> more ){
+    private static String resolveEmptyPathCase(CidFileSystem fs, List<String> more ){
         switch(more.size()) {
             case 0:
-                return fs ? fs.basePath : Path.of("/")
+                return "/"
             case 1:
                 return resolve0(fs, more[0], EMPTY)
             default:
@@ -166,10 +151,8 @@ class CidPath implements Path {
     }
 
     static private String norm0(String path) {
-        if( !path )
+        if( !path || path==SEPARATOR)
             return ""
-        if( path==SEPARATOR )
-            return path
         //Remove repeated elements
         path = Path.of(path).normalize().toString()
         //Remove initial and final separators
@@ -204,7 +187,7 @@ class CidPath implements Path {
 
     @Override
     Path getFileName() {
-        final result = storePath?.getFileName()?.toString()
+        final result = Path.of(filePath).getFileName()?.toString()
         return result ? new CidPath(null, result) : null
     }
 
@@ -220,28 +203,28 @@ class CidPath implements Path {
 
     @Override
     int getNameCount() {
-        return fileSystem ? storePath.nameCount-fileSystem.basePath.nameCount : storePath.nameCount
+        return Path.of(filePath).nameCount
     }
 
     @Override
     Path getName(int index) {
         if( index<0 )
             throw new IllegalArgumentException("Path name index cannot be less than zero - offending value: $index")
-        final c= fileSystem.basePath.nameCount
-        return new CidPath(index==0 ? fileSystem : null, storePath.getName(c + index).toString())
+        final path = Path.of(filePath)
+        return new CidPath(index==0 ? fileSystem : null, path.getName(index).toString())
     }
 
     @Override
     Path subpath(int beginIndex, int endIndex) {
         if( beginIndex<0 )
             throw new IllegalArgumentException("subpath begin index cannot be less than zero - offending value: $beginIndex")
-        final c= fileSystem.basePath.nameCount
-        return new CidPath(beginIndex==0 ? fileSystem : null, storePath.subpath(c+beginIndex, c+endIndex).toString())
+        final path = Path.of(filePath)
+        return new CidPath(beginIndex==0 ? fileSystem : null, path.subpath(beginIndex, endIndex).toString())
     }
 
     @Override
     Path normalize() {
-        return new CidPath(fileSystem, storePath.normalize())
+        return new CidPath(fileSystem, Path.of(filePath).normalize().toString())
     }
 
     @Override
@@ -251,7 +234,7 @@ class CidPath implements Path {
 
     @Override
     boolean startsWith(String other) {
-        return storePath.startsWith(fileSystem.basePath.resolve(other))
+        return filePath.startsWith(other)
     }
 
     @Override
@@ -261,7 +244,7 @@ class CidPath implements Path {
 
     @Override
     boolean endsWith(String other) {
-        return storePath.endsWith(other)
+        return filePath.endsWith(other)
     }
 
     @Override
@@ -275,12 +258,10 @@ class CidPath implements Path {
             return other
         if( that.isAbsolute() ) {
             return that
+        } else {
+            final newPath = Path.of(filePath).resolve(that.toString())
+            return new CidPath(fileSystem, newPath.toString())
         }
-        if( that.storePath ) {
-            final newPath = this.storePath.resolve(that.storePath)
-            return new CidPath(fileSystem, newPath)
-        }
-        return this
     }
 
     @Override
@@ -304,7 +285,17 @@ class CidPath implements Path {
         if( CidPath.class != other.class ) {
             throw new ProviderMismatchException()
         }
-        final path = storePath.relativize(((CidPath) other).storePath)
+        CidPath cidOther = other as CidPath
+        if( this.isAbsolute() != cidOther.isAbsolute() )
+            throw new IllegalArgumentException("Cannot compare absolute with relative paths");
+        def path
+        if( this.isAbsolute() ) {
+            // Compare 'filePath' as absolute paths adding the root separator
+            path = Path.of(SEPARATOR + filePath).relativize(Path.of(SEPARATOR + cidOther.filePath))
+        } else {
+            // Compare 'filePath' as relative paths
+            path = Path.of(filePath).relativize(Path.of(cidOther.filePath))
+        }
         return new CidPath(null , path.getNameCount()>0 ? path.toString(): SEPARATOR)
     }
 
@@ -324,12 +315,11 @@ class CidPath implements Path {
 
     @Override
     Path toRealPath(LinkOption... options) throws IOException {
-        return getTargetPath()
+        return this.getTargetPath()
     }
 
     protected Path getTargetPath(){
-        final target = findTarget(storePath, fileSystem)
-        return target ? target : storePath
+        return findTarget(fileSystem, filePath)
     }
 
     @Override
@@ -347,7 +337,7 @@ class CidPath implements Path {
         if( CidPath.class != other.class )
             throw new ProviderMismatchException()
         final that = other as CidPath
-        return this.storePath.compareTo(that.storePath)
+        return Path.of(this.filePath).compareTo(Path.of(that.filePath))
     }
 
     @Override
@@ -356,7 +346,7 @@ class CidPath implements Path {
             return false
         }
         final that = (CidPath)other
-        return this.fileSystem == that.fileSystem && this.storePath.equals(that.storePath)
+        return this.fileSystem == that.fileSystem && this.filePath.equals(that.filePath)
     }
 
     /**
@@ -364,7 +354,7 @@ class CidPath implements Path {
      */
     @Override
     int hashCode() {
-        return Objects.hash(fileSystem,storePath)
+        return Objects.hash(fileSystem,filePath)
     }
 
     static URI asUri(String path) {

@@ -33,7 +33,7 @@ import nextflow.exception.AbortOperationException
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class HistoryFile extends WithLockFile {
+class HistoryFile extends File {
 
     static String defaultFileName() { Const.appCacheDir.resolve('history').toString() }
 
@@ -410,7 +410,52 @@ class HistoryFile extends WithLockFile {
         }
     }
 
+    /**
+     * Apply the given action by using a file lock
+     *
+     * @param action The closure implementing the action to be executed with a file lock
+     * @return The value returned by the action closure
+     */
+    private withFileLock(Closure action) {
 
+        def rnd = new Random()
+        long ts = System.currentTimeMillis()
+        String parent = this.parent ?: new File('.').absolutePath
+        def file = new File(parent, "${this.name}.lock".toString())
+        def fos = new FileOutputStream(file)
+        try {
+            Throwable error
+            FileLock lock = null
+
+            try {
+                while( true ) {
+                    lock = fos.getChannel().tryLock()
+                    if( lock ) break
+                    if( System.currentTimeMillis() - ts < 1_000 )
+                        sleep rnd.nextInt(75)
+                    else {
+                        error = new IllegalStateException("Can't lock file: ${this.absolutePath} -- Nextflow needs to run in a file system that supports file locks")
+                        break
+                    }
+                }
+                if( lock ) {
+                    return action.call()
+                }
+            }
+            catch( Exception e ) {
+                return action.call()
+            }
+            finally {
+                if( lock?.isValid() ) lock.release()
+            }
+
+            if( error ) throw error
+        }
+        finally {
+            fos.closeQuietly()
+            file.delete()
+        }
+    }
 
     Set<String> findAllRunNames() {
         findAll().findResults{ it.runName }

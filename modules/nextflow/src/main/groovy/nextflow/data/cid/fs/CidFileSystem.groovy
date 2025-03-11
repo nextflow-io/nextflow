@@ -17,7 +17,8 @@
 
 package nextflow.data.cid.fs
 
-import nextflow.data.cid.DefaultCidStore
+import nextflow.data.cid.CidStore
+import nextflow.data.cid.CidStoreFactory
 
 import java.nio.file.FileStore
 import java.nio.file.FileSystem
@@ -40,7 +41,7 @@ class CidFileSystem extends FileSystem {
 
     private CidFileSystemProvider provider
 
-    private Path basePath
+    private CidStore cidStore
 
     /*
      * Only needed to prevent serialization issues - see https://github.com/nextflow-io/nextflow/issues/5208
@@ -49,23 +50,23 @@ class CidFileSystem extends FileSystem {
 
     CidFileSystem(CidFileSystemProvider provider, DataConfig config) {
         this.provider = provider
-        this.basePath = DefaultCidStore.getMetadataPath(config)
+        this.cidStore = CidStoreFactory.create(config)
     }
 
-    Path getBasePath() {
-        return basePath
+    CidStore getCidStore() {
+        return cidStore
     }
 
     @Override
     boolean equals( Object other ) {
         if( this.class != other.class ) return false
         final that = (CidFileSystem)other
-        this.provider == that.provider && this.basePath == that.basePath
+        this.provider == that.provider && this.cidStore == that.cidStore
     }
 
     @Override
     int hashCode() {
-        Objects.hash(provider,basePath)
+        Objects.hash(provider,cidStore)
     }
 
     @Override

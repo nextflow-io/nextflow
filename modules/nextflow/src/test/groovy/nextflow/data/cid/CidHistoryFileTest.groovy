@@ -17,7 +17,6 @@
 package nextflow.data.cid
 
 import spock.lang.Specification
-import spock.lang.TempDir
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -29,16 +28,19 @@ import java.nio.file.Path
  */
 class CidHistoryFileTest extends Specification {
 
-    @TempDir
     Path tempDir
-
     Path historyFile
     CidHistoryFile cidHistoryFile
 
     def setup() {
+        tempDir = Files.createTempDirectory("wdir")
         historyFile = tempDir.resolve("cid-history.txt")
         Files.createFile(historyFile)
         cidHistoryFile = new CidHistoryFile(historyFile)
+    }
+
+    def cleanup(){
+        tempDir?.deleteDir()
     }
 
     def "write should append a new record to the file"() {
@@ -46,55 +48,65 @@ class CidHistoryFileTest extends Specification {
         UUID sessionId = UUID.randomUUID()
         String runName = "TestRun"
         String runCid = "cid://123"
+        String resultsCid = "cid://456"
 
         when:
-        cidHistoryFile.write(runName, sessionId, runCid)
+        cidHistoryFile.write(runName, sessionId, runCid, resultsCid)
 
         then:
         def lines = Files.readAllLines(historyFile)
         lines.size() == 1
-        def parsedRecord = CidHistoryFile.CidRecord.parse(lines[0])
+        def parsedRecord = CidHistoryRecord.parse(lines[0])
         parsedRecord.sessionId == sessionId
         parsedRecord.runName == runName
         parsedRecord.runCid == runCid
+        parsedRecord.resultsCid == resultsCid
     }
 
-    def "getRunCid should return correct runCid for existing session"() {
+    def "should return correct record for existing session"() {
         given:
         UUID sessionId = UUID.randomUUID()
         String runName = "Run1"
         String runCid = "cid://123"
+        String resultsCid = "cid://456"
 
         and:
-        cidHistoryFile.write(runName, sessionId, runCid)
+        cidHistoryFile.write(runName, sessionId, runCid, resultsCid)
 
-        expect:
-        cidHistoryFile.getRunCid(sessionId) == runCid
+        when:
+        def record = cidHistoryFile.getRecord(sessionId)
+        then:
+        record.sessionId == sessionId
+        record.runName == runName
+        record.runCid == runCid
+        record.resultsCid == resultsCid
     }
 
-    def "getRunCid should return null if session does not exist"() {
+    def "should return null if session does not exist"() {
         expect:
-        cidHistoryFile.getRunCid(UUID.randomUUID()) == null
+        cidHistoryFile.getRecord(UUID.randomUUID()) == null
     }
 
-    def "update should modify existing runCid for given session"() {
+    def "update should modify existing Cids for given session"() {
         given:
         UUID sessionId = UUID.randomUUID()
         String runName = "Run1"
-        String initialCid = "cid-abc"
-        String updatedCid = "cid-updated"
+        String runCidUpdated = "run-cid-updated"
+        String resultsCidUpdated = "results-cid-updated"
 
         and:
-        cidHistoryFile.write(runName, sessionId, initialCid)
+        cidHistoryFile.write(runName, sessionId, 'run-cid-initial', 'results-cid-inital')
 
         when:
-        cidHistoryFile.update(sessionId, updatedCid)
+        cidHistoryFile.updateRunCid(sessionId, runCidUpdated)
+        cidHistoryFile.updateResultsCid(sessionId, resultsCidUpdated)
 
         then:
         def lines = Files.readAllLines(historyFile)
         lines.size() == 1
-        def parsedRecord = CidHistoryFile.CidRecord.parse(lines[0])
-        parsedRecord.runCid == updatedCid
+        def parsedRecord = CidHistoryRecord.parse(lines[0])
+        parsedRecord.runCid == runCidUpdated
+        parsedRecord.resultsCid == resultsCidUpdated
     }
 
     def "update should do nothing if session does not exist"() {
@@ -103,56 +115,38 @@ class CidHistoryFileTest extends Specification {
         UUID nonExistingSessionId = UUID.randomUUID()
         String runName = "Run1"
         String runCid = "cid://123"
-
+        String resultsCid = "cid://456"
         and:
-        cidHistoryFile.write(runName, existingSessionId, runCid)
+        cidHistoryFile.write(runName, existingSessionId, runCid, resultsCid)
 
         when:
-        cidHistoryFile.update(nonExistingSessionId, "new-cid")
-
+        cidHistoryFile.updateRunCid(nonExistingSessionId, "new-cid")
+        cidHistoryFile.updateRunCid(nonExistingSessionId, "new-res-cid")
         then:
         def lines = Files.readAllLines(historyFile)
         lines.size() == 1
-        def parsedRecord = CidHistoryFile.CidRecord.parse(lines[0])
+        def parsedRecord = CidHistoryRecord.parse(lines[0])
         parsedRecord.runCid == runCid
+        parsedRecord.resultsCid == resultsCid
     }
 
-    def "CidRecord parse should throw for invalid record"() {
-        when:
-        CidHistoryFile.CidRecord.parse("invalid-record")
-
-        then:
-        thrown(IllegalArgumentException)
-    }
-
-    def "CidRecord parse should handle 4-column record"() {
-        given:
-        def timestamp = new Date()
-        def formattedTimestamp = CidHistoryFile.TIMESTAMP_FMT.format(timestamp)
-        def line = "${formattedTimestamp}\trun-1\t${UUID.randomUUID()}\tcid://123"
-
-        when:
-        def record = CidHistoryFile.CidRecord.parse(line)
-
-        then:
-        record.timestamp != null
-        record.runName == "run-1"
-        record.runCid == "cid://123"
-    }
-
-    def "CidRecord toString should produce tab-separated format"() {
+    def 'should get records' () {
         given:
         UUID sessionId = UUID.randomUUID()
-        def record = new CidHistoryFile.CidRecord(sessionId, "TestRun")
-        record.timestamp = new Date()
-        record.runCid = "cid://123"
+        String runName = "Run1"
+        String runCid = "cid://123"
+        String resultsCid = "cid://456"
+        and:
+        cidHistoryFile.write(runName, sessionId, runCid, resultsCid)
 
         when:
-        def line = record.toString()
-
+        def records = cidHistoryFile.getRecords()
         then:
-        line.contains("\t")
-        line.split("\t").size() == 4
+        records.size() == 1
+        records[0].sessionId == sessionId
+        records[0].runName == runName
+        records[0].runCid == runCid
+        records[0].resultsCid == resultsCid
     }
 }
 

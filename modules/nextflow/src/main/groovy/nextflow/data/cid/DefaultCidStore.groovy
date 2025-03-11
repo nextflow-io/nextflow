@@ -17,9 +17,10 @@
 
 package nextflow.data.cid
 
+import nextflow.util.TestOnly
+
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.function.Consumer
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -36,46 +37,46 @@ import nextflow.exception.AbortOperationException
 class DefaultCidStore implements CidStore {
 
     private static String HISTORY_FILE_NAME =".history"
+    private static final String METADATA_FILE = '.data.json'
+    private static final String METADATA_PATH = '.meta'
     private Path metaLocation
     private Path location
+    private CidHistoryLog historyLog
 
     void open(DataConfig config) {
         location = config.store.location
-        metaLocation = getMetadataPath(config)
+        metaLocation = config.store.location.resolve(METADATA_PATH)
         if( !Files.exists(metaLocation) && !Files.createDirectories(metaLocation) ) {
             throw new AbortOperationException("Unable to create CID store directory: $metaLocation")
         }
+        historyLog = new CidHistoryFile(config.store.logLocation ?: metaLocation.resolve(HISTORY_FILE_NAME))
     }
 
     @Override
     void save(String key, Object value) {
-        final path = metaLocation.resolve(key)
+        final path = metaLocation.resolve("$key/$METADATA_FILE")
         Files.createDirectories(path.parent)
         log.debug "Save CID file path: $path"
         path.text = value
     }
 
     @Override
-    void list(String key, Consumer<String> consumer) {
-        for( Path it : Files.walk(metaLocation.resolve(key)) ) {
-            final fileKey = metaLocation.relativize(it).toString()
-            consumer.accept(fileKey)
-        }
-    }
-
-    @Override
     Object load(String key) {
-        metaLocation.resolve(key).text
+        final path = metaLocation.resolve("$key/$METADATA_FILE")
+        log.debug("Loading from path $path")
+        if (path.exists())
+            return path.text
+        log.debug("File for key $key not found")
+        return null
     }
 
     @Override
     Path getPath(){ location }
 
-    @Override
-    CidHistoryFile getHistoryFile(){
-        return new CidHistoryFile(metaLocation.resolve(HISTORY_FILE_NAME))
-    }
+    @TestOnly
+    Path getMetadataPath() {metaLocation}
 
-    static Path getMetadataPath(DataConfig config){ config.store.location.resolve('.meta') }
+    @Override
+    CidHistoryLog getHistoryLog(){ historyLog }
 
 }

@@ -18,6 +18,7 @@
 package nextflow.data.cid
 
 import groovy.util.logging.Slf4j
+import nextflow.data.cid.model.Checksum
 import nextflow.data.cid.model.DataPath
 import nextflow.data.cid.model.Parameter
 import nextflow.data.cid.model.WorkflowResults
@@ -49,7 +50,7 @@ import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
 
 import static nextflow.data.cid.fs.CidPath.CID_PROT
-import static nextflow.data.cid.fs.CidPath.METADATA_FILE
+
 /**
  * Observer to write the generated workflow metadata in a CID store.
  *
@@ -72,7 +73,7 @@ class CidObserver implements TraceObserver {
 
     @Override
     void onFlowCreate(Session session) {
-        this.store.getHistoryFile().write(session.runName, session.uniqueId, '-')
+        this.store.getHistoryLog().write(session.runName, session.uniqueId, '-', '-')
     }
 
     @TestOnly
@@ -85,7 +86,7 @@ class CidObserver implements TraceObserver {
             DataType.WorkflowResults,
             "$CID_PROT${executionHash}",
             new ArrayList<Parameter>())
-        this.store.getHistoryFile().update(session.uniqueId, "${CID_PROT}${this.executionHash}")
+        this.store.getHistoryLog().updateRunCid(session.uniqueId, "${CID_PROT}${this.executionHash}")
     }
 
     @Override
@@ -93,8 +94,8 @@ class CidObserver implements TraceObserver {
         if (this.workflowResults){
             final content = JsonOutput.prettyPrint(JsonOutput.toJson(workflowResults))
             final wfResultsHash = CacheHelper.hasher(content).hash().toString()
-            this.store.save("${wfResultsHash}/$METADATA_FILE", content)
-            this.store.getHistoryFile().update(session.uniqueId, "${CID_PROT}${wfResultsHash}")
+            this.store.save(wfResultsHash, content)
+            this.store.getHistoryLog().updateResultsCid(session.uniqueId, "${CID_PROT}${wfResultsHash}")
         }
     }
 
@@ -102,13 +103,21 @@ class CidObserver implements TraceObserver {
         final normalizer = new PathNormalizer(session.workflowMetadata)
         final mainScript = new DataPath(
             normalizer.normalizePath(session.workflowMetadata.scriptFile.normalize()),
-            session.workflowMetadata.scriptId
+            new Checksum(session.workflowMetadata.scriptId, "nextflow", CacheHelper.HashMode.DEFAULT().toString())
         )
         List<DataPath> otherScripts  = new LinkedList<>()
         for (Path p: ScriptMeta.allScriptNames().values()) {
             if (p && p != session.workflowMetadata.scriptFile) {
-                otherScripts.add(new DataPath(normalizer.normalizePath(p.normalize()),
-                    CacheHelper.hasher(p.text).hash().toString()))
+                otherScripts.add(
+                    new DataPath(
+                        normalizer.normalizePath(p.normalize()),
+                        new Checksum(
+                            CacheHelper.hasher(p.text).hash().toString(),
+                            "nextflow",
+                            CacheHelper.HashMode.DEFAULT().toString()
+                        )
+                    )
+                )
             }
         }
         final workflow = new Workflow(
@@ -128,7 +137,7 @@ class CidObserver implements TraceObserver {
 
         final content = JsonOutput.prettyPrint(JsonOutput.toJson(value))
         final executionHash = CacheHelper.hasher(content).hash().toString()
-        store.save("${executionHash}/$METADATA_FILE", content)
+        store.save(executionHash, content)
         return executionHash
     }
 
@@ -172,25 +181,29 @@ class CidObserver implements TraceObserver {
     }
 
     protected String storeTaskRun(TaskRun task, PathNormalizer normalizer) {
+        final codeChecksum = new Checksum(CacheHelper.hasher(session.stubRun ? task.stubSource: task.source).hash().toString(),
+            "nextflow", CacheHelper.HashMode.DEFAULT().toString())
         final value = new nextflow.data.cid.model.TaskRun(
             DataType.TaskRun,
             session.uniqueId.toString(),
             task.getName(),
-            CacheHelper.hasher(session.stubRun ? task.stubSource: task.source).hash().toString(),
+            codeChecksum,
             task.inputs ? manageInputs(task.inputs, normalizer): null,
             task.isContainerEnabled() ? task.getContainerFingerprint(): null,
             normalizer.normalizePath(task.getCondaEnv()),
             normalizer.normalizePath(task.getSpackEnv()),
             task.config?.getArchitecture()?.toString(),
             task.processor.getTaskGlobalVars(task),
-            task.processor.getTaskBinEntries(task.source).collect { Path p -> new DataPath(normalizer.normalizePath(p.normalize()),
-                CacheHelper.hasher(p).hash().toString() )}
+            task.processor.getTaskBinEntries(task.source).collect { Path p -> new DataPath(
+                normalizer.normalizePath(p.normalize()),
+                new Checksum(CacheHelper.hasher(p).hash().toString(), "nextflow", CacheHelper.HashMode.DEFAULT().toString()) )
+            }
         )
 
         // store in the underlying persistence
-        final key = "${task.hash}/$METADATA_FILE"
+        final key = task.hash.toString()
         store.save(key, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
-        return task.hash.toString()
+        return key
     }
 
     protected void storeTaskOutput(TaskRun task, Path path) {
@@ -198,12 +211,13 @@ class CidObserver implements TraceObserver {
             final attrs = readAttributes(path)
             final rel = getTaskRelative(task, path)
             final cid = "${task.hash}/${rel}"
-            final key = "${cid}/$METADATA_FILE"
-            final hash = CacheHelper.hasher(path).hash().toString()
+            final key = cid.toString()
+            final checksum = new Checksum( CacheHelper.hasher(path).hash().toString(),
+                "nextflow", CacheHelper.HashMode.DEFAULT().toString() )
             final value = new Output(
                 DataType.TaskOutput,
                 path.toUriString(),
-                hash,
+                checksum,
                 "$CID_PROT$task.hash",
                 attrs.size(),
                 attrs.creationTime().toMillis(),
@@ -252,21 +266,25 @@ class CidObserver implements TraceObserver {
     @Override
     void onFilePublish(Path destination, Path source){
         try {
-            final hash = CacheHelper.hasher(destination).hash().toString()
+            final checksum = new Checksum(
+                CacheHelper.hasher(destination).hash().toString(),
+                "nextflow",
+                CacheHelper.HashMode.DEFAULT().toString()
+            )
             final rel = getWorkflowRelative(destination)
-            final key = "$executionHash/${rel}/$METADATA_FILE"
+            final key = "$executionHash/${rel}"
             final sourceReference = getSourceReference(source)
             final attrs = readAttributes(destination)
             final value = new Output(
                 DataType.WorkflowOutput,
                 destination.toUriString(),
-                hash,
+                checksum,
                 sourceReference,
                 attrs.size(),
                 attrs.creationTime().toMillis(),
                 attrs.lastModifiedTime().toMillis())
             store.save(key, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
-            workflowResults.outputs.add("${CID_PROT}${executionHash}/${rel}")
+            workflowResults.outputs.add("${CID_PROT}${key}")
         } catch (Throwable e) {
             log.warn("Exception storing CID output $destination for workflow ${executionHash}.", e)
         }
@@ -288,20 +306,24 @@ class CidObserver implements TraceObserver {
     @Override
     void onFilePublish(Path destination){
         try {
-            final hash = CacheHelper.hasher(destination).hash().toString()
+            final checksum = new Checksum(
+                CacheHelper.hasher(destination).hash().toString(),
+                "nextflow",
+                CacheHelper.HashMode.DEFAULT().toString()
+            )
             final rel = getWorkflowRelative(destination)
-            final key = "$executionHash/${rel}/$METADATA_FILE"
+            final key = "$executionHash/${rel}"
             final attrs = readAttributes(destination)
             final value = new Output(
                 DataType.WorkflowOutput,
                 destination.toUriString(),
-                hash,
+                checksum,
                 "${CID_PROT}${executionHash}".toString(),
                 attrs.size(),
                 attrs.creationTime().toMillis(),
                 attrs.lastModifiedTime().toMillis())
             store.save(key, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
-            workflowResults.outputs.add("${CID_PROT}${executionHash}/${rel}")
+            workflowResults.outputs.add("${CID_PROT}${key}")
         }catch (Throwable e) {
             log.warn("Exception storing CID output $destination for workflow ${executionHash}. ${e.getLocalizedMessage()}")
         }
@@ -344,7 +366,10 @@ class CidObserver implements TraceObserver {
         final paths = new LinkedList<Object>();
         for( FileHolder it : files ) {
             final ref = getSourceReference(it.storePath)
-            paths.add(ref ? ref : new DataPath(normalizer.normalizePath(it.storePath), CacheHelper.hasher(it.storePath).hash().toString()))
+            paths.add(ref ? new DataPath(ref) : new DataPath(
+                normalizer.normalizePath(it.storePath),
+                new Checksum(CacheHelper.hasher(it.storePath).hash().toString(), "nextflow", CacheHelper.HashMode.DEFAULT().toString()))
+            )
         }
         return paths
     }
