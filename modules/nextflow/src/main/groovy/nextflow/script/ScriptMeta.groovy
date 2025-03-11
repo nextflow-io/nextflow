@@ -48,17 +48,24 @@ class ScriptMeta {
 
     static private Map<BaseScript,ScriptMeta> REGISTRY = new HashMap<>(10)
 
+    static private Map<Path,BaseScript> scriptsByPath = new HashMap<>(10)
+
     static private Set<String> resolvedProcessNames = new HashSet<>(20)
 
     @TestOnly
     static void reset() {
         REGISTRY.clear()
+        scriptsByPath.clear()
         resolvedProcessNames.clear()
     }
 
     static ScriptMeta get(BaseScript script) {
         if( !script ) throw new IllegalStateException("Missing current script context")
         return REGISTRY.get(script)
+    }
+
+    static BaseScript getScriptByPath(Path path) {
+        return scriptsByPath.get(path)
     }
 
     static Set<String> allProcessNames() {
@@ -94,8 +101,8 @@ class ScriptMeta {
         get(ExecutionStack.script())
     }
 
-    /** the script {@link Class} object */
-    private Class<? extends BaseScript> clazz
+    /** the script object */
+    private BaseScript script
 
     /** The location path from where the script has been loaded */
     private Path scriptPath
@@ -115,12 +122,12 @@ class ScriptMeta {
 
     Path getModuleDir () { scriptPath?.parent }
 
-    String getScriptName() { clazz.getName() }
+    String getScriptName() { script.getClass().getName() }
 
     boolean isModule() { module }
 
     ScriptMeta(BaseScript script) {
-        this.clazz = script.class
+        this.script = script
         for( def entry : definedFunctions0(script) ) {
             addDefinition(entry)
         }
@@ -129,12 +136,11 @@ class ScriptMeta {
     /** only for testing */
     protected ScriptMeta() {}
 
-    @PackageScope
     void setScriptPath(Path path) {
+        scriptsByPath.put(path, script)
         scriptPath = path
     }
 
-    @PackageScope
     void setModule(boolean val) {
         this.module = val
     }
