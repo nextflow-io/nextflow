@@ -2,17 +2,17 @@
 
 # Spot instance failures and retries
 
-This page describes changes in how Nextflow handles spot instance failures on AWS and Google Cloud, the impact of those changes, and how to configure spot retry behavior for your pipelines. It applies to Nextflow v24.10 and later.
+This page describes changes in how Nextflow handles spot instance failures on AWS and Google Cloud, the impact of those changes, and how to configure spot retry behavior for your pipelines. It applies to Nextflow 24.10 and later.
 
 ## Retry behavior
 
 Up to version 24.10, Nextflow silently retried spot instance failures up to `5` times when using AWS Batch or Google Batch. These retries were controlled by cloud-specific configuration parameters (e.g., `aws.batch.maxSpotAttempts`) and happened in cloud infrastructure without explicit visibility to Nextflow.
 
-<h3>Before Nextflow v24.10</h3>
+<h3>Before Nextflow 24.10</h3>
 
 By default, Nextflow would instruct AWS and Google to automatically retry jobs lost to spot reclamation up to `5` times. Retries were handled by the cloud provider _within_ a Nextflow task. It was often unclear that tasks were restarted as there was no explicit message. Task runtimes and associated cloud costs were increased because they included the runtime of the reclaimed and retried tasks. Due to the high likelihood of reclamation before completion, long-running tasks running on spot instances frequently required retries, leading to inefficient allocation of resources and higher costs.
 
-<h3>After Nextflow v24.10</h3>
+<h3>After Nextflow 24.10</h3>
 
 The default spot reclamation retry setting changed to `0` on AWS and Google. By default, no _internal_ retries are attempted on these platforms. Spot reclamations leads to an immediate failure that is exposed to Nextflow in the same way as other generic failures (for example, returning `exit code 1` on AWS). Nextflow treats these failures like any other job failure unless a retry strategy is configured.
 
@@ -71,7 +71,7 @@ The above example sets retries to `5` for any failures, not just failures at the
 
 ### Use Fusion snapshots
 
-If you have long-running tasks where losing progress due to spot reclamation is costly, consider [Fusion snapshots](https://docs.seqera.io/fusion/guide/snapshots). Fusion snapshots allows you to resume a partially completed task on a new machine if a spot instance is reclaimed and reduce wasted compute time.
+If you have long-running tasks where losing progress due to spot reclamation is costly, consider [Fusion snapshots](https://docs.seqera.io/fusion/guide/snapshots) (if supported by your environment). Fusion snapshots allows you to resume a partially completed task on a new machine if a spot instance is reclaimed and reduce wasted compute time.
 
 Key features of Fusion snapshots:
 
@@ -79,7 +79,7 @@ Key features of Fusion snapshots:
 - Especially useful for tasks that take many hours or days to complete.
 - May significantly reduce costs and run times in high-reclamation environments.
 
-See [Fusion snapshots](https://docs.seqera.io/fusion/guide/snapshots) for more information.
+See [Fusion Snapshots for AWS Batch](https://docs.seqera.io/fusion/guide/snapshots) for more information.
 
 ## Best practices
 
