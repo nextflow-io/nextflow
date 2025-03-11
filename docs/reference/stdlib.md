@@ -205,7 +205,7 @@ The following functions are available in Nextflow scripts:
 : Stop the pipeline execution and return an exit code and optional error message.
 
 `file( filePattern: String, [options] ) -> Path | List<Path>`
-: Get one or more files from a path or glob pattern. Returns a [Path](#path) or list of Paths if there are multiple files.
+: Get a file from a file name or glob pattern. Returns a collection of files if the glob pattern yields zero or multiple files.
 
 : The following options are available:
 
@@ -230,7 +230,7 @@ The following functions are available in Nextflow scripts:
 : See also: {ref}`Channel.fromPath <channel-path>`.
 
 `files( filePattern: String, [options] ) -> List<Path>`
-: Convenience function for `file()` that always returns a list.
+: Get a collection of files from a file name or glob pattern. Supports the same options as `file()`.
 
 `groupKey( key, size: int ) -> GroupKey`
 : Create a grouping key to use with the {ref}`operator-grouptuple` operator.
@@ -534,7 +534,7 @@ The following methods are available for a list:
 `take( n: int ) -> List<E>`
 : Returns the first *n* elements of the list.
 
-`takeWhile( condition: (E) -> boolean ) -> List`
+`takeWhile( condition: (E) -> boolean ) -> List<E>`
 : Returns the longest prefix of the list where each element satisfies the given condition.
 
 `withIndex() -> List<(E,Integer)>`
