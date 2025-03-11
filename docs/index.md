@@ -154,7 +154,7 @@ developer/plugins
 :caption: Guides
 :maxdepth: 1
 
-runtime-behavior
+updating-spot-retries
 metrics
 flux
 ```

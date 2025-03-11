@@ -1,10 +1,10 @@
-(runtime-behavior-page)=
+(spot-retries-page)=
 
-# Updating runtime behavior
+# Spot instance failures and retries
 
 This page describes changes in how Nextflow handles spot instance failures and retries on AWS and Google Cloud, the impact of those changes, and how to configure spot retry behavior for your pipelines. These changes apply to Nextflow 24.10 and later.
 
-## Spot instance failures and retries
+## Retry behavior
 
 Up to version 24.10, Nextflow would silently retry spot instance failures up to `5` times when using AWS Batch or Google Batch. These retries were controlled by cloud-specific configuration parameters (e.g., `aws.batch.maxSpotAttempts`) and happened in cloud infrastructure without explicit visibility to Nextflow.
 
