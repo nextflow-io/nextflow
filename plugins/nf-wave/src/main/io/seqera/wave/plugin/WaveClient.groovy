@@ -677,6 +677,7 @@ class WaveClient {
         if( !handle )
             return null
         final result = new ContainerMeta()
+        result.requestTime = handle.createdAt
         result.requestId = handle.response.requestId
         result.sourceImage = handle.response.containerImage
         result.targetImage = handle.response.targetImage
