@@ -141,6 +141,6 @@ The language server provides limited support for Groovy scripts in the lib direc
 
 To resolve this issue, edit or close and re-open the Nextflow script to refresh the diagnostics.
 
-### Report an issue
+### Reporting issues
 
-Report issues at [`nextflow-io/vscode-language-nextflow`](https://github.com/nextflow-io/vscode-language-nextflow) or [`nextflow-io/language-server`](https://github.com/nextflow-io/language-server). When reporting issues, include a minimal code snippet that reproduces the issue and any error logs from the server.
+Report issues at [nextflow-io/vscode-language-nextflow](https://github.com/nextflow-io/vscode-language-nextflow) or [nextflow-io/language-server](https://github.com/nextflow-io/language-server). When reporting issues, include a minimal code snippet that reproduces the issue and any error logs from the server.
