@@ -2,7 +2,7 @@
 
 # Spot instance failures and retries
 
-This page describes recent changes in how Nextflow handles spot instance failures on AWS and Google Cloud, the impact of those changes, and how to configure spot retry behavior for your pipelines. It applies to Nextflow v24.10 and later.
+This page describes changes in how Nextflow handles spot instance failures on AWS and Google Cloud, the impact of those changes, and how to configure spot retry behavior for your pipelines. It applies to Nextflow v24.10 and later.
 
 ## Retry behavior
 
@@ -10,7 +10,7 @@ Up to version 24.10, Nextflow silently retried spot instance failures up to `5` 
 
 <h3>Before Nextflow v24.10</h3>
 
-By default, Nextflow would instruct AWS and Google to automatically retry jobs lost to spot reclamation up to `5` times. Retries were handled by the cloud provider _within_ a Nextflow task. It was often unclear that tasks were restarted because there was no explicit message. Task runtimes and associated costs were increased because they included the runtime of the reclaimed and retried tasks.
+By default, Nextflow would instruct AWS and Google to automatically retry jobs lost to spot reclamation up to `5` times. Retries were handled by the cloud provider _within_ a Nextflow task. It was often unclear that tasks were restarted as there was no explicit message. Task runtimes and associated cloud costs were increased because they included the runtime of the reclaimed and retried tasks. Due to the high likelihood of reclamation before completion, long-running tasks running on spot instances frequently required retries, leading to inefficient allocation of resources and higher costs.
 
 <h3>After Nextflow v24.10</h3>
 
@@ -29,17 +29,7 @@ Since the default for spot retries is now `0`, you must actively enable a retry 
 
 ### Do nothing
 
-If you do not configure anything, you will observe more pipeline failures when spot instances are reclaimed.
-
-Pros:
-
-- Clearer visibility into failures.
-- Failed tasks can be re-run. For example, using the `-resume` option.
-
-Cons:
-
-- Potentially higher failure rate if tasks are frequently reclaimed.
-- Manual intervention needed each time.
+If you do not configure anything, you will observe more pipeline failures when spot instances are reclaimed. This approach provides clearer visibility into failures. Failed tasks can be re-run with the `-resume` option. However, frequent task reclamation may lead to a higher failure rate and each retry requires manual intervention.
 
 :::{note}
 If you resume the pipeline using the resume option, it will pick up at the point the pipeline was interrupted and start with a retry of that task.
@@ -71,6 +61,7 @@ The above example sets the maximum number of spot retries to `5` for both AWS an
 You can set `maxRetries` to enable Nextflow-level retries for any failure:
 
 ```
+// nextflow.config
 process {
     maxRetries = 5
 }
@@ -88,7 +79,7 @@ Key features of Fusion snapshots:
 - Especially useful for tasks that take many hours or days to complete.
 - May significantly reduce costs and run times in high-reclamation environments.
 
-See [Fusion snapshots](https://docs.seqera.io/fusion/guide/snapshots) for more information and configuration options.
+See [Fusion snapshots](https://docs.seqera.io/fusion/guide/snapshots) for more information.
 
 ## Best practices
 
