@@ -1,0 +1,32 @@
+set -e
+export NXF_PLUGINS_DEFAULT=nf-amazon
+
+# Skip test if AWS keys are missing
+if [[ ! $AWS_ACCESS_KEY_ID ]]; then
+  echo "Skip s3-files test since AWS keys are not available"
+  exit 0
+fi
+
+#
+# run normal mode
+#
+$NXF_RUN | tee stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process > foo'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process > bar (gut)'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process > bar (liver)'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process > bar (lung)'` == 1 ]] || false
+cmp stdout .expected || false
+
+
+
+#
+# run resume mode
+#
+$NXF_RUN -resume | tee stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > foo'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > bar (gut)'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > bar (liver)'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > bar (lung)'` == 1 ]] || false
+cmp stdout .expected || false
