@@ -15,9 +15,6 @@
  */
 package nextflow.processor
 
-import nextflow.data.cid.fs.CidPath
-import nextflow.trace.TraceRecord
-
 import static nextflow.processor.ErrorStrategy.*
 
 import java.lang.reflect.InvocationTargetException
@@ -81,6 +78,7 @@ import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.file.FilePatternSplitter
 import nextflow.file.FilePorter
+import nextflow.file.RealPathAware
 import nextflow.plugin.Plugins
 import nextflow.processor.tip.TaskTipProvider
 import nextflow.script.BaseScript
@@ -107,6 +105,7 @@ import nextflow.script.params.TupleInParam
 import nextflow.script.params.TupleOutParam
 import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
+import nextflow.trace.TraceRecord
 import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
@@ -1940,7 +1939,7 @@ class TaskProcessor {
 
             if( item instanceof Path || coerceToPath ) {
                 def path = normalizeToPath(item)
-                if (path instanceof CidPath){
+                if (path instanceof RealPathAware){
                     path = path.toRealPath()
                 }
                 def target = executor.isForeignFile(path) ? batch.addToForeign(path) : path

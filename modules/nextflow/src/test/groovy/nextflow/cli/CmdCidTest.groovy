@@ -17,17 +17,17 @@
 package nextflow.cli
 
 import groovy.json.JsonOutput
-import nextflow.data.cid.CidHistoryRecord
-import nextflow.data.cid.CidStoreFactory
 
 import java.nio.file.Files
 
+import nextflow.dag.MermaidHtmlRenderer
+import nextflow.data.cid.CidHistoryRecord
+import nextflow.data.cid.CidStoreFactory
 import nextflow.plugin.Plugins
 
 import org.junit.Rule
 import spock.lang.Specification
 import test.OutputCapture
-
 
 /**
  * CLI cid Tests
@@ -235,7 +235,7 @@ class CmdCidTest extends Specification {
     cid://45678/output.txt -->cid://123987
     cid://45678 -->cid://45678/output.txt
 """
-        final template = CmdCid.CmdLineage.readTemplate()
+        final template = MermaidHtmlRenderer.readTemplate()
         def expectedOutput = template.replace('REPLACE_WITH_NETWORK_DATA', network)
 
         when:
