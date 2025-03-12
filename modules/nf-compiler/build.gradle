@@ -29,3 +29,7 @@ dependencies {
 generateGrammarSource {
   arguments += ['-no-listener', '-no-visitor']
 }
+
+tasks.named('sourcesJar') {
+    dependsOn tasks.named('generateGrammarSource')
+}
