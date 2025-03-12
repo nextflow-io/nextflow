@@ -101,7 +101,7 @@ class CidOperationImpl implements CmdCid.CidOperation {
     void lineage(ConfigMap config, List<String> args) {
         try {
             final store = CidStoreFactory.getOrCreate(new Session(config))
-            final template = readTemplate()
+            final template = MermaidHtmlRenderer.readTemplate()
             final network = getLineage(store, args[0])
             Path file = Path.of(args[1])
             file.text = template.replace('REPLACE_WITH_NETWORK_DATA', network)
@@ -213,15 +213,5 @@ class CidOperationImpl implements CmdCid.CidOperation {
         final label = convertToLabel(value.toString())
         lines << "    ${value.toString()}@{shape: document, label: \"${label}\"}".toString();
         edges.add(new Edge(value.toString(), nodeToRender))
-    }
-
-    protected static String readTemplate() {
-        final writer = new StringWriter()
-        final res = MermaidHtmlRenderer.class.getResourceAsStream('mermaid.dag.template.html')
-        int ch
-        while( (ch=res.read()) != -1 ) {
-            writer.append(ch as char)
-        }
-        writer.toString()
     }
 }
