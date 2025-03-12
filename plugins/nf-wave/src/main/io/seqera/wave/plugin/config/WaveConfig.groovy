@@ -23,7 +23,6 @@ import groovy.util.logging.Slf4j
 import io.seqera.wave.api.ScanLevel
 import io.seqera.wave.api.ScanMode
 import io.seqera.wave.config.CondaOpts
-import io.seqera.wave.config.SpackOpts
 import nextflow.file.FileHelper
 import nextflow.util.Duration
 /**
@@ -42,7 +41,6 @@ class WaveConfig {
     final private List<URL> containerConfigUrl
     final private Duration tokensCacheMaxDuration
     final private CondaOpts condaOpts
-    final private SpackOpts spackOpts
     final private List<String> strategy
     final private Boolean bundleProjectResources
     final private String buildRepository
@@ -65,7 +63,6 @@ class WaveConfig {
         this.containerConfigUrl = parseConfig(opts, env)
         this.tokensCacheMaxDuration = opts.navigate('tokens.cache.maxDuration', '30m') as Duration
         this.condaOpts = opts.navigate('build.conda', Collections.emptyMap()) as CondaOpts
-        this.spackOpts = opts.navigate('build.spack', Collections.emptyMap()) as SpackOpts
         this.buildRepository = opts.navigate('build.repository') as String
         this.cacheRepository = opts.navigate('build.cacheRepository') as String
         this.strategy = parseStrategy(opts.strategy)
@@ -84,8 +81,6 @@ class WaveConfig {
     String endpoint() { this.endpoint }
 
     CondaOpts condaOpts() { this.condaOpts }
-
-    SpackOpts spackOpts() { this.spackOpts }
 
     RetryOpts retryOpts() { this.retryOpts }
 
