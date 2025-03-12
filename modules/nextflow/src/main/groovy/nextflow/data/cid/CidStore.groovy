@@ -28,7 +28,7 @@ import nextflow.data.config.DataConfig
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-interface CidStore {
+interface CidStore extends Closeable {
 
     /**
      * Open the CID store.

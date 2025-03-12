@@ -97,6 +97,7 @@ class CidObserver implements TraceObserver {
             this.store.save(wfResultsHash, content)
             this.store.getHistoryLog().updateResultsCid(session.uniqueId, "${CID_PROT}${wfResultsHash}")
         }
+        store.close()
     }
 
     protected String storeWorkflowRun() {

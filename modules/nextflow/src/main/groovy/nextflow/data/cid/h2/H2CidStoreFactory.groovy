@@ -14,32 +14,28 @@
  * limitations under the License.
  *
  */
-package nextflow.data.cid
+
+package nextflow.data.cid.h2
 
 import groovy.transform.CompileStatic
+import nextflow.data.cid.CidStore
+import nextflow.data.cid.CidStoreFactory
 import nextflow.data.config.DataConfig
-import nextflow.plugin.Priority
 
 /**
- * Default Factory for CidStore
  *
- * @author Jorge Ejarque <jorge.ejarque@seqera.io>
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-@Priority(0)
-class DefaultCidStoreFactory extends CidStoreFactory {
+class H2CidStoreFactory extends CidStoreFactory {
 
     @Override
     boolean canOpen(DataConfig config) {
-        final loc = config.store.location
-        return loc && (loc.startsWith('file:/') || !loc.contains('://'))
+        return config.store.location.startsWith('jdbc:h2:')
     }
 
     @Override
     protected CidStore newInstance(DataConfig config) {
-        final cidStore = new DefaultCidStore()
-        cidStore.open(config)
-        return cidStore
+        return new H2CidStore()
     }
-
 }
