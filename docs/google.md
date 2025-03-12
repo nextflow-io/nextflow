@@ -207,7 +207,7 @@ The Google Storage path needs to contain at least sub-directory. Don't use only 
 
 ### Spot Instances
 
-Spot Instances are supported adding the following setting in the Nextflow config file:
+Spot Instances are supported by adding the following setting in the Nextflow config file:
 
 ```groovy
 google {
