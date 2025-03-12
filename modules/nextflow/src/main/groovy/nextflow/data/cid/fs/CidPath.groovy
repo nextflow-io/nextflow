@@ -44,7 +44,7 @@ import nextflow.file.FileHelper
 @Slf4j
 @CompileStatic
 class CidPath implements Path {
-
+    static public final List<String> SUPPORTED_CHECKSUM_ALGORITHMS=["nextflow"]
     static public final String SEPARATOR = '/'
     public static final String CID_PROT = "${SCHEME}://"
 
@@ -73,8 +73,18 @@ class CidPath implements Path {
         final hashedPath = FileHelper.toCanonicalPath(cidObject.path as String)
         if( !hashedPath.exists() )
             throw new FileNotFoundException("Target path $cidObject.path does not exists.")
-        if( cidObject.checksum && CacheHelper.hasher(hashedPath).hash().toString() != cidObject.checksum ) {
-            log.warn("Checksum of $hashedPath does not match with the one stored in the metadata")
+        if( cidObject.checksum ) {
+            final checksum = cidObject.checksum as Map
+            if( checksum.algorithm as String in SUPPORTED_CHECKSUM_ALGORITHMS ){
+
+                final hash = checksum.mode
+                        ? CacheHelper.hasher(hashedPath,CacheHelper.HashMode.of(checksum.mode.toString().toLowerCase())).hash().toString()
+                        : CacheHelper.hasher(hashedPath).hash().toString()
+                if( hash != checksum.value )
+                    log.warn("Checksum of $hashedPath does not match with the one stored in the metadata")
+            } else {
+                log.warn("Checksum of $hashedPath can not be validated. Algorithm ${checksum.algorithm} is not supported")
+            }
         }
     }
 

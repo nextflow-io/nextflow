@@ -70,7 +70,7 @@ class CidObserverTest extends Specification {
         def observer = new CidObserver(session, store)
         def expectedString = '{"type":"WorkflowRun","workflow":{"type": "Workflow",' +
             '"mainScriptFile":{"path":"file://' + scriptFile.toString() +
-            '", "checksum": {"value": "78910", "algorithm": "nextflow", "mode": "STANDARD"}},' +
+            '", "checksum": {"value": "78910", "algorithm": "nextflow", "mode": "standard"}},' +
             '"otherScriptFiles": [], "repository": "https://nextflow.io/nf-test/",' +
             '"commitId": "123456" },' +
             '"sessionId": "' + uniqueId + '",' +
@@ -120,7 +120,7 @@ class CidObserverTest extends Specification {
         def expectedString = '{"type":"TaskRun",' +
             '"sessionId":"'+uniqueId.toString() + '",' +
             '"name":"foo", "codeChecksum": {' +
-            '"value": "' + sourceHash + '", "algorithm": "nextflow", "mode": "STANDARD"},' +
+            '"value": "' + sourceHash + '", "algorithm": "nextflow", "mode": "standard"},' +
             '"inputs": null,"container": null,"conda": null,' +
             '"spack": null,"architecture": null,' +
             '"globalVars": {},"binEntries": [],"annotations":null}'
@@ -165,7 +165,7 @@ class CidObserverTest extends Specification {
         def expectedString = '{"type":"TaskOutput",' +
             '"path":"' + outFile.toString() + '",' +
             '"checksum": { "value":"'+ fileHash + '",' +
-            '"algorithm": "nextflow", "mode": "STANDARD"},' +
+            '"algorithm": "nextflow", "mode": "standard"},' +
             '"source":"cid://15cd5b07",' +
             '"size":'+attrs.size() + ',' +
             '"createdAt":' + attrs.creationTime().toMillis() + ',' +
@@ -341,7 +341,7 @@ class CidObserverTest extends Specification {
             def expectedString1 =  '{"type":"WorkflowOutput",' +
                 '"path":"' + outFile1.toString() + '",' +
                 '"checksum": {"value": "'+ fileHash1 + '",' +
-                '"algorithm": "nextflow", "mode": "STANDARD"},' +
+                '"algorithm": "nextflow", "mode": "standard"},' +
                 '"source":"cid://123987/file.bam",' +
                 '"size":'+attrs1.size() + ',' +
                 '"createdAt":' + attrs1.creationTime().toMillis() + ',' +
@@ -360,7 +360,7 @@ class CidObserverTest extends Specification {
             def expectedString2 =  '{"type":"WorkflowOutput",' +
                 '"path":"' + outFile2.toString() + '",' +
                 '"checksum": { "value": "'+ fileHash2 + '",' +
-                '"algorithm": "nextflow", "mode": "STANDARD"},' +
+                '"algorithm": "nextflow", "mode": "standard"},' +
                 '"source":"cid://' + observer.executionHash +'",' +
                 '"size":'+attrs2.size() + ',' +
                 '"createdAt":' + attrs2.creationTime().toMillis() + ',' +
