@@ -25,4 +25,3 @@ nextflow.mail.SimpleMailProvider
 nextflow.mail.JavaMailProvider
 nextflow.processor.tip.DefaultTaskTipProvider
 nextflow.fusion.FusionTokenDefault
-nextflow.cli.MyCid

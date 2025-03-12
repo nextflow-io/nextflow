@@ -280,7 +280,7 @@ ext.nexusEmail = project.findProperty('nexusEmail')
 // `signing.keyId` property needs to be defined in the `gradle.properties` file
 ext.enableSignArchives = project.findProperty('signing.keyId')
 
-ext.coreProjects = projects( ':nextflow', ':nf-commons', ':nf-httpfs' )
+ext.coreProjects = projects( ':nextflow', ':nf-cid', ':nf-commons', ':nf-httpfs' )
 
 configure(coreProjects) {
     group = 'io.nextflow'
