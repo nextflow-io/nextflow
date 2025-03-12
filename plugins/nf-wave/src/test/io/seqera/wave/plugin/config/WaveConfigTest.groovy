@@ -99,21 +99,6 @@ class WaveConfigTest extends Specification {
         
     }
 
-    def 'should get spack config' () {
-        when:
-        def opts = new WaveConfig([:])
-        then:
-        opts.spackOpts().basePackages == null
-        opts.spackOpts().commands == null
-
-        when:
-        opts = new WaveConfig([build:[spack:[ basePackages: 'foo bar', commands:['USER hola'] ]]])
-        then:
-        opts.spackOpts().basePackages == 'foo bar'
-        opts.spackOpts().commands == ['USER hola']
-        
-    }
-
     def 'should get build and cache repos' () {
         when:
         def opts = new WaveConfig([:])
