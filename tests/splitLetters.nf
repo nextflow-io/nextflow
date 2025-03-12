@@ -22,6 +22,7 @@ process splitLetters {
     output:
     file 'chunk_*'
 
+    script:
     """
     printf '${params.str}' | split -b 6 - chunk_
     """
@@ -35,6 +36,7 @@ process massage {
     output:
     stdout
 
+    script:
     """
     cat $x | tr '[a-z]' '[A-Z]'
     """

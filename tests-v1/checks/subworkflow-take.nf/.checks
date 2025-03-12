@@ -1,0 +1,19 @@
+set -e
+
+rm * || true
+$NXF_RUN | tee stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'process > flow1:foo'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'process > flow1:bar'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'process > flow2:foo'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'process > flow2:bar'` == 1 ]] || false
+
+
+rm * || true
+$NXF_RUN -resume | tee stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > flow1:foo'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > flow1:bar'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > flow2:foo'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > flow2:bar'` == 1 ]] || false
+
