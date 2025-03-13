@@ -1126,10 +1126,10 @@ class Session implements ISession {
         }
     }
 
-    void notifyWorkflowPublish(Object value) {
+    void notifyWorkflowPublish(String name, Object value) {
         for( final observer : observers ) {
             try {
-                observer.onWorkflowPublish(value)
+                observer.onWorkflowPublish(name, value)
             }
             catch( Exception e ) {
                 log.error "Failed to invoke observer on workflow publish: $observer", e
@@ -1137,11 +1137,13 @@ class Session implements ISession {
         }
     }
 
-    void notifyFilePublish(Path destination, Path source=null) {
+    void notifyFilePublish(Path destination, Path source, Map annotations) {
         def copy = new ArrayList<TraceObserver>(observers)
         for( TraceObserver observer : copy  ) {
             try {
                 observer.onFilePublish(destination, source)
+                if (annotations)
+                    observer.onFileAnnotation(destination, annotations)
             }
             catch( Exception e ) {
                 log.error "Failed to invoke observer on file publish: $observer", e

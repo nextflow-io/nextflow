@@ -342,7 +342,7 @@ class CidObserverTest extends Specification {
         when: 'Workflow complete'
             observer.onFlowComplete()
         then: 'Check history file is updated and Workflow Result is written in the cid store'
-            def results = new WorkflowResults( "cid://${observer.executionHash}", [ "cid://${observer.executionHash}/foo/file.bam", "cid://${observer.executionHash}/foo/file2.bam"])
+            def results = new WorkflowResults( "cid://${observer.executionHash}", [:], [ "cid://${observer.executionHash}/foo/file.bam", "cid://${observer.executionHash}/foo/file2.bam"])
             def finalCid = store.getHistoryLog().getRecord(uniqueId).resultsCid.substring(CID_PROT.size())
             finalCid != observer.executionHash
             folder.resolve(".meta/${finalCid}/.data.json").text == encoder.encode(results)

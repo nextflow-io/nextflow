@@ -581,7 +581,7 @@ class PublishDir {
     }
 
     protected void notifyFilePublish(Path destination, Path source=null) {
-        session.notifyFilePublish(destination, source)
+        session.notifyFilePublish(destination, source, tags as Map)
     }
 
 }

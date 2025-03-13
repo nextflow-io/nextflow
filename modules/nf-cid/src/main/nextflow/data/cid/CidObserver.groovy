@@ -83,7 +83,9 @@ class CidObserver implements TraceObserver {
         this.executionHash = storeWorkflowRun()
         workflowResults = new WorkflowResults(
             "$CID_PROT${executionHash}",
-            new ArrayList<String>())
+            new HashMap<String, Object>(),
+            new ArrayList<String>(),
+        )
         this.store.getHistoryLog().updateRunCid(session.uniqueId, "${CID_PROT}${this.executionHash}")
     }
 
@@ -259,7 +261,11 @@ class CidObserver implements TraceObserver {
     }
 
     @Override
-    void onFilePublish(Path destination, Path source){
+    void onFilePublish(Path destination, Path source) {
+        storePublishedFile(destination, source)
+    }
+
+    protected void storePublishedFile(Path destination, Path source = null, Map annotations = null){
         try {
             final checksum = new Checksum(
                 CacheHelper.hasher(destination).hash().toString(),
@@ -267,8 +273,9 @@ class CidObserver implements TraceObserver {
                 CacheHelper.HashMode.DEFAULT().toString().toLowerCase()
             )
             final rel = getWorkflowRelative(destination)
-            final key = "$executionHash/${rel}" as String
-            final sourceReference = getSourceReference(source)
+            final key = "$executionHash/${rel}"
+
+            final sourceReference = source ? getSourceReference(source) : "${CID_PROT}${executionHash}".toString()
             final attrs = readAttributes(destination)
             final value = new WorkflowOutput(
                 destination.toUriString(),
@@ -278,10 +285,9 @@ class CidObserver implements TraceObserver {
                 attrs.creationTime().toMillis(),
                 attrs.lastModifiedTime().toMillis())
             store.save(key, value)
-            workflowResults.outputs.add("${CID_PROT}${key}".toString())
-        }
-        catch (Throwable e) {
-            log.warn("Exception storing CID output $destination for workflow ${executionHash}.", e)
+            workflowResults.publishedData.add("${CID_PROT}${key}".toString())
+        } catch (Throwable e) {
+            log.warn("Exception storing published file $destination for workflow ${executionHash}.", e)
         }
     }
 
@@ -300,27 +306,42 @@ class CidObserver implements TraceObserver {
 
     @Override
     void onFilePublish(Path destination){
-        try {
-            final checksum = new Checksum(
-                CacheHelper.hasher(destination).hash().toString(),
-                "nextflow",
-                CacheHelper.HashMode.DEFAULT().toString().toLowerCase()
-            )
-            final rel = getWorkflowRelative(destination)
-            final key = "$executionHash/${rel}"
-            final attrs = readAttributes(destination)
-            final value = new WorkflowOutput(
-                destination.toUriString(),
-                checksum,
-                "${CID_PROT}${executionHash}".toString(),
-                attrs.size(),
-                attrs.creationTime().toMillis(),
-                attrs.lastModifiedTime().toMillis())
-            store.save(key, value)
-            workflowResults.outputs.add("${CID_PROT}${key}" as String)
-        }catch (Throwable e) {
-            log.warn("Exception storing CID output $destination for workflow ${executionHash}. ${e.getLocalizedMessage()}")
+        storePublishedFile (destination)
+    }
+
+    @Override
+    void onWorkflowPublish(String name, Object value){
+        synchronized (workflowResults.outputs) {
+            try {
+                def output = workflowResults.outputs.get(name) as List
+                if (output) {
+                    output.add(convertPathsToCidReferences(value))
+                } else {
+                    output = [convertPathsToCidReferences(value)]
+                }
+                workflowResults.outputs.put(name, output)
+            } catch (Throwable e) {
+                log.warn("Exception storing CID output $name for workflow ${executionHash}.", e)
+            }
         }
+    }
+
+    private Object convertPathsToCidReferences(Object value){
+        if( value instanceof Path ) {
+            final rel = getWorkflowRelative(value)
+            return rel ? "${CID_PROT}${executionHash}/${rel}".toString() : value
+        }
+
+        if( value instanceof Collection ) {
+            return value.collect { el -> convertPathsToCidReferences(el) }
+        }
+
+        if( value instanceof Map ) {
+            return value
+                .findAll { k, v -> v != null }
+                .collectEntries { k, v -> Map.entry(k, convertPathsToCidReferences(v)) }
+        }
+        return value
     }
 
     protected String getWorkflowRelative(Path path){
