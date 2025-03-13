@@ -35,7 +35,7 @@ import nextflow.util.Duration
 @CompileStatic
 class WaveConfig {
     final private static String DEF_ENDPOINT = 'https://wave.seqera.io'
-    final private static List<String> DEF_STRATEGIES = List.of('container','dockerfile','conda', 'spack')
+    final private static List<String> DEF_STRATEGIES = List.of('container','dockerfile','conda')
     final private Boolean enabled
     final private String endpoint
     final private List<URL> containerConfigUrl
