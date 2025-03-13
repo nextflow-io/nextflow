@@ -18,6 +18,7 @@ package nextflow.config
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.Const
 import nextflow.config.schema.ConfigScope
 import nextflow.config.schema.SchemaNode
 import nextflow.config.schema.ScopeName
@@ -73,10 +74,14 @@ class ConfigValidator {
     }
 
     void validate(ConfigMap config) {
+        if( Const.getSyntaxParser() != 'v2' )
+            return
         validate(config.toConfigObject())
     }
 
     void validate(ConfigObject config) {
+        if( Const.getSyntaxParser() != 'v2' )
+            return
         final flatConfig = config.flatten()
         for( String key : flatConfig.keySet() ) {
             final names = key.tokenize('.')
