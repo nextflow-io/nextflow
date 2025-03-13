@@ -275,6 +275,15 @@ abstract class AbstractGridExecutor extends Executor {
     protected abstract List<String> getKillCommand()
 
     /**
+     * The command to be used to report the status of a grid job
+     *
+     * @param jobId Id of the submitted job
+     * @param queue Queue where job has been submitted
+     * @return The command line to be used to report the job status
+     */
+    abstract List<String> queueJobStatusReportCommand(jobId, queue)
+
+    /**
      * Status as returned by the grid engine
      */
     static protected enum QueueStatus { PENDING, RUNNING, HOLD, ERROR, DONE, UNKNOWN }
@@ -424,6 +433,53 @@ abstract class AbstractGridExecutor extends Executor {
         // because the command wrapper script should not manage the container execution.
         // Instead, it is the command wrapper script that is launched run within a container process.
         return isFusionEnabled()
+    }
+
+    /**
+     * Dump de status report of a job.
+     *
+     * @param jobId Native id of the job
+     * @param queue Queue of the submitted
+     * @return String The job status report
+     */
+    String dumpJobStatusReport(jobId, queue){
+        List cmd = queueJobStatusReportCommand(jobId, queue)
+        if( !cmd ) {
+            // If no specific status report command dump queue status as previously
+            return dumpQueueStatus()
+        }
+        try {
+            log.trace "[${name.toUpperCase()}] getting job $jobId status report > cmd: ${cmd.join(' ')}"
+
+            final buf = new StringBuilder()
+            final process = new ProcessBuilder(cmd).redirectErrorStream(true).start()
+            final consumer = process.consumeProcessOutputStream(buf)
+            process.waitForOrKill(60_000)
+            final exit = process.exitValue(); consumer.join() // <-- make sure sync with the output consume #1045
+            final result = buf.toString()
+
+            if( exit == 0 ) {
+                log.trace "[${name.toUpperCase()}] getting job $jobId status report> cmd exit: $exit"
+                return result
+            }
+            else {
+                def m = """\
+                [${name.toUpperCase()}] job $jobId status report cannot be fetched.
+                - cmd executed: ${cmd.join(' ')}
+                - exit status : $exit
+                - output      :
+                """.stripIndent(true)
+                m += result.indent('  ')
+                log.warn1(m, firstOnly: true)
+                return dumpQueueStatus()
+            }
+
+        }
+        catch( Exception e ) {
+            log.warn "[${name.toUpperCase()}] failed to retrieve $jobId status report -- See the log file for details.", e
+            return dumpQueueStatus()
+        }
+
     }
 }
 
