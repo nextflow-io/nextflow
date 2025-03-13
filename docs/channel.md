@@ -80,9 +80,9 @@ See {ref}`channel-factory` for the full list of channel factories.
 
 ## Operators
 
-Channel operators, or "operators" for short, are functions that consume and produce channels. Because channels are asynchronous, operators are necessary to manipulate the values in a channel, aside from using a process. As a result, operators are useful for implementing the "glue logic" between processes.
+Channel operators, or _operators_ for short, are functions that consume and produce channels. Because channels are asynchronous, operators are necessary to manipulate the values in a channel, aside from using a process. As a result, operators are useful for implementing the _glue logic_ between processes.
 
-Here are some of the most commonly-used operators:
+Commonly used operators include:
 
 - {ref}`operator-combine`: emit the combinations of two channels
 
