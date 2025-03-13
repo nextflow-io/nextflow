@@ -157,7 +157,7 @@ The following settings are available:
 : :::{versionchanged} 24.08.0-edge
   The default value was changed from `5` to `0`.
   :::
-: Max number of execution attempts of a job interrupted by a EC2 spot reclaim event (default: `0`)
+: Max number of execution attempts of a job interrupted by a EC2 Spot reclaim event (default: `0`)
 
 `aws.batch.maxTransferAttempts`
 : Max number of downloads attempts from S3 (default: `1`).
@@ -854,7 +854,7 @@ The following settings are available for Google Cloud Batch:
 : :::{versionchanged} 24.08.0-edge
   The default value was changed from `5` to `0`.
   :::
-: Max number of execution attempts of a job interrupted by a Compute Engine spot reclaim event (default: `0`).
+: Max number of execution attempts of a job interrupted by a Compute Engine Spot reclaim event (default: `0`).
 : See also: `google.batch.autoRetryExitCodes`
 
 `google.batch.network`
