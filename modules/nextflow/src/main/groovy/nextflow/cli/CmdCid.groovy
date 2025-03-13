@@ -247,7 +247,7 @@ class CmdCid extends CmdBase implements UsageAware {
                 usage()
                 return
             }
-            operations.diff(config, args)
+            operation.diff(config, args)
         }
 
         @Override

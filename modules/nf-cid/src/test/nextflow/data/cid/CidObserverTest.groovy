@@ -325,7 +325,7 @@ class CidObserverTest extends Specification {
             def fileHash1 = CacheHelper.hasher(outFile1).hash().toString()
             def output1 = new WorkflowOutput(outFile1.toString(), new Checksum(fileHash1, "nextflow", "standard"), "cid://123987/file.bam",
             attrs1.size(), attrs1.creationTime().toMillis(), attrs1.lastModifiedTime().toMillis() )
-            folder.resolve(".meta/${observer.executionHash}/foo/file.bam/.data.json").text == encoder.encode(output1)
+            folder.resolve(".meta/${observer.executionHash}/outputs/foo/file.bam/.data.json").text == encoder.encode(output1)
 
         when: 'publish without source path'
         def outFile2 = outputDir.resolve('foo/file2.bam')
@@ -337,15 +337,16 @@ class CidObserverTest extends Specification {
         then: 'Check outFile2 metadata in cid store'
             def output2 = new WorkflowOutput(outFile2.toString(), new Checksum(fileHash2, "nextflow", "standard"), "cid://${observer.executionHash}" ,
             attrs2.size(), attrs2.creationTime().toMillis(), attrs2.lastModifiedTime().toMillis() )
-            folder.resolve(".meta/${observer.executionHash}/foo/file2.bam/.data.json").text == encoder.encode(output2)
+            folder.resolve(".meta/${observer.executionHash}/outputs/foo/file2.bam/.data.json").text == encoder.encode(output2)
 
         when: 'Workflow complete'
             observer.onFlowComplete()
         then: 'Check history file is updated and Workflow Result is written in the cid store'
-            def results = new WorkflowResults( "cid://${observer.executionHash}", [:], [ "cid://${observer.executionHash}/foo/file.bam", "cid://${observer.executionHash}/foo/file2.bam"])
             def finalCid = store.getHistoryLog().getRecord(uniqueId).resultsCid.substring(CID_PROT.size())
             finalCid != observer.executionHash
-            folder.resolve(".meta/${finalCid}/.data.json").text == encoder.encode(results)
+            def resultsRetrieved = store.load(finalCid) as WorkflowResults
+            resultsRetrieved.outputs == [:]
+            resultsRetrieved.publishedFiles == [ "cid://${observer.executionHash}/outputs/foo/file.bam", "cid://${observer.executionHash}/outputs/foo/file2.bam"]
 
         cleanup:
             folder?.deleteDir()

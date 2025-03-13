@@ -126,7 +126,10 @@ trait TraceObserver {
      * Method that is invoked when a workflow output is published.
      *
      * @param name
+<<<<<<< HEAD
      *      The name of the workflow output
+=======
+>>>>>>> 3289e9e30 (first POC output structure and annotations)
      * @param value
      *      A list if the published channel was a queue channel,
      *      otherwise an object if the channel was a value channel
