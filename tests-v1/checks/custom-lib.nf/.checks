@@ -1,0 +1,23 @@
+#
+# check the ability to load custom script/classes in the 
+# local `lib` directory 
+#
+set -e
+
+# copy the test script in this directory 
+cp ${NXF_SCRIPT:-../../custom-lib.nf} test.nf
+
+# crate a library class 
+mkdir -p lib
+cat >lib/Foo.groovy <<EOL
+class Foo {
+
+  static String hello() { "Hello world!" }
+
+}
+EOL
+
+${NXF_CMD:-nextflow} run test.nf | tee stdout
+
+[[ `< stdout grep -c 'Hello world!'` == 1 ]] || false
+

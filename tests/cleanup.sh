@@ -1,3 +1,4 @@
+#!/bin/bash
 find . -name .report | xargs rm
 find . -name stdout | xargs rm
 find . -name .stdout | xargs rm

@@ -24,6 +24,7 @@ process storeCache  {
     output:
     file "${cheers}.txt" 
 
+    script:
     "printf $cheers > ${cheers}.txt"
 
 }
