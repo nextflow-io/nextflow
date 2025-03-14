@@ -110,6 +110,11 @@ class PublishDir {
     private def tags
 
     /**
+     * Annotations to be associated to the target file
+     */
+    private Map annotations
+
+    /**
      * The content type of the file. Currently only supported by AWS S3.
      * This can be either a MIME type content type string or a Boolean value
      */
@@ -210,6 +215,9 @@ class PublishDir {
 
         if( params.tags != null )
             result.tags = params.tags
+
+        if( params.annotations != null )
+            result.annotations = params.annotations as Map
 
         if( params.contentType instanceof Boolean )
             result.contentType = params.contentType
@@ -581,7 +589,7 @@ class PublishDir {
     }
 
     protected void notifyFilePublish(Path destination, Path source=null) {
-        session.notifyFilePublish(destination, source, tags as Map)
+        session.notifyFilePublish(destination, source, annotations)
     }
 
 }

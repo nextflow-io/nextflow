@@ -1141,7 +1141,6 @@ class Session implements ISession {
         def copy = new ArrayList<TraceObserver>(observers)
         for( TraceObserver observer : copy  ) {
             try {
-                observer.onFilePublish(destination, source)
                 observer.onFilePublish(destination, source, annotations)
             }
             catch( Exception e ) {

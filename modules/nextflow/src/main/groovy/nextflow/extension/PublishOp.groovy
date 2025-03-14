@@ -96,6 +96,10 @@ class PublishOp {
         final overrides = targetResolver instanceof Closure
             ? [saveAs: targetResolver]
             : [path: targetResolver]
+        if (opts.annotations instanceof Closure){
+            final annotations = opts.annotations as Closure
+            overrides.annotations = annotations.call(value) as Map
+        }
         final publisher = PublishDir.create(opts + overrides)
 
         // publish files

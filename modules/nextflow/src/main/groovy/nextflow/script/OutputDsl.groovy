@@ -84,7 +84,7 @@ class OutputDsl {
             final opts = publishOptions(name, defaults, overrides)
 
             if( opts.enabled == null || opts.enabled )
-                ops << new PublishOp(name, session, CH.getReadChannel(mixed), opts).apply()
+                ops << new PublishOp(session, name, CH.getReadChannel(mixed), opts).apply()
         }
     }
 
@@ -169,6 +169,14 @@ class OutputDsl {
 
         void tags(Map value) {
             setOption('tags', value)
+        }
+
+        void annotations(Map value) {
+            setOption('annotations', value)
+        }
+
+        void annotations(Closure value) {
+            setOption('annotations', value)
         }
 
         private void setOption(String name, Object value) {
