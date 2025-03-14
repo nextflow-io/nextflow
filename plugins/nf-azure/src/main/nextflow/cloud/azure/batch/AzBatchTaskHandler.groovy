@@ -116,17 +116,14 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final done = taskState0(taskKey)==BatchTaskState.COMPLETED
         if( done ) {
             // finalize the task
-            task.exitStatus = readExitFile()
+            final info = batchService.getTask(taskKey).executionInfo
+            task.exitStatus = info?.exitCode ?: readExitFile()
             task.stdout = outputFile
             task.stderr = errorFile
             status = TaskStatus.COMPLETED
-            final info = batchService.getTask(taskKey).executionInfo
-            if (info.result == BatchTaskExecutionResult.FAILURE) {
-                if (task.exitStatus != 0) {
-                    // If the exit status is not 0, throw a process failed exception and Nextflow will handle it with errorStrategy
-                    task.error = new ProcessFailedException("Task ${task.name} failed with exit code ${task.exitStatus}".toString())
-                } else {
-                    // Else use the existing error handling
+            if (info.result == BatchTaskExecutionResult.FAILURE ) {
+                if (task.exitStatus == 0 || task.exitStatus == Integer.MAX_VALUE) {
+                    // Consider unrecoverable failure when Task failure and exit code is 0 or does not exist (MAX_VALUE)
                     task.error = new ProcessUnrecoverableException(info.failureInfo.message)
                 }
             }
