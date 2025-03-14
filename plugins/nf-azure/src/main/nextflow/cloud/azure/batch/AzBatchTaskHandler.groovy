@@ -121,11 +121,8 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             task.stdout = outputFile
             task.stderr = errorFile
             status = TaskStatus.COMPLETED
-            if (info.result == BatchTaskExecutionResult.FAILURE ) {
-                if (task.exitStatus == 0 || task.exitStatus == Integer.MAX_VALUE) {
-                    // Consider unrecoverable failure when Task failure and exit code is 0 or does not exist (MAX_VALUE)
-                    task.error = new ProcessUnrecoverableException(info.failureInfo.message)
-                }
+            if (info.result == BatchTaskExecutionResult.FAILURE && task.exitStatus == 0) {
+                task.error = new ProcessUnrecoverableException(info.failureInfo.message)
             }
             deleteTask(taskKey, task)
             return true
