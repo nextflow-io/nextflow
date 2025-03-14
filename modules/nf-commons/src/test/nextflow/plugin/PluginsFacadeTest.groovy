@@ -1,6 +1,7 @@
 package nextflow.plugin
 
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 
 import com.sun.net.httpserver.HttpServer
@@ -467,6 +468,27 @@ class PluginsFacadeTest extends Specification {
         then:
         result == [www]
 
+    }
+
+    def 'should prefetch plugin metadata when starting plugins'() {
+        def specs = [new PluginSpec("nf-one"), new PluginSpec("nf-two", "~1.2.0")]
+
+        given:
+        def updater = Mock(PluginUpdater)
+        def unit = new PluginsFacade() {
+            PluginUpdater createUpdater(Path root, CustomPluginManager manager) {
+                return updater
+            }
+        }
+        unit.init()
+
+        when:
+        unit.start(specs)
+        then:
+        1 * updater.prefetchMetadata(specs) // order is important!
+        then:
+        1 * updater.prepareAndStart("nf-one", null)
+        1 * updater.prepareAndStart("nf-two", "~1.2.0")
     }
 
 }
