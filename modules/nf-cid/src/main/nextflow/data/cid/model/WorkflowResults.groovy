@@ -31,5 +31,5 @@ import nextflow.data.cid.serde.CidSerializable
 class WorkflowResults implements CidSerializable {
     String run
     Map<String, Object> outputs
-    List<String> publishedData
+    List<String> publishedFiles
 }

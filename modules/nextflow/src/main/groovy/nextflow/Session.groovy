@@ -1142,8 +1142,7 @@ class Session implements ISession {
         for( TraceObserver observer : copy  ) {
             try {
                 observer.onFilePublish(destination, source)
-                if (annotations)
-                    observer.onFileAnnotation(destination, annotations)
+                observer.onFilePublish(destination, source, annotations)
             }
             catch( Exception e ) {
                 log.error "Failed to invoke observer on file publish: $observer", e

@@ -54,7 +54,7 @@ class PublishOp {
 
     private volatile boolean complete
 
-    PublishOp(String name, Session session, DataflowReadChannel source, Map opts) {
+    PublishOp(Session session, String name, DataflowReadChannel source, Map opts) {
         this.session = session
         this.source = source
         this.opts = opts

@@ -123,7 +123,7 @@ trait TraceObserver {
     void onFlowError(TaskHandler handler, TraceRecord trace){}
 
     /**
-     * Method that is invoked when a value is published from a channel.
+     * Method that is invoked when a value is published to a workflow output.
      *
      * @param name
      * @param value
@@ -158,6 +158,8 @@ trait TraceObserver {
      * @param annotations
      *      The annotations attached to this file
      */
-    void onFileAnnotation(Path destination, Map annotations){}
+    void onFilePublish(Path destination, Path source, Map annotations){
+        onFilePublish(destination, source)
+    }
 
 }
