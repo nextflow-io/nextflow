@@ -143,8 +143,8 @@ class PublishOp {
 
         // if the resolved publish path is a string, resolve it
         // against the base output directory
-        if( resolvedPath instanceof String )
-            return outputDir.resolve(resolvedPath)
+        if( resolvedPath instanceof CharSequence )
+            return outputDir.resolve(resolvedPath.toString())
 
         throw new ScriptRuntimeException("Invalid output `path` directive -- it should either return a string or use the `>>` operator to publish files")
     }

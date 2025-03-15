@@ -11,18 +11,16 @@ export NXF_CMD=${NXF_CMD:-$(get_abs_filename ../launch.sh)}
 export NXF_ANSI_LOG=false
 export NXF_DISABLE_CHECK_LATEST=true
 
-#
-# Integration tests
-#
-if [[ $TEST_MODE == 'test_integration' ]]; then
-
+test_integration() {
     (
-      cd ../tests/
+      cd "$1"
       sudo bash cleanup.sh
       cd checks
       bash run.sh
     )
+}
 
+test_e2e() {
     if [[ $TEST_SMOKE == true ]]; then
       echo Skipping tests since TEST_SMOKE flag is true
       exit 0
@@ -45,8 +43,24 @@ if [[ $TEST_MODE == 'test_integration' ]]; then
     [[ $TOWER_ACCESS_TOKEN ]] && OPTS='-with-tower' || OPTS=''
     $NXF_CMD run nextflow-io/rnaseq-nf -with-docker $OPTS
     $NXF_CMD run nextflow-io/rnaseq-nf -with-docker $OPTS -resume
+}
 
-    exit 0
+#
+# Integration tests
+#
+if [[ $TEST_MODE == 'test_integration' ]]; then
+  test_integration ../tests/
+  test_integration ../tests-v1/
+  test_e2e
+fi
+
+#
+# Integration tests (strict syntax)
+#
+if [[ $TEST_MODE == 'test_parser_v2' ]]; then
+  export NXF_SYNTAX_PARSER=v2
+  test_integration ../tests/
+  test_e2e
 fi
 
 #

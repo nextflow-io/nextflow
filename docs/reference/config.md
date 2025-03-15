@@ -157,7 +157,7 @@ The following settings are available:
 : :::{versionchanged} 24.08.0-edge
   The default value was changed from `5` to `0`.
   :::
-: Max number of execution attempts of a job interrupted by a EC2 spot reclaim event (default: `0`)
+: Max number of execution attempts of a job interrupted by a EC2 Spot reclaim event (default: `0`)
 
 `aws.batch.maxTransferAttempts`
 : Max number of downloads attempts from S3 (default: `1`).
@@ -297,6 +297,12 @@ The following settings are available:
 `azure.activeDirectory.tenantId`
 : The Azure tenant ID
 
+`azure.azcopy.blobTier`
+: The blob [access tier](https://learn.microsoft.com/en-us/azure/storage/blobs/access-tiers-overview) used by `azcopy` to upload files to Azure Blob Storage. Valid options are `None`, `Hot`, or `Cool` (default: `None`).
+
+`azure.azcopy.blockSize`
+: The block size (in MB) used by `azcopy` to transfer files between Azure Blob Storage and compute nodes (default: 4).
+
 `azure.batch.accountName`
 : The batch service account name.
 
@@ -403,9 +409,6 @@ The following settings are available:
 
 `azure.managedIdentity.system`
 : When `true`, use the system-assigned [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) to authenticate Azure resources. See {ref}`azure-managed-identities` for more details.
-
-`azure.managedIdentity.tenantId`
-: The Azure tenant ID
 
 `azure.registry.server`
 : Specify the container registry from which to pull the Docker images (default: `docker.io`).
@@ -851,7 +854,7 @@ The following settings are available for Google Cloud Batch:
 : :::{versionchanged} 24.08.0-edge
   The default value was changed from `5` to `0`.
   :::
-: Max number of execution attempts of a job interrupted by a Compute Engine spot reclaim event (default: `0`).
+: Max number of execution attempts of a job interrupted by a Compute Engine Spot reclaim event (default: `0`).
 : See also: `google.batch.autoRetryExitCodes`
 
 `google.batch.network`

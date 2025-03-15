@@ -59,7 +59,7 @@ class OutputDslTest extends Specification {
             path('foo')
         }
         dsl.declare('bar') {
-            path('barbar')
+            path { v -> "${'barbar'}" }
             index {
                 path 'index.csv'
             }
