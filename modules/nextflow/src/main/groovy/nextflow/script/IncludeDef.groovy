@@ -16,10 +16,6 @@
 
 package nextflow.script
 
-import nextflow.exception.ScriptCompilationException
-import nextflow.plugin.extension.PluginExtensionProvider
-import nextflow.plugin.Plugins
-
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -32,6 +28,10 @@ import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.Session
 import nextflow.exception.IllegalModulePath
+import nextflow.exception.ScriptCompilationException
+import nextflow.plugin.Plugins
+import nextflow.plugin.extension.PluginExtensionProvider
+import nextflow.script.parser.v1.ScriptLoaderV1
 /**
  * Implements a script inclusion
  *
@@ -96,11 +96,11 @@ class IncludeDef {
         return this
     }
 
-    /*
-     * Note: this method invocation is injected during the Nextflow AST manipulation.
-     * Do not use it explicitly.
+    /**
+     * Used internally by the script DSL to include modules
+     * into a script.
      *
-     * @param ownerParams The params in the owner context
+     * @param ownerParams The params in the including script context
      */
     void load0(ScriptBinding.ParamsMap ownerParams) {
         checkValidPath(path)
@@ -109,7 +109,7 @@ class IncludeDef {
             return
         }
         // -- resolve the concrete against the current script
-        final moduleFile = realModulePath(path)
+        final moduleFile = realModulePath(path).normalize()
         // -- load the module
         final moduleScript = loadModule0(moduleFile, resolveParams(ownerParams), session)
         // -- add it to the inclusions
@@ -136,10 +136,17 @@ class IncludeDef {
     @PackageScope
     @Memoized
     static BaseScript loadModule0(Path path, Map params, Session session) {
+        final script = ScriptMeta.getScriptByPath(path)
+        if( script ) {
+            script.getBinding().setParams(params)
+            script.run()
+            return script
+        }
+
         final binding = new ScriptBinding() .setParams(params)
 
         // the execution of a library file has as side effect the registration of declared processes
-        new ScriptParser(session)
+        new ScriptLoaderV1(session)
                 .setModule(true)
                 .setBinding(binding)
                 .runScript(path)

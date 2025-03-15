@@ -188,6 +188,23 @@ class DockerBuilderTest extends Specification {
                 .runCommand == 'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --device /dev/fuse --cap-add SYS_ADMIN fedora'
     }
 
+    def 'test container platform' () {
+        expect:
+        new DockerBuilder('fedora')
+            .build()
+            .runCommand == 'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
+
+        new DockerBuilder('fedora')
+            .setPlatform('amd64')
+            .build()
+            .runCommand == 'docker run -i --platform amd64 -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
+
+        new DockerBuilder('fedora')
+            .setPlatform('linux/arm64')
+            .build()
+            .runCommand == 'docker run -i --platform linux/arm64 -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
+    }
+
     def 'test add mount'() {
 
         when:

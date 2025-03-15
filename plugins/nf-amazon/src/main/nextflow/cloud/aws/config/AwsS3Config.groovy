@@ -123,6 +123,6 @@ class AwsS3Config {
     }
 
     boolean isCustomEndpoint() {
-        endpoint && !endpoint.contains(".amazonaws.com")
+        endpoint && !endpoint.endsWith(".amazonaws.com")
     }
 }

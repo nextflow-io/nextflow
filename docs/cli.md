@@ -223,16 +223,38 @@ These commands will execute two different project revisions based on the given G
 
 ### Pipeline parameters
 
-Pipeline scripts can use an arbitrary number of parameters that can be overridden using the command line or Nextflow configuration files. Any script parameter can be specified on the command line by prefixing the parameter name with double-dash characters. For example:
+Pipeline scripts can define *parameters* that can be overridden on the command line.
 
-```console
-$ nextflow run <pipeline> --foo Hello
+Parameters can be declared in the main script:
+
+```nextflow
+params.alpha = 'default script value'
+
+workflow {
+  println "alpha = ${params.alpha}"
+}
 ```
 
-Then, the parameter can be accessed in the pipeline script using the `params.foo` identifier.
+Or in a config file:
+
+```groovy
+params {
+  alpha = 'default config value'
+}
+```
+
+The above parameter can be specified on the command line as `--alpha`:
+
+```console
+$ nextflow run main.nf --alpha Hello
+```
 
 :::{note}
-When the parameter name is formatted using `camelCase`, a second parameter is created with the same value using `kebab-case`, and vice versa.
+Parameters that are specified on the command line without a value are set to `true`.
+:::
+
+:::{note}
+Parameters that are specified on the command line in kebab case (e.g., `--foo-bar`) are automatically converted to camel case (e.g., `--fooBar`). Because of this, a parameter defined as `fooBar` in the pipeline script can be specified on the command line as `--fooBar` or `--foo-bar`.
 :::
 
 :::{warning}
@@ -245,14 +267,14 @@ $ nextflow run <pipeline> --files "*.fasta"
 
 Parameters specified on the command line can be also specified in a params file using the `-params-file` option.
 
-```bash
-nextflow run main.nf -params-file pipeline_params.yml
+```console
+$ nextflow run main.nf -params-file pipeline_params.yml
 ```
 
 The `-params-file` option loads parameters for your Nextflow pipeline from a JSON or YAML file. Parameters defined in the file are equivalent to specifying them directly on the command line. For example, instead of specifying parameters on the command line:
 
-```bash
-nextflow run main.nf --alpha 1 --beta foo
+```console
+$ nextflow run main.nf --alpha 1 --beta foo
 ```
 
 Parameters can be represented in YAML format:
@@ -271,7 +293,12 @@ Or in JSON format:
 }
 ```
 
-The parameters specified in a params file are merged with the resolved configuration. The values provided via a params file overwrite those of the same name in the Nextflow configuration file, but not those specified on the command line.
+Parameters are applied in the following order (from lowest to highest priority):
+
+1. Parameters defined in pipeline scripts (e.g. `main.nf`)
+2. Parameters defined in {ref}`config files <config-params>`
+6. Parameters specified in a params file (`-params-file`)
+7. Parameters specified on the command line (`--something value`)
 
 ## Managing projects
 
