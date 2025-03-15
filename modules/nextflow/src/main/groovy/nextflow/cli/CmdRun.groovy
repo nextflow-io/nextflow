@@ -37,6 +37,7 @@ import nextflow.NextflowMeta
 import nextflow.SysEnv
 import nextflow.config.ConfigBuilder
 import nextflow.config.ConfigMap
+import nextflow.config.ConfigValidator
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.plugin.Plugins
@@ -334,12 +335,12 @@ class CmdRun extends CmdBase implements HubOptions {
         // check DSL syntax in the config
         launchInfo(config, scriptFile)
 
-        // check if NXF_ variables are set in nextflow.config
-        checkConfigEnv(config)
-
         // -- load plugins
         final cfg = plugins ? [plugins: plugins.tokenize(',')] : config
         Plugins.load(cfg)
+
+        // -- validate config options
+        new ConfigValidator().validate(config)
 
         // -- create a new runner instance
         final runner = new ScriptRunner(config)
@@ -404,17 +405,6 @@ class CmdRun extends CmdBase implements HubOptions {
         else {
             // Plain header to the console if ANSI is disabled
             log.info "N E X T F L O W  ~  version ${BuildInfo.version}"
-        }
-    }
-
-    protected checkConfigEnv(ConfigMap config) {
-        // Warn about setting NXF_ environment variables within env config scope
-        final env = config.env as Map<String, String>
-        for( String name : env.keySet() ) {
-            if( name.startsWith('NXF_') && name!='NXF_DEBUG' ) {
-                final msg = "Nextflow variables must be defined in the launching environment - The following variable set in the config file is going to be ignored: '$name'"
-                log.warn(msg)
-            }
         }
     }
 
