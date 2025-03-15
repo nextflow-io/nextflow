@@ -38,6 +38,8 @@ class PublishOp {
 
     private Session session
 
+    private String name
+
     private DataflowReadChannel source
 
     private Map opts
@@ -50,12 +52,11 @@ class PublishOp {
 
     private List indexRecords = []
 
-    private String name
-
     private volatile boolean complete
 
     PublishOp(Session session, String name, DataflowReadChannel source, Map opts) {
         this.session = session
+        this.name = name
         this.source = source
         this.opts = opts
         this.path = opts.path as String
@@ -63,7 +64,6 @@ class PublishOp {
             this.pathResolver = opts.pathResolver as Closure
         if( opts.index )
             this.indexOpts = new IndexOpts(session.outputDir, opts.index as Map)
-        this.name = name
     }
 
     boolean getComplete() { complete }
@@ -109,15 +109,11 @@ class PublishOp {
             final files = entry.value
             publisher.apply(files, sourceDir)
         }
-        // append record to index file
-        if( indexOpts ) {
-            final record = indexOpts.mapper != null ? indexOpts.mapper.call(value) : value
-            final normalized = normalizePaths(record, targetResolver)
-            log.trace "Normalized record for index file: ${normalized}"
-            indexRecords << normalized
-            // emit workflow publish event
-            session.notifyWorkflowPublish(name, normalized)
-        }
+
+        // append record to index
+        final normalized = normalizePaths(value, targetResolver)
+        log.trace "Normalized record for index file: ${normalized}"
+        indexRecords << normalized
     }
 
     /**
@@ -156,12 +152,21 @@ class PublishOp {
     }
 
     /**
-     * Once all values have been published, write the
-     * index file (if enabled).
+     * Once all values have been published, publish the index
+     * and write it to a file (if enabled).
      */
     protected void onComplete(nope) {
-        if( indexOpts && indexRecords.size() > 0 ) {
-            log.trace "Saving records to index file: ${indexRecords}"
+        // publish individual record if source is a value channel
+        final index = CH.isValue(source)
+            ? indexRecords.first()
+            : indexRecords
+
+        // publish workflow output
+        session.notifyWorkflowPublish(name, index)
+
+        // write index file
+        if( indexOpts && index ) {
+            log.trace "Saving records to index file: ${index}"
             final indexPath = indexOpts.path
             final ext = indexPath.getExtension()
             indexPath.parent.mkdirs()
