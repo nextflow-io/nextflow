@@ -517,7 +517,7 @@ Each `>>` specifies a *source file* and *publish target*. The source file should
 
 ### Index files
 
-An output can create an index file of the values that were published. An index file preserves the structure of channel values, including metadata, which is simpler than encoding this information with directories and file names. The index file can be CSV (`.csv`) or JSON (`.json`). The channel values should be files, lists, or maps.
+Each output can create an index file of the values that were published. An index file preserves the structure of channel values, including metadata, which is simpler than encoding this information with directories and file names. The index file can be CSV (`.csv`), JSON (`.json`), or YAML (`.yml`, `.yaml`). The channel values should be files, lists, or maps.
 
 For example:
 
@@ -583,13 +583,13 @@ The following directives are available for each output in the output block:
   The following directives are available in an index definition:
 
   `header`
-  : When `true`, the keys of the first record are used as the column names (default: `false`). Can also be a list of column names. Only used for `csv` files.
+  : When `true`, the keys of the first record are used as the column names (default: `false`). Can also be a list of column names. Only used for CSV files.
 
   `path`
   : The name of the index file relative to the base output directory (required). Can be a CSV, JSON, or YAML file.
 
   `sep`
-  : The character used to separate values (default: `','`). Only used for `csv` files.
+  : The character used to separate values (default: `','`). Only used for CSV files.
 
 `path`
 : Specify the publish path relative to the output directory (default: `'.'`). Can be a path, a closure that defines a custom directory for each published value, or a closure that publishes individual files using the `>>` operator.
@@ -626,7 +626,7 @@ The third preview, introduced in 25.04, made the following breaking changes:
 
 - The syntax for dynamic publish paths has changed. Instead of defining a closure that returns a closure with the `path` directive, the outer closure should use the `>>` operator to publish individual files.
 
-- The `mapper` index directive has been removed. Use a `map` operator on the published channel instead.
+- The `mapper` index directive has been removed. Use a `map` operator in the workflwo body instead.
 
 ### Migrating from first preview
 
@@ -639,4 +639,3 @@ The first preview of workflow publishing was introduced in 24.04. The second pre
   In other words, only target blocks can be specified in the output block, but target blocks can still specify directives such as `mode`.
 
 - Target names cannot begin or end with a slash (`/`);
-
