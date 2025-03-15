@@ -29,12 +29,12 @@ process foo {
 
     script:
     """
-    if [[ -f $PWD/marker ]]; then
+    if [[ -f $launchDir/marker ]]; then
     	echo DONE - mem: $task.memory - time: $task.time
     	exit 0
     else
     	echo FAIL
-    	touch $PWD/marker
+    	touch $launchDir/marker
     	exit 5;
     fi
     """

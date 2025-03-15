@@ -50,6 +50,29 @@ class WaveFactoryTest extends Specification {
     }
 
     @Unroll
+    def 'should get wave enable status' () {
+        given:
+        SysEnv.push(ENV)
+        def session = Mock(Session) { getConfig() >> CONFIG }
+
+        when:
+        def result = WaveFactory.shouldEnable(session)
+        then:
+        result == ENABLED
+        CONFIG == EXPECTED
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        ENABLED | ENV                               | CONFIG                        | EXPECTED
+        false   | [:]                               | [:]                           | [:]
+        true    | [:]                               | [wave:[enabled:true]]         | [wave:[enabled:true]]
+        true    | [:]                               | [wave:[enabled:true], fusion:[enabled:true]]     | [wave:[enabled:true,bundleProjectResources:true], fusion:[enabled:true]]
+        false   | [NXF_DISABLE_WAVE_SERVICE: 'true']| [wave:[enabled:true], fusion:[enabled:true]]     | [wave:[enabled:false], fusion:[enabled:true]]
+    }
+
+    @Unroll
     def 'should check s5cmd is enabled' () {
         given:
         def factory = new WaveFactory()
@@ -65,6 +88,7 @@ class WaveFactoryTest extends Specification {
         [aws:[batch:[platformType:'Fargate']]]   | true
 
     }
+
     def 'should fail when wave is disabled' () {
         given:
         def CONFIG = [wave:[:], fusion:[enabled:true]]
@@ -93,7 +117,9 @@ class WaveFactoryTest extends Specification {
         0 * session.setDisableRemoteBinDir(true) >> null
         and:
         CONFIG == [wave:[:], fusion:[enabled:true]]
-    }
 
+        cleanup:
+        SysEnv.pop()
+    }
 
 }

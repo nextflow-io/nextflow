@@ -2,7 +2,7 @@ package nextflow.prov
 
 import static test.TestHelper.*
 
-import nextflow.config.ConfigParser
+import nextflow.config.ConfigParserFactory
 import nextflow.extension.SplitFastqOp2Test
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
@@ -23,7 +23,7 @@ class ProvTest extends Dsl2Spec {
     }
 
     ConfigObject globalConfig() {
-        new ConfigParser().parse('''
+        ConfigParserFactory.create().parse('''
         process.fair = true
         ''')
     }

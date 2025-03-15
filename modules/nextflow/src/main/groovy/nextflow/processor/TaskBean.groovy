@@ -24,7 +24,6 @@ import nextflow.container.ContainerConfig
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.TaskArrayExecutor
 import nextflow.util.MemoryUnit
-
 /**
  * Serializable task value object. Holds configuration values required to
  * launch the task execution
@@ -92,6 +91,8 @@ class TaskBean implements Serializable, Cloneable {
 
     String containerOptions
 
+    String containerPlatform
+
     Map<String,Path> inputFiles
 
     List<String> outputFiles
@@ -158,6 +159,7 @@ class TaskBean implements Serializable, Cloneable {
         this.containerNative = task.isContainerNative()
         this.containerEnabled = task.isContainerEnabled()
         this.containerOptions = task.config.getContainerOptions()
+        this.containerPlatform = task.getContainerPlatform()
         // secret management
         this.secretNative = task.isSecretNative()
         this.secretNames = task.config.getSecret()

@@ -26,6 +26,7 @@ class OutputDslTest extends Specification {
         def file2 = work2.resolve('file2.txt'); file2.text = 'world'
         and:
         def session = Mock(Session) {
+            getPublishTargets() >> [:]
             getConfig() >> [
                 workflow: [
                     output: [
@@ -47,22 +48,20 @@ class OutputDslTest extends Specification {
         ch2.bind(file2)
         ch2.bind(Channel.STOP)
         and:
-        def targets = [
-            (ch1): 'foo',
-            (ch2): 'bar'
-        ]
+        session.publishTargets.put(ch1, 'foo')
+        session.publishTargets.put(ch2, 'bar')
         def dsl = new OutputDsl()
         and:
         SysEnv.push(NXF_FILE_ROOT: root.toString())
 
         when:
         dsl.target('bar') {
-            path('barbar')
+            path { v -> "${'barbar'}" }
             index {
                 path 'index.csv'
             }
         }
-        dsl.build(targets)
+        dsl.build(session)
 
         def now = System.currentTimeMillis()
         while( !dsl.complete ) {
@@ -74,13 +73,13 @@ class OutputDslTest extends Specification {
         then:
         outputDir.resolve('foo/file1.txt').text == 'Hello'
         outputDir.resolve('barbar/file2.txt').text == 'world'
-        outputDir.resolve('barbar/index.csv').text == """\
+        outputDir.resolve('index.csv').text == """\
             "file2","${outputDir}/barbar/file2.txt"
             """.stripIndent()
         and:
         1 * session.notifyFilePublish(outputDir.resolve('foo/file1.txt'), file1)
         1 * session.notifyFilePublish(outputDir.resolve('barbar/file2.txt'), file2)
-        1 * session.notifyFilePublish(outputDir.resolve('barbar/index.csv'))
+        1 * session.notifyFilePublish(outputDir.resolve('index.csv'))
 
         cleanup:
         SysEnv.pop()

@@ -48,10 +48,11 @@ dependencies {
     }
 
     // address security vulnerabilities
-    runtimeOnly 'io.netty:netty-common:4.1.115.Final'
+    runtimeOnly 'io.netty:netty-handler:4.1.118.Final'
+    runtimeOnly 'net.minidev:json-smart:2.5.2'
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.apache.groovy:groovy:4.0.25"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.25"
+    testImplementation "org.apache.groovy:groovy:4.0.26"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.26"
 }
