@@ -123,11 +123,12 @@ trait TraceObserver {
     void onFlowError(TaskHandler handler, TraceRecord trace){}
 
     /**
-     * Method that is invoked when a value is published from a channel.
+     * Method that is invoked when a value is published to a workflow output.
      *
+     * @param name
      * @param value
      */
-    void onWorkflowPublish(Object value){}
+    void onWorkflowPublish(String name, Object value){}
 
     /**
      * Method that is invoke when an output file is published
@@ -150,4 +151,15 @@ trait TraceObserver {
     void onFilePublish(Path destination, Path source){
         onFilePublish(destination)
     }
+    /**
+     * Method that is invoked when a output file is annotated
+     * @param destination
+     *      The destination path at `publishDir` folder.
+     * @param annotations
+     *      The annotations attached to this file
+     */
+    void onFilePublish(Path destination, Path source, Map annotations){
+        onFilePublish(destination, source)
+    }
+
 }

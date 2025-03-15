@@ -17,6 +17,8 @@
 
 package nextflow.data.cid
 
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 import nextflow.util.TestOnly
 
 import java.nio.file.Files

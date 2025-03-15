@@ -50,9 +50,11 @@ class PublishOp {
 
     private List indexRecords = []
 
+    private String name
+
     private volatile boolean complete
 
-    PublishOp(Session session, DataflowReadChannel source, Map opts) {
+    PublishOp(Session session, String name, DataflowReadChannel source, Map opts) {
         this.session = session
         this.source = source
         this.opts = opts
@@ -61,6 +63,7 @@ class PublishOp {
             this.pathResolver = opts.pathResolver as Closure
         if( opts.index )
             this.indexOpts = new IndexOpts(session.outputDir, opts.index as Map)
+        this.name = name
     }
 
     boolean getComplete() { complete }
@@ -89,13 +92,14 @@ class PublishOp {
         if( targetResolver == null )
             return
 
-        // emit workflow publish event
-        session.notifyWorkflowPublish(value)
-
         // create publisher
         final overrides = targetResolver instanceof Closure
             ? [saveAs: targetResolver]
             : [path: targetResolver]
+        if (opts.annotations instanceof Closure){
+            final annotations = opts.annotations as Closure
+            overrides.annotations = annotations.call(value) as Map
+        }
         final publisher = PublishDir.create(opts + overrides)
 
         // publish files
@@ -105,13 +109,14 @@ class PublishOp {
             final files = entry.value
             publisher.apply(files, sourceDir)
         }
-
         // append record to index file
         if( indexOpts ) {
             final record = indexOpts.mapper != null ? indexOpts.mapper.call(value) : value
             final normalized = normalizePaths(record, targetResolver)
             log.trace "Normalized record for index file: ${normalized}"
             indexRecords << normalized
+            // emit workflow publish event
+            session.notifyWorkflowPublish(name, normalized)
         }
     }
 
@@ -169,7 +174,7 @@ class PublishOp {
             else {
                 log.warn "Invalid extension '${ext}' for index file '${indexPath}' -- should be 'csv' or 'json'"
             }
-            session.notifyFilePublish(indexPath)
+            session.notifyFilePublish(indexPath, null, opts.tags as Map)
         }
 
         log.trace "Publish operator complete"
