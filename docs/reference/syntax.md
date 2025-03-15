@@ -827,7 +827,7 @@ If the type is implicitly available in the script, the *fully-qualified type nam
 new Date()
 ```
 
-See {ref}`stdlib-default-imports` for the set of types which are implicitly available in Nextflow scripts.
+See {ref}`stdlib-page` for the set of types that are available in Nextflow scripts.
 
 ### Unary expressions
 
