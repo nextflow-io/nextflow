@@ -166,13 +166,12 @@ class WorkflowStatsTest extends Specification {
 
     def 'should return task percents' () {
         given:
-        def stats = new WorkflowStats(succeededCount: 20, cachedCount: 40, ignoredCount: 60, failedCount: 80)
+        def stats = new WorkflowStats(succeededCount: 20, cachedCount: 50, failedCount: 130)
 
         expect: 
         stats.getSucceedPct() == 10.0f
-        stats.getCachedPct() == 20.0f
-        stats.getIgnoredPct() == 30.0f
-        stats.getFailedPct() == 40.0f
+        stats.getCachedPct() == 25.0f
+        stats.getFailedPct() == 65.0f
 
     }
 
