@@ -38,6 +38,8 @@ class PublishOp {
 
     private Session session
 
+    private String name
+
     private DataflowReadChannel source
 
     private Map publishOpts
@@ -52,8 +54,9 @@ class PublishOp {
 
     private volatile boolean complete
 
-    PublishOp(Session session, DataflowReadChannel source, Map opts) {
+    PublishOp(Session session, String name, DataflowReadChannel source, Map opts) {
         this.session = session
+        this.name = name
         this.source = source
         this.publishOpts = opts
         this.path = opts.path as String
@@ -89,9 +92,6 @@ class PublishOp {
         if( targetResolver == null )
             return
 
-        // emit workflow publish event
-        session.notifyWorkflowPublish(value)
-
         // create publisher
         final overrides = targetResolver instanceof Closure
             ? [saveAs: targetResolver]
@@ -106,12 +106,10 @@ class PublishOp {
             publisher.apply(files, sourceDir)
         }
 
-        // append record to index file
-        if( indexOpts ) {
-            final normalized = normalizePaths(value, targetResolver)
-            log.trace "Normalized record for index file: ${normalized}"
-            indexRecords << normalized
-        }
+        // append record to index
+        final normalized = normalizePaths(value, targetResolver)
+        log.trace "Normalized record for index file: ${normalized}"
+        indexRecords << normalized
     }
 
     /**
@@ -186,12 +184,21 @@ class PublishOp {
     }
 
     /**
-     * Once all values have been published, write the
-     * index file (if enabled).
+     * Once all values have been published, publish the index
+     * and write it to a file (if enabled).
      */
     protected void onComplete(nope) {
-        if( indexOpts && indexRecords.size() > 0 ) {
-            log.trace "Saving records to index file: ${indexRecords}"
+        // publish individual record if source is a value channel
+        final index = CH.isValue(source)
+            ? indexRecords.first()
+            : indexRecords
+
+        // publish workflow output
+        session.notifyWorkflowPublish(name, index)
+
+        // write index file
+        if( indexOpts && index ) {
+            log.trace "Saving records to index file: ${index}"
             final indexPath = indexOpts.path
             final ext = indexPath.getExtension()
             indexPath.parent.mkdirs()
@@ -199,10 +206,10 @@ class PublishOp {
                 new CsvWriter(header: indexOpts.header, sep: indexOpts.sep).apply(indexRecords, indexPath)
             }
             else if( ext == 'json' ) {
-                indexPath.text = DumpHelper.prettyPrintJson(indexRecords)
+                indexPath.text = DumpHelper.prettyPrintJson(index)
             }
             else if( ext == 'yaml' || ext == 'yml' ) {
-                indexPath.text = DumpHelper.prettyPrintYaml(indexRecords)
+                indexPath.text = DumpHelper.prettyPrintYaml(index)
             }
             else {
                 log.warn "Invalid extension '${ext}' for index file '${indexPath}' -- should be CSV, JSON, or YAML"

@@ -75,7 +75,7 @@ class OutputDsl {
             final opts = publishOptions(name, defaults, overrides)
 
             if( opts.enabled == null || opts.enabled )
-                ops << new PublishOp(session, CH.getReadChannel(source), opts).apply()
+                ops << new PublishOp(session, name, CH.getReadChannel(source), opts).apply()
         }
     }
 
