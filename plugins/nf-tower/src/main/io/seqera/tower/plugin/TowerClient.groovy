@@ -17,11 +17,11 @@
 
 package io.seqera.tower.plugin
 
-
 import java.nio.file.Path
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
@@ -29,10 +29,14 @@ import groovy.json.JsonGenerator
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.container.resolver.ContainerMeta
+import nextflow.container.resolver.ContainerResolver
+import nextflow.container.resolver.ContainerResolverProvider
 import nextflow.exception.AbortOperationException
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
@@ -45,7 +49,6 @@ import nextflow.util.LoggerHelper
 import nextflow.util.ProcessHelper
 import nextflow.util.SimpleHttpClient
 import nextflow.util.Threads
-
 /**
  * Send out messages via HTTP to a configured URL on different workflow
  * execution events.
@@ -138,6 +141,7 @@ class TowerClient implements TraceObserver {
 
     private TowerReports reports
 
+    private Map<String,Map<String,Object>> allContainers = new ConcurrentHashMap<>()
 
     /**
      * Constructor that consumes a URL and creates
@@ -707,7 +711,18 @@ class TowerClient implements TraceObserver {
         final result = new LinkedHashMap(5)
         result.put('tasks', payload)
         result.put('progress', getWorkflowProgress(true))
+        result.put('containers', getNewContainers(tasks))
         result.instant = Instant.now().toEpochMilli()
+        return result
+    }
+
+    protected List<ContainerMeta> getNewContainers(Collection<TraceRecord> tasks) {
+        final result = new ArrayList<ContainerMeta>()
+        for( TraceRecord it : tasks ) {
+            final meta = it.getContainerMeta()
+            if( meta && !allContainers.containsKey(meta.targetImage) )
+                result.add(meta)
+        }
         return result
     }
 
@@ -841,4 +856,8 @@ class TowerClient implements TraceObserver {
         }
     }
 
+    @Memoized
+    private ContainerResolver containerResolver() {
+        ContainerResolverProvider.load()
+    }
 }
