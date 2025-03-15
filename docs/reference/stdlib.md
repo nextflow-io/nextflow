@@ -205,7 +205,10 @@ The following functions are available in Nextflow scripts:
 : Stop the pipeline execution and return an exit code and optional error message.
 
 `file( filePattern: String, [options] ) -> Path | List<Path>`
-: Get a file from a file name or glob pattern. Returns a collection of files if the glob pattern yields zero or multiple files.
+: Get a file from a file name or glob pattern. Returns a collection of files if the glob pattern does not yield exactly one file.
+: :::{note}
+  When using the {ref}`strict syntax <strict-syntax>`, this function will report a warning when it returns a collection of files. Use `files()` to get a collection of files instead.
+  :::
 
 : The following options are available:
 
