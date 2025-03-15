@@ -473,27 +473,11 @@ workflow {
 }
 ```
 
-:::{versionadded} 23.09.0-edge
-:::
-
-By default, `path` inputs will accept any number of files and stage them accordingly. The `arity` option can be used to enforce the expected number of files, either as a number or a range.
-
-For example:
-
-```nextflow
-input:
-    path('one.txt', arity: '1')         // exactly one file is expected
-    path('pair_*.txt', arity: '2')      // exactly two files are expected
-    path('many_*.txt', arity: '1..*')   // one or more files are expected
-```
-
-When a task is executed, Nextflow will check whether the received files for each path input match the declared arity, and fail if they do not.
-
 :::{note}
 Process `path` inputs have nearly the same interface as described in {ref}`stdlib-types-path`, with one difference which is relevant when files are staged into a subdirectory. Given the following input:
 
 ```nextflow
-path x, name: 'my-dir/*'
+path x, name: 'my-dir/file.txt'
 ```
 
 In this case, `x.name` returns the file name with the parent directory (e.g. `my-dir/file.txt`), whereas normally it would return the file name (e.g. `file.txt`). You can use `x.fileName.name` to get the file name.
@@ -532,12 +516,12 @@ seq1 seq2 seq3
 
 The target input file name may contain the `*` and `?` wildcards, which can be used to control the name of staged files. The following table shows how the wildcards are replaced depending on the cardinality of the received input collection.
 
-| Cardinality | Name pattern | Staged file names                                                                                       |
+| Arity       | Name pattern | Staged file names                                                                                       |
 | ----------- | ------------ | ------------------------------------------------------------------------------------------------------- |
 | any         | `*`          | named as the source file                                                                                |
-| 1           | `file*.ext`  | `file.ext`                                                                                              |
-| 1           | `file?.ext`  | `file1.ext`                                                                                             |
-| 1           | `file??.ext` | `file01.ext`                                                                                            |
+| one         | `file*.ext`  | `file.ext`                                                                                              |
+| one         | `file?.ext`  | `file1.ext`                                                                                             |
+| one         | `file??.ext` | `file01.ext`                                                                                            |
 | many        | `file*.ext`  | `file1.ext`, `file2.ext`, `file3.ext`, ..                                                               |
 | many        | `file?.ext`  | `file1.ext`, `file2.ext`, `file3.ext`, ..                                                               |
 | many        | `file??.ext` | `file01.ext`, `file02.ext`, `file03.ext`, ..                                                            |
@@ -567,6 +551,22 @@ workflow {
 :::{note}
 Rewriting input file names according to a named pattern is an extra feature and not at all required. The normal file input syntax introduced in the {ref}`process-input-path` section is valid for collections of multiple files as well. To handle multiple input files while preserving the original file names, use a variable identifier or the `*` wildcard.
 :::
+
+:::{versionadded} 23.09.0-edge
+:::
+
+The `arity` option can be used to enforce the expected number of files, either as a number or a range.
+
+For example:
+
+```nextflow
+input:
+path('one.txt', arity: '1')         // exactly one file is expected
+path('pair_*.txt', arity: '2')      // exactly two files are expected
+path('many_*.txt', arity: '1..*')   // one or more files are expected
+```
+
+When a task is executed, Nextflow will check whether the received files for each path input match the declared arity, and fail if they do not. When the arity is `'1'`, the corresponding input variable will be a single file; otherwise, it will be a list of files.
 
 ### Dynamic input file names
 
@@ -921,22 +921,6 @@ In the above example, the `randomNum` process creates a file named `result.txt` 
 
 Refer to the {ref}`process reference <process-reference-outputs>` for the list of available options for `path` outputs.
 
-:::{versionadded} 23.09.0-edge
-:::
-
-By default, `path` outputs will accept any number of matching files from the task directory. The `arity` option can be used to enforce the expected number of files, either as a number or a range.
-
-For example:
-
-```nextflow
-output:
-path('one.txt', arity: '1')         // exactly one file is expected
-path('pair_*.txt', arity: '2')      // exactly two files are expected
-path('many_*.txt', arity: '1..*')   // one or more files are expected
-```
-
-When a task completes, Nextflow will check whether the produced files for each path output match the declared arity, and fail if they do not.
-
 ### Multiple output files
 
 When an output file name contains a `*` or `?` wildcard character, it is interpreted as a [glob][glob] path matcher. This allows you to capture multiple files into a list and emit the list as a single value. For example:
@@ -980,6 +964,22 @@ Although the input files matching a glob output declaration are not included in 
 :::
 
 Read more about glob syntax at the following link [What is a glob?][glob]
+
+:::{versionadded} 23.09.0-edge
+:::
+
+The `arity` option can be used to enforce the expected number of files, either as a number or a range.
+
+For example:
+
+```nextflow
+output:
+path('one.txt', arity: '1')         // exactly one file is expected
+path('pair_*.txt', arity: '2')      // exactly two files are expected
+path('many_*.txt', arity: '1..*')   // one or more files are expected
+```
+
+When a task completes, Nextflow will check whether the produced files for each path output match the declared arity, and fail if they do not. When the arity is `'1'`, the corresponding output will be a single file; otherwise, it will be a list of files.
 
 ### Dynamic output file names
 

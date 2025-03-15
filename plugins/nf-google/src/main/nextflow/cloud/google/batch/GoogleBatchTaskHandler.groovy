@@ -268,7 +268,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                     LifecyclePolicy.newBuilder()
                         .setActionCondition(
                             LifecyclePolicy.ActionCondition.newBuilder()
-                                .addExitCodes(50001)
+                                .addAllExitCodes(executor.config.autoRetryExitCodes)
                         )
                         .setAction(LifecyclePolicy.Action.RETRY_TASK)
                 )

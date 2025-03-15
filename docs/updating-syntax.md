@@ -8,13 +8,17 @@ This page explains how to update Nextflow scripts and config files to adhere to 
 If you are still using DSL1, see {ref}`dsl1-page` to learn how to migrate your Nextflow pipelines to DSL2 before consulting this guide.
 :::
 
+(strict-syntax)=
+
 ## Preparing for strict syntax
+
+:::{versionadded} 25.02.0-edge
+The strict syntax can be enabled in Nextflow by setting `NXF_SYNTAX_PARSER=v2`.
+:::
 
 The strict syntax is a subset of DSL2. While DSL2 allows any Groovy syntax, the strict syntax allows only a subset of Groovy syntax for Nextflow scripts and config files. This new specification enables more specific error reporting, ensures more consistent code, and will allow the Nextflow language to evolve independently of Groovy.
 
-The strict syntax is currently only enforced by the Nextflow language server, which is provided as part of the Nextflow {ref}`vscode-page`. However, the strict syntax will be gradually adopted by the Nextflow CLI in future releases and will eventually be the only way to write Nextflow code.
-
-New language features will be implemented as part of the strict syntax, and not the current DSL2 parser, with few exceptions. Therefore, it is important to prepare for the strict syntax in order to use new language features in the future.
+The strict syntax will eventually become the only way to write Nextflow code, and new language features will be implemented only in the strict syntax, with few exceptions. Therefore, it is important to prepare for the strict syntax in order to maintain compatibility with future versions of Nextflow and be able to use new language features.
 
 This section describes the key differences between the DSL2 and the strict syntax. In general, the amount of changes that are required depends on the amount of custom Groovy code in your scripts and config files.
 
@@ -487,7 +491,13 @@ The process `when` section is deprecated. Use conditional logic, such as an `if`
 
 The process `shell` section is deprecated. Use the `script` block instead. The VS Code extension provides syntax highlighting and error checking to help distinguish between Nextflow variables and Bash variables.
 
+(updating-config-syntax)=
+
 ### Configuration syntax
+
+:::{versionadded} 25.02.0-edge
+The strict config syntax can be enabled in Nextflow by setting `NXF_SYNTAX_PARSER=v2`.
+:::
 
 See {ref}`Configuration <config-syntax>` for a comprehensive description of the configuration language.
 
@@ -544,6 +554,6 @@ There are two ways to preserve Groovy code:
  - Move the code to the `lib` directory
  - Create a plugin
 
-Any Groovy code can be moved into the `lib` directory, which supports the full Groovy language. This approach is useful for temporarily preserving some Groovy code until it can be updated later and incorporated into a Nextflow script. See {ref}`<lib-directory>` documentation for more information.
+Any Groovy code can be moved into the `lib` directory, which supports the full Groovy language. This approach is useful for temporarily preserving some Groovy code until it can be updated later and incorporated into a Nextflow script. See {ref}`lib-directory` documentation for more information.
 
 For Groovy code that is complicated or if it depends on third-party libraries, it may be better to create a plugin. Plugins can define custom functions that can be included by Nextflow scripts like a module. Furthermore, plugins can be easily re-used across different pipelines. See {ref}`plugins-dev-page` for more information on how to develop plugins.
