@@ -15,8 +15,6 @@
  */
 package nextflow.processor
 
-import nextflow.trace.TraceRecord
-
 import static nextflow.processor.ErrorStrategy.*
 
 import java.lang.reflect.InvocationTargetException
@@ -80,6 +78,7 @@ import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.file.FilePatternSplitter
 import nextflow.file.FilePorter
+import nextflow.file.RealPathAware
 import nextflow.plugin.Plugins
 import nextflow.processor.tip.TaskTipProvider
 import nextflow.script.BaseScript
@@ -106,6 +105,7 @@ import nextflow.script.params.TupleInParam
 import nextflow.script.params.TupleOutParam
 import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
+import nextflow.trace.TraceRecord
 import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
@@ -1939,6 +1939,9 @@ class TaskProcessor {
 
             if( item instanceof Path || coerceToPath ) {
                 def path = normalizeToPath(item)
+                if (path instanceof RealPathAware){
+                    path = path.toRealPath()
+                }
                 def target = executor.isForeignFile(path) ? batch.addToForeign(path) : path
                 def holder = new FileHolder(target)
                 files << holder
@@ -2274,7 +2277,7 @@ class TaskProcessor {
      * @return The list of paths of scripts in the project bin folder referenced in the task command
      */
     @Memoized
-    protected List<Path> getTaskBinEntries(String script) {
+    public List<Path> getTaskBinEntries(String script) {
         List<Path> result = []
         def tokenizer = new StringTokenizer(script," \t\n\r\f()[]{};&|<>`")
         while( tokenizer.hasMoreTokens() ) {
@@ -2307,7 +2310,7 @@ class TaskProcessor {
         log.info(buffer.toString())
     }
 
-    protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
+    public Map<String,Object> getTaskGlobalVars(TaskRun task) {
         final result = task.getGlobalVars(ownerScript.binding)
         final directives = getTaskExtensionDirectiveVars(task)
         result.putAll(directives)
