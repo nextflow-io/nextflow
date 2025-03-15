@@ -352,6 +352,10 @@ The following methods are available for a Duration:
 `toSeconds() -> long`
 : Get the duration value in seconds (rounded down).
 
+:::{note}
+These methods are also available as `getDays()`, `getHours()`, `getMillis()`, `getMinutes()`, and `getSeconds()`.
+:::
+
 ## Iterable\<E\>
 
 An iterable is a trait shared by collections that support iteration. The following types are iterables:
@@ -667,6 +671,10 @@ The following methods are available for a `MemoryUnit` object:
 
 `toUnit( unit: String ) -> long`
 : Get the memory value in terms of a given unit (rounded down). The unit can be one of: `'B'`, `'KB'`, `'MB'`, `'GB'`, `'TB'`, `'PB'`, `'EB'`, `'ZB'`.
+
+:::{note}
+These methods are also available as `getBytes()`, `getGiga()`, `getKilo()`, and `getMega()`.
+:::
 
 (stdlib-types-path)=
 
