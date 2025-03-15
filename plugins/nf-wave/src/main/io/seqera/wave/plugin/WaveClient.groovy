@@ -676,16 +676,17 @@ class WaveClient {
         final handle = responses.get(key)
         if( !handle )
             return null
+        final resp = handle.response
         final result = new ContainerMeta()
         result.requestTime = handle.createdAt
-        result.requestId = handle.response.requestId
-        result.sourceImage = handle.response.containerImage
-        result.targetImage = handle.response.targetImage
-        result.buildId = handle.response.buildId
-        result.scanId = handle.response.scanId
-        result.cached = handle.response.cached
-        result.freeze = handle.response.freeze
-        result.mirror = handle.response.mirror
+        result.requestId = resp.requestId
+        result.sourceImage = resp.containerImage
+        result.targetImage = resp.targetImage
+        result.buildId = !resp.mirror ? resp.buildId : null
+        result.mirrorId = resp.mirror ? resp.buildId : null
+        result.scanId = resp.scanId
+        result.cached = resp.cached
+        result.freeze = resp.freeze
         return result
     }
 

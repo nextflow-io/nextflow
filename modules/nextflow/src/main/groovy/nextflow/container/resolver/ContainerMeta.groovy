@@ -36,9 +36,9 @@ class ContainerMeta {
     String sourceImage
     String targetImage
     String buildId
+    String mirrorId
     String scanId
     Boolean cached
     Boolean freeze
-    Boolean mirror
     Instant requestTime
 }
