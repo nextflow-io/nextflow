@@ -3,9 +3,15 @@ package nextflow.cloud.azure.batch
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.function.Predicate
+import java.nio.file.Path
 
 import com.azure.compute.batch.models.BatchPool
 import com.azure.compute.batch.models.ElevationLevel
+import com.azure.compute.batch.models.OutputFile
+import com.azure.compute.batch.models.OutputFileDestination
+import com.azure.compute.batch.models.OutputFileBlobContainerDestination
+import com.azure.compute.batch.models.OutputFileUploadConfig
+import com.azure.compute.batch.models.OutputFileUploadCondition
 import com.azure.identity.ManagedIdentityCredential
 import com.google.common.hash.HashCode
 import nextflow.Global
@@ -370,7 +376,7 @@ class AzBatchServiceTest extends Specification {
         when:
         def ret = svc.guessBestVm(LOC, 1, null, null, 'xyz')
         then:
-        1 * svc.findBestVm(LOC, 1, null, null, 'xyz')  >> TYPE
+        1 * svc.findBestVm(LOC, 1, null, null, 'xyz') >> TYPE
         and:
         ret == TYPE
 
@@ -835,5 +841,80 @@ class AzBatchServiceTest extends Specification {
         0 * service.createJob0('bar',t3) >> null
         and:
         result == 'job3'
+    }
+
+    def 'should check output files' () {
+        given:
+        def exec = Mock(AzBatchExecutor) { getConfig() >> new AzConfig([:]) }
+        def svc = Spy(AzBatchService, constructorArgs: [exec])
+        def workDir = Mock(Path) {
+            toUriString() >> 'az://container/work/dir'
+            resolve(_) >> { String path -> Mock(Path) { toString() >> "az://container/work/dir/${path}" } }
+            subpath(1,_) >> { Mock(Path) { toString() >> 'work/dir' } }
+        }
+        def task = Mock(TaskRun) {
+            getWorkDir() >> workDir
+            CMD_EXIT >> '.exitcode'
+            CMD_LOG >> '.command.log'
+            CMD_OUTFILE >> '.command.out'
+            CMD_ERRFILE >> '.command.err'
+            CMD_STAGE >> '.command.begin'
+            CMD_TRACE >> '.command.trace'
+            CMD_ENV >> '.command.env'
+        }
+        def sas = 'foo'
+
+        def mockOutputFile = { String path ->
+            new OutputFile(
+                path,
+                new OutputFileDestination().setContainer(
+                    new OutputFileBlobContainerDestination().setPath('work/dir')
+                ),
+                new OutputFileUploadConfig(OutputFileUploadCondition.TASK_COMPLETION)
+            )
+        }
+
+        when:
+        def result = svc.outputFileUrls(task, sas)
+        then:
+        7 * svc.destFile(_, _, _) >> { String path, Path dir, String token -> mockOutputFile(path) }
+        and:
+        result.size() == 7  // includes all expected output files
+        and:
+        with(result[0]) {  // .exitcode
+            filePattern == '.exitcode'
+            destination.container.path == 'work/dir'
+            uploadOptions.uploadCondition.toString() == 'taskcompletion'
+        }
+        with(result[1]) {  // .command.log
+            filePattern == '.command.log'
+            destination.container.path == 'work/dir'
+            uploadOptions.uploadCondition.toString() == 'taskcompletion'
+        }
+        with(result[2]) {  // .command.out
+            filePattern == '.command.out'
+            destination.container.path == 'work/dir'
+            uploadOptions.uploadCondition.toString() == 'taskcompletion'
+        }
+        with(result[3]) {  // .command.err
+            filePattern == '.command.err'
+            destination.container.path == 'work/dir'
+            uploadOptions.uploadCondition.toString() == 'taskcompletion'
+        }
+        with(result[4]) {  // .command.stage
+            filePattern == '.command.stage'
+            destination.container.path == 'work/dir'
+            uploadOptions.uploadCondition.toString() == 'taskcompletion'
+        }
+        with(result[5]) {  // .command.trace
+            filePattern == '.command.trace'
+            destination.container.path == 'work/dir'
+            uploadOptions.uploadCondition.toString() == 'taskcompletion'
+        }
+        with(result[6]) {  // .command.env
+            filePattern == '.command.env'
+            destination.container.path == 'work/dir'
+            uploadOptions.uploadCondition.toString() == 'taskcompletion'
+        }
     }
 }
