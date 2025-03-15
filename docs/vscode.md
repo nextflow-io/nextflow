@@ -102,6 +102,8 @@ The following settings are available:
 `nextflow.paranoidWarnings`
 : Enable additional warnings for future deprecations, potential problems, and other discouraged patterns.
 
+(vscode-language-server)=
+
 ## Language server
 
 Most of the functionality of the VS Code extension is provided by the [Nextflow language server](https://github.com/nextflow-io/language-server), which implements the [Language Server Protocol (LSP)](https://microsoft.github.io/language-server-protocol/) for Nextflow scripts and config files.
