@@ -52,22 +52,7 @@ jobs:
                 echo "commit_message=$COMMIT_MESSAGE" | head -n 1 >> $GITHUB_OUTPUT
             fi
 
-      - name: Get changed files
-        id: changed-files
-        uses: tj-actions/changed-files@v43
-        with:
-          files_ignore: docs/**
-
-      - name: List all changed files
-        env:
-            ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
-        run: |
-            for file in ${ALL_CHANGED_FILES}; do
-                echo "$file was changed"
-            done
-
       - name: Setup env
-        if: steps.changed-files.outputs.any_changed == 'true'
         run: |
              rm -f $HOME/.gitconfig;
              mkdir -p "$HOME/.nextflow";
@@ -76,7 +61,6 @@ jobs:
           NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
 
       - name: Setup Java ${{ matrix.java_version }}
-        if: steps.changed-files.outputs.any_changed == 'true'
         uses: actions/setup-java@v4
         with:
           java-version: ${{matrix.java_version}}
@@ -85,11 +69,9 @@ jobs:
           cache: gradle
 
       - name: Compile
-        if: steps.changed-files.outputs.any_changed == 'true'
         run: make assemble
 
       - name: Test
-        if: steps.changed-files.outputs.any_changed == 'true'
         run: |
             env | sort
             # configure test env
@@ -114,18 +96,16 @@ jobs:
 
       - name: Publish tests report
         uses: actions/upload-artifact@v4
-        if: steps.changed-files.outputs.any_changed == 'true' && always()
         with:
           name: report-unit-tests-jdk-${{ matrix.java_version }}
           path: |
             **/build/reports/tests/test
 
     outputs:
-      any_changed: ${{ steps.changed-files.outputs.any_changed }}
       commit_message: ${{ steps.get_commit_message.outputs.commit_message }}
 
   test:
-    if: ${{ !contains(needs.build.outputs.commit_message, '[ci fast]') && needs.build.outputs.any_changed == 'true' }}
+    if: ${{ !contains(needs.build.outputs.commit_message, '[ci fast]') }}
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 90
