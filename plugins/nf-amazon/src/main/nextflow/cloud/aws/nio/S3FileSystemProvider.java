@@ -686,7 +686,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 					: readAttr0(s3Path));
 		}
 		// not support attribute class
-		throw new UnsupportedOperationException(format("only %s supported", BasicFileAttributes.class));
+		throw new UnsupportedOperationException(format("while trying readAttributes of %s, only %s supported", s3Path.toString(), BasicFileAttributes.class));
 	}
 
 	private Optional<S3FileAttributes> readAttr1(S3Path s3Path) throws IOException {
