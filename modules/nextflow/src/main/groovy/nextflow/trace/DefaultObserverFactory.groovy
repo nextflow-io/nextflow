@@ -3,6 +3,7 @@ package nextflow.trace
 import java.nio.file.Path
 
 import nextflow.Session
+
 /**
  * Creates Nextflow observes object
  * 
