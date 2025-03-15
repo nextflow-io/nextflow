@@ -78,10 +78,6 @@ process doOtherThings {
 
 In this example, `$MAX` is a Nextflow variable that must be defined elsewhere in the pipeline script. Nextflow replaces it with the actual value before executing the script. Meanwhile, `$DB` is a Bash variable that must exist in the execution environment, and Bash will replace it with the actual value during execution.
 
-:::{tip}
-Alternatively, you can use the {ref}`process-shell` block definition, which allows a script to contain both Bash and Nextflow variables without having to escape the first.
-:::
-
 ### Scripts *à la carte*
 
 The process script is interpreted by Nextflow as a Bash script by default, but you are not limited to Bash.
@@ -477,27 +473,11 @@ workflow {
 }
 ```
 
-:::{versionadded} 23.09.0-edge
-:::
-
-By default, `path` inputs will accept any number of files and stage them accordingly. The `arity` option can be used to enforce the expected number of files, either as a number or a range.
-
-For example:
-
-```nextflow
-input:
-    path('one.txt', arity: '1')         // exactly one file is expected
-    path('pair_*.txt', arity: '2')      // exactly two files are expected
-    path('many_*.txt', arity: '1..*')   // one or more files are expected
-```
-
-When a task is executed, Nextflow will check whether the received files for each path input match the declared arity, and fail if they do not.
-
 :::{note}
 Process `path` inputs have nearly the same interface as described in {ref}`stdlib-types-path`, with one difference which is relevant when files are staged into a subdirectory. Given the following input:
 
 ```nextflow
-path x, name: 'my-dir/*'
+path x, name: 'my-dir/file.txt'
 ```
 
 In this case, `x.name` returns the file name with the parent directory (e.g. `my-dir/file.txt`), whereas normally it would return the file name (e.g. `file.txt`). You can use `x.fileName.name` to get the file name.
@@ -536,12 +516,12 @@ seq1 seq2 seq3
 
 The target input file name may contain the `*` and `?` wildcards, which can be used to control the name of staged files. The following table shows how the wildcards are replaced depending on the cardinality of the received input collection.
 
-| Cardinality | Name pattern | Staged file names                                                                                       |
+| Arity       | Name pattern | Staged file names                                                                                       |
 | ----------- | ------------ | ------------------------------------------------------------------------------------------------------- |
 | any         | `*`          | named as the source file                                                                                |
-| 1           | `file*.ext`  | `file.ext`                                                                                              |
-| 1           | `file?.ext`  | `file1.ext`                                                                                             |
-| 1           | `file??.ext` | `file01.ext`                                                                                            |
+| one         | `file*.ext`  | `file.ext`                                                                                              |
+| one         | `file?.ext`  | `file1.ext`                                                                                             |
+| one         | `file??.ext` | `file01.ext`                                                                                            |
 | many        | `file*.ext`  | `file1.ext`, `file2.ext`, `file3.ext`, ..                                                               |
 | many        | `file?.ext`  | `file1.ext`, `file2.ext`, `file3.ext`, ..                                                               |
 | many        | `file??.ext` | `file01.ext`, `file02.ext`, `file03.ext`, ..                                                            |
@@ -571,6 +551,22 @@ workflow {
 :::{note}
 Rewriting input file names according to a named pattern is an extra feature and not at all required. The normal file input syntax introduced in the {ref}`process-input-path` section is valid for collections of multiple files as well. To handle multiple input files while preserving the original file names, use a variable identifier or the `*` wildcard.
 :::
+
+:::{versionadded} 23.09.0-edge
+:::
+
+The `arity` option can be used to enforce the expected number of files, either as a number or a range.
+
+For example:
+
+```nextflow
+input:
+path('one.txt', arity: '1')         // exactly one file is expected
+path('pair_*.txt', arity: '2')      // exactly two files are expected
+path('many_*.txt', arity: '1..*')   // one or more files are expected
+```
+
+When a task is executed, Nextflow will check whether the received files for each path input match the declared arity, and fail if they do not. When the arity is `'1'`, the corresponding input variable will be a single file; otherwise, it will be a list of files.
 
 ### Dynamic input file names
 
@@ -925,22 +921,6 @@ In the above example, the `randomNum` process creates a file named `result.txt` 
 
 Refer to the {ref}`process reference <process-reference-outputs>` for the list of available options for `path` outputs.
 
-:::{versionadded} 23.09.0-edge
-:::
-
-By default, `path` outputs will accept any number of matching files from the task directory. The `arity` option can be used to enforce the expected number of files, either as a number or a range.
-
-For example:
-
-```nextflow
-output:
-path('one.txt', arity: '1')         // exactly one file is expected
-path('pair_*.txt', arity: '2')      // exactly two files are expected
-path('many_*.txt', arity: '1..*')   // one or more files are expected
-```
-
-When a task completes, Nextflow will check whether the produced files for each path output match the declared arity, and fail if they do not.
-
 ### Multiple output files
 
 When an output file name contains a `*` or `?` wildcard character, it is interpreted as a [glob][glob] path matcher. This allows you to capture multiple files into a list and emit the list as a single value. For example:
@@ -984,6 +964,22 @@ Although the input files matching a glob output declaration are not included in 
 :::
 
 Read more about glob syntax at the following link [What is a glob?][glob]
+
+:::{versionadded} 23.09.0-edge
+:::
+
+The `arity` option can be used to enforce the expected number of files, either as a number or a range.
+
+For example:
+
+```nextflow
+output:
+path('one.txt', arity: '1')         // exactly one file is expected
+path('pair_*.txt', arity: '2')      // exactly two files are expected
+path('many_*.txt', arity: '1..*')   // one or more files are expected
+```
+
+When a task completes, Nextflow will check whether the produced files for each path output match the declared arity, and fail if they do not. When the arity is `'1'`, the corresponding output will be a single file; otherwise, it will be a list of files.
 
 ### Dynamic output file names
 
@@ -1132,12 +1128,12 @@ The `emit` option can be used on a process output to define a name for the corre
 process FOO {
     output:
     path 'hello.txt', emit: hello
-    path 'bye.txt', emit: bye
+    stdout emit: bye
 
     script:
     """
     echo "hello" > hello.txt
-    echo "bye" > bye.txt
+    echo "bye"
     """
 }
 
@@ -1280,7 +1276,7 @@ Note, however, that the latter syntax can be used both for a directive's main ar
 
 It's a very common scenario that different instances of the same process may have very different needs in terms of computing resources. In such situations requesting, for example, an amount of memory too low will cause some tasks to fail. Instead, using a higher limit that fits all the tasks in your execution could significantly decrease the execution priority of your jobs.
 
-The [Dynamic directives](#dynamic-directives) evaluation feature can be used to modify the amount of computing resources requested in case of a process failure and try to re-execute it using a higher limit. For example:
+[Dynamic directives](#dynamic-directives) can be used to adjust the requested task resources when a task fails and is re-executed. For example:
 
 ```nextflow
 process foo {
@@ -1297,13 +1293,39 @@ process foo {
 }
 ```
 
-In the above example the {ref}`process-memory` and execution {ref}`process-time` limits are defined dynamically. The first time the process is executed the `task.attempt` is set to `1`, thus it will request a two GB of memory and one hour of maximum execution time.
+In the above example the {ref}`process-memory` and execution {ref}`process-time` limits are defined dynamically. The first time the process is executed the `task.attempt` is set to `1`, thus it will request 2 GB of memory and 1 hour of walltime.
 
-If the task execution fail reporting an exit status in the range between 137 and 140, the task is re-submitted (otherwise terminates immediately). This time the value of `task.attempt` is `2`, thus increasing the amount of the memory to four GB and the time to 2 hours, and so on.
+If the task execution fails with an exit status between 137 and 140, the task is re-executed; otherwise, the run is terminated immediately. The re-executed task will have `task.attempt` set to `2`, and will request 4 GB of memory and 2 hours of walltime.
 
-The directive {ref}`process-maxretries` set the maximum number of time the same task can be re-executed.
+The {ref}`process-maxretries` directive sets the maximum number of times the same task can be re-executed.
+
+:::{tip}
+Directives with named arguments, such as `accelerator` and `disk`, must use a more verbose syntax when they are dynamic. For example:
+
+```nextflow
+// static request
+disk 375.GB, type: 'local-ssd'
+
+// dynamic request
+disk { [request: 375.GB * task.attempt, type: 'local-ssd'] }
+```
+:::
+
+Task resources can also be defined in terms of task inputs. For example:
+
+```nextflow
+process foo {
+    memory { 8.GB + 1.GB * Math.ceil(input_file.size() / 1024 ** 3) }
+
+    input:
+    path input_file
+}
+```
+
+In this example, each task requests 8 GB of memory, plus the size of the input file rounded up to the next GB. This way, each task requests only as much memory as it needs based on the size of the inputs. The specific function that you use should be tuned for each process.
 
 ### Dynamic task resources with previous execution trace
+
 :::{versionadded} 24.10.0
 :::
 
@@ -1321,8 +1343,8 @@ process foo {
     """
 }
 ```
-In the above example, the {ref}`process-memory` is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to one GB. In the subsequent attempts, it doubles the previously allocated memory. See {ref}`trace-report` for more information about trace records.
 
+In the above example, the {ref}`process-memory` is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to 1 GB. In each subsequent attempt, the requested memory is doubled. See {ref}`trace-report` for more information about trace records.
 
 ### Dynamic retry with backoff
 

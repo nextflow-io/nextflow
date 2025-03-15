@@ -35,6 +35,8 @@ import nextflow.file.FileHelper
 @CompileStatic
 class SysHelper {
 
+    public static final String DEFAULT_DOCKER_PLATFORM = 'linux/amd64'
+
     private static String DATE_FORMAT = 'dd-MMM-yyyy HH:mm'
 
     /**
@@ -195,4 +197,5 @@ class SysHelper {
 
         return buffer.toString()
     }
+
 }

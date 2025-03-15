@@ -27,8 +27,8 @@ A Nextflow script may contain the following top-level declarations:
 
 - Shebang
 - Feature flags
-- Includes
-- Parameter definitions
+- Include declarations
+- Parameter declarations
 - Workflow definitions
 - Process definitions
 - Function definitions
@@ -795,6 +795,9 @@ printf 'Hello %s!\n', 'World'
 
 // positional and named args
 file 'hello.txt', checkIfExists: true
+
+// named args
+resourceLabels group: 'my-group', user: 'me'
 ```
 
 If the last argument is a closure, it can be specified outside of the parentheses:
