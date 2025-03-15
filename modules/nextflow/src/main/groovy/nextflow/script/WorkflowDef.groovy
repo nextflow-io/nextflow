@@ -62,8 +62,8 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         copy.setDelegate(resolver)
         this.body = copy.call()
         // now it can access the parameters
-        this.declaredInputs = new ArrayList<>(resolver.getTakes().keySet())
-        this.declaredOutputs = new ArrayList<>(resolver.getEmits().keySet())
+        this.declaredInputs = new ArrayList<>(resolver.getTakes())
+        this.declaredOutputs = new ArrayList<>(resolver.getEmits())
         this.variableNames = getVarNames0()
     }
 
@@ -216,22 +216,18 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 @CompileStatic
 class WorkflowParamsDsl {
 
-    static final private String TAKE_PREFIX = '_take_'
-    static final private String EMIT_PREFIX = '_emit_'
+    private static final String TAKE = '_take_'
+    private static final String EMIT = '_emit_'
 
+    List<String> takes = new ArrayList<>(10)
+    List<String> emits = new ArrayList<>(10)
 
-    Map<String,Object> takes = new LinkedHashMap<>(10)
-    Map<String,Object> emits = new LinkedHashMap<>(10)
-
-    @Override
-    def invokeMethod(String name, Object args) {
-        if( name.startsWith(TAKE_PREFIX) )
-            takes.put(name.substring(TAKE_PREFIX.size()), args)
-
-        else if( name.startsWith(EMIT_PREFIX) )
-            emits.put(name.substring(EMIT_PREFIX.size()), args)
-
-        else
-            throw new MissingMethodException(name, WorkflowDef, args)
+    void _take_(String name) {
+        takes.add(name)
     }
+
+    void _emit_(String name) {
+        emits.add(name)
+    }
+
 }

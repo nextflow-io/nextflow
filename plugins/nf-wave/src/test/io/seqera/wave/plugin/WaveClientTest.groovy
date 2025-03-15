@@ -205,7 +205,6 @@ class WaveClientTest extends Specification {
         !req.containerPlatform
         !req.containerFile
         !req.condaFile
-        !req.spackFile
         !req.containerConfig.layers
         !req.freeze
         !req.dryRun
@@ -227,7 +226,6 @@ class WaveClientTest extends Specification {
         !req.containerPlatform
         !req.containerFile
         !req.condaFile
-        !req.spackFile
         !req.containerConfig.layers
         !req.mirror
         and:
@@ -250,7 +248,6 @@ class WaveClientTest extends Specification {
         !req.containerPlatform
         !req.containerFile
         !req.condaFile
-        !req.spackFile
         !req.containerConfig.layers
         !req.freeze
         and:
@@ -274,7 +271,6 @@ class WaveClientTest extends Specification {
         !req.containerPlatform
         !req.containerFile
         !req.condaFile
-        !req.spackFile
         !req.containerConfig.layers
         and:
         req.scanMode == ScanMode.required
@@ -298,7 +294,6 @@ class WaveClientTest extends Specification {
         !req.containerPlatform
         !req.containerFile
         !req.condaFile
-        !req.spackFile
         !req.containerConfig.layers
         and:
         req.dryRun
@@ -325,7 +320,6 @@ class WaveClientTest extends Specification {
         and:
         !req.containerFile
         !req.condaFile
-        !req.spackFile
         !req.containerConfig.layers
         and:
         req.fingerprint == 'd31044e6594126479585c0cdca15c15e'
@@ -344,7 +338,6 @@ class WaveClientTest extends Specification {
         !req.containerImage
         new String(req.containerFile.decodeBase64()) == DOCKERFILE
         !req.condaFile
-        !req.spackFile
         !req.containerConfig.layers
     }
 
@@ -368,7 +361,6 @@ class WaveClientTest extends Specification {
         !req.containerImage
         new String(req.containerFile.decodeBase64()) == SINGULARITY_FILE
         !req.condaFile
-        !req.spackFile
         !req.containerConfig.layers
         and:
         req.format == 'sif'
@@ -388,7 +380,6 @@ class WaveClientTest extends Specification {
         !req.containerImage
         new String(req.containerFile.decodeBase64()) == DOCKERFILE
         !req.condaFile
-        !req.spackFile
         !req.containerConfig.layers
     }
 
@@ -764,10 +755,6 @@ class WaveClientTest extends Specification {
         then:
         result == [dockerfile:'x']
 
-        when:
-        result = client.resolveConflicts([spack:'x',container:'z'], ['conda','spack'])
-        then:
-        result == [spack:'x']
     }
 
     def 'should patch strategy for singularity' () {
@@ -781,10 +768,9 @@ class WaveClientTest extends Specification {
 
         where:
         STRATEGY                                            | SING      | EXPECTED
-        ['conda','dockerfile', 'spack']                     | false     | ['conda','dockerfile', 'spack']
-        ['conda','dockerfile', 'spack']                     | true      | ['conda','singularityfile', 'spack']
-        ['conda','dockerfile', 'spack']                     | true      | ['conda','singularityfile', 'spack']
-        ['conda','singularityfile','dockerfile', 'spack']   | true      | ['conda','singularityfile','dockerfile', 'spack']
+        ['conda','dockerfile']                              | false     | ['conda','dockerfile']
+        ['conda','dockerfile']                              | true      | ['conda','singularityfile']
+        ['conda','singularityfile','dockerfile']            | true      | ['conda','singularityfile','dockerfile']
     }
 
     def 'should check conflicts' () {
