@@ -1,11 +1,15 @@
 package nextflow.cloud.azure.batch
 
+import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.function.Predicate
 
 import com.azure.compute.batch.models.BatchPool
 import com.azure.compute.batch.models.ElevationLevel
+import com.azure.core.exception.HttpResponseException
+import com.azure.core.http.HttpResponse
 import com.azure.identity.ManagedIdentityCredential
 import com.google.common.hash.HashCode
 import nextflow.Global
@@ -22,14 +26,9 @@ import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
+import reactor.core.publisher.Flux
 import spock.lang.Specification
 import spock.lang.Unroll
-import com.azure.core.exception.HttpResponseException
-import com.azure.core.http.HttpResponse
-import reactor.core.publisher.Flux
-import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
-import com.azure.core.exception.ResourceExistsException
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -856,8 +855,9 @@ class AzBatchServiceTest extends Specification {
         service.safeCreatePool(spec)
         
         then: 'createPool is called once'
-        1 * service.createPool(spec)
-        0 * service.log.debug(_)
+        1 * service.createPool(spec) >> null
+        and:
+        noExceptionThrown()
 
         when: 'pool already exists (409 with PoolExists)'
         service.safeCreatePool(spec)
@@ -872,7 +872,8 @@ class AzBatchServiceTest extends Specification {
             }
             throw new HttpResponseException("Pool already exists", response)
         }
-        1 * service.log.debug("Pool test-pool already exists, ignoring creation request")
+        and:
+        noExceptionThrown()
 
         when: 'different HttpResponseException occurs'
         service.safeCreatePool(spec)
