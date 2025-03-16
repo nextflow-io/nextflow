@@ -17,6 +17,8 @@
 package nextflow.cloud.azure.batch
 
 import java.math.RoundingMode
+import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
@@ -93,6 +95,8 @@ import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
 import nextflow.util.MustacheTemplateEngine
 import nextflow.util.Rnd
+import reactor.core.publisher.Flux
+
 /**
  * Implements Azure Batch operations for Nextflow executor
  *
@@ -696,7 +700,7 @@ class AzBatchService implements Closeable {
         def pool = getPool(spec.poolId)
         if( !pool ) {
             if( config.batch().canCreatePool() ) {
-                createPool(spec)
+                safeCreatePool(spec)
             }
             else {
                 throw new IllegalArgumentException("Can't find Azure Batch pool '$spec.poolId' - Make sure it exists or set `allowPoolCreation=true` in the nextflow config file")
@@ -854,6 +858,27 @@ class AzBatchService implements Closeable {
         }
 
         apply(() -> client.createPool(poolParams))
+    }
+
+    protected void safeCreatePool(AzVmPoolSpec spec) {
+        try {
+            createPool(spec)
+        }
+        catch (HttpResponseException e) {
+            if (e.response.statusCode == 409 && toString(e.response.body)?.contains("PoolExists")) {
+                log.debug "[AZURE BATCH] Pool '${spec.poolId}' already exists (ignoring creation request)"
+                return
+            }
+            throw e
+        }
+    }
+
+    protected String toString(Flux<ByteBuffer> body) {
+        body
+            .map(byteBuffer -> StandardCharsets.UTF_8.decode(byteBuffer).toString())
+            .collectList()  // Collects all strings into a List<String>
+            .map(list -> String.join("", list)) // Joins the list into a single string
+            .block()
     }
 
     protected String scaleFormula(AzPoolOpts opts) {
