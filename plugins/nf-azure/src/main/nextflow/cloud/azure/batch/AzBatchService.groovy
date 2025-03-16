@@ -696,7 +696,7 @@ class AzBatchService implements Closeable {
         def pool = getPool(spec.poolId)
         if( !pool ) {
             if( config.batch().canCreatePool() ) {
-                createPool(spec)
+                safeCreatePool(spec)
             }
             else {
                 throw new IllegalArgumentException("Can't find Azure Batch pool '$spec.poolId' - Make sure it exists or set `allowPoolCreation=true` in the nextflow config file")
@@ -854,6 +854,19 @@ class AzBatchService implements Closeable {
         }
 
         apply(() -> client.createPool(poolParams))
+    }
+
+    protected void safeCreatePool(AzVmPoolSpec spec) {
+        try {
+            createPool(spec)
+        }
+        catch (HttpResponseException e) {
+            if (e.response.statusCode == 409 && e.response.body.toString().contains("PoolExists")) {
+                log.debug "Pool ${spec.poolId} already exists, ignoring creation request"
+                return
+            }
+            throw e
+        }
     }
 
     protected String scaleFormula(AzPoolOpts opts) {

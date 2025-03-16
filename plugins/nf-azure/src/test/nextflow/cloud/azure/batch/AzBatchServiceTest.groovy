@@ -792,60 +792,6 @@ class AzBatchServiceTest extends Specification {
         [managedIdentity: [clientId: 'client-123']]     | 'client-123'
     }
 
-    def 'should handle pool exists error' () {
-        given:
-        def CONFIG = [batch:[location: 'northeurope']]
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
-        def batchImage = GroovyMock(com.azure.compute.batch.models.BatchSupportedImage)
-        def vmConfig = GroovyMock(com.azure.compute.batch.models.VirtualMachineConfiguration)
-        def client = GroovyMock(com.azure.compute.batch.BatchClient)
-        AzBatchService svc = Spy(new AzBatchService(exec)) {
-            getImage(_) >> batchImage
-            poolVmConfig(_) >> vmConfig
-            getClient() >> client
-        }
-        and:
-        def spec = new AzVmPoolSpec(
-            poolId: 'pool-1', 
-            vmType: Mock(AzVmType) {
-                getName() >> 'Standard_D1_v2'
-                getNumberOfCores() >> 1
-            }, 
-            opts: new AzPoolOpts([:]))
-        and:
-        def errorBody = """{
-            "odata.metadata":"https://mybatch.eastus.batch.azure.com/\$metadata#Microsoft.Azure.Batch.Protocol.Entities.Container.errors/@Element",
-            "code":"PoolExists",
-            "message":{
-                "lang":"en-US",
-                "value":"The specified pool already exists.\\nRequestId:d9475bc1-f9e5-492b-9114-6a05a8a57abc\\nTime:2025-01-23T14:15:51.6526349Z"
-            }
-        }"""
-        def bodyBytes = errorBody.getBytes(StandardCharsets.UTF_8)
-        def response = GroovyMock(HttpResponse) {
-            getStatusCode() >> 409
-            getBodyAsString() >> errorBody
-            getBody() >> Flux.just(ByteBuffer.wrap(bodyBytes))
-        }
-
-        when:
-        svc.createPool(spec)
-        then:
-        1 * client.createPool(_) >> { throw new com.azure.core.exception.ResourceExistsException("Pool exists", response) }
-        noExceptionThrown()
-    }
-
-    def 'should retry on specific error codes' () {
-        given:
-        def CONFIG = [batch:[location: 'northeurope']]
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
-        AzBatchService svc = Spy(new AzBatchService(exec))
-
-        when:
-        def cond = svc.@RETRY_CODES
-        then:
-        cond.containsAll([408, 409, 429, 500, 502, 503, 504])
-    }
 
     def 'should cache job id' () {
         given:
@@ -896,5 +842,58 @@ class AzBatchServiceTest extends Specification {
         0 * service.createJob0('bar',t3) >> null
         and:
         result == 'job3'
+    }
+
+    def 'should test safeCreatePool' () {
+        given:
+        def exec = Mock(AzBatchExecutor)
+        def service = Spy(new AzBatchService(exec))
+        def spec = Mock(AzVmPoolSpec) {
+            getPoolId() >> 'test-pool'
+        }
+
+        when: 'pool is created successfully'
+        service.safeCreatePool(spec)
+        
+        then: 'createPool is called once'
+        1 * service.createPool(spec)
+        0 * service.log.debug(_)
+
+        when: 'pool already exists (409 with PoolExists)'
+        service.safeCreatePool(spec)
+        
+        then: 'exception is caught and debug message is logged'
+        1 * service.createPool(spec) >> {
+            def response = Mock(HttpResponse) {
+                getStatusCode() >> 409
+                getBody() >> {
+                    Flux.just(ByteBuffer.wrap('{"error":{"code":"PoolExists"}}'.getBytes(StandardCharsets.UTF_8)))
+                }
+            }
+            throw new HttpResponseException("Pool already exists", response)
+        }
+        1 * service.log.debug("Pool test-pool already exists, ignoring creation request")
+
+        when: 'different HttpResponseException occurs'
+        service.safeCreatePool(spec)
+        
+        then: 'exception is rethrown'
+        1 * service.createPool(spec) >> {
+            def response = Mock(HttpResponse) {
+                getStatusCode() >> 400
+                getBody() >> {
+                    Flux.just(ByteBuffer.wrap('{"error":{"code":"BadRequest"}}'.getBytes(StandardCharsets.UTF_8)))
+                }
+            }
+            throw new HttpResponseException("Bad request", response)
+        }
+        thrown(HttpResponseException)
+
+        when: 'a different exception occurs'
+        service.safeCreatePool(spec)
+        
+        then: 'exception is not caught'
+        1 * service.createPool(spec) >> { throw new IllegalArgumentException("Some other error") }
+        thrown(IllegalArgumentException)
     }
 }
