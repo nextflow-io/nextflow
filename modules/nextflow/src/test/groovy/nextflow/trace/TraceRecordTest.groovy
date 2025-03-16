@@ -16,6 +16,9 @@
 
 package nextflow.trace
 
+import java.nio.file.NoSuchFileException
+import java.nio.file.Path
+
 import groovy.json.JsonSlurper
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -333,4 +336,12 @@ class TraceRecordTest extends Specification {
         'COMPLETED' | true
     }
 
+    def 'should throw file not found exception' () {
+        given:
+        def rec = new TraceRecord([:])
+        when:
+        rec.parseTraceFile(Path.of('unknown'))
+        then:
+        thrown(NoSuchFileException)
+    }
 }

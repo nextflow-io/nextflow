@@ -2,13 +2,20 @@
 
 # Installation
 
+Nextflow can be used on any POSIX-compatible system (Linux, macOS, etc), and on Windows through [WSL](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux). This page describes how to install Nextflow.
+
+:::{note}
+New versions of Nextflow are released regularly. See {ref}`updating-nextflow-page` for more information about Nextflow release cadence, how to update Nextflow, and how select your version of Nextflow.
+:::
+
 (install-requirements)=
 
 ## Requirements
 
-Nextflow can be used on any POSIX-compatible system (Linux, macOS, etc), and on Windows through [WSL](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux). It requires Bash 3.2 (or later) and [Java 17 (or later, up to 23)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed. You can see which version you have using the following command:
+Nextflow requires Bash 3.2 (or later) and [Java 17 (or later, up to 23)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed. To see which version of Java you have, run the following command:
 
-```bash
+```{code-block} bash
+:class: copyable
 java -version
 ```
 
@@ -16,13 +23,14 @@ java -version
 Support for Java versions prior to 17 was dropped.
 :::
 
-If you don't have a compatible version of Java installed in your computer, it is recommended that you install it through [SDKMAN!](https://sdkman.io/), and that you use the latest LTS version of Temurin. See [this website](https://whichjdk.com/) for more information.
+If you don't have a compatible version of Java installed, it is recommended that you install it through [SDKMAN!](https://sdkman.io/), and that you use the latest Long-Term-Support (LTS) version of Temurin. See [Which version of JDK should I use?](https://whichjdk.com/) for more information about different versions of Java.
 
 To install Java with SDKMAN:
 
 1. [Install SDKMAN](https://sdkman.io/install):
 
-    ```bash
+    ```{code-block} bash
+    :class: copyable
     curl -s https://get.sdkman.io | bash
     ```
 
@@ -30,13 +38,15 @@ To install Java with SDKMAN:
 
 3. Install Java:
 
-    ```bash
+    ```{code-block} bash
+    :class: copyable
     sdk install java 17.0.10-tem
     ```
 
 4. Confirm that Java is installed correctly:
 
-    ```bash
+    ```{code-block} bash
+    :class: copyable
     java -version
     ```
 
@@ -46,27 +56,30 @@ To install Java with SDKMAN:
 
 Nextflow is distributed as a self-installing package, in order to make the installation process as simple as possible:
 
-1. Install Nextflow:
+To install Nextflow:
 
-    ```bash
+1. Download Nextflow:
+
+    ```{code-block} bash
+    :class: copyable
     curl -s https://get.nextflow.io | bash
     ```
 
-    This will create the `nextflow` executable in the current directory.
-
     :::{tip}
-    You can set `export CAPSULE_LOG=none` to make the installation logs less verbose.
+    Set `export CAPSULE_LOG=none` to make the installation logs less verbose.
     :::
 
 2. Make Nextflow executable:
 
-    ```bash
+    ```{code-block} bash
+    :class: copyable
     chmod +x nextflow
     ```
 
 3. Move Nextflow into an executable path. For example:
 
-    ```bash
+    ```{code-block} bash
+    :class: copyable
     mkdir -p $HOME/.local/bin/
     mv nextflow $HOME/.local/bin/
     ```
@@ -81,63 +94,45 @@ Nextflow is distributed as a self-installing package, in order to make the insta
 
 4. Confirm that Nextflow is installed correctly:
 
-    ```bash
+    ```{code-block} bash
+    :class: copyable
     nextflow info
     ```
 
-## Updates
+## Seqera Platform
 
-With Nextflow installed in your environment, you can update to the latest version using the following command:
+You can launch workflows directly from [Seqera Platform](https://seqera.io/platform/) without installing Nextflow locally.
 
-```bash
-nextflow self-update
-```
+Launching from Seqera Platform provides you with:
 
-You can also temporarily switch to a specific version of Nextflow with the `NXF_VER` environment variable. For example:
+- User-friendly launch interfaces.
+- Automated cloud infrastructure creation.
+- Organizational user management.
+- Advanced analytics with resource optimization.
 
-```bash
-NXF_VER=23.10.0 nextflow info
-```
-
-## Stable and edge releases
-
-A *stable* version of Nextflow is released every six months, in the 4th and 10th month of each year.
-
-Additionally, an *edge* version is released on a monthly basis. The edge releases can be used to access the latest updates and experimental features.
-
-To use the latest edge release, set `NXF_EDGE=1` when updating:
-
-```bash
-NXF_EDGE=1 nextflow self-update
-```
-
-You can also use `NXF_VER` to temporarily switch to any edge release. For example:
-
-```bash
-NXF_VER=24.06.0-edge nextflow info
-```
+Seqera Cloud Basic is free for small teams. Researchers at qualifying academic institutions can apply for free access to Seqera Cloud Pro.
+See the [Seqera Platform documentation](https://docs.seqera.io/platform) for set-up information and tutorials to get started.
 
 ## Standalone distribution
 
-The Nextflow standalone distribution (i.e. the `dist` distribution) consists of self-contained `nextflow` executable file
-that includes all the application dependencies for core functionalities, and it can run without downloading third parties
-libraries. This distribution is mainly useful for offline environments.
+The Nextflow standalone distribution (i.e. the `dist` release) is a self-contained `nextflow` executable that can run without needing to download core dependencies at runtime. This distribution is useful for offline environments, as well as building and testing Nextflow locally.
 
-Note however the support for cloud services e.g. AWS, Seqera Platform, Wave, etc. still require the download
-of the corresponding Nextflow plugins.
+The standalone distribution will still download core and third-party plugins as needed at runtime.
 
 To use the standalone distribution:
 
-1. Download it from the [GitHub releases page](https://github.com/nextflow-io/nextflow/releases), under the "Assets" section for a specific
+1. Download the standalone distribution from Assets section of the [GitHub releases page](https://github.com/nextflow-io/nextflow/releases).
 
-2. Grant execution permissions to the downloaded file e.g.
+2. Grant execution permissions to the downloaded file. For example:
 
+    ```{code-block} bash
+    :class: copyable
+    chmod +x nextflow-24.10.1-dist
     ```
-    chmod -x nextflow-24.10.1-dist
-    ```
 
-3. Then you can use it as a drop-in replacement for `nextflow` command. For example:
+3. Use it as a drop-in replacement for `nextflow` command. For example:
 
-    ```
+    ```{code-block} bash
+    :class: copyable
     ./nextflow-24.10.1-dist run hello
     ```

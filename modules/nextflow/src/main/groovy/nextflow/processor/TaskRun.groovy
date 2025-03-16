@@ -16,8 +16,6 @@
 
 package nextflow.processor
 
-import nextflow.conda.CondaConfig
-
 import java.nio.file.FileSystems
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -29,8 +27,10 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.conda.CondaCache
+import nextflow.conda.CondaConfig
 import nextflow.container.ContainerConfig
 import nextflow.container.resolver.ContainerInfo
+import nextflow.container.resolver.ContainerMeta
 import nextflow.container.resolver.ContainerResolver
 import nextflow.container.resolver.ContainerResolverProvider
 import nextflow.exception.ProcessException
@@ -402,7 +402,7 @@ class TaskRun implements Cloneable {
     }
 
     String getTraceScript() {
-        return template!=null && body.source
+        return template!=null && body?.source
             ? body.source
             : getScript()
     }
@@ -670,7 +670,7 @@ class TaskRun implements Cloneable {
 
     protected ContainerInfo containerInfo() {
         // note: use an explicit function instead of a closure or lambda syntax, otherwise
-        // when calling this method from a subclass it will result into a MissingMethodExeception
+        // when calling this method from a subclass it will result into a MissingMethodException
         // see  https://issues.apache.org/jira/browse/GROOVY-2433
         cache0.computeIfAbsent('containerInfo', new Function<String,ContainerInfo>() {
             @Override
@@ -680,7 +680,7 @@ class TaskRun implements Cloneable {
     }
 
     @Memoized
-    private ContainerResolver containerResolver() {
+    protected ContainerResolver containerResolver() {
         ContainerResolverProvider.load()
     }
 
@@ -719,6 +719,17 @@ class TaskRun implements Cloneable {
        return containerKey
             ? containerResolver().isContainerReady(containerKey)
             : true
+    }
+
+    ContainerMeta containerMeta() {
+        return containerKey
+            ? containerResolver().getContainerMeta(containerKey)
+            : null
+    }
+    
+    String getContainerPlatform() {
+        final result = config.getArchitecture()
+        return result ? result.dockerArch : containerResolver().defaultContainerPlatform()
     }
 
     ResourcesBundle getModuleBundle() {
@@ -847,7 +858,13 @@ class TaskRun implements Cloneable {
         this.source = block.getSource()
 
         try {
-            script = code.call()?.toString()
+            final result = code.call()
+            if ( result instanceof Path ) {
+                script = renderTemplate(result)
+            }
+            else {
+                script = result.toString()
+            }
         }
         catch( ProcessException e ) {
             throw e

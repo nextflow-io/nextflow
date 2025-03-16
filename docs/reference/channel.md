@@ -508,6 +508,10 @@ that it will cause your pipeline to run forever. Consider using the `take` or `u
 a certain condition is met (e.g. after receiving 10 files, receiving a file named `DONE`).
 :::
 
+:::{note}
+The `channel.watchPath` factory only works with local and shared filesystems. It does not support object storage such as S3.
+:::
+
 See also: [channel.fromPath](#frompath) factory method.
 
 [glob]: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob

@@ -39,34 +39,20 @@ jobs:
         run: |
             if [ "${{ github.event_name }}" = "pull_request" ]; then
                 echo "GitHub event=pull_request"
-                COMMIT_SHA=${{ github.event.pull_request.head.sha }}
-                COMMIT_MESSAGE=$(curl -s \
+                COMMIT_SHA="${{ github.event.pull_request.head.sha }}"
+                COMMIT_MESSAGE="$(curl -s \
                   -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                  https://api.github.com/repos/${{ github.repository }}/commits/$COMMIT_SHA | jq -r '.commit.message')
+                  https://api.github.com/repos/${{ github.repository }}/commits/$COMMIT_SHA | jq -r '.commit.message')"
                 echo "Commit message=$COMMIT_MESSAGE" | head -n 1
                 echo "commit_message=$COMMIT_MESSAGE" | head -n 1 >> $GITHUB_OUTPUT
             else
-               echo "GitHub event=${{ github.event_name }}"
-               echo "Commit message=${{ github.event.head_commit.message }}" | head -n 1
-               echo "commit_message=${{ github.event.head_commit.message }}" | head -n 1 >> $GITHUB_OUTPUT
-            fi 
-
-      - name: Get changed files
-        id: changed-files
-        uses: tj-actions/changed-files@v43
-        with:
-          files_ignore: docs/**
-
-      - name: List all changed files
-        env:
-            ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
-        run: |
-            for file in ${ALL_CHANGED_FILES}; do
-                echo "$file was changed"
-            done
+                echo "GitHub event=${{ github.event_name }}"
+                COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
+                echo "Commit message=$COMMIT_MESSAGE" | head -n 1
+                echo "commit_message=$COMMIT_MESSAGE" | head -n 1 >> $GITHUB_OUTPUT
+            fi
 
       - name: Setup env
-        if: steps.changed-files.outputs.any_changed == 'true'
         run: |
              rm -f $HOME/.gitconfig;
              mkdir -p "$HOME/.nextflow";
@@ -75,7 +61,6 @@ jobs:
           NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
 
       - name: Setup Java ${{ matrix.java_version }}
-        if: steps.changed-files.outputs.any_changed == 'true'
         uses: actions/setup-java@v4
         with:
           java-version: ${{matrix.java_version}}
@@ -84,11 +69,9 @@ jobs:
           cache: gradle
 
       - name: Compile
-        if: steps.changed-files.outputs.any_changed == 'true'
         run: make assemble
 
       - name: Test
-        if: steps.changed-files.outputs.any_changed == 'true'
         run: |
             env | sort
             # configure test env
@@ -113,18 +96,16 @@ jobs:
 
       - name: Publish tests report
         uses: actions/upload-artifact@v4
-        if: steps.changed-files.outputs.any_changed == 'true' && always()
         with:
           name: report-unit-tests-jdk-${{ matrix.java_version }}
           path: |
             **/build/reports/tests/test
 
     outputs:
-      any_changed: ${{ steps.changed-files.outputs.any_changed }}
       commit_message: ${{ steps.get_commit_message.outputs.commit_message }}
 
   test:
-    if: ${{ !contains(needs.build.outputs.commit_message, '[ci fast]') && needs.build.outputs.any_changed == 'true' }}
+    if: ${{ !contains(needs.build.outputs.commit_message, '[ci fast]') }}
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -132,7 +113,7 @@ jobs:
       fail-fast: false
       matrix:
         java_version: [17, 23]
-        test_mode: ["test_integration", "test_docs", "test_aws", "test_azure", "test_google", "test_wave"]
+        test_mode: ["test_integration", "test_parser_v2", "test_docs", "test_aws", "test_azure", "test_google", "test_wave"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -187,7 +168,9 @@ jobs:
 
       - name: Tar integration tests
         if: always()
-        run: tar -cvf integration-tests.tar tests/checks
+        run: | 
+            tar -cvf integration-tests.tar.gz tests/checks
+            tar -cvf validation-tests.tar.gz validation
 
       - name: Publish tests report
         uses: actions/upload-artifact@v4
@@ -195,9 +178,8 @@ jobs:
         with:
           name: report-${{ matrix.test_mode }}-jdk-${{ matrix.java_version }}
           path: |
-            validation/**/*
-            validation/**/.*
-            integration-tests.tar
+            validation-tests.tar.gz
+            integration-tests.tar.gz
 
   test-e2e:
       if: ${{ contains(needs.build.outputs.commit_message,'[e2e stage]') || contains(needs.build.outputs.commit_message,'[e2e prod]') }}

@@ -1,5 +1,19 @@
 nf-azure changelog
 ===================
+1.13.0 - 12 Feb 2025
+- Allow Azure Batch tasks to be submitted to different pools (#5766) [76790d2a]
+- Fix Check for number of low priority nodes in Azure Batch before raising a pool resize error (#5576) [9b528c11]
+- Update azure deps [b163da95]
+- Bump groovy 4.0.25 [19c40a4a]
+- Bump io.netty:netty-handler:4.1.118.Final [db4a9037]
+- Bump net.minidev:json-smart:2.5.2 [b5c4faf4]
+- Bump netty-common:4.1.118.Final [8574e243]
+
+1.12.0 - 20 Jan 2025
+- Ensure job is killed when exception in task status check (#5561) [9eefd207]
+- Bump logback 1.5.13 + slf4j 2.0.16 [cc0163ac]
+- Bump groovy 4.0.24 missing deps [40670f7e]
+
 1.11.0 - 3 Dec 2024
 - Detecting errors in data unstaging (#5345) [3c8e602d]
 - Bump netty-common to version 4.1.115.Final [d1bbd3d0]

@@ -14,7 +14,7 @@ You can configure your credentials for various Git providers in the Git configur
 
 ## Using a local repository
 
-Nextflow can work with repositories stored in a local or shared file system. The repository must be created as a [bare repository](https://mijingo.com/blog/what-is-a-bare-git-repository).
+Nextflow can work with repositories stored in a local or shared file system. The repository must be created as a [bare repository](https://craftquest.io/articles/what-is-a-bare-git-repository).
 
 For example, given a bare repository at `/shared/projects/foo.git`, Nextflow is able to run it using the following syntax:
 
@@ -115,9 +115,67 @@ For example, shebang definitions `#!/usr/bin/python` and `#!/usr/local/bin/pytho
 ```
 :::
 
+(lib-directory)=
+
 #### The `lib` directory
 
-Any Groovy scripts or JAR files in the `lib` directory will be automatically loaded and made available to your pipeline scripts. The `lib` directory is a useful way to provide utility code or external libraries without cluttering the pipeline scripts.
+The `lib` directory can be used to add utility code or external libraries without cluttering the pipeline scripts. The `lib` directory in the Nextflow project root is added to the classpath by default. Classes defined in the `lib` directory will be available in pipeline scripts. Functions defined outside of classes will not be available in pipeline scripts.
+
+For example, `lib/DNASequence.groovy` defines the `DNASequence` class:
+
+```groovy
+// lib/DNASequence.groovy
+class DNASequence {
+    String sequence
+
+    // Constructor
+    DNASequence(String sequence) {
+        this.sequence = sequence.toUpperCase() // Ensure sequence is in uppercase for consistency
+    }
+
+    // Method to calculate melting temperature using the Wallace rule
+    double getMeltingTemperature() {
+        int g_count = sequence.count('G')
+        int c_count = sequence.count('C')
+        int a_count = sequence.count('A')
+        int t_count = sequence.count('T')
+
+        // Wallace rule calculation
+        double tm = 4 * (g_count + c_count) + 2 * (a_count + t_count)
+        return tm
+    }
+
+    String toString() {
+        return "DNA[$sequence]"
+    }
+}
+```
+
+The `DNASequence` class is available in the execution context:
+
+```nextflow
+// main.nf
+workflow {
+    Channel.of('ACGTTGCAATGCCGTA', 'GCGTACGGTACGTTAC')
+        .map { seq -> new DNASequence(seq) }
+        .view { dna ->
+            "Found sequence '$dna' with melting temperaure ${dna.getMeltingTemperature()}°C"
+        }
+}
+```
+
+It prints:
+
+```
+Found sequence 'DNA[ACGTTGCAATGCCGTA]' with melting temperaure 48.0°C
+Found sequence 'DNA[GCGTACGGTACGTTAC]' with melting temperaure 50.0°C
+```
+
+:::{note}
+Package declarations in the `lib` directory are ignored. The package of a class is determined by the directory structure within the `lib` directory.
+
+For example, if the above example were defined in `lib/utils/DNASequence.groovy`, the class would need to be referenced in pipeline scripts as `utils.DNASequence`.
+:::
 
 ### Data
 

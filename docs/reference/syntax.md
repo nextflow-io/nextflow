@@ -27,8 +27,8 @@ A Nextflow script may contain the following top-level declarations:
 
 - Shebang
 - Feature flags
-- Includes
-- Parameter definitions
+- Include declarations
+- Parameter declarations
 - Workflow definitions
 - Process definitions
 - Function definitions
@@ -795,6 +795,9 @@ printf 'Hello %s!\n', 'World'
 
 // positional and named args
 file 'hello.txt', checkIfExists: true
+
+// named args
+resourceLabels group: 'my-group', user: 'me'
 ```
 
 If the last argument is a closure, it can be specified outside of the parentheses:
@@ -824,7 +827,7 @@ If the type is implicitly available in the script, the *fully-qualified type nam
 new Date()
 ```
 
-See {ref}`stdlib-default-imports` for the set of types which are implicitly available in Nextflow scripts.
+See {ref}`stdlib-page` for the set of types that are available in Nextflow scripts.
 
 ### Unary expressions
 

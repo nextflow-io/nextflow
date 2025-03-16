@@ -34,24 +34,25 @@ configurations {
 
 dependencies {
     compileOnly project(':nextflow')
-    compileOnly 'org.slf4j:slf4j-api:2.0.7'
+    compileOnly 'org.slf4j:slf4j-api:2.0.16'
     compileOnly 'org.pf4j:pf4j:3.12.0'
-    api('com.azure:azure-storage-blob:12.26.1') {
+    api('com.azure:azure-storage-blob:12.29.0') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
-    api('com.azure:azure-compute-batch:1.0.0-beta.2') {
+    api('com.azure:azure-compute-batch:1.0.0-beta.3') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
         exclude group: 'com.google.guava', module: 'guava'
     }
-    api('com.azure:azure-identity:1.12.2') {
+    api('com.azure:azure-identity:1.15.1') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
 
     // address security vulnerabilities
-    runtimeOnly 'io.netty:netty-common:4.1.115.Final'
+    runtimeOnly 'io.netty:netty-handler:4.1.118.Final'
+    runtimeOnly 'net.minidev:json-smart:2.5.2'
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.apache.groovy:groovy:4.0.24"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.24"
+    testImplementation "org.apache.groovy:groovy:4.0.26"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.26"
 }

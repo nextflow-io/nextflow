@@ -28,7 +28,7 @@ import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import nextflow.cli.HubOptions
-import nextflow.config.ConfigParser
+import nextflow.config.ConfigParserFactory
 import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AmbiguousPipelineNameException
@@ -455,7 +455,7 @@ class AssetManager {
         }
 
         if( text ) try {
-            def config = new ConfigParser().setIgnoreIncludes(true).parse(text)
+            def config = ConfigParserFactory.create().setIgnoreIncludes(true).setStrict(false).parse(text)
             result = (ConfigObject)config.manifest
         }
         catch( Exception e ) {
@@ -833,7 +833,7 @@ class AssetManager {
 
     protected Map refToMap(Ref ref, Map<String,Ref> remote) {
         final entry = new HashMap(2)
-        final peel = git.getRepository().peel(ref)
+        final peel = git.getRepository().getRefDatabase().peel(ref)
         final objId = peel.getPeeledObjectId() ?: peel.getObjectId()
         // the branch or tag name
         entry.name = shortenRefName(ref.name)
@@ -867,7 +867,7 @@ class AssetManager {
         result << (name == current ? '*' : ' ')
 
         if( level ) {
-            def peel = git.getRepository().peel(ref)
+            def peel = git.getRepository().getRefDatabase().peel(ref)
             def obj = peel.getPeeledObjectId() ?: peel.getObjectId()
             result << ' '
             result << formatObjectId(obj, level == 1)

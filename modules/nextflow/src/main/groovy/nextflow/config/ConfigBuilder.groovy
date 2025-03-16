@@ -71,8 +71,6 @@ class ConfigBuilder {
 
     List<Path> parsedConfigFiles = []
 
-    List<String> parsedProfileNames
-
     boolean showClosures
 
     boolean stripSecrets
@@ -338,6 +336,7 @@ class ConfigBuilder {
         binding.put('baseDir', base)
         binding.put('projectDir', base)
         binding.put('launchDir', Paths.get('.').toRealPath())
+        binding.put('outputDir', Paths.get('results').complete())
         binding.put('secrets', SecretsLoader.secretContext())
         return binding
     }
@@ -346,7 +345,7 @@ class ConfigBuilder {
         assert env != null
 
         final ignoreIncludes = options ? options.ignoreConfigIncludes : false
-        final slurper = new ConfigParser()
+        final slurper = ConfigParserFactory.create()
                 .setRenderClosureAsString(showClosures)
                 .setStripSecrets(stripSecrets)
                 .setIgnoreIncludes(ignoreIncludes)
@@ -383,9 +382,8 @@ class ConfigBuilder {
                 }
             }
 
-            this.parsedProfileNames = new ArrayList<>(slurper.getProfileNames())
             if( validateProfile ) {
-                checkValidProfile(slurper.getConditionalBlockNames())
+                checkValidProfile(slurper.getProfiles())
             }
 
         }
@@ -420,7 +418,7 @@ class ConfigBuilder {
 
         log.debug "Applying config profile: `${profile}`"
         def allNames = profile.tokenize(',')
-        slurper.registerConditionalBlock('profiles', allNames)
+        slurper.setProfiles(allNames)
 
         def config = parse0(slurper,entry)
         validate(config,entry)
@@ -684,6 +682,7 @@ class ConfigBuilder {
 
         // -- sets the messages options
         if( cmdRun.withWebLog ) {
+            log.warn "The command line option '-with-weblog' is deprecated - consider enabling this feature by setting 'weblog.enabled=true' in your configuration file"
             if( !(config.weblog instanceof Map) )
                 config.weblog = [:]
             config.weblog.enabled = true

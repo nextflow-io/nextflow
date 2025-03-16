@@ -1,5 +1,19 @@
 nf-google changelog
 ===================
+1.18.0 - 12 Feb 2025
+- Add DeadlineExceededException to Google Batch retryable exceptions [944f48f9]
+- Fix Google Batch task array causes process to fail (#5780) [7ad7a237]
+- Fix Mount input file buckets in task arrays for Google Batch (#5739) [ba171fd1]
+- Improve Google Batch executor stability and error handling (#5690) [b64087fc]
+- Ignore tests when smoke mode is enabled [3eb6efad]
+- Bump groovy 4.0.25 [19c40a4a]
+
+1.17.0 - 20 Jan 2025
+- Ensure job is killed when exception in task status check (#5561) [9eefd207]
+- Fix Google Batch hang when internal error during scheduling (#5567) [18f7de13]
+- Bump groovy 4.0.24 missing deps [40670f7e]
+- Bump logback 1.5.13 + slf4j 2.0.16 [cc0163ac]
+
 1.16.0 - 3 Dec 2024
 - Detecting errors in data unstaging (#5345) [3c8e602d]
 - Bump bouncycastle to jdk18on:1.78.1  (#5467) [cd8c385f]
@@ -14,7 +28,7 @@ nf-google changelog
 - Add retry policy to google batch describe task (#5356) [64bb5a92]
 
 1.15.0 - 4 Sep 2024
-- Add Google Batch warning when for conflicting disk image config (#5279) [ci fast] [96cb57cb]
+- Add Google Batch warning when for conflicting disk image config (#5279) [96cb57cb]
 - Add support for Google Batch used specified boot images  (#5268) [0aaa6482]
 - Disable Google Batch automatic spot retries (#5223) [aad21533]
 
@@ -45,7 +59,7 @@ nf-google changelog
 1.12.0 - 15 Apr 2024
 - Add custom jobName for Google Batch [df40d55f]
 - Add retry policy to Google Batch client [c4981dcc]
-- Improve error message when Google creds file is corrupted [ci fast] [a550e52f]
+- Improve error message when Google creds file is corrupted [a550e52f]
 - Fix support for GCS requester pays bucket option [d9d61cff]
 - Fix failing CI tests (#4861) [1c0e648e]
 - Bump groovy 4.0.21 [9e08390b]
@@ -56,7 +70,7 @@ nf-google changelog
 1.10.0 - 20 Dec 2023
 - Add ability to disable Cloudinfo service (#4606) [f7251895]
 - Add support for Instance template to Google Batch [df7ed294]
-- Improve GLS tests [ci fast] [58590b1c]
+- Improve GLS tests [58590b1c]
 
 1.9.0 - 24 Nov 2023
 - Add labels field in Job request for Google Batch (#4538) [627c595e]
@@ -90,7 +104,7 @@ nf-google changelog
 - Prevent null exit code when Google batch is unable to access exit status [f68a39ec]
 - Fix S3 path normalization [b75ec444]
 - Fix invalid machine type setting when no valid machine type is found (#3961) [5eb93971]
-- Fix Google Batch default instance family types (#3960) [ci fast] [b5257cd7]
+- Fix Google Batch default instance family types (#3960) [b5257cd7]
 
 1.7.4 - 15 May 2023
 - Update logging libraries [d7eae86e]

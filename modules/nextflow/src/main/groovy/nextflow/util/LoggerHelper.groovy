@@ -213,8 +213,8 @@ class LoggerHelper {
             root.addAppender(syslogAppender)
 
         // -- main package logger
-        def mainLevel = packages[MAIN_PACKAGE] == Level.TRACE ? Level.TRACE : Level.DEBUG
-        def logger = createLogger(MAIN_PACKAGE, mainLevel)
+        final mainLevel = packages[MAIN_PACKAGE] == Level.TRACE ? Level.TRACE : Level.DEBUG
+        final logger = createLogger(MAIN_PACKAGE, mainLevel)
 
         // -- set AWS lib level to WARN to reduce noise in the log file
         final AWS = 'com.amazonaws'

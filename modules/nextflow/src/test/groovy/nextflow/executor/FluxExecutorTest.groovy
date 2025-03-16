@@ -38,6 +38,15 @@ class FluxExecutorTest extends Specification {
         exec.parseJobId('ƒ6nmtLVpBq') == 'ƒ6nmtLVpBq'
     }
 
+    def testParseJobID() {
+
+        given:
+        def exec = [:] as FluxExecutor
+
+        expect:
+        exec.parseJobId('f6nmtLVpBq') == 'f6nmtLVpBq'
+    }
+
     def testKill() {
 
         given:

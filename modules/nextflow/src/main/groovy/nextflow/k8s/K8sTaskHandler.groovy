@@ -472,7 +472,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
      * Terminates the current task execution
      */
     @Override
-    void kill() {
+    protected void killTask() {
         if( cleanupDisabled() )
             return
         

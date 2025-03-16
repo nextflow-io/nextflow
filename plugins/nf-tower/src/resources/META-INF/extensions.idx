@@ -10,3 +10,4 @@
 #
 
 io.seqera.tower.plugin.TowerFactory
+io.seqera.tower.plugin.TowerFusionToken
