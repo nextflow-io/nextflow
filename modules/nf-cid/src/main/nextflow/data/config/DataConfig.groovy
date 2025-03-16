@@ -20,7 +20,6 @@ package nextflow.data.config
 import groovy.transform.CompileStatic
 import nextflow.Global
 import nextflow.Session
-import nextflow.util.TestOnly
 
 /**
  * Model workflow data config

@@ -17,23 +17,21 @@
 
 package nextflow.data.cid
 
-import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import nextflow.data.config.DataConfig
-
 /**
  * Interface for the CID store
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-interface CidStore {
+interface CidStore extends Closeable {
 
     /**
      * Open the CID store.
      * @param config Configuration to open the CID store.
      */
-    void open(DataConfig config)
+    CidStore open(DataConfig config)
 
     /**
      * Save a CID entry in the store for in a given key.
@@ -48,12 +46,6 @@ interface CidStore {
      * @return entry value, or null if key does not exists
      */
     Object load(String key)
-
-    /**
-     * Get the CID store location path.
-     * @return CID store location path.
-     */
-    Path getPath()
 
     /**
      * Get the {@link CidHistoryLog} object associated to the CidStore.

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2025, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package nextflow.cli
@@ -20,6 +21,7 @@ import groovy.json.JsonOutput
 
 import java.nio.file.Files
 
+import nextflow.SysEnv
 import nextflow.dag.MermaidHtmlRenderer
 import nextflow.data.cid.CidHistoryRecord
 import nextflow.data.cid.CidStoreFactory
@@ -36,9 +38,15 @@ import test.OutputCapture
  */
 class CmdCidTest extends Specification {
 
+    def setup() {
+        // clear the environment to avoid the local env pollute the test env
+        SysEnv.push([:])
+    }
+
     def cleanup() {
         Plugins.stop()
         CidStoreFactory.reset()
+        SysEnv.pop()
     }
 
     def setupSpec() {

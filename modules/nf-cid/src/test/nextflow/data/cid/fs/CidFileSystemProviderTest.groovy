@@ -17,6 +17,7 @@
 
 package nextflow.data.cid.fs
 
+import nextflow.data.cid.DefaultCidStore
 import spock.lang.Shared
 
 import java.nio.ByteBuffer
@@ -79,7 +80,7 @@ class CidFileSystemProviderTest extends Specification {
         when:
         def fs = provider.newFileSystem(cid, config) as CidFileSystem
         then:
-        fs.cidStore.path == data
+        (fs.cidStore as DefaultCidStore).location == data
     }
 
     def 'should get a file system' () {
@@ -95,9 +96,9 @@ class CidFileSystemProviderTest extends Specification {
         when:
         provider.newFileSystem(uri, config) as CidFileSystem
         and:
-        def result = provider.getFileSystem(uri) as CidFileSystem
+        def fs = provider.getFileSystem(uri) as CidFileSystem
         then:
-        result.cidStore.path == data
+        (fs.cidStore as DefaultCidStore).location == data
     }
 
     def 'should get or create a file system' () {
@@ -111,7 +112,7 @@ class CidFileSystemProviderTest extends Specification {
         when:
         def fs = provider.getFileSystemOrCreate(uri) as CidFileSystem
         then:
-        fs.cidStore.path == data
+        (fs.cidStore as DefaultCidStore).location == data
 
         when:
         def fs2 = provider.getFileSystemOrCreate(uri) as CidFileSystem

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2025, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,34 +14,28 @@
  * limitations under the License.
  *
  */
-package nextflow.data.cid
 
-import java.util.regex.Pattern
+package nextflow.data.cid.h2
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.data.cid.CidStore
+import nextflow.data.cid.CidStoreFactory
 import nextflow.data.config.DataConfig
 import nextflow.plugin.Priority
 
-/**
- * Default Factory for CidStore
- *
- * @author Jorge Ejarque <jorge.ejarque@seqera.io>
- */
+@Slf4j
 @CompileStatic
-@Priority(0)
-class DefaultCidStoreFactory extends CidStoreFactory {
-
-    private static Pattern SCHEME = ~/^[a-zA-Z][a-zA-Z\d+\-.]*:/
+@Priority(-10)  // <-- lower is higher, this is needed to override default provider behavior
+class H2CidStoreFactory extends CidStoreFactory {
 
     @Override
     boolean canOpen(DataConfig config) {
-        final loc = config.store.location
-        return !loc || loc.startsWith('file:/') || !SCHEME.matcher(loc).find()
+        return config.store.location.startsWith('jdbc:h2:')
     }
 
     @Override
     protected CidStore newInstance(DataConfig config) {
-        return new DefaultCidStore() .open(config)
+        return new H2CidStore().open(config)
     }
-
 }

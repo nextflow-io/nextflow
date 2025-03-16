@@ -85,6 +85,8 @@ class CmdCid extends CmdBase implements UsageAware {
         this.operations = ServiceLoader.load(CidOperation.class).findFirst().orElse(null)
         if( !operations )
             throw new IllegalStateException("Unable to load CID plugin")
+        // init plugins
+        Plugins.load(config)
         // consume the first argument
         getCmd(args).apply(args.drop(1))
     }
