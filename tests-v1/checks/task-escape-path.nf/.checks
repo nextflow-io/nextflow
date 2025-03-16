@@ -1,0 +1,24 @@
+set -e
+
+$NXF_RUN | tee stdout
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process > foo1'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process > foo2'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process > foo3'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process > foo4'` == 1 ]] || false
+
+[[ `< stdout grep -F -c 'FOO1: file\ AA.txt; file1.txt file2.txt fil\ BB.txt'` == 1 ]] || false
+[[ `< stdout grep -F -c 'FOO2: file\ AA.txt; file1.txt file2.txt fil\ BB.txt'` == 1 ]] || false
+[[ `< stdout grep -F -c 'FOO3: file\ AA.txt; file1.txt file2.txt fil\ BB.txt'` == 1 ]] || false
+[[ `< stdout grep -F -c 'FOO4: file\ AA.txt; file1.txt file2.txt fil\ BB.txt'` == 1 ]] || false
+
+## resume 
+$NXF_RUN -resume | tee stdout
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > foo1'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > foo2'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > foo3'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > foo4'` == 1 ]] || false
+
+[[ `< stdout grep -F -c 'FOO1: file\ AA.txt; file1.txt file2.txt fil\ BB.txt'` == 1 ]] || false
+[[ `< stdout grep -F -c 'FOO2: file\ AA.txt; file1.txt file2.txt fil\ BB.txt'` == 1 ]] || false
+[[ `< stdout grep -F -c 'FOO3: file\ AA.txt; file1.txt file2.txt fil\ BB.txt'` == 1 ]] || false
+[[ `< stdout grep -F -c 'FOO4: file\ AA.txt; file1.txt file2.txt fil\ BB.txt'` == 1 ]] || false

@@ -137,6 +137,10 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
             result << "--memory ${memory} "
         }
 
+        if( platform ) {
+            result << "--platform ${platform} "
+        }
+
         // the name is after the user option so it has precedence over any options provided by the user
         if ( name )
             result << '--name ' << name << ' '

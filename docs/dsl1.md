@@ -1,24 +1,12 @@
 (dsl1-page)=
 
-# Migrating from DSL 1
+# Migrating from DSL1
 
-In Nextflow version `22.03.0-edge`, DSL2 became the default DSL version. In version `22.12.0-edge`, DSL1 support was removed, and the Nextflow documentation was updated to use DSL2 by default. Users who are still using DSL1 should migrate their pipelines to DSL2 in order to use the latest versions of Nextflow. This page describes the differences between DSL1 and DSL2, and how to migrate to DSL2.
-
-In Nextflow versions prior to `22.03.0-edge`, you must enable DSL2 explicitly in order to use it. You can either set the feature flag in your pipeline script:
-
-```nextflow
-nextflow.enable.dsl=2
-```
-
-Or set the environment variable where you launch Nextflow:
-
-```bash
-export NXF_DEFAULT_DSL=2
-```
+In Nextflow version `22.03.0-edge`, DSL2 became the default DSL version. In version `22.12.0-edge`, DSL1 support was removed and the Nextflow documentation was updated to use DSL2 by default. Users who are still using DSL1 should migrate their pipelines to DSL2 to use the latest versions of Nextflow. This page describes the differences between DSL1 and DSL2 and how to migrate to DSL2.
 
 ## Processes and workflows
 
-In DSL1, a process definition is also the process invocation. Process inputs and outputs are connected to channels using `from` and `into`. Here is the {ref}`your-first-script` example written in DSL1:
+In DSL1, a process definition is also the process invocation. Process inputs and outputs are connected to channels using `from` and `into`. You can see a basic Nextflow script written in DSL1 here:
 
 ```nextflow
 nextflow.enable.dsl=1
@@ -53,44 +41,69 @@ result.view { it.trim() }
 
 To migrate this code to DSL2, you need to move all of your channel logic throughout the script into a `workflow` definition. Additionally, you must call each process explicitly, passing any input channels as arguments (instead of `from ...`) and receiving any output channels as return values (instead of `into ...`).
 
-Refer to the {ref}`workflow-page` page to learn how to define a workflow. The DSL2 version of the above script is duplicated here for your convenience:
+See {ref}`workflow-page` page to learn how to define a workflow.
 
-```{literalinclude} snippets/your-first-script.nf
-:language: nextflow
+You can see the DSL1 Nextflow script from above written in DSL2 here:
+
+```nextflow
+params.str = 'Hello world!'
+
+process splitLetters {
+    output:
+    path 'chunk_*'
+
+    script:
+    """
+    printf '${params.str}' | split -b 6 - chunk_
+    """
+}
+
+process convertToUpper {
+    input:
+    path x
+
+    output:
+    stdout
+
+    script:
+    """
+    cat $x | tr '[a-z]' '[A-Z]'
+    """
+}
+
+workflow {
+    splitLetters | flatten | convertToUpper | view { v -> v.trim() }
+}
 ```
 
 ## Channel forking
 
-In DSL1, a channel can be used as an input only once; to use a channel multiple times, the channel must be forked using the `into` operator.
-
-In DSL2, channels are automatically forked when connecting two or more consumers.
-
-For example, this would not work in DSL1 but is not a problem in DSL2:
+In DSL1, a channel can be used as an input only once; to use a channel multiple times, the channel must be forked using the `into` operator. In DSL2, channels are automatically forked when connecting two or more consumers. For example:
 
 ```nextflow
 Channel
-    .from('Hello','Hola','Ciao')
-    .set{ cheers }
+    .of('Hello','Hola','Ciao')
+    .set { cheers }
 
 cheers
-    .map{ it.toUpperCase() }
+    .map { v -> v.toUpperCase() }
     .view()
 
 cheers
-    .map{ it.reverse() }
+    .map { v -> v.reverse() }
     .view()
 ```
 
-Similarly, process outputs can be consumed by multiple consumers automatically, which makes workflow scripts much easier to read and write.
+Similarly, in DSL2, process outputs can be consumed by multiple consumers automatically, which makes workflow scripts much easier to read and write.
 
 ## Modules
 
-In DSL1, the entire Nextflow pipeline must be defined in a single file (e.g. `main.nf`). This restriction becomes quite cumbersome as a pipeline becomes larger, and it hinders the sharing and reuse of pipeline components.
+In DSL1, the entire Nextflow pipeline must be defined in a single file. For example, `main.nf`. This restriction becomes cumbersome as a pipeline grows and hinders the sharing and reuse of pipeline components.
 
-DSL2 introduces the concept of "module scripts" (or "modules" for short), which are Nextflow scripts that can be "included" by other scripts. While modules are not essential to migrating to DSL2, nor are they mandatory in DSL2 by any means, modules can help you organize a large pipeline into multiple smaller files, and take advantage of modules created by others. Check out the {ref}`module-page` to get started.
+DSL2 introduces the concept of "module scripts" (or "modules" for short), which are Nextflow scripts that can be "included" by other scripts. While modules are not essential to migrating to DSL2, nor are they mandatory in DSL2, modules can help you organize a large pipeline into multiple smaller files and take advantage of modules created by others. See {ref}`module-page` to learn more about modules.
 
 :::{note}
-DSL2 scripts cannot exceed 64 KB in size. Large DSL1 scripts may need to be split into modules to avoid this limit.
+DSL2 scripts cannot exceed 64 KB in size. Split large DSL1 scripts into modules to avoid this limit.
 :::
 
 ## Deprecations
@@ -103,14 +116,13 @@ DSL2 scripts cannot exceed 64 KB in size. Large DSL1 scripts may need to be spli
 
 - The `mode flatten` option for process outputs is no longer available. Use the {ref}`operator-flatten` operator on the corresponding output channel instead.
 
-- Unqualified value and file elements in a tuple declaration are no longer allowed. Use an explicit `val` or `path` qualifier.
-
-  For example:
+- Unqualified value and file elements in a tuple declaration are no longer allowed. Use an explicit `val` or `path` qualifier. For example:
 
   ```nextflow
   process foo {
       input:
       tuple X, 'some-file.sam'
+
       output:
       tuple X, 'some-file.bam'
 
@@ -127,6 +139,7 @@ DSL2 scripts cannot exceed 64 KB in size. Large DSL1 scripts may need to be spli
   process foo {
       input:
       tuple val(X), path('some-file.sam')
+
       output:
       tuple val(X), path('some-file.bam')
 

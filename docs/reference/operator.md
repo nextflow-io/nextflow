@@ -794,6 +794,10 @@ The `map` operator applies a *mapping function* to each item from a source chann
 :language: console
 ```
 
+:::{note}
+`null` values are not emitted by `map`.
+:::
+
 (operator-max)=
 
 ## max

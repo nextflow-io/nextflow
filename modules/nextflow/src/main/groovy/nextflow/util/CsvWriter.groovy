@@ -50,21 +50,34 @@ class CsvWriter {
         path.delete()
 
         if( columns )
-            path << columns.collect(it -> '"' + it + '"').join(sep) << '\n'
+            path << columns.collect(column -> "\"${column}\"").join(sep) << '\n'
 
         for( final record : records ) {
             Collection values
-            if( record instanceof List )
+            if( record instanceof List ) {
                 values = record
-            else if( record instanceof Map )
+            }
+            else if( record instanceof Map ) {
                 values = columns
                     ? record.subMap(columns).values()
                     : record.values()
-            else
+            }
+            else {
                 throw new IllegalArgumentException('Records must be list or map objects')
+            }
 
-            path << values.collect(it -> '"' + it + '"').join(sep) << '\n'
+            path << values.collect(v -> "\"${toCsvString(v)}\"").join(sep) << '\n'
         }
+    }
+
+    private static String toCsvString(value) {
+        if( value == null )
+            return ""
+
+        if( value instanceof Path )
+            return value.toUriString()
+
+        return value.toString()
     }
 
 }
