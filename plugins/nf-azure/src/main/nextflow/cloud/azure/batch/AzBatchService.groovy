@@ -202,7 +202,6 @@ class AzBatchService implements Closeable {
         def all = listAllVms(location)
         List<Tuple2<Double,String>> scores = []
         def list = allFamilies ? allFamilies.tokenize(',') : ['']
-        log.debug "[AZURE BATCH] Listing VM families"
         for( String family : list ) {
             for( Map entry : all ) {
                 if( !matchType(family, entry.name as String) )
