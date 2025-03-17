@@ -32,7 +32,7 @@ class NF {
         return (Session)Global.session
     }
 
-    static String getSyntaxParser() {
+    static String getSyntaxParserVersion() {
         return SysEnv.get('NXF_SYNTAX_PARSER', 'v1')
     }
 
