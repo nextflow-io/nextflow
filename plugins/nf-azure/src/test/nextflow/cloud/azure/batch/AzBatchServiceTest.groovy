@@ -1,11 +1,15 @@
 package nextflow.cloud.azure.batch
 
+import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.function.Predicate
 
 import com.azure.compute.batch.models.BatchPool
 import com.azure.compute.batch.models.ElevationLevel
+import com.azure.core.exception.HttpResponseException
+import com.azure.core.http.HttpResponse
 import com.azure.identity.ManagedIdentityCredential
 import com.google.common.hash.HashCode
 import nextflow.Global
@@ -22,6 +26,7 @@ import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
+import reactor.core.publisher.Flux
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -830,6 +835,7 @@ class AzBatchServiceTest extends Specification {
         [managedIdentity: [clientId: 'client-123']]     | 'client-123'
     }
 
+
     def 'should cache job id' () {
         given:
         def exec = Mock(AzBatchExecutor)
@@ -879,5 +885,60 @@ class AzBatchServiceTest extends Specification {
         0 * service.createJob0('bar',t3) >> null
         and:
         result == 'job3'
+    }
+
+    def 'should test safeCreatePool' () {
+        given:
+        def exec = Mock(AzBatchExecutor)
+        def service = Spy(new AzBatchService(exec))
+        def spec = Mock(AzVmPoolSpec) {
+            getPoolId() >> 'test-pool'
+        }
+
+        when: 'pool is created successfully'
+        service.safeCreatePool(spec)
+        
+        then: 'createPool is called once'
+        1 * service.createPool(spec) >> null
+        and:
+        noExceptionThrown()
+
+        when: 'pool already exists (409 with PoolExists)'
+        service.safeCreatePool(spec)
+        
+        then: 'exception is caught and debug message is logged'
+        1 * service.createPool(spec) >> {
+            def response = Mock(HttpResponse) {
+                getStatusCode() >> 409
+                getBody() >> {
+                    Flux.just(ByteBuffer.wrap('{"error":{"code":"PoolExists"}}'.getBytes(StandardCharsets.UTF_8)))
+                }
+            }
+            throw new HttpResponseException("Pool already exists", response)
+        }
+        and:
+        noExceptionThrown()
+
+        when: 'different HttpResponseException occurs'
+        service.safeCreatePool(spec)
+        
+        then: 'exception is rethrown'
+        1 * service.createPool(spec) >> {
+            def response = Mock(HttpResponse) {
+                getStatusCode() >> 400
+                getBody() >> {
+                    Flux.just(ByteBuffer.wrap('{"error":{"code":"BadRequest"}}'.getBytes(StandardCharsets.UTF_8)))
+                }
+            }
+            throw new HttpResponseException("Bad request", response)
+        }
+        thrown(HttpResponseException)
+
+        when: 'a different exception occurs'
+        service.safeCreatePool(spec)
+        
+        then: 'exception is not caught'
+        1 * service.createPool(spec) >> { throw new IllegalArgumentException("Some other error") }
+        thrown(IllegalArgumentException)
     }
 }
