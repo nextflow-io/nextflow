@@ -129,6 +129,6 @@ class ConfigValidator {
      */
     private void checkEnv(String name) {
         if( name.startsWith('NXF_') && name!='NXF_DEBUG' )
-            log.warn "Nextflow environment variables must be defined in the launch environment -- the following environment variable in the config will be ignored: `$name`"
+            log.warn "Nextflow environment variables must be defined in the launch environment -- the following environment variable in the config will be ignored: '$name'"
     }
 }
