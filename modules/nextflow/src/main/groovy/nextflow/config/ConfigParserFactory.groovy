@@ -33,7 +33,7 @@ import nextflow.config.parser.v2.ConfigParserV2
 class ConfigParserFactory {
 
     static ConfigParser create() {
-        final parser = Const.getSyntaxParser()
+        final parser = NF.getSyntaxParser()
         if( parser == 'v1' ) {
             return new ConfigParserV1()
         }

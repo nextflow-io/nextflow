@@ -34,7 +34,7 @@ import nextflow.script.parser.v2.ScriptLoaderV2
 class ScriptLoaderFactory {
 
     static ScriptLoader create(Session session) {
-        final parser = Const.getSyntaxParser()
+        final parser = NF.getSyntaxParser()
         if( parser == 'v1' ) {
             return new ScriptLoaderV1(session)
         }
