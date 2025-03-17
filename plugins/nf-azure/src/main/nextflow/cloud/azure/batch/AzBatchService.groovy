@@ -146,25 +146,22 @@ class AzBatchService implements Closeable {
 
     @Memoized
     private List<Map> listAllVms(String location) {
-        
-        final locationNames = listLocationNames()
-        if( !locationNames.contains(location) )
-            log.warn("[AZURE BATCH] No location called ${location} found! Please confirm it exists and the name is correct!")
-
         if( !location )
             throw new IllegalArgumentException("Missing Azure location parameter")
+        final locationNames = listLocationNames()
+        if( !locationNames.contains(location) )
+            log.warn("No Azure location called '${location}' found")
         final json = AzBatchService.class.getResourceAsStream("/nextflow/cloud/azure/vm-list-size-${location}.json")
         if( !json ) {
-            log.warn("[AZURE BATCH] Unable to find Azure VM names for location: $location")
+            log.warn "Unable to find Azure VM names for location: $location"
             return Collections.emptyList()
         }
 
-        final vmList = (List<Map>) new JsonSlurper().parse(json)
-
+        final vmList = new JsonSlurper().parse(json) as List<Map>
         if ( vmList.isEmpty() )
-            log.warn("[AZURE BATCH] No VM sizes found for location: $location")
-
-        log.debug("[AZURE BATCH] vmList: ${vmList}")
+            log.warn("No VM sizes found for Azure location: $location")
+        else
+            log.debug("[AZURE BATCH] Azure location '$location' -> vmList: ${vmList}")
         return vmList
     }
 
