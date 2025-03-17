@@ -3,5 +3,5 @@
 /docs/ @nextflow-io/docs
 
 # COMPILER ------------------------------------------------------------
-# nf-compiler module
-/modules/nf-compiler/ @nextflow-io/compiler
+# nf-lang module
+/modules/nf-lang/ @nextflow-io/compiler
