@@ -19,7 +19,7 @@ package nextflow.config
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.Const
+import nextflow.NF
 import nextflow.config.parser.v1.ConfigParserV1
 import nextflow.config.parser.v2.ConfigParserV2
 

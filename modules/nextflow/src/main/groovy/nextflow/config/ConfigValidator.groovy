@@ -18,7 +18,7 @@ package nextflow.config
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.Const
+import nextflow.NF
 import nextflow.config.schema.ConfigScope
 import nextflow.config.schema.SchemaNode
 import nextflow.config.schema.ScopeName
