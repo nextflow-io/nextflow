@@ -72,7 +72,7 @@ class FusionEnvProvider {
                 result.putAll(env)
         }
         catch (ReportWarningException e) {
-            log.warn1(e.message, causedBy:e, cacheKey:e.kind)
+            log.warn1(e.message, cacheKey:e.kind)
         }
         return result
     }

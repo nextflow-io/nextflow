@@ -81,4 +81,9 @@ class DefaultContainerResolver implements ContainerResolver {
     boolean isContainerReady(String key) {
         return true
     }
+
+    @Override
+    ContainerMeta getContainerMeta(String key) {
+        return new ContainerMeta(targetImage: key)
+    }
 }
