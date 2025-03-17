@@ -437,16 +437,16 @@ class MermaidRenderer implements DagRenderer {
      */
     private void renderNodeTree(List<String> lines, String name, String fqName, Map<String,Object> nodeTree) {
         if( name ) {
-            final isWorkflow = name != INPUTS && name != OUTPUTS
-            final label = isWorkflow ? name : '" "'
-            final fqLabel = isWorkflow ? fqName : '" "'
-            lines << "    subgraph ${fqLabel} [${label}]".toString()
+            if( name == INPUTS || name == OUTPUTS )
+                lines << "    subgraph \" \"".toString()
+            else
+                lines << "    subgraph ${fqName} [${name}]".toString()
         }
 
         nodeTree.each { key, value ->
             if( value instanceof Map ) {
-                final fqKey = fqName ? "${fqName}::${key}".toString() : key
-                renderNodeTree(lines, key, fqKey, value)
+                final id = fqName ? "${fqName}::${key}".toString() : key
+                renderNodeTree(lines, key, id, value)
             }
             else if( value instanceof Node ) {
                 // skip node if it is disconnected
