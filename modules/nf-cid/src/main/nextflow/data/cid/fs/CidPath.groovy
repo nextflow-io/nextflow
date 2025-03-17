@@ -17,11 +17,20 @@
 
 package nextflow.data.cid.fs
 
+import groovy.json.JsonOutput
 import groovy.util.logging.Slf4j
 import nextflow.data.cid.model.Output
+import nextflow.data.cid.model.WorkflowResults
 import nextflow.file.RealPathAware
 import nextflow.util.CacheHelper
 import nextflow.util.TestOnly
+
+import java.nio.ByteBuffer
+import java.nio.channels.ClosedChannelException
+import java.nio.channels.NonWritableChannelException
+import java.nio.channels.SeekableByteChannel
+import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.attribute.FileTime
 
 import static nextflow.data.cid.fs.CidFileSystemProvider.*
 
@@ -43,7 +52,6 @@ import nextflow.file.FileHelper
  */
 @Slf4j
 @CompileStatic
-
 class CidPath implements Path, RealPathAware {
 
     static public final List<String> SUPPORTED_CHECKSUM_ALGORITHMS=["nextflow"]
@@ -97,7 +105,7 @@ class CidPath implements Path, RealPathAware {
     /**
      * Finds the target path of a CID path
      **/
-    protected static Path findTarget(CidFileSystem fs, String filePath, String[] childs=[]) throws Exception{
+    protected static Path findTarget(CidFileSystem fs, String filePath, boolean resultsAsPath, String[] childs=[]) throws Exception{
         if( !fs )
             throw new IllegalArgumentException("Cannot get target path for a relative CidPath")
         if( filePath.isEmpty() || filePath == SEPARATOR )
@@ -118,6 +126,20 @@ class CidPath implements Path, RealPathAware {
                     throw new FileNotFoundException("Target path $realPath for $filePath does not exists.")
                 return realPath
             }
+            if( object instanceof WorkflowResults && resultsAsPath ){
+                final cidObject = object as WorkflowResults
+                final results = cidObject.outputs as Map
+                final creationTime = cidObject.creationTime as long
+                if( results ) {
+                    if( childs && childs.size() > 0 ) {
+                        final output = results.navigate(childs.join('.'))
+                        if( output ){
+                            return new CidResultsPath(JsonOutput.prettyPrint(JsonOutput.toJson(results)), creationTime, fs, filePath, childs)
+                        }
+                    }
+                    return new CidResultsPath(JsonOutput.prettyPrint(JsonOutput.toJson(results)), creationTime, fs, filePath, childs)
+                }
+            }
         } else {
             // If there isn't metadata check the parent to check if it is a subfolder of a task/workflow output
             final currentPath = Path.of(filePath)
@@ -126,7 +148,7 @@ class CidPath implements Path, RealPathAware {
                 ArrayList<String> newChilds = new ArrayList<String>()
                 newChilds.add(currentPath.getFileName().toString())
                 newChilds.addAll(childs)
-                return findTarget(fs, parent.toString(), newChilds as String[])
+                return findTarget(fs, parent.toString(), resultsAsPath, newChilds as String[])
             }
         }
         throw new FileNotFoundException("Target path $filePath does not exists.")
@@ -325,11 +347,11 @@ class CidPath implements Path, RealPathAware {
 
     @Override
     Path toRealPath(LinkOption... options) throws IOException {
-        return this.getTargetPath()
+        return this.getTargetPath(true)
     }
 
-    protected Path getTargetPath(){
-        return findTarget(fileSystem, filePath)
+    protected Path getTargetPath(boolean resultsAsPath){
+        return findTarget(fileSystem, filePath, resultsAsPath)
     }
 
     @Override
@@ -344,10 +366,7 @@ class CidPath implements Path, RealPathAware {
 
     @Override
     int compareTo(Path other) {
-        if( CidPath.class != other.class )
-            throw new ProviderMismatchException()
-        final that = other as CidPath
-        return Path.of(this.filePath).compareTo(Path.of(that.filePath))
+        return toString().compareTo(other.toString());
     }
 
     @Override
@@ -385,3 +404,102 @@ class CidPath implements Path, RealPathAware {
     }
 
 }
+
+class ResultsSeekableByteChannel implements SeekableByteChannel {
+    private final ByteBuffer buffer
+    private boolean open
+
+    ResultsSeekableByteChannel(byte[] bytes){
+        this.open = true
+        this.buffer = ByteBuffer.wrap(bytes)
+    }
+
+    @Override
+    int read(ByteBuffer dst) {
+        if (!open) throw new ClosedChannelException()
+        if (!buffer.hasRemaining()) return -1
+        int remaining = Math.min(dst.remaining(), buffer.remaining())
+        byte[] temp = new byte[remaining]
+        buffer.get(temp)
+        dst.put(temp)
+        return remaining
+    }
+
+    @Override
+    int write(ByteBuffer src) { throw new NonWritableChannelException() }
+
+    @Override
+    long position() { return buffer.position() }
+
+    @Override
+    SeekableByteChannel position(long newPosition) {
+        if (newPosition < 0 || newPosition > buffer.limit()) throw new IllegalArgumentException()
+        buffer.position((int) newPosition)
+        return this
+    }
+
+    @Override
+    long size() { return buffer.limit() }
+
+    @Override
+    SeekableByteChannel truncate(long size) { throw new NonWritableChannelException() }
+
+    @Override
+    boolean isOpen() { return open }
+
+    @Override
+    void close() { open = false }
+}
+
+class CidResultsPath extends CidPath {
+    private byte[] results
+    private FileTime creationTime
+
+    CidResultsPath (String resultsObject, long creationTime, CidFileSystem fs, String path, String[] childs) {
+        super(fs, path, childs)
+        this.results = resultsObject.getBytes("UTF-8")
+        this.creationTime = FileTime.fromMillis(creationTime)
+    }
+
+    InputStream newInputStream() {
+        return new ByteArrayInputStream(results)
+    }
+
+    SeekableByteChannel newSeekableByteChannel(){
+        return new ResultsSeekableByteChannel(results)
+    }
+
+    <A extends BasicFileAttributes> A readAttributes(Class<A> type){
+        return (A) new BasicFileAttributes() {
+            @Override
+            long size() { return results.length }
+
+            @Override
+            FileTime lastModifiedTime() { return creationTime }
+
+            @Override
+            FileTime lastAccessTime() { return creationTime }
+
+            @Override
+            FileTime creationTime() { return creationTime }
+
+            @Override
+            boolean isRegularFile() { return true }
+
+            @Override
+            boolean isDirectory() { return false }
+
+            @Override
+            boolean isSymbolicLink() { return false }
+
+            @Override
+            boolean isOther() { return false }
+
+            @Override
+            Object fileKey() { return null }
+        }
+    }
+
+
+}
+
