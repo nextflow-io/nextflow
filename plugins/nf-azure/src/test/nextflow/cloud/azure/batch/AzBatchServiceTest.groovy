@@ -96,6 +96,50 @@ class AzBatchServiceTest extends Specification {
         'Standard_D5_v2' in names
     }
 
+    def 'should list all VMs in region' () {
+        given:
+        def exec = Mock(AzBatchExecutor) {
+            getConfig() >> new AzConfig([:])
+        }
+        def svc = new AzBatchService(exec)
+
+        when:
+        def vms = svc.listAllVms('northeurope')
+
+        then:
+        [
+            maxDataDiskCount: 32,
+            memoryInMB: 28672,
+            name: "Standard_D4_v2",
+            numberOfCores: 8,
+            osDiskSizeInMB: 1047552,
+            resourceDiskSizeInMB: 409600
+        ] in vms
+        [
+            maxDataDiskCount: 8,
+            memoryInMB: 7168,
+            name: "Basic_A3",
+            numberOfCores: 4,
+            osDiskSizeInMB: 1047552,
+            resourceDiskSizeInMB: 122880
+        ] in vms
+    }
+
+    def 'should fail to list VMs in region' () {
+        given:
+        def exec = Mock(AzBatchExecutor) {
+            getConfig() >> new AzConfig([:])
+        }
+        def svc = new AzBatchService(exec)
+
+        when:
+        def vms = svc.listAllVms('mars')
+
+        then:
+        vms instanceof List
+        vms.isEmpty()
+    }
+
     def 'should get size for vm' () {
         given:
         def exec = Mock(AzBatchExecutor) {
