@@ -47,6 +47,7 @@ process pyTask {
     input:
     stdin
 
+    script:
     '''
     #!/usr/bin/env python3
     import sys

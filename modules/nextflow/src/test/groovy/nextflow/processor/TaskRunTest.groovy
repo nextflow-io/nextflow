@@ -24,6 +24,8 @@ import nextflow.Session
 import nextflow.ast.TaskCmdXform
 import nextflow.container.ContainerConfig
 import nextflow.container.resolver.ContainerInfo
+import nextflow.container.resolver.ContainerMeta
+import nextflow.container.resolver.ContainerResolver
 import nextflow.executor.Executor
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
@@ -941,6 +943,31 @@ class TaskRunTest extends Specification {
         0 * task.resolveBody(_) >> null
     }
 
+    def 'should get container info & meta' () {
+        given:
+        def image = 'my/container:latest'
+        def meta = new ContainerMeta(sourceImage: image, targetImage: image)
+        def info = new ContainerInfo(image,image,image)
+        def resolver = Mock(ContainerResolver)
+        def config = Mock(TaskConfig) { getContainer() >> image }
+        def task = Spy(new TaskRun(config:config))
+        task.containerResolver() >> resolver
+
+        when:
+        def result1 = task.containerInfo()
+        then:
+        resolver.resolveImage(task,image) >> info
+        and:
+        result1 == info
+
+        when:
+        def result2 = task.containerMeta()
+        then:
+        resolver.getContainerMeta(image) >> meta
+        and:
+        result2 == meta
+    }
+    
     def 'should resolve task stub from template' () {
 
         given:

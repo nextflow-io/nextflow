@@ -151,9 +151,10 @@ developer/plugins
 
 ```{toctree}
 :hidden:
-:caption: Tutorials
+:caption: Guides
 :maxdepth: 1
 
-flux
+updating-spot-retries
 metrics
+flux
 ```

@@ -1,0 +1,27 @@
+set -e
+mkdir 'w o r k d i r'
+
+#
+# run using a workdir containing blanks 
+#
+echo ''
+$NXF_RUN -w "$PWD/w o r k d i r" > stdout
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > foo'` == 3 ]] || false
+
+
+#
+# the same using scracth 
+#
+echo ''
+$NXF_RUN -w "$PWD/w o r k d i r" -process.scratch true > stdout
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > foo'` == 3 ]] || false
+
+
+#
+# the same using Docker 
+#
+# Disabled - See https://github.com/docker/docker/issues/17967
+#echo ''
+#$NXF_RUN $WITH_DOCKER -w "$PWD/w o r k d i r" > stdout
+#[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > foo'` == 3 ]] || false
+#
