@@ -31,12 +31,17 @@ import nextflow.plugin.Priority
 @Priority(0)
 class DefaultCidStoreFactory extends CidStoreFactory {
 
-    private static Pattern SCHEME = ~/^[a-zA-Z][a-zA-Z\d+\-.]*:/
+    private static Pattern SCHEME = ~/^([a-zA-Z][a-zA-Z\d+\-.]*):/
+    private static List SUPPORTED_SCHEMES = ['file', 's3', 'gs', 'az']
 
     @Override
     boolean canOpen(DataConfig config) {
         final loc = config.store.location
-        return !loc || loc.startsWith('file:/') || !SCHEME.matcher(loc).find()
+        if( !loc ) {
+            return true
+        }
+        final matcher = SCHEME.matcher(loc)
+        return matcher.find() ? matcher.group(1) in SUPPORTED_SCHEMES : true
     }
 
     @Override

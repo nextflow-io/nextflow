@@ -42,7 +42,8 @@ class DefaultCidStoreFactoryTest extends Specification {
         true        | [store:[location:'/some/path']]
         true        | [store:[location:'some/rel/path']]
         true        | [store:[location:'file:/this/that']]
-        false       | [store:[location:'s3://some/path']]
+        true        | [store:[location:'s3://some/path']]
+        false       | [store:[location:'http://some/path']]
         false       | [store:[location:'jdbc:foo']]
     }
 
