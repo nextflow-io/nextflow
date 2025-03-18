@@ -16,9 +16,8 @@
  */
 
 params.prefix = 'my'
-
-data = 'Hello\n'
-list = ['alpha', 'delta', 'gamma', 'omega']
+params.data = 'Hello\n'
+params.list = ['alpha', 'delta', 'gamma', 'omega']
 
 process foo {
 
@@ -29,6 +28,7 @@ process foo {
   output:
   file "${params.prefix}_${x}.txt"
 
+  script:
   """
   echo World >>  ${params.prefix}_${x}.txt
   """
@@ -36,5 +36,5 @@ process foo {
 }
 
 workflow {
-  foo(list, data) | subscribe { println "~ Saving ${it.name}"; it.copyTo('.') }
+  foo(params.list, params.data) | subscribe { println "~ Saving ${it.name}"; it.copyTo('.') }
 }

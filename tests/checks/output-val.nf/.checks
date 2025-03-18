@@ -11,7 +11,7 @@ $NXF_RUN | tee stdout
 [[ `< stdout grep 'x: 100'` ]] 				|| false
 [[ `< stdout grep 'y: two hundred'` ]] 		|| false
 [[ `< stdout grep 'str: Hello'` ]] 			|| false
-[[ `< stdout grep 'exp: input-100.out'` ]] 	|| false
+[[ `< stdout grep 'exp: prot-100.out'` ]] 	|| false
 
 
 
@@ -26,5 +26,5 @@ $NXF_RUN -resume | tee stdout
 [[ `< stdout grep 'x: 100'` ]] 				|| false
 [[ `< stdout grep 'y: two hundred'` ]] 		|| false
 [[ `< stdout grep 'str: Hello'` ]] 			|| false
-[[ `< stdout grep 'exp: input-100.out'` ]] 	|| false
+[[ `< stdout grep 'exp: prot-100.out'` ]] 	|| false
 

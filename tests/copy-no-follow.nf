@@ -21,6 +21,7 @@ process test {
 	output:
 	file '*' 
 
+	script:
 	"""
 	echo "TEST" > testFile.txt
 	ln -s testFile.txt testFileLink.txt

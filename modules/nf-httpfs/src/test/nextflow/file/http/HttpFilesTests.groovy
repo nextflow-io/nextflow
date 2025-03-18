@@ -33,6 +33,8 @@ import nextflow.SysEnv
 import org.junit.Rule
 import spock.lang.IgnoreIf
 import spock.lang.Specification
+import test.TestHelper
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -243,7 +245,8 @@ class HttpFilesTests extends Specification {
         def RESP = 'Hello world'
         and:
         // launch web server
-        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
+        int port = TestHelper.rndServerPort()
+        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         def hc1 = server.createContext("/", new BasicHandler(RESP, 200));
 
         hc1.setAuthenticator(new BasicAuthenticator("get") {
@@ -255,7 +258,7 @@ class HttpFilesTests extends Specification {
         server.start()
 
         when:
-        def path = Paths.get(new URI('http://admin:Secret1@localhost:9900/foo/bar'))
+        def path = Paths.get(new URI("http://admin:Secret1@localhost:${port}/foo/bar"))
         then:
         path.text == 'Hello world'
 
