@@ -54,9 +54,11 @@ To install Java with SDKMAN:
 
 ## Install Nextflow
 
-Nextflow is distributed as a self-installing package, in order to make the installation process as simple as possible:
+Nextflow can be installed either as a self-installing package or via Conda.
 
-To install Nextflow:
+### Self-installing package
+
+To install Nextflow as a self-installing package:
 
 1. Download Nextflow:
 
@@ -92,12 +94,48 @@ To install Nextflow:
     Nextflow will update its executable during the self update process, therefore the update can fail if the executable is placed in a directory with restricted permissions.
     :::
 
-4. Confirm that Nextflow is installed correctly:
+4. Confirm Nextflow is installed correctly:
 
     ```{code-block} bash
     :class: copyable
     nextflow info
     ```
+
+### Conda
+
+To install Nextflow with Conda:
+
+1. Add the Bioconda and conda-forge channels to your Conda configuration:
+    
+    ```{code-block} bash
+    :class: copyable
+    conda config --add channels bioconda
+    conda config --add channels conda-forge
+    ```
+
+2. Create an environment:
+
+    ```{code-block} bash
+    :class: copyable
+    conda create --name nf_env nextflow
+    ```
+
+3. Active the environment:
+
+    ```{code-block} bash
+    source activate nf_env
+    ```
+
+4. Confirm Nextflow is installed correctly:
+
+    ```{code-block} bash
+    :class: copyable
+    nextflow info
+    ```
+
+:::{warning}
+Installing Nextflow via Conda may lead to outdated versions, dependency conflicts, and Java compatibility issues. Using the self-installing package is recommended for a more reliable and up-to-date installation.
+:::
 
 ## Seqera Platform
 
