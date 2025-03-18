@@ -111,7 +111,9 @@ class IncludeDef {
         // -- resolve the concrete against the current script
         final moduleFile = realModulePath(path).normalize()
         // -- load the module
-        final moduleScript = loadModule0(moduleFile, resolveParams(ownerParams), session)
+        final moduleScript = NF.getSyntaxParserVersion() == 'v2'
+            ? loadModuleV2(moduleFile, ownerParams, session)
+            : loadModuleV1(moduleFile, resolveParams(ownerParams), session)
         // -- add it to the inclusions
         for( Module module : modules ) {
             meta.addModule(moduleScript, module.name, module.alias)
@@ -133,19 +135,37 @@ class IncludeDef {
     @PackageScope
     Path getOwnerPath() { getMeta().getScriptPath() }
 
+    /**
+     * When using the strict syntax, the included script will already
+     * have been compiled, so simply execute it to load its definitions.
+     *
+     * @param path    The included script path
+     * @param params  The params of the including script
+     * @param session The current workflow run
+     */
     @PackageScope
     @Memoized
-    static BaseScript loadModule0(Path path, Map params, Session session) {
+    static BaseScript loadModuleV2(Path path, Map params, Session session) {
         final script = ScriptMeta.getScriptByPath(path)
-        if( script ) {
-            script.getBinding().setParams(params)
-            script.run()
-            return script
-        }
+        if( !script )
+            throw new IllegalStateException()
+        script.getBinding().setParams(params)
+        script.run()
+        return script
+    }
 
+    /**
+     * When not using the strict syntax, compile and execute the
+     * included script to load its definitions.
+     *
+     * @param path    The included script path
+     * @param params  The params of the including script
+     * @param session The current workflow run
+     */
+    @PackageScope
+    @Memoized
+    static BaseScript loadModuleV1(Path path, Map params, Session session) {
         final binding = new ScriptBinding() .setParams(params)
-
-        // the execution of a library file has as side effect the registration of declared processes
         new ScriptLoaderV1(session)
                 .setModule(true)
                 .setBinding(binding)
