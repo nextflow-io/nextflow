@@ -54,7 +54,7 @@ To install Java with SDKMAN:
 
 ## Install Nextflow
 
-Nextflow can be installed either as a self-installing package or via Conda.
+Nextflow is distributed as an easy to use self-installing package. It is also distributed via Conda and as a standalone distribution.
 
 ### Self-installing package
 
@@ -137,21 +137,7 @@ To install Nextflow with Conda:
 Installing Nextflow via Conda may lead to outdated versions, dependency conflicts, and Java compatibility issues. Using the self-installing package is recommended for a more reliable and up-to-date installation.
 :::
 
-## Seqera Platform
-
-You can launch workflows directly from [Seqera Platform](https://seqera.io/platform/) without installing Nextflow locally.
-
-Launching from Seqera Platform provides you with:
-
-- User-friendly launch interfaces.
-- Automated cloud infrastructure creation.
-- Organizational user management.
-- Advanced analytics with resource optimization.
-
-Seqera Cloud Basic is free for small teams. Researchers at qualifying academic institutions can apply for free access to Seqera Cloud Pro.
-See the [Seqera Platform documentation](https://docs.seqera.io/platform) for set-up information and tutorials to get started.
-
-## Standalone distribution
+### Standalone distribution
 
 The Nextflow standalone distribution (i.e. the `dist` release) is a self-contained `nextflow` executable that can run without needing to download core dependencies at runtime. This distribution is useful for offline environments, as well as building and testing Nextflow locally.
 
@@ -172,5 +158,19 @@ To use the standalone distribution:
 
     ```{code-block} bash
     :class: copyable
-    ./nextflow-24.10.1-dist run hello
+    ./nextflow-24.10.1-dist run info
     ```
+
+## Seqera Platform
+
+You can launch workflows directly from [Seqera Platform](https://seqera.io/platform/) without installing Nextflow locally.
+
+Launching from Seqera Platform provides you with:
+
+- User-friendly launch interfaces.
+- Automated cloud infrastructure creation.
+- Organizational user management.
+- Advanced analytics with resource optimization.
+
+Seqera Cloud Basic is free for small teams. Researchers at qualifying academic institutions can apply for free access to Seqera Cloud Pro.
+See the [Seqera Platform documentation](https://docs.seqera.io/platform) for set-up information and tutorials to get started.
