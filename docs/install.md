@@ -56,9 +56,11 @@ To install Java with SDKMAN:
 
 Nextflow is distributed as an easy to use self-installing package. It is also distributed via Conda and as a standalone distribution.
 
-### Self-installing package
+### Self-installing
 
-To install Nextflow as a self-installing package:
+In order to make the installation process as simple as possible, Nextflow is distributed as a self-installing package.
+
+To install Nextflow with the self-installing package:
 
 1. Download Nextflow:
 
@@ -141,8 +143,6 @@ Installing Nextflow via Conda may lead to outdated versions, dependency conflict
 
 The Nextflow standalone distribution (i.e. the `dist` release) is a self-contained `nextflow` executable that can run without needing to download core dependencies at runtime. This distribution is useful for offline environments, as well as building and testing Nextflow locally.
 
-The standalone distribution will still download core and third-party plugins as needed at runtime.
-
 To use the standalone distribution:
 
 1. Download the standalone distribution from Assets section of the [GitHub releases page](https://github.com/nextflow-io/nextflow/releases).
@@ -160,6 +160,10 @@ To use the standalone distribution:
     :class: copyable
     ./nextflow-24.10.1-dist run info
     ```
+
+:::{note}
+The standalone distribution will still download core and third-party plugins as needed at runtime.
+:::
 
 ## Seqera Platform
 
