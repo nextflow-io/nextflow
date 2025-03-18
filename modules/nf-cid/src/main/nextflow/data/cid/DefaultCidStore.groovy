@@ -17,7 +17,12 @@
 
 package nextflow.data.cid
 
+<<<<<<< HEAD
 import nextflow.file.FileHelper
+=======
+import nextflow.data.cid.serde.Encoder
+import nextflow.data.cid.serde.JsonEncoder
+>>>>>>> bdbe5bdb0 (Add serde interfaces)
 import nextflow.util.TestOnly
 
 import java.nio.file.Files
@@ -44,10 +49,12 @@ class DefaultCidStore implements CidStore {
     private Path metaLocation
     private Path location
     private CidHistoryLog historyLog
+    private Encoder<String,CidSerializable> encoder
 
     DefaultCidStore open(DataConfig config) {
         location = toLocationPath(config.store.location)
         metaLocation = location.resolve(METADATA_PATH)
+        encoder = new JsonEncoder<CidSerializable>() {}
         if( !Files.exists(metaLocation) && !Files.createDirectories(metaLocation) ) {
             throw new AbortOperationException("Unable to create CID store directory: $metaLocation")
         }
@@ -62,19 +69,19 @@ class DefaultCidStore implements CidStore {
     }
 
     @Override
-    void save(String key, Object value) {
+    void save(String key, CidSerializable value) {
         final path = metaLocation.resolve("$key/$METADATA_FILE")
         Files.createDirectories(path.parent)
         log.debug "Save CID file path: $path"
-        path.text = value
+        path.text = encoder.encode(value)
     }
 
     @Override
-    Object load(String key) {
+    CidSerializable load(String key) {
         final path = metaLocation.resolve("$key/$METADATA_FILE")
         log.debug("Loading from path $path")
         if (path.exists())
-            return path.text
+            return encoder.decode(path.text)
         log.debug("File for key $key not found")
         return null
     }
