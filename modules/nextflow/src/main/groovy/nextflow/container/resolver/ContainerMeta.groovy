@@ -12,22 +12,33 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-includeConfig "${'delta'}.config"
+package nextflow.container.resolver
 
-profiles {
+import java.time.Instant
 
-	standard {
-	  	process {
-	  		cpus = 2 
-	  		memory = '2GB'
-	  	}
-	}
-	
-	
-	advanced {
-		includeConfig "omega.config"
-	}
+import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.ToString
 
+/**
+ * Model container usage metadata
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@CompileStatic
+@ToString(includePackage = false, includeNames = true)
+@EqualsAndHashCode
+class ContainerMeta {
+    String requestId
+    String sourceImage
+    String targetImage
+    String buildId
+    String mirrorId
+    String scanId
+    Boolean cached
+    Boolean freeze
+    Instant requestTime
 }
