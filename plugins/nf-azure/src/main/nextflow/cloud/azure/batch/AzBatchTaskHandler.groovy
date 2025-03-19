@@ -15,14 +15,14 @@
  */
 package nextflow.cloud.azure.batch
 
+import nextflow.exception.ProcessException
+
 import java.nio.file.Path
 
-import com.azure.compute.batch.models.BatchTaskExecutionResult
 import com.azure.compute.batch.models.BatchTaskState
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.types.CloudMachineInfo
-import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.fusion.FusionAwareTask
@@ -121,11 +121,11 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             task.stdout = outputFile
             task.stderr = errorFile
             status = TaskStatus.COMPLETED
-            if( info.result == BatchTaskExecutionResult.FAILURE ){
-                if( task.exitStatus == 0 || task.exitStatus == Integer.MAX_VALUE) {
-                    // Consider unrecoverable failure when Task failure and exit code is 0 or does not exist (MAX_VALUE)
-                    task.error = new ProcessUnrecoverableException(info.failureInfo.message)
-                }
+            if( task.exitStatus == Integer.MAX_VALUE && info.failureInfo.message) {
+                // when task exist code is not defined and there is a Azure Batch task failure raise an exception with Azure's failure message
+                task.error = new ProcessException(info.failureInfo.message)
+
+
             }
             deleteTask(taskKey, task)
             return true
