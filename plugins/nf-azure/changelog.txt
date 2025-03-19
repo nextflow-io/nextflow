@@ -1,5 +1,9 @@
 nf-azure changelog
 ===================
+1.14.1 - 19 Mar 2025
+- Fix handling of exit status with Azure Batch and Fusion (#5806) [7085862d]
+- Removing Azure vmList from log [ci fast] [67ffc8ab]
+
 1.14.0 - 17 Mar 2025
 - Add  cpu-shares and memory limits to Azure Batch tasks (#5799) [f9c0cbfd]
 - Add disk directive support in Azure Batch (#5784) [113d7250]
