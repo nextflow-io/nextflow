@@ -676,7 +676,7 @@ class AzBatchServiceTest extends Specification {
         result.id == 'nf-01000000'
         result.requiredSlots == 4
         and:
-        result.commandLine == "sh -c 'bash .command.run 2>&1 | tee .command.log'"
+        result.commandLine == "bash -o pipefail -c 'bash .command.run 2>&1 | tee .command.log'"
         and:
         result.containerSettings.imageName == 'ubuntu:latest'
         result.containerSettings.containerRunOptions == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro '
@@ -720,7 +720,7 @@ class AzBatchServiceTest extends Specification {
         result.id == 'nf-02000000'
         result.requiredSlots == 4
         and:
-        result.commandLine == "sh -c 'bash .command.run 2>&1 | tee .command.log'"
+        result.commandLine == "bash -o pipefail -c 'bash .command.run 2>&1 | tee .command.log'"
         and:
         result.containerSettings.imageName == 'ubuntu:latest'
         result.containerSettings.containerRunOptions == '--cpu-shares 4096 --memory 8192m -v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro '
@@ -765,7 +765,7 @@ class AzBatchServiceTest extends Specification {
         result.id == 'nf-02000000'
         result.requiredSlots == 4
         and:
-        result.commandLine == "sh -c 'bash .command.run 2>&1 | tee .command.log'"
+        result.commandLine == "bash -o pipefail -c 'bash .command.run 2>&1 | tee .command.log'"
         and:
         result.containerSettings.imageName == 'ubuntu:latest'
         result.containerSettings.containerRunOptions == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro -v /mnt/batch/tasks/fsmounts/file1:mountPath1:rw -v /foo:/foo '
