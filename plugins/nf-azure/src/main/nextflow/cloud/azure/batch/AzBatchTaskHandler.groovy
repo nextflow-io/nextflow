@@ -77,7 +77,7 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
     }
 
-    protected BashWrapperBuilder createTaskWrapper() {
+    protected BashWrapperBuilder createBashWrapper() {
         return fusionEnabled()
                 ? fusionLauncher()
                 : new AzBatchScriptLauncher(task.toTaskBean(), executor)
@@ -86,7 +86,7 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     @Override
     void submit() {
         log.debug "[AZURE BATCH] Submitting task $task.name - work-dir=${task.workDirStr}"
-        createTaskWrapper().build()
+        createBashWrapper().build()
         // submit the task execution
         this.taskKey = batchService.submitTask(task)
         log.debug "[AZURE BATCH] Submitted task $task.name with taskId=$taskKey"
@@ -122,8 +122,10 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             task.stderr = errorFile
             status = TaskStatus.COMPLETED
             if( task.exitStatus == Integer.MAX_VALUE && info.failureInfo.message) {
+                final reason = info.failureInfo.message
+                final unrecoverable = reason.contains('CannotPullContainer') && reason.contains('unauthorized')
                 // when task exist code is not defined and there is a Azure Batch task failure raise an exception with Azure's failure message
-                task.error = new ProcessException(info.failureInfo.message)
+                task.error = unrecoverable ? new ProcessUnrecoverableException(reason) : new ProcessException(reason)
             }
             deleteTask(taskKey, task)
             return true

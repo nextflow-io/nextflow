@@ -2,14 +2,12 @@ package nextflow.cloud.azure.batch
 
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
-import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.Executor
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
-import nextflow.processor.TaskStatus
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
 import spock.lang.Specification
@@ -58,7 +56,7 @@ class AzBatchTaskHandlerTest extends Specification {
         handler.submit()
         
         then:
-        1 * handler.createTaskWrapper() >> Mock(BashWrapperBuilder)
+        1 * handler.createBashWrapper() >> Mock(BashWrapperBuilder)
         1 * handler.getBatchService() >> Mock(AzBatchService)
     }
 
