@@ -124,8 +124,6 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             if( task.exitStatus == Integer.MAX_VALUE && info.failureInfo.message) {
                 // when task exist code is not defined and there is a Azure Batch task failure raise an exception with Azure's failure message
                 task.error = new ProcessException(info.failureInfo.message)
-
-
             }
             deleteTask(taskKey, task)
             return true
