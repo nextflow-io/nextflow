@@ -160,8 +160,6 @@ class AzBatchService implements Closeable {
         final vmList = new JsonSlurper().parse(json) as List<Map>
         if ( vmList.isEmpty() )
             log.warn("No VM sizes found for Azure location: $location")
-        else
-            log.debug("[AZURE BATCH] Azure location '$location' -> vmList: ${vmList}")
         return vmList
     }
 
