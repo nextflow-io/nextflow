@@ -1,5 +1,5 @@
 nf-amazon@2.13.0
-nf-azure@1.14.0
+nf-azure@1.14.1
 nf-cloudcache@0.4.3
 nf-codecommit@0.2.3
 nf-console@1.2.0
