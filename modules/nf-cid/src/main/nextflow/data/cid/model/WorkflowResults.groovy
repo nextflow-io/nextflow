@@ -29,6 +29,7 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class WorkflowResults {
     DataType type
-    String run
-    List outputs
+    long creationTime
+    Map<String, Object> outputs
+    List<String> publishedFiles
 }
