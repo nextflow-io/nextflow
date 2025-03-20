@@ -85,10 +85,6 @@ allprojects {
         maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
         maven { url = "https://s3-eu-west-1.amazonaws.com/maven.seqera.io/releases" }
         maven { url = "https://s3-eu-west-1.amazonaws.com/maven.seqera.io/snapshots" }
-        maven {
-            url 'https://jitpack.io'
-            content { includeGroup 'com.github.nextflow-io.language-server' }
-        }
     }
 
     configurations {
@@ -241,7 +237,7 @@ task compile {
 
 def getRuntimeConfigs() {
     def names = subprojects
-            .findAll { prj -> prj.name in ['nextflow','nf-commons','nf-httpfs'] }
+            .findAll { prj -> prj.name in ['nextflow','nf-commons','nf-httpfs','nf-lang'] }
             .collect { it.name }
 
     FileCollection result = null
@@ -267,7 +263,7 @@ task exportClasspath {
         def home = System.getProperty('user.home')
         def all = getRuntimeConfigs()
         def libs = all.collect { File file ->  /*println file.canonicalPath.replace(home, '$HOME');*/ file.canonicalPath;  }
-        ['nextflow','nf-commons','nf-httpfs'].each {libs << file("modules/$it/build/libs/${it}-${version}.jar").canonicalPath }
+        ['nextflow','nf-commons','nf-httpfs','nf-lang'].each {libs << file("modules/$it/build/libs/${it}-${version}.jar").canonicalPath }
         file('.launch.classpath').text = libs.unique().join(':')
     }
 }
@@ -280,7 +276,7 @@ ext.nexusEmail = project.findProperty('nexusEmail')
 // `signing.keyId` property needs to be defined in the `gradle.properties` file
 ext.enableSignArchives = project.findProperty('signing.keyId')
 
-ext.coreProjects = projects( ':nextflow', ':nf-commons', ':nf-httpfs' )
+ext.coreProjects = projects( ':nextflow', ':nf-commons', ':nf-httpfs', ':nf-lang' )
 
 configure(coreProjects) {
     group = 'io.nextflow'
