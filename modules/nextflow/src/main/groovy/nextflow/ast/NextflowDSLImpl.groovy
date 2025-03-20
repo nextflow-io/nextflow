@@ -596,6 +596,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 final source = binaryX.leftExpression
                 final target = binaryX.rightExpression
                 node.expression = callThisX('publish', args(source, target))
+                return true
             }
         }
 

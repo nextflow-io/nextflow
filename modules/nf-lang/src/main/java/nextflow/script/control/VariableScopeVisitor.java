@@ -181,8 +181,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         if( node.main instanceof BlockStatement block )
             copyVariableScope(block.getVariableScope());
 
-        visitWorkflowEmits(node.emits);
-        visit(node.publishers);
+        visitWorkflowOutputs(node.emits, "emit");
+        visitWorkflowOutputs(node.publishers, "output");
 
         currentDefinition = null;
         vsc.popScope();
@@ -204,9 +204,9 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         }
     }
 
-    private void visitWorkflowEmits(Statement emits) {
-        var declaredEmits = new HashMap<String,ASTNode>();
-        for( var stmt : asBlockStatements(emits) ) {
+    private void visitWorkflowOutputs(Statement outputs, String typeLabel) {
+        var declaredOutputs = new HashMap<String,ASTNode>();
+        for( var stmt : asBlockStatements(outputs) ) {
             var stmtX = (ExpressionStatement)stmt;
             var emit = stmtX.getExpression();
             if( emit instanceof AssignmentExpression assign ) {
@@ -214,11 +214,11 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
 
                 var target = (VariableExpression)assign.getLeftExpression();
                 var name = target.getName();
-                var other = declaredEmits.get(name);
+                var other = declaredOutputs.get(name);
                 if( other != null )
-                    vsc.addError("Workflow emit `" + name + "` is already declared", target, "First declared here", other);
+                    vsc.addError("Workflow " + typeLabel + " `" + name + "` is already declared", target, "First declared here", other);
                 else
-                    declaredEmits.put(name, target);
+                    declaredOutputs.put(name, target);
             }
             else {
                 visit(emit);

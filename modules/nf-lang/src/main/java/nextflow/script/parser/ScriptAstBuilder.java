@@ -525,6 +525,10 @@ public class ScriptAstBuilder {
             if( emits instanceof BlockStatement )
                 collectSyntaxError(new SyntaxException("Entry workflow cannot have an emit section", emits));
         }
+        if( name != null ) {
+            if( publishers instanceof BlockStatement )
+                collectSyntaxError(new SyntaxException("Named workflow cannot have a publish section", publishers));
+        }
 
         var result = ast( new WorkflowNode(name, takes, main, emits, publishers), ctx );
         groovydocManager.handle(result, ctx);
@@ -602,7 +606,8 @@ public class ScriptAstBuilder {
     private Statement checkWorkflowPublisher(Statement stmt) {
         var valid = stmt instanceof ExpressionStatement es
             && es.getExpression() instanceof BinaryExpression be
-            && be.getOperation().getType() == Types.RIGHT_SHIFT;
+            && be.getLeftExpression() instanceof VariableExpression
+            && be.getOperation().getType() == Types.ASSIGN;
         if( !valid ) {
             collectSyntaxError(new SyntaxException("Invalid workflow publish statement", stmt));
             return null;
