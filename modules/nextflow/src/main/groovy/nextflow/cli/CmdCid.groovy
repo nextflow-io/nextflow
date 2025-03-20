@@ -26,7 +26,10 @@ import nextflow.config.ConfigBuilder
 import nextflow.config.ConfigMap
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
+import org.pf4j.ExtensionPoint
+
 /**
+ * CID command line interface
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -36,7 +39,7 @@ class CmdCid extends CmdBase implements UsageAware {
 
     private static final String NAME = 'cid'
 
-    interface CidOperation {
+    interface CidCommand extends ExtensionPoint {
         void log(ConfigMap config)
         void show(ConfigMap config, List<String> args)
         void lineage(ConfigMap config, List<String> args)
@@ -51,7 +54,7 @@ class CmdCid extends CmdBase implements UsageAware {
 
     private List<SubCmd> commands = new ArrayList<>()
 
-    private CidOperation operations
+    private CidCommand operation
 
     private ConfigMap config
 
@@ -81,9 +84,11 @@ class CmdCid extends CmdBase implements UsageAware {
             .setOptions(launcher.options)
             .setBaseDir(Paths.get('.'))
             .build()
+        // init plugins
+        Plugins.load(config)
         // load the command operations
-        this.operations = ServiceLoader.load(CidOperation.class).findFirst().orElse(null)
-        if( !operations )
+        this.operation = Plugins.getExtension(CidCommand)
+        if( !operation )
             throw new IllegalStateException("Unable to load CID plugin")
         // consume the first argument
         getCmd(args).apply(args.drop(1))
@@ -157,7 +162,7 @@ class CmdCid extends CmdBase implements UsageAware {
                 usage()
                 return
             }
-            operations.log(config)
+            operation.log(config)
         }
 
         @Override
@@ -186,7 +191,7 @@ class CmdCid extends CmdBase implements UsageAware {
                 return
             }
 
-            operations.show(config, args)
+            operation.show(config, args)
         }
 
         @Override
@@ -213,7 +218,7 @@ class CmdCid extends CmdBase implements UsageAware {
                 return
             }
 
-            operations.lineage(config, args)
+            operation.lineage(config, args)
         }
 
         @Override

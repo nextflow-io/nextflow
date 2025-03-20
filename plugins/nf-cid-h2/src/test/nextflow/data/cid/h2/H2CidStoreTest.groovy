@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2025, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,37 +15,36 @@
  *
  */
 
-package nextflow.data.config
+package nextflow.data.cid.h2
 
-
+import nextflow.data.config.DataConfig
+import spock.lang.Shared
 import spock.lang.Specification
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class DataConfigTest extends Specification {
+class H2CidStoreTest extends Specification {
 
-    def 'should create default config' () {
-        when:
-        def config = new DataConfig(Map.of())
-        then:
-        !config.enabled
-        !config.store.location
+    @Shared
+    H2CidStore store
+
+    def setupSpec() {
+        def uri = "jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1"
+        def config = new DataConfig([store:[location:uri]])
+        store = new H2CidStore().open(config)
     }
 
-    def 'should create default with enable' () {
-        when:
-        def config = new DataConfig([enabled: true])
-        then:
-        config.enabled
-        !config.store.location
+    def cleanupSpec() {
+        store.close()
     }
 
-    def 'should create data config with location' () {
+    def 'should store and get a value' () {
         when:
-        def config = new DataConfig(enabled: true, store: [location: "/some/data/store"])
+        store.save('/some/key', 'Hello world')
         then:
-        config.enabled
-        config.store.location == '/some/data/store'
+        store.load('/some/key') == 'Hello world'
     }
+
 }

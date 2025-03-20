@@ -13,6 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-#
 
-nextflow.data.cid.operation.CidOperationImpl
+nextflow.data.cid.h2.H2CidPlugin
+nextflow.data.cid.h2.H2CidStoreFactory

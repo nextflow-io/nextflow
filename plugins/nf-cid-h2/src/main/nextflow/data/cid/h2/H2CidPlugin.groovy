@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2025, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,21 +15,21 @@
  *
  */
 
-package nextflow.data.config
+package nextflow.data.cid.h2
 
 import groovy.transform.CompileStatic
+import nextflow.plugin.BasePlugin
+import org.pf4j.PluginWrapper
+
 /**
- * Model data store options
+ * Implements plugin entry class for H2 db based CID store
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class DataStoreOpts {
+class H2CidPlugin extends BasePlugin{
 
-    final String location
-
-    DataStoreOpts(Map opts) {
-        this.location = opts.location as String
+    H2CidPlugin(PluginWrapper wrapper) {
+        super(wrapper)
     }
-
 }

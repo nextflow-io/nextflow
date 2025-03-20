@@ -17,6 +17,7 @@
 
 package nextflow.data.cid
 
+import nextflow.file.FileHelper
 import nextflow.util.TestOnly
 
 import java.nio.file.Files
@@ -39,17 +40,25 @@ class DefaultCidStore implements CidStore {
     private static String HISTORY_FILE_NAME =".history"
     private static final String METADATA_FILE = '.data.json'
     private static final String METADATA_PATH = '.meta'
+
     private Path metaLocation
     private Path location
     private CidHistoryLog historyLog
 
-    void open(DataConfig config) {
-        location = config.store.location
-        metaLocation = config.store.location.resolve(METADATA_PATH)
+    DefaultCidStore open(DataConfig config) {
+        location = toLocationPath(config.store.location)
+        metaLocation = location.resolve(METADATA_PATH)
         if( !Files.exists(metaLocation) && !Files.createDirectories(metaLocation) ) {
             throw new AbortOperationException("Unable to create CID store directory: $metaLocation")
         }
-        historyLog = new CidHistoryFile(config.store.logLocation ?: metaLocation.resolve(HISTORY_FILE_NAME))
+        historyLog = new CidHistoryFile(metaLocation.resolve(HISTORY_FILE_NAME))
+        return this
+    }
+
+    protected Path toLocationPath(String location) {
+        return location
+            ? FileHelper.toCanonicalPath(location)
+            : Path.of('.').toAbsolutePath().normalize().resolve('data')
     }
 
     @Override
@@ -70,13 +79,20 @@ class DefaultCidStore implements CidStore {
         return null
     }
 
-    @Override
-    Path getPath(){ location }
+    Path getLocation(){
+        return location
+    }
 
     @TestOnly
-    Path getMetadataPath() {metaLocation}
+    Path getMetadataPath() {
+        return metaLocation
+    }
 
     @Override
-    CidHistoryLog getHistoryLog(){ historyLog }
+    CidHistoryLog getHistoryLog(){
+        return historyLog
+    }
 
+    @Override
+    void close() { }
 }

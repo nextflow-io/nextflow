@@ -38,13 +38,16 @@ abstract class CidStoreFactory implements ExtensionPoint {
 
     private static boolean initialized
 
+    protected abstract boolean canOpen(DataConfig config)
+
     protected abstract CidStore newInstance(DataConfig config)
 
      static CidStore create(DataConfig config){
-        final all = Plugins.getPriorityExtensions(CidStoreFactory)
-        if( !all )
+         final factory = Plugins
+             .getPriorityExtensions(CidStoreFactory)
+             .find( f-> f.canOpen(config))
+         if( !factory )
             throw new IllegalStateException("Unable to find Nextflow CID store factory")
-        final factory = all.first()
         log.debug "Using Nextflow CID store factory: ${factory.getClass().getName()}"
         return factory.newInstance(config)
     }

@@ -17,14 +17,12 @@
 
 package nextflow.data.cid
 
+import java.nio.file.Files
+import java.nio.file.Path
+
 import nextflow.data.config.DataConfig
 import spock.lang.Specification
 import spock.lang.TempDir
-
-import java.nio.file.Files
-import java.nio.file.Path
-import java.util.function.Consumer
-
 /**
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
@@ -52,7 +50,6 @@ class DefaultCidStoreTest extends Specification {
         cidStore.open(config)
         def historyLog = cidStore.getHistoryLog()
         then:
-        cidStore.getPath() == storeLocation
         cidStore.getMetadataPath() == metaLocation
         historyLog != null
         historyLog instanceof CidHistoryFile
