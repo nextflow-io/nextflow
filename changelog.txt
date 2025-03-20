@@ -1,5 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.02.1-edge - 19 Mar 2025
+- Fix handling of exit status with Azure Batch and Fusion Fusion (#5806) [7085862d]
+- Fix false positive Process already defined error (#5894) [4bd0b619]
+- Fix Specify container platform when creating test deployment [d27df801]
+- Removing Azure vmList from log [67ffc8ab]
+- Bump nf-azure@1.14.1 [87ef472a]
+
 25.02.0-edge - 17 Mar 2025
 - Add cpu-shares and memory limits to Azure Batch tasks (#5799) [f9c0cbfd]
 - Add Config parser v2 (and loader) (#4744) [b019b0bb]
