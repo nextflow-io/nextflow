@@ -53,7 +53,7 @@ import org.codehaus.groovy.syntax.Types;
 /**
  * Initialize the variable scopes for an AST.
  *
- * See: org.codehaus.groovy.classgen.VariableScopeVisitor
+ * @see org.codehaus.groovy.classgen.VariableScopeVisitor
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

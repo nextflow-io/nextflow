@@ -40,7 +40,7 @@ import org.codehaus.groovy.syntax.SyntaxException;
 import static nextflow.script.ast.ASTHelpers.*;
 
 /**
- * Validate types where possible.
+ * Resolve and validate the types of expressions.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

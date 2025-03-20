@@ -22,6 +22,7 @@ import org.codehaus.groovy.ast.ModuleNode;
 import org.codehaus.groovy.control.SourceUnit;
 
 /**
+ * The top-level AST node for a script.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

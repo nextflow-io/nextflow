@@ -29,6 +29,8 @@ import org.codehaus.groovy.control.CompilationUnit;
 import org.codehaus.groovy.control.SourceUnit;
 
 /**
+ * Resolve variable names, function names, and type names in
+ * a config file.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

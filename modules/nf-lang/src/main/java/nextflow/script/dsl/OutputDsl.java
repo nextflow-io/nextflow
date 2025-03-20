@@ -20,6 +20,11 @@ import java.util.Map;
 
 import groovy.lang.Closure;
 
+/**
+ * DSL scope for the workflow output definition.
+ *
+ * @author Ben Sherman <bentshermann@gmail.com>
+ */
 public interface OutputDsl extends DslScope {
 
     @Constant("args")

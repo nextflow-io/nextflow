@@ -18,6 +18,7 @@ package nextflow.config.ast;
 import java.util.List;
 
 /**
+ * A config block that defines a config option through a DSL.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

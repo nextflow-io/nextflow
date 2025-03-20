@@ -22,6 +22,7 @@ import org.codehaus.groovy.syntax.Token;
 import static org.codehaus.groovy.ast.tools.GeneralUtils.ASSIGN;
 
 /**
+ * Convenience class for assignment expressions.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

@@ -19,6 +19,7 @@ import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.expr.Expression;
 
 /**
+ * A parameter declaration.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

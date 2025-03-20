@@ -20,6 +20,7 @@ import org.codehaus.groovy.ast.Variable;
 import org.codehaus.groovy.ast.expr.Expression;
 
 /**
+ * A feature flag declaration.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

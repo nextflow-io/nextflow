@@ -25,6 +25,7 @@ import org.codehaus.groovy.ast.stmt.EmptyStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
 
 /**
+ * A function definition.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

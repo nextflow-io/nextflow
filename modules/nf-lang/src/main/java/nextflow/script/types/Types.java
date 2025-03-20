@@ -32,6 +32,11 @@ import org.codehaus.groovy.ast.GenericsType;
 import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.tools.GenericsUtils;
 
+/**
+ * Utility constants and functions for working with Nextflow types.
+ *
+ * @author Ben Sherman <bentshermann@gmail.com>
+ */
 public class Types {
 
     public static final List<ClassNode> DEFAULT_IMPORTS = List.of(

@@ -20,6 +20,8 @@ import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.stmt.ExpressionStatement;
 
 /**
+ * An incomplete script declaration, used to provide more
+ * contextual error messages and completions.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

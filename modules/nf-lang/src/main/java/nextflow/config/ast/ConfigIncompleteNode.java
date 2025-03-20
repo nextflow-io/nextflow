@@ -16,6 +16,8 @@
 package nextflow.config.ast;
 
 /**
+ * An incomplete config statement, used to provide more
+ * contextual error messages and completions.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

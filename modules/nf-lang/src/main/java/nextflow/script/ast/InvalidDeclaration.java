@@ -18,6 +18,10 @@ package nextflow.script.ast;
 import org.codehaus.groovy.ast.stmt.EmptyStatement;
 
 /**
+ * An invalid script declaration. Denotes either a
+ * script declaration that was mixed with statements,
+ * or an invalid script declaration for which a more
+ * specific error could not be given.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

@@ -18,6 +18,7 @@ package nextflow.config.ast;
 import java.util.List;
 
 /**
+ * A config block statement.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

@@ -15,5 +15,11 @@
  */
 package nextflow.script.dsl;
 
+/**
+ * Marker interface for DSL scopes, which define the built-in
+ * variables and functions for a particular context.
+ *
+ * @author Ben Sherman <bentshermann@gmail.com>
+ */
 public interface DslScope {
 }

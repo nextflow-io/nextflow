@@ -41,6 +41,7 @@ import org.codehaus.groovy.control.SourceUnit;
 import static nextflow.script.ast.ASTHelpers.*;
 
 /**
+ * Format a script.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

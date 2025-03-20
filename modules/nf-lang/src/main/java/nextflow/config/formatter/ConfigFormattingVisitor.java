@@ -32,6 +32,7 @@ import org.codehaus.groovy.runtime.IOGroovyMethods;
 import static nextflow.script.ast.ASTHelpers.*;
 
 /**
+ * Format a config file.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

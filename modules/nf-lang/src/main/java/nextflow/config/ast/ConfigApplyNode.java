@@ -20,6 +20,7 @@ import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
 
 /**
+ * A directive in a config "apply" block.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

@@ -46,6 +46,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.args;
 import static org.codehaus.groovy.ast.tools.GeneralUtils.ctorX;
 
 /**
+ * Utility functions for common AST operations.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

@@ -16,6 +16,10 @@
 package nextflow.script.control;
 
 /**
+ * Interface used by errors that are associated with a
+ * compile phase.
+ *
+ * @see Phases
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

@@ -23,6 +23,11 @@ import nextflow.script.types.Duration;
 import nextflow.script.types.MemoryUnit;
 import nextflow.script.types.TaskConfig;
 
+/**
+ * DSL scope for process definitions.
+ *
+ * @author Ben Sherman <bentshermann@gmail.com>
+ */
 public interface ProcessDsl extends DslScope {
 
     @Constant("task")

@@ -19,6 +19,7 @@ import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.stmt.Statement;
 
 /**
+ * A workflow output definition.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

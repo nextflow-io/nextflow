@@ -19,6 +19,7 @@ import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.MethodNode;
 
 /**
+ * An included process, workflow, or function.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

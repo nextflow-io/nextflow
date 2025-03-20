@@ -21,6 +21,7 @@ import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.expr.ConstantExpression;
 
 /**
+ * An include declaration.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

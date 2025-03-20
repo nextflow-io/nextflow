@@ -15,5 +15,8 @@
  */
 package nextflow.script.types;
 
+/**
+ * Placeholder type used to model process and workflow outputs.
+ */
 public class NamedTuple {
 }

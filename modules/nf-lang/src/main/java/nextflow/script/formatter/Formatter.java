@@ -64,6 +64,7 @@ import org.codehaus.groovy.syntax.Types;
 import static nextflow.script.ast.ASTHelpers.*;
 
 /**
+ * Transform an AST into formatted source code.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

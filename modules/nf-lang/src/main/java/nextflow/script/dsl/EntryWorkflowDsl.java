@@ -20,6 +20,11 @@ import java.util.Map;
 
 import nextflow.script.types.ParamsMap;
 
+/**
+ * DSL scope for the entry workflow.
+ *
+ * @author Ben Sherman <bentshermann@gmail.com>
+ */
 public interface EntryWorkflowDsl extends WorkflowDsl {
 
     @Constant("args")

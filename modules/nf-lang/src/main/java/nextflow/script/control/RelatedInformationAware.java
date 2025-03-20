@@ -18,6 +18,9 @@ package nextflow.script.control;
 import org.codehaus.groovy.ast.ASTNode;
 
 /**
+ * Interface used by errors that have related information,
+ * such as the "already defined here" in a "variable already declared"
+ * error.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

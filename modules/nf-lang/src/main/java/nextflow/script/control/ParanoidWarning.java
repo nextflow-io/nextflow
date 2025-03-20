@@ -21,6 +21,8 @@ import org.codehaus.groovy.control.messages.WarningMessage;
 import org.codehaus.groovy.syntax.CSTNode;
 
 /**
+ * A warning that should only be reported when paranoid warnings
+ * are enabled.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

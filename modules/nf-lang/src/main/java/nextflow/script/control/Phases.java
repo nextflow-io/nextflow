@@ -16,6 +16,9 @@
 package nextflow.script.control;
 
 /**
+ * Extended compilation phases for the Nextflow compiler.
+ *
+ * @see org.codehaus.groovy.control.Phases
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

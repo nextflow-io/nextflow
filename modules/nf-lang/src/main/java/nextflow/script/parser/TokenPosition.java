@@ -16,6 +16,9 @@
 package nextflow.script.parser;
 
 /**
+ * The starting position of a token, used for semantic highlighting.
+ *
+ * @see PositionConfigureUtils
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

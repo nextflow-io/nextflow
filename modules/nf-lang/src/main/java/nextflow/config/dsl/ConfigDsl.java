@@ -22,6 +22,11 @@ import nextflow.script.dsl.Constant;
 import nextflow.script.dsl.Description;
 import nextflow.script.dsl.DslScope;
 
+/**
+ * The built-in constants and functions in a config file.
+ *
+ * @author Ben Sherman <bentshermann@gmail.com>
+ */
 public interface ConfigDsl extends DslScope {
 
     @Deprecated

@@ -54,7 +54,7 @@ import static org.codehaus.groovy.ast.tools.ClosureUtils.getParametersSafe;
 /**
  * Resolve the names of symbols.
  *
- * See: org.codehaus.groovy.control.ResolveVisitor
+ * @see org.codehaus.groovy.control.ResolveVisitor
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

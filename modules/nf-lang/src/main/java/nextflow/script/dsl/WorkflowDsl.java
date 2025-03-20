@@ -21,6 +21,11 @@ import java.util.Map;
 import groovy.lang.Closure;
 import nextflow.script.types.Channel;
 
+/**
+ * DSL scope for workflow definitions.
+ *
+ * @author Ben Sherman <bentshermann@gmail.com>
+ */
 public interface WorkflowDsl extends DslScope {
 
     @Constant("channel")

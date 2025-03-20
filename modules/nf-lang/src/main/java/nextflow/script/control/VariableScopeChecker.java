@@ -46,9 +46,9 @@ import org.codehaus.groovy.syntax.Types;
 import static nextflow.script.ast.ASTHelpers.*;
 
 /**
- * Helper class for checking variable names.
+ * Resolve variable and function names.
  *
- * See: org.codehaus.groovy.classgen.VariableScopeVisitor
+ * @see org.codehaus.groovy.classgen.VariableScopeVisitor
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

@@ -24,6 +24,11 @@ import groovy.lang.Closure;
 import nextflow.script.types.NextflowMetadata;
 import nextflow.script.types.WorkflowMetadata;
 
+/**
+ * The built-in constants and functions in a script.
+ *
+ * @author Ben Sherman <bentshermann@gmail.com>
+ */
 public interface ScriptDsl extends DslScope {
 
     @Deprecated

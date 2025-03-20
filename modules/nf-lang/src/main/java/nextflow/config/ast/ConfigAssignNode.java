@@ -20,6 +20,7 @@ import java.util.List;
 import org.codehaus.groovy.ast.expr.Expression;
 
 /**
+ * A config assignment statement.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

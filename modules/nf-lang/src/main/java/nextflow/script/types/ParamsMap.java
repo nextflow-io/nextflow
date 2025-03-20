@@ -15,5 +15,8 @@
  */
 package nextflow.script.types;
 
+/**
+ * Placeholder type used to model pipeline parameters.
+ */
 public class ParamsMap {
 }

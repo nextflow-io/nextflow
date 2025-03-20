@@ -28,6 +28,8 @@ import nextflow.script.ast.ScriptNode;
 import org.codehaus.groovy.control.SourceUnit;
 
 /**
+ * Resolve and compile all modules included (directly or indirectly)
+ * by the main script.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

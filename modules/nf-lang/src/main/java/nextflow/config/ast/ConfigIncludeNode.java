@@ -18,6 +18,7 @@ package nextflow.config.ast;
 import org.codehaus.groovy.ast.expr.Expression;
 
 /**
+ * A config include statement.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

@@ -20,6 +20,12 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Annotation for defining the name of a custom config scope. Used
+ * only by third-party plugins.
+ *
+ * @author Ben Sherman <bentshermann@gmail.com>
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE })
 public @interface ScopeName {

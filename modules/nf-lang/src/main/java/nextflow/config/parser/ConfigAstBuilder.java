@@ -98,7 +98,7 @@ import static org.codehaus.groovy.ast.expr.VariableExpression.THIS_EXPRESSION;
 import static org.codehaus.groovy.ast.tools.GeneralUtils.*;
 
 /**
- * Transform a Nextflow config parse tree into a Groovy AST.
+ * Transform a Nextflow config parse tree into an abstract syntax tree (AST).
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
