@@ -1,5 +1,12 @@
 nf-wave changelog
 ==================
+1.11.0 - 17 Mar 2025
+- Add Wave container metadata to Platform traces (#5724) [b81178c5]
+- Align container platform with `arch` directive when using Wave (#5847) [b9d23e22]
+- Remove Spack from Wave (2nd) [076c8237]
+- Remove Spack from Wave assets [9c554de9]
+- Bump groovy 4.0.26 [f740bc56]
+
 1.10.0 - 12 Jab 2025
 - Add Fusion token validation (#5614) [ci fast] [1dcb18d6]
 - Add traceparent header to wave & tower clients (#5725) [ci fast] [7eea9f2d]

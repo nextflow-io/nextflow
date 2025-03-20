@@ -13,7 +13,7 @@ If you are still using DSL1, see {ref}`dsl1-page` to learn how to migrate your N
 ## Preparing for strict syntax
 
 :::{versionadded} 25.02.0-edge
-The strict syntax can be enabled in Nextflow by setting `NXF_SYNTAX_PARSER=v2`.
+The strict syntax can be enabled in Nextflow by setting the environment variable `NXF_SYNTAX_PARSER=v2`.
 :::
 
 The strict syntax is a subset of DSL2. While DSL2 allows any Groovy syntax, the strict syntax allows only a subset of Groovy syntax for Nextflow scripts and config files. This new specification enables more specific error reporting, ensures more consistent code, and will allow the Nextflow language to evolve independently of Groovy.
@@ -496,7 +496,7 @@ The process `shell` section is deprecated. Use the `script` block instead. The V
 ### Configuration syntax
 
 :::{versionadded} 25.02.0-edge
-The strict config syntax can be enabled in Nextflow by setting `NXF_SYNTAX_PARSER=v2`.
+The strict config syntax can be enabled in Nextflow by setting the environment variable `NXF_SYNTAX_PARSER=v2`.
 :::
 
 See {ref}`Configuration <config-syntax>` for a comprehensive description of the configuration language.
