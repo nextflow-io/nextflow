@@ -96,7 +96,7 @@ output {
       sample.quant >> "quant/${sample.id}"
     }
     index {
-      path 'samples.yaml'
+      path 'samples.csv'
       header true
       sep ','
     }
