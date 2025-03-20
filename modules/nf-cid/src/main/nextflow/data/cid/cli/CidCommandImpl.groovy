@@ -15,7 +15,7 @@
  *
  */
 
-package nextflow.data.cid.operation
+package nextflow.data.cid.cli
 
 import static nextflow.data.cid.fs.CidPath.*
 
@@ -34,11 +34,12 @@ import nextflow.data.cid.CidStoreFactory
 import nextflow.data.cid.model.DataType
 import nextflow.ui.TableBuilder
 /**
+ * Implements CID command line operations
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class CidOperationImpl implements CmdCid.CidOperation {
+class CidCommandImpl implements CmdCid.CidCommand {
 
     @Canonical
     static class Edge {

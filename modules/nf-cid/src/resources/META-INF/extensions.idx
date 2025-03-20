@@ -16,4 +16,4 @@
 
 nextflow.data.cid.DefaultCidStoreFactory
 nextflow.data.cid.CidObserverFactory
-nextflow.data.cid.operation.CidOperationImpl
+nextflow.data.cid.cli.CidCommandImpl
