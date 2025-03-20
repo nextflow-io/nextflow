@@ -1149,6 +1149,18 @@ class Session implements ISession {
         }
     }
 
+    void notifyFileStage(Path destination, Path source=null) {
+        def copy = new ArrayList<TraceObserver>(observers)
+        for( TraceObserver observer : copy  ) {
+            try {
+                observer.onFileStage(destination, source)
+            }
+            catch( Exception e ) {
+                log.error "Failed to invoke observer on file stage: $observer", e
+            }
+        }
+    }
+
     void notifyFlowComplete() {
         def copy = new ArrayList<TraceObserver>(observers)
         for( TraceObserver observer : copy  ) {

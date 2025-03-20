@@ -105,7 +105,7 @@ class FilePorter {
     }
 
     protected FileTransfer createFileTransfer(Path source, Path target) {
-        return new FileTransfer(source, target, maxRetries, semaphore)
+        return new FileTransfer(source, target, maxRetries, semaphore, session)
     }
 
     protected FileTransfer getOrSubmit(FileCopy copy) {
@@ -281,8 +281,9 @@ class FilePorter {
         volatile Future result
         private String message
         private int debugDelay
+        final private Session session
 
-        FileTransfer(Path foreignPath, Path stagePath, int maxRetries, Semaphore semaphore) {
+        FileTransfer(Path foreignPath, Path stagePath, int maxRetries, Semaphore semaphore, Session session) {
             this.semaphore = semaphore
             this.source = foreignPath
             this.target = stagePath
@@ -290,6 +291,7 @@ class FilePorter {
             this.message = "Staging foreign file: ${source.toUriString()}"
             this.refCount = new AtomicInteger(0)
             this.debugDelay = System.getProperty('filePorter.debugDelay') as Integer ?: 0
+            this.session = session
         }
 
         @Override
@@ -325,7 +327,9 @@ class FilePorter {
             int count = 0
             while( true ) {
                 try {
-                    return stageForeignFile0(filePath, stagePath)
+                    def output = stageForeignFile0(filePath, stagePath)
+                    this.session.notifyFileStage(stagePath, filePath)
+                    return output
                 }
                 catch( IOException e ) {
                     // remove the target file that could be have partially downloaded
