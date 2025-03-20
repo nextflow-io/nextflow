@@ -37,7 +37,7 @@ import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
 import org.codehaus.groovy.syntax.SyntaxException;
 
-import static nextflow.script.ast.ASTHelpers.*;
+import static nextflow.script.ast.ASTUtils.*;
 
 /**
  * Resolve and validate the types of expressions.

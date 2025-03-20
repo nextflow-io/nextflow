@@ -30,8 +30,8 @@ import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
+import nextflow.script.ast.IncludeModuleNode;
 import nextflow.script.ast.IncludeNode;
-import nextflow.script.ast.IncludeVariable;
 import nextflow.script.ast.IncompleteNode;
 import nextflow.script.ast.InvalidDeclaration;
 import nextflow.script.ast.OutputNode;
@@ -98,10 +98,10 @@ import org.codehaus.groovy.syntax.Numbers;
 import org.codehaus.groovy.syntax.SyntaxException;
 import org.codehaus.groovy.syntax.Types;
 
+import static nextflow.script.ast.ASTUtils.*;
 import static nextflow.script.parser.PositionConfigureUtils.ast;
 import static nextflow.script.parser.PositionConfigureUtils.tokenPosition;
 import static nextflow.script.parser.ScriptParser.*;
-import static nextflow.script.ast.ASTHelpers.*;
 import static org.codehaus.groovy.ast.expr.VariableExpression.THIS_EXPRESSION;
 import static org.codehaus.groovy.ast.tools.GeneralUtils.*;
 
@@ -343,7 +343,7 @@ public class ScriptAstBuilder {
             .map(it -> {
                 var name = it.name.getText();
                 var alias = it.alias != null ? it.alias.getText() : null;
-                var result = new IncludeVariable(name, alias);
+                var result = new IncludeModuleNode(name, alias);
                 result.putNodeMetaData("_START_NAME", tokenPosition(it.name));
                 if( it.alias != null )
                     result.putNodeMetaData("_START_ALIAS", tokenPosition(it.alias));

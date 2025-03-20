@@ -23,16 +23,16 @@ import org.codehaus.groovy.ast.MethodNode;
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-public class IncludeVariable extends ASTNode {
+public class IncludeModuleNode extends ASTNode {
     public final String name;
     public final String alias;
 
-    public IncludeVariable(String name, String alias) {
+    public IncludeModuleNode(String name, String alias) {
         this.name = name;
         this.alias = alias;
     }
 
-    public IncludeVariable(String name) {
+    public IncludeModuleNode(String name) {
         this(name, null);
     }
 

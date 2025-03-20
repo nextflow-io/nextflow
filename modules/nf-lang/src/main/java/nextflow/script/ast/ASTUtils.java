@@ -50,7 +50,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.ctorX;
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-public class ASTHelpers {
+public class ASTUtils {
 
     public static Expression createX(Class type, TupleExpression args) {
         return ctorX(new ClassNode(type), args);

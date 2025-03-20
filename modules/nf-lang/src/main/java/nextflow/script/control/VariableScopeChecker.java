@@ -43,7 +43,7 @@ import org.codehaus.groovy.syntax.SyntaxException;
 import org.codehaus.groovy.syntax.Token;
 import org.codehaus.groovy.syntax.Types;
 
-import static nextflow.script.ast.ASTHelpers.*;
+import static nextflow.script.ast.ASTUtils.*;
 
 /**
  * Resolve variable and function names.

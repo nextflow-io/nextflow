@@ -63,7 +63,7 @@ import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
 import org.codehaus.groovy.syntax.SyntaxException;
 import org.codehaus.groovy.syntax.Types;
 
-import static nextflow.script.ast.ASTHelpers.*;
+import static nextflow.script.ast.ASTUtils.*;
 
 /**
  * Initialize the variable scopes for an AST.

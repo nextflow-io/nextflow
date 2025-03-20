@@ -29,7 +29,7 @@ import nextflow.script.formatter.Formatter;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.runtime.IOGroovyMethods;
 
-import static nextflow.script.ast.ASTHelpers.*;
+import static nextflow.script.ast.ASTUtils.*;
 
 /**
  * Format a config file.

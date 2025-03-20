@@ -20,8 +20,8 @@ import java.util.List;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
+import nextflow.script.ast.IncludeModuleNode;
 import nextflow.script.ast.IncludeNode;
-import nextflow.script.ast.IncludeVariable;
 import nextflow.script.ast.OutputNode;
 import nextflow.script.ast.ParamNode;
 import nextflow.script.ast.ProcessNode;
@@ -38,7 +38,7 @@ import org.codehaus.groovy.ast.stmt.ExpressionStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.control.SourceUnit;
 
-import static nextflow.script.ast.ASTHelpers.*;
+import static nextflow.script.ast.ASTUtils.*;
 
 /**
  * Format a script.
@@ -115,7 +115,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         return maxWidth;
     }
 
-    protected int getIncludeWidth(IncludeVariable module) {
+    protected int getIncludeWidth(IncludeModuleNode module) {
         return module.alias != null
             ? module.name.length() + 4 + module.alias.length()
             : module.name.length();

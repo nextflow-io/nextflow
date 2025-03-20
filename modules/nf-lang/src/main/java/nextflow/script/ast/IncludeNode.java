@@ -27,9 +27,9 @@ import org.codehaus.groovy.ast.expr.ConstantExpression;
  */
 public class IncludeNode extends ASTNode {
     public final ConstantExpression source;
-    public final List<IncludeVariable> modules;
+    public final List<IncludeModuleNode> modules;
 
-    public IncludeNode(ConstantExpression source, List<IncludeVariable> modules) {
+    public IncludeNode(ConstantExpression source, List<IncludeModuleNode> modules) {
         this.source = source;
         this.modules = modules;
     }
