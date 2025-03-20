@@ -4,4 +4,4 @@
 
 # COMPILER ------------------------------------------------------------
 # nf-lang module
-/modules/nf-lang/ @nextflow-io/compiler
+/modules/nf-lang/ @nextflow-io/lang 
