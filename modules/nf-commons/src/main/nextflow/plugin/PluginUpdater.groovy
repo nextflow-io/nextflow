@@ -17,6 +17,8 @@
 
 package nextflow.plugin
 
+import org.pf4j.update.FileVerifier
+
 import static java.nio.file.StandardCopyOption.*
 
 import java.nio.file.Files
@@ -242,6 +244,27 @@ class PluginUpdater extends UpdateManager {
         final CheckedSupplier<Path> supplier = () -> downloadPlugin(id, version)
         final policy = retryPolicy(id,version)
         return Failsafe.with(policy).get(supplier)
+    }
+
+    // override this method from the parent class to support oras:// downloads
+    @Override
+    protected Path downloadPlugin(String id, String version) {
+        try {
+            def release = findReleaseForPlugin(id, version)
+
+            // pf4j's FileDownloader interface uses java.net.URL, which
+            // doesn't support custom protocols. This means we can't use
+            // it for oras:// URIs and instead have to call the ORAS downloader
+            // directly in such cases
+            Path downloaded = OrasPluginDownloader.canDownload(release.url)
+                ? new OrasPluginDownloader().downloadFile(release.url)
+                : getFileDownloader(id).downloadFile(new URL(release.url))
+
+            getFileVerifier(id).verify(new FileVerifier.Context(id, release), downloaded);
+            return downloaded;
+        } catch (IOException e) {
+            throw new PluginRuntimeException(e, "Error during download of plugin {}", id);
+        }
     }
 
     protected <T> RetryPolicy<T> retryPolicy(String id, String version) {
