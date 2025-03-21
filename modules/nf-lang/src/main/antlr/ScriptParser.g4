@@ -349,7 +349,7 @@ multipleAssignmentStatement
     ;
 
 assignmentStatement
-    :   left=expression nls
+    :   target=expression nls
         op=(ASSIGN
         |   ADD_ASSIGN
         |   SUB_ASSIGN
@@ -365,7 +365,7 @@ assignmentStatement
         |   POWER_ASSIGN
         |   ELVIS_ASSIGN
         ) nls
-        right=expression
+        source=expression
     ;
 
 // -- expression statement
@@ -497,7 +497,7 @@ indexPropertyArgs
     :   LBRACK expressionList RBRACK
     ;
 
-// -- variable, type identifiers
+// -- variable, function, type identifiers
 identifier
     :   Identifier
     |   CapitalizedIdentifier

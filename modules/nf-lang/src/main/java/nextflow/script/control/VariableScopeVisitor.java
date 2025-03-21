@@ -423,10 +423,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             var target = ae.getLeftExpression();
             visit(source);
             if( checkImplicitDeclaration(target) ) {
-                var de = new DeclarationExpression(target, ae.getOperation(), source);
-                de.setSourcePosition(ae);
-                de.putNodeMetaData(ASTNodeMarker.IMPLICIT_DECLARATION, Boolean.TRUE);
-                node.setExpression(de);
+                ae.putNodeMetaData(ASTNodeMarker.IMPLICIT_DECLARATION, Boolean.TRUE);
             }
             else {
                 visitMutatedVariable(target);
@@ -441,16 +438,16 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
      * In processes and workflows, variables can be declared without `def`
      * and are treated as variables scoped to the process or workflow.
      *
-     * @param node
+     * @param target
      */
-    private boolean checkImplicitDeclaration(Expression node) {
-        if( node instanceof TupleExpression te ) {
+    private boolean checkImplicitDeclaration(Expression target) {
+        if( target instanceof TupleExpression te ) {
             var result = false;
             for( var el : te.getExpressions() )
                 result |= declareAssignedVariable((VariableExpression) el);
             return result;
         }
-        else if( node instanceof VariableExpression ve ) {
+        else if( target instanceof VariableExpression ve ) {
             return declareAssignedVariable(ve);
         }
         return false;
@@ -577,7 +574,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         if( !node.isImplicitThis() )
             return;
         var name = node.getMethodAsString();
-        var mn = vsc.findDslFunction(name, node);
+        var mn = vsc.findDslFunction(name, node.getMethod());
         if( mn != null ) {
             if( VariableScopeChecker.isDataflowMethod(mn) )
                 checkDataflowMethod(node, mn);

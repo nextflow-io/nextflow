@@ -36,6 +36,7 @@ import org.codehaus.groovy.ast.expr.MapEntryExpression;
 import org.codehaus.groovy.ast.expr.MethodCall;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.NamedArgumentListExpression;
+import org.codehaus.groovy.ast.expr.PropertyExpression;
 import org.codehaus.groovy.ast.expr.TupleExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.BlockStatement;
@@ -149,6 +150,18 @@ public class ASTUtils {
             if( pn.getNodeMetaData(ASTNodeMarker.METHOD_VARIABLE_TARGET) instanceof MethodNode mn )
                 return mn;
         }
+        return null;
+    }
+
+    /**
+     * Given a property expression which represents a process or workflow
+     * output, return the underlying process or workflow.
+     *
+     * @param node
+     */
+    public static MethodNode asMethodOutput(PropertyExpression node) {
+        if( node.getObjectExpression() instanceof VariableExpression ve && "out".equals(node.getPropertyAsString()) )
+            return asMethodVariable(ve.getAccessedVariable());
         return null;
     }
 

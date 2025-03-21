@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
@@ -36,7 +35,6 @@ import org.codehaus.groovy.ast.expr.ArgumentListExpression;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
 import org.codehaus.groovy.ast.expr.ClosureExpression;
 import org.codehaus.groovy.ast.expr.ConstructorCallExpression;
-import org.codehaus.groovy.ast.expr.DeclarationExpression;
 import org.codehaus.groovy.ast.expr.EmptyExpression;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
@@ -401,17 +399,6 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             var targetArgs = (ArgumentListExpression)mce.getArguments();
             var targetBody = (ClosureExpression)targetArgs.getExpression(0);
             es.setExpression( callThisX("target", args(name, targetBody)) );
-        }
-    }
-
-    // see: VariableScopeVisitor::visitExpressionStatement()
-    @Override
-    public void visitExpressionStatement(ExpressionStatement node) {
-        var exp = node.getExpression();
-        if( exp instanceof DeclarationExpression de && de.getNodeMetaData(ASTNodeMarker.IMPLICIT_DECLARATION) != null ) {
-            var result = new AssignmentExpression(de.getLeftExpression(), de.getRightExpression());
-            result.setSourcePosition(de);
-            node.setExpression(result);
         }
     }
 
