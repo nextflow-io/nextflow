@@ -40,26 +40,31 @@ class FileHolder  {
 
     final String stageName
 
-    FileHolder( Path inputFile ) {
+    final Path origPath
+
+    FileHolder( Path inputFile, Path origPath = null ) {
         assert inputFile
         this.sourceObj = inputFile
         this.storePath = real(inputFile)
         this.stageName = norm(inputFile.getFileName())
+        this.origPath = origPath
     }
 
-    FileHolder( def origin, Path path ) {
+    FileHolder( def origin, Path path, Path origPath = null ) {
         assert origin != null
         assert path != null
 
         this.sourceObj = origin
         this.storePath = path
         this.stageName = norm(path.getFileName())
+        this.origPath = origPath
     }
 
-    protected FileHolder( def source, Path store, def stageName ) {
+    protected FileHolder( def source, Path store, def stageName, Path origPath = null ) {
         this.sourceObj = source
         this.storePath = store
         this.stageName = norm(stageName)
+        this.origPath = origPath
     }
 
     FileHolder withName( def stageName )  {
@@ -69,6 +74,8 @@ class FileHolder  {
     Path getStorePath() { storePath }
 
     String getStageName() { stageName }
+
+    Path getOrigPath() { origPath }
 
     @PackageScope
     static FileHolder get( def path, def name = null ) {
