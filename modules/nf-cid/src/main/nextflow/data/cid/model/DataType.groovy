@@ -23,5 +23,16 @@ package nextflow.data.cid.model
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 enum DataType {
-    TaskRun, Workflow, WorkflowRun, TaskOutput, WorkflowOutput, WorkflowResults
+    TaskRun(nextflow.data.cid.model.TaskRun),
+    Workflow(nextflow.data.cid.model.Workflow),
+    WorkflowRun(nextflow.data.cid.model.WorkflowRun),
+    TaskOutput(nextflow.data.cid.model.Output),
+    WorkflowOutput(nextflow.data.cid.model.Output),
+    WorkflowResults(nextflow.data.cid.model.WorkflowResults)
+
+    final Class clazz
+
+    DataType(Class clazz) {
+        this.clazz = clazz
+    }
 }

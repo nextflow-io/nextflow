@@ -92,9 +92,8 @@ class CidObserver implements TraceObserver {
     @Override
     void onFlowComplete(){
         if (this.workflowResults){
-            final content = JsonOutput.prettyPrint(JsonOutput.toJson(workflowResults))
-            final wfResultsHash = CacheHelper.hasher(content).hash().toString()
-            this.store.save(wfResultsHash, content)
+            final wfResultsHash = CacheHelper.hasher(JsonOutput.toJson(workflowResults)).hash().toString()
+            this.store.save(wfResultsHash, workflowResults)
             this.store.getHistoryLog().updateResultsCid(session.uniqueId, "${CID_PROT}${wfResultsHash}")
         }
     }
@@ -135,9 +134,8 @@ class CidObserver implements TraceObserver {
             getNormalizedParams(session.params, normalizer)
         )
 
-        final content = JsonOutput.prettyPrint(JsonOutput.toJson(value))
-        final executionHash = CacheHelper.hasher(content).hash().toString()
-        store.save(executionHash, content)
+        final executionHash = CacheHelper.hasher(JsonOutput.toJson(value)).hash().toString()
+        store.save(executionHash, value)
         return executionHash
     }
 
@@ -203,7 +201,7 @@ class CidObserver implements TraceObserver {
 
         // store in the underlying persistence
         final key = task.hash.toString()
-        store.save(key, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
+        store.save(key, value)
         return key
     }
 
@@ -223,7 +221,7 @@ class CidObserver implements TraceObserver {
                 attrs.size(),
                 attrs.creationTime().toMillis(),
                 attrs.lastModifiedTime().toMillis())
-            store.save(key, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
+            store.save(key, value)
         } catch (Throwable e) {
             log.warn("Exception storing CID output $path for task ${task.name}. ${e.getLocalizedMessage()}")
         }
@@ -284,7 +282,7 @@ class CidObserver implements TraceObserver {
                 attrs.size(),
                 attrs.creationTime().toMillis(),
                 attrs.lastModifiedTime().toMillis())
-            store.save(key, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
+            store.save(key, value)
             workflowResults.outputs.add("${CID_PROT}${key}")
         } catch (Throwable e) {
             log.warn("Exception storing CID output $destination for workflow ${executionHash}.", e)
@@ -323,7 +321,7 @@ class CidObserver implements TraceObserver {
                 attrs.size(),
                 attrs.creationTime().toMillis(),
                 attrs.lastModifiedTime().toMillis())
-            store.save(key, JsonOutput.prettyPrint(JsonOutput.toJson(value)))
+            store.save(key, value)
             workflowResults.outputs.add("${CID_PROT}${key}")
         }catch (Throwable e) {
             log.warn("Exception storing CID output $destination for workflow ${executionHash}. ${e.getLocalizedMessage()}")

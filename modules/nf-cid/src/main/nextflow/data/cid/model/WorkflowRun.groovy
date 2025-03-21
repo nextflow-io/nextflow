@@ -19,6 +19,7 @@ package nextflow.data.cid.model
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import nextflow.data.cid.CidSerializable
 
 /**
  * Models a Workflow Execution
@@ -27,7 +28,7 @@ import groovy.transform.CompileStatic
  */
 @Canonical
 @CompileStatic
-class WorkflowRun {
+class WorkflowRun implements CidSerializable{
     DataType type
     Workflow workflow
     String sessionId

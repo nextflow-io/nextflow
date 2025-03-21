@@ -17,12 +17,9 @@
 
 package nextflow.data.cid
 
-<<<<<<< HEAD
 import nextflow.file.FileHelper
-=======
 import nextflow.data.cid.serde.Encoder
 import nextflow.data.cid.serde.JsonEncoder
->>>>>>> bdbe5bdb0 (Add serde interfaces)
 import nextflow.util.TestOnly
 
 import java.nio.file.Files
@@ -49,12 +46,13 @@ class DefaultCidStore implements CidStore {
     private Path metaLocation
     private Path location
     private CidHistoryLog historyLog
-    private Encoder<String,CidSerializable> encoder
+    private Encoder<String> encoder
+
 
     DefaultCidStore open(DataConfig config) {
         location = toLocationPath(config.store.location)
         metaLocation = location.resolve(METADATA_PATH)
-        encoder = new JsonEncoder<CidSerializable>() {}
+        encoder = new JsonEncoder() {}
         if( !Files.exists(metaLocation) && !Files.createDirectories(metaLocation) ) {
             throw new AbortOperationException("Unable to create CID store directory: $metaLocation")
         }

@@ -16,7 +16,11 @@
 
 package nextflow.data.cid.serde
 
-import java.lang.reflect.Type
+import nextflow.data.cid.CidSerializable
+import nextflow.data.cid.model.DataType
+import nextflow.data.cid.model.Output
+import nextflow.data.cid.model.WorkflowResults
+import nextflow.data.cid.model.WorkflowRun
 
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
@@ -25,21 +29,19 @@ import groovy.json.JsonSlurper
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-abstract class JsonEncoder<V> implements Encoder<String,V> {
+class JsonEncoder implements Encoder<String> {
 
-    private Type type
-
-    JsonEncoder() {
-        this.type = TypeHelper.getGenericType(this, 0)
-    }
+    JsonEncoder() {}
 
     @Override
-    String encode(V object) {
+    String encode(CidSerializable object) {
         return JsonOutput.toJson(object)
     }
 
     @Override
-    V decode(String encoded) {
-        return (V) new JsonSlurper().parseText(encoded)
+    CidSerializable decode(String encoded) {
+        final object = new JsonSlurper().parseText(encoded) as Map
+        final dataType = DataType.valueOf(object.type as String)
+        return dataType.clazz.newInstance(object)
     }
 }

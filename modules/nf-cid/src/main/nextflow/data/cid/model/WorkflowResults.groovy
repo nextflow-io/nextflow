@@ -19,6 +19,7 @@ package nextflow.data.cid.model
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import nextflow.data.cid.CidSerializable
 
 /**
  * Models the results of a workflow execution.
@@ -27,7 +28,7 @@ import groovy.transform.CompileStatic
  */
 @Canonical
 @CompileStatic
-class WorkflowResults {
+class WorkflowResults implements CidSerializable{
     DataType type
     String run
     List outputs

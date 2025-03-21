@@ -19,6 +19,7 @@ package nextflow.data.cid.model
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import nextflow.data.cid.CidSerializable
 
 /**
  *
@@ -26,7 +27,7 @@ import groovy.transform.CompileStatic
  */
 @Canonical
 @CompileStatic
-class Output {
+class Output implements CidSerializable{
     DataType type
     String path
     Checksum checksum

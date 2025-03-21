@@ -16,14 +16,16 @@
 
 package nextflow.data.cid.serde
 
+import nextflow.data.cid.CidSerializable
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface Encoder<T,V> {
+interface Encoder<T> {
 
-    T encode(V object)
+    T encode(CidSerializable object)
 
-    V decode(T encoded)
+    CidSerializable decode(T encoded)
 
 }

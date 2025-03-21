@@ -17,9 +17,9 @@
 
 package nextflow.data.cid.fs
 
-import groovy.json.JsonSlurper
 import groovy.util.logging.Slf4j
 import nextflow.data.cid.model.DataType
+import nextflow.data.cid.model.Output
 import nextflow.file.RealPathAware
 import nextflow.util.CacheHelper
 import nextflow.util.TestOnly
@@ -72,13 +72,13 @@ class CidPath implements Path, RealPathAware {
         this.filePath = resolve0(fs, norm0(path), norm0(more))
     }
 
-    private static void validateHash(Map cidObject) {
+    private static void validateHash(Output cidObject) {
         final hashedPath = FileHelper.toCanonicalPath(cidObject.path as String)
         if( !hashedPath.exists() )
             throw new FileNotFoundException("Target path $cidObject.path does not exists.")
         if( cidObject.checksum ) {
-            final checksum = cidObject.checksum as Map
-            if( checksum.algorithm as String in SUPPORTED_CHECKSUM_ALGORITHMS ){
+            final checksum = cidObject.checksum
+            if( checksum.algorithm in SUPPORTED_CHECKSUM_ALGORITHMS ){
 
                 final hash = checksum.mode
                         ? CacheHelper.hasher(hashedPath,CacheHelper.HashMode.of(checksum.mode.toString().toLowerCase())).hash().toString()
@@ -106,12 +106,11 @@ class CidPath implements Path, RealPathAware {
         final store = fs.getCidStore()
         if( !store )
             throw new Exception("CID store not found. Check Nextflow configuration.")
-        final slurper = new JsonSlurper()
         final object = store.load(filePath)
         if ( object ){
-            final cidObject = slurper.parse(object.toString().toCharArray()) as Map
-            final type = DataType.valueOf(cidObject.type as String)
+            final type = object.type
             if( type == DataType.TaskOutput || type == DataType.WorkflowOutput ) {
+                final cidObject = object as Output
                 // return the real path stored in the metadata
                 validateHash(cidObject)
                 def realPath = FileHelper.toCanonicalPath(cidObject.path as String)

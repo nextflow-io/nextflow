@@ -16,9 +16,12 @@
 
 package nextflow.data.cid
 
+import nextflow.data.cid.model.DataType
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 interface CidSerializable {
+    DataType getType()
 }

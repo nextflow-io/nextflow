@@ -17,11 +17,17 @@
 
 package nextflow.data.cid.cli
 
+import groovy.json.JsonOutput
+import nextflow.data.cid.model.Output
+import nextflow.data.cid.model.Parameter
+import nextflow.data.cid.model.WorkflowRun
+import nextflow.data.cid.model.TaskRun
+import nextflow.script.params.FileInParam
+
 import static nextflow.data.cid.fs.CidPath.*
 
 import java.nio.file.Path
 
-import groovy.json.JsonSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import nextflow.Session
@@ -87,11 +93,11 @@ class CidCommandImpl implements CmdCid.CidCommand {
             try {
                 final entry = store.load(key)
                 if( entry )
-                    println entry.toString()
+                    println JsonOutput.prettyPrint(JsonOutput.toJson(entry))
                 else
                     println "No entry found for ${args[0]}."
             } catch (Throwable e) {
-                println "Error loading ${args[0]}."
+                println "Error loading ${args[0]}. ${e.message}"
             }
         } else {
             println "Error CID store not loaded. Check Nextflow configuration."
@@ -132,14 +138,13 @@ class CidCommandImpl implements CmdCid.CidCommand {
     private void processNode(List<String> lines, String nodeToRender, LinkedList<String> nodes, LinkedList<Edge> edges, CidStore store) {
         if (!nodeToRender.startsWith(CID_PROT))
             throw new Exception("Identifier is not a CID URL")
-        final slurper = new JsonSlurper()
         final key = nodeToRender.substring(CID_PROT.size())
-        final cidObject = slurper.parse(store.load(key).toString().toCharArray()) as Map
+        final cidObject = store.load(key)
         switch (DataType.valueOf(cidObject.type as String)) {
             case DataType.TaskOutput:
             case DataType.WorkflowOutput:
                 lines << "    ${nodeToRender}@{shape: document, label: \"${nodeToRender}\"}".toString();
-                final source = cidObject.source as String
+                final source = (cidObject as Output).source
                 if (source) {
                     if (source.startsWith(CID_PROT)) {
                         nodes.add(source)
@@ -153,8 +158,9 @@ class CidCommandImpl implements CmdCid.CidCommand {
 
                 break;
             case DataType.WorkflowRun:
-                lines << "${nodeToRender}@{shape: processes, label: \"${cidObject.runName}\"}".toString()
-                final parameters = cidObject.params as List<nextflow.data.cid.model.Parameter>
+                final wfRun = cidObject as WorkflowRun
+                lines << "${nodeToRender}@{shape: processes, label: \"${wfRun.name}\"}".toString()
+                final parameters = wfRun.params
                 parameters.each {
                     final label = convertToLabel(it.value.toString())
                     lines << "    ${it.value.toString()}@{shape: document, label: \"${label}\"}".toString();
@@ -162,10 +168,11 @@ class CidCommandImpl implements CmdCid.CidCommand {
                 }
                 break;
             case DataType.TaskRun:
-                lines << "    ${nodeToRender}@{shape: process, label: \"${cidObject.name}\"}".toString()
-                final parameters = cidObject.inputs as List<nextflow.data.cid.model.Parameter>
-                for (nextflow.data.cid.model.Parameter source: parameters){
-                    if (source.type.equals(nextflow.script.params.FileInParam.simpleName)) {
+                final taskRun = cidObject as TaskRun
+                lines << "    ${nodeToRender}@{shape: process, label: \"${taskRun.name}\"}".toString()
+                final parameters = taskRun.inputs
+                for (Parameter source: parameters){
+                    if (source.type.equals(FileInParam.simpleName)) {
                         manageFileInParam(lines, nodeToRender, nodes, edges, source.value)
                     } else {
                         final label = convertToLabel(source.value.toString())
