@@ -1940,7 +1940,7 @@ class TaskProcessor {
             if( item instanceof Path || coerceToPath ) {
                 def path = normalizeToPath(item)
                 def target = executor.isForeignFile(path) ? batch.addToForeign(path) : path
-                def holder = new FileHolder(target)
+                def holder = new FileHolder(target, path)
                 files << holder
             }
             else {
