@@ -82,7 +82,7 @@ class MermaidRenderer implements DagRenderer {
         lines << "flowchart ${direction}".toString()
 
         // render nodes
-        renderNodeTree(lines, null, nodeTree)
+        renderNodeTree(lines, null, null, nodeTree)
 
         // render edges
         def edges = [] as Set<Edge>
@@ -432,17 +432,22 @@ class MermaidRenderer implements DagRenderer {
      *
      * @param lines
      * @param name
+     * @param fqName
      * @param nodeTree
      */
-    private void renderNodeTree(List<String> lines, String name, Map<String,Object> nodeTree) {
+    private void renderNodeTree(List<String> lines, String name, String fqName, Map<String,Object> nodeTree) {
         if( name ) {
-            final label = name in [INPUTS, OUTPUTS] ? '" "' : name
-            lines << "    subgraph ${label}".toString()
+            if( name == INPUTS || name == OUTPUTS )
+                lines << "    subgraph \" \"".toString()
+            else
+                lines << "    subgraph ${fqName} [${name}]".toString()
         }
 
         nodeTree.each { key, value ->
-            if( value instanceof Map )
-                renderNodeTree(lines, key, value)
+            if( value instanceof Map ) {
+                final id = fqName ? "${fqName}::${key}".toString() : key
+                renderNodeTree(lines, key, id, value)
+            }
             else if( value instanceof Node ) {
                 // skip node if it is disconnected
                 if( !value.inputs && !value.outputs )

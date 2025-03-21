@@ -25,6 +25,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigValidator
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
@@ -81,6 +82,7 @@ class CmdConfig extends CmdBase {
         if( args ) base = getBaseDir(args[0])
         if( !base ) base = Paths.get('.')
 
+        // -- validate command line options
         if( profile && showAllProfiles ) {
             throw new AbortOperationException("Option `-profile` conflicts with option `-show-profiles`")
         }
@@ -103,6 +105,7 @@ class CmdConfig extends CmdBase {
         if( printProperties )
             outputFormat = 'properties'
 
+        // -- build the config
         final builder = new ConfigBuilder()
                 .setShowClosures(true)
                 .setStripSecrets(true)
@@ -113,6 +116,10 @@ class CmdConfig extends CmdBase {
 
         final config = builder.buildConfigObject()
 
+        // -- validate config options
+        new ConfigValidator().validate(config)
+
+        // -- print config options
         if( printValue ) {
             printValue0(config, printValue, stdout)
         }
