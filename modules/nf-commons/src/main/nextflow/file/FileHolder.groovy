@@ -20,11 +20,15 @@ package nextflow.file
 import java.nio.file.FileSystems
 import java.nio.file.Path
 
+import com.google.common.hash.Hasher
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
+import nextflow.util.CacheFunnel
+import nextflow.util.CacheHelper
+import nextflow.util.CacheHelper.HashMode
 /**
  * Implements a special {@code Path} used to stage files in the work area
  */
@@ -32,7 +36,7 @@ import groovy.util.logging.Slf4j
 @ToString(includePackage = false, includeNames = true)
 @EqualsAndHashCode
 @CompileStatic
-class FileHolder  {
+class FileHolder implements CacheFunnel {
 
     final def sourceObj
 
@@ -66,12 +70,17 @@ class FileHolder  {
         new FileHolder( this.sourceObj, this.storePath, stageName )
     }
 
+    Path getSourcePath() {
+        sourceObj instanceof Path ? sourceObj : null
+    }
+
     Path getStorePath() { storePath }
 
     String getStageName() { stageName }
 
-    Path getSourcePath() {
-        sourceObj instanceof Path ? sourceObj : null
+    @Override
+    Hasher funnel(Hasher hasher, HashMode mode) {
+        return CacheHelper.hasher(hasher, sourceObj, mode)
     }
 
     @PackageScope
