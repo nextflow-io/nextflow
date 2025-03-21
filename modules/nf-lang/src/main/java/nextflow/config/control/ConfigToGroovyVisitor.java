@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.config.parser.v2;
+package nextflow.config.control;
 
 import java.util.ArrayList;
 import java.util.stream.Collectors;
@@ -34,8 +34,9 @@ import org.codehaus.groovy.control.SourceUnit;
 import static org.codehaus.groovy.ast.tools.GeneralUtils.*;
 
 /**
- * Visitor to convert a Nextflow config AST into a
- * Groovy AST which is executed against {@link ConfigDsl}.
+ * Transform a Nextflow config AST into a Groovy AST.
+ *
+ * @see nextflow.config.parser.v2.ConfigDsl
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
