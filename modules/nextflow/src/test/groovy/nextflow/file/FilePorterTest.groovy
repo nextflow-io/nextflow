@@ -133,18 +133,6 @@ class FilePorterTest extends Specification {
 
 
 
-    static class ErrorStage extends FilePorter.FileTransfer {
-
-        ErrorStage(Path path, Path stagePath, int maxRetries) {
-            super(path, stagePath, maxRetries, new Semaphore(100))
-        }
-
-        @Override
-        void run() throws Exception {
-            throw new ProcessStageException('Cannot stage file')
-        }
-    }
-
     def 'should submit actions' () {
 
         given:
