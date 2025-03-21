@@ -17,6 +17,9 @@
 
 package nextflow.data.cid.h2
 
+import nextflow.data.cid.CidSerializable
+import nextflow.data.cid.serde.Encoder
+import nextflow.data.cid.serde.JsonEncoder
 
 import java.sql.Clob
 
@@ -38,11 +41,13 @@ import nextflow.util.TestOnly
 class H2CidStore implements CidStore {
 
     private HikariDataSource dataSource
+    private Encoder<String> encoder
 
     @Override
     H2CidStore open(DataConfig config) {
         assert config.store.location.startsWith('jdbc:h2:')
         log.info "Connecting CID H2 store: '${config.store.location}'"
+        encoder = new JsonEncoder()
         dataSource = createDataSource(config.store)
         // create the db tables
         createDbTables(dataSource)
@@ -90,19 +95,20 @@ class H2CidStore implements CidStore {
     }
 
     @Override
-    void save(String key, Object value) {
+    void save(String key, CidSerializable object) {
+        final value = encoder.encode(object)
         try(final sql=new Sql(dataSource)) {
             sql.execute("""
             INSERT INTO cid_file (path, metadata) VALUES (?, ?)
-        """, [key, value])
+        """, [key, (Object)value])
         }
     }
 
     @Override
-    Object load(String key) {
+    CidSerializable load(String key) {
         try(final sql=new Sql(dataSource)) {
             final result = sql.firstRow("SELECT metadata FROM cid_file WHERE path = ?", List.<Object>of(key))
-            return result ? toValue(result.metadata) : null
+            return result ? encoder.decode(toValue(result.metadata).toString()) : null
         }
     }
 
