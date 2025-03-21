@@ -36,6 +36,7 @@ import nextflow.script.control.Compiler;
 import nextflow.script.control.ModuleResolver;
 import nextflow.script.control.ResolveIncludeVisitor;
 import nextflow.script.control.ScriptResolveVisitor;
+import nextflow.script.control.ScriptToGroovyVisitor;
 import nextflow.script.control.TypeCheckingVisitor;
 import nextflow.script.parser.ScriptParserPluginFactory;
 import org.codehaus.groovy.ast.ASTNode;
