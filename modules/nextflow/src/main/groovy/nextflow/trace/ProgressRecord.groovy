@@ -62,7 +62,7 @@ class ProgressRecord implements Cloneable {
     }
 
     int getTotalCount() {
-        pending + submitted + running + succeeded + ignored + cached + stored + aborted
+        pending + submitted + running + succeeded + failed - retries + cached + stored + aborted
     }
 
     int getCompletedCount() {
