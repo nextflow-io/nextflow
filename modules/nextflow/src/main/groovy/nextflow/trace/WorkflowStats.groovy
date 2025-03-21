@@ -97,6 +97,10 @@ class WorkflowStats implements Cloneable {
         x >= 0 ? x : 0
     }
 
+    int getTotalCount() {
+        gtz(succeededCount + cachedCount + failedCount + abortedCount)
+    }
+
     String getSucceedCountFmt() {
         INTEGER_FMT.format(gtz(succeededCount))
     }
@@ -114,17 +118,22 @@ class WorkflowStats implements Cloneable {
     }
 
     float getSucceedPct() {
-        int tot = gtz(succeededCount + cachedCount + failedCount)
+        int tot = getTotalCount()
         tot ? Math.round(succeededCount / tot * 10000.0 as float) / 100.0 as float : 0
     }
 
     float getCachedPct() {
-        def tot = gtz(succeededCount + cachedCount + failedCount)
+        int tot = getTotalCount()
         tot ? Math.round(gtz(cachedCount) / tot * 10000.0 as float) / 100.0 as float : 0
     }
 
+    float getIgnoredPct() {
+        int tot = getTotalCount()
+        tot ? Math.round(gtz(ignoredCount) / tot * 10000.0 as float) / 100.0 as float : 0
+    }
+
     float getFailedPct() {
-        def tot = gtz(succeededCount + cachedCount + failedCount)
+        int tot = getTotalCount()
         tot ? Math.round(gtz(failedCount) / tot * 10000.0 as float) / 100.0 as float : 0
     }
 
