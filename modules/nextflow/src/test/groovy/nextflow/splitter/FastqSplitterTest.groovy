@@ -25,7 +25,6 @@ import test.TestHelper
 class FastqSplitterTest extends Specification {
 
     def testFastqRead() {
-
         given:
         def text = '''
             @HWI-EAS209_0006_FC706VJ:5:58:5894:21141#ATCACG/1
@@ -53,7 +52,6 @@ class FastqSplitterTest extends Specification {
         entries[0].readString == 'TTAATTGGTAAATAAATCTCCTAATAGCTTAGATNTTACCTTNNNNNNNNNNTAGTTTCTTGAGATTTGTTGGGGGAGACATTTTTGTGATTGCCTTGAT'
         entries[0].qualityHeader == 'HWI-EAS209_0006_FC706VJ:5:58:5894:21141#ATCACG/1'
         entries[0].qualityString == 'efcfffffcfeefffcffffffddf`feed]`]_Ba_^__[YBBBBBBBBBBRTT\\]][]dddd`ddd^dddadd^BBBBBBBBBBBBBBBBBBBBBBBB'
-
     }
 
     static final FASTAQ1 = '''
@@ -118,7 +116,6 @@ class FastqSplitterTest extends Specification {
             '''.stripIndent().trim()
 
     def testFastqSplitByRecord() {
-
         when:
         def records = new FastqSplitter().target(FASTQ2).options(record: true).list()
         then:
@@ -156,7 +153,6 @@ class FastqSplitterTest extends Specification {
         records[2].readString == 'CGGGGAGCGCGGGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTAGGGAGCACCCCGCCGCAGGGGGACAGGCGAGATCGGAAGAGCACACGTCT'
         records[2].qualityHeader == ''
         records[2].qualityString == 'BCCFFDFFHHHHHJJJJJIJHHHHFFFFEEEEEEEDDDDDDBDBDBBDBBDBBB(:ABCDDDDDDDDDDDDDDDD@BBBDDDDDDDDDDDDBDDDDDDDDDDADC'
-
     }
 
 
@@ -193,7 +189,6 @@ class FastqSplitterTest extends Specification {
             .stripIndent().trim()
 
     def testFastqSplitBy3() {
-
         when:
         def items = new FastqSplitter().target(FASTQ3).options(by:3).list()
 
@@ -237,18 +232,15 @@ class FastqSplitterTest extends Specification {
             CCCFFFFFHHHGHJJJJJJJJJHBB?BDDD5:1:6@DDBBD@D68@<<?B8>CCDDCDDDCDDBBD>@?AA?B@D55@<ACDD8@9<?BDDDBB<<9>@BBD###
             '''
                 .stripIndent().leftTrim()
-
     }
 
     def testFastqSplitBy3ToRecord() {
-
         when:
         def items = new FastqSplitter().target(FASTQ3).options(by:3, record:[readHeader:true]).list()
         then:
         items[0] == [ [readHeader: 'SRR636272.19519409/1'], [readHeader: 'SRR636272.13995011/1'], [readHeader: 'SRR636272.21107783/1']]
         items[1] == [ [readHeader: 'SRR636272.23331539/1'], [readHeader: 'SRR636272.7306321/1'], [readHeader: 'SRR636272.23665592/1']]
         items[2] == [ [readHeader: 'SRR636272.1267179/1'] ]
-
     }
 
     def testFastqSplitBy3ToFile() {
@@ -297,11 +289,9 @@ class FastqSplitterTest extends Specification {
             CCCFFFFFHHHGHJJJJJJJJJHBB?BDDD5:1:6@DDBBD@D68@<<?B8>CCDDCDDDCDDBBD>@?AA?B@D55@<ACDD8@9<?BDDDBB<<9>@BBD###
             '''
                 .stripIndent().leftTrim()
-
     }
 
     def testFastqSplitWithLimit() {
-
         when:
         def items = new FastqSplitter().options(limit:3, record:[readHeader:true]).target(FASTQ3).list()
 
@@ -310,7 +300,6 @@ class FastqSplitterTest extends Specification {
         items[0] == [readHeader: 'SRR636272.19519409/1']
         items[1] == [readHeader: 'SRR636272.13995011/1']
         items[2] == [readHeader: 'SRR636272.21107783/1']
-
     }
 
 
@@ -374,9 +363,8 @@ class FastqSplitterTest extends Specification {
             .stripIndent().trim()
 
 
-
     def testQualityCheckWithString () {
-
+        given:
         FastqSplitter splitter
 
         when:
@@ -388,12 +376,9 @@ class FastqSplitterTest extends Specification {
         splitter = new FastqSplitter().target(fastq64)
         then:
         splitter.qualityScore() == 64
-
     }
 
-
     def testQualityCheckWithPath () {
-
         given:
         def file = TestHelper.createInMemTempFile()
         file.text = fastq64
@@ -402,9 +387,7 @@ class FastqSplitterTest extends Specification {
         FastqSplitter splitter = new FastqSplitter().target(file)
         then:
         splitter.qualityScore() == 64
-
     }
-
 
     def testDetectFastqQuality() {
         given:
@@ -418,7 +401,6 @@ class FastqSplitterTest extends Specification {
         FastqSplitter.detectQualityString('hello') == 64       // <- ask to emilio
         FastqSplitter.detectQualityString(qualityUnknown) == -1
         FastqSplitter.detectQualityString(null) == -1
-
     }
 
 }

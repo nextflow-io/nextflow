@@ -20,10 +20,11 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.operator.ChainWithClosure
-import groovyx.gpars.dataflow.operator.CopyChannelsClosure
+import groovyx.gpars.dataflow.operator.DataflowProcessor
+import nextflow.Channel
 import nextflow.NF
-import static nextflow.extension.DataflowHelper.newOperator
+import nextflow.extension.op.Op
+
 /**
  * Implements the {@link OperatorImpl#tap} operator
  *
@@ -68,7 +69,7 @@ class TapOp {
             throw new IllegalArgumentException("Missing target channel on `tap` operator")
 
         final binding = NF.binding
-        names.each { item ->
+        for( String item : names ) { 
             def channel = CH.createBy(source)
             if( binding.hasVariable(item) )
                 log.warn "A variable named '${item}' already exists in the script global context -- Consider renaming it "
@@ -76,7 +77,6 @@ class TapOp {
             binding.setVariable(item, channel)
             outputs << channel
         }
-
     }
 
     /**
@@ -90,12 +90,12 @@ class TapOp {
         assert source != null
         assert target != null
         if( source.class != target.class ) {
-                throw new IllegalArgumentException("Operator `tap` source and target channel types must match -- source: ${source.class.name}, target: ${target.class.name} ")
+            throw new IllegalArgumentException("Operator `tap` source and target channel types must match -- source: ${source.class.name}, target: ${target.class.name} ")
         }
 
         this.source = source
         this.result = CH.createBy(source)
-        this.outputs = [result, target]
+        this.outputs = List.of(result, target)
     }
 
     /**
@@ -108,8 +108,24 @@ class TapOp {
      * @return An instance of {@link TapOp} itself
      */
     TapOp apply() {
-        newOperator([source], outputs, new ChainWithClosure(new CopyChannelsClosure()));
+        new SubscribeOp()
+            .withInput(source)
+            .withOnNext(this.&emit)
+            .withOnComplete(this.&complete)
+            .apply()
         return this
+    }
+
+    protected void emit(DataflowProcessor dp, Object it) {
+        for( DataflowWriteChannel ch : outputs ) {
+            Op.bind(dp, ch, it)
+        }
+    }
+
+    protected void complete(DataflowProcessor dp) {
+        for( DataflowWriteChannel ch : outputs ) {
+            Op.bind(dp, ch, Channel.STOP)
+        }
     }
 
 }
