@@ -283,11 +283,14 @@ class FilePorterTest extends Specification {
     }
     def 'should stage a file' () {
         given:
+        def sess = Mock(Session) {
+            getConfig() >> [:]
+        }
         def folder = Files.createTempDirectory('test')
         def local1 = folder.resolve('hola.text')
         def foreign1 = TestHelper.createInMemTempFile('hola.txt', 'hola mundo!')
         and:
-        def porter = new FilePorter.FileTransfer(foreign1, local1, 0, Mock(Semaphore))
+        def porter = new FilePorter.FileTransfer(foreign1, local1, 0, Mock(Semaphore), sess)
 
         when:
         porter.stageForeignFile(foreign1, local1)
@@ -309,13 +312,16 @@ class FilePorterTest extends Specification {
 
     def 'should check valid files' () {
         given:
+        def sess = Mock(Session) {
+            getConfig() >> [:]
+        }
         def CONTENT = 'hola mundo!'
         def foreign1 = TestHelper.createInMemTempFile('hola.txt', CONTENT)
         and:
         def folder = Files.createTempDirectory('test')
         def local1 = folder.resolve('hola.text'); local1.text = CONTENT
         and:
-        def porter = new FilePorter.FileTransfer(foreign1, local1, 0, Mock(Semaphore))
+        def porter = new FilePorter.FileTransfer(foreign1, local1, 0, Mock(Semaphore), sess)
 
         when:
         def equals = porter.checkPathIntegrity(foreign1, local1)
