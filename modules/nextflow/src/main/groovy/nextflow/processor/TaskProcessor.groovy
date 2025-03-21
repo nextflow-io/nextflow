@@ -80,6 +80,7 @@ import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.file.FilePatternSplitter
 import nextflow.file.FilePorter
+import nextflow.file.RemoteFileHolder
 import nextflow.plugin.Plugins
 import nextflow.processor.tip.TaskTipProvider
 import nextflow.script.BaseScript
@@ -1939,9 +1940,14 @@ class TaskProcessor {
 
             if( item instanceof Path || coerceToPath ) {
                 def path = normalizeToPath(item)
-                def target = executor.isForeignFile(path) ? batch.addToForeign(path) : path
-                def holder = new FileHolder(target, path)
-                files << holder
+                if (executor.isForeignFile(path)) {
+                    def target = batch.addToForeign(path)
+                    def holder = new RemoteFileHolder(target, path)
+                    files << holder
+                } else {
+                    def holder = new FileHolder(path)
+                    files << holder
+                }
             }
             else {
                 files << normalizeInputToFile(item, "input.${++count}")
