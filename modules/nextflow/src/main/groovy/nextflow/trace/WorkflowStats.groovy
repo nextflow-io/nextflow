@@ -98,7 +98,7 @@ class WorkflowStats implements Cloneable {
     }
 
     int getTotalCount() {
-        gtz(succeededCount + cachedCount + failedCount + abortedCount)
+        gtz(succeededCount + cachedCount + ignoredCount + effectiveFailedCount + abortedCount)
     }
 
     String getSucceedCountFmt() {
@@ -132,9 +132,9 @@ class WorkflowStats implements Cloneable {
         tot ? Math.round(gtz(ignoredCount) / tot * 10000.0 as float) / 100.0 as float : 0
     }
 
-    float getFailedPct() {
+    float getEffectiveFailedPct() {
         int tot = getTotalCount()
-        tot ? Math.round(gtz(failedCount) / tot * 10000.0 as float) / 100.0 as float : 0
+        tot ? Math.round(gtz(effectiveFailedCount) / tot * 10000.0 as float) / 100.0 as float : 0
     }
 
     protected Duration makeDuration(long value) {
@@ -168,9 +168,14 @@ class WorkflowStats implements Cloneable {
     int getSucceededCount() { gtz(succeededCount) }
 
     /**
-     * @return Failed tasks count
+     * @return Failed tasks count (includes ignored and retried)
      */
     int getFailedCount() { gtz(failedCount) }
+
+    /**
+     * @return "Effective" failed tasks count (excludes ignored and retried)
+     */
+    int getEffectiveFailedCount() { gtz(failedCount - ignoredCount - retriesCount) }
 
     /**
      * @return Ignored tasks count
