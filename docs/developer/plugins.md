@@ -351,14 +351,19 @@ class MyObserverFactory implements TraceObserverFactory {
 // MyObserver.groovy
 import java.nio.file.Path
 
+import nextflow.Session
 import nextflow.processor.TaskHandler
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceRecord
 
 class MyObserver implements TraceObserver {
+    private Session session
     
     @Override
-    void onFlowBegin() {
+    void onFlowCreate(Session session) {
+        // store the session for later use
+        this.session = session
+
         println "Okay, let's begin!"
     }
 
@@ -373,8 +378,13 @@ class MyObserver implements TraceObserver {
     }
 
     @Override
+    void onFileStage(Path destination, Path source) {
+        println("I staged a file from '${source.toUriString()}' to '${destination.toUriString()}'")
+    }
+
+    @Override
     void onFilePublish(Path destination, Path source) {
-        println "I published a file! It's located at ${path.toUriString()}"
+        println "I published a file! It's located at '${destination.toUriString()}'"
     }
     
     @Override
