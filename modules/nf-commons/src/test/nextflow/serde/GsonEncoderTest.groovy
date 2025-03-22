@@ -16,15 +16,40 @@
 
 package nextflow.serde
 
-import spock.lang.Specification
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 
+import groovy.transform.EqualsAndHashCode
+import nextflow.serde.gson.GsonEncoder
+import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class GsonEncoderTest extends Specification {
 
-    def 'should encode and decode an object'() {
+    @EqualsAndHashCode
+    static class Foo {
+        String name
+        Instant timestamp
+        OffsetDateTime datetime
+    }
+
+    def 'should serialize-deserialize an object' () {
+        given:
+        def encoder = new GsonEncoder<Foo>() { }
+        def ts = Instant.ofEpochSecond(1742638384)
+        def dt = ts.atOffset(ZoneOffset.UTC)
+        def foo = new Foo(name:'Yo!', timestamp: ts, datetime: dt)
+        when:
+        def json = encoder.encode(foo)
+        then:
+        json == '{"name":"Yo!","timestamp":"2025-03-22T10:13:04Z","datetime":"2025-03-22T10:13:04Z"}'
+        encoder.decode(json) == foo
+    }
+
+    def 'should encode and decode polymorphic class/1'() {
         given:
         def encoder = new MyEncoder()
         def dog = new Dog("bau", 10)
@@ -39,4 +64,18 @@ class GsonEncoderTest extends Specification {
         animal == dog
     }
 
+    def 'should encode and decode polymorphic class/1'() {
+        given:
+        def encoder = new MyEncoder()
+        def dog = new Cat("bau", true)
+        when:
+        def json = encoder.encode(dog)
+        then:
+        json == '{"@type":"Cat","name":"bau","likesSun":true}'
+
+        when:
+        def animal = encoder.decode(json)
+        then:
+        animal == dog
+    }
 }

@@ -21,7 +21,6 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import nextflow.serde.gson.GsonEncoder
 import nextflow.serde.gson.RuntimeTypeAdapterFactory
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>

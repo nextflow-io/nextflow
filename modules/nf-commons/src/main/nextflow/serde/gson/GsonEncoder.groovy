@@ -17,6 +17,8 @@
 package nextflow.serde.gson
 
 import java.lang.reflect.Type
+import java.time.Instant
+import java.time.OffsetDateTime
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -68,6 +70,8 @@ abstract class GsonEncoder<T> implements Encoder<T, String> {
 
     private Gson create0() {
         final builder = new GsonBuilder()
+        builder.registerTypeAdapter(Instant.class, new InstantAdapter())
+        builder.registerTypeAdapter(OffsetDateTime.class, new OffsetDateTimeAdapter())
         builder.registerTypeAdapter(GStringImpl.class, new GStringSerializer())
         if( factory )
             builder.registerTypeAdapterFactory(factory)
