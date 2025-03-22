@@ -17,20 +17,22 @@
 
 package nextflow.cli
 
-import groovy.json.JsonOutput
-
 import java.nio.file.Files
 
 import nextflow.SysEnv
 import nextflow.dag.MermaidHtmlRenderer
 import nextflow.data.cid.CidHistoryRecord
 import nextflow.data.cid.CidStoreFactory
+import nextflow.data.cid.model.Checksum
+import nextflow.data.cid.model.Parameter
+import nextflow.data.cid.model.TaskOutput
+import nextflow.data.cid.model.TaskRun
+import nextflow.data.cid.model.WorkflowOutput
+import nextflow.data.cid.serde.CidEncoder
 import nextflow.plugin.Plugins
-
 import org.junit.Rule
 import spock.lang.Specification
 import test.OutputCapture
-
 /**
  * CLI cid Tests
  *
@@ -130,16 +132,12 @@ class CmdCidTest extends Specification {
         def launcher = Mock(Launcher){
             getOptions() >> new CliOptions(config: [configFile.toString()])
         }
-
-        def recordEntry = JsonOutput.prettyPrint('{"type":"WorkflowOutput",' +
-                '"path":"/path/to/file",' +
-                '"checksum":"45372qe",' +
-                '"source":"cid://123987/file.bam",' +
-                '"size": 1234,' +
-                '"createdAt": 123456789,' +
-                '"modifiedAt": 123456789,' +
-                '"annotations":null}')
-        cidFile.text = recordEntry
+        def encoder = new CidEncoder().withPrettyPrint(true)
+        def entry = new WorkflowOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
+                "cid://123987/file.bam", 1234, 123456789, 123456789, null)
+        def jsonSer = encoder.encode(entry)
+        def expectedOutput = jsonSer
+        cidFile.text = jsonSer
         when:
             def cidCmd = new CmdCid(launcher: launcher, args: ["show", "cid://12345"])
             cidCmd.run()
@@ -151,8 +149,8 @@ class CmdCidTest extends Specification {
                 .findResults { line -> !line.contains('plugin') ? line : null }
 
         then:
-            stdout.size() == recordEntry.readLines().size()
-            stdout.join('\n') == recordEntry
+            stdout.size() == expectedOutput.readLines().size()
+            stdout.join('\n') == expectedOutput
 
         cleanup:
             folder?.deleteDir()
@@ -204,31 +202,24 @@ class CmdCidTest extends Specification {
         Files.createDirectories(cidFile3.parent)
         Files.createDirectories(cidFile4.parent)
         Files.createDirectories(cidFile5.parent)
-
-        def recordEntry = JsonOutput.prettyPrint('{"type":"WorkflowOutput",' +
-            '"path":"/path/to/file","checksum":"45372qe","source":"cid://123987/file.bam",' +
-            '"size": 1234,"createdAt": 123456789, "modifiedAt": 123456789,"annotations":null}')
-        cidFile.text = recordEntry
-        recordEntry = JsonOutput.prettyPrint('{"type":"TaskOutput",' +
-            '"path":"/path/to/file","checksum":"45372qe","source":"cid://123987",' +
-            '"size": 1234,"createdAt": 123456789,"modifiedAt": 123456789,"annotations":null}')
-        cidFile2.text = recordEntry
-        recordEntry = JsonOutput.prettyPrint('{"type":"TaskRun",' +
-            '"sessionId":"u345-2346-1stw2", "name":"foo","code":"abcde2345",' +
-            '"inputs": [{"type": "ValueInParam","name": "sample_id","value": "ggal_gut"},' +
-            '{"type": "FileInParam","name": "reads","value": ["cid://45678/output.txt"]}],' +
-            '"container": null,"conda": null,"spack": null,"architecture": null,' +
-            '"globalVars": {},"binEntries": [],"annotations":null}')
-        cidFile3.text = recordEntry
-        recordEntry = JsonOutput.prettyPrint('{"type":"TaskOutput",' +
-            '"path":"/path/to/file","checksum":"45372qe","source":"cid://45678",' +
-            '"size": 1234,"createdAt": 123456789,"modifiedAt": 123456789,"annotations":null}')
-        cidFile4.text = recordEntry
-        recordEntry = JsonOutput.prettyPrint('{"type":"TaskRun",' +
-            '"sessionId":"u345-2346-1stw2", "name":"bar","code":"abfs2556",' +
-            '"inputs": null,"container": null,"conda": null,"spack": null,"architecture": null,' +
-            '"globalVars": {},"binEntries": [],"annotations":null}')
-        cidFile5.text = recordEntry
+        def encoder = new CidEncoder()
+        def entry = new WorkflowOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
+                "cid://123987/file.bam", 1234, 123456789, 123456789, null)
+        cidFile.text = encoder.encode(entry)
+        entry = new TaskOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
+                "cid://123987", 1234, 123456789, 123456789, null)
+        cidFile2.text = encoder.encode(entry)
+        entry = new TaskRun("u345-2346-1stw2", "foo", new Checksum("abcde2345","nextflow","standard"),
+                [new Parameter( "ValueInParam", "sample_id","ggal_gut"),
+                new Parameter("FileInParam","reads",["cid://45678/output.txt"])],
+                null, null, null, null, [:],[], null)
+        cidFile3.text = encoder.encode(entry)
+        entry  = new TaskOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
+                "cid://45678", 1234, 123456789, 123456789, null)
+        cidFile4.text = encoder.encode(entry)
+        entry = new TaskRun("u345-2346-1stw2", "bar", new Checksum("abfs2556","nextflow","standard"),
+                null,null, null, null, null, [:],[], null)
+        cidFile5.text = encoder.encode(entry)
         final network = """flowchart BT
     cid://12345/file.bam@{shape: document, label: "cid://12345/file.bam"}
     cid://123987/file.bam@{shape: document, label: "cid://123987/file.bam"}

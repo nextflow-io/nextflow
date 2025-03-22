@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2025, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,42 +12,32 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
-package nextflow.util
+package nextflow.serde.gson
 
 import java.time.Instant
+import java.time.OffsetDateTime
 
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
+import com.google.gson.TypeAdapter
+import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonWriter
 import groovy.transform.CompileStatic
-import groovy.transform.Memoized
-import nextflow.serde.gson.InstantAdapter
 
 /**
- * Implements helper for Gson ser-deserialization
- *
- * Deprecated. Use {@link nextflow.serde.gson.GsonEncoder} instead
+ * Implements a Gson adapter for {@link Instant}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Deprecated
 @CompileStatic
-class GsonHelper {
-
-    @Memoized
-    static protected Gson gson() {
-        new GsonBuilder()
-            .registerTypeAdapter(Instant, new InstantAdapter())
-            .create()
+class OffsetDateTimeAdapter extends TypeAdapter<OffsetDateTime> {
+    @Override
+    void write(JsonWriter writer, OffsetDateTime value) throws IOException {
+        writer.value(value?.toString())
     }
 
-    static String toJson(Object obj) {
-        return gson().toJson(obj)
-    }
-
-    static <T> T fromJson(String json, Class<T> clazz) {
-        return gson().fromJson(json,clazz)
+    @Override
+    OffsetDateTime read(JsonReader reader) throws IOException {
+        return OffsetDateTime.parse(reader.nextString())
     }
 }

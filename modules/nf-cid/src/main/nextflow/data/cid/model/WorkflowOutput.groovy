@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2025, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,26 +12,21 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.data.cid.model
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
-import nextflow.data.cid.serde.CidSerializable
-
+import groovy.transform.InheritConstructors
 
 /**
- * Models a workflow definition.
+ * Model a workflow output object
  *
- * @author Jorge Ejarque <jorge.ejarque@seqera.io
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Canonical
 @CompileStatic
-class Workflow implements CidSerializable {
-    DataPath mainScriptFile
-    List<DataPath> otherScriptFiles
-    String repository
-    String commitId
+@InheritConstructors
+class WorkflowOutput extends Output {
 }

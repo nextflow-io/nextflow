@@ -19,6 +19,7 @@ package nextflow.data.cid.model
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import nextflow.data.cid.serde.CidSerializable
 
 /**
  * Models a task execution.
@@ -27,8 +28,7 @@ import groovy.transform.CompileStatic
  */
 @Canonical
 @CompileStatic
-class TaskRun {
-    DataType type
+class TaskRun implements CidSerializable {
     String sessionId
     String name
     Checksum codeChecksum

@@ -17,8 +17,8 @@
 
 package nextflow.data.cid
 
-
 import groovy.transform.CompileStatic
+import nextflow.data.cid.serde.CidSerializable
 import nextflow.data.config.DataConfig
 /**
  * Interface for the CID store
@@ -38,14 +38,14 @@ interface CidStore extends Closeable {
      * @param key Entry key.
      * @param value Entry object.
      */
-    void save(String key, Object value)
+    void save(String key, CidSerializable value)
 
     /**
      * Load an entry for a given CID key.
      * @param key CID key.
      * @return entry value, or null if key does not exists
      */
-    Object load(String key)
+     CidSerializable load(String key)
 
     /**
      * Get the {@link CidHistoryLog} object associated to the CidStore.
