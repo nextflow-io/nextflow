@@ -17,10 +17,6 @@
 
 package nextflow.data.cid.h2
 
-import nextflow.data.cid.CidSerializable
-import nextflow.data.cid.serde.Encoder
-import nextflow.data.cid.serde.JsonEncoder
-
 import java.sql.Clob
 
 import com.zaxxer.hikari.HikariDataSource
@@ -29,6 +25,8 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.data.cid.CidHistoryLog
 import nextflow.data.cid.CidStore
+import nextflow.data.cid.serde.CidEncoder
+import nextflow.data.cid.serde.CidSerializable
 import nextflow.data.config.DataConfig
 import nextflow.data.config.DataStoreOpts
 import nextflow.util.TestOnly
@@ -41,13 +39,13 @@ import nextflow.util.TestOnly
 class H2CidStore implements CidStore {
 
     private HikariDataSource dataSource
-    private Encoder<String> encoder
+    private CidEncoder encoder
 
     @Override
     H2CidStore open(DataConfig config) {
         assert config.store.location.startsWith('jdbc:h2:')
         log.info "Connecting CID H2 store: '${config.store.location}'"
-        encoder = new JsonEncoder()
+        encoder = new CidEncoder()
         dataSource = createDataSource(config.store)
         // create the db tables
         createDbTables(dataSource)

@@ -21,13 +21,11 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 import nextflow.data.cid.model.Checksum
-import nextflow.data.cid.model.DataType
-import nextflow.data.cid.model.Output
-import nextflow.data.cid.serde.JsonEncoder
+import nextflow.data.cid.model.TaskOutput
+import nextflow.data.cid.serde.CidEncoder
 import nextflow.data.config.DataConfig
 import spock.lang.Specification
 import spock.lang.TempDir
-
 /**
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
@@ -63,7 +61,7 @@ class DefaultCidStoreTest extends Specification {
     def "save should store value in the correct file location"() {
         given:
         def key = "testKey"
-        def value = new Output(DataType.TaskOutput, "/path/to/file", new Checksum("hash_value", "hash_algorithm", "standard"), "cid://source", 1234)
+        def value = new TaskOutput("/path/to/file", new Checksum("hash_value", "hash_algorithm", "standard"), "cid://source", 1234)
         def cidStore = new DefaultCidStore()
         cidStore.open(config)
 
@@ -73,13 +71,13 @@ class DefaultCidStoreTest extends Specification {
         then:
         def filePath = metaLocation.resolve("$key/.data.json")
         Files.exists(filePath)
-        filePath.text == new JsonEncoder().encode(value)
+        filePath.text == new CidEncoder().encode(value)
     }
 
     def "load should retrieve stored value correctly"() {
         given:
         def key = "testKey"
-        def value = new Output(DataType.TaskOutput, "/path/to/file", new Checksum("hash_value", "hash_algorithm", "standard"), "cid://source", 1234)
+        def value = new TaskOutput("/path/to/file", new Checksum("hash_value", "hash_algorithm", "standard"), "cid://source", 1234)
         def cidStore = new DefaultCidStore()
         cidStore.open(config)
         cidStore.save(key, value)

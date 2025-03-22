@@ -14,14 +14,26 @@
  * limitations under the License.
  */
 
-package nextflow.data.cid
+package nextflow.serde.gson
 
-import nextflow.data.cid.model.DataType
+import java.lang.reflect.Type
 
+import com.google.gson.JsonElement
+import com.google.gson.JsonPrimitive
+import com.google.gson.JsonSerializationContext
+import com.google.gson.JsonSerializer
+import groovy.transform.CompileStatic
 /**
+ * Implements a Gson serializer for Groovy GString
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface CidSerializable {
-    DataType getType()
+@CompileStatic
+class GStringSerializer implements JsonSerializer<GString> {
+
+    @Override
+    JsonElement serialize(GString src, Type typeOfSrc, JsonSerializationContext context) {
+        // Convert GString to plain String
+        return new JsonPrimitive(src.toString());
+    }
 }

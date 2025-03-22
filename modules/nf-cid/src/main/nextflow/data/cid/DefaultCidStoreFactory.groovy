@@ -23,7 +23,7 @@ import nextflow.data.config.DataConfig
 import nextflow.plugin.Priority
 
 /**
- * Default Factory for CidStore
+ * Default Factory for CidStore.
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */

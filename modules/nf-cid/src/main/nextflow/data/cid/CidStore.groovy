@@ -17,8 +17,8 @@
 
 package nextflow.data.cid
 
-
 import groovy.transform.CompileStatic
+import nextflow.data.cid.serde.CidSerializable
 import nextflow.data.config.DataConfig
 /**
  * Interface for the CID store

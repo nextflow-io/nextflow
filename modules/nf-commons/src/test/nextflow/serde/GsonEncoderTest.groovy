@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2025, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,27 +12,31 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
-package nextflow.data.cid.model
+package nextflow.serde
+
+import spock.lang.Specification
 
 /**
- * Possible metadata type entries.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-enum DataType {
-    TaskRun(nextflow.data.cid.model.TaskRun),
-    Workflow(nextflow.data.cid.model.Workflow),
-    WorkflowRun(nextflow.data.cid.model.WorkflowRun),
-    TaskOutput(nextflow.data.cid.model.Output),
-    WorkflowOutput(nextflow.data.cid.model.Output),
-    WorkflowResults(nextflow.data.cid.model.WorkflowResults)
+class GsonEncoderTest extends Specification {
 
-    final Class clazz
+    def 'should encode and decode an object'() {
+        given:
+        def encoder = new MyEncoder()
+        def dog = new Dog("bau", 10)
+        when:
+        def json = encoder.encode(dog)
+        then:
+        json == '{"@type":"Dog","name":"bau","barkVolume":10}'
 
-    DataType(Class clazz) {
-        this.clazz = clazz
+        when:
+        def animal = encoder.decode(json)
+        then:
+        animal == dog
     }
+
 }

@@ -18,12 +18,10 @@
 package nextflow.data.cid.h2
 
 import nextflow.data.cid.model.Checksum
-import nextflow.data.cid.model.Output
-import nextflow.data.cid.model.DataType
+import nextflow.data.cid.model.TaskOutput
 import nextflow.data.config.DataConfig
 import spock.lang.Shared
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -45,7 +43,7 @@ class H2CidStoreTest extends Specification {
 
     def 'should store and get a value' () {
         given:
-        def value = new Output(DataType.TaskOutput, "/path/to/file", new Checksum("hash_value", "hash_algorithm", "standard"), "cid://source", 1234)
+        def value = new TaskOutput("/path/to/file", new Checksum("hash_value", "hash_algorithm", "standard"), "cid://source", 1234)
         when:
         store.save('/some/key', value)
         then:

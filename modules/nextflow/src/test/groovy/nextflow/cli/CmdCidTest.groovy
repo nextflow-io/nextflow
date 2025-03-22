@@ -17,26 +17,22 @@
 
 package nextflow.cli
 
-import groovy.json.JsonOutput
-import nextflow.data.cid.model.Checksum
-import nextflow.data.cid.model.DataType
-import nextflow.data.cid.model.Output
-import nextflow.data.cid.model.Parameter
-import nextflow.data.cid.model.TaskRun
-import nextflow.data.cid.serde.JsonEncoder
-
 import java.nio.file.Files
 
 import nextflow.SysEnv
 import nextflow.dag.MermaidHtmlRenderer
 import nextflow.data.cid.CidHistoryRecord
 import nextflow.data.cid.CidStoreFactory
+import nextflow.data.cid.model.Checksum
+import nextflow.data.cid.model.Parameter
+import nextflow.data.cid.model.TaskOutput
+import nextflow.data.cid.model.TaskRun
+import nextflow.data.cid.model.WorkflowOutput
+import nextflow.data.cid.serde.CidEncoder
 import nextflow.plugin.Plugins
-
 import org.junit.Rule
 import spock.lang.Specification
 import test.OutputCapture
-
 /**
  * CLI cid Tests
  *
@@ -136,11 +132,11 @@ class CmdCidTest extends Specification {
         def launcher = Mock(Launcher){
             getOptions() >> new CliOptions(config: [configFile.toString()])
         }
-        def encoder = new JsonEncoder()
-        def entry = new Output(DataType.WorkflowOutput,"path/to/file",new Checksum("45372qe","nextflow","standard"),
+        def encoder = new CidEncoder().withPrettyPrint(true)
+        def entry = new WorkflowOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
                 "cid://123987/file.bam", 1234, 123456789, 123456789, null)
         def jsonSer = encoder.encode(entry)
-        def expectedOutput = JsonOutput.prettyPrint(jsonSer)
+        def expectedOutput = jsonSer
         cidFile.text = jsonSer
         when:
             def cidCmd = new CmdCid(launcher: launcher, args: ["show", "cid://12345"])
@@ -206,22 +202,22 @@ class CmdCidTest extends Specification {
         Files.createDirectories(cidFile3.parent)
         Files.createDirectories(cidFile4.parent)
         Files.createDirectories(cidFile5.parent)
-        def encoder = new JsonEncoder()
-        def entry = new Output(DataType.WorkflowOutput,"path/to/file",new Checksum("45372qe","nextflow","standard"),
+        def encoder = new CidEncoder()
+        def entry = new WorkflowOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
                 "cid://123987/file.bam", 1234, 123456789, 123456789, null)
         cidFile.text = encoder.encode(entry)
-        entry = new Output(DataType.TaskOutput,"path/to/file",new Checksum("45372qe","nextflow","standard"),
+        entry = new TaskOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
                 "cid://123987", 1234, 123456789, 123456789, null)
         cidFile2.text = encoder.encode(entry)
-        entry = new TaskRun(DataType.TaskRun, "u345-2346-1stw2", "foo", new Checksum("abcde2345","nextflow","standard"),
+        entry = new TaskRun("u345-2346-1stw2", "foo", new Checksum("abcde2345","nextflow","standard"),
                 [new Parameter( "ValueInParam", "sample_id","ggal_gut"),
                 new Parameter("FileInParam","reads",["cid://45678/output.txt"])],
                 null, null, null, null, [:],[], null)
         cidFile3.text = encoder.encode(entry)
-        entry  = new Output(DataType.TaskOutput,"path/to/file",new Checksum("45372qe","nextflow","standard"),
+        entry  = new TaskOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
                 "cid://45678", 1234, 123456789, 123456789, null)
         cidFile4.text = encoder.encode(entry)
-        entry = new TaskRun(DataType.TaskRun, "u345-2346-1stw2", "bar", new Checksum("abfs2556","nextflow","standard"),
+        entry = new TaskRun("u345-2346-1stw2", "bar", new Checksum("abfs2556","nextflow","standard"),
                 null,null, null, null, null, [:],[], null)
         cidFile5.text = encoder.encode(entry)
         final network = """flowchart BT

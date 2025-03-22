@@ -17,19 +17,17 @@
 
 package nextflow.data.cid
 
-import nextflow.file.FileHelper
-import nextflow.data.cid.serde.Encoder
-import nextflow.data.cid.serde.JsonEncoder
-import nextflow.util.TestOnly
-
 import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.data.cid.serde.CidEncoder
+import nextflow.data.cid.serde.CidSerializable
 import nextflow.data.config.DataConfig
 import nextflow.exception.AbortOperationException
-
+import nextflow.file.FileHelper
+import nextflow.util.TestOnly
 /**
  * Default Implementation for the a CID store.
  *
@@ -46,13 +44,13 @@ class DefaultCidStore implements CidStore {
     private Path metaLocation
     private Path location
     private CidHistoryLog historyLog
-    private Encoder<String> encoder
+    private CidEncoder encoder
 
 
     DefaultCidStore open(DataConfig config) {
         location = toLocationPath(config.store.location)
         metaLocation = location.resolve(METADATA_PATH)
-        encoder = new JsonEncoder() {}
+        encoder = new CidEncoder()
         if( !Files.exists(metaLocation) && !Files.createDirectories(metaLocation) ) {
             throw new AbortOperationException("Unable to create CID store directory: $metaLocation")
         }

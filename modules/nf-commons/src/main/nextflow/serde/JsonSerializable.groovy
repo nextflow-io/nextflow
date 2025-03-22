@@ -14,18 +14,13 @@
  * limitations under the License.
  */
 
-package nextflow.data.cid.serde
-
-import nextflow.data.cid.CidSerializable
+package nextflow.serde
 
 /**
+ * Implements a marker interface for Json serialization objects.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface Encoder<T> {
-
-    T encode(CidSerializable object)
-
-    CidSerializable decode(T encoded)
+interface JsonSerializable {
 
 }

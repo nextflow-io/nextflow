@@ -18,7 +18,6 @@
 package nextflow.data.cid.fs
 
 import groovy.util.logging.Slf4j
-import nextflow.data.cid.model.DataType
 import nextflow.data.cid.model.Output
 import nextflow.file.RealPathAware
 import nextflow.util.CacheHelper
@@ -108,8 +107,7 @@ class CidPath implements Path, RealPathAware {
             throw new Exception("CID store not found. Check Nextflow configuration.")
         final object = store.load(filePath)
         if ( object ){
-            final type = object.type
-            if( type == DataType.TaskOutput || type == DataType.WorkflowOutput ) {
+            if( object instanceof Output ) {
                 final cidObject = object as Output
                 // return the real path stored in the metadata
                 validateHash(cidObject)

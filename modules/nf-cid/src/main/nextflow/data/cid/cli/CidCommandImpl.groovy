@@ -17,13 +17,6 @@
 
 package nextflow.data.cid.cli
 
-import groovy.json.JsonOutput
-import nextflow.data.cid.model.Output
-import nextflow.data.cid.model.Parameter
-import nextflow.data.cid.model.WorkflowRun
-import nextflow.data.cid.model.TaskRun
-import nextflow.script.params.FileInParam
-
 import static nextflow.data.cid.fs.CidPath.*
 
 import java.nio.file.Path
@@ -37,7 +30,14 @@ import nextflow.dag.MermaidHtmlRenderer
 import nextflow.data.cid.CidHistoryRecord
 import nextflow.data.cid.CidStore
 import nextflow.data.cid.CidStoreFactory
-import nextflow.data.cid.model.DataType
+import nextflow.data.cid.model.Output
+import nextflow.data.cid.model.Parameter
+import nextflow.data.cid.model.TaskOutput
+import nextflow.data.cid.model.TaskRun
+import nextflow.data.cid.model.WorkflowOutput
+import nextflow.data.cid.model.WorkflowRun
+import nextflow.data.cid.serde.CidEncoder
+import nextflow.script.params.FileInParam
 import nextflow.ui.TableBuilder
 /**
  * Implements CID command line operations
@@ -89,11 +89,12 @@ class CidCommandImpl implements CmdCid.CidCommand {
             throw new Exception("Identifier is not a CID URL")
         final key = args[0].substring(CID_PROT.size())
         final store = CidStoreFactory.getOrCreate(new Session(config))
+        final encoder = new CidEncoder().withPrettyPrint(true)
         if (store) {
             try {
                 final entry = store.load(key)
                 if( entry )
-                    println JsonOutput.prettyPrint(JsonOutput.toJson(entry))
+                    println encoder.encode(entry)
                 else
                     println "No entry found for ${args[0]}."
             } catch (Throwable e) {
@@ -140,9 +141,9 @@ class CidCommandImpl implements CmdCid.CidCommand {
             throw new Exception("Identifier is not a CID URL")
         final key = nodeToRender.substring(CID_PROT.size())
         final cidObject = store.load(key)
-        switch (DataType.valueOf(cidObject.type as String)) {
-            case DataType.TaskOutput:
-            case DataType.WorkflowOutput:
+        switch (cidObject.getClass()) {
+            case TaskOutput:
+            case WorkflowOutput:
                 lines << "    ${nodeToRender}@{shape: document, label: \"${nodeToRender}\"}".toString();
                 final source = (cidObject as Output).source
                 if (source) {
@@ -155,9 +156,9 @@ class CidCommandImpl implements CmdCid.CidCommand {
                         edges.add(new Edge(source, nodeToRender))
                     }
                 }
-
                 break;
-            case DataType.WorkflowRun:
+
+            case WorkflowRun:
                 final wfRun = cidObject as WorkflowRun
                 lines << "${nodeToRender}@{shape: processes, label: \"${wfRun.name}\"}".toString()
                 final parameters = wfRun.params
@@ -166,8 +167,9 @@ class CidCommandImpl implements CmdCid.CidCommand {
                     lines << "    ${it.value.toString()}@{shape: document, label: \"${label}\"}".toString();
                     edges.add(new Edge(it.value.toString(), nodeToRender))
                 }
-                break;
-            case DataType.TaskRun:
+                break
+
+            case TaskRun:
                 final taskRun = cidObject as TaskRun
                 lines << "    ${nodeToRender}@{shape: process, label: \"${taskRun.name}\"}".toString()
                 final parameters = taskRun.inputs
@@ -180,9 +182,10 @@ class CidCommandImpl implements CmdCid.CidCommand {
                         edges.add(new Edge(source.value.toString(), nodeToRender))
                     }
                 }
-                break;
+                break
+
             default:
-                throw new Exception("Unrecognized type reference ${cidObject.type}")
+                throw new Exception("Unrecognized type reference ${cidObject.getClass().getSimpleName()}")
         }
     }
 

@@ -17,21 +17,7 @@
 
 package nextflow.data.cid
 
-import nextflow.data.cid.model.Checksum
-import nextflow.data.cid.model.DataPath
-import nextflow.data.cid.model.DataType
-import nextflow.data.cid.model.Output
-import nextflow.data.cid.model.Workflow
-import nextflow.data.cid.model.WorkflowResults
-import nextflow.data.cid.model.WorkflowRun
-import nextflow.data.cid.serde.JsonEncoder
-import nextflow.data.config.DataConfig
-import nextflow.processor.TaskConfig
-import nextflow.processor.TaskProcessor
-import nextflow.script.ScriptBinding
-import nextflow.script.WorkflowMetadata
-import nextflow.util.CacheHelper
-import nextflow.util.PathNormalizer
+import static nextflow.data.cid.fs.CidPath.*
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -39,12 +25,24 @@ import java.nio.file.attribute.BasicFileAttributes
 
 import com.google.common.hash.HashCode
 import nextflow.Session
+import nextflow.data.cid.model.Checksum
+import nextflow.data.cid.model.DataPath
+import nextflow.data.cid.model.TaskOutput
+import nextflow.data.cid.model.Workflow
+import nextflow.data.cid.model.WorkflowOutput
+import nextflow.data.cid.model.WorkflowResults
+import nextflow.data.cid.model.WorkflowRun
+import nextflow.data.cid.serde.CidEncoder
+import nextflow.data.config.DataConfig
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskId
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+import nextflow.script.ScriptBinding
+import nextflow.script.WorkflowMetadata
+import nextflow.util.CacheHelper
+import nextflow.util.PathNormalizer
 import spock.lang.Specification
-
-import static nextflow.data.cid.fs.CidPath.CID_PROT
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -76,13 +74,13 @@ class CidObserverTest extends Specification {
         store.open(DataConfig.create(session))
         def observer = new CidObserver(session, store)
         def mainScript = new DataPath("file://${scriptFile.toString()}", new Checksum("78910", "nextflow", "standard"))
-        def workflow = new Workflow(DataType.Workflow, mainScript, [],"https://nextflow.io/nf-test/", "123456" )
-        def workflowRun = new WorkflowRun(DataType.WorkflowRun, workflow, uniqueId.toString(), "test_run", [])
+        def workflow = new Workflow(mainScript, [],"https://nextflow.io/nf-test/", "123456" )
+        def workflowRun = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [])
         when:
         observer.onFlowCreate(session)
         observer.onFlowBegin()
         then:
-        folder.resolve(".meta/${observer.executionHash}/.data.json").text == new JsonEncoder().encode(workflowRun)
+        folder.resolve(".meta/${observer.executionHash}/.data.json").text == new CidEncoder().encode(workflowRun)
 
         cleanup:
         folder?.deleteDir()
@@ -120,13 +118,13 @@ class CidObserverTest extends Specification {
             normalizePath( _ as Path) >> {Path p -> p?.toString()}
             normalizePath( _ as String) >> {String p -> p}
         }
-        def taskDescription = new nextflow.data.cid.model.TaskRun(DataType.TaskRun, uniqueId.toString(), "foo",
+        def taskDescription = new nextflow.data.cid.model.TaskRun(uniqueId.toString(), "foo",
             new Checksum(sourceHash, "nextflow", "standard"),
             null, null, null, null, null, [:], [], null )
         when:
         observer.storeTaskRun(task, normalizer)
         then:
-        folder.resolve(".meta/${hash.toString()}/.data.json").text == new JsonEncoder().encode(taskDescription)
+        folder.resolve(".meta/${hash.toString()}/.data.json").text == new CidEncoder().encode(taskDescription)
 
         cleanup:
         folder?.deleteDir()
@@ -161,7 +159,7 @@ class CidObserverTest extends Specification {
         }
         and:
         def attrs = Files.readAttributes(outFile, BasicFileAttributes)
-        def output = new Output(DataType.TaskOutput, outFile.toString(), new Checksum(fileHash, "nextflow", "standard"),
+        def output = new TaskOutput(outFile.toString(), new Checksum(fileHash, "nextflow", "standard"),
             "cid://15cd5b07", attrs.size(), attrs.creationTime().toMillis(), attrs.lastModifiedTime().toMillis() )
         and:
         observer.readAttributes(outFile) >> attrs
@@ -169,7 +167,7 @@ class CidObserverTest extends Specification {
         when:
         observer.storeTaskOutput(task, outFile)
         then:
-        folder.resolve(".meta/${hash}/foo/bar/file.bam/.data.json").text == new JsonEncoder().encode(output)
+        folder.resolve(".meta/${hash}/foo/bar/file.bam/.data.json").text == new CidEncoder().encode(output)
 
         cleanup:
         folder?.deleteDir()
@@ -256,8 +254,6 @@ class CidObserverTest extends Specification {
         Path.of('outDir')               | Path.of('outDir/relative')            | "relative"
         Path.of('/path/to/outDir')      | Path.of('results/relative')           | "results/relative"
         Path.of('/path/to/outDir')      | Path.of('./relative')                 | "relative"
-
-
     }
 
     def 'should return exception when relativise workflow output dirs' (){
@@ -277,8 +273,6 @@ class CidObserverTest extends Specification {
         OUTPUT_DIR                      | PATH                                  | EXPECTED
         Path.of('/path/to/outDir')      | Path.of('/another/path/')             | "relative"
         Path.of('/path/to/outDir')      | Path.of('../relative')                | "relative"
-
-
     }
 
     def 'should save workflow output' (){
@@ -309,7 +303,8 @@ class CidObserverTest extends Specification {
         }
         store.open(DataConfig.create(session))
         def observer = new CidObserver(session, store)
-        def encoder = new JsonEncoder()
+        def encoder = new CidEncoder()
+
         when: 'Starting workflow'
             observer.onFlowCreate(session)
             observer.onFlowBegin()
@@ -328,7 +323,7 @@ class CidObserverTest extends Specification {
         then: 'check file 1 output metadata in cid store'
             def attrs1 = Files.readAttributes(outFile1, BasicFileAttributes)
             def fileHash1 = CacheHelper.hasher(outFile1).hash().toString()
-            def output1 = new Output(DataType.WorkflowOutput, outFile1.toString(), new Checksum(fileHash1, "nextflow", "standard"), "cid://123987/file.bam",
+            def output1 = new WorkflowOutput(outFile1.toString(), new Checksum(fileHash1, "nextflow", "standard"), "cid://123987/file.bam",
             attrs1.size(), attrs1.creationTime().toMillis(), attrs1.lastModifiedTime().toMillis() )
             folder.resolve(".meta/${observer.executionHash}/foo/file.bam/.data.json").text == encoder.encode(output1)
 
@@ -340,14 +335,14 @@ class CidObserverTest extends Specification {
             def fileHash2 = CacheHelper.hasher(outFile2).hash().toString()
             observer.onFilePublish(outFile2)
         then: 'Check outFile2 metadata in cid store'
-            def output2 = new Output(DataType.WorkflowOutput, outFile2.toString(), new Checksum(fileHash2, "nextflow", "standard"), "cid://${observer.executionHash}" ,
+            def output2 = new WorkflowOutput(outFile2.toString(), new Checksum(fileHash2, "nextflow", "standard"), "cid://${observer.executionHash}" ,
             attrs2.size(), attrs2.creationTime().toMillis(), attrs2.lastModifiedTime().toMillis() )
             folder.resolve(".meta/${observer.executionHash}/foo/file2.bam/.data.json").text == encoder.encode(output2)
 
         when: 'Workflow complete'
             observer.onFlowComplete()
         then: 'Check history file is updated and Workflow Result is written in the cid store'
-            def results = new WorkflowResults(DataType.WorkflowResults, "cid://${observer.executionHash}", [ "cid://${observer.executionHash}/foo/file.bam", "cid://${observer.executionHash}/foo/file2.bam"])
+            def results = new WorkflowResults( "cid://${observer.executionHash}", [ "cid://${observer.executionHash}/foo/file.bam", "cid://${observer.executionHash}/foo/file2.bam"])
             def finalCid = store.getHistoryLog().getRecord(uniqueId).resultsCid.substring(CID_PROT.size())
             finalCid != observer.executionHash
             folder.resolve(".meta/${finalCid}/.data.json").text == encoder.encode(results)

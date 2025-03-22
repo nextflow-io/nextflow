@@ -16,32 +16,14 @@
 
 package nextflow.data.cid.serde
 
-import nextflow.data.cid.CidSerializable
-import nextflow.data.cid.model.DataType
-import nextflow.data.cid.model.Output
-import nextflow.data.cid.model.WorkflowResults
-import nextflow.data.cid.model.WorkflowRun
-
-import groovy.json.JsonOutput
-import groovy.json.JsonSlurper
-
+import groovy.transform.CompileStatic
+import nextflow.serde.JsonSerializable
 /**
+ * Marker interface for CID serializable objects
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class JsonEncoder implements Encoder<String> {
+@CompileStatic
+interface CidSerializable extends JsonSerializable {
 
-    JsonEncoder() {}
-
-    @Override
-    String encode(CidSerializable object) {
-        return JsonOutput.toJson(object)
-    }
-
-    @Override
-    CidSerializable decode(String encoded) {
-        final object = new JsonSlurper().parseText(encoded) as Map
-        final dataType = DataType.valueOf(object.type as String)
-        return dataType.clazz.newInstance(object)
-    }
 }
