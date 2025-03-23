@@ -29,6 +29,13 @@ import nextflow.script.formatter.FormattingOptions
 import nextflow.script.formatter.ScriptFormattingVisitor
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage
+
+import org.fusesource.jansi.Ansi
+import org.fusesource.jansi.AnsiConsole
+import static nextflow.util.LoggerHelper.isHashLogPrefix
+import static org.fusesource.jansi.Ansi.Attribute
+import static org.fusesource.jansi.Ansi.Color
+import static org.fusesource.jansi.Ansi.ansi
 /**
  * CLI sub-command FORMAT
  *
@@ -63,10 +70,10 @@ class CmdFormat extends CmdBase {
     @Override
     void run() {
         if( !args )
-            throw new AbortOperationException("No input files specified")
+            throw new AbortOperationException("Error: No input files specified")
 
         if( spaces && tabs )
-            throw new AbortOperationException("Cannot specify both `-spaces` and `-tabs`")
+            throw new AbortOperationException("Error: Cannot specify both `-spaces` and `-tabs`")
 
         if( !spaces && !tabs )
             spaces = 4
@@ -101,9 +108,14 @@ class CmdFormat extends CmdBase {
         }
         else {
             log.debug "Formatting script ${file}"
+            printStatus(file)
             final formatter = new ScriptFormattingVisitor(source, formattingOptions)
             formatter.visit()
-            file.text = formatter.toString()
+            // Check if anything changed)
+            if(file.text != formatter.toString()){
+                printHaveFormatted(file)
+                file.text = formatter.toString()
+            }
         }
     }
 
@@ -114,20 +126,43 @@ class CmdFormat extends CmdBase {
         }
         else {
             log.debug "Formatting config ${file}"
+            printStatus(file)
             final formatter = new ConfigFormattingVisitor(source, formattingOptions)
             formatter.visit()
-            file.text = formatter.toString()
+            // Check if anything changed)
+            if(file.text != formatter.toString()){
+                printHaveFormatted(file)
+                file.text = formatter.toString()
+            }
         }
+    }
+
+    private void printStatus(File file) {
+        // TODO: Figure out how to chomp previous status
+        final str = ansi().a(Attribute.INTENSITY_FAINT).a("Formatting: ${file}").reset().newline().toString()
+        AnsiConsole.out.print(str)
+        AnsiConsole.out.flush()
+    }
+
+    private void printHaveFormatted(File file) {
+        final str = ansi().fg(Color.GREEN).a("Reformatted: ${file}").reset().newline().toString()
+        AnsiConsole.out.print(str)
+        AnsiConsole.out.flush()
     }
 
     private void printErrors(SourceUnit source) {
         final errorMessages = source.getErrorCollector().getErrors()
-        System.err.println()
+        final term = ansi()
+        term.fg(Color.RED)
         for( final message : errorMessages ) {
             if( message instanceof SyntaxErrorMessage ) {
                 final cause = message.getCause()
-                System.err.println "${source.getName()} at line ${cause.getStartLine()}, column ${cause.getStartColumn()}: ${cause.getOriginalMessage()}"
+                term.a("Error: ${source.getName()} at line ${cause.getStartLine()}, column ${cause.getStartColumn()}: ${cause.getOriginalMessage()}")
             }
         }
+        // Double newline as next status update will chomp back one
+        term.fg(Color.DEFAULT).newline().newline()
+        AnsiConsole.out.print(term.toString())
+        AnsiConsole.out.flush()
     }
 }
