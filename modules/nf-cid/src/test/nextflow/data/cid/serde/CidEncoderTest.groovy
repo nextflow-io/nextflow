@@ -5,7 +5,7 @@ import nextflow.data.cid.model.Output
 import nextflow.data.cid.model.TaskOutput
 import spock.lang.Specification
 
-class JsonEncoderTest extends Specification{
+class CidEncoderTest extends Specification{
 
     def 'should encode and decode Outputs'(){
         given:
