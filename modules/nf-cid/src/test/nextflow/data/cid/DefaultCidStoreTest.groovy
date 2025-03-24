@@ -94,4 +94,27 @@ class DefaultCidStoreTest extends Specification {
         expect:
         cidStore.load("nonexistentKey") == null
     }
+
+    def 'should query' () {
+        given:
+        def key = "testKey/path"
+        def value = '[{"key":"value"}, {"key":"value2"}]'
+        def key2 = "testKey2"
+        def value2 = '[{"key":"value2"}, {"key":"value3"}]'
+        def key3 = "testKey3"
+        def value3 = '{ "outputs": { "samples": [{"key":"value4"}, {"key":"value5"}] } }'
+        def cidStore = new DefaultCidStore()
+        cidStore.open(config)
+        cidStore.save(key, value)
+        cidStore.save(key2, value2)
+        cidStore.save(key3, value3)
+        expect:
+        cidStore.query(new URI("cid://testKey/path"))[0] == [ [ key:"value"], [key:"value2"]]
+        cidStore.query(new URI("cid://testKey/path?key=value"))[0] == [key:"value"]
+        cidStore.query(new URI("cid://testKey2?key=value2"))[0] == [key:"value2"]
+        cidStore.query(new URI("cid:///?key=value2"))[0] == [key:"value2"]
+        cidStore.query(new URI("cid://testkey3/outputs/samples?key=value4"))[0] == [key:"value4"]
+    }
+
+
 }

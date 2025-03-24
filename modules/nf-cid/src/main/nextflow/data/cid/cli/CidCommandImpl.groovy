@@ -17,6 +17,7 @@
 
 package nextflow.data.cid.cli
 
+import groovy.json.JsonOutput
 import org.eclipse.jgit.diff.DiffAlgorithm
 import org.eclipse.jgit.diff.DiffFormatter
 import org.eclipse.jgit.diff.RawText
@@ -256,6 +257,22 @@ class CidCommandImpl implements CmdCid.CidCommand {
                 generateDiff(entry1, key1, entry2, key2)
             } catch (Throwable e) {
                 println "Error generating diff between ${args[0]}: $e.message"
+            }
+        } else {
+            println "Error CID store not loaded. Check Nextflow configuration."
+        }
+    }
+
+    @Override
+    void query(ConfigMap config, List<String> args) {
+        if (!args[0].startsWith(CID_PROT))
+            throw new Exception("Identifier is not a CID URL")
+        final store = CidStoreFactory.getOrCreate(new Session(config))
+        if (store) {
+            try {
+                println JsonOutput.prettyPrint( JsonOutput.toJson( store.query( new URI(args[0]) ) ) )
+            } catch (Throwable e) {
+                println "Error processing query ${args[0]}: $e.message"
             }
         } else {
             println "Error CID store not loaded. Check Nextflow configuration."

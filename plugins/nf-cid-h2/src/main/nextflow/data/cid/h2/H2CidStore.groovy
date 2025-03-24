@@ -122,6 +122,12 @@ class H2CidStore implements CidStore {
     }
 
     @Override
+    List<Object> query(URI queryString) {
+        //TODO: Implement for H2
+        return new ArrayList<Object>()
+    }
+
+    @Override
     void close() {
         dataSource.close()
     }

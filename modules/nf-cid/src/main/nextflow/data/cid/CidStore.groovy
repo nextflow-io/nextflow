@@ -53,4 +53,6 @@ interface CidStore extends Closeable {
      */
     CidHistoryLog getHistoryLog()
 
+    List<Object> query(URI queryString)
+
 }
