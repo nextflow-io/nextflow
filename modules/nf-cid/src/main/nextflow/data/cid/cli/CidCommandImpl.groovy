@@ -21,7 +21,6 @@ import static nextflow.data.cid.fs.CidPath.*
 
 import java.nio.file.Path
 
-import groovy.json.JsonSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import nextflow.Session
@@ -31,7 +30,14 @@ import nextflow.dag.MermaidHtmlRenderer
 import nextflow.data.cid.CidHistoryRecord
 import nextflow.data.cid.CidStore
 import nextflow.data.cid.CidStoreFactory
-import nextflow.data.cid.model.DataType
+import nextflow.data.cid.model.Output
+import nextflow.data.cid.model.Parameter
+import nextflow.data.cid.model.TaskOutput
+import nextflow.data.cid.model.TaskRun
+import nextflow.data.cid.model.WorkflowOutput
+import nextflow.data.cid.model.WorkflowRun
+import nextflow.data.cid.serde.CidEncoder
+import nextflow.script.params.FileInParam
 import nextflow.ui.TableBuilder
 /**
  * Implements CID command line operations
@@ -83,15 +89,16 @@ class CidCommandImpl implements CmdCid.CidCommand {
             throw new Exception("Identifier is not a CID URL")
         final key = args[0].substring(CID_PROT.size())
         final store = CidStoreFactory.getOrCreate(new Session(config))
+        final encoder = new CidEncoder().withPrettyPrint(true)
         if (store) {
             try {
                 final entry = store.load(key)
                 if( entry )
-                    println entry.toString()
+                    println encoder.encode(entry)
                 else
                     println "No entry found for ${args[0]}."
             } catch (Throwable e) {
-                println "Error loading ${args[0]}."
+                println "Error loading ${args[0]}. ${e.message}"
             }
         } else {
             println "Error CID store not loaded. Check Nextflow configuration."
@@ -132,14 +139,13 @@ class CidCommandImpl implements CmdCid.CidCommand {
     private void processNode(List<String> lines, String nodeToRender, LinkedList<String> nodes, LinkedList<Edge> edges, CidStore store) {
         if (!nodeToRender.startsWith(CID_PROT))
             throw new Exception("Identifier is not a CID URL")
-        final slurper = new JsonSlurper()
         final key = nodeToRender.substring(CID_PROT.size())
-        final cidObject = slurper.parse(store.load(key).toString().toCharArray()) as Map
-        switch (DataType.valueOf(cidObject.type as String)) {
-            case DataType.TaskOutput:
-            case DataType.WorkflowOutput:
+        final cidObject = store.load(key)
+        switch (cidObject.getClass()) {
+            case TaskOutput:
+            case WorkflowOutput:
                 lines << "    ${nodeToRender}@{shape: document, label: \"${nodeToRender}\"}".toString();
-                final source = cidObject.source as String
+                final source = (cidObject as Output).source
                 if (source) {
                     if (source.startsWith(CID_PROT)) {
                         nodes.add(source)
@@ -150,22 +156,25 @@ class CidCommandImpl implements CmdCid.CidCommand {
                         edges.add(new Edge(source, nodeToRender))
                     }
                 }
-
                 break;
-            case DataType.WorkflowRun:
-                lines << "${nodeToRender}@{shape: processes, label: \"${cidObject.runName}\"}".toString()
-                final parameters = cidObject.params as List<nextflow.data.cid.model.Parameter>
+
+            case WorkflowRun:
+                final wfRun = cidObject as WorkflowRun
+                lines << "${nodeToRender}@{shape: processes, label: \"${wfRun.name}\"}".toString()
+                final parameters = wfRun.params
                 parameters.each {
                     final label = convertToLabel(it.value.toString())
                     lines << "    ${it.value.toString()}@{shape: document, label: \"${label}\"}".toString();
                     edges.add(new Edge(it.value.toString(), nodeToRender))
                 }
-                break;
-            case DataType.TaskRun:
-                lines << "    ${nodeToRender}@{shape: process, label: \"${cidObject.name}\"}".toString()
-                final parameters = cidObject.inputs as List<nextflow.data.cid.model.Parameter>
-                for (nextflow.data.cid.model.Parameter source: parameters){
-                    if (source.type.equals(nextflow.script.params.FileInParam.simpleName)) {
+                break
+
+            case TaskRun:
+                final taskRun = cidObject as TaskRun
+                lines << "    ${nodeToRender}@{shape: process, label: \"${taskRun.name}\"}".toString()
+                final parameters = taskRun.inputs
+                for (Parameter source: parameters){
+                    if (source.type.equals(FileInParam.simpleName)) {
                         manageFileInParam(lines, nodeToRender, nodes, edges, source.value)
                     } else {
                         final label = convertToLabel(source.value.toString())
@@ -173,9 +182,10 @@ class CidCommandImpl implements CmdCid.CidCommand {
                         edges.add(new Edge(source.value.toString(), nodeToRender))
                     }
                 }
-                break;
+                break
+
             default:
-                throw new Exception("Unrecognized type reference ${cidObject.type}")
+                throw new Exception("Unrecognized type reference ${cidObject.getClass().getSimpleName()}")
         }
     }
 

@@ -19,15 +19,16 @@ package nextflow.data.cid.model
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import nextflow.data.cid.serde.CidSerializable
 
 /**
+ * Model a base class for workflow and task outputs
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Canonical
 @CompileStatic
-class Output {
-    DataType type
+abstract class Output implements CidSerializable {
     String path
     Checksum checksum
     String source
