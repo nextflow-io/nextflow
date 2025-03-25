@@ -13,14 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.script.parser.v2;
+package nextflow.script.control;
 
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import nextflow.ast.GStringToLazyVisitor;
-import nextflow.ast.TaskCmdXformVisitor;
 import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
@@ -54,12 +52,13 @@ import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.codehaus.groovy.syntax.SyntaxException;
 
-import static nextflow.script.ast.ASTHelpers.*;
+import static nextflow.script.ast.ASTUtils.*;
 import static org.codehaus.groovy.ast.tools.GeneralUtils.*;
 
 /**
- * Visitor to convert a Nextflow script AST into a
- * Groovy AST which is executed against {@link BaseScript}.
+ * Transform a Nextflow script AST into a Groovy AST.
+ *
+ * @see nextflow.script.BaseScript
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
@@ -349,7 +348,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     }
 
     protected ClosureExpression wrapExpressionInClosure(Expression node)  {
-        return closureX(block(new VariableScope(), stmt(node)));
+        return closureX(block(stmt(node)));
     }
 
     private Statement processWhen(Expression when) {
