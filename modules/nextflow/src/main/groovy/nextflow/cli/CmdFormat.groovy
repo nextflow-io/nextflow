@@ -64,11 +64,16 @@ class CmdFormat extends CmdBase {
 
     private FormattingOptions formattingOptions
 
+    private int numFilesChanged = 0
+    private int numFilesUnchanged = 0
+
     @Override
     String getName() { 'format' }
 
     @Override
     void run() {
+        // Print a newline, as first format update will chomp it
+        println()
         if( !args )
             throw new AbortOperationException("Error: No input files specified")
 
@@ -91,6 +96,21 @@ class CmdFormat extends CmdBase {
 
             file.eachFileRecurse(FileType.FILES, this.&format)
         }
+        final emojis = [
+            "🧽 🫧",
+            "🧼 🎉",
+            "🧹 💨",
+            "📝 ✨"
+        ]
+        def rnd = new Random()
+        final term = ansi().cursorUp(1).eraseLine()
+        term.fg(Color.GREEN).a(Attribute.INTENSITY_BOLD)
+        term.a("${numFilesChanged} file${numFilesChanged==1 ? '':'s'} reformatted, ")
+        term.a(Attribute.INTENSITY_BOLD_OFF)
+        term.a("${numFilesUnchanged} file${numFilesUnchanged==1 ? '':'s'} left unchanged ")
+        term.a("${emojis[rnd.nextInt(4)]}").reset().newline()
+        AnsiConsole.out.print(term)
+        AnsiConsole.out.flush()
     }
 
     void format(File file) {
@@ -113,8 +133,10 @@ class CmdFormat extends CmdBase {
             formatter.visit()
             // Check if anything changed)
             if(file.text != formatter.toString()){
-                printHaveFormatted(file)
+                numFilesChanged += 1
                 file.text = formatter.toString()
+            } else {
+                numFilesUnchanged += 1
             }
         }
     }
@@ -131,33 +153,29 @@ class CmdFormat extends CmdBase {
             formatter.visit()
             // Check if anything changed)
             if(file.text != formatter.toString()){
-                printHaveFormatted(file)
+                numFilesChanged += 1
                 file.text = formatter.toString()
+            } else {
+                numFilesUnchanged += 1
             }
         }
     }
 
     private void printStatus(File file) {
-        // TODO: Figure out how to chomp previous status
-        final str = ansi().a(Attribute.INTENSITY_FAINT).a("Formatting: ${file}").reset().newline().toString()
-        AnsiConsole.out.print(str)
-        AnsiConsole.out.flush()
-    }
-
-    private void printHaveFormatted(File file) {
-        final str = ansi().fg(Color.GREEN).a("Reformatted: ${file}").reset().newline().toString()
+        final str = ansi().cursorUp(1).eraseLine().a(Attribute.INTENSITY_FAINT).a("Formatting: ${file}").reset().newline().toString()
         AnsiConsole.out.print(str)
         AnsiConsole.out.flush()
     }
 
     private void printErrors(SourceUnit source) {
         final errorMessages = source.getErrorCollector().getErrors()
-        final term = ansi()
-        term.fg(Color.RED)
+        final term = ansi().cursorUp(1).eraseLine()
         for( final message : errorMessages ) {
             if( message instanceof SyntaxErrorMessage ) {
                 final cause = message.getCause()
-                term.a("Error: ${source.getName()} at line ${cause.getStartLine()}, column ${cause.getStartColumn()}: ${cause.getOriginalMessage()}")
+                term.fg(Color.RED).a(Attribute.INTENSITY_BOLD).a("error").fg(Color.DEFAULT).a(": ")
+                term.a("Failed to parse ${source.getName()}").a(Attribute.INTENSITY_BOLD_OFF)
+                term.a(":${cause.getStartLine()}:${cause.getStartColumn()}: ${cause.getOriginalMessage()}")
             }
         }
         // Double newline as next status update will chomp back one
