@@ -830,7 +830,11 @@ class TaskProcessor {
             try {
                 if( resumeDir != workDir )
                     exists = workDir.exists()
-                if( !exists && !workDir.mkdirs() )
+                if( exists ) {
+                    tries++
+                    continue
+                }
+                else if( !workDir.mkdirs() )
                     throw new IOException("Unable to create directory=$workDir -- check file system permissions")
             }
             finally {
@@ -854,7 +858,7 @@ class TaskProcessor {
      */
     final boolean checkStoredOutput( TaskRun task ) {
         if( !task.config.storeDir ) {
-            log.trace "[${safeTaskName(task)}] Store dir not set -- return false"
+            log.trace "[${safeTaskName(task)}] storeDir not set -- return false"
             return false
         }
 
@@ -870,12 +874,12 @@ class TaskProcessor {
             return true
         }
         if( invalid ) {
-            checkWarn "[${safeTaskName(task)}] StoreDir can only be used when using 'file' outputs"
+            checkWarn "[${safeTaskName(task)}] storeDir can only be used with `val` and `path` outputs"
             return false
         }
 
         if( !task.config.getStoreDir().exists() ) {
-            log.trace "[${safeTaskName(task)}] Store dir does not exist > ${task.config.storeDir} -- return false"
+            log.trace "[${safeTaskName(task)}] storeDir does not exist > ${task.config.storeDir} -- return false"
             // no folder -> no cached result
             return false
         }
@@ -897,7 +901,7 @@ class TaskProcessor {
             return true
         }
         catch( MissingFileException | MissingValueException e ) {
-            log.trace "[${safeTaskName(task)}] Missed store > ${e.getMessage()} -- folder: ${task.config.storeDir}"
+            log.trace "[${safeTaskName(task)}] Missed storeDir > ${e.getMessage()} -- folder: ${task.config.storeDir}"
             task.exitStatus = Integer.MAX_VALUE
             task.workDir = null
             return false
@@ -2181,15 +2185,13 @@ class TaskProcessor {
         session.filePorter.transfer(batch)
     }
 
-    final protected void makeTaskContextStage3( TaskRun task, HashCode hash, Path folder ) {
-
+    protected void makeTaskContextStage3( TaskRun task, HashCode hash, Path folder ) {
         // set hash-code & working directory
         task.hash = hash
         task.workDir = folder
         task.config.workDir = folder
         task.config.hash = hash.toString()
         task.config.name = task.getName()
-
     }
 
     final protected HashCode createTaskHashKey(TaskRun task) {
@@ -2239,7 +2241,7 @@ class TaskProcessor {
             }
         }
 
-        if( session.stubRun ) {
+        if( session.stubRun && task.config.getStubBlock() ) {
             keys.add('stub-run')
         }
 
@@ -2336,12 +2338,12 @@ class TaskProcessor {
 
         makeTaskContextStage3(task, hash, folder)
 
-        // add the task to the collection of running tasks
-        if( arrayCollector )
-            arrayCollector.collect(task)
-        else
+        // when no collector is define OR it's a task retry, then submit directly for execution
+        if( !arrayCollector || task.config.getAttempt() > 1 )
             executor.submit(task)
-
+        // add the task to the collection of running tasks
+        else
+            arrayCollector.collect(task)
     }
 
     protected boolean checkWhenGuard(TaskRun task) {

@@ -42,6 +42,32 @@ class AzureRepositoryProviderTest extends Specification {
         }
         '''
 
+    def 'should parse repo fields from path' () {
+        expect:
+        AzureRepositoryProvider.getUniformPath(PATH) == EXPECTED
+
+        where:
+        PATH                                | EXPECTED
+        't-neumann/hello'                   | ['t-neumann', 'hello', 'hello']
+        'ORGANIZATION/PROJECT/hello'        | ['ORGANIZATION','PROJECT','hello']
+        'ORGANIZATION/PROJECT/_git/hello'   | ['ORGANIZATION','PROJECT','hello']
+
+    }
+
+    def 'should throw exception if wrong path' () {
+        when:
+        def path = AzureRepositoryProvider.getUniformPath(PATH)
+
+        then :
+        def exception = thrown(IllegalArgumentException)
+        exception?.message == EXCEPTION
+
+        where:
+        PATH                                | EXCEPTION
+        'incorrect_path_1'                  | "Unexpected Azure repository path format - offending value: 'incorrect_path_1'"
+        'ORG/PROJ/hello/incorrect'          | "Unexpected Azure repository path format - offending value: 'ORG/PROJ/hello/incorrect'"
+    }
+
     def 'should return repo url' () {
 
         given:
@@ -49,17 +75,13 @@ class AzureRepositoryProviderTest extends Specification {
         def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
 
         expect:
-        new AzureRepositoryProvider('t-neumann/hello', obj).getEndpointUrl() == 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello'
-    }
+        new AzureRepositoryProvider(PATH, obj).getEndpointUrl() == EXPECTED
 
-    def 'should return repo with organization url' () {
-
-        given:
-        def config = new ConfigSlurper().parse(CONFIG)
-        def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
-
-        expect:
-        new AzureRepositoryProvider('ORGANIZATION/PROJECT/hello', obj).getEndpointUrl() == 'https://dev.azure.com/ORGANIZATION/PROJECT/_apis/git/repositories/hello'
+        where:
+        PATH                                | EXPECTED
+        't-neumann/hello'                   | 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello'
+        'ORGANIZATION/PROJECT/hello'        | 'https://dev.azure.com/ORGANIZATION/PROJECT/_apis/git/repositories/hello'
+        'ORGANIZATION/PROJECT/_git/hello'   | 'https://dev.azure.com/ORGANIZATION/PROJECT/_apis/git/repositories/hello'
     }
 
     def 'should return project URL' () {
@@ -69,18 +91,12 @@ class AzureRepositoryProviderTest extends Specification {
         def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
 
         expect:
-        new AzureRepositoryProvider('t-neumann/hello', obj).getRepositoryUrl() == 'https://dev.azure.com/t-neumann/hello'
-
-    }
-
-    def 'should return project with organization URL' () {
-
-        given:
-        def config = new ConfigSlurper().parse(CONFIG)
-        def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
-
-        expect:
-        new AzureRepositoryProvider('ORGANIZATION/PROJECT/hello', obj).getRepositoryUrl() == 'https://dev.azure.com/ORGANIZATION/PROJECT/hello'
+        new AzureRepositoryProvider(PATH, obj).getRepositoryUrl() == EXPECTED
+        where:
+        PATH                                | EXPECTED
+        't-neumann/hello'                   | 'https://dev.azure.com/t-neumann/hello'
+        'ORGANIZATION/PROJECT/hello'        | 'https://dev.azure.com/ORGANIZATION/PROJECT/hello'
+        'ORGANIZATION/PROJECT/_git/hello'   | 'https://dev.azure.com/ORGANIZATION/PROJECT/_git/hello'
 
     }
 

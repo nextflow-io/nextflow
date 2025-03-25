@@ -73,7 +73,7 @@ Additionally, the [directive values](#directives) for the given task can be acce
 
 `path( identifier | stageName )`
 
-: Declare a file input. The received value can be any type, and it will be staged into the task directory. If the received value is not a file or collection of files, it is implicitly converted to a string and written to a file.
+: Declare a file input. The received value should be a file or collection of files and will be staged into the task directory.
 
 : The argument can be an identifier or string. If an identifier, the received value will be made available to the process body as a variable. If a string, the received value will be staged into the task directory under the given alias.
 
@@ -350,6 +350,10 @@ For cloud-based executors like AWS Batch, or when using Fusion with any executor
 
 - {ref}`process-container`
 - {ref}`process-containerOptions`
+
+When using Wave, the following additional directives must be uniform:
+
+- {ref}`process-conda`
 
 (process-beforescript)=
 
@@ -1593,11 +1597,11 @@ process formatBlastDatabases {
 ```
 
 :::{warning}
-The `storeDir` directive is meant for long-term process caching and should not be used to publish output files or organize outputs into a semantic directory structure. In those cases, use the [publishDir](#publishdir) directive instead.
+If a process uses `storeDir` and all of its outputs are optional, the process will always be skipped, even if the store directory is empty. This issue can be avoided by specifying at least one required file output.
 :::
 
-:::{note}
-The use of AWS S3 paths is supported, however it requires the installation of the [AWS CLI](https://aws.amazon.com/cli/) (i.e. `aws`) in the target compute node.
+:::{warning}
+The `storeDir` directive should not be used to publish workflow outputs. Use the [publishDir](#publishdir) directive or the {ref}`workflow output definition <workflow-output-def>` instead.
 :::
 
 (process-tag)=

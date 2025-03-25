@@ -21,6 +21,7 @@ process foo {
   input:
   path(obj)
 
+  script:
   """
   cat $obj | head
   """
@@ -31,6 +32,7 @@ process bar {
   input:
   tuple val(pair), path(obj)
 
+  script:
   """
   cat $obj | head
   """

@@ -67,18 +67,12 @@ allprojects {
     apply plugin: 'jacoco'
 
     java {
+        // these settings apply to all jvm tooling, including groovy
         toolchain {
             languageVersion = JavaLanguageVersion.of(21)
         }
-    }
-
-    compileJava {
-        options.release.set(17)
-    }
-
-    tasks.withType(GroovyCompile) {
-        sourceCompatibility = '17'
-        targetCompatibility = '17'
+        sourceCompatibility = 17
+        targetCompatibility = 17
     }
 
     idea {
@@ -91,6 +85,10 @@ allprojects {
         maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
         maven { url = "https://s3-eu-west-1.amazonaws.com/maven.seqera.io/releases" }
         maven { url = "https://s3-eu-west-1.amazonaws.com/maven.seqera.io/snapshots" }
+        maven {
+            url 'https://jitpack.io'
+            content { includeGroup 'com.github.nextflow-io.language-server' }
+        }
     }
 
     configurations {
@@ -109,8 +107,8 @@ allprojects {
 
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:2.4.0'
-        groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.24"
-        groovyDoc "org.apache.groovy:groovy-ant:4.0.24"
+        groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.26"
+        groovyDoc "org.apache.groovy:groovy-ant:4.0.26"
     }
 
     test {

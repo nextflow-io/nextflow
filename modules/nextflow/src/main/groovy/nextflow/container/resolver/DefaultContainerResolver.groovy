@@ -32,6 +32,25 @@ import nextflow.processor.TaskRun
 @CompileStatic
 class DefaultContainerResolver implements ContainerResolver {
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    final boolean enabled() {
+        return true
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    String defaultContainerPlatform() {
+        return null
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     @Override
     ContainerInfo resolveImage(TaskRun task, String imageName) {
         if( !imageName ) {
@@ -55,8 +74,16 @@ class DefaultContainerResolver implements ContainerResolver {
         return new ContainerInfo(imageName, ret, hashKey)
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     boolean isContainerReady(String key) {
         return true
+    }
+
+    @Override
+    ContainerMeta getContainerMeta(String key) {
+        return new ContainerMeta(targetImage: key)
     }
 }

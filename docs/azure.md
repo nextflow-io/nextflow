@@ -184,6 +184,9 @@ process EXAMPLE_PROCESS {
 
 Note when creating tasks that use fewer than 4 CPUs, Nextflow will create a pool with machines that have 4 times the number of CPUs required in order to pack more tasks onto each machine. This means the pipeline spends less time waiting for machines to be created, startup and join the Azure Batch pool. Similarly, if a process requires fewer than 8 CPUs Nextflow will use a machine with double the number of CPUs required. If you wish to override this behaviour you can use a specific `machineType` directive, e.g. using a `machineType` directive of `Standard_E2d_v5` will use always use a Standard_E2d_v5 machine.
 
+:::{note}
+You can use the regular expressions to avoid certain machine types. For example, setting `machineType` to `standard_*[^p]_v*` will avoid machine types with names that contain the letter `p`, such as ARM-based machines.
+
 The pool is not removed when the pipeline terminates, unless the configuration setting `deletePoolsOnCompletion = true` is added in your Nextflow configuration file.
 
 Pool specific settings should be provided in the `auto` pool configuration scope. If you wish to specify a single machine size for all processes, you can specify a fixed `vmSize` for the `auto` pool.
@@ -266,6 +269,18 @@ azure {
 ```
 :::
 
+### Task packing on nodes
+
+Each node is given a number of task slots, which are the number of tasks that can be run concurrently on the node. The number of task slots is determined by the number of CPUs for the selected virtual machine. Nextflow will assign each process a number of task slots equal to a percentage of the total resources available on the node, based on the `cpus`, `memory`, and `disk` directives.
+
+For example, if using a `Standard_D4d_v5` machine with 4 vCPUs, 16 GB of memory, and a 150 GB local disk. If a process has the directives `cpus 2`, `memory 8.GB`, or `disk 75.GB`, it will be assigned one task slot and two tasks will concurrently run on the node. If the process has `cpus 4`, `memory 2.GB` or `disk 150.GB`, it will be assigned two task slots, and only one task will concurrently run on the node.
+
+A node may become overprovisioned if the tasks are using more than their fraction of total resources. For example, in the above example, if a process has the `cpus` directive set to `2`, it will be assigned one task slot and two tasks will concurrently run on the node. If the process uses more than 8 GB of memory or 75 GB of disk space, the node might become overprovisioned, and performance might degrade or the task will fail.
+
+:::{warning}
+The `cpus` directive is used to determine the number of task slots, not the number of cores.
+:::
+
 ### Requirements on pre-existing named pools
 
 When Nextflow is configured to use a pool already available in the Batch account, the target pool must satisfy the following requirements:
@@ -327,14 +342,14 @@ When Nextflow creates a pool of compute nodes, it selects:
 
 Together, these settings determine the Operating System and version installed on each node.
 
-By default, Nextflow creates pool nodes based on CentOS 8, but this behavior can be customised in the pool configuration. Below are configurations for image reference/SKU combinations to select two popular systems.
+By default, Nextflow creates pool nodes based on Ubuntu 22.04, but this behavior can be customised in the pool configuration. Below are configurations for image reference/SKU combinations to select two popular systems.
 
-- Ubuntu 20.04 (default):
+- Ubuntu 22.04 (default):
 
   ```groovy
-  azure.batch.pools.<name>.sku = "batch.node.ubuntu 20.04"
-  azure.batch.pools.<name>.offer = "ubuntu-server-container"
-  azure.batch.pools.<name>.publisher = "microsoft-azure-batch"
+  azure.batch.pools.<name>.sku = "batch.node.ubuntu 22.04"
+  azure.batch.pools.<name>.offer = "ubuntu-hpc"
+  azure.batch.pools.<name>.publisher = "microsoft-dsvm"
   ```
 
 - CentOS 8:

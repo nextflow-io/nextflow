@@ -32,9 +32,7 @@ import spock.lang.Specification
  */
 class TaskConfigTest extends Specification {
 
-
     def testShell() {
-
         when:
         def config = new TaskConfig().setContext(my_shell: 'hello')
         config.shell = value
@@ -55,7 +53,6 @@ class TaskConfigTest extends Specification {
     }
 
     def testErrorStrategy() {
-
         when:
         def config = new TaskConfig(map)
 
@@ -72,11 +69,9 @@ class TaskConfigTest extends Specification {
         ErrorStrategy.IGNORE        | [errorStrategy: 'Ignore']
         ErrorStrategy.RETRY         | [errorStrategy: 'retry']
         ErrorStrategy.RETRY         | [errorStrategy: 'Retry']
-
     }
 
     def testErrorStrategy2() {
-
         when:
         def config = new TaskConfig()
         config.context = [x:1]
@@ -96,11 +91,9 @@ class TaskConfigTest extends Specification {
         ErrorStrategy.RETRY         | 'Retry'
         ErrorStrategy.RETRY         | { x == 1 ? 'retry' : 'ignore' }
         ErrorStrategy.FINISH        | 'finish'
-
     }
 
     def testModules() {
-
         given:
         def config
         def local
@@ -142,12 +135,9 @@ class TaskConfigTest extends Specification {
         then:
         local.module == ['b/2','c/3']
         local.getModule() == ['b/2','c/3']
-
-
     }
 
     def testMaxRetries() {
-
         when:
         def config = new TaskConfig()
         config.maxRetries = value
@@ -162,10 +152,10 @@ class TaskConfigTest extends Specification {
         1       | 1
         '3'     | 3
         10      | 10
-
     }
 
     def testMaxRetriesDefault() {
+        given:
         TaskConfig config
 
         when:
@@ -196,7 +186,6 @@ class TaskConfigTest extends Specification {
     }
 
     def testMaxErrors() {
-
         when:
         def config = new TaskConfig()
         config.maxErrors = value
@@ -211,12 +200,9 @@ class TaskConfigTest extends Specification {
         1       | 1
         '3'     | 3
         10      | 10
-
     }
 
-
     def testGetTime() {
-
         when:
         def config = new TaskConfig().setContext(ten: 10)
         config.time = value
@@ -233,11 +219,9 @@ class TaskConfigTest extends Specification {
         new Duration('2h')  || '2h'
         new Duration('10h') || { "$ten hours" }
         new Duration('24h') || '48h'
-
     }
 
     def 'test max submit await'() {
-
         when:
         def config = new TaskConfig()
         config.maxSubmitAwait = value
@@ -251,11 +235,9 @@ class TaskConfigTest extends Specification {
         null                || null
         new Duration('1s')  || 1000
         new Duration('2h')  || '2h'
-
     }
 
     def testGetMemory() {
-
         when:
         def config = new TaskConfig().setContext(ten: 10)
         config.memory = value
@@ -272,11 +254,9 @@ class TaskConfigTest extends Specification {
         new MemoryUnit('2M')    || '2M'
         new MemoryUnit('10G')   || { "$ten G" }
         new MemoryUnit('16G')   || '32G'
-
     }
 
     def testGetDisk() {
-
         when:
         def config = new TaskConfig().setContext(x: 20)
         config.disk = value
@@ -295,11 +275,9 @@ class TaskConfigTest extends Specification {
         new MemoryUnit('20G')   || { "$x G" }
         new MemoryUnit('30G')   || MemoryUnit.of('30G')
         new MemoryUnit('100G')  || '200G'
-
     }
 
     def testGetCpus() {
-
         when:
         def config = new TaskConfig().setContext(ten: 10)
         config.cpus = value
@@ -317,11 +295,9 @@ class TaskConfigTest extends Specification {
         8            | true     | 8
         10           | true     | { ten ?: 0  }
         24           | true     | 32
-
     }
 
     def testGetStore() {
-
         when:
         def config = new TaskConfig()
         config.storeDir = value
@@ -335,7 +311,6 @@ class TaskConfigTest extends Specification {
         null                                || null
         Paths.get('/data/path/')            || '/data/path'
         Paths.get('hello').toAbsolutePath() || 'hello'
-
     }
 
     def testClusterOptionsAsString() {
@@ -355,7 +330,6 @@ class TaskConfigTest extends Specification {
     }
 
     def testGetClusterOptionsAsList() {
-
         when:
         def config = new TaskConfig()
         config.clusterOptions = value
@@ -372,7 +346,6 @@ class TaskConfigTest extends Specification {
     }
 
     def testIsDynamic() {
-
         given:
         def config = new TaskConfig()
 
@@ -402,12 +375,9 @@ class TaskConfigTest extends Specification {
         config = new TaskConfig( alpha:1, beta: "${->foo}" )
         then:
         config.isDynamic()
-
-
     }
 
     def 'should return a new value when changing context' () {
-
         given:
         def config = new TaskConfig()
         config.alpha = 'Simple string'
@@ -433,7 +403,6 @@ class TaskConfigTest extends Specification {
     }
 
     def 'should return the guard condition' () {
-
         given:
         def config = new TaskConfig()
         def closure = new TaskClosure({ x == 'Hello' && count==1 }, '{closure source code}')
@@ -454,11 +423,9 @@ class TaskConfigTest extends Specification {
         config.context = [x: 'Hello', count: 3]
         then:
         !config.getGuard('when')
-
     }
 
     def 'should create ext config properties' () {
-
         given:
         def config = new TaskConfig()
         config.ext.alpha = 'AAAA'
@@ -479,12 +446,9 @@ class TaskConfigTest extends Specification {
         config.ext.alpha == 'AAAA'
         config.ext.delta == 'dddd'
         config.ext.omega == 'oooo'
-
     }
 
-
     def 'should create publishDir object' () {
-
         setup:
         def script = Mock(BaseScript)
         ProcessConfig process
@@ -529,11 +493,9 @@ class TaskConfigTest extends Specification {
         dirs[0].pattern == null
         dirs[1].path == Paths.get('/there')
         dirs[1].pattern == '*.fq'
-
     }
 
     def 'should create publishDir with local variables' () {
-
         given:
         TaskConfig config
 
@@ -543,11 +505,9 @@ class TaskConfigTest extends Specification {
         config.setContext( foo: 'world', bar: 'hello', x: 'copy' )
         then:
         config.getPublishDir() == [ PublishDir.create(path: 'world/hello', mode: 'copy') ]
-
     }
 
     def 'should invoke dynamic cpus property only when cloning the config object' () {
-
         given:
         def config = new TaskConfig()
 
@@ -572,7 +532,6 @@ class TaskConfigTest extends Specification {
     }
 
     def 'should configure pod options'()  {
-
         given:
         def script = Mock(BaseScript)
 
@@ -589,11 +548,9 @@ class TaskConfigTest extends Specification {
         process.createTaskConfig().getPodOptions() == new PodOptions([
                     [secret: 'foo', mountPath: '/this'],
                     [secret: 'bar', env: 'BAR_XXX'] ])
-
     }
 
     def 'should get gpu resources' () {
-
         given:
         def script = Mock(BaseScript)
 
@@ -616,7 +573,6 @@ class TaskConfigTest extends Specification {
     }
 
     def 'should configure secrets'()  {
-
         given:
         def script = Mock(BaseScript)
 
@@ -630,11 +586,9 @@ class TaskConfigTest extends Specification {
         and:
         process.createTaskConfig().secret == ['alpha', 'omega']
         process.createTaskConfig().getSecret() == ['alpha', 'omega']
-
     }
 
     def 'should configure resourceLabels options'()  {
-
         given:
         def script = Mock(BaseScript)
 
@@ -671,4 +625,43 @@ class TaskConfigTest extends Specification {
         def e = thrown(ProcessUnrecoverableException)
         e.message == "Directive 'resourceLimits.cpus' cannot be a negative value - offending value: -1"
     }
+
+    def 'should validate shell cli' () {
+        given:
+        def config = new TaskConfig([:])
+        when:
+        config.validateShell(['bash','this','that'])
+        then:
+        noExceptionThrown()
+
+        when:
+        config.validateShell([''])
+        then:
+        thrown(IllegalArgumentException)
+
+//        when:
+//        config.validateShell(['bash\nthis\nthat'])
+//        then:
+//        thrown(IllegalArgumentException)
+//
+//        when:
+//        config.validateShell(['bash', ' -eu '])
+//        then:
+//        thrown(IllegalArgumentException)
+    }
+
+    def 'should get arch and container platform' () {
+        given:
+        def config = new TaskConfig(CONFIG)
+
+        expect:
+        config.getArchitecture() == ARCH
+
+        where:
+        CONFIG              | ARCH
+        [:]                 | null
+        [arch:'amd64']      | new Architecture(name:'amd64')
+        [arch:'arm64']      | new Architecture(name:'arm64')
+    }
+
 }

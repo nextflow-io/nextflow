@@ -91,4 +91,11 @@ class TestHelper {
         // Convert the decoded bytes into a string
         return new String(decodedBytes);
     }
+
+    static int rndServerPort() {
+        ServerSocket socket = new ServerSocket(0)
+        int port = socket.localPort
+        socket.close()
+        return port
+    }
 }
