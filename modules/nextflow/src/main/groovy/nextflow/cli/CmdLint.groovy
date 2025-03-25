@@ -27,6 +27,11 @@ import nextflow.script.control.Compiler
 import nextflow.script.control.ScriptParser
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage
+import org.fusesource.jansi.Ansi
+import org.fusesource.jansi.AnsiConsole
+import static org.fusesource.jansi.Ansi.Attribute
+import static org.fusesource.jansi.Ansi.Color
+import static org.fusesource.jansi.Ansi.ansi
 /**
  * CLI sub-command LINT
  *
@@ -43,6 +48,10 @@ class CmdLint extends CmdBase {
     private ScriptParser scriptParser
 
     private ConfigParser configParser
+
+    private int numErrors = 0
+    private int numFilesWithErrors = 0
+    private int numFilesWithoutErrors = 0
 
     @Override
     String getName() { 'lint' }
@@ -73,6 +82,7 @@ class CmdLint extends CmdBase {
 
     void parse(File file) {
         final name = file.getName()
+        printStatus(file)
         if( name.endsWith('.nf') )
             scriptParser.parse(file)
         else if( name.endsWith('.config') )
@@ -85,19 +95,37 @@ class CmdLint extends CmdBase {
             .stream()
             .sorted(Comparator.comparing((SourceUnit source) -> source.getSource().getURI()))
             .forEach((source) -> {
-                if( source.getErrorCollector().hasErrors() )
+                if( source.getErrorCollector().hasErrors() ){
                     printErrors(source)
+                    numFilesWithErrors += 1
+                } else {
+                    numFilesWithoutErrors += 1
+                }
             })
+    }
+
+    private void printStatus(File file) {
+        final str = ansi().cursorUp(1).eraseLine().a(Attribute.INTENSITY_FAINT).a("Formatting: ${file}").reset().newline().toString()
+        AnsiConsole.out.print(str)
+        AnsiConsole.out.flush()
     }
 
     private void printErrors(SourceUnit source) {
         final errorMessages = source.getErrorCollector().getErrors()
-        System.err.println()
+        final term = ansi().cursorUp(1).eraseLine()
         for( final message : errorMessages ) {
             if( message instanceof SyntaxErrorMessage ) {
+                numErrors += 1
                 final cause = message.getCause()
-                System.err.println "LINT ERROR: ${source.getName()} at line ${cause.getStartLine()}, column ${cause.getStartColumn()}: ${cause.getOriginalMessage()}"
+                term.fg(Color.RED).a(Attribute.INTENSITY_BOLD).a("error").fg(Color.DEFAULT).a(": ")
+                term.a("${source.getName()}").a(Attribute.INTENSITY_BOLD_OFF)
+                term.a(":${cause.getStartLine()}:${cause.getStartColumn()}: ${cause.getOriginalMessage()}")
+                term.newline()
             }
         }
+        // Double newline as next status update will chomp back one
+        term.fg(Color.DEFAULT).newline()
+        AnsiConsole.out.print(term)
+        AnsiConsole.out.flush()
     }
 }

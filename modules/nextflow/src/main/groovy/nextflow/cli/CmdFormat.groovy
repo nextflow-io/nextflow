@@ -162,7 +162,9 @@ class CmdFormat extends CmdBase {
     }
 
     private void printStatus(File file) {
-        final str = ansi().cursorUp(1).eraseLine().a(Attribute.INTENSITY_FAINT).a("Formatting: ${file}").reset().newline().toString()
+        final str = ansi().cursorUp(1).eraseLine()
+        str.a(Attribute.INTENSITY_FAINT).a("Formatting: ${file}")
+        str.reset().newline().toString()
         AnsiConsole.out.print(str)
         AnsiConsole.out.flush()
     }
@@ -176,10 +178,11 @@ class CmdFormat extends CmdBase {
                 term.fg(Color.RED).a(Attribute.INTENSITY_BOLD).a("error").fg(Color.DEFAULT).a(": ")
                 term.a("Failed to parse ${source.getName()}").a(Attribute.INTENSITY_BOLD_OFF)
                 term.a(":${cause.getStartLine()}:${cause.getStartColumn()}: ${cause.getOriginalMessage()}")
+                term.newline()
             }
         }
         // Double newline as next status update will chomp back one
-        term.fg(Color.DEFAULT).newline().newline()
+        term.fg(Color.DEFAULT).newline()
         AnsiConsole.out.print(term.toString())
         AnsiConsole.out.flush()
     }
