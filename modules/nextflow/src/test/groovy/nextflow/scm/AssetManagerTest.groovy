@@ -375,13 +375,15 @@ class AssetManagerTest extends Specification {
         when:
         def holder = new AssetManager()
         holder.build('foo/bar')
-        then:
-        holder.getMainScriptName() == 'hello.nf'
-        holder.manifest.getDefaultBranch() == 'super-stuff'
-        holder.manifest.getHomePage() == 'http://foo.com'
-        holder.manifest.getDescription() == 'This pipeline do this and that'
-        holder.manifest.getAuthor() == 'Hi Dude'
 
+        then:
+        with(holder) {
+            getMainScriptName() == 'hello.nf'
+            manifest.getDefaultBranch() == 'super-stuff'
+            manifest.getHomePage() == 'http://foo.com'
+            manifest.getDescription() == 'This pipeline do this and that'
+            manifest.getAuthor() == 'Hi Dude'
+        }
     }
 
     @Tag("config")
@@ -399,11 +401,12 @@ class AssetManagerTest extends Specification {
         holder.build('foo/bar')
 
         then:
-        holder.getMainScriptName() == 'main.nf'
-        holder.getHomePage() == 'https://github.com/foo/bar'
-        holder.manifest.getDefaultBranch() == null
-        holder.manifest.getDescription() == null
-
+        with(holder) {
+            getMainScriptName() == 'main.nf'
+            getHomePage() == 'https://github.com/foo/bar'
+            manifest.getDefaultBranch() == null
+            manifest.getDescription() == null
+        }
     }
 
     @Tag("git")
@@ -432,8 +435,9 @@ class AssetManagerTest extends Specification {
     }
 
     @Tag("git")
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     @Unroll
-    def 'should filter remote branches #refName'() {
+    def 'should verify ref #refName is remote branch: #isRemote'() {
         given:
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
@@ -441,10 +445,14 @@ class AssetManagerTest extends Specification {
         manager.download()
         def branches = manager.getBranchList()
 
-        expect:
-        def remote_branch = branches.find { it.name == refName }
-        remote_branch != null
-        AssetManager.isRemoteBranch(remote_branch) == isRemote
+        when:
+        def ref = branches.find { it.name == refName }
+
+        then:
+        with(ref) {
+            it != null
+            AssetManager.isRemoteBranch(it) == isRemote
+        }
 
         where:
         refName                         | isRemote
@@ -527,14 +535,17 @@ class AssetManagerTest extends Specification {
                 .setProject('nextflow-io/nextflow')
         and:
         def script = manager.getScriptFile()
+
         then:
-        script.localPath == dir
-        script.commitId == commit.name()
-        script.revision == getLocalDefaultBranch()
-        script.parent == dir
-        script.text == "println 'Hello world'"
-        script.repository == 'https://github.com/nextflow-io/nextflow'
-        script.projectName == 'nextflow-io/nextflow'
+        with(script) {
+            localPath == dir
+            commitId == commit.name()
+            revision == getLocalDefaultBranch()
+            parent == dir
+            text == "println 'Hello world'"
+            repository == 'https://github.com/nextflow-io/nextflow'
+            projectName == 'nextflow-io/nextflow'
+        }
 
         when:
         p = Mock(RepositoryProvider) { getRepositoryUrl() >> 'https://github.com/nextflow-io/nextflow' }
@@ -544,14 +555,17 @@ class AssetManagerTest extends Specification {
                 .setProject('nextflow-io/nextflow')
         and:
         script = manager.getScriptFile('foo.nf')
+
         then:
-        script.localPath == dir
-        script.commitId == commit.name()
-        script.revision == getLocalDefaultBranch()
-        script.parent == dir
-        script.text == "this is foo content"
-        script.repository == 'https://github.com/nextflow-io/nextflow'
-        script.projectName == 'nextflow-io/nextflow'
+        with(script) {
+            localPath == dir
+            commitId == commit.name()
+            revision == getLocalDefaultBranch()
+            parent == dir
+            text == "this is foo content"
+            repository == 'https://github.com/nextflow-io/nextflow'
+            projectName == 'nextflow-io/nextflow'
+        }
     }
 
     @Tag("git")
@@ -666,59 +680,50 @@ class AssetManagerTest extends Specification {
     }
 
     @Tag("config")
-    def 'should handle manifest with gitmodules configuration'() {
+    @Unroll
+    def 'should handle manifest with #format gitmodules configuration'() {
         given:
-        def config = '''
-            manifest {
-                gitmodules = ['module1', 'module2']
-                recurseSubmodules = true
-            }
-            '''
-        def dir = tempDir.getRoot()
-        dir.resolve('foo/bar').mkdirs()
-        dir.resolve('foo/bar/nextflow.config').text = config
-        dir.resolve('foo/bar/.git').mkdir()
-        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
-        dir.resolve('foo/bar/.gitmodules').text = '''
-            [submodule "module1"]
-                path = module1
-                url = https://github.com/org/module1.git
-            [submodule "module2"]
-                path = module2
-                url = https://github.com/org/module2.git
-            '''
-
-        when:
-        def holder = new AssetManager()
-        holder.build('foo/bar')
-
-        then:
-        holder.manifest.gitmodules == ['module1', 'module2']
-        holder.manifest.recurseSubmodules == true
-    }
-
-    @Tag("config")
-    def 'should handle manifest with string gitmodules configuration'() {
-        given:
-        def config = '''
-            manifest {
-                gitmodules = 'module1, module2'
-                recurseSubmodules = true
-            }
-            '''
         def dir = tempDir.getRoot()
         dir.resolve('foo/bar').mkdirs()
         dir.resolve('foo/bar/nextflow.config').text = config
         dir.resolve('foo/bar/.git').mkdir()
         dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
 
+        if (gitmodulesContent) {
+            dir.resolve('foo/bar/.gitmodules').text = gitmodulesContent
+        }
+
         when:
         def holder = new AssetManager()
         holder.build('foo/bar')
 
         then:
-        holder.manifest.gitmodules.tokenize(', ') == ['module1', 'module2']
-        holder.manifest.recurseSubmodules == true
+        with(holder.manifest) {
+            gitmodules == expected || gitmodules.tokenize(', ') == expected
+            recurseSubmodules == true
+        }
+
+        where:
+        format      | config                                                          | gitmodulesContent                                     | expected
+        'array'     | '''
+                     manifest {
+                         gitmodules = ['module1', 'module2']
+                         recurseSubmodules = true
+                     }
+                     '''                                                              | '''
+                                                                                        [submodule "module1"]
+                                                                                            path = module1
+                                                                                            url = https://github.com/org/module1.git
+                                                                                        [submodule "module2"]
+                                                                                            path = module2
+                                                                                            url = https://github.com/org/module2.git
+                                                                                        '''                                                    | ['module1', 'module2']
+        'string'    | '''
+                     manifest {
+                         gitmodules = 'module1, module2'
+                         recurseSubmodules = true
+                     }
+                     '''                                                              | null                                                  | ['module1', 'module2']
     }
 
     @Tag("git")
