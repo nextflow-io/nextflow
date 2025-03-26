@@ -53,6 +53,11 @@ interface CidStore extends Closeable {
      */
     CidHistoryLog getHistoryLog()
 
-    List<Object> query(URI queryString)
+    /**
+     * Search for cid entries.
+     * @queryString Json-path like query string. (Only simple and nested field operators are supported(No array, wildcards,etc.)
+     * @return List of Cid object's fulfilling the queryString
+     */
+    List<CidSerializable> search(String queryString)
 
 }

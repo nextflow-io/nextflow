@@ -17,7 +17,9 @@
 
 package nextflow.data.cid.cli
 
-import groovy.json.JsonOutput
+import nextflow.data.cid.CidUtils
+import nextflow.data.cid.serde.CidSerializable
+import nextflow.serde.gson.GsonEncoder
 import org.eclipse.jgit.diff.DiffAlgorithm
 import org.eclipse.jgit.diff.DiffFormatter
 import org.eclipse.jgit.diff.RawText
@@ -95,16 +97,19 @@ class CidCommandImpl implements CmdCid.CidCommand {
     void show(ConfigMap config, List<String> args) {
         if (!args[0].startsWith(CID_PROT))
             throw new Exception("Identifier is not a CID URL")
-        final key = args[0].substring(CID_PROT.size())
         final store = CidStoreFactory.getOrCreate(new Session(config))
-        final encoder = new CidEncoder().withPrettyPrint(true)
         if (store) {
             try {
-                final entry = store.load(key)
-                if( entry )
-                    println encoder.encode(entry)
-                else
-                    println "No entry found for ${args[0]}."
+                def entries = CidUtils.query(store, new URI(args[0]))
+                if( entries ) {
+                    entries = entries.size() == 1 ? entries[0] : entries
+                    if (entries instanceof CidSerializable)
+                        println new CidEncoder().withPrettyPrint(true).encode(entries as CidSerializable)
+                    else
+                        println new GsonEncoder<Object>(){}.withPrettyPrint(true).encode(entries)
+                } else {
+                    println "No entries found for ${args[0]}."
+                }
             } catch (Throwable e) {
                 println "Error loading ${args[0]}. ${e.message}"
             }
@@ -257,22 +262,6 @@ class CidCommandImpl implements CmdCid.CidCommand {
                 generateDiff(entry1, key1, entry2, key2)
             } catch (Throwable e) {
                 println "Error generating diff between ${args[0]}: $e.message"
-            }
-        } else {
-            println "Error CID store not loaded. Check Nextflow configuration."
-        }
-    }
-
-    @Override
-    void query(ConfigMap config, List<String> args) {
-        if (!args[0].startsWith(CID_PROT))
-            throw new Exception("Identifier is not a CID URL")
-        final store = CidStoreFactory.getOrCreate(new Session(config))
-        if (store) {
-            try {
-                println JsonOutput.prettyPrint( JsonOutput.toJson( store.query( new URI(args[0]) ) ) )
-            } catch (Throwable e) {
-                println "Error processing query ${args[0]}: $e.message"
             }
         } else {
             println "Error CID store not loaded. Check Nextflow configuration."

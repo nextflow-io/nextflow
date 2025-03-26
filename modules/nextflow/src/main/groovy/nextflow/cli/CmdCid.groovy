@@ -44,7 +44,6 @@ class CmdCid extends CmdBase implements UsageAware {
         void show(ConfigMap config, List<String> args)
         void lineage(ConfigMap config, List<String> args)
         void diff(ConfigMap config, List<String> args)
-        void query(ConfigMap config, List<String> args)
     }
 
     interface SubCmd {
@@ -65,7 +64,6 @@ class CmdCid extends CmdBase implements UsageAware {
         commands << new CmdShow()
         commands << new CmdLineage()
         commands << new CmdDiff()
-        commands << new CmdQuery()
     }
 
     @Parameter(hidden = true)
@@ -260,30 +258,4 @@ class CmdCid extends CmdBase implements UsageAware {
 
     }
 
-    class CmdQuery implements SubCmd {
-
-        @Override
-        String getName() { 'query' }
-
-        @Override
-        String getDescription() {
-            return 'Search data in descriptions'
-        }
-
-        void apply(List<String> args) {
-            if (args.size() != 1) {
-                println("ERROR: Incorrect number of parameters")
-                usage()
-                return
-            }
-            operation.query(config, args)
-        }
-
-        @Override
-        void usage() {
-            println description
-            println "Usage: nextflow $NAME $name <URIQuery>"
-        }
-
-    }
 }

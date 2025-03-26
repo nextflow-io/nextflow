@@ -17,6 +17,12 @@
 
 package nextflow.data.cid
 
+import nextflow.data.cid.model.DataPath
+import nextflow.data.cid.model.Parameter
+import nextflow.data.cid.model.Workflow
+import nextflow.data.cid.model.WorkflowOutput
+import nextflow.data.cid.model.WorkflowRun
+
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -97,23 +103,29 @@ class DefaultCidStoreTest extends Specification {
 
     def 'should query' () {
         given:
-        def key = "testKey/path"
-        def value = '[{"key":"value"}, {"key":"value2"}]'
+        def uniqueId = UUID.randomUUID()
+        def mainScript = new DataPath("file://path/to/main.nf", new Checksum("78910", "nextflow", "standard"))
+        def workflow = new Workflow(mainScript, [],"https://nextflow.io/nf-test/", "123456" )
+        def key = "testKey"
+        def value1 = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [ new Parameter("String", "param1", "value1"), new Parameter("String", "param2", "value2")] )
         def key2 = "testKey2"
-        def value2 = '[{"key":"value2"}, {"key":"value3"}]'
+        def value2 = new WorkflowOutput("/path/tp/file1", new Checksum("78910", "nextflow", "standard"),  "testkey", 1234, 1234567, 1234567, [key1:"value1", key2:"value2"])
         def key3 = "testKey3"
-        def value3 = '{ "outputs": { "samples": [{"key":"value4"}, {"key":"value5"}] } }'
+        def value3 = new WorkflowOutput("/path/tp/file2", new Checksum("78910", "nextflow", "standard"),  "testkey", 1234, 1234567, 1234567, [key2:"value2", key3:"value3"])
+        def key4 = "testKey4"
+        def value4 = new WorkflowOutput("/path/tp/file", new Checksum("78910", "nextflow", "standard"),  "testkey", 1234, 1234567, 1234567, [key3:"value3", key4:"value4"])
+
         def cidStore = new DefaultCidStore()
         cidStore.open(config)
-        cidStore.save(key, value)
+        cidStore.save(key, value1)
         cidStore.save(key2, value2)
         cidStore.save(key3, value3)
-        expect:
-        cidStore.query(new URI("cid://testKey/path"))[0] == [ [ key:"value"], [key:"value2"]]
-        cidStore.query(new URI("cid://testKey/path?key=value"))[0] == [key:"value"]
-        cidStore.query(new URI("cid://testKey2?key=value2"))[0] == [key:"value2"]
-        cidStore.query(new URI("cid:///?key=value2"))[0] == [key:"value2"]
-        cidStore.query(new URI("cid://testkey3/outputs/samples?key=value4"))[0] == [key:"value4"]
+        cidStore.save(key4, value4)
+
+        when:
+        def results3 = cidStore.search("type=WorkflowOutput&annotations.key2=value2")
+        then:
+        results3.size() == 2
     }
 
 

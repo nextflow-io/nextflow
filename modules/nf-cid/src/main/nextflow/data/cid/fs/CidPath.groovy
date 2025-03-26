@@ -354,7 +354,7 @@ class CidPath implements Path, RealPathAware {
         return this.getTargetPath(true)
     }
 
-    protected Path getTargetPath(boolean resultsAsPath){
+    protected Path getTargetPath(boolean resultsAsPath=false){
         return findTarget(fileSystem, filePath, resultsAsPath)
     }
 
