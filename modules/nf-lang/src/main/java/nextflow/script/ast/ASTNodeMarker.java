@@ -24,8 +24,11 @@ public enum ASTNodeMarker {
     // denotes a fully-qualified type annotation (ClassNode)
     FULLY_QUALIFIED,
 
-    // denotes that a variable declaration was inferred from an assignment
+    // denotes that an assignment is an implicit declaration
     IMPLICIT_DECLARATION,
+
+    // the inferred type of an expression
+    INFERRED_TYPE,
 
     // the number of enclosing parentheses around an expression
     INSIDE_PARENTHESES_LEVEL,
