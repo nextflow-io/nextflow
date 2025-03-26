@@ -21,6 +21,7 @@ import com.beust.jcommander.Parameters
 import groovy.io.FileType
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import java.util.regex.Pattern
 import nextflow.config.control.ConfigParser
 import nextflow.exception.AbortOperationException
 import nextflow.script.control.Compiler
@@ -110,16 +111,29 @@ class CmdLint extends CmdBase {
         AnsiConsole.out.flush()
     }
 
+    private Ansi highlightString(String str, Ansi term) {
+        def matcher = str =~ /^(.*)([`'][^`']+[`'])(.*)$/
+        if (matcher.find()) {
+            term.a(matcher.group(1))
+                .fg(Color.CYAN).a(matcher.group(2)).fg(Color.DEFAULT)
+                .a(matcher.group(3))
+        } else {
+            term.a(str)
+        }
+        return term
+    }
+
     private void printErrors(SourceUnit source) {
         final errorMessages = source.getErrorCollector().getErrors()
-        final term = ansi().cursorUp(1).eraseLine()
+        def term = ansi().cursorUp(1).eraseLine()
         for( final message : errorMessages ) {
             if( message instanceof SyntaxErrorMessage ) {
                 numErrors += 1
                 final cause = message.getCause()
                 term.fg(Color.RED).a(Attribute.INTENSITY_BOLD).a("error").fg(Color.DEFAULT).a(": ")
                 term.a("${source.getName()}").a(Attribute.INTENSITY_BOLD_OFF)
-                term.a(":${cause.getStartLine()}:${cause.getStartColumn()}: ${cause.getOriginalMessage()}")
+                term.a(":${cause.getStartLine()}:${cause.getStartColumn()}: ")
+                term = highlightString(cause.getOriginalMessage(), term)
                 term.newline()
             }
         }
