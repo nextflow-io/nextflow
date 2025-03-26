@@ -103,7 +103,10 @@ class TraceRecord implements Serializable {
             vol_ctxt: 'num',        // -- /proc/$pid/status field 'voluntary_ctxt_switches'
             inv_ctxt: 'num',        // -- /proc/$pid/status field 'nonvoluntary_ctxt_switches'
             hostname: 'str',
-            cpu_model:  'str'
+            cpu_model:  'str',
+            gpu_model:  'str',
+            gpu_mem_total: 'str',
+            gpu_driver: 'str'
     ]
 
     static public Map<String,Closure<String>> FORMATTER = [
@@ -451,6 +454,9 @@ class TraceRecord implements Serializable {
                         this.put(name, val)
                         break
 
+                    case 'gpu_model':
+                    case 'gpu_mem_total':
+                    case 'gpu_driver':
                     case 'cpu_model':
                         this.put(name, value)
                         break

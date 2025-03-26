@@ -130,6 +130,7 @@ nxf_write_trace() {
         "realtime=$wall_time" \
         "%cpu=$ucpu" \
         "cpu_model=$cpu_model" \
+        "gpu_model=$gpu_name" \
         "rchar=${io_stat1[0]}" \
         "wchar=${io_stat1[1]}" \
         "syscr=${io_stat1[2]}" \
@@ -174,6 +175,19 @@ nxf_trace_linux() {
     local start_millis=$(nxf_date)
     ## capture error and kill mem watcher
     trap 'kill $mem_proc' ERR
+
+    ## check if nvidia-smi is available and capture GPU metrics if it is
+    if command -v nvidia-smi &>/dev/null; then
+        local gpu_stats=$(nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total,driver_version --format=csv,noheader)
+        [ $NXF_DEBUG = 1 ] && echo "+++ GPU STATS: $gpu_stats"
+        
+        # Extract individual metrics from gpu_stats
+        local gpu_name=$(echo "$gpu_stats" | awk -F, '{print $1}' | xargs)
+        local gpu_mem_total=$(echo "$gpu_stats" | awk -F, '{print $4}' | xargs)
+        local gpu_driver=$(echo "$gpu_stats" | awk -F, '{print $5}' | xargs)
+        
+        [ $NXF_DEBUG = 1 ] && echo "+++ GPU METRICS: name=$gpu_name, util=$gpu_utilization, mem_used=$gpu_memory_used, mem_total=$gpu_memory_total, driver=$gpu_driver_version"
+    fi
     
     ## run task script
     {{trace_cmd}} &
@@ -206,6 +220,9 @@ nxf_trace_linux() {
         "realtime=$wall_time" \
         "%cpu=$ucpu" \
         "cpu_model=$cpu_model" \
+        "gpu_model=$gpu_name" \
+        "gpu_mem_total=$gpu_mem_total" \
+        "gpu_driver=$gpu_driver" \
         "rchar=${io_stat1[0]}" \
         "wchar=${io_stat1[1]}" \
         "syscr=${io_stat1[2]}" \
