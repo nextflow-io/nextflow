@@ -18,10 +18,14 @@ package nextflow.cli
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
+import com.beust.jcommander.validators.NoValueValidator
+import com.beust.jcommander.IParameterValidator
+import com.beust.jcommander.ParameterException
 import groovy.io.FileType
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import java.util.regex.Pattern
+import java.time.Instant
 import nextflow.config.control.ConfigParser
 import nextflow.exception.AbortOperationException
 import nextflow.script.control.Compiler
@@ -46,15 +50,47 @@ class CmdLint extends CmdBase {
     @Parameter(description = 'List of paths to lint')
     List<String> args = []
 
-    @Parameter(names = ['-hide-code'], description = 'Hide code snippet with error')
-    Boolean hideCode
+    static class OutputFormatValidator implements IParameterValidator {
+        @Override
+        void validate(String name, String value) throws ParameterException {
+            def allowedValues = ['full', 'extended', 'concise', 'json']
+            if (!allowedValues.contains(value)) {
+                throw new ParameterException("Output format must be one of $allowedValues (found: $value)")
+            }
+        }
+    }
 
-    @Parameter(names=['-show-context'], description = 'Show more context around code snippet')
-    Boolean showContext
+    @Parameter(
+        names = ['-output-format'],
+        description = 'Output format for lint results [env: NXF_LINT_FORMAT]. Options: full, extended, concise, json',
+        validateWith = OutputFormatValidator
+    )
+    String outputFormat = System.getenv('NXF_LINT_FORMAT') ?: 'full'
 
     private ScriptParser scriptParser
 
     private ConfigParser configParser
+
+    static class LintResults {
+        String date
+        List<LintError> errors = []
+        LintSummary summary = new LintSummary()
+    }
+
+    static class LintError {
+        String filename
+        Integer startLine
+        Integer startColumn
+        String message
+    }
+
+    static class LintSummary {
+        Integer numErrors = 0
+        Integer numFilesWithErrors = 0
+        Integer numFilesWithoutErrors = 0
+    }
+
+    private LintResults jsonResults = new LintResults()
 
     private int numErrors = 0
     private int numFilesWithErrors = 0
@@ -71,9 +107,14 @@ class CmdLint extends CmdBase {
         scriptParser = new ScriptParser()
         configParser = new ConfigParser()
 
-        final term = ansi().a("Checking Nextflow code..").newline()
-        AnsiConsole.out.print(term)
-        AnsiConsole.out.flush()
+        jsonResults.date = Instant.now().toString()
+
+        final term = ansi()
+        if(outputFormat != 'json') {
+            term.a("Checking Nextflow code..").newline()
+            AnsiConsole.out.print(term)
+            AnsiConsole.out.flush()
+        }
 
         for( final arg : args ) {
             final file = new File(arg)
@@ -90,26 +131,39 @@ class CmdLint extends CmdBase {
         checkErrors(scriptParser.compiler())
         checkErrors(configParser.compiler())
 
-        final emojis = [
-            "🔍 📋",
-            "🕵🏻‍♂️ 🔎",
-            "🔬 👨🏻‍💻",
-            "📑 ☑️",
-            "🧾 ✔️"
-        ]
-        def rnd = new Random()
-        term.cursorUp(1).eraseLine().cursorUp(1).eraseLine()
-        if( hideCode ) // extra newline needed if no code being shown
-            term.newline()
-        term.bold().a("Nextflow code checks complete! ${emojis[rnd.nextInt(emojis.size())]}").reset().newline()
-        if(numFilesWithErrors > 0)
-            term.fg(Color.RED).a(" ❌ ${numFilesWithErrors} file${numFilesWithErrors==1 ? '':'s'} had ${numErrors} error${numErrors==1 ? '':'s'}").newline()
-        if(numFilesWithoutErrors > 0)
-            term.fg(Color.BLUE).a(" ✅ ${numFilesWithoutErrors} file${numFilesWithoutErrors==1 ? '':'s'} had no errors").newline()
-        if(numFilesWithErrors == 0 && numFilesWithoutErrors == 0)
-            term.a(" No files found to process").newline()
-        AnsiConsole.out.print(term)
-        AnsiConsole.out.flush()
+        jsonResults.summary.numErrors = numErrors
+        jsonResults.summary.numFilesWithErrors = numFilesWithErrors
+        jsonResults.summary.numFilesWithoutErrors = numFilesWithoutErrors
+
+        if(outputFormat == 'json'){
+            println groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(jsonResults))
+        } else {
+            final emojis = [
+                "🔍 📋",
+                "🕵🏻‍♂️ 🔎",
+                "🔬 👨🏻‍💻",
+                "📑 ☑️",
+                "🧾 ✔️"
+            ]
+            def rnd = new Random()
+            term.cursorUp(1).eraseLine().cursorUp(1).eraseLine()
+            if( outputFormat == 'concise' ) // extra newline needed if no code being shown
+                term.newline()
+            term.bold().a("Nextflow code checks complete! ${emojis[rnd.nextInt(emojis.size())]}").reset().newline()
+            if(numFilesWithErrors > 0)
+                term.fg(Color.RED).a(" ❌ ${numFilesWithErrors} file${numFilesWithErrors==1 ? '':'s'} had ${numErrors} error${numErrors==1 ? '':'s'}").newline()
+            if(numFilesWithoutErrors > 0)
+                term.fg(Color.BLUE).a(" ✅ ${numFilesWithoutErrors} file${numFilesWithoutErrors==1 ? '':'s'} had no errors").newline()
+            if(numFilesWithErrors == 0 && numFilesWithoutErrors == 0)
+                term.a(" No files found to process").newline()
+            AnsiConsole.out.print(term)
+            AnsiConsole.out.flush()
+        }
+
+        // If we found errors, throw an exception so that we get a non-zero exit code
+        if (numErrors > 0) {
+            throw new AbortOperationException()
+        }
     }
 
     void parse(File file) {
@@ -138,6 +192,8 @@ class CmdLint extends CmdBase {
     }
 
     private void printStatus(File file) {
+        if(outputFormat == 'json')
+            return
         final str = ansi().cursorUp(1).eraseLine().a(Attribute.INTENSITY_FAINT).a("Checking: ${file.getPath().replaceFirst(/^\.\//, '')}").reset().newline().toString()
         AnsiConsole.out.print(str)
         AnsiConsole.out.flush()
@@ -165,9 +221,7 @@ class CmdLint extends CmdBase {
             lines = reader.readLines()
         }
 
-        int context = 0
-        if( showContext )
-            context = 2
+        int context = outputFormat == 'extended' ? 2 : 0
         int fromLine = Math.max(1, lineStart - context)
         int toLine = Math.min(lines.size(), lineEnd + context)
 
@@ -235,19 +289,31 @@ class CmdLint extends CmdBase {
             if( message instanceof SyntaxErrorMessage ) {
                 numErrors += 1
                 final cause = message.getCause()
-                term.bold().a("${source.getName().replaceFirst(/^\.\//, '')}").reset()
-                term.a(":${cause.getStartLine()}:${cause.getStartColumn()}: ")
-                term = highlightString(cause.getOriginalMessage(), term)
-                if( !hideCode ) {
+                if(outputFormat == 'json') {
+                    def error = new LintError(
+                        filename: source.getName(),
+                        startLine: cause.getStartLine(),
+                        startColumn: cause.getStartColumn(),
+                        message: cause.getOriginalMessage()
+                    )
+                    jsonResults.errors << error
+                } else {
+                    term.bold().a("${source.getName().replaceFirst(/^\.\//, '')}").reset()
+                    term.a(":${cause.getStartLine()}:${cause.getStartColumn()}: ")
+                    term = highlightString(cause.getOriginalMessage(), term)
+                    if( outputFormat != 'concise' ) {
+                        term.newline()
+                        term = getCodeBlock(source, message, term)
+                    }
                     term.newline()
-                    term = getCodeBlock(source, message, term)
                 }
-                term.newline()
             }
         }
-        // Extra newline as next status update will chomp back one
-        term.fg(Color.DEFAULT).newline()
-        AnsiConsole.out.print(term)
-        AnsiConsole.out.flush()
+        if(outputFormat != 'json') {
+            // Extra newline as next status update will chomp back one
+            term.fg(Color.DEFAULT).newline()
+            AnsiConsole.out.print(term)
+            AnsiConsole.out.flush()
+        }
     }
 }
