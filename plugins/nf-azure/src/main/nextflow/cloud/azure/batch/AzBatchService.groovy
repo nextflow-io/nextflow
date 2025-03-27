@@ -521,8 +521,9 @@ class AzBatchService implements Closeable {
         // Add environment variables for managed identity if configured
         final env = [:] as Map<String,String>
         if( pool?.opts?.managedIdentityId ) {
-            env.put('AZCOPY_AUTO_LOGIN_TYPE', 'MSI')
-            env.put('AZCOPY_MSI_CLIENT_ID', pool.opts.managedIdentityId)
+            env.put('AZCOPY_AUTO_LOGIN_TYPE', 'MSI') // azcopy
+            env.put('AZCOPY_MSI_CLIENT_ID', pool.opts.managedIdentityId) // azcopy
+            env.put('FUSION_AZ_MSI_CLIENT_ID', pool.opts.managedIdentityId) // fusion
         }
 
         return new BatchTaskCreateContent(taskId, cmd)
