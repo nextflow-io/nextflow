@@ -26,6 +26,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import java.util.regex.Pattern
 import java.time.Instant
+import java.nio.file.*
 import nextflow.config.control.ConfigParser
 import nextflow.exception.AbortOperationException
 import nextflow.script.control.Compiler
@@ -49,6 +50,12 @@ class CmdLint extends CmdBase {
 
     @Parameter(description = 'List of paths to lint')
     List<String> args = []
+
+    @Parameter(
+        names = ['-exclude'],
+        description = 'File pattern to exclude from linting (can be specified multiple times)'
+    )
+    List<String> excludePatterns = []
 
     static class OutputFormatValidator implements IParameterValidator {
         @Override
@@ -166,8 +173,32 @@ class CmdLint extends CmdBase {
         }
     }
 
+    private boolean shouldExcludeFile(File file) {
+        if (!excludePatterns)
+            return false
+
+        def path = file.toPath()
+
+        return excludePatterns.any { pattern ->
+            if (pattern.contains("*") || pattern.contains("?") || pattern.contains("[")) {
+                def matcher = FileSystems.default.getPathMatcher("glob:${pattern}")
+                return matcher.matches(path)
+            } else {
+                def prefix = Paths.get(pattern)
+                return path.getNameCount() >= prefix.getNameCount() &&
+                    path.subpath(0, prefix.getNameCount()) == prefix
+            }
+        }
+    }
+
     void parse(File file) {
         final name = file.getName()
+        // Skip excluded files
+        if (shouldExcludeFile(file)) {
+            log.debug "Skipping excluded file ${file}"
+            return
+        }
+
         log.debug "Linting file ${file}"
         printStatus(file)
         if( name.endsWith('.nf') )
