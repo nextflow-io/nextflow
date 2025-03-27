@@ -65,6 +65,10 @@ class CmdLint extends CmdBase {
         scriptParser = new ScriptParser()
         configParser = new ConfigParser()
 
+        final term = ansi().a("Checking Nextflow code..").newline()
+        AnsiConsole.out.print(term)
+        AnsiConsole.out.flush()
+
         for( final arg : args ) {
             final file = new File(arg)
             if( file.isFile() ) {
@@ -88,16 +92,21 @@ class CmdLint extends CmdBase {
             "🧾 ✔️"
         ]
         def rnd = new Random()
-        final term = ansi().cursorUp(1).eraseLine()
-        term.bold().a("Nextflow code lint complete! ${emojis[rnd.nextInt(emojis.size())]}").reset().newline()
-        term.fg(Color.RED).a(" ❌ ${numErrors} errors found in ${numFilesWithErrors} files").newline()
-        term.fg(Color.BLUE).a(" ✅ ${numFilesWithoutErrors} files had no errors").newline()
+        term.cursorUp(1).eraseLine().cursorUp(1).eraseLine()
+        term.bold().a("Nextflow code checks complete! ${emojis[rnd.nextInt(emojis.size())]}").reset().newline()
+        if(numFilesWithErrors > 0)
+            term.fg(Color.RED).a(" ❌ ${numFilesWithErrors} file${numFilesWithErrors==1 ? '':'s'} had ${numErrors} error${numErrors==1 ? '':'s'}").newline()
+        if(numFilesWithoutErrors > 0)
+            term.fg(Color.BLUE).a(" ✅ ${numFilesWithoutErrors} file${numFilesWithoutErrors==1 ? '':'s'} had no errors").newline()
+        if(numFilesWithErrors == 0 && numFilesWithoutErrors == 0)
+            term.a(" No files found to process").newline()
         AnsiConsole.out.print(term)
         AnsiConsole.out.flush()
     }
 
     void parse(File file) {
         final name = file.getName()
+        log.debug "Linting file ${file}"
         printStatus(file)
         if( name.endsWith('.nf') )
             scriptParser.parse(file)
@@ -139,11 +148,10 @@ class CmdLint extends CmdBase {
     }
 
     private Ansi getCodeBlock(SourceUnit source, SyntaxErrorMessage message, Ansi term) {
-        def cause = message.cause
-        def lineStart = cause.getStartLine()
-        def colStart = cause.getStartColumn()
-        def lineEnd = cause.getEndLine()
-        def colEnd = cause.getEndColumn()
+        def lineStart = message.cause.getStartLine()
+        def colStart = message.cause.getStartColumn()
+        def lineEnd = message.cause.getEndLine()
+        def colEnd = message.cause.getEndColumn()
         def lines
         source.getSource().getReader().withCloseable { reader ->
             lines = reader.readLines()
@@ -188,13 +196,16 @@ class CmdLint extends CmdBase {
             int adjStart = Math.max(0, start - windowStart)
             int adjEnd = Math.max(adjStart + 1, Math.min(end - windowStart, line.length()))
 
+            // Line number
             term.fg(Ansi.Color.BLUE).a(String.format("%3d | ", i)).reset()
 
             if (i == lineStart) {
+                // Print line, with error in red
                 term.a(Attribute.INTENSITY_FAINT).a(line.substring(0, adjStart)).reset()
                 term.fg(Ansi.Color.RED).a(line.substring(adjStart, adjEnd)).reset()
                 term.a(Attribute.INTENSITY_FAINT).a(line.substring(adjEnd)).reset().newline()
 
+                // Print carets underneath pointing to the error
                 String marker = ' ' * adjStart
                 String carets = '^' * Math.max(1, adjEnd - adjStart)
                 term.a("    | ")

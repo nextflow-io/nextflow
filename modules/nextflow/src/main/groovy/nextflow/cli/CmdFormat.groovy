@@ -106,9 +106,13 @@ class CmdFormat extends CmdBase {
         ]
         def rnd = new Random()
         final term = ansi().cursorUp(1).eraseLine()
-        term.fg(Color.GREEN).a("${numFilesChanged} file${numFilesChanged==1 ? '':'s'} reformatted, ")
-        term.fg(Color.BLUE).a("${numFilesUnchanged} file${numFilesUnchanged==1 ? '':'s'} left unchanged ")
-        term.a("${emojis[rnd.nextInt(emojis.size())]}").newline()
+        term.bold().a("Nextflow code formatting complete! ${emojis[rnd.nextInt(emojis.size())]}").reset().newline()
+        if(numFilesChanged > 0)
+            term.fg(Color.GREEN).a(" ${numFilesChanged} file${numFilesChanged==1 ? '':'s'} reformatted").newline()
+        if(numFilesUnchanged > 0)
+            term.fg(Color.BLUE).a(" ${numFilesUnchanged} file${numFilesUnchanged==1 ? '':'s'} left unchanged").newline()
+        if(numFilesChanged == 0 && numFilesUnchanged == 0)
+            term.a(" No files found to process").newline()
         AnsiConsole.out.print(term)
         AnsiConsole.out.flush()
     }
