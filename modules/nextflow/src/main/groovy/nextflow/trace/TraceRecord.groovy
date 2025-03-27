@@ -106,7 +106,10 @@ class TraceRecord implements Serializable {
             cpu_model:  'str',
             gpu_model:  'str',
             gpu_mem_total: 'str',
-            gpu_driver: 'str'
+            gpu_driver: 'str',
+            avg_gpu_util: 'perc',   // -- Average GPU utilization percentage
+            avg_gpu_mem: 'mem',     // -- Average GPU memory usage in MiB
+            avg_gpu_mem_perc: 'perc' // -- Average GPU memory usage as percentage of total available
     ]
 
     static public Map<String,Closure<String>> FORMATTER = [
@@ -444,11 +447,20 @@ class TraceRecord implements Serializable {
                         // fields '%cpu' and '%mem' are expressed as percent value
                         this.put(name, parseInt(value, file, name) / 10F)
                         break
+                        
+                    case 'avg_gpu_util':
+                        this.put(name, parseInt(value, file, name))
+                        break
+
+                    case 'avg_gpu_mem_perc':
+                        this.put(name, parseFloat(value, file, name))
+                        break
 
                     case 'rss':
                     case 'vmem':
                     case 'peak_rss':
                     case 'peak_vmem':
+                    case 'avg_gpu_mem':
                         // these fields are provided in KB, so they are normalized to bytes
                         def val = parseLong(value, file, name) * 1024
                         this.put(name, val)
@@ -530,6 +542,16 @@ class TraceRecord implements Serializable {
         catch( NumberFormatException e ) {
             log.debug "[WARN] Not a valid integer number `$str` -- offending row: $row in file `$file`"
             return 0
+        }
+    }
+
+    private float parseFloat( String str, Path file, String row )  {
+        try {
+            str.toFloat()
+        }
+        catch( NumberFormatException e ) {
+            log.debug "[WARN] Not a valid float number `$str` -- offending row: $row in file `$file`"
+            return 0.0f
         }
     }
 
