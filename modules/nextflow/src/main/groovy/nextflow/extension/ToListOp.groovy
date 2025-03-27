@@ -20,6 +20,8 @@ import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.expression.DataflowExpression
+import groovyx.gpars.dataflow.operator.DataflowProcessor
+import nextflow.extension.op.Op
 
 /**
  * Implements {@link OperatorImpl#toList(groovyx.gpars.dataflow.DataflowReadChannel)}  operator
@@ -50,21 +52,25 @@ class ToListOp {
         final target = new DataflowVariable()
         if( source instanceof DataflowExpression ) {
             final result = new ArrayList(1)
-            Map<String,Closure> events = [:]
-            events.onNext = { result.add(it) }
-            events.onComplete = { target.bind(result) }
-            DataflowHelper.subscribeImpl(source, events )
+            new SubscribeOp()
+                .withInput(source)
+                .withOnNext({ result.add(it) })
+                .withOnComplete({ DataflowProcessor dp -> Op.bind(dp, target, result) })
+                .apply()
             return target
         }
 
-        DataflowHelper.reduceImpl(source, target, []) { List list, item -> list << item }
-        if( ordering ) {
-            final sort = { List list -> ordering instanceof Closure ? list.sort((Closure) ordering) : list.sort() }
-            return (DataflowVariable)target.then(sort)
-        }
-        else {
-            return target
-        }
+        Closure beforeBind = ordering
+                    ? { List list -> ordering instanceof Closure ? list.sort((Closure) ordering) : list.sort() }
+                    : null
+
+        ReduceOp .create()
+            .withSource(source)
+            .withTarget(target)
+            .withSeed(new ArrayList())
+            .withBeforeBind(beforeBind)
+            .withAction{ List list, item -> list << item }
+            .apply()
     }
 
     @Deprecated
