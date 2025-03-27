@@ -33,7 +33,7 @@ class MermaidHtmlRenderer implements DagRenderer {
         file.text = template.replace('REPLACE_WITH_NETWORK_DATA', network)
     }
 
-    private String readTemplate() {
+    static String readTemplate() {
         final writer = new StringWriter()
         final res = MermaidHtmlRenderer.class.getResourceAsStream('mermaid.dag.template.html')
         int ch

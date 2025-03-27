@@ -1,0 +1,152 @@
+/*
+ * Copyright 2013-2024, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+package nextflow.data.cid
+
+import spock.lang.Specification
+
+import java.nio.file.Files
+import java.nio.file.Path
+
+/**
+ * CID History file tests
+ *
+ * @author Jorge Ejarque <jorge.ejarque@seqera.io>
+ */
+class CidHistoryFileTest extends Specification {
+
+    Path tempDir
+    Path historyFile
+    CidHistoryFile cidHistoryFile
+
+    def setup() {
+        tempDir = Files.createTempDirectory("wdir")
+        historyFile = tempDir.resolve("cid-history.txt")
+        Files.createFile(historyFile)
+        cidHistoryFile = new CidHistoryFile(historyFile)
+    }
+
+    def cleanup(){
+        tempDir?.deleteDir()
+    }
+
+    def "write should append a new record to the file"() {
+        given:
+        UUID sessionId = UUID.randomUUID()
+        String runName = "TestRun"
+        String runCid = "cid://123"
+        String resultsCid = "cid://456"
+
+        when:
+        cidHistoryFile.write(runName, sessionId, runCid, resultsCid)
+
+        then:
+        def lines = Files.readAllLines(historyFile)
+        lines.size() == 1
+        def parsedRecord = CidHistoryRecord.parse(lines[0])
+        parsedRecord.sessionId == sessionId
+        parsedRecord.runName == runName
+        parsedRecord.runCid == runCid
+        parsedRecord.resultsCid == resultsCid
+    }
+
+    def "should return correct record for existing session"() {
+        given:
+        UUID sessionId = UUID.randomUUID()
+        String runName = "Run1"
+        String runCid = "cid://123"
+        String resultsCid = "cid://456"
+
+        and:
+        cidHistoryFile.write(runName, sessionId, runCid, resultsCid)
+
+        when:
+        def record = cidHistoryFile.getRecord(sessionId)
+        then:
+        record.sessionId == sessionId
+        record.runName == runName
+        record.runCid == runCid
+        record.resultsCid == resultsCid
+    }
+
+    def "should return null if session does not exist"() {
+        expect:
+        cidHistoryFile.getRecord(UUID.randomUUID()) == null
+    }
+
+    def "update should modify existing Cids for given session"() {
+        given:
+        UUID sessionId = UUID.randomUUID()
+        String runName = "Run1"
+        String runCidUpdated = "run-cid-updated"
+        String resultsCidUpdated = "results-cid-updated"
+
+        and:
+        cidHistoryFile.write(runName, sessionId, 'run-cid-initial', 'results-cid-inital')
+
+        when:
+        cidHistoryFile.updateRunCid(sessionId, runCidUpdated)
+        cidHistoryFile.updateResultsCid(sessionId, resultsCidUpdated)
+
+        then:
+        def lines = Files.readAllLines(historyFile)
+        lines.size() == 1
+        def parsedRecord = CidHistoryRecord.parse(lines[0])
+        parsedRecord.runCid == runCidUpdated
+        parsedRecord.resultsCid == resultsCidUpdated
+    }
+
+    def "update should do nothing if session does not exist"() {
+        given:
+        UUID existingSessionId = UUID.randomUUID()
+        UUID nonExistingSessionId = UUID.randomUUID()
+        String runName = "Run1"
+        String runCid = "cid://123"
+        String resultsCid = "cid://456"
+        and:
+        cidHistoryFile.write(runName, existingSessionId, runCid, resultsCid)
+
+        when:
+        cidHistoryFile.updateRunCid(nonExistingSessionId, "new-cid")
+        cidHistoryFile.updateRunCid(nonExistingSessionId, "new-res-cid")
+        then:
+        def lines = Files.readAllLines(historyFile)
+        lines.size() == 1
+        def parsedRecord = CidHistoryRecord.parse(lines[0])
+        parsedRecord.runCid == runCid
+        parsedRecord.resultsCid == resultsCid
+    }
+
+    def 'should get records' () {
+        given:
+        UUID sessionId = UUID.randomUUID()
+        String runName = "Run1"
+        String runCid = "cid://123"
+        String resultsCid = "cid://456"
+        and:
+        cidHistoryFile.write(runName, sessionId, runCid, resultsCid)
+
+        when:
+        def records = cidHistoryFile.getRecords()
+        then:
+        records.size() == 1
+        records[0].sessionId == sessionId
+        records[0].runName == runName
+        records[0].runCid == runCid
+        records[0].resultsCid == resultsCid
+    }
+}
+

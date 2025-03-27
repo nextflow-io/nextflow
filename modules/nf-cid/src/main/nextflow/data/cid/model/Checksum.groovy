@@ -15,29 +15,20 @@
  *
  */
 
-package nextflow.util
+package nextflow.data.cid.model
 
-import java.time.Instant
-
-import com.google.gson.TypeAdapter
-import com.google.gson.stream.JsonReader
-import com.google.gson.stream.JsonWriter
+import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 
 /**
- * Implements a Gson adapter for {@link Instant}
+ * Models a checksum including the value as well as the algortihm and mode used to compute it.
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Jorge Ejarque <jorge.ejarque@seqera.io
  */
+@Canonical
 @CompileStatic
-class GsonInstantAdapter extends TypeAdapter<Instant> {
-    @Override
-    void write(JsonWriter writer, Instant value) throws IOException {
-        writer.value(value?.toString())
-    }
-
-    @Override
-    Instant read(JsonReader reader) throws IOException {
-        return Instant.parse(reader.nextString())
-    }
+class Checksum {
+    String value
+    String algorithm
+    String mode
 }
