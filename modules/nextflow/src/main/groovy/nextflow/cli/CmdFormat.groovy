@@ -21,6 +21,7 @@ import com.beust.jcommander.Parameters
 import groovy.io.FileType
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import java.nio.file.*
 import nextflow.config.control.ConfigParser
 import nextflow.config.formatter.ConfigFormattingVisitor
 import nextflow.exception.AbortOperationException
@@ -57,6 +58,12 @@ class CmdFormat extends CmdBase {
 
     @Parameter(names = ['-harshil-alignment'], description = 'Use Harshil alignment')
     Boolean harhsilAlignment
+
+    @Parameter(
+        names = ['-exclude'],
+        description = 'File pattern to exclude from formatter (can be specified multiple times)'
+    )
+    List<String> excludePatterns = []
 
     private ScriptParser scriptParser
 
@@ -117,8 +124,32 @@ class CmdFormat extends CmdBase {
         AnsiConsole.out.flush()
     }
 
+    private boolean shouldExcludeFile(File file) {
+        if (!excludePatterns)
+            return false
+
+        def path = file.toPath()
+
+        return excludePatterns.any { pattern ->
+            if (pattern.contains("*") || pattern.contains("?") || pattern.contains("[")) {
+                def matcher = FileSystems.default.getPathMatcher("glob:${pattern}")
+                return matcher.matches(path)
+            } else {
+                def prefix = Paths.get(pattern)
+                return path.getNameCount() >= prefix.getNameCount() &&
+                    path.subpath(0, prefix.getNameCount()) == prefix
+            }
+        }
+    }
+
     void format(File file) {
         final name = file.getName()
+        // Skip excluded files
+        if (shouldExcludeFile(file)) {
+            log.debug "Skipping excluded file ${file}"
+            return
+        }
+
         if( name.endsWith('.nf') )
             formatScript(file)
         else if( name.endsWith('.config') )
