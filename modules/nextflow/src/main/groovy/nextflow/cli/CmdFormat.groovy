@@ -97,18 +97,18 @@ class CmdFormat extends CmdBase {
             file.eachFileRecurse(FileType.FILES, this.&format)
         }
         final emojis = [
-            "🧽 🫧",
+            "🪣 🫧",
+            "🧽 ✨",
+            "✍️ 💫",
+            "🪄 📄",
             "🧼 🎉",
-            "🧹 💨",
-            "📝 ✨"
+            "🧹 💨"
         ]
         def rnd = new Random()
         final term = ansi().cursorUp(1).eraseLine()
-        term.fg(Color.GREEN).a(Attribute.INTENSITY_BOLD)
-        term.a("${numFilesChanged} file${numFilesChanged==1 ? '':'s'} reformatted, ")
-        term.a(Attribute.INTENSITY_BOLD_OFF)
-        term.a("${numFilesUnchanged} file${numFilesUnchanged==1 ? '':'s'} left unchanged ")
-        term.a("${emojis[rnd.nextInt(4)]}").reset().newline()
+        term.fg(Color.GREEN).a("${numFilesChanged} file${numFilesChanged==1 ? '':'s'} reformatted, ")
+        term.fg(Color.BLUE).a("${numFilesUnchanged} file${numFilesUnchanged==1 ? '':'s'} left unchanged ")
+        term.a("${emojis[rnd.nextInt(emojis.size())]}").newline()
         AnsiConsole.out.print(term)
         AnsiConsole.out.flush()
     }
@@ -169,15 +169,28 @@ class CmdFormat extends CmdBase {
         AnsiConsole.out.flush()
     }
 
+    private Ansi highlightString(String str, Ansi term) {
+        def matcher = str =~ /^(.*)([`'][^`']+[`'])(.*)$/
+        if (matcher.find()) {
+            term.a(matcher.group(1))
+                .fg(Color.CYAN).a(matcher.group(2)).fg(Color.DEFAULT)
+                .a(matcher.group(3))
+        } else {
+            term.a(str)
+        }
+        return term
+    }
+
     private void printErrors(SourceUnit source) {
         final errorMessages = source.getErrorCollector().getErrors()
-        final term = ansi().cursorUp(1).eraseLine()
+        def term = ansi().cursorUp(1).eraseLine()
         for( final message : errorMessages ) {
             if( message instanceof SyntaxErrorMessage ) {
                 final cause = message.getCause()
                 term.fg(Color.RED).a(Attribute.INTENSITY_BOLD).a("error").fg(Color.DEFAULT).a(": ")
                 term.a("Failed to parse ${source.getName()}").a(Attribute.INTENSITY_BOLD_OFF)
-                term.a(":${cause.getStartLine()}:${cause.getStartColumn()}: ${cause.getOriginalMessage()}")
+                term.a(":${cause.getStartLine()}:${cause.getStartColumn()}: ")
+                term = highlightString(cause.getOriginalMessage(), term)
                 term.newline()
             }
         }

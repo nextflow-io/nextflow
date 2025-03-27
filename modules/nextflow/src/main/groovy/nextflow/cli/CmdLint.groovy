@@ -60,7 +60,7 @@ class CmdLint extends CmdBase {
     @Override
     void run() {
         if( !args )
-            throw new AbortOperationException("No input files specified")
+            throw new AbortOperationException("Error: No input files specified")
 
         scriptParser = new ScriptParser()
         configParser = new ConfigParser()
@@ -79,6 +79,21 @@ class CmdLint extends CmdBase {
         configParser.analyze()
         checkErrors(scriptParser.compiler())
         checkErrors(configParser.compiler())
+
+        final emojis = [
+            "🔍 📋",
+            "🕵🏻‍♂️ 🔎",
+            "🔬 👨🏻‍💻",
+            "📑 ☑️",
+            "🧾 ✔️"
+        ]
+        def rnd = new Random()
+        final term = ansi().cursorUp(1).eraseLine()
+        term.a(Attribute.INTENSITY_BOLD).a("Nextflow code lint complete! ${emojis[rnd.nextInt(emojis.size())]}").reset().newline()
+        term.fg(Color.RED).a(" ❌ ${numErrors} errors found in ${numFilesWithErrors} files").newline()
+        term.fg(Color.BLUE).a(" ✅ ${numFilesWithoutErrors} files had no errors").newline()
+        AnsiConsole.out.print(term)
+        AnsiConsole.out.flush()
     }
 
     void parse(File file) {
@@ -106,7 +121,7 @@ class CmdLint extends CmdBase {
     }
 
     private void printStatus(File file) {
-        final str = ansi().cursorUp(1).eraseLine().a(Attribute.INTENSITY_FAINT).a("Formatting: ${file}").reset().newline().toString()
+        final str = ansi().cursorUp(1).eraseLine().a(Attribute.INTENSITY_FAINT).a("Checking: ${file}").reset().newline().toString()
         AnsiConsole.out.print(str)
         AnsiConsole.out.flush()
     }
@@ -130,7 +145,6 @@ class CmdLint extends CmdBase {
             if( message instanceof SyntaxErrorMessage ) {
                 numErrors += 1
                 final cause = message.getCause()
-                term.fg(Color.RED).a(Attribute.INTENSITY_BOLD).a("error").fg(Color.DEFAULT).a(": ")
                 term.a("${source.getName()}").a(Attribute.INTENSITY_BOLD_OFF)
                 term.a(":${cause.getStartLine()}:${cause.getStartColumn()}: ")
                 term = highlightString(cause.getOriginalMessage(), term)
