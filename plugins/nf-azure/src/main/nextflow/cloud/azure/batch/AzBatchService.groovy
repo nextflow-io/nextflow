@@ -49,6 +49,7 @@ import com.azure.compute.batch.models.ContainerConfiguration
 import com.azure.compute.batch.models.ContainerRegistryReference
 import com.azure.compute.batch.models.ContainerType
 import com.azure.compute.batch.models.ElevationLevel
+import com.azure.compute.batch.models.EnvironmentSetting
 import com.azure.compute.batch.models.MetadataItem
 import com.azure.compute.batch.models.MountConfiguration
 import com.azure.compute.batch.models.NetworkConfiguration
@@ -496,8 +497,13 @@ class AzBatchService implements Closeable {
         if( fusionEnabled ) {
             opts += "--privileged "
             for( Map.Entry<String,String> it : launcher.fusionEnv() ) {
-                opts += "-e $it.key=$it.value "
+                // This is a bad solution and breaks Fusion for everyone
+                if (!(pool.opts.managedIdentityId && it.key == "AZURE_STORAGE_SAS_TOKEN")) {
+                    opts += "-e $it.key=$it.value "
+                }
             }
+            // For testing purposes only, remove before merging
+            opts += "-e FUSION_LOG_LEVEL=trace -e FUSION_LOG_OUTPUT=stdout "
         }
 
         // Create container settings
@@ -516,6 +522,15 @@ class AzBatchService implements Closeable {
             constraints.setMaxWallClockTime( Duration.of(task.config.getTime().toMillis(), ChronoUnit.MILLIS) )
 
         log.trace "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
+
+        // Add environment variables for managed identity if configured
+        final env = [:] as Map<String,String>
+        if( pool?.opts?.managedIdentityId ) {
+            env.put('AZCOPY_AUTO_LOGIN_TYPE', 'MSI') // azcopy
+            env.put('AZCOPY_MSI_CLIENT_ID', pool.opts.managedIdentityId) // azcopy
+            env.put('FUSION_AZ_MSI_CLIENT_ID', pool.opts.managedIdentityId) // fusion
+        }
+
         return new BatchTaskCreateContent(taskId, cmd)
                 .setUserIdentity(userIdentity(pool.opts.privileged, pool.opts.runAs, AutoUserScope.TASK))
                 .setContainerSettings(containerOpts)
@@ -523,6 +538,9 @@ class AzBatchService implements Closeable {
                 .setOutputFiles(outputFileUrls(task, sas))
                 .setRequiredSlots(slots)
                 .setConstraints(constraints)
+                .setEnvironmentSettings(env.collect { name, value -> 
+                    new EnvironmentSetting(name).setValue(value)
+                })
     }
 
     AzTaskKey runTask(String poolId, String jobId, TaskRun task) {
@@ -583,6 +601,13 @@ class AzBatchService implements Closeable {
         List<OutputFile> result = new ArrayList<>(20)
         result << destFile(TaskRun.CMD_EXIT, task.workDir, sas)
         result << destFile(TaskRun.CMD_LOG, task.workDir, sas)
+        result << destFile(TaskRun.CMD_OUTFILE, task.workDir, sas)
+        result << destFile(TaskRun.CMD_ERRFILE, task.workDir, sas)
+        result << destFile(TaskRun.CMD_SCRIPT, task.workDir, sas)
+        result << destFile(TaskRun.CMD_RUN, task.workDir, sas)
+        result << destFile(TaskRun.CMD_STAGE, task.workDir, sas)
+        result << destFile(TaskRun.CMD_TRACE, task.workDir, sas)
+        result << destFile(TaskRun.CMD_ENV, task.workDir, sas)
         return result
     }
 
