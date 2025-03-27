@@ -46,6 +46,12 @@ class CmdLint extends CmdBase {
     @Parameter(description = 'List of paths to lint')
     List<String> args = []
 
+    @Parameter(names = ['-hide-code'], description = 'Hide code snippet with error')
+    Boolean hideCode
+
+    @Parameter(names=['-show-context'], description = 'Show more context around code snippet')
+    Boolean showContext
+
     private ScriptParser scriptParser
 
     private ConfigParser configParser
@@ -93,6 +99,8 @@ class CmdLint extends CmdBase {
         ]
         def rnd = new Random()
         term.cursorUp(1).eraseLine().cursorUp(1).eraseLine()
+        if( hideCode ) // extra newline needed if no code being shown
+            term.newline()
         term.bold().a("Nextflow code checks complete! ${emojis[rnd.nextInt(emojis.size())]}").reset().newline()
         if(numFilesWithErrors > 0)
             term.fg(Color.RED).a(" ❌ ${numFilesWithErrors} file${numFilesWithErrors==1 ? '':'s'} had ${numErrors} error${numErrors==1 ? '':'s'}").newline()
@@ -130,7 +138,7 @@ class CmdLint extends CmdBase {
     }
 
     private void printStatus(File file) {
-        final str = ansi().cursorUp(1).eraseLine().a(Attribute.INTENSITY_FAINT).a("Checking: ${file}").reset().newline().toString()
+        final str = ansi().cursorUp(1).eraseLine().a(Attribute.INTENSITY_FAINT).a("Checking: ${file.getPath().replaceFirst(/^\.\//, '')}").reset().newline().toString()
         AnsiConsole.out.print(str)
         AnsiConsole.out.flush()
     }
@@ -158,6 +166,8 @@ class CmdLint extends CmdBase {
         }
 
         int context = 0
+        if( showContext )
+            context = 2
         int fromLine = Math.max(1, lineStart - context)
         int toLine = Math.min(lines.size(), lineEnd + context)
 
@@ -225,15 +235,17 @@ class CmdLint extends CmdBase {
             if( message instanceof SyntaxErrorMessage ) {
                 numErrors += 1
                 final cause = message.getCause()
-                term.bold().a("${source.getName()}").reset()
+                term.bold().a("${source.getName().replaceFirst(/^\.\//, '')}").reset()
                 term.a(":${cause.getStartLine()}:${cause.getStartColumn()}: ")
                 term = highlightString(cause.getOriginalMessage(), term)
-                term.newline()
-                term = getCodeBlock(source, message, term)
+                if( !hideCode ) {
+                    term.newline()
+                    term = getCodeBlock(source, message, term)
+                }
                 term.newline()
             }
         }
-        // Double newline as next status update will chomp back one
+        // Extra newline as next status update will chomp back one
         term.fg(Color.DEFAULT).newline()
         AnsiConsole.out.print(term)
         AnsiConsole.out.flush()

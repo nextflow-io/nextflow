@@ -151,7 +151,7 @@ class CmdFormat extends CmdBase {
             printErrors(source)
         }
         else {
-            log.debug "Formatting config ${file}"
+            log.debug "Formatting config ${file.getPath().replaceFirst(/^\.\//, '')}"
             printStatus(file)
             final formatter = new ConfigFormattingVisitor(source, formattingOptions)
             formatter.visit()
@@ -167,7 +167,7 @@ class CmdFormat extends CmdBase {
 
     private void printStatus(File file) {
         final str = ansi().cursorUp(1).eraseLine()
-        str.a(Attribute.INTENSITY_FAINT).a("Formatting: ${file}")
+        str.a(Attribute.INTENSITY_FAINT).a("Formatting: ${file.getPath().replaceFirst(/^\.\//, '')}")
         str.reset().newline().toString()
         AnsiConsole.out.print(str)
         AnsiConsole.out.flush()
@@ -192,7 +192,7 @@ class CmdFormat extends CmdBase {
             if( message instanceof SyntaxErrorMessage ) {
                 final cause = message.getCause()
                 term.fg(Color.RED).bold().a("error").fg(Color.DEFAULT).a(": ")
-                term.a("Failed to parse ${source.getName()}").a(Attribute.INTENSITY_BOLD_OFF)
+                term.a("Failed to parse ${source.getName().replaceFirst(/^\.\//, '')}").a(Attribute.INTENSITY_BOLD_OFF)
                 term.a(":${cause.getStartLine()}:${cause.getStartColumn()}: ")
                 term = highlightString(cause.getOriginalMessage(), term)
                 term.newline()
