@@ -187,7 +187,7 @@ class CmdFormat extends CmdBase {
         for( final message : errorMessages ) {
             if( message instanceof SyntaxErrorMessage ) {
                 final cause = message.getCause()
-                term.fg(Color.RED).a(Attribute.INTENSITY_BOLD).a("error").fg(Color.DEFAULT).a(": ")
+                term.fg(Color.RED).bold().a("error").fg(Color.DEFAULT).a(": ")
                 term.a("Failed to parse ${source.getName()}").a(Attribute.INTENSITY_BOLD_OFF)
                 term.a(":${cause.getStartLine()}:${cause.getStartColumn()}: ")
                 term = highlightString(cause.getOriginalMessage(), term)

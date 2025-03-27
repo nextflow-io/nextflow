@@ -89,7 +89,7 @@ class CmdLint extends CmdBase {
         ]
         def rnd = new Random()
         final term = ansi().cursorUp(1).eraseLine()
-        term.a(Attribute.INTENSITY_BOLD).a("Nextflow code lint complete! ${emojis[rnd.nextInt(emojis.size())]}").reset().newline()
+        term.bold().a("Nextflow code lint complete! ${emojis[rnd.nextInt(emojis.size())]}").reset().newline()
         term.fg(Color.RED).a(" ❌ ${numErrors} errors found in ${numFilesWithErrors} files").newline()
         term.fg(Color.BLUE).a(" ✅ ${numFilesWithoutErrors} files had no errors").newline()
         AnsiConsole.out.print(term)
@@ -138,6 +138,75 @@ class CmdLint extends CmdBase {
         return term
     }
 
+    private Ansi getCodeBlock(SourceUnit source, SyntaxErrorMessage message, Ansi term) {
+        def cause = message.cause
+        def lineStart = cause.getStartLine()
+        def colStart = cause.getStartColumn()
+        def lineEnd = cause.getEndLine()
+        def colEnd = cause.getEndColumn()
+        def lines
+        source.getSource().getReader().withCloseable { reader ->
+            lines = reader.readLines()
+        }
+
+        int context = 0
+        int fromLine = Math.max(1, lineStart - context)
+        int toLine = Math.min(lines.size(), lineEnd + context)
+
+        // Enforce max 5 lines
+        if (toLine - fromLine + 1 > 5) {
+            if (lineStart <= 3) {
+                toLine = fromLine + 4
+            } else if (lineEnd >= lines.size() - 2) {
+                fromLine = toLine - 4
+            } else {
+                fromLine = lineStart - 2
+                toLine = lineStart + 2
+            }
+        }
+
+        for (int i = fromLine; i <= toLine; i++) {
+            String fullLine = lines[i - 1]
+            int start = (i == lineStart) ? colStart - 1 : 0
+            int end = (i == lineEnd) ? colEnd - 1 : fullLine.length()
+
+            // Truncate to max 70 characters if needed
+            int maxLen = 70
+            int lineLen = fullLine.length()
+            int windowStart = 0
+            if (lineLen > maxLen) {
+                if (start < maxLen - 10) {
+                    windowStart = 0
+                } else if (end > lineLen - 10) {
+                    windowStart = lineLen - maxLen
+                } else {
+                    windowStart = start - 30
+                }
+            }
+
+            String line = fullLine.substring(windowStart, Math.min(lineLen, windowStart + maxLen))
+            int adjStart = Math.max(0, start - windowStart)
+            int adjEnd = Math.max(adjStart + 1, Math.min(end - windowStart, line.length()))
+
+            term.fg(Ansi.Color.BLUE).a(String.format("%3d | ", i)).reset()
+
+            if (i == lineStart) {
+                term.a(Attribute.INTENSITY_FAINT).a(line.substring(0, adjStart)).reset()
+                term.fg(Ansi.Color.RED).a(line.substring(adjStart, adjEnd)).reset()
+                term.a(Attribute.INTENSITY_FAINT).a(line.substring(adjEnd)).reset().newline()
+
+                String marker = ' ' * adjStart
+                String carets = '^' * Math.max(1, adjEnd - adjStart)
+                term.a("    | ")
+                    .fg(Ansi.Color.RED).bold().a(marker + carets).reset().newline()
+            } else {
+                term.a(Attribute.INTENSITY_FAINT).a(line).reset().newline()
+            }
+        }
+
+        return term
+    }
+
     private void printErrors(SourceUnit source) {
         final errorMessages = source.getErrorCollector().getErrors()
         def term = ansi().cursorUp(1).eraseLine()
@@ -145,9 +214,11 @@ class CmdLint extends CmdBase {
             if( message instanceof SyntaxErrorMessage ) {
                 numErrors += 1
                 final cause = message.getCause()
-                term.a("${source.getName()}").a(Attribute.INTENSITY_BOLD_OFF)
+                term.bold().a("${source.getName()}").reset()
                 term.a(":${cause.getStartLine()}:${cause.getStartColumn()}: ")
                 term = highlightString(cause.getOriginalMessage(), term)
+                term.newline()
+                term = getCodeBlock(source, message, term)
                 term.newline()
             }
         }
