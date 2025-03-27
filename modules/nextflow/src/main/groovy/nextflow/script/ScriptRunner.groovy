@@ -25,6 +25,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
+import nextflow.container.inspect.ContainerInspectMode
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.plugin.Plugins
@@ -46,7 +47,7 @@ class ScriptRunner {
     /**
      * The script interpreter
      */
-    private ScriptParser scriptParser
+    private ScriptLoader scriptLoader
 
     /**
      * The pipeline file (it may be null when it's provided as string)
@@ -103,7 +104,7 @@ class ScriptRunner {
     /**
      * @return The interpreted script object
      */
-    @Deprecated BaseScript getScriptObj() { scriptParser.script }
+    @Deprecated BaseScript getScriptObj() { scriptLoader.getScript() }
 
     /**
      * @return The result produced by the script execution
@@ -224,10 +225,12 @@ class ScriptRunner {
     }
 
     protected void parseScript( ScriptFile scriptFile, String entryName ) {
-        scriptParser = new ScriptParser(session)
+        scriptLoader = ScriptLoaderFactory.create(session)
                             .setEntryName(entryName)
+                            // setting module true when running in "inspect" mode to prevent the running the entry workflow
+                            .setModule(ContainerInspectMode.active())
                             .parse(scriptFile.main)
-        session.script = scriptParser.script
+        session.script = scriptLoader.getScript()
     }
 
 
@@ -238,11 +241,11 @@ class ScriptRunner {
      */
     protected run() {
         log.debug "> Launching execution"
-        assert scriptParser, "Missing script instance to run"
+        assert scriptLoader, "Missing script instance to run"
         // -- launch the script execution
-        scriptParser.runScript()
+        scriptLoader.runScript()
         // -- normalise output
-        result = normalizeOutput(scriptParser.getResult())
+        result = normalizeOutput(scriptLoader.getResult())
         // -- ignite dataflow network
         session.fireDataflowNetwork(preview)
     }

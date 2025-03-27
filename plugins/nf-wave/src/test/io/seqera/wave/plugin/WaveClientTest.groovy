@@ -43,6 +43,7 @@ import io.seqera.wave.config.CondaOpts
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.container.inspect.ContainerInspectMode
+import nextflow.container.resolver.ContainerMeta
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
@@ -204,7 +205,6 @@ class WaveClientTest extends Specification {
         !req.containerPlatform
         !req.containerFile
         !req.condaFile
-        !req.spackFile
         !req.containerConfig.layers
         !req.freeze
         !req.dryRun
@@ -226,7 +226,6 @@ class WaveClientTest extends Specification {
         !req.containerPlatform
         !req.containerFile
         !req.condaFile
-        !req.spackFile
         !req.containerConfig.layers
         !req.mirror
         and:
@@ -249,7 +248,6 @@ class WaveClientTest extends Specification {
         !req.containerPlatform
         !req.containerFile
         !req.condaFile
-        !req.spackFile
         !req.containerConfig.layers
         !req.freeze
         and:
@@ -273,7 +271,6 @@ class WaveClientTest extends Specification {
         !req.containerPlatform
         !req.containerFile
         !req.condaFile
-        !req.spackFile
         !req.containerConfig.layers
         and:
         req.scanMode == ScanMode.required
@@ -297,7 +294,6 @@ class WaveClientTest extends Specification {
         !req.containerPlatform
         !req.containerFile
         !req.condaFile
-        !req.spackFile
         !req.containerConfig.layers
         and:
         req.dryRun
@@ -306,7 +302,7 @@ class WaveClientTest extends Specification {
         req.timestamp instanceof String
 
         cleanup:
-        ContainerInspectMode.activate(false)
+        ContainerInspectMode.reset()
     }
 
     def 'should create request object and platform' () {
@@ -324,7 +320,6 @@ class WaveClientTest extends Specification {
         and:
         !req.containerFile
         !req.condaFile
-        !req.spackFile
         !req.containerConfig.layers
         and:
         req.fingerprint == 'd31044e6594126479585c0cdca15c15e'
@@ -343,7 +338,6 @@ class WaveClientTest extends Specification {
         !req.containerImage
         new String(req.containerFile.decodeBase64()) == DOCKERFILE
         !req.condaFile
-        !req.spackFile
         !req.containerConfig.layers
     }
 
@@ -367,7 +361,6 @@ class WaveClientTest extends Specification {
         !req.containerImage
         new String(req.containerFile.decodeBase64()) == SINGULARITY_FILE
         !req.condaFile
-        !req.spackFile
         !req.containerConfig.layers
         and:
         req.format == 'sif'
@@ -387,7 +380,6 @@ class WaveClientTest extends Specification {
         !req.containerImage
         new String(req.containerFile.decodeBase64()) == DOCKERFILE
         !req.condaFile
-        !req.spackFile
         !req.containerConfig.layers
     }
 
@@ -464,7 +456,7 @@ class WaveClientTest extends Specification {
     def 'should create asset with image' () {
         given:
         def session = Mock(Session) { getConfig() >> [:]}
-        def task = Mock(TaskRun) { getConfig() >> [arch:'amd64'] }
+        def task = Mock(TaskRun) { getConfig()>>[:]; getContainerPlatform()>>'linux/amd64' }
         def IMAGE = 'foo:latest'
         and:
         def client = new WaveClient(session)
@@ -473,28 +465,8 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, IMAGE, false)
         then:
         assets.containerImage == IMAGE
-        !assets.moduleResources
-        !assets.containerFile
-        !assets.containerConfig
-        !assets.packagesSpec
-        !assets.projectResources
         assets.containerPlatform == 'linux/amd64'
-    }
-
-    def 'should create asset with image and platform' () {
-        given:
-        def ARCH = 'linux/arm64'
-        def session = Mock(Session) { getConfig() >> [:] }
-        def task = Mock(TaskRun) { getConfig() >> [arch:ARCH.toString()] }
-        def IMAGE = 'foo:latest'
         and:
-        def client = new WaveClient(session)
-
-        when:
-        def assets = client.resolveAssets(task, IMAGE, false)
-        then:
-        assets.containerImage == IMAGE
-        assets.containerPlatform == 'linux/arm64'
         !assets.moduleResources
         !assets.containerFile
         !assets.containerConfig
@@ -531,7 +503,7 @@ class WaveClientTest extends Specification {
         def CONTAINER_CONFIG = new ContainerConfig(entrypoint: ['entry.sh'], layers: [new ContainerLayer(location: 'http://somewhere')])
         and:
         def session = Mock(Session) { getConfig() >> [:]}
-        def task = Mock(TaskRun) { getConfig() >> [arch:ARCH.toString()]; getModuleBundle() >> BUNDLE }
+        def task = Mock(TaskRun) { getConfig() >> [:]; getContainerPlatform()>>ARCH; getModuleBundle() >> BUNDLE }
         and:
         WaveClient client = Spy(WaveClient, constructorArgs:[session])
 
@@ -736,7 +708,7 @@ class WaveClientTest extends Specification {
         def BIN_DIR = Path.of('/something/bin')
         def ARCH = 'linux/arm64'
         and:
-        def task = Mock(TaskRun) {getModuleBundle() >> MODULE_RES; getConfig() >> [arch:ARCH.toString()] }
+        def task = Mock(TaskRun) {getModuleBundle() >> MODULE_RES; getConfig()>>[:]; getContainerPlatform()>>ARCH }
         and:
         def session = Mock(Session) {
             getConfig() >> [wave: [bundleProjectResources: true]]
@@ -783,10 +755,6 @@ class WaveClientTest extends Specification {
         then:
         result == [dockerfile:'x']
 
-        when:
-        result = client.resolveConflicts([spack:'x',container:'z'], ['conda','spack'])
-        then:
-        result == [spack:'x']
     }
 
     def 'should patch strategy for singularity' () {
@@ -800,10 +768,9 @@ class WaveClientTest extends Specification {
 
         where:
         STRATEGY                                            | SING      | EXPECTED
-        ['conda','dockerfile', 'spack']                     | false     | ['conda','dockerfile', 'spack']
-        ['conda','dockerfile', 'spack']                     | true      | ['conda','singularityfile', 'spack']
-        ['conda','dockerfile', 'spack']                     | true      | ['conda','singularityfile', 'spack']
-        ['conda','singularityfile','dockerfile', 'spack']   | true      | ['conda','singularityfile','dockerfile', 'spack']
+        ['conda','dockerfile']                              | false     | ['conda','dockerfile']
+        ['conda','dockerfile']                              | true      | ['conda','singularityfile']
+        ['conda','singularityfile','dockerfile']            | true      | ['conda','singularityfile','dockerfile']
     }
 
     def 'should check conflicts' () {
@@ -989,11 +956,11 @@ class WaveClientTest extends Specification {
         
         where:
         ARCH                | EXPECTED
-        'linux/amd64'       | 'https://fusionfs.seqera.io/releases/v2.4-amd64.json'
-        'linux/x86_64'      | 'https://fusionfs.seqera.io/releases/v2.4-amd64.json'
-        'arm64'             | 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
-        'linux/arm64'       | 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
-        'linux/arm64/v8'    | 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
+        'linux/amd64'       | 'https://fusionfs.seqera.io/releases/v2.5-amd64.json'
+        'linux/x86_64'      | 'https://fusionfs.seqera.io/releases/v2.5-amd64.json'
+        'arm64'             | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
+        'linux/arm64'       | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
+        'linux/arm64/v8'    | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
     }
 
     @Unroll
@@ -1396,4 +1363,77 @@ class WaveClientTest extends Specification {
         and:
         ready
     }
+
+    def 'should return container meta' () {
+        given:
+        def containerKey = 'xyz'
+        def sess = Mock(Session) {getConfig() >> [:] }
+        def cache = Mock(Map)
+        and:
+        def resp = new SubmitContainerTokenResponse(
+            requestId: '12345',
+            targetImage: 'wave.io/12345/my/container:latest',
+            containerImage: 'my/container:latest',
+            buildId: 'bd-123',
+            scanId: 'sc-123',
+            freeze: true,
+            cached: true,
+            mirror: false
+        )
+        def handle = new WaveClient.Handle(resp,Instant.now())
+        def wave = Spy(new WaveClient(session:sess, responses: cache))
+
+        when:
+        def result = wave.getContainerMeta(containerKey)
+        then:
+        cache.get(containerKey)>>handle
+        and:
+        result == new ContainerMeta(
+                requestId: resp.requestId,
+                requestTime: handle.createdAt,
+                sourceImage: resp.containerImage,
+                targetImage: resp.targetImage,
+                buildId: resp.buildId,
+                mirrorId: null,
+                scanId: resp.scanId,
+                freeze: resp.freeze,
+                cached: resp.cached )
+    }
+
+    def 'should return container meta for mirror' () {
+        given:
+        def containerKey = 'xyz'
+        def sess = Mock(Session) {getConfig() >> [:] }
+        def cache = Mock(Map)
+        and:
+        def resp = new SubmitContainerTokenResponse(
+            requestId: '12345',
+            targetImage: 'wave.io/12345/my/container:latest',
+            containerImage: 'my/container:latest',
+            buildId: 'mr-123',
+            scanId: 'sc-123',
+            freeze: true,
+            cached: true,
+            mirror: true
+        )
+        def handle = new WaveClient.Handle(resp,Instant.now())
+        def wave = Spy(new WaveClient(session:sess, responses: cache))
+
+        when:
+        def result = wave.getContainerMeta(containerKey)
+        then:
+        cache.get(containerKey)>>handle
+        and:
+        result == new ContainerMeta(
+            requestId: resp.requestId,
+            requestTime: handle.createdAt,
+            sourceImage: resp.containerImage,
+            targetImage: resp.targetImage,
+            buildId: null,
+            mirrorId: resp.buildId,
+            scanId: resp.scanId,
+            freeze: resp.freeze,
+            cached: resp.cached )
+    }
+
 }

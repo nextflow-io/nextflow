@@ -18,6 +18,7 @@ package nextflow.processor
 
 import static nextflow.util.CacheHelper.*
 
+import java.nio.file.CopyOption
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
@@ -26,6 +27,7 @@ import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.PathMatcher
+import java.nio.file.StandardCopyOption
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.ExecutorService
 
@@ -36,6 +38,7 @@ import dev.failsafe.event.ExecutionAttemptedEvent
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
@@ -509,17 +512,25 @@ class PublishDir {
             FilesEx.mklink(source, [hard:true], destination)
         }
         else if( mode == Mode.MOVE ) {
-            FileHelper.movePath(source, destination)
+            FileHelper.movePath(source, destination, copyOpts())
         }
         else if( mode == Mode.COPY ) {
-            FileHelper.copyPath(source, destination)
+            FileHelper.copyPath(source, destination, copyOpts())
         }
         else if( mode == Mode.COPY_NO_FOLLOW ) {
-            FileHelper.copyPath(source, destination, LinkOption.NOFOLLOW_LINKS)
+            FileHelper.copyPath(source, destination, copyOpts(LinkOption.NOFOLLOW_LINKS))
         }
         else {
             throw new IllegalArgumentException("Unknown file publish mode: ${mode}")
         }
+    }
+
+    @Memoized
+    protected CopyOption[] copyOpts(CopyOption... opts) {
+        final copyAttributes = session.config.navigate('workflow.output.copyAttributes', false)
+        return copyAttributes
+            ? opts + StandardCopyOption.COPY_ATTRIBUTES
+            : opts
     }
 
     protected void createPublishDir() {

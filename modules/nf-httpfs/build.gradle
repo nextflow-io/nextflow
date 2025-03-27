@@ -29,13 +29,13 @@ sourceSets {
 
 dependencies {
     api project(':nf-commons')
-    api "ch.qos.logback:logback-classic:1.4.14"
-    api "org.apache.groovy:groovy:4.0.24"
-    api "org.apache.groovy:groovy-nio:4.0.24"
+    api "ch.qos.logback:logback-classic:1.5.16"
+    api "org.apache.groovy:groovy:4.0.26"
+    api "org.apache.groovy:groovy-nio:4.0.26"
     api("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
 
     /* testImplementation inherited from top gradle build file */
-    testImplementation "org.apache.groovy:groovy-json:4.0.24" // needed by wiremock
+    testImplementation "org.apache.groovy:groovy-json:4.0.26" // needed by wiremock
     testImplementation ('com.github.tomakehurst:wiremock:1.57') { exclude module: 'groovy-all' }
     testImplementation ('com.github.tomjankes:wiremock-groovy:0.2.0') { exclude module: 'groovy-all' }
 

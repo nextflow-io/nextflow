@@ -36,7 +36,7 @@ class TaskStartParams {
     }
 
     String toString() {
-        "id=$id; index=$index"
+        "TaskStartParams[id=$id; index=$index]"
     }
 
 }

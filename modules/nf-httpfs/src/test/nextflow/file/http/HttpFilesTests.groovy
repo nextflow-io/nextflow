@@ -33,6 +33,8 @@ import nextflow.SysEnv
 import org.junit.Rule
 import spock.lang.IgnoreIf
 import spock.lang.Specification
+import test.TestHelper
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -100,6 +102,7 @@ class HttpFilesTests extends Specification {
         server?.stop(0)
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def 'read a http file ' () {
         given:
         def uri = new URI('http://www.nextflow.io/index.html')
@@ -116,6 +119,7 @@ class HttpFilesTests extends Specification {
         
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def 'should check file properties' () {
         given:
         SysEnv.push([NXF_HTTPFS_MAX_ATTEMPTS: '1'])
@@ -152,8 +156,8 @@ class HttpFilesTests extends Specification {
         lines[1] == 'Disallow: /'
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def 'should read HTTPS file' () {
-
         given:
         def uri = new URI('https://www.nextflow.io/index.html')
         when:
@@ -166,11 +170,10 @@ class HttpFilesTests extends Specification {
         then:
         lines.size()>0
         lines[0].startsWith('<!DOCTYPE html><html lang="en">')
-
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def 'should copy a file' () {
-
         given:
         def uri = new URI('https://www.nextflow.io/index.html')
         def source = Paths.get(uri)
@@ -184,7 +187,6 @@ class HttpFilesTests extends Specification {
 
         cleanup:
         target?.parent?.deleteDir()
-
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
@@ -204,7 +206,6 @@ class HttpFilesTests extends Specification {
     }
 
     def 'should read with a newByteChannel' () {
-
         given:
         def wireMock = new WireMockGroovy(18080)
         wireMock.stub {
@@ -237,16 +238,15 @@ class HttpFilesTests extends Specification {
         then:
         buffer.toString() == path.text
         buffer.toString() == '01234567890123456789012345678901234567890123456789'
-
     }
-
 
     def 'should use basic auth' () {
         given:
         def RESP = 'Hello world'
         and:
         // launch web server
-        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
+        int port = TestHelper.rndServerPort()
+        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         def hc1 = server.createContext("/", new BasicHandler(RESP, 200));
 
         hc1.setAuthenticator(new BasicAuthenticator("get") {
@@ -258,7 +258,7 @@ class HttpFilesTests extends Specification {
         server.start()
 
         when:
-        def path = Paths.get(new URI('http://admin:Secret1@localhost:9900/foo/bar'))
+        def path = Paths.get(new URI("http://admin:Secret1@localhost:${port}/foo/bar"))
         then:
         path.text == 'Hello world'
 

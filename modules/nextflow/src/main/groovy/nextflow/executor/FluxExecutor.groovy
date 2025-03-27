@@ -1,5 +1,5 @@
 /*
- * Copyright 2022, Seqera Labs
+ * Copyright 2022-2025, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ import nextflow.processor.TaskRun
 @CompileStatic
 class FluxExecutor extends AbstractGridExecutor {
 
-    static final private Pattern SUBMIT_REGEX = ~/(ƒ.+)/
+    static final private Pattern SUBMIT_REGEX = ~/((ƒ|f).+)/
 
     /**
      * Gets the directives to submit the specified task to the cluster for execution

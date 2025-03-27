@@ -6,18 +6,13 @@
 
 When a pipeline script is launched, Nextflow looks for configuration files in multiple locations. Since each configuration file may contain conflicting settings, they are applied in the following order (from lowest to highest priority):
 
-1. Parameters defined in pipeline scripts (e.g. `main.nf`)
-2. The config file `$HOME/.nextflow/config`
-3. The config file `nextflow.config` in the project directory
-4. The config file `nextflow.config` in the launch directory
-5. Config file specified using the `-c <config-file>` option
-6. Parameters specified in a params file (`-params-file` option)
-7. Parameters specified on the command line (`--something value`)
-
-When more than one of these options for specifying configurations are used, they are merged, so that the settings in the first override the same settings appearing in the second, and so on.
+1. The config file `$HOME/.nextflow/config` (or `$NXF_HOME/.nextflow/config` when {ref}`NXF_HOME <nxf-env-vars>` is set).
+2. The config file `nextflow.config` in the project directory
+3. The config file `nextflow.config` in the launch directory
+4. Config files specified using the `-c <config-files>` option
 
 :::{tip}
-You can use the `-C <config-file>` option to use a single configuration file and ignore all other files.
+You can alternatively use the `-C <config-file>` option to specify a fixed set of configuration files and ignore all other files.
 :::
 
 (config-syntax)=
@@ -102,22 +97,22 @@ Config includes can also be specified within config blocks. However, config file
 
 The following constants are globally available in a Nextflow configuration file:
 
-`baseDir`
+`baseDir: Path`
 : :::{deprecated} 20.04.0
   :::
 : Alias for `projectDir`.
 
-`launchDir`
+`launchDir: Path`
 : The directory where the workflow was launched.
 
-`projectDir`
+`projectDir: Path`
 : The directory where the main script is located.
 
 ## Functions
 
 The following functions are globally available in a Nextflow configuration file:
 
-`env( name )`
+`env( name: String ) -> String`
 : :::{versionadded} 24.11.0-edge
   :::
 : Get the value of the environment variable with the specified name in the Nextflow launch environment.
@@ -129,16 +124,16 @@ The following functions are globally available in a Nextflow configuration file:
 Pipeline parameters can be defined in the config file using the `params` scope:
 
 ```groovy
-params.custom_param = 123
-params.another_param = 'string value .. '
+params.alpha = 123
+params.beta = 'string value .. '
 
 params {
-    alpha_1 = true
-    beta_2 = 'another string ..'
+    gamma = true
+    delta = "params.alpha is ${params.alpha}"
 }
 ```
 
-See {ref}`cli-params` for information about how to modify these on the command line.
+See {ref}`cli-params` for information about how to specify pipeline parameters.
 
 (config-process)=
 
@@ -259,13 +254,12 @@ With the above configuration:
 
 ## Config profiles
 
-Configuration files can contain the definition of one or more *profiles*. A profile is a set of configuration attributes that can be selected during pipeline execution by using the `-profile` command line option.
+Configuration files can define one or more *profiles*. A profile is a set of configuration settings that can be selected during pipeline execution using the `-profile` command line option.
 
-Configuration profiles are defined by using the special scope `profiles`, which group the attributes that belong to the same profile using a common prefix. For example:
+Configuration profiles are defined in the `profiles` scope. For example:
 
 ```groovy
 profiles {
-
     standard {
         process.executor = 'local'
     }
@@ -281,39 +275,47 @@ profiles {
         process.container = 'cbcrg/imagex'
         docker.enabled = true
     }
-
 }
 ```
 
-This configuration defines three different profiles: `standard`, `cluster`, and `cloud`, that each set different process
-configuration strategies depending on the target runtime platform. The `standard` profile is used by default when no profile is specified.
+The above configuration defines three profiles: `standard`, `cluster`, and `cloud`. Each profile provides a different configuration for a given execution environment. The `standard` profile is used by default when no profile is specified.
 
-:::{tip}
-Multiple configuration profiles can be specified by separating the profile names with a comma, for example:
+Configuration profiles can be specified at runtime as a comma-separated list:
 
 ```bash
 nextflow run <your script> -profile standard,cloud
 ```
+
+Config profiles are applied in the order in which they were defined in the config file, regardless of the order they are specified on the command line.
+
+:::{versionadded} 25.02.0-edge
+When using the {ref}`strict config syntax <updating-config-syntax>`, profiles are applied in the order in which they are specified on the command line.
 :::
 
 :::{danger}
-When using the `profiles` feature in your config file, do NOT set attributes in the same scope both inside and outside a `profiles` context. For example:
+When defining a profile in the config file, avoid using both the dot and block syntax for the same scope. For example:
 
 ```groovy
-process.cpus = 1
-
 profiles {
-  foo {
-    process.memory = '2 GB'
-  }
-
-  bar {
-    process.memory = '4 GB'
-  }
+    foo {
+        process.memory = '2 GB'
+        process {
+            cpus = 2
+        }
+    }
 }
 ```
 
-In the above example, the `process.cpus` attribute is not correctly applied because the `process` scope is also used in the `foo` and `bar` profiles.
+Due to a limitation of the legacy config parser, the first setting will be overwritten by the second:
+
+```console
+$ nextflow config -profile foo
+process {
+   cpus = 2
+}
+```
+
+This limitation can be avoided by using the {ref}`strict config syntax <updating-config-syntax>`.
 :::
 
 ## Workflow handlers

@@ -103,7 +103,7 @@ class GoogleOpts {
             throw new AbortOperationException("Missing Google credentials file: $credsFilePath")
         }
         catch (Exception e) {
-            throw new AbortOperationException("Invalid or corrupted Gogole credentials file: $credsFilePath", e)
+            throw new AbortOperationException("Invalid or corrupted Google credentials file: $credsFilePath", e)
         }
     }
 

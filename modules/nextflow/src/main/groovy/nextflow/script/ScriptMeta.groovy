@@ -48,11 +48,14 @@ class ScriptMeta {
 
     static private Map<BaseScript,ScriptMeta> REGISTRY = new HashMap<>(10)
 
+    static private Map<Path,BaseScript> scriptsByPath = new HashMap<>(10)
+
     static private Set<String> resolvedProcessNames = new HashSet<>(20)
 
     @TestOnly
     static void reset() {
         REGISTRY.clear()
+        scriptsByPath.clear()
         resolvedProcessNames.clear()
     }
 
@@ -61,12 +64,25 @@ class ScriptMeta {
         return REGISTRY.get(script)
     }
 
+    static BaseScript getScriptByPath(Path path) {
+        return scriptsByPath.get(path)
+    }
+
     static Set<String> allProcessNames() {
         def result = new HashSet()
         for( ScriptMeta entry : REGISTRY.values() )
             result.addAll( entry.getProcessNames() )
         // add all resolved names
         result.addAll(resolvedProcessNames)
+        return result
+    }
+
+    static Set<ProcessDef> allProcesses() {
+        final result = new HashSet()
+        for( final entry : REGISTRY.values() ) {
+            final processes = entry.getDefinitions().findAll { d -> d instanceof ProcessDef }
+            result.addAll(processes)
+        }
         return result
     }
 
@@ -85,8 +101,8 @@ class ScriptMeta {
         get(ExecutionStack.script())
     }
 
-    /** the script {@link Class} object */
-    private Class<? extends BaseScript> clazz
+    /** the script object */
+    private BaseScript script
 
     /** The location path from where the script has been loaded */
     private Path scriptPath
@@ -106,12 +122,12 @@ class ScriptMeta {
 
     Path getModuleDir () { scriptPath?.parent }
 
-    String getScriptName() { clazz.getName() }
+    String getScriptName() { script.getClass().getName() }
 
     boolean isModule() { module }
 
     ScriptMeta(BaseScript script) {
-        this.clazz = script.class
+        this.script = script
         for( def entry : definedFunctions0(script) ) {
             addDefinition(entry)
         }
@@ -120,12 +136,11 @@ class ScriptMeta {
     /** only for testing */
     protected ScriptMeta() {}
 
-    @PackageScope
     void setScriptPath(Path path) {
+        scriptsByPath.put(path, script)
         scriptPath = path
     }
 
-    @PackageScope
     void setModule(boolean val) {
         this.module = val
     }

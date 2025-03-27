@@ -42,11 +42,16 @@ The plugin version is optional. If it is not specified, Nextflow will download t
 
 The core plugins are documented in this documentation. For all other plugins, please refer to the plugin's code repository for documentation and support.
 
+:::{versionadded} 25.02.0-edge
+:::
+
+The plugin version can be prefixed with `~` to pin the major and minor version while allowing the latest patch release to be used. For example, `nf-amazon@~2.9.0` will resolve to the latest version matching `2.9.x`, which is `2.9.2`. When working offline, Nextflow will resolve version ranges against the local plugin cache defined by `NXF_PLUGINS_DIR`.
+
 ## Offline usage
 
 To use Nextflow plugins in an offline environment:
 
-1. {ref}`Install Nextflow <install-nextflow>` on a system with an internet connection. Do not use the "all" package, as this does not allow the use of custom plugins.
+1. {ref}`Install Nextflow <install-nextflow>` on a system with an internet connection.
 
 2. Download any additional plugins by running `nextflow plugin install <pluginId,..>`. Alternatively, simply run your pipeline once and Nextflow will download all of the plugins that it needs.
 

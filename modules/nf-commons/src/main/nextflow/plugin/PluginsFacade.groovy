@@ -46,6 +46,7 @@ class PluginsFacade implements PluginStateListener {
 
     private String mode
     private Path root
+    private boolean offline
     private PluginUpdater updater
     private CustomPluginManager manager
     private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
@@ -55,14 +56,16 @@ class PluginsFacade implements PluginStateListener {
     PluginsFacade() {
         mode = getPluginsMode()
         root = getPluginsDir()
+        offline = env.get('NXF_OFFLINE') == 'true'
         if( mode==DEV_MODE && root.toString()=='plugins' && !isRunningFromDistArchive() )
             root = detectPluginsDevRoot()
         System.setProperty('pf4j.mode', mode)
     }
 
-    PluginsFacade(Path root, String mode=PROD_MODE) {
+    PluginsFacade(Path root, String mode=PROD_MODE, boolean offline=false) {
         this.mode = mode
         this.root = root
+        this.offline = offline
         System.setProperty('pf4j.mode', mode)
     }
 
@@ -182,7 +185,7 @@ class PluginsFacade implements PluginStateListener {
 
     protected PluginUpdater createUpdater(Path root, CustomPluginManager manager) {
         return ( mode!=DEV_MODE
-                ? new PluginUpdater(manager, root, new URL(indexUrl))
+                ? new PluginUpdater(manager, root, new URL(indexUrl), offline)
                 : new DevPluginUpdater(manager) )
     }
 
@@ -371,7 +374,7 @@ class PluginsFacade implements PluginStateListener {
         }
 
         // add tower plugin when config contains tower options
-        if( (Bolts.navigate(config,'tower.enabled') || env.TOWER_ACCESS_TOKEN ) && !specs.find {it.id == 'nf-tower' } ) {
+        if( (Bolts.navigate(config,'tower.enabled') || Bolts.navigate(config,'fusion.enabled') || env.TOWER_ACCESS_TOKEN ) && !specs.find {it.id == 'nf-tower' } ) {
             specs << defaultPlugins.getPlugin('nf-tower')
         }
         if( (Bolts.navigate(config,'wave.enabled') || Bolts.navigate(config,'fusion.enabled')) && !specs.find {it.id == 'nf-wave' } ) {

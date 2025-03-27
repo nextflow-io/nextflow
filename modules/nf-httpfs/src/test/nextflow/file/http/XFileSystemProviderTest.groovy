@@ -22,6 +22,7 @@ import java.nio.file.Path
 import com.github.tomakehurst.wiremock.junit.WireMockRule
 import com.github.tomjankes.wiremock.WireMockGroovy
 import org.junit.Rule
+import spock.lang.IgnoreIf
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -29,7 +30,7 @@ import spock.lang.Unroll
  */
 class XFileSystemProviderTest extends Specification {
 
-
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def "should return input stream"() {
         given:
         def fsp = new HttpFileSystemProvider()
@@ -98,7 +99,7 @@ class XFileSystemProviderTest extends Specification {
         Locale.setDefault(Locale.Category.FORMAT, defLocale)
     }
 
-
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def "should read file attributes from HttpPath"() {
         given:
         def fsp = new HttpFileSystemProvider()
@@ -111,6 +112,7 @@ class XFileSystemProviderTest extends Specification {
         attrs.size() > 0
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def "should read file attributes from FtpPath"() {
         given:
         def fsp = new FtpFileSystemProvider()

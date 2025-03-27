@@ -1,3 +1,4 @@
+(plugins-dev-page)=
 
 # Plugins
 
@@ -97,7 +98,7 @@ class MyObserver implements TraceObserver {
 
     @Override
     void onFlowCreate(Session session) {
-        final message = session.config.navigate('myplugin.create.message')
+        final message = session.config.navigate('myplugin.createMessage')
         println message
     }
 }
@@ -107,15 +108,42 @@ You can then set this option in your config file:
 
 ```groovy
 // dot syntax
-myplugin.create.message = "I'm alive!"
+myplugin.createMessage = "I'm alive!"
 
-// closure syntax
+// block syntax
 myplugin {
-    create {
-        message = "I'm alive!"
-    }
+    createMessage = "I'm alive!"
 }
 ```
+
+:::{versionadded} 25.02.0-edge
+:::
+
+Plugins can declare their config options by implementing the `ConfigScope` interface and declaring each config option as a field with the `@ConfigOption` annotation:
+
+```groovy
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.config.schema.ScopeName
+import nextflow.script.dsl.Description
+
+@ScopeName('myplugin')
+@Description('''
+    The `myplugin` scope allows you to configure the `nf-myplugin` plugin.
+''')
+class MyPluginConfig implements ConfigScope {
+
+    MyPluginConfig(Map opts) {
+        this.createMessage = opts.createMessage
+    }
+
+    @ConfigOption
+    @Description('Message to print to standard output when a run is initialized.')
+    String createMessage
+}
+```
+
+While this approach is not required to support plugin config options, it allows Nextflow to recognize plugin definitions when validating the config.
 
 ### Executors
 
@@ -148,6 +176,38 @@ process foo {
 
 :::{tip}
 Refer to the source code of Nextflow's built-in executors to see how to implement the various components of an executor. You might be able to implement most of your executor by simply reusing existing code.
+:::
+
+### Filesystems
+
+Plugins can define custom filesystems that can be used by Nextflow to interact with external storage systems using a single interface. For more information about accessing remote files, see {ref}`remote-files`.
+
+To implement a custom filesystem, create a class in your plugin that extends [`FileSystemProvider`](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/spi/FileSystemProvider.html). Implement the `getScheme()` method to define the URI scheme for your filesystem:
+
+```groovy
+import java.nio.file.spi.FileSystemProvider
+
+class MyFileSystemProvider extends FileSystemProvider {
+
+    @Override
+    String getScheme() {
+        return 'myfs'
+    }
+
+    // ...
+}
+```
+
+You can then use this filesystem in your pipeline:
+
+```nextflow
+input = file('myfs://path/to/input/file.txt')
+```
+
+See [Developing a Custom File System Provider](https://docs.oracle.com/javase/8/docs/technotes/guides/io/fsp/filesystemprovider.html) for more information. Refer to the `nf-https` module (`XFileSystemProvider`) or `nf-amazon` plugin (`S3FileSystemProvider`) in the Nextflow source code for examples of custom filesystems.
+
+:::{tip}
+Custom filesystems are an advanced type of plugin extension. Before creating a new filesystem, make sure that your use case can't already be supported through an existing filesystem such as HTTP or S3.
 :::
 
 ### Functions
@@ -355,6 +415,10 @@ Here is an example meta file for a plugin release:
     "sha512sum": "9e9e33695c1a7c051271..."
 }
 ```
+
+:::{note}
+The plugin version should be a valid [semantic version](https://semver.org/).
+:::
 
 (testing-plugins)=
 

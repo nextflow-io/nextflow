@@ -92,12 +92,12 @@ class CondaCacheTest extends Specification {
         def hash = CondaCache.sipHash(ENV)
         ENV.text = '''
             channels:
+              - conda-forge
               - bioconda
-              - defaults
             dependencies:
               # Default bismark
               - star=2.5.4a
-              - bwa=0.7.15        
+              - bwa=0.7.15
             '''
             .stripIndent(true)  // https://issues.apache.org/jira/browse/GROOVY-9423
         when:
@@ -105,7 +105,7 @@ class CondaCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV.toString())
         1 * cache.getCacheDir() >> BASE
-        prefix.toString() == "/conda/envs/env-${hash}-9416240708c49c4e627414b46a743664"
+        prefix.toString() == "/conda/envs/env-${hash}-64874f9dc9e7be788384bccef357a4f4"
 
         cleanup:
         folder?.deleteDir()
@@ -119,15 +119,15 @@ class CondaCacheTest extends Specification {
         def BASE = Paths.get('/conda/envs')
         def ENV = Files.createTempFile('test','.yml')
         def hash = CondaCache.sipHash(ENV)
-        ENV.text = '''  
+        ENV.text = '''
             name: my-env-1.1
             channels:
+              - conda-forge
               - bioconda
-              - defaults
             dependencies:
               # Default bismark
               - star=2.5.4a
-              - bwa=0.7.15        
+              - bwa=0.7.15
             '''
                 .stripIndent(true)
 
@@ -136,7 +136,7 @@ class CondaCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV.toString())
         1 * cache.getCacheDir() >> BASE
-        prefix.toString() == "/conda/envs/env-${hash}-e7fafe40ca966397a2c0d9bed7181aa7"
+        prefix.toString() == "/conda/envs/env-${hash}-5b5c72e839d0c7dcabb5d06607c205fc"
 
     }
 
@@ -150,7 +150,7 @@ class CondaCacheTest extends Specification {
         def hash = CondaCache.sipHash(ENV)
         ENV.text = '''
                 star=2.5.4a
-                bwa=0.7.15   
+                bwa=0.7.15
                 multiqc=1.2.3
                 '''
                 .stripIndent(true)  // https://issues.apache.org/jira/browse/GROOVY-9423
@@ -161,7 +161,7 @@ class CondaCacheTest extends Specification {
         1 * cache.isYamlFilePath(ENV.toString())
         1 * cache.isTextFilePath(ENV.toString())
         1 * cache.getCacheDir() >> BASE
-        prefix.toString() == "/conda/envs/env-${hash}-8a4aa7db8ddb8ce4eb4d450d4814a437"
+        prefix.toString() == "/conda/envs/env-${hash}-85371202d8820331ff19ae89c0595497"
 
         cleanup:
         folder?.deleteDir()
