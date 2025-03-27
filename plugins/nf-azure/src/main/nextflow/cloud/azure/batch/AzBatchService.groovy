@@ -497,8 +497,13 @@ class AzBatchService implements Closeable {
         if( fusionEnabled ) {
             opts += "--privileged "
             for( Map.Entry<String,String> it : launcher.fusionEnv() ) {
-                opts += "-e $it.key=$it.value "
+                // This is a bad solution and breaks Fusion for everyone
+                if (!(pool.opts.managedIdentityId && it.key == "AZURE_STORAGE_SAS_TOKEN")) {
+                    opts += "-e $it.key=$it.value "
+                }
             }
+            // For testing purposes only, remove before merging
+            opts += "-e FUSION_LOG_LEVEL=trace -e FUSION_LOG_OUTPUT=stdout "
         }
 
         // Create container settings
