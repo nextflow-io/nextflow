@@ -525,7 +525,7 @@ class MermaidRenderer implements DagRenderer {
 
         nodeTree.each { key, value ->
             if( value instanceof Map ) {
-                final id = fqName ? "${fqName}::${key}".toString() : key
+                final id = fqName ? "${fqName}:${key}".toString() : key
                 renderNodeTree(lines, key, id, value)
             }
             else if( value instanceof Node ) {
