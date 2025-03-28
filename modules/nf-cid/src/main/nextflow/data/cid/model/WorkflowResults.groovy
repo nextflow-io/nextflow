@@ -29,6 +29,7 @@ import nextflow.data.cid.serde.CidSerializable
 @Canonical
 @CompileStatic
 class WorkflowResults implements CidSerializable {
-    String run
-    List<String> outputs
+    long creationTime
+    Map<String, Object> outputs
+    List<String> publishedFiles
 }

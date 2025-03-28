@@ -35,5 +35,5 @@ abstract class Output implements CidSerializable {
     long size
     long createdAt
     long modifiedAt
-    List<String> annotations
+    Map annotations
 }

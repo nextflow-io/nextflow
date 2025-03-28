@@ -17,17 +17,22 @@
 
 package nextflow.data.cid
 
-import java.nio.file.Files
-import java.nio.file.Path
-
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
+import java.nio.file.FileVisitResult
+import java.nio.file.FileVisitor
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.attribute.BasicFileAttributes
+
 import nextflow.data.cid.serde.CidEncoder
 import nextflow.data.cid.serde.CidSerializable
 import nextflow.data.config.DataConfig
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.util.TestOnly
+
 /**
  * Default Implementation for the a CID store.
  *
@@ -77,7 +82,7 @@ class DefaultCidStore implements CidStore {
         final path = metaLocation.resolve("$key/$METADATA_FILE")
         log.debug("Loading from path $path")
         if (path.exists())
-            return encoder.decode(path.text)
+            return encoder.decode(path.text) as CidSerializable
         log.debug("File for key $key not found")
         return null
     }
@@ -97,5 +102,51 @@ class DefaultCidStore implements CidStore {
     }
 
     @Override
-    void close() { }
+    void close() throws IOException { }
+
+    @Override
+    List<CidSerializable> search(String queryString) {
+
+        def params = null
+        if (queryString) {
+            params = CidUtils.parseQuery(queryString)
+        }
+        return searchAllFiles(params)
+
+    }
+
+    private List<CidSerializable> searchAllFiles (Map<String,String> params) {
+        final results = new LinkedList<CidSerializable>()
+
+        Files.walkFileTree(metaLocation, new FileVisitor<Path>() {
+
+            @Override
+            FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+                FileVisitResult.CONTINUE
+            }
+
+            @Override
+            FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                if (file.name.startsWith('.data.json') ) {
+                    final cidObject = encoder.decode(file.text)
+                    if (CidUtils.checkParams(cidObject, params)){
+                        results.add(cidObject as CidSerializable)
+                    }
+                }
+                FileVisitResult.CONTINUE
+            }
+
+            @Override
+            FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+                FileVisitResult.CONTINUE
+            }
+
+            @Override
+            FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                FileVisitResult.CONTINUE
+            }
+        })
+
+        return results
+    }
 }
