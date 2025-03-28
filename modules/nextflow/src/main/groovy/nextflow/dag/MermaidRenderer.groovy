@@ -62,16 +62,19 @@ class MermaidRenderer implements DagRenderer {
         // construct node lookup from DAG
         def nodeLookup = getNodeLookup(dag)
 
+        // infer operator subgraph keys
+        def operatorSubgraphKeys = inferSubgraphKeys(nodeLookup)
+
         // collapse operator nodes
         if( !verbose )
-            collapseOperators(nodeLookup)
+            collapseOperators(nodeLookup, operatorSubgraphKeys)
 
         // remove empty workflow inputs
         if( !verbose )
             removeEmptyInputs(nodeLookup)
 
         // construct node tree
-        final nodeTree = getNodeTree(nodeLookup)
+        final nodeTree = getNodeTree(nodeLookup, operatorSubgraphKeys)
 
         // collapse node tree to desired depth
         if( depth >= 0 )
@@ -148,16 +151,22 @@ class MermaidRenderer implements DagRenderer {
      * with a summary node.
      *
      * @param nodeLookup
+     * @param operatorSubgraphKeys Infered subgraphs of operators. (updated by the method)
      */
-    private void collapseOperators(Map<DAG.Vertex,Node> nodeLookup) {
+    private void collapseOperators(Map<DAG.Vertex,Node> nodeLookup, Map<Node,List> operatorSubgraphKeys) {
         def queue = nodeLookup
                 .values()
                 .findAll( n -> n.vertex.type == DAG.Type.OPERATOR ) as List<Node>
 
         while( !queue.isEmpty() ) {
             final node = queue.pop()
-            final subgraph = findSubgraph(node, (Node n) -> n.vertex.type == DAG.Type.OPERATOR)
-            collapseSubgraph(nodeLookup, subgraph, node.vertex)
+            final subgraphKey = operatorSubgraphKeys[node]
+            // Only merge operator nodes within the same subgraph
+            final subgraph = findSubgraph(node, (Node n) -> 
+                    n.vertex.type == DAG.Type.OPERATOR && operatorSubgraphKeys[n]==subgraphKey )
+            def summaryNode = collapseSubgraph(nodeLookup, subgraph, node.vertex)    
+            operatorSubgraphKeys[summaryNode]=subgraphKey
+            operatorSubgraphKeys.keySet().removeAll(subgraph.nodes)
             queue.removeAll(subgraph.nodes)
         }
     }
@@ -225,8 +234,9 @@ class MermaidRenderer implements DagRenderer {
      * @param nodeLookup
      * @param subgraph
      * @param vertex
+     * @return the created summary node
      */
-    private void collapseSubgraph(Map<DAG.Vertex,Node> nodeLookup, Subgraph subgraph, DAG.Vertex vertex) {
+    private Node collapseSubgraph(Map<DAG.Vertex,Node> nodeLookup, Subgraph subgraph, DAG.Vertex vertex) {
         // remove subgraph
         removeSubgraph(nodeLookup, subgraph)
 
@@ -239,6 +249,8 @@ class MermaidRenderer implements DagRenderer {
 
         for( def w : subgraph.outputs )
             w.inputs << summaryNode
+
+        return summaryNode
     }
 
     /**
@@ -262,11 +274,9 @@ class MermaidRenderer implements DagRenderer {
      * Construct a node tree with a subgraph for each subworkflow.
      *
      * @param nodeLookup
+     * @param inferredKeys Inferred subgraph of operator nodes
      */
-    private Map<String,Object> getNodeTree(Map<DAG.Vertex,Node> nodeLookup) {
-        // infer subgraphs of operator nodes
-        final inferredKeys = inferSubgraphKeys(nodeLookup)
-
+    private Map<String,Object> getNodeTree(Map<DAG.Vertex,Node> nodeLookup, Map<Node,List> inferredKeys) {
         // construct node tree
         def nodeTree = [:] as Map<String,Object>
 
@@ -320,15 +330,85 @@ class MermaidRenderer implements DagRenderer {
                 .values()
                 .findAll( n -> n.vertex.type == DAG.Type.OPERATOR ) as List<Node>
 
+        // Get nodes of the DAG in creation order (which should be mostly topological).
+        def topo_order = nodeLookup.keySet().sort { 
+            a,b -> a.getOrder() <=> b.getOrder()
+        }  as List<DAG.Vertex>
+
+        // Process operator nodes one by one.
         while( !queue.isEmpty() ) {
             // find subgraph of operator nodes
             final node = queue.pop()
-            final subgraph = findSubgraph(node, (Node n) -> n.vertex.type == DAG.Type.OPERATOR)
 
-            // select a neighboring process
-            final inputs = subgraph.inputs.findAll( n -> n.vertex.type == DAG.Type.PROCESS )
-            final outputs = subgraph.outputs.findAll( n -> n.vertex.type == DAG.Type.PROCESS )
+            // Three successive strategies are used to find the appropriate subgraph key.
 
+            // Strategy 1: from topological order.
+            // Find topo index of the node
+            def vertexTopoIndex = topo_order.indexOf(node.vertex)
+
+            // find previous and next process in the topo_order list
+            def idx = vertexTopoIndex - 1
+            while(idx >= 0 && topo_order[idx].type != DAG.Type.PROCESS){
+                idx--
+            }
+            def prevIdx = idx
+
+            idx = vertexTopoIndex + 1
+            while(idx < topo_order.size() && topo_order[idx].type != DAG.Type.PROCESS){
+                idx++
+            }
+            def nextIdx = idx
+
+            if(prevIdx > -1 && nextIdx < topo_order.size()){
+                // Two processes were found in topological order before and after the operator. 
+                // Do they share a common path?
+                def prevPath = getSubgraphKeys(topo_order[prevIdx].label)[0] as List
+                def nextPath = getSubgraphKeys(topo_order[nextIdx].label)[0] as List
+                if(prevPath.join(':') == nextPath.join(':')) {
+                    // Paths matching, save it as infered key
+                    inferredKeys[node] = prevPath
+                    continue // go to next node
+                }
+            }
+            // Previous and next processes in the topo_order list didn't have matching paths.
+
+            // Stragegy 2: Look for subgraphs of neighbor processes present both
+            // in inputs and outputs of the node.
+            final inputs = node.inputs.findAll( n -> n.vertex.type == DAG.Type.PROCESS )
+            final outputs = node.outputs.findAll( n -> n.vertex.type == DAG.Type.PROCESS )
+
+            // Find all path appearing in neighbors
+            def neighborPaths = [:] as Map<List<String>,List<Integer>>
+            for (def n : inputs){
+                def key = getSubgraphKeys(n.vertex.label)[0] as List<String>
+                if(neighborPaths[key])
+                    neighborPaths[key][0]++
+                else    
+                    neighborPaths[key] = [1, 0]
+            }
+
+            for (def n : outputs){
+                def key = getSubgraphKeys(n.vertex.label)[0] as List<String>
+                if(neighborPaths[key])
+                    neighborPaths[key][1]++
+                else    
+                    neighborPaths[key] = [0, 1]
+            }
+            
+            // Remove all path with only inputs or only outputs
+            neighborPaths.removeAll{ k,v -> v[0] == 0 || v[1] == 0}
+            // Was such a path found?
+            if(neighborPaths.size() > 0){
+                // In case several paths remains, they must be nested
+                // Select the innermost path, i.e. the longest
+                def key = Collections.max(neighborPaths.keySet(), Comparator.comparing((List path) -> path? path.size():0))
+
+                // save it as infered key
+                inferredKeys[node] = key
+                continue // go to next node
+            }
+
+            // Strategy 3: Pick an input or output process
             Node process = null
             if( inputs.size() == 1 )
                 process = inputs[0]
@@ -338,6 +418,10 @@ class MermaidRenderer implements DagRenderer {
                 process = inputs[0]
             else if( outputs.size() > 0 )
                 process = outputs[0]
+            else { 
+                // No inputs and no outputs processes with identified path.
+                // No subgraph associated to this operator.
+            }
 
             // extract keys from fully qualified process name
             final keys = process
@@ -345,11 +429,7 @@ class MermaidRenderer implements DagRenderer {
                 : []
 
             // save inferred keys
-            for( def w : subgraph.nodes )
-                inferredKeys[w] = keys
-
-            // update queue
-            queue.removeAll(subgraph.nodes)
+            inferredKeys[node] = keys
         }
 
         return inferredKeys
@@ -445,7 +525,7 @@ class MermaidRenderer implements DagRenderer {
 
         nodeTree.each { key, value ->
             if( value instanceof Map ) {
-                final id = fqName ? "${fqName}::${key}".toString() : key
+                final id = fqName ? "${fqName}:${key}".toString() : key
                 renderNodeTree(lines, key, id, value)
             }
             else if( value instanceof Node ) {
