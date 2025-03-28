@@ -105,10 +105,11 @@ class TraceRecord implements Serializable {
             hostname: 'str',
             cpu_model:  'str',
             gpu_model:  'str',
-            gpu_mem_total: 'str',
-            gpu_driver: 'str',
-            avg_gpu_util: 'perc',   // -- Average GPU utilization percentage
-            avg_gpu_mem: 'mem',     // -- Average GPU memory usage in MiB
+            gpu_mem:    'str',      // -- Total GPU memory in MiB
+            gpu_driver: 'str',      // -- GPU driver version
+            '%gpu':      'perc',    // -- Average GPU utilization percentage
+            '%gpu_mem':  'perc',    // -- Average GPU memory usage as percentage of total available
+            avg_gpu_mem: 'mem',      // -- Average GPU memory usage in MiB
             avg_gpu_mem_perc: 'perc' // -- Average GPU memory usage as percentage of total available
     ]
 
@@ -448,11 +449,11 @@ class TraceRecord implements Serializable {
                         this.put(name, parseInt(value, file, name) / 10F)
                         break
                         
-                    case 'avg_gpu_util':
+                    case '%gpu':
                         this.put(name, parseInt(value, file, name))
                         break
 
-                    case 'avg_gpu_mem_perc':
+                    case '%gpu_mem':
                         this.put(name, parseFloat(value, file, name))
                         break
 
@@ -467,7 +468,7 @@ class TraceRecord implements Serializable {
                         break
 
                     case 'gpu_model':
-                    case 'gpu_mem_total':
+                    case 'gpu_mem':
                     case 'gpu_driver':
                     case 'cpu_model':
                         this.put(name, value)
