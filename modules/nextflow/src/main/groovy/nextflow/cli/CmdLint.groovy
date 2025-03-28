@@ -33,6 +33,7 @@ import nextflow.script.control.Compiler
 import nextflow.script.control.ScriptParser
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage
+import org.eclipse.jgit.ignore.IgnoreNode
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import static org.fusesource.jansi.Ansi.Attribute
@@ -78,6 +79,8 @@ class CmdLint extends CmdBase {
 
     private ConfigParser configParser
 
+    private IgnoreNode ignoreNode
+
     static class LintResults {
         String date
         List<LintError> errors = []
@@ -121,6 +124,20 @@ class CmdLint extends CmdBase {
             term.a("Checking Nextflow code..").newline()
             AnsiConsole.out.print(term)
             AnsiConsole.out.flush()
+        }
+
+        // Extend excludePatterns with hardcoded defaults
+        excludePatterns += ['.git/']
+
+        // Load exclude patterns from .gitignore if present
+        // NOTE: Only works if running in the project root
+        //  Would be nice to do parent .gitignore merging etc.
+        def gitignoreFile = Paths.get('.gitignore')
+        if (Files.exists(gitignoreFile)) {
+            ignoreNode = new IgnoreNode()
+            Files.newInputStream(gitignoreFile).withCloseable { inputStream ->
+                ignoreNode.parse(inputStream)
+            }
         }
 
         for( final arg : args ) {
@@ -173,22 +190,46 @@ class CmdLint extends CmdBase {
         }
     }
 
+    // Recursively check gitignore rules whilst the result is CHECK_PARENT
+    private IgnoreNode.MatchResult checkIgnoreNode(Path path) {
+        def ignoreResult = ignoreNode.isIgnored(path.toString().replace(File.separator, '/'), false)
+        if (ignoreResult == IgnoreNode.MatchResult.CHECK_PARENT) {
+            def parentPath = path.getParent()
+            if (parentPath != null) {
+                return checkIgnoreNode(parentPath)
+            }
+        }
+
+        return ignoreResult
+    }
+
     private boolean shouldExcludeFile(File file) {
-        if (!excludePatterns)
-            return false
+        def path = file.toPath().normalize()
 
-        def path = file.toPath()
-
-        return excludePatterns.any { pattern ->
+        def excludeResult = excludePatterns.any { pattern ->
+            // Glob pattern
             if (pattern.contains("*") || pattern.contains("?") || pattern.contains("[")) {
                 def matcher = FileSystems.default.getPathMatcher("glob:${pattern}")
                 return matcher.matches(path)
-            } else {
+            }
+            // Bare directory / file names
+            else {
                 def prefix = Paths.get(pattern)
-                return path.getNameCount() >= prefix.getNameCount() &&
-                    path.subpath(0, prefix.getNameCount()) == prefix
+                return path.getNameCount() >= prefix.getNameCount() && path.subpath(0, prefix.getNameCount()) == prefix
             }
         }
+        if (excludeResult)
+            return true
+
+        // Check .gitignore patterns
+        if (ignoreNode != null) {
+            def ignoreResult = checkIgnoreNode(path)
+            if(ignoreResult == IgnoreNode.MatchResult.IGNORED)
+                return true
+        }
+
+        // Nothing matched
+        return false
     }
 
     void parse(File file) {
