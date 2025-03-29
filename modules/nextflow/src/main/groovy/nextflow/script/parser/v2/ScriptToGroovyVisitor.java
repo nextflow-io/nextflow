@@ -474,53 +474,59 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         sourceUnit.addError(new SyntaxException(message, node));
     }
 
-}
+    /**
+     * Transform publish statements in a workflow output:
+     *
+     *   path { sample ->
+     *     sample.foo >> 'foo/'
+     *     sample.bar >> 'bar/'
+     *   }
+     *
+     * becomes:
+     *
+     *   path { sample ->
+     *     publish(sample.foo, 'foo/')
+     *     publish(sample.bar, 'bar/')
+     *   }
+     */
+    private class PublishDslVisitor extends CodeVisitorSupport {
 
+        private boolean hasPublishStatements;
 
-/**
- * Transform dynamic publish paths in the workflow output definition:
- *
- *   path { sample ->
- *     sample.foo >> 'foo/'
- *     sample.bar >> 'bar/'
- *   }
- *
- * becomes:
- *
- *   path { sample ->
- *     publish(sample.foo, 'foo/')
- *     publish(sample.bar, 'bar/')
- *   }
- */
-class PublishDslVisitor extends CodeVisitorSupport {
+        private boolean hasNonPublishStatements;
 
-    private boolean inPathDirective;
+        @Override
+        public void visitMethodCallExpression(MethodCallExpression node) {
+            if( "path".equals(node.getMethodAsString()) )
+                visitPathDirective(node);
+        }
 
-    @Override
-    public void visitMethodCallExpression(MethodCallExpression node) {
-        if( "path".equals(node.getMethodAsString()) )
-            inPathDirective = true;
-        super.visitMethodCallExpression(node);
-        inPathDirective = false;
+        private void visitPathDirective(MethodCallExpression node) {
+            var code = asDslBlock(node, 1);
+            for( var stmt : code.getStatements() ) {
+                if( visitPublishStatement(stmt) )
+                    hasPublishStatements = true;
+                else
+                    hasNonPublishStatements = true;
+            }
+            if( hasPublishStatements && hasNonPublishStatements )
+                syntaxError(node, "Publish statements cannot be mixed with other statements in a dynamic publish path");
+        }
+
+        private boolean visitPublishStatement(Statement node) {
+            if( !(node instanceof ExpressionStatement) )
+                return false;
+            var es = (ExpressionStatement) node;
+            if( !(es.getExpression() instanceof BinaryExpression) )
+                return false;
+            var be = (BinaryExpression) es.getExpression();
+            if( be.getOperation().getType() != Types.RIGHT_SHIFT )
+                return false;
+            var source = be.getLeftExpression();
+            var target = be.getRightExpression();
+            es.setExpression(callThisX("publish", args(source, target)));
+            return true;
+        }
     }
 
-    @Override
-    public void visitExpressionStatement(ExpressionStatement node) {
-        if( !visitPublishStatement(node) )
-            super.visitExpressionStatement(node);
-    }
-
-    private boolean visitPublishStatement(ExpressionStatement node) {
-        if( !inPathDirective )
-            return false;
-        if( !(node.getExpression() instanceof BinaryExpression) )
-            return false;
-        var be = (BinaryExpression) node.getExpression();
-        if( be.getOperation().getType() != Types.RIGHT_SHIFT )
-            return false;
-        var source = be.getLeftExpression();
-        var target = be.getRightExpression();
-        node.setExpression(callThisX("publish", args(source, target)));
-        return true;
-    }
 }
