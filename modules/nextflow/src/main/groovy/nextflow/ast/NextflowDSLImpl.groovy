@@ -547,7 +547,7 @@ class NextflowDSLImpl implements ASTTransformation {
 
                 final outputName = call.method
                 final outputBody = (ClosureExpression)callArgs[0]
-                new PublishPathVisitor().visit(outputBody)
+                new PublishDslVisitor().visit(outputBody)
                 stmtX.expression = callThisX('declare', args(outputName, outputBody))
             }
         }
@@ -567,9 +567,9 @@ class NextflowDSLImpl implements ASTTransformation {
          *     publish(sample.bar, 'bar/')
          *   }
          */
-        protected class PublishPathVisitor extends CodeVisitorSupport {
+        protected class PublishDslVisitor extends CodeVisitorSupport {
 
-            private boolean inPathDirective;
+            private boolean inPathDirective
 
             @Override
             void visitMethodCallExpression(MethodCallExpression node) {

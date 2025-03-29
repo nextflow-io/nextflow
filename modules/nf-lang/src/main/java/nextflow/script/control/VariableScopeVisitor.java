@@ -207,9 +207,9 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
     private void visitWorkflowOutputs(Statement outputs, String typeLabel) {
         var declaredOutputs = new HashMap<String,ASTNode>();
         for( var stmt : asBlockStatements(outputs) ) {
-            var stmtX = (ExpressionStatement)stmt;
-            var emit = stmtX.getExpression();
-            if( emit instanceof AssignmentExpression assign ) {
+            var es = (ExpressionStatement)stmt;
+            var output = es.getExpression();
+            if( output instanceof AssignmentExpression assign ) {
                 visit(assign.getRightExpression());
 
                 var target = (VariableExpression)assign.getLeftExpression();
@@ -221,7 +221,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
                     declaredOutputs.put(name, target);
             }
             else {
-                visit(emit);
+                visit(output);
             }
         }
     }
@@ -354,27 +354,13 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitOutput(OutputNode node) {
-        if( node.body instanceof BlockStatement block )
-            visitOutputBody(block);
-    }
-
-    private void visitOutputBody(BlockStatement block) {
-        block.setVariableScope(currentScope());
-
-        asDirectives(block).forEach((call) -> {
-            var code = asDslBlock(call, 1);
-            if( code != null )
-                visitTargetBody(code);
-        });
-    }
-
-    private void visitTargetBody(BlockStatement block) {
         vsc.pushScope(OutputDsl.class);
+        var block = (BlockStatement) node.body;
         block.setVariableScope(currentScope());
 
         asBlockStatements(block).forEach((stmt) -> {
-            // validate target directive
-            var call = checkDirective(stmt, "output target directive", true);
+            // validate output directive
+            var call = checkDirective(stmt, "output directive", true);
             if( call == null )
                 return;
 

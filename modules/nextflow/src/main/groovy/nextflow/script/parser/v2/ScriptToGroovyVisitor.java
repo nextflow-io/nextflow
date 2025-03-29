@@ -26,7 +26,7 @@ import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.IncludeNode;
-import nextflow.script.ast.OutputNode;
+import nextflow.script.ast.OutputBlockNode;
 import nextflow.script.ast.ParamNode;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ScriptNode;
@@ -389,24 +389,18 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     }
 
     @Override
-    public void visitOutput(OutputNode node) {
-        visitOutputTargets(node.body);
-
-        var closure = closureX(node.body);
+    public void visitOutputs(OutputBlockNode node) {
+        var statements = node.declarations.stream()
+            .map((output) -> {
+                new PublishDslVisitor().visit(output.body);
+                var name = constX(output.name);
+                var body = closureX(output.body);
+                return stmt(callThisX("declare", args(name, body)));
+            })
+            .toList();
+        var closure = closureX(block(new VariableScope(), statements));
         var result = stmt(callThisX("output", args(closure)));
         moduleNode.addStatement(result);
-    }
-
-    private void visitOutputTargets(Statement body) {
-        for( var stmt : asBlockStatements(body) ) {
-            var es = (ExpressionStatement)stmt;
-            var mce = (MethodCallExpression)es.getExpression();
-            var name = mce.getMethod();
-            var targetArgs = (ArgumentListExpression)mce.getArguments();
-            var targetBody = (ClosureExpression)targetArgs.getExpression(0);
-            new PublishPathVisitor().visit(targetBody);
-            es.setExpression( callThisX("declare", args(name, targetBody)) );
-        }
     }
 
     // see: VariableScopeVisitor::visitExpressionStatement()
@@ -498,7 +492,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
  *     publish(sample.bar, 'bar/')
  *   }
  */
-class PublishPathVisitor extends CodeVisitorSupport {
+class PublishDslVisitor extends CodeVisitorSupport {
 
     private boolean inPathDirective;
 

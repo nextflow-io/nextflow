@@ -35,14 +35,14 @@ class OutputDef {
         this.closure = closure
     }
 
-    void run(Session session) {
+    void apply(Session session) {
         final dsl = new OutputDsl()
         final cl = (Closure)closure.clone()
         cl.setDelegate(dsl)
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
         cl.call()
 
-        dsl.build(session)
+        dsl.apply(session)
     }
 
 }

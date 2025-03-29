@@ -53,7 +53,7 @@ class OutputDsl {
         declarations[name] = dsl.getOptions()
     }
 
-    void build(Session session) {
+    void apply(Session session) {
         final outputs = session.outputs
         final defaults = session.config.navigate('workflow.output', Collections.emptyMap()) as Map
 

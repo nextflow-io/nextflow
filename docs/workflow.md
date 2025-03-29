@@ -390,7 +390,7 @@ A script can define an *output block* which declares the top-level outputs of th
 Here is a basic example:
 
 ```nextflow
-process foo {
+process fetch {
     // ...
 
     output:
@@ -401,10 +401,10 @@ process foo {
 
 workflow {
     main:
-    foo(params.input)
+    fetch(params.input)
 
     publish:
-    samples = foo.out
+    samples = fetch.out
 }
 
 output {
@@ -414,7 +414,7 @@ output {
 }
 ```
 
-In the above example, the output of process `foo` is assigned to the `samples` workflow output. How these outputs are published to a directory structure is described in the next section.
+In the above example, the output of process `fetch` is assigned to the `samples` workflow output. How this output is published to a directory structure is described in the next section.
 
 ### Publishing files
 
@@ -470,7 +470,7 @@ All files received by an output will be published into the specified directory. 
 workflow {
     main:
     ch_samples = Channel.of(
-        [ [id: 'foo'], [ file('1.txt'), file('2.txt') ] ]
+        [ [id: 'SAMP1'], [ file('1.txt'), file('2.txt') ] ]
     )
 
     publish:
@@ -607,8 +607,7 @@ For example:
 
 ```nextflow
 output {
-    foo {
-        enabled params.save_foo
+    samples {
         mode 'copy'
     }
 }
