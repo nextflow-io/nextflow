@@ -24,7 +24,8 @@ import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.OutputNode;
-import nextflow.script.ast.ParamNode;
+import nextflow.script.ast.ParamNodeV1;
+import nextflow.script.ast.ParamBlockNode;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
@@ -115,7 +116,21 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     }
 
     @Override
-    public void visitParam(ParamNode node) {
+    public void visitParams(ParamBlockNode node) {
+        var statements = node.declarations.stream()
+            .map((param) -> {
+                var name = constX(param.name);
+                var body = closureX(param.body);
+                return stmt(callThisX("declare", args(name, body)));
+            })
+            .toList();
+        var closure = closureX(block(new VariableScope(), statements));
+        var result = stmt(callThisX("params", args(closure)));
+        moduleNode.addStatement(result);
+    }
+
+    @Override
+    public void visitParamV1(ParamNodeV1 node) {
         var result = stmt(assignX(node.target, node.value));
         moduleNode.addStatement(result);
     }

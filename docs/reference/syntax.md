@@ -28,7 +28,8 @@ A Nextflow script may contain the following top-level declarations:
 - Shebang
 - Feature flags
 - Include declarations
-- Parameter declarations
+- Params block
+- Parameter declarations (legacy)
 - Workflow definitions
 - Process definitions
 - Function definitions
@@ -107,9 +108,25 @@ The following definitions can be included:
 - Processes
 - Named workflows
 
-### Parameter
+### Params block
 
-A parameter declaration is an assignment. The target should be a pipeline parameter and the source should be an expression:
+The params block consists of one or more *parameter declarations*. A parameter declaration consists of a name and one or more *parameter directives* for defining the parameter:
+
+```nextflow
+params {
+    input {
+        defaultValue null
+        description 'Path to input data'
+        type 'file'
+    }
+}
+```
+
+Only one params block may be defined in a script. See {ref}`workflow-params-def` for the set of available parameter directives.
+
+### Parameter (legacy)
+
+A legacy parameter declaration is an assignment. The target should be a pipeline parameter and the source should be an expression:
 
 ```nextflow
 params.message = 'Hello world!'

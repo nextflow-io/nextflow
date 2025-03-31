@@ -122,12 +122,11 @@ class ScriptRunner {
      * @param args The arguments to be passed to the script
      * @return The result as returned by the {@code #run} method
      */
-
-    def execute( List<String> args = null, String entryName=null ) {
+    def execute( List<String> args=null, Map<String,?> params=null, String entryName=null ) {
         assert scriptFile
 
         // init session
-        session.init(scriptFile, args)
+        session.init(scriptFile, args, params)
 
         // start session
         session.start()
