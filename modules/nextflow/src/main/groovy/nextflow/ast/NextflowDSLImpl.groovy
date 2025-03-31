@@ -36,6 +36,8 @@ import nextflow.script.TokenStdoutCall
 import nextflow.script.TokenValCall
 import nextflow.script.TokenValRef
 import nextflow.script.TokenVar
+import nextflow.script.control.GStringToLazyVisitor
+import nextflow.script.control.TaskCmdXformVisitor
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.ClassNode

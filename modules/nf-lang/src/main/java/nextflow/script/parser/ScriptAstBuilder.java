@@ -835,36 +835,36 @@ public class ScriptAstBuilder {
     }
 
     private Statement assignment(MultipleAssignmentStatementContext ctx) {
-        var left = variableNames(ctx.variableNames());
-        var right = expression(ctx.expression());
-        return stmt(ast( new AssignmentExpression(left, right), ctx ));
+        var target = variableNames(ctx.variableNames());
+        var source = expression(ctx.expression());
+        return stmt(ast( new AssignmentExpression(target, source), ctx ));
     }
 
     private Statement assignment(AssignmentStatementContext ctx) {
-        var left = expression(ctx.left);
-        if( left instanceof VariableExpression && isInsideParentheses(left) ) {
-            if( left.<Number>getNodeMetaData(ASTNodeMarker.INSIDE_PARENTHESES_LEVEL).intValue() > 1 )
+        var target = expression(ctx.target);
+        if( target instanceof VariableExpression && isInsideParentheses(target) ) {
+            if( target.<Number>getNodeMetaData(ASTNodeMarker.INSIDE_PARENTHESES_LEVEL).intValue() > 1 )
                 throw createParsingFailedException("Nested parenthesis is not allowed in multiple assignment, e.g. ((a)) = b", ctx);
 
-            var tuple = ast( new TupleExpression(left), ctx.left );
-            return stmt(ast( new AssignmentExpression(tuple, token(ctx.op), expression(ctx.right)), ctx ));
+            var tuple = ast( new TupleExpression(target), ctx.target );
+            return stmt(ast( new AssignmentExpression(tuple, token(ctx.op), expression(ctx.source)), ctx ));
         }
 
-        if ( isAssignmentLhsValid(left) )
-            return stmt(ast( new AssignmentExpression(left, token(ctx.op), expression(ctx.right)), ctx ));
+        if ( isValidAssignmentTarget(target) )
+            return stmt(ast( new AssignmentExpression(target, token(ctx.op), expression(ctx.source)), ctx ));
 
         throw createParsingFailedException("Invalid assignment target -- must be a variable, index, or property expression", ctx);
     }
 
-    private boolean isAssignmentLhsValid(Expression left) {
+    private boolean isValidAssignmentTarget(Expression target) {
         // e.g. p = 123
-        if( left instanceof VariableExpression && !isInsideParentheses(left) )
+        if( target instanceof VariableExpression && !isInsideParentheses(target) )
             return true;
         // e.g. obj.p = 123
-        if( left instanceof PropertyExpression )
+        if( target instanceof PropertyExpression )
             return true;
         // e.g. map[a] = 123 OR map['a'] = 123 OR map["$a"] = 123
-        if( left instanceof BinaryExpression be && be.getOperation().getType() == Types.LEFT_SQUARE_BRACKET )
+        if( target instanceof BinaryExpression be && be.getOperation().getType() == Types.LEFT_SQUARE_BRACKET )
             return true;
         return false;
     }
