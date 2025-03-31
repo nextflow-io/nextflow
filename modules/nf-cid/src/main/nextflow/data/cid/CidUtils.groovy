@@ -1,21 +1,59 @@
+/*
+ * Copyright 2013-2025, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package nextflow.data.cid
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.data.cid.fs.CidPath
 import nextflow.data.cid.serde.CidSerializable
 
 import java.nio.file.Path
 
+/**
+ * Utils class for CID.
+ *
+ * @author Jorge Ejarque <jorge.ejarque@seqera.io>
+ */
 @Slf4j
+@CompileStatic
 class CidUtils {
 
     public static List query(CidStore store, URI uri) {
         String key = uri.authority ? uri.authority + uri.path : uri.path
         try {
             if (key == CidPath.SEPARATOR) {
-                return store.search(uri.query)
+                final results = store.search(uri.query)
+                if (results && uri.fragment){
+                    // If fragment is defined get the property of the object indicated by the fragment
+                    final filteredResults = []
+                    results.forEach {
+                        final output = navigate(it, uri.fragment)
+                        if (output){
+                            filteredResults.add(output)
+                        }
+                    }
+                    return filteredResults
+                }
+                return results
             } else {
-                return searchPath(store, key, uri.query ? parseQuery(uri.query) : null)
+                final parameters = uri.query ? parseQuery(uri.query) : null
+                final children = getChildrenFormFragment(uri.fragment)
+                return searchPath(store, key, parameters, children )
             }
         } catch(Throwable e){
             log.debug("Exception querying $uri. $e.message")
@@ -24,16 +62,28 @@ class CidUtils {
 
     }
 
-    private static List<Object> searchPath(CidStore store, String path, Map<String, String> params, String[] childs = []) {
+    public static String[] getChildrenFormFragment(String fragment) {
+        if (fragment) {
+            if (fragment.contains('.')) {
+                return fragment.split("\\.")
+            } else {
+                return [fragment] as String[]
+            }
+        } else {
+            return [] as String[]
+        }
+    }
+
+    private static List<Object> searchPath(CidStore store, String path, Map<String, String> params, String[] children = []) {
         final results = new LinkedList<Object>()
         final object = store.load(path)
         if (object) {
-            if (childs && childs.size() > 0) {
-                final output = navigate(object, childs.join('.'))
+            if (children && children.size() > 0) {
+                final output = navigate(object, children.join('.'))
                 if (output) {
                     treatObject(output, params, results)
                 } else {
-                    throw new FileNotFoundException("Cid object $path/${childs ? childs.join('/') : ''} not found.")
+                    throw new FileNotFoundException("Cid object $path/${children ? children.join('/') : ''} not found.")
                 }
             } else {
                 treatObject(object, params, results)
@@ -43,12 +93,12 @@ class CidUtils {
             final currentPath = Path.of(path)
             final parent = currentPath.getParent()
             if (parent) {
-                ArrayList<String> newChilds = new ArrayList<String>()
-                newChilds.add(currentPath.getFileName().toString())
-                newChilds.addAll(childs)
-                return searchPath(store, parent.toString(), params, newChilds as String[])
+                ArrayList<String> newChildren = new ArrayList<String>()
+                newChildren.add(currentPath.getFileName().toString())
+                newChildren.addAll(children)
+                return searchPath(store, parent.toString(), params, newChildren as String[])
             } else {
-                throw new FileNotFoundException("Cid object $path/${childs ? childs.join('/') : ''} not found.")
+                throw new FileNotFoundException("Cid object $path/${children ? children.join('/') : ''} not found.")
             }
         }
         return results
@@ -82,7 +132,7 @@ class CidUtils {
         return true
     }
 
-    protected static Object navigate(Object obj, String path){
+    public static Object navigate(Object obj, String path){
         if (!obj)
             return null
         try{
@@ -99,7 +149,7 @@ class CidUtils {
                 if (current.metaClass.hasProperty(current, key)) {
                     return current.getAt(key) // Navigate Object properties
                 }
-                log.debug("No property found for $key")
+                log.trace("No property found for $key")
                 return null // Property not found
             }
         } catch (Throwable e) {

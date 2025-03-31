@@ -17,7 +17,6 @@
 
 package nextflow.data.cid.fs
 
-import javax.swing.DefaultListSelectionModel
 import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel
 import java.nio.file.AccessDeniedException
@@ -102,10 +101,7 @@ class CidFileSystemProvider extends FileSystemProvider {
 
     @Override
     CidPath getPath(URI uri) {
-        // the URI authority holds the base component of the CID path
-        final base = uri.authority
-        final path = uri.path
-        return (CidPath) getFileSystemOrCreate(uri).getPath(base, path)
+        return (CidPath) ((CidFileSystem) getFileSystemOrCreate(uri)).getPath(uri)
     }
 
     @Override

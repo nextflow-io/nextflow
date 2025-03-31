@@ -42,6 +42,24 @@ class CidPathTest extends Specification {
         wdir.deleteDir()
     }
 
+    def 'should create from URI' () {
+        when:
+        def path = new CidPath(fs, new URI( URI_STRING ))
+        then:
+        path.filePath == PATH
+        path.fragment == FRAGMENT
+        path.query == QUERY
+
+        where:
+        URI_STRING                      | PATH              | QUERY         | FRAGMENT
+        "cid://1234/hola"               | "1234/hola"       | null          | null
+        "cid://1234/hola#frag.sub"      | "1234/hola"       | null          | "frag.sub"
+        "cid://1234/#frag.sub"          | "1234"            | null          | "frag.sub"
+        "cid://1234/?q=a&b=c"           | "1234"            | "q=a&b=c"     | null
+        "cid://1234/?q=a&b=c#frag.sub"  | "1234"            | "q=a&b=c"     | "frag.sub"
+        "cid:///"                       | "/"               | null          | null
+    }
+
     def 'should create correct cid Path' () {
         when:
             def cid = new CidPath(FS, PATH, MORE)
@@ -83,6 +101,7 @@ class CidPathTest extends Specification {
         null    | './1234/c'            | [] as String[]            | '1234/c'
         fs      | '1234'                | ['/'] as String[]         | '1234'
         null    | '1234'                | ['/'] as String[]         | '1234'
+        null    | '../../a/b'           | [] as String[]            | '../../a/b'
     }
 
     def 'should get target path' () {

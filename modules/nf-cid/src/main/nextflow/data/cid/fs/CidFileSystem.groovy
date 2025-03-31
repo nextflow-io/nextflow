@@ -111,7 +111,12 @@ class CidFileSystem extends FileSystem {
 
     @Override
     Path getPath(String first, String... more) {
-        return new CidPath(this,first,more)
+        final path = more ? CidPath.SEPARATOR + more.join(CidPath. SEPARATOR) : ''
+        return getPath(CidPath.asUri(CidPath.CID_PROT + first + path))
+    }
+
+    Path getPath(URI uri){
+        return new CidPath(this, uri)
     }
 
     @Override

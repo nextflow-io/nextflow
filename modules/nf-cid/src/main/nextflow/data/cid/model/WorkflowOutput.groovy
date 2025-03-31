@@ -29,4 +29,5 @@ import groovy.transform.InheritConstructors
 @CompileStatic
 @InheritConstructors
 class WorkflowOutput extends Output {
+    String publishedBy
 }

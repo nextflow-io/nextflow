@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2025, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,19 +19,16 @@ package nextflow.data.cid.fs
 
 import groovy.json.JsonOutput
 import groovy.util.logging.Slf4j
-
+import nextflow.data.cid.CidUtils
 import nextflow.data.cid.model.Output
 import nextflow.data.cid.model.WorkflowResults
+import nextflow.data.cid.serde.CidSerializable
 import nextflow.file.RealPathAware
 import nextflow.util.CacheHelper
 import nextflow.util.TestOnly
 
-import java.nio.ByteBuffer
-import java.nio.channels.ClosedChannelException
-import java.nio.channels.NonWritableChannelException
-import java.nio.channels.SeekableByteChannel
-import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileTime
+import java.time.Instant
 
 import static nextflow.data.cid.fs.CidFileSystemProvider.*
 
@@ -66,18 +63,48 @@ class CidPath implements Path, RealPathAware {
     // String with the cid file path
     private String filePath
 
+    private String query
+
+    private String fragment
+
     /*
      * Only needed to prevent serialization issues - see https://github.com/nextflow-io/nextflow/issues/5208
      */
     protected CidPath(){}
 
-    CidPath(CidFileSystem fs, String path) {
-        this(fs, path, EMPTY)
+    CidPath(CidFileSystem fs, URI uri) {
+        if( uri.scheme != SCHEME ) {
+            throw new IllegalArgumentException("Invalid CID URI - scheme is different for $SCHEME")
+        }
+        this.fileSystem = fs
+        this.query = uri.query
+        this.fragment = uri.fragment
+        this.filePath = resolve0( fs, norm0("${uri.authority?:''}${uri.path}") )
     }
 
-    CidPath(CidFileSystem fs, String path, String[] more) {
+    protected CidPath( String query, String fragment, String filepath, CidFileSystem fs){
         this.fileSystem = fs
-        this.filePath = resolve0(fs, norm0(path), norm0(more))
+        this.query = query
+        this.fragment = fragment
+        this.filePath = filepath
+    }
+
+
+    CidPath(CidFileSystem fs, String path) {
+        this( fs, asUri( CID_PROT + norm0(path)) )
+    }
+
+    CidPath(CidFileSystem fs, String first, String[] more) {
+        this( fs, asUri( CID_PROT + buildPath(first, more) ) )
+    }
+
+    private static String buildPath(String first, String[] more){
+        first = norm0(first)
+        if (more){
+            final morePath = norm0(more).join(SEPARATOR)
+            return first.isEmpty() ? morePath : first + SEPARATOR + morePath
+        }
+        return first
     }
 
     private static void validateHash(Output cidObject) {
@@ -106,7 +133,7 @@ class CidPath implements Path, RealPathAware {
     /**
      * Finds the target path of a CID path
      **/
-    protected static Path findTarget(CidFileSystem fs, String filePath, boolean resultsAsPath, String[] childs=[]) throws Exception{
+    protected static Path findTarget(CidFileSystem fs, String filePath, boolean resultsAsPath, String[] children=[]) throws Exception{
         if( !fs )
             throw new IllegalArgumentException("Cannot get target path for a relative CidPath")
         if( filePath.isEmpty() || filePath == SEPARATOR )
@@ -117,45 +144,56 @@ class CidPath implements Path, RealPathAware {
         final object = store.load(filePath)
         if ( object ){
             if( object instanceof Output ) {
-                final cidObject = object as Output
-                // return the real path stored in the metadata
-                validateHash(cidObject)
-                def realPath = FileHelper.toCanonicalPath(cidObject.path as String)
-                if (childs && childs.size() > 0)
-                    realPath = realPath.resolve(childs.join(SEPARATOR))
-                if( !realPath.exists() )
-                    throw new FileNotFoundException("Target path $realPath for $filePath does not exists.")
-                return realPath
+                return getTargetPathFromOutput(object, children)
             }
 
             if( resultsAsPath ){
-                def results = object as Map
-                final creationTime = results.creationTime ? results.creationTime as Long : System.currentTimeMillis()
-                if( object instanceof WorkflowResults )  {
-                    results = (object as WorkflowResults).outputs
-                }
-                if( results ) {
-                    if( childs && childs.size() > 0 ) {
-                        final output = results.navigate(childs.join('.'))
-                        if( output ){
-                            return new CidResultsPath(JsonOutput.prettyPrint(JsonOutput.toJson(output)), creationTime, fs, filePath, childs)
-                        }
-                    }
-                    return new CidResultsPath(JsonOutput.prettyPrint(JsonOutput.toJson(results)), creationTime, fs, filePath, childs)
-                }
+                return getMetadataAsTargetPath(object, fs, filePath, children)
             }
         } else {
             // If there isn't metadata check the parent to check if it is a subfolder of a task/workflow output
             final currentPath = Path.of(filePath)
             final parent = Path.of(filePath).getParent()
             if( parent) {
-                ArrayList<String> newChilds = new ArrayList<String>()
-                newChilds.add(currentPath.getFileName().toString())
-                newChilds.addAll(childs)
-                return findTarget(fs, parent.toString(), resultsAsPath, newChilds as String[])
+                ArrayList<String> newChildren = new ArrayList<String>()
+                newChildren.add(currentPath.getFileName().toString())
+                newChildren.addAll(children)
+                return findTarget(fs, parent.toString(), resultsAsPath, newChildren as String[])
             }
         }
         throw new FileNotFoundException("Target path $filePath does not exists.")
+    }
+
+
+    private static Path getMetadataAsTargetPath(CidSerializable object, CidFileSystem fs, String filePath, String[] children){
+        def results = object
+        def creationTime = CidUtils.navigate(results, 'creationTime') as String
+        creationTime = creationTime ? FileTime.from(Instant.parse(creationTime)) : FileTime.fromMillis(System.currentTimeMillis())
+        if( object instanceof WorkflowResults ) {
+            results = (object as WorkflowResults).outputs
+        }
+        if( results ) {
+            if( children && children.size() > 0 ) {
+                final output = CidUtils.navigate(results, children.join('.'))
+                if( output ){
+                    return new CidResultsPath(JsonOutput.prettyPrint(JsonOutput.toJson(output)), creationTime, fs, filePath, children)
+                }
+            }
+            return new CidResultsPath(JsonOutput.prettyPrint(JsonOutput.toJson(results)), creationTime, fs, filePath, children)
+        }
+        throw new FileNotFoundException("Target path $filePath does not exists.")
+    }
+
+    private static Path getTargetPathFromOutput(Output object, String[] children) {
+        final cidObject = object as Output
+        // return the real path stored in the metadata
+        validateHash(cidObject)
+        def realPath = FileHelper.toCanonicalPath(cidObject.path as String)
+        if (children && children.size() > 0)
+            realPath = realPath.resolve(children.join(SEPARATOR))
+        if (!realPath.exists())
+            throw new FileNotFoundException("Target path $realPath does not exists.")
+        return realPath
     }
 
     private static boolean isEmptyBase(CidFileSystem fs, String base){
@@ -296,7 +334,7 @@ class CidPath implements Path, RealPathAware {
             return that
         } else {
             final newPath = Path.of(filePath).resolve(that.toString())
-            return new CidPath(fileSystem, newPath.toString())
+            return new CidPath(that.query, that.fragment, newPath.toString(), fileSystem)
         }
     }
 
@@ -332,12 +370,12 @@ class CidPath implements Path, RealPathAware {
             // Compare 'filePath' as relative paths
             path = Path.of(filePath).relativize(Path.of(cidOther.filePath))
         }
-        return new CidPath(null , path.getNameCount()>0 ? path.toString(): SEPARATOR)
+        return new CidPath(cidOther.query, cidOther.fragment, path.getNameCount()>0 ? path.toString() : SEPARATOR, null)
     }
 
     @Override
     URI toUri() {
-        asUri("${SCHEME}://${filePath}")
+        asUri("${SCHEME}://${filePath}${query ? '?' + query: ''}${fragment ? '#'+ fragment : ''}")
     }
 
     String toUriString() {
@@ -355,8 +393,9 @@ class CidPath implements Path, RealPathAware {
     }
 
     protected Path getTargetPath(boolean resultsAsPath=false){
-        return findTarget(fileSystem, filePath, resultsAsPath)
+        return findTarget(fileSystem, filePath, resultsAsPath, CidUtils.getChildrenFormFragment(fragment))
     }
+
 
     @Override
     File toFile() throws IOException {
@@ -398,112 +437,14 @@ class CidPath implements Path, RealPathAware {
         if (path.startsWith(CID_PROT + SEPARATOR) && path.length() > 7)
             throw new IllegalArgumentException("Invalid CID file system path URI - make sure the schema prefix does not container more than two slash characters - offending value: $path")
         if (path == CID_PROT) //Empty path case
-            return new URI("")
+            return new URI("cid:///")
         return new URI(path)
     }
 
     @Override
     String toString() {
-        filePath
+        "$filePath${query ? '?' + query: ''}${fragment ? '#'+ fragment : ''}".toString()
     }
-
-}
-
-class ResultsSeekableByteChannel implements SeekableByteChannel {
-    private final ByteBuffer buffer
-    private boolean open
-
-    ResultsSeekableByteChannel(byte[] bytes){
-        this.open = true
-        this.buffer = ByteBuffer.wrap(bytes)
-    }
-
-    @Override
-    int read(ByteBuffer dst) {
-        if (!open) throw new ClosedChannelException()
-        if (!buffer.hasRemaining()) return -1
-        int remaining = Math.min(dst.remaining(), buffer.remaining())
-        byte[] temp = new byte[remaining]
-        buffer.get(temp)
-        dst.put(temp)
-        return remaining
-    }
-
-    @Override
-    int write(ByteBuffer src) { throw new NonWritableChannelException() }
-
-    @Override
-    long position() { return buffer.position() }
-
-    @Override
-    SeekableByteChannel position(long newPosition) {
-        if (newPosition < 0 || newPosition > buffer.limit()) throw new IllegalArgumentException()
-        buffer.position((int) newPosition)
-        return this
-    }
-
-    @Override
-    long size() { return buffer.limit() }
-
-    @Override
-    SeekableByteChannel truncate(long size) { throw new NonWritableChannelException() }
-
-    @Override
-    boolean isOpen() { return open }
-
-    @Override
-    void close() { open = false }
-}
-
-class CidResultsPath extends CidPath {
-    private byte[] results
-    private FileTime creationTime
-
-    CidResultsPath (String resultsObject, long creationTime, CidFileSystem fs, String path, String[] childs) {
-        super(fs, path, childs)
-        this.results = resultsObject.getBytes("UTF-8")
-        this.creationTime = FileTime.fromMillis(creationTime)
-    }
-
-    InputStream newInputStream() {
-        return new ByteArrayInputStream(results)
-    }
-
-    SeekableByteChannel newSeekableByteChannel(){
-        return new ResultsSeekableByteChannel(results)
-    }
-
-    <A extends BasicFileAttributes> A readAttributes(Class<A> type){
-        return (A) new BasicFileAttributes() {
-            @Override
-            long size() { return results.length }
-
-            @Override
-            FileTime lastModifiedTime() { return creationTime }
-
-            @Override
-            FileTime lastAccessTime() { return creationTime }
-
-            @Override
-            FileTime creationTime() { return creationTime }
-
-            @Override
-            boolean isRegularFile() { return true }
-
-            @Override
-            boolean isDirectory() { return false }
-
-            @Override
-            boolean isSymbolicLink() { return false }
-
-            @Override
-            boolean isOther() { return false }
-
-            @Override
-            Object fileKey() { return null }
-        }
-    }
-
 
 }
 
