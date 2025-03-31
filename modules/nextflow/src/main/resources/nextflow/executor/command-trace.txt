@@ -130,15 +130,18 @@ nxf_write_trace() {
         "realtime=$wall_time" \
         "%cpu=$ucpu" \
         "cpu_model=$cpu_model" \
-        "gpu_model=$gpu_model" \
-        "gpu_mem=$gpu_mem_total" \
-        "gpu_driver=$gpu_driver" \
         "rchar=${io_stat1[0]}" \
         "wchar=${io_stat1[1]}" \
         "syscr=${io_stat1[2]}" \
         "syscw=${io_stat1[3]}" \
         "read_bytes=${io_stat1[4]}" \
-        "write_bytes=${io_stat1[5]}" > "$trace_file" || >&2 echo "Error: Failed to write to file: $trace_file"
+        "write_bytes=${io_stat1[5]}" \
+        "gpu_model=$gpu_model" \
+        "gpu_mem=$gpu_mem_total" \
+        "gpu_driver=$gpu_driver" \
+        "%gpu=$gpu_util" \
+        "%gpu_mem=$gpu_mem_perc" \
+        "avg_gpu_mem=$gpu_avg_mem" > "$trace_file" || >&2 echo "Error: Failed to write to file: $trace_file"
 }
 
 nxf_trace_mac() {
@@ -175,6 +178,7 @@ nxf_gpu_watch() {
     local timeout
     local DONE
     local STOP=''
+    local temp_file="${trace_file}.gpu.tmp"
 
     # Check nvidia-smi availability at the start
     if ! command -v nvidia-smi &>/dev/null; then
@@ -235,24 +239,32 @@ nxf_gpu_watch() {
     if [ $gpu_samples -gt 0 ]; then
         local avg_gpu_util=$((gpu_util_sum / gpu_samples))
         # Calculate average memory usage in MiB
-        local gpu_mem=$((gpu_mem_sum / gpu_samples))
+        local avg_gpu_mem=$((gpu_mem_sum / gpu_samples))
         # Calculate average memory percentage
         local avg_gpu_mem_perc=$(awk -v sum=$gpu_mem_perc_sum -v samples=$gpu_samples 'BEGIN {printf "%.1f", sum/samples}')
         
-        [ $NXF_DEBUG = 1 ] && echo "Final averages - util: $avg_gpu_util%, mem: $gpu_mem MiB, mem_perc: $avg_gpu_mem_perc%"
+        [ $NXF_DEBUG = 1 ] && echo "Final averages - util: $avg_gpu_util%, mem: $avg_gpu_mem MiB, mem_perc: $avg_gpu_mem_perc%"
         
-        # Write values directly to the trace file
+        # Write values to the temporary trace file
         printf "%s\n" \
             "%gpu=$avg_gpu_util" \
-            "gpu_mem=$(nxf_format_mem $((gpu_mem * 1024)))" \
-            "%gpu_mem=$avg_gpu_mem_perc" >> "$trace_file"
+            "%gpu_mem=$avg_gpu_mem_perc" \
+            "avg_gpu_mem=$avg_gpu_mem" > "$temp_file"
+        
+        # Append to the main trace file
+        cat "$temp_file" >> "$trace_file"
+        rm -f "$temp_file"
     else
         [ $NXF_DEBUG = 1 ] && echo "Warning: No GPU samples collected"
-        # Write zero values if no samples collected
+        # Create temporary file with zero values
         printf "%s\n" \
             "%gpu=0" \
-            "gpu_mem=$(nxf_format_mem 0)" \
-            "%gpu_mem=0" >> "$trace_file"
+            "%gpu_mem=0" \
+            "avg_gpu_mem=0" > "$temp_file"
+        
+        # Append to the main trace file
+        cat "$temp_file" >> "$trace_file"
+        rm -f "$temp_file"
     fi
 }
 
@@ -273,15 +285,21 @@ nxf_trace_linux() {
     trap 'kill $mem_proc $gpu_proc' ERR
 
     ## check if nvidia-smi is available and capture GPU metrics if it is
+    local gpu_model="unknown"
     local gpu_mem_total=0
+    local gpu_driver="unknown"
+    local gpu_util=0
+    local gpu_mem_perc=0
+    local gpu_avg_mem=0
+    
     if command -v nvidia-smi &>/dev/null; then
         local gpu_stats=$(nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader)
         [ $NXF_DEBUG = 1 ] && echo "+++ GPU STATS: $gpu_stats"
         
         # Extract individual metrics from gpu_stats
-        local gpu_model=$(echo "$gpu_stats" | awk -F, '{print $1}' | xargs)
+        gpu_model=$(echo "$gpu_stats" | awk -F, '{print $1}' | xargs)
         gpu_mem_total=$(echo "$gpu_stats" | awk -F, '{print $2}' | sed 's/MiB//' | xargs)
-        local gpu_driver=$(echo "$gpu_stats" | awk -F, '{print $3}' | xargs)
+        gpu_driver=$(echo "$gpu_stats" | awk -F, '{print $3}' | xargs)
         
         [ $NXF_DEBUG = 1 ] && echo "+++ GPU METRICS: name=$gpu_model, mem_total=$gpu_mem_total, driver=$gpu_driver"
     fi
@@ -320,33 +338,18 @@ nxf_trace_linux() {
     local wall_time=$((end_millis-start_millis))
     [ $NXF_DEBUG = 1 ] && echo "+++ STATS %CPU=$ucpu TIME=$wall_time I/O=${io_stat1[*]}"
 
-    printf "%s\n" \
-        "nextflow.trace/v2" \
-        "realtime=$wall_time" \
-        "%cpu=$ucpu" \
-        "cpu_model=$cpu_model" \
-        "gpu_model=$gpu_model" \
-        "gpu_mem=$(nxf_format_mem $((gpu_mem_total * 1024)))" \
-        "gpu_driver=$gpu_driver" > "$trace_file" || >&2 echo "Error: Failed to write to file: $trace_file"
-    
-    # Default GPU values if GPU monitoring didn't run
-    if [ -z "$gpu_proc" ]; then
-        printf "%s\n" \
-            "gpu_mem=$(nxf_format_mem 0)" \
-            "gpu_model=unknown" \
-            "gpu_driver=unknown" \
-            "%gpu=0" \
-            "%gpu_mem=0" >> "$trace_file"
+    # If GPU metrics were collected, update the values from the temp file
+    if [ ! -z "$gpu_proc" ]; then
+        # Parse GPU metrics from temp file if available
+        [ -e "$trace_file" ] && {
+            gpu_util=$(grep "^%gpu=" "$trace_file" | cut -d= -f2 || echo "0")
+            gpu_mem_perc=$(grep "^%gpu_mem=" "$trace_file" | cut -d= -f2 || echo "0")
+            gpu_avg_mem=$(grep "^avg_gpu_mem=" "$trace_file" | cut -d= -f2 || echo "0")
+        }
     fi
-    
-    # Append the remaining metrics
-    printf "%s\n" \
-        "rchar=${io_stat1[0]}" \
-        "wchar=${io_stat1[1]}" \
-        "syscr=${io_stat1[2]}" \
-        "syscw=${io_stat1[3]}" \
-        "read_bytes=${io_stat1[4]}" \
-        "write_bytes=${io_stat1[5]}" >> "$trace_file" || >&2 echo "Error: Failed to append to file: $trace_file"
+
+    # Write all metrics at once using the write_trace function
+    nxf_write_trace
 
     ## join nxf_mem_watch
     [ -e /proc/$mem_proc ] && eval "echo 'DONE' >&$mem_fd" || true

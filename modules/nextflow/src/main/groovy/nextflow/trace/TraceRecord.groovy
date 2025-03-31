@@ -105,12 +105,11 @@ class TraceRecord implements Serializable {
             hostname: 'str',
             cpu_model:  'str',
             gpu_model:  'str',
-            gpu_mem:    'str',      // -- Total GPU memory in MiB
+            gpu_mem:    'mem',      // -- Total GPU memory capacity in MiB
             gpu_driver: 'str',      // -- GPU driver version
             '%gpu':      'perc',    // -- Average GPU utilization percentage
             '%gpu_mem':  'perc',    // -- Average GPU memory usage as percentage of total available
             avg_gpu_mem: 'mem',      // -- Average GPU memory usage in MiB
-            avg_gpu_mem_perc: 'perc' // -- Average GPU memory usage as percentage of total available
     ]
 
     static public Map<String,Closure<String>> FORMATTER = [
@@ -461,17 +460,40 @@ class TraceRecord implements Serializable {
                     case 'vmem':
                     case 'peak_rss':
                     case 'peak_vmem':
-                    case 'avg_gpu_mem':
                         // these fields are provided in KB, so they are normalized to bytes
                         def val = parseLong(value, file, name) * 1024
                         this.put(name, val)
                         break
+                        
+                    case 'avg_gpu_mem':
+                        // Convert MiB to bytes for consistent formatting
+                        try {
+                            def val = parseLong(value, file, name) * 1024 * 1024
+                            this.put(name, val)
+                        }
+                        catch(NumberFormatException e) {
+                            log.debug "[WARN] Invalid avg_gpu_mem value: $value - $e.message"
+                            this.put(name, 0)
+                        }
+                        break
 
                     case 'gpu_model':
-                    case 'gpu_mem':
                     case 'gpu_driver':
                     case 'cpu_model':
                         this.put(name, value)
+                        break
+
+                    case 'gpu_mem':
+                        // Convert MiB to bytes for consistent formatting
+                        try {
+                            def val = parseLong(value, file, name) * 1024 * 1024
+                            this.put(name, val)
+                        }
+                        catch(NumberFormatException e) {
+                            log.debug "[WARN] Invalid gpu_mem value: $value - $e.message"
+                            // If it's already formatted with units, store as is
+                            this.put(name, value)
+                        }
                         break
 
                     default:
