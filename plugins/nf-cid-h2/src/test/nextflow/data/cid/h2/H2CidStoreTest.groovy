@@ -27,6 +27,9 @@ import nextflow.data.cid.model.WorkflowRun
 import nextflow.data.config.DataConfig
 import spock.lang.Shared
 import spock.lang.Specification
+
+import java.time.Instant
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -60,14 +63,15 @@ class H2CidStoreTest extends Specification {
         def uniqueId = UUID.randomUUID()
         def mainScript = new DataPath("file://path/to/main.nf", new Checksum("78910", "nextflow", "standard"))
         def workflow = new Workflow(mainScript, [], "https://nextflow.io/nf-test/", "123456")
+        def time = Instant.ofEpochMilli(1234567).toString()
         def key = "testKey"
         def value1 = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [new Parameter("String", "param1", "value1"), new Parameter("String", "param2", "value2")])
         def key2 = "testKey2"
-        def value2 = new WorkflowOutput("/path/tp/file1", new Checksum("78910", "nextflow", "standard"), "testkey", 1234, 1234567, 1234567, [key1: "value1", key2: "value2"])
+        def value2 = new WorkflowOutput("/path/tp/file1", new Checksum("78910", "nextflow", "standard"), "testkey", 1234, time, time, [key1: "value1", key2: "value2"])
         def key3 = "testKey3"
-        def value3 = new WorkflowOutput("/path/tp/file2", new Checksum("78910", "nextflow", "standard"), "testkey", 1234, 1234567, 1234567, [key2: "value2", key3: "value3"])
+        def value3 = new WorkflowOutput("/path/tp/file2", new Checksum("78910", "nextflow", "standard"), "testkey", 1234, time, time, [key2: "value2", key3: "value3"])
         def key4 = "testKey4"
-        def value4 = new WorkflowOutput("/path/tp/file", new Checksum("78910", "nextflow", "standard"), "testkey", 1234, 1234567, 1234567, [key3: "value3", key4: "value4"])
+        def value4 = new WorkflowOutput("/path/tp/file", new Checksum("78910", "nextflow", "standard"), "testkey", 1234, time, time, [key3: "value3", key4: "value4"])
 
         store.save(key, value1)
         store.save(key2, value2)

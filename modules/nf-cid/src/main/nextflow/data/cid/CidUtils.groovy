@@ -32,7 +32,16 @@ import java.nio.file.Path
 @Slf4j
 @CompileStatic
 class CidUtils {
-
+    /**
+     * Query a CID store.
+     * @param store CID store to query.
+     * @param uri Query to perform in a URI-like format.
+     *      Format 'cid://<key>[?QueryString][#fragment]' where:
+     *       - Key: Element where the query will be applied. '/' indicates query will be applied in all the elements of the CID store.
+     *       - QueryString: all param-value pairs that the CID element should fulfill in a URI's query string format.
+     *       - Fragment: Element fragment to retrieve.
+     * @return List of object fulfilling the query
+     */
     public static List query(CidStore store, URI uri) {
         String key = uri.authority ? uri.authority + uri.path : uri.path
         try {
@@ -52,7 +61,7 @@ class CidUtils {
                 return results
             } else {
                 final parameters = uri.query ? parseQuery(uri.query) : null
-                final children = getChildrenFormFragment(uri.fragment)
+                final children = parseChildrenFormFragment(uri.fragment)
                 return searchPath(store, key, parameters, children )
             }
         } catch(Throwable e){
@@ -62,7 +71,12 @@ class CidUtils {
 
     }
 
-    public static String[] getChildrenFormFragment(String fragment) {
+    /**
+     * Get the array of the search path children elements from the fragment string
+     * @param fragment String containing the elements separated by '.'
+     * @return array with the parsed element
+     */
+    public static String[] parseChildrenFormFragment(String fragment) {
         if (fragment) {
             if (fragment.contains('.')) {
                 return fragment.split("\\.")
@@ -73,24 +87,31 @@ class CidUtils {
             return [] as String[]
         }
     }
-
-    private static List<Object> searchPath(CidStore store, String path, Map<String, String> params, String[] children = []) {
+    /**
+     * Search for objects inside a description
+     * @param store CID store
+     * @param key CID key where to perform the search
+     * @param params Parameter-value pairs to be evaluated in the key
+     * @param children  Sub-objects to evaluate and retrieve
+     * @return List of object
+     */
+    protected static List<Object> searchPath(CidStore store, String key, Map<String, String> params, String[] children = []) {
         final results = new LinkedList<Object>()
-        final object = store.load(path)
+        final object = store.load(key)
         if (object) {
             if (children && children.size() > 0) {
                 final output = navigate(object, children.join('.'))
                 if (output) {
                     treatObject(output, params, results)
                 } else {
-                    throw new FileNotFoundException("Cid object $path/${children ? children.join('/') : ''} not found.")
+                    throw new FileNotFoundException("Cid object $key/${children ? children.join('/') : ''} not found.")
                 }
             } else {
                 treatObject(object, params, results)
             }
         } else {
             // If there isn't metadata check the parent to check if it is a subfolder of a task/workflow output
-            final currentPath = Path.of(path)
+            final currentPath = Path.of(key)
             final parent = currentPath.getParent()
             if (parent) {
                 ArrayList<String> newChildren = new ArrayList<String>()
@@ -98,12 +119,18 @@ class CidUtils {
                 newChildren.addAll(children)
                 return searchPath(store, parent.toString(), params, newChildren as String[])
             } else {
-                throw new FileNotFoundException("Cid object $path/${children ? children.join('/') : ''} not found.")
+                throw new FileNotFoundException("Cid object $key/${children ? children.join('/') : ''} not found.")
             }
         }
         return results
     }
 
+    /**
+     * Evaluates object or the objects in a collection matches a set of parameter-value pairs. It includes in the results collection in case of match.
+     * @param object Object or collection of objects to evaluate
+     * @param params parameter-value pairs to evaluate in each object
+     * @param results results collection to include the matching objects
+     */
     protected static void treatObject(def object, Map<String, String> params, List<Object> results) {
         if (params) {
             if (object instanceof Collection) {
@@ -115,13 +142,26 @@ class CidUtils {
             results.add(object)
         }
     }
-
+    /**
+     * Parses a query string and store them in parameter-value Map.
+     * @param queryString URI-like query string. (e.g. param1=value1&param2=value2).
+     * @return Map containing the parameter-value pairs of the query string.
+     */
     public static Map<String, String> parseQuery(String queryString) {
-        return queryString.split('&').collectEntries {
-            it.split('=').collect { URLDecoder.decode(it, 'UTF-8') }
-        } as Map<String, String>
+        if (queryString) {
+            return queryString.split('&').collectEntries {
+                it.split('=').collect { URLDecoder.decode(it, 'UTF-8') }
+            } as Map<String, String>
+        }
+        return [:]
     }
 
+    /**
+     * Check if an object fullfill the parameter-value
+     * @param object Object to evaluate
+     * @param params parameter-value pairs to evaluate
+     * @return true if all object parameters exist and matches with the value, otherwise false.
+     */
     public static boolean checkParams(Object object, Map<String,String> params) {
         for (final entry : params.entrySet()) {
             final value = navigate(object, entry.key)
@@ -132,6 +172,12 @@ class CidUtils {
         return true
     }
 
+    /**
+     * Retrieves the sub-object or value indicated by a path.
+     * @param obj Object to navigate
+     * @param path Elements path separated by '.' e.g. field.subfield
+     * @return sub-object / value
+     */
     public static Object navigate(Object obj, String path){
         if (!obj)
             return null

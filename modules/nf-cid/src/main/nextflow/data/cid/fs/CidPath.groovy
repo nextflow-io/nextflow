@@ -393,7 +393,7 @@ class CidPath implements Path, RealPathAware {
     }
 
     protected Path getTargetPath(boolean resultsAsPath=false){
-        return findTarget(fileSystem, filePath, resultsAsPath, CidUtils.getChildrenFormFragment(fragment))
+        return findTarget(fileSystem, filePath, resultsAsPath, CidUtils.parseChildrenFormFragment(fragment))
     }
 
 
