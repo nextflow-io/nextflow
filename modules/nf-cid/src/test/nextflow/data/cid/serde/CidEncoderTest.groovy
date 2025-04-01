@@ -142,7 +142,7 @@ class CidEncoderTest extends Specification{
         def encoded = encoder.encode(wfResults)
         def object = encoder.decode(encoded)
         then:
-        encoded == '{"type":"WorkflowResults","runId":"cid://1234"}'
+        encoded == '{"type":"WorkflowResults","creationTime":null,"runId":"cid://1234","outputs":null}'
         def result = object as WorkflowResults
         result.creationTime == null
 

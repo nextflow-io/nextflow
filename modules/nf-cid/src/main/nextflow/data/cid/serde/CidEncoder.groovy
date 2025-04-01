@@ -44,6 +44,8 @@ class CidEncoder extends GsonEncoder<CidSerializable> {
             .registerSubtype(TaskRun, TaskRun.simpleName)
             .registerSubtype(TaskOutput, TaskOutput.simpleName)
             .registerSubtype(TaskResults, TaskResults.simpleName) )
+        // enable rendering of null values
+        withSerializeNulls(true)
     }
 
 }
