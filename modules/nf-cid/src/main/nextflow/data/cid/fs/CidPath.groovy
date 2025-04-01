@@ -98,6 +98,10 @@ class CidPath implements Path, RealPathAware {
         this( fs, asUri( CID_PROT + buildPath(first, more) ) )
     }
 
+    static String asUriString(String first, String... more) {
+        return CID_PROT + buildPath(first, more)
+    }
+
     private static String buildPath(String first, String[] more){
         first = norm0(first)
         if (more){
@@ -389,7 +393,6 @@ class CidPath implements Path, RealPathAware {
     protected Path getTargetPath(boolean resultsAsPath=false){
         return findTarget(fileSystem, filePath, resultsAsPath, CidUtils.parseChildrenFormFragment(fragment))
     }
-
 
     @Override
     File toFile() throws IOException {

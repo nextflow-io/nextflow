@@ -17,13 +17,12 @@
 
 package nextflow.data.cid
 
-import java.time.Instant
-
 import static nextflow.data.cid.fs.CidPath.*
 
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
+import java.time.Instant
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -31,8 +30,8 @@ import nextflow.Session
 import nextflow.data.cid.model.Checksum
 import nextflow.data.cid.model.DataPath
 import nextflow.data.cid.model.Parameter
-import nextflow.data.cid.model.TaskResults
 import nextflow.data.cid.model.TaskOutput
+import nextflow.data.cid.model.TaskResults
 import nextflow.data.cid.model.Workflow
 import nextflow.data.cid.model.WorkflowOutput
 import nextflow.data.cid.model.WorkflowResults
@@ -84,13 +83,14 @@ class CidObserver implements TraceObserver {
 
     @Override
     void onFlowBegin() {
-        this.executionHash = storeWorkflowRun()
+        executionHash = storeWorkflowRun()
+        final executionUri = asUriString(executionHash)
         workflowResults = new WorkflowResults(
             Instant.now().toString(),
-            "${CID_PROT}${this.executionHash}",
+            executionUri,
             new HashMap<String, Object>()
         )
-        this.store.getHistoryLog().updateRunCid(session.uniqueId, "${CID_PROT}${this.executionHash}")
+        this.store.getHistoryLog().updateRunCid(session.uniqueId, executionUri)
     }
 
     @Override
@@ -99,7 +99,7 @@ class CidObserver implements TraceObserver {
             workflowResults.creationTime = System.currentTimeMillis()
             final key = CacheHelper.hasher(workflowResults).hash().toString()
             this.store.save("${key}", workflowResults)
-            this.store.getHistoryLog().updateResultsCid(session.uniqueId, "${CID_PROT}${key}")
+            this.store.getHistoryLog().updateResultsCid(session.uniqueId, asUriString(key))
         }
     }
 
@@ -178,7 +178,7 @@ class CidObserver implements TraceObserver {
                 outputParams.add(new Parameter(key.class.simpleName, key.name, value) )
             }
         }
-        final value = new TaskResults("$CID_PROT${task.hash}", "$CID_PROT$executionHash", Instant.now().toString(), outputParams)
+        final value = new TaskResults(asUriString(task.hash.toString()), asUriString(executionHash), Instant.now().toString(), outputParams)
         final key = CacheHelper.hasher(value).hash().toString()
         store.save(key,value)
         return key
@@ -186,11 +186,12 @@ class CidObserver implements TraceObserver {
 
     private Object manageFileOutParams( Object value, TaskRun task) {
         if (value instanceof Path) {
-            return CID_PROT + storeTaskOutput(task, (Path) value)
-        } else if (value instanceof Collection<Path>) {
+            return asUriString(storeTaskOutput(task, (Path) value))
+        }
+        if (value instanceof Collection<Path>) {
             final files = new LinkedList<String>()
             for (Path it : value) {
-                files.add( CID_PROT + storeTaskOutput(task, (Path) it) )
+                files.add( asUriString(storeTaskOutput(task, (Path)it)) )
             }
             return files
         }
@@ -233,7 +234,7 @@ class CidObserver implements TraceObserver {
             final value = new TaskOutput(
                 path.toUriString(),
                 checksum,
-                "$CID_PROT$task.hash",
+                asUriString(task.hash.toString()),
                 attrs.size(),
                 CidUtils.toDate(attrs?.creationTime()),
                 CidUtils.toDate(attrs?.lastModifiedTime()))
@@ -270,7 +271,7 @@ class CidObserver implements TraceObserver {
             if( storeDir && path.startsWith(storeDir)) {
                 final rel = storeDir.relativize(path)
                 //If output stored in storeDir, keep the path in case it is used as workflow output
-                this.outputsStoreDirCid.put(path.toString(), "$CID_PROT${task.hash}/$rel".toString())
+                this.outputsStoreDirCid.put(path.toString(), asUriString(task.hash.toString(),rel.toString()))
                 return rel
             }
     }
@@ -294,7 +295,7 @@ class CidObserver implements TraceObserver {
             final rel = getWorkflowRelative(destination)
             final key = "$executionHash/${rel}"
 
-            final sourceReference = source ? getSourceReference(source) : "${CID_PROT}${executionHash}".toString()
+            final sourceReference = source ? getSourceReference(source) : asUriString(executionHash)
             final attrs = readAttributes(destination)
             final value = new WorkflowOutput(
                 destination.toUriString(),
@@ -304,7 +305,7 @@ class CidObserver implements TraceObserver {
                 CidUtils.toDate(attrs?.creationTime()),
                 CidUtils.toDate(attrs?.lastModifiedTime()),
                 annotations)
-            value.publishedBy = "${CID_PROT}${executionHash}".toString()
+            value.publishedBy = asUriString(executionHash)
             store.save(key, value)
         } catch (Throwable e) {
             log.warn("Exception storing published file $destination for workflow ${executionHash}.", e)
@@ -315,13 +316,10 @@ class CidObserver implements TraceObserver {
         final hash = FileHelper.getTaskHashFromPath(source, session.workDir)
         if (hash) {
             final target = FileHelper.getWorkFolder(session.workDir, hash).relativize(source).toString()
-            return "$CID_PROT$hash/$target"
-        } else {
-            final storeDirReference = outputsStoreDirCid.get(source.toString())
-            if (storeDirReference)
-                return "$CID_PROT$storeDirReference"
+            return asUriString(hash.toString(), target)
         }
-        return null
+        final storeDirReference = outputsStoreDirCid.get(source.toString())
+        return storeDirReference ? asUriString(storeDirReference) : null
     }
 
     @Override
@@ -337,7 +335,7 @@ class CidObserver implements TraceObserver {
     private Object convertPathsToCidReferences(Object value){
         if( value instanceof Path ) {
             final rel = getWorkflowRelative(value)
-            return rel ? "${CID_PROT}${executionHash}/${rel}".toString() : value
+            return rel ? asUriString(executionHash, rel) : value
         }
 
         if( value instanceof Collection ) {

@@ -392,4 +392,21 @@ class CidPathTest extends Specification {
         '1234/a/b/c'    | '1234/a/b/c'
         ''              | '/'
     }
+
+    def 'should validate asString method'() {
+        expect:
+        CidPath.asUriString(FIRST, MORE as String[]) == EXPECTED
+
+        where:
+        FIRST       | MORE          | EXPECTED
+        'foo'       | []            | 'cid://foo'
+        'foo/'      | []            | 'cid://foo'
+        '/foo'      | []            | 'cid://foo'
+        and:
+        'a'       | ['/b/']         | 'cid://a/b'
+        'a'       | ['/b','c']      | 'cid://a/b/c'
+        'a'       | ['/b','//c']    | 'cid://a/b/c'
+        'a'       | ['/b/c', 'd']   | 'cid://a/b/c/d'
+        '/a/'     | ['/b/c', 'd']   | 'cid://a/b/c/d'
+    }
 }
