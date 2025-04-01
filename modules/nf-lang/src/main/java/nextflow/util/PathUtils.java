@@ -26,7 +26,7 @@ public class PathUtils {
             return false;
         return excludePatterns.stream()
             .anyMatch((pattern) -> {
-                if( pattern.contains("*") || pattern.contains("?") || pattern.contains("[") ) {
+                if( isGlob(pattern) ) {
                     var matcher = FileSystems.getDefault().getPathMatcher("glob:" + pattern);
                     return matcher.matches(path);
                 }
@@ -35,6 +35,10 @@ public class PathUtils {
                     return path.getNameCount() >= prefix.getNameCount() && prefix.equals(path.subpath(0, prefix.getNameCount()));
                 }
             });
+    }
+
+    public static boolean isGlob(String pattern) {
+        return pattern.contains("*") || pattern.contains("?") || pattern.contains("[");
     }
 
 }
