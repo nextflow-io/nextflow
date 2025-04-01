@@ -87,11 +87,11 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
             module.setTarget(null);
         var includeUnit = compiler.getSource(includeUri);
         if( includeUnit == null ) {
-            addError("Invalid include source: '" + includeUri + "'", node);
+            addError("Invalid include source: '" + includeUri.getPath() + "'", node);
             return;
         }
         if( includeUnit.getAST() == null ) {
-            addError("Module could not be parsed: '" + includeUri + "'", node);
+            addError("Module could not be parsed: '" + includeUri.getPath() + "'", node);
             return;
         }
         var definitions = getDefinitions(includeUri);
@@ -101,7 +101,7 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
                 .filter(defNode -> includedName.equals(defNode.getName()))
                 .findFirst();
             if( !includedNode.isPresent() ) {
-                addError("Included name '" + includedName + "' is not defined in module '" + includeUri + "'", node);
+                addError("Included name '" + includedName + "' is not defined in module '" + includeUri.getPath() + "'", node);
                 continue;
             }
             module.setTarget(includedNode.get());
