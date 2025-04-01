@@ -17,11 +17,13 @@
 
 package nextflow.data.cid.fs
 
-import nextflow.data.cid.DefaultCidStore
-import nextflow.data.config.DataConfig
+import nextflow.data.cid.model.WorkflowResults
+import nextflow.data.cid.serde.CidEncoder
+import nextflow.file.FileHelper
+import nextflow.serde.gson.GsonEncoder
 
 import java.nio.file.Files
-import java.nio.file.Path
+import java.time.Instant
 
 import spock.lang.Shared
 import spock.lang.Specification
@@ -113,14 +115,18 @@ class CidPathTest extends Specification {
         outputSubFolderFile.text = "this is file1"
         def outputFile = data.resolve('file2.txt')
         outputFile.text = "this is file2"
-        def store = new DefaultCidStore()
-        store.open(new DataConfig(enabled: true, store: [location: cid.parent.toString()]))
-        def cidFs = Mock(CidFileSystem){ getCidStore() >> store }
+
+        def cidFs = new FileHelper().getOrCreateFileSystemFor('cid', [enabled: true, store: [location: cid.parent.toString()]] )
+
         cid.resolve('12345/output1').mkdirs()
         cid.resolve('12345/path/to/file2.txt').mkdirs()
         cid.resolve('12345/.data.json').text = '{"type":"TaskRun"}'
         cid.resolve('12345/output1/.data.json').text = '{"type":"TaskOutput", "path": "' + outputFolder.toString() + '"}'
         cid.resolve('12345/path/to/file2.txt/.data.json').text = '{"type":"TaskOutput", "path": "' + outputFile.toString() + '"}'
+        def time = Instant.now().toString()
+        def wfResultsMetadata = new CidEncoder().withPrettyPrint(true).encode(new WorkflowResults(time, "cid://1234", [a: "cid://1234/a.txt"]))
+        cid.resolve('5678/').mkdirs()
+        cid.resolve('5678/.data.json').text = wfResultsMetadata
 
         expect: 'Get real path when CidPath is the output data or a subfolder'
         new CidPath(cidFs,'12345/output1' ).getTargetPath() == outputFolder
@@ -150,6 +156,23 @@ class CidPathTest extends Specification {
 
         when: 'Cid does not exist'
         new CidPath(cidFs, '23456').getTargetPath()
+        then:
+        thrown(FileNotFoundException)
+
+        when: 'Cid description'
+        def result = new CidPath(cidFs, '5678').getTargetPath(true)
+        then:
+        result instanceof CidResultsPath
+        result.text == wfResultsMetadata
+
+        when: 'Cid description subobject'
+        def result2 = new CidPath(cidFs, '5678#outputs').getTargetPath(true)
+        then:
+        result2 instanceof CidResultsPath
+        result2.text == new GsonEncoder<Object>(){}.withPrettyPrint(true).encode([a: "cid://1234/a.txt"])
+
+        when: 'Cid subobject does not exist'
+        new CidPath(cidFs, '23456#notexists').getTargetPath(true)
         then:
         thrown(FileNotFoundException)
 

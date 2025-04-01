@@ -23,6 +23,8 @@ import nextflow.data.cid.fs.CidPath
 import nextflow.data.cid.serde.CidSerializable
 
 import java.nio.file.Path
+import java.nio.file.attribute.FileTime
+import java.time.Instant
 
 /**
  * Utils class for CID.
@@ -202,5 +204,30 @@ class CidUtils {
             log.debug("Error navigating to $path in object", e)
             return null
         }
+    }
+
+    /**
+     * Helper function to convert from FileTime to ISO 8601.
+     *
+     * @param time File time to convert
+     * @return ISO Date format or 'N/A' in case of not available (null)
+     */
+    public static String toDate(FileTime time){
+        if (time)
+            return Instant.ofEpochMilli(time.toMillis()).toString()
+        else
+            return 'N/A'
+    }
+
+    /**
+     * Helper function to convert from String ISO 8601 to FileTime.
+     *
+     * @param date ISO formated time
+     * @return Converted FileTime or null if date is not available (null or 'N/A')
+     */
+    public static FileTime toFileTime(String date){
+        if (!date || date == 'N/A')
+            return null
+        return FileTime.from(Instant.parse(date))
     }
 }

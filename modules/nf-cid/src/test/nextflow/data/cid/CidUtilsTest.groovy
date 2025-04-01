@@ -10,6 +10,8 @@ import spock.lang.Specification
 import spock.lang.TempDir
 
 import java.nio.file.Path
+import java.nio.file.attribute.FileTime
+import java.time.Instant
 
 class CidUtilsTest extends Specification{
 
@@ -24,6 +26,26 @@ class CidUtilsTest extends Specification{
         def configMap = [enabled: true, store: [location: storeLocation.toString(), logLocation: storeLocation.resolve(".log").toString()]]
         config = new DataConfig(configMap)
     }
+
+    def 'should convert to Date'(){
+        expect:
+        CidUtils.toDate(FILE_TIME) == DATE
+        where:
+        FILE_TIME                   | DATE
+        null                        | "N/A"
+        FileTime.fromMillis(1234)   | Instant.ofEpochMilli(1234).toString()
+    }
+
+    def 'should convert to FileTime'(){
+        expect:
+        CidUtils.toFileTime(DATE) == FILE_TIME
+        where:
+        FILE_TIME                   | DATE
+        null                        | "N/A"
+        null                        | null
+        FileTime.fromMillis(1234)   | Instant.ofEpochMilli(1234).toString()
+    }
+
 
     def 'should query'() {
         given:

@@ -217,8 +217,8 @@ class CidObserver implements TraceObserver {
                 checksum,
                 "$CID_PROT$task.hash",
                 attrs.size(),
-                Instant.ofEpochMilli(attrs.creationTime().toMillis()).toString(),
-                Instant.ofEpochMilli(attrs.lastModifiedTime().toMillis()).toString())
+                CidUtils.toDate(attrs?.creationTime()),
+                CidUtils.toDate(attrs?.lastModifiedTime()))
             store.save(key, value)
         } catch (Throwable e) {
             log.warn("Exception storing CID output $path for task ${task.name}. ${e.getLocalizedMessage()}")
@@ -282,8 +282,8 @@ class CidObserver implements TraceObserver {
                 checksum,
                 sourceReference,
                 attrs.size(),
-                Instant.ofEpochMilli(attrs.creationTime().toMillis()).toString(),
-                Instant.ofEpochMilli(attrs.lastModifiedTime().toMillis()).toString(),
+                CidUtils.toDate(attrs?.creationTime()),
+                CidUtils.toDate(attrs?.lastModifiedTime()),
                 annotations)
             value.publishedBy = "${CID_PROT}${executionHash}".toString()
             store.save(key, value)

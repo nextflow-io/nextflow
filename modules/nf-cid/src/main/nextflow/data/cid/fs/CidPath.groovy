@@ -17,13 +17,13 @@
 
 package nextflow.data.cid.fs
 
-import groovy.json.JsonOutput
 import groovy.util.logging.Slf4j
 import nextflow.data.cid.CidUtils
 import nextflow.data.cid.model.Output
-import nextflow.data.cid.model.WorkflowResults
+import nextflow.data.cid.serde.CidEncoder
 import nextflow.data.cid.serde.CidSerializable
 import nextflow.file.RealPathAware
+import nextflow.serde.gson.GsonEncoder
 import nextflow.util.CacheHelper
 import nextflow.util.TestOnly
 
@@ -164,22 +164,16 @@ class CidPath implements Path, RealPathAware {
         throw new FileNotFoundException("Target path $filePath does not exists.")
     }
 
-
-    private static Path getMetadataAsTargetPath(CidSerializable object, CidFileSystem fs, String filePath, String[] children){
-        def results = object
-        def creationTime = CidUtils.navigate(results, 'creationTime') as String
-        creationTime = creationTime ? FileTime.from(Instant.parse(creationTime)) : FileTime.fromMillis(System.currentTimeMillis())
-        if( object instanceof WorkflowResults ) {
-            results = (object as WorkflowResults).outputs
-        }
+    protected static Path getMetadataAsTargetPath(CidSerializable results, CidFileSystem fs, String filePath, String[] children){
         if( results ) {
+            def creationTime = CidUtils.toFileTime(CidUtils.navigate(results, 'creationTime') as String) ?: FileTime.from(Instant.now())
             if( children && children.size() > 0 ) {
                 final output = CidUtils.navigate(results, children.join('.'))
                 if( output ){
-                    return new CidResultsPath(JsonOutput.prettyPrint(JsonOutput.toJson(output)), creationTime, fs, filePath, children)
+                    return new CidResultsPath(new GsonEncoder<Object>(){}.withPrettyPrint(true).encode(output), creationTime, fs, filePath, children)
                 }
             }
-            return new CidResultsPath(JsonOutput.prettyPrint(JsonOutput.toJson(results)), creationTime, fs, filePath, children)
+            return new CidResultsPath(new CidEncoder().withPrettyPrint(true).encode(results), creationTime, fs, filePath, children)
         }
         throw new FileNotFoundException("Target path $filePath does not exists.")
     }
