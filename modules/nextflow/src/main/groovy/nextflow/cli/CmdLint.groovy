@@ -163,7 +163,8 @@ class CmdLint extends CmdBase {
         for( final message : errorMessages ) {
             if( message instanceof SyntaxErrorMessage ) {
                 final cause = message.getCause()
-                errorListener.onError(cause, source)
+                final filename = source.getName().replaceFirst(/^\.\//, '')
+                errorListener.onError(cause, filename, source)
                 summary.errors += 1
             }
         }
@@ -185,7 +186,7 @@ interface ErrorListener {
     void beforeAll()
     void beforeFile(File file)
     void beforeErrors()
-    void onError(SyntaxException error, SourceUnit source)
+    void onError(SyntaxException error, String filename, SourceUnit source)
     void afterErrors()
     void afterAll(LintSummary summary)
 }
@@ -224,8 +225,8 @@ class AnsiErrorListener implements ErrorListener {
     }
 
     @Override
-    void onError(SyntaxException error, SourceUnit source) {
-        term.bold().a("${source.getName().replaceFirst(/^\.\//, '')}").reset()
+    void onError(SyntaxException error, String filename, SourceUnit source) {
+        term.bold().a(filename).reset()
         term.a(":${error.getStartLine()}:${error.getStartColumn()}: ")
         term = highlightString(error.getOriginalMessage(), term)
         if( format != 'concise' ) {
@@ -376,9 +377,9 @@ class JsonErrorListener implements ErrorListener {
     }
 
     @Override
-    void onError(SyntaxException error, SourceUnit source) {
+    void onError(SyntaxException error, String filename, SourceUnit source) {
         errors.add([
-            filename: source.getName(),
+            filename: filename,
             startLine: error.getStartLine(),
             startColumn: error.getStartColumn(),
             message: error.getOriginalMessage()
