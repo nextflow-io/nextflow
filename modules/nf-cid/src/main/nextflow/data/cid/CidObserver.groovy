@@ -31,6 +31,7 @@ import nextflow.Session
 import nextflow.data.cid.model.Checksum
 import nextflow.data.cid.model.DataPath
 import nextflow.data.cid.model.Parameter
+import nextflow.data.cid.model.TaskResults
 import nextflow.data.cid.model.TaskOutput
 import nextflow.data.cid.model.Workflow
 import nextflow.data.cid.model.WorkflowOutput
@@ -46,6 +47,7 @@ import nextflow.script.params.DefaultInParam
 import nextflow.script.params.FileInParam
 import nextflow.script.params.FileOutParam
 import nextflow.script.params.InParam
+import nextflow.script.params.OutParam
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
@@ -162,19 +164,35 @@ class CidObserver implements TraceObserver {
         final pathNormalizer = new PathNormalizer(session.workflowMetadata)
         // store the task run entry
         storeTaskRun(task, pathNormalizer)
-        // store all task outputs files
-        final outputs = task.getOutputsByType(FileOutParam)
-        outputs.forEach { FileOutParam key, Object value -> manageFileOutParams(value, task)}
-
+        // store all task results
+        storeTaskResults(task)
     }
 
-    private void manageFileOutParams( Object value, TaskRun task) {
-        if (value instanceof Path) {
-            storeTaskOutput(task, (Path) value)
-        } else if (value instanceof Collection<Path>) {
-            for (Path it : value) {
-                storeTaskOutput(task, (Path) it)
+    protected String storeTaskResults(TaskRun task ){
+        final outputs = task.getOutputs()
+        final outputParams = new LinkedList<Parameter>()
+        outputs.forEach { OutParam key, Object value ->
+            if (key instanceof FileOutParam) {
+                outputParams.add(new Parameter(key.class.simpleName, key.name, manageFileOutParams(value, task)))
+            } else {
+                outputParams.add(new Parameter(key.class.simpleName, key.name, value) )
             }
+        }
+        final value = new TaskResults("$CID_PROT${task.hash}", "$CID_PROT$executionHash", Instant.now().toString(), outputParams)
+        final key = CacheHelper.hasher(value).hash().toString()
+        store.save(key,value)
+        return key
+    }
+
+    private Object manageFileOutParams( Object value, TaskRun task) {
+        if (value instanceof Path) {
+            return CID_PROT + storeTaskOutput(task, (Path) value)
+        } else if (value instanceof Collection<Path>) {
+            final files = new LinkedList<String>()
+            for (Path it : value) {
+                files.add( CID_PROT + storeTaskOutput(task, (Path) it) )
+            }
+            return files
         }
     }
 
@@ -204,7 +222,7 @@ class CidObserver implements TraceObserver {
         return key
     }
 
-    protected void storeTaskOutput(TaskRun task, Path path) {
+    protected String storeTaskOutput(TaskRun task, Path path) {
         try {
             final attrs = readAttributes(path)
             final rel = getTaskRelative(task, path)
@@ -220,6 +238,7 @@ class CidObserver implements TraceObserver {
                 CidUtils.toDate(attrs?.creationTime()),
                 CidUtils.toDate(attrs?.lastModifiedTime()))
             store.save(key, value)
+            return key
         } catch (Throwable e) {
             log.warn("Exception storing CID output $path for task ${task.name}. ${e.getLocalizedMessage()}")
         }

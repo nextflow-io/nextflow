@@ -19,6 +19,7 @@ package nextflow.data.cid.serde
 
 import groovy.transform.CompileStatic
 import nextflow.data.cid.model.TaskOutput
+import nextflow.data.cid.model.TaskResults
 import nextflow.data.cid.model.TaskRun
 import nextflow.data.cid.model.Workflow
 import nextflow.data.cid.model.WorkflowOutput
@@ -40,6 +41,7 @@ class CidEncoder extends GsonEncoder<CidSerializable> {
         .registerSubtype(WorkflowOutput, WorkflowOutput.simpleName)
         .registerSubtype(TaskRun, TaskRun.simpleName)
         .registerSubtype(TaskOutput, TaskOutput.simpleName)
+        .registerSubtype(TaskResults, TaskResults.simpleName)
 
     CidEncoder() {
         withTypeAdapterFactory(CID_SERIALIZABLE_FACTORY)
