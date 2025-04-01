@@ -191,6 +191,7 @@ interface ErrorListener {
 }
 
 
+@CompileStatic
 class AnsiErrorListener implements ErrorListener {
     private String format
 
@@ -317,7 +318,7 @@ class AnsiErrorListener implements ErrorListener {
     }
 
     @Memoized
-    private String getSourceText(SourceUnit source) {
+    private List<String> getSourceText(SourceUnit source) {
         return source.getSource().getReader().readLines()
     }
 
@@ -357,6 +358,7 @@ class AnsiErrorListener implements ErrorListener {
 }
 
 
+@CompileStatic
 class JsonErrorListener implements ErrorListener {
 
     private List<Map> errors = []
