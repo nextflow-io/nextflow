@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import groovy.lang.GString;
 import groovy.lang.Tuple2;
 import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.types.shim.ShimType;
@@ -55,7 +56,7 @@ public class Types {
         var returnType = node.getReturnType();
         if( returnType.isGenericsPlaceHolder() )
             return true;
-        return !ClassHelper.OBJECT_TYPE.equals(returnType) && !ClassHelper.VOID_TYPE.equals(returnType);
+        return !ClassHelper.isObjectType(returnType) && !ClassHelper.isPrimitiveVoid(returnType);
     }
 
     /**
@@ -67,6 +68,8 @@ public class Types {
      * @param source
      */
     public static boolean isAssignableFrom(ClassNode target, ClassNode source) {
+        if( ClassHelper.isObjectType(target) )
+            return true;
         if( target.equals(source) )
             return true;
         return isAssignableFrom(target.getTypeClass(), source.getTypeClass());
@@ -88,6 +91,9 @@ public class Types {
      * @param type
      */
     public static String getName(ClassNode type) {
+        if( type == null )
+            return "?";
+
         if( type.isArray() )
             return getName(type.getComponentType());
 
@@ -210,7 +216,8 @@ public class Types {
         Map.entry(double.class,  Number.class),
         Map.entry(float.class,   Number.class),
         Map.entry(int.class,     Integer.class),
-        Map.entry(long.class,    Integer.class)
+        Map.entry(long.class,    Integer.class),
+        Map.entry(GString.class, String.class)
     );
 
     /**
