@@ -17,15 +17,14 @@
 
 package nextflow.data.cid.fs
 
+import static nextflow.data.cid.fs.CidPath.*
+
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import nextflow.data.config.DataConfig
 import nextflow.file.FileHelper
 import nextflow.file.FileSystemPathFactory
-
-import static nextflow.data.cid.fs.CidPath.CID_PROT
-
 /**
  * Implements a {@link FileSystemPathFactory} for CID file system
  *
@@ -36,7 +35,7 @@ class CidPathFactory extends FileSystemPathFactory {
 
     @Override
     protected Path parseUri(String uri) {
-        return uri.startsWith(CID_PROT) ? create(uri) : null
+        return isCidUri(uri) ? create(uri) : null
     }
 
     @Override

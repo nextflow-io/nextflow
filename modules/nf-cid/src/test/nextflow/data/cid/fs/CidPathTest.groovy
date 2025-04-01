@@ -393,6 +393,7 @@ class CidPathTest extends Specification {
         ''              | '/'
     }
 
+    @Unroll
     def 'should validate asString method'() {
         expect:
         CidPath.asUriString(FIRST, MORE as String[]) == EXPECTED
@@ -409,4 +410,25 @@ class CidPathTest extends Specification {
         'a'       | ['/b/c', 'd']   | 'cid://a/b/c/d'
         '/a/'     | ['/b/c', 'd']   | 'cid://a/b/c/d'
     }
+
+    @Unroll
+    def 'should check is cid uri string' () {
+        expect:
+        CidPath.isCidUri(STR) == EXPECTED
+
+        where:
+        STR             | EXPECTED
+        null            | false
+        ''              | false
+        'foo'           | false
+        '/foo'          | false
+        'cid:/foo'      | false
+        'cid:foo'       | false
+        'cid/foo'       | false
+        and:
+        'cid://'        | true
+        'cid:///'       | true
+        'cid://foo/bar' | true
+    }
+
 }

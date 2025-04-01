@@ -102,6 +102,10 @@ class CidPath implements Path, RealPathAware {
         return CID_PROT + buildPath(first, more)
     }
 
+    static boolean isCidUri(String path) {
+        return path && path.startsWith(CID_PROT)
+    }
+
     private static String buildPath(String first, String[] more){
         first = norm0(first)
         if (more){
@@ -440,7 +444,7 @@ class CidPath implements Path, RealPathAware {
 
     @Override
     String toString() {
-        "$filePath${query ? '?' + query: ''}${fragment ? '#'+ fragment : ''}".toString()
+        return "$filePath${query ? '?' + query: ''}${fragment ? '#'+ fragment : ''}".toString()
     }
 
 }

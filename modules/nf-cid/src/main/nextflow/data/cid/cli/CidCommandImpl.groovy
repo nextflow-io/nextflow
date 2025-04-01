@@ -17,18 +17,9 @@
 
 package nextflow.data.cid.cli
 
-import nextflow.data.cid.CidUtils
-import nextflow.data.cid.serde.CidSerializable
-import nextflow.serde.gson.GsonEncoder
-import org.eclipse.jgit.diff.DiffAlgorithm
-import org.eclipse.jgit.diff.DiffFormatter
-import org.eclipse.jgit.diff.RawText
-import org.eclipse.jgit.diff.RawTextComparator
-
-import java.nio.charset.StandardCharsets
-
 import static nextflow.data.cid.fs.CidPath.*
 
+import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 
 import groovy.transform.Canonical
@@ -40,6 +31,7 @@ import nextflow.dag.MermaidHtmlRenderer
 import nextflow.data.cid.CidHistoryRecord
 import nextflow.data.cid.CidStore
 import nextflow.data.cid.CidStoreFactory
+import nextflow.data.cid.CidUtils
 import nextflow.data.cid.model.Output
 import nextflow.data.cid.model.Parameter
 import nextflow.data.cid.model.TaskOutput
@@ -47,8 +39,14 @@ import nextflow.data.cid.model.TaskRun
 import nextflow.data.cid.model.WorkflowOutput
 import nextflow.data.cid.model.WorkflowRun
 import nextflow.data.cid.serde.CidEncoder
+import nextflow.data.cid.serde.CidSerializable
 import nextflow.script.params.FileInParam
+import nextflow.serde.gson.GsonEncoder
 import nextflow.ui.TableBuilder
+import org.eclipse.jgit.diff.DiffAlgorithm
+import org.eclipse.jgit.diff.DiffFormatter
+import org.eclipse.jgit.diff.RawText
+import org.eclipse.jgit.diff.RawTextComparator
 /**
  * Implements CID command line operations
  *
@@ -95,7 +93,7 @@ class CidCommandImpl implements CmdCid.CidCommand {
 
     @Override
     void show(ConfigMap config, List<String> args) {
-        if (!args[0].startsWith(CID_PROT))
+        if (!isCidUri(args[0]))
             throw new Exception("Identifier is not a CID URL")
         final store = CidStoreFactory.getOrCreate(new Session(config))
         if (store) {
@@ -150,7 +148,7 @@ class CidCommandImpl implements CmdCid.CidCommand {
     }
 
     private void processNode(List<String> lines, String nodeToRender, LinkedList<String> nodes, LinkedList<Edge> edges, CidStore store) {
-        if (!nodeToRender.startsWith(CID_PROT))
+        if (!isCidUri(nodeToRender))
             throw new Exception("Identifier is not a CID URL")
         final key = nodeToRender.substring(CID_PROT.size())
         final cidObject = store.load(key)
@@ -160,7 +158,7 @@ class CidCommandImpl implements CmdCid.CidCommand {
                 lines << "    ${nodeToRender}@{shape: document, label: \"${nodeToRender}\"}".toString();
                 final source = (cidObject as Output).source
                 if (source) {
-                    if (source.startsWith(CID_PROT)) {
+                    if (isCidUri(source)) {
                         nodes.add(source)
                         edges.add(new Edge(source, nodeToRender))
                     } else {
@@ -213,7 +211,7 @@ class CidCommandImpl implements CmdCid.CidCommand {
         }
         if (value instanceof CharSequence) {
             final source = value.toString()
-            if (source.startsWith(CID_PROT)) {
+            if (isCidUri(source)) {
                 nodes.add(source)
                 edges.add(new Edge(source, nodeToRender))
                 return
@@ -222,7 +220,7 @@ class CidCommandImpl implements CmdCid.CidCommand {
         if (value instanceof Map) {
             if (value.path) {
                 final path = value.path.toString()
-                if (path.startsWith(CID_PROT)) {
+                if (isCidUri(path)) {
                     nodes.add(path)
                     edges.add(new Edge(path, nodeToRender))
                     return
@@ -241,7 +239,7 @@ class CidCommandImpl implements CmdCid.CidCommand {
 
     @Override
     void diff(ConfigMap config, List<String> args) {
-        if (!args[0].startsWith(CID_PROT) || !args[1].startsWith(CID_PROT))
+        if (!isCidUri(args[0]) || !isCidUri(args[1]))
             throw new Exception("Identifier is not a CID URL")
 
         final store = CidStoreFactory.getOrCreate(new Session(config))
