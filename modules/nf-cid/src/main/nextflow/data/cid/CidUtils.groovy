@@ -44,7 +44,7 @@ class CidUtils {
      *       - Fragment: Element fragment to retrieve.
      * @return List of object fulfilling the query
      */
-    public static List query(CidStore store, URI uri) {
+    static List query(CidStore store, URI uri) {
         String key = uri.authority ? uri.authority + uri.path : uri.path
         try {
             if (key == CidPath.SEPARATOR) {
@@ -78,7 +78,7 @@ class CidUtils {
      * @param fragment String containing the elements separated by '.'
      * @return array with the parsed element
      */
-    public static String[] parseChildrenFormFragment(String fragment) {
+    static String[] parseChildrenFormFragment(String fragment) {
         if (fragment) {
             if (fragment.contains('.')) {
                 return fragment.split("\\.")
@@ -149,7 +149,7 @@ class CidUtils {
      * @param queryString URI-like query string. (e.g. param1=value1&param2=value2).
      * @return Map containing the parameter-value pairs of the query string.
      */
-    public static Map<String, String> parseQuery(String queryString) {
+    static Map<String, String> parseQuery(String queryString) {
         if (queryString) {
             return queryString.split('&').collectEntries {
                 it.split('=').collect { URLDecoder.decode(it, 'UTF-8') }
@@ -164,7 +164,7 @@ class CidUtils {
      * @param params parameter-value pairs to evaluate
      * @return true if all object parameters exist and matches with the value, otherwise false.
      */
-    public static boolean checkParams(Object object, Map<String,String> params) {
+    static boolean checkParams(Object object, Map<String,String> params) {
         for (final entry : params.entrySet()) {
             final value = navigate(object, entry.key)
             if (!value || value.toString() != entry.value.toString() ) {
@@ -180,7 +180,7 @@ class CidUtils {
      * @param path Elements path separated by '.' e.g. field.subfield
      * @return sub-object / value
      */
-    public static Object navigate(Object obj, String path){
+    static Object navigate(Object obj, String path){
         if (!obj)
             return null
         try{
@@ -212,7 +212,7 @@ class CidUtils {
      * @param time File time to convert
      * @return ISO Date format or 'N/A' in case of not available (null)
      */
-    public static String toDate(FileTime time){
+    static String toDate(FileTime time){
         if (time)
             return Instant.ofEpochMilli(time.toMillis()).toString()
         else
@@ -225,7 +225,7 @@ class CidUtils {
      * @param date ISO formated time
      * @return Converted FileTime or null if date is not available (null or 'N/A')
      */
-    public static FileTime toFileTime(String date){
+    static FileTime toFileTime(String date){
         if (!date)
             return null
         return FileTime.from(Instant.parse(date))
