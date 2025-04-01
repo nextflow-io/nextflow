@@ -21,19 +21,18 @@ import com.beust.jcommander.Parameters
 import groovy.io.FileType
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import java.nio.file.*
 import nextflow.config.control.ConfigParser
 import nextflow.config.formatter.ConfigFormattingVisitor
 import nextflow.exception.AbortOperationException
 import nextflow.script.control.ScriptParser
 import nextflow.script.formatter.FormattingOptions
 import nextflow.script.formatter.ScriptFormattingVisitor
+import nextflow.util.PathUtils
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage
-
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
-import static nextflow.util.LoggerHelper.isHashLogPrefix
+
 import static org.fusesource.jansi.Ansi.Attribute
 import static org.fusesource.jansi.Ansi.Color
 import static org.fusesource.jansi.Ansi.ansi
@@ -63,7 +62,7 @@ class CmdFormat extends CmdBase {
         names = ['-exclude'],
         description = 'File pattern to exclude from formatter (can be specified multiple times)'
     )
-    List<String> excludePatterns = []
+    List<String> excludePatterns = ['.git', '.nf-test', 'work']
 
     private ScriptParser scriptParser
 
@@ -71,16 +70,14 @@ class CmdFormat extends CmdBase {
 
     private FormattingOptions formattingOptions
 
-    private int numFilesChanged = 0
-    private int numFilesUnchanged = 0
+    private int filesChanged = 0
+    private int filesUnchanged = 0
 
     @Override
     String getName() { 'format' }
 
     @Override
     void run() {
-        // Print a newline, as first format update will chomp it
-        println()
         if( !args )
             throw new AbortOperationException("Error: No input files specified")
 
@@ -94,6 +91,9 @@ class CmdFormat extends CmdBase {
         configParser = new ConfigParser()
         formattingOptions = new FormattingOptions(spaces, !tabs, harhsilAlignment, false)
 
+        // print extra newline since first file status will chomp it
+        println()
+
         for( final arg : args ) {
             final file = new File(arg)
             if( file.isFile() ) {
@@ -103,6 +103,7 @@ class CmdFormat extends CmdBase {
 
             file.eachFileRecurse(FileType.FILES, this.&format)
         }
+
         final emojis = [
             "🪣 🫧",
             "🧽 ✨",
@@ -111,45 +112,26 @@ class CmdFormat extends CmdBase {
             "🧼 🎉",
             "🧹 💨"
         ]
-        def rnd = new Random()
-        final term = ansi().cursorUp(1).eraseLine()
+        final rnd = new Random()
+        Ansi term = ansi().cursorUp(1).eraseLine()
         term.bold().a("Nextflow code formatting complete! ${emojis[rnd.nextInt(emojis.size())]}").reset().newline()
-        if(numFilesChanged > 0)
-            term.fg(Color.GREEN).a(" ${numFilesChanged} file${numFilesChanged==1 ? '':'s'} reformatted").newline()
-        if(numFilesUnchanged > 0)
-            term.fg(Color.BLUE).a(" ${numFilesUnchanged} file${numFilesUnchanged==1 ? '':'s'} left unchanged").newline()
-        if(numFilesChanged == 0 && numFilesUnchanged == 0)
+        if( filesChanged > 0 )
+            term.fg(Color.GREEN).a(" ${filesChanged} file${filesChanged==1 ? '':'s'} reformatted").newline()
+        if( filesUnchanged > 0 )
+            term.fg(Color.BLUE).a(" ${filesUnchanged} file${filesUnchanged==1 ? '':'s'} left unchanged").newline()
+        if( filesChanged == 0 && filesUnchanged == 0 )
             term.a(" No files found to process").newline()
         AnsiConsole.out.print(term)
         AnsiConsole.out.flush()
     }
 
-    private boolean shouldExcludeFile(File file) {
-        if (!excludePatterns)
-            return false
-
-        def path = file.toPath()
-
-        return excludePatterns.any { pattern ->
-            if (pattern.contains("*") || pattern.contains("?") || pattern.contains("[")) {
-                def matcher = FileSystems.default.getPathMatcher("glob:${pattern}")
-                return matcher.matches(path)
-            } else {
-                def prefix = Paths.get(pattern)
-                return path.getNameCount() >= prefix.getNameCount() &&
-                    path.subpath(0, prefix.getNameCount()) == prefix
-            }
-        }
-    }
-
     void format(File file) {
-        final name = file.getName()
-        // Skip excluded files
-        if (shouldExcludeFile(file)) {
+        if( PathUtils.isPathExcluded(file.toPath(), excludePatterns) ) {
             log.debug "Skipping excluded file ${file}"
             return
         }
 
+        final name = file.getName()
         if( name.endsWith('.nf') )
             formatScript(file)
         else if( name.endsWith('.config') )
@@ -160,19 +142,21 @@ class CmdFormat extends CmdBase {
         final source = scriptParser.parse(file)
         if( source.getErrorCollector().hasErrors() ) {
             printErrors(source)
+            return
+        }
+
+        log.debug "Formatting script ${file}"
+        printStatus(file)
+
+        final formatter = new ScriptFormattingVisitor(source, formattingOptions)
+        formatter.visit()
+        final result = formatter.toString()
+        if( file.text != result ) {
+            filesChanged += 1
+            file.text = result
         }
         else {
-            log.debug "Formatting script ${file}"
-            printStatus(file)
-            final formatter = new ScriptFormattingVisitor(source, formattingOptions)
-            formatter.visit()
-            // Check if anything changed)
-            if(file.text != formatter.toString()){
-                numFilesChanged += 1
-                file.text = formatter.toString()
-            } else {
-                numFilesUnchanged += 1
-            }
+            filesUnchanged += 1
         }
     }
 
@@ -180,45 +164,37 @@ class CmdFormat extends CmdBase {
         final source = configParser.parse(file)
         if( source.getErrorCollector().hasErrors() ) {
             printErrors(source)
+            return
+        }
+
+        log.debug "Formatting config ${file.getPath().replaceFirst(/^\.\//, '')}"
+        printStatus(file)
+
+        final formatter = new ConfigFormattingVisitor(source, formattingOptions)
+        formatter.visit()
+        final result = formatter.toString()
+        if( file.text != result ) {
+            filesChanged += 1
+            file.text = result
         }
         else {
-            log.debug "Formatting config ${file.getPath().replaceFirst(/^\.\//, '')}"
-            printStatus(file)
-            final formatter = new ConfigFormattingVisitor(source, formattingOptions)
-            formatter.visit()
-            // Check if anything changed)
-            if(file.text != formatter.toString()){
-                numFilesChanged += 1
-                file.text = formatter.toString()
-            } else {
-                numFilesUnchanged += 1
-            }
+            filesUnchanged += 1
         }
     }
 
     private void printStatus(File file) {
-        final str = ansi().cursorUp(1).eraseLine()
-        str.a(Attribute.INTENSITY_FAINT).a("Formatting: ${file.getPath().replaceFirst(/^\.\//, '')}")
-        str.reset().newline().toString()
-        AnsiConsole.out.print(str)
+        final line = ansi()
+            .cursorUp(1).eraseLine()
+            .a(Attribute.INTENSITY_FAINT).a("Formatting: ${file.getPath().replaceFirst(/^\.\//, '')}")
+            .reset().newline().toString()
+        AnsiConsole.out.print(line)
         AnsiConsole.out.flush()
     }
 
-    private Ansi highlightString(String str, Ansi term) {
-        def matcher = str =~ /^(.*)([`'][^`']+[`'])(.*)$/
-        if (matcher.find()) {
-            term.a(matcher.group(1))
-                .fg(Color.CYAN).a(matcher.group(2)).fg(Color.DEFAULT)
-                .a(matcher.group(3))
-        } else {
-            term.a(str)
-        }
-        return term
-    }
-
     private void printErrors(SourceUnit source) {
+        Ansi term = ansi().cursorUp(1).eraseLine()
+
         final errorMessages = source.getErrorCollector().getErrors()
-        def term = ansi().cursorUp(1).eraseLine()
         for( final message : errorMessages ) {
             if( message instanceof SyntaxErrorMessage ) {
                 final cause = message.getCause()
@@ -229,9 +205,23 @@ class CmdFormat extends CmdBase {
                 term.newline()
             }
         }
-        // Double newline as next status update will chomp back one
+
+        // print extra newline since next file status will chomp back one
         term.fg(Color.DEFAULT).newline()
         AnsiConsole.out.print(term.toString())
         AnsiConsole.out.flush()
+    }
+
+    private Ansi highlightString(String str, Ansi term) {
+        final matcher = str =~ /^(.*)([`'][^`']+[`'])(.*)$/
+        if( matcher.find() ) {
+            term.a(matcher.group(1))
+                .fg(Color.CYAN).a(matcher.group(2)).fg(Color.DEFAULT)
+                .a(matcher.group(3))
+        }
+        else {
+            term.a(str)
+        }
+        return term
     }
 }

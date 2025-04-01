@@ -16,26 +16,28 @@
 
 package nextflow.cli
 
+import java.time.Instant
+
+import com.beust.jcommander.IParameterValidator
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
-import com.beust.jcommander.validators.NoValueValidator
-import com.beust.jcommander.IParameterValidator
 import com.beust.jcommander.ParameterException
 import groovy.io.FileType
+import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
-import java.util.regex.Pattern
-import java.time.Instant
-import java.nio.file.*
 import nextflow.config.control.ConfigParser
 import nextflow.exception.AbortOperationException
 import nextflow.script.control.Compiler
 import nextflow.script.control.ScriptParser
+import nextflow.util.PathUtils
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage
-import org.eclipse.jgit.ignore.IgnoreNode
+import org.codehaus.groovy.syntax.SyntaxException
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
+
 import static org.fusesource.jansi.Ansi.Attribute
 import static org.fusesource.jansi.Ansi.Color
 import static org.fusesource.jansi.Ansi.ansi
@@ -56,17 +58,7 @@ class CmdLint extends CmdBase {
         names = ['-exclude'],
         description = 'File pattern to exclude from linting (can be specified multiple times)'
     )
-    List<String> excludePatterns = []
-
-    static class OutputFormatValidator implements IParameterValidator {
-        @Override
-        void validate(String name, String value) throws ParameterException {
-            def allowedValues = ['full', 'extended', 'concise', 'json']
-            if (!allowedValues.contains(value)) {
-                throw new ParameterException("Output format must be one of $allowedValues (found: $value)")
-            }
-        }
-    }
+    List<String> excludePatterns = ['.git', '.nf-test', 'work']
 
     @Parameter(
         names = ['-output-format'],
@@ -75,36 +67,24 @@ class CmdLint extends CmdBase {
     )
     String outputFormat = System.getenv('NXF_LINT_FORMAT') ?: 'full'
 
+    static class OutputFormatValidator implements IParameterValidator {
+
+        private static final List<String> FORMATS = List.of('full', 'extended', 'concise', 'json')
+
+        @Override
+        void validate(String name, String value) {
+            if( !FORMATS.contains(value) )
+                throw new ParameterException("Output format must be one of $FORMATS (found: $value)")
+        }
+    }
+
     private ScriptParser scriptParser
 
     private ConfigParser configParser
 
-    private IgnoreNode ignoreNode
+    private ErrorListener errorListener
 
-    static class LintResults {
-        String date
-        List<LintError> errors = []
-        LintSummary summary = new LintSummary()
-    }
-
-    static class LintError {
-        String filename
-        Integer startLine
-        Integer startColumn
-        String message
-    }
-
-    static class LintSummary {
-        Integer numErrors = 0
-        Integer numFilesWithErrors = 0
-        Integer numFilesWithoutErrors = 0
-    }
-
-    private LintResults jsonResults = new LintResults()
-
-    private int numErrors = 0
-    private int numFilesWithErrors = 0
-    private int numFilesWithoutErrors = 0
+    private LintSummary summary = new LintSummary()
 
     @Override
     String getName() { 'lint' }
@@ -116,29 +96,11 @@ class CmdLint extends CmdBase {
 
         scriptParser = new ScriptParser()
         configParser = new ConfigParser()
+        errorListener = outputFormat == 'json'
+            ? new JsonErrorListener()
+            : new AnsiErrorListener(outputFormat)
 
-        jsonResults.date = Instant.now().toString()
-
-        final term = ansi()
-        if(outputFormat != 'json') {
-            term.a("Checking Nextflow code..").newline()
-            AnsiConsole.out.print(term)
-            AnsiConsole.out.flush()
-        }
-
-        // Extend excludePatterns with hardcoded defaults
-        excludePatterns += ['.git/']
-
-        // Load exclude patterns from .gitignore if present
-        // NOTE: Only works if running in the project root
-        //  Would be nice to do parent .gitignore merging etc.
-        def gitignoreFile = Paths.get('.gitignore')
-        if (Files.exists(gitignoreFile)) {
-            ignoreNode = new IgnoreNode()
-            Files.newInputStream(gitignoreFile).withCloseable { inputStream ->
-                ignoreNode.parse(inputStream)
-            }
-        }
+        errorListener.beforeAll()
 
         for( final arg : args ) {
             final file = new File(arg)
@@ -155,93 +117,23 @@ class CmdLint extends CmdBase {
         checkErrors(scriptParser.compiler())
         checkErrors(configParser.compiler())
 
-        jsonResults.summary.numErrors = numErrors
-        jsonResults.summary.numFilesWithErrors = numFilesWithErrors
-        jsonResults.summary.numFilesWithoutErrors = numFilesWithoutErrors
+        errorListener.afterAll(summary)
 
-        if(outputFormat == 'json'){
-            println groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(jsonResults))
-        } else {
-            final emojis = [
-                "🔍 📋",
-                "🕵🏻‍♂️ 🔎",
-                "🔬 👨🏻‍💻",
-                "📑 ☑️",
-                "🧾 ✔️"
-            ]
-            def rnd = new Random()
-            term.cursorUp(1).eraseLine().cursorUp(1).eraseLine()
-            if( outputFormat == 'concise' ) // extra newline needed if no code being shown
-                term.newline()
-            term.bold().a("Nextflow code checks complete! ${emojis[rnd.nextInt(emojis.size())]}").reset().newline()
-            if(numFilesWithErrors > 0)
-                term.fg(Color.RED).a(" ❌ ${numFilesWithErrors} file${numFilesWithErrors==1 ? '':'s'} had ${numErrors} error${numErrors==1 ? '':'s'}").newline()
-            if(numFilesWithoutErrors > 0)
-                term.fg(Color.BLUE).a(" ✅ ${numFilesWithoutErrors} file${numFilesWithoutErrors==1 ? '':'s'} had no errors").newline()
-            if(numFilesWithErrors == 0 && numFilesWithoutErrors == 0)
-                term.a(" No files found to process").newline()
-            AnsiConsole.out.print(term)
-            AnsiConsole.out.flush()
-        }
-
-        // If we found errors, throw an exception so that we get a non-zero exit code
-        if (numErrors > 0) {
+        // If there were errors, throw an exception to return a non-zero exit code
+        if( summary.errors > 0 )
             throw new AbortOperationException()
-        }
-    }
-
-    // Recursively check gitignore rules whilst the result is CHECK_PARENT
-    private IgnoreNode.MatchResult checkIgnoreNode(Path path) {
-        def ignoreResult = ignoreNode.isIgnored(path.toString().replace(File.separator, '/'), false)
-        if (ignoreResult == IgnoreNode.MatchResult.CHECK_PARENT) {
-            def parentPath = path.getParent()
-            if (parentPath != null) {
-                return checkIgnoreNode(parentPath)
-            }
-        }
-
-        return ignoreResult
-    }
-
-    private boolean shouldExcludeFile(File file) {
-        def path = file.toPath().normalize()
-
-        def excludeResult = excludePatterns.any { pattern ->
-            // Glob pattern
-            if (pattern.contains("*") || pattern.contains("?") || pattern.contains("[")) {
-                def matcher = FileSystems.default.getPathMatcher("glob:${pattern}")
-                return matcher.matches(path)
-            }
-            // Bare directory / file names
-            else {
-                def prefix = Paths.get(pattern)
-                return path.getNameCount() >= prefix.getNameCount() && path.subpath(0, prefix.getNameCount()) == prefix
-            }
-        }
-        if (excludeResult)
-            return true
-
-        // Check .gitignore patterns
-        if (ignoreNode != null) {
-            def ignoreResult = checkIgnoreNode(path)
-            if(ignoreResult == IgnoreNode.MatchResult.IGNORED)
-                return true
-        }
-
-        // Nothing matched
-        return false
     }
 
     void parse(File file) {
-        final name = file.getName()
-        // Skip excluded files
-        if (shouldExcludeFile(file)) {
+        if( PathUtils.isPathExcluded(file.toPath(), excludePatterns) ) {
             log.debug "Skipping excluded file ${file}"
             return
         }
 
         log.debug "Linting file ${file}"
-        printStatus(file)
+        errorListener.beforeFile(file)
+
+        final name = file.getName()
         if( name.endsWith('.nf') )
             scriptParser.parse(file)
         else if( name.endsWith('.config') )
@@ -254,78 +146,147 @@ class CmdLint extends CmdBase {
             .stream()
             .sorted(Comparator.comparing((SourceUnit source) -> source.getSource().getURI()))
             .forEach((source) -> {
-                if( source.getErrorCollector().hasErrors() ){
+                if( source.getErrorCollector().hasErrors() ) {
                     printErrors(source)
-                    numFilesWithErrors += 1
-                } else {
-                    numFilesWithoutErrors += 1
+                    summary.filesWithErrors += 1
+                }
+                else {
+                    summary.filesWithoutErrors += 1
                 }
             })
     }
 
-    private void printStatus(File file) {
-        if(outputFormat == 'json')
-            return
-        final str = ansi().cursorUp(1).eraseLine().a(Attribute.INTENSITY_FAINT).a("Checking: ${file.getPath().replaceFirst(/^\.\//, '')}").reset().newline().toString()
-        AnsiConsole.out.print(str)
+    private void printErrors(SourceUnit source) {
+        errorListener.beforeErrors()
+
+        final errorMessages = source.getErrorCollector().getErrors()
+        for( final message : errorMessages ) {
+            if( message instanceof SyntaxErrorMessage ) {
+                final cause = message.getCause()
+                errorListener.onError(cause, source)
+                summary.errors += 1
+            }
+        }
+
+        errorListener.afterErrors()
+    }
+
+}
+
+
+class LintSummary {
+    int errors = 0
+    int filesWithErrors = 0
+    int filesWithoutErrors = 0
+}
+
+
+interface ErrorListener {
+    void beforeAll()
+    void beforeFile(File file)
+    void beforeErrors()
+    void onError(SyntaxException error, SourceUnit source)
+    void afterErrors()
+    void afterAll(LintSummary summary)
+}
+
+
+class AnsiErrorListener implements ErrorListener {
+    private String format
+
+    AnsiErrorListener(String format) {
+        this.format = format
+    }
+
+    @Override
+    void beforeAll() {
+        final line = ansi().a("Checking Nextflow code..").newline()
+        AnsiConsole.out.print(line)
         AnsiConsole.out.flush()
     }
 
+    @Override
+    void beforeFile(File file) {
+        final line = ansi()
+            .cursorUp(1).eraseLine()
+            .a(Attribute.INTENSITY_FAINT).a("Checking: ${file.getPath().replaceFirst(/^\.\//, '')}")
+            .reset().newline().toString()
+        AnsiConsole.out.print(line)
+        AnsiConsole.out.flush()
+    }
+
+    private Ansi term
+
+    @Override
+    void beforeErrors() {
+        term = ansi().cursorUp(1).eraseLine()
+    }
+
+    @Override
+    void onError(SyntaxException error, SourceUnit source) {
+        term.bold().a("${source.getName().replaceFirst(/^\.\//, '')}").reset()
+        term.a(":${error.getStartLine()}:${error.getStartColumn()}: ")
+        term = highlightString(error.getOriginalMessage(), term)
+        if( format != 'concise' ) {
+            term.newline()
+            term = printCodeBlock(source, error, term)
+        }
+        term.newline()
+    }
+
     private Ansi highlightString(String str, Ansi term) {
-        def matcher = str =~ /^(.*)([`'][^`']+[`'])(.*)$/
-        if (matcher.find()) {
+        final matcher = str =~ /^(.*)([`'][^`']+[`'])(.*)$/
+        if( matcher.find() ) {
             term.a(matcher.group(1))
                 .fg(Color.CYAN).a(matcher.group(2)).fg(Color.DEFAULT)
                 .a(matcher.group(3))
-        } else {
+        }
+        else {
             term.a(str)
         }
         return term
     }
 
-    private Ansi getCodeBlock(SourceUnit source, SyntaxErrorMessage message, Ansi term) {
-        def lineStart = message.cause.getStartLine()
-        def colStart = message.cause.getStartColumn()
-        def lineEnd = message.cause.getEndLine()
-        def colEnd = message.cause.getEndColumn()
-        def lines
-        source.getSource().getReader().withCloseable { reader ->
-            lines = reader.readLines()
-        }
+    private Ansi printCodeBlock(SourceUnit source, SyntaxException error, Ansi term) {
+        final startLine = error.getStartLine()
+        final startColumn = error.getStartColumn()
+        final endLine = error.getEndLine()
+        final endColumn = error.getEndColumn()
+        final lines = getSourceText(source)
 
-        int context = outputFormat == 'extended' ? 2 : 0
-        int fromLine = Math.max(1, lineStart - context)
-        int toLine = Math.min(lines.size(), lineEnd + context)
-
-        // Enforce max 5 lines
-        if (toLine - fromLine + 1 > 5) {
-            if (lineStart <= 3) {
+        // get context window (up to 5 lines)
+        int padding = format == 'extended' ? 2 : 0
+        int fromLine = Math.max(1, startLine - padding)
+        int toLine = Math.min(lines.size(), endLine + padding)
+        if( toLine - fromLine + 1 > 5 ) {
+            if( startLine <= 3 ) {
                 toLine = fromLine + 4
-            } else if (lineEnd >= lines.size() - 2) {
+            }
+            else if( endLine >= lines.size() - 2 ) {
                 fromLine = toLine - 4
-            } else {
-                fromLine = lineStart - 2
-                toLine = lineStart + 2
+            }
+            else {
+                fromLine = startLine - 2
+                toLine = startLine + 2
             }
         }
 
-        for (int i = fromLine; i <= toLine; i++) {
+        for( int i = fromLine; i <= toLine; i++ ) {
             String fullLine = lines[i - 1]
-            int start = (i == lineStart) ? colStart - 1 : 0
-            int end = (i == lineEnd) ? colEnd - 1 : fullLine.length()
+            int start = (i == startLine) ? startColumn - 1 : 0
+            int end = (i == endLine) ? endColumn - 1 : fullLine.length()
 
-            // Truncate to max 70 characters if needed
+            // Truncate to max 70 characters
             int maxLen = 70
             int lineLen = fullLine.length()
             int windowStart = 0
-            if (lineLen > maxLen) {
-                if (start < maxLen - 10) {
+            if( lineLen > maxLen ) {
+                if( start < maxLen - 10 )
                     windowStart = 0
-                } else if (end > lineLen - 10) {
+                else if( end > lineLen - 10 )
                     windowStart = lineLen - maxLen
-                } else {
+                else
                     windowStart = start - 30
-                }
             }
 
             String line = fullLine.substring(windowStart, Math.min(lineLen, windowStart + maxLen))
@@ -335,18 +296,19 @@ class CmdLint extends CmdBase {
             // Line number
             term.fg(Ansi.Color.BLUE).a(String.format("%3d | ", i)).reset()
 
-            if (i == lineStart) {
-                // Print line, with error in red
+            if( i == startLine ) {
+                // Print line with error in red
                 term.a(Attribute.INTENSITY_FAINT).a(line.substring(0, adjStart)).reset()
                 term.fg(Ansi.Color.RED).a(line.substring(adjStart, adjEnd)).reset()
                 term.a(Attribute.INTENSITY_FAINT).a(line.substring(adjEnd)).reset().newline()
 
-                // Print carets underneath pointing to the error
+                // Print carets underneath the error range
                 String marker = ' ' * adjStart
                 String carets = '^' * Math.max(1, adjEnd - adjStart)
                 term.a("    | ")
                     .fg(Ansi.Color.RED).bold().a(marker + carets).reset().newline()
-            } else {
+            }
+            else {
                 term.a(Attribute.INTENSITY_FAINT).a(line).reset().newline()
             }
         }
@@ -354,38 +316,84 @@ class CmdLint extends CmdBase {
         return term
     }
 
-    private void printErrors(SourceUnit source) {
-        final errorMessages = source.getErrorCollector().getErrors()
-        def term = ansi().cursorUp(1).eraseLine()
-        for( final message : errorMessages ) {
-            if( message instanceof SyntaxErrorMessage ) {
-                numErrors += 1
-                final cause = message.getCause()
-                if(outputFormat == 'json') {
-                    def error = new LintError(
-                        filename: source.getName(),
-                        startLine: cause.getStartLine(),
-                        startColumn: cause.getStartColumn(),
-                        message: cause.getOriginalMessage()
-                    )
-                    jsonResults.errors << error
-                } else {
-                    term.bold().a("${source.getName().replaceFirst(/^\.\//, '')}").reset()
-                    term.a(":${cause.getStartLine()}:${cause.getStartColumn()}: ")
-                    term = highlightString(cause.getOriginalMessage(), term)
-                    if( outputFormat != 'concise' ) {
-                        term.newline()
-                        term = getCodeBlock(source, message, term)
-                    }
-                    term.newline()
-                }
-            }
-        }
-        if(outputFormat != 'json') {
-            // Extra newline as next status update will chomp back one
-            term.fg(Color.DEFAULT).newline()
-            AnsiConsole.out.print(term)
-            AnsiConsole.out.flush()
-        }
+    @Memoized
+    private String getSourceText(SourceUnit source) {
+        return source.getSource().getReader().readLines()
+    }
+
+    @Override
+    void afterErrors() {
+        // print extra newline since next file status will chomp back one
+        term.fg(Color.DEFAULT).newline()
+        AnsiConsole.out.print(term)
+        AnsiConsole.out.flush()
+    }
+
+    @Override
+    void afterAll(LintSummary summary) {
+        final emojis = [
+            "🔍 📋",
+            "🕵🏻‍♂️ 🔎",
+            "🔬 👨🏻‍💻",
+            "📑 ☑️",
+            "🧾 ✔️"
+        ]
+        final rnd = new Random()
+        final term = ansi()
+        term.cursorUp(1).eraseLine().cursorUp(1).eraseLine()
+        // print extra newline if no code is being shown
+        if( format == 'concise' )
+            term.newline()
+        term.bold().a("Nextflow code checks complete! ${emojis[rnd.nextInt(emojis.size())]}").reset().newline()
+        if( summary.filesWithErrors > 0 )
+            term.fg(Color.RED).a(" ❌ ${summary.filesWithErrors} file${summary.filesWithErrors==1 ? '' : 's'} had ${summary.errors} error${summary.errors==1 ? '' : 's'}").newline()
+        if( summary.filesWithoutErrors > 0 )
+            term.fg(Color.BLUE).a(" ✅ ${summary.filesWithoutErrors} file${summary.filesWithoutErrors==1 ? '' : 's'} had no errors").newline()
+        if( summary.filesWithErrors == 0 && summary.filesWithoutErrors == 0 )
+            term.a(" No files found to process").newline()
+        AnsiConsole.out.print(term)
+        AnsiConsole.out.flush()
+    }
+}
+
+
+class JsonErrorListener implements ErrorListener {
+
+    private List<Map> errors = []
+
+    @Override
+    void beforeAll() {
+    }
+
+    @Override
+    void beforeFile(File file) {
+    }
+
+    @Override
+    void beforeErrors() {
+    }
+
+    @Override
+    void onError(SyntaxException error, SourceUnit source) {
+        errors.add([
+            filename: source.getName(),
+            startLine: error.getStartLine(),
+            startColumn: error.getStartColumn(),
+            message: error.getOriginalMessage()
+        ])
+    }
+
+    @Override
+    void afterErrors() {
+    }
+
+    @Override
+    void afterAll(LintSummary summary) {
+        final result = [
+            date: Instant.now().toString(),
+            summary: summary,
+            errors: errors
+        ]
+        println JsonOutput.prettyPrint(JsonOutput.toJson(result))
     }
 }
