@@ -34,17 +34,16 @@ import nextflow.serde.gson.RuntimeTypeAdapterFactory
  */
 @CompileStatic
 class CidEncoder extends GsonEncoder<CidSerializable> {
-    public static RuntimeTypeAdapterFactory CID_SERIALIZABLE_FACTORY = RuntimeTypeAdapterFactory.of(CidSerializable.class, "type")
-        .registerSubtype(WorkflowRun, WorkflowRun.simpleName)
-        .registerSubtype(WorkflowResults, WorkflowResults.simpleName)
-        .registerSubtype(Workflow, Workflow.simpleName)
-        .registerSubtype(WorkflowOutput, WorkflowOutput.simpleName)
-        .registerSubtype(TaskRun, TaskRun.simpleName)
-        .registerSubtype(TaskOutput, TaskOutput.simpleName)
-        .registerSubtype(TaskResults, TaskResults.simpleName)
 
     CidEncoder() {
-        withTypeAdapterFactory(CID_SERIALIZABLE_FACTORY)
+        withTypeAdapterFactory(RuntimeTypeAdapterFactory.of(CidSerializable.class, "type")
+            .registerSubtype(WorkflowRun, WorkflowRun.simpleName)
+            .registerSubtype(WorkflowResults, WorkflowResults.simpleName)
+            .registerSubtype(Workflow, Workflow.simpleName)
+            .registerSubtype(WorkflowOutput, WorkflowOutput.simpleName)
+            .registerSubtype(TaskRun, TaskRun.simpleName)
+            .registerSubtype(TaskOutput, TaskOutput.simpleName)
+            .registerSubtype(TaskResults, TaskResults.simpleName) )
     }
 
 }
