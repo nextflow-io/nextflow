@@ -216,7 +216,7 @@ class CidUtils {
         if (time)
             return Instant.ofEpochMilli(time.toMillis()).toString()
         else
-            return 'N/A'
+            return null
     }
 
     /**
@@ -226,7 +226,7 @@ class CidUtils {
      * @return Converted FileTime or null if date is not available (null or 'N/A')
      */
     public static FileTime toFileTime(String date){
-        if (!date || date == 'N/A')
+        if (!date)
             return null
         return FileTime.from(Instant.parse(date))
     }

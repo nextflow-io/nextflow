@@ -22,7 +22,6 @@ import static nextflow.data.cid.fs.CidPath.*
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
-import java.time.Instant
 
 import com.google.common.hash.HashCode
 import nextflow.Session
@@ -161,7 +160,7 @@ class CidObserverTest extends Specification {
         and:
         def attrs = Files.readAttributes(outFile, BasicFileAttributes)
         def output = new TaskOutput(outFile.toString(), new Checksum(fileHash, "nextflow", "standard"),
-            "cid://15cd5b07", attrs.size(), Instant.ofEpochMilli(attrs.creationTime().toMillis()).toString(), Instant.ofEpochMilli(attrs.lastModifiedTime().toMillis()).toString() )
+            "cid://15cd5b07", attrs.size(), CidUtils.toDate(attrs.creationTime()), CidUtils.toDate(attrs.lastModifiedTime()) )
         and:
         observer.readAttributes(outFile) >> attrs
 
@@ -327,7 +326,7 @@ class CidObserverTest extends Specification {
             def attrs1 = Files.readAttributes(outFile1, BasicFileAttributes)
             def fileHash1 = CacheHelper.hasher(outFile1).hash().toString()
             def output1 = new WorkflowOutput(outFile1.toString(), new Checksum(fileHash1, "nextflow", "standard"), "cid://123987/file.bam",
-            attrs1.size(), Instant.ofEpochMilli(attrs1.creationTime().toMillis()).toString(), Instant.ofEpochMilli(attrs1.lastModifiedTime().toMillis()).toString() )
+            attrs1.size(), CidUtils.toDate(attrs1.creationTime()), CidUtils.toDate(attrs1.lastModifiedTime()) )
             output1.setPublishedBy("$CID_PROT${observer.executionHash}".toString())
             folder.resolve(".meta/${observer.executionHash}/foo/file.bam/.data.json").text == encoder.encode(output1)
 
@@ -341,7 +340,7 @@ class CidObserverTest extends Specification {
             observer.onWorkflowPublish("b", outFile2)
         then: 'Check outFile2 metadata in cid store'
             def output2 = new WorkflowOutput(outFile2.toString(), new Checksum(fileHash2, "nextflow", "standard"), "cid://${observer.executionHash}" ,
-            attrs2.size(), Instant.ofEpochMilli(attrs2.creationTime().toMillis()).toString(), Instant.ofEpochMilli(attrs2.lastModifiedTime().toMillis()).toString() )
+            attrs2.size(), CidUtils.toDate(attrs2.creationTime()), CidUtils.toDate(attrs2.lastModifiedTime()) )
             output2.setPublishedBy("$CID_PROT${observer.executionHash}".toString())
             folder.resolve(".meta/${observer.executionHash}/foo/file2.bam/.data.json").text == encoder.encode(output2)
 

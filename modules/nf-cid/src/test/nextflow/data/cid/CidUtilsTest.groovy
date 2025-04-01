@@ -32,7 +32,7 @@ class CidUtilsTest extends Specification{
         CidUtils.toDate(FILE_TIME) == DATE
         where:
         FILE_TIME                   | DATE
-        null                        | "N/A"
+        null                        | null
         FileTime.fromMillis(1234)   | Instant.ofEpochMilli(1234).toString()
     }
 
@@ -41,7 +41,6 @@ class CidUtilsTest extends Specification{
         CidUtils.toFileTime(DATE) == FILE_TIME
         where:
         FILE_TIME                   | DATE
-        null                        | "N/A"
         null                        | null
         FileTime.fromMillis(1234)   | Instant.ofEpochMilli(1234).toString()
     }
