@@ -51,6 +51,13 @@ public class ScriptParser {
         return source;
     }
 
+    public SourceUnit parse(String name, String contents) {
+        var source = getSource(name, contents);
+        compiler.addSource(source);
+        compiler.compile(source);
+        return source;
+    }
+
     public void analyze() {
         for( var source : compiler.getSources().values() ) {
             var includeResolver = new ResolveIncludeVisitor(source, compiler, Collections.emptySet());
@@ -67,6 +74,15 @@ public class ScriptParser {
     private SourceUnit getSource(File file) {
         return new SourceUnit(
             file,
+            compiler.compilationUnit().getConfiguration(),
+            compiler.compilationUnit().getClassLoader(),
+            new LazyErrorCollector(compiler.compilationUnit().getConfiguration()));
+    }
+
+    private SourceUnit getSource(String name, String contents) {
+        return new SourceUnit(
+            name,
+            contents,
             compiler.compilationUnit().getConfiguration(),
             compiler.compilationUnit().getClassLoader(),
             new LazyErrorCollector(compiler.compilationUnit().getConfiguration()));
