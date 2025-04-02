@@ -425,6 +425,7 @@ class WorkflowMetadata {
 
         onCompleteActions.each { Closure action ->
             try {
+                action.delegate['log'] = log
                 action.call()
             }
             catch (WorkflowScriptErrorException e) {
@@ -446,6 +447,7 @@ class WorkflowMetadata {
         setErrorAttributes()
         onErrorActions.each { Closure action ->
             try {
+                action.delegate['log'] = log
                 action.call(trace)
             }
             catch (Exception e) {
