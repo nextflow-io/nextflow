@@ -31,12 +31,12 @@ import java.nio.file.Path
 trait TraceObserver {
 
     /**
-     * The is method is invoked when the flow is going to start
+     * This method is invoked when the flow is going to start
      */
     void onFlowCreate(Session session) {}
 
     /**
-     * The is method is invoked when the flow is going to start
+     * This method is invoked when the flow is going to start
      */
     void onFlowBegin() {}
 

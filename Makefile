@@ -52,7 +52,7 @@ clean:
 # install compiled artifacts in Maven local dir
 # 
 install:
-	BUILD_PACK=1 ./gradlew installLauncher publishToMavenLocal -Dmaven.repo.local=${HOME}/.nextflow/capsule/deps/
+	BUILD_PACK=1 ./gradlew installLauncher publishToMavenLocal
 
 #
 # Show dependencies try `make deps config=runtime`, `make deps config=google`
