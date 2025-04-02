@@ -16,6 +16,7 @@
 
 package test
 
+import nextflow.config.control.ConfigParser
 import nextflow.script.control.ScriptParser
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage
 import org.codehaus.groovy.syntax.SyntaxException
@@ -33,6 +34,24 @@ class TestUtils {
      * @param contents
      */
     static List<SyntaxException> check(ScriptParser parser, String contents) {
+        def source = parser.parse('main.nf', contents.stripIndent())
+        parser.analyze()
+        def errorCollector = source.getErrorCollector()
+        if( !errorCollector.hasErrors() )
+            return Collections.emptyList()
+        return errorCollector.getErrors().stream()
+            .filter(e -> e instanceof SyntaxErrorMessage)
+            .map(e -> e.cause)
+            .toList()
+    }
+
+    /**
+     * Parse and analyze a config file and return the list of errors.
+     *
+     * @param parser
+     * @param contents
+     */
+    static List<SyntaxException> check(ConfigParser parser, String contents) {
         def source = parser.parse('main.nf', contents.stripIndent())
         parser.analyze()
         def errorCollector = source.getErrorCollector()
