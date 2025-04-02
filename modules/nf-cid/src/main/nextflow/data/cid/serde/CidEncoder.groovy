@@ -19,6 +19,7 @@ package nextflow.data.cid.serde
 
 import groovy.transform.CompileStatic
 import nextflow.data.cid.model.TaskOutput
+import nextflow.data.cid.model.TaskResults
 import nextflow.data.cid.model.TaskRun
 import nextflow.data.cid.model.Workflow
 import nextflow.data.cid.model.WorkflowOutput
@@ -35,15 +36,16 @@ import nextflow.serde.gson.RuntimeTypeAdapterFactory
 class CidEncoder extends GsonEncoder<CidSerializable> {
 
     CidEncoder() {
-        withTypeAdapterFactory(
-            RuntimeTypeAdapterFactory.of(CidSerializable.class, "type")
-                .registerSubtype(WorkflowRun, WorkflowRun.simpleName)
-                .registerSubtype(WorkflowResults, WorkflowResults.simpleName)
-                .registerSubtype(Workflow, Workflow.simpleName)
-                .registerSubtype(WorkflowOutput, WorkflowOutput.simpleName)
-                .registerSubtype(TaskRun, TaskRun.simpleName)
-                .registerSubtype(TaskOutput, TaskOutput.simpleName)
-        )
+        withTypeAdapterFactory(RuntimeTypeAdapterFactory.of(CidSerializable.class, "type")
+            .registerSubtype(WorkflowRun, WorkflowRun.simpleName)
+            .registerSubtype(WorkflowResults, WorkflowResults.simpleName)
+            .registerSubtype(Workflow, Workflow.simpleName)
+            .registerSubtype(WorkflowOutput, WorkflowOutput.simpleName)
+            .registerSubtype(TaskRun, TaskRun.simpleName)
+            .registerSubtype(TaskOutput, TaskOutput.simpleName)
+            .registerSubtype(TaskResults, TaskResults.simpleName) )
+        // enable rendering of null values
+        withSerializeNulls(true)
     }
 
 }

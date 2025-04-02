@@ -43,6 +43,7 @@ class CmdCid extends CmdBase implements UsageAware {
         void log(ConfigMap config)
         void show(ConfigMap config, List<String> args)
         void lineage(ConfigMap config, List<String> args)
+        void diff(ConfigMap config, List<String> args)
     }
 
     interface SubCmd {
@@ -62,6 +63,7 @@ class CmdCid extends CmdBase implements UsageAware {
         commands << new CmdLog()
         commands << new CmdShow()
         commands << new CmdLineage()
+        commands << new CmdDiff()
     }
 
     @Parameter(hidden = true)
@@ -228,4 +230,32 @@ class CmdCid extends CmdBase implements UsageAware {
         }
 
     }
+
+    class CmdDiff implements SubCmd {
+
+        @Override
+        String getName() { 'diff' }
+
+        @Override
+        String getDescription() {
+            return 'Show differences between two CID descriptions'
+        }
+
+        void apply(List<String> args) {
+            if (args.size() != 2) {
+                println("ERROR: Incorrect number of parameters")
+                usage()
+                return
+            }
+            operation.diff(config, args)
+        }
+
+        @Override
+        void usage() {
+            println description
+            println "Usage: nextflow $NAME $name <CID 1> <CID 2>"
+        }
+
+    }
+
 }

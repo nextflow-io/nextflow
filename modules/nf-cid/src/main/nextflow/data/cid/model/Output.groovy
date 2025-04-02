@@ -33,7 +33,7 @@ abstract class Output implements CidSerializable {
     Checksum checksum
     String source
     long size
-    long createdAt
-    long modifiedAt
-    List<String> annotations
+    String createdAt
+    String modifiedAt
+    Map annotations
 }

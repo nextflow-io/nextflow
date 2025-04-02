@@ -101,10 +101,7 @@ class CidFileSystemProvider extends FileSystemProvider {
 
     @Override
     CidPath getPath(URI uri) {
-        // the URI authority holds the base component of the CID path
-        final base = uri.authority
-        final path = uri.path
-        return (CidPath) getFileSystemOrCreate(uri).getPath(base, path)
+        return (CidPath) ((CidFileSystem) getFileSystemOrCreate(uri)).getPath(uri)
     }
 
     @Override
@@ -115,8 +112,11 @@ class CidFileSystemProvider extends FileSystemProvider {
     @Override
     InputStream newInputStream(Path path, OpenOption... options) throws IOException {
         final cid = toCidPath(path)
-        final realPath = cid.getTargetPath()
-        realPath.fileSystem.provider().newInputStream(realPath, options)
+        final realPath = cid.getTargetPath(true)
+        if (realPath instanceof CidResultsPath)
+            return (realPath as CidResultsPath).newInputStream()
+        else
+            return realPath.fileSystem.provider().newInputStream(realPath, options)
     }
 
     @Override
@@ -129,8 +129,13 @@ class CidFileSystemProvider extends FileSystemProvider {
                     throw new UnsupportedOperationException("'$opt' not allowed");
             }
         }
-        final realPath = cid.getTargetPath()
-        final channel = realPath.fileSystem.provider().newByteChannel(realPath, options, attrs)
+        final realPath = cid.getTargetPath(true)
+        SeekableByteChannel channel
+        if (realPath instanceof CidResultsPath){
+            channel = (realPath as CidResultsPath).newSeekableByteChannel()
+        } else {
+            channel = realPath.fileSystem.provider().newByteChannel(realPath, options, attrs)
+        }
 
         new SeekableByteChannel() {
 
@@ -179,7 +184,7 @@ class CidFileSystemProvider extends FileSystemProvider {
     @Override
     DirectoryStream<Path> newDirectoryStream(Path path, DirectoryStream.Filter<? super Path> filter) throws IOException {
         final cid = toCidPath(path)
-        final real = cid.getTargetPath()
+        final real = cid.getTargetPath(false)
         final stream = real
                 .getFileSystem()
                 .provider()
@@ -277,7 +282,7 @@ class CidFileSystemProvider extends FileSystemProvider {
 
     @Override
     boolean isHidden(Path path) throws IOException {
-        return toCidPath(path).getTargetPath().isHidden()
+        return toCidPath(path).getTargetPath(true).isHidden()
     }
 
     @Override
@@ -294,7 +299,9 @@ class CidFileSystemProvider extends FileSystemProvider {
             if( m == AccessMode.EXECUTE )
                 throw new AccessDeniedException("Execute mode not supported")
         }
-        final real = cid.getTargetPath()
+        final real = cid.getTargetPath(true)
+        if (real instanceof CidResultsPath)
+            return
         real.fileSystem.provider().checkAccess(real, modes)
     }
 
@@ -306,8 +313,11 @@ class CidFileSystemProvider extends FileSystemProvider {
     @Override
     <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) throws IOException {
         final cid = toCidPath(path)
-        final real = cid.getTargetPath()
-        real.fileSystem.provider().readAttributes(real,type,options)
+        final real = cid.getTargetPath(true)
+        if (real instanceof CidResultsPath)
+            return (real as CidResultsPath).readAttributes(type)
+        else
+            return real.fileSystem.provider().readAttributes(real,type,options)
     }
 
     @Override

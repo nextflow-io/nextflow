@@ -19,6 +19,7 @@ package nextflow.data.cid.cli
 
 import static nextflow.data.cid.fs.CidPath.*
 
+import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 
 import groovy.transform.Canonical
@@ -30,6 +31,7 @@ import nextflow.dag.MermaidHtmlRenderer
 import nextflow.data.cid.CidHistoryRecord
 import nextflow.data.cid.CidStore
 import nextflow.data.cid.CidStoreFactory
+import nextflow.data.cid.CidUtils
 import nextflow.data.cid.model.Output
 import nextflow.data.cid.model.Parameter
 import nextflow.data.cid.model.TaskOutput
@@ -37,8 +39,14 @@ import nextflow.data.cid.model.TaskRun
 import nextflow.data.cid.model.WorkflowOutput
 import nextflow.data.cid.model.WorkflowRun
 import nextflow.data.cid.serde.CidEncoder
+import nextflow.data.cid.serde.CidSerializable
 import nextflow.script.params.FileInParam
+import nextflow.serde.gson.GsonEncoder
 import nextflow.ui.TableBuilder
+import org.eclipse.jgit.diff.DiffAlgorithm
+import org.eclipse.jgit.diff.DiffFormatter
+import org.eclipse.jgit.diff.RawText
+import org.eclipse.jgit.diff.RawTextComparator
 /**
  * Implements CID command line operations
  *
@@ -85,18 +93,21 @@ class CidCommandImpl implements CmdCid.CidCommand {
 
     @Override
     void show(ConfigMap config, List<String> args) {
-        if (!args[0].startsWith(CID_PROT))
+        if (!isCidUri(args[0]))
             throw new Exception("Identifier is not a CID URL")
-        final key = args[0].substring(CID_PROT.size())
         final store = CidStoreFactory.getOrCreate(new Session(config))
-        final encoder = new CidEncoder().withPrettyPrint(true)
         if (store) {
             try {
-                final entry = store.load(key)
-                if( entry )
-                    println encoder.encode(entry)
-                else
-                    println "No entry found for ${args[0]}."
+                def entries = CidUtils.query(store, new URI(args[0]))
+                if( entries ) {
+                    entries = entries.size() == 1 ? entries[0] : entries
+                    if (entries instanceof CidSerializable)
+                        println new CidEncoder().withPrettyPrint(true).encode(entries as CidSerializable)
+                    else
+                        println new GsonEncoder<Object>(){}.withPrettyPrint(true).encode(entries)
+                } else {
+                    println "No entries found for ${args[0]}."
+                }
             } catch (Throwable e) {
                 println "Error loading ${args[0]}. ${e.message}"
             }
@@ -137,7 +148,7 @@ class CidCommandImpl implements CmdCid.CidCommand {
     }
 
     private void processNode(List<String> lines, String nodeToRender, LinkedList<String> nodes, LinkedList<Edge> edges, CidStore store) {
-        if (!nodeToRender.startsWith(CID_PROT))
+        if (!isCidUri(nodeToRender))
             throw new Exception("Identifier is not a CID URL")
         final key = nodeToRender.substring(CID_PROT.size())
         final cidObject = store.load(key)
@@ -147,7 +158,7 @@ class CidCommandImpl implements CmdCid.CidCommand {
                 lines << "    ${nodeToRender}@{shape: document, label: \"${nodeToRender}\"}".toString();
                 final source = (cidObject as Output).source
                 if (source) {
-                    if (source.startsWith(CID_PROT)) {
+                    if (isCidUri(source)) {
                         nodes.add(source)
                         edges.add(new Edge(source, nodeToRender))
                     } else {
@@ -200,7 +211,7 @@ class CidCommandImpl implements CmdCid.CidCommand {
         }
         if (value instanceof CharSequence) {
             final source = value.toString()
-            if (source.startsWith(CID_PROT)) {
+            if (isCidUri(source)) {
                 nodes.add(source)
                 edges.add(new Edge(source, nodeToRender))
                 return
@@ -209,7 +220,7 @@ class CidCommandImpl implements CmdCid.CidCommand {
         if (value instanceof Map) {
             if (value.path) {
                 final path = value.path.toString()
-                if (path.startsWith(CID_PROT)) {
+                if (isCidUri(path)) {
                     nodes.add(path)
                     edges.add(new Edge(path, nodeToRender))
                     return
@@ -225,4 +236,64 @@ class CidCommandImpl implements CmdCid.CidCommand {
         lines << "    ${value.toString()}@{shape: document, label: \"${label}\"}".toString();
         edges.add(new Edge(value.toString(), nodeToRender))
     }
+
+    @Override
+    void diff(ConfigMap config, List<String> args) {
+        if (!isCidUri(args[0]) || !isCidUri(args[1]))
+            throw new Exception("Identifier is not a CID URL")
+
+        final store = CidStoreFactory.getOrCreate(new Session(config))
+        if (store) {
+            try {
+                final key1 = args[0].substring(CID_PROT.size())
+                final entry1 = store.load(key1) as String
+                if( !entry1 ){
+                    println "No entry found for ${args[0]}."
+                    return
+                }
+                final key2 = args[1].substring(CID_PROT.size())
+                final entry2 = store.load(key2) as String
+                if( !entry2 ) {
+                    println "No entry found for ${args[1]}."
+                    return
+                }
+                generateDiff(entry1, key1, entry2, key2)
+            } catch (Throwable e) {
+                println "Error generating diff between ${args[0]}: $e.message"
+            }
+        } else {
+            println "Error CID store not loaded. Check Nextflow configuration."
+        }
+    }
+
+    private static void generateDiff(String entry1, String key1, String entry2, String key2) {
+        // Convert strings to JGit RawText format
+        final text1 = new RawText(entry1.getBytes(StandardCharsets.UTF_8))
+        final text2 = new RawText(entry2.getBytes(StandardCharsets.UTF_8))
+
+        // Set up the diff algorithm (Git-style diff)
+        final diffAlgorithm = DiffAlgorithm.getAlgorithm(DiffAlgorithm.SupportedAlgorithm.MYERS)
+        final diffComparator = RawTextComparator.DEFAULT
+
+        // Compute the differences
+        final editList = diffAlgorithm.diff(diffComparator, text1, text2)
+
+        final output = new StringBuilder()
+        // Add header
+        output.append("diff --git ${key1} ${key2}\n")
+        output.append("--- ${key1}\n")
+        output.append("+++ ${key2}\n")
+
+        // Use DiffFormatter to display results in Git-style format
+        final outputStream = new ByteArrayOutputStream()
+        final diffFormatter = new DiffFormatter(outputStream)
+        diffFormatter.setOldPrefix(key1)
+        diffFormatter.setNewPrefix(key2)
+        diffFormatter.format(editList, text1, text2)
+        output.append(outputStream.toString(StandardCharsets.UTF_8))
+
+        println output.toString()
+    }
+
+
 }

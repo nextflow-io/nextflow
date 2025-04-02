@@ -17,6 +17,8 @@
 
 package nextflow.data.cid.h2
 
+import groovy.json.JsonSlurper
+
 import java.sql.Clob
 
 import com.zaxxer.hikari.HikariDataSource
@@ -25,6 +27,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.data.cid.CidHistoryLog
 import nextflow.data.cid.CidStore
+import nextflow.data.cid.CidUtils
 import nextflow.data.cid.serde.CidEncoder
 import nextflow.data.cid.serde.CidSerializable
 import nextflow.data.config.DataConfig
@@ -49,6 +52,7 @@ class H2CidStore implements CidStore {
         dataSource = createDataSource(config.store)
         // create the db tables
         createDbTables(dataSource)
+        createAlias(dataSource)
         return this
     }
 
@@ -92,6 +96,14 @@ class H2CidStore implements CidStore {
         }
     }
 
+    static void createAlias(HikariDataSource dataSource){
+        try(final sql=new Sql(dataSource)) {
+            sql.execute("""
+            CREATE ALIAS IF NOT EXISTS JSON_MATCH FOR "nextflow.data.cid.h2.H2CidStore.matchesJsonQuery"
+            """)
+        }
+    }
+
     @Override
     void save(String key, CidSerializable object) {
         final value = encoder.encode(object)
@@ -122,9 +134,32 @@ class H2CidStore implements CidStore {
     }
 
     @Override
+    List<CidSerializable> search(String queryString) {
+        final results= new LinkedList<CidSerializable>()
+        try(final sql=new Sql(dataSource)) {
+            sql.eachRow("SELECT metadata FROM cid_file WHERE JSON_MATCH(metadata, ?)", List.<Object>of(queryString)) { row ->
+                results.add(encoder.decode(toValue(row['metadata']) as String))
+            }
+        }
+        return results
+    }
+    /**
+     * JSON_MATCH implementation for h2
+     * @param jsonString
+     * @param queryString
+     * @return
+     */
+    static boolean matchesJsonQuery(String jsonString, String queryString) {
+        def json = new JsonSlurper().parseText(jsonString)
+        def conditions = CidUtils.parseQuery(queryString)
+        return CidUtils.checkParams(json, conditions)
+    }
+
+    @Override
     void close() {
         dataSource.close()
     }
+
 
     @TestOnly
     void truncateAllTables() {

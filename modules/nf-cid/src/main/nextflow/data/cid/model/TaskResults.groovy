@@ -22,14 +22,16 @@ import groovy.transform.CompileStatic
 import nextflow.data.cid.serde.CidSerializable
 
 /**
- * Models the results of a workflow execution.
+ * Models task results.
  *
- * @author Jorge Ejarque <jorge.ejarque@seqera.io
+ * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
 @Canonical
 @CompileStatic
-class WorkflowResults implements CidSerializable {
+class TaskResults implements CidSerializable {
+    String taskRun
+    String runBy
     String creationTime
-    String runId
-    Map<String, Object> outputs
+    List<Parameter> outputs
+    List<String> annotations
 }

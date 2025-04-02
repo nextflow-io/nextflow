@@ -42,6 +42,8 @@ abstract class GsonEncoder<T> implements Encoder<T, String> {
 
     private boolean prettyPrint
 
+    private boolean serializeNulls
+
     private volatile Gson gson
 
     protected GsonEncoder() {
@@ -55,6 +57,11 @@ abstract class GsonEncoder<T> implements Encoder<T, String> {
 
     GsonEncoder<T> withPrettyPrint(boolean value) {
         this.prettyPrint = value
+        return this
+    }
+
+    GsonEncoder<T> withSerializeNulls(boolean value) {
+        this.serializeNulls = value
         return this
     }
 
@@ -77,6 +84,8 @@ abstract class GsonEncoder<T> implements Encoder<T, String> {
             builder.registerTypeAdapterFactory(factory)
         if( prettyPrint )
             builder.setPrettyPrinting()
+        if( serializeNulls )
+            builder.serializeNulls()
         return builder.create()
     }
 
