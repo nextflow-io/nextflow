@@ -94,12 +94,18 @@ class AwsBatchConfig implements CloudTransferOptions {
      */
     boolean fargateMode
 
+    /**
+     * Flag to fail and Kill unscheduled jobs.
+     */
+    boolean killUnscheduled
+
     /*
      * only for testing
      */
     protected AwsBatchConfig() {}
 
     AwsBatchConfig(Map opts) {
+        killUnscheduled = opts.killUnscheduled as boolean ?: false
         fargateMode = opts.platformType == 'fargate'
         cliPath = !fargateMode ? parseCliPath(opts.cliPath as String) : null
         s5cmdPath = fargateMode ? parses5cmdPath(opts.cliPath as String) : null
