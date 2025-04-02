@@ -364,8 +364,7 @@ public class Formatter extends CodeVisitorSupport {
     @Override
     public void visitBinaryExpression(BinaryExpression node) {
         if( node instanceof DeclarationExpression ) {
-            if( node.getNodeMetaData(ASTNodeMarker.IMPLICIT_DECLARATION) != Boolean.TRUE )
-                append("def ");
+            append("def ");
             inVariableDeclaration = true;
             visit(node.getLeftExpression());
             inVariableDeclaration = false;
