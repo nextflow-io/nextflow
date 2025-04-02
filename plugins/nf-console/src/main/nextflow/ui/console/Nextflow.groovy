@@ -33,7 +33,7 @@ import nextflow.cli.CmdRun
 import nextflow.config.ConfigBuilder
 import nextflow.script.ScriptBinding
 import nextflow.script.ScriptFile
-import nextflow.script.ScriptLoaderFactory
+import nextflow.script.parser.v1.ScriptLoaderV1
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 /**
  * Implement a REPL console for Nextflow DSL based on Groovy console
@@ -98,7 +98,7 @@ class Nextflow extends Console {
     void newScript(ClassLoader parent, Binding binding) {
         assert parent
 
-        def parser = ScriptLoaderFactory.create(parent)
+        final parser = new ScriptLoaderV1(parent)
         config = parser.getConfig()
 
         if (threadInterrupt)
