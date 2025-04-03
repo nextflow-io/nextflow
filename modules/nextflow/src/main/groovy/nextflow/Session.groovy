@@ -874,7 +874,9 @@ class Session implements ISession {
             final processDefs = ScriptMeta.allProcessDefinitions()
             log.debug "Workflow process definitions [$ver]: ${processDefs.entrySet().collect{"${it.key} ${it.value}"}.join(', ')}"
             final resolvedNames = ScriptMeta.allResolvedProcessNames()
-            log.debug "Resolved process names: ${resolvedNames.entrySet().collect{"${it.key} ${it.value}"}.join(', ')}"         
+            final mainScriptMeta = ScriptMeta.get(script)
+            final unaliasedProcessNames = mainScriptMeta.getLocalProcessNames() // Process in main file are not aliased.
+            log.debug "Resolved process names: ${unaliasedProcessNames.collect{"$it ${mainScriptMeta.getScriptPath()}:$it"}.join(', ')} ${resolvedNames.entrySet().collect{"${it.key} ${it.value}"}.join(', ')}"         
 
             validateConfig(names)
         }
