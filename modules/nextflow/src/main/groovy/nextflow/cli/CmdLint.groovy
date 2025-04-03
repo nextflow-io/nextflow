@@ -62,10 +62,10 @@ class CmdLint extends CmdBase {
 
     @Parameter(
         names = ['-output-format'],
-        description = 'Output format for lint results [env: NXF_LINT_FORMAT]. Options: full, extended, concise, json',
+        description = 'Output format for lint results. Options: full, extended, concise, json',
         validateWith = OutputFormatValidator
     )
-    String outputFormat = System.getenv('NXF_LINT_FORMAT') ?: 'full'
+    String outputFormat = 'full'
 
     static class OutputFormatValidator implements IParameterValidator {
 

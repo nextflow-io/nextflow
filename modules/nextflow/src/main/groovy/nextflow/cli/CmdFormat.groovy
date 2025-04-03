@@ -49,20 +49,20 @@ class CmdFormat extends CmdBase {
     @Parameter(description = 'List of paths to format')
     List<String> args = []
 
-    @Parameter(names=['-spaces'], description = 'Number of spaces to indent')
-    int spaces
-
-    @Parameter(names = ['-tabs'], description = 'Indent with tabs')
-    Boolean tabs
-
-    @Parameter(names = ['-harshil-alignment'], description = 'Use Harshil alignment')
-    Boolean harhsilAlignment
-
     @Parameter(
         names = ['-exclude'],
         description = 'File pattern to exclude from formatter (can be specified multiple times)'
     )
     List<String> excludePatterns = ['.git', '.nf-test', 'work']
+
+    @Parameter(names = ['-harshil-alignment'], description = 'Use Harshil alignment')
+    Boolean harhsilAlignment
+
+    @Parameter(names=['-spaces'], description = 'Number of spaces to indent')
+    int spaces
+
+    @Parameter(names = ['-tabs'], description = 'Indent with tabs')
+    Boolean tabs
 
     private ScriptParser scriptParser
 
