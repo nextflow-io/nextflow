@@ -37,15 +37,7 @@ import groovy.transform.PackageScope
 class DotRenderer implements DagRenderer {
 
     private String name
-    private Session session = Global.session as Session
-    private String direction = session.config.navigate('dag.direction', 'TB')
-
-    {
-        if( direction !in ['TB','LR'] ) {
-            log.warn "Invalid configuration property `dag.direction = '$direction'` - use either: 'TB' (top-bottom) or 'LR' (left-right)"
-            this.direction = 'TB'
-        }
-    }
+    private final String direction
 
     /**
      * Create a render instance
@@ -54,6 +46,13 @@ class DotRenderer implements DagRenderer {
      */
     DotRenderer( String name ) {
         this.name = normalise(name)
+        String direction = (Global.session as Session).config.dag?.direction as String ?: "TB"
+        if( direction !in ['TB','LR'] ) {
+            log.warn "Invalid configuration property `dag.direction = '$direction'` - use either: 'TB' (top-bottom) or 'LR' (left-right)"
+            this.direction = 'TB'
+        } else {
+            this.direction = direction
+        }
     }
 
     @PackageScope
