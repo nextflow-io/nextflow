@@ -16,6 +16,7 @@
 
 package nextflow.cli
 
+import java.nio.file.Path
 import java.time.Instant
 
 import com.beust.jcommander.IParameterValidator
@@ -99,13 +100,10 @@ class CmdLint extends CmdBase {
         errorListener.beforeAll()
 
         for( final arg : args ) {
-            final file = new File(arg)
-            if( file.isFile() ) {
-                parse(file)
-                continue
-            }
-
-            file.eachFileRecurse(FileType.FILES, this.&parse)
+            PathUtils.visitFiles(
+                Path.of(arg),
+                (path) -> !PathUtils.isExcluded(path, excludePatterns),
+                (path) -> parse(path.toFile()))
         }
 
         scriptParser.analyze()
@@ -120,12 +118,7 @@ class CmdLint extends CmdBase {
             throw new AbortOperationException()
     }
 
-    void parse(File file) {
-        if( PathUtils.isPathExcluded(file.toPath(), excludePatterns) ) {
-            log.debug "Skipping excluded file ${file}"
-            return
-        }
-
+    private void parse(File file) {
         log.debug "Linting file ${file}"
         errorListener.beforeFile(file)
 

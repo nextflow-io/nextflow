@@ -31,7 +31,7 @@ class PathUtilsTest extends Specification {
         def patterns = [ '.git', '.nf-test', 'work', 'foo/bar' ]
 
         expect:
-        result == PathUtils.isPathExcluded(Path.of(path), patterns)
+        result == PathUtils.isExcluded(Path.of(path), patterns)
 
         where:
         path                            | result

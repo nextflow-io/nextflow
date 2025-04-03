@@ -16,6 +16,8 @@
 
 package nextflow.cli
 
+import java.nio.file.Path
+
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.io.FileType
@@ -91,13 +93,10 @@ class CmdFormat extends CmdBase {
         println()
 
         for( final arg : args ) {
-            final file = new File(arg)
-            if( file.isFile() ) {
-                format(file)
-                continue
-            }
-
-            file.eachFileRecurse(FileType.FILES, this.&format)
+            PathUtils.visitFiles(
+                Path.of(arg),
+                (path) -> !PathUtils.isExcluded(path, excludePatterns),
+                (path) -> format(path.toFile()))
         }
 
         final emojis = [
@@ -127,12 +126,7 @@ class CmdFormat extends CmdBase {
         return ansi
     }
 
-    void format(File file) {
-        if( PathUtils.isPathExcluded(file.toPath(), excludePatterns) ) {
-            log.debug "Skipping excluded file ${file}"
-            return
-        }
-
+    private void format(File file) {
         final name = file.getName()
         if( name.endsWith('.nf') )
             formatScript(file)

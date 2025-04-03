@@ -15,13 +15,36 @@
  */
 package nextflow.util;
 
-import java.nio.file.FileSystems;
+import java.io.IOException;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 public class PathUtils {
 
-    public static boolean isPathExcluded(Path path, List<String> excludePatterns) {
+    public static void visitFiles(Path root, Predicate<Path> predicate, Consumer<Path> action) throws IOException {
+        Files.walkFileTree(root, new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes attrs) {
+                return predicate.test(path)
+                    ? FileVisitResult.CONTINUE
+                    : FileVisitResult.SKIP_SUBTREE;
+            }
+            @Override
+            public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) {
+                if( predicate.test(path) )
+                    action.accept(path);
+                return FileVisitResult.CONTINUE;
+            }
+        });
+    }
+
+    public static boolean isExcluded(Path path, List<String> excludePatterns) {
         if( excludePatterns == null )
             return false;
         var pathStr = path.toString();
