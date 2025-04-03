@@ -37,10 +37,6 @@ import org.codehaus.groovy.control.messages.SyntaxErrorMessage
 import org.codehaus.groovy.syntax.SyntaxException
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
-
-import static org.fusesource.jansi.Ansi.Attribute
-import static org.fusesource.jansi.Ansi.Color
-import static org.fusesource.jansi.Ansi.ansi
 /**
  * CLI sub-command LINT
  *
@@ -98,7 +94,7 @@ class CmdLint extends CmdBase {
         configParser = new ConfigParser()
         errorListener = outputFormat == 'json'
             ? new JsonErrorListener()
-            : new AnsiErrorListener(outputFormat)
+            : new StdoutErrorListener(outputFormat, launcher.options.ansiLog)
 
         errorListener.beforeAll()
 
@@ -193,11 +189,19 @@ interface ErrorListener {
 
 
 @CompileStatic
-class AnsiErrorListener implements ErrorListener {
+class StdoutErrorListener implements ErrorListener {
     private String format
+    private boolean ansiLog
 
-    AnsiErrorListener(String format) {
+    StdoutErrorListener(String format, boolean ansiLog) {
         this.format = format
+        this.ansiLog = ansiLog
+    }
+
+    private Ansi ansi() {
+        final ansi = Ansi.ansi()
+        ansi.setEnabled(ansiLog)
+        return ansi
     }
 
     @Override
@@ -211,7 +215,7 @@ class AnsiErrorListener implements ErrorListener {
     void beforeFile(File file) {
         final line = ansi()
             .cursorUp(1).eraseLine()
-            .a(Attribute.INTENSITY_FAINT).a("Checking: ${file.getPath().replaceFirst(/^\.\//, '')}")
+            .a(Ansi.Attribute.INTENSITY_FAINT).a("Checking: ${file.getPath().replaceFirst(/^\.\//, '')}")
             .reset().newline().toString()
         AnsiConsole.out.print(line)
         AnsiConsole.out.flush()
@@ -240,7 +244,7 @@ class AnsiErrorListener implements ErrorListener {
         final matcher = str =~ /^(.*)([`'][^`']+[`'])(.*)$/
         if( matcher.find() ) {
             term.a(matcher.group(1))
-                .fg(Color.CYAN).a(matcher.group(2)).fg(Color.DEFAULT)
+                .fg(Ansi.Color.CYAN).a(matcher.group(2)).fg(Ansi.Color.DEFAULT)
                 .a(matcher.group(3))
         }
         else {
@@ -300,9 +304,9 @@ class AnsiErrorListener implements ErrorListener {
 
             if( i == startLine ) {
                 // Print line with error in red
-                term.a(Attribute.INTENSITY_FAINT).a(line.substring(0, adjStart)).reset()
+                term.a(Ansi.Attribute.INTENSITY_FAINT).a(line.substring(0, adjStart)).reset()
                 term.fg(Ansi.Color.RED).a(line.substring(adjStart, adjEnd)).reset()
-                term.a(Attribute.INTENSITY_FAINT).a(line.substring(adjEnd)).reset().newline()
+                term.a(Ansi.Attribute.INTENSITY_FAINT).a(line.substring(adjEnd)).reset().newline()
 
                 // Print carets underneath the error range
                 String marker = ' ' * adjStart
@@ -311,7 +315,7 @@ class AnsiErrorListener implements ErrorListener {
                     .fg(Ansi.Color.RED).bold().a(marker + carets).reset().newline()
             }
             else {
-                term.a(Attribute.INTENSITY_FAINT).a(line).reset().newline()
+                term.a(Ansi.Attribute.INTENSITY_FAINT).a(line).reset().newline()
             }
         }
 
@@ -326,7 +330,7 @@ class AnsiErrorListener implements ErrorListener {
     @Override
     void afterErrors() {
         // print extra newline since next file status will chomp back one
-        term.fg(Color.DEFAULT).newline()
+        term.fg(Ansi.Color.DEFAULT).newline()
         AnsiConsole.out.print(term)
         AnsiConsole.out.flush()
     }
@@ -348,9 +352,9 @@ class AnsiErrorListener implements ErrorListener {
             term.newline()
         term.bold().a("Nextflow code checks complete! ${emojis[rnd.nextInt(emojis.size())]}").reset().newline()
         if( summary.filesWithErrors > 0 )
-            term.fg(Color.RED).a(" ❌ ${summary.filesWithErrors} file${summary.filesWithErrors==1 ? '' : 's'} had ${summary.errors} error${summary.errors==1 ? '' : 's'}").newline()
+            term.fg(Ansi.Color.RED).a(" ❌ ${summary.filesWithErrors} file${summary.filesWithErrors==1 ? '' : 's'} had ${summary.errors} error${summary.errors==1 ? '' : 's'}").newline()
         if( summary.filesWithoutErrors > 0 )
-            term.fg(Color.BLUE).a(" ✅ ${summary.filesWithoutErrors} file${summary.filesWithoutErrors==1 ? '' : 's'} had no errors").newline()
+            term.fg(Ansi.Color.BLUE).a(" ✅ ${summary.filesWithoutErrors} file${summary.filesWithoutErrors==1 ? '' : 's'} had no errors").newline()
         if( summary.filesWithErrors == 0 && summary.filesWithoutErrors == 0 )
             term.a(" No files found to process").newline()
         AnsiConsole.out.print(term)

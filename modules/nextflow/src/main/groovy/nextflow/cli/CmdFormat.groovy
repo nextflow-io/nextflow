@@ -32,10 +32,6 @@ import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
-
-import static org.fusesource.jansi.Ansi.Attribute
-import static org.fusesource.jansi.Ansi.Color
-import static org.fusesource.jansi.Ansi.ansi
 /**
  * CLI sub-command FORMAT
  *
@@ -113,16 +109,22 @@ class CmdFormat extends CmdBase {
             "🧹 💨"
         ]
         final rnd = new Random()
-        Ansi term = ansi().cursorUp(1).eraseLine()
+        final term = ansi().cursorUp(1).eraseLine()
         term.bold().a("Nextflow code formatting complete! ${emojis[rnd.nextInt(emojis.size())]}").reset().newline()
         if( filesChanged > 0 )
-            term.fg(Color.GREEN).a(" ${filesChanged} file${filesChanged==1 ? '':'s'} reformatted").newline()
+            term.fg(Ansi.Color.GREEN).a(" ${filesChanged} file${filesChanged==1 ? '':'s'} reformatted").newline()
         if( filesUnchanged > 0 )
-            term.fg(Color.BLUE).a(" ${filesUnchanged} file${filesUnchanged==1 ? '':'s'} left unchanged").newline()
+            term.fg(Ansi.Color.BLUE).a(" ${filesUnchanged} file${filesUnchanged==1 ? '':'s'} left unchanged").newline()
         if( filesChanged == 0 && filesUnchanged == 0 )
             term.a(" No files found to process").newline()
         AnsiConsole.out.print(term)
         AnsiConsole.out.flush()
+    }
+
+    private Ansi ansi() {
+        final ansi = Ansi.ansi()
+        ansi.setEnabled(launcher.options.ansiLog)
+        return ansi
     }
 
     void format(File file) {
@@ -185,7 +187,7 @@ class CmdFormat extends CmdBase {
     private void printStatus(File file) {
         final line = ansi()
             .cursorUp(1).eraseLine()
-            .a(Attribute.INTENSITY_FAINT).a("Formatting: ${file.getPath().replaceFirst(/^\.\//, '')}")
+            .a(Ansi.Attribute.INTENSITY_FAINT).a("Formatting: ${file.getPath().replaceFirst(/^\.\//, '')}")
             .reset().newline().toString()
         AnsiConsole.out.print(line)
         AnsiConsole.out.flush()
@@ -198,8 +200,8 @@ class CmdFormat extends CmdBase {
         for( final message : errorMessages ) {
             if( message instanceof SyntaxErrorMessage ) {
                 final cause = message.getCause()
-                term.fg(Color.RED).bold().a("error").fg(Color.DEFAULT).a(": ")
-                term.a("Failed to parse ${source.getName().replaceFirst(/^\.\//, '')}").a(Attribute.INTENSITY_BOLD_OFF)
+                term.fg(Ansi.Color.RED).bold().a("error").fg(Ansi.Color.DEFAULT).a(": ")
+                term.a("Failed to parse ${source.getName().replaceFirst(/^\.\//, '')}").a(Ansi.Attribute.INTENSITY_BOLD_OFF)
                 term.a(":${cause.getStartLine()}:${cause.getStartColumn()}: ")
                 term = highlightString(cause.getOriginalMessage(), term)
                 term.newline()
@@ -207,7 +209,7 @@ class CmdFormat extends CmdBase {
         }
 
         // print extra newline since next file status will chomp back one
-        term.fg(Color.DEFAULT).newline()
+        term.fg(Ansi.Color.DEFAULT).newline()
         AnsiConsole.out.print(term.toString())
         AnsiConsole.out.flush()
     }
@@ -216,7 +218,7 @@ class CmdFormat extends CmdBase {
         final matcher = str =~ /^(.*)([`'][^`']+[`'])(.*)$/
         if( matcher.find() ) {
             term.a(matcher.group(1))
-                .fg(Color.CYAN).a(matcher.group(2)).fg(Color.DEFAULT)
+                .fg(Ansi.Color.CYAN).a(matcher.group(2)).fg(Ansi.Color.DEFAULT)
                 .a(matcher.group(3))
         }
         else {
