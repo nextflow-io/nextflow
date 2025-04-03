@@ -873,10 +873,19 @@ class Session implements ISession {
             final ver = "dsl${NF.dsl1 ?'1' :'2'}"
             final processDefs = ScriptMeta.allProcessDefinitions()
             log.debug "Workflow process definitions [$ver]: ${processDefs.entrySet().collect{"${it.key} ${it.value}"}.join(', ')}"
-            final resolvedNames = ScriptMeta.allResolvedProcessNames()
+            def resolvedNames = ScriptMeta.allResolvedProcessNames()
+            // Add unaliased process names to the resolved names map
             final mainScriptMeta = ScriptMeta.get(script)
-            final unaliasedProcessNames = mainScriptMeta.getLocalProcessNames() // Process in main file are not aliased.
-            log.debug "Resolved process names: ${unaliasedProcessNames.collect{"$it ${mainScriptMeta.getScriptPath()}:$it"}.join(', ')} ${resolvedNames.entrySet().collect{"${it.key} ${it.value}"}.join(', ')}"         
+            mainScriptMeta.getLocalProcessNames().each { name ->
+                // The processes defined in the main script cannot be included in 
+                // other scripts, as it would create a circular inclusion.
+                // Hence, no need to check for the key existence in the map.
+                def key = Map.entry(mainScriptMeta.getScriptPath(), name)
+                def list = new ArrayList()
+                list.add(name)
+                resolvedNames.put(key, list)
+            }
+            log.debug "Resolved process names: ${resolvedNames.entrySet().join(', ')}"         
 
             validateConfig(names)
         }
