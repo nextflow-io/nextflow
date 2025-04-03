@@ -15,6 +15,11 @@
  */
 
 package nextflow.dag
+
+import groovy.util.logging.Slf4j
+import nextflow.Global
+import nextflow.Session
+
 import java.nio.file.Path
 
 import groovy.transform.PackageScope
@@ -28,9 +33,19 @@ import groovy.transform.PackageScope
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Mike Smoot <mes@aescon.com>
  */
+@Slf4j
 class DotRenderer implements DagRenderer {
 
     private String name
+    private Session session = Global.session as Session
+    private String direction = session.config.navigate('dag.direction', 'TB')
+
+    {
+        if( direction !in ['TB','LR'] ) {
+            log.warn "Invalid configuration property `dag.direction = '$direction'` - use either: 'TB' (top-bottom) or 'LR' (left-right)"
+            this.direction = 'TB'
+        }
+    }
 
     /**
      * Create a render instance
@@ -52,6 +67,7 @@ class DotRenderer implements DagRenderer {
     String renderNetwork(DAG dag) {
         def result = []
         result << "digraph \"$name\" {"
+        result << "rankdir=$direction;" // arguments: LR or TB
         dag.edges.each { edge -> result << renderEdge( edge ) }
         result << "}\n"
         return result.join('\n')
