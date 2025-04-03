@@ -55,6 +55,7 @@ import nextflow.processor.TaskProcessor
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
 import nextflow.script.ProcessFactory
+import nextflow.script.ProcessDef
 import nextflow.script.ScriptBinding
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptMeta
@@ -871,6 +872,8 @@ class Session implements ISession {
             final names = ScriptMeta.allProcessNames()
             final ver = "dsl${NF.dsl1 ?'1' :'2'}"
             log.debug "Workflow process names [$ver]: ${names.join(', ')}"
+            final processDefs = ScriptMeta.allProcessDefinitions()
+            log.debug "Workflow process definitions [$ver]: ${processDefs.entrySet().collect{"${it.key} ${it.value}"}.join(', ')}"
             validateConfig(names)
         }
         else {

@@ -86,6 +86,22 @@ class ScriptMeta {
         return result
     }
 
+    /** 
+     * Returns a map of all local process definitions per script path.
+     * @return Map of script path and a list of process names
+     *         defined in that script
+     *         ie. [scriptPath -> [processName1, processName2]]
+     */
+    static Map<Path, List<String>> allProcessDefinitions() {
+        final result = new HashMap()
+         for( final entry : REGISTRY.values() ) {
+            final processes = entry.getDefinitions().findAll { d -> d instanceof ProcessDef }
+            final processNames = processes.collect { d -> d.getName() }
+            result.put(entry.getScriptPath(), processNames)
+        }
+        return result
+    }
+
     static void addResolvedName(String name) {
         resolvedProcessNames.add(name)
     }
