@@ -50,7 +50,7 @@ class ScriptMeta {
 
     static private Map<Path,BaseScript> scriptsByPath = new HashMap<>(10)
 
-    static private Set<String> resolvedProcessNames = new HashSet<>(20)
+    static private Map<String,Map.Entry<Path,String>> resolvedProcessNames = new HashMap<>(20)
 
     @TestOnly
     static void reset() {
@@ -73,7 +73,7 @@ class ScriptMeta {
         for( ScriptMeta entry : REGISTRY.values() )
             result.addAll( entry.getProcessNames() )
         // add all resolved names
-        result.addAll(resolvedProcessNames)
+        result.addAll(resolvedProcessNames.keySet())
         return result
     }
 
@@ -95,15 +95,22 @@ class ScriptMeta {
     static Map<Path, List<String>> allProcessDefinitions() {
         final result = new HashMap()
          for( final entry : REGISTRY.values() ) {
-            final processes = entry.getDefinitions().findAll { d -> d instanceof ProcessDef }
-            final processNames = processes.collect { d -> d.getName() }
-            result.put(entry.getScriptPath(), processNames)
+            result.put(entry.getScriptPath(), entry.getLocalProcessNames())
         }
         return result
     }
 
-    static void addResolvedName(String name) {
-        resolvedProcessNames.add(name)
+    /** 
+     * Returns a map of all resolved process names, with their corresponding 
+     * script path and original process names.
+     * @return Map of process name and a map of script path and original process name
+     */
+     static Map<String, Map.Entry<Path, String>> allResolvedProcessNames() {
+        return resolvedProcessNames
+    }
+
+    static void addResolvedName(String name, Path path, String baseName) {
+        resolvedProcessNames.put(name, new AbstractMap.SimpleEntry<>(path, baseName))
     }
 
     static Map<String,Path> allScriptNames() {
