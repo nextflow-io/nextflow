@@ -28,7 +28,7 @@ class PathUtilsTest extends Specification {
 
     def 'should determine whether a path is excluded' () {
         given:
-        def patterns = [ '.git', '.nf-test', 'work' ]
+        def patterns = [ '.git', '.nf-test', 'work', 'foo/bar' ]
 
         expect:
         result == PathUtils.isPathExcluded(Path.of(path), patterns)
@@ -38,24 +38,12 @@ class PathUtilsTest extends Specification {
         '.git/main.nf'                  | true
         '.nf-test/mock.nf'              | true
         'modules/foo/.nf-test/mock.nf'  | true
+        'modules/foo/bar/main.nf'       | true
         'work/01/234567/main.nf'        | true
         'main.nf'                       | false
         'modules/foo/main.nf'           | false
         'nextflow.config'               | false
         'conf/base.config'              | false
-    }
-
-    def 'should determine whether a pattern is a glob' () {
-        expect:
-        result == PathUtils.isGlob(pattern)
-
-        where:
-        pattern             | result
-        '.git'              | false
-        'work'              | false
-        '*.nf'              | true
-        'script_?.nf'       | true
-        'script_[1234].nf'  | true
     }
 
 }

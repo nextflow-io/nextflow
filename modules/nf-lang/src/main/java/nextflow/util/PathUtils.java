@@ -24,21 +24,8 @@ public class PathUtils {
     public static boolean isPathExcluded(Path path, List<String> excludePatterns) {
         if( excludePatterns == null )
             return false;
-        return excludePatterns.stream()
-            .anyMatch((pattern) -> {
-                if( isGlob(pattern) ) {
-                    var matcher = FileSystems.getDefault().getPathMatcher("glob:" + pattern);
-                    return matcher.matches(path);
-                }
-                else {
-                    var prefix = Path.of(pattern);
-                    return path.getNameCount() >= prefix.getNameCount() && prefix.equals(path.subpath(0, prefix.getNameCount()));
-                }
-            });
-    }
-
-    public static boolean isGlob(String pattern) {
-        return pattern.contains("*") || pattern.contains("?") || pattern.contains("[");
+        var pathStr = path.toString();
+        return excludePatterns.stream().anyMatch(pattern -> pathStr.contains(pattern));
     }
 
 }
