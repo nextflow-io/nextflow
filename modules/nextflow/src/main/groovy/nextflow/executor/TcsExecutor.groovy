@@ -11,30 +11,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/*
-  Implemented by Satoshi Ohshima <ohshima@cc.kyushu-u.ac.jp>
-  I referred to the other executors groovy implementations.
-  Resource requests and other job characteristics can be controlled via the following process directives:
-  - time
-  - clusterOptions
-  queue (resource group), cpu, node, and other options should be indicated by clusterOptions.
-  This is because they depend on target systems (required options are not the same) and can be controlled by "-L" options in arguments of pjsub command.
-
-  example of nextflow.config on Genkai (Kyushu University)
-    process {
-      executor = 'tcs'
-      time = '00:30:00'
-      clusterOptions = '-L rscgrp=a-batch -L vnode-core=4'
-    }
-
-  example of nextflow.config on Flow (Nagoya University)
-    process {
-      executor = 'tcs'
-      time = '00:30:00'
-      clusterOptions = '-L rscunit=cx -L rscgrp=cx-share -L gpu=1'
-    }
-
- */
 
 package nextflow.executor
 
@@ -45,11 +21,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskRun
-/*
- * Implements a executor for Fujitsu TCS
- *
- * See https://software.fujitsu.com/jp/manual/manualindex/p21000154.html (in Japanese)
- */
+
 @Slf4j
 @CompileStatic
 class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {

@@ -445,3 +445,42 @@ Nextflow does not provide direct support for SLURM multi-clusters. If you need t
 :::{versionadded} 23.07.0-edge
 Some SLURM clusters require memory allocations to be specified with `--mem-per-cpu` instead of `--mem`. You can specify `executor.perCpuMemAllocation = true` in the Nextflow configuration to enable this behavior. Nextflow will automatically compute the memory per CPU for each task (by default 1 CPU is used).
 :::
+
+## TCS
+
+The `tcs` executor allows you to run your pipeline script using a [Fujitsu Technical Computing Suite (TCS)](https://software.fujitsu.com/jp/manual/manualindex/p21000155e.html).
+
+Nextflow manages each process as a separate job that is submitted to the cluster using the `pjsub` command.
+
+The pipeline must be launched from a node where the `pjsub` command is available, which is typically the login node.
+
+To enable the TCS executor, set `process.executor = 'tcs'` in the `nextflow.config` file.
+
+Resource requests and other job characteristics can be controlled via the following process directives:
+
+- {ref}`process-clusterOptions`
+- {ref}`process-time`
+
+:::{note}
+Other options such as queue (resource group), cpu, and node should be indicated by clusterOptions.
+This is because they depend on target systems (required options are not the same) and can be controlled by "-L" options in arguments of pjsub command.
+
+This is an example of nextflow.config on Supercomputer Genkai (Kyushu University).
+```
+process {
+  executor = 'tcs'
+  time = '00:30:00'
+  clusterOptions = '-L rscgrp=a-batch -L vnode-core=4'
+}
+```
+
+This is an example of nextflow.config on Supercomputer Flow (Nagoya University).
+```
+process {
+  executor = 'tcs'
+  time = '00:30:00'
+  clusterOptions = '-L rscunit=cx -L rscgrp=cx-share -L gpu=1'
+}
+```
+
+(tcs-executor)=
