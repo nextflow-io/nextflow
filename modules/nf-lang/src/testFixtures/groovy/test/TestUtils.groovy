@@ -26,7 +26,9 @@ import java.nio.file.attribute.BasicFileAttributes
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import nextflow.config.control.ConfigParser
+import nextflow.script.control.Compiler
 import nextflow.script.control.ScriptParser
+import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage
 import org.codehaus.groovy.syntax.SyntaxException
 
@@ -45,13 +47,14 @@ class TestUtils {
     static List<SyntaxException> check(ScriptParser parser, String contents) {
         final source = parser.parse('main.nf', contents.stripIndent())
         parser.analyze()
-        final errorCollector = source.getErrorCollector()
-        if( !errorCollector.hasErrors() )
-            return Collections.emptyList()
-        return errorCollector.getErrors().stream()
-            .filter(e -> e instanceof SyntaxErrorMessage)
-            .map(e -> e.cause)
-            .toList()
+        return getErrors(source)
+    }
+
+    static List<SyntaxException> check(ScriptParser parser, List<Path> files) {
+        for( final path : files )
+            parser.parse(path.toFile())
+        parser.analyze()
+        return getErrors(files, parser.compiler())
     }
 
     /**
@@ -61,8 +64,24 @@ class TestUtils {
      * @param contents
      */
     static List<SyntaxException> check(ConfigParser parser, String contents) {
-        final source = parser.parse('main.nf', contents.stripIndent())
+        final source = parser.parse('nextflow.config', contents.stripIndent())
         parser.analyze()
+        return getErrors(source)
+    }
+
+    static List<SyntaxException> check(ConfigParser parser, List<Path> files) {
+        for( final path : files )
+            parser.parse(path.toFile())
+        parser.analyze()
+        return getErrors(files, parser.compiler())
+    }
+
+    /**
+     * Get the list of compiler errors for a source file.
+     *
+     * @param source
+     */
+    static List<SyntaxException> getErrors(SourceUnit source) {
         final errorCollector = source.getErrorCollector()
         if( !errorCollector.hasErrors() )
             return Collections.emptyList()
@@ -72,19 +91,34 @@ class TestUtils {
             .toList()
     }
 
+    static List<SyntaxException> getErrors(List<Path> files, Compiler compiler) {
+        return files.stream()
+            .map(file -> file.toUri())
+            .map(uri -> compiler.getSources().get(uri))
+            .flatMap(source -> getErrors(source).stream())
+            .toList()
+    }
+
+    /**
+     * Create a temporary directory.
+     */
+    static Path tempDir() {
+        return Files.createTempDirectory('test')
+    }
+
     private static FileSystem fs = Jimfs.newFileSystem(Configuration.unix())
 
     /**
      * Create an in-memory temporary directory.
      */
-    static Path tempDir() {
+    static Path tempDirInMem() {
         final tmp = fs.getPath('/tmp')
-        Files.createDirectory(tmp)
+        Files.createDirectories(tmp)
         return Files.createTempDirectory(tmp, 'test')
     }
 
     /**
-     * Create an in-memory temporary file.
+     * Create a temporary file.
      *
      * @param parent
      * @param name

@@ -60,7 +60,7 @@ public class ScriptParser {
 
     public void analyze() {
         for( var source : compiler.getSources().values() ) {
-            var includeResolver = new ResolveIncludeVisitor(source, compiler, Collections.emptySet());
+            var includeResolver = new ResolveIncludeVisitor(source, compiler);
             includeResolver.visit();
             for( var error : includeResolver.getErrors() )
                 source.getErrorCollector().addErrorAndContinue(error);

@@ -22,7 +22,7 @@ import java.nio.file.Path
 import spock.lang.Specification
 
 import static test.TestUtils.deleteDir
-import static test.TestUtils.tempDir
+import static test.TestUtils.tempDirInMem
 import static test.TestUtils.tempFile
 
 /**
@@ -33,7 +33,7 @@ class PathUtilsTest extends Specification {
 
     def 'should visit all files in a directory that satisfy a condition' () {
         given:
-        def root = tempDir()
+        def root = tempDirInMem()
         def files = [
             'main.nf',
             'nextflow.config',

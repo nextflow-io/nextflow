@@ -16,11 +16,16 @@
 
 package nextflow.config.control
 
+import java.nio.file.Path
+
 import org.codehaus.groovy.syntax.SyntaxException
-import spock.lang.Ignore
 import spock.lang.Shared
 import spock.lang.Specification
 import test.TestUtils
+
+import static test.TestUtils.deleteDir
+import static test.TestUtils.tempDir
+import static test.TestUtils.tempFile
 
 /**
  * @see nextflow.config.control.ConfigResolveVisitor
@@ -38,6 +43,10 @@ class ConfigResolveTest extends Specification {
 
     List<SyntaxException> check(String contents) {
         return TestUtils.check(parser, contents)
+    }
+
+    List<SyntaxException> check(List<Path> files) {
+        return TestUtils.check(parser, files)
     }
 
     def 'should report an error for an undefined variable' () {
@@ -77,34 +86,38 @@ class ConfigResolveTest extends Specification {
         errors.size() == 0
     }
 
-    @Ignore("config includes aren't working in tests due to FileSystemNotFoundException")
     def 'should report an error for an invalid config include' () {
+        given:
+        def root = tempDir()
+        def config = tempFile(root, 'nextflow.config')
+
         when:
-        def errors = check(
-            '''\
+        config.text = '''\
             profiles {
                 includeConfig 'foo.config'
             }
             '''
-        )
+        def errors = check([config])
         then:
         errors.size() == 1
         errors[0].getStartLine() == 2
-        errors[0].getStartColumn() == 5
+        errors[0].getStartColumn() == 17
         errors[0].getOriginalMessage() == 'Config includes are only allowed at the top-level or in a profile'
 
         when:
-        errors = check(
-            '''\
+        config.text = '''\
             profiles {
                 foo {
                     includeConfig 'foo.config'
                 }
             }
             '''
-        )
+        errors = check([config])
         then:
         errors.size() == 0
+
+        cleanup:
+        deleteDir(root)
     }
 
 }

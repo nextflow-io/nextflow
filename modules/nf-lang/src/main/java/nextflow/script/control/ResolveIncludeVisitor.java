@@ -61,6 +61,10 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
         this.changedUris = changedUris;
     }
 
+    public ResolveIncludeVisitor(SourceUnit sourceUnit, Compiler compiler) {
+        this(sourceUnit, compiler, null);
+    }
+
     @Override
     protected SourceUnit getSourceUnit() {
         return sourceUnit;
@@ -127,7 +131,7 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
     }
 
     private boolean isIncludeStale(IncludeNode node, URI includeUri) {
-        if( changedUris.contains(uri) || changedUris.contains(includeUri) )
+        if( changedUris == null || changedUris.contains(uri) || changedUris.contains(includeUri) )
             return true;
         for( var module : node.modules ) {
             if( module.getTarget() == null )
