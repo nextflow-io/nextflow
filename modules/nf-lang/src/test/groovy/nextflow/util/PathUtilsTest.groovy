@@ -16,15 +16,49 @@
 
 package nextflow.util
 
+import java.nio.file.Files
 import java.nio.file.Path
 
 import spock.lang.Specification
+
+import static test.TestUtils.deleteDir
+import static test.TestUtils.tempDir
+import static test.TestUtils.tempFile
 
 /**
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 class PathUtilsTest extends Specification {
+
+    def 'should visit all files in a directory that satisfy a condition' () {
+        given:
+        def root = tempDir()
+        def files = [
+            'main.nf',
+            'nextflow.config',
+            'modules/index/main.nf',
+            'modules/fastqc/main.nf',
+            'modules/quant/main.nf',
+            'modules/multiqc/main.nf',
+            'modules/rnaseq.nf'
+        ]
+        files.each { filename ->
+            tempFile(root, filename)
+        }
+
+        when:
+        def result = [] as Set
+        PathUtils.visitFiles(
+            root,
+            path -> Files.isDirectory(path) || path.toString().endsWith('.nf'),
+            path -> result.add(root.relativize(path).toString()) )
+        then:
+        result == files.findAll { filename -> filename.endsWith('.nf') }.toSet()
+
+        cleanup:
+        deleteDir(root)
+    }
 
     def 'should determine whether a path is excluded' () {
         given:
