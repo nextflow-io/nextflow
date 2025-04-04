@@ -152,7 +152,7 @@ class CmdLint extends CmdBase {
         for( final message : errorMessages ) {
             if( message instanceof SyntaxErrorMessage ) {
                 final cause = message.getCause()
-                final filename = source.getName().replaceFirst(/^\.\//, '')
+                final filename = source.getName()
                 errorListener.onError(cause, filename, source)
                 summary.errors += 1
             }
@@ -208,7 +208,7 @@ class StdoutErrorListener implements ErrorListener {
     void beforeFile(File file) {
         final line = ansi()
             .cursorUp(1).eraseLine()
-            .a(Ansi.Attribute.INTENSITY_FAINT).a("Checking: ${file.getPath().replaceFirst(/^\.\//, '')}")
+            .a(Ansi.Attribute.INTENSITY_FAINT).a("Checking: ${file}")
             .reset().newline().toString()
         AnsiConsole.out.print(line)
         AnsiConsole.out.flush()

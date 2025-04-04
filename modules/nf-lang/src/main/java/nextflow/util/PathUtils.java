@@ -38,7 +38,7 @@ public class PathUtils {
             @Override
             public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) {
                 if( predicate.test(path) )
-                    action.accept(path);
+                    action.accept(path.normalize());
                 return FileVisitResult.CONTINUE;
             }
         });
