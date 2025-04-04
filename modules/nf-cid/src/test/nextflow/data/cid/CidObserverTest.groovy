@@ -98,6 +98,7 @@ class CidObserverTest extends Specification {
         }
         store.open(DataConfig.create(session))
         def observer = new CidObserver(session, store)
+        observer.executionHash = "hash"
         and:
         def hash = HashCode.fromInt(123456789)
         and:
@@ -122,7 +123,7 @@ class CidObserverTest extends Specification {
         def taskDescription = new nextflow.data.cid.model.TaskRun(uniqueId.toString(), "foo",
             new Checksum(sourceHash, "nextflow", "standard"),
             new Checksum(scriptHash, "nextflow", "standard"),
-            null, null, null, null, null, [:], [], null )
+            null, null, null, null, null, [:], [], "cid://hash", null)
         when:
         observer.storeTaskRun(task, normalizer)
         then:
@@ -328,7 +329,7 @@ class CidObserverTest extends Specification {
             def attrs1 = Files.readAttributes(outFile1, BasicFileAttributes)
             def fileHash1 = CacheHelper.hasher(outFile1).hash().toString()
             def output1 = new DataOutput(outFile1.toString(), new Checksum(fileHash1, "nextflow", "standard"),
-                "cid://123987/file.bam", "$CID_PROT${observer.executionHash}",
+                "cid://123987/outputs/file.bam", "$CID_PROT${observer.executionHash}",
                 attrs1.size(), CidUtils.toDate(attrs1.creationTime()), CidUtils.toDate(attrs1.lastModifiedTime()) )
             folder.resolve(".meta/${observer.executionHash}/outputs/foo/file.bam/.data.json").text == encoder.encode(output1)
 

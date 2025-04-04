@@ -225,7 +225,8 @@ class CidObserver implements TraceObserver {
                 normalizer.normalizePath(p.normalize()),
                 new Checksum(CacheHelper.hasher(p).hash().toString(), "nextflow",
                     CacheHelper.HashMode.DEFAULT().toString().toLowerCase()) )
-            }
+            },
+            asUriString(executionHash)
         )
 
         // store in the underlying persistence
@@ -336,7 +337,7 @@ class CidObserver implements TraceObserver {
         final hash = FileHelper.getTaskHashFromPath(source, session.workDir)
         if (hash) {
             final target = FileHelper.getWorkFolder(session.workDir, hash).relativize(source).toString()
-            return asUriString(hash.toString(), target)
+            return asUriString(hash.toString(), 'outputs', target)
         }
         final storeDirReference = outputsStoreDirCid.get(source.toString())
         return storeDirReference ? asUriString(storeDirReference) : null

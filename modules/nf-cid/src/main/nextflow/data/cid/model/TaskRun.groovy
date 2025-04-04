@@ -40,5 +40,6 @@ class TaskRun implements CidSerializable {
     String architecture
     Map globalVars
     List<DataPath> binEntries
+    String workflowRun
     Map annotations
 }
