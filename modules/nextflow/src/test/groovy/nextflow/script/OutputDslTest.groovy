@@ -64,7 +64,7 @@ class OutputDslTest extends Specification {
                 path 'index.csv'
             }
         }
-        dsl.build(session)
+        dsl.apply(session)
 
         def now = System.currentTimeMillis()
         while( !dsl.complete ) {
