@@ -33,4 +33,5 @@ class WorkflowRun implements CidSerializable {
     String sessionId
     String name
     List<Parameter> params
+    Map annotations
 }

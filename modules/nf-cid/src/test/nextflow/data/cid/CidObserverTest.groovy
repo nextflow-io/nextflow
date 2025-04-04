@@ -27,10 +27,9 @@ import com.google.common.hash.HashCode
 import nextflow.Session
 import nextflow.data.cid.model.Checksum
 import nextflow.data.cid.model.DataPath
-import nextflow.data.cid.model.TaskOutput
+import nextflow.data.cid.model.DataOutput
 import nextflow.data.cid.model.Workflow
-import nextflow.data.cid.model.WorkflowOutput
-import nextflow.data.cid.model.WorkflowResults
+import nextflow.data.cid.model.WorkflowOutputs
 import nextflow.data.cid.model.WorkflowRun
 import nextflow.data.cid.serde.CidEncoder
 import nextflow.data.config.DataConfig
@@ -112,14 +111,17 @@ class CidObserverTest extends Specification {
             getHash() >> hash
             getProcessor() >> processor
             getSource() >> 'echo task source'
+            getScript() >> 'this is the script'
         }
-        def sourceHash =CacheHelper.hasher('echo task source').hash().toString()
+        def sourceHash = CacheHelper.hasher('echo task source').hash().toString()
+        def scriptHash = CacheHelper.hasher('this is the script').hash().toString()
         def normalizer = Mock(PathNormalizer.class) {
             normalizePath( _ as Path) >> {Path p -> p?.toString()}
             normalizePath( _ as String) >> {String p -> p}
         }
         def taskDescription = new nextflow.data.cid.model.TaskRun(uniqueId.toString(), "foo",
             new Checksum(sourceHash, "nextflow", "standard"),
+            new Checksum(scriptHash, "nextflow", "standard"),
             null, null, null, null, null, [:], [], null )
         when:
         observer.storeTaskRun(task, normalizer)
@@ -159,15 +161,15 @@ class CidObserverTest extends Specification {
         }
         and:
         def attrs = Files.readAttributes(outFile, BasicFileAttributes)
-        def output = new TaskOutput(outFile.toString(), new Checksum(fileHash, "nextflow", "standard"),
-            "cid://15cd5b07", attrs.size(), CidUtils.toDate(attrs.creationTime()), CidUtils.toDate(attrs.lastModifiedTime()) )
+        def output = new DataOutput(outFile.toString(), new Checksum(fileHash, "nextflow", "standard"),
+            "cid://15cd5b07", "cid://15cd5b07", attrs.size(), CidUtils.toDate(attrs.creationTime()), CidUtils.toDate(attrs.lastModifiedTime()) )
         and:
         observer.readAttributes(outFile) >> attrs
 
         when:
         observer.storeTaskOutput(task, outFile)
         then:
-        folder.resolve(".meta/${hash}/foo/bar/file.bam/.data.json").text == new CidEncoder().encode(output)
+        folder.resolve(".meta/${hash}/outputs/foo/bar/file.bam/.data.json").text == new CidEncoder().encode(output)
 
         cleanup:
         folder?.deleteDir()
@@ -325,10 +327,10 @@ class CidObserverTest extends Specification {
         then: 'check file 1 output metadata in cid store'
             def attrs1 = Files.readAttributes(outFile1, BasicFileAttributes)
             def fileHash1 = CacheHelper.hasher(outFile1).hash().toString()
-            def output1 = new WorkflowOutput(outFile1.toString(), new Checksum(fileHash1, "nextflow", "standard"), "cid://123987/file.bam",
-            attrs1.size(), CidUtils.toDate(attrs1.creationTime()), CidUtils.toDate(attrs1.lastModifiedTime()) )
-            output1.setPublishedBy("$CID_PROT${observer.executionHash}".toString())
-            folder.resolve(".meta/${observer.executionHash}/foo/file.bam/.data.json").text == encoder.encode(output1)
+            def output1 = new DataOutput(outFile1.toString(), new Checksum(fileHash1, "nextflow", "standard"),
+                "cid://123987/file.bam", "$CID_PROT${observer.executionHash}",
+                attrs1.size(), CidUtils.toDate(attrs1.creationTime()), CidUtils.toDate(attrs1.lastModifiedTime()) )
+            folder.resolve(".meta/${observer.executionHash}/outputs/foo/file.bam/.data.json").text == encoder.encode(output1)
 
         when: 'publish without source path'
         def outFile2 = outputDir.resolve('foo/file2.bam')
@@ -339,18 +341,17 @@ class CidObserverTest extends Specification {
             observer.onFilePublish(outFile2)
             observer.onWorkflowPublish("b", outFile2)
         then: 'Check outFile2 metadata in cid store'
-            def output2 = new WorkflowOutput(outFile2.toString(), new Checksum(fileHash2, "nextflow", "standard"), "cid://${observer.executionHash}" ,
-            attrs2.size(), CidUtils.toDate(attrs2.creationTime()), CidUtils.toDate(attrs2.lastModifiedTime()) )
-            output2.setPublishedBy("$CID_PROT${observer.executionHash}".toString())
-            folder.resolve(".meta/${observer.executionHash}/foo/file2.bam/.data.json").text == encoder.encode(output2)
+            def output2 = new DataOutput(outFile2.toString(), new Checksum(fileHash2, "nextflow", "standard"),
+                "cid://${observer.executionHash}" , "cid://${observer.executionHash}",
+                attrs2.size(), CidUtils.toDate(attrs2.creationTime()), CidUtils.toDate(attrs2.lastModifiedTime()) )
+            folder.resolve(".meta/${observer.executionHash}/outputs/foo/file2.bam/.data.json").text == encoder.encode(output2)
 
         when: 'Workflow complete'
             observer.onFlowComplete()
         then: 'Check history file is updated and Workflow Result is written in the cid store'
-            def finalCid = store.getHistoryLog().getRecord(uniqueId).resultsCid.substring(CID_PROT.size())
-            finalCid != observer.executionHash
-            def resultsRetrieved = store.load(finalCid) as WorkflowResults
-            resultsRetrieved.outputs == [a: "cid://${observer.executionHash}/foo/file.bam", b: "cid://${observer.executionHash}/foo/file2.bam"]
+            def finalCid = store.getHistoryLog().getRecord(uniqueId).runCid.substring(CID_PROT.size())
+            def resultsRetrieved = store.load("${finalCid}/outputs") as WorkflowOutputs
+            resultsRetrieved.outputs == [a: "cid://${observer.executionHash}/outputs/foo/file.bam", b: "cid://${observer.executionHash}/outputs/foo/file2.bam"]
 
         cleanup:
             folder?.deleteDir()

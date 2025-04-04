@@ -18,12 +18,9 @@
 package nextflow.data.cid.fs
 
 import groovy.util.logging.Slf4j
-import nextflow.data.cid.CidUtils
-import nextflow.data.cid.model.Output
-import nextflow.data.cid.serde.CidEncoder
+import nextflow.data.cid.model.DataOutput
 import nextflow.data.cid.serde.CidSerializable
 import nextflow.file.RealPathAware
-import nextflow.serde.gson.GsonEncoder
 import nextflow.util.CacheHelper
 import nextflow.util.TestOnly
 
@@ -31,6 +28,7 @@ import java.nio.file.attribute.FileTime
 import java.time.Instant
 
 import static nextflow.data.cid.fs.CidFileSystemProvider.*
+import static nextflow.data.cid.CidUtils.*
 
 import java.nio.file.FileSystem
 import java.nio.file.LinkOption
@@ -115,7 +113,7 @@ class CidPath implements Path, RealPathAware {
         return first
     }
 
-    private static void validateHash(Output cidObject) {
+    private static void validateHash(DataOutput cidObject) {
         final hashedPath = FileHelper.toCanonicalPath(cidObject.path as String)
         if( !hashedPath.exists() )
             throw new FileNotFoundException("Target path $cidObject.path does not exists.")
@@ -151,10 +149,9 @@ class CidPath implements Path, RealPathAware {
             throw new Exception("CID store not found. Check Nextflow configuration.")
         final object = store.load(filePath)
         if ( object ){
-            if( object instanceof Output ) {
+            if( object instanceof DataOutput ) {
                 return getTargetPathFromOutput(object, children)
             }
-
             if( resultsAsPath ){
                 return getMetadataAsTargetPath(object, fs, filePath, children)
             }
@@ -166,7 +163,8 @@ class CidPath implements Path, RealPathAware {
                 ArrayList<String> newChildren = new ArrayList<String>()
                 newChildren.add(currentPath.getFileName().toString())
                 newChildren.addAll(children)
-                return findTarget(fs, parent.toString(), resultsAsPath, newChildren as String[])
+                //resultsAsPath set to false because parent paths are only inspected for DataOutputs
+                return findTarget(fs, parent.toString(), false, newChildren as String[])
             }
         }
         throw new FileNotFoundException("Target path $filePath does not exists.")
@@ -174,20 +172,49 @@ class CidPath implements Path, RealPathAware {
 
     protected static Path getMetadataAsTargetPath(CidSerializable results, CidFileSystem fs, String filePath, String[] children){
         if( results ) {
-            def creationTime = CidUtils.toFileTime(CidUtils.navigate(results, 'creationTime') as String) ?: FileTime.from(Instant.now())
             if( children && children.size() > 0 ) {
-                final output = CidUtils.navigate(results, children.join('.'))
-                if( output ){
-                    return new CidResultsPath(new GsonEncoder<Object>(){}.withPrettyPrint(true).encode(output), creationTime, fs, filePath, children)
-                }
+                return getSubObjectAsPath(fs, filePath, results, children)
+            }else {
+                return generateCidMetadataPath(fs, filePath, results, children)
             }
-            return new CidResultsPath(new CidEncoder().withPrettyPrint(true).encode(results), creationTime, fs, filePath, children)
         }
         throw new FileNotFoundException("Target path $filePath does not exists.")
     }
 
-    private static Path getTargetPathFromOutput(Output object, String[] children) {
-        final cidObject = object as Output
+    /**
+     * Get a metadata sub-object as CidMetadataPath.
+     * If the requested sub-object is the workflow or task outputs, retrieves the outputs from the outputs description.
+     *
+     * @param fs CidFilesystem for the te.
+     * @param key Parent metadata key.
+     * @param object Parent object.
+     * @param children Array of string in indicating the properties to navigate to get the sub-object.
+     * @return CidMetadataPath or null in it does not exist.
+     */
+    static CidMetadataPath getSubObjectAsPath(CidFileSystem fs, String key, CidSerializable object, String[] children) {
+        if( isSearchingOutputs(object, children) ) {
+            // When asking for a Workflow or task output retrieve the outputs description
+            final outputs = fs.cidStore.load("${key}/outputs")
+            if( outputs ) {
+               return generateCidMetadataPath(fs, key, outputs, children)
+            } else
+                throw new FileNotFoundException("Target path $key#outputs does not exists.")
+        } else {
+            return generateCidMetadataPath(fs, key, object, children)
+        }
+    }
+
+    private static CidMetadataPath generateCidMetadataPath(CidFileSystem fs, String key, Object object, String[] children){
+        def creationTime = FileTime.from(navigate(object, 'createdAt') as Instant ?: Instant.now())
+        final output = children ? navigate(object, children.join('.')) : object
+        if( output ){
+            return new CidMetadataPath(encodeSearchOutputs(output, true), creationTime, fs, key, children)
+        }
+        throw new FileNotFoundException("Target path $key#${children.join('.')} does not exists.")
+    }
+
+    private static Path getTargetPathFromOutput(DataOutput object, String[] children) {
+        final cidObject = object as DataOutput
         // return the real path stored in the metadata
         validateHash(cidObject)
         def realPath = FileHelper.toCanonicalPath(cidObject.path as String)
@@ -264,7 +291,7 @@ class CidPath implements Path, RealPathAware {
     @Override
     Path getFileName() {
         final result = Path.of(filePath).getFileName()?.toString()
-        return result ? new CidPath(null, result) : null
+        return result ? new CidPath( fragment, query, result, null) : null
     }
 
     @Override
@@ -287,6 +314,9 @@ class CidPath implements Path, RealPathAware {
         if( index<0 )
             throw new IllegalArgumentException("Path name index cannot be less than zero - offending value: $index")
         final path = Path.of(filePath)
+        if (index == path.nameCount - 1){
+            return new CidPath( fragment, query, path.getName(index).toString(), null)
+        }
         return new CidPath(index==0 ? fileSystem : null, path.getName(index).toString())
     }
 
@@ -395,7 +425,7 @@ class CidPath implements Path, RealPathAware {
     }
 
     protected Path getTargetPath(boolean resultsAsPath=false){
-        return findTarget(fileSystem, filePath, resultsAsPath, CidUtils.parseChildrenFormFragment(fragment))
+        return findTarget(fileSystem, filePath, resultsAsPath, parseChildrenFormFragment(fragment))
     }
 
     @Override

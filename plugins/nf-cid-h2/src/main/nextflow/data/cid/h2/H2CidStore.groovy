@@ -89,7 +89,6 @@ class H2CidStore implements CidStore {
                 run_name VARCHAR(255) NOT NULL,
                 session_id UUID NOT NULL,
                 run_cid VARCHAR(255) NOT NULL,
-                results_cid VARCHAR(255) NOT NULL,
                 UNIQUE (run_name, session_id) -- Enforce uniqueness constraint
             );
         ''')

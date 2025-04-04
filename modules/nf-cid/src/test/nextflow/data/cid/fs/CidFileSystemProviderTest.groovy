@@ -127,7 +127,7 @@ class CidFileSystemProviderTest extends Specification {
         def output = data.resolve("output.txt")
         output.text = "Hello, World!"
         outputMeta.mkdirs()
-        outputMeta.resolve(".data.json").text = '{"type":"WorkflowOutput","path":"'+output.toString()+'"}'
+        outputMeta.resolve(".data.json").text = '{"type":"DataOutput","path":"'+output.toString()+'"}'
 
         Global.session = Mock(Session) { getConfig()>>config }
         and:
@@ -157,7 +157,7 @@ class CidFileSystemProviderTest extends Specification {
         def output = data.resolve("output.txt")
         output.text = "Hello, World!"
         outputMeta.mkdirs()
-        outputMeta.resolve(".data.json").text = '{"type":"WorkflowOutput","path":"'+output.toString()+'"}'
+        outputMeta.resolve(".data.json").text = '{"type":"DataOutput","path":"'+output.toString()+'"}'
 
         Global.session = Mock(Session) { getConfig()>>config }
         and:
@@ -198,7 +198,7 @@ class CidFileSystemProviderTest extends Specification {
         meta.resolve('12345/output1').mkdirs()
         meta.resolve('12345/output2').mkdirs()
         meta.resolve('12345/.data.json').text = '{"type":"TaskRun"}'
-        meta.resolve('12345/output1/.data.json').text = '{"type":"TaskOutput", "path": "' + output1.toString() + '"}'
+        meta.resolve('12345/output1/.data.json').text = '{"type":"DataOutput", "path": "' + output1.toString() + '"}'
 
         and:
         def config = [workflow:[data:[store:[location:wdir.toString()]]]]
@@ -313,7 +313,7 @@ class CidFileSystemProviderTest extends Specification {
         output.resolve('abc').text = 'file1'
         output.resolve('.foo').text = 'file2'
         meta.resolve('12345/output').mkdirs()
-        meta.resolve('12345/output/.data.json').text = '{"type":"TaskOutput", "path": "' + output.toString() + '"}'
+        meta.resolve('12345/output/.data.json').text = '{"type":"DataOutput", "path": "' + output.toString() + '"}'
         and:
         def provider = new CidFileSystemProvider()
         def cid1 = provider.getPath(CidPath.asUri('cid://12345/output/abc'))
@@ -333,7 +333,7 @@ class CidFileSystemProviderTest extends Specification {
         def file = data.resolve('abc')
         file.text = 'Hello'
         meta.resolve('12345/abc').mkdirs()
-        meta.resolve('12345/abc/.data.json').text = '{"type":"TaskOutput", "path": "' + file.toString() + '"}'
+        meta.resolve('12345/abc/.data.json').text = '{"type":"DataOutput", "path": "' + file.toString() + '"}'
         Global.session = Mock(Session) { getConfig()>>config }
         and:
         def provider = new CidFileSystemProvider()

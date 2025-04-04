@@ -35,14 +35,12 @@ class CidHistoryRecord {
     final String runName
     final UUID sessionId
     final String runCid
-    final String resultsCid
 
-    CidHistoryRecord(Date timestamp, String name, UUID sessionId, String runCid, String resultsCid = null) {
+    CidHistoryRecord(Date timestamp, String name, UUID sessionId, String runCid) {
         this.timestamp = timestamp
         this.runName = name
         this.sessionId = sessionId
         this.runCid = runCid
-        this.resultsCid = resultsCid
     }
 
     CidHistoryRecord(UUID sessionId, String name = null) {
@@ -58,7 +56,6 @@ class CidHistoryRecord {
         line << (runName ?: '-')
         line << (sessionId.toString())
         line << (runCid ?: '-')
-        line << (resultsCid ?: '-')
     }
 
     @Override
@@ -71,8 +68,8 @@ class CidHistoryRecord {
         if (cols.size() == 2)
             return new CidHistoryRecord(UUID.fromString(cols[0]))
 
-        if (cols.size() == 5) {
-            return new CidHistoryRecord(TIMESTAMP_FMT.parse(cols[0]), cols[1], UUID.fromString(cols[2]), cols[3], cols[4])
+        if (cols.size() == 4) {
+            return new CidHistoryRecord(TIMESTAMP_FMT.parse(cols[0]), cols[1], UUID.fromString(cols[2]), cols[3])
         }
 
         throw new IllegalArgumentException("Not a valid history entry: `$line`")

@@ -49,7 +49,7 @@ class H2CidHistoryLogTest extends Specification {
         def log = store.getHistoryLog()
         def uuid = UUID.randomUUID()
         when:
-        log.write('foo', uuid, '1234', '4321')
+        log.write('foo', uuid, '1234')
         then:
         noExceptionThrown()
 
@@ -59,7 +59,6 @@ class H2CidHistoryLogTest extends Specification {
         rec.runName == 'foo'
         rec.sessionId == uuid
         rec.runCid == '1234'
-        rec.resultsCid == '4321'
     }
 
     def 'should update run cid' () {
@@ -67,7 +66,7 @@ class H2CidHistoryLogTest extends Specification {
         def log = store.getHistoryLog()
         def uuid = UUID.randomUUID()
         when:
-        log.write('foo', uuid, '1234', '4321')
+        log.write('foo', uuid, '1234')
         then:
         noExceptionThrown()
 
@@ -82,30 +81,6 @@ class H2CidHistoryLogTest extends Specification {
         rec.runName == 'foo'
         rec.sessionId == uuid
         rec.runCid == '4444'
-        rec.resultsCid == '4321'
-    }
-
-    def 'should update results cid' () {
-        given:
-        def log = store.getHistoryLog()
-        def uuid = UUID.randomUUID()
-        when:
-        log.write('foo', uuid, '1234', '4321')
-        then:
-        noExceptionThrown()
-
-        when:
-        log.updateResultsCid(uuid, '5555')
-        then:
-        noExceptionThrown()
-
-        when:
-        def rec = log.getRecord(uuid)
-        then:
-        rec.runName == 'foo'
-        rec.sessionId == uuid
-        rec.runCid == '1234'
-        rec.resultsCid == '5555'
     }
 
     def 'should update get records' () {
@@ -115,9 +90,9 @@ class H2CidHistoryLogTest extends Specification {
         def uuid2 = UUID.randomUUID()
         def uuid3 = UUID.randomUUID()
         when:
-        log.write('foo1', uuid1, '1', '11')
-        log.write('foo2', uuid2, '2', '22')
-        log.write('foo3', uuid3, '3', '33')
+        log.write('foo1', uuid1, '1')
+        log.write('foo2', uuid2, '2')
+        log.write('foo3', uuid3, '3')
         then:
         noExceptionThrown()
 
@@ -129,17 +104,14 @@ class H2CidHistoryLogTest extends Specification {
         all[0].runName == 'foo1'
         all[0].sessionId == uuid1
         all[0].runCid == '1'
-        all[0].resultsCid == '11'
         and:
         all[1].runName == 'foo2'
         all[1].sessionId == uuid2
         all[1].runCid == '2'
-        all[1].resultsCid == '22'
         and:
         all[2].runName == 'foo3'
         all[2].sessionId == uuid3
         all[2].runCid == '3'
-        all[2].resultsCid == '33'
     }
 
 }

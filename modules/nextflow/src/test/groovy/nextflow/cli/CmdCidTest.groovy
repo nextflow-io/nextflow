@@ -27,9 +27,8 @@ import nextflow.data.cid.CidHistoryRecord
 import nextflow.data.cid.CidStoreFactory
 import nextflow.data.cid.model.Checksum
 import nextflow.data.cid.model.Parameter
-import nextflow.data.cid.model.TaskOutput
+import nextflow.data.cid.model.DataOutput
 import nextflow.data.cid.model.TaskRun
-import nextflow.data.cid.model.WorkflowOutput
 import nextflow.plugin.Plugins
 import org.junit.Rule
 import spock.lang.Specification
@@ -77,7 +76,7 @@ class CmdCidTest extends Specification {
             def launcher = Mock(Launcher){
                 getOptions() >> new CliOptions(config: [configFile.toString()])
             }
-            def recordEntry = "${CidHistoryRecord.TIMESTAMP_FMT.format(date)}\trun_name\t${uniqueId}\tcid://123456\tcid://456789".toString()
+            def recordEntry = "${CidHistoryRecord.TIMESTAMP_FMT.format(date)}\trun_name\t${uniqueId}\tcid://123456".toString()
             historyFile.text = recordEntry
         when:
             def cidCmd = new CmdCid(launcher: launcher, args: ["log"])
@@ -136,10 +135,10 @@ class CmdCidTest extends Specification {
         def launcher = Mock(Launcher){
             getOptions() >> new CliOptions(config: [configFile.toString()])
         }
-        def time = Instant.ofEpochMilli(123456789).toString()
+        def time = Instant.ofEpochMilli(123456789)
         def encoder = new CidEncoder().withPrettyPrint(true)
-        def entry = new WorkflowOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-                "cid://123987/file.bam", 1234, time, time, null)
+        def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
+                "cid://123987/file.bam","cid://123987/", 1234, time, time, null)
         def jsonSer = encoder.encode(entry)
         def expectedOutput = jsonSer
         cidFile.text = jsonSer
@@ -208,22 +207,26 @@ class CmdCidTest extends Specification {
         Files.createDirectories(cidFile4.parent)
         Files.createDirectories(cidFile5.parent)
         def encoder = new CidEncoder()
-        def time = Instant.ofEpochMilli(123456789).toString()
-        def entry = new WorkflowOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-                "cid://123987/file.bam", 1234, time, time, null)
+        def time = Instant.ofEpochMilli(123456789)
+        def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
+                "cid://123987/file.bam", "cid://45678", 1234, time, time, null)
         cidFile.text = encoder.encode(entry)
-        entry = new TaskOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-                "cid://123987", 1234, time, time, null)
+        entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
+                "cid://123987", "cid://123987", 1234, time, time, null)
         cidFile2.text = encoder.encode(entry)
-        entry = new TaskRun("u345-2346-1stw2", "foo", new Checksum("abcde2345","nextflow","standard"),
+        entry = new TaskRun("u345-2346-1stw2", "foo",
+                new Checksum("abcde2345","nextflow","standard"),
+                new Checksum("abfsc2375","nextflow","standard"),
                 [new Parameter( "ValueInParam", "sample_id","ggal_gut"),
                 new Parameter("FileInParam","reads",["cid://45678/output.txt"])],
                 null, null, null, null, [:],[], null)
         cidFile3.text = encoder.encode(entry)
-        entry  = new TaskOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-                "cid://45678", 1234, time, time, null)
+        entry  = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
+                "cid://45678", "cid://45678",  1234, time, time, null)
         cidFile4.text = encoder.encode(entry)
-        entry = new TaskRun("u345-2346-1stw2", "bar", new Checksum("abfs2556","nextflow","standard"),
+        entry = new TaskRun("u345-2346-1stw2", "bar",
+                new Checksum("abfs2556","nextflow","standard"),
+                new Checksum("abfsc2375","nextflow","standard"),
                 null,null, null, null, null, [:],[], null)
         cidFile5.text = encoder.encode(entry)
         final network = """flowchart BT
@@ -275,14 +278,14 @@ class CmdCidTest extends Specification {
             getOptions() >> new CliOptions(config: [configFile.toString()])
         }
         def encoder = new CidEncoder().withPrettyPrint(true)
-        def time = Instant.ofEpochMilli(123456789).toString()
-        def entry = new WorkflowOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-                "cid://123987/file.bam", 1234, time, time, null)
+        def time = Instant.ofEpochMilli(123456789)
+        def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
+                "cid://123987/file.bam", "cid://123987/", 1234, time, time, null)
         def jsonSer = encoder.encode(entry)
         def expectedOutput = jsonSer
         cidFile.text = jsonSer
         when:
-        def cidCmd = new CmdCid(launcher: launcher, args: ["show", "cid:///?type=WorkflowOutput"])
+        def cidCmd = new CmdCid(launcher: launcher, args: ["show", "cid:///?type=DataOutput"])
         cidCmd.run()
         def stdout = capture
                 .toString()

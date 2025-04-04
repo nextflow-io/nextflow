@@ -32,16 +32,11 @@ import nextflow.data.cid.CidHistoryRecord
 import nextflow.data.cid.CidStore
 import nextflow.data.cid.CidStoreFactory
 import nextflow.data.cid.CidUtils
-import nextflow.data.cid.model.Output
+import nextflow.data.cid.model.DataOutput
 import nextflow.data.cid.model.Parameter
-import nextflow.data.cid.model.TaskOutput
 import nextflow.data.cid.model.TaskRun
-import nextflow.data.cid.model.WorkflowOutput
 import nextflow.data.cid.model.WorkflowRun
-import nextflow.data.cid.serde.CidEncoder
-import nextflow.data.cid.serde.CidSerializable
 import nextflow.script.params.FileInParam
-import nextflow.serde.gson.GsonEncoder
 import nextflow.ui.TableBuilder
 import org.eclipse.jgit.diff.DiffAlgorithm
 import org.eclipse.jgit.diff.DiffFormatter
@@ -81,7 +76,6 @@ class CidCommandImpl implements CmdCid.CidCommand {
                 .head('RUN NAME')
                 .head('SESSION ID')
                 .head('RUN CID')
-                .head('RESULT CID')
             for( CidHistoryRecord record: records ){
                 table.append(record.toList())
             }
@@ -101,10 +95,7 @@ class CidCommandImpl implements CmdCid.CidCommand {
                 def entries = CidUtils.query(store, new URI(args[0]))
                 if( entries ) {
                     entries = entries.size() == 1 ? entries[0] : entries
-                    if (entries instanceof CidSerializable)
-                        println new CidEncoder().withPrettyPrint(true).encode(entries as CidSerializable)
-                    else
-                        println new GsonEncoder<Object>(){}.withPrettyPrint(true).encode(entries)
+                    println CidUtils.encodeSearchOutputs(entries, true)
                 } else {
                     println "No entries found for ${args[0]}."
                 }
@@ -153,10 +144,9 @@ class CidCommandImpl implements CmdCid.CidCommand {
         final key = nodeToRender.substring(CID_PROT.size())
         final cidObject = store.load(key)
         switch (cidObject.getClass()) {
-            case TaskOutput:
-            case WorkflowOutput:
+            case DataOutput:
                 lines << "    ${nodeToRender}@{shape: document, label: \"${nodeToRender}\"}".toString();
-                final source = (cidObject as Output).source
+                final source = (cidObject as DataOutput).source
                 if (source) {
                     if (isCidUri(source)) {
                         nodes.add(source)

@@ -19,10 +19,9 @@ package nextflow.data.cid.h2
 
 import nextflow.data.cid.model.Checksum
 import nextflow.data.cid.model.DataPath
+import nextflow.data.cid.model.DataOutput
 import nextflow.data.cid.model.Parameter
-import nextflow.data.cid.model.TaskOutput
 import nextflow.data.cid.model.Workflow
-import nextflow.data.cid.model.WorkflowOutput
 import nextflow.data.cid.model.WorkflowRun
 import nextflow.data.config.DataConfig
 import spock.lang.Shared
@@ -51,7 +50,7 @@ class H2CidStoreTest extends Specification {
 
     def 'should store and get a value' () {
         given:
-        def value = new TaskOutput("/path/to/file", new Checksum("hash_value", "hash_algorithm", "standard"), "cid://source", 1234)
+        def value = new DataOutput("/path/to/file", new Checksum("hash_value", "hash_algorithm", "standard"), "cid://source", "cid://run", 1234)
         when:
         store.save('/some/key', value)
         then:
@@ -63,22 +62,22 @@ class H2CidStoreTest extends Specification {
         def uniqueId = UUID.randomUUID()
         def mainScript = new DataPath("file://path/to/main.nf", new Checksum("78910", "nextflow", "standard"))
         def workflow = new Workflow(mainScript, [], "https://nextflow.io/nf-test/", "123456")
-        def time = Instant.ofEpochMilli(1234567).toString()
+        def time = Instant.ofEpochMilli(1234567)
         def key = "testKey"
         def value1 = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [new Parameter("String", "param1", "value1"), new Parameter("String", "param2", "value2")])
         def key2 = "testKey2"
-        def value2 = new WorkflowOutput("/path/tp/file1", new Checksum("78910", "nextflow", "standard"), "testkey", 1234, time, time, [key1: "value1", key2: "value2"])
+        def value2 = new DataOutput("/path/tp/file1", new Checksum("78910", "nextflow", "standard"), "testkey", "cid://run", 1234, time, time, [key1: "value1", key2: "value2"])
         def key3 = "testKey3"
-        def value3 = new WorkflowOutput("/path/tp/file2", new Checksum("78910", "nextflow", "standard"), "testkey", 1234, time, time, [key2: "value2", key3: "value3"])
+        def value3 = new DataOutput("/path/tp/file2", new Checksum("78910", "nextflow", "standard"), "testkey", "cid://run", 1234, time, time, [key2: "value2", key3: "value3"])
         def key4 = "testKey4"
-        def value4 = new WorkflowOutput("/path/tp/file", new Checksum("78910", "nextflow", "standard"), "testkey", 1234, time, time, [key3: "value3", key4: "value4"])
+        def value4 = new DataOutput("/path/tp/file", new Checksum("78910", "nextflow", "standard"), "testkey", "cid://run", 1234, time, time, [key3: "value3", key4: "value4"])
 
         store.save(key, value1)
         store.save(key2, value2)
         store.save(key3, value3)
         store.save(key4, value4)
         when:
-        def results = store.search("type=WorkflowOutput&annotations.key2=value2")
+        def results = store.search("type=DataOutput&annotations.key2=value2")
         then:
         results.size() == 2
     }

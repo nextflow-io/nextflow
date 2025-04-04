@@ -16,6 +16,8 @@
 
 package nextflow.serde.gson
 
+import com.google.gson.stream.JsonToken
+
 import java.time.Instant
 
 import com.google.gson.TypeAdapter
@@ -37,6 +39,10 @@ class InstantAdapter extends TypeAdapter<Instant> {
 
     @Override
     Instant read(JsonReader reader) throws IOException {
+        if (reader.peek() == JsonToken.NULL) {
+            reader.nextNull();
+            return null;
+        }
         return Instant.parse(reader.nextString())
     }
 }

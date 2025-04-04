@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,22 +12,28 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package nextflow.data.cid.model
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
-import groovy.transform.InheritConstructors
+import nextflow.data.cid.serde.CidSerializable
+
+import java.time.Instant
 
 /**
- * Model a workflow output object
+ * Models task results.
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
 @Canonical
 @CompileStatic
-@InheritConstructors
-class WorkflowOutput extends Output {
-    String publishedBy
+class TaskOutputs implements CidSerializable {
+    String taskRun
+    String workflowRun
+    Instant createdAt
+    List<Parameter> outputs
+    Map annotations
 }

@@ -38,13 +38,13 @@ class CidHistoryFile implements CidHistoryLog {
         this.path = file
     }
 
-    void write(String name, UUID key, String runCid, String resultsCid, Date date = null) {
+    void write(String name, UUID key, String runCid, Date date = null) {
         assert key
 
         withFileLock {
             def timestamp = date ?: new Date()
             log.trace("Writting record for $key in CID history file $this")
-            path << new CidHistoryRecord(timestamp, name, key, runCid, resultsCid).toString() << '\n'
+            path << new CidHistoryRecord(timestamp, name, key, runCid).toString() << '\n'
         }
     }
 
@@ -53,17 +53,6 @@ class CidHistoryFile implements CidHistoryLog {
 
         try {
             withFileLock { updateRunCid0(sessionId, runCid) }
-        }
-        catch (Throwable e) {
-            log.warn "Can't update CID history file: $this", e.message
-        }
-    }
-
-    void updateResultsCid(UUID sessionId, String resultsCid) {
-        assert sessionId
-
-        try {
-            withFileLock { updateResultsCid0(sessionId, resultsCid) }
         }
         catch (Throwable e) {
             log.warn "Can't update CID history file: $this", e.message
@@ -105,31 +94,7 @@ class CidHistoryFile implements CidHistoryLog {
                 def current = line ? CidHistoryRecord.parse(line) : null
                 if (current.sessionId == id) {
                     log.trace("Updating record for $id in CID history file $this")
-                    final newRecord = new CidHistoryRecord(current.timestamp, current.runName, current.sessionId, runCid, current.resultsCid)
-                    newHistory << newRecord.toString() << '\n'
-                } else {
-                    newHistory << line << '\n'
-                }
-            }
-            catch (IllegalArgumentException e) {
-                log.warn("Can't read CID history file: $this", e.message)
-            }
-        }
-
-        // rewrite the history content
-        this.path.setText(newHistory.toString())
-    }
-
-    private void updateResultsCid0(UUID id, String resultsCid) {
-        assert id
-        def newHistory = new StringBuilder()
-
-        this.path.readLines().each { line ->
-            try {
-                def current = line ? CidHistoryRecord.parse(line) : null
-                if (current.sessionId == id) {
-                    log.trace("Updating record for $id in CID history file $this")
-                    final newRecord = new CidHistoryRecord(current.timestamp, current.runName, current.sessionId, current.runCid, resultsCid)
+                    final newRecord = new CidHistoryRecord(current.timestamp, current.runName, current.sessionId, runCid)
                     newHistory << newRecord.toString() << '\n'
                 } else {
                     newHistory << line << '\n'

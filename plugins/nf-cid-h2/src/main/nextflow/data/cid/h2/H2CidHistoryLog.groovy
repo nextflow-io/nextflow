@@ -43,14 +43,14 @@ class H2CidHistoryLog implements CidHistoryLog {
     }
 
     @Override
-    void write(String name, UUID sessionId, String runCid, String resultsCid) {
+    void write(String name, UUID sessionId, String runCid) {
         try(final sql=new Sql(dataSource)) {
             def query = """
-                INSERT INTO cid_history_record (timestamp, run_name, session_id, run_cid, results_cid) 
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO cid_history_record (timestamp, run_name, session_id, run_cid) 
+                VALUES (?, ?, ?, ?)
             """
             def timestamp = new Timestamp(System.currentTimeMillis()) // Current timestamp
-            sql.executeInsert(query, List.<Object>of(timestamp, name, sessionId.toString(), runCid, resultsCid))
+            sql.executeInsert(query, List.<Object>of(timestamp, name, sessionId.toString(), runCid))
         }
     }
 
@@ -74,25 +74,6 @@ class H2CidHistoryLog implements CidHistoryLog {
     }
 
     @Override
-    void updateResultsCid(UUID sessionId, String resultsCid) {
-        try(final sql=new Sql(dataSource)) {
-            def query = """
-                UPDATE cid_history_record 
-                SET results_cid = ? 
-                WHERE session_id = ?
-            """
-
-            final count = sql.executeUpdate(query, List.<Object>of(resultsCid, sessionId.toString()))
-            if (count > 0) {
-                log.debug "Successfully updated run_cid for session_id: $sessionId"
-            }
-            else {
-                log.warn "No record found with session_id: $sessionId"
-            }
-        }
-    }
-
-    @Override
     List<CidHistoryRecord> getRecords() {
         try(final sql=new Sql(dataSource)) {
             final result = new ArrayList<CidHistoryRecord>(100)
@@ -105,7 +86,6 @@ class H2CidHistoryLog implements CidHistoryLog {
                         row.run_name as String,
                         UUID.fromString(row.session_id as String),
                         row.run_cid as String,
-                        row.results_cid as String
                     )
                 )
             }
@@ -125,7 +105,6 @@ class H2CidHistoryLog implements CidHistoryLog {
                 row.run_name as String,
                 UUID.fromString(row.session_id as String),
                 row.run_cid as String,
-                row.results_cid as String
             )
         }
     }
