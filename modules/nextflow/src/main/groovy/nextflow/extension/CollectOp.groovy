@@ -16,13 +16,17 @@
 
 package nextflow.extension
 
-import static nextflow.util.CheckHelper.checkParams
+import static nextflow.util.CheckHelper.*
 
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
+import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
+import nextflow.extension.op.ContextGrouping
+import nextflow.extension.op.Op
 import nextflow.util.ArrayBag
+
 /**
  * Implements {@link OperatorImpl#collect(groovyx.gpars.dataflow.DataflowReadChannel)}  operator
  *
@@ -53,11 +57,16 @@ class CollectOp {
         final result = []
         final target = new DataflowVariable()
 
-        Map<String,Closure> events = [:]
-        events.onNext = { append(result, it) }
-        events.onComplete = { target << ( result ? new ArrayBag(normalise(result)) : Channel.STOP )  }
+        new SubscribeOp()
+            .withInput(source)
+            .withContext(new ContextGrouping())
+            .withOnNext { append(result, it) }
+            .withOnComplete { DataflowProcessor dp ->
+                final msg = result ? new ArrayBag(normalise(result)) : Channel.STOP
+                Op.bind(dp, target, msg)
+            }
+            .apply()
 
-        DataflowHelper.subscribeImpl(source, events)
         return target
     }
 

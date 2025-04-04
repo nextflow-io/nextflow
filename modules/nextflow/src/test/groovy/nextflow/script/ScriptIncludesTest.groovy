@@ -145,7 +145,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'dlrow olleh'
+        result.unwrap() == 'dlrow olleh'
     }
 
     def 'should allow duplicate functions' () {
@@ -174,7 +174,7 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         when:
         def result = new MockScriptRunner() .setScript(SCRIPT).execute()
-        def map = result.val
+        def map = result.unwrap()
         then:
         map
         map.witharg == 'hello world'.reverse()
@@ -213,9 +213,9 @@ class ScriptIncludesTest extends Dsl2Spec {
         def result = new MockScriptRunner() .setScript(SCRIPT).execute()
 
         then:
-        result.val == '1-2'
-        result.val == '2-4'
-        result.val == '3-6'
+        result.unwrap() == '1-2'
+        result.unwrap() == '2-4'
+        result.unwrap() == '3-6'
 
         cleanup:
         NextflowMeta.instance.strictMode(false)
@@ -301,7 +301,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'HELLO MUNDO'
+        result.unwrap() == 'HELLO MUNDO'
         binding.variables.alpha == null
     }
 
@@ -351,7 +351,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'HELLO MUNDO'
+        result.unwrap() == 'HELLO MUNDO'
         !binding.hasVariable('alpha')
         !binding.hasVariable('foo')
         !binding.hasVariable('bar')
@@ -397,7 +397,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'HELLO MUNDO'
+        result.unwrap() == 'HELLO MUNDO'
     }
 
     def 'should gather process outputs' () {
@@ -440,7 +440,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'HELLO MUNDO'
+        result.unwrap() == 'HELLO MUNDO'
         !vars.containsKey('data')
         !vars.containsKey('foo')
         !vars.containsKey('bar')
@@ -476,7 +476,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result.val == 'echo Hello world'
+        result.unwrap() == 'echo Hello world'
 
         cleanup:
         folder?.deleteDir()
@@ -516,7 +516,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result.val == 'echo sample=world pairId=x reads=/some/file'
+        result.unwrap() == 'echo sample=world pairId=x reads=/some/file'
     }
 
 
@@ -563,7 +563,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         when:
         def result = dsl_eval(SCRIPT)
         then:
-        result.val == 'echo Ciao world'
+        result.unwrap() == 'echo Ciao world'
     }
 
     def 'should use multiple assignment' () {
@@ -610,8 +610,8 @@ class ScriptIncludesTest extends Dsl2Spec {
         when:
         def result = dsl_eval(SCRIPT)
         then:
-        result[0].val == 'Ciao'
-        result[1].val == 'world'
+        result[0].unwrap() == 'Ciao'
+        result[1].unwrap() == 'world'
     }
 
 
@@ -648,7 +648,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result.val == 'echo Hello world'
+        result.unwrap() == 'echo Hello world'
         
     }
 
@@ -716,7 +716,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result.val == 'echo Hola mundo'
+        result.unwrap() == 'echo Hola mundo'
     }
 
     def 'should not fail when invoking a process in a module' () {
@@ -866,8 +866,8 @@ class ScriptIncludesTest extends Dsl2Spec {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result[0].val == 'HELLO'
-        result[1].val == 'WORLD'
+        result[0].unwrap() == 'HELLO'
+        result[1].unwrap() == 'WORLD'
     }
 
 
@@ -919,8 +919,8 @@ class ScriptIncludesTest extends Dsl2Spec {
             """)
 
         then:
-        result[0].val == 'CMD CONSUMER 1'
-        result[1].val == 'CMD CONSUMER 2'
+        result[0].unwrap() == 'CMD CONSUMER 1'
+        result[1].unwrap() == 'CMD CONSUMER 2'
 
     }
 
@@ -957,8 +957,8 @@ class ScriptIncludesTest extends Dsl2Spec {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result[0].val == 'HELLO'
-        result[1].val == 'WORLD'
+        result[0].unwrap() == 'HELLO'
+        result[1].unwrap() == 'WORLD'
     }
 
     def 'should inherit module params' () {
@@ -993,7 +993,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'OWNER LAST'
+        result.unwrap() == 'OWNER LAST'
     }
 
     def 'should override module params' () {
@@ -1028,7 +1028,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'AAA ZZZ'
+        result.unwrap() == 'AAA ZZZ'
     }
 
     def 'should extends module params' () {
@@ -1065,7 +1065,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'ONE ZZZ'
+        result.unwrap() == 'ONE ZZZ'
     }
 
     def 'should declare moduleDir path' () {
