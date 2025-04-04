@@ -69,13 +69,14 @@ class PathUtilsTest extends Specification {
 
         where:
         path                            | result
-        '.git/main.nf'                  | true
-        '.nf-test/mock.nf'              | true
-        'modules/foo/.nf-test/mock.nf'  | true
-        'modules/foo/bar/main.nf'       | true
-        'work/01/234567/main.nf'        | true
+        '.git'                          | true
+        '.nf-test'                      | true
+        'modules/foo/.nf-test'          | true
+        'modules/foo/bar'               | true
+        'work'                          | true
         'main.nf'                       | false
         'modules/foo/main.nf'           | false
+        'subworkflows/foobar/main.nf'   | false
         'nextflow.config'               | false
         'conf/base.config'              | false
     }

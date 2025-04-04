@@ -90,14 +90,15 @@ class ConfigResolveTest extends Specification {
         given:
         def root = tempDir()
         def config = tempFile(root, 'nextflow.config')
+        def extra = tempFile(root, 'extra.config', '')
 
         when:
         config.text = '''\
             profiles {
-                includeConfig 'foo.config'
+                includeConfig 'extra.config'
             }
             '''
-        def errors = check([config])
+        def errors = check([config, extra])
         then:
         errors.size() == 1
         errors[0].getStartLine() == 2
@@ -107,12 +108,12 @@ class ConfigResolveTest extends Specification {
         when:
         config.text = '''\
             profiles {
-                foo {
-                    includeConfig 'foo.config'
+                extra {
+                    includeConfig 'extra.config'
                 }
             }
             '''
-        errors = check([config])
+        errors = check([config, extra])
         then:
         errors.size() == 0
 

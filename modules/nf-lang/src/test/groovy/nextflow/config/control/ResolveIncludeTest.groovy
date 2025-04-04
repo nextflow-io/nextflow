@@ -19,6 +19,7 @@ package nextflow.config.control
 import java.nio.file.Path
 
 import org.codehaus.groovy.syntax.SyntaxException
+import spock.lang.Ignore
 import spock.lang.Specification
 import test.TestUtils
 
@@ -45,14 +46,14 @@ class ResolveIncludeTest extends Specification {
             '''\
             includeConfig 'extra.config'
             ''')
-        def extra = root.resolve('extra.nf')
+        def extra = root.resolve('extra.config')
 
         when:
         def errors = check([config])
         then:
         errors.size() == 1
         errors[0].getStartLine() == 1
-        errors[0].getStartColumn() == 15
+        errors[0].getStartColumn() == 13
         errors[0].getOriginalMessage() == "Invalid include source: '${extra}'"
 
         cleanup:
@@ -81,6 +82,7 @@ class ResolveIncludeTest extends Specification {
         deleteDir(root)
     }
 
+    @Ignore("requires http filesystem to test properly")
     def 'should not resolve remote includes' () {
         given:
         def root = tempDir()

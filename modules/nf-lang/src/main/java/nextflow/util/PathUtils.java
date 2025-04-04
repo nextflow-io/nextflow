@@ -16,6 +16,7 @@
 package nextflow.util;
 
 import java.io.IOException;
+import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -48,7 +49,9 @@ public class PathUtils {
         if( excludePatterns == null )
             return false;
         var pathStr = path.toString();
-        return excludePatterns.stream().anyMatch(pattern -> pathStr.contains(pattern));
+        return excludePatterns.stream().anyMatch(pattern ->
+            pathStr.equals(pattern) || pathStr.endsWith("/" + pattern)
+        );
     }
 
 }
