@@ -407,7 +407,7 @@ Format a specific file.
 $ nextflow format main.nf
 ```
 
-Format all files in the current directory (and subdirectories) and use 2 spaces per indent.
+Format all files in the current directory (and subdirectories) and use two spaces per indent.
 
 ```console
 $ nextflow format -spaces 2 .
