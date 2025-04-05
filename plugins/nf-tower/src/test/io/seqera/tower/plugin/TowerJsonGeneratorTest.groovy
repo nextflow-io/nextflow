@@ -251,7 +251,7 @@ class TowerJsonGeneratorTest extends Specification {
         given:
         def gen = TowerJsonGenerator.create([:])
         and:
-        def ts = Instant.ofEpochSecond(1742421070).atOffset(ZoneOffset.UTC)
+        def ts = Instant.ofEpochSecond(1742421070).atOffset(ZoneOffset.ofHours(2))
         def c1 = new ContainerMeta(
             requestId:'r-1',
             requestTime:ts,
@@ -266,7 +266,7 @@ class TowerJsonGeneratorTest extends Specification {
         when:
         def json = gen.toJson([containers: [c1]])
         then:
-        json == '{"containers":[{"requestId":"r-1","sourceImage":"debian:latest","targetImage":"wave/debian","buildId":"bd-2","mirrorId":"mr-4","scanId":"sc-3","cached":false,"freeze":true,"requestTime":"2025-03-19T21:51:10Z"}]}'
+        json == '{"containers":[{"requestId":"r-1","sourceImage":"debian:latest","targetImage":"wave/debian","buildId":"bd-2","mirrorId":"mr-4","scanId":"sc-3","cached":false,"freeze":true,"requestTime":"2025-03-19T23:51:10+02:00"}]}'
     }
 
 }
