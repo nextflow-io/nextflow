@@ -41,6 +41,7 @@ import nextflow.script.control.TaskCmdXformVisitor
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.CodeVisitorSupport
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.VariableScope
@@ -410,12 +411,13 @@ class NextflowDSLImpl implements ASTTransformation {
             }
 
             final binaryX = (BinaryExpression)stm.expression
-            if( binaryX.operation.type != Types.RIGHT_SHIFT ) {
+            final target = isVariableX(binaryX.leftExpression)
+            if( !target || binaryX.operation.type != Types.ASSIGN ) {
                 syntaxError(stm, "Invalid workflow publish statement")
                 return stm
             }
 
-            return stmt( callThisX('_publish_target', args(binaryX.leftExpression, binaryX.rightExpression)) )
+            return stmt( callThisX('_publish_', args(constX(target.name), binaryX.rightExpression)) )
         }
 
         protected Expression makeWorkflowDefWrapper( ClosureExpression closure, boolean anonymous ) {
@@ -458,6 +460,10 @@ class NextflowDSLImpl implements ASTTransformation {
                         break
 
                     case WORKFLOW_PUBLISH:
+                        if( !anonymous ) {
+                            syntaxError(stm, "The `publish` section is only allowed in the entry workflow")
+                            break
+                        }
                         if( !(stm instanceof ExpressionStatement) ) {
                             syntaxError(stm, "Invalid workflow publish statement")
                             break
@@ -492,16 +498,16 @@ class NextflowDSLImpl implements ASTTransformation {
         }
 
         /**
-         * Transform targets in the workflow output definition:
+         * Transform outputs in the workflow output definition:
          *
          *   output {
-         *     'foo' { ... }
+         *     samples { ... }
          *   }
          *
          * becomes:
          *
          *   output {
-         *     target('foo') { ... }
+         *     declare('samples') { ... }
          *   }
          *
          * @param methodCall
@@ -514,7 +520,7 @@ class NextflowDSLImpl implements ASTTransformation {
             final arguments = (ArgumentListExpression)methodCall.arguments
 
             if( arguments.size() != 1 || arguments[0] !instanceof ClosureExpression ) {
-                syntaxError(methodCall, "Invalid output definition")
+                syntaxError(methodCall, "Invalid workflow output block")
                 return
             }
 
@@ -522,28 +528,77 @@ class NextflowDSLImpl implements ASTTransformation {
             final block = (BlockStatement)closure.code
             for( Statement stmt : block.statements ) {
                 if( stmt !instanceof ExpressionStatement ) {
-                    syntaxError(stmt, "Invalid output target definition")
+                    syntaxError(stmt, "Invalid workflow output declaration")
                     return
                 }
 
-                final stmtExpr = (ExpressionStatement)stmt
-                if( stmtExpr.expression !instanceof MethodCallExpression ) {
-                    syntaxError(stmt, "Invalid output target definition")
+                final stmtX = (ExpressionStatement)stmt
+                if( stmtX.expression !instanceof MethodCallExpression ) {
+                    syntaxError(stmt, "Invalid workflow output declaration")
                     return
                 }
 
-                final call = (MethodCallExpression)stmtExpr.expression
+                final call = (MethodCallExpression)stmtX.expression
                 assert call.arguments instanceof ArgumentListExpression
 
-                final targetArgs = (ArgumentListExpression)call.arguments
-                if( targetArgs.size() != 1 || targetArgs[0] !instanceof ClosureExpression ) {
-                    syntaxError(stmt, "Invalid output target definition")
+                final callArgs = (ArgumentListExpression)call.arguments
+                if( callArgs.size() != 1 || callArgs[0] !instanceof ClosureExpression ) {
+                    syntaxError(stmt, "Invalid workflow output declaration")
                     return
                 }
 
-                final targetName = call.method
-                final targetBody = (ClosureExpression)targetArgs[0]
-                stmtExpr.expression = callThisX('target', args(targetName, targetBody))
+                final outputName = call.method
+                final outputBody = (ClosureExpression)callArgs[0]
+                new PublishDslVisitor().visit(outputBody)
+                stmtX.expression = callThisX('declare', args(outputName, outputBody))
+            }
+        }
+
+        /**
+         * Transform dynamic publish paths in the workflow output definition:
+         *
+         *   path { sample ->
+         *     sample.foo >> 'foo/'
+         *     sample.bar >> 'bar/'
+         *   }
+         *
+         * becomes:
+         *
+         *   path { sample ->
+         *     publish(sample.foo, 'foo/')
+         *     publish(sample.bar, 'bar/')
+         *   }
+         */
+        protected class PublishDslVisitor extends CodeVisitorSupport {
+
+            private boolean inPathDirective
+
+            @Override
+            void visitMethodCallExpression(MethodCallExpression node) {
+                if( node.getMethodAsString() == 'path' )
+                    inPathDirective = true
+                super.visitMethodCallExpression(node)
+                inPathDirective = false
+            }
+
+            @Override
+            void visitExpressionStatement(ExpressionStatement node) {
+                if( !visitPublishStatement(node) )
+                    super.visitExpressionStatement(node)
+            }
+
+            private boolean visitPublishStatement(ExpressionStatement node) {
+                if( !inPathDirective )
+                    return false
+                if( node.expression !instanceof BinaryExpression )
+                    return false
+                final binaryX = (BinaryExpression) node.expression
+                if( binaryX.operation.type != Types.RIGHT_SHIFT )
+                    return false
+                final source = binaryX.leftExpression
+                final target = binaryX.rightExpression
+                node.expression = callThisX('publish', args(source, target))
+                return true
             }
         }
 

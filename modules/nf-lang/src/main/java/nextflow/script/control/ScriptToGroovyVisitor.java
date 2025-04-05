@@ -23,13 +23,14 @@ import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.IncludeNode;
-import nextflow.script.ast.OutputNode;
+import nextflow.script.ast.OutputBlockNode;
 import nextflow.script.ast.ParamNode;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
 import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.CodeVisitorSupport;
 import org.codehaus.groovy.ast.VariableScope;
 import org.codehaus.groovy.ast.expr.ArgumentListExpression;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
@@ -49,6 +50,7 @@ import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.codehaus.groovy.syntax.SyntaxException;
+import org.codehaus.groovy.syntax.Types;
 
 import static nextflow.script.ast.ASTUtils.*;
 import static org.codehaus.groovy.ast.tools.GeneralUtils.*;
@@ -149,30 +151,30 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     private void visitWorkflowTakes(Statement takes) {
         for( var stmt : asBlockStatements(takes) ) {
-            var stmtX = (ExpressionStatement)stmt;
-            var take = (VariableExpression)stmtX.getExpression();
-            stmtX.setExpression(callThisX("_take_", args(constX(take.getName()))));
+            var es = (ExpressionStatement)stmt;
+            var take = (VariableExpression)es.getExpression();
+            es.setExpression(callThisX("_take_", args(constX(take.getName()))));
         }
     }
 
     private void visitWorkflowEmits(Statement emits, Statement main) {
         var code = (BlockStatement)main;
         for( var stmt : asBlockStatements(emits) ) {
-            var stmtX = (ExpressionStatement)stmt;
-            var emit = stmtX.getExpression();
+            var es = (ExpressionStatement)stmt;
+            var emit = es.getExpression();
             if( emit instanceof VariableExpression ve ) {
-                stmtX.setExpression(callThisX("_emit_", args(constX(ve.getName()))));
+                es.setExpression(callThisX("_emit_", args(constX(ve.getName()))));
             }
             else if( emit instanceof AssignmentExpression ae ) {
                 var target = (VariableExpression)ae.getLeftExpression();
-                stmtX.setExpression(callThisX("_emit_", args(constX(target.getName()))));
-                code.addStatement(stmtX);
+                es.setExpression(callThisX("_emit_", args(constX(target.getName()))));
+                code.addStatement(es);
             }
             else {
                 var target = varX("$out");
                 code.addStatement(assignS(target, emit));
-                stmtX.setExpression(callThisX("_emit_", args(constX(target.getName()))));
-                code.addStatement(stmtX);
+                es.setExpression(callThisX("_emit_", args(constX(target.getName()))));
+                code.addStatement(es);
             }
         }
     }
@@ -180,10 +182,11 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     private void visitWorkflowPublishers(Statement publishers, Statement main) {
         var code = (BlockStatement)main;
         for( var stmt : asBlockStatements(publishers) ) {
-            var stmtX = (ExpressionStatement)stmt;
-            var publish = (BinaryExpression)stmtX.getExpression();
-            stmtX.setExpression(callThisX("_publish_target", args(publish.getLeftExpression(), publish.getRightExpression())));
-            code.addStatement(stmtX);
+            var es = (ExpressionStatement)stmt;
+            var publish = (BinaryExpression)es.getExpression();
+            var target = asVarX(publish.getLeftExpression());
+            es.setExpression(callThisX("_publish_", args(constX(target.getName()), publish.getRightExpression())));
+            code.addStatement(es);
         }
     }
 
@@ -383,23 +386,18 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     }
 
     @Override
-    public void visitOutput(OutputNode node) {
-        visitOutputTargets(node.body);
-
-        var closure = closureX(node.body);
+    public void visitOutputs(OutputBlockNode node) {
+        var statements = node.declarations.stream()
+            .map((output) -> {
+                new PublishDslVisitor().visit(output.body);
+                var name = constX(output.name);
+                var body = closureX(output.body);
+                return stmt(callThisX("declare", args(name, body)));
+            })
+            .toList();
+        var closure = closureX(block(new VariableScope(), statements));
         var result = stmt(callThisX("output", args(closure)));
         moduleNode.addStatement(result);
-    }
-
-    private void visitOutputTargets(Statement body) {
-        for( var stmt : asBlockStatements(body) ) {
-            var es = (ExpressionStatement)stmt;
-            var mce = (MethodCallExpression)es.getExpression();
-            var name = mce.getMethod();
-            var targetArgs = (ArgumentListExpression)mce.getArguments();
-            var targetBody = (ClosureExpression)targetArgs.getExpression(0);
-            es.setExpression( callThisX("target", args(name, targetBody)) );
-        }
     }
 
     private String getSourceText(Statement node) {
@@ -460,6 +458,61 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     private void syntaxError(ASTNode node, String message) {
         sourceUnit.addError(new SyntaxException(message, node));
+    }
+
+    /**
+     * Transform publish statements in a workflow output:
+     *
+     *   path { sample ->
+     *     sample.foo >> 'foo/'
+     *     sample.bar >> 'bar/'
+     *   }
+     *
+     * becomes:
+     *
+     *   path { sample ->
+     *     publish(sample.foo, 'foo/')
+     *     publish(sample.bar, 'bar/')
+     *   }
+     */
+    private class PublishDslVisitor extends CodeVisitorSupport {
+
+        private boolean hasPublishStatements;
+
+        private boolean hasNonPublishStatements;
+
+        @Override
+        public void visitMethodCallExpression(MethodCallExpression node) {
+            if( "path".equals(node.getMethodAsString()) )
+                visitPathDirective(node);
+        }
+
+        private void visitPathDirective(MethodCallExpression node) {
+            var code = asDslBlock(node, 1);
+            for( var stmt : code.getStatements() ) {
+                if( visitPublishStatement(stmt) )
+                    hasPublishStatements = true;
+                else
+                    hasNonPublishStatements = true;
+            }
+            if( hasPublishStatements && hasNonPublishStatements )
+                syntaxError(node, "Publish statements cannot be mixed with other statements in a dynamic publish path");
+        }
+
+        private boolean visitPublishStatement(Statement node) {
+            if( !(node instanceof ExpressionStatement) )
+                return false;
+            var es = (ExpressionStatement) node;
+            if( !(es.getExpression() instanceof BinaryExpression) )
+                return false;
+            var be = (BinaryExpression) es.getExpression();
+            if( be.getOperation().getType() != Types.RIGHT_SHIFT )
+                return false;
+            var source = be.getLeftExpression();
+            var target = be.getRightExpression();
+            es.setExpression(callThisX("publish", args(source, target)));
+            return true;
+        }
     }
 
 }

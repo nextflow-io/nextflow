@@ -26,7 +26,7 @@ class OutputDslTest extends Specification {
         def file2 = work2.resolve('file2.txt'); file2.text = 'world'
         and:
         def session = Mock(Session) {
-            getPublishTargets() >> [:]
+            getOutputs() >> [:]
             getConfig() >> [
                 workflow: [
                     output: [
@@ -48,20 +48,23 @@ class OutputDslTest extends Specification {
         ch2.bind(file2)
         ch2.bind(Channel.STOP)
         and:
-        session.publishTargets.put(ch1, 'foo')
-        session.publishTargets.put(ch2, 'bar')
+        session.outputs.put('foo', ch1)
+        session.outputs.put('bar', ch2)
         def dsl = new OutputDsl()
         and:
         SysEnv.push(NXF_FILE_ROOT: root.toString())
 
         when:
-        dsl.target('bar') {
+        dsl.declare('foo') {
+            path('foo')
+        }
+        dsl.declare('bar') {
             path { v -> "${'barbar'}" }
             index {
                 path 'index.csv'
             }
         }
-        dsl.build(session)
+        dsl.apply(session)
 
         def now = System.currentTimeMillis()
         while( !dsl.complete ) {
@@ -86,14 +89,14 @@ class OutputDslTest extends Specification {
         root?.deleteDir()
     }
 
-    def 'should set target dsl' () {
+    def 'should set publish options in output declaration' () {
         when:
-        def dsl1 = new OutputDsl.TargetDsl()
+        def dsl1 = new OutputDsl.DeclareDsl()
         then:
         dsl1.getOptions() == [:]
 
         when:
-        def dsl2 = new OutputDsl.TargetDsl()
+        def dsl2 = new OutputDsl.DeclareDsl()
         and:
         dsl2.contentType('simple/text')
         dsl2.enabled(true)
@@ -114,7 +117,7 @@ class OutputDslTest extends Specification {
         ]
     }
 
-    def 'should set index dsl' () {
+    def 'should set index directives' () {
         when:
         def dsl1 = new OutputDsl.IndexDsl()
         then:
@@ -122,16 +125,13 @@ class OutputDslTest extends Specification {
 
         when:
         def dsl2 = new OutputDsl.IndexDsl()
-        def mapper = { v -> v }
         and:
         dsl2.header(true)
-        dsl2.mapper(mapper)
         dsl2.path('path')
         dsl2.sep(',')
         then:
         dsl2.getOptions() == [
             header: true,
-            mapper: mapper,
             path: 'path',
             sep: ','
         ]

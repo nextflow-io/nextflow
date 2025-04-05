@@ -181,8 +181,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         if( node.main instanceof BlockStatement block )
             copyVariableScope(block.getVariableScope());
 
-        visitWorkflowEmits(node.emits);
-        visit(node.publishers);
+        visitWorkflowOutputs(node.emits, "emit");
+        visitWorkflowOutputs(node.publishers, "output");
 
         currentDefinition = null;
         vsc.popScope();
@@ -204,24 +204,24 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         }
     }
 
-    private void visitWorkflowEmits(Statement emits) {
-        var declaredEmits = new HashMap<String,ASTNode>();
-        for( var stmt : asBlockStatements(emits) ) {
-            var stmtX = (ExpressionStatement)stmt;
-            var emit = stmtX.getExpression();
-            if( emit instanceof AssignmentExpression assign ) {
+    private void visitWorkflowOutputs(Statement outputs, String typeLabel) {
+        var declaredOutputs = new HashMap<String,ASTNode>();
+        for( var stmt : asBlockStatements(outputs) ) {
+            var es = (ExpressionStatement)stmt;
+            var output = es.getExpression();
+            if( output instanceof AssignmentExpression assign ) {
                 visit(assign.getRightExpression());
 
                 var target = (VariableExpression)assign.getLeftExpression();
                 var name = target.getName();
-                var other = declaredEmits.get(name);
+                var other = declaredOutputs.get(name);
                 if( other != null )
-                    vsc.addError("Workflow emit `" + name + "` is already declared", target, "First declared here", other);
+                    vsc.addError("Workflow " + typeLabel + " `" + name + "` is already declared", target, "First declared here", other);
                 else
-                    declaredEmits.put(name, target);
+                    declaredOutputs.put(name, target);
             }
             else {
-                visit(emit);
+                visit(output);
             }
         }
     }
@@ -354,27 +354,13 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitOutput(OutputNode node) {
-        if( node.body instanceof BlockStatement block )
-            visitOutputBody(block);
-    }
-
-    private void visitOutputBody(BlockStatement block) {
-        block.setVariableScope(currentScope());
-
-        asDirectives(block).forEach((call) -> {
-            var code = asDslBlock(call, 1);
-            if( code != null )
-                visitTargetBody(code);
-        });
-    }
-
-    private void visitTargetBody(BlockStatement block) {
         vsc.pushScope(OutputDsl.class);
+        var block = (BlockStatement) node.body;
         block.setVariableScope(currentScope());
 
         asBlockStatements(block).forEach((stmt) -> {
-            // validate target directive
-            var call = checkDirective(stmt, "output target directive", true);
+            // validate output directive
+            var call = checkDirective(stmt, "output directive", true);
             if( call == null )
                 return;
 

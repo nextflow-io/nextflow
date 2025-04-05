@@ -32,7 +32,7 @@ public class ScriptNode extends ModuleNode {
     private List<IncludeNode> includes = new ArrayList<>();
     private List<ParamNode> params = new ArrayList<>();
     private WorkflowNode entry;
-    private OutputNode output;
+    private OutputBlockNode outputs;
     private List<WorkflowNode> workflows = new ArrayList<>();
     private List<ProcessNode> processes = new ArrayList<>();
     private List<FunctionNode> functions = new ArrayList<>();
@@ -61,8 +61,8 @@ public class ScriptNode extends ModuleNode {
         return entry;
     }
 
-    public OutputNode getOutput() {
-        return output;
+    public OutputBlockNode getOutputs() {
+        return outputs;
     }
 
     public List<WorkflowNode> getWorkflows() {
@@ -97,8 +97,8 @@ public class ScriptNode extends ModuleNode {
         this.entry = entry;
     }
 
-    public void setOutput(OutputNode output) {
-        this.output = output;
+    public void setOutputs(OutputBlockNode outputs) {
+        this.outputs = outputs;
     }
 
     public void addWorkflow(WorkflowNode workflowNode) {
