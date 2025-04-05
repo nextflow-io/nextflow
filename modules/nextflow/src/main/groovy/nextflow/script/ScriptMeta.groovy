@@ -50,7 +50,7 @@ class ScriptMeta {
 
     static private Map<Path,BaseScript> scriptsByPath = new HashMap<>(10)
 
-    static private Set<String> resolvedProcessNames = new HashSet<>(20)
+    static private Map<Map.Entry<Path,String>,List<String>> resolvedProcessNames = new HashMap<>(20)
 
     @TestOnly
     static void reset() {
@@ -73,7 +73,7 @@ class ScriptMeta {
         for( ScriptMeta entry : REGISTRY.values() )
             result.addAll( entry.getProcessNames() )
         // add all resolved names
-        result.addAll(resolvedProcessNames)
+        result.addAll(resolvedProcessNames.values().flatten())
         return result
     }
 
@@ -86,8 +86,44 @@ class ScriptMeta {
         return result
     }
 
-    static void addResolvedName(String name) {
-        resolvedProcessNames.add(name)
+    /** 
+     * Returns a map of all local process definitions per script path.
+     * @return Map of script path and a list of process names
+     *         defined in that script
+     *         ie. [scriptPath -> [processName1, processName2]]
+     */
+    static Map<Path, List<String>> allProcessDefinitions() {
+        final result = new HashMap()
+         for( final entry : REGISTRY.values() ) {
+            result.put(entry.getScriptPath(), entry.getLocalProcessNames())
+        }
+        return result
+    }
+
+    /** 
+     * Returns a map of all process names and their aliases within the scripts.
+     * @return 
+     */
+     static Map<Map.Entry<Path, String>, List<String>> allResolvedProcessNames() {
+        // Return a deep copy of the attribute, to avoid altering the static attribute.
+        def result = new HashMap(resolvedProcessNames.entrySet().size())
+        resolvedProcessNames.entrySet().each { entry ->
+            def key = Map.entry(entry.key.key, entry.key.value)
+            def value = new LinkedList<String>(entry.value)
+            result.put(key, value)
+        }
+
+        return result
+    }
+
+    static void addResolvedName(String name, Path path, String baseName) {
+        def resolvedNameList = resolvedProcessNames.get(Map.entry(path, baseName))
+        if(!resolvedNameList){
+            resolvedNameList = new LinkedList<String>()
+            resolvedProcessNames.put(Map.entry(path, baseName), resolvedNameList)
+        }
+
+        resolvedNameList.add(name)
     }
 
     static Map<String,Path> allScriptNames() {
