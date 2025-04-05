@@ -26,7 +26,7 @@ import nextflow.util.TestOnly
 import org.pf4j.ExtensionPoint
 
 /**
- * Factory for CidStore
+ * Factory for {@link CidStore} objects
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */

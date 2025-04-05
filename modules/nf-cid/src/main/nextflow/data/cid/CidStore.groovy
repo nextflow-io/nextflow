@@ -22,6 +22,7 @@ import nextflow.data.cid.serde.CidSerializable
 import nextflow.data.config.DataConfig
 /**
  * Interface for the CID store
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic

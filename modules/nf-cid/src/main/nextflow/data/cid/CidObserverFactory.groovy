@@ -23,6 +23,7 @@ import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
 
 /**
+ * Implements factory for {@link CidObserver} object
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
