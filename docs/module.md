@@ -107,19 +107,19 @@ As a best practice, parameters should be used in the entry workflow and passed t
 A module can define parameters using the same syntax as a Nextflow workflow script:
 
 ```nextflow
-params.foo = 'Hello'
-params.bar = 'world!'
+params.message = 'Hello'
+params.target = 'world!'
 
 def sayHello() {
-    println "$params.foo $params.bar"
+    println "$params.message $params.target"
 }
 ```
 
 When including a module, the module will first use parameters from the including context. For example:
 
 ```nextflow
-params.foo = 'Hola'
-params.bar = 'Mundo'
+params.message = 'Hola'
+params.target = 'Mundo'
 
 include { sayHello } from './some/module'
 
@@ -145,10 +145,10 @@ It is best to define all pipeline parameters *before* any `include` statements.
 The `addParams` option can be used to pass parameters to the module without adding them to the including scope.
 
 ```nextflow
-params.foo = 'Hola'
-params.bar = 'Mundo'
+params.message = 'Hola'
+params.target = 'Mundo'
 
-include { sayHello } from './some/module' addParams(foo: 'Ciao')
+include { sayHello } from './some/module' addParams(message: 'Ciao')
 
 workflow {
     sayHello()
@@ -164,10 +164,10 @@ Ciao Mundo
 Alternatively, the `params` option can be used to pass parameters to module without adding them to the including scope, *and* without inheriting any parameters from the including scope.
 
 ```nextflow
-params.foo = 'Hola'
-params.bar = 'Mundo'
+params.message = 'Hola'
+params.target = 'Mundo'
 
-include { sayHello } from './some/module' params(foo: 'Ciao')
+include { sayHello } from './some/module' params(message: 'Ciao')
 
 workflow {
     sayHello()
