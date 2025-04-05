@@ -68,7 +68,7 @@ class CidUtilsTest extends Specification{
 
     def "should parse children elements form Fragment string"() {
         expect:
-        CidUtils.parseChildrenFormFragment(FRAGMENT) == EXPECTED
+        CidUtils.parseChildrenFormFragment(FRAGMENT) == EXPECTED as String[]
 
         where:
         FRAGMENT            | EXPECTED

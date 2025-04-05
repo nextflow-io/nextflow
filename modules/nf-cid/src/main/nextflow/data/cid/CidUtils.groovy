@@ -37,6 +37,9 @@ import java.time.Instant
 @Slf4j
 @CompileStatic
 class CidUtils {
+
+    private static final String[] EMPTY_ARRAY = new String[] {}
+
     /**
      * Query a CID store.
      * @param store CID store to query.
@@ -82,16 +85,13 @@ class CidUtils {
      * @return array with the parsed element
      */
     static String[] parseChildrenFormFragment(String fragment) {
-        if (fragment) {
-            if (fragment.contains('.')) {
-                return fragment.split("\\.")
-            } else {
-                return [fragment] as String[]
-            }
-        } else {
-            return [] as String[]
-        }
+        if( !fragment )
+            return EMPTY_ARRAY
+        return fragment.contains('.')
+            ?  fragment.split("\\.")
+            :  List.of(fragment) as String[]
     }
+
     /**
      * Search for objects inside a description
      * @param store CID store
