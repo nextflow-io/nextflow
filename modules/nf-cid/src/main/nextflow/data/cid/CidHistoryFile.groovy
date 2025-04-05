@@ -16,14 +16,14 @@
  */
 package nextflow.data.cid
 
-import groovy.util.logging.Slf4j
-
 import java.nio.channels.FileChannel
 import java.nio.channels.FileLock
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 
+import groovy.util.logging.Slf4j
+import nextflow.extension.FilesEx
 /**
  * File to store a history of the workflow executions and their corresponding CIDs
  *
@@ -101,7 +101,7 @@ class CidHistoryFile implements CidHistoryLog {
                 }
             }
             catch (IllegalArgumentException e) {
-                log.warn("Can't read CID history file: $this", e.message)
+                log.warn("Can't read CID history file: ${FilesEx.toUriString(this.path)}", e.message)
             }
         }
 
