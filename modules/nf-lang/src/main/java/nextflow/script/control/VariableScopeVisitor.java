@@ -318,7 +318,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         if( mn != null )
             call.putNodeMetaData(ASTNodeMarker.METHOD_TARGET, mn);
         else
-            vsc.addError("Invalid " + typeLabel + " `" + name + "`", node);
+            vsc.addError("Unrecognized " + typeLabel + " `" + name + "`", node);
         return call;
     }
 
@@ -463,7 +463,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         }
         else if( currentDefinition instanceof ProcessNode || currentDefinition instanceof WorkflowNode ) {
             if( currentClosure != null )
-                addError("Variables in a closure should be declared with `def`", ve);
+                vsc.addError("Variables in a closure should be declared with `def`", ve);
             var scope = currentScope();
             currentScope(currentDefinition.getVariableScope());
             vsc.declare(ve);
@@ -506,7 +506,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
                 sourceUnit.addWarning("Params should be declared at the top-level (i.e. outside the workflow)", target);
             // TODO: re-enable after workflow.onComplete bug is fixed
             // else
-            //     addError("Built-in variable cannot be mutated", target);
+            //     vsc.addError("Built-in variable cannot be mutated", target);
         }
         else if( variable != null ) {
             checkExternalWriteInAsyncClosure(target, variable);

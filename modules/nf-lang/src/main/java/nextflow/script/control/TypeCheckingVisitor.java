@@ -29,6 +29,7 @@ import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.Variable;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
 import org.codehaus.groovy.ast.expr.DeclarationExpression;
+import org.codehaus.groovy.ast.expr.EmptyExpression;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.PropertyExpression;
@@ -129,6 +130,8 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
     private void applyDeclaration(BinaryExpression node) {
         var target = node.getLeftExpression();
         var source = node.getRightExpression();
+        if( source instanceof EmptyExpression )
+            return;
         visit(target);
         visit(source);
         var sourceType = TypeChecker.getType(source);
