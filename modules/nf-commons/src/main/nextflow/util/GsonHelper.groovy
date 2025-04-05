@@ -23,19 +23,23 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import nextflow.serde.gson.InstantAdapter
 
 /**
  * Implements helper for Gson ser-deserialization
- * 
+ *
+ * Deprecated. Use {@link nextflow.serde.gson.GsonEncoder} instead
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Deprecated
 @CompileStatic
 class GsonHelper {
 
     @Memoized
     static protected Gson gson() {
         new GsonBuilder()
-            .registerTypeAdapter(Instant, new GsonInstantAdapter())
+            .registerTypeAdapter(Instant, new InstantAdapter())
             .create()
     }
 
