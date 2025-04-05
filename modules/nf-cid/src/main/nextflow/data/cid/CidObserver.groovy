@@ -152,7 +152,6 @@ class CidObserver implements TraceObserver {
         return normalizedParams
     }
 
-
     @Override
     void onProcessComplete(TaskHandler handler, TraceRecord trace) {
         storeTaskInfo(handler.task)
@@ -265,7 +264,6 @@ class CidObserver implements TraceObserver {
     protected String getWorkflowOutputKey(Path destination) {
         final rel = getWorkflowRelative(destination)
         return executionHash + SEPARATOR + 'outputs' + SEPARATOR + rel
-
     }
 
     protected String getTaskRelative(TaskRun task, Path path){
@@ -281,7 +279,6 @@ class CidObserver implements TraceObserver {
                 throw new Exception("Cannot asses the relative path for output $path of ${task.name}" )
             return path.normalize().toString()
         }
-
     }
 
     private String getTaskRelative0(TaskRun task, Path path){
@@ -398,7 +395,6 @@ class CidObserver implements TraceObserver {
                 throw new Exception("Cannot asses the relative path for workflow output $path")
             return path.normalize().toString()
         }
-
     }
 
     protected List<Parameter> manageInputs(Map<InParam, Object> inputs, PathNormalizer normalizer) {
