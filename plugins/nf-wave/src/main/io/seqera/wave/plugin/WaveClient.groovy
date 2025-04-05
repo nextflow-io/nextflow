@@ -26,6 +26,7 @@ import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
+import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
@@ -678,7 +679,7 @@ class WaveClient {
             return null
         final resp = handle.response
         final result = new ContainerMeta()
-        result.requestTime = handle.createdAt
+        result.requestTime = handle.createdAt?.atZone(ZoneId.systemDefault())?.toOffsetDateTime()
         result.requestId = resp.requestId
         result.sourceImage = resp.containerImage
         result.targetImage = resp.targetImage
