@@ -40,3 +40,5 @@ plugins-prod
 sandbox
 wave-tests
 x/*
+**/CondorExecutorNextflow.groovy
+modules/nextflow/src/main/groovy/nextflow/executor/CondorExecutorNextflow.groovy
