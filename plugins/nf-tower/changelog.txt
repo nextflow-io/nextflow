@@ -1,5 +1,8 @@
 nf-tower changelog
 ===================
+1.11.1 - 5 Apr 2025
+- Fix date format in Wave containers meta (#5903) [59536c0a]
+
 1.11.0 - 17 Mar 2025
 - Add Wave container metadata to Platform traces (#5724) [b81178c5]
 - Update Platform token error message [18b69349]
