@@ -103,7 +103,13 @@ class TraceRecord implements Serializable {
             vol_ctxt: 'num',        // -- /proc/$pid/status field 'voluntary_ctxt_switches'
             inv_ctxt: 'num',        // -- /proc/$pid/status field 'nonvoluntary_ctxt_switches'
             hostname: 'str',
-            cpu_model:  'str'
+            cpu_model:  'str',
+            gpu_model:  'str',
+            gpu_mem:    'mem',      // -- Total GPU memory capacity in MiB
+            gpu_driver: 'str',      // -- GPU driver version
+            '%gpu':      'perc',    // -- Average GPU utilization percentage
+            '%gpu_mem':  'perc',    // -- Average GPU memory usage as percentage of total available
+            avg_gpu_mem: 'mem',      // -- Average GPU memory usage in MiB
     ]
 
     static public Map<String,Closure<String>> FORMATTER = [
@@ -441,6 +447,14 @@ class TraceRecord implements Serializable {
                         // fields '%cpu' and '%mem' are expressed as percent value
                         this.put(name, parseInt(value, file, name) / 10F)
                         break
+                        
+                    case '%gpu':
+                        this.put(name, parseInt(value, file, name))
+                        break
+
+                    case '%gpu_mem':
+                        this.put(name, parseFloat(value, file, name))
+                        break
 
                     case 'rss':
                     case 'vmem':
@@ -450,9 +464,36 @@ class TraceRecord implements Serializable {
                         def val = parseLong(value, file, name) * 1024
                         this.put(name, val)
                         break
+                        
+                    case 'avg_gpu_mem':
+                        // Convert MiB to bytes for consistent formatting
+                        try {
+                            def val = parseLong(value, file, name) * 1024 * 1024
+                            this.put(name, val)
+                        }
+                        catch(NumberFormatException e) {
+                            log.debug "[WARN] Invalid avg_gpu_mem value: $value - $e.message"
+                            this.put(name, 0)
+                        }
+                        break
 
+                    case 'gpu_model':
+                    case 'gpu_driver':
                     case 'cpu_model':
                         this.put(name, value)
+                        break
+
+                    case 'gpu_mem':
+                        // Convert MiB to bytes for consistent formatting
+                        try {
+                            def val = parseLong(value, file, name) * 1024 * 1024
+                            this.put(name, val)
+                        }
+                        catch(NumberFormatException e) {
+                            log.debug "[WARN] Invalid gpu_mem value: $value - $e.message"
+                            // If it's already formatted with units, store as is
+                            this.put(name, value)
+                        }
                         break
 
                     default:
@@ -524,6 +565,16 @@ class TraceRecord implements Serializable {
         catch( NumberFormatException e ) {
             log.debug "[WARN] Not a valid integer number `$str` -- offending row: $row in file `$file`"
             return 0
+        }
+    }
+
+    private float parseFloat( String str, Path file, String row )  {
+        try {
+            str.toFloat()
+        }
+        catch( NumberFormatException e ) {
+            log.debug "[WARN] Not a valid float number `$str` -- offending row: $row in file `$file`"
+            return 0.0f
         }
     }
 
