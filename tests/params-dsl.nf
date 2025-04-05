@@ -21,10 +21,7 @@ params {
     description "List of IDs"
   }
 
-  save_intermeds {
-    defaultValue false
-    description "Whether to save intermediate files"
-  }
+  save_intermeds = false
 }
 
 workflow {

@@ -53,6 +53,20 @@ params {
         defaultValue null
         description 'Path to input data'
     }
+
+    save_intermeds {
+        defaultValue false
+        description "Whether to save intermediate files"
+    }
+}
+```
+
+If only a default value is specified, the parameter declaration can be shortened to an assignment:
+
+```nextflow
+params {
+    input = null
+    save_intermeds = false
 }
 ```
 
@@ -61,9 +75,9 @@ Parameters can be used in the entry workflow:
 ```nextflow
 workflow {
     if( params.input )
-        bar(params.input)
+        analyze(params.input, params.save_intermeds)
     else
-        bar(foo())
+        analyze(fake_input(), params.save_intermeds)
 }
 ```
 

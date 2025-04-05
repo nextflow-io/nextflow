@@ -160,7 +160,8 @@ paramsBody
     ;
 
 paramDeclaration
-    :   identifier LBRACE nls blockStatements? RBRACE
+    :   identifier nls ASSIGN nls expression
+    |   identifier LBRACE nls blockStatements? RBRACE
     |   statement
     ;
 

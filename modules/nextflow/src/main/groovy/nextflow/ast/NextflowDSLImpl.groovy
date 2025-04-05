@@ -310,31 +310,47 @@ class NextflowDSLImpl implements ASTTransformation {
 
             final closure = (ClosureExpression)arguments[0]
             final block = (BlockStatement)closure.code
-            for( Statement stmt : block.statements ) {
+            for( final stmt : block.statements ) {
                 if( stmt !instanceof ExpressionStatement ) {
                     syntaxError(stmt, "Invalid parameter declaration")
                     return
                 }
 
                 final stmtX = (ExpressionStatement)stmt
-                if( stmtX.expression !instanceof MethodCallExpression ) {
+                if( !convertParamBlock(stmtX) && !convertParamAssign(stmtX) ) {
                     syntaxError(stmt, "Invalid parameter declaration")
                     return
                 }
-
-                final call = (MethodCallExpression)stmtX.expression
-                assert call.arguments instanceof ArgumentListExpression
-
-                final callArgs = (ArgumentListExpression)call.arguments
-                if( callArgs.size() != 1 || callArgs[0] !instanceof ClosureExpression ) {
-                    syntaxError(stmt, "Invalid parameter declaration")
-                    return
-                }
-
-                final name = call.method
-                final body = (ClosureExpression)callArgs[0]
-                stmtX.expression = callThisX('declare', args(name, body))
             }
+        }
+
+        protected boolean convertParamBlock(ExpressionStatement stmtX) {
+            if( stmtX.expression !instanceof MethodCallExpression )
+                return false
+            final call = (MethodCallExpression)stmtX.expression
+            if( call.arguments !instanceof ArgumentListExpression )
+                return false
+            final callArgs = (ArgumentListExpression)call.arguments
+            if( callArgs.size() != 1 || callArgs[0] !instanceof ClosureExpression )
+                return false
+            final name = call.method
+            final body = (ClosureExpression)callArgs[0]
+            stmtX.expression = callThisX('declare', args(name, body))
+            return true
+        }
+
+        protected boolean convertParamAssign(ExpressionStatement stmtX) {
+            if( stmtX.expression !instanceof BinaryExpression )
+                return false
+            final binX = (BinaryExpression)stmtX.expression
+            if( binX.leftExpression !instanceof VariableExpression || binX.operation.type != Types.ASSIGN )
+                return false
+            final target = (VariableExpression)binX.leftExpression
+            final defaultValue = binX.rightExpression
+            final call = callThisX('defaultValue', args(defaultValue))
+            final body = block(new VariableScope(), List.of(stmt(call)))
+            stmtX.expression = callThisX('declare', args(constX(target.name), closureX(body)))
+            return true
         }
 
         /*

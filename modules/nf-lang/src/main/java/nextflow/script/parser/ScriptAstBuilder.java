@@ -361,10 +361,18 @@ public class ScriptAstBuilder {
             return null;
         }
         var name = identifier(ctx.identifier());
-        var body = blockStatements(ctx.blockStatements());
+        var body = ctx.ASSIGN() != null
+            ? paramBody(expression(ctx.expression()))
+            : blockStatements(ctx.blockStatements());
         var result = new ParamNode(name, body);
         checkInvalidVarName(name, result);
         return result;
+    }
+
+    private BlockStatement paramBody(Expression defaultValue) {
+        var call = ast( callThisX("defaultValue", args(defaultValue)), defaultValue );
+        var statement = ast( stmt(call), defaultValue );
+        return ast( block(new VariableScope(), List.of(statement)), defaultValue );
     }
 
     private ParamNodeV1 paramDeclarationV1(ParamDeclarationV1Context ctx) {
