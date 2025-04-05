@@ -236,6 +236,47 @@ println "PWD = ${env('PWD')}"
 
 The following patterns are still supported but have been restricted. That is, some syntax variants have been removed.
 
+<h4>Include declarations</h4>
+
+In Nextflow DSL2, include declarations can have an `addParams` or `params` clause as described in {ref}`module-params`:
+
+```nextflow
+params.message = 'Hola'
+params.target = 'Mundo'
+
+include { sayHello } from './some/module' addParams(message: 'Ciao')
+
+workflow {
+    sayHello()
+}
+```
+
+In the strict syntax, these clauses are no longer supported. Params should be passed to workflows, processes, and functions as explicit inputs:
+
+```nextflow
+include { sayHello } from './some/module'
+
+params.message = 'Hola'
+params.target = 'Mundo'
+
+workflow {
+    sayHello('Ciao', params.target)
+}
+```
+
+Where the `sayHello` workflow is defined as follows:
+
+```nextflow
+workflow sayHello {
+    take:
+    message
+    target
+
+    main:
+    // ...
+}
+```
+
 <h4>Variable declarations</h4>
 
 In Groovy, variables can be declared in many different ways:
