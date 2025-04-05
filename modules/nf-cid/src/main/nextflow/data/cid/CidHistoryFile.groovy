@@ -128,7 +128,7 @@ class CidHistoryFile implements CidHistoryLog {
         try {
             fos = FileChannel.open(file, StandardOpenOption.WRITE, StandardOpenOption.CREATE)
         } catch (UnsupportedOperationException e){
-            log.warn("File System Provider for ${this.path} do not support file locking - Attemting without locking", e)
+            log.warn("File System Provider for ${this.path} do not support file locking - Attempting without locking", e)
             return action.call()
         }
         if (!fos){
