@@ -113,8 +113,8 @@ class CidFileSystemProvider extends FileSystemProvider {
     InputStream newInputStream(Path path, OpenOption... options) throws IOException {
         final cid = toCidPath(path)
         final realPath = cid.getTargetPath(true)
-        if (realPath instanceof CidResultsPath)
-            return (realPath as CidResultsPath).newInputStream()
+        if (realPath instanceof CidMetadataPath)
+            return (realPath as CidMetadataPath).newInputStream()
         else
             return realPath.fileSystem.provider().newInputStream(realPath, options)
     }
@@ -131,8 +131,8 @@ class CidFileSystemProvider extends FileSystemProvider {
         }
         final realPath = cid.getTargetPath(true)
         SeekableByteChannel channel
-        if (realPath instanceof CidResultsPath){
-            channel = (realPath as CidResultsPath).newSeekableByteChannel()
+        if (realPath instanceof CidMetadataPath){
+            channel = (realPath as CidMetadataPath).newSeekableByteChannel()
         } else {
             channel = realPath.fileSystem.provider().newByteChannel(realPath, options, attrs)
         }
@@ -300,7 +300,7 @@ class CidFileSystemProvider extends FileSystemProvider {
                 throw new AccessDeniedException("Execute mode not supported")
         }
         final real = cid.getTargetPath(true)
-        if (real instanceof CidResultsPath)
+        if (real instanceof CidMetadataPath)
             return
         real.fileSystem.provider().checkAccess(real, modes)
     }
@@ -314,8 +314,8 @@ class CidFileSystemProvider extends FileSystemProvider {
     <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) throws IOException {
         final cid = toCidPath(path)
         final real = cid.getTargetPath(true)
-        if (real instanceof CidResultsPath)
-            return (real as CidResultsPath).readAttributes(type)
+        if (real instanceof CidMetadataPath)
+            return (real as CidMetadataPath).readAttributes(type)
         else
             return real.fileSystem.provider().readAttributes(real,type,options)
     }

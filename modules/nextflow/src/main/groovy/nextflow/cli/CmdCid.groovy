@@ -77,6 +77,7 @@ class CmdCid extends CmdBase implements UsageAware {
     @Override
     void run() {
         if( !args ) {
+            usage(List.of())
             return
         }
         // setup the plugins system and load the secrets provider

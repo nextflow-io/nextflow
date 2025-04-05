@@ -48,10 +48,9 @@ class CidHistoryFileTest extends Specification {
         UUID sessionId = UUID.randomUUID()
         String runName = "TestRun"
         String runCid = "cid://123"
-        String resultsCid = "cid://456"
 
         when:
-        cidHistoryFile.write(runName, sessionId, runCid, resultsCid)
+        cidHistoryFile.write(runName, sessionId, runCid)
 
         then:
         def lines = Files.readAllLines(historyFile)
@@ -60,7 +59,6 @@ class CidHistoryFileTest extends Specification {
         parsedRecord.sessionId == sessionId
         parsedRecord.runName == runName
         parsedRecord.runCid == runCid
-        parsedRecord.resultsCid == resultsCid
     }
 
     def "should return correct record for existing session"() {
@@ -68,10 +66,9 @@ class CidHistoryFileTest extends Specification {
         UUID sessionId = UUID.randomUUID()
         String runName = "Run1"
         String runCid = "cid://123"
-        String resultsCid = "cid://456"
 
         and:
-        cidHistoryFile.write(runName, sessionId, runCid, resultsCid)
+        cidHistoryFile.write(runName, sessionId, runCid)
 
         when:
         def record = cidHistoryFile.getRecord(sessionId)
@@ -79,7 +76,6 @@ class CidHistoryFileTest extends Specification {
         record.sessionId == sessionId
         record.runName == runName
         record.runCid == runCid
-        record.resultsCid == resultsCid
     }
 
     def "should return null if session does not exist"() {
@@ -87,7 +83,7 @@ class CidHistoryFileTest extends Specification {
         cidHistoryFile.getRecord(UUID.randomUUID()) == null
     }
 
-    def "update should modify existing Cids for given session"() {
+    def "update should modify existing Cid for given session"() {
         given:
         UUID sessionId = UUID.randomUUID()
         String runName = "Run1"
@@ -95,18 +91,16 @@ class CidHistoryFileTest extends Specification {
         String resultsCidUpdated = "results-cid-updated"
 
         and:
-        cidHistoryFile.write(runName, sessionId, 'run-cid-initial', 'results-cid-inital')
+        cidHistoryFile.write(runName, sessionId, 'run-cid-initial')
 
         when:
         cidHistoryFile.updateRunCid(sessionId, runCidUpdated)
-        cidHistoryFile.updateResultsCid(sessionId, resultsCidUpdated)
 
         then:
         def lines = Files.readAllLines(historyFile)
         lines.size() == 1
         def parsedRecord = CidHistoryRecord.parse(lines[0])
         parsedRecord.runCid == runCidUpdated
-        parsedRecord.resultsCid == resultsCidUpdated
     }
 
     def "update should do nothing if session does not exist"() {
@@ -115,19 +109,16 @@ class CidHistoryFileTest extends Specification {
         UUID nonExistingSessionId = UUID.randomUUID()
         String runName = "Run1"
         String runCid = "cid://123"
-        String resultsCid = "cid://456"
         and:
-        cidHistoryFile.write(runName, existingSessionId, runCid, resultsCid)
+        cidHistoryFile.write(runName, existingSessionId, runCid)
 
         when:
         cidHistoryFile.updateRunCid(nonExistingSessionId, "new-cid")
-        cidHistoryFile.updateRunCid(nonExistingSessionId, "new-res-cid")
         then:
         def lines = Files.readAllLines(historyFile)
         lines.size() == 1
         def parsedRecord = CidHistoryRecord.parse(lines[0])
         parsedRecord.runCid == runCid
-        parsedRecord.resultsCid == resultsCid
     }
 
     def 'should get records' () {
@@ -135,9 +126,8 @@ class CidHistoryFileTest extends Specification {
         UUID sessionId = UUID.randomUUID()
         String runName = "Run1"
         String runCid = "cid://123"
-        String resultsCid = "cid://456"
         and:
-        cidHistoryFile.write(runName, sessionId, runCid, resultsCid)
+        cidHistoryFile.write(runName, sessionId, runCid)
 
         when:
         def records = cidHistoryFile.getRecords()
@@ -146,7 +136,6 @@ class CidHistoryFileTest extends Specification {
         records[0].sessionId == sessionId
         records[0].runName == runName
         records[0].runCid == runCid
-        records[0].resultsCid == resultsCid
     }
 }
 

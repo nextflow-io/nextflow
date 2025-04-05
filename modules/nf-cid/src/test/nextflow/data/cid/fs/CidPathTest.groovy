@@ -17,10 +17,10 @@
 
 package nextflow.data.cid.fs
 
-import nextflow.data.cid.model.WorkflowResults
+import nextflow.data.cid.CidUtils
+import nextflow.data.cid.model.WorkflowOutputs
 import nextflow.data.cid.serde.CidEncoder
 import nextflow.file.FileHelper
-import nextflow.serde.gson.GsonEncoder
 
 import java.nio.file.Files
 import java.time.Instant
@@ -116,21 +116,21 @@ class CidPathTest extends Specification {
         def outputFile = data.resolve('file2.txt')
         outputFile.text = "this is file2"
 
-        def cidFs = new FileHelper().getOrCreateFileSystemFor('cid', [enabled: true, store: [location: cid.parent.toString()]] )
+        def cidFs = new FileHelper().getOrCreateFileSystemFor('cid', [enabled: true, store: [location: cid.parent.toString()]] ) as CidFileSystem
 
         cid.resolve('12345/output1').mkdirs()
         cid.resolve('12345/path/to/file2.txt').mkdirs()
         cid.resolve('12345/.data.json').text = '{"type":"TaskRun"}'
-        cid.resolve('12345/output1/.data.json').text = '{"type":"TaskOutput", "path": "' + outputFolder.toString() + '"}'
-        cid.resolve('12345/path/to/file2.txt/.data.json').text = '{"type":"TaskOutput", "path": "' + outputFile.toString() + '"}'
-        def time = Instant.now().toString()
-        def wfResultsMetadata = new CidEncoder().withPrettyPrint(true).encode(new WorkflowResults(time, "cid://1234", [a: "cid://1234/a.txt"]))
+        cid.resolve('12345/output1/.data.json').text = '{"type":"DataOutput", "path": "' + outputFolder.toString() + '"}'
+        cid.resolve('12345/path/to/file2.txt/.data.json').text = '{"type":"DataOutput", "path": "' + outputFile.toString() + '"}'
+        def time = Instant.now()
+        def wfResultsMetadata = new CidEncoder().withPrettyPrint(true).encode(new WorkflowOutputs(time, "cid://1234", [a: "cid://1234/a.txt"]))
         cid.resolve('5678/').mkdirs()
         cid.resolve('5678/.data.json').text = wfResultsMetadata
 
         expect: 'Get real path when CidPath is the output data or a subfolder'
-        new CidPath(cidFs,'12345/output1' ).getTargetPath() == outputFolder
-        new CidPath(cidFs,'12345/output1/some/path' ).getTargetPath() == outputSubFolder
+        new CidPath(cidFs, '12345/output1').getTargetPath() == outputFolder
+        new CidPath(cidFs,'12345/output1/some/path').getTargetPath() == outputSubFolder
         new CidPath(cidFs,'12345/output1/some/path/file1.txt').getTargetPath().text == outputSubFolderFile.text
         new CidPath(cidFs, '12345/path/to/file2.txt').getTargetPath().text == outputFile.text
 
@@ -162,14 +162,14 @@ class CidPathTest extends Specification {
         when: 'Cid description'
         def result = new CidPath(cidFs, '5678').getTargetPath(true)
         then:
-        result instanceof CidResultsPath
+        result instanceof CidMetadataPath
         result.text == wfResultsMetadata
 
         when: 'Cid description subobject'
         def result2 = new CidPath(cidFs, '5678#outputs').getTargetPath(true)
         then:
-        result2 instanceof CidResultsPath
-        result2.text == new GsonEncoder<Object>(){}.withPrettyPrint(true).encode([a: "cid://1234/a.txt"])
+        result2 instanceof CidMetadataPath
+        result2.text == CidUtils.encodeSearchOutputs([a: "cid://1234/a.txt"], true)
 
         when: 'Cid subobject does not exist'
         new CidPath(cidFs, '23456#notexists').getTargetPath(true)

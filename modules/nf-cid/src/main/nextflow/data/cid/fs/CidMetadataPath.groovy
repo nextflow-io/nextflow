@@ -24,17 +24,17 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileTime
 
 /**
- * Class to model the metadata results description as a file.
+ * Class to model the metadata descriptions as a file.
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
 @CompileStatic
-class CidResultsPath extends CidPath {
+class CidMetadataPath extends CidPath {
     private byte[] results
     private FileTime creationTime
 
-    CidResultsPath (String resultsObject, FileTime creationTime, CidFileSystem fs, String path, String[] childs) {
-        super(fs, path, childs)
+    CidMetadataPath(String resultsObject, FileTime creationTime, CidFileSystem fs, String path, String[] childs) {
+        super(fs, "${path}${childs ? '#'+ childs.join('.') : ''}")
         this.results = resultsObject.getBytes("UTF-8")
         this.creationTime = creationTime
     }

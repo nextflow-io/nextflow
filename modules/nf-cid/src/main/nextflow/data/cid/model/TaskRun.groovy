@@ -32,6 +32,7 @@ class TaskRun implements CidSerializable {
     String sessionId
     String name
     Checksum codeChecksum
+    Checksum scriptChecksum
     List<Parameter> inputs
     String container
     String conda
@@ -39,5 +40,6 @@ class TaskRun implements CidSerializable {
     String architecture
     Map globalVars
     List<DataPath> binEntries
-    List<String> annotations
+    String workflowRun
+    Map annotations
 }

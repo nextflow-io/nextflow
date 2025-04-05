@@ -20,9 +20,12 @@ package nextflow.data.cid
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.data.cid.fs.CidPath
+import nextflow.data.cid.model.WorkflowRun
+import nextflow.data.cid.model.TaskRun
+import nextflow.data.cid.serde.CidEncoder
 import nextflow.data.cid.serde.CidSerializable
+import nextflow.serde.gson.GsonEncoder
 
-import java.nio.file.Path
 import java.nio.file.attribute.FileTime
 import java.time.Instant
 
@@ -102,29 +105,51 @@ class CidUtils {
         final object = store.load(key)
         if (object) {
             if (children && children.size() > 0) {
-                final output = navigate(object, children.join('.'))
+                final output = getSubObject(store, key, object, children)
                 if (output) {
                     treatObject(output, params, results)
                 } else {
-                    throw new FileNotFoundException("Cid object $key/${children ? children.join('/') : ''} not found.")
+                    throw new FileNotFoundException("Cid object $key#${children.join('.')} not found.")
                 }
             } else {
                 treatObject(object, params, results)
             }
         } else {
-            // If there isn't metadata check the parent to check if it is a subfolder of a task/workflow output
-            final currentPath = Path.of(key)
-            final parent = currentPath.getParent()
-            if (parent) {
-                ArrayList<String> newChildren = new ArrayList<String>()
-                newChildren.add(currentPath.getFileName().toString())
-                newChildren.addAll(children)
-                return searchPath(store, parent.toString(), params, newChildren as String[])
-            } else {
-                throw new FileNotFoundException("Cid object $key/${children ? children.join('/') : ''} not found.")
-            }
+            throw new FileNotFoundException("Cid object $key not found.")
         }
         return results
+    }
+
+    /**
+     * Get a metadata sub-object.
+     * If the requested sub-object is the workflow or task outputs, retrieves the outputs from the outputs description.
+     *
+     * @param store CidStore to retrieve metadata objects.
+     * @param key Parent metadata key.
+     * @param object Parent object.
+     * @param children Array of string in indicating the properties to navigate to get the sub-object.
+     * @return Sub-object or null in it does not exist.
+     */
+    static Object getSubObject(CidStore store, String key, CidSerializable object, String[] children) {
+        if( isSearchingOutputs(object, children) ) {
+            // When asking for a Workflow or task output retrieve the outputs description
+            final outputs = store.load("${key}/outputs")
+            if (outputs)
+                return navigate(outputs, children.join('.'))
+            else
+                return null
+        }
+        return navigate(object, children.join('.'))
+    }
+    /**
+     * Check if the Cid pseudo path or query is for Task or Workflow outputs.
+     *
+     * @param object Parent Cid metadata object
+     * @param children Array of string in indicating the properties to navigate to get the sub-object.
+     * @return return 'true' if the parent is a Task/Workflow run and the first element in children is 'outputs'. Otherwise 'false'
+     */
+    public static boolean isSearchingOutputs(CidSerializable object, String[] children) {
+        return (object instanceof WorkflowRun || object instanceof TaskRun) && children && children[0] == 'outputs'
     }
 
     /**
@@ -210,11 +235,11 @@ class CidUtils {
      * Helper function to convert from FileTime to ISO 8601.
      *
      * @param time File time to convert
-     * @return ISO Date format or 'N/A' in case of not available (null)
+     * @return Instant or null in case of not available (null)
      */
-    static String toDate(FileTime time){
+    static Instant toDate(FileTime time){
         if (time)
-            return Instant.ofEpochMilli(time.toMillis()).toString()
+            return Instant.ofEpochMilli(time.toMillis())
         else
             return null
     }
@@ -229,5 +254,26 @@ class CidUtils {
         if (!date)
             return null
         return FileTime.from(Instant.parse(date))
+    }
+
+    /**
+     * Helper function to unify the encoding of outputs when querying and navigating the CID pseudoFS.
+     * Outputs can include CidSerializable objects, collections or parts of these objects.
+     * CidSerializable objects can be encoded with the CidEncoder, but collections or parts of
+     * these objects require to extend the GsonEncoder.
+     *
+     * @param output Output to encode
+     * @return Output encoded as a JSON string
+     */
+    static String encodeSearchOutputs(Object output, boolean prettyPrint) {
+        if (output instanceof CidSerializable){
+            return new CidEncoder().withPrettyPrint(prettyPrint).encode(output)
+        } else {
+            return new GsonEncoder<Object>() {}
+                .withPrettyPrint(prettyPrint)
+                .withSerializeNulls(true)
+                .withTypeAdapterFactory(CidEncoder.newCidTypeAdapterFactory())
+                .encode(output)
+        }
     }
 }

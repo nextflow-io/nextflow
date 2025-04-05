@@ -33,7 +33,7 @@ class CidUtilsTest extends Specification{
         where:
         FILE_TIME                   | DATE
         null                        | null
-        FileTime.fromMillis(1234)   | Instant.ofEpochMilli(1234).toString()
+        FileTime.fromMillis(1234)   | Instant.ofEpochMilli(1234)
     }
 
     def 'should convert to FileTime'(){
