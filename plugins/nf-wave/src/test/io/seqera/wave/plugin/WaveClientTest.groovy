@@ -26,7 +26,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileTime
 import java.time.Duration
 import java.time.Instant
-import java.time.ZoneOffset
+import java.time.ZoneId
 
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
@@ -1391,7 +1391,7 @@ class WaveClientTest extends Specification {
         and:
         result == new ContainerMeta(
                 requestId: resp.requestId,
-                requestTime: handle.createdAt.atOffset(ZoneOffset.UTC),
+                requestTime: handle.createdAt.atZone(ZoneId.systemDefault()).toOffsetDateTime(),
                 sourceImage: resp.containerImage,
                 targetImage: resp.targetImage,
                 buildId: resp.buildId,
@@ -1427,7 +1427,7 @@ class WaveClientTest extends Specification {
         and:
         result == new ContainerMeta(
             requestId: resp.requestId,
-            requestTime: handle.createdAt.atOffset(ZoneOffset.UTC),
+            requestTime: handle.createdAt.atZone(ZoneId.systemDefault()).toOffsetDateTime(),
             sourceImage: resp.containerImage,
             targetImage: resp.targetImage,
             buildId: null,
