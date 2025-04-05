@@ -17,9 +17,11 @@
 
 package nextflow.data.cid.model
 
+import java.nio.file.Path
+
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
-
+import nextflow.util.CacheHelper
 /**
  * Models a checksum including the value as well as the algortihm and mode used to compute it.
  *
@@ -31,4 +33,16 @@ class Checksum {
     String value
     String algorithm
     String mode
+
+    static Checksum of(String value, String algorithm, CacheHelper.HashMode mode) {
+        new Checksum(value, algorithm, mode.toString().toLowerCase())
+    }
+
+    static Checksum ofNextflow(String value) {
+        new Checksum(CacheHelper.hasher(value).hash().toString(), 'nextflow', CacheHelper.HashMode.DEFAULT().toString().toLowerCase())
+    }
+
+    static Checksum ofNextflow(Path path) {
+        new Checksum(CacheHelper.hasher(path).hash().toString(), 'nextflow', CacheHelper.HashMode.DEFAULT().toString().toLowerCase())
+    }
 }

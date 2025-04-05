@@ -103,7 +103,7 @@ class CidObserver implements TraceObserver {
         final normalizer = new PathNormalizer(session.workflowMetadata)
         final mainScript = new DataPath(
             normalizer.normalizePath(session.workflowMetadata.scriptFile.normalize()),
-            new Checksum(session.workflowMetadata.scriptId, "nextflow", CacheHelper.HashMode.DEFAULT().toString().toLowerCase())
+            Checksum.of(session.workflowMetadata.scriptId, "nextflow", CacheHelper.HashMode.DEFAULT())
         )
         List<DataPath> otherScripts  = new LinkedList<>()
         for (Path p: ScriptMeta.allScriptNames().values()) {
@@ -111,11 +111,7 @@ class CidObserver implements TraceObserver {
                 otherScripts.add(
                     new DataPath(
                         normalizer.normalizePath(p.normalize()),
-                        new Checksum(
-                            CacheHelper.hasher(p.text).hash().toString(),
-                            "nextflow",
-                            CacheHelper.HashMode.DEFAULT().toString().toLowerCase()
-                        )
+                        Checksum.ofNextflow(p.text)
                     )
                 )
             }
@@ -209,10 +205,8 @@ class CidObserver implements TraceObserver {
     }
 
     protected String storeTaskRun(TaskRun task, PathNormalizer normalizer) {
-        final codeChecksum = new Checksum(CacheHelper.hasher(session.stubRun ? task.stubSource: task.source).hash().toString(),
-            "nextflow", CacheHelper.HashMode.DEFAULT().toString().toLowerCase())
-        final scriptChecksum = new Checksum(CacheHelper.hasher(task.script).hash().toString(),
-            "nextflow", CacheHelper.HashMode.DEFAULT().toString().toLowerCase())
+        final codeChecksum = Checksum.ofNextflow(session.stubRun ? task.stubSource: task.source)
+        final scriptChecksum = Checksum.ofNextflow(task.script)
         final value = new nextflow.data.cid.model.TaskRun(
             session.uniqueId.toString(),
             task.getName(),
@@ -226,8 +220,7 @@ class CidObserver implements TraceObserver {
             task.processor.getTaskGlobalVars(task),
             task.processor.getTaskBinEntries(task.source).collect { Path p -> new DataPath(
                 normalizer.normalizePath(p.normalize()),
-                new Checksum(CacheHelper.hasher(p).hash().toString(), "nextflow",
-                    CacheHelper.HashMode.DEFAULT().toString().toLowerCase()) )
+                Checksum.ofNextflow(p) )
             },
             asUriString(executionHash)
         )
@@ -242,8 +235,7 @@ class CidObserver implements TraceObserver {
         try {
             final attrs = readAttributes(path)
             final key = getTaskOutputKey(task, path)
-            final checksum = new Checksum( CacheHelper.hasher(path).hash().toString(),
-                "nextflow", CacheHelper.HashMode.DEFAULT().toString().toLowerCase() )
+            final checksum = Checksum.ofNextflow(path)
             final value = new DataOutput(
                 path.toUriString(),
                 checksum,
@@ -312,11 +304,7 @@ class CidObserver implements TraceObserver {
 
     protected void storePublishedFile(Path destination, Path source = null, Map annotations = null){
         try {
-            final checksum = new Checksum(
-                CacheHelper.hasher(destination).hash().toString(),
-                "nextflow",
-                CacheHelper.HashMode.DEFAULT().toString().toLowerCase()
-            )
+            final checksum = Checksum.ofNextflow(destination)
             final key = getWorkflowOutputKey(destination)
             final sourceReference = source ? getSourceReference(source) : asUriString(executionHash)
             final attrs = readAttributes(destination)
@@ -419,8 +407,7 @@ class CidObserver implements TraceObserver {
             final ref = getSourceReference(it.storePath)
             paths.add(ref ? new DataPath(ref) : new DataPath(
                 normalizer.normalizePath(it.storePath),
-                new Checksum(CacheHelper.hasher(it.storePath).hash().toString(), "nextflow",
-                    CacheHelper.HashMode.DEFAULT().toString().toLowerCase()))
+                Checksum.ofNextflow(it.storePath))
             )
         }
         return paths
