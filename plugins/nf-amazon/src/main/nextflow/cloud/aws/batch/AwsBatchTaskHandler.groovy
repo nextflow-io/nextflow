@@ -116,6 +116,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     final static private Map<String,String> jobDefinitions = [:]
 
+    final static private UNSCHEDULABLE_MSG = "MISCONFIGURATION:JOB_RESOURCE_REQUIREMENT"
+
     /**
      * Batch context shared between multiple task handlers
      */
@@ -226,16 +228,34 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      */
     @Override
     boolean checkIfRunning() {
-        if( !jobId || !isSubmitted() )
+        if (!jobId || !isSubmitted())
             return false
         final job = describeJob(jobId)
         final result = job?.status in ['RUNNING', 'SUCCEEDED', 'FAILED']
-        if( result )
+        if (result)
             this.status = TaskStatus.RUNNING
+        else
+            checkIfUnscheduled(job)
         // fetch the task arn
         if( !taskArn )
             taskArn = job?.getContainer()?.getTaskArn()
         return result
+    }
+
+    protected checkIfUnscheduled(JobDetail job) {
+        if( job ) {
+            final reason = errReason(job)
+            if( reason.contains(UNSCHEDULABLE_MSG) ) {
+                log.warn("Unscheduled AWS Batch job ${jobId} (${task.lazyName()}) - $reason")
+                // If indicated in aws.batch config kill the job an produce a failure
+                if( executor.awsOptions.killUnscheduled ){
+                    log.warn(" Killing ${jobId}")
+                    kill()
+                    task.error = new ProcessException("Unscheduled AWS Batch job - $reason")
+                    status = TaskStatus.COMPLETED
+                }
+            }
+        }
     }
 
     protected String errReason(JobDetail job){
@@ -256,6 +276,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     @Override
     boolean checkIfCompleted() {
         assert jobId
+        if( isCompleted() ) {
+            //Task can be marked as completed before running by unschedulable reason. Return true
+            return true
+        }
         if( !isRunning() )
             return false
         final job = describeJob(jobId)

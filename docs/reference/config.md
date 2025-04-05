@@ -140,6 +140,11 @@ The following settings are available:
   :::
 : The AWS Batch Execution Role ARN that needs to be used to execute the Batch Job. This is mandatory when using AWS Fargate platform type. See [AWS documentation](https://docs.aws.amazon.com/batch/latest/userguide/execution-IAM-role.html) for more details.
 
+`aws.batch.killUnscheduled`
+: :::{versionadded} 25.03.0-edge
+:::
+: Kill and produce a failure when a job is pending and an unscheduled reason is detected (e.g `MISCONFIGURATION::JOB_RESOURCE_REQUIREMENT`) (default: `false`).
+
 `aws.batch.jobRole`
 : The AWS Batch Job Role ARN that needs to be used to execute the Batch Job.
 
