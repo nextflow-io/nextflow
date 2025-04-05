@@ -42,6 +42,8 @@ import nextflow.script.WorkflowMetadata
 import nextflow.util.CacheHelper
 import nextflow.util.PathNormalizer
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -208,7 +210,8 @@ class CidObserverTest extends Specification {
         Path.of('/path/to/work/12/3456789') | Path.of('storeDir')               | Path.of('./relative')                         | "relative"
     }
 
-    def 'should return exception when relativize task output dirs' (){
+    @Unroll
+    def 'should return exception when relativize task output dirs'() {
         when:
             def config = [workflow:[data:[enabled: true, store:[location:'cid']]]]
             def store = new DefaultCidStore();
@@ -230,8 +233,8 @@ class CidObserverTest extends Specification {
         def observer = new CidObserver(session, store)
         observer.getTaskRelative(task, PATH)
         then:
-            def e = thrown(Exception)
-            e.message == "Cannot asses the relative path for output $PATH of ${task.name}".toString()
+            def e = thrown(IllegalArgumentException)
+            e.message == "Cannot access the relative path for output '$PATH' and task '${task.name}'".toString()
 
         where:
         WORK_DIR                            | STORE_DIR                         | PATH
@@ -239,7 +242,7 @@ class CidObserverTest extends Specification {
         Path.of('/path/to/work/12/3456789') | Path.of('/path/to/storeDir')      | Path.of('../path/to/storeDir/relative')
     }
 
-    def 'should relativise workflow output dirs' (){
+    def 'should relativize workflow output dirs' (){
         when:
             def config = [workflow:[data:[enabled: true, store:[location:'cid']]]]
             def store = new DefaultCidStore();
@@ -259,7 +262,8 @@ class CidObserverTest extends Specification {
         Path.of('/path/to/outDir')      | Path.of('./relative')                 | "relative"
     }
 
-    def 'should return exception when relativise workflow output dirs' (){
+    @Unroll
+    def 'should return exception when relativize workflow output dirs' (){
         when:
             def config = [workflow:[data:[enabled: true, store:[location:'cid']]]]
             def store = new DefaultCidStore();
@@ -270,15 +274,15 @@ class CidObserverTest extends Specification {
             def observer = new CidObserver(session, store)
             observer.getWorkflowRelative(PATH)
         then:
-            def e = thrown(Exception)
-            e.message == "Cannot asses the relative path for workflow output $PATH"
+            def e = thrown(IllegalArgumentException)
+            e.message == "Cannot access relative path for workflow output '$PATH'"
         where:
         OUTPUT_DIR                      | PATH                                  | EXPECTED
         Path.of('/path/to/outDir')      | Path.of('/another/path/')             | "relative"
         Path.of('/path/to/outDir')      | Path.of('../relative')                | "relative"
     }
 
-    def 'should save workflow output' (){
+    def 'should save workflow output'() {
         given:
         def folder = Files.createTempDirectory('test')
         def config = [workflow:[data:[enabled: true, store:[location:folder.toString()]]]]

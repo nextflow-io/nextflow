@@ -28,14 +28,13 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.data.cid.model.Checksum
+import nextflow.data.cid.model.DataOutput
 import nextflow.data.cid.model.DataPath
 import nextflow.data.cid.model.Parameter
-import nextflow.data.cid.model.DataOutput
 import nextflow.data.cid.model.TaskOutputs
 import nextflow.data.cid.model.Workflow
 import nextflow.data.cid.model.WorkflowOutputs
 import nextflow.data.cid.model.WorkflowRun
-import nextflow.data.cid.serde.CidEncoder
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.processor.TaskHandler
@@ -65,7 +64,6 @@ class CidObserver implements TraceObserver {
     private Session session
     private WorkflowOutputs workflowResults
     private Map<String,String> outputsStoreDirCid = new HashMap<String,String>(10)
-    private CidEncoder encoder = new CidEncoder()
 
     CidObserver(Session session, CidStore store){
         this.session = session
@@ -179,7 +177,8 @@ class CidObserver implements TraceObserver {
         outputs.forEach { OutParam key, Object value ->
             if (key instanceof FileOutParam) {
                 outputParams.add( new Parameter( key.class.simpleName, key.name, manageFileOutParams(value, task) ) )
-            } else {
+            }
+            else {
                 if( value instanceof Path )
                     outputParams.add( new Parameter( key.class.simpleName, key.name, normalizer.normalizePath( value as Path ) ) )
                 else if ( value instanceof CharSequence )
@@ -191,7 +190,7 @@ class CidObserver implements TraceObserver {
         return outputParams
     }
 
-    private Object manageFileOutParams( Object value, TaskRun task) {
+    private Object manageFileOutParams(Object value, TaskRun task) {
         if (value instanceof Path) {
             return asUriString(storeTaskOutput(task, (Path) value))
         }
@@ -202,6 +201,11 @@ class CidObserver implements TraceObserver {
             }
             return files
         }
+        // unexpected task output
+        final msg = value!=null
+            ? "Unexepected output [${value.getClass().getName()}] '${value}' for task '${task.name}'"
+            : "Unexpected output null for task '${task.name}'"
+        throw new IllegalArgumentException(msg)
     }
 
     protected String storeTaskRun(TaskRun task, PathNormalizer normalizer) {
@@ -251,7 +255,7 @@ class CidObserver implements TraceObserver {
             store.save(key, value)
             return key
         } catch (Throwable e) {
-            log.warn("Exception storing CID output $path for task ${task.name}. ${e.getLocalizedMessage()}")
+            log.warn("Unexpected error storing CID output '${path.toUriString()}' for task '${task.name}'", e)
             return path.toUriString()
         }
     }
@@ -269,35 +273,36 @@ class CidObserver implements TraceObserver {
     protected String getTaskRelative(TaskRun task, Path path){
         if (path.isAbsolute()) {
             final rel = getTaskRelative0(task, path)
-            if (rel) return rel
-            throw new Exception("Cannot asses the relative path for output $path of ${task.name}")
-        } else {
-            //Check if contains workdir or storeDir
-            final rel = getTaskRelative0(task, path.toAbsolutePath())
-            if (rel) return rel
-            if (path.normalize().getName(0).toString() == "..")
-                throw new Exception("Cannot asses the relative path for output $path of ${task.name}" )
-            return path.normalize().toString()
+            if (rel)
+                return rel
+            throw new IllegalArgumentException("Cannot access the relative path for output '${path.toUriString()}' and task '${task.name}'")
         }
+        //Check if contains workdir or storeDir
+        final rel = getTaskRelative0(task, path.toAbsolutePath())
+        if (rel) return rel
+        if (path.normalize().getName(0).toString() == "..")
+            throw new IllegalArgumentException("Cannot access the relative path for output '${path.toUriString()}' and task '${task.name}'" )
+        return path.normalize().toString()
     }
 
     private String getTaskRelative0(TaskRun task, Path path){
         final workDirAbsolute = task.workDir.toAbsolutePath()
-            if (path.startsWith(workDirAbsolute)) {
-                return workDirAbsolute.relativize(path).toString()
-            }
-            //If task output is not in the workDir check if output is stored in the task's storeDir
-            final storeDir = task.getConfig().getStoreDir().toAbsolutePath()
-            if( storeDir && path.startsWith(storeDir)) {
-                final rel = storeDir.relativize(path)
-                //If output stored in storeDir, keep the path in case it is used as workflow output
-                this.outputsStoreDirCid.put(path.toString(), asUriString(task.hash.toString(),rel.toString()))
-                return rel
-            }
+        if (path.startsWith(workDirAbsolute)) {
+            return workDirAbsolute.relativize(path).toString()
+        }
+        //If task output is not in the workDir check if output is stored in the task's storeDir
+        final storeDir = task.getConfig().getStoreDir().toAbsolutePath()
+        if( storeDir && path.startsWith(storeDir) ) {
+            final rel = storeDir.relativize(path)
+            //If output stored in storeDir, keep the path in case it is used as workflow output
+            this.outputsStoreDirCid.put(path.toString(), asUriString(task.hash.toString(),rel.toString()))
+            return rel
+        }
+        return null
     }
 
     protected BasicFileAttributes readAttributes(Path path) {
-        Files.readAttributes(path, BasicFileAttributes)
+        return Files.readAttributes(path, BasicFileAttributes)
     }
 
     @Override
@@ -326,7 +331,7 @@ class CidObserver implements TraceObserver {
                 annotations)
             store.save(key, value)
         } catch (Throwable e) {
-            log.warn("Exception storing published file $destination for workflow ${executionHash}.", e)
+            log.warn("Unexpected error storing published file '${destination.toUriString()}' for workflow '${executionHash}'", e)
         }
     }
 
@@ -383,18 +388,16 @@ class CidObserver implements TraceObserver {
         if (path.isAbsolute()) {
             if (path.startsWith(outputDirAbs)) {
                 return outputDirAbs.relativize(path).toString()
-            } else {
-                throw new Exception("Cannot asses the relative path for workflow output $path")
             }
-        } else {
-            final pathAbs = path.toAbsolutePath()
-            if (pathAbs.startsWith(outputDirAbs)) {
-                return outputDirAbs.relativize(pathAbs).toString()
-            }
-            if (path.normalize().getName(0).toString() == "..")
-                throw new Exception("Cannot asses the relative path for workflow output $path")
-            return path.normalize().toString()
+            throw new IllegalArgumentException("Cannot access relative path for workflow output '${path.toUriString()}'")
         }
+        final pathAbs = path.toAbsolutePath()
+        if (pathAbs.startsWith(outputDirAbs)) {
+            return outputDirAbs.relativize(pathAbs).toString()
+        }
+        if (path.normalize().getName(0).toString() == "..")
+            throw new IllegalArgumentException("Cannot access relative path for workflow output '${path.toUriString()}'")
+        return path.normalize().toString()
     }
 
     protected List<Parameter> manageInputs(Map<InParam, Object> inputs, PathNormalizer normalizer) {
