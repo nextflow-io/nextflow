@@ -89,7 +89,11 @@ class PluginUpdater extends UpdateManager {
             result.add(new LocalUpdateRepository('downloaded', local))
         }
         else {
-            result.add(new DefaultUpdateRepository('nextflow.io', remote))
+            def remoteRepo = remote.path.endsWith('.json')
+                ? new DefaultUpdateRepository('nextflow.io', remote)
+                : new HttpPluginRepository('registry', remote.toURI())
+
+            result.add(remoteRepo)
             result.addAll(customRepos())
         }
         return result
@@ -136,6 +140,18 @@ class PluginUpdater extends UpdateManager {
         // create the update repository instance
         final fileName = uri.tokenize('/')[-1]
         return new DefaultUpdateRepository('uri', new URL(uri), fileName)
+    }
+
+    /**
+     * Prefetch metadata for plugins. This gives an opportunity for certain
+     * repository types to perform some data-loading optimisations.
+     */
+    void prefetchMetadata(List<PluginSpec> plugins) {
+        for( def repo : this.@repositories ) {
+            if( repo instanceof PrefetchUpdateRepository ) {
+                repo.prefetch(plugins)
+            }
+        }
     }
 
     /**
