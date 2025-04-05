@@ -25,6 +25,7 @@ import groovy.console.ui.Console
 import groovy.console.ui.OutputTransforms
 import groovy.transform.ThreadInterrupt
 import groovy.util.logging.Slf4j
+import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.cli.CliOptions
@@ -98,7 +99,9 @@ class Nextflow extends Console {
     void newScript(ClassLoader parent, Binding binding) {
         assert parent
 
-        def parser = new ScriptLoaderV1(parent)
+        if( NF.getSyntaxParserVersion() != 'v1' )
+            log.warn "The Nextflow console only supports the v1 syntax parser -- ignoring NXF_SYNTAX_PARSER setting"
+        final parser = new ScriptLoaderV1(parent)
         config = parser.getConfig()
 
         if (threadInterrupt)
