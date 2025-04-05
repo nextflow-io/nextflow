@@ -22,6 +22,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.extension.FilesEx
 /**
@@ -30,6 +31,7 @@ import nextflow.extension.FilesEx
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
 @Slf4j
+@CompileStatic
 class CidHistoryFile implements CidHistoryLog {
 
     Path path
@@ -43,7 +45,7 @@ class CidHistoryFile implements CidHistoryLog {
 
         withFileLock {
             def timestamp = date ?: new Date()
-            log.trace("Writting record for $key in CID history file $this")
+            log.trace("Writting record for $key in CID history file ${FilesEx.toUriString(this.path)}")
             path << new CidHistoryRecord(timestamp, name, key, runCid).toString() << '\n'
         }
     }
@@ -55,7 +57,7 @@ class CidHistoryFile implements CidHistoryLog {
             withFileLock { updateRunCid0(sessionId, runCid) }
         }
         catch (Throwable e) {
-            log.warn "Can't update CID history file: $this", e.message
+            log.warn "Can't update CID history file: ${FilesEx.toUriString(this.path)}", e.message
         }
     }
 
@@ -65,7 +67,7 @@ class CidHistoryFile implements CidHistoryLog {
             withFileLock { this.path.eachLine {list.add(CidHistoryRecord.parse(it)) } }
         }
         catch (Throwable e) {
-            log.warn "Can't read records from CID history file: $this", e.message
+            log.warn "Can't read records from CID history file: ${FilesEx.toUriString(this.path)}", e.message
         }
         return list
     }
@@ -80,7 +82,7 @@ class CidHistoryFile implements CidHistoryLog {
                 return current
             }
         }
-        log.warn("Can't find session $id in CID history file $this")
+        log.warn("Can't find session $id in CID history file ${FilesEx.toUriString(this.path)}")
         return null
     }
 
@@ -89,11 +91,11 @@ class CidHistoryFile implements CidHistoryLog {
         assert id
         def newHistory = new StringBuilder()
 
-        this.path.readLines().each { line ->
+        for( String line : this.path.readLines()) {
             try {
                 def current = line ? CidHistoryRecord.parse(line) : null
                 if (current.sessionId == id) {
-                    log.trace("Updating record for $id in CID history file $this")
+                    log.trace("Updating record for $id in CID history file ${FilesEx.toUriString(this.path)}")
                     final newRecord = new CidHistoryRecord(current.timestamp, current.runName, current.sessionId, runCid)
                     newHistory << newRecord.toString() << '\n'
                 } else {
@@ -126,11 +128,11 @@ class CidHistoryFile implements CidHistoryLog {
         try {
             fos = FileChannel.open(file, StandardOpenOption.WRITE, StandardOpenOption.CREATE)
         } catch (UnsupportedOperationException e){
-            log.warn("File System Provider for ${this.path} do not support file locking. Continuing without lock...")
+            log.warn("File System Provider for ${this.path} do not support file locking - Attemting without locking", e)
             return action.call()
         }
         if (!fos){
-            throw new IllegalStateException("Can't create a file channel for ${this.path.toAbsolutePath()}")
+            throw new IllegalStateException("Can't create a file channel for ${FilesEx.toUriString(this.path)}")
         }
         try {
             Throwable error
@@ -143,7 +145,7 @@ class CidHistoryFile implements CidHistoryLog {
                     if (System.currentTimeMillis() - ts < 1_000)
                         sleep rnd.nextInt(75)
                     else {
-                        error = new IllegalStateException("Can't lock file: ${this.path.toAbsolutePath()} -- Nextflow needs to run in a file system that supports file locks")
+                        error = new IllegalStateException("Can't lock file: ${FilesEx.toUriString(this.path)} - Nextflow needs to run in a file system that supports file locks")
                         break
                     }
                 }
