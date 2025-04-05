@@ -15,31 +15,19 @@
  */
 package nextflow.script.ast;
 
-import org.codehaus.groovy.ast.ClassNode;
-import org.codehaus.groovy.ast.GroovyCodeVisitor;
+import java.util.List;
 
-public interface ScriptVisitor extends GroovyCodeVisitor {
+import org.codehaus.groovy.ast.ASTNode;
 
-    void visit(ScriptNode node);
+/**
+ * A workflow params definition.
+ *
+ * @author Ben Sherman <bentshermann@gmail.com>
+ */
+public class ParamBlockNode extends ASTNode {
+    public final List<ParamNode> declarations;
 
-    void visitFeatureFlag(FeatureFlagNode node);
-
-    void visitInclude(IncludeNode node);
-
-    void visitParams(ParamBlockNode node);
-
-    void visitParam(ParamNode node);
-
-    void visitParamV1(ParamNodeV1 node);
-
-    void visitWorkflow(WorkflowNode node);
-
-    void visitProcess(ProcessNode node);
-
-    void visitFunction(FunctionNode node);
-
-    void visitEnum(ClassNode node);
-
-    void visitOutput(OutputNode node);
-
+    public ParamBlockNode(List<ParamNode> declarations) {
+        this.declarations = declarations;
+    }
 }

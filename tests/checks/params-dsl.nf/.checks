@@ -1,0 +1,12 @@
+
+echo "Test successful run"
+$NXF_RUN --input ./data | tee stdout
+
+echo "Test missing required param"
+$NXF_RUN | tee stdout
+
+echo "Test overwrite script param from config profile"
+$NXF_RUN -c ../../params-dsl.config -profile test | tee stdout
+
+echo "Test invalid param"
+$NXF_RUN --foobar | tee stdout

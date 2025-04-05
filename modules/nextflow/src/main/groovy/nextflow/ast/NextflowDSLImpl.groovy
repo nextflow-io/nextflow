@@ -158,10 +158,12 @@ class NextflowDSLImpl implements ASTTransformation {
             final preCondition = methodCall.objectExpression?.getText() == 'this'
             final methodName = methodCall.getMethodAsString()
 
-            /*
-             * intercept the *process* method in order to transform the script closure
-             */
-            if( methodName == 'process' && preCondition ) {
+            if( methodName == 'params' && preCondition ) {
+                convertParamsDef(methodCall,sourceUnit)
+                super.visitMethodCallExpression(methodCall)
+            }
+
+            else if( methodName == 'process' && preCondition ) {
 
                 // clear block label
                 bodyLabel = null
@@ -277,6 +279,78 @@ class NextflowDSLImpl implements ASTTransformation {
             else if( call.objectExpression instanceof MethodCallExpression ) {
                 convertIncludeDef((MethodCallExpression)call.objectExpression)
             }
+        }
+
+        /**
+         * Transform parameter declarations in the workflow params definition:
+         *
+         *   params {
+         *     foo { ... }
+         *   }
+         *
+         * becomes:
+         *
+         *   params {
+         *     declare('foo') { ... }
+         *   }
+         *
+         * @param methodCall
+         * @param unit
+         */
+        protected void convertParamsDef(MethodCallExpression methodCall, SourceUnit unit) {
+            log.trace "Convert 'params' ${methodCall.arguments}"
+
+            assert methodCall.arguments instanceof ArgumentListExpression
+            final arguments = (ArgumentListExpression)methodCall.arguments
+
+            if( arguments.size() != 1 || arguments[0] !instanceof ClosureExpression ) {
+                syntaxError(methodCall, "Invalid params definition")
+                return
+            }
+
+            final closure = (ClosureExpression)arguments[0]
+            final block = (BlockStatement)closure.code
+            for( final stmt : block.statements ) {
+                if( stmt !instanceof ExpressionStatement ) {
+                    syntaxError(stmt, "Invalid parameter declaration")
+                    return
+                }
+
+                final stmtX = (ExpressionStatement)stmt
+                if( !convertParamBlock(stmtX) && !convertParamAssign(stmtX) ) {
+                    syntaxError(stmt, "Invalid parameter declaration")
+                    return
+                }
+            }
+        }
+
+        protected boolean convertParamBlock(ExpressionStatement stmtX) {
+            if( stmtX.expression !instanceof MethodCallExpression )
+                return false
+            final call = (MethodCallExpression)stmtX.expression
+            if( call.arguments !instanceof ArgumentListExpression )
+                return false
+            final callArgs = (ArgumentListExpression)call.arguments
+            if( callArgs.size() != 1 || callArgs[0] !instanceof ClosureExpression )
+                return false
+            final name = call.method
+            final body = (ClosureExpression)callArgs[0]
+            stmtX.expression = callThisX('declare', args(name, body))
+            return true
+        }
+
+        protected boolean convertParamAssign(ExpressionStatement stmtX) {
+            if( stmtX.expression !instanceof BinaryExpression )
+                return false
+            final binX = (BinaryExpression)stmtX.expression
+            if( binX.leftExpression !instanceof VariableExpression || binX.operation.type != Types.ASSIGN )
+                return false
+            final target = (VariableExpression)binX.leftExpression
+            final defaultValue = binX.rightExpression
+            final call = callThisX('defaultValue', args(defaultValue))
+            final body = block(new VariableScope(), List.of(stmt(call)))
+            stmtX.expression = callThisX('declare', args(constX(target.name), closureX(body)))
+            return true
         }
 
         /*

@@ -13,22 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.script.ast;
-
-import org.codehaus.groovy.ast.ASTNode;
-import org.codehaus.groovy.ast.stmt.Statement;
+package nextflow.script.dsl;
 
 /**
- * A parameter declaration.
+ * DSL scope for a parameter declaration.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-public class ParamNode extends ASTNode {
-    public final String name;
-    public Statement body;
+public interface ParamDsl extends DslScope {
 
-    public ParamNode(String name, Statement body) {
-        this.name = name;
-        this.body = body;
-    }
+    @Description("""
+        The default value to use if the parameter is not specified.
+    """)
+    void defaultValue(Object value);
+
+    @Description("""
+        A natural-language description of the parameter.
+    """)
+    void description(String value);
+
 }

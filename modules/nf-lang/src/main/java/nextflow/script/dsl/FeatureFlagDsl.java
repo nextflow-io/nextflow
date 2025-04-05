@@ -49,6 +49,12 @@ public class FeatureFlagDsl {
     """)
     public boolean previewOutput;
 
+    @FeatureFlag("nextflow.preview.params")
+    @Description("""
+        When `true`, enables the use of the [workflow params definition](https://nextflow.io/docs/latest/workflow.html#workflow-params-def).
+    """)
+    public boolean previewParams;
+
     @FeatureFlag("nextflow.preview.recursion")
     @Description("""
         When `true`, enables the use of [process and workflow recursion](https://github.com/nextflow-io/nextflow/discussions/2521).

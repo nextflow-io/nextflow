@@ -23,7 +23,8 @@ import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.IncludeModuleNode;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.OutputNode;
-import nextflow.script.ast.ParamNode;
+import nextflow.script.ast.ParamNodeV1;
+import nextflow.script.ast.ParamBlockNode;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
@@ -79,7 +80,9 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             visitFeatureFlag(featureFlag);
         for( var includeNode : scriptNode.getIncludes() )
             visitInclude(includeNode);
-        visitParams(scriptNode.getParams());
+        if( scriptNode.getParams() != null )
+            visitParams(scriptNode.getParams());
+        visitParamsV1(scriptNode.getParamsV1());
         var entry = scriptNode.getEntry();
         if( entry != null ) {
             if( entry.getLineNumber() != -1 )
@@ -176,7 +179,33 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.appendNewLine();
     }
 
-    protected void visitParams(List<ParamNode> nodes) {
+    @Override
+    public void visitParams(ParamBlockNode node) {
+        fmt.appendLeadingComments(node);
+        fmt.append("params {\n");
+        fmt.incIndent();
+        node.declarations.forEach((param) -> {
+            fmt.appendLeadingComments(param);
+            fmt.appendIndent();
+            fmt.append(param.name);
+            fmt.append(" {\n");
+            fmt.incIndent();
+            asBlockStatements(param.body).forEach((stmt) -> {
+                var call = asMethodCallX(stmt);
+                if( call == null )
+                    return;
+                fmt.appendLeadingComments(stmt);
+                fmt.visitDirective(call);
+            });
+            fmt.decIndent();
+            fmt.appendIndent();
+            fmt.append("}\n");
+        });
+        fmt.decIndent();
+        fmt.append("}\n");
+    }
+
+    protected void visitParamsV1(List<ParamNodeV1> nodes) {
         var alignmentWidth = options.harshilAlignment()
             ? nodes.stream().map(this::getParamWidth).max(Integer::compare).orElse(0)
             : 0;
@@ -195,7 +224,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         }
     }
 
-    protected int getParamWidth(ParamNode node) {
+    protected int getParamWidth(ParamNodeV1 node) {
         var target = (PropertyExpression) node.target;
         var name = target.getPropertyAsString();
         return name != null ? name.length() : 0;

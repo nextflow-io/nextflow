@@ -30,8 +30,10 @@ public abstract class ScriptVisitorSupport extends ClassCodeVisitorSupport imple
             visitFeatureFlag(featureFlag);
         for( var includeNode : script.getIncludes() )
             visitInclude(includeNode);
-        for( var paramNode : script.getParams() )
-            visitParam(paramNode);
+        if( script.getParams() != null )
+            visitParams(script.getParams());
+        for( var paramNode : script.getParamsV1() )
+            visitParamV1(paramNode);
         for( var workflowNode : script.getWorkflows() )
             visitWorkflow(workflowNode);
         for( var processNode : script.getProcesses() )
@@ -56,7 +58,18 @@ public abstract class ScriptVisitorSupport extends ClassCodeVisitorSupport imple
     }
 
     @Override
+    public void visitParams(ParamBlockNode node) {
+        for( var param : node.declarations )
+            visitParam(param);
+    }
+
+    @Override
     public void visitParam(ParamNode node) {
+        visit(node.body);
+    }
+
+    @Override
+    public void visitParamV1(ParamNodeV1 node) {
         visit(node.value);
     }
 

@@ -36,6 +36,8 @@ import nextflow.script.ast.IncompleteNode;
 import nextflow.script.ast.InvalidDeclaration;
 import nextflow.script.ast.OutputNode;
 import nextflow.script.ast.ParamNode;
+import nextflow.script.ast.ParamNodeV1;
+import nextflow.script.ast.ParamBlockNode;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.WorkflowNode;
@@ -284,10 +286,22 @@ public class ScriptAstBuilder {
             moduleNode.setOutput(node);
         }
 
-        else if( ctx instanceof ParamDeclAltContext pac ) {
-            var node = paramDeclaration(pac.paramDeclaration());
+        else if( ctx instanceof ParamsDefAltContext pac ) {
+            var node = paramsDef(pac.paramsDef());
             saveLeadingComments(node, ctx);
-            moduleNode.addParam(node);
+            if( moduleNode.getParams() != null )
+                collectSyntaxError(new SyntaxException("Params block defined more than once", node));
+            if( !moduleNode.getParamsV1().isEmpty() )
+                collectSyntaxError(new SyntaxException("Params block cannot be mixed with legacy parameter declarations", node));
+            moduleNode.setParams(node);
+        }
+
+        else if( ctx instanceof ParamDeclV1AltContext pac ) {
+            var node = paramDeclarationV1(pac.paramDeclarationV1());
+            saveLeadingComments(node, ctx);
+            if( moduleNode.getParams() != null )
+                collectSyntaxError(new SyntaxException("Params block cannot be mixed with legacy parameter declarations", node));
+            moduleNode.addParamV1(node);
         }
 
         else if( ctx instanceof ProcessDefAltContext pdac ) {
@@ -327,14 +341,48 @@ public class ScriptAstBuilder {
         return result;
     }
 
+    private ParamBlockNode paramsDef(ParamsDefContext ctx) {
+        var declarations = paramsBody(ctx.paramsBody());
+        return ast( new ParamBlockNode(declarations), ctx );
+    }
+
+    private List<ParamNode> paramsBody(ParamsBodyContext ctx) {
+        if( ctx == null )
+            return Collections.emptyList();
+        return ctx.paramDeclaration().stream()
+            .map(this::paramDeclaration)
+            .filter(param -> param != null)
+            .toList();
+    }
+
     private ParamNode paramDeclaration(ParamDeclarationContext ctx) {
+        if( ctx.statement() != null ) {
+            collectSyntaxError(new SyntaxException("Invalid parameter declaration", statement(ctx.statement())));
+            return null;
+        }
+        var name = identifier(ctx.identifier());
+        var body = ctx.ASSIGN() != null
+            ? paramBody(expression(ctx.expression()))
+            : blockStatements(ctx.blockStatements());
+        var result = new ParamNode(name, body);
+        checkInvalidVarName(name, result);
+        return result;
+    }
+
+    private BlockStatement paramBody(Expression defaultValue) {
+        var call = ast( callThisX("defaultValue", args(defaultValue)), defaultValue );
+        var statement = ast( stmt(call), defaultValue );
+        return ast( block(new VariableScope(), List.of(statement)), defaultValue );
+    }
+
+    private ParamNodeV1 paramDeclarationV1(ParamDeclarationV1Context ctx) {
         Expression target = ast( varX("params"), ctx.PARAMS() );
         for( var ident : ctx.identifier() ) {
             var name = ast( constX(identifier(ident)), ident );
             target = ast( propX(target, name), target, name );
         }
         var value = expression(ctx.expression());
-        return ast( new ParamNode(target, value), ctx );
+        return ast( new ParamNodeV1(target, value), ctx );
     }
 
     private IncludeNode includeDeclaration(IncludeDeclarationContext ctx) {
