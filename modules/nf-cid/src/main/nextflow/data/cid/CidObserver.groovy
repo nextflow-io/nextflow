@@ -104,7 +104,7 @@ class CidObserver implements TraceObserver {
     }
 
     protected List<DataPath> collectScriptDataPaths() {
-        final allScripts = ScriptMeta.allScriptNames()
+        final allScripts = allScriptFiles()
         final result = new ArrayList<DataPath>(allScripts.size()+1)
         final normalizer = new PathNormalizer(session.workflowMetadata)
         // the main script
@@ -114,10 +114,10 @@ class CidObserver implements TraceObserver {
         ) )
 
         // all other scripts
-        for (Path p: allScriptFiles()) {
-            if( p==null || p == session.workflowMetadata.scriptFile )
+        for (Path it: allScripts) {
+            if( it==null || it == session.workflowMetadata.scriptFile )
                 continue
-            final dataPath = new DataPath(normalizer.normalizePath(p.normalize()), Checksum.ofNextflow(p.text))
+            final dataPath = new DataPath(normalizer.normalizePath(it.normalize()), Checksum.ofNextflow(it.text))
             result.add(dataPath)
         }
         return result
