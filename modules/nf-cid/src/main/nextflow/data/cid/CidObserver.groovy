@@ -99,29 +99,38 @@ class CidObserver implements TraceObserver {
         }
     }
 
-    protected String storeWorkflowRun() {
+    protected Collection<Path> allScriptFiles() {
+        return ScriptMeta.allScriptNames().values()
+    }
+
+    protected List<DataPath> collectScriptDataPaths() {
+        final allScripts = ScriptMeta.allScriptNames()
+        final result = new ArrayList<DataPath>(allScripts.size()+1)
         final normalizer = new PathNormalizer(session.workflowMetadata)
-        final mainScript = new DataPath(
+        // the main script
+        result.add( new DataPath(
             normalizer.normalizePath(session.workflowMetadata.scriptFile.normalize()),
             Checksum.of(session.workflowMetadata.scriptId, "nextflow", CacheHelper.HashMode.DEFAULT())
-        )
-        List<DataPath> otherScripts  = new LinkedList<>()
-        for (Path p: ScriptMeta.allScriptNames().values()) {
-            if (p && p != session.workflowMetadata.scriptFile) {
-                otherScripts.add(
-                    new DataPath(
-                        normalizer.normalizePath(p.normalize()),
-                        Checksum.ofNextflow(p.text)
-                    )
-                )
-            }
+        ) )
+
+        // all other scripts
+        for (Path p: allScriptFiles()) {
+            if( p==null || p == session.workflowMetadata.scriptFile )
+                continue
+            final dataPath = new DataPath(normalizer.normalizePath(p.normalize()), Checksum.ofNextflow(p.text))
+            result.add(dataPath)
         }
+        return result
+    }
+    protected String storeWorkflowRun() {
+        final normalizer = new PathNormalizer(session.workflowMetadata)
+        // create the workflow object holding script files and repo tracking info
         final workflow = new Workflow(
-            mainScript,
-            otherScripts,
+            collectScriptDataPaths(),
             session.workflowMetadata.repository,
             session.workflowMetadata.commitId
         )
+        // create the workflow run main object
         final value = new WorkflowRun(
             workflow,
             session.uniqueId.toString(),

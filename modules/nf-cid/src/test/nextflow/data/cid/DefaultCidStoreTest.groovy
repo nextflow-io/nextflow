@@ -106,7 +106,7 @@ class DefaultCidStoreTest extends Specification {
         def uniqueId = UUID.randomUUID()
         def time = Instant.ofEpochMilli(1234567)
         def mainScript = new DataPath("file://path/to/main.nf", new Checksum("78910", "nextflow", "standard"))
-        def workflow = new Workflow(mainScript, [],"https://nextflow.io/nf-test/", "123456" )
+        def workflow = new Workflow([mainScript],"https://nextflow.io/nf-test/", "123456" )
         def key = "testKey"
         def value1 = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [ new Parameter("String", "param1", "value1"), new Parameter("String", "param2", "value2")] )
         def key2 = "testKey2"

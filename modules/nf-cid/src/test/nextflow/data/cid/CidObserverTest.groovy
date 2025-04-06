@@ -26,8 +26,8 @@ import java.nio.file.attribute.BasicFileAttributes
 import com.google.common.hash.HashCode
 import nextflow.Session
 import nextflow.data.cid.model.Checksum
-import nextflow.data.cid.model.DataPath
 import nextflow.data.cid.model.DataOutput
+import nextflow.data.cid.model.DataPath
 import nextflow.data.cid.model.Workflow
 import nextflow.data.cid.model.WorkflowOutputs
 import nextflow.data.cid.model.WorkflowRun
@@ -38,17 +38,68 @@ import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.script.ScriptBinding
+import nextflow.script.ScriptMeta
 import nextflow.script.WorkflowMetadata
 import nextflow.util.CacheHelper
 import nextflow.util.PathNormalizer
 import spock.lang.Specification
 import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class CidObserverTest extends Specification {
+
+    def 'should collect script files' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def config = [workflow:[data:[enabled: true, store:[location:folder.toString()]]]]
+        def store = new DefaultCidStore();
+        def uniqueId = UUID.randomUUID()
+        def scriptFile = folder.resolve("main.nf")
+        def module1 = folder.resolve("script1.nf"); module1.text = 'hola'
+        def module2 = folder.resolve("script2.nf"); module2.text = 'world'
+        and:
+
+        def metadata = Mock(WorkflowMetadata){
+            getRepository() >> "https://nextflow.io/nf-test/"
+            getCommitId() >> "123456"
+            getScriptId() >> "78910"
+            getScriptFile() >> scriptFile
+            getProjectDir() >> folder.resolve("projectDir")
+            getWorkDir() >> folder.resolve("workDir")
+        }
+        def session = Mock(Session) {
+            getConfig() >> config
+            getUniqueId() >> uniqueId
+            getRunName() >> "test_run"
+            getWorkflowMetadata() >> metadata
+            getParams() >> new ScriptBinding.ParamsMap()
+        }
+        store.open(DataConfig.create(session))
+        def observer = Spy(new CidObserver(session, store))
+
+        when:
+        def files = observer.collectScriptDataPaths()
+        then:
+        observer.allScriptFiles() >> [ scriptFile, module1, module2 ]
+        and:
+        files.size() == 3
+        and:
+        files[0].path == "file://${scriptFile.toString()}"
+        files[0].checksum == new Checksum("78910", "nextflow", "standard")
+        and:
+        files[1].path == "file://$module1"
+        files[1].checksum == Checksum.ofNextflow(module1.text)
+        and:
+        files[2].path == "file://$module2"
+        files[2].checksum == Checksum.ofNextflow(module2.text)
+
+        cleanup:
+        ScriptMeta.reset()
+        folder?.deleteDir()
+    }
 
     def 'should save workflow' (){
         given:
@@ -75,7 +126,7 @@ class CidObserverTest extends Specification {
         store.open(DataConfig.create(session))
         def observer = new CidObserver(session, store)
         def mainScript = new DataPath("file://${scriptFile.toString()}", new Checksum("78910", "nextflow", "standard"))
-        def workflow = new Workflow(mainScript, [],"https://nextflow.io/nf-test/", "123456" )
+        def workflow = new Workflow([mainScript],"https://nextflow.io/nf-test/", "123456" )
         def workflowRun = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [])
         when:
         observer.onFlowCreate(session)
