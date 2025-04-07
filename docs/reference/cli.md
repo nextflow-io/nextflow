@@ -739,8 +739,8 @@ The `lint` command parses and analyzes the given Nextflow scripts and config fil
 `-exclude`
 : File pattern to exclude from linting. Can be specified multiple times (default: `.git, .nf-test, work`).
 
-`-output-format`
-: Output format for lint results. Options: `full`, `extended`, `concise`, `json` (default: `full`).
+`-o, -output`
+: Output format for lint results: `full`, `extended`, `concise`, `json` (default: `full`).
 
 **Examples**
 

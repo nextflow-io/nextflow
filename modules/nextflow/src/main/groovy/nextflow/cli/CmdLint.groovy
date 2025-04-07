@@ -58,8 +58,8 @@ class CmdLint extends CmdBase {
     List<String> excludePatterns = ['.git', '.nf-test', 'work']
 
     @Parameter(
-        names = ['-output-format'],
-        description = 'Output format for lint results. Options: full, extended, concise, json',
+        names = ['-o', '-output'],
+        description = 'Output format for lint results: full, extended, concise, json',
         validateWith = OutputFormatValidator
     )
     String outputFormat = 'full'
