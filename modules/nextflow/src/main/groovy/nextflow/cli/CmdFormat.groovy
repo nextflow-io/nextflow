@@ -77,7 +77,7 @@ class CmdFormat extends CmdBase {
     @Override
     void run() {
         if( !args )
-            throw new AbortOperationException("Error: No input files specified")
+            throw new AbortOperationException("Error: No input files were specified")
 
         if( spaces && tabs )
             throw new AbortOperationException("Error: Cannot specify both `-spaces` and `-tabs`")
@@ -99,17 +99,8 @@ class CmdFormat extends CmdBase {
                 (path) -> format(path.toFile()))
         }
 
-        final emojis = [
-            "🪣 🫧",
-            "🧽 ✨",
-            "✍️ 💫",
-            "🪄 📄",
-            "🧼 🎉",
-            "🧹 💨"
-        ]
-        final rnd = new Random()
         final term = ansi().cursorUp(1).eraseLine()
-        term.bold().a("Nextflow code formatting complete! ${emojis[rnd.nextInt(emojis.size())]}").reset().newline()
+        term.bold().a("Nextflow code formatting complete!").reset().newline()
         if( filesChanged > 0 )
             term.fg(Ansi.Color.GREEN).a(" ${filesChanged} file${filesChanged==1 ? '':'s'} reformatted").newline()
         if( filesUnchanged > 0 )

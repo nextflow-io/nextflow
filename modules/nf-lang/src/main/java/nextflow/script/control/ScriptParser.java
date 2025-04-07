@@ -46,19 +46,29 @@ public class ScriptParser {
 
     public SourceUnit parse(File file) {
         var source = getSource(file);
-        compiler.addSource(source);
-        compiler.compile(source);
+        parse0(source);
         return source;
     }
 
     public SourceUnit parse(String name, String contents) {
         var source = getSource(name, contents);
-        compiler.addSource(source);
-        compiler.compile(source);
+        parse0(source);
         return source;
     }
 
+    private void parse0(SourceUnit source) {
+        var uri = source.getSource().getURI();
+        if( compiler.getSource(uri) != null )
+            return;
+        compiler.addSource(source);
+        compiler.compile(source);
+    }
+
     public void analyze() {
+        for( var source : compiler.getSources().values() ) {
+            new ModuleResolver(compiler()).resolve(source, (uri) -> getSource(new File(uri)));
+        }
+
         for( var source : compiler.getSources().values() ) {
             var includeResolver = new ResolveIncludeVisitor(source, compiler);
             includeResolver.visit();

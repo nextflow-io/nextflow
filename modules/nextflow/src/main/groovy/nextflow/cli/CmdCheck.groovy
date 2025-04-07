@@ -39,27 +39,27 @@ import org.codehaus.groovy.syntax.SyntaxException
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 /**
- * CLI sub-command LINT
+ * CLI sub-command CHECK
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Check Nextflow scripts and config files for errors")
-class CmdLint extends CmdBase {
+class CmdCheck extends CmdBase {
 
-    @Parameter(description = 'List of paths to lint')
+    @Parameter(description = 'List of paths to check')
     List<String> args = []
 
     @Parameter(
         names = ['-exclude'],
-        description = 'File pattern to exclude from linting (can be specified multiple times)'
+        description = 'File pattern to exclude from error checking (can be specified multiple times)'
     )
     List<String> excludePatterns = ['.git', '.nf-test', 'work']
 
     @Parameter(
-        names = ['-output-format'],
-        description = 'Output format for lint results. Options: full, extended, concise, json',
+        names = ['-o', '-output'],
+        description = 'Output format for reporting errors: full, extended, concise, json',
         validateWith = OutputFormatValidator
     )
     String outputFormat = 'full'
@@ -81,15 +81,15 @@ class CmdLint extends CmdBase {
 
     private ErrorListener errorListener
 
-    private LintSummary summary = new LintSummary()
+    private CheckSummary summary = new CheckSummary()
 
     @Override
-    String getName() { 'lint' }
+    String getName() { 'check' }
 
     @Override
     void run() {
         if( !args )
-            throw new AbortOperationException("Error: No input files specified")
+            throw new AbortOperationException("Error: No input files were specified")
 
         scriptParser = new ScriptParser()
         configParser = new ConfigParser()
@@ -99,6 +99,7 @@ class CmdLint extends CmdBase {
 
         errorListener.beforeAll()
 
+        // parse all files specified on the command line
         for( final arg : args ) {
             PathUtils.visitFiles(
                 Path.of(arg),
@@ -106,8 +107,11 @@ class CmdLint extends CmdBase {
                 (path) -> parse(path.toFile()))
         }
 
+        // analyze all files
         scriptParser.analyze()
         configParser.analyze()
+
+        // report errors
         checkErrors(scriptParser.compiler())
         checkErrors(configParser.compiler())
 
@@ -119,7 +123,7 @@ class CmdLint extends CmdBase {
     }
 
     private void parse(File file) {
-        log.debug "Linting file ${file}"
+        log.debug "Checking file ${file}"
         errorListener.beforeFile(file)
 
         final name = file.getName()
@@ -164,7 +168,7 @@ class CmdLint extends CmdBase {
 }
 
 
-class LintSummary {
+class CheckSummary {
     int errors = 0
     int filesWithErrors = 0
     int filesWithoutErrors = 0
@@ -177,7 +181,7 @@ interface ErrorListener {
     void beforeErrors()
     void onError(SyntaxException error, String filename, SourceUnit source)
     void afterErrors()
-    void afterAll(LintSummary summary)
+    void afterAll(CheckSummary summary)
 }
 
 
@@ -329,21 +333,13 @@ class StdoutErrorListener implements ErrorListener {
     }
 
     @Override
-    void afterAll(LintSummary summary) {
-        final emojis = [
-            "🔍 📋",
-            "🕵🏻‍♂️ 🔎",
-            "🔬 👨🏻‍💻",
-            "📑 ☑️",
-            "🧾 ✔️"
-        ]
-        final rnd = new Random()
+    void afterAll(CheckSummary summary) {
         final term = ansi()
         term.cursorUp(1).eraseLine().cursorUp(1).eraseLine()
         // print extra newline if no code is being shown
         if( format == 'concise' )
             term.newline()
-        term.bold().a("Nextflow code checks complete! ${emojis[rnd.nextInt(emojis.size())]}").reset().newline()
+        term.bold().a("Nextflow error checking complete!").reset().newline()
         if( summary.filesWithErrors > 0 )
             term.fg(Ansi.Color.RED).a(" ❌ ${summary.filesWithErrors} file${summary.filesWithErrors==1 ? '' : 's'} had ${summary.errors} error${summary.errors==1 ? '' : 's'}").newline()
         if( summary.filesWithoutErrors > 0 )
@@ -388,7 +384,7 @@ class JsonErrorListener implements ErrorListener {
     }
 
     @Override
-    void afterAll(LintSummary summary) {
+    void afterAll(CheckSummary summary) {
         final result = [
             date: Instant.now().toString(),
             summary: summary,
