@@ -17,12 +17,12 @@
 
 package nextflow.container.resolver
 
-import java.time.Instant
+
+import java.time.OffsetDateTime
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
-
 /**
  * Model container usage metadata
  *
@@ -40,5 +40,5 @@ class ContainerMeta {
     String scanId
     Boolean cached
     Boolean freeze
-    Instant requestTime
+    OffsetDateTime requestTime
 }
