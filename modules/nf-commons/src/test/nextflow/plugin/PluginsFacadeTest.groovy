@@ -124,6 +124,13 @@ class PluginsFacadeTest extends Specification {
         then:
         result == [ new PluginSpec('nf-tower', '0.1.0') ]
 
+        // fusion requires both nf-tower and nf-wave
+        when:
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'true'])
+        result = handler.pluginsRequirement([fusion:[enabled:true]])
+        then:
+        result == [ new PluginSpec('nf-tower', '0.1.0'), new PluginSpec('nf-wave', '0.1.0')  ]
+
         when:
         handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
         result = handler.pluginsRequirement([wave:[enabled:true]])

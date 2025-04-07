@@ -97,22 +97,22 @@ Config includes can also be specified within config blocks. However, config file
 
 The following constants are globally available in a Nextflow configuration file:
 
-`baseDir`
+`baseDir: Path`
 : :::{deprecated} 20.04.0
   :::
 : Alias for `projectDir`.
 
-`launchDir`
+`launchDir: Path`
 : The directory where the workflow was launched.
 
-`projectDir`
+`projectDir: Path`
 : The directory where the main script is located.
 
 ## Functions
 
 The following functions are globally available in a Nextflow configuration file:
 
-`env( name )`
+`env( name: String ) -> String`
 : :::{versionadded} 24.11.0-edge
   :::
 : Get the value of the environment variable with the specified name in the Nextflow launch environment.

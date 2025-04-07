@@ -30,6 +30,7 @@ import nextflow.conda.CondaCache
 import nextflow.conda.CondaConfig
 import nextflow.container.ContainerConfig
 import nextflow.container.resolver.ContainerInfo
+import nextflow.container.resolver.ContainerMeta
 import nextflow.container.resolver.ContainerResolver
 import nextflow.container.resolver.ContainerResolverProvider
 import nextflow.exception.ProcessException
@@ -679,7 +680,7 @@ class TaskRun implements Cloneable {
     }
 
     @Memoized
-    private ContainerResolver containerResolver() {
+    protected ContainerResolver containerResolver() {
         ContainerResolverProvider.load()
     }
 
@@ -720,6 +721,12 @@ class TaskRun implements Cloneable {
             : true
     }
 
+    ContainerMeta containerMeta() {
+        return containerKey
+            ? containerResolver().getContainerMeta(containerKey)
+            : null
+    }
+    
     String getContainerPlatform() {
         final result = config.getArchitecture()
         return result ? result.dockerArch : containerResolver().defaultContainerPlatform()

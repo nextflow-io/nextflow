@@ -1,5 +1,10 @@
 nf-amazon changelog
 ===================
+2.13.0 - 17 Mar 2025
+- Fix Consider AWS China as custom endpoint (#5840) [232ce9d1]
+- Fix Prevent S3 global option when using custom endpoints (#5779) [ed9da469]
+- Bump groovy 4.0.26 [f740bc56]
+
 2.12.0 - 12 Feb 2025
 - Fix bugs with workflow outputs (#5502) [ab59d30f]
 - Fail the run if publish thread pool times out (#5578) [5325e5a6]
