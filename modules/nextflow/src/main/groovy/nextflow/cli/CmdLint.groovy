@@ -89,7 +89,7 @@ class CmdLint extends CmdBase {
     @Override
     void run() {
         if( !args )
-            throw new AbortOperationException("Error: No input files specified")
+            throw new AbortOperationException("Error: No input files were specified")
 
         scriptParser = new ScriptParser()
         configParser = new ConfigParser()
@@ -330,20 +330,12 @@ class StdoutErrorListener implements ErrorListener {
 
     @Override
     void afterAll(LintSummary summary) {
-        final emojis = [
-            "🔍 📋",
-            "🕵🏻‍♂️ 🔎",
-            "🔬 👨🏻‍💻",
-            "📑 ☑️",
-            "🧾 ✔️"
-        ]
-        final rnd = new Random()
         final term = ansi()
         term.cursorUp(1).eraseLine().cursorUp(1).eraseLine()
         // print extra newline if no code is being shown
         if( format == 'concise' )
             term.newline()
-        term.bold().a("Nextflow code checks complete! ${emojis[rnd.nextInt(emojis.size())]}").reset().newline()
+        term.bold().a("Nextflow code checks complete!").reset().newline()
         if( summary.filesWithErrors > 0 )
             term.fg(Ansi.Color.RED).a(" ❌ ${summary.filesWithErrors} file${summary.filesWithErrors==1 ? '' : 's'} had ${summary.errors} error${summary.errors==1 ? '' : 's'}").newline()
         if( summary.filesWithoutErrors > 0 )
