@@ -30,8 +30,7 @@ import nextflow.data.cid.serde.CidSerializable
 @Canonical
 @CompileStatic
 class Workflow implements CidSerializable {
-    DataPath mainScriptFile
-    List<DataPath> otherScriptFiles
+    List<DataPath> scriptFiles
     String repository
     String commitId
 }

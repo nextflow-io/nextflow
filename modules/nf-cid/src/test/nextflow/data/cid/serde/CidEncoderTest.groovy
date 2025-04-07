@@ -44,7 +44,7 @@ class CidEncoderTest extends Specification{
         and:
         def uniqueId = UUID.randomUUID()
         def mainScript = new DataPath("file://path/to/main.nf", new Checksum("78910", "nextflow", "standard"))
-        def workflow = new Workflow(mainScript, [], "https://nextflow.io/nf-test/", "123456")
+        def workflow = new Workflow([mainScript], "https://nextflow.io/nf-test/", "123456")
         def wfRun = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [new Parameter("String", "param1", "value1"), new Parameter("String", "param2", "value2")])
 
         when:
@@ -55,10 +55,10 @@ class CidEncoderTest extends Specification{
         object instanceof WorkflowRun
         def result = object as WorkflowRun
         result.workflow instanceof Workflow
-        result.workflow.mainScriptFile instanceof DataPath
-        result.workflow.mainScriptFile.path == "file://path/to/main.nf"
-        result.workflow.mainScriptFile.checksum instanceof Checksum
-        result.workflow.mainScriptFile.checksum.value == "78910"
+        result.workflow.scriptFiles.first instanceof DataPath
+        result.workflow.scriptFiles.first.path == "file://path/to/main.nf"
+        result.workflow.scriptFiles.first.checksum instanceof Checksum
+        result.workflow.scriptFiles.first.checksum.value == "78910"
         result.workflow.commitId == "123456"
         result.sessionId == uniqueId.toString()
         result.name == "test_run"
