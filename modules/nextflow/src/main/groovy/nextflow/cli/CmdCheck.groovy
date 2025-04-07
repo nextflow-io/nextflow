@@ -99,6 +99,7 @@ class CmdCheck extends CmdBase {
 
         errorListener.beforeAll()
 
+        // parse all files specified on the command line
         for( final arg : args ) {
             PathUtils.visitFiles(
                 Path.of(arg),
@@ -106,8 +107,11 @@ class CmdCheck extends CmdBase {
                 (path) -> parse(path.toFile()))
         }
 
+        // analyze all files
         scriptParser.analyze()
         configParser.analyze()
+
+        // report errors
         checkErrors(scriptParser.compiler())
         checkErrors(configParser.compiler())
 
