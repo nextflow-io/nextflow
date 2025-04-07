@@ -52,6 +52,42 @@ Available options:
 
 ## Commands
 
+### `check`
+
+Check Nextflow scripts and config files for errors.
+
+**Usage**
+
+```console
+$ nextflow check [options] [paths]
+```
+
+**Description**
+
+The `check` command parses and analyzes the given Nextflow scripts and config files, and prints any errors. Directories are recursively scanned for scripts and config files to check.
+
+**Options**
+
+`-exclude`
+: File pattern to exclude from error checking. Can be specified multiple times (default: `.git, .nf-test, work`).
+
+`-o, -output`
+: Output format for reporting errors: `full`, `extended`, `concise`, `json` (default: `full`).
+
+**Examples**
+
+Check a specific file.
+
+```console
+$ nextflow check main.nf
+```
+
+Check all files in the current directory (and subdirectories) with concise output.
+
+```console
+$ nextflow check -output-format concise .
+```
+
 (cli-clean)=
 
 ### `clean`
@@ -718,42 +754,6 @@ Execute a pipeline into a Kubernetes cluster.
 
 ```console
 $ nextflow kuberun nextflow-io/hello
-```
-
-### `lint`
-
-Check Nextflow scripts and config files for errors.
-
-**Usage**
-
-```console
-$ nextflow lint [options] [paths]
-```
-
-**Description**
-
-The `lint` command parses and analyzes the given Nextflow scripts and config files, and prints any errors. Directories are recursively scanned for scripts and config files to lint.
-
-**Options**
-
-`-exclude`
-: File pattern to exclude from linting. Can be specified multiple times (default: `.git, .nf-test, work`).
-
-`-o, -output`
-: Output format for lint results: `full`, `extended`, `concise`, `json` (default: `full`).
-
-**Examples**
-
-Lint a specific file.
-
-```console
-$ nextflow lint main.nf
-```
-
-Lint all files in the current directory (and subdirectories) with concise output.
-
-```console
-$ nextflow lint -output-format concise .
 ```
 
 ### `list`
