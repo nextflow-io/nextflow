@@ -117,6 +117,7 @@ class CmdConfig extends CmdBase {
         final config = builder.buildConfigObject()
 
         // -- validate config options
+        Plugins.load(config)
         new ConfigValidator().validate(config)
 
         // -- print config options
