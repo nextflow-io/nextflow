@@ -24,6 +24,7 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.NF
 import nextflow.config.ConfigBuilder
 import nextflow.config.ConfigValidator
 import nextflow.exception.AbortOperationException
@@ -117,8 +118,10 @@ class CmdConfig extends CmdBase {
         final config = builder.buildConfigObject()
 
         // -- validate config options
-        Plugins.load(config)
-        new ConfigValidator().validate(config)
+        if( NF.getSyntaxParserVersion() == 'v2' ) {
+            Plugins.load(config)
+            new ConfigValidator().validate(config)
+        }
 
         // -- print config options
         if( printValue ) {
