@@ -228,32 +228,42 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      */
     @Override
     boolean checkIfRunning() {
-        if (!jobId || !isSubmitted())
+        if( !jobId || !isSubmitted() )
             return false
         final job = describeJob(jobId)
         final result = job?.status in ['RUNNING', 'SUCCEEDED', 'FAILED']
-        if (result)
+        if( result )
             this.status = TaskStatus.RUNNING
         else
-            checkIfUnscheduled(job)
+            checkIfUnschedulable(job)
         // fetch the task arn
         if( !taskArn )
             taskArn = job?.getContainer()?.getTaskArn()
         return result
     }
 
-    protected checkIfUnscheduled(JobDetail job) {
-        if( job ) {
-            final reason = errReason(job)
-            if( reason.contains(UNSCHEDULABLE_MSG) ) {
-                log.warn("Unscheduled AWS Batch job ${jobId} (${task.lazyName()}) - $reason")
-                // If indicated in aws.batch config kill the job an produce a failure
-                if( executor.awsOptions.killUnscheduled ){
-                    log.warn(" Killing ${jobId}")
-                    kill()
-                    task.error = new ProcessException("Unscheduled AWS Batch job - $reason")
-                    status = TaskStatus.COMPLETED
-                }
+    protected void checkIfUnschedulable(JobDetail job) {
+        if( job ) try {
+            checkIfUnschedulable0(job)
+        }
+        catch (Throwable e) {
+            log.warn "Unable to check if job is unschedulable - ${e.message}", e
+        }
+    }
+
+    private void checkIfUnschedulable0(JobDetail job) {
+        final reason = errReason(job)
+        if( reason.contains(UNSCHEDULABLE_MSG) ) {
+            final msg = "unschedulable AWS Batch job ${jobId} (${task.lazyName()}) - $reason"
+            // If indicated in aws.batch config kill the job an produce a failure
+            if( executor.awsOptions.killUnscheduled ){
+                log.warn("Terminating ${jobId}")
+                kill()
+                task.error = new ProcessException("Unschedulable AWS Batch job ${jobId} - $reason")
+                status = TaskStatus.COMPLETED
+            }
+            else {
+                log.warn "Detected $msg"
             }
         }
     }
