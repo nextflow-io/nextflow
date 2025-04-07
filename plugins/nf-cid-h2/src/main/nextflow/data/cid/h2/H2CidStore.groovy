@@ -133,11 +133,11 @@ class H2CidStore implements CidStore {
     }
 
     @Override
-    List<CidSerializable> search(String queryString) {
-        final results= new LinkedList<CidSerializable>()
+    Map<String, CidSerializable> search(String queryString) {
+        final results= new HashMap<String, CidSerializable>()
         try(final sql=new Sql(dataSource)) {
-            sql.eachRow("SELECT metadata FROM cid_file WHERE JSON_MATCH(metadata, ?)", List.<Object>of(queryString)) { row ->
-                results.add(encoder.decode(toValue(row['metadata']) as String))
+            sql.eachRow("SELECT path, metadata FROM cid_file WHERE JSON_MATCH(metadata, ?)", List.<Object>of(queryString)) { row ->
+                results.put(row['path'] as String, encoder.decode(toValue(row['metadata']) as String))
             }
         }
         return results

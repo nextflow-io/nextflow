@@ -44,6 +44,7 @@ class CmdCid extends CmdBase implements UsageAware {
         void show(ConfigMap config, List<String> args)
         void lineage(ConfigMap config, List<String> args)
         void diff(ConfigMap config, List<String> args)
+        void find(ConfigMap config, List<String> args)
     }
 
     interface SubCmd {
@@ -64,6 +65,7 @@ class CmdCid extends CmdBase implements UsageAware {
         commands << new CmdShow()
         commands << new CmdLineage()
         commands << new CmdDiff()
+        commands << new CmdFind()
     }
 
     @Parameter(hidden = true)
@@ -255,6 +257,33 @@ class CmdCid extends CmdBase implements UsageAware {
         void usage() {
             println description
             println "Usage: nextflow $NAME $name <CID 1> <CID 2>"
+        }
+
+    }
+
+    class CmdFind implements SubCmd {
+
+        @Override
+        String getName() { 'find' }
+
+        @Override
+        String getDescription() {
+            return 'Find CID metadata descriptions matching with a query'
+        }
+
+        void apply(List<String> args) {
+            if (args.size() != 1) {
+                println("ERROR: Incorrect number of parameters")
+                usage()
+                return
+            }
+            operation.find(config, args)
+        }
+
+        @Override
+        void usage() {
+            println description
+            println "Usage: nextflow $NAME $name <query>"
         }
 
     }

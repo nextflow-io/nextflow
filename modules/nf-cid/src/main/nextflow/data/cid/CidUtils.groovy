@@ -48,9 +48,9 @@ class CidUtils {
      *       - Key: Element where the query will be applied. '/' indicates query will be applied in all the elements of the CID store.
      *       - QueryString: all param-value pairs that the CID element should fulfill in a URI's query string format.
      *       - Fragment: Element fragment to retrieve.
-     * @return List of object fulfilling the query
+     * @return Collection of object fulfilling the query
      */
-    static List query(CidStore store, URI uri) {
+    static Collection query(CidStore store, URI uri) {
         String key = uri.authority ? uri.authority + uri.path : uri.path
         try {
             if (key == CidPath.SEPARATOR) {
@@ -67,8 +67,8 @@ class CidUtils {
 
     }
 
-    private static List<CidSerializable> globalSearch(CidStore store, URI uri) {
-        final results = store.search(uri.query)
+    private static Collection<CidSerializable> globalSearch(CidStore store, URI uri) {
+        final results = store.search(uri.query).values()
         if (results && uri.fragment) {
             // If fragment is defined get the property of the object indicated by the fragment
             return filterResults(results, uri.fragment)
@@ -76,7 +76,7 @@ class CidUtils {
         return results
     }
 
-    private static List filterResults(List<CidSerializable> results, String fragment) {
+    private static List filterResults(Collection<CidSerializable> results, String fragment) {
         final filteredResults = []
         results.forEach {
             final output = navigate(it, fragment)

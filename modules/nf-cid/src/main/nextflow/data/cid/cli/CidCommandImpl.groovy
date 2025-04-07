@@ -305,5 +305,19 @@ class CidCommandImpl implements CmdCid.CidCommand {
         println output.toString()
     }
 
+    @Override
+    void find(ConfigMap config, List<String> args) {
+        final store = CidStoreFactory.getOrCreate(new Session(config))
+        if (!store) {
+            println "Error CID store not loaded. Check Nextflow configuration."
+            return
+        }
+        try {
+            println CidUtils.encodeSearchOutputs(store.search(args[0]), true)
+        } catch (Throwable e){
+            println "Exception searching for ${args[0]}. ${e.message}"
+        }
+    }
+
 
 }

@@ -57,8 +57,10 @@ interface CidStore extends Closeable {
     /**
      * Search for cid entries.
      * @queryString Json-path like query string. (Only simple and nested field operators are supported(No array, wildcards,etc.)
-     * @return List of Cid object's fulfilling the queryString
+     * @return Map<key, Cid object> fulfilling the queryString
      */
-    List<CidSerializable> search(String queryString)
+    Map<String,CidSerializable> search(String queryString)
+
+
 
 }
