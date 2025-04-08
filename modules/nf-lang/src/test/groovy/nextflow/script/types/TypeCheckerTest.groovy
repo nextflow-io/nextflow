@@ -166,9 +166,12 @@ class TypeCheckerTest extends Specification {
         def exp = parseExpression(
             '''
             process hello {
+                input:
+                val(target)
+
                 output:
                 val('hello'), emit: x
-                val('world'), emit: y
+                val(target), emit: y
 
                 script:
                 """
@@ -176,7 +179,7 @@ class TypeCheckerTest extends Specification {
             }
 
             workflow {
-                hello()
+                hello('world')
             }
             '''
         )
@@ -191,13 +194,16 @@ class TypeCheckerTest extends Specification {
         def exp = parseExpression(
             '''
             workflow hello {
+                take:
+                target
+
                 emit:
                 x = 'hello'
-                y = 'world'
+                y = target
             }
 
             workflow {
-                hello()
+                hello('world')
             }
             '''
         )

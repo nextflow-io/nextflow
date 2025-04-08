@@ -107,19 +107,9 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
 
     private void checkMethodCallArguments(MethodCallExpression node, MethodNode defNode) {
         var argsCount = asMethodCallArguments(node).size();
-        var paramsCount = numberOfParameters(defNode);
+        var paramsCount = defNode.getParameters().length;
         if( argsCount != paramsCount )
             addError(String.format("Incorrect number of call arguments, expected %d but received %d", paramsCount, argsCount), node);
-    }
-
-    private static int numberOfParameters(MethodNode node) {
-        if( node instanceof ProcessNode pn ) {
-            return (int) asBlockStatements(pn.inputs).size();
-        }
-        if( node instanceof WorkflowNode wn ) {
-            return (int) asBlockStatements(wn.takes).size();
-        }
-        return node.getParameters().length;
     }
 
     @Override
