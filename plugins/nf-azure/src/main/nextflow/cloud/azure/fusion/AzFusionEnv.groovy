@@ -22,6 +22,7 @@ import nextflow.Global
 import nextflow.cloud.azure.batch.AzHelper
 import groovy.transform.CompileStatic
 import nextflow.cloud.azure.config.AzConfig
+import nextflow.cloud.azure.config.AzPoolOpts
 import nextflow.fusion.FusionConfig
 import nextflow.fusion.FusionEnv
 import org.pf4j.Extension
@@ -36,39 +37,70 @@ import org.pf4j.Extension
 @Slf4j
 class AzFusionEnv implements FusionEnv {
 
+    private String scheme 
+    private FusionConfig config
+    private AzPoolOpts poolOpts
+
+    /**
+     * Set the pool options to be used when getting the environment
+     * 
+     * @param poolOpts The pool options
+     */
+    void setPoolOpts(AzPoolOpts poolOpts) {
+        this.poolOpts = poolOpts
+    }
+
     @Override
     Map<String, String> getEnvironment(String scheme, FusionConfig config) {
+        // Delegate to the 3-parameter version with null managedIdentityId
+        return getEnvironment(scheme, config, poolOpts?.managedIdentityId)
+    }
+
+    /**
+     * Get the environment variables for Fusion with Azure, taking into 
+     * account a managed identity ID if provided
+     *
+     * @param scheme The storage scheme ('az' for Azure)
+     * @param config The Fusion configuration
+     * @param managedIdentityId Optional managed identity client ID from pool options
+     * @return Map of environment variables
+     */
+    Map<String, String> getEnvironment(String scheme, FusionConfig config, String managedIdentityId) {
         if (scheme != 'az') {
             return Collections.<String, String> emptyMap()
         }
 
         final cfg = AzConfig.config
+        final managedIdentity = poolOpts?.managedIdentityId
         final result = new LinkedHashMap(10)
 
         if (!cfg.storage().accountName) {
             throw new IllegalArgumentException("Missing Azure Storage account name")
         }
 
-        if (cfg.storage().accountKey && cfg.storage().sasToken) {
-            throw new IllegalArgumentException("Azure Storage Access key and SAS token detected. Only one is allowed")
-        }
-
         result.AZURE_STORAGE_ACCOUNT = cfg.storage().accountName
-        // In theory, generating an impromptu SAS token for authentication methods other than
-        // `azure.storage.sasToken` should not be necessary, because those methods should already allow sufficient
-        // access for normal operation. Nevertheless, #5287 heavily implies that failing to do so causes the Azure
-        // Storage plugin or Fusion to fail. In any case, it may be possible to remove this in the future.
-        result.AZURE_STORAGE_SAS_TOKEN = getOrCreateSasToken()
 
+        // If pool has a managed identity, ONLY add the MSI client ID
+        // DO NOT add any SAS token or reference cfg.storage().sasToken
+        if (managedIdentityId) {
+            log.debug("Azure Fusion environment - Using managed identity for authentication: ${managedIdentityId}")
+            result.FUSION_AZ_MSI_CLIENT_ID = managedIdentityId
+            // No SAS token is added or generated
+            return result
+        }
+        
+        // If no managed identity, use the standard environment with SAS token
+        result.AZURE_STORAGE_SAS_TOKEN = getOrCreateSasToken()
+        
         return result
     }
-
+    
     /**
      * Return the SAS token if it is defined in the configuration, otherwise generate one based on the requested
      * authentication method.
      */
     synchronized String getOrCreateSasToken() {
-
+        log.debug("Azure Fusion environment - Generating SAS token for authentication")
         final cfg = AzConfig.config
 
         // If a SAS token is already defined in the configuration, just return it

@@ -453,6 +453,7 @@ class AzBatchService implements Closeable {
         return key.size()>MAX_LEN ? key.substring(0,MAX_LEN) : key
     }
 
+
     protected BatchTaskCreateContent createTask(String poolId, String jobId, TaskRun task) {
         assert poolId, 'Missing Azure Batch poolId argument'
         assert jobId, 'Missing Azure Batch jobId argument'
@@ -493,27 +494,40 @@ class AzBatchService implements Closeable {
 
         // Handle Fusion settings
         final fusionEnabled = FusionHelper.isFusionEnabled((Session)Global.session)
-        final launcher = fusionEnabled ? FusionScriptLauncher.create(task.toTaskBean(), 'az') : null
+        String fusionCmd = null
+        
         if( fusionEnabled ) {
+            // Create the FusionScriptLauncher from the TaskBean
+            final taskBean = task.toTaskBean()
+            final launcher = FusionScriptLauncher.create(taskBean, 'az')
+            
+            // Create the adapter that will manage the Fusion env with pool options
+            // TaskRun doesn't implement FusionAwareTask directly, so we need a wrapper
+            final adapter = new AzureBatchFusionAdapter(new FusionTaskWrapper(task), launcher, pool?.opts)
+            
+            // Add container options
             opts += "--privileged "
-            for( Map.Entry<String,String> it : launcher.fusionEnv() ) {
-                // This is a bad solution and breaks Fusion for everyone
-                if (!(pool.opts.managedIdentityId && it.key == "AZURE_STORAGE_SAS_TOKEN")) {
-                    opts += "-e $it.key=$it.value "
-                }
+
+            // Add all environment variables from the adapter
+            for( Map.Entry<String,String> it : adapter.getEnvironment() ) {
+                opts += "-e $it.key=$it.value "
             }
+            
             // For testing purposes only, remove before merging
             opts += "-e FUSION_LOG_LEVEL=trace -e FUSION_LOG_OUTPUT=stdout "
+            
+            // Get the fusion submit command
+            final List<String> cmdList = adapter.fusionSubmitCli()
+            fusionCmd = cmdList ? String.join(' ', cmdList) : null
         }
-
-        // Create container settings
+        
         final containerOpts = new BatchTaskContainerSettings(container)
                 .setContainerRunOptions(opts)
-
+        
         // submit command line
-        final String cmd = fusionEnabled
-                ? launcher.fusionSubmitCli(task).join(' ')
-                : "bash -o pipefail -c 'bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}'"
+        final String cmd = fusionEnabled && fusionCmd
+                    ? fusionCmd
+                    : "bash -o pipefail -c 'bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}'"
         // cpus and memory
         final slots = computeSlots(task, pool)
         // max wall time
