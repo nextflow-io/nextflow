@@ -17,8 +17,11 @@
 package nextflow.script.formatter
 
 import nextflow.script.control.ScriptParser
+import nextflow.script.control.ScriptResolveVisitor
+import nextflow.script.types.Types
 import spock.lang.Shared
 import spock.lang.Specification
+import test.TestUtils
 
 /**
  *
@@ -35,7 +38,8 @@ class ScriptFormatterTest extends Specification {
 
     String format(String contents) {
         def source = scriptParser.parse('main.nf', contents)
-        assert !source.getErrorCollector().hasErrors()
+        new ScriptResolveVisitor(source, scriptParser.compiler().compilationUnit(), Types.DEFAULT_IMPORTS, Collections.emptyList()).visit()
+        assert !TestUtils.hasSyntaxErrors(source)
         def formatter = new ScriptFormattingVisitor(source, new FormattingOptions(4, true))
         formatter.visit()
         return formatter.toString()
@@ -190,6 +194,21 @@ class ScriptFormatterTest extends Specification {
                     }
                 }
             }
+            '''
+        )
+    }
+
+    def 'should format an operator chain' () {
+        expect:
+        checkFormat(
+            '''\
+            Channel.of( 1, 2, 3 )
+                .multiMap{v->foo:bar:v}.set{result}
+            ''',
+            '''\
+            Channel.of(1, 2, 3)
+                .multiMap { v -> foo: bar: v }
+                .set { result }
             '''
         )
     }

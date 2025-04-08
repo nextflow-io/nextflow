@@ -27,6 +27,8 @@ import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import nextflow.config.control.ConfigParser
 import nextflow.script.control.Compiler
+import nextflow.script.control.PhaseAware
+import nextflow.script.control.Phases
 import nextflow.script.control.ScriptParser
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage
@@ -97,6 +99,13 @@ class TestUtils {
             .map(uri -> compiler.getSources().get(uri))
             .flatMap(source -> getErrors(source).stream())
             .toList()
+    }
+
+    static boolean hasSyntaxErrors(SourceUnit source) {
+        return getErrors(source).stream()
+            .filter(error -> error instanceof PhaseAware ? error.getPhase() == Phases.SYNTAX : true)
+            .findFirst()
+            .isPresent()
     }
 
     /**
