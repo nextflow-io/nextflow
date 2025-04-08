@@ -20,7 +20,7 @@ In Nextflow there are two kinds of channels: *queue channels* and *value channel
 ### Queue channel
 
 A *queue channel* is a non-blocking unidirectional FIFO queue connecting a *producer* process (i.e. outputting a value)
-to a consumer process, or an operators.
+to a consumer process or an operator.
 
 A queue channel can be created by factory methods ({ref}`channel-of`, {ref}`channel-path`, etc), operators ({ref}`operator-map`, {ref}`operator-flatmap`, etc), and processes (see {ref}`Process outputs <process-output>`).
 
