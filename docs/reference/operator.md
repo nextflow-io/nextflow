@@ -1528,6 +1528,8 @@ map { v -> v as Integer }
 You can also use `toLong`, `toFloat`, and `toDouble` to convert to other numerical types.
 :::
 
+(operator-tolist)=
+
 ## toList
 
 *Returns: value channel*

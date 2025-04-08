@@ -86,8 +86,6 @@ Commonly used operators include:
 
 - {ref}`operator-combine`: emit the combinations of two channels
 
-- {ref}`operator-collect`: collect the values from a channel into a list
-
 - {ref}`operator-filter`: select the values in a channel that satisfy a condition
 
 - {ref}`operator-flatMap`: transform each value from a channel into a list and emit each list 
@@ -100,6 +98,8 @@ element separately
 - {ref}`operator-map`: transform each value from a channel with a mapping function
 
 - {ref}`operator-mix`: emit the values from multiple channels
+
+- {ref}`operator-tolist`: collect the values from a channel into a list
 
 - {ref}`operator-view`: print each value in a channel to standard output
 
