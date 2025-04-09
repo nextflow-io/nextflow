@@ -16,7 +16,6 @@
 
 package nextflow.config
 
-import nextflow.SysEnv
 import org.junit.Rule
 import spock.lang.Specification
 import test.OutputCapture
@@ -28,14 +27,6 @@ class ConfigValidatorTest extends Specification {
 
     @Rule
     OutputCapture capture = new OutputCapture()
-
-    def setupSpec() {
-        SysEnv.push(NXF_SYNTAX_PARSER: 'v2')
-    }
-
-    def cleanupSpec() {
-        SysEnv.pop()
-    }
 
     def 'should warn about invalid config options' () {
         given:
