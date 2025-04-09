@@ -50,6 +50,7 @@ import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
 import nextflow.util.PathNormalizer
 import nextflow.util.TestOnly
+
 /**
  * Observer to write the generated workflow metadata in a CID store.
  *
@@ -78,6 +79,12 @@ class CidObserver implements TraceObserver {
 
     @TestOnly
     String getExecutionHash(){ executionHash }
+
+    @TestOnly
+    String setExecutionHash(String hash){ this.executionHash = hash }
+
+    @TestOnly
+    String setNormalizer(PathNormalizer normalizer){  this.normalizer = normalizer }
 
     @Override
     void onFlowBegin() {
@@ -256,6 +263,7 @@ class CidObserver implements TraceObserver {
                 path.toUriString(),
                 checksum,
                 asUriString(task.hash.toString()),
+                asUriString(executionHash),
                 asUriString(task.hash.toString()),
                 attrs.size(),
                 CidUtils.toDate(attrs?.creationTime()),
@@ -329,6 +337,7 @@ class CidObserver implements TraceObserver {
                 checksum,
                 sourceReference,
                 asUriString(executionHash),
+                null,
                 attrs.size(),
                 CidUtils.toDate(attrs?.creationTime()),
                 CidUtils.toDate(attrs?.lastModifiedTime()),

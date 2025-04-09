@@ -19,7 +19,8 @@ class CidEncoderTest extends Specification{
         given:
             def encoder = new CidEncoder()
         and:
-            def output = new DataOutput("/path/to/file", new Checksum("hash_value", "hash_algorithm", "standard"), "cid://source", "cid://run", 1234)
+            def output = new DataOutput("/path/to/file", new Checksum("hash_value", "hash_algorithm", "standard"),
+                "cid://source", "cid://workflow", "cid://task", 1234)
 
         when:
             def encoded = encoder.encode(output)

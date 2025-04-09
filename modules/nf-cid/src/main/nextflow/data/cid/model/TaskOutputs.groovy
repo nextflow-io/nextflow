@@ -31,9 +31,24 @@ import java.time.Instant
 @Canonical
 @CompileStatic
 class TaskOutputs implements CidSerializable {
+    /**
+     * Reference to the task that generated the data.
+     */
     String taskRun
+    /**
+     * Reference to the WorkflowRun that generated the data.
+     */
     String workflowRun
+    /**
+     * Creation date of this task outputs description
+     */
     Instant createdAt
+    /**
+     * Outputs of the task
+     */
     List<Parameter> outputs
+    /**
+     * Annotations attached to the task outputs
+     */
     Map annotations
 }

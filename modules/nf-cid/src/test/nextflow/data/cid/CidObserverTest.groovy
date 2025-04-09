@@ -273,9 +273,9 @@ class CidObserverTest extends Specification {
                 new Parameter(ValueInParam.simpleName, "id", "value")
             ], null, null, null, null, [:], [], "cid://hash", null)
         def dataOutput1 = new DataOutput(outFile1.toString(), new Checksum(fileHash1, "nextflow", "standard"),
-            "cid://1234567890", "cid://1234567890", attrs1.size(), CidUtils.toDate(attrs1.creationTime()), CidUtils.toDate(attrs1.lastModifiedTime()) )
+            "cid://1234567890", "cid://hash", "cid://1234567890", attrs1.size(), CidUtils.toDate(attrs1.creationTime()), CidUtils.toDate(attrs1.lastModifiedTime()) )
         def dataOutput2 = new DataOutput(outFile2.toString(), new Checksum(fileHash2, "nextflow", "standard"),
-            "cid://1234567890", "cid://1234567890", attrs2.size(), CidUtils.toDate(attrs2.creationTime()), CidUtils.toDate(attrs2.lastModifiedTime()) )
+            "cid://1234567890", "cid://hash", "cid://1234567890", attrs2.size(), CidUtils.toDate(attrs2.creationTime()), CidUtils.toDate(attrs2.lastModifiedTime()) )
 
         when:
         observer.onProcessComplete(handler, null )
@@ -314,6 +314,7 @@ class CidObserverTest extends Specification {
         }
         store.open(DataConfig.create(session))
         def observer = Spy(new CidObserver(session, store))
+        observer.executionHash = "hash"
         and:
         def workDir = folder.resolve('12/34567890')
         Files.createDirectories(workDir)
@@ -334,7 +335,7 @@ class CidObserverTest extends Specification {
         and:
         def attrs = Files.readAttributes(outFile, BasicFileAttributes)
         def output = new DataOutput(outFile.toString(), new Checksum(fileHash, "nextflow", "standard"),
-            "cid://15cd5b07", "cid://15cd5b07", attrs.size(), CidUtils.toDate(attrs.creationTime()), CidUtils.toDate(attrs.lastModifiedTime()) )
+            "cid://15cd5b07", "cid://hash", "cid://15cd5b07", attrs.size(), CidUtils.toDate(attrs.creationTime()), CidUtils.toDate(attrs.lastModifiedTime()) )
         and:
         observer.readAttributes(outFile) >> attrs
 
@@ -502,7 +503,7 @@ class CidObserverTest extends Specification {
             def attrs1 = Files.readAttributes(outFile1, BasicFileAttributes)
             def fileHash1 = CacheHelper.hasher(outFile1).hash().toString()
             def output1 = new DataOutput(outFile1.toString(), new Checksum(fileHash1, "nextflow", "standard"),
-                "cid://123987/outputs/file.bam", "$CID_PROT${observer.executionHash}",
+                "cid://123987/outputs/file.bam", "$CID_PROT${observer.executionHash}", null,
                 attrs1.size(), CidUtils.toDate(attrs1.creationTime()), CidUtils.toDate(attrs1.lastModifiedTime()) )
             folder.resolve(".meta/${observer.executionHash}/outputs/foo/file.bam/.data.json").text == encoder.encode(output1)
 
@@ -516,7 +517,7 @@ class CidObserverTest extends Specification {
             observer.onWorkflowPublish("b", outFile2)
         then: 'Check outFile2 metadata in cid store'
             def output2 = new DataOutput(outFile2.toString(), new Checksum(fileHash2, "nextflow", "standard"),
-                "cid://${observer.executionHash}" , "cid://${observer.executionHash}",
+                "cid://${observer.executionHash}" , "cid://${observer.executionHash}", null,
                 attrs2.size(), CidUtils.toDate(attrs2.creationTime()), CidUtils.toDate(attrs2.lastModifiedTime()) )
             folder.resolve(".meta/${observer.executionHash}/outputs/foo/file2.bam/.data.json").text == encoder.encode(output2)
 

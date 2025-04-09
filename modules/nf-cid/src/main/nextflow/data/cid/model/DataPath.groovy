@@ -28,6 +28,12 @@ import groovy.transform.CompileStatic
 @Canonical
 @CompileStatic
 class DataPath {
+    /**
+     * Real path of the output data.
+     */
     String path
+    /**
+     * Checksum of the output data.
+     */
     Checksum checksum
 }

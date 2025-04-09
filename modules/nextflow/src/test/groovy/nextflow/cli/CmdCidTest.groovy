@@ -138,7 +138,7 @@ class CmdCidTest extends Specification {
         def time = Instant.ofEpochMilli(123456789)
         def encoder = new CidEncoder().withPrettyPrint(true)
         def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-                "cid://123987/file.bam","cid://123987/", 1234, time, time, null)
+                "cid://123987/file.bam","cid://12345/","cid://123987/", 1234, time, time, null)
         def jsonSer = encoder.encode(entry)
         def expectedOutput = jsonSer
         cidFile.text = jsonSer
@@ -209,10 +209,10 @@ class CmdCidTest extends Specification {
         def encoder = new CidEncoder()
         def time = Instant.ofEpochMilli(123456789)
         def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-                "cid://123987/file.bam", "cid://45678", 1234, time, time, null)
+                "cid://123987/file.bam", "cid://45678",null, 1234, time, time, null)
         cidFile.text = encoder.encode(entry)
         entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-                "cid://123987", "cid://123987", 1234, time, time, null)
+                "cid://123987", "cid://45678", "cid://123987", 1234, time, time, null)
         cidFile2.text = encoder.encode(entry)
         entry = new TaskRun("u345-2346-1stw2", "foo",
                 new Checksum("abcde2345","nextflow","standard"),
@@ -222,7 +222,7 @@ class CmdCidTest extends Specification {
                 null, null, null, null, [:],[], null)
         cidFile3.text = encoder.encode(entry)
         entry  = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-                "cid://45678", "cid://45678",  1234, time, time, null)
+                "cid://45678", "cid://45678", null, 1234, time, time, null)
         cidFile4.text = encoder.encode(entry)
         entry = new TaskRun("u345-2346-1stw2", "bar",
                 new Checksum("abfs2556","nextflow","standard"),
@@ -280,7 +280,7 @@ class CmdCidTest extends Specification {
         def encoder = new CidEncoder().withPrettyPrint(true)
         def time = Instant.ofEpochMilli(123456789)
         def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-                "cid://123987/file.bam", "cid://123987/", 1234, time, time, null)
+                "cid://123987/file.bam", "cid://12345", "cid://123987/", 1234, time, time, null)
         def jsonSer = encoder.encode(entry)
         def expectedOutput = jsonSer
         cidFile.text = jsonSer

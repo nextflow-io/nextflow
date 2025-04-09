@@ -67,7 +67,7 @@ class DefaultCidStoreTest extends Specification {
     def "save should store value in the correct file location"() {
         given:
         def key = "testKey"
-        def value = new DataOutput("/path/to/file", new Checksum("hash_value", "hash_algorithm", "standard"), "cid://source", "cid://run", 1234)
+        def value = new DataOutput("/path/to/file", new Checksum("hash_value", "hash_algorithm", "standard"), "cid://source", "cid://workflow", "cid://task", 1234)
         def cidStore = new DefaultCidStore()
         cidStore.open(config)
 
@@ -83,7 +83,7 @@ class DefaultCidStoreTest extends Specification {
     def "load should retrieve stored value correctly"() {
         given:
         def key = "testKey"
-        def value = new DataOutput("/path/to/file", new Checksum("hash_value", "hash_algorithm", "standard"), "cid://source", "cid://run", 1234)
+        def value = new DataOutput("/path/to/file", new Checksum("hash_value", "hash_algorithm", "standard"), "cid://source", "cid://workflow", "cid://task", 1234)
         def cidStore = new DefaultCidStore()
         cidStore.open(config)
         cidStore.save(key, value)
@@ -110,11 +110,11 @@ class DefaultCidStoreTest extends Specification {
         def key = "testKey"
         def value1 = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [ new Parameter("String", "param1", "value1"), new Parameter("String", "param2", "value2")] )
         def key2 = "testKey2"
-        def value2 = new DataOutput("/path/tp/file1", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", 1234, time, time, [key1:"value1", key2:"value2"])
+        def value2 = new DataOutput("/path/tp/file1", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, [key1:"value1", key2:"value2"])
         def key3 = "testKey3"
-        def value3 = new DataOutput("/path/tp/file2", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", 1234, time, time, [key2:"value2", key3:"value3"])
+        def value3 = new DataOutput("/path/tp/file2", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, [key2:"value2", key3:"value3"])
         def key4 = "testKey4"
-        def value4 = new DataOutput("/path/tp/file", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", 1234, time, time, [key3:"value3", key4:"value4"])
+        def value4 = new DataOutput("/path/tp/file", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, [key3:"value3", key4:"value4"])
 
         def cidStore = new DefaultCidStore()
         cidStore.open(config)

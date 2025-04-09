@@ -29,17 +29,56 @@ import nextflow.data.cid.serde.CidSerializable
 @Canonical
 @CompileStatic
 class TaskRun implements CidSerializable {
+    /**
+     * Execution session identifier
+     */
     String sessionId
+    /**
+     * Task name
+     */
     String name
+    /**
+     * Checksum of the task source code
+     */
     Checksum codeChecksum
+    /**
+     * Checksum of the task script
+     */
     Checksum scriptChecksum
+    /**
+     * Task run inputs
+     */
     List<Parameter> inputs
+    /**
+     * Container used for the task run
+     */
     String container
+    /**
+     * Conda environment used for the task run
+     */
     String conda
+    /**
+     * Spack environment used for the task run
+     */
     String spack
+    /**
+     * Architecture defined in the Spack environment used for the task run
+     */
     String architecture
+    /**
+     * Global variables defined in the task run
+     */
     Map globalVars
+    /**
+     * Binaries used in the task run
+     */
     List<DataPath> binEntries
+    /**
+     * Workflow run associated to the task run
+     */
     String workflowRun
+    /**
+     * Annotations attached to the task run
+     */
     Map annotations
 }

@@ -102,7 +102,7 @@ class CidCommandImplTest extends Specification{
         def time = Instant.ofEpochMilli(123456789)
         def encoder = new CidEncoder().withPrettyPrint(true)
         def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-            "cid://123987/file.bam","cid://123987/", 1234, time, time, null)
+            "cid://123987/file.bam","cid://123987/", null, 1234, time, time, null)
         def jsonSer = encoder.encode(entry)
         def expectedOutput = jsonSer
         cidFile.text = jsonSer
@@ -155,10 +155,10 @@ class CidCommandImplTest extends Specification{
         def encoder = new CidEncoder()
         def time = Instant.ofEpochMilli(123456789)
         def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-            "cid://123987/file.bam", "cid://45678", 1234, time, time, null)
+            "cid://123987/file.bam", "cid://45678", null, 1234, time, time, null)
         cidFile.text = encoder.encode(entry)
         entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-            "cid://123987", "cid://123987", 1234, time, time, null)
+            "cid://123987", "cid://45678", "cid://123987", 1234, time, time, null)
         cidFile2.text = encoder.encode(entry)
         entry = new TaskRun("u345-2346-1stw2", "foo",
             new Checksum("abcde2345","nextflow","standard"),
@@ -170,7 +170,7 @@ class CidCommandImplTest extends Specification{
             null, null, null, null, [:],[], null)
         cidFile3.text = encoder.encode(entry)
         entry  = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-            "cid://45678", "cid://45678",  1234, time, time, null)
+            "cid://45678", "cid://45678", null, 1234, time, time, null)
         cidFile4.text = encoder.encode(entry)
         entry = new TaskRun("u345-2346-1stw2", "bar",
             new Checksum("abfs2556","nextflow","standard"),
@@ -224,7 +224,7 @@ class CidCommandImplTest extends Specification{
         def encoder = new CidEncoder()
         def time = Instant.ofEpochMilli(123456789)
         def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-            "cid://12345", "cid://12345", 1234, time, time, null)
+            "cid://12345", "cid://12345", null, 1234, time, time, null)
         cidFile.text = encoder.encode(entry)
         def wf = new Workflow([new DataPath("/path/to/main.nf)")], "hello-nf", "aasdklk")
         entry = new WorkflowRun(wf,"sessionId","run_name",
@@ -267,7 +267,7 @@ class CidCommandImplTest extends Specification{
         def encoder = new CidEncoder().withPrettyPrint(true)
         def time = Instant.ofEpochMilli(123456789)
         def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-            "cid://123987/file.bam", "cid://123987/", 1234, time, time, null)
+            "cid://123987/file.bam", "cid://123987/", null, 1234, time, time, null)
         def jsonSer = encoder.encode(entry)
         def expectedOutput = jsonSer
         cidFile.text = jsonSer
@@ -294,9 +294,9 @@ class CidCommandImplTest extends Specification{
         def encoder = new CidEncoder().withPrettyPrint(true)
         def time = Instant.ofEpochMilli(123456789)
         def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-            "cid://123987/file.bam", "cid://123987/", 1234, time, time, null)
+            "cid://123987/file.bam", "cid://123987/", null, 1234, time, time, null)
         def entry2 = new DataOutput("path/to/file2",new Checksum("42472qet","nextflow","standard"),
-            "cid://123987/file2.bam", "cid://123987/", 1235, time, time, null)
+            "cid://123987/file2.bam", "cid://123987/", null, 1235, time, time, null)
         def expectedOutput1 = '[\n  "path/to/file",\n  "path/to/file2"\n]'
         def expectedOutput2 = '[\n  "path/to/file2",\n  "path/to/file"\n]'
         cidFile.text = encoder.encode(entry)
@@ -323,15 +323,15 @@ class CidCommandImplTest extends Specification{
         def encoder = new CidEncoder().withPrettyPrint(true)
         def time = Instant.ofEpochMilli(123456789)
         def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-            "cid://123987/file.bam", "cid://123987/", 1234, time, time, null)
+            "cid://123987/file.bam", "cid://123987/", null, 1234, time, time, null)
         def entry2 = new DataOutput("path/to/file2",new Checksum("42472qet","nextflow","standard"),
-            "cid://123987/file2.bam", "cid://123987/", 1235, time, time, null)
+            "cid://123987/file2.bam", "cid://123987/", null, 1235, time, time, null)
         cidFile.text = encoder.encode(entry)
         cidFile2.text = encoder.encode(entry2)
         def expectedOutput = '''diff --git 12345 67890
 --- 12345
 +++ 67890
-@@ -1,14 +1,14 @@
+@@ -1,15 +1,15 @@
  {
    "type": "DataOutput",
 -  "path": "path/to/file",
@@ -344,7 +344,8 @@ class CidCommandImplTest extends Specification{
    },
 -  "source": "cid://123987/file.bam",
 +  "source": "cid://123987/file2.bam",
-   "run": "cid://123987/",
+   "workflowRun": "cid://123987/",
+   "taskRun": null,
 -  "size": 1234,
 +  "size": 1235,
    "createdAt": "1970-01-02T10:17:36.789Z",
@@ -372,7 +373,7 @@ class CidCommandImplTest extends Specification{
         def encoder = new CidEncoder().withPrettyPrint(true)
         def time = Instant.ofEpochMilli(123456789)
         def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-            "cid://123987/file.bam", "cid://123987/", 1234, time, time, null)
+            "cid://123987/file.bam", "cid://123987/", null, 1234, time, time, null)
         cidFile.text = encoder.encode(entry)
 
         when:
