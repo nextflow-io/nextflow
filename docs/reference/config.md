@@ -871,7 +871,6 @@ The following settings are available for Google Cloud Batch:
 
 : Note network tags are ignored when using instance templates. See the [Google Cloud documentation](https://cloud.google.com/vpc/docs/add-remove-network-tags).
 
-
 `google.batch.serviceAccountEmail`
 : Define the Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used.
 
