@@ -22,7 +22,6 @@ You can use the `println` function to print to the console:
 println 'Hello, World!'
 ```
 
-
 ## Variables
 
 Variables are declared using the `def` keyword:
@@ -48,6 +47,8 @@ println str
 Variables can also be declared without `def` in some cases. However, this practice is discouraged outside of simple code snippets because it can lead to a {ref}`race condition <cache-global-var-race-condition>`.
 :::
 
+(script-list)=
+
 ## Lists
 
 Lists are defined using square brackets:
@@ -68,7 +69,9 @@ In order to get the length of the list use the `size` method:
 println myList.size()
 ```
 
-Refer to the [Java](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/List.html) and [Groovy](http://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/List.html) standard libraries for the set of available list operations.
+See {ref}`stdlib-types-list` for the set of available list operations.
+
+(script-map)=
 
 ## Maps
 
@@ -106,21 +109,105 @@ When adding two maps, the first map is copied and then appended with the keys fr
 Copying a map with the `+` operator is a safer way to modify maps in Nextflow, specifically when passing maps through channels. This way, a new instance of the map will be created, and any references to the original map won't be affected.
 :::
 
-See the [Java](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Map.html) and [Groovy](http://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/Map.html) standard libraries for the set of available map operations.
+See {ref}`stdlib-types-map` for the set of available map operations.
+
+(script-operators)=
+
+## Operators
+
+Operators are symbols that perform specific functions on one or more values, and generally make code easier to read. This section highlights some of the most commonly used operators.
+
+:::{note}
+Operators in this context are different from *channel operators*, which are specialized functions for working with channels. See {ref}`channel-page` for more information.
+:::
+
+The `==` and `!=` operators can be used to test whether any two values are equal (or not equal):
+
+```nextflow
+assert 2 + 2 == 4
+assert [2, 2] != [4]
+assert 'two plus two' != 'four'
+```
+
+:::{tip}
+The `assert` keyword simply tests a condition and raises an error if the condition is false. Every assert that you see on this page will succeed if executed.
+:::
+
+Comparison operators can be used to compare two values:
+
+```nextflow
+assert 3 < 3.14         // numbers are compared as, well, numbers
+assert 3 <= 3
+assert 'foo' > 'bar'    // strings are compared alphabetically
+```
+
+Logical operators can be used to perform Boolean logic:
+
+```nextflow
+assert true && false == false   // logical AND
+assert true || false == true    // logical OR
+assert !true == false           // logical NOT
+```
+
+The `in` and `!in` operators can be used to test *membership*, i.e. whether a collection contains a value:
+
+```nextflow
+assert 'lo wo' in 'Hello world!'
+assert 2 in [1, 2, 3]
+```
+
+Arithmetic operators can be used to do math:
+
+```nextflow
+assert 2 + 2 == 4
+assert 2 - 2 == 0
+assert 2 * 2 == 4
+assert 2 / 2 == 1.0
+assert 2 ** 2 == 4  // exponent
+assert 2 % 2 == 0   // modulo (division remainder)
+```
+
+Some arithmetic operators can be used with other types of values. For example, `+` can be used to concatenate lists, maps, and strings:
+
+```nextflow
+assert [1, 2, 3] + [4] == [1, 2, 3, 4]
+```
 
 ## Conditional execution
 
-One of the most important features of any programming language is the ability to execute different code under different conditions. The simplest way to do this is to use the `if` construct:
+One of the most important features of any programming language is the ability to execute different code under different conditions. This can be done with an if-else statement:
 
 ```nextflow
 def x = Math.random()
 if( x < 0.5 ) {
-    println "You lost."
+    println 'You lost.'
 }
 else {
-    println "You won!"
+    println 'You won!'
 }
 ```
+
+In some cases, conditional statements can be expressed more concisely as a conditional expression (also known as a *ternary expression*):
+
+```nextflow
+def message = Math.random() < 0.5
+    ? 'You lost.'
+    : 'You won!'
+println message
+```
+
+A shortened version of the conditional expression can be used to return a value if it is "truthy", or fallback to a second value otherwise:
+
+```nextflow
+def counts = ['A': 1, 'B', 2]
+assert counts['C'] ?: 0 == 0    // x is "truthy" if !!x == true
+```
+
+:::{tip}
+The `?:` operator is also known as the [elvis operator](https://en.wikipedia.org/wiki/Elvis_operator).
+:::
+
+(script-string)=
 
 ## Strings
 
@@ -205,37 +292,21 @@ unknown recognition error type: groovyjarjarantlr4.v4.runtime.LexerNoViableAltEx
 
 ## Regular expressions
 
-Regular expressions are the Swiss Army knife of text processing. They provide the programmer with the ability to match and extract patterns from strings.
-
-Regular expressions are available via the `~/pattern/` syntax and the `=~` and `==~` operators.
+Regular expressions are the Swiss Army knife of text processing. They provide the ability to match and extract patterns from strings.
 
 Use `=~` to check whether a given pattern occurs anywhere in a string:
 
 ```nextflow
-assert 'foo' =~ /foo/       // return TRUE
-assert 'foobar' =~ /foo/    // return TRUE
+assert 'foo' =~ /foo/
+assert 'foobar' =~ /foo/
 ```
 
 Use `==~` to check whether a string matches a given regular expression pattern exactly.
 
 ```nextflow
-assert 'foo' ==~ /foo/       // return TRUE
-assert 'foobar' ==~ /foo/    // return FALSE
+assert 'foo' ==~ /foo/
+assert !('foobar' ==~ /foo/)
 ```
-
-The `~` operator creates a [Pattern](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/regex/Pattern.html) from the given string, while the `=~` operator creates a [Matcher](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/regex/Matcher.html):
-
-```nextflow
-x = ~/abc/
-println x.class
-// prints java.util.regex.Pattern
-
-y = 'some string' =~ /abc/
-println y.class
-// prints java.util.regex.Matcher
-```
-
-See the linked Java documentation for the available operations for these classes.
 
 ### String replacement
 

@@ -19,8 +19,8 @@ package nextflow.script
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.NF
 import nextflow.Session
-import nextflow.SysEnv
 import nextflow.script.parser.v1.ScriptLoaderV1
 import nextflow.script.parser.v2.ScriptLoaderV2
 
@@ -34,7 +34,7 @@ import nextflow.script.parser.v2.ScriptLoaderV2
 class ScriptLoaderFactory {
 
     static ScriptLoader create(Session session) {
-        final parser = SysEnv.get('NXF_SYNTAX_PARSER', 'v1')
+        final parser = NF.getSyntaxParserVersion()
         if( parser == 'v1' ) {
             return new ScriptLoaderV1(session)
         }

@@ -77,8 +77,6 @@ class WaveAssets {
         allMeta.add( spec.condaOpts?.mambaImage )
         allMeta.add( spec.condaOpts?.commands )
         allMeta.add( spec.condaOpts?.basePackages )
-        allMeta.add( spec.spackOpts?.commands )
-        allMeta.add( spec.spackOpts?.basePackages )
         allMeta.add( spec.channels )
         return CacheHelper.hasher(allMeta).hash().toString()
     }

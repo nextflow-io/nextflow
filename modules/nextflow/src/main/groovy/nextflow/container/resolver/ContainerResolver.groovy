@@ -64,4 +64,11 @@ interface ContainerResolver extends ExtensionPoint {
      */
     boolean isContainerReady(String key)
 
+    /**
+     * Retrieve the metadata associated with this container request
+     *
+     * @param key The container key
+     * @return A map holding the metadata for this container or {@code null} if not available
+     */
+    ContainerMeta getContainerMeta(String key)
 }

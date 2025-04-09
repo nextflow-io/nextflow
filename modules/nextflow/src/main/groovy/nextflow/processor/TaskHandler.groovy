@@ -219,6 +219,7 @@ abstract class TaskHandler {
         record.time = task.config.getTime()?.toMillis()
         record.env = task.getEnvironmentStr()
         record.executorName = task.processor.executor.getName()
+        record.containerMeta = task.containerMeta()
 
         if( isCompleted() ) {
             record.error_action = task.errorAction?.toString()

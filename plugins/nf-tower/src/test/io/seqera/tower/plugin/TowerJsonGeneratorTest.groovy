@@ -17,8 +17,12 @@
 
 package io.seqera.tower.plugin
 
+import java.time.Instant
+import java.time.ZoneOffset
+
 import groovy.json.JsonGenerator
 import groovy.json.JsonSlurper
+import nextflow.container.resolver.ContainerMeta
 import nextflow.trace.ProgressRecord
 import nextflow.trace.WorkflowStats
 import spock.lang.Specification
@@ -241,6 +245,28 @@ class TowerJsonGeneratorTest extends Specification {
             peakMemory == 15
             terminated == true
         }
+    }
+
+    def 'should serialise container meta' () {
+        given:
+        def gen = TowerJsonGenerator.create([:])
+        and:
+        def ts = Instant.ofEpochSecond(1742421070).atOffset(ZoneOffset.ofHours(2))
+        def c1 = new ContainerMeta(
+            requestId:'r-1',
+            requestTime:ts,
+            buildId: 'bd-2',
+            scanId: 'sc-3',
+            mirrorId: 'mr-4',
+            cached: false,
+            freeze: true,
+            sourceImage: 'debian:latest',
+            targetImage: 'wave/debian')
+
+        when:
+        def json = gen.toJson([containers: [c1]])
+        then:
+        json == '{"containers":[{"requestId":"r-1","sourceImage":"debian:latest","targetImage":"wave/debian","buildId":"bd-2","mirrorId":"mr-4","scanId":"sc-3","cached":false,"freeze":true,"requestTime":"2025-03-19T23:51:10+02:00"}]}'
     }
 
 }

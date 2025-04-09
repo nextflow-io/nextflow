@@ -1,3 +1,7 @@
 # DOCUMENTATION -------------------------------------------------------
 # Docs folder ownership
 /docs/ @nextflow-io/docs
+
+# COMPILER ------------------------------------------------------------
+# nf-lang module
+/modules/nf-lang/ @nextflow-io/lang 

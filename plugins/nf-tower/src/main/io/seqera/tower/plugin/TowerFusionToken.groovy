@@ -113,7 +113,7 @@ class TowerFusionToken implements FusionToken {
     @Override
     Map<String, String> getEnvironment(String scheme, FusionConfig config) {
         try {
-            getEnvironment0(scheme, config)
+            return getEnvironment0(scheme, config)
         }
         catch (Exception e) {
             final msg = "Unable to validate Fusion license - reason: ${e.message}"

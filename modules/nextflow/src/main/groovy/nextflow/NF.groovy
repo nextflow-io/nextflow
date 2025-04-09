@@ -32,6 +32,10 @@ class NF {
         return (Session)Global.session
     }
 
+    static String getSyntaxParserVersion() {
+        return SysEnv.get('NXF_SYNTAX_PARSER', 'v1')
+    }
+
     static void init() {
         NextflowDelegatingMetaClass.provider = PluginExtensionProvider.INSTANCE()
         CH.init()

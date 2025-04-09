@@ -205,9 +205,9 @@ Any input data **not** stored in a Google Storage bucket will automatically be t
 The Google Storage path needs to contain at least sub-directory. Don't use only the bucket name e.g. `gs://my-bucket`.
 :::
 
-### Spot instances
+### Spot Instances
 
-Spot instances are supported adding the following setting in the Nextflow config file:
+Spot Instances are supported by adding the following setting in the Nextflow config file:
 
 ```groovy
 google {

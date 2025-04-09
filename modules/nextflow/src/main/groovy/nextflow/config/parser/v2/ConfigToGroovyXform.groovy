@@ -22,6 +22,7 @@ import java.lang.annotation.RetentionPolicy
 import java.lang.annotation.Target
 
 import groovy.transform.CompileStatic
+import nextflow.config.control.ConfigToGroovyVisitor
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit

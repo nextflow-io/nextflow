@@ -8,7 +8,7 @@ This tutorial explains how resource usage metrics are computed from execution re
 
 CPU Usage plots report how CPU resources are used by each process.
 
-```{image} _static/report-resource-cpu.png
+```{image} _static/report-resource-cpu-noheader.png
 ```
 
 **Raw Usage** tabs are expected to show 100% core usage if processes perform one task of pure computation. If tasks are distributed over, 2, 3, or 4 CPUs, the raw usage will be 200%, 300%, or 400%, respectively. **% Allocated** tabs rescale raw usage values relative to the number of CPUs that are set with the `cpus` directive. If the `cpus` directive is not set, CPUs are set to `1` and **% Allocated** tabs will show the same values **Raw Usage** tabs.

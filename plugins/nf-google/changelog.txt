@@ -1,5 +1,10 @@
 nf-google changelog
 ===================
+1.19.0 - 17 Mar 2025
+- Fix Google Batch autoRetryExitCodes bug (#5828) [cfeedd6f]
+- Improve Google Batch support for GPUs (#5406) [420fb17e]
+- Bump groovy 4.0.26 [f740bc56]
+
 1.18.0 - 12 Feb 2025
 - Add DeadlineExceededException to Google Batch retryable exceptions [944f48f9]
 - Fix Google Batch task array causes process to fail (#5780) [7ad7a237]
