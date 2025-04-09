@@ -1,5 +1,8 @@
 nf-tower changelog
 ===================
+1.11.2 - 8 Apr 2025
+- Fix container meta deduplication [f4600d2e]
+
 1.11.1 - 5 Apr 2025
 - Fix date format in Wave containers meta (#5903) [59536c0a]
 
