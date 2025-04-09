@@ -36,7 +36,7 @@ public class ScriptParser {
 
     public ScriptParser() {
         var config = getConfig();
-        var classLoader = new GroovyClassLoader(ClassLoader.getSystemClassLoader().getParent(), config, true);
+        var classLoader = new GroovyClassLoader();
         compiler = new Compiler(config, classLoader);
     }
 
