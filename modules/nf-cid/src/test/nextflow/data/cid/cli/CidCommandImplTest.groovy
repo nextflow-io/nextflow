@@ -5,6 +5,7 @@ import nextflow.config.ConfigMap
 import nextflow.dag.MermaidHtmlRenderer
 import nextflow.data.cid.CidHistoryRecord
 import nextflow.data.cid.CidStoreFactory
+import nextflow.data.cid.DefaultCidHistoryLog
 import nextflow.data.cid.model.Checksum
 import nextflow.data.cid.model.DataOutput
 import nextflow.data.cid.model.DataPath
@@ -55,11 +56,11 @@ class CidCommandImplTest extends Specification{
     def 'should print executions cids' (){
         given:
         def historyFile = storeLocation.resolve(".meta/.history")
-        Files.createDirectories(historyFile.parent)
+        def cidLog = new DefaultCidHistoryLog(historyFile)
         def uniqueId = UUID.randomUUID()
         def date = new Date();
         def recordEntry = "${CidHistoryRecord.TIMESTAMP_FMT.format(date)}\trun_name\t${uniqueId}\tcid://123456".toString()
-        historyFile.text = recordEntry
+        cidLog.write("run_name", uniqueId, "cid://123456", date)
         when:
         new CidCommandImpl().log(configMap)
         def stdout = capture

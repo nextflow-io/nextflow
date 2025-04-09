@@ -61,7 +61,7 @@ class DefaultCidStoreTest extends Specification {
         then:
         cidStore.getMetadataPath() == metaLocation
         historyLog != null
-        historyLog instanceof CidHistoryFile
+        historyLog instanceof DefaultCidHistoryLog
     }
 
     def "save should store value in the correct file location"() {

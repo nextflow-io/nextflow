@@ -59,7 +59,7 @@ class DefaultCidStore implements CidStore {
         if( !Files.exists(metaLocation) && !Files.createDirectories(metaLocation) ) {
             throw new AbortOperationException("Unable to create CID store directory: $metaLocation")
         }
-        historyLog = new CidHistoryFile(metaLocation.resolve(HISTORY_FILE_NAME))
+        historyLog = new DefaultCidHistoryLog(metaLocation.resolve(HISTORY_FILE_NAME))
         return this
     }
 

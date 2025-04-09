@@ -17,6 +17,7 @@
 
 package nextflow.cli
 
+import nextflow.data.cid.DefaultCidHistoryLog
 import nextflow.data.cid.serde.CidEncoder
 
 import java.nio.file.Files
@@ -70,14 +71,14 @@ class CmdCidTest extends Specification {
             def configFile = folder.resolve('nextflow.config')
             configFile.text = "workflow.data.enabled = true\nworkflow.data.store.location = '$folder'".toString()
             def historyFile = folder.resolve(".meta/.history")
-            Files.createDirectories(historyFile.parent)
+            def cidLog = new DefaultCidHistoryLog(historyFile)
             def uniqueId = UUID.randomUUID()
             def date = new Date();
             def launcher = Mock(Launcher){
                 getOptions() >> new CliOptions(config: [configFile.toString()])
             }
+            cidLog.write("run_name", uniqueId, "cid://123456", date)
             def recordEntry = "${CidHistoryRecord.TIMESTAMP_FMT.format(date)}\trun_name\t${uniqueId}\tcid://123456".toString()
-            historyFile.text = recordEntry
         when:
             def cidCmd = new CmdCid(launcher: launcher, args: ["log"])
             cidCmd.run()
