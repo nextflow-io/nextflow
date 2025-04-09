@@ -31,10 +31,12 @@ import groovy.util.logging.Slf4j
 import nextflow.config.control.ConfigParser
 import nextflow.exception.AbortOperationException
 import nextflow.script.control.Compiler
+import nextflow.script.control.ParanoidWarning
 import nextflow.script.control.ScriptParser
 import nextflow.util.PathUtils
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage
+import org.codehaus.groovy.control.messages.WarningMessage
 import org.codehaus.groovy.syntax.SyntaxException
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
@@ -139,13 +141,13 @@ class CmdCheck extends CmdBase {
             .stream()
             .sorted(Comparator.comparing((SourceUnit source) -> source.getSource().getURI()))
             .forEach((source) -> {
-                if( source.getErrorCollector().hasErrors() ) {
+                final errorCollector = source.getErrorCollector()
+                if( errorCollector.hasErrors() || errorCollector.hasWarnings() )
                     printErrors(source)
+                if( errorCollector.hasErrors() )
                     summary.filesWithErrors += 1
-                }
-                else {
+                else
                     summary.filesWithoutErrors += 1
-                }
             })
     }
 
@@ -156,10 +158,16 @@ class CmdCheck extends CmdBase {
         for( final message : errorMessages ) {
             if( message instanceof SyntaxErrorMessage ) {
                 final cause = message.getCause()
-                final filename = source.getName()
-                errorListener.onError(cause, filename, source)
+                errorListener.onError(cause, source.getName(), source)
                 summary.errors += 1
             }
+        }
+
+        final warningMessages = source.getErrorCollector().getWarnings()
+        for( final warning : warningMessages ) {
+            if( warning instanceof ParanoidWarning )
+                continue
+            errorListener.onWarning(warning, source.getName(), source)
         }
 
         errorListener.afterErrors()
@@ -180,6 +188,7 @@ interface ErrorListener {
     void beforeFile(File file)
     void beforeErrors()
     void onError(SyntaxException error, String filename, SourceUnit source)
+    void onWarning(WarningMessage warning, String filename, SourceUnit source)
     void afterErrors()
     void afterAll(CheckSummary summary)
 }
@@ -232,7 +241,20 @@ class StandardErrorListener implements ErrorListener {
         term = highlightString(error.getOriginalMessage(), term)
         if( format != 'concise' ) {
             term.newline()
-            term = printCodeBlock(source, error, term)
+            term = printCodeBlock(source, Range.of(error), term, Ansi.Color.RED)
+        }
+        term.newline()
+    }
+
+    @Override
+    void onWarning(WarningMessage warning, String filename, SourceUnit source) {
+        final token = warning.getContext().getRoot()
+        term.bold().a(filename).reset()
+        term.a(":${token.getStartLine()}:${token.getStartColumn()}: ")
+        term.fg(Ansi.Color.YELLOW).a(warning.getMessage()).fg(Ansi.Color.DEFAULT)
+        if( format != 'concise' ) {
+            term.newline()
+            term = printCodeBlock(source, Range.of(warning), term, Ansi.Color.YELLOW)
         }
         term.newline()
     }
@@ -250,11 +272,11 @@ class StandardErrorListener implements ErrorListener {
         return term
     }
 
-    private Ansi printCodeBlock(SourceUnit source, SyntaxException error, Ansi term) {
-        final startLine = error.getStartLine()
-        final startColumn = error.getStartColumn()
-        final endLine = error.getEndLine()
-        final endColumn = error.getEndColumn()
+    private Ansi printCodeBlock(SourceUnit source, Range range, Ansi term, Ansi.Color color) {
+        final startLine = range.startLine()
+        final startColumn = range.startColumn()
+        final endLine = range.endLine()
+        final endColumn = range.endColumn()
         final lines = getSourceText(source)
 
         // get context window (up to 5 lines)
@@ -300,16 +322,16 @@ class StandardErrorListener implements ErrorListener {
             term.fg(Ansi.Color.BLUE).a(String.format("%3d | ", i)).reset()
 
             if( i == startLine ) {
-                // Print line with error in red
+                // Print line with range highlighted
                 term.a(Ansi.Attribute.INTENSITY_FAINT).a(line.substring(0, adjStart)).reset()
-                term.fg(Ansi.Color.RED).a(line.substring(adjStart, adjEnd)).reset()
+                term.fg(color).a(line.substring(adjStart, adjEnd)).reset()
                 term.a(Ansi.Attribute.INTENSITY_FAINT).a(line.substring(adjEnd)).reset().newline()
 
-                // Print carets underneath the error range
+                // Print carets underneath the range
                 String marker = ' ' * adjStart
                 String carets = '^' * Math.max(1, adjEnd - adjStart)
                 term.a("    | ")
-                    .fg(Ansi.Color.RED).bold().a(marker + carets).reset().newline()
+                    .fg(color).bold().a(marker + carets).reset().newline()
             }
             else {
                 term.a(Ansi.Attribute.INTENSITY_FAINT).a(line).reset().newline()
@@ -349,6 +371,32 @@ class StandardErrorListener implements ErrorListener {
         AnsiConsole.out.print(term)
         AnsiConsole.out.flush()
     }
+
+    private static record Range(
+        int startLine,
+        int startColumn,
+        int endLine,
+        int endColumn
+    ) {
+        public static Range of(SyntaxException error) {
+            return new Range(
+                error.getStartLine(),
+                error.getStartColumn(),
+                error.getEndLine(),
+                error.getEndColumn(),
+            )
+        }
+
+        public static Range of(WarningMessage warning) {
+            final token = warning.getContext().getRoot()
+            return new Range(
+                token.getStartLine(),
+                token.getStartColumn(),
+                token.getStartLine(),
+                token.getStartColumn() + token.getText().length(),
+            )
+        }
+    }
 }
 
 
@@ -377,6 +425,10 @@ class JsonErrorListener implements ErrorListener {
             startColumn: error.getStartColumn(),
             message: error.getOriginalMessage()
         ])
+    }
+
+    @Override
+    void onWarning(WarningMessage warning, String filename, SourceUnit source) {
     }
 
     @Override

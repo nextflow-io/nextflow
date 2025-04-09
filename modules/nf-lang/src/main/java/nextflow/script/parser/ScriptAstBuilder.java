@@ -94,6 +94,7 @@ import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.CompilePhase;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
+import org.codehaus.groovy.control.messages.WarningMessage;
 import org.codehaus.groovy.syntax.Numbers;
 import org.codehaus.groovy.syntax.SyntaxException;
 import org.codehaus.groovy.syntax.Types;
@@ -489,7 +490,7 @@ public class ScriptAstBuilder {
             return "exec";
         }
         if( ctx.SHELL() != null ) {
-            collectWarning("The `shell` block is deprecated, use `script` instead", ast( new EmptyExpression(), ctx.SHELL() ));
+            collectWarning("The `shell` block is deprecated, use `script` instead", ctx.SHELL().getText(), ast( new EmptyExpression(), ctx.SHELL() ));
             return "shell";
         }
         return "script";
@@ -1826,8 +1827,9 @@ public class ScriptAstBuilder {
         sourceUnit.getErrorCollector().addException(e, sourceUnit);
     }
 
-    private void collectWarning(String text, ASTNode node) {
-        sourceUnit.addWarning(text, node);
+    private void collectWarning(String message, String tokenText, ASTNode node) {
+        var token = new org.codehaus.groovy.syntax.Token(0, tokenText, node.getLineNumber(), node.getColumnNumber()); // ASTNode to CSTNode
+        sourceUnit.getErrorCollector().addWarning(WarningMessage.POSSIBLE_ERRORS, message, token, sourceUnit);
     }
 
     private void removeErrorListeners() {
