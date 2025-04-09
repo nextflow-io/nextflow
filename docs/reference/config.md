@@ -795,8 +795,8 @@ The following settings are available:
 `fusion.snapshots`
 : :::{versionadded} 25.03.0-edge
   :::
-: Enable the snapshotting capability provided by Fusion (preview). This feature allows the automatic restoring the state of jobs interrupted by a spot-preemption (default: `false`)
-: Note: currently is only supported by AWS Batch executor.
+: *Currently only supported for AWS Batch*
+: Enable Fusion snapshotting (preview, default: `false`). This feature allows Fusion to automatically restore a job when it is interrupted by a spot reclamation.
 
 `fusion.tags`
 : Pattern for applying tags to files created via the Fusion client (default: `[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)`).

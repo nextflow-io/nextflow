@@ -66,7 +66,7 @@ public class FusionConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        Enable the snapshotting capability provided by Fusion (preview). This feature allows the automatic restoring the state of jobs interrupted by a spot-preemption (default: `false`).
+        Enable Fusion snapshotting (preview, default: `false`). This feature allows Fusion to automatically restore a job when it is interrupted by a spot reclamation.
     """)
     public boolean snapshots;
 
