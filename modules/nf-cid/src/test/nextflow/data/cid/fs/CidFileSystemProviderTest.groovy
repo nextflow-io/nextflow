@@ -21,6 +21,9 @@ import nextflow.data.cid.DefaultCidStore
 import spock.lang.Shared
 
 import java.nio.ByteBuffer
+import java.nio.channels.NonWritableChannelException
+import java.nio.file.AccessDeniedException
+import java.nio.file.AccessMode
 import java.nio.file.FileSystemNotFoundException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -136,18 +139,103 @@ class CidFileSystemProviderTest extends Specification {
         def opts = Set.of(StandardOpenOption.READ)
         when:
         def channel = provider.newByteChannel(cid, opts)
-        and:
+        then:
+        channel.isOpen()
+        channel.position() == 0
+        channel.size() == "Hello, World!".getBytes().size()
+        when:
+        channel.truncate(25)
+        then:
+        thrown(NonWritableChannelException)
+
+        when:
         def buffer = ByteBuffer.allocate(1000);
         def read = channel.read(buffer)
-        channel.close()
         def bytes = new byte[read]
         buffer.get(0,bytes)
         then:
         bytes == "Hello, World!".getBytes()
+        when:
+        channel.position(2)
+        then:
+        channel.position() == 2
+
+        when:
+        channel.write(buffer)
+        then:
+        thrown(NonWritableChannelException)
+
+        when:
+        provider.newByteChannel(cid, Set.of(StandardOpenOption.WRITE))
+        then:
+        thrown(UnsupportedOperationException)
+
+        when:
+        provider.newByteChannel(cid, Set.of(StandardOpenOption.APPEND))
+        then:
+        thrown(UnsupportedOperationException)
 
         cleanup:
+        channel.close()
         outputMeta.deleteDir()
         output.delete()
+    }
+
+    def 'should create new byte channel for CidMetadata' () {
+        given:
+        def config = [workflow:[data:[store:[location:wdir.toString()]]]]
+        def outputMeta = meta.resolve("12345")
+        outputMeta.mkdirs()
+        outputMeta.resolve(".data.json").text = '{"type":"WorkflowRun","sessionId":"session","name":"run_name","params":[{"type":"String","name":"param1","value":"value1"}]}'
+
+        Global.session = Mock(Session) { getConfig()>>config }
+        and:
+        def provider = new CidFileSystemProvider()
+        def cid = provider.getPath(CidPath.asUri('cid://12345#name'))
+
+        when:
+        def channel = provider.newByteChannel(cid, Set.of(StandardOpenOption.READ))
+        then:
+        channel.isOpen()
+        channel.position() == 0
+        channel.size() == '"run_name"'.getBytes().size()
+
+        when:
+        channel.truncate(25)
+        then:
+        thrown(NonWritableChannelException)
+
+        when:
+        def buffer = ByteBuffer.allocate(1000);
+        def read = channel.read(buffer)
+        def bytes = new byte[read]
+        buffer.get(0,bytes)
+        then:
+        bytes =='"run_name"'.getBytes()
+
+        when:
+        channel.position(2)
+        then:
+        channel.position() == 2
+
+        when:
+        channel.write(buffer)
+        then:
+        thrown(NonWritableChannelException)
+
+        when:
+        provider.newByteChannel(cid, Set.of(StandardOpenOption.WRITE))
+        then:
+        thrown(UnsupportedOperationException)
+
+        when:
+        provider.newByteChannel(cid, Set.of(StandardOpenOption.APPEND))
+        then:
+        thrown(UnsupportedOperationException)
+
+        cleanup:
+        channel.close()
+        outputMeta.deleteDir()
     }
 
     def 'should read cid' () {
@@ -355,5 +443,47 @@ class CidFileSystemProviderTest extends Specification {
         meta.resolve('12345').deleteDir()
     }
 
+    def 'should throw exception in unsupported methods'() {
+        given:
+        def provider = new CidFileSystemProvider()
+
+        when:
+        provider.newOutputStream(null)
+        then:
+        thrown(UnsupportedOperationException)
+
+        when:
+        provider.getFileStore(null)
+        then:
+        thrown(UnsupportedOperationException)
+
+        when:
+        provider.readAttributes(null, "attrib")
+        then:
+        thrown(UnsupportedOperationException)
+
+        when:
+        provider.setAttribute(null, "attrib", null)
+        then:
+        thrown(UnsupportedOperationException)
+    }
+
+    def 'should throw exception when checking access mode'(){
+        given:
+        def provider = new CidFileSystemProvider()
+        def cid1 = provider.getPath(CidPath.asUri('cid://12345/abc'))
+
+        when:
+        provider.checkAccess(cid1, AccessMode.WRITE)
+        then:
+        def ex1 = thrown(AccessDeniedException)
+        ex1.message == "Write mode not supported"
+
+        when:
+        provider.checkAccess(cid1, AccessMode.EXECUTE)
+        then:
+        def ex2 = thrown(AccessDeniedException)
+        ex2.message == "Execute mode not supported"
+    }
 }
 

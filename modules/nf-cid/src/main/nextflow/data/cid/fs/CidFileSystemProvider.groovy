@@ -18,6 +18,7 @@
 package nextflow.data.cid.fs
 
 import java.nio.ByteBuffer
+import java.nio.channels.NonWritableChannelException
 import java.nio.channels.SeekableByteChannel
 import java.nio.file.AccessDeniedException
 import java.nio.file.AccessMode
@@ -59,23 +60,25 @@ class CidFileSystemProvider extends FileSystemProvider {
     protected CidPath toCidPath(Path path) {
         if (path !instanceof CidPath)
             throw new ProviderMismatchException()
+        if (path instanceof CidMetadataPath)
+            return (CidMetadataPath) path
         return (CidPath) path
     }
 
     private void checkScheme(URI uri) {
         final scheme = uri.scheme.toLowerCase()
-        if( scheme != getScheme() )
+        if (scheme != getScheme())
             throw new IllegalArgumentException("Not a valid ${getScheme().toUpperCase()} scheme: $scheme")
     }
 
     @Override
     synchronized FileSystem newFileSystem(URI uri, Map<String, ?> config) throws IOException {
         checkScheme(uri)
-        if( !fileSystem ) {
+        if (!fileSystem) {
             //Overwrite default values with provided configuration
             final defaultConfig = DataConfig.asMap()
             if (config) {
-                for (Map.Entry<String,?> e : config.entrySet()) {
+                for (Map.Entry<String, ?> e : config.entrySet()) {
                     defaultConfig.put(e.key, e.value)
                 }
             }
@@ -93,7 +96,7 @@ class CidFileSystemProvider extends FileSystemProvider {
 
     synchronized FileSystem getFileSystemOrCreate(URI uri) {
         checkScheme(uri)
-        if( !fileSystem ) {
+        if (!fileSystem) {
             fileSystem = (CidFileSystem) newFileSystem(uri, DataConfig.asMap())
         }
         return fileSystem
@@ -112,72 +115,96 @@ class CidFileSystemProvider extends FileSystemProvider {
     @Override
     InputStream newInputStream(Path path, OpenOption... options) throws IOException {
         final cid = toCidPath(path)
+        if (cid instanceof CidMetadataPath)
+            return (cid as CidMetadataPath).newInputStream()
+        return newInputStream0(cid, options)
+    }
+
+    private static InputStream newInputStream0(CidPath cid, OpenOption... options) throws IOException {
         final realPath = cid.getTargetPath(true)
         if (realPath instanceof CidMetadataPath)
             return (realPath as CidMetadataPath).newInputStream()
-        else
-            return realPath.fileSystem.provider().newInputStream(realPath, options)
+        return realPath.fileSystem.provider().newInputStream(realPath, options)
     }
 
     @Override
     SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
         final cid = toCidPath(path)
-        if (options.size() > 0) {
-            for (OpenOption opt: options) {
-                // All OpenOption values except for APPEND and WRITE are allowed
-                if (opt == StandardOpenOption.APPEND || opt == StandardOpenOption.WRITE)
-                    throw new UnsupportedOperationException("'$opt' not allowed");
-            }
+        validateOptions(options)
+        return newByteChannel0(cid, options, attrs)
+    }
+
+
+    private class CidPathSeekableByteChannel implements SeekableByteChannel {
+        SeekableByteChannel channel
+
+        CidPathSeekableByteChannel(SeekableByteChannel channel) {
+            this.channel = channel
+        }
+
+        @Override
+        int read(ByteBuffer dst) throws IOException {
+            return channel.read(dst)
+        }
+
+        @Override
+        int write(ByteBuffer src) throws IOException {
+            throw new NonWritableChannelException(){}
+        }
+
+        @Override
+        long position() throws IOException {
+            return channel.position()
+        }
+
+        @Override
+        SeekableByteChannel position(long newPosition) throws IOException {
+            channel.position(newPosition)
+            return this
+        }
+
+        @Override
+        long size() throws IOException {
+            return channel.size()
+        }
+
+        @Override
+        SeekableByteChannel truncate(long unused) throws IOException {
+            throw new NonWritableChannelException()
+        }
+
+        @Override
+        boolean isOpen() {
+            return channel.isOpen()
+        }
+
+        @Override
+        void close() throws IOException {
+            channel.close()
+        }
+    }
+
+    private static void validateOptions(Set<? extends OpenOption> options) {
+        if (!options || options.empty)
+            return
+        for (OpenOption opt : options) {
+            // All OpenOption values except for APPEND and WRITE are allowed
+            if (opt == StandardOpenOption.APPEND || opt == StandardOpenOption.WRITE)
+                throw new UnsupportedOperationException("'$opt' not allowed");
+        }
+
+    }
+
+    private SeekableByteChannel newByteChannel0(CidPath cid, Set<? extends OpenOption> options, FileAttribute<?>... attrs) {
+        if (cid instanceof CidMetadataPath) {
+            return (cid as CidMetadataPath).newSeekableByteChannel()
         }
         final realPath = cid.getTargetPath(true)
-        SeekableByteChannel channel
-        if (realPath instanceof CidMetadataPath){
-            channel = (realPath as CidMetadataPath).newSeekableByteChannel()
+        if (realPath instanceof CidMetadataPath) {
+            return (realPath as CidMetadataPath).newSeekableByteChannel()
         } else {
-            channel = realPath.fileSystem.provider().newByteChannel(realPath, options, attrs)
-        }
-
-        new SeekableByteChannel() {
-
-            @Override
-            int read(ByteBuffer dst) throws IOException {
-                return channel.read(dst)
-            }
-
-            @Override
-            int write(ByteBuffer src) throws IOException {
-                throw new UnsupportedOperationException("Write operation not supported")
-            }
-
-            @Override
-            long position() throws IOException {
-                return channel.position()
-            }
-
-            @Override
-            SeekableByteChannel position(long newPosition) throws IOException {
-                throw new UnsupportedOperationException("Position operation not supported")
-            }
-
-            @Override
-            long size() throws IOException {
-                return channel.size()
-            }
-
-            @Override
-            SeekableByteChannel truncate(long unused) throws IOException {
-                throw new UnsupportedOperationException("Truncate operation not supported")
-            }
-
-            @Override
-            boolean isOpen() {
-                return channel.isOpen()
-            }
-
-            @Override
-            void close() throws IOException {
-                channel.close()
-            }
+            SeekableByteChannel channel = realPath.fileSystem.provider().newByteChannel(realPath, options, attrs)
+            return new CidPathSeekableByteChannel(channel)
         }
     }
 
@@ -186,9 +213,9 @@ class CidFileSystemProvider extends FileSystemProvider {
         final cid = toCidPath(path)
         final real = cid.getTargetPath(false)
         final stream = real
-                .getFileSystem()
-                .provider()
-                .newDirectoryStream(real, new CidFilter(fileSystem))
+            .getFileSystem()
+            .provider()
+            .newDirectoryStream(real, new CidFilter(fileSystem))
 
         return new DirectoryStream<Path>() {
 
@@ -203,11 +230,12 @@ class CidFileSystemProvider extends FileSystemProvider {
             }
         }
     }
+
     private class CidFilter implements DirectoryStream.Filter<Path> {
 
         private final CidFileSystem fs
 
-        CidFilter(CidFileSystem fs){
+        CidFilter(CidFileSystem fs) {
             this.fs = fs
         }
 
@@ -217,9 +245,9 @@ class CidFileSystemProvider extends FileSystemProvider {
         }
     }
 
-    private static CidPath fromRealToCidPath(Path toConvert, Path realBase, CidPath cidBase){
+    private static CidPath fromRealToCidPath(Path toConvert, Path realBase, CidPath cidBase) {
         if (toConvert.isAbsolute()) {
-            if (toConvert.class != realBase.class){
+            if (toConvert.class != realBase.class) {
                 throw new ProviderMismatchException()
             }
             final relative = realBase.relativize(toConvert)
@@ -292,17 +320,27 @@ class CidFileSystemProvider extends FileSystemProvider {
 
     @Override
     void checkAccess(Path path, AccessMode... modes) throws IOException {
+        validateAccessModes(modes)
         final cid = toCidPath(path)
-        for( AccessMode m : modes ) {
-            if( m == AccessMode.WRITE )
-                throw new AccessDeniedException("Write mode not supported")
-            if( m == AccessMode.EXECUTE )
-                throw new AccessDeniedException("Execute mode not supported")
-        }
+        if (cid instanceof CidMetadataPath)
+            return
+        checkAccess0(cid, modes)
+    }
+
+    private void checkAccess0(CidPath cid, AccessMode... modes) {
         final real = cid.getTargetPath(true)
         if (real instanceof CidMetadataPath)
             return
         real.fileSystem.provider().checkAccess(real, modes)
+    }
+
+    private void validateAccessModes(AccessMode... modes) {
+        for (AccessMode m : modes) {
+            if (m == AccessMode.WRITE)
+                throw new AccessDeniedException("Write mode not supported")
+            if (m == AccessMode.EXECUTE)
+                throw new AccessDeniedException("Execute mode not supported")
+        }
     }
 
     @Override
@@ -313,11 +351,16 @@ class CidFileSystemProvider extends FileSystemProvider {
     @Override
     <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) throws IOException {
         final cid = toCidPath(path)
+        if (cid instanceof CidMetadataPath)
+            return (cid as CidMetadataPath).readAttributes(type)
+        readAttributes0(cid, type, options)
+    }
+
+    private <A extends BasicFileAttributes> A readAttributes0(CidPath cid, Class<A> type, LinkOption... options) throws IOException {
         final real = cid.getTargetPath(true)
         if (real instanceof CidMetadataPath)
             return (real as CidMetadataPath).readAttributes(type)
-        else
-            return real.fileSystem.provider().readAttributes(real,type,options)
+        return real.fileSystem.provider().readAttributes(real, type, options)
     }
 
     @Override

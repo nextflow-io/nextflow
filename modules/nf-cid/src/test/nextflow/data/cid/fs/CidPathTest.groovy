@@ -18,11 +18,21 @@
 package nextflow.data.cid.fs
 
 import nextflow.data.cid.CidUtils
+import nextflow.data.cid.model.Checksum
+import nextflow.data.cid.model.Parameter
+import nextflow.data.cid.model.Workflow
 import nextflow.data.cid.model.WorkflowOutputs
+import nextflow.data.cid.model.DataOutput
+import nextflow.data.cid.model.WorkflowRun
 import nextflow.data.cid.serde.CidEncoder
 import nextflow.file.FileHelper
+import nextflow.util.CacheHelper
+import org.junit.Rule
+import test.OutputCapture
 
 import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.ProviderMismatchException
 import java.time.Instant
 
 import spock.lang.Shared
@@ -39,6 +49,9 @@ class CidPathTest extends Specification {
     @Shared def cid = wdir.resolve('.meta')
     @Shared def data = wdir.resolve('work')
     @Shared def fs = Mock(CidFileSystem)
+
+    @Rule
+    OutputCapture capture = new OutputCapture()
 
     def cleanupSpec(){
         wdir.deleteDir()
@@ -104,6 +117,8 @@ class CidPathTest extends Specification {
         fs      | '1234'                | ['/'] as String[]         | '1234'
         null    | '1234'                | ['/'] as String[]         | '1234'
         null    | '../../a/b'           | [] as String[]            | '../../a/b'
+        fs      | '1234/'               | [] as String[]            | '1234'
+        null    | '1234/'               | [] as String[]            | '1234'
     }
 
     def 'should get target path' () {
@@ -154,6 +169,11 @@ class CidPathTest extends Specification {
         then:
         thrown(FileNotFoundException)
 
+        when: 'CidPath subfolder of an output data description does not exist'
+        new CidPath(cidFs, '12345/output1/other/path').getTargetPath()
+        then:
+        thrown(FileNotFoundException)
+
         when: 'Cid does not exist'
         new CidPath(cidFs, '23456').getTargetPath()
         then:
@@ -179,6 +199,44 @@ class CidPathTest extends Specification {
         cleanup:
         cid.resolve('12345').deleteDir()
 
+    }
+
+    def 'should get subobjects as path' (){
+        given:
+        def cidFs = new FileHelper().getOrCreateFileSystemFor('cid', [enabled: true, store: [location: cid.parent.toString()]] ) as CidFileSystem
+        def wf = new WorkflowRun(new Workflow([],"repo", "commit"), "sessionId", "runId", [new Parameter("String", "param1", "value1")])
+
+        when: 'workflow repo in workflow run'
+        Path p = CidPath.getMetadataAsTargetPath(wf, cidFs, "12345", ["workflow", "repository"] as String[])
+        then:
+        p instanceof CidMetadataPath
+        p.text == '"repo"'
+
+        when: 'outputs'
+        def outputs = new WorkflowOutputs(Instant.now(), "cid://12345", [ samples: ["sample1", "sample2"]])
+        cidFs.cidStore.save("12345/outputs", outputs)
+        Path p2 = CidPath.getMetadataAsTargetPath(wf, cidFs, "12345", ["outputs"] as String[])
+        then:
+        p2 instanceof CidMetadataPath
+        p2.text == CidUtils.encodeSearchOutputs([ samples: ["sample1", "sample2"]], true)
+
+        when: 'child does not exists'
+        CidPath.getMetadataAsTargetPath(wf, cidFs, "12345", ["no-exist"] as String[])
+        then:
+        def exception = thrown(FileNotFoundException)
+        exception.message == "Target path '12345#no-exist' does not exist."
+
+        when: 'outputs does not exists'
+        CidPath.getMetadataAsTargetPath(wf, cidFs, "6789", ["outputs"] as String[])
+        then:
+        def exception1 = thrown(FileNotFoundException)
+        exception1.message == "Target path '6789#outputs' does not exist."
+
+        when: 'null object'
+        CidPath.getMetadataAsTargetPath(null, cidFs, "12345", ["no-exist"] as String[])
+        then:
+        def exception2 = thrown(FileNotFoundException)
+        exception2.message == "Target path '12345' does not exist."
     }
 
     def 'should get file name' () {
@@ -368,7 +426,91 @@ class CidPathTest extends Specification {
         and:
         result == new CidPath(cidfs, '321')
     }
-    
+
+    def 'should throw illegat exception when not correct scheme' (){
+        when: 'creation'
+        new CidPath(fs, new URI("http://1234"))
+        then:
+        thrown(IllegalArgumentException)
+
+        when: 'asUri'
+        CidPath.asUri("http://1234")
+        then:
+        thrown(IllegalArgumentException)
+
+        when: 'asUri'
+        CidPath.asUri("")
+        then:
+        thrown(IllegalArgumentException)
+
+    }
+
+    def 'should throw provider mismatch exception when different path types' () {
+        given:
+        def pr = Mock(CidFileSystemProvider)
+        def fs = Mock(CidFileSystem){
+            provider() >> pr}
+        and:
+        def cid = new CidPath(fs, '123/a/b/c')
+
+        when: 'resolve with path'
+        cid.resolve(Path.of('d'))
+        then:
+        thrown(ProviderMismatchException)
+
+        when: 'resolve with uri string'
+        cid.resolve(Path.of('http://1234'))
+        then:
+        thrown(ProviderMismatchException)
+
+        when: 'relativize'
+        cid.relativize(Path.of('d'))
+        then:
+        thrown(ProviderMismatchException)
+    }
+
+    def 'should throw exception for unsupported methods' () {
+        given:
+        def pr = Mock(CidFileSystemProvider)
+        def fs = Mock(CidFileSystem){
+            provider() >> pr}
+        and:
+        def cid = new CidPath(fs, '123/a/b/c')
+
+        when: 'to file'
+        cid.toFile()
+        then:
+        thrown(UnsupportedOperationException)
+
+        when: 'register'
+        cid.register(null, null,null)
+        then:
+        thrown(UnsupportedOperationException)
+    }
+
+    def 'should throw exception for incorrect index'() {
+        when: 'getting name with negative index'
+        new CidPath(fs, "1234").getName(-1)
+        then:
+        thrown(IllegalArgumentException)
+
+        when: 'getting name with larger index tha namecount'
+        new CidPath(fs, "1234").getName(2)
+        then:
+        thrown(IllegalArgumentException)
+
+        when: 'getting subpath with negative index'
+        new CidPath(fs, "1234").subpath(-1,1)
+        then:
+        thrown(IllegalArgumentException)
+
+        when: 'getting subpath with larger index tha namecount'
+        new CidPath(fs, "1234").subpath(0,2)
+        then:
+        thrown(IllegalArgumentException)
+
+    }
+
     @Unroll
     def 'should get to uri string' () {
         expect:
@@ -430,5 +572,97 @@ class CidPathTest extends Specification {
         'cid:///'       | true
         'cid://foo/bar' | true
     }
+
+    def 'should detect equals'(){
+        expect:
+        new CidPath(FS1, PATH1).equals(new CidPath(FS2, PATH2)) == EXPECTED
+        where:
+        FS1            | FS2            | PATH1             | PATH2             | EXPECTED
+        null           | fs             | "12345/path"      | "12345/path"      | false
+        fs             | null           | "12345/path"      | "12345/path"      | false
+        null           | null           | "12345/"          | "12345/path"      | false
+        fs             | fs             | "12345/"          | "12345/path"      | false
+        and:
+        null           | null           | "12345/path"      | "12345/path"      | true
+        fs             | fs             | "12345/path"      | "12345/path"      | true
+        null           | null           | "12345/"          | "12345"           | true
+        fs             | fs             | "12345/"          | "12345 "          | true
+    }
+
+    def 'should validate correct hash'(){
+        when:
+        def file = wdir.resolve("file.txt")
+        file.text = "this is a data file"
+        def hash = CacheHelper.hasher(file).hash().toString()
+        def correctData = new DataOutput(file.toString(), new Checksum(hash,"nextflow", "standard"))
+        CidPath.validateDataOutput(correctData)
+        def stdout = capture
+            .toString()
+            .readLines()// remove the log part
+            .findResults { line -> !line.contains('DEBUG') ? line : null }
+            .findResults { line -> !line.contains('INFO') ? line : null }
+            .findResults { line -> !line.contains('plugin') ? line : null }
+
+        then:
+        stdout.size() == 0
+
+        cleanup:
+        file.delete()
+    }
+
+    def 'should warn with incorrect hash'(){
+        when:
+        def file = wdir.resolve("file.txt")
+        file.text = "this is a data file"
+        def hash = CacheHelper.hasher(file).hash().toString()
+        def correctData = new DataOutput(file.toString(), new Checksum("abscd","nextflow", "standard"))
+        CidPath.validateDataOutput(correctData)
+        def stdout = capture
+            .toString()
+            .readLines()// remove the log part
+            .findResults { line -> !line.contains('DEBUG') ? line : null }
+            .findResults { line -> !line.contains('INFO') ? line : null }
+            .findResults { line -> !line.contains('plugin') ? line : null }
+
+        then:
+        stdout.size() == 1
+        stdout[0].endsWith("Checksum of '$file' does not match with the one stored in the metadata")
+
+        cleanup:
+        file.delete()
+    }
+
+    def 'should warn when hash algorithm is not supported'(){
+        when:
+        def file = wdir.resolve("file.txt")
+        file.text = "this is a data file"
+        def hash = CacheHelper.hasher(file).hash().toString()
+        def correctData = new DataOutput(file.toString(), new Checksum(hash,"not-supported", "standard"))
+        CidPath.validateDataOutput(correctData)
+        def stdout = capture
+            .toString()
+            .readLines()// remove the log part
+            .findResults { line -> !line.contains('DEBUG') ? line : null }
+            .findResults { line -> !line.contains('INFO') ? line : null }
+            .findResults { line -> !line.contains('plugin') ? line : null }
+
+        then:
+        stdout.size() == 1
+        stdout[0].endsWith("Checksum of '$file' can't be validated. Algorithm 'not-supported' is not supported")
+
+        cleanup:
+        file.delete()
+    }
+
+    def 'should throw exception when file not found validating hash'(){
+        when:
+        def correctData = new DataOutput("not/existing/file", new Checksum("120741","nextflow", "standard"))
+        CidPath.validateDataOutput(correctData)
+
+        then:
+        thrown(FileNotFoundException)
+
+    }
+
 
 }

@@ -43,11 +43,6 @@ class CidHistoryRecord {
         this.runCid = runCid
     }
 
-    CidHistoryRecord(UUID sessionId, String name = null) {
-        this.runName = name
-        this.sessionId = sessionId
-    }
-
     protected CidHistoryRecord() {}
 
     List<String> toList() {
@@ -65,13 +60,9 @@ class CidHistoryRecord {
 
     static CidHistoryRecord parse(String line) {
         def cols = line.tokenize('\t')
-        if (cols.size() == 2)
-            return new CidHistoryRecord(UUID.fromString(cols[0]))
-
         if (cols.size() == 4) {
             return new CidHistoryRecord(TIMESTAMP_FMT.parse(cols[0]), cols[1], UUID.fromString(cols[2]), cols[3])
         }
-
         throw new IllegalArgumentException("Not a valid history entry: `$line`")
     }
 }
