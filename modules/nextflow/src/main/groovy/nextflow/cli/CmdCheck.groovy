@@ -95,7 +95,7 @@ class CmdCheck extends CmdBase {
         configParser = new ConfigParser()
         errorListener = outputFormat == 'json'
             ? new JsonErrorListener()
-            : new StdoutErrorListener(outputFormat, launcher.options.ansiLog)
+            : new StandardErrorListener(outputFormat, launcher.options.ansiLog)
 
         errorListener.beforeAll()
 
@@ -186,11 +186,11 @@ interface ErrorListener {
 
 
 @CompileStatic
-class StdoutErrorListener implements ErrorListener {
+class StandardErrorListener implements ErrorListener {
     private String format
     private boolean ansiLog
 
-    StdoutErrorListener(String format, boolean ansiLog) {
+    StandardErrorListener(String format, boolean ansiLog) {
         this.format = format
         this.ansiLog = ansiLog
     }

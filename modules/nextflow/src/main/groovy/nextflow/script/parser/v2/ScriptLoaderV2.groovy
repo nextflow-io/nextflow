@@ -20,7 +20,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import nextflow.Session
-import nextflow.cli.StdoutErrorListener
+import nextflow.cli.StandardErrorListener
 import nextflow.exception.ScriptCompilationException
 import nextflow.script.BaseScript
 import nextflow.script.ScriptBinding
@@ -116,7 +116,7 @@ class ScriptLoaderV2 implements ScriptLoader {
             })
         }
         catch( CompilationFailedException e ) {
-            final errorListener = new StdoutErrorListener('full', false)
+            final errorListener = new StandardErrorListener('full', false)
             println()
             errorListener.beforeErrors()
             for( final message : compiler.getErrors() ) {
