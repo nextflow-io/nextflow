@@ -26,6 +26,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileTime
 import java.time.Duration
 import java.time.Instant
+import java.time.ZoneId
 
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
@@ -956,11 +957,11 @@ class WaveClientTest extends Specification {
         
         where:
         ARCH                | EXPECTED
-        'linux/amd64'       | 'https://fusionfs.seqera.io/releases/v2.5-amd64.json'
-        'linux/x86_64'      | 'https://fusionfs.seqera.io/releases/v2.5-amd64.json'
-        'arm64'             | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
-        'linux/arm64'       | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
-        'linux/arm64/v8'    | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
+        'linux/amd64'       | 'https://fusionfs.seqera.io/releases/v2.4-amd64.json'
+        'linux/x86_64'      | 'https://fusionfs.seqera.io/releases/v2.4-amd64.json'
+        'arm64'             | 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
+        'linux/arm64'       | 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
+        'linux/arm64/v8'    | 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
     }
 
     @Unroll
@@ -1390,7 +1391,7 @@ class WaveClientTest extends Specification {
         and:
         result == new ContainerMeta(
                 requestId: resp.requestId,
-                requestTime: handle.createdAt,
+                requestTime: handle.createdAt.atZone(ZoneId.systemDefault()).toOffsetDateTime(),
                 sourceImage: resp.containerImage,
                 targetImage: resp.targetImage,
                 buildId: resp.buildId,
@@ -1426,7 +1427,7 @@ class WaveClientTest extends Specification {
         and:
         result == new ContainerMeta(
             requestId: resp.requestId,
-            requestTime: handle.createdAt,
+            requestTime: handle.createdAt.atZone(ZoneId.systemDefault()).toOffsetDateTime(),
             sourceImage: resp.containerImage,
             targetImage: resp.targetImage,
             buildId: null,

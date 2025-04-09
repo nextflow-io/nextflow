@@ -1,5 +1,17 @@
 nf-azure changelog
 ===================
+1.14.1 - 19 Mar 2025
+- Fix handling of exit status with Azure Batch and Fusion (#5806) [7085862d]
+- Removing Azure vmList from log [ci fast] [67ffc8ab]
+
+1.14.0 - 17 Mar 2025
+- Add  cpu-shares and memory limits to Azure Batch tasks (#5799) [f9c0cbfd]
+- Add disk directive support in Azure Batch (#5784) [113d7250]
+- Validates Azure region before checking available VMs (#5108) [080893a2]
+- Fix Ignore Azure pool already exists error (#5721) [e267961b]
+- Bump Ubuntu 22.04 as default SKU for Azure Batch (#5804) [e0ba536d]
+- Bump groovy 4.0.26 [f740bc56]
+
 1.13.0 - 12 Feb 2025
 - Allow Azure Batch tasks to be submitted to different pools (#5766) [76790d2a]
 - Fix Check for number of low priority nodes in Azure Batch before raising a pool resize error (#5576) [9b528c11]
