@@ -36,7 +36,7 @@ class FusionConfig {
 
     final static public String DEFAULT_FUSION_AMD64_URL = 'https://fusionfs.seqera.io/releases/v2.4-amd64.json'
     final static public String DEFAULT_FUSION_ARM64_URL = 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
-    final static public String DEFAULT_SNAPSHOT_AMD64_URL = 'https://fusionfs.seqera.io/releases/v4.5-snap_amd64.json'
+    final static public String DEFAULT_SNAPSHOT_AMD64_URL = 'https://fusionfs.seqera.io/releases/v2.4-snap_amd64.json'
 
     final static public String DEFAULT_TAGS = "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
 

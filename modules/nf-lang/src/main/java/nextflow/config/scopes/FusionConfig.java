@@ -66,6 +66,12 @@ public class FusionConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        Enable the snapshotting capability provided by Fusion (preview). This feature allows the automatic restoring the state of jobs interrupted by a spot-preemption (default: `false`).
+    """)
+    public boolean snapshots;
+
+    @ConfigOption
+    @Description("""
         The pattern that determines how tags are applied to files created via the Fusion client (default: `[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)`). Set to `false` to disable tags.
     """)
     public String tags;
