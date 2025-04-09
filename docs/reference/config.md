@@ -143,7 +143,7 @@ The following settings are available:
 `aws.batch.killUnscheduled`
 : :::{versionadded} 25.03.0-edge
 :::
-: Kill and produce a failure when a job is pending and an unscheduled reason is detected (e.g `MISCONFIGURATION::JOB_RESOURCE_REQUIREMENT`) (default: `false`).
+: Kill and produce a failure when a job is pending and an unscheduled reason is detected (e.g., `MISCONFIGURATION::JOB_RESOURCE_REQUIREMENT`) (default: `false`).
 
 `aws.batch.jobRole`
 : The AWS Batch Job Role ARN that needs to be used to execute the Batch Job.
