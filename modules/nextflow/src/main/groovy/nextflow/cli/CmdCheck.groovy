@@ -125,14 +125,23 @@ class CmdCheck extends CmdBase {
     }
 
     private void parse(File file) {
-        log.debug "Checking file ${file}"
-        errorListener.beforeFile(file)
-
         final name = file.getName()
         if( name.endsWith('.nf') )
-            scriptParser.parse(file)
+            checkScript(file)
         else if( name.endsWith('.config') )
-            configParser.parse(file)
+            checkConfig(file)
+    }
+
+    private void checkScript(File file) {
+        log.debug "Checking script ${file}"
+        errorListener.beforeFile(file)
+        scriptParser.parse(file)
+    }
+
+    private void checkConfig(File file) {
+        log.debug "Checking config ${file}"
+        errorListener.beforeFile(file)
+        configParser.parse(file)
     }
 
     private void checkErrors(Compiler compiler) {
