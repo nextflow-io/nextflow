@@ -948,7 +948,7 @@ class WaveClientTest extends Specification {
     @Unroll
     def 'should get fusion default url' () {
         given:
-        def sess = Mock(Session) {getConfig() >> [:] }
+        def sess = Mock(Session) {getConfig() >> [fusion:[snapshots:SNAP]] }
         and:
         def wave = Spy(new WaveClient(sess))
 
@@ -956,12 +956,14 @@ class WaveClientTest extends Specification {
         wave.defaultFusionUrl(ARCH).toURI().toString() == EXPECTED
         
         where:
-        ARCH                | EXPECTED
-        'linux/amd64'       | 'https://fusionfs.seqera.io/releases/v2.4-amd64.json'
-        'linux/x86_64'      | 'https://fusionfs.seqera.io/releases/v2.4-amd64.json'
-        'arm64'             | 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
-        'linux/arm64'       | 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
-        'linux/arm64/v8'    | 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
+        ARCH                | SNAP  | EXPECTED
+        'linux/amd64'       | null  | 'https://fusionfs.seqera.io/releases/v2.4-amd64.json'
+        'linux/x86_64'      | null  | 'https://fusionfs.seqera.io/releases/v2.4-amd64.json'
+        'arm64'             | null  | 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
+        'linux/arm64'       | null  | 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
+        'linux/arm64/v8'    | null  | 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
+        and:
+        'linux/amd64'       | true  | 'https://fusionfs.seqera.io/releases/v2.4-snap_amd64.json'
     }
 
     @Unroll
