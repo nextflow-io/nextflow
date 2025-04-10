@@ -16,6 +16,7 @@
 
 package nextflow.cloud.aws.batch
 
+import java.nio.file.Path
 import java.time.Instant
 
 import com.amazonaws.services.batch.AWSBatch
@@ -34,6 +35,7 @@ import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.SubmitJobResult
 import nextflow.BuildInfo
+import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.aws.util.S3PathFactory
@@ -1120,6 +1122,38 @@ class AwsBatchTaskHandlerTest extends Specification {
         [TOWER_WORKFLOW_ID: '12345']    | 'foo'     | 'tw-12345-foo'
         [TOWER_WORKFLOW_ID: '12345']    | 'foo'     | 'tw-12345-foo'
         [TOWER_WORKFLOW_ID: '12345']    | 'foo(12)' | 'tw-12345-foo12'
+    }
 
+    @Unroll
+    def 'should validate max spot attempts' () {
+        given:
+        def config = Global.config = [aws:[batch:[maxSpotAttempts: ATTEMPTS]], fusion: [enabled: FUSION, snapshots: SNAPSHOTS]]
+        def session = Mock(Session) {getConfig() >> config }
+        def opts = new AwsOptions(session)
+        and:
+        def executor = Mock(AwsBatchExecutor) { getAwsOptions() >> opts; isFusionEnabled()>>FUSION }
+        def proc = Mock(TaskProcessor) { getExecutor()>>executor }
+        def task = Mock(TaskRun) {workDir>> Path.of('/foo'); getProcessor()>>proc }
+        def handler = new AwsBatchTaskHandler(task, executor)
+
+        expect:
+        handler.maxSpotAttempts() == EXPECTED
+
+        where:
+        ATTEMPTS    | FUSION | SNAPSHOTS  | EXPECTED
+        null        | false  | false      | 0
+        0           | false  | false      | 0
+        1           | false  | false      | 1
+        2           | false  | false      | 2
+        and:
+        null        | true  | false      | 0
+        0           | true  | false      | 0
+        1           | true  | false      | 1
+        2           | true  | false      | 2
+        and:
+        null        | true  | true       | 5    // <-- default to 5
+        0           | true  | true       | 5    // <-- default to 5 
+        1           | true  | true       | 1
+        2           | true  | true       | 2
     }
 }

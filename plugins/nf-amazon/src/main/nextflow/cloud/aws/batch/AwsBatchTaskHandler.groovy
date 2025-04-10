@@ -696,7 +696,12 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     }
 
     protected int maxSpotAttempts() {
-        return executor.awsOptions.maxSpotAttempts
+        final result = executor.awsOptions.maxSpotAttempts
+        if( result )
+            return result
+        // when fusion snapshot is enabled max attempt should be > 0
+        // to enable to allow snapshot retry the job execution in a new ec2 instance
+        return fusionEnabled() && fusionConfig().snapshotsEnabled() ? 5 : 0
     }
 
     protected String getJobName(TaskRun task) {
