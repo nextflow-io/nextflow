@@ -303,4 +303,39 @@ class CmdCidTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should show query results'(){
+        given:
+        def folder = Files.createTempDirectory('test').toAbsolutePath()
+        def configFile = folder.resolve('nextflow.config')
+        configFile.text = "workflow.data.enabled = true\nworkflow.data.store.location = '$folder'".toString()
+        def cidFile = folder.resolve(".meta/12345/.data.json")
+        Files.createDirectories(cidFile.parent)
+        def launcher = Mock(Launcher){
+            getOptions() >> new CliOptions(config: [configFile.toString()])
+        }
+        def encoder = new CidEncoder().withPrettyPrint(true)
+        def time = Instant.ofEpochMilli(123456789)
+        def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
+            "cid://123987/file.bam", "cid://12345", "cid://123987/", 1234, time, time, null)
+        def jsonSer = encoder.encode(entry)
+        def expectedOutput = jsonSer
+        cidFile.text = jsonSer
+        when:
+        def cidCmd = new CmdCid(launcher: launcher, args: ["show", "cid:///?type=DataOutput"])
+        cidCmd.run()
+        def stdout = capture
+            .toString()
+            .readLines()// remove the log part
+            .findResults { line -> !line.contains('DEBUG') ? line : null }
+            .findResults { line -> !line.contains('INFO') ? line : null }
+            .findResults { line -> !line.contains('plugin') ? line : null }
+
+        then:
+        stdout.size() == expectedOutput.readLines().size()
+        stdout.join('\n') == expectedOutput
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
 }

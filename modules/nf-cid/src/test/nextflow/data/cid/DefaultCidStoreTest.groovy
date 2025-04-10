@@ -124,9 +124,12 @@ class DefaultCidStoreTest extends Specification {
         cidStore.save(key4, value4)
 
         when:
-        def results3 = cidStore.search("type=DataOutput&annotations.key2=value2")
+        def results = cidStore.search("type=DataOutput&annotations.key2=value2")
         then:
-        results3.size() == 2
+        results.size() == 2
+        results.keySet().containsAll([key2,key3])
+        results[key2] == value2
+        results[key3] == value3
     }
 
 

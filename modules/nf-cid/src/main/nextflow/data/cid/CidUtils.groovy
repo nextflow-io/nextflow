@@ -95,9 +95,8 @@ class CidUtils {
     static String[] parseChildrenFormFragment(String fragment) {
         if( !fragment )
             return EMPTY_ARRAY
-        return fragment.contains('.')
-            ?  fragment.split("\\.")
-            :  List.of(fragment) as String[]
+        final children = fragment.tokenize('.')
+        return children as String[]
     }
 
     /**
@@ -186,12 +185,13 @@ class CidUtils {
      * @return Map containing the parameter-value pairs of the query string.
      */
     static Map<String, String> parseQuery(String queryString) {
-        if (queryString) {
-            return queryString.split('&').collectEntries {
-                it.split('=').collect { URLDecoder.decode(it, 'UTF-8') }
-            } as Map<String, String>
+        if( !queryString ) {
+            return [:]
         }
-        return [:]
+        return queryString.split('&').collectEntries {
+            it.split('=').collect { URLDecoder.decode(it, 'UTF-8') }
+        } as Map<String, String>
+
     }
 
     /**
@@ -200,14 +200,27 @@ class CidUtils {
      * @param params parameter-value pairs to evaluate
      * @return true if all object parameters exist and matches with the value, otherwise false.
      */
-    static boolean checkParams(Object object, Map<String,String> params) {
-        for (final entry : params.entrySet()) {
+    static boolean checkParams(Object object, Map<String, String> params) {
+        for( final entry : params.entrySet() ) {
             final value = navigate(object, entry.key)
-            if (!value || value.toString() != entry.value.toString() ) {
+            if( !checkParam(value, entry.value) ) {
                 return false
             }
         }
         return true
+    }
+
+    private static boolean checkParam(Object value, Object expected) {
+        if( !value )
+            return false
+        if( value instanceof Collection ) {
+            for( def v : value as Collection ) {
+                if( v.toString() == expected.toString() )
+                    return true
+            }
+            return false
+        }
+        return value.toString() == expected.toString()
     }
 
     /**

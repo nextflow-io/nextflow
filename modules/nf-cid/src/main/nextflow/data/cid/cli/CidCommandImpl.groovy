@@ -17,8 +17,6 @@
 
 package nextflow.data.cid.cli
 
-import groovy.util.logging.Slf4j
-import nextflow.data.cid.model.DataPath
 import nextflow.data.cid.serde.CidEncoder
 
 import static nextflow.data.cid.fs.CidPath.*
@@ -110,8 +108,6 @@ class CidCommandImpl implements CmdCid.CidCommand {
         } catch (Throwable e) {
             println "Error loading ${args[0]}. ${e.message}"
         }
-
-
     }
 
     @Override
@@ -313,11 +309,9 @@ class CidCommandImpl implements CmdCid.CidCommand {
             return
         }
         try {
-            println CidUtils.encodeSearchOutputs(store.search(args[0]), true)
+            println CidUtils.encodeSearchOutputs(store.search(args[0]).keySet().collect {asUriString(it)}, true)
         } catch (Throwable e){
             println "Exception searching for ${args[0]}. ${e.message}"
         }
     }
-
-
 }

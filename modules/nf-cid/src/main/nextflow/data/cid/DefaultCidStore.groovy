@@ -128,7 +128,7 @@ class DefaultCidStore implements CidStore {
                 if (file.name.startsWith('.data.json') ) {
                     final cidObject = encoder.decode(file.text)
                     if (CidUtils.checkParams(cidObject, params)){
-                        results.put(file.getParent().toString(), cidObject as CidSerializable)
+                        results.put(metaLocation.relativize(file.getParent()).toString(), cidObject as CidSerializable)
                     }
                 }
                 FileVisitResult.CONTINUE

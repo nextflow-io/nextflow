@@ -416,6 +416,35 @@ class CidCommandImplTest extends Specification{
         stdout[3] == expectedOutput
     }
 
+    def 'should find metadata descriptions'(){
+        given:
+        def cidFile = storeLocation.resolve(".meta/123987/file.bam/.data.json")
+        Files.createDirectories(cidFile.parent)
+        def cidFile2 = storeLocation.resolve(".meta/123987/file2.bam/.data.json")
+        Files.createDirectories(cidFile2.parent)
+        def encoder = new CidEncoder().withPrettyPrint(true)
+        def time = Instant.ofEpochMilli(123456789)
+        def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
+            "cid://123987/file.bam", "cid://123987/", null, 1234, time, time, null)
+        def entry2 = new DataOutput("path/to/file2",new Checksum("42472qet","nextflow","standard"),
+            "cid://123987/file2.bam", "cid://123987/", null, 1235, time, time, null)
+        def expectedOutput1 = '[\n  "cid://123987/file.bam",\n  "cid://123987/file2.bam"\n]'
+        def expectedOutput2 = '[\n  "cid://123987/file2.bam",\n  "cid://123987/file.bam"\n]'
+        cidFile.text = encoder.encode(entry)
+        cidFile2.text = encoder.encode(entry2)
+        when:
+        new CidCommandImpl().find(configMap, ["type=DataOutput"])
+        def stdout = capture
+            .toString()
+            .readLines()// remove the log part
+            .findResults { line -> !line.contains('DEBUG') ? line : null }
+            .findResults { line -> !line.contains('INFO') ? line : null }
+            .findResults { line -> !line.contains('plugin') ? line : null }
+
+        then:
+        stdout.join('\n') == expectedOutput1 || stdout.join('\n') == expectedOutput2
+    }
+
 
 
 }

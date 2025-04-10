@@ -86,11 +86,11 @@ class CidUtilsTest extends Specification{
         CidUtils.parseChildrenFormFragment(FRAGMENT) == EXPECTED as String[]
 
         where:
-        FRAGMENT            | EXPECTED
-        "field1"            | ["field1"]
-        "field1.field2"     | ["field1", "field2"]
-        null                | []
-        ""                  | []
+        FRAGMENT                | EXPECTED
+        "workflow"              | ["workflow"]
+        "workflow.repository"   | ["workflow", "repository"]
+        null                    | []
+        ""                      | []
     }
 
     def "should parse a query string as Map"() {
@@ -99,25 +99,40 @@ class CidUtilsTest extends Specification{
 
         where:
         QUERY_STRING                | EXPECTED
-        "key1=value1&key2=value2"   | ["key1": "value1", "key2": "value2"]
-        "key=val with space"        | ["key": "val with space"]
+        "type=value1&taskRun=value2"   | ["type": "value1", "taskRun": "value2"]
+        "type=val with space"        | ["type": "val with space"]
         ""                          | [:]
         null                        | [:]
     }
 
     def "should check params in an object"() {
         given:
-        def obj = ["field": "value", "nested": ["subfield": "subvalue"]]
+        def obj = [ "type": "value", "workflow": ["repository": "subvalue"], "outputs" : [ ["path":"/to/file"],["path":"file2"] ] ]
 
         expect:
         CidUtils.checkParams(obj, PARAMS) == EXPECTED
 
         where:
         PARAMS                                  | EXPECTED
-        ["field": "value"]                      | true
-        ["field": "wrong"]                      | false
-        ["nested.subfield": "subvalue"]         | true
-        ["nested.subfield": "wrong"]            | false
+        ["type": "value"]                       | true
+        ["type": "wrong"]                       | false
+        ["workflow.repository": "subvalue"]     | true
+        ["workflow.repository": "wrong"]        | false
+        ["outputs.path": "wrong"]               | false
+        ["outputs.path": "/to/file"]            | true
+        ["outputs.path": "file2"]               | true
+
+    }
+
+    def 'should parse query' (){
+        expect:
+        CidUtils.parseQuery(PARAMS) == EXPECTED
+        where:
+        PARAMS                              | EXPECTED
+        "type=value"                        | ["type": "value"]
+        "workflow.repository=subvalue"      | ["workflow.repository": "subvalue"]
+        ""                                  | [:]
+        null                                | [:]
     }
 
     def "should navigate in object params"() {
