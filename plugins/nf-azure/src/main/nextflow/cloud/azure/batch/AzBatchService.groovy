@@ -503,7 +503,7 @@ class AzBatchService implements Closeable {
             
             // Create the adapter that will manage the Fusion env with pool options
             // TaskRun doesn't implement FusionAwareTask directly, so we need a wrapper
-            final adapter = new AzureBatchFusionAdapter(new FusionTaskWrapper(task), launcher, pool?.opts)
+            final adapter = new AzureBatchFusionAdapter(new AzFusionTaskWrapper(task), launcher, pool?.opts)
             
             // Add container options
             opts += "--privileged "

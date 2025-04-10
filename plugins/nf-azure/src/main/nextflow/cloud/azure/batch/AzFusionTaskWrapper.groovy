@@ -31,13 +31,13 @@ import nextflow.processor.TaskRun
  */
 @Slf4j
 @CompileStatic
-class FusionTaskWrapper implements FusionAwareTask {
+class AzFusionTaskWrapper implements FusionAwareTask {
 
     private TaskRun task
     private FusionScriptLauncher fusionLauncher
     private Boolean fusionEnabled
 
-    FusionTaskWrapper(TaskRun task) {
+    AzFusionTaskWrapper(TaskRun task) {
         this.task = task
     }
 
