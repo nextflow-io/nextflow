@@ -300,7 +300,7 @@ public class ScriptAstBuilder {
         else if( ctx instanceof WorkflowDefAltContext wdac ) {
             var node = workflowDef(wdac.workflowDef());
             saveLeadingComments(node, ctx);
-            if( node.getName() == null ) {
+            if( node.isEntry() ) {
                 if( moduleNode.getEntry() != null )
                     collectSyntaxError(new SyntaxException("Entry workflow defined more than once", node));
                 moduleNode.setEntry(node);

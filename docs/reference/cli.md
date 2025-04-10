@@ -429,6 +429,9 @@ The `format` command formats the given Nextflow scripts and config files. Direct
 `-exclude`
 : File pattern to exclude from linting. Can be specified multiple times (default: `.git, .nf-test, work`).
 
+`-sort-declarations`
+: Sort script declarations in Nextflow scripts (default: `false`).
+
 `-spaces`
 : Number of spaces to indent (default: `4`).
 

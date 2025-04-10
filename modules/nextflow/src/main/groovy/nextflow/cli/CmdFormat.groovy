@@ -56,6 +56,9 @@ class CmdFormat extends CmdBase {
     @Parameter(names = ['-harshil-alignment'], description = 'Use Harshil alignment')
     Boolean harhsilAlignment
 
+    @Parameter(names = ['-sort-declarations'], description = 'Sort script declarations in Nextflow scripts')
+    Boolean sortDeclarations
+
     @Parameter(names=['-spaces'], description = 'Number of spaces to indent')
     int spaces
 
@@ -87,7 +90,7 @@ class CmdFormat extends CmdBase {
 
         scriptParser = new ScriptParser()
         configParser = new ConfigParser()
-        formattingOptions = new FormattingOptions(spaces, !tabs, harhsilAlignment, false)
+        formattingOptions = new FormattingOptions(spaces, !tabs, harhsilAlignment, false, sortDeclarations)
 
         // print extra newline since first file status will chomp it
         println()

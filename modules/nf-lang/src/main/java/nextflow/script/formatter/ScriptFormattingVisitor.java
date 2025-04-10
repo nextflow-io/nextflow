@@ -15,6 +15,7 @@
  */
 package nextflow.script.formatter;
 
+import java.util.Comparator;
 import java.util.List;
 
 import nextflow.script.ast.AssignmentExpression;
@@ -75,31 +76,40 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             maxIncludeWidth = getMaxIncludeWidth(scriptNode.getIncludes());
         if( scriptNode.getShebang() != null )
             fmt.append(scriptNode.getShebang());
-        for( var featureFlag : scriptNode.getFeatureFlags() )
-            visitFeatureFlag(featureFlag);
-        for( var includeNode : scriptNode.getIncludes() )
-            visitInclude(includeNode);
-        visitParams(scriptNode.getParams());
+
+        // format code snippet if applicable
         var entry = scriptNode.getEntry();
-        if( entry != null ) {
-            if( entry.getLineNumber() != -1 )
-                visitWorkflow(entry);
-            else
-                fmt.visit(entry.main);
+        if( entry != null && entry.isCodeSnippet() ) {
+            fmt.visit(entry.main);
+            return;
         }
-        if( scriptNode.getOutput() != null )
-            visitOutput(scriptNode.getOutput());
-        for( var workflowNode : scriptNode.getWorkflows() ) {
-            if( !workflowNode.isEntry() )
-                visitWorkflow(workflowNode);
+
+        // format script declarations
+        var declarations = scriptNode.getDeclarations();
+
+        // -- declarations are canonically sorted by default
+        // -- revert to original order if sorting is disabled
+        if( !options.sortDeclarations() ) {
+            declarations.sort(Comparator.comparing(node -> node.getLineNumber()));
         }
-        for( var processNode : scriptNode.getProcesses() )
-            visitProcess(processNode);
-        for( var functionNode : scriptNode.getFunctions() )
-            visitFunction(functionNode);
-        for( var classNode : scriptNode.getClasses() ) {
-            if( classNode.isEnum() )
-                visitEnum(classNode);
+
+        for( var decl : scriptNode.getDeclarations() ) {
+            if( decl instanceof ClassNode cn && cn.isEnum() )
+                visitEnum(cn);
+            else if( decl instanceof FeatureFlagNode ffn )
+                visitFeatureFlag(ffn);
+            else if( decl instanceof FunctionNode fn )
+                visitFunction(fn);
+            else if( decl instanceof IncludeNode in )
+                visitInclude(in);
+            else if( decl instanceof OutputNode on )
+                visitOutput(on);
+            else if( decl instanceof ParamNode pn )
+                visitParam(pn);
+            else if( decl instanceof ProcessNode pn )
+                visitProcess(pn);
+            else if( decl instanceof WorkflowNode wn )
+                visitWorkflow(wn);
         }
     }
 

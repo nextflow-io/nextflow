@@ -56,6 +56,10 @@ public class WorkflowNode extends MethodNode {
         return getName() == null;
     }
 
+    public boolean isCodeSnippet() {
+        return getLineNumber() == -1;
+    }
+
     private static Parameter[] dummyParams(Statement takes) {
         return asBlockStatements(takes)
             .stream()
