@@ -71,7 +71,6 @@ class AzFusionEnv implements FusionEnv {
         }
 
         final cfg = AzConfig.config
-        final managedIdentity = poolOpts?.managedIdentityId
         final result = new LinkedHashMap(10)
 
         if (!cfg.storage().accountName) {
@@ -102,6 +101,11 @@ class AzFusionEnv implements FusionEnv {
     synchronized String getOrCreateSasToken() {
         log.debug("Azure Fusion environment - Generating SAS token for authentication")
         final cfg = AzConfig.config
+
+        // Check for incompatible configuration
+        if (cfg.storage().accountKey && cfg.storage().sasToken) {
+            throw new IllegalArgumentException("Azure Storage Access key and SAS token detected. Only one is allowed")
+        }
 
         // If a SAS token is already defined in the configuration, just return it
         if (cfg.storage().sasToken) {

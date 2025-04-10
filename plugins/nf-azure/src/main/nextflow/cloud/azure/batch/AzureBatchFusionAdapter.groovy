@@ -84,28 +84,29 @@ class AzureBatchFusionAdapter {
         
         // If using Azure and pool has managed identity, use AzFusionEnv to get environment
         if (poolOpts?.managedIdentityId) {
+            log.debug("Pool has managed identity: ${poolOpts.managedIdentityId}")
+            
             // Find AzFusionEnv extension
             final azFusionEnv = findAzFusionEnv()
             if (azFusionEnv) {
                 // Set the pool options so it has access to managedIdentityId
                 azFusionEnv.setPoolOpts(poolOpts)
                 
-                // Get environment with managed identity
-                final env = azFusionEnv.getEnvironment('az', null)
+                // Get environment with managed identity directly from AzFusionEnv
+                final env = azFusionEnv.getEnvironment('az', null, poolOpts.managedIdentityId)
                 if (env) {
+                    // Replace our environment with the one from AzFusionEnv
                     result.putAll(env)
+                    log.debug("Using managed identity from AzFusionEnv: ${poolOpts.managedIdentityId}")
                 }
-                
-                log.debug("Using managed identity for Azure Batch Fusion task: ${poolOpts.managedIdentityId}")
-                
-                // Make sure SAS token is removed if somehow present
-                result.remove('AZURE_STORAGE_SAS_TOKEN')
+                else {
+                    log.warn("Fusion environment not found for pool attached to job: ${task.getTask().id}")
+                }
             }
             else {
                 // Fallback to direct environment variable if AzFusionEnv not found
                 log.warn("AzFusionEnv extension not found, using direct MSI environment variable")
                 result.put('FUSION_AZ_MSI_CLIENT_ID', poolOpts.managedIdentityId)
-                result.remove('AZURE_STORAGE_SAS_TOKEN')
                 
                 // Add Azure storage account name if not already present
                 if (!result.containsKey('AZURE_STORAGE_ACCOUNT')) {
@@ -115,6 +116,9 @@ class AzureBatchFusionAdapter {
                     }
                 }
             }
+            
+            // Always remove SAS token when using managed identity
+            result.remove('AZURE_STORAGE_SAS_TOKEN')
         }
         
         return result

@@ -189,11 +189,59 @@ class AzFusionEnvTest extends Specification {
         Global.session = Mock(Session) {
             getConfig() >> [azure: [storage: [accountName: 'x1', accountKey: 'y1', sasToken: 'z1']]]
         }
+        
         when:
         def config = Mock(FusionConfig)
-        def env = new AzFusionEnv().getEnvironment('az', Mock(FusionConfig))
+        def fusionEnv = new AzFusionEnv()
+        def env = fusionEnv.getEnvironment('az', config)
+        
         then:
-        thrown(IllegalArgumentException)
+        def ex = thrown(IllegalArgumentException)
+        ex.message.contains('Azure Storage Access key and SAS token detected')
+    }
+
+    def 'should skip SAS token generation when pool-specific managed identity ID is provided'() {
+        given:
+        def NAME = 'myaccount'
+        def POOL_MSI_ID = 'pool-managed-identity-id'
+        Global.session = Mock(Session) {
+            getConfig() >> [azure: [storage: [accountName: NAME]]]
+        }
+
+        when:
+        def config = Mock(FusionConfig)
+        def fusionEnv = new AzFusionEnv()
+        def env = fusionEnv.getEnvironment('az', config, POOL_MSI_ID)
+
+        then:
+        env.AZURE_STORAGE_ACCOUNT == NAME
+        env.FUSION_AZ_MSI_CLIENT_ID == POOL_MSI_ID
+        !env.AZURE_STORAGE_SAS_TOKEN  // SAS token should NOT be present
+        env.size() == 2  // Only account name and managed identity
+    }
+    
+    def 'should set pool options correctly and use them for environment'() {
+        given:
+        def NAME = 'myaccount'
+        def POOL_MSI_ID = 'pool-managed-identity-id'
+        Global.session = Mock(Session) {
+            getConfig() >> [azure: [storage: [accountName: NAME]]]
+        }
+        def poolOpts = Mock(nextflow.cloud.azure.config.AzPoolOpts) {
+            getManagedIdentityId() >> POOL_MSI_ID
+        }
+
+        when:
+        def config = Mock(FusionConfig)
+        def fusionEnv = new AzFusionEnv()
+        fusionEnv.setPoolOpts(poolOpts)
+        def env = fusionEnv.getEnvironment('az', config)
+
+        then:
+        env.AZURE_STORAGE_ACCOUNT == NAME
+        env.FUSION_AZ_MSI_CLIENT_ID == POOL_MSI_ID
+        !env.AZURE_STORAGE_SAS_TOKEN  // SAS token should NOT be present
+        env.size() == 2  // Only account name and managed identity
     }
 
 }

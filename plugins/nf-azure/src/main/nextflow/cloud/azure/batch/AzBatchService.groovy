@@ -513,9 +513,6 @@ class AzBatchService implements Closeable {
                 opts += "-e $it.key=$it.value "
             }
             
-            // For testing purposes only, remove before merging
-            opts += "-e FUSION_LOG_LEVEL=trace -e FUSION_LOG_OUTPUT=stdout "
-            
             // Get the fusion submit command
             final List<String> cmdList = adapter.fusionSubmitCli()
             fusionCmd = cmdList ? String.join(' ', cmdList) : null
@@ -531,9 +528,7 @@ class AzBatchService implements Closeable {
         // cpus and memory
         final slots = computeSlots(task, pool)
         // max wall time
-        final constraints = new BatchTaskConstraints()
-        if( task.config.getTime() )
-            constraints.setMaxWallClockTime( Duration.of(task.config.getTime().toMillis(), ChronoUnit.MILLIS) )
+        final constraints = constraints(task)
 
         log.trace "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
 
@@ -545,11 +540,64 @@ class AzBatchService implements Closeable {
             env.put('FUSION_AZ_MSI_CLIENT_ID', pool.opts.managedIdentityId) // fusion
         }
 
+        return createBatchTaskContent(
+            taskId, 
+            cmd, 
+            userIdentity(pool.opts.privileged, pool.opts.runAs, AutoUserScope.TASK),
+            containerOpts,
+            resourceFileUrls(task, sas),
+            outputFileUrls(task, sas),
+            slots,
+            constraints,
+            env
+        )
+    }
+
+    /**
+     * Create task constraints based on the task configuration
+     * 
+     * @param task The task run to create constraints for
+     * @return The BatchTaskConstraints object
+     */
+    protected BatchTaskConstraints constraints(TaskRun task) {
+        final constraints = new BatchTaskConstraints()
+        if( task.config.getTime() )
+            constraints.setMaxWallClockTime( Duration.of(task.config.getTime().toMillis(), ChronoUnit.MILLIS) )
+        return constraints
+    }
+
+    /**
+     * Create a BatchTaskCreateContent object with the given parameters
+     * 
+     * @param taskId Task ID
+     * @param cmd Command to run
+     * @param userIdentity User identity
+     * @param containerSettings Container settings
+     * @param resourceFiles Resource files
+     * @param outputFiles Output files
+     * @param slots Required slots
+     * @param constraints Task constraints
+     * @param env Environment variables
+     * @return The BatchTaskCreateContent object
+     */
+    protected BatchTaskCreateContent createBatchTaskContent(
+            String taskId, 
+            String cmd, 
+            UserIdentity userIdentity, 
+            BatchTaskContainerSettings containerSettings,
+            List<ResourceFile> resourceFiles,
+            List<OutputFile> outputFiles,
+            int slots,
+            BatchTaskConstraints constraints,
+            Map<String,String> env) {
+        
+        log.trace "[AZURE BATCH] Task details: id=$taskId, slots=$slots, constraints=${constraints?.maxWallClockTime}"
+        
         return new BatchTaskCreateContent(taskId, cmd)
-                .setUserIdentity(userIdentity(pool.opts.privileged, pool.opts.runAs, AutoUserScope.TASK))
-                .setContainerSettings(containerOpts)
-                .setResourceFiles(resourceFileUrls(task, sas))
-                .setOutputFiles(outputFileUrls(task, sas))
+                .setUserIdentity(userIdentity)
+                .setContainerSettings(containerSettings)
+                .setResourceFiles(resourceFiles)
+                .setOutputFiles(outputFiles)
                 .setRequiredSlots(slots)
                 .setConstraints(constraints)
                 .setEnvironmentSettings(env.collect { name, value -> 
