@@ -93,7 +93,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             declarations.sort(Comparator.comparing(node -> node.getLineNumber()));
         }
 
-        for( var decl : scriptNode.getDeclarations() ) {
+        for( var decl : declarations ) {
             if( decl instanceof ClassNode cn && cn.isEnum() )
                 visitEnum(cn);
             else if( decl instanceof FeatureFlagNode ffn )
