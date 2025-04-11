@@ -22,6 +22,7 @@ import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.IncludeModuleNode;
 import nextflow.script.ast.IncludeNode;
+import nextflow.script.ast.OutputBlockNode;
 import nextflow.script.ast.OutputNode;
 import nextflow.script.ast.ParamNode;
 import nextflow.script.ast.ProcessNode;
@@ -87,8 +88,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             else
                 fmt.visit(entry.main);
         }
-        if( scriptNode.getOutput() != null )
-            visitOutput(scriptNode.getOutput());
+        if( scriptNode.getOutputs() != null )
+            visitOutputs(scriptNode.getOutputs());
         for( var workflowNode : scriptNode.getWorkflows() ) {
             if( !workflowNode.isEntry() )
                 visitWorkflow(workflowNode);
@@ -410,37 +411,29 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
     }
 
     @Override
-    public void visitOutput(OutputNode node) {
+    public void visitOutputs(OutputBlockNode node) {
         fmt.appendLeadingComments(node);
         fmt.append("output {\n");
         fmt.incIndent();
-        visitOutputBody(node.body);
+        super.visitOutputs(node);
         fmt.decIndent();
         fmt.append("}\n");
     }
 
-    protected void visitOutputBody(Statement body) {
-        asBlockStatements(body).forEach((stmt) -> {
-            var call = asMethodCallX(stmt);
-            if( call == null )
-                return;
-
-            var code = asDslBlock(call, 1);
-            if( code != null ) {
-                fmt.appendLeadingComments(stmt);
-                fmt.appendIndent();
-                fmt.visit(call.getMethod());
-                fmt.append(" {\n");
-                fmt.incIndent();
-                visitTargetBody(code);
-                fmt.decIndent();
-                fmt.appendIndent();
-                fmt.append("}\n");
-            }
-        });
+    @Override
+    public void visitOutput(OutputNode node) {
+        fmt.appendLeadingComments(node);
+        fmt.appendIndent();
+        fmt.append(node.name);
+        fmt.append(" {\n");
+        fmt.incIndent();
+        visitOutputBody((BlockStatement) node.body);
+        fmt.decIndent();
+        fmt.appendIndent();
+        fmt.append("}\n");
     }
 
-    protected void visitTargetBody(BlockStatement block) {
+    protected void visitOutputBody(BlockStatement block) {
         asBlockStatements(block).forEach((stmt) -> {
             var call = asMethodCallX(stmt);
             if( call == null )

@@ -70,8 +70,8 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
                 visitProcess(processNode);
             for( var functionNode : sn.getFunctions() )
                 visitFunction(functionNode);
-            if( sn.getOutput() != null )
-                visitOutput(sn.getOutput());
+            if( sn.getOutputs() != null )
+                visitOutputs(sn.getOutputs());
     
             // report errors for any unresolved variable references
             new DynamicVariablesVisitor().visit(sn);
