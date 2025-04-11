@@ -17,6 +17,7 @@
 
 package nextflow.cli
 
+import nextflow.data.cid.DefaultCidHistoryLog
 import nextflow.data.cid.serde.CidEncoder
 
 import java.nio.file.Files
@@ -70,14 +71,14 @@ class CmdCidTest extends Specification {
             def configFile = folder.resolve('nextflow.config')
             configFile.text = "workflow.data.enabled = true\nworkflow.data.store.location = '$folder'".toString()
             def historyFile = folder.resolve(".meta/.history")
-            Files.createDirectories(historyFile.parent)
+            def cidLog = new DefaultCidHistoryLog(historyFile)
             def uniqueId = UUID.randomUUID()
             def date = new Date();
             def launcher = Mock(Launcher){
                 getOptions() >> new CliOptions(config: [configFile.toString()])
             }
+            cidLog.write("run_name", uniqueId, "cid://123456", date)
             def recordEntry = "${CidHistoryRecord.TIMESTAMP_FMT.format(date)}\trun_name\t${uniqueId}\tcid://123456".toString()
-            historyFile.text = recordEntry
         when:
             def cidCmd = new CmdCid(launcher: launcher, args: ["log"])
             cidCmd.run()
@@ -138,7 +139,7 @@ class CmdCidTest extends Specification {
         def time = Instant.ofEpochMilli(123456789)
         def encoder = new CidEncoder().withPrettyPrint(true)
         def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-                "cid://123987/file.bam","cid://123987/", 1234, time, time, null)
+                "cid://123987/file.bam","cid://12345/","cid://123987/", 1234, time, time, null)
         def jsonSer = encoder.encode(entry)
         def expectedOutput = jsonSer
         cidFile.text = jsonSer
@@ -209,10 +210,10 @@ class CmdCidTest extends Specification {
         def encoder = new CidEncoder()
         def time = Instant.ofEpochMilli(123456789)
         def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-                "cid://123987/file.bam", "cid://45678", 1234, time, time, null)
+                "cid://123987/file.bam", "cid://45678",null, 1234, time, time, null)
         cidFile.text = encoder.encode(entry)
         entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-                "cid://123987", "cid://123987", 1234, time, time, null)
+                "cid://123987", "cid://45678", "cid://123987", 1234, time, time, null)
         cidFile2.text = encoder.encode(entry)
         entry = new TaskRun("u345-2346-1stw2", "foo",
                 new Checksum("abcde2345","nextflow","standard"),
@@ -222,7 +223,7 @@ class CmdCidTest extends Specification {
                 null, null, null, null, [:],[], null)
         cidFile3.text = encoder.encode(entry)
         entry  = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-                "cid://45678", "cid://45678",  1234, time, time, null)
+                "cid://45678", "cid://45678", null, 1234, time, time, null)
         cidFile4.text = encoder.encode(entry)
         entry = new TaskRun("u345-2346-1stw2", "bar",
                 new Checksum("abfs2556","nextflow","standard"),
@@ -280,7 +281,7 @@ class CmdCidTest extends Specification {
         def encoder = new CidEncoder().withPrettyPrint(true)
         def time = Instant.ofEpochMilli(123456789)
         def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-                "cid://123987/file.bam", "cid://123987/", 1234, time, time, null)
+                "cid://123987/file.bam", "cid://12345", "cid://123987/", 1234, time, time, null)
         def jsonSer = encoder.encode(entry)
         def expectedOutput = jsonSer
         cidFile.text = jsonSer
@@ -293,6 +294,41 @@ class CmdCidTest extends Specification {
                 .findResults { line -> !line.contains('DEBUG') ? line : null }
                 .findResults { line -> !line.contains('INFO') ? line : null }
                 .findResults { line -> !line.contains('plugin') ? line : null }
+
+        then:
+        stdout.size() == expectedOutput.readLines().size()
+        stdout.join('\n') == expectedOutput
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should show query results'(){
+        given:
+        def folder = Files.createTempDirectory('test').toAbsolutePath()
+        def configFile = folder.resolve('nextflow.config')
+        configFile.text = "workflow.data.enabled = true\nworkflow.data.store.location = '$folder'".toString()
+        def cidFile = folder.resolve(".meta/12345/.data.json")
+        Files.createDirectories(cidFile.parent)
+        def launcher = Mock(Launcher){
+            getOptions() >> new CliOptions(config: [configFile.toString()])
+        }
+        def encoder = new CidEncoder().withPrettyPrint(true)
+        def time = Instant.ofEpochMilli(123456789)
+        def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
+            "cid://123987/file.bam", "cid://12345", "cid://123987/", 1234, time, time, null)
+        def jsonSer = encoder.encode(entry)
+        def expectedOutput = jsonSer
+        cidFile.text = jsonSer
+        when:
+        def cidCmd = new CmdCid(launcher: launcher, args: ["show", "cid:///?type=DataOutput"])
+        cidCmd.run()
+        def stdout = capture
+            .toString()
+            .readLines()// remove the log part
+            .findResults { line -> !line.contains('DEBUG') ? line : null }
+            .findResults { line -> !line.contains('INFO') ? line : null }
+            .findResults { line -> !line.contains('plugin') ? line : null }
 
         then:
         stdout.size() == expectedOutput.readLines().size()

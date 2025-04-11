@@ -31,8 +31,20 @@ import java.time.Instant
 @Canonical
 @CompileStatic
 class WorkflowOutputs implements CidSerializable {
+    /**
+     * Creation date of the workflow outputs description
+     */
     Instant createdAt
+    /**
+     * Workflow run that generated the outputs
+     */
     String workflowRun
+    /**
+     * Workflow outputs
+     */
     Map<String, Object> outputs
+    /**
+     * Annotations attached to the workflow outputs
+     */
     Map annotations
 }

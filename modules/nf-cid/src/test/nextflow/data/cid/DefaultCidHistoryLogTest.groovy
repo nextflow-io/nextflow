@@ -26,36 +26,35 @@ import java.nio.file.Path
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
-class CidHistoryFileTest extends Specification {
+class DefaultCidHistoryLogTest extends Specification {
 
     Path tempDir
     Path historyFile
-    CidHistoryFile cidHistoryFile
+    DefaultCidHistoryLog cidHistoryLog
 
     def setup() {
         tempDir = Files.createTempDirectory("wdir")
-        historyFile = tempDir.resolve("cid-history.txt")
-        Files.createFile(historyFile)
-        cidHistoryFile = new CidHistoryFile(historyFile)
+        historyFile = tempDir.resolve("cid-history")
+        cidHistoryLog = new DefaultCidHistoryLog(historyFile)
     }
 
     def cleanup(){
         tempDir?.deleteDir()
     }
 
-    def "write should append a new record to the file"() {
+    def "write should add a new file to the history folder"() {
         given:
         UUID sessionId = UUID.randomUUID()
         String runName = "TestRun"
         String runCid = "cid://123"
 
         when:
-        cidHistoryFile.write(runName, sessionId, runCid)
+        cidHistoryLog.write(runName, sessionId, runCid)
 
         then:
-        def lines = Files.readAllLines(historyFile)
-        lines.size() == 1
-        def parsedRecord = CidHistoryRecord.parse(lines[0])
+        def files = historyFile.listFiles()
+        files.size() == 1
+        def parsedRecord = CidHistoryRecord.parse(files[0].text)
         parsedRecord.sessionId == sessionId
         parsedRecord.runName == runName
         parsedRecord.runCid == runCid
@@ -68,19 +67,19 @@ class CidHistoryFileTest extends Specification {
         String runCid = "cid://123"
 
         and:
-        cidHistoryFile.write(runName, sessionId, runCid)
+        cidHistoryLog.write(runName, sessionId, runCid)
 
         when:
-        def record = cidHistoryFile.getRecord(sessionId)
+        def record = cidHistoryLog.getRecord(sessionId)
         then:
         record.sessionId == sessionId
         record.runName == runName
         record.runCid == runCid
     }
 
-    def "should return null if session does not exist"() {
+    def "should return null and warn if session does not exist"() {
         expect:
-        cidHistoryFile.getRecord(UUID.randomUUID()) == null
+        cidHistoryLog.getRecord(UUID.randomUUID()) == null
     }
 
     def "update should modify existing Cid for given session"() {
@@ -91,15 +90,15 @@ class CidHistoryFileTest extends Specification {
         String resultsCidUpdated = "results-cid-updated"
 
         and:
-        cidHistoryFile.write(runName, sessionId, 'run-cid-initial')
+        cidHistoryLog.write(runName, sessionId, 'run-cid-initial')
 
         when:
-        cidHistoryFile.updateRunCid(sessionId, runCidUpdated)
+        cidHistoryLog.updateRunCid(sessionId, runCidUpdated)
 
         then:
-        def lines = Files.readAllLines(historyFile)
-        lines.size() == 1
-        def parsedRecord = CidHistoryRecord.parse(lines[0])
+        def files = historyFile.listFiles()
+        files.size() == 1
+        def parsedRecord = CidHistoryRecord.parse(files[0].text)
         parsedRecord.runCid == runCidUpdated
     }
 
@@ -110,14 +109,14 @@ class CidHistoryFileTest extends Specification {
         String runName = "Run1"
         String runCid = "cid://123"
         and:
-        cidHistoryFile.write(runName, existingSessionId, runCid)
+        cidHistoryLog.write(runName, existingSessionId, runCid)
 
         when:
-        cidHistoryFile.updateRunCid(nonExistingSessionId, "new-cid")
+        cidHistoryLog.updateRunCid(nonExistingSessionId, "new-cid")
         then:
-        def lines = Files.readAllLines(historyFile)
-        lines.size() == 1
-        def parsedRecord = CidHistoryRecord.parse(lines[0])
+        def files = historyFile.listFiles()
+        files.size() == 1
+        def parsedRecord = CidHistoryRecord.parse(files[0].text)
         parsedRecord.runCid == runCid
     }
 
@@ -127,10 +126,10 @@ class CidHistoryFileTest extends Specification {
         String runName = "Run1"
         String runCid = "cid://123"
         and:
-        cidHistoryFile.write(runName, sessionId, runCid)
+        cidHistoryLog.write(runName, sessionId, runCid)
 
         when:
-        def records = cidHistoryFile.getRecords()
+        def records = cidHistoryLog.getRecords()
         then:
         records.size() == 1
         records[0].sessionId == sessionId

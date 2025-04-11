@@ -29,9 +29,24 @@ import nextflow.data.cid.serde.CidSerializable
 @Canonical
 @CompileStatic
 class WorkflowRun implements CidSerializable {
+    /**
+     * Description of the workflow associated to the workflow run.
+     */
     Workflow workflow
+    /**
+     * Session identifier used in the workflow run
+     */
     String sessionId
+    /**
+     * Workflow run name
+     */
     String name
+    /**
+     * Workflow parameters
+     */
     List<Parameter> params
+    /**
+     * Annotations attached to the workflow run
+     */
     Map annotations
 }

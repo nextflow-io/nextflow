@@ -18,6 +18,7 @@
 package nextflow.data.cid.fs
 
 import groovy.util.logging.Slf4j
+import nextflow.data.cid.model.Checksum
 import nextflow.data.cid.model.DataOutput
 import nextflow.data.cid.serde.CidSerializable
 import nextflow.file.RealPathAware
@@ -113,23 +114,29 @@ class CidPath implements Path, RealPathAware {
         return first
     }
 
-    private static void validateHash(DataOutput cidObject) {
+    protected static void validateDataOutput(DataOutput cidObject) {
         final hashedPath = FileHelper.toCanonicalPath(cidObject.path as String)
         if( !hashedPath.exists() )
             throw new FileNotFoundException("Target path $cidObject.path does not exists.")
-        if( cidObject.checksum ) {
-            final checksum = cidObject.checksum
-            if( checksum.algorithm in SUPPORTED_CHECKSUM_ALGORITHMS ){
+        validateChecksum(cidObject.checksum, hashedPath)
+    }
 
-                final hash = checksum.mode
-                        ? CacheHelper.hasher(hashedPath,CacheHelper.HashMode.of(checksum.mode.toString().toLowerCase())).hash().toString()
-                        : CacheHelper.hasher(hashedPath).hash().toString()
-                if( hash != checksum.value )
-                    log.warn("Checksum of $hashedPath does not match with the one stored in the metadata")
-            } else {
-                log.warn("Checksum of $hashedPath can not be validated. Algorithm ${checksum.algorithm} is not supported")
-            }
+    protected static void validateChecksum(Checksum checksum, Path hashedPath) {
+        if( !checksum)
+            return
+        if( ! isAlgorithmSupported(checksum.algorithm) ) {
+            log.warn("Checksum of '$hashedPath' can't be validated. Algorithm '${checksum.algorithm}' is not supported")
+            return
         }
+        final hash = checksum.mode
+            ? CacheHelper.hasher(hashedPath, CacheHelper.HashMode.of(checksum.mode.toString().toLowerCase())).hash().toString()
+            : CacheHelper.hasher(hashedPath).hash().toString()
+        if (hash != checksum.value)
+            log.warn("Checksum of '$hashedPath' does not match with the one stored in the metadata")
+    }
+
+    protected static isAlgorithmSupported( String algorithm ){
+        return algorithm && algorithm in SUPPORTED_CHECKSUM_ALGORITHMS
     }
 
     @TestOnly
@@ -167,18 +174,19 @@ class CidPath implements Path, RealPathAware {
                 return findTarget(fs, parent.toString(), false, newChildren as String[])
             }
         }
-        throw new FileNotFoundException("Target path $filePath does not exists.")
+        throw new FileNotFoundException("Target path '$filePath' does not exists.")
     }
 
     protected static Path getMetadataAsTargetPath(CidSerializable results, CidFileSystem fs, String filePath, String[] children){
-        if( results ) {
-            if( children && children.size() > 0 ) {
-                return getSubObjectAsPath(fs, filePath, results, children)
-            }else {
-                return generateCidMetadataPath(fs, filePath, results, children)
-            }
+        if( !results ) {
+            throw new FileNotFoundException("Target path '$filePath' does not exist.")
         }
-        throw new FileNotFoundException("Target path $filePath does not exists.")
+        if (children && children.size() > 0) {
+            return getSubObjectAsPath(fs, filePath, results, children)
+        } else {
+            return generateCidMetadataPath(fs, filePath, results, children)
+        }
+
     }
 
     /**
@@ -195,10 +203,10 @@ class CidPath implements Path, RealPathAware {
         if( isSearchingOutputs(object, children) ) {
             // When asking for a Workflow or task output retrieve the outputs description
             final outputs = fs.cidStore.load("${key}/outputs")
-            if( outputs ) {
-               return generateCidMetadataPath(fs, key, outputs, children)
-            } else
-                throw new FileNotFoundException("Target path $key#outputs does not exists.")
+            if( !outputs ) {
+                throw new FileNotFoundException("Target path '$key#outputs' does not exist.")
+            }
+            return generateCidMetadataPath(fs, key, outputs, children)
         } else {
             return generateCidMetadataPath(fs, key, object, children)
         }
@@ -207,21 +215,21 @@ class CidPath implements Path, RealPathAware {
     private static CidMetadataPath generateCidMetadataPath(CidFileSystem fs, String key, Object object, String[] children){
         def creationTime = FileTime.from(navigate(object, 'createdAt') as Instant ?: Instant.now())
         final output = children ? navigate(object, children.join('.')) : object
-        if( output ){
-            return new CidMetadataPath(encodeSearchOutputs(output, true), creationTime, fs, key, children)
+        if( !output ) {
+            throw new FileNotFoundException("Target path '$key#${children.join('.')}' does not exist.")
         }
-        throw new FileNotFoundException("Target path $key#${children.join('.')} does not exists.")
+        return new CidMetadataPath(encodeSearchOutputs(output, true), creationTime, fs, key, children)
     }
 
     private static Path getTargetPathFromOutput(DataOutput object, String[] children) {
         final cidObject = object as DataOutput
         // return the real path stored in the metadata
-        validateHash(cidObject)
+        validateDataOutput(cidObject)
         def realPath = FileHelper.toCanonicalPath(cidObject.path as String)
         if (children && children.size() > 0)
             realPath = realPath.resolve(children.join(SEPARATOR))
         if (!realPath.exists())
-            throw new FileNotFoundException("Target path $realPath does not exists.")
+            throw new FileNotFoundException("Target path '$realPath' does not exist.")
         return realPath
     }
 
@@ -257,7 +265,7 @@ class CidPath implements Path, RealPathAware {
         if( !path || path==SEPARATOR)
             return ""
         //Remove repeated elements
-        path = Path.of(path).normalize().toString()
+        path = Path.of(path.trim()).normalize().toString()
         //Remove initial and final separators
         if( path.startsWith(SEPARATOR) )
             path = path.substring(1)

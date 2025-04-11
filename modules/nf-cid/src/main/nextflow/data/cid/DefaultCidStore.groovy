@@ -59,7 +59,7 @@ class DefaultCidStore implements CidStore {
         if( !Files.exists(metaLocation) && !Files.createDirectories(metaLocation) ) {
             throw new AbortOperationException("Unable to create CID store directory: $metaLocation")
         }
-        historyLog = new CidHistoryFile(metaLocation.resolve(HISTORY_FILE_NAME))
+        historyLog = new DefaultCidHistoryLog(metaLocation.resolve(HISTORY_FILE_NAME))
         return this
     }
 
@@ -105,18 +105,16 @@ class DefaultCidStore implements CidStore {
     void close() throws IOException { }
 
     @Override
-    List<CidSerializable> search(String queryString) {
-
+    Map<String, CidSerializable> search(String queryString) {
         def params = null
         if (queryString) {
             params = CidUtils.parseQuery(queryString)
         }
         return searchAllFiles(params)
-
     }
 
-    private List<CidSerializable> searchAllFiles (Map<String,String> params) {
-        final results = new LinkedList<CidSerializable>()
+    private Map<String, CidSerializable> searchAllFiles (Map<String,String> params) {
+        final results = new HashMap<String, CidSerializable>()
 
         Files.walkFileTree(metaLocation, new FileVisitor<Path>() {
 
@@ -130,7 +128,7 @@ class DefaultCidStore implements CidStore {
                 if (file.name.startsWith('.data.json') ) {
                     final cidObject = encoder.decode(file.text)
                     if (CidUtils.checkParams(cidObject, params)){
-                        results.add(cidObject as CidSerializable)
+                        results.put(metaLocation.relativize(file.getParent()).toString(), cidObject as CidSerializable)
                     }
                 }
                 FileVisitResult.CONTINUE

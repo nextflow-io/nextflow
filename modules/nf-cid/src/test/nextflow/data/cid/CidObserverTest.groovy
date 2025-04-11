@@ -17,6 +17,18 @@
 
 package nextflow.data.cid
 
+import nextflow.data.cid.model.Parameter
+import nextflow.data.cid.model.TaskOutputs
+import nextflow.file.FileHolder
+import nextflow.processor.TaskHandler
+import nextflow.script.TokenVar
+import nextflow.script.params.FileInParam
+import nextflow.script.params.FileOutParam
+import nextflow.script.params.InParam
+import nextflow.script.params.OutParam
+import nextflow.script.params.ValueInParam
+import nextflow.script.params.ValueOutParam
+
 import static nextflow.data.cid.fs.CidPath.*
 
 import java.nio.file.Files
@@ -49,7 +61,37 @@ import spock.lang.Unroll
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class CidObserverTest extends Specification {
+    def 'should normalize paths' (){
+        given:
+        def folder = Files.createTempDirectory('test')
+        def workDir = folder.resolve("workDir")
+        def projectDir = folder.resolve("projectDir")
+        def metadata = Mock(WorkflowMetadata){
+            getRepository() >> "https://nextflow.io/nf-test/"
+            getCommitId() >> "123456"
+            getScriptId() >> "78910"
+            getProjectDir() >> projectDir
+            getWorkDir() >> workDir
+        }
+        def params = [path: workDir.resolve("path/file.txt"), sequence: projectDir.resolve("file2.txt").toString(), value: 12]
+        when:
+        def results = CidObserver.getNormalizedParams(params, new PathNormalizer(metadata))
+        then:
+        results.size() == 3
+        results.get(0).name == "path"
+        results.get(0).type == Path.simpleName
+        results.get(0).value == "work/path/file.txt"
+        results.get(1).name == "sequence"
+        results.get(1).type == "String"
+        results.get(1).value == projectDir.resolve("file2.txt").toString()
+        results.get(2).name == "value"
+        results.get(2).type == "Integer"
+        results.get(2).value == 12
 
+        cleanup:
+        ScriptMeta.reset()
+        folder?.deleteDir()
+    }
     def 'should collect script files' () {
         given:
         def folder = Files.createTempDirectory('test')
@@ -81,7 +123,7 @@ class CidObserverTest extends Specification {
         def observer = Spy(new CidObserver(session, store))
 
         when:
-        def files = observer.collectScriptDataPaths()
+        def files = observer.collectScriptDataPaths(new PathNormalizer(metadata))
         then:
         observer.allScriptFiles() >> [ scriptFile, module1, module2 ]
         and:
@@ -142,23 +184,68 @@ class CidObserverTest extends Specification {
         given:
         def folder = Files.createTempDirectory('test')
         def config = [workflow:[data:[enabled: true, store:[location:folder.toString()]]]]
-        def store = new DefaultCidStore();
         def uniqueId = UUID.randomUUID()
+        def workDir = folder.resolve("work")
         def session = Mock(Session) {
             getConfig()>>config
             getUniqueId()>>uniqueId
             getRunName()>>"test_run"
+            getWorkDir() >> workDir
         }
-        store.open(DataConfig.create(session))
-        def observer = new CidObserver(session, store)
-        observer.executionHash = "hash"
+        def metadata = Mock(WorkflowMetadata){
+            getRepository() >> "https://nextflow.io/nf-test/"
+            getCommitId() >> "123456"
+            getScriptId() >> "78910"
+            getProjectDir() >> folder.resolve("projectDir")
+            getWorkDir() >> workDir
+        }
         and:
-        def hash = HashCode.fromInt(123456789)
+        def store = new DefaultCidStore();
+        store.open(DataConfig.create(session))
+        and:
+        def observer = new CidObserver(session, store)
+        def normalizer = new PathNormalizer(metadata)
+        observer.executionHash = "hash"
+        observer.normalizer = normalizer
+        and:
+        def hash = HashCode.fromString("1234567890")
+        def taskWd = workDir.resolve('12/34567890')
+        Files.createDirectories(taskWd)
         and:
         def processor = Mock(TaskProcessor){
             getTaskGlobalVars(_) >> [:]
             getTaskBinEntries(_) >> []
         }
+
+        and: 'Task Inputs'
+        def inputs = new LinkedHashMap<InParam, Object>()
+        // File from task
+        inputs.put(new FileInParam(null, []).bind("file1"), [new FileHolder(workDir.resolve('78/567890/file1.txt'))])
+        // Normal file
+        def file = folder.resolve("file2.txt")
+        file.text = "this is a test file"
+        def fileHash = CacheHelper.hasher(file).hash().toString()
+        inputs.put(new FileInParam(null, []).bind("file2"), [new FileHolder(file)])
+        //Value input
+        inputs.put(new ValueInParam(null, []).bind("id"), "value")
+
+        and: 'Task Outputs'
+        def outputs = new LinkedHashMap<OutParam, Object>()
+        // Single Path output
+        def outFile1 = taskWd.resolve('fileOut1.txt')
+        outFile1.text = 'some data'
+        def fileHash1 = CacheHelper.hasher(outFile1).hash().toString()
+        def attrs1 = Files.readAttributes(outFile1, BasicFileAttributes)
+        outputs.put(new FileOutParam(null, []).bind(new TokenVar("file1")), outFile1)
+        // Collection Path output
+        def outFile2 = taskWd.resolve('fileOut2.txt')
+        outFile2.text = 'some other data'
+        def fileHash2 = CacheHelper.hasher(outFile2).hash().toString()
+        def attrs2 = Files.readAttributes(outFile2, BasicFileAttributes)
+        outputs.put(new FileOutParam(null, []).bind(new TokenVar("file2")), [outFile2])
+        outputs.put(new ValueOutParam(null, []).bind(new TokenVar("id")), "value")
+
+        and: 'Task description'
         def task = Mock(TaskRun) {
             getId() >> TaskId.of(100)
             getName() >> 'foo'
@@ -166,27 +253,58 @@ class CidObserverTest extends Specification {
             getProcessor() >> processor
             getSource() >> 'echo task source'
             getScript() >> 'this is the script'
+            getInputs() >> inputs
+            getOutputs() >> outputs
+            getWorkDir() >> taskWd
         }
+        def handler = Mock(TaskHandler){
+            getTask() >> task
+        }
+
+        and: 'Expected CID objects'
         def sourceHash = CacheHelper.hasher('echo task source').hash().toString()
         def scriptHash = CacheHelper.hasher('this is the script').hash().toString()
-        def normalizer = Mock(PathNormalizer.class) {
-            normalizePath( _ as Path) >> {Path p -> p?.toString()}
-            normalizePath( _ as String) >> {String p -> p}
-        }
         def taskDescription = new nextflow.data.cid.model.TaskRun(uniqueId.toString(), "foo",
             new Checksum(sourceHash, "nextflow", "standard"),
             new Checksum(scriptHash, "nextflow", "standard"),
-            null, null, null, null, null, [:], [], "cid://hash", null)
+            [
+                new Parameter(FileInParam.simpleName, "file1", ['cid://78567890/outputs/file1.txt']),
+                new Parameter(FileInParam.simpleName, "file2", [[path: normalizer.normalizePath(file), checksum: [value:fileHash, algorithm: "nextflow", mode:  "standard"]]]),
+                new Parameter(ValueInParam.simpleName, "id", "value")
+            ], null, null, null, null, [:], [], "cid://hash", null)
+        def dataOutput1 = new DataOutput(outFile1.toString(), new Checksum(fileHash1, "nextflow", "standard"),
+            "cid://1234567890", "cid://hash", "cid://1234567890", attrs1.size(), CidUtils.toDate(attrs1.creationTime()), CidUtils.toDate(attrs1.lastModifiedTime()) )
+        def dataOutput2 = new DataOutput(outFile2.toString(), new Checksum(fileHash2, "nextflow", "standard"),
+            "cid://1234567890", "cid://hash", "cid://1234567890", attrs2.size(), CidUtils.toDate(attrs2.creationTime()), CidUtils.toDate(attrs2.lastModifiedTime()) )
+
         when:
-        observer.storeTaskRun(task, normalizer)
+        observer.onProcessComplete(handler, null )
+        def taskRunResult = store.load("${hash.toString()}")
+        def dataOutputResult1 = store.load("${hash}/outputs/fileOut1.txt") as DataOutput
+        def dataOutputResult2 = store.load("${hash}/outputs/fileOut2.txt") as DataOutput
+        def taskOutputsResult = store.load("${hash}/outputs") as TaskOutputs
         then:
-        folder.resolve(".meta/${hash.toString()}/.data.json").text == new CidEncoder().encode(taskDescription)
+        taskRunResult == taskDescription
+        dataOutputResult1 == dataOutput1
+        dataOutputResult2 == dataOutput2
+        taskOutputsResult.taskRun == "cid://1234567890"
+        taskOutputsResult.workflowRun == "cid://hash"
+        taskOutputsResult.outputs.size() == 3
+        taskOutputsResult.outputs.get(0).type == FileOutParam.simpleName
+        taskOutputsResult.outputs.get(0).name == "file1"
+        taskOutputsResult.outputs.get(0).value == "cid://1234567890/outputs/fileOut1.txt"
+        taskOutputsResult.outputs.get(1).type == FileOutParam.simpleName
+        taskOutputsResult.outputs.get(1).name == "file2"
+        taskOutputsResult.outputs.get(1).value == ["cid://1234567890/outputs/fileOut2.txt"]
+        taskOutputsResult.outputs.get(2).type == ValueOutParam.simpleName
+        taskOutputsResult.outputs.get(2).name == "id"
+        taskOutputsResult.outputs.get(2).value == "value"
 
         cleanup:
         folder?.deleteDir()
     }
 
-    def 'should save task output' () {
+    def 'should save task data output' () {
         given:
         def folder = Files.createTempDirectory('test')
         def config = [workflow:[data:[enabled: true, store:[location:folder.toString()]]]]
@@ -196,6 +314,7 @@ class CidObserverTest extends Specification {
         }
         store.open(DataConfig.create(session))
         def observer = Spy(new CidObserver(session, store))
+        observer.executionHash = "hash"
         and:
         def workDir = folder.resolve('12/34567890')
         Files.createDirectories(workDir)
@@ -216,7 +335,7 @@ class CidObserverTest extends Specification {
         and:
         def attrs = Files.readAttributes(outFile, BasicFileAttributes)
         def output = new DataOutput(outFile.toString(), new Checksum(fileHash, "nextflow", "standard"),
-            "cid://15cd5b07", "cid://15cd5b07", attrs.size(), CidUtils.toDate(attrs.creationTime()), CidUtils.toDate(attrs.lastModifiedTime()) )
+            "cid://15cd5b07", "cid://hash", "cid://15cd5b07", attrs.size(), CidUtils.toDate(attrs.creationTime()), CidUtils.toDate(attrs.lastModifiedTime()) )
         and:
         observer.readAttributes(outFile) >> attrs
 
@@ -384,7 +503,7 @@ class CidObserverTest extends Specification {
             def attrs1 = Files.readAttributes(outFile1, BasicFileAttributes)
             def fileHash1 = CacheHelper.hasher(outFile1).hash().toString()
             def output1 = new DataOutput(outFile1.toString(), new Checksum(fileHash1, "nextflow", "standard"),
-                "cid://123987/outputs/file.bam", "$CID_PROT${observer.executionHash}",
+                "cid://123987/outputs/file.bam", "$CID_PROT${observer.executionHash}", null,
                 attrs1.size(), CidUtils.toDate(attrs1.creationTime()), CidUtils.toDate(attrs1.lastModifiedTime()) )
             folder.resolve(".meta/${observer.executionHash}/outputs/foo/file.bam/.data.json").text == encoder.encode(output1)
 
@@ -398,7 +517,7 @@ class CidObserverTest extends Specification {
             observer.onWorkflowPublish("b", outFile2)
         then: 'Check outFile2 metadata in cid store'
             def output2 = new DataOutput(outFile2.toString(), new Checksum(fileHash2, "nextflow", "standard"),
-                "cid://${observer.executionHash}" , "cid://${observer.executionHash}",
+                "cid://${observer.executionHash}" , "cid://${observer.executionHash}", null,
                 attrs2.size(), CidUtils.toDate(attrs2.creationTime()), CidUtils.toDate(attrs2.lastModifiedTime()) )
             folder.resolve(".meta/${observer.executionHash}/outputs/foo/file2.bam/.data.json").text == encoder.encode(output2)
 

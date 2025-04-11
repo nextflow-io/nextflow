@@ -17,6 +17,8 @@
 
 package nextflow.data.cid.cli
 
+import nextflow.data.cid.serde.CidEncoder
+
 import static nextflow.data.cid.fs.CidPath.*
 
 import java.nio.charset.StandardCharsets
@@ -42,6 +44,7 @@ import org.eclipse.jgit.diff.DiffAlgorithm
 import org.eclipse.jgit.diff.DiffFormatter
 import org.eclipse.jgit.diff.RawText
 import org.eclipse.jgit.diff.RawTextComparator
+
 /**
  * Implements CID command line operations
  *
@@ -70,61 +73,61 @@ class CidCommandImpl implements CmdCid.CidCommand {
 
     private void printHistory(CidStore store) {
         final records = store.historyLog?.records
-        if( records ) {
-            def table = new TableBuilder(cellSeparator: '\t')
-                .head('TIMESTAMP')
-                .head('RUN NAME')
-                .head('SESSION ID')
-                .head('RUN CID')
-            for( CidHistoryRecord record: records ){
-                table.append(record.toList())
-            }
-            println table.toString()
-        } else {
+        if( !records ) {
             println("No workflow runs CIDs found.")
+            return
         }
+        def table = new TableBuilder(cellSeparator: '\t')
+            .head('TIMESTAMP')
+            .head('RUN NAME')
+            .head('SESSION ID')
+            .head('RUN CID')
+        for (CidHistoryRecord record : records) {
+            table.append(record.toList())
+        }
+        println table.toString()
     }
 
     @Override
     void show(ConfigMap config, List<String> args) {
-        if (!isCidUri(args[0]))
+        if( !isCidUri(args[0]) )
             throw new Exception("Identifier is not a CID URL")
         final store = CidStoreFactory.getOrCreate(new Session(config))
-        if (store) {
-            try {
-                def entries = CidUtils.query(store, new URI(args[0]))
-                if( entries ) {
-                    entries = entries.size() == 1 ? entries[0] : entries
-                    println CidUtils.encodeSearchOutputs(entries, true)
-                } else {
-                    println "No entries found for ${args[0]}."
-                }
-            } catch (Throwable e) {
-                println "Error loading ${args[0]}. ${e.message}"
-            }
-        } else {
+        if ( !store ) {
             println "Error CID store not loaded. Check Nextflow configuration."
+            return
+        }
+        try {
+            def entries = CidUtils.query(store, new URI(args[0]))
+            if( !entries ) {
+                println "No entries found for ${args[0]}."
+                return
+            }
+            entries = entries.size() == 1 ? entries[0] : entries
+            println CidUtils.encodeSearchOutputs(entries, true)
+        } catch (Throwable e) {
+            println "Error loading ${args[0]}. ${e.message}"
         }
     }
 
     @Override
     void lineage(ConfigMap config, List<String> args) {
+        final store = CidStoreFactory.getOrCreate(new Session(config))
+        if( !store ) {
+            println "Error CID store not loaded. Check Nextflow configuration."
+            return
+        }
         try {
-            final store = CidStoreFactory.getOrCreate(new Session(config))
-            final template = MermaidHtmlRenderer.readTemplate()
-            final network = getLineage(store, args[0])
-            Path file = Path.of(args[1])
-            file.text = template.replace('REPLACE_WITH_NETWORK_DATA', network)
+            renderLineage(store, args[0], Path.of(args[1]))
             println("Linage graph for ${args[0]} rendered in ${args[1]}")
         } catch (Throwable e) {
             println("ERROR: rendering lineage graph. ${e.message}")
         }
     }
 
-    private String getLineage(CidStore store, String dataCid) {
+    private void renderLineage(CidStore store, String dataCid, Path file) {
         def lines = [] as List<String>
         lines << "flowchart BT".toString()
-
         final nodesToRender = new LinkedList<String>()
         nodesToRender.add(dataCid)
         final edgesToRender = new LinkedList<Edge>()
@@ -135,7 +138,9 @@ class CidCommandImpl implements CmdCid.CidCommand {
         lines << ""
         edgesToRender.each { lines << "    ${it.source} -->${it.destination}".toString() }
         lines << ""
-        return lines.join('\n')
+        lines.join('\n')
+        final template = MermaidHtmlRenderer.readTemplate()
+        file.text = template.replace('REPLACE_WITH_NETWORK_DATA', lines.join('\n'))
     }
 
     private void processNode(List<String> lines, String nodeToRender, LinkedList<String> nodes, LinkedList<Edge> edges, CidStore store) {
@@ -145,48 +150,58 @@ class CidCommandImpl implements CmdCid.CidCommand {
         final cidObject = store.load(key)
         switch (cidObject.getClass()) {
             case DataOutput:
-                lines << "    ${nodeToRender}@{shape: document, label: \"${nodeToRender}\"}".toString();
-                final source = (cidObject as DataOutput).source
-                if (source) {
-                    if (isCidUri(source)) {
-                        nodes.add(source)
-                        edges.add(new Edge(source, nodeToRender))
-                    } else {
-                        final label = convertToLabel(source)
-                        lines << "    ${source}@{shape: document, label: \"${label}\"}".toString();
-                        edges.add(new Edge(source, nodeToRender))
-                    }
-                }
+                processDataOutput(cidObject as DataOutput, lines, nodeToRender, nodes, edges)
                 break;
 
             case WorkflowRun:
-                final wfRun = cidObject as WorkflowRun
-                lines << "${nodeToRender}@{shape: processes, label: \"${wfRun.name}\"}".toString()
-                final parameters = wfRun.params
-                parameters.each {
-                    final label = convertToLabel(it.value.toString())
-                    lines << "    ${it.value.toString()}@{shape: document, label: \"${label}\"}".toString();
-                    edges.add(new Edge(it.value.toString(), nodeToRender))
-                }
+                processWorkflowRun(cidObject as WorkflowRun, lines, nodeToRender, edges)
                 break
 
             case TaskRun:
-                final taskRun = cidObject as TaskRun
-                lines << "    ${nodeToRender}@{shape: process, label: \"${taskRun.name}\"}".toString()
-                final parameters = taskRun.inputs
-                for (Parameter source: parameters){
-                    if (source.type.equals(FileInParam.simpleName)) {
-                        manageFileInParam(lines, nodeToRender, nodes, edges, source.value)
-                    } else {
-                        final label = convertToLabel(source.value.toString())
-                        lines << "    ${source.value.toString()}@{shape: document, label: \"${label}\"}".toString();
-                        edges.add(new Edge(source.value.toString(), nodeToRender))
-                    }
-                }
+                processTaskRun(cidObject as TaskRun, lines, nodeToRender, nodes, edges)
                 break
 
             default:
                 throw new Exception("Unrecognized type reference ${cidObject.getClass().getSimpleName()}")
+        }
+    }
+
+    private void processTaskRun(TaskRun taskRun, List<String> lines, String nodeToRender, LinkedList<String> nodes, LinkedList<Edge> edges) {
+        lines << "    ${nodeToRender}@{shape: process, label: \"${taskRun.name}\"}".toString()
+        final parameters = taskRun.inputs
+        for (Parameter source : parameters) {
+            if (source.type.equals(FileInParam.simpleName)) {
+                manageFileInParam(lines, nodeToRender, nodes, edges, source.value)
+            } else {
+                final label = convertToLabel(source.value.toString())
+                lines << "    ${source.value.toString()}@{shape: document, label: \"${label}\"}".toString();
+                edges.add(new Edge(source.value.toString(), nodeToRender))
+            }
+        }
+    }
+
+    private void processWorkflowRun(WorkflowRun wfRun, List<String> lines, String nodeToRender, LinkedList<Edge> edges) {
+        lines << "    ${nodeToRender}@{shape: processes, label: \"${wfRun.name}\"}".toString()
+        final parameters = wfRun.params
+        parameters.each {
+            final label = convertToLabel(it.value.toString())
+            lines << "    ${it.value.toString()}@{shape: document, label: \"${label}\"}".toString();
+            edges.add(new Edge(it.value.toString(), nodeToRender))
+        }
+    }
+
+    private void processDataOutput(DataOutput cidObject, List<String> lines, String nodeToRender, LinkedList<String> nodes, LinkedList<Edge> edges){
+        lines << "    ${nodeToRender}@{shape: document, label: \"${nodeToRender}\"}".toString();
+        final source = cidObject.source
+        if(! source )
+            return
+        if (isCidUri(source)) {
+            nodes.add(source)
+            edges.add(new Edge(source, nodeToRender))
+        } else {
+            final label = convertToLabel(source)
+            lines << "    ${source}@{shape: document, label: \"${label}\"}".toString();
+            edges.add(new Edge(source, nodeToRender))
         }
     }
 
@@ -207,7 +222,7 @@ class CidCommandImpl implements CmdCid.CidCommand {
                 return
             }
         }
-        if (value instanceof Map) {
+        if (value instanceof Map ) {
             if (value.path) {
                 final path = value.path.toString()
                 if (isCidUri(path)) {
@@ -233,26 +248,27 @@ class CidCommandImpl implements CmdCid.CidCommand {
             throw new Exception("Identifier is not a CID URL")
 
         final store = CidStoreFactory.getOrCreate(new Session(config))
-        if (store) {
-            try {
-                final key1 = args[0].substring(CID_PROT.size())
-                final entry1 = store.load(key1) as String
-                if( !entry1 ){
-                    println "No entry found for ${args[0]}."
-                    return
-                }
-                final key2 = args[1].substring(CID_PROT.size())
-                final entry2 = store.load(key2) as String
-                if( !entry2 ) {
-                    println "No entry found for ${args[1]}."
-                    return
-                }
-                generateDiff(entry1, key1, entry2, key2)
-            } catch (Throwable e) {
-                println "Error generating diff between ${args[0]}: $e.message"
-            }
-        } else {
+        if (!store) {
             println "Error CID store not loaded. Check Nextflow configuration."
+            return
+        }
+        try {
+            final key1 = args[0].substring(CID_PROT.size())
+            final entry1 = store.load(key1)
+            if (!entry1) {
+                println "No entry found for ${args[0]}."
+                return
+            }
+            final key2 = args[1].substring(CID_PROT.size())
+            final entry2 = store.load(key2)
+            if (!entry2) {
+                println "No entry found for ${args[1]}."
+                return
+            }
+            final encoder = new CidEncoder().withPrettyPrint(true)
+            generateDiff(encoder.encode(entry1), key1, encoder.encode(entry2), key2)
+        } catch (Throwable e) {
+            println "Error generating diff between ${args[0]}: $e.message"
         }
     }
 
@@ -285,5 +301,17 @@ class CidCommandImpl implements CmdCid.CidCommand {
         println output.toString()
     }
 
-
+    @Override
+    void find(ConfigMap config, List<String> args) {
+        final store = CidStoreFactory.getOrCreate(new Session(config))
+        if (!store) {
+            println "Error CID store not loaded. Check Nextflow configuration."
+            return
+        }
+        try {
+            println CidUtils.encodeSearchOutputs(store.search(args[0]).keySet().collect {asUriString(it)}, true)
+        } catch (Throwable e){
+            println "Exception searching for ${args[0]}. ${e.message}"
+        }
+    }
 }

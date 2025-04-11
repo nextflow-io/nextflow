@@ -4,6 +4,7 @@ import nextflow.data.cid.model.Checksum
 import nextflow.data.cid.model.DataPath
 import nextflow.data.cid.model.Parameter
 import nextflow.data.cid.model.Workflow
+import nextflow.data.cid.model.WorkflowOutputs
 import nextflow.data.cid.model.WorkflowRun
 import nextflow.data.config.DataConfig
 import spock.lang.Specification
@@ -23,7 +24,7 @@ class CidUtilsTest extends Specification{
 
     def setup() {
         storeLocation = tempDir.resolve("store")
-        def configMap = [enabled: true, store: [location: storeLocation.toString(), logLocation: storeLocation.resolve(".log").toString()]]
+        def configMap = [enabled: true, store: [location: storeLocation.toString()]]
         config = new DataConfig(configMap)
     }
 
@@ -53,16 +54,30 @@ class CidUtilsTest extends Specification{
         def workflow = new Workflow([mainScript], "https://nextflow.io/nf-test/", "123456")
         def key = "testKey"
         def value1 = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [new Parameter("String", "param1", "value1"), new Parameter("String", "param2", "value2")])
-
+        def outputs1 = new WorkflowOutputs(Instant.now(), "cid://testKey", [output: "name"] )
         def cidStore = new DefaultCidStore()
         cidStore.open(config)
         cidStore.save(key, value1)
+        cidStore.save("$key/outputs", outputs1)
+
         when:
         List<Object> params = CidUtils.query(cidStore, new URI('cid://testKey#params'))
         then:
         params.size() == 1
         params[0] instanceof List<Parameter>
         (params[0] as List<Parameter>).size() == 2
+
+        when:
+        List<Object> outputs = CidUtils.query(cidStore, new URI('cid://testKey#outputs'))
+        then:
+        outputs.size() == 1
+        outputs[0] instanceof Map
+        outputs[0]['output'] == "name"
+
+        expect:
+        CidUtils.query(cidStore, new URI('cid://testKey#no-exist')) == []
+        CidUtils.query(cidStore, new URI('cid://testKey#outputs.no-exist')) == []
+        CidUtils.query(cidStore, new URI('cid://no-exist#something')) == []
 
     }
 
@@ -71,11 +86,11 @@ class CidUtilsTest extends Specification{
         CidUtils.parseChildrenFormFragment(FRAGMENT) == EXPECTED as String[]
 
         where:
-        FRAGMENT            | EXPECTED
-        "field1"            | ["field1"]
-        "field1.field2"     | ["field1", "field2"]
-        null                | []
-        ""                  | []
+        FRAGMENT                | EXPECTED
+        "workflow"              | ["workflow"]
+        "workflow.repository"   | ["workflow", "repository"]
+        null                    | []
+        ""                      | []
     }
 
     def "should parse a query string as Map"() {
@@ -84,25 +99,40 @@ class CidUtilsTest extends Specification{
 
         where:
         QUERY_STRING                | EXPECTED
-        "key1=value1&key2=value2"   | ["key1": "value1", "key2": "value2"]
-        "key=val with space"        | ["key": "val with space"]
+        "type=value1&taskRun=value2"   | ["type": "value1", "taskRun": "value2"]
+        "type=val with space"        | ["type": "val with space"]
         ""                          | [:]
         null                        | [:]
     }
 
     def "should check params in an object"() {
         given:
-        def obj = ["field": "value", "nested": ["subfield": "subvalue"]]
+        def obj = [ "type": "value", "workflow": ["repository": "subvalue"], "outputs" : [ ["path":"/to/file"],["path":"file2"] ] ]
 
         expect:
         CidUtils.checkParams(obj, PARAMS) == EXPECTED
 
         where:
         PARAMS                                  | EXPECTED
-        ["field": "value"]                      | true
-        ["field": "wrong"]                      | false
-        ["nested.subfield": "subvalue"]         | true
-        ["nested.subfield": "wrong"]            | false
+        ["type": "value"]                       | true
+        ["type": "wrong"]                       | false
+        ["workflow.repository": "subvalue"]     | true
+        ["workflow.repository": "wrong"]        | false
+        ["outputs.path": "wrong"]               | false
+        ["outputs.path": "/to/file"]            | true
+        ["outputs.path": "file2"]               | true
+
+    }
+
+    def 'should parse query' (){
+        expect:
+        CidUtils.parseQuery(PARAMS) == EXPECTED
+        where:
+        PARAMS                              | EXPECTED
+        "type=value"                        | ["type": "value"]
+        "workflow.repository=subvalue"      | ["workflow.repository": "subvalue"]
+        ""                                  | [:]
+        null                                | [:]
     }
 
     def "should navigate in object params"() {
@@ -160,6 +190,22 @@ class CidUtilsTest extends Specification{
 
         then:
         result == [new Parameter("String", "param1", "value1")]
+    }
+
+    def 'should navigate' (){
+        def uniqueId = UUID.randomUUID()
+        def mainScript = new DataPath("file://path/to/main.nf", new Checksum("78910", "nextflow", "standard"))
+        def workflow = new Workflow([mainScript], "https://nextflow.io/nf-test/", "123456")
+        def wfRun = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [new Parameter("String", "param1", [key: "value1"]), new Parameter("String", "param2", "value2")])
+
+        expect:
+            CidUtils.navigate(wfRun, "workflow.commitId") == "123456"
+            CidUtils.navigate(wfRun, "params.name") == ["param1", "param2"]
+            CidUtils.navigate(wfRun, "params.value.key") == "value1"
+            CidUtils.navigate(wfRun, "params.value.no-exist") == null
+            CidUtils.navigate(wfRun, "params.no-exist") == null
+            CidUtils.navigate(wfRun, "no-exist") == null
+            CidUtils.navigate(null, "something") == null
     }
 
 }

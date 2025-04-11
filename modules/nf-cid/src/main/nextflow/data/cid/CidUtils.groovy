@@ -48,25 +48,13 @@ class CidUtils {
      *       - Key: Element where the query will be applied. '/' indicates query will be applied in all the elements of the CID store.
      *       - QueryString: all param-value pairs that the CID element should fulfill in a URI's query string format.
      *       - Fragment: Element fragment to retrieve.
-     * @return List of object fulfilling the query
+     * @return Collection of object fulfilling the query
      */
-    static List query(CidStore store, URI uri) {
+    static Collection query(CidStore store, URI uri) {
         String key = uri.authority ? uri.authority + uri.path : uri.path
         try {
             if (key == CidPath.SEPARATOR) {
-                final results = store.search(uri.query)
-                if (results && uri.fragment){
-                    // If fragment is defined get the property of the object indicated by the fragment
-                    final filteredResults = []
-                    results.forEach {
-                        final output = navigate(it, uri.fragment)
-                        if (output){
-                            filteredResults.add(output)
-                        }
-                    }
-                    return filteredResults
-                }
-                return results
+                return globalSearch(store, uri)
             } else {
                 final parameters = uri.query ? parseQuery(uri.query) : null
                 final children = parseChildrenFormFragment(uri.fragment)
@@ -79,6 +67,26 @@ class CidUtils {
 
     }
 
+    private static Collection<CidSerializable> globalSearch(CidStore store, URI uri) {
+        final results = store.search(uri.query).values()
+        if (results && uri.fragment) {
+            // If fragment is defined get the property of the object indicated by the fragment
+            return filterResults(results, uri.fragment)
+        }
+        return results
+    }
+
+    private static List filterResults(Collection<CidSerializable> results, String fragment) {
+        final filteredResults = []
+        results.forEach {
+            final output = navigate(it, fragment)
+            if (output) {
+                filteredResults.add(output)
+            }
+        }
+        return filteredResults
+    }
+
     /**
      * Get the array of the search path children elements from the fragment string
      * @param fragment String containing the elements separated by '.'
@@ -87,9 +95,8 @@ class CidUtils {
     static String[] parseChildrenFormFragment(String fragment) {
         if( !fragment )
             return EMPTY_ARRAY
-        return fragment.contains('.')
-            ?  fragment.split("\\.")
-            :  List.of(fragment) as String[]
+        final children = fragment.tokenize('.')
+        return children as String[]
     }
 
     /**
@@ -101,23 +108,26 @@ class CidUtils {
      * @return List of object
      */
     protected static List<Object> searchPath(CidStore store, String key, Map<String, String> params, String[] children = []) {
-        final results = new LinkedList<Object>()
         final object = store.load(key)
-        if (object) {
-            if (children && children.size() > 0) {
-                final output = getSubObject(store, key, object, children)
-                if (output) {
-                    treatObject(output, params, results)
-                } else {
-                    throw new FileNotFoundException("Cid object $key#${children.join('.')} not found.")
-                }
-            } else {
-                treatObject(object, params, results)
-            }
-        } else {
+        if (!object) {
             throw new FileNotFoundException("Cid object $key not found.")
         }
+        final results = new LinkedList<Object>()
+        if (children && children.size() > 0) {
+            treatSubObject(store, key, object, children, params, results)
+        } else {
+            treatObject(object, params, results)
+        }
+
         return results
+    }
+
+    private static void treatSubObject(CidStore store, String key, CidSerializable object, String[] children, Map<String, String> params, LinkedList<Object> results) {
+        final output = getSubObject(store, key, object, children)
+        if (!output) {
+            throw new FileNotFoundException("Cid object $key#${children.join('.')} not found.")
+        }
+        treatObject(output, params, results)
     }
 
     /**
@@ -134,13 +144,13 @@ class CidUtils {
         if( isSearchingOutputs(object, children) ) {
             // When asking for a Workflow or task output retrieve the outputs description
             final outputs = store.load("${key}/outputs")
-            if (outputs)
-                return navigate(outputs, children.join('.'))
-            else
+            if (!outputs)
                 return null
+            return navigate(outputs, children.join('.'))
         }
         return navigate(object, children.join('.'))
     }
+
     /**
      * Check if the Cid pseudo path or query is for Task or Workflow outputs.
      *
@@ -148,7 +158,7 @@ class CidUtils {
      * @param children Array of string in indicating the properties to navigate to get the sub-object.
      * @return return 'true' if the parent is a Task/Workflow run and the first element in children is 'outputs'. Otherwise 'false'
      */
-    public static boolean isSearchingOutputs(CidSerializable object, String[] children) {
+    static boolean isSearchingOutputs(CidSerializable object, String[] children) {
         return (object instanceof WorkflowRun || object instanceof TaskRun) && children && children[0] == 'outputs'
     }
 
@@ -175,12 +185,13 @@ class CidUtils {
      * @return Map containing the parameter-value pairs of the query string.
      */
     static Map<String, String> parseQuery(String queryString) {
-        if (queryString) {
-            return queryString.split('&').collectEntries {
-                it.split('=').collect { URLDecoder.decode(it, 'UTF-8') }
-            } as Map<String, String>
+        if( !queryString ) {
+            return [:]
         }
-        return [:]
+        return queryString.split('&').collectEntries {
+            it.split('=').collect { URLDecoder.decode(it, 'UTF-8') }
+        } as Map<String, String>
+
     }
 
     /**
@@ -189,14 +200,27 @@ class CidUtils {
      * @param params parameter-value pairs to evaluate
      * @return true if all object parameters exist and matches with the value, otherwise false.
      */
-    static boolean checkParams(Object object, Map<String,String> params) {
-        for (final entry : params.entrySet()) {
+    static boolean checkParams(Object object, Map<String, String> params) {
+        for( final entry : params.entrySet() ) {
             final value = navigate(object, entry.key)
-            if (!value || value.toString() != entry.value.toString() ) {
+            if( !checkParam(value, entry.value) ) {
                 return false
             }
         }
         return true
+    }
+
+    private static boolean checkParam(Object value, Object expected) {
+        if( !value )
+            return false
+        if( value instanceof Collection ) {
+            for( def v : value as Collection ) {
+                if( v.toString() == expected.toString() )
+                    return true
+            }
+            return false
+        }
+        return value.toString() == expected.toString()
     }
 
     /**
@@ -208,28 +232,49 @@ class CidUtils {
     static Object navigate(Object obj, String path){
         if (!obj)
             return null
-        try{
-            // type has been replaced by class when evaluating CidSerializable objects
-            if (obj instanceof CidSerializable && path == 'type')
+        // type has been replaced by class when evaluating CidSerializable objects
+        if (obj instanceof CidSerializable && path == 'type')
                 return obj.getClass()?.simpleName
-            path.tokenize('.').inject(obj) { current, key ->
-                if (current == null) return null
-
-                if (current instanceof Map) {
-                    return current[key] // Navigate Map properties
-                }
-
-                if (current.metaClass.hasProperty(current, key)) {
-                    return current.getAt(key) // Navigate Object properties
-                }
-                log.trace("No property found for $key")
-                return null // Property not found
+        try{
+            return path.tokenize('.').inject(obj) { current, key ->
+                return getSubPath(current, key)
             }
         } catch (Throwable e) {
             log.debug("Error navigating to $path in object", e)
             return null
         }
     }
+
+    private static Object getSubPath(current, String key) {
+        if (current == null)
+            return null
+
+        if (current instanceof Map) {
+            return current[key] // Navigate Map properties
+        }
+        if (current instanceof Collection) {
+            return navigateCollection(current, key)
+        }
+        if (current.metaClass.hasProperty(current, key)) {
+            return current.getAt(key) // Navigate Object properties
+        }
+        log.debug("No property found for $key")
+        return null
+    }
+
+     private static Object navigateCollection(Collection collection, String key) {
+         def results = []
+         for (Object object: collection){
+             final res = getSubPath(object, key)
+             if (res) results.add(res)
+         }
+         if (results.isEmpty() ) {
+             log.trace("No property found for $key")
+             return null
+         }
+         // Return a single object if only ine results is found.
+         return results.size() == 1 ? results[0] : results
+     }
 
     /**
      * Helper function to convert from FileTime to ISO 8601.
