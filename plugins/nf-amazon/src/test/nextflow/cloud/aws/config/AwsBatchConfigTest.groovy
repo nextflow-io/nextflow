@@ -34,7 +34,7 @@ class AwsBatchConfigTest extends Specification {
         batch.maxParallelTransfers == AwsBatchConfig.MAX_TRANSFER
         batch.maxTransferAttempts == AwsBatchConfig.DEFAULT_AWS_MAX_ATTEMPTS
         batch.delayBetweenAttempts == AwsBatchConfig.DEFAULT_DELAY_BETWEEN_ATTEMPTS
-        batch.maxSpotAttempts == AwsBatchConfig.DEFAULT_MAX_SPOT_ATTEMPTS
+        batch.maxSpotAttempts == null
         batch.retryMode == 'standard'
         and:
         !batch.cliPath
