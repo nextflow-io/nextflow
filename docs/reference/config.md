@@ -867,7 +867,7 @@ The following settings are available for Google Cloud Batch:
   - global/networks/{network}
 
 `google.batch.networkTags`
-: Define the network tags to be applied to the instances created by Google Batch jobs. Network tags are used to apply firewall rules and control network access (e.g. `['allow-ssh', 'allow-http']`). 
+: The network tags to be applied to the instances created by Google Batch jobs. Network tags are used to apply firewall rules and control network access (e.g., `['allow-ssh', 'allow-http']`). 
 
 : Network tags are ignored when using instance templates. See [Add network tags](https://cloud.google.com/vpc/docs/add-remove-network-tags) for more information.
 
