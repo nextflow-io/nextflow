@@ -792,6 +792,12 @@ The following settings are available:
 : Enable privileged containers for Fusion (default: `true`)
 : Non-privileged use is supported only on Kubernetes with the [k8s-fuse-plugin](https://github.com/nextflow-io/k8s-fuse-plugin) or a similar FUSE device plugin.
 
+`fusion.snapshots`
+: :::{versionadded} 25.03.0-edge
+  :::
+: *Currently only supported for AWS Batch*
+: Enable Fusion snapshotting (preview, default: `false`). This feature allows Fusion to automatically restore a job when it is interrupted by a spot reclamation.
+
 `fusion.tags`
 : Pattern for applying tags to files created via the Fusion client (default: `[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)`).
 : Set to `false` to disable.

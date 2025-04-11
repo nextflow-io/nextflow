@@ -742,7 +742,7 @@ class NextflowDSLImpl implements ASTTransformation {
          * closure expression and set a `when` directive in the process configuration properties.
          *
          * See {@link nextflow.script.ProcessConfig#configProperties}
-         * See {@link nextflow.processor.TaskConfig#getGuard(java.lang.String)}
+         * See {@link nextflow.processor.TaskConfig#getWhenGuard()}
          */
         protected BlockStatement addWhenGuardCall( List<Statement> statements, StringBuilder source, BlockStatement parent ) {
             createBlock0(PROCESS_WHEN, statements, source, parent)
