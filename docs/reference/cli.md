@@ -52,42 +52,6 @@ Available options:
 
 ## Commands
 
-### `check`
-
-Check Nextflow scripts and config files for errors.
-
-**Usage**
-
-```console
-$ nextflow check [options] [paths]
-```
-
-**Description**
-
-The `check` command parses and analyzes the given Nextflow scripts and config files, and prints any errors. Directories are recursively scanned for scripts and config files to check.
-
-**Options**
-
-`-exclude`
-: File pattern to exclude from error checking. Can be specified multiple times (default: `.git, .nf-test, work`).
-
-`-o, -output`
-: Output format for reporting errors: `full`, `extended`, `concise`, `json` (default: `full`).
-
-**Examples**
-
-Check a specific file.
-
-```console
-$ nextflow check main.nf
-```
-
-Check all files in the current directory (and subdirectories) with concise output.
-
-```console
-$ nextflow check -output-format concise .
-```
-
 (cli-clean)=
 
 ### `clean`
@@ -410,48 +374,6 @@ Forcefully drop the `nextflow-io/hello` pipeline, ignoring any local changes.
 $ nextflow drop nextflow-io/hello -f
 ```
 
-### `format`
-
-Format Nextflow scripts and config files.
-
-**Usage**
-
-```console
-$ nextflow format [options] [paths]
-```
-
-**Description**
-
-The `format` command formats the given Nextflow scripts and config files. Directories are recursively scanned for scripts and config files to format.
-
-**Options**
-
-`-exclude`
-: File pattern to exclude from linting. Can be specified multiple times (default: `.git, .nf-test, work`).
-
-`-sort-declarations`
-: Sort script declarations in Nextflow scripts (default: `false`).
-
-`-spaces`
-: Number of spaces to indent (default: `4`).
-
-`-tabs`
-: Indent with tabs (default: `false`).
-
-**Examples**
-
-Format a specific file.
-
-```console
-$ nextflow format main.nf
-```
-
-Format all files in the current directory (and subdirectories) and use two spaces per indent.
-
-```console
-$ nextflow format -spaces 2 .
-```
-
 ### `fs`
 
 Perform basic filesystem operations.
@@ -757,6 +679,60 @@ Execute a pipeline into a Kubernetes cluster.
 
 ```console
 $ nextflow kuberun nextflow-io/hello
+```
+
+### `lint`
+
+Lint Nextflow scripts and config files.
+
+**Usage**
+
+```console
+$ nextflow lint [options] [paths]
+```
+
+**Description**
+
+The `lint` command parses and analyzes the given Nextflow scripts and config files, formats them if specified, and prints any errors. Directories are recursively scanned for scripts and config files to lint.
+
+**Options**
+
+`-exclude`
+: File pattern to exclude from linting. Can be specified multiple times (default: `.git, .nf-test, work`).
+
+`-format`
+: Format scripts and config files that have no errors.
+
+`-o, -output`
+: Output mode for reporting errors: `full`, `extended`, `concise`, `json` (default: `full`).
+
+`-sort-declarations`
+: Sort script declarations in Nextflow scripts (default: `false`).
+
+`-spaces`
+: Number of spaces to indent (default: `4`).
+
+`-tabs`
+: Indent with tabs (default: `false`).
+
+**Examples**
+
+Lint a specific file.
+
+```console
+$ nextflow lint main.nf
+```
+
+Lint all files in the current directory (and subdirectories) with concise output.
+
+```console
+$ nextflow lint -o concise .
+```
+
+Lint and format all files in the current directory (and subdirectories) and use two spaces per indent.
+
+```console
+$ nextflow lint -format -spaces 2 .
 ```
 
 ### `list`

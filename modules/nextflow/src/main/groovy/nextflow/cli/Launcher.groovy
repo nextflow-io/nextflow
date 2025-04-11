@@ -107,8 +107,7 @@ class Launcher {
                 new CmdSelfUpdate(),
                 new CmdPlugin(),
                 new CmdInspect(),
-                new CmdCheck(),
-                new CmdFormat()
+                new CmdLint()
         ]
 
         if(SecretsLoader.isEnabled())

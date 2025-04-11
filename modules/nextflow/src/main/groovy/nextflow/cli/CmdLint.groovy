@@ -23,16 +23,18 @@ import com.beust.jcommander.IParameterValidator
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import com.beust.jcommander.ParameterException
-import groovy.io.FileType
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.config.control.ConfigParser
+import nextflow.config.formatter.ConfigFormattingVisitor
 import nextflow.exception.AbortOperationException
 import nextflow.script.control.Compiler
 import nextflow.script.control.ParanoidWarning
 import nextflow.script.control.ScriptParser
+import nextflow.script.formatter.FormattingOptions
+import nextflow.script.formatter.ScriptFormattingVisitor
 import nextflow.util.PathUtils
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage
@@ -41,16 +43,16 @@ import org.codehaus.groovy.syntax.SyntaxException
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 /**
- * CLI sub-command CHECK
+ * CLI sub-command LINT
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Check Nextflow scripts and config files for errors")
-class CmdCheck extends CmdBase {
+@Parameters(commandDescription = "Lint Nextflow scripts and config files")
+class CmdLint extends CmdBase {
 
-    @Parameter(description = 'List of paths to check')
+    @Parameter(description = 'List of paths to lint')
     List<String> args = []
 
     @Parameter(
@@ -61,21 +63,36 @@ class CmdCheck extends CmdBase {
 
     @Parameter(
         names = ['-o', '-output'],
-        description = 'Output format for reporting errors: full, extended, concise, json',
-        validateWith = OutputFormatValidator
+        description = 'Output mode for reporting errors: full, extended, concise, json',
+        validateWith = OutputModeValidator
     )
-    String outputFormat = 'full'
+    String outputMode = 'full'
 
-    static class OutputFormatValidator implements IParameterValidator {
+    static class OutputModeValidator implements IParameterValidator {
 
-        private static final List<String> FORMATS = List.of('full', 'extended', 'concise', 'json')
+        private static final List<String> MODES = List.of('full', 'extended', 'concise', 'json')
 
         @Override
         void validate(String name, String value) {
-            if( !FORMATS.contains(value) )
-                throw new ParameterException("Output format must be one of $FORMATS (found: $value)")
+            if( !MODES.contains(value) )
+                throw new ParameterException("Output mode must be one of $MODES (found: $value)")
         }
     }
+
+    @Parameter(names = ['-format'], description = 'Format scripts and config files that have no errors')
+    boolean formatting
+
+    @Parameter(names = ['-harshil-alignment'], description = 'Use Harshil alignment')
+    boolean harhsilAlignment
+
+    @Parameter(names = ['-sort-declarations'], description = 'Sort script declarations in Nextflow scripts')
+    boolean sortDeclarations
+
+    @Parameter(names=['-spaces'], description = 'Number of spaces to indent')
+    int spaces
+
+    @Parameter(names = ['-tabs'], description = 'Indent with tabs')
+    boolean tabs
 
     private ScriptParser scriptParser
 
@@ -83,33 +100,47 @@ class CmdCheck extends CmdBase {
 
     private ErrorListener errorListener
 
-    private CheckSummary summary = new CheckSummary()
+    private FormattingOptions formattingOptions
+
+    private ErrorSummary summary = new ErrorSummary()
 
     @Override
-    String getName() { 'check' }
+    String getName() { 'lint' }
 
     @Override
     void run() {
         if( !args )
             throw new AbortOperationException("Error: No input files were specified")
 
+        if( spaces && tabs )
+            throw new AbortOperationException("Error: Cannot specify both `-spaces` and `-tabs`")
+
+        if( !spaces && !tabs )
+            spaces = 4
+
         scriptParser = new ScriptParser()
         configParser = new ConfigParser()
-        errorListener = outputFormat == 'json'
+        errorListener = outputMode == 'json'
             ? new JsonErrorListener()
-            : new StandardErrorListener(outputFormat, launcher.options.ansiLog)
+            : new StandardErrorListener(outputMode, launcher.options.ansiLog)
+        formattingOptions = new FormattingOptions(spaces, !tabs, harhsilAlignment, false, sortDeclarations)
 
         errorListener.beforeAll()
 
-        // parse all files specified on the command line
+        // collect files to lint
+        final List<File> files = []
+
         for( final arg : args ) {
             PathUtils.visitFiles(
                 Path.of(arg),
                 (path) -> !PathUtils.isExcluded(path, excludePatterns),
-                (path) -> parse(path.toFile()))
+                (path) -> files.add(path.toFile()))
         }
 
-        // analyze all files
+        // parse and analyze files
+        for( final file : files )
+            parse(file)
+
         scriptParser.analyze()
         configParser.analyze()
 
@@ -117,6 +148,13 @@ class CmdCheck extends CmdBase {
         checkErrors(scriptParser.compiler())
         checkErrors(configParser.compiler())
 
+        // format files if specified
+        if( formatting ) {
+            for( final file : files )
+                format(file)
+        }
+
+        // print summary
         errorListener.afterAll(summary)
 
         // If there were errors, throw an exception to return a non-zero exit code
@@ -127,19 +165,19 @@ class CmdCheck extends CmdBase {
     private void parse(File file) {
         final name = file.getName()
         if( name.endsWith('.nf') )
-            checkScript(file)
+            parseScript(file)
         else if( name.endsWith('.config') )
-            checkConfig(file)
+            parseConfig(file)
     }
 
-    private void checkScript(File file) {
-        log.debug "Checking script ${file}"
+    private void parseScript(File file) {
+        log.debug "Linting script ${file}"
         errorListener.beforeFile(file)
         scriptParser.parse(file)
     }
 
-    private void checkConfig(File file) {
-        log.debug "Checking config ${file}"
+    private void parseConfig(File file) {
+        log.debug "Linting config ${file}"
         errorListener.beforeFile(file)
         configParser.parse(file)
     }
@@ -182,13 +220,57 @@ class CmdCheck extends CmdBase {
         errorListener.afterErrors()
     }
 
+    private void format(File file) {
+        final name = file.getName()
+        final result =
+            name.endsWith('.nf') ? formatScript(file) :
+            name.endsWith('.config') ? formatConfig(file) :
+            null
+
+        if( result != null && file.text != result ) {
+            summary.filesFormatted += 1
+            file.text = result
+        }
+    }
+
+    private String formatScript(File file) {
+        final source = scriptParser.compiler().getSource(file.toURI())
+        if( source.getErrorCollector().hasErrors() ) {
+            printErrors(source)
+            return null
+        }
+
+        log.debug "Formatting script ${file}"
+        errorListener.beforeFormat(file)
+
+        final formatter = new ScriptFormattingVisitor(source, formattingOptions)
+        formatter.visit()
+        return formatter.toString()
+    }
+
+    private String formatConfig(File file) {
+        final source = configParser.compiler().getSource(file.toURI())
+        if( source.getErrorCollector().hasErrors() ) {
+            printErrors(source)
+            return null
+        }
+
+        log.debug "Formatting config ${file}"
+        errorListener.beforeFormat(file)
+
+        final formatter = new ConfigFormattingVisitor(source, formattingOptions)
+        formatter.visit()
+        return formatter.toString()
+    }
+
 }
 
 
-class CheckSummary {
+class ErrorSummary {
     int errors = 0
     int filesWithErrors = 0
     int filesWithoutErrors = 0
+    int filesFormatted = 0
 }
 
 
@@ -199,17 +281,18 @@ interface ErrorListener {
     void onError(SyntaxException error, String filename, SourceUnit source)
     void onWarning(WarningMessage warning, String filename, SourceUnit source)
     void afterErrors()
-    void afterAll(CheckSummary summary)
+    void beforeFormat(File file)
+    void afterAll(ErrorSummary summary)
 }
 
 
 @CompileStatic
 class StandardErrorListener implements ErrorListener {
-    private String format
+    private String mode
     private boolean ansiLog
 
-    StandardErrorListener(String format, boolean ansiLog) {
-        this.format = format
+    StandardErrorListener(String mode, boolean ansiLog) {
+        this.mode = mode
         this.ansiLog = ansiLog
     }
 
@@ -221,7 +304,7 @@ class StandardErrorListener implements ErrorListener {
 
     @Override
     void beforeAll() {
-        final line = ansi().a("Checking Nextflow code..").newline()
+        final line = ansi().a("Linting Nextflow code..").newline()
         AnsiConsole.out.print(line)
         AnsiConsole.out.flush()
     }
@@ -230,7 +313,7 @@ class StandardErrorListener implements ErrorListener {
     void beforeFile(File file) {
         final line = ansi()
             .cursorUp(1).eraseLine()
-            .a(Ansi.Attribute.INTENSITY_FAINT).a("Checking: ${file}")
+            .a(Ansi.Attribute.INTENSITY_FAINT).a("Linting: ${file}")
             .reset().newline().toString()
         AnsiConsole.out.print(line)
         AnsiConsole.out.flush()
@@ -248,7 +331,7 @@ class StandardErrorListener implements ErrorListener {
         term.bold().a(filename).reset()
         term.a(":${error.getStartLine()}:${error.getStartColumn()}: ")
         term = highlightString(error.getOriginalMessage(), term)
-        if( format != 'concise' ) {
+        if( mode != 'concise' ) {
             term.newline()
             term = printCodeBlock(source, Range.of(error), term, Ansi.Color.RED)
         }
@@ -261,7 +344,7 @@ class StandardErrorListener implements ErrorListener {
         term.bold().a(filename).reset()
         term.a(":${token.getStartLine()}:${token.getStartColumn()}: ")
         term.fg(Ansi.Color.YELLOW).a(warning.getMessage()).fg(Ansi.Color.DEFAULT)
-        if( format != 'concise' ) {
+        if( mode != 'concise' ) {
             term.newline()
             term = printCodeBlock(source, Range.of(warning), term, Ansi.Color.YELLOW)
         }
@@ -289,7 +372,7 @@ class StandardErrorListener implements ErrorListener {
         final lines = getSourceText(source)
 
         // get context window (up to 5 lines)
-        int padding = format == 'extended' ? 2 : 0
+        int padding = mode == 'extended' ? 2 : 0
         int fromLine = Math.max(1, startLine - padding)
         int toLine = Math.min(lines.size(), endLine + padding)
         if( toLine - fromLine + 1 > 5 ) {
@@ -364,19 +447,35 @@ class StandardErrorListener implements ErrorListener {
     }
 
     @Override
-    void afterAll(CheckSummary summary) {
+    void beforeFormat(File file) {
+        final line = ansi()
+            .cursorUp(1).eraseLine()
+            .a(Ansi.Attribute.INTENSITY_FAINT).a("Formatting: ${file}")
+            .reset().newline().toString()
+        AnsiConsole.out.print(line)
+        AnsiConsole.out.flush()
+    }
+
+    @Override
+    void afterAll(ErrorSummary summary) {
         final term = ansi()
         term.cursorUp(1).eraseLine().cursorUp(1).eraseLine()
         // print extra newline if no code is being shown
-        if( format == 'concise' )
+        if( mode == 'concise' )
             term.newline()
-        term.bold().a("Nextflow error checking complete!").reset().newline()
-        if( summary.filesWithErrors > 0 )
+        term.bold().a("Nextflow linting complete!").reset().newline()
+        if( summary.filesWithErrors > 0 ) {
             term.fg(Ansi.Color.RED).a(" ❌ ${summary.filesWithErrors} file${summary.filesWithErrors==1 ? '' : 's'} had ${summary.errors} error${summary.errors==1 ? '' : 's'}").newline()
-        if( summary.filesWithoutErrors > 0 )
-            term.fg(Ansi.Color.BLUE).a(" ✅ ${summary.filesWithoutErrors} file${summary.filesWithoutErrors==1 ? '' : 's'} had no errors").newline()
-        if( summary.filesWithErrors == 0 && summary.filesWithoutErrors == 0 )
+        }
+        if( summary.filesWithoutErrors > 0 ) {
+            term.fg(Ansi.Color.GREEN).a(" ✅ ${summary.filesWithoutErrors} file${summary.filesWithoutErrors==1 ? '' : 's'} had no errors")
+            if( summary.filesFormatted > 0 )
+                term.fg(Ansi.Color.BLUE).a(" (${summary.filesFormatted} formatted)")
+            term.newline()
+        }
+        if( summary.filesWithErrors == 0 && summary.filesWithoutErrors == 0 ) {
             term.a(" No files found to process").newline()
+        }
         AnsiConsole.out.print(term)
         AnsiConsole.out.flush()
     }
@@ -445,7 +544,11 @@ class JsonErrorListener implements ErrorListener {
     }
 
     @Override
-    void afterAll(CheckSummary summary) {
+    void beforeFormat(File file) {
+    }
+
+    @Override
+    void afterAll(ErrorSummary summary) {
         final result = [
             date: Instant.now().toString(),
             summary: summary,
