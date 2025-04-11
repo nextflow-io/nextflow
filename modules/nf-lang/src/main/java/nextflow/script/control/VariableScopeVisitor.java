@@ -318,7 +318,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         if( mn != null )
             call.putNodeMetaData(ASTNodeMarker.METHOD_TARGET, mn);
         else
-            vsc.addError("Invalid " + typeLabel + " `" + name + "`", node);
+            vsc.addError("Unrecognized " + typeLabel + " `" + name + "`", node);
         return call;
     }
 
@@ -463,7 +463,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         }
         else if( currentDefinition instanceof ProcessNode || currentDefinition instanceof WorkflowNode ) {
             if( currentClosure != null )
-                addError("Variables in a closure should be declared with `def`", ve);
+                vsc.addError("Variables in a closure should be declared with `def`", ve);
             var scope = currentScope();
             currentScope(currentDefinition.getVariableScope());
             vsc.declare(ve);
@@ -503,10 +503,10 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         var variable = vsc.findVariableDeclaration(target.getName(), target);
         if( isDslVariable(variable) ) {
             if( "params".equals(variable.getName()) )
-                sourceUnit.addWarning("Params should be declared at the top-level (i.e. outside the workflow)", target);
+                vsc.addWarning("Params should be declared at the top-level (i.e. outside the workflow)", target.getName(), target);
             // TODO: re-enable after workflow.onComplete bug is fixed
             // else
-            //     addError("Built-in variable cannot be mutated", target);
+            //     vsc.addError("Built-in variable cannot be mutated", target);
         }
         else if( variable != null ) {
             checkExternalWriteInAsyncClosure(target, variable);
@@ -521,7 +521,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         var scope = currentClosure.getVariableScope();
         var name = variable.getName();
         if( inOperatorCall && scope.isReferencedLocalVariable(name) && scope.getDeclaredVariable(name) == null )
-            sourceUnit.addWarning("Mutating an external variable in an operator closure can lead to a race condition", target);
+            vsc.addWarning("Mutating an external variable in an operator closure can lead to a race condition", target.getName(), target);
     }
 
     // expressions
@@ -682,7 +682,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         var mn = asMethodVariable(variable);
         if( mn != null && mn.getDeclaringClass().getTypeClass() == ScriptDsl.class ) {
             if( WARN_GLOBALS.contains(variable.getName()) )
-                sourceUnit.addWarning("The use of `" + variable.getName() + "` in a process is discouraged -- input files should be provided as process inputs", context);
+                vsc.addWarning("The use of `" + variable.getName() + "` in a process is discouraged -- input files should be provided as process inputs", variable.getName(), context);
         }
     }
 
