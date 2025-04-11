@@ -135,7 +135,7 @@ class CidCommandImplTest extends Specification{
 
         then:
         stdout.size() == 1
-        stdout[0] == "No entries found for cid://12345."
+        stdout[0] == "No entries found for cid://12345"
     }
 
     def 'should get lineage cid content' (){

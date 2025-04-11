@@ -279,7 +279,7 @@ class CidObserverTest extends Specification {
 
         when:
         observer.onProcessComplete(handler, null )
-        def taskRunResult = store.load("${hash.toString()}")
+        def taskRunResult = store.load(hash.toString()) as nextflow.data.cid.model.TaskRun
         def dataOutputResult1 = store.load("${hash}/outputs/fileOut1.txt") as DataOutput
         def dataOutputResult2 = store.load("${hash}/outputs/fileOut2.txt") as DataOutput
         def taskOutputsResult = store.load("${hash}/outputs") as TaskOutputs

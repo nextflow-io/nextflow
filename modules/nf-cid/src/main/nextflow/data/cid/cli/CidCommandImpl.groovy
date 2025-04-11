@@ -100,7 +100,7 @@ class CidCommandImpl implements CmdCid.CidCommand {
         try {
             def entries = CidUtils.query(store, new URI(args[0]))
             if( !entries ) {
-                println "No entries found for ${args[0]}."
+                println "No entries found for ${args[0]}"
                 return
             }
             entries = entries.size() == 1 ? entries[0] : entries
