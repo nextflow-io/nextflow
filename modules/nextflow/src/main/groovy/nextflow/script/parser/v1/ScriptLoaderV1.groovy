@@ -165,7 +165,7 @@ class ScriptLoaderV1 implements ScriptLoader {
         throw new IllegalArgumentException("Unknown script type: ${script?.getClass()?.getName()}")
     }
 
-    private GroovyShell getInterpreter() {
+    GroovyShell getInterpreter() {
         if( !binding && session )
             binding = session.binding
         if( !binding )

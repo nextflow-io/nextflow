@@ -26,6 +26,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileTime
 import java.time.Duration
 import java.time.Instant
+import java.time.ZoneId
 
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
@@ -947,7 +948,7 @@ class WaveClientTest extends Specification {
     @Unroll
     def 'should get fusion default url' () {
         given:
-        def sess = Mock(Session) {getConfig() >> [:] }
+        def sess = Mock(Session) {getConfig() >> [fusion:[snapshots:SNAP]] }
         and:
         def wave = Spy(new WaveClient(sess))
 
@@ -955,12 +956,14 @@ class WaveClientTest extends Specification {
         wave.defaultFusionUrl(ARCH).toURI().toString() == EXPECTED
         
         where:
-        ARCH                | EXPECTED
-        'linux/amd64'       | 'https://fusionfs.seqera.io/releases/v2.5-amd64.json'
-        'linux/x86_64'      | 'https://fusionfs.seqera.io/releases/v2.5-amd64.json'
-        'arm64'             | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
-        'linux/arm64'       | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
-        'linux/arm64/v8'    | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
+        ARCH                | SNAP  | EXPECTED
+        'linux/amd64'       | null  | 'https://fusionfs.seqera.io/releases/v2.4-amd64.json'
+        'linux/x86_64'      | null  | 'https://fusionfs.seqera.io/releases/v2.4-amd64.json'
+        'arm64'             | null  | 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
+        'linux/arm64'       | null  | 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
+        'linux/arm64/v8'    | null  | 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
+        and:
+        'linux/amd64'       | true  | 'https://fusionfs.seqera.io/releases/v2.4-snap_amd64.json'
     }
 
     @Unroll
@@ -1390,7 +1393,7 @@ class WaveClientTest extends Specification {
         and:
         result == new ContainerMeta(
                 requestId: resp.requestId,
-                requestTime: handle.createdAt,
+                requestTime: handle.createdAt.atZone(ZoneId.systemDefault()).toOffsetDateTime(),
                 sourceImage: resp.containerImage,
                 targetImage: resp.targetImage,
                 buildId: resp.buildId,
@@ -1426,7 +1429,7 @@ class WaveClientTest extends Specification {
         and:
         result == new ContainerMeta(
             requestId: resp.requestId,
-            requestTime: handle.createdAt,
+            requestTime: handle.createdAt.atZone(ZoneId.systemDefault()).toOffsetDateTime(),
             sourceImage: resp.containerImage,
             targetImage: resp.targetImage,
             buildId: null,
