@@ -293,6 +293,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
         allocationPolicy.putAllLabels( task.config.getResourceLabels() )
 
+        // Add network tags if configured
+        if( executor.config.networkTags )
+            allocationPolicy.addAllTags( executor.config.networkTags )
+
         // use instance template if specified
         if( task.config.getMachineType()?.startsWith('template://') ) {
             if( task.config.getAccelerator() )
@@ -312,6 +316,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
             if( executor.config.spot )
                 log.warn1 'Config option `google.batch.spot` ignored because an instance template was specified'
+
+            if( executor.config.networkTags )
+                log.warn1 'Config option `google.batch.networkTags` ignored because an instance template was specified'
 
             instancePolicyOrTemplate
                 .setInstallGpuDrivers( executor.config.getInstallGpuDrivers() )

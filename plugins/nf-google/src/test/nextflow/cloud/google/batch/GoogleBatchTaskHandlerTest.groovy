@@ -152,6 +152,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
                 getServiceAccountEmail() >> 'foo@bar.baz'
                 getSubnetwork() >> 'subnet-1'
                 getUsePrivateAddress() >> true
+                getNetworkTags() >> ['tag1', 'tag2']
             }
         }
         and:
@@ -219,6 +220,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         allocationPolicy.getInstances(0).getInstallGpuDrivers() == true
         allocationPolicy.getLabelsMap() == [foo: 'bar']
         allocationPolicy.getServiceAccount().getEmail() == 'foo@bar.baz'
+        allocationPolicy.getTagsList() == ['tag1', 'tag2']
         and:
         instancePolicy.getAccelerators(0).getCount() == 1
         instancePolicy.getAccelerators(0).getType() == ACCELERATOR.type
