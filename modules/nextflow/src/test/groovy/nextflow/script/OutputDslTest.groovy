@@ -77,9 +77,9 @@ class OutputDslTest extends Specification {
             "file2","${outputDir}/barbar/file2.txt"
             """.stripIndent()
         and:
-        1 * session.notifyFilePublish(outputDir.resolve('foo/file1.txt'), file1)
-        1 * session.notifyFilePublish(outputDir.resolve('barbar/file2.txt'), file2)
-        1 * session.notifyFilePublish(outputDir.resolve('index.csv'))
+        1 * session.notifyFilePublish(outputDir.resolve('foo/file1.txt'), file1, null)
+        1 * session.notifyFilePublish(outputDir.resolve('barbar/file2.txt'), file2, null)
+        1 * session.notifyFilePublish(outputDir.resolve('index.csv'), null, null)
 
         cleanup:
         SysEnv.pop()
