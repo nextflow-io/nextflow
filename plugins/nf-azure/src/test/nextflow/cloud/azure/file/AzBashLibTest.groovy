@@ -21,6 +21,7 @@ class AzBashLibTest extends Specification {
             return false
         }
         
+        // Check if all lines are the same
         for (int i = 0; i < expectedLines.size(); i++) {
             if (expectedLines[i] != actualLines[i]) {
                 return false
@@ -38,8 +39,8 @@ class AzBashLibTest extends Specification {
     }
 
     def 'should return base script'() {
-        expect:
-        AzBashLib.script() == '''
+        given:
+        def expected = '''
             # custom env variables used for azcopy opts
             export AZCOPY_BLOCK_SIZE_MB=4
             export AZCOPY_BLOCK_BLOB_TIER=None
@@ -97,7 +98,10 @@ class AzBashLibTest extends Specification {
                     }
                 }
             }
-            '''.stripIndent()
+            '''
+        
+        expect:
+        compareScripts(expected, AzBashLib.script())
     }
 
     def 'should return script with config, with default azcopy opts'() {
