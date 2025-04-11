@@ -90,6 +90,18 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
+    def 'should format a parameter declaration' () {
+        expect:
+        checkFormat(
+            '''\
+            params.foo='bar'
+            ''',
+            '''\
+            params.foo = 'bar'
+            '''
+        )
+    }
+
     def 'should format a workflow definition' () {
         expect:
         checkFormat(
@@ -211,6 +223,33 @@ class ScriptFormatterTest extends Specification {
                 .set { result }
             '''
         )
+    }
+
+    def 'should not sort script declarations by default' () {
+        given:
+        def source = 
+            '''\
+            params.foo = 'bar'
+
+            include { foo ; bar } from './foobar.nf'
+
+            process hello {
+                script:
+                'echo true'
+            }
+
+            workflow hello {
+            }
+
+            workflow {
+            }
+
+            output {
+            }
+            '''.stripIndent()
+
+        expect:
+        format(source) == source
     }
 
 }

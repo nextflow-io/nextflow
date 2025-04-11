@@ -56,6 +56,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     private int maxIncludeWidth = 0;
 
+    private int maxParamWidth = 0;
+
     public ScriptFormattingVisitor(SourceUnit sourceUnit, FormattingOptions options) {
         this.sourceUnit = sourceUnit;
         this.options = options;
@@ -72,8 +74,6 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         if( !(moduleNode instanceof ScriptNode) )
             return;
         var scriptNode = (ScriptNode) moduleNode;
-        if( options.harshilAlignment() )
-            maxIncludeWidth = getMaxIncludeWidth(scriptNode.getIncludes());
         if( scriptNode.getShebang() != null )
             fmt.append(scriptNode.getShebang());
 
@@ -91,6 +91,18 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         // -- revert to original order if sorting is disabled
         if( !options.sortDeclarations() ) {
             declarations.sort(Comparator.comparing(node -> node.getLineNumber()));
+        }
+
+        // -- prepare alignment widths if needed
+        if( options.harshilAlignment() ) {
+            maxIncludeWidth = scriptNode.getIncludes().stream()
+                .flatMap(in -> in.modules.stream())
+                .map(this::getIncludeWidth)
+                .max(Integer::compare).orElse(0);
+
+            maxParamWidth = scriptNode.getParams().stream()
+                .map(this::getParamWidth)
+                .max(Integer::compare).orElse(0);
         }
 
         for( var decl : declarations ) {
@@ -111,24 +123,6 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             else if( decl instanceof WorkflowNode wn )
                 visitWorkflow(wn);
         }
-    }
-
-    protected int getMaxIncludeWidth(List<IncludeNode> includes) {
-        int maxWidth = 0;
-        for( var includeNode : includes ) {
-            for( var module : includeNode.modules ) {
-                var width = getIncludeWidth(module);
-                if( maxWidth < width )
-                    maxWidth = width;
-            }
-        }
-        return maxWidth;
-    }
-
-    protected int getIncludeWidth(IncludeModuleNode module) {
-        return module.alias != null
-            ? module.name.length() + 4 + module.alias.length()
-            : module.name.length();
     }
 
     public String toString() {
@@ -186,23 +180,24 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.appendNewLine();
     }
 
-    protected void visitParams(List<ParamNode> nodes) {
-        var alignmentWidth = options.harshilAlignment()
-            ? nodes.stream().map(this::getParamWidth).max(Integer::compare).orElse(0)
-            : 0;
+    protected int getIncludeWidth(IncludeModuleNode module) {
+        return module.alias != null
+            ? module.name.length() + 4 + module.alias.length()
+            : module.name.length();
+    }
 
-        for( var node : nodes ) {
-            fmt.appendLeadingComments(node);
-            fmt.appendIndent();
-            fmt.visit(node.target);
-            if( alignmentWidth > 0 ) {
-                var padding = alignmentWidth - getParamWidth(node);
-                fmt.append(" ".repeat(padding));
-            }
-            fmt.append(" = ");
-            fmt.visit(node.value);
-            fmt.appendNewLine();
+    @Override
+    public void visitParam(ParamNode node) {
+        fmt.appendLeadingComments(node);
+        fmt.appendIndent();
+        fmt.visit(node.target);
+        if( maxParamWidth > 0 ) {
+            var padding = maxParamWidth - getParamWidth(node);
+            fmt.append(" ".repeat(padding));
         }
+        fmt.append(" = ");
+        fmt.visit(node.value);
+        fmt.appendNewLine();
     }
 
     protected int getParamWidth(ParamNode node) {
