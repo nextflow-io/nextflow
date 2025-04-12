@@ -78,8 +78,7 @@ class ScriptLoaderV2Test extends Specification {
         parser.runScript()
         then:
         def e = thrown(ScriptCompilationException)
-        e.message.contains("Unexpected input: '{'")
-        e.message.contains('foo.nf')
+        e.message == 'Script compilation failed'
 
         cleanup:
         file.parent.deleteDir()

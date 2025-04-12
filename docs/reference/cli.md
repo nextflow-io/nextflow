@@ -681,6 +681,60 @@ Execute a pipeline into a Kubernetes cluster.
 $ nextflow kuberun nextflow-io/hello
 ```
 
+### `lint`
+
+Lint Nextflow scripts and config files.
+
+**Usage**
+
+```console
+$ nextflow lint [options] [paths]
+```
+
+**Description**
+
+The `lint` command parses and analyzes the given Nextflow scripts and config files, formats them if specified, and prints any errors. Directories are recursively scanned for scripts and config files to lint.
+
+**Options**
+
+`-exclude`
+: File pattern to exclude from linting. Can be specified multiple times (default: `.git, .nf-test, work`).
+
+`-format`
+: Format scripts and config files that have no errors.
+
+`-o, -output`
+: Output mode for reporting errors: `full`, `extended`, `concise`, `json` (default: `full`).
+
+`-sort-declarations`
+: Sort script declarations in Nextflow scripts (default: `false`).
+
+`-spaces`
+: Number of spaces to indent (default: `4`).
+
+`-tabs`
+: Indent with tabs (default: `false`).
+
+**Examples**
+
+Lint a specific file.
+
+```console
+$ nextflow lint main.nf
+```
+
+Lint all files in the current directory (and subdirectories) with concise output.
+
+```console
+$ nextflow lint -o concise .
+```
+
+Lint and format all files in the current directory (and subdirectories) and use two spaces per indent.
+
+```console
+$ nextflow lint -format -spaces 2 .
+```
+
 ### `list`
 
 List all downloaded projects.
