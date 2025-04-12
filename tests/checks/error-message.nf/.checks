@@ -4,7 +4,7 @@ set -e
 
 if [[ "$NXF_SYNTAX_PARSER" == "v2" ]] ; then
     # strict parser should give compile-time error
-    < stdout grep "error-message.nf at 19, 1: \`printx\` is not defined"
+    < stdout grep "error-message.nf:19:1: \`printx\` is not defined"
 else
     # legacy parser should give runtime error
     < stdout grep "Check script '.*error-message.nf' at line: 19"
