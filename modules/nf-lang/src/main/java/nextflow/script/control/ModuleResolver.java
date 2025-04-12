@@ -54,6 +54,8 @@ public class ModuleResolver {
         queuedSources.add(entry);
         while( !queuedSources.isEmpty() ) {
             var source = queuedSources.remove();
+            if( source.getAST() == null )
+                continue;
             var sn = (ScriptNode) source.getAST();
             for( var in : sn.getIncludes() ) {
                 var includeSource = resolveInclude(in, source, sourceResolver);

@@ -1,5 +1,27 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.02.3-edge - 8 Apr 2025
+- Fix container meta deduplication [f4600d2e]
+- Bump nf-tower@1.11.2 [220e429a]
+
+25.02.2-edge - 5 Apr 2025
+- Add nf-lang module from language-server (#5876) [36153c68]
+- Add section about include addParams to syntax guide (#5946) [d0842992]
+- Add tower plugin when fusion is enabled [579873bc]
+- Fix Nextflow console (#5937) [0206d1f2]
+- Fix console with v1 parser only [c733b371]
+- Fix date format in Wave containers meta (#5903) [59536c0a]
+- Fix grammar for reference to an operator (#5914) [7d3cb2b7]
+- Fix typo in comments (#5891) [47a0cc1e]
+- Fix Preserve workflow context in DAG for Mermaid renderer (#5918) [6da5496b]
+- Chore Improve deprecation warnings (#5939) [ea60dfb4]
+- Chore Move compile-to-groovy visitors into nf-lang (#5910) [0f588576]
+- Chore Move foreign file staging after storeDir evaluation (#5759) [2c53d9bd]
+- Chore Add nf-lang type checking utils (#5913) [4be204fb]
+- Bump nf-console@1.2.1 [cd3b1f93]
+- Bump nf-tower@1.11.1 [587d6274]
+- Bump nf-wave@1.11.1 [e5fb7694]
+
 25.02.1-edge - 19 Mar 2025
 - Fix handling of exit status with Azure Batch and Fusion Fusion (#5806) [7085862d]
 - Fix false positive Process already defined error (#5894) [4bd0b619]

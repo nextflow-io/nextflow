@@ -263,7 +263,7 @@ public class ScriptCompiler {
             var cn = source.getAST().getClasses().get(0);
 
             // perform strict syntax checking
-            var includeResolver = new ResolveIncludeVisitor(source, compiler, Collections.emptySet());
+            var includeResolver = new ResolveIncludeVisitor(source, compiler);
             includeResolver.visit();
             for( var error : includeResolver.getErrors() )
                 source.getErrorCollector().addErrorAndContinue(error);

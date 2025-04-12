@@ -90,7 +90,7 @@ public class VariableScopeChecker {
                 var message = variable instanceof Parameter
                     ? "Parameter was not used -- prefix with `_` to suppress warning"
                     : "Variable was declared but not used";
-                sourceUnit.addWarning(message, node);
+                addWarning(message, variable.getName(), node);
             }
         }
     }
@@ -259,6 +259,11 @@ public class VariableScopeChecker {
         }
 
         return includes.get(name);
+    }
+
+    public void addWarning(String message, String tokenText, ASTNode node) {
+        var token = new Token(0, tokenText, node.getLineNumber(), node.getColumnNumber()); // ASTNode to CSTNode
+        sourceUnit.getErrorCollector().addWarning(WarningMessage.POSSIBLE_ERRORS, message, token, sourceUnit);
     }
 
     public void addParanoidWarning(String message, String tokenText, ASTNode node, String otherMessage, ASTNode otherNode) {
