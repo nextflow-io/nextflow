@@ -141,7 +141,7 @@ class TowerClient implements TraceObserver {
 
     private TowerReports reports
 
-    private Map<String,Map<String,Object>> allContainers = new ConcurrentHashMap<>()
+    private Map<String,Boolean> allContainers = new ConcurrentHashMap<>()
 
     /**
      * Constructor that consumes a URL and creates
@@ -720,8 +720,10 @@ class TowerClient implements TraceObserver {
         final result = new ArrayList<ContainerMeta>()
         for( TraceRecord it : tasks ) {
             final meta = it.getContainerMeta()
-            if( meta && !allContainers.containsKey(meta.targetImage) )
+            if( meta && !allContainers.get(meta.targetImage) ) {
+                allContainers.put(meta.targetImage, Boolean.TRUE)
                 result.add(meta)
+            }
         }
         return result
     }

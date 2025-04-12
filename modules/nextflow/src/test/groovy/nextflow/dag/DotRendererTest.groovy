@@ -59,6 +59,7 @@ class DotRendererTest extends Specification {
         file.text ==
             '''
             digraph "TheGraph" {
+            rankdir=TB;
             v0 [shape=point,label="",fixedsize=true,width=0.1];
             v1 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="Op1"];
             v0 -> v1;

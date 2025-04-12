@@ -82,7 +82,7 @@ class IncludeDef {
     IncludeDef params(Map args) {
         if( NF.paramsDefinitionEnabled )
             throw new IllegalStateException("Include with `params()` is not allowed when `nextflow.preview.params` is enabled")
-        log.warn "Include with `params()` is deprecated -- pass params as a workflow or process input instead"
+        log.warn1 "Include with `params()` is deprecated -- pass params as a workflow or process input instead"
         this.params = args != null ? new HashMap(args) : null
         return this
     }
@@ -90,7 +90,7 @@ class IncludeDef {
     IncludeDef addParams(Map args) {
         if( NF.paramsDefinitionEnabled )
             throw new IllegalStateException("Include with `addParams()` is not allowed when `nextflow.preview.params` is enabled")
-        log.warn "Include with `addParams()` is deprecated -- pass params as a workflow or process input instead"
+        log.warn1 "Include with `addParams()` is deprecated -- pass params as a workflow or process input instead"
         this.addedParams = args
         return this
     }

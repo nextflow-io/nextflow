@@ -105,7 +105,7 @@ class AwsOptions implements CloudTransferOptions {
         return awsConfig.batchConfig.getMaxTransferAttempts()
     }
 
-    int getMaxSpotAttempts() {
+    Integer getMaxSpotAttempts() {
         return awsConfig.batchConfig.getMaxSpotAttempts()
     }
 

@@ -238,7 +238,7 @@ public class ConfigAstBuilder {
             .toList();
         var result = ast( new ConfigApplyBlockNode(name, statements), ctx );
         if( !"plugins".equals(name) )
-            collectSyntaxError(new SyntaxException("Config directives (i.e. statements without `=`) are only allowed in the `plugins` scope", result));
+            collectSyntaxError(new SyntaxException("Config settings must be assigned with an equals sign (`=`)", result));
         return result;
     }
 

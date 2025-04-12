@@ -54,7 +54,6 @@ import groovyx.gpars.group.PGroup
 import nextflow.NF
 import nextflow.Nextflow
 import nextflow.Session
-import nextflow.ast.NextflowDSLImpl
 import nextflow.ast.TaskCmdXform
 import nextflow.ast.TaskTemplateVarsXform
 import nextflow.cloud.CloudSpotTerminationException
@@ -310,7 +309,7 @@ class TaskProcessor {
         this.config = config
         this.taskBody = taskBody
         if( taskBody.isShell )
-            log.warn "Process ${name} > the `shell` block is deprecated, use `script` instead"
+            log.warn1 "The `shell` process section is deprecated -- use the `script` section instead"
         this.name = name
         this.maxForks = config.maxForks && config.maxForks>0 ? config.maxForks as int : 0
         this.forksCount = maxForks ? new LongAdder() : null
@@ -2350,7 +2349,7 @@ class TaskProcessor {
     protected boolean checkWhenGuard(TaskRun task) {
 
         try {
-            def pass = task.config.getGuard(NextflowDSLImpl.PROCESS_WHEN)
+            def pass = task.config.getWhenGuard()
             if( pass ) {
                 return true
             }

@@ -158,12 +158,13 @@ class XFileSystemProviderTest extends Specification {
     }
 
     @Rule
-    WireMockRule wireMockRule = new WireMockRule(18080)
+    WireMockRule wireMockRule = new WireMockRule(0)
 
     @Unroll
     def 'should follow a redirect when read a http file '() {
         given:
-        def wireMock = new WireMockGroovy(18080)
+        def wireMock = new WireMockGroovy(wireMockRule.port())
+        def localhost = "http://localhost:${wireMockRule.port()}"
         wireMock.stub {
             request {
                 method "GET"
@@ -172,7 +173,7 @@ class XFileSystemProviderTest extends Specification {
             response {
                 status HTTP_CODE
                 headers {
-                    "Location" "http://localhost:18080${REDIRECT_TO}"
+                    "Location" "${localhost}${REDIRECT_TO}"
                 }
             }
         }
@@ -184,7 +185,7 @@ class XFileSystemProviderTest extends Specification {
             response {
                 status HTTP_CODE
                 headers {
-                    "Location" "http://localhost:18080/target.html"
+                    "Location" "${localhost}/target.html"
                 }
             }
         }
@@ -210,7 +211,7 @@ class XFileSystemProviderTest extends Specification {
         and:
         def provider = new HttpFileSystemProvider()
         when:
-        def path = provider.getPath(new URI('http://localhost:18080/index.html'))
+        def path = provider.getPath(new URI("${localhost}/index.html"))
         then:
         path
         Files.size(path) == EXPECTED

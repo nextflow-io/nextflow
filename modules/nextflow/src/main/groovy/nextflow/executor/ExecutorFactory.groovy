@@ -188,7 +188,7 @@ class ExecutorFactory {
         def clazz = getExecutorClass(name)
 
         if( !isTypeSupported(script.type, clazz) ) {
-            log.warn "Process '$processName' cannot be executed by '$name' executor -- Using 'local' executor instead"
+            log.warn1 "Process '$processName' cannot be executed by '$name' executor -- Using 'local' executor instead"
             name = 'local'
             clazz = LocalExecutor.class
         }
