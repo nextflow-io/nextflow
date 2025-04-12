@@ -22,6 +22,7 @@ import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.extension.Bolts
@@ -39,6 +40,9 @@ import org.pf4j.PluginStateListener
 @Slf4j
 @CompileStatic
 class PluginsFacade implements PluginStateListener {
+
+    @PackageScope
+    final static String DEFAULT_PLUGINS_REPO = 'https://raw.githubusercontent.com/nextflow-io/plugins/main/plugins.json'
 
     private static final String DEV_MODE = 'dev'
     private static final String PROD_MODE = 'prod'
@@ -64,7 +68,7 @@ class PluginsFacade implements PluginStateListener {
     }
 
     PluginsFacade(Path root, String mode=PROD_MODE, boolean offline=false,
-                  String indexUrl=Plugins.DEFAULT_PLUGINS_REPO) {
+                  String indexUrl=DEFAULT_PLUGINS_REPO) {
         this.mode = mode
         this.root = root
         this.offline = offline
@@ -98,28 +102,44 @@ class PluginsFacade implements PluginStateListener {
         }
     }
 
+    static protected boolean isSupportedIndex(String url) {
+        if( !url ) {
+            throw new IllegalArgumentException("Missing plugins registry URL")
+        }
+        if( !url.startsWith('https://') && !url.startsWith('http://') ) {
+            throw new IllegalArgumentException("Plugins registry URL must start with 'http://' or 'https://': $url")
+        }
+        if( url == DEFAULT_PLUGINS_REPO ) {
+            return true
+        }
+        final hostname = URI.create(url).authority
+        return hostname.endsWith('.nextflow.io')
+            || hostname.endsWith('.nextflow.com')
+            || hostname.endsWith('.seqera.io')
+            || hostname.endsWith('.seqera.com')
+    }
+
     protected String getPluginsIndexUrl() {
         final url = env.get('NXF_PLUGINS_INDEX_URL')
-        if( url ) {
-            log.trace "Detected NXF_PLUGINS_INDEX_URL=$url"
-            if( url != Plugins.DEFAULT_PLUGINS_REPO ) {
-                // warn that this is experimental behaviour
-                log.warn """\
+        if( !url ) {
+            log.trace "Using default plugins url"
+            return DEFAULT_PLUGINS_REPO
+        }
+        log.debug "Detected NXF_PLUGINS_INDEX_URL=$url"
+        if( !isSupportedIndex(url) ) {
+            // warn that this is experimental behaviour
+            log.warn """\
                 =======================================================================
                 =                                WARNING                                    =
-                = You are running this script using a custom plugins index url.             =
+                = This workflow run us using an unofficial plugins registry.                =
                 =                                                                           =
                 = ${url}
                 =                                                                           =
-                = This is an experimental feature and should not be used in production.     =
+                = Its usage is unsupported and not recommended for production workloads.    =
                 =============================================================================
                 """.stripIndent(true)
-            }
-            return url
-        } else {
-            log.trace "Using default plugins url"
-            return Plugins.DEFAULT_PLUGINS_REPO
         }
+        return url
     }
 
     private boolean isNextflowDevRoot(File file) {
