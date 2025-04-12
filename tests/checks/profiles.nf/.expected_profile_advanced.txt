@@ -1,5 +1,4 @@
-echo = true
-foo = 'bar'
+outputDir = 'results'
 
 process {
    cpus = 8

@@ -36,6 +36,7 @@ import nextflow.script.control.Compiler;
 import nextflow.script.control.ModuleResolver;
 import nextflow.script.control.ResolveIncludeVisitor;
 import nextflow.script.control.ScriptResolveVisitor;
+import nextflow.script.control.ScriptToGroovyVisitor;
 import nextflow.script.control.TypeCheckingVisitor;
 import nextflow.script.parser.ScriptParserPluginFactory;
 import org.codehaus.groovy.ast.ASTNode;
@@ -262,7 +263,7 @@ public class ScriptCompiler {
             var cn = source.getAST().getClasses().get(0);
 
             // perform strict syntax checking
-            var includeResolver = new ResolveIncludeVisitor(source, compiler, Collections.emptySet());
+            var includeResolver = new ResolveIncludeVisitor(source, compiler);
             includeResolver.visit();
             for( var error : includeResolver.getErrors() )
                 source.getErrorCollector().addErrorAndContinue(error);

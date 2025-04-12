@@ -53,7 +53,6 @@ import groovyx.gpars.group.PGroup
 import nextflow.NF
 import nextflow.Nextflow
 import nextflow.Session
-import nextflow.ast.NextflowDSLImpl
 import nextflow.ast.TaskCmdXform
 import nextflow.ast.TaskTemplateVarsXform
 import nextflow.cloud.CloudSpotTerminationException
@@ -318,7 +317,7 @@ class TaskProcessor {
         this.config = config
         this.taskBody = taskBody
         if( taskBody.isShell )
-            log.warn "Process ${name} > the `shell` block is deprecated, use `script` instead"
+            log.warn1 "The `shell` process section is deprecated -- use the `script` section instead"
         this.name = name
         this.maxForks = config.maxForks && config.maxForks>0 ? config.maxForks as int : 0
         this.forksCount = maxForks ? new LongAdder() : null
@@ -651,7 +650,7 @@ class TaskProcessor {
         // -- map the inputs to a map and use to delegate closure values interpolation
         final secondPass = [:]
         int count = makeTaskContextStage1(task, secondPass, values)
-        makeTaskContextStage2(task, secondPass, count)
+        final foreignFiles = makeTaskContextStage2(task, secondPass, count)
 
         // verify that `when` guard, when specified, is satisfied
         if( !checkWhenGuard(task) )
@@ -664,6 +663,9 @@ class TaskProcessor {
         //    if true skip the execution and return the stored data
         if( checkStoredOutput(task) )
             return
+
+        // -- download foreign files
+        session.filePorter.transfer(foreignFiles)
 
         def hash = createTaskHashKey(task)
         checkCachedOrLaunchTask(task, hash, resumable)
@@ -1941,7 +1943,7 @@ class TaskProcessor {
         throw new ProcessUnrecoverableException("Not a valid path value: '$str'")
     }
 
-    protected List<FileHolder> normalizeInputToFiles( Object obj, int count, boolean coerceToPath, FilePorter.Batch batch ) {
+    protected List<FileHolder> normalizeInputToFiles( Object obj, int count, boolean coerceToPath, FilePorter.Batch foreignFiles ) {
 
         Collection allItems = obj instanceof Collection ? obj : [obj]
         def len = allItems.size()
@@ -1952,7 +1954,7 @@ class TaskProcessor {
 
             if( item instanceof Path || coerceToPath ) {
                 def path = normalizeToPath(item)
-                def target = executor.isForeignFile(path) ? batch.addToForeign(path) : path
+                def target = executor.isForeignFile(path) ? foreignFiles.addToForeign(path) : path
                 def holder = new FileHolder(target)
                 files << holder
             }
@@ -2152,12 +2154,12 @@ class TaskProcessor {
         return count
     }
 
-    final protected void makeTaskContextStage2( TaskRun task, Map secondPass, int count ) {
+    final protected FilePorter.Batch makeTaskContextStage2( TaskRun task, Map secondPass, int count ) {
 
         final ctx = task.context
         final allNames = new HashMap<String,Integer>()
 
-        final FilePorter.Batch batch = session.filePorter.newBatch(executor.getStageDir())
+        final FilePorter.Batch foreignFiles = session.filePorter.newBatch(executor.getStageDir())
 
         // -- all file parameters are processed in a second pass
         //    so that we can use resolve the variables that eventually are in the file name
@@ -2165,7 +2167,7 @@ class TaskProcessor {
             final param = entry.getKey()
             final val = entry.getValue()
             final fileParam = param as FileInParam
-            final normalized = normalizeInputToFiles(val, count, fileParam.isPathQualifier(), batch)
+            final normalized = normalizeInputToFiles(val, count, fileParam.isPathQualifier(), foreignFiles)
             final resolved = expandWildcards( fileParam.getFilePattern(ctx), normalized )
 
             if( !param.isValidArity(resolved.size()) )
@@ -2193,9 +2195,7 @@ class TaskProcessor {
             def message = "Process `$name` input file name collision -- There are multiple input files for each of the following file names: ${conflicts.keySet().join(', ')}"
             throw new ProcessUnrecoverableException(message)
         }
-
-        // -- download foreign files
-        session.filePorter.transfer(batch)
+        return foreignFiles
     }
 
     protected void makeTaskContextStage3( TaskRun task, HashCode hash, Path folder ) {
@@ -2362,7 +2362,7 @@ class TaskProcessor {
     protected boolean checkWhenGuard(TaskRun task) {
 
         try {
-            def pass = task.config.getGuard(NextflowDSLImpl.PROCESS_WHEN)
+            def pass = task.config.getWhenGuard()
             if( pass ) {
                 return true
             }

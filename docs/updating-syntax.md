@@ -13,7 +13,7 @@ If you are still using DSL1, see {ref}`dsl1-page` to learn how to migrate your N
 ## Preparing for strict syntax
 
 :::{versionadded} 25.02.0-edge
-The strict syntax can be enabled in Nextflow by setting `NXF_SYNTAX_PARSER=v2`.
+The strict syntax can be enabled in Nextflow by setting the environment variable `NXF_SYNTAX_PARSER=v2`.
 :::
 
 The strict syntax is a subset of DSL2. While DSL2 allows any Groovy syntax, the strict syntax allows only a subset of Groovy syntax for Nextflow scripts and config files. This new specification enables more specific error reporting, ensures more consistent code, and will allow the Nextflow language to evolve independently of Groovy.
@@ -235,6 +235,47 @@ println "PWD = ${env('PWD')}"
 ### Restricted syntax
 
 The following patterns are still supported but have been restricted. That is, some syntax variants have been removed.
+
+<h4>Include declarations</h4>
+
+In Nextflow DSL2, include declarations can have an `addParams` or `params` clause as described in {ref}`module-params`:
+
+```nextflow
+params.message = 'Hola'
+params.target = 'Mundo'
+
+include { sayHello } from './some/module' addParams(message: 'Ciao')
+
+workflow {
+    sayHello()
+}
+```
+
+In the strict syntax, these clauses are no longer supported. Params should be passed to workflows, processes, and functions as explicit inputs:
+
+```nextflow
+include { sayHello } from './some/module'
+
+params.message = 'Hola'
+params.target = 'Mundo'
+
+workflow {
+    sayHello('Ciao', params.target)
+}
+```
+
+Where the `sayHello` workflow is defined as follows:
+
+```nextflow
+workflow sayHello {
+    take:
+    message
+    target
+
+    main:
+    // ...
+}
+```
 
 <h4>Variable declarations</h4>
 
@@ -496,7 +537,7 @@ The process `shell` section is deprecated. Use the `script` block instead. The V
 ### Configuration syntax
 
 :::{versionadded} 25.02.0-edge
-The strict config syntax can be enabled in Nextflow by setting `NXF_SYNTAX_PARSER=v2`.
+The strict config syntax can be enabled in Nextflow by setting the environment variable `NXF_SYNTAX_PARSER=v2`.
 :::
 
 See {ref}`Configuration <config-syntax>` for a comprehensive description of the configuration language.

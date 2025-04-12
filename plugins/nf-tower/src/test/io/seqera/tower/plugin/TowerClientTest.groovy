@@ -26,6 +26,7 @@ import nextflow.Session
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.container.ContainerConfig
+import nextflow.container.resolver.ContainerMeta
 import nextflow.exception.AbortOperationException
 import nextflow.script.ScriptBinding
 import nextflow.script.WorkflowMetadata
@@ -212,7 +213,7 @@ class TowerClientTest extends Specification {
                 complete: nowTs ])
         trace.executorName= 'batch'
         trace.machineInfo = new CloudMachineInfo('m4.large', 'eu-west-1b', PriceModel.spot)
-
+        trace.containerMeta = new ContainerMeta(requestId: '12345', sourceImage: 'ubuntu:latest', targetImage: 'wave.io/12345/ubuntu:latest')
         when:
         def req = observer.makeTasksReq([trace])
         then:
@@ -232,6 +233,10 @@ class TowerClientTest extends Specification {
         req.progress.running == 1
         req.progress.succeeded == 2
         req.progress.failed == 3
+        and:
+        req.containers[0].requestId == '12345'
+        req.containers[0].sourceImage == 'ubuntu:latest'
+        req.containers[0].targetImage == 'wave.io/12345/ubuntu:latest'
         and:
         aroundNow(req.instant)
 
@@ -473,5 +478,50 @@ class TowerClientTest extends Specification {
         null                                            | null          | null        | [:]
         "local-platform::${ProcessHelper.selfPid()}"    | null          | null        | [TOWER_ALLOW_NEXTFLOW_LOGS:'true']
         'aws-batch::1234z'                              | 'xyz.out'     | 'hola.log'  | [TOWER_ALLOW_NEXTFLOW_LOGS:'true', AWS_BATCH_JOB_ID: '1234z', NXF_OUT_FILE: 'xyz.out', NXF_LOG_FILE: 'hola.log']
+    }
+
+    def 'should deduplicate containers' () {
+        given:
+        def client = Spy(new TowerClient())
+        and:
+        def c1 = new ContainerMeta(requestId: '12345', sourceImage: 'ubuntu:latest', targetImage: 'wave.io/12345/ubuntu:latest')
+        def c2 = new ContainerMeta(requestId: '54321', sourceImage: 'ubuntu:latest', targetImage: 'wave.io/54321/ubuntu:latest')
+        and:
+        def trace1 = new TraceRecord(
+                taskId: 1,
+                process: 'foo',
+                workdir: "/work/dir",
+                cpus: 1,
+                submit: System.currentTimeMillis(),
+                start: System.currentTimeMillis(),
+                complete: System.currentTimeMillis())
+        trace1.containerMeta = c1
+        and:
+        def trace2 = new TraceRecord(
+            taskId: 2,
+            process: 'foo',
+            workdir: "/work/dir",
+            cpus: 1,
+            submit: System.currentTimeMillis(),
+            start: System.currentTimeMillis(),
+            complete: System.currentTimeMillis())
+        trace2.containerMeta = c2
+        and:
+        def trace3 = new TraceRecord(
+            taskId: 3,
+            process: 'foo',
+            workdir: "/work/dir",
+            cpus: 1,
+            submit: System.currentTimeMillis(),
+            start: System.currentTimeMillis(),
+            complete: System.currentTimeMillis())
+        trace3.containerMeta = c2
+
+        expect:
+        client.getNewContainers([trace1]) == [c1]
+        and:
+        client.getNewContainers([trace1]) == []
+        and:
+        client.getNewContainers([trace1, trace2, trace3]) == [c2]
     }
 }

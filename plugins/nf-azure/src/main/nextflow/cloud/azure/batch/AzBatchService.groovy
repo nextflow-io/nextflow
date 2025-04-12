@@ -17,6 +17,8 @@
 package nextflow.cloud.azure.batch
 
 import java.math.RoundingMode
+import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
@@ -93,6 +95,8 @@ import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
 import nextflow.util.MustacheTemplateEngine
 import nextflow.util.Rnd
+import reactor.core.publisher.Flux
+
 /**
  * Implements Azure Batch operations for Nextflow executor
  *
@@ -144,13 +148,19 @@ class AzBatchService implements Closeable {
     private List<Map> listAllVms(String location) {
         if( !location )
             throw new IllegalArgumentException("Missing Azure location parameter")
+        final locationNames = listLocationNames()
+        if( !locationNames.contains(location) )
+            log.warn("No Azure location called '${location}' found")
         final json = AzBatchService.class.getResourceAsStream("/nextflow/cloud/azure/vm-list-size-${location}.json")
         if( !json ) {
             log.warn "Unable to find Azure VM names for location: $location"
             return Collections.emptyList()
         }
 
-        return (List<Map>) new JsonSlurper().parse(json)
+        final vmList = new JsonSlurper().parse(json) as List<Map>
+        if ( vmList.isEmpty() )
+            log.warn("No VM sizes found for Azure location: $location")
+        return vmList
     }
 
     @Memoized
@@ -497,7 +507,7 @@ class AzBatchService implements Closeable {
         // submit command line
         final String cmd = fusionEnabled
                 ? launcher.fusionSubmitCli(task).join(' ')
-                : "sh -c 'bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}'"
+                : "bash -o pipefail -c 'bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}'"
         // cpus and memory
         final slots = computeSlots(task, pool)
         // max wall time
@@ -696,7 +706,7 @@ class AzBatchService implements Closeable {
         def pool = getPool(spec.poolId)
         if( !pool ) {
             if( config.batch().canCreatePool() ) {
-                createPool(spec)
+                safeCreatePool(spec)
             }
             else {
                 throw new IllegalArgumentException("Can't find Azure Batch pool '$spec.poolId' - Make sure it exists or set `allowPoolCreation=true` in the nextflow config file")
@@ -854,6 +864,27 @@ class AzBatchService implements Closeable {
         }
 
         apply(() -> client.createPool(poolParams))
+    }
+
+    protected void safeCreatePool(AzVmPoolSpec spec) {
+        try {
+            createPool(spec)
+        }
+        catch (HttpResponseException e) {
+            if (e.response.statusCode == 409 && toString(e.response.body)?.contains("PoolExists")) {
+                log.debug "[AZURE BATCH] Pool '${spec.poolId}' already exists (ignoring creation request)"
+                return
+            }
+            throw e
+        }
+    }
+
+    protected String toString(Flux<ByteBuffer> body) {
+        body
+            .map(byteBuffer -> StandardCharsets.UTF_8.decode(byteBuffer).toString())
+            .collectList()  // Collects all strings into a List<String>
+            .map(list -> String.join("", list)) // Joins the list into a single string
+            .block()
     }
 
     protected String scaleFormula(AzPoolOpts opts) {
