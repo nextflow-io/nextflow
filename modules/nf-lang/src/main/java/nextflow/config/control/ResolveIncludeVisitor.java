@@ -59,6 +59,10 @@ public class ResolveIncludeVisitor extends ConfigVisitorSupport {
         this.changedUris = changedUris;
     }
 
+    public ResolveIncludeVisitor(SourceUnit sourceUnit, Compiler compiler) {
+        this(sourceUnit, compiler, null);
+    }
+
     @Override
     protected SourceUnit getSourceUnit() {
         return sourceUnit;
@@ -81,7 +85,7 @@ public class ResolveIncludeVisitor extends ConfigVisitorSupport {
         changed = true;
         var includeUnit = compiler.getSource(includeUri);
         if( includeUnit == null ) {
-            addError("Invalid include source: '" + includeUri + "'", node);
+            addError("Invalid include source: '" + includeUri.getPath() + "'", node);
             return;
         }
     }
@@ -95,7 +99,7 @@ public class ResolveIncludeVisitor extends ConfigVisitorSupport {
     }
 
     protected boolean isIncludeStale(URI includeUri) {
-        return changedUris.contains(uri) || changedUris.contains(includeUri);
+        return changedUris == null || changedUris.contains(uri) || changedUris.contains(includeUri);
     }
 
     @Override
