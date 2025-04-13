@@ -49,23 +49,14 @@ A script can declare parameters using the `params` block:
 
 ```nextflow
 params {
-    input {
-        defaultValue null
-        description 'Path to input data'
-    }
+    /**
+     * Path to input data.
+     */
+    input
 
-    save_intermeds {
-        defaultValue false
-        description "Whether to save intermediate files"
-    }
-}
-```
-
-If only a default value is specified, the parameter declaration can be shortened to an assignment:
-
-```nextflow
-params {
-    input = null
+    /**
+     * Whether to save intermediate files.
+     */
     save_intermeds = false
 }
 ```
@@ -85,7 +76,7 @@ workflow {
 Named workflows should not use params. They should receive their inputs explicitly through the `take:` section.
 :::
 
-The default value can be overridden by the command line, params file, or config file.
+The default value can be overridden by the command line, params file, or config file. If a param does not have a default value and is not specified at runtime, the run will fail.
 
 ### Legacy syntax
 

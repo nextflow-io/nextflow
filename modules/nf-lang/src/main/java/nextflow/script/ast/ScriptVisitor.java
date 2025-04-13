@@ -28,8 +28,6 @@ public interface ScriptVisitor extends GroovyCodeVisitor {
 
     void visitParams(ParamBlockNode node);
 
-    void visitParam(ParamNode node);
-
     void visitParamV1(ParamNodeV1 node);
 
     void visitWorkflow(WorkflowNode node);

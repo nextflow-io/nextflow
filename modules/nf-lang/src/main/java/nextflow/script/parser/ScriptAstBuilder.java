@@ -35,7 +35,6 @@ import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.IncompleteNode;
 import nextflow.script.ast.InvalidDeclaration;
 import nextflow.script.ast.OutputNode;
-import nextflow.script.ast.ParamNode;
 import nextflow.script.ast.ParamNodeV1;
 import nextflow.script.ast.ParamBlockNode;
 import nextflow.script.ast.ProcessNode;
@@ -301,7 +300,7 @@ public class ScriptAstBuilder {
             var node = paramDeclarationV1(pac.paramDeclarationV1());
             saveLeadingComments(node, ctx);
             if( moduleNode.getParams() != null )
-                collectSyntaxError(new SyntaxException("Params block cannot be mixed with legacy parameter declarations", node));
+                collectSyntaxError(new SyntaxException("Legacy parameter declarations cannot be mixed with the params block", node));
             moduleNode.addParamV1(node);
         }
 
@@ -347,33 +346,28 @@ public class ScriptAstBuilder {
         return ast( new ParamBlockNode(declarations), ctx );
     }
 
-    private List<ParamNode> paramsBody(ParamsBodyContext ctx) {
+    private Parameter[] paramsBody(ParamsBodyContext ctx) {
         if( ctx == null )
-            return Collections.emptyList();
+            return Parameter.EMPTY_ARRAY;
         return ctx.paramDeclaration().stream()
             .map(this::paramDeclaration)
             .filter(param -> param != null)
-            .toList();
+            .toArray(Parameter[]::new);
     }
 
-    private ParamNode paramDeclaration(ParamDeclarationContext ctx) {
+    private Parameter paramDeclaration(ParamDeclarationContext ctx) {
         if( ctx.statement() != null ) {
             collectSyntaxError(new SyntaxException("Invalid parameter declaration", statement(ctx.statement())));
             return null;
         }
+        var type = ClassHelper.dynamicType();
         var name = identifier(ctx.identifier());
-        var body = ctx.ASSIGN() != null
-            ? paramBody(expression(ctx.expression()))
-            : blockStatements(ctx.blockStatements());
-        var result = new ParamNode(name, body);
+        var defaultValue = ctx.expression() != null ? expression(ctx.expression()) : null;
+        var result = ast( param(type, name, defaultValue), ctx );
         checkInvalidVarName(name, result);
+        groovydocManager.handle(result, ctx);
+        saveLeadingComments(result, ctx);
         return result;
-    }
-
-    private BlockStatement paramBody(Expression defaultValue) {
-        var call = ast( callThisX("defaultValue", args(defaultValue)), defaultValue );
-        var statement = ast( stmt(call), defaultValue );
-        return ast( block(new VariableScope(), List.of(statement)), defaultValue );
     }
 
     private ParamNodeV1 paramDeclarationV1(ParamDeclarationV1Context ctx) {

@@ -24,7 +24,7 @@ import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.OutputNode;
-import nextflow.script.ast.ParamNode;
+import nextflow.script.ast.ParamBlockNode;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
@@ -34,7 +34,6 @@ import nextflow.script.dsl.EntryWorkflowDsl;
 import nextflow.script.dsl.FeatureFlag;
 import nextflow.script.dsl.FeatureFlagDsl;
 import nextflow.script.dsl.OutputDsl;
-import nextflow.script.dsl.ParamDsl;
 import nextflow.script.dsl.ProcessDsl;
 import nextflow.script.dsl.ScriptDsl;
 import nextflow.script.dsl.WorkflowDsl;
@@ -170,18 +169,11 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
     }
 
     @Override
-    public void visitParam(ParamNode node) {
-        vsc.pushScope(ParamDsl.class);
-        var block = (BlockStatement) node.body;
-        block.setVariableScope(currentScope());
-
-        asBlockStatements(block).forEach((stmt) -> {
-            var call = checkDirective(stmt, "parameter directive", true);
-            if( call == null )
-                return;
-            super.visitMethodCallExpression(call);
-        });
-        vsc.popScope();
+    public void visitParams(ParamBlockNode node) {
+        for( var parameter : node.declarations ) {
+            if( parameter.hasInitialExpression() )
+                visit(parameter.getInitialExpression());
+        }
     }
 
     private boolean inWorkflowEmit;

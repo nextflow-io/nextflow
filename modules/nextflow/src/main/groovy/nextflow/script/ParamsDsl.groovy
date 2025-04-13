@@ -29,19 +29,21 @@ import nextflow.exception.ScriptRuntimeException
 @CompileStatic
 class ParamsDsl {
 
-    private Map<String,Map> declarations = [:]
+    private Map<String,Optional<?>> declarations = [:]
 
-    void declare(String name, Closure closure) {
+    void declare(String name) {
+        declare0(name, Optional.empty())
+    }
+
+    void declare(String name, Object defaultValue) {
+        declare0(name, Optional.of(defaultValue))
+    }
+
+    private void declare0(String name, Optional<?> defaultValue) {
         if( declarations.containsKey(name) )
             throw new ScriptRuntimeException("Parameter '${name}' is declared more than once in the workflow params definition")
 
-        final dsl = new DeclareDsl()
-        final cl = (Closure)closure.clone()
-        cl.setResolveStrategy(Closure.DELEGATE_FIRST)
-        cl.setDelegate(dsl)
-        cl.call()
-
-        declarations[name] = dsl.getOptions()
+        declarations[name] = defaultValue
     }
 
     void apply(Session session) {
@@ -57,40 +59,16 @@ class ParamsDsl {
 
         final params = new HashMap<String,?>()
         for( final name : declarations.keySet() ) {
-            final decl = declarations[name]
+            final defaultValue = declarations[name]
             if( configParams.containsKey(name) )
                 params[name] = configParams[name]
-            else if( decl.containsKey('defaultValue') )
-                params[name] = decl.defaultValue
+            else if( defaultValue.isPresent() )
+                params[name] = defaultValue.get()
             else
                 throw new ScriptRuntimeException("Parameter `$name` is required but was not specified on the command line, params file, or config")
         }
 
         session.binding.setParams(params)
-    }
-
-    static class DeclareDsl {
-
-        private Map opts = [:]
-
-        void defaultValue(Object value) {
-            setOption('defaultValue', value)
-        }
-
-        void description(String value) {
-            setOption('description', value)
-        }
-
-        private void setOption(String name, Object value) {
-            if( opts.containsKey(name) )
-                throw new ScriptRuntimeException("Parameter directive `${name}` cannot be defined more than once for a given parameter")
-            opts[name] = value
-        }
-
-        Map getOptions() {
-            return opts
-        }
-
     }
 
 }

@@ -110,19 +110,16 @@ The following definitions can be included:
 
 ### Params block
 
-The params block consists of one or more *parameter declarations*. A parameter declaration consists of a name and one or more *parameter directives* for defining the parameter:
+The params block consists of one or more *parameter declarations*. A parameter declaration consists of a name and an optional default value:
 
 ```nextflow
 params {
-    input {
-        defaultValue null
-        description 'Path to input data'
-        type 'file'
-    }
+    input
+    save_intermeds = false
 }
 ```
 
-Only one params block may be defined in a script. See {ref}`workflow-params-def` for the set of available parameter directives.
+Only one params block may be defined in a script.
 
 ### Parameter (legacy)
 

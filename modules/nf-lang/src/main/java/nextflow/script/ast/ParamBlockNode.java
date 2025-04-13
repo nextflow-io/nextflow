@@ -15,9 +15,8 @@
  */
 package nextflow.script.ast;
 
-import java.util.List;
-
 import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.Parameter;
 
 /**
  * A workflow params definition.
@@ -25,9 +24,9 @@ import org.codehaus.groovy.ast.ASTNode;
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 public class ParamBlockNode extends ASTNode {
-    public final List<ParamNode> declarations;
+    public final Parameter[] declarations;
 
-    public ParamBlockNode(List<ParamNode> declarations) {
+    public ParamBlockNode(Parameter[] declarations) {
         this.declarations = declarations;
     }
 }

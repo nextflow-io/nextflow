@@ -20,6 +20,7 @@ import java.util.List;
 
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.OutputNode;
+import nextflow.script.ast.ParamBlockNode;
 import nextflow.script.ast.ParamNodeV1;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ScriptNode;
@@ -78,6 +79,12 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
             // report errors for any unresolved variable references
             new DynamicVariablesVisitor().visit(sn);
         }
+    }
+
+    @Override
+    public void visitParams(ParamBlockNode node) {
+        for( var param : node.declarations )
+            param.setInitialExpression(resolver.transform(param.getInitialExpression()));
     }
 
     @Override

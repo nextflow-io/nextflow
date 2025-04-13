@@ -59,13 +59,6 @@ public abstract class ScriptVisitorSupport extends ClassCodeVisitorSupport imple
 
     @Override
     public void visitParams(ParamBlockNode node) {
-        for( var param : node.declarations )
-            visitParam(param);
-    }
-
-    @Override
-    public void visitParam(ParamNode node) {
-        visit(node.body);
     }
 
     @Override

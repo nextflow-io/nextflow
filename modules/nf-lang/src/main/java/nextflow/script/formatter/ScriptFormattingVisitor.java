@@ -15,6 +15,7 @@
  */
 package nextflow.script.formatter;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
@@ -101,9 +102,16 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 .map(this::getIncludeWidth)
                 .max(Integer::compare).orElse(0);
 
-            maxParamWidth = scriptNode.getParamsV1().stream()
-                .map(this::getParamWidth)
-                .max(Integer::compare).orElse(0);
+            if( scriptNode.getParams() != null ) {
+                maxParamWidth = Arrays.stream(scriptNode.getParams().declarations)
+                    .map(param -> param.getName().length())
+                    .max(Integer::compare).orElse(0);
+            }
+            else {
+                maxParamWidth = scriptNode.getParamsV1().stream()
+                    .map(this::getParamWidth)
+                    .max(Integer::compare).orElse(0);
+            }
         }
 
         for( var decl : declarations ) {
@@ -194,23 +202,20 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.appendLeadingComments(node);
         fmt.append("params {\n");
         fmt.incIndent();
-        node.declarations.forEach((param) -> {
+        for( var param : node.declarations ) {
             fmt.appendLeadingComments(param);
             fmt.appendIndent();
-            fmt.append(param.name);
-            fmt.append(" {\n");
-            fmt.incIndent();
-            asBlockStatements(param.body).forEach((stmt) -> {
-                var call = asMethodCallX(stmt);
-                if( call == null )
-                    return;
-                fmt.appendLeadingComments(stmt);
-                fmt.visitDirective(call);
-            });
-            fmt.decIndent();
-            fmt.appendIndent();
-            fmt.append("}\n");
-        });
+            fmt.append(param.getName());
+            if( param.hasInitialExpression() ) {
+                if( maxParamWidth > 0 ) {
+                    var padding = maxParamWidth - param.getName().length();
+                    fmt.append(" ".repeat(padding));
+                }
+                fmt.append(" = ");
+                fmt.visit(param.getInitialExpression());
+            }
+            fmt.appendNewLine();
+        }
         fmt.decIndent();
         fmt.append("}\n");
     }

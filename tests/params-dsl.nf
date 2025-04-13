@@ -17,10 +17,14 @@
 nextflow.preview.params = true
 
 params {
-  input {
-    description "List of IDs"
-  }
+  /**
+   * List of IDs.
+   */
+  input
 
+  /**
+   * Whether to save intermediate outputs.
+   */
   save_intermeds = false
 }
 

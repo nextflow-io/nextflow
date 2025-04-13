@@ -15,6 +15,7 @@
  */
 package nextflow.script.control;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -117,11 +118,13 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitParams(ParamBlockNode node) {
-        var statements = node.declarations.stream()
+        var statements = Arrays.stream(node.declarations)
             .map((param) -> {
-                var name = constX(param.name);
-                var body = closureX(param.body);
-                return stmt(callThisX("declare", args(name, body)));
+                var name = constX(param.getName());
+                var arguments = param.hasInitialExpression()
+                    ? args(name, param.getInitialExpression())
+                    : args(name);
+                return stmt(callThisX("declare", arguments));
             })
             .toList();
         var closure = closureX(block(new VariableScope(), statements));

@@ -285,13 +285,15 @@ class NextflowDSLImpl implements ASTTransformation {
          * Transform parameter declarations in the workflow params definition:
          *
          *   params {
-         *     foo { ... }
+         *     foo
+         *     bar = 42
          *   }
          *
          * becomes:
          *
          *   params {
-         *     declare('foo') { ... }
+         *     declare('foo')
+         *     declare('bar', 42)
          *   }
          *
          * @param methodCall
@@ -317,40 +319,29 @@ class NextflowDSLImpl implements ASTTransformation {
                 }
 
                 final stmtX = (ExpressionStatement)stmt
-                if( !convertParamBlock(stmtX) && !convertParamAssign(stmtX) ) {
+                if( !convertParamAssign(stmtX) ) {
                     syntaxError(stmt, "Invalid parameter declaration")
                     return
                 }
             }
         }
 
-        protected boolean convertParamBlock(ExpressionStatement stmtX) {
-            if( stmtX.expression !instanceof MethodCallExpression )
-                return false
-            final call = (MethodCallExpression)stmtX.expression
-            if( call.arguments !instanceof ArgumentListExpression )
-                return false
-            final callArgs = (ArgumentListExpression)call.arguments
-            if( callArgs.size() != 1 || callArgs[0] !instanceof ClosureExpression )
-                return false
-            final name = call.method
-            final body = (ClosureExpression)callArgs[0]
-            stmtX.expression = callThisX('declare', args(name, body))
-            return true
-        }
-
         protected boolean convertParamAssign(ExpressionStatement stmtX) {
-            if( stmtX.expression !instanceof BinaryExpression )
-                return false
-            final binX = (BinaryExpression)stmtX.expression
-            if( binX.leftExpression !instanceof VariableExpression || binX.operation.type != Types.ASSIGN )
-                return false
-            final target = (VariableExpression)binX.leftExpression
-            final defaultValue = binX.rightExpression
-            final call = callThisX('defaultValue', args(defaultValue))
-            final body = block(new VariableScope(), List.of(stmt(call)))
-            stmtX.expression = callThisX('declare', args(constX(target.name), closureX(body)))
-            return true
+            if( stmtX.expression instanceof VariableExpression ) {
+                final target = (VariableExpression)stmtX.expression
+                stmtX.expression = callThisX('declare', args(constX(target.name)))
+                return true
+            }
+            if( stmtX.expression instanceof BinaryExpression ) {
+                final binX = (BinaryExpression)stmtX.expression
+                if( binX.leftExpression instanceof VariableExpression && binX.operation.type == Types.ASSIGN ) {
+                    final target = (VariableExpression)binX.leftExpression
+                    final defaultValue = binX.rightExpression
+                    stmtX.expression = callThisX('declare', args(constX(target.name), defaultValue))
+                    return true
+                }
+            }
+            return false
         }
 
         /*
