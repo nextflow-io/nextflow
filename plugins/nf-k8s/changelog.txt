@@ -1,4 +1,4 @@
 nf-google changelog
 ===================
-1.19.0 - 17 Mar 2025
-
+1.0.0 - 13 Apr 2025
+- Refactor Kubernetes support as a core plugin

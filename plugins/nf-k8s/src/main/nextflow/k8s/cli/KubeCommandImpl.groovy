@@ -21,6 +21,7 @@ import nextflow.cli.CmdKubeRun
 import nextflow.k8s.K8sDriverLauncher
 
 /**
+ * Kuberun command implementation logic
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
