@@ -184,7 +184,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         currentDefinition = node;
         node.setVariableScope(currentScope());
 
-        declareWorkflowInputs(node.takes);
+        for( var take : node.getParameters() )
+            vsc.declare(take, take);
 
         visit(node.main);
         if( node.main instanceof BlockStatement block )
@@ -195,15 +196,6 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
 
         currentDefinition = null;
         vsc.popScope();
-    }
-
-    private void declareWorkflowInputs(Statement takes) {
-        for( var stmt : asBlockStatements(takes) ) {
-            var ve = asVarX(stmt);
-            if( ve == null )
-                continue;
-            vsc.declare(ve);
-        }
     }
 
     private void copyVariableScope(VariableScope source) {
@@ -353,7 +345,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         for( var parameter : node.getParameters() ) {
             if( parameter.hasInitialExpression() )
                 visit(parameter.getInitialExpression());
-            vsc.declare(parameter, node);
+            vsc.declare(parameter, parameter);
         }
         visit(node.getCode());
 

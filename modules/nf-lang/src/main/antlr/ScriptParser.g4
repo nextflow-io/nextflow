@@ -260,7 +260,12 @@ workflowBody
     ;
 
 workflowTakes
-    :   identifier (sep identifier)*
+    :   workflowTake (sep workflowTake)*
+    ;
+
+workflowTake
+    :   identifier
+    |   statement
     ;
 
 workflowMain

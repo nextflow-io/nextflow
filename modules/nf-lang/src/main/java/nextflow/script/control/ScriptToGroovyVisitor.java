@@ -32,6 +32,7 @@ import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
 import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.VariableScope;
 import org.codehaus.groovy.ast.expr.ArgumentListExpression;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
@@ -140,7 +141,6 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitWorkflow(WorkflowNode node) {
-        visitWorkflowTakes(node.takes);
         visit(node.main);
         visitWorkflowEmits(node.emits, node.main);
         visitWorkflowPublishers(node.publishers, node.main);
@@ -154,7 +154,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             )
         ));
         var closure = closureX(block(new VariableScope(), List.of(
-            node.takes,
+            workflowTakes(node.getParameters()),
             node.emits,
             bodyDef
         )));
@@ -165,12 +165,13 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         moduleNode.addStatement(result);
     }
 
-    private void visitWorkflowTakes(Statement takes) {
-        for( var stmt : asBlockStatements(takes) ) {
-            var stmtX = (ExpressionStatement)stmt;
-            var take = (VariableExpression)stmtX.getExpression();
-            stmtX.setExpression(callThisX("_take_", args(constX(take.getName()))));
-        }
+    private Statement workflowTakes(Parameter[] takes) {
+        var statements = Arrays.stream(takes)
+            .map((take) ->
+                stmt(callThisX("_take_", args(constX(take.getName()))))
+            )
+            .toList();
+        return block(null, statements);
     }
 
     private void visitWorkflowEmits(Statement emits, Statement main) {

@@ -357,7 +357,7 @@ public class ScriptAstBuilder {
 
     private Parameter paramDeclaration(ParamDeclarationContext ctx) {
         if( ctx.statement() != null ) {
-            collectSyntaxError(new SyntaxException("Invalid parameter declaration", statement(ctx.statement())));
+            collectSyntaxError(new SyntaxException("Invalid parameter declaration", ast( new EmptyStatement(), ctx.statement() )));
             return null;
         }
         var type = ClassHelper.dynamicType();
@@ -532,7 +532,7 @@ public class ScriptAstBuilder {
             return "exec";
         }
         if( ctx.SHELL() != null ) {
-            collectWarning("The `shell` block is deprecated, use `script` instead", ctx.SHELL().getText(), ast( new EmptyExpression(), ctx.SHELL() ));
+            collectWarning("The `shell` block is deprecated, use `script` instead", ctx.SHELL().getText(), ast( new EmptyStatement(), ctx.SHELL() ));
             return "shell";
         }
         return "script";
@@ -548,7 +548,7 @@ public class ScriptAstBuilder {
         var name = ctx.name != null ? ctx.name.getText() : null;
 
         if( ctx.body == null ) {
-            var result = ast( new WorkflowNode(name, null, null, null, null), ctx );
+            var result = ast( new WorkflowNode(name, Parameter.EMPTY_ARRAY, null, null, null), ctx );
             groovydocManager.handle(result, ctx);
             return result;
         }
@@ -563,10 +563,10 @@ public class ScriptAstBuilder {
         );
 
         if( name == null ) {
-            if( takes instanceof BlockStatement )
-                collectSyntaxError(new SyntaxException("Entry workflow cannot have a take section", takes));
-            if( emits instanceof BlockStatement )
-                collectSyntaxError(new SyntaxException("Entry workflow cannot have an emit section", emits));
+            if( ctx.body.TAKE() != null )
+                collectSyntaxError(new SyntaxException("Entry workflow cannot have a take section", ast( new EmptyStatement(), ctx.body.TAKE() )));
+            if( ctx.body.EMIT() != null )
+                collectSyntaxError(new SyntaxException("Entry workflow cannot have an emit section", ast( new EmptyStatement(), ctx.body.EMIT() )));
         }
 
         var result = ast( new WorkflowNode(name, takes, main, emits, publishers), ctx );
@@ -575,24 +575,31 @@ public class ScriptAstBuilder {
     }
 
     private WorkflowNode workflowDef(BlockStatement main) {
-        var takes = EmptyStatement.INSTANCE;
+        var takes = Parameter.EMPTY_ARRAY;
         var emits = EmptyStatement.INSTANCE;
         var publishers = EmptyStatement.INSTANCE;
         return new WorkflowNode(null, takes, main, emits, publishers);
     }
 
-    private Statement workflowTakes(WorkflowTakesContext ctx) {
+    private Parameter[] workflowTakes(WorkflowTakesContext ctx) {
         if( ctx == null )
-            return EmptyStatement.INSTANCE;
+            return Parameter.EMPTY_ARRAY;
 
-        var statements = ctx.identifier().stream()
+        return ctx.workflowTake().stream()
             .map(this::workflowTake)
-            .toList();
-        return ast( block(null, statements), ctx );
+            .filter(take -> take != null)
+            .toArray(Parameter[]::new);
     }
 
-    private Statement workflowTake(IdentifierContext ctx) {
-        var result = ast( stmt(variableName(ctx)), ctx );
+    private Parameter workflowTake(WorkflowTakeContext ctx) {
+        if( ctx.statement() != null ) {
+            collectSyntaxError(new SyntaxException("Invalid workflow take", ast( new EmptyStatement(), ctx.statement() )));
+            return null;
+        }
+        var type = ClassHelper.dynamicType();
+        var name = identifier(ctx.identifier());
+        var result = ast( param(type, name), ctx );
+        checkInvalidVarName(name, result);
         saveTrailingComment(result, ctx);
         return result;
     }

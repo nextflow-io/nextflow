@@ -32,6 +32,7 @@ import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.expr.EmptyExpression;
 import org.codehaus.groovy.ast.expr.PropertyExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
@@ -103,9 +104,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 .max(Integer::compare).orElse(0);
 
             if( scriptNode.getParams() != null ) {
-                maxParamWidth = Arrays.stream(scriptNode.getParams().declarations)
-                    .map(param -> param.getName().length())
-                    .max(Integer::compare).orElse(0);
+                maxParamWidth = maxParameterWidth(scriptNode.getParams().declarations);
             }
             else {
                 maxParamWidth = scriptNode.getParamsV1().stream()
@@ -199,6 +198,10 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitParams(ParamBlockNode node) {
+        var alignmentWidth = options.harshilAlignment()
+            ? maxParameterWidth(node.declarations)
+            : 0;
+
         fmt.appendLeadingComments(node);
         fmt.append("params {\n");
         fmt.incIndent();
@@ -207,8 +210,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             fmt.appendIndent();
             fmt.append(param.getName());
             if( param.hasInitialExpression() ) {
-                if( maxParamWidth > 0 ) {
-                    var padding = maxParamWidth - param.getName().length();
+                if( alignmentWidth > 0 ) {
+                    var padding = alignmentWidth - param.getName().length();
                     fmt.append(" ".repeat(padding));
                 }
                 fmt.append(" = ");
@@ -218,6 +221,12 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         }
         fmt.decIndent();
         fmt.append("}\n");
+    }
+
+    private int maxParameterWidth(Parameter[] parameters) {
+        return Arrays.stream(parameters)
+            .map(param -> param.getName().length())
+            .max(Integer::compare).orElse(0);
     }
 
     @Override
@@ -234,7 +243,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.appendNewLine();
     }
 
-    protected int getParamWidth(ParamNodeV1 node) {
+    private int getParamWidth(ParamNodeV1 node) {
         var target = (PropertyExpression) node.target;
         var name = target.getPropertyAsString();
         return name != null ? name.length() : 0;
@@ -250,14 +259,15 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         }
         fmt.append(" {\n");
         fmt.incIndent();
-        if( node.takes instanceof BlockStatement ) {
+        var takes = node.getParameters();
+        if( takes.length > 0 ) {
             fmt.appendIndent();
             fmt.append("take:\n");
-            visitWorkflowTakes(asBlockStatements(node.takes));
+            visitWorkflowTakes(takes);
             fmt.appendNewLine();
         }
         if( node.main instanceof BlockStatement ) {
-            if( node.takes instanceof BlockStatement || node.emits instanceof BlockStatement || node.publishers instanceof BlockStatement ) {
+            if( takes.length > 0 || node.emits instanceof BlockStatement || node.publishers instanceof BlockStatement ) {
                 fmt.appendIndent();
                 fmt.append("main:\n");
             }
@@ -279,29 +289,28 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.append("}\n");
     }
 
-    protected void visitWorkflowTakes(List<Statement> takes) {
+    private void visitWorkflowTakes(Parameter[] takes) {
         var alignmentWidth = options.harshilAlignment()
-            ? getMaxParameterWidth(takes)
+            ? maxParameterWidth(takes)
             : 0;
 
-        for( var stmt : takes ) {
-            var ve = asVarX(stmt);
+        for( var take : takes ) {
             fmt.appendIndent();
-            fmt.visit(ve);
-            if( fmt.hasTrailingComment(stmt) ) {
+            fmt.append(take.getName());
+            if( fmt.hasTrailingComment(take) ) {
                 if( alignmentWidth > 0 ) {
-                    var padding = alignmentWidth - ve.getName().length();
+                    var padding = alignmentWidth - take.getName().length();
                     fmt.append(" ".repeat(padding));
                 }
-                fmt.appendTrailingComment(stmt);
+                fmt.appendTrailingComment(take);
             }
             fmt.appendNewLine();
         }
     }
 
-    protected void visitWorkflowEmits(List<Statement> emits) {
+    private void visitWorkflowEmits(List<Statement> emits) {
         var alignmentWidth = options.harshilAlignment()
-            ? getMaxParameterWidth(emits)
+            ? maxParameterWidth(emits)
             : 0;
 
         for( var stmt : emits ) {
@@ -338,27 +347,24 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         }
     }
 
-    protected int getMaxParameterWidth(List<Statement> statements) {
+    private int maxParameterWidth(List<Statement> statements) {
         if( statements.size() == 1 )
             return 0;
 
-        int maxWidth = 0;
-        for( var stmt : statements ) {
-            var stmtX = (ExpressionStatement)stmt;
-            var emit = stmtX.getExpression();
-            int width = 0;
-            if( emit instanceof VariableExpression ve ) {
-                width = ve.getName().length();
-            }
-            else if( emit instanceof AssignmentExpression assign ) {
-                var target = (VariableExpression)assign.getLeftExpression();
-                width = target.getName().length();
-            }
-
-            if( maxWidth < width )
-                maxWidth = width;
-        }
-        return maxWidth;
+        return statements.stream()
+            .map((stmt) -> {
+                var stmtX = (ExpressionStatement)stmt;
+                var emit = stmtX.getExpression();
+                if( emit instanceof VariableExpression ve ) {
+                    return ve.getName().length();
+                }
+                if( emit instanceof AssignmentExpression assign ) {
+                    var target = (VariableExpression)assign.getLeftExpression();
+                    return target.getName().length();
+                }
+                return 0;
+            })
+            .max(Integer::compare).orElse(0);
     }
 
     @Override
