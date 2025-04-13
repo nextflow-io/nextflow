@@ -17,21 +17,20 @@
 
 package nextflow.file
 
-import java.nio.file.LinkOption
-import java.nio.file.Path
 
+import java.nio.file.Path
 /**
- * Marker interface for objects that represent a real path.
+ * Marker interface for a logical file path associated with a (real) target path.
  *
- * This interface is used in the { @link nextflow.processor.TaskProcessor } when managing the foreign file staging.
+ * This interface is used in the {@link nextflow.processor.TaskProcessor} when managing the foreign file staging.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface RealPathAware {
+interface LogicalDataPath {
     /**
-     * Returns the real path
-     * @param options
-     * @return
+     * Resolve the logical path to the target path.
+     *
+     * @return The real {@link Path} object associated with this logical path.
      */
-    Path toRealPath(LinkOption... options)
+    Path toTargetPath()
 }

@@ -20,7 +20,7 @@ import groovy.util.logging.Slf4j
 import nextflow.data.cid.model.Checksum
 import nextflow.data.cid.model.DataOutput
 import nextflow.data.cid.serde.CidSerializable
-import nextflow.file.RealPathAware
+import nextflow.file.LogicalDataPath
 import nextflow.util.CacheHelper
 import nextflow.util.TestOnly
 
@@ -48,7 +48,7 @@ import nextflow.file.FileHelper
  */
 @Slf4j
 @CompileStatic
-class CidPath implements Path, RealPathAware {
+class CidPath implements Path, LogicalDataPath {
 
     static public final List<String> SUPPORTED_CHECKSUM_ALGORITHMS=["nextflow"]
     static public final String SEPARATOR = '/'
@@ -429,6 +429,10 @@ class CidPath implements Path, RealPathAware {
     @Override
     Path toRealPath(LinkOption... options) throws IOException {
         return this.getTargetPath(true)
+    }
+
+    Path toTargetPath() {
+        return getTargetPath(true)
     }
 
     protected Path getTargetPath(boolean resultsAsPath=false){

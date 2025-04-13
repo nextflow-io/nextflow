@@ -77,7 +77,7 @@ import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.file.FilePatternSplitter
 import nextflow.file.FilePorter
-import nextflow.file.RealPathAware
+import nextflow.file.LogicalDataPath
 import nextflow.plugin.Plugins
 import nextflow.processor.tip.TaskTipProvider
 import nextflow.script.BaseScript
@@ -1942,7 +1942,7 @@ class TaskProcessor {
             if( item instanceof Path || coerceToPath ) {
                 def path = normalizeToPath(item)
 
-                if (path instanceof RealPathAware){
+                if (path instanceof LogicalDataPath){
                     path = path.toRealPath()
                 }
                 def target = executor.isForeignFile(path) ? foreignFiles.addToForeign(path) : path
