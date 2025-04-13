@@ -154,6 +154,7 @@ interface TraceObserver {
     default void onFilePublish(Path destination, Path source){
         onFilePublish(destination)
     }
+
     /**
      * Method that is invoked when a output file is annotated
      * @param destination
@@ -161,7 +162,7 @@ interface TraceObserver {
      * @param annotations
      *      The annotations attached to this file
      */
-    void onFilePublish(Path destination, Path source, Map annotations){
+    default void onFilePublish(Path destination, Path source, Map annotations){
         onFilePublish(destination, source)
     }
 
