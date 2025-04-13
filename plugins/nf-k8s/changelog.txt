@@ -1,4 +1,4 @@
-nf-google changelog
+nf-k8s changelog
 ===================
 1.0.0 - 13 Apr 2025
 - Refactor Kubernetes support as a core plugin
