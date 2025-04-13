@@ -140,10 +140,10 @@ The following settings are available:
   :::
 : The AWS Batch Execution Role ARN that needs to be used to execute the Batch Job. This is mandatory when using AWS Fargate platform type. See [AWS documentation](https://docs.aws.amazon.com/batch/latest/userguide/execution-IAM-role.html) for more details.
 
-`aws.batch.killUnscheduled`
+`aws.batch.terminateUnschedulableJobs`
 : :::{versionadded} 25.03.0-edge
 :::
-: When `true`, Nextflow kills a pending job and throws a `ProcessException` if an unscheduled reason (e.g., `MISCONFIGURATION::JOB_RESOURCE_REQUIREMENT`) is detected (default: `false`).
+: When `true`, jobs that cannot be scheduled for lack of resources or misconfiguration are terminated automatically. The pipeline may complete with an error status depending the error strategy defined for the corresponding jobs (default: `false`).
 
 `aws.batch.jobRole`
 : The AWS Batch Job Role ARN that needs to be used to execute the Batch Job.

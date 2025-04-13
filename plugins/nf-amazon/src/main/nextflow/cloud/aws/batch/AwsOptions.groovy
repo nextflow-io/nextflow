@@ -161,8 +161,8 @@ class AwsOptions implements CloudTransferOptions {
         return awsConfig.batchConfig.getExecutionRole()
     }
 
-    boolean isKillUnscheduled() {
-        return awsConfig.batchConfig.killUnscheduled
+    boolean terminateUnschedulableJobs() {
+        return awsConfig.batchConfig.terminateUnschedulableJobs
     }
 
 }

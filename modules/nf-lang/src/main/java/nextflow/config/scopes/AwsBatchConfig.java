@@ -110,4 +110,9 @@ public class AwsBatchConfig implements ConfigScope {
     """)
     public List<String> volumes;
 
+    @ConfigOption
+    @Description("""
+        When true, jobs that cannot be scheduled for lack of resources or misconfiguration are terminated automatically (default: `false`).
+    """)
+    public boolean terminateUnschedulableJobs;
 }

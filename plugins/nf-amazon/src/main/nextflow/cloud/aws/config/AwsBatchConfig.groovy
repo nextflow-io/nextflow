@@ -93,9 +93,9 @@ class AwsBatchConfig implements CloudTransferOptions {
     boolean fargateMode
 
     /**
-     * Flag to fail and Kill unscheduled jobs.
+     * Flag to fail and terminate unscheduled jobs.
      */
-    boolean killUnscheduled
+    boolean terminateUnschedulableJobs
 
     /*
      * only for testing
@@ -103,7 +103,6 @@ class AwsBatchConfig implements CloudTransferOptions {
     protected AwsBatchConfig() {}
 
     AwsBatchConfig(Map opts) {
-        killUnscheduled = opts.killUnscheduled as boolean ?: false
         fargateMode = opts.platformType == 'fargate'
         cliPath = !fargateMode ? parseCliPath(opts.cliPath as String) : null
         s5cmdPath = fargateMode ? parses5cmdPath(opts.cliPath as String) : null
@@ -118,11 +117,11 @@ class AwsBatchConfig implements CloudTransferOptions {
         shareIdentifier = opts.shareIdentifier
         schedulingPriority = opts.schedulingPriority as Integer ?: 0
         executionRole = opts.executionRole
+        terminateUnschedulableJobs = opts.terminateUnschedulableJobs as boolean
         if( retryMode == 'built-in' )
             retryMode = null // this force falling back on NF built-in retry mode instead of delegating to AWS CLI tool
         if( retryMode && retryMode !in AwsOptions.VALID_RETRY_MODES )
             log.warn "Unexpected value for 'aws.batch.retryMode' config setting - offending value: $retryMode - valid values: ${AwsOptions.VALID_RETRY_MODES.join(',')}"
-
     }
 
     // ====  getters =====
