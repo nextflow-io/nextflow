@@ -1879,6 +1879,13 @@ class TaskProcessor {
         return Collections.unmodifiableMap(result)
     }
 
+    protected Path resolvePath(Object item) {
+        final result = normalizeToPath(item)
+        return result instanceof LogicalDataPath
+            ? result.toTargetPath()
+            : result
+    }
+
     /**
      * An input file parameter can be provided with any value other than a file.
      * This function normalize a generic value to a {@code Path} create a temporary file
@@ -1889,7 +1896,6 @@ class TaskProcessor {
      * @return The {@code Path} that will be staged in the task working folder
      */
     protected FileHolder normalizeInputToFile( Object input, String altName ) {
-
         /*
          * when it is a local file, just return a reference holder to it
          */
@@ -1940,13 +1946,9 @@ class TaskProcessor {
         for( def item : allItems ) {
 
             if( item instanceof Path || coerceToPath ) {
-                def path = normalizeToPath(item)
-
-                if (path instanceof LogicalDataPath){
-                    path = path.toRealPath()
-                }
-                def target = executor.isForeignFile(path) ? foreignFiles.addToForeign(path) : path
-                def holder = new FileHolder(target)
+                final path = resolvePath(item)
+                final target = executor.isForeignFile(path) ? foreignFiles.addToForeign(path) : path
+                final holder = new FileHolder(target)
                 files << holder
             }
             else {
