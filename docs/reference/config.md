@@ -530,7 +530,7 @@ The following settings are available:
 `dag.direction`
 : :::{versionadded} 23.10.0
   :::
-: *Only supported by the HTML and Mermaid renderers.*
+: *Supported by Graphviz, DOT, HTML and Mermaid renderers.*
 : Controls the direction of the DAG, can be `'LR'` (left-to-right) or `'TB'` (top-to-bottom) (default: `'TB'`).
 
 `dag.file`
