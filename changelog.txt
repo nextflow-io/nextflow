@@ -1,5 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.02.3-edge - 8 Apr 2025
+- Fix container meta deduplication [f4600d2e]
+- Bump nf-tower@1.11.2 [220e429a]
+
 25.02.2-edge - 5 Apr 2025
 - Add nf-lang module from language-server (#5876) [36153c68]
 - Add section about include addParams to syntax guide (#5946) [d0842992]

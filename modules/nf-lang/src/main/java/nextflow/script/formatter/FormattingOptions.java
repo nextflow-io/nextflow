@@ -19,9 +19,10 @@ public record FormattingOptions(
     int tabSize,
     boolean insertSpaces,
     boolean harshilAlignment,
-    boolean maheshForm
+    boolean maheshForm,
+    boolean sortDeclarations
 ) {
     public FormattingOptions(int tabSize, boolean insertSpaces) {
-        this(tabSize, insertSpaces, false, false);
+        this(tabSize, insertSpaces, false, false, false);
     }
 }

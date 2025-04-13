@@ -416,6 +416,9 @@ class PluginsFacade implements PluginStateListener {
         if( executor == 'azurebatch' || workDir?.startsWith('az://') || bucketDir?.startsWith('az://') )
             plugins << defaultPlugins.getPlugin('nf-azure')
 
+        if( executor == 'k8s' )
+            plugins << defaultPlugins.getPlugin('nf-k8s')
+
         if( Bolts.navigate(config, 'weblog.enabled'))
             plugins << new PluginSpec('nf-weblog')
             

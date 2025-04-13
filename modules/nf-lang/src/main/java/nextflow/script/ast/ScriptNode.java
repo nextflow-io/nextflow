@@ -18,6 +18,7 @@ package nextflow.script.ast;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ModuleNode;
 import org.codehaus.groovy.control.SourceUnit;
 
@@ -43,6 +44,31 @@ public class ScriptNode extends ModuleNode {
 
     public String getShebang() {
         return shebang;
+    }
+
+    /**
+     * Get the list of script declarations in canonical order.
+     */
+    public List<ASTNode> getDeclarations() {
+        var declarations = new ArrayList<ASTNode>();
+        declarations.addAll(featureFlags);
+        declarations.addAll(includes);
+        declarations.addAll(params);
+        if( entry != null )
+            declarations.add(entry);
+        if( output != null )
+            declarations.add(output);
+        for( var wn : workflows ) {
+            if( !wn.isEntry() )
+                declarations.add(wn);
+        }
+        declarations.addAll(processes);
+        declarations.addAll(functions);
+        for( var cn : getClasses() ) {
+            if( cn.isEnum() )
+                declarations.add(cn);
+        }
+        return declarations;
     }
 
     public List<FeatureFlagNode> getFeatureFlags() {

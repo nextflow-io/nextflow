@@ -36,8 +36,6 @@ import nextflow.util.Duration
 @CompileStatic
 class AwsBatchConfig implements CloudTransferOptions {
 
-    public static final int DEFAULT_MAX_SPOT_ATTEMPTS = 0
-
     public static final int DEFAULT_AWS_MAX_ATTEMPTS = 5
 
     private int maxParallelTransfers = MAX_TRANSFER
@@ -112,7 +110,7 @@ class AwsBatchConfig implements CloudTransferOptions {
         maxParallelTransfers = opts.maxParallelTransfers as Integer ?: MAX_TRANSFER
         maxTransferAttempts = opts.maxTransferAttempts as Integer ?: defaultMaxTransferAttempts()
         delayBetweenAttempts = opts.delayBetweenAttempts as Duration ?: DEFAULT_DELAY_BETWEEN_ATTEMPTS
-        maxSpotAttempts = opts.maxSpotAttempts!=null ? opts.maxSpotAttempts as Integer : DEFAULT_MAX_SPOT_ATTEMPTS
+        maxSpotAttempts = opts.maxSpotAttempts!=null ? opts.maxSpotAttempts as Integer : null
         volumes = makeVols(opts.volumes)
         jobRole = opts.jobRole
         logsGroup = opts.logsGroup

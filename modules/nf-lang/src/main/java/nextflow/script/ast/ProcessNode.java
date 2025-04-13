@@ -48,7 +48,7 @@ public class ProcessNode extends MethodNode {
     public final Statement stub;
 
     public ProcessNode(String name, Statement directives, Statement inputs, Statement outputs, Expression when, String type, Statement exec, Statement stub) {
-        super(name, 0, dummyReturnType(outputs), Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY, EmptyStatement.INSTANCE);
+        super(name, 0, dummyReturnType(outputs), dummyParams(inputs), ClassNode.EMPTY_ARRAY, EmptyStatement.INSTANCE);
         this.directives = directives;
         this.inputs = inputs;
         this.outputs = outputs;
@@ -56,6 +56,13 @@ public class ProcessNode extends MethodNode {
         this.type = type;
         this.exec = exec;
         this.stub = stub;
+    }
+
+    private static Parameter[] dummyParams(Statement inputs) {
+        return asBlockStatements(inputs)
+            .stream()
+            .map((stmt) -> new Parameter(ClassHelper.dynamicType(), ""))
+            .toArray(Parameter[]::new);
     }
 
     private static ClassNode dummyReturnType(Statement outputs) {
