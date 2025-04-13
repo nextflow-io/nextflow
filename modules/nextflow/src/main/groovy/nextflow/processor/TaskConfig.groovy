@@ -30,7 +30,6 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.AcceleratorResource
 import nextflow.executor.res.DiskResource
-import nextflow.k8s.model.PodOptions
 import nextflow.script.TaskClosure
 import nextflow.util.CmdLineHelper
 import nextflow.util.CmdLineOptionMap
@@ -497,10 +496,6 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     Integer getRetryCount() {
         get('retryCount') as Integer ?: 0
-    }
-
-    PodOptions getPodOptions() {
-        new PodOptions((List)get('pod'))
     }
 
     AcceleratorResource getAccelerator() {

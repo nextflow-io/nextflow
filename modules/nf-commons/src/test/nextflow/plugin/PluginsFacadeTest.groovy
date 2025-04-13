@@ -183,7 +183,8 @@ class PluginsFacadeTest extends Specification {
                 'nf-amazon': new PluginSpec('nf-amazon', '0.1.0'),
                 'nf-google': new PluginSpec('nf-google', '0.1.0'),
                 'nf-azure': new PluginSpec('nf-azure', '0.1.0'),
-                'nf-tower': new PluginSpec('nf-tower', '0.1.0')
+                'nf-tower': new PluginSpec('nf-tower', '0.1.0'),
+                'nf-k8s': new PluginSpec('nf-k8s', '0.1.0')
         ])
         and:
         def handler = new PluginsFacade(defaultPlugins: defaults)
@@ -209,6 +210,12 @@ class PluginsFacadeTest extends Specification {
         !plugins.find { it.id == 'nf-google' }
         !plugins.find { it.id == 'nf-amazon' }
         plugins.find { it.id == 'nf-azure' }
+
+        when:
+        plugins = handler.defaultPluginsConf([process:[executor: 'k8s']])
+        then:
+        plugins.find { it.id == 'nf-k8s' }
+        !plugins.find { it.id == 'nf-amazon' }
 
         when:
         plugins = handler.defaultPluginsConf([:])
