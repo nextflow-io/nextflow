@@ -165,7 +165,7 @@ class CidPath implements Path, RealPathAware {
             // If there isn't metadata check the parent to check if it is a subfolder of a task/workflow output
             final currentPath = Path.of(filePath)
             final parent = Path.of(filePath).getParent()
-            if( parent) {
+            if( parent ) {
                 ArrayList<String> newChildren = new ArrayList<String>()
                 newChildren.add(currentPath.getFileName().toString())
                 newChildren.addAll(children)
@@ -185,7 +185,6 @@ class CidPath implements Path, RealPathAware {
         } else {
             return generateCidMetadataPath(fs, filePath, results, children)
         }
-
     }
 
     /**
@@ -206,7 +205,8 @@ class CidPath implements Path, RealPathAware {
                 throw new FileNotFoundException("Target path '$key#outputs' does not exist.")
             }
             return generateCidMetadataPath(fs, key, outputs, children)
-        } else {
+        }
+        else {
             return generateCidMetadataPath(fs, key, object, children)
         }
     }
@@ -245,7 +245,7 @@ class CidPath implements Path, RealPathAware {
             final remain = parts[1..-1] + more.toList()
             return resolve0(fs, parts[0], remain as String[])
         }
-        def result = Path.of(base)
+        final result = Path.of(base)
         return more ? result.resolve(more.join(SEPARATOR)).toString() : result.toString()
     }
 
@@ -414,7 +414,7 @@ class CidPath implements Path, RealPathAware {
 
     @Override
     URI toUri() {
-        asUri("${SCHEME}://${filePath}${query ? '?' + query: ''}${fragment ? '#'+ fragment : ''}")
+        return asUri("${SCHEME}://${filePath}${query ? '?' + query: ''}${fragment ? '#'+ fragment : ''}")
     }
 
     String toUriString() {
