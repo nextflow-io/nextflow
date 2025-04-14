@@ -366,6 +366,54 @@ workflow {
 }
 ```
 
+(workflow-recursion)=
+
+## Process and workflow recursion
+
+:::{versionadded} 21.11.0-edge
+:::
+
+:::{note}
+This feature requires the `nextflow.preview.recursion` feature flag to be enabled.
+:::
+
+Processes can be invoked recursively using the `recurse` method.
+
+```{literalinclude} ../snippets/recurse-process.nf
+:language: nextflow
+```
+
+```{literalinclude} ../snippets/recurse-process.out
+:language: console
+```
+
+In the above example, the `count_down` process is first invoked with the value `params.start`. On each subsequent iteration, the process is invoked again using the output from the previous iteration. The recursion continues until the specified condition is satisfied, as defined by the `until` method, which terminates the recursion.
+
+The recursive output can also be limited using the `times` method:
+
+```groovy
+count_down
+    .recurse(params.start)
+    .times(3)
+    .view { v -> "${v}..." }
+```
+
+Workflows can also be invoked recursively:
+
+```{literalinclude} ../snippets/recurse-workflow.nf
+:language: nextflow
+```
+
+```{literalinclude} ../snippets/recurse-workflow.out
+:language: console
+```
+
+**Limitations**
+
+- A recursive process or workflow must have matching inputs and outputs, such that the outputs for each iteration can be supplied as the inputs for the next iteration.
+
+- Recursive workflows cannot use *reduction* operators such as `collect`, `reduce`, and `toList`, because these operators cause the recursion to hang indefinitely after the initial iteration.
+
 (workflow-output-def)=
 
 ## Workflow outputs
