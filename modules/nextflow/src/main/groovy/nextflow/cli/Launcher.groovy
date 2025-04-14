@@ -94,20 +94,18 @@ class Launcher {
                 new CmdConsole(),
                 new CmdFs(),
                 new CmdInfo(),
-                new CmdList(),
                 new CmdLog(),
                 new CmdPull(),
                 new CmdRun(),
                 new CmdKubeRun(),
-                new CmdDrop(),
                 new CmdConfig(),
                 new CmdNode(),
-                new CmdView(),
                 new CmdHelp(),
                 new CmdSelfUpdate(),
                 new CmdPlugin(),
                 new CmdInspect(),
-                new CmdLint()
+                new CmdLint(),
+                new CmdPipelines()
         ]
 
         if(SecretsLoader.isEnabled())
