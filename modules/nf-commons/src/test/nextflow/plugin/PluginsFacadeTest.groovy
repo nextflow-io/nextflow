@@ -490,17 +490,4 @@ class PluginsFacadeTest extends Specification {
         1 * updater.prepareAndStart("nf-one", null)
         1 * updater.prepareAndStart("nf-two", "~1.2.0")
     }
-
-    @Unroll
-    def 'check is a supported plugins index' () {
-        expect:
-        PluginsFacade.isSupportedIndex(INDEX) == EXPECTED
-
-        where:
-        INDEX                           | EXPECTED
-        'https://foo.nextflow.io'       | true
-        'https://foo.seqera.io'         | true
-        and:
-        'https://foo.nf.io'             | false
-    }
 }

@@ -102,23 +102,6 @@ class PluginsFacade implements PluginStateListener {
         }
     }
 
-    static protected boolean isSupportedIndex(String url) {
-        if( !url ) {
-            throw new IllegalArgumentException("Missing plugins registry URL")
-        }
-        if( !url.startsWith('https://') && !url.startsWith('http://') ) {
-            throw new IllegalArgumentException("Plugins registry URL must start with 'http://' or 'https://': $url")
-        }
-        if( url == DEFAULT_PLUGINS_REPO ) {
-            return true
-        }
-        final hostname = URI.create(url).authority
-        return hostname.endsWith('.nextflow.io')
-            || hostname.endsWith('.nextflow.com')
-            || hostname.endsWith('.seqera.io')
-            || hostname.endsWith('.seqera.com')
-    }
-
     protected String getPluginsIndexUrl() {
         final url = env.get('NXF_PLUGINS_INDEX_URL')
         if( !url ) {
@@ -126,16 +109,22 @@ class PluginsFacade implements PluginStateListener {
             return DEFAULT_PLUGINS_REPO
         }
         log.debug "Detected NXF_PLUGINS_INDEX_URL=$url"
-        if( !isSupportedIndex(url) ) {
+
+        // sanity check url
+        if( !url.startsWith("https://") && !url.startsWith("http://") ) {
+            throw new IllegalArgumentException("Plugins registry URL must start with 'http://' or 'https://': $url")
+        }
+        if( url != DEFAULT_PLUGINS_REPO ) {
             // warn that this is experimental behaviour
+            // (remove this warning when feature is ready)
             log.warn """\
                 =======================================================================
                 =                                WARNING                                    =
-                = This workflow run us using an unofficial plugins registry.                =
+                = This workflow run is using a custom plugins registry.                     =
                 =                                                                           =
                 = ${url}
                 =                                                                           =
-                = Its usage is unsupported and not recommended for production workloads.    =
+                = This is experimental and not recommended for production workloads.        =
                 =============================================================================
                 """.stripIndent(true)
         }

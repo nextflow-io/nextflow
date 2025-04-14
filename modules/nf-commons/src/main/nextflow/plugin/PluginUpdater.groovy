@@ -147,6 +147,8 @@ class PluginUpdater extends UpdateManager {
      * repository types to perform some data-loading optimisations.
      */
     void prefetchMetadata(List<PluginSpec> plugins) {
+        // use direct field access to avoid the refresh() call in getRepositories()
+        // which could fail anything which hasn't had a chance to prefetch yet
         for( def repo : this.@repositories ) {
             if( repo instanceof PrefetchUpdateRepository ) {
                 repo.prefetch(plugins)
