@@ -56,7 +56,7 @@ class GoogleBatchScriptLauncherTest extends Specification{
                 getProjectId() >> 'my-project'
                 getEnableRequesterPaysBuckets() >> true
             }
-            getFuseMountOptions() >> ['-o allow_other', '--uid=1000']
+            getFuseOptions() >> ['-o allow_other', '--uid=1000']
         }
         and:
         def PATH1 = CloudStorageFileSystem.forBucket('alpha').getPath('/data/sample1.bam')
