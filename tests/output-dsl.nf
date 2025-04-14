@@ -84,24 +84,16 @@ workflow {
     }
 
   publish:
-  ch_samples >> 'samples'
+  samples = ch_samples
 }
 
 output {
   samples {
     path { sample ->
-      def dirs = [
-        'bam': 'align',
-        'bai': 'align',
-        'log': 'fastqc'
-      ]
-      return { filename ->
-        def ext = filename.tokenize('.').last()
-        def dir = dirs[ext]
-        dir != null
-          ? "${dir}/${filename}"
-          : "${filename}/${sample.id}"
-      }
+      sample.fastqc >> 'log/'
+      sample.bam >> 'align/'
+      sample.bai >> 'align/'
+      sample.quant >> "quant/${sample.id}"
     }
     index {
       path 'samples.csv'

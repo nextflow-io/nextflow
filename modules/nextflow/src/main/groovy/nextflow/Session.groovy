@@ -95,7 +95,7 @@ class Session implements ISession {
 
     final List<Closure> igniters = new ArrayList<>(20)
 
-    final Map<DataflowWriteChannel,String> publishTargets = [:]
+    final Map<String,DataflowWriteChannel> outputs = [:]
 
     /**
      * Creates process executors
@@ -1126,10 +1126,10 @@ class Session implements ISession {
         }
     }
 
-    void notifyWorkflowPublish(Object value) {
+    void notifyWorkflowPublish(String name, Object value) {
         for( final observer : observers ) {
             try {
-                observer.onWorkflowPublish(value)
+                observer.onWorkflowPublish(name, value)
             }
             catch( Exception e ) {
                 log.error "Failed to invoke observer on workflow publish: $observer", e

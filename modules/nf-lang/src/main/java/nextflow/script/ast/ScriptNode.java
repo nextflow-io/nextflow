@@ -33,7 +33,7 @@ public class ScriptNode extends ModuleNode {
     private List<IncludeNode> includes = new ArrayList<>();
     private List<ParamNode> params = new ArrayList<>();
     private WorkflowNode entry;
-    private OutputNode output;
+    private OutputBlockNode outputs;
     private List<WorkflowNode> workflows = new ArrayList<>();
     private List<ProcessNode> processes = new ArrayList<>();
     private List<FunctionNode> functions = new ArrayList<>();
@@ -56,8 +56,8 @@ public class ScriptNode extends ModuleNode {
         declarations.addAll(params);
         if( entry != null )
             declarations.add(entry);
-        if( output != null )
-            declarations.add(output);
+        if( outputs != null )
+            declarations.add(outputs);
         for( var wn : workflows ) {
             if( !wn.isEntry() )
                 declarations.add(wn);
@@ -87,8 +87,8 @@ public class ScriptNode extends ModuleNode {
         return entry;
     }
 
-    public OutputNode getOutput() {
-        return output;
+    public OutputBlockNode getOutputs() {
+        return outputs;
     }
 
     public List<WorkflowNode> getWorkflows() {
@@ -123,8 +123,8 @@ public class ScriptNode extends ModuleNode {
         this.entry = entry;
     }
 
-    public void setOutput(OutputNode output) {
-        this.output = output;
+    public void setOutputs(OutputBlockNode outputs) {
+        this.outputs = outputs;
     }
 
     public void addWorkflow(WorkflowNode workflowNode) {
