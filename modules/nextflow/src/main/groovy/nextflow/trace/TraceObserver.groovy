@@ -123,11 +123,15 @@ interface TraceObserver {
     default void onFlowError(TaskHandler handler, TraceRecord trace){}
 
     /**
-     * Method that is invoked when a value is published from a channel.
+     * Method that is invoked when a workflow output is published.
      *
+     * @param name
+     *      The name of the workflow output
      * @param value
+     *      A list if the published channel was a queue channel,
+     *      otherwise an object if the channel was a value channel
      */
-    default void onWorkflowPublish(Object value){}
+    default void onWorkflowPublish(String name, Object value){}
 
     /**
      * Method that is invoke when an output file is published
