@@ -104,14 +104,9 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 .map(this::getIncludeWidth)
                 .max(Integer::compare).orElse(0);
 
-            if( scriptNode.getParams() != null ) {
-                maxParamWidth = maxParameterWidth(scriptNode.getParams().declarations);
-            }
-            else {
-                maxParamWidth = scriptNode.getParamsV1().stream()
-                    .map(this::getParamWidth)
-                    .max(Integer::compare).orElse(0);
-            }
+            maxParamWidth = scriptNode.getParamsV1().stream()
+                .map(this::getParamWidth)
+                .max(Integer::compare).orElse(0);
         }
 
         for( var decl : declarations ) {
