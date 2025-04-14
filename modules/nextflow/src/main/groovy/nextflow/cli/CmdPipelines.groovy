@@ -33,7 +33,7 @@ import nextflow.util.TestOnly
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Manage pipeline projects")
-class CmdPipelines extends CmdBase {
+class CmdPipelines extends CmdBase implements UsageAware {
 
     private static final List<SubCmd> commands = [
         new CmdDrop(),
@@ -168,6 +168,7 @@ class CmdPipelines extends CmdBase {
         cmd.apply(pipeline)
     }
 
+    @Override
     void usage() {
         final result = []
         result << 'Usage: nextflow pipelines <command>'
@@ -178,6 +179,11 @@ class CmdPipelines extends CmdBase {
         }
         result << ''
         println result.join('\n').toString()
+    }
+
+    @Override
+    void usage(List<String> args) {
+        usage()
     }
 
     private SubCmd findCmd(String name) {
