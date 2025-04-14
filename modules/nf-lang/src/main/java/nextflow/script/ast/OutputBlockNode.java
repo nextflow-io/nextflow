@@ -15,29 +15,20 @@
  */
 package nextflow.script.ast;
 
-import org.codehaus.groovy.ast.ClassNode;
-import org.codehaus.groovy.ast.GroovyCodeVisitor;
+import java.util.List;
 
-public interface ScriptVisitor extends GroovyCodeVisitor {
+import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.stmt.Statement;
 
-    void visit(ScriptNode node);
+/**
+ * A workflow output definition.
+ *
+ * @author Ben Sherman <bentshermann@gmail.com>
+ */
+public class OutputBlockNode extends ASTNode {
+    public final List<OutputNode> declarations;
 
-    void visitFeatureFlag(FeatureFlagNode node);
-
-    void visitInclude(IncludeNode node);
-
-    void visitParam(ParamNode node);
-
-    void visitWorkflow(WorkflowNode node);
-
-    void visitProcess(ProcessNode node);
-
-    void visitFunction(FunctionNode node);
-
-    void visitEnum(ClassNode node);
-
-    void visitOutputs(OutputBlockNode node);
-
-    void visitOutput(OutputNode node);
-
+    public OutputBlockNode(List<OutputNode> declarations) {
+        this.declarations = declarations;
+    }
 }
