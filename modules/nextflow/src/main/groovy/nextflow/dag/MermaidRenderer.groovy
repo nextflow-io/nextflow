@@ -368,7 +368,7 @@ class MermaidRenderer implements DagRenderer {
             if( name == INPUTS || name == OUTPUTS )
                 lines << "    subgraph \" \"".toString()
             else
-                lines << "    subgraph ${fqName} [${name}]".toString()
+                lines << "    subgraph \"${fqName} [${name}]\"".toString()
         }
 
         nodeTree.each { key, value ->
@@ -398,11 +398,11 @@ class MermaidRenderer implements DagRenderer {
 
         switch( node.vertex.type ) {
             case DAG.Type.PROCESS:
-                return "${id}([${node.label}])"
+                return "${id}([\"${node.label}\"])"
 
             case DAG.Type.OPERATOR:
                 return verbose
-                    ? "${id}([${node.vertex.label}])"
+                    ? "${id}([\"${node.vertex.label}\"])"
                     : "${id}(( ))"
 
             case DAG.Type.ORIGIN:

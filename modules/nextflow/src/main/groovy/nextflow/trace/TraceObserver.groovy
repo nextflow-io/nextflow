@@ -28,32 +28,32 @@ import java.nio.file.Path
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-trait TraceObserver {
+interface TraceObserver {
 
     /**
      * This method is invoked when the flow is going to start
      */
-    void onFlowCreate(Session session) {}
+    default void onFlowCreate(Session session) {}
 
     /**
      * This method is invoked when the flow is going to start
      */
-    void onFlowBegin() {}
+    default void onFlowBegin() {}
 
     /**
      * This method is invoked when the flow is going to complete
      */
-    void onFlowComplete() {}
+    default void onFlowComplete() {}
 
     /*
      * Invoked when the process is created.
      */
-    void onProcessCreate( TaskProcessor process ){}
+    default void onProcessCreate( TaskProcessor process ){}
 
     /*
       * Invoked when all tak have been executed and process ends.
       */
-    void onProcessTerminate( TaskProcessor process ){}
+    default void onProcessTerminate( TaskProcessor process ){}
 
     /**
      * This method when a new task is created and submitted in the nextflow
@@ -63,7 +63,7 @@ trait TraceObserver {
      * @param handler
      * @param trace
      */
-    void onProcessPending(TaskHandler handler, TraceRecord trace){}
+    default void onProcessPending(TaskHandler handler, TraceRecord trace){}
 
     /**
      * This method is invoked before a process run is going to be submitted
@@ -73,7 +73,7 @@ trait TraceObserver {
      * @param trace
      *      The associated {@link TraceRecord} for the current task.
      */
-    void onProcessSubmit(TaskHandler handler, TraceRecord trace){}
+    default void onProcessSubmit(TaskHandler handler, TraceRecord trace){}
 
     /**
      * This method is invoked when a process run is going to start
@@ -83,7 +83,7 @@ trait TraceObserver {
      * @param trace
      *      The associated {@link TraceRecord} for the current task.
      */
-    void onProcessStart(TaskHandler handler, TraceRecord trace){}
+    default void onProcessStart(TaskHandler handler, TraceRecord trace){}
 
     /**
      * This method is invoked when a process run completes
@@ -93,7 +93,7 @@ trait TraceObserver {
      * @param trace
      *      The associated {@link TraceRecord} for the current task.
      */
-    void onProcessComplete(TaskHandler handler, TraceRecord trace){}
+    default void onProcessComplete(TaskHandler handler, TraceRecord trace){}
 
     /**
      * method invoked when a task execution is skipped because the result is cached (already computed)
@@ -105,12 +105,12 @@ trait TraceObserver {
      *      The trace record for the cached trace. When this event is invoked for a store task
      *      the {@code trace} record is expected to be {@code null}
      */
-    void onProcessCached(TaskHandler handler, TraceRecord trace){}
+    default void onProcessCached(TaskHandler handler, TraceRecord trace){}
 
     /**
      * @return {@code true} whenever this observer requires to collect task execution metrics
      */
-    boolean enableMetrics(){ false }
+    default boolean enableMetrics(){ false }
 
     /**
      * Method that is invoked, when a workflow fails.
@@ -120,14 +120,18 @@ trait TraceObserver {
      * @param trace
      *      The associated {@link TraceRecord} for the current task.
      */
-    void onFlowError(TaskHandler handler, TraceRecord trace){}
+    default void onFlowError(TaskHandler handler, TraceRecord trace){}
 
     /**
-     * Method that is invoked when a value is published from a channel.
+     * Method that is invoked when a workflow output is published.
      *
+     * @param name
+     *      The name of the workflow output
      * @param value
+     *      A list if the published channel was a queue channel,
+     *      otherwise an object if the channel was a value channel
      */
-    void onWorkflowPublish(Object value){}
+    default void onWorkflowPublish(String name, Object value){}
 
     /**
      * Method that is invoke when an output file is published
@@ -136,7 +140,7 @@ trait TraceObserver {
      * @param destination
      *      The destination path at `publishDir` folder.
      */
-    void onFilePublish(Path destination){}
+    default void onFilePublish(Path destination){}
 
     /**
      * Method that is invoke when an output file is published
@@ -147,7 +151,7 @@ trait TraceObserver {
      * @param source
      *      The source path at `workDir` folder.
      */
-    void onFilePublish(Path destination, Path source){
+    default void onFilePublish(Path destination, Path source){
         onFilePublish(destination)
     }
 }
