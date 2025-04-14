@@ -14,6 +14,7 @@ The following functionalities are provided via plugin components, and they make 
 - `nf-azure`: Support for Microsoft Azure.
 - `nf-cloudcache`: Support for the cloud cache (see `NXF_CLOUDCACHE_PATH` under {ref}`config-env-vars`).
 - `nf-console`: Implement Nextflow [REPL console](https://www.nextflow.io/blog/2015/introducing-nextflow-console.html).
+- `nf-k8s`: Support for Kubernetes.
 - `nf-google`: Support for Google Cloud.
 - `nf-tower`: Support for [Seqera Platform](https://seqera.io) (formerly Tower Cloud).
 - `nf-wave`: Support for [Wave containers](https://seqera.io/wave/) service.
@@ -41,6 +42,11 @@ The plugin identifier consists of the plugin name and plugin version separated b
 The plugin version is optional. If it is not specified, Nextflow will download the latest plugin version that is compatible with your Nextflow version. In general, it recommended that you not specify the plugin version unless you actually want to stick to that version, such as for [offline usage](#offline-usage).
 
 The core plugins are documented in this documentation. For all other plugins, please refer to the plugin's code repository for documentation and support.
+
+:::{versionadded} 25.02.0-edge
+:::
+
+The plugin version can be prefixed with `~` to pin the major and minor version while allowing the latest patch release to be used. For example, `nf-amazon@~2.9.0` will resolve to the latest version matching `2.9.x`, which is `2.9.2`. When working offline, Nextflow will resolve version ranges against the local plugin cache defined by `NXF_PLUGINS_DIR`.
 
 ## Offline usage
 

@@ -28,6 +28,7 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.container.ContainerConfig
 import nextflow.container.resolver.ContainerInfo
+import nextflow.container.resolver.ContainerMeta
 import nextflow.container.resolver.ContainerResolver
 import nextflow.container.resolver.DefaultContainerResolver
 import nextflow.plugin.Priority
@@ -131,7 +132,7 @@ class WaveContainerResolver implements ContainerResolver {
      *      An instance of {@link TaskRun} task representing the current task
      * @param container
      *      The container image name specified by the task. Can be {@code null} if the task
-     *      provides a Dockerfile or a Conda recipe or a Spack recipe
+     *      provides a Dockerfile or a Conda recipe
      * @return
      *      The container image name returned by the Wave backend or {@code null}
      *      when the task does not request any container or dockerfile to build
@@ -152,5 +153,10 @@ class WaveContainerResolver implements ContainerResolver {
     @Override
     boolean isContainerReady(String key) {
         return client().isContainerReady(key)
+    }
+
+    @Override
+    ContainerMeta getContainerMeta(String key) {
+        return client().getContainerMeta(key)
     }
 }

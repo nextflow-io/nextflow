@@ -157,7 +157,7 @@ The following settings are available:
 : :::{versionchanged} 24.08.0-edge
   The default value was changed from `5` to `0`.
   :::
-: Max number of execution attempts of a job interrupted by a EC2 spot reclaim event (default: `0`)
+: Max number of execution attempts of a job interrupted by a EC2 Spot reclaim event (default: `0`)
 
 `aws.batch.maxTransferAttempts`
 : Max number of downloads attempts from S3 (default: `1`).
@@ -179,6 +179,11 @@ The following settings are available:
 : :::{versionadded} 22.09.0-edge
   :::
 : The share identifier for all tasks when using [fair-share scheduling for AWS Batch](https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/)
+
+`aws.batch.terminateUnschedulableJobs`
+: :::{versionadded} 25.03.0-edge
+:::
+: When `true`, jobs that cannot be scheduled for lack of resources or misconfiguration are terminated automatically (default: `false`). The pipeline may complete with an error status depending on the error strategy defined for the corresponding jobs.
 
 `aws.batch.volumes`
 : One or more container mounts. Mounts can be specified as simple e.g. `/some/path` or canonical format e.g. `/host/path:/mount/path[:ro|rw]`. Multiple mounts can be specified separating them with a comma or using a list object.
@@ -530,7 +535,7 @@ The following settings are available:
 `dag.direction`
 : :::{versionadded} 23.10.0
   :::
-: *Only supported by the HTML and Mermaid renderers.*
+: *Supported by Graphviz, DOT, HTML and Mermaid renderers.*
 : Controls the direction of the DAG, can be `'LR'` (left-to-right) or `'TB'` (top-to-bottom) (default: `'TB'`).
 
 `dag.file`
@@ -792,6 +797,12 @@ The following settings are available:
 : Enable privileged containers for Fusion (default: `true`)
 : Non-privileged use is supported only on Kubernetes with the [k8s-fuse-plugin](https://github.com/nextflow-io/k8s-fuse-plugin) or a similar FUSE device plugin.
 
+`fusion.snapshots`
+: :::{versionadded} 25.03.0-edge
+  :::
+: *Currently only supported for AWS Batch*
+: Enable Fusion snapshotting (preview, default: `false`). This feature allows Fusion to automatically restore a job when it is interrupted by a spot reclamation.
+
 `fusion.tags`
 : Pattern for applying tags to files created via the Fusion client (default: `[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)`).
 : Set to `false` to disable.
@@ -854,7 +865,7 @@ The following settings are available for Google Cloud Batch:
 : :::{versionchanged} 24.08.0-edge
   The default value was changed from `5` to `0`.
   :::
-: Max number of execution attempts of a job interrupted by a Compute Engine spot reclaim event (default: `0`).
+: Max number of execution attempts of a job interrupted by a Compute Engine Spot reclaim event (default: `0`).
 : See also: `google.batch.autoRetryExitCodes`
 
 `google.batch.network`

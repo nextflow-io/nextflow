@@ -298,12 +298,12 @@ Enum types cannot be included across modules at this time.
 
 ### Output block
 
-The output block consists of one or more *target blocks*. A target block consists of a *target name* and one or more *target directives* for configuring the corresponding publish target:
+The output block consists of one or more *output declarations*. Each output declaration consists of a name and one or more *output directives* for defining the output:
 
 ```nextflow
 output {
-    'fastq' {
-        path 'samples'
+    samples {
+        path 'fastq'
         index {
             path 'index.csv'
         }
@@ -311,7 +311,7 @@ output {
 }
 ```
 
-Only one output block may be defined in a script. See {ref}`workflow-output-def` for the set of available target directives.
+Only one output block may be defined in a script. See {ref}`workflow-output-def` for the set of available output directives.
 
 ## Statements
 
@@ -827,7 +827,7 @@ If the type is implicitly available in the script, the *fully-qualified type nam
 new Date()
 ```
 
-See {ref}`stdlib-default-imports` for the set of types which are implicitly available in Nextflow scripts.
+See {ref}`stdlib-page` for the set of types that are available in Nextflow scripts.
 
 ### Unary expressions
 

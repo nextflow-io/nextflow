@@ -26,6 +26,7 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.cloud.types.CloudMachineInfo
+import nextflow.container.resolver.ContainerMeta
 import nextflow.extension.Bolts
 import nextflow.processor.TaskId
 import nextflow.script.ProcessDef
@@ -119,6 +120,7 @@ class TraceRecord implements Serializable {
 
     transient private String executorName
     transient private CloudMachineInfo machineInfo
+    transient private ContainerMeta containerMeta
 
     /**
      * Convert the given value to a string
@@ -609,4 +611,11 @@ class TraceRecord implements Serializable {
         this.machineInfo = value
     }
 
+    ContainerMeta getContainerMeta() {
+        return containerMeta
+    }
+
+    void setContainerMeta(ContainerMeta meta) {
+        this.containerMeta = meta
+    }
 }

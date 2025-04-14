@@ -20,7 +20,7 @@ compileGroovy {
 dependencies {
     api(project(':nf-commons'))
     api(project(':nf-httpfs'))
-    api 'com.github.nextflow-io.language-server:compiler:main-SNAPSHOT'
+    api(project(':nf-lang'))
     api "org.apache.groovy:groovy:4.0.26"
     api "org.apache.groovy:groovy-nio:4.0.26"
     api "org.apache.groovy:groovy-xml:4.0.26"
@@ -48,8 +48,6 @@ dependencies {
     api 'jline:jline:2.9'
     api 'org.pf4j:pf4j:3.12.0'
     api 'dev.failsafe:failsafe:3.1.0'
-    api 'org.bouncycastle:bcprov-ext-jdk18on:1.78.1'
-    api 'org.bouncycastle:bcpkix-jdk18on:1.78.1'
     api 'io.seqera:lib-trace:0.1.0'
 
     testImplementation 'org.subethamail:subethasmtp:3.1.7'

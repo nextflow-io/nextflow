@@ -23,7 +23,7 @@ class TowerFusionEnvTest extends Specification {
     WireMockServer wireMockServer
 
     def setupSpec() {
-        wireMockServer = new WireMockServer(18080)
+        wireMockServer = new WireMockServer(0)
         wireMockServer.start()
     }
 
@@ -249,7 +249,7 @@ class TowerFusionEnvTest extends Specification {
         Global.session = Mock(Session) {
             config >> [
                 tower: [
-                    endpoint   : 'http://localhost:18080',
+                    endpoint   : wireMockServer.baseUrl(),
                     accessToken: 'abc123'
                 ]
             ]
@@ -295,7 +295,7 @@ class TowerFusionEnvTest extends Specification {
         Global.session = Mock(Session) {
             config >> [
                 tower: [
-                    endpoint   : 'http://localhost:18080',
+                    endpoint   : wireMockServer.baseUrl(),
                     accessToken: 'abc123'
                 ]
             ]

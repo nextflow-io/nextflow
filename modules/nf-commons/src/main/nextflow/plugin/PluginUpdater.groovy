@@ -32,11 +32,11 @@ import dev.failsafe.function.CheckedSupplier
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
-import nextflow.Const
 import nextflow.SysEnv
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FileMutex
+import org.pf4j.InvalidPluginDescriptorException
 import org.pf4j.PluginDependency
 import org.pf4j.PluginRuntimeException
 import org.pf4j.PluginState
@@ -67,6 +67,8 @@ class PluginUpdater extends UpdateManager {
 
     private boolean pullOnly
 
+    private boolean offline
+
     private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
 
     protected PluginUpdater(CustomPluginManager pluginManager) {
@@ -74,16 +76,22 @@ class PluginUpdater extends UpdateManager {
         this.pluginManager = pluginManager
     }
 
-    PluginUpdater(CustomPluginManager pluginManager, Path pluginsRoot, URL repo) {
-        super(pluginManager, wrap(repo))
+    PluginUpdater(CustomPluginManager pluginManager, Path pluginsRoot, URL repo, boolean offline) {
+        super(pluginManager, wrap(repo, pluginsRoot, offline))
+        this.offline = offline
         this.pluginsStore = pluginsRoot
         this.pluginManager = pluginManager
     }
 
-    static private List<UpdateRepository> wrap(URL repo) {
+    static private List<UpdateRepository> wrap(URL remote, Path local, boolean offline) {
         List<UpdateRepository> result = new ArrayList<>(1)
-        result << new DefaultUpdateRepository('nextflow.io', repo)
-        result.addAll(customRepos())
+        if( offline ) {
+            result.add(new LocalUpdateRepository('downloaded', local))
+        }
+        else {
+            result.add(new DefaultUpdateRepository('nextflow.io', remote))
+            result.addAll(customRepos())
+        }
         return result
     }
 
@@ -199,19 +207,18 @@ class PluginUpdater extends UpdateManager {
     }
 
     private Path download0(String id, String version) {
+        // 0. check if version is specified
+        if( !version )
+            throw new InvalidPluginDescriptorException("Missing version for plugin $id")
+        log.info "Downloading plugin ${id}@${version}"
 
-        // 0. check if already exists
+        // 1. check if already exists
         final pluginPath = pluginsStore.resolve("$id-$version")
         if( FilesEx.exists(pluginPath) ) {
             return pluginPath
         }
 
-        // 1. determine the version
-        if( !version )
-            version = getLastPluginRelease(id)
-        log.info "Downloading plugin ${id}@${version}"
-
-        // 2. Download to temporary location
+        // 2. download to temporary location
         Path downloaded = safeDownloadPlugin(id, version);
 
         // 3. unzip the content and delete downloaded file
@@ -314,18 +321,32 @@ class PluginUpdater extends UpdateManager {
         new File(tmp, "nextflow-plugin-${id}-${version}.lock")
     }
 
-    private boolean load0(String id, String version) {
+    private boolean load0(String id, String requestedVersion) {
         assert id, "Missing plugin Id"
 
-        if( version == null )
-            version = getLastPluginRelease(id)?.version
+        if( offline && !requestedVersion ) {
+            throw new IllegalStateException("Cannot find version for $id plugin -- plugin versions MUST be specified in offline mode")
+        }
 
-        final offline = SysEnv.get('NXF_OFFLINE')=='true'
+        def version = requestedVersion
         if( !version ) {
-            final msg = offline
-                ? "Cannot find version for $id plugin -- plugin versions MUST be specified in offline mode"
+            version = getLastPluginRelease(id)?.version
+        }
+        else if( !Version.isValid(version) ) {
+            // a version is 'valid' if it's an exact semver version "major.minor.patch" so
+            // if it's not that, treat it as a version constraint and look for matches
+            version = findNewestMatchingRelease(id, version)?.version
+        }
+
+        if( !version ) {
+            final msg = requestedVersion
+                ? "Cannot find version of $id plugin matching $requestedVersion"
                 : "Cannot find latest version of $id plugin"
             throw new IllegalStateException(msg)
+        }
+
+        if( version != requestedVersion ) {
+            log.debug "Plugin $id version $requestedVersion resolved to: $version"
         }
 
         def pluginPath = pluginsStore.resolve("$id-$version")
@@ -405,6 +426,10 @@ class PluginUpdater extends UpdateManager {
             log.debug "Update not supported during development mode"
             return false
         }
+        if( offline ) {
+            log.debug "Update not supported in offline mode"
+            return false
+        }
 
         if( !version )
             version = getLastPluginRelease(pluginId)?.version
@@ -446,7 +471,7 @@ class PluginUpdater extends UpdateManager {
             throw new IllegalArgumentException("Unknown plugin id: $id")
 
         // note: order releases list by descending version numbers ie. latest version comes first
-        def releases = pluginInfo.releases.sort(false) { a,b -> Version.valueOf(b.version) <=> Version.valueOf(a.version) }
+        def releases = pluginInfo.releases.sort(false) { a,b -> Version.parse(b.version) <=> Version.parse(a.version) }
         for (PluginInfo.PluginRelease rel : releases ) {
             if( !versionManager.checkVersionConstraint(rel.version, verConstraint) || !rel.url )
                 continue
