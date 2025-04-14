@@ -20,7 +20,7 @@ import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import nextflow.data.cid.serde.CidSerializable
 
-import java.time.Instant
+import java.time.OffsetDateTime
 
 /**
  * Model a base class for workflow and task outputs
@@ -60,13 +60,13 @@ class DataOutput implements CidSerializable {
     /**
      * Data creation date.
      */
-    Instant createdAt
+    OffsetDateTime createdAt
     /**
      * Data last modified date.
      */
-    Instant modifiedAt
+    OffsetDateTime modifiedAt
     /**
      * Annotations attached to the data
      */
-    Map annotations
+    List<Annotation> annotations
 }

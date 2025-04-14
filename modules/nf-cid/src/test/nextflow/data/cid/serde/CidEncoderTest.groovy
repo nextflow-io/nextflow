@@ -27,7 +27,7 @@ import nextflow.data.cid.model.WorkflowOutputs
 import nextflow.data.cid.model.WorkflowRun
 import spock.lang.Specification
 
-import java.time.Instant
+import java.time.OffsetDateTime
 
 class CidEncoderTest extends Specification{
 
@@ -87,8 +87,8 @@ class CidEncoderTest extends Specification{
         given:
         def encoder = new CidEncoder()
         and:
-        def time = Instant.now()
-        def wfResults = new WorkflowOutputs(time, "cid://1234", [a: "A", b: "B"])
+        def time = OffsetDateTime.now()
+        def wfResults = new WorkflowOutputs(time, "cid://1234", [new Parameter("String", "a", "A"), new Parameter("String", "b", "B")])
         when:
         def encoded = encoder.encode(wfResults)
         def object = encoder.decode(encoded)
@@ -98,7 +98,7 @@ class CidEncoderTest extends Specification{
         def result = object as WorkflowOutputs
         result.createdAt == time
         result.workflowRun == "cid://1234"
-        result.outputs == [a: "A", b: "B"]
+        result.outputs == [new Parameter("String", "a", "A"), new Parameter("String", "b", "B")]
     }
 
     def 'should encode and decode TaskRun'() {
@@ -137,7 +137,7 @@ class CidEncoderTest extends Specification{
         given:
         def encoder = new CidEncoder()
         and:
-        def time = Instant.now()
+        def time = OffsetDateTime.now()
         def parameter = new Parameter("a","b", "c")
         def wfResults = new TaskOutputs("cid://1234", "cid://5678", time, [parameter], null)
         when:

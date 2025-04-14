@@ -12,6 +12,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package nextflow.data.cid
@@ -21,10 +22,13 @@ import nextflow.data.cid.model.TaskOutputs
 import nextflow.file.FileHolder
 import nextflow.processor.TaskHandler
 import nextflow.script.TokenVar
+import nextflow.script.params.EnvOutParam
 import nextflow.script.params.FileInParam
 import nextflow.script.params.FileOutParam
 import nextflow.script.params.InParam
 import nextflow.script.params.OutParam
+import nextflow.script.params.StdInParam
+import nextflow.script.params.StdOutParam
 import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
 
@@ -179,9 +183,24 @@ class CidObserverTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should get parameter type' () {
+        expect:
+        CidObserver.getParameterType(PARAM) == STRING
+        where:
+        PARAM                                           | STRING
+        new FileInParam(null, [])                       | "path"
+        new ValueOutParam(null, [])                     | "val"
+        new EnvOutParam(null, [])                       | "env"
+        new StdInParam(null, [])                        | "stdin"
+        new StdOutParam(null, [])                       | "stdout"
+        Path.of("test")                                 | "Path"
+        ["test"]                                        | "Collection"
+        [key:"value"]                                   | "Map"
+    }
+
     def 'should save task run' () {
         given:
-        def folder = Files.createTempDirectory('test').toRealPath()
+        def folder = Files.createTempDirectory('test')
         def config = [workflow:[data:[enabled: true, store:[location:folder.toString()]]]]
         def uniqueId = UUID.randomUUID()
         def workDir = folder.resolve("work")
@@ -267,9 +286,9 @@ class CidObserverTest extends Specification {
             new Checksum(sourceHash, "nextflow", "standard"),
             new Checksum(scriptHash, "nextflow", "standard"),
             [
-                new Parameter(FileInParam.simpleName, "file1", ['cid://78567890/outputs/file1.txt']),
-                new Parameter(FileInParam.simpleName, "file2", [[path: normalizer.normalizePath(file), checksum: [value:fileHash, algorithm: "nextflow", mode:  "standard"]]]),
-                new Parameter(ValueInParam.simpleName, "id", "value")
+                new Parameter("path", "file1", ['cid://78567890/file1.txt']),
+                new Parameter("path", "file2", [[path: normalizer.normalizePath(file), checksum: [value:fileHash, algorithm: "nextflow", mode:  "standard"]]]),
+                new Parameter("val", "id", "value")
             ], null, null, null, null, [:], [], "cid://hash", null)
         def dataOutput1 = new DataOutput(outFile1.toString(), new Checksum(fileHash1, "nextflow", "standard"),
             "cid://1234567890", "cid://hash", "cid://1234567890", attrs1.size(), CidUtils.toDate(attrs1.creationTime()), CidUtils.toDate(attrs1.lastModifiedTime()) )
@@ -278,10 +297,10 @@ class CidObserverTest extends Specification {
 
         when:
         observer.onProcessComplete(handler, null )
-        def taskRunResult = store.load(hash.toString()) as nextflow.data.cid.model.TaskRun
-        def dataOutputResult1 = store.load("${hash}/outputs/fileOut1.txt") as DataOutput
-        def dataOutputResult2 = store.load("${hash}/outputs/fileOut2.txt") as DataOutput
-        def taskOutputsResult = store.load("${hash}/outputs") as TaskOutputs
+        def taskRunResult = store.load("${hash.toString()}")
+        def dataOutputResult1 = store.load("${hash}/fileOut1.txt") as DataOutput
+        def dataOutputResult2 = store.load("${hash}/fileOut2.txt") as DataOutput
+        def taskOutputsResult = store.load("${hash}#outputs") as TaskOutputs
         then:
         taskRunResult == taskDescription
         dataOutputResult1 == dataOutput1
@@ -289,13 +308,13 @@ class CidObserverTest extends Specification {
         taskOutputsResult.taskRun == "cid://1234567890"
         taskOutputsResult.workflowRun == "cid://hash"
         taskOutputsResult.outputs.size() == 3
-        taskOutputsResult.outputs.get(0).type == FileOutParam.simpleName
+        taskOutputsResult.outputs.get(0).type == "path"
         taskOutputsResult.outputs.get(0).name == "file1"
-        taskOutputsResult.outputs.get(0).value == "cid://1234567890/outputs/fileOut1.txt"
-        taskOutputsResult.outputs.get(1).type == FileOutParam.simpleName
+        taskOutputsResult.outputs.get(0).value == "cid://1234567890/fileOut1.txt"
+        taskOutputsResult.outputs.get(1).type == "path"
         taskOutputsResult.outputs.get(1).name == "file2"
-        taskOutputsResult.outputs.get(1).value == ["cid://1234567890/outputs/fileOut2.txt"]
-        taskOutputsResult.outputs.get(2).type == ValueOutParam.simpleName
+        taskOutputsResult.outputs.get(1).value == ["cid://1234567890/fileOut2.txt"]
+        taskOutputsResult.outputs.get(2).type == "val"
         taskOutputsResult.outputs.get(2).name == "id"
         taskOutputsResult.outputs.get(2).value == "value"
 
@@ -341,7 +360,7 @@ class CidObserverTest extends Specification {
         when:
         observer.storeTaskOutput(task, outFile)
         then:
-        folder.resolve(".meta/${hash}/outputs/foo/bar/file.bam/.data.json").text == new CidEncoder().encode(output)
+        folder.resolve(".meta/${hash}/foo/bar/file.bam/.data.json").text == new CidEncoder().encode(output)
 
         cleanup:
         folder?.deleteDir()
@@ -502,9 +521,9 @@ class CidObserverTest extends Specification {
             def attrs1 = Files.readAttributes(outFile1, BasicFileAttributes)
             def fileHash1 = CacheHelper.hasher(outFile1).hash().toString()
             def output1 = new DataOutput(outFile1.toString(), new Checksum(fileHash1, "nextflow", "standard"),
-                "cid://123987/outputs/file.bam", "$CID_PROT${observer.executionHash}", null,
+                "cid://123987/file.bam", "$CID_PROT${observer.executionHash}", null,
                 attrs1.size(), CidUtils.toDate(attrs1.creationTime()), CidUtils.toDate(attrs1.lastModifiedTime()) )
-            folder.resolve(".meta/${observer.executionHash}/outputs/foo/file.bam/.data.json").text == encoder.encode(output1)
+            folder.resolve(".meta/${observer.executionHash}/foo/file.bam/.data.json").text == encoder.encode(output1)
 
         when: 'publish without source path'
         def outFile2 = outputDir.resolve('foo/file2.bam')
@@ -518,14 +537,14 @@ class CidObserverTest extends Specification {
             def output2 = new DataOutput(outFile2.toString(), new Checksum(fileHash2, "nextflow", "standard"),
                 "cid://${observer.executionHash}" , "cid://${observer.executionHash}", null,
                 attrs2.size(), CidUtils.toDate(attrs2.creationTime()), CidUtils.toDate(attrs2.lastModifiedTime()) )
-            folder.resolve(".meta/${observer.executionHash}/outputs/foo/file2.bam/.data.json").text == encoder.encode(output2)
+            folder.resolve(".meta/${observer.executionHash}/foo/file2.bam/.data.json").text == encoder.encode(output2)
 
         when: 'Workflow complete'
             observer.onFlowComplete()
         then: 'Check history file is updated and Workflow Result is written in the cid store'
             def finalCid = store.getHistoryLog().getRecord(uniqueId).runCid.substring(CID_PROT.size())
-            def resultsRetrieved = store.load("${finalCid}/outputs") as WorkflowOutputs
-            resultsRetrieved.outputs == [a: "cid://${observer.executionHash}/outputs/foo/file.bam", b: "cid://${observer.executionHash}/outputs/foo/file2.bam"]
+            def resultsRetrieved = store.load("${finalCid}#outputs") as WorkflowOutputs
+            resultsRetrieved.outputs == [new Parameter(Path.simpleName, "a", "cid://${observer.executionHash}/foo/file.bam"), new Parameter(Path.simpleName, "b", "cid://${observer.executionHash}/foo/file2.bam")]
 
         cleanup:
             folder?.deleteDir()

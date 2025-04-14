@@ -16,6 +16,8 @@
 
 package nextflow.serde.gson
 
+import com.google.gson.stream.JsonToken
+
 import java.time.Instant
 import java.time.OffsetDateTime
 
@@ -38,6 +40,10 @@ class OffsetDateTimeAdapter extends TypeAdapter<OffsetDateTime> {
 
     @Override
     OffsetDateTime read(JsonReader reader) throws IOException {
+        if (reader.peek() == JsonToken.NULL) {
+            reader.nextNull();
+            return null;
+        }
         return OffsetDateTime.parse(reader.nextString())
     }
 }

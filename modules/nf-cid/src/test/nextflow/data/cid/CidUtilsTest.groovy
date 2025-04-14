@@ -29,6 +29,8 @@ import spock.lang.TempDir
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
 import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 
 class CidUtilsTest extends Specification{
 
@@ -50,7 +52,7 @@ class CidUtilsTest extends Specification{
         where:
         FILE_TIME                   | DATE
         null                        | null
-        FileTime.fromMillis(1234)   | Instant.ofEpochMilli(1234)
+        FileTime.fromMillis(1234)   | OffsetDateTime.ofInstant(Instant.ofEpochMilli(1234), ZoneOffset.UTC)
     }
 
     def 'should convert to FileTime'(){
@@ -59,7 +61,7 @@ class CidUtilsTest extends Specification{
         where:
         FILE_TIME                   | DATE
         null                        | null
-        FileTime.fromMillis(1234)   | Instant.ofEpochMilli(1234).toString()
+        FileTime.fromMillis(1234)   | OffsetDateTime.ofInstant(Instant.ofEpochMilli(1234), ZoneOffset.UTC)
     }
 
 
@@ -70,11 +72,11 @@ class CidUtilsTest extends Specification{
         def workflow = new Workflow([mainScript], "https://nextflow.io/nf-test/", "123456")
         def key = "testKey"
         def value1 = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [new Parameter("String", "param1", "value1"), new Parameter("String", "param2", "value2")])
-        def outputs1 = new WorkflowOutputs(Instant.now(), "cid://testKey", [output: "name"] )
+        def outputs1 = new WorkflowOutputs(OffsetDateTime.now(), "cid://testKey", [new Parameter( "String", "output", "name")] )
         def cidStore = new DefaultCidStore()
         cidStore.open(config)
         cidStore.save(key, value1)
-        cidStore.save("$key/outputs", outputs1)
+        cidStore.save("$key#outputs", outputs1)
 
         when:
         List<Object> params = CidUtils.query(cidStore, new URI('cid://testKey#params'))
@@ -87,14 +89,24 @@ class CidUtilsTest extends Specification{
         List<Object> outputs = CidUtils.query(cidStore, new URI('cid://testKey#outputs'))
         then:
         outputs.size() == 1
-        outputs[0] instanceof Map
-        outputs[0]['output'] == "name"
+        outputs[0] instanceof List<Parameter>
+        def param = (outputs[0] as List)[0] as Parameter
+        param.name == "output"
 
-        expect:
-        CidUtils.query(cidStore, new URI('cid://testKey#no-exist')) == []
-        CidUtils.query(cidStore, new URI('cid://testKey#outputs.no-exist')) == []
-        CidUtils.query(cidStore, new URI('cid://no-exist#something')) == []
+        when:
+        CidUtils.query(cidStore, new URI('cid://testKey#no-exist'))
+        then:
+        thrown(IllegalArgumentException)
 
+        when:
+        CidUtils.query(cidStore, new URI('cid://testKey#outputs.no-exist'))
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        CidUtils.query(cidStore, new URI('cid://no-exist#something'))
+        then:
+        thrown(IllegalArgumentException)
     }
 
     def "should parse children elements form Fragment string"() {

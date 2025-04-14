@@ -24,9 +24,6 @@ import nextflow.file.LogicalDataPath
 import nextflow.util.CacheHelper
 import nextflow.util.TestOnly
 
-import java.nio.file.attribute.FileTime
-import java.time.Instant
-
 import static nextflow.data.cid.fs.CidFileSystemProvider.*
 import static nextflow.data.cid.CidUtils.*
 
@@ -37,6 +34,7 @@ import java.nio.file.ProviderMismatchException
 import java.nio.file.WatchEvent
 import java.nio.file.WatchKey
 import java.nio.file.WatchService
+import java.time.OffsetDateTime
 
 import groovy.transform.CompileStatic
 import nextflow.file.FileHelper
@@ -212,7 +210,7 @@ class CidPath implements Path, LogicalDataPath {
     }
 
     private static CidMetadataPath generateCidMetadataPath(CidFileSystem fs, String key, Object object, String[] children){
-        def creationTime = FileTime.from(navigate(object, 'createdAt') as Instant ?: Instant.now())
+        def creationTime = toFileTime(navigate(object, 'createdAt') as OffsetDateTime ?: OffsetDateTime.now())
         final output = children ? navigate(object, children.join('.')) : object
         if( !output ) {
             throw new FileNotFoundException("Target path '$key#${children.join('.')}' does not exist.")

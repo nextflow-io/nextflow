@@ -38,6 +38,8 @@ import test.OutputCapture
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 
 class CidCommandImplTest extends Specification{
 
@@ -116,7 +118,7 @@ class CidCommandImplTest extends Specification{
         given:
         def cidFile = storeLocation.resolve(".meta/12345/.data.json")
         Files.createDirectories(cidFile.parent)
-        def time = Instant.ofEpochMilli(123456789)
+        def time = OffsetDateTime.ofInstant(Instant.ofEpochMilli(123456789), ZoneOffset.UTC)
         def encoder = new CidEncoder().withPrettyPrint(true)
         def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
             "cid://123987/file.bam","cid://123987/", null, 1234, time, time, null)
@@ -151,7 +153,7 @@ class CidCommandImplTest extends Specification{
 
         then:
         stdout.size() == 1
-        stdout[0] == "No entries found for cid://12345"
+        stdout[0] == "Error loading cid://12345. Cid object 12345 not found."
     }
 
     def 'should get lineage cid content' (){
@@ -170,7 +172,7 @@ class CidCommandImplTest extends Specification{
         Files.createDirectories(cidFile4.parent)
         Files.createDirectories(cidFile5.parent)
         def encoder = new CidEncoder()
-        def time = Instant.ofEpochMilli(123456789)
+        def time = OffsetDateTime.ofInstant(Instant.ofEpochMilli(123456789), ZoneOffset.UTC)
         def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
             "cid://123987/file.bam", "cid://45678", null, 1234, time, time, null)
         cidFile.text = encoder.encode(entry)
@@ -239,7 +241,7 @@ class CidCommandImplTest extends Specification{
         Files.createDirectories(cidFile.parent)
         Files.createDirectories(cidFile3.parent)
         def encoder = new CidEncoder()
-        def time = Instant.ofEpochMilli(123456789)
+        def time = OffsetDateTime.ofInstant(Instant.ofEpochMilli(123456789), ZoneOffset.UTC)
         def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
             "cid://12345", "cid://12345", null, 1234, time, time, null)
         cidFile.text = encoder.encode(entry)
@@ -282,7 +284,7 @@ class CidCommandImplTest extends Specification{
         def cidFile = storeLocation.resolve(".meta/12345/.data.json")
         Files.createDirectories(cidFile.parent)
         def encoder = new CidEncoder().withPrettyPrint(true)
-        def time = Instant.ofEpochMilli(123456789)
+        def time = OffsetDateTime.ofInstant(Instant.ofEpochMilli(123456789), ZoneOffset.UTC)
         def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
             "cid://123987/file.bam", "cid://123987/", null, 1234, time, time, null)
         def jsonSer = encoder.encode(entry)
@@ -309,7 +311,7 @@ class CidCommandImplTest extends Specification{
         def cidFile2 = storeLocation.resolve(".meta/67890/.data.json")
         Files.createDirectories(cidFile2.parent)
         def encoder = new CidEncoder().withPrettyPrint(true)
-        def time = Instant.ofEpochMilli(123456789)
+        def time = OffsetDateTime.ofInstant(Instant.ofEpochMilli(123456789), ZoneOffset.UTC)
         def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
             "cid://123987/file.bam", "cid://123987/", null, 1234, time, time, null)
         def entry2 = new DataOutput("path/to/file2",new Checksum("42472qet","nextflow","standard"),
@@ -338,7 +340,7 @@ class CidCommandImplTest extends Specification{
         def cidFile2 = storeLocation.resolve(".meta/67890/.data.json")
         Files.createDirectories(cidFile2.parent)
         def encoder = new CidEncoder().withPrettyPrint(true)
-        def time = Instant.ofEpochMilli(123456789)
+        def time = OffsetDateTime.ofInstant(Instant.ofEpochMilli(123456789), ZoneOffset.UTC)
         def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
             "cid://123987/file.bam", "cid://123987/", null, 1234, time, time, null)
         def entry2 = new DataOutput("path/to/file2",new Checksum("42472qet","nextflow","standard"),
@@ -388,7 +390,7 @@ class CidCommandImplTest extends Specification{
         def cidFile = storeLocation.resolve(".meta/12345/.data.json")
         Files.createDirectories(cidFile.parent)
         def encoder = new CidEncoder().withPrettyPrint(true)
-        def time = Instant.ofEpochMilli(123456789)
+        def time = OffsetDateTime.ofInstant(Instant.ofEpochMilli(123456789), ZoneOffset.UTC)
         def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
             "cid://123987/file.bam", "cid://123987/", null, 1234, time, time, null)
         cidFile.text = encoder.encode(entry)
@@ -439,7 +441,7 @@ class CidCommandImplTest extends Specification{
         def cidFile2 = storeLocation.resolve(".meta/123987/file2.bam/.data.json")
         Files.createDirectories(cidFile2.parent)
         def encoder = new CidEncoder().withPrettyPrint(true)
-        def time = Instant.ofEpochMilli(123456789)
+        def time = OffsetDateTime.ofInstant(Instant.ofEpochMilli(123456789), ZoneOffset.UTC)
         def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
             "cid://123987/file.bam", "cid://123987/", null, 1234, time, time, null)
         def entry2 = new DataOutput("path/to/file2",new Checksum("42472qet","nextflow","standard"),
