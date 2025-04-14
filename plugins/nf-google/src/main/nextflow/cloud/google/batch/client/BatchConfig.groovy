@@ -89,7 +89,7 @@ class BatchConfig {
         result.serviceAccountEmail = session.config.navigate('google.batch.serviceAccountEmail')
         result.retryConfig = new BatchRetryConfig( session.config.navigate('google.batch.retryPolicy') as Map ?: Map.of() )
         result.autoRetryExitCodes = session.config.navigate('google.batch.autoRetryExitCodes', DEFAULT_RETRY_LIST) as List<Integer>
-        result.fuseMountOptions = session.config.navigate('google.batch.fuseMountOptions', []) as List<String>
+        result.fuseMountOptions = session.config.navigate('google.batch.fuseMountOptions', List.of()) as List<String>
         return result
     }
 
