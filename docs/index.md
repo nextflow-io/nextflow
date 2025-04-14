@@ -136,6 +136,7 @@ reference/operator
 updating-nextflow
 updating-syntax
 dsl1
+releases/index
 ```
 
 ```{toctree}
