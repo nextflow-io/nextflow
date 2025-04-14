@@ -145,6 +145,8 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         final result = new ArrayList(10)
         for( String it : buckets ) {
             final mountOptions = ['-o rw', '-implicit-dirs']
+            if( config && config.fuseMountOptions && !config.fuseMountOptions.isEmpty() )
+                mountOptions.addAll(config.fuseMountOptions)
             if( config && config.googleOpts.enableRequesterPaysBuckets )
                 mountOptions << "--billing-project ${config.googleOpts.projectId}".toString()
 
