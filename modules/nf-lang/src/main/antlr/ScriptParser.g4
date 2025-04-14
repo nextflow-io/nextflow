@@ -266,11 +266,12 @@ outputDef
     ;
 
 outputBody
-    :   sep? outputTargetBody (sep outputTargetBody)*
+    :   sep? outputDeclaration (sep outputDeclaration)*
     ;
 
-outputTargetBody
-    : statement
+outputDeclaration
+    :   identifier LBRACE nls blockStatements? RBRACE
+    |   statement
     ;
 
 // -- function definition
@@ -281,7 +282,7 @@ functionDef
 
 // -- incomplete script declaration
 incompleteScriptDeclaration
-    :   identifier (DOT identifier)* DOT?
+    :   identifier (DOT identifier)* DOT
     ;
 
 

@@ -34,6 +34,7 @@ import nextflow.script.ast.IncludeModuleNode;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.IncompleteNode;
 import nextflow.script.ast.InvalidDeclaration;
+import nextflow.script.ast.OutputBlockNode;
 import nextflow.script.ast.OutputNode;
 import nextflow.script.ast.ParamNode;
 import nextflow.script.ast.ProcessNode;
@@ -94,6 +95,7 @@ import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.CompilePhase;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
+import org.codehaus.groovy.control.messages.WarningMessage;
 import org.codehaus.groovy.syntax.Numbers;
 import org.codehaus.groovy.syntax.SyntaxException;
 import org.codehaus.groovy.syntax.Types;
@@ -279,9 +281,9 @@ public class ScriptAstBuilder {
         else if( ctx instanceof OutputDefAltContext odac ) {
             var node = outputDef(odac.outputDef());
             saveLeadingComments(node, ctx);
-            if( moduleNode.getOutput() != null )
+            if( moduleNode.getOutputs() != null )
                 collectSyntaxError(new SyntaxException("Output block defined more than once", node));
-            moduleNode.setOutput(node);
+            moduleNode.setOutputs(node);
         }
 
         else if( ctx instanceof ParamDeclAltContext pac ) {
@@ -299,7 +301,7 @@ public class ScriptAstBuilder {
         else if( ctx instanceof WorkflowDefAltContext wdac ) {
             var node = workflowDef(wdac.workflowDef());
             saveLeadingComments(node, ctx);
-            if( node.getName() == null ) {
+            if( node.isEntry() ) {
                 if( moduleNode.getEntry() != null )
                     collectSyntaxError(new SyntaxException("Entry workflow defined more than once", node));
                 moduleNode.setEntry(node);
@@ -489,7 +491,7 @@ public class ScriptAstBuilder {
             return "exec";
         }
         if( ctx.SHELL() != null ) {
-            collectWarning("The `shell` block is deprecated, use `script` instead", ast( new EmptyExpression(), ctx.SHELL() ));
+            collectWarning("The `shell` block is deprecated, use `script` instead", ctx.SHELL().getText(), ast( new EmptyExpression(), ctx.SHELL() ));
             return "shell";
         }
         return "script";
@@ -524,6 +526,10 @@ public class ScriptAstBuilder {
                 collectSyntaxError(new SyntaxException("Entry workflow cannot have a take section", takes));
             if( emits instanceof BlockStatement )
                 collectSyntaxError(new SyntaxException("Entry workflow cannot have an emit section", emits));
+        }
+        if( name != null ) {
+            if( publishers instanceof BlockStatement )
+                collectSyntaxError(new SyntaxException("Named workflow cannot have a publish section", publishers));
         }
 
         var result = ast( new WorkflowNode(name, takes, main, emits, publishers), ctx );
@@ -602,7 +608,8 @@ public class ScriptAstBuilder {
     private Statement checkWorkflowPublisher(Statement stmt) {
         var valid = stmt instanceof ExpressionStatement es
             && es.getExpression() instanceof BinaryExpression be
-            && be.getOperation().getType() == Types.RIGHT_SHIFT;
+            && be.getLeftExpression() instanceof VariableExpression
+            && be.getOperation().getType() == Types.ASSIGN;
         if( !valid ) {
             collectSyntaxError(new SyntaxException("Invalid workflow publish statement", stmt));
             return null;
@@ -610,30 +617,30 @@ public class ScriptAstBuilder {
         return stmt;
     }
 
-    private OutputNode outputDef(OutputDefContext ctx) {
-        var body = outputBody(ctx.outputBody());
-        return ast( new OutputNode(body), ctx );
+    private OutputBlockNode outputDef(OutputDefContext ctx) {
+        var declarations = outputBody(ctx.outputBody());
+        return ast( new OutputBlockNode(declarations), ctx );
     }
 
-    private Statement outputBody(OutputBodyContext ctx) {
+    private List<OutputNode> outputBody(OutputBodyContext ctx) {
         if( ctx == null )
-            return EmptyStatement.INSTANCE;
-        var statements = ctx.outputTargetBody().stream()
-            .map(this::outputTargetBody)
+            return Collections.emptyList();
+        return ctx.outputDeclaration().stream()
+            .map(this::outputDeclaration)
+            .filter(output -> output != null)
             .toList();
-        return ast( block(null, statements), ctx );
     }
 
-    private Statement outputTargetBody(OutputTargetBodyContext ctx) {
-        var stmt = statement(ctx.statement());
-        var call = asMethodCallX(stmt);
-        if( call != null ) {
-            var block = asDslBlock(call, 1);
-            if( block != null )
-                return stmt;
+    private OutputNode outputDeclaration(OutputDeclarationContext ctx) {
+        if( ctx.statement() != null ) {
+            collectSyntaxError(new SyntaxException("Invalid output declaration", statement(ctx.statement())));
+            return null;
         }
-        collectSyntaxError(new SyntaxException("Invalid output target block", stmt));
-        return ast( new EmptyStatement(), stmt );
+        var name = identifier(ctx.identifier());
+        var body = blockStatements(ctx.blockStatements());
+        var result = new OutputNode(name, body);
+        checkInvalidVarName(name, result);
+        return result;
     }
 
     private FunctionNode functionDef(FunctionDefContext ctx) {
@@ -1826,8 +1833,9 @@ public class ScriptAstBuilder {
         sourceUnit.getErrorCollector().addException(e, sourceUnit);
     }
 
-    private void collectWarning(String text, ASTNode node) {
-        sourceUnit.addWarning(text, node);
+    private void collectWarning(String message, String tokenText, ASTNode node) {
+        var token = new org.codehaus.groovy.syntax.Token(0, tokenText, node.getLineNumber(), node.getColumnNumber()); // ASTNode to CSTNode
+        sourceUnit.getErrorCollector().addWarning(WarningMessage.POSSIBLE_ERRORS, message, token, sourceUnit);
     }
 
     private void removeErrorListeners() {
