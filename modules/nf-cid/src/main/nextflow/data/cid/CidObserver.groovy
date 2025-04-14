@@ -165,7 +165,8 @@ class CidObserver implements TraceObserver {
             workflow,
             session.uniqueId.toString(),
             session.runName,
-            getNormalizedParams(session.params, normalizer)
+            getNormalizedParams(session.params, normalizer),
+            session.resolvedConfig
         )
         final executionHash = CacheHelper.hasher(value).hash().toString()
         store.save(executionHash, value)

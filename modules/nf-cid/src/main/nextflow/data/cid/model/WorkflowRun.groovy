@@ -45,6 +45,10 @@ class WorkflowRun implements CidSerializable {
      */
     List<Parameter> params
     /**
+     * Resolved Configuration
+     */
+    String resolvedConfig
+    /**
      * Annotations attached to the workflow run
      */
     List<Annotation> annotations
