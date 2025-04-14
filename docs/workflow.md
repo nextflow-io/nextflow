@@ -387,7 +387,7 @@ Processes can be invoked recursively using the `recurse` method.
 :language: console
 ```
 
-In the above example, the `count_down` process is invoked first with `params.start`, then again with the output of that invocation, and so on. The `until` method is used to limit the recursion based on a condition.
+In the above example, the `count_down` process is first invoked with the value `params.start`. On each subsequent iteration, the process is invoked again using the output from the previous iteration. The recursion continues until the specified condition is satisfied, as defined by the `until` method, which terminates the recursion.
 
 The recursive output can also be limited using the `times` method:
 
@@ -410,9 +410,9 @@ Workflows can also be invoked recursively:
 
 **Limitations**
 
-- The recursive process or workflow must have matching inputs and outputs, so that the outputs can be fed back into the inputs.
+- A recursive process or workflow must have matching inputs and outputs, such that the outputs for each iteration can be supplied as the inputs for the next iteration.
 
-- Recursive workflows cannot use *reduction* operators such as `collect`, `reduce`, and `toList`, because these operators cause the recursion to hang forever after the first iteration.
+- Recursive workflows cannot use *reduction* operators such as `collect`, `reduce`, and `toList`, because these operators cause the recursion to hang indefinitely after the initial iteration.
 
 (workflow-output-def)=
 
