@@ -340,39 +340,9 @@ $ nextflow console
 
 ### `drop`
 
-Delete the local copy of a project.
-
-**Usage**
-
-```console
-$ nextflow drop [options] [project]
-```
-
-**Description**
-
-The `drop` command is used to remove the projects which have been downloaded into the global cache. Please refer the `list` command for generating a list of downloaded pipelines.
-
-**Options**
-
-`-f`
-: Delete the repository without taking care of local changes.
-
-`-h, -help`
-: Print the command usage.
-
-**Examples**
-
-Drop the `nextflow-io/hello` project.
-
-```console
-$ nextflow drop nextflow-io/hello
-```
-
-Forcefully drop the `nextflow-io/hello` pipeline, ignoring any local changes.
-
-```console
-$ nextflow drop nextflow-io/hello -f
-```
+:::{versionchanged} 25.04.0
+The `nextflow drop` command has been replaced with `nextflow pipelines drop`.
+:::
 
 ### `fs`
 
@@ -737,33 +707,9 @@ $ nextflow lint -format -spaces 2 .
 
 ### `list`
 
-List all downloaded projects.
-
-**Usage**
-
-```console
-$ nextflow list [options]
-```
-
-**Description**
-
-The `list` commands prints a list of the projects which are already downloaded into the global cache `~/.nextflow/assets`.
-
-**Options**
-
-`-h, -help`
-: Print the command usage.
-
-**Examples**
-
-List the downloaded pipelines.
-
-```console
-$ nextflow list
-
-nextflow-io/hello
-nextflow-hub/fastqc
-```
+:::{versionchanged} 25.04.0
+The `nextflow list` command has been replaced with `nextflow pipelines list`.
+:::
 
 (cli-log)=
 
@@ -894,6 +840,82 @@ Filter fields from the execution log of a process based on a criteria.
 $ nextflow log tiny_leavitt -F 'process =~ /splitLetters/'
 
 work/1f/f1ea9158fb23b53d5083953121d6b6
+```
+
+### `pipelines`
+
+:::{versionadded} 25.04.0
+:::
+
+Manage pipeline projects.
+
+```console
+$ nextflow pipelines <subcommand> [options]
+```
+
+The `pipelines` command provides several subcommands for managing the pipeline cache (used by the `pull` and `run` commands). The cache is stored in `~/.nextflow/assets` by default.
+
+`drop <pipeilne>`
+
+: Delete a project from the pipeline cache.
+
+`list`
+
+: List all projects in the pipeline cache.
+
+`view <pipeline>`
+
+: View information about a project.
+
+**Examples**
+
+List all downloaded pipelines.
+
+```console
+$ nextflow list
+
+nextflow-io/hello
+nextflow-io/rnaseq-nf
+```
+
+View the contents of a downloaded pipeline.
+
+```console
+$ nextflow view nextflow-io/hello
+
+== content of main directory: .nextflow/assets/nextflow-io/hello
+.git
+.gitignore
+.travis.yml
+LICENSE
+README.md
+circle.yml
+main.nf
+nextflow.config
+
+== content of main script: .nextflow/assets/nextflow-io/hello/main.nf
+#!/usr/bin/env nextflow
+
+process sayHello {
+  input:
+    val x
+  output:
+    stdout
+  script:
+    """
+    echo '$x world!'
+    """
+}
+
+workflow {
+  Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
+}
+```
+
+Drop the `nextflow-io/hello` project.
+
+```console
+$ nextflow drop nextflow-io/hello
 ```
 
 (cli-plugin)=
@@ -1262,91 +1284,6 @@ Nextflow installation completed. Please note:
 
 ### `view`
 
-View a project's script file(s).
-
-**Usage**
-
-```console
-$ nextflow view [options] [project]
-```
-
-**Description**
-
-The `view` command is used to inspect the pipelines that are already stored in the global nextflow cache. For downloading a pipeline into the global cache `~/.nextflow/assets`, refer to the `pull` command.
-
-**Options**
-
-`-h, -help`
-: Print the command usage.
-
-`-l`
-: List repository content.
-
-`-q`
-: Hide header line.
-
-**Examples**
-
-Viewing the contents of a downloaded pipeline.
-
-```console
-$ nextflow view nextflow-io/hello
-
-== content of file: .nextflow/assets/nextflow-io/hello/main.nf
-#!/usr/bin/env nextflow
-
-process sayHello {
-  input:
-    val x
-  output:
-    stdout
-  script:
-    """
-    echo '$x world!'
-    """
-}
-
-workflow {
-  Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
-}
-```
-
-List the folder structure of the downloaded pipeline:
-
-```console
-$ nextflow view -l nextflow-io/hello
-
-== content of path: .nextflow/assets/nextflow-io/hello
-LICENSE
-README.md
-nextflow.config
-.gitignore
-circle.yml
-foo.nf
-.git
-.travis.yml
-main.nf
-```
-
-View the contents of a downloaded pipeline without omitting the header:
-
-```console
-$ nextflow view -q nextflow-io/hello
-
-#!/usr/bin/env nextflow
-
-process sayHello {
-  input:
-    val x
-  output:
-    stdout
-  script:
-    """
-    echo '$x world!'
-    """
-}
-
-workflow {
-  Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
-}
-```
+:::{versionchanged} 25.04.0
+The `nextflow view` command has been replaced with `nextflow pipelines view`.
+:::

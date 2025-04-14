@@ -122,7 +122,7 @@ class CmdPipelines extends CmdBase {
             Plugins.init()
             final manager = new AssetManager(pipeline)
             if( !manager.isLocal() )
-                throw new AbortOperationException("Unknown project name `${pipeline}`")
+                throw new AbortOperationException("Project `${pipeline}` is not doenloaded locally")
 
             // list repository content
             println "== content of pipeline directory: ${manager.localPath}"
