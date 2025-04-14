@@ -116,9 +116,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     final static private Map<String,String> jobDefinitions = [:]
 
-    final static private MISCONFIGURATION_REASONS = List.of(
+    final static private List<String> MISCONFIGURATION_REASONS = List.of(
         "MISCONFIGURATION:JOB_RESOURCE_REQUIREMENT",
-        "MISCONFIGURATION:COMPUTE_ENVIRONMENT_MAX_RESOURCE" )
+        "MISCONFIGURATION:COMPUTE_ENVIRONMENT_MAX_RESOURCE"
+    )
 
     /**
      * Batch context shared between multiple task handlers

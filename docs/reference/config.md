@@ -140,11 +140,6 @@ The following settings are available:
   :::
 : The AWS Batch Execution Role ARN that needs to be used to execute the Batch Job. This is mandatory when using AWS Fargate platform type. See [AWS documentation](https://docs.aws.amazon.com/batch/latest/userguide/execution-IAM-role.html) for more details.
 
-`aws.batch.terminateUnschedulableJobs`
-: :::{versionadded} 25.03.0-edge
-:::
-: When `true`, jobs that cannot be scheduled for lack of resources or misconfiguration are terminated automatically. The pipeline may complete with an error status depending the error strategy defined for the corresponding jobs (default: `false`).
-
 `aws.batch.jobRole`
 : The AWS Batch Job Role ARN that needs to be used to execute the Batch Job.
 
@@ -184,6 +179,11 @@ The following settings are available:
 : :::{versionadded} 22.09.0-edge
   :::
 : The share identifier for all tasks when using [fair-share scheduling for AWS Batch](https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/)
+
+`aws.batch.terminateUnschedulableJobs`
+: :::{versionadded} 25.03.0-edge
+:::
+: When `true`, jobs that cannot be scheduled for lack of resources or misconfiguration are terminated automatically (default: `false`). The pipeline may complete with an error status depending on the error strategy defined for the corresponding jobs.
 
 `aws.batch.volumes`
 : One or more container mounts. Mounts can be specified as simple e.g. `/some/path` or canonical format e.g. `/host/path:/mount/path[:ro|rw]`. Multiple mounts can be specified separating them with a comma or using a list object.

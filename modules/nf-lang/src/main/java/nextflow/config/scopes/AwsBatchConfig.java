@@ -106,13 +106,14 @@ public class AwsBatchConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        When true, jobs that cannot be scheduled for lack of resources or misconfiguration are terminated automatically (default: `false`).
+    """)
+    public boolean terminateUnschedulableJobs;
+
+    @ConfigOption
+    @Description("""
         One or more container mounts. Mounts can be specified as simple e.g. `/some/path` or canonical format e.g. `/host/path:/mount/path[:ro|rw]`.
     """)
     public List<String> volumes;
 
-    @ConfigOption
-    @Description("""
-        When true, jobs that cannot be scheduled for lack of resources or misconfiguration are terminated automatically (default: `false`).
-    """)
-    public boolean terminateUnschedulableJobs;
 }
