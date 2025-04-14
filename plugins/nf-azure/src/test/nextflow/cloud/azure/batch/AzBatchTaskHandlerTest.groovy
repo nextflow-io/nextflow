@@ -57,10 +57,9 @@ class AzBatchTaskHandlerTest extends Specification {
         def processor = Mock(TaskProcessor) {
             getExecutor() >> executor
         }
-        def task = Mock(TaskRun) {
-            getProcessor() >> processor
-            getConfig() >> Mock(TaskConfig)
-        }
+        def task = createTaskRun()
+        task.getProcessor() >> processor
+        task.getConfig() >> Mock(TaskConfig)
         and:
         def handler = Spy(new AzBatchTaskHandler(task, executor)) {
             getBatchService() >> azure
