@@ -298,7 +298,7 @@ Enum types cannot be included across modules at this time.
 
 ### Output block
 
-The output block consists of one or more *output declarations*. An output declaration consists of a name and one or more *output directives* for defining the output:
+The output block consists of one or more *output declarations*. Each output declaration consists of a name and one or more *output directives* for defining the output:
 
 ```nextflow
 output {

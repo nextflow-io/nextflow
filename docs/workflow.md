@@ -24,7 +24,7 @@ workflow {
 
 ### Parameters
 
-Parameters can be defined in the script with a default value that can be overridden from the CLI, params file, or config file. Params should only be used by the entry workflow:
+Parameters can be defined in the script with a default value that can be overridden from the CLI, params file, or config file. Parameters should only be used by the entry workflow:
 
 ```nextflow
 params.data = '/some/data/file'
@@ -52,7 +52,7 @@ workflow {
 }
 ```
 
-The above example defines a workflow named `my_workflow` which can be called from another workflow as `my_workflow()`. Both `foo` and `bar` could be any other process or workflow.
+The above example defines a workflow named `my_workflow` which is called from another workflow as `my_workflow()`. Both `foo` and `bar` could be any other process or workflow.
 
 ### Takes and emits
 
@@ -374,11 +374,11 @@ workflow {
 :::
 
 :::{versionchanged} 24.10.0
-A second preview version was introduced. Read the [migration notes](#migrating-from-first-preview) for details.
+A second preview version was introduced. See [Migrating from first preview](#migrating-from-first-preview) for more details.
 :::
 
 :::{versionchanged} 25.04.0
-A third preview version was introduced. Read the [migration notes](#migrating-from-second-preview) for details.
+A third preview version was introduced. See [Migrating from second preview](#migrating-from-second-preview) for more details.
 :::
 
 :::{note}
@@ -429,9 +429,9 @@ nextflow run main.nf -output-dir 'my-results'
 outputDir = 'my-results'
 ```
 
-It defaults to `results` in the launch directory.
+The default output directory is `results` in the launch directory.
 
-By default, all output files are published to this directory. Each output in the output block can define where files are published using the `path` directive. For example:
+By default, all output files are published to the output directory. Each output in the output block can define where files are published using the `path` directive. For example:
 
 ```nextflow
 workflow {
@@ -517,7 +517,7 @@ Each `>>` specifies a *source file* and *publish target*. The source file should
 
 ### Index files
 
-Each output can create an index file of the values that were published. An index file preserves the structure of channel values, including metadata, which is simpler than encoding this information with directories and file names. The index file can be CSV (`.csv`), JSON (`.json`), or YAML (`.yml`, `.yaml`). The channel values should be files, lists, or maps.
+Each output can create an index file of the values that were published. An index file preserves the structure of channel values, including metadata, which is simpler than encoding this information with directories and file names. The index file can be a CSV (`.csv`), JSON (`.json`), or YAML (`.yml`, `.yaml`) file. The channel values should be files, lists, or maps.
 
 For example:
 
@@ -637,4 +637,4 @@ The first preview of workflow publishing was introduced in 24.04. The second pre
 
   In other words, only target blocks can be specified in the output block, but target blocks can still specify directives such as `mode`.
 
-- Target names cannot begin or end with a slash (`/`);
+- Target names cannot begin or end with a slash (`/`).
