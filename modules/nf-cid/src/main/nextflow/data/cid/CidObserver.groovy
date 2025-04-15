@@ -16,6 +16,8 @@
 
 package nextflow.data.cid
 
+import nextflow.util.SecretHelper
+
 import java.time.OffsetDateTime
 
 import static nextflow.data.cid.fs.CidPath.*
@@ -166,7 +168,7 @@ class CidObserver implements TraceObserver {
             session.uniqueId.toString(),
             session.runName,
             getNormalizedParams(session.params, normalizer),
-            session.resolvedConfig
+            SecretHelper.hideSecrets(session.config.deepClone()) as Map
         )
         final executionHash = CacheHelper.hasher(value).hash().toString()
         store.save(executionHash, value)
