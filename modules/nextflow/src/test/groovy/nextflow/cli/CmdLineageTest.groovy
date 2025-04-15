@@ -215,8 +215,8 @@ class CmdLineageTest extends Specification {
         entry = new TaskRun("u345-2346-1stw2", "foo",
                 new Checksum("abcde2345","nextflow","standard"),
                 new Checksum("abfsc2375","nextflow","standard"),
-                [new Parameter( "ValueInParam", "sample_id","ggal_gut"),
-                new Parameter("FileInParam","reads",["lid://45678/output.txt"])],
+                [new Parameter( "val", "sample_id","ggal_gut"),
+                new Parameter("path","reads",["lid://45678/output.txt"])],
                 null, null, null, null, [:],[], null)
         lidFile3.text = encoder.encode(entry)
         entry  = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
@@ -230,10 +230,10 @@ class CmdLineageTest extends Specification {
         final network = """flowchart BT
     lid://12345/file.bam@{shape: document, label: "lid://12345/file.bam"}
     lid://123987/file.bam@{shape: document, label: "lid://123987/file.bam"}
-    lid://123987@{shape: process, label: "foo"}
+    lid://123987@{shape: process, label: "foo [lid://123987]"}
     ggal_gut@{shape: document, label: "ggal_gut"}
     lid://45678/output.txt@{shape: document, label: "lid://45678/output.txt"}
-    lid://45678@{shape: process, label: "bar"}
+    lid://45678@{shape: process, label: "bar [lid://45678]"}
 
     lid://123987/file.bam -->lid://12345/file.bam
     lid://123987 -->lid://123987/file.bam

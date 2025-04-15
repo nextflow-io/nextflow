@@ -133,7 +133,7 @@ class LinFileSystemProvider extends FileSystemProvider {
         return newByteChannel0(lid, options, attrs)
     }
 
-
+    @CompileStatic
     private class LinPathSeekableByteChannel implements SeekableByteChannel {
         SeekableByteChannel channel
 
@@ -230,6 +230,7 @@ class LinFileSystemProvider extends FileSystemProvider {
         }
     }
 
+    @CompileStatic
     private class LidFilter implements DirectoryStream.Filter<Path> {
 
         private final LinFileSystem fs

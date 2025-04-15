@@ -16,6 +16,7 @@
 
 package nextflow.lineage
 
+import groovy.transform.CompileStatic
 import nextflow.lineage.model.Annotation
 import nextflow.lineage.model.Checksum
 import nextflow.lineage.model.DataPath
@@ -26,30 +27,33 @@ import nextflow.lineage.model.Workflow
 import nextflow.lineage.model.WorkflowOutputs
 import nextflow.lineage.model.WorkflowRun
 
-import java.lang.reflect.Field
-
 /**
  * Class to validate if the string refers to a property in the classes of the Lineage Metadata model.
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
+@CompileStatic
 class LinPropertyValidator {
 
-    private static List<Class> LID_MODEL_CLASSES = [Workflow, WorkflowRun, WorkflowOutputs, TaskRun, TaskOutputs, DataOutput, DataPath, Parameter, Checksum, Annotation]
+    private static List<Class> LID_MODEL_CLASSES = [Workflow, WorkflowRun, WorkflowOutputs, TaskRun, TaskOutputs, DataOutput, DataPath, Parameter, Checksum, Annotation] as List<Class>
     private Set<String> validProperties
 
     LinPropertyValidator(){
         this.validProperties = new HashSet<String>()
         for( Class clazz: LID_MODEL_CLASSES) {
-            for( Field field: clazz.declaredFields) {
+            for( MetaProperty field: clazz.metaClass.getProperties()) {
                 validProperties.add( field.name)
             }
         }
     }
 
     void validate(Collection<String> properties) {
-        for(String property: properties) {
-            if (!(property in this.validProperties)) {
-                throw new IllegalArgumentException("Property '$property' doesn't exist in the lineage model")
+        for( String property: properties ) {
+            if( !(property in this.validProperties) ) {
+                def msg = "Property '$property' doesn't exist in the lineage model."
+                final matches = this.validProperties.closest(property)
+                if( matches )
+                    msg += " -- Did you mean one of these?" + matches.collect { "  $it"}.join(', ')
+                throw new IllegalArgumentException(msg)
             }
         }
     }

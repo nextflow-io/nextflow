@@ -51,6 +51,7 @@ import org.eclipse.jgit.diff.RawTextComparator
  */
 @CompileStatic
 class LinCommandImpl implements CmdLineage.LinCommand {
+    private static Path DEFAULT_HTML_FILE = Path.of("lineage-render.html")
 
     @Canonical
     static class Edge {
@@ -117,8 +118,9 @@ class LinCommandImpl implements CmdLineage.LinCommand {
             return
         }
         try {
-            renderLineage(store, args[0], Path.of(args[1]))
-            println("Linage graph for ${args[0]} rendered in ${args[1]}")
+            final renderFile = args.size() > 1 ? Path.of(args[1]) : DEFAULT_HTML_FILE
+            renderLineage(store, args[0], renderFile)
+            println("Linage graph for ${args[0]} rendered in $renderFile")
         } catch (Throwable e) {
             println("ERROR: rendering lineage graph. ${e.message}")
         }
@@ -140,6 +142,10 @@ class LinCommandImpl implements CmdLineage.LinCommand {
         lines.join('\n')
         final template = MermaidHtmlRenderer.readTemplate()
         file.text = template.replace('REPLACE_WITH_NETWORK_DATA', lines.join('\n'))
+    }
+
+    private String safeId( String rawId){
+        return rawId.replaceAll(/[^a-zA-Z0-9_.:\/\-]/, '_')
     }
 
     private void processNode(List<String> lines, String nodeToRender, LinkedList<String> nodes, LinkedList<Edge> edges, LinStore store) {
@@ -166,26 +172,28 @@ class LinCommandImpl implements CmdLineage.LinCommand {
     }
 
     private void processTaskRun(TaskRun taskRun, List<String> lines, String nodeToRender, LinkedList<String> nodes, LinkedList<Edge> edges) {
-        lines << "    ${nodeToRender}@{shape: process, label: \"${taskRun.name}\"}".toString()
+        lines << "    ${nodeToRender}@{shape: process, label: \"${taskRun.name} [$nodeToRender]\"}".toString()
         final parameters = taskRun.inputs
         for (Parameter source : parameters) {
-            if (source.type.equals(FileInParam.simpleName)) {
+            if (source.type.equals("path")) {
                 manageFileInParam(lines, nodeToRender, nodes, edges, source.value)
             } else {
                 final label = convertToLabel(source.value.toString())
-                lines << "    ${source.value.toString()}@{shape: document, label: \"${label}\"}".toString();
-                edges.add(new Edge(source.value.toString(), nodeToRender))
+                final id = safeId(source.value.toString())
+                lines << "    ${id}@{shape: document, label: \"${label}\"}".toString();
+                edges.add(new Edge(id, nodeToRender))
             }
         }
     }
 
     private void processWorkflowRun(WorkflowRun wfRun, List<String> lines, String nodeToRender, LinkedList<Edge> edges) {
-        lines << "    ${nodeToRender}@{shape: processes, label: \"${wfRun.name}\"}".toString()
+        lines << """    ${nodeToRender}@{shape: processes, label: \"${wfRun.name} [${nodeToRender}]\"}""".toString()
         final parameters = wfRun.params
         parameters.each {
             final label = convertToLabel(it.value.toString())
-            lines << "    ${it.value.toString()}@{shape: document, label: \"${label}\"}".toString();
-            edges.add(new Edge(it.value.toString(), nodeToRender))
+            final id = safeId(it.value.toString())
+            lines << "    ${id}@{shape: document, label: \"${label}\"}".toString();
+            edges.add(new Edge(id, nodeToRender))
         }
     }
 
@@ -199,8 +207,9 @@ class LinCommandImpl implements CmdLineage.LinCommand {
             edges.add(new Edge(source, nodeToRender))
         } else {
             final label = convertToLabel(source)
-            lines << "    ${source}@{shape: document, label: \"${label}\"}".toString();
-            edges.add(new Edge(source, nodeToRender))
+            final id = safeId(source)
+            lines << "    ${id}@{shape: document, label: \"${label}\"}".toString();
+            edges.add(new Edge(id, nodeToRender))
         }
     }
 
@@ -230,15 +239,17 @@ class LinCommandImpl implements CmdLineage.LinCommand {
                     return
                 } else {
                     final label = convertToLabel(path)
-                    lines << "    ${path}@{shape: document, label: \"${label}\"}".toString();
-                    edges.add(new Edge(path, nodeToRender))
+                    final id = safeId(path)
+                    lines << "    ${id}@{shape: document, label: \"${label}\"}".toString();
+                    edges.add(new Edge(id, nodeToRender))
                     return
                 }
             }
         }
         final label = convertToLabel(value.toString())
-        lines << "    ${value.toString()}@{shape: document, label: \"${label}\"}".toString();
-        edges.add(new Edge(value.toString(), nodeToRender))
+        final id = safeId(value.toString())
+        lines << "    ${id}@{shape: document, label: \"${label}\"}".toString();
+        edges.add(new Edge(id, nodeToRender))
     }
 
     @Override
