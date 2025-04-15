@@ -464,6 +464,8 @@ output {
 
 In the above example, the output of process `fetch` is assigned to the `samples` workflow output. How this output is published to a directory structure is described in the next section.
 
+(workflow-publishing-files)=
+
 ### Publishing files
 
 The top-level output directory of a workflow run can be set using the `-output-dir` command-line option or the `outputDir` config option:
