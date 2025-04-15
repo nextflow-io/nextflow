@@ -41,7 +41,7 @@ class CmdLineage extends CmdBase implements UsageAware {
 
     interface LinCommand extends ExtensionPoint {
         void log(ConfigMap config)
-        void show(ConfigMap config, List<String> args)
+        void describe(ConfigMap config, List<String> args)
         void render(ConfigMap config, List<String> args)
         void diff(ConfigMap config, List<String> args)
         void find(ConfigMap config, List<String> args)
@@ -62,7 +62,7 @@ class CmdLineage extends CmdBase implements UsageAware {
 
     CmdLineage() {
         commands << new CmdLog()
-        commands << new CmdShow()
+        commands << new CmdDescribe()
         commands << new CmdRender()
         commands << new CmdDiff()
         commands << new CmdFind()
@@ -177,11 +177,11 @@ class CmdLineage extends CmdBase implements UsageAware {
         }
     }
 
-    class CmdShow implements SubCmd{
+    class CmdDescribe implements SubCmd{
 
         @Override
         String getName() {
-            return 'show'
+            return 'describe'
         }
 
         @Override
@@ -196,7 +196,7 @@ class CmdLineage extends CmdBase implements UsageAware {
                 return
             }
 
-            operation.show(config, args)
+            operation.describe(config, args)
         }
 
         @Override

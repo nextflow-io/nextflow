@@ -88,7 +88,7 @@ class LinCommandImpl implements CmdLineage.LinCommand {
     }
 
     @Override
-    void show(ConfigMap config, List<String> args) {
+    void describe(ConfigMap config, List<String> args) {
         if( !isLidUri(args[0]) )
             throw new Exception("Identifier is not a LID URL")
         final store = LinStoreFactory.getOrCreate(new Session(config))

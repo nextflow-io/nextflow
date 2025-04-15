@@ -189,7 +189,7 @@ class LinPathTest extends Specification {
         thrown(FileNotFoundException)
 
         when: 'Lid description'
-        def result = new LinPath(lidFs, '5678').getTargetorMetadataPath()
+        def result = new LinPath(lidFs, '5678').getTargetOrMetadataPath()
         then:
         result instanceof LinMetadataPath
         result.text == wfResultsMetadata

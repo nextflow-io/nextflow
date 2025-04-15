@@ -141,7 +141,7 @@ class CmdLineageTest extends Specification {
         def expectedOutput = jsonSer
         lidFile.text = jsonSer
         when:
-            def lidCmd = new CmdLineage(launcher: launcher, args: ["show", "lid://12345"])
+            def lidCmd = new CmdLineage(launcher: launcher, args: ["describe", "lid://12345"])
             lidCmd.run()
             def stdout = capture
                 .toString()
@@ -168,7 +168,7 @@ class CmdLineageTest extends Specification {
         }
 
         when:
-            def lidCmd = new CmdLineage(launcher: launcher, args: ["show", "lid://12345"])
+            def lidCmd = new CmdLineage(launcher: launcher, args: ["describe", "lid://12345"])
             lidCmd.run()
             def stdout = capture
                 .toString()
@@ -283,7 +283,7 @@ class CmdLineageTest extends Specification {
         def expectedOutput = jsonSer
         lidFile.text = jsonSer
         when:
-        def lidCmd = new CmdLineage(launcher: launcher, args: ["show", "lid:///?type=DataOutput"])
+        def lidCmd = new CmdLineage(launcher: launcher, args: ["describe", "lid:///?type=DataOutput"])
         lidCmd.run()
         def stdout = capture
                 .toString()
@@ -318,7 +318,7 @@ class CmdLineageTest extends Specification {
         def expectedOutput = jsonSer
         lidFile.text = jsonSer
         when:
-        def lidCmd = new CmdLineage(launcher: launcher, args: ["show", "lid:///?type=DataOutput"])
+        def lidCmd = new CmdLineage(launcher: launcher, args: ["describe", "lid:///?type=DataOutput"])
         lidCmd.run()
         def stdout = capture
             .toString()

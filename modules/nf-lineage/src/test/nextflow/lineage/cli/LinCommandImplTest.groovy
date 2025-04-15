@@ -126,7 +126,7 @@ class LinCommandImplTest extends Specification{
         def expectedOutput = jsonSer
         lidFile.text = jsonSer
         when:
-        new LinCommandImpl().show(configMap, ["lid://12345"])
+        new LinCommandImpl().describe(configMap, ["lid://12345"])
         def stdout = capture
             .toString()
             .readLines()// remove the log part
@@ -143,7 +143,7 @@ class LinCommandImplTest extends Specification{
         given:
 
         when:
-        new LinCommandImpl().show(configMap, ["lid://12345"])
+        new LinCommandImpl().describe(configMap, ["lid://12345"])
         def stdout = capture
             .toString()
             .readLines()// remove the log part
@@ -291,7 +291,7 @@ class LinCommandImplTest extends Specification{
         def expectedOutput = jsonSer
         lidFile.text = jsonSer
         when:
-        new LinCommandImpl().show(configMap, ["lid:///?type=DataOutput"])
+        new LinCommandImpl().describe(configMap, ["lid:///?type=DataOutput"])
         def stdout = capture
             .toString()
             .readLines()// remove the log part
@@ -321,7 +321,7 @@ class LinCommandImplTest extends Specification{
         lidFile.text = encoder.encode(entry)
         lidFile2.text = encoder.encode(entry2)
         when:
-        new LinCommandImpl().show(configMap, ["lid:///?type=DataOutput#path"])
+        new LinCommandImpl().describe(configMap, ["lid:///?type=DataOutput#path"])
         def stdout = capture
             .toString()
             .readLines()// remove the log part
@@ -415,7 +415,7 @@ class LinCommandImplTest extends Specification{
         when:
         def config = new ConfigMap()
         new LinCommandImpl().log(config)
-        new LinCommandImpl().show(config, ["lid:///?type=DataOutput"])
+        new LinCommandImpl().describe(config, ["lid:///?type=DataOutput"])
         new LinCommandImpl().render(config, ["lid://12345", "output.html"])
         new LinCommandImpl().diff(config, ["lid://89012", "lid://12345"])
 
