@@ -95,7 +95,7 @@ class Session implements ISession {
 
     final List<Closure> igniters = new ArrayList<>(20)
 
-    final Map<DataflowWriteChannel,String> publishTargets = [:]
+    final Map<String,DataflowWriteChannel> outputs = [:]
 
     /**
      * Creates process executors
