@@ -180,19 +180,19 @@ class CidPathTest extends Specification {
         thrown(FileNotFoundException)
 
         when: 'Cid description'
-        def result = new CidPath(cidFs, '5678').getTargetPath(true)
+        def result = new CidPath(cidFs, '5678').getTargetOrMetadataPath()
         then:
         result instanceof CidMetadataPath
         result.text == wfResultsMetadata
 
         when: 'Cid description subobject'
-        def result2 = new CidPath(cidFs, '5678#outputs').getTargetPath(true)
+        def result2 = new CidPath(cidFs, '5678#outputs').getTargetOrMetadataPath()
         then:
         result2 instanceof CidMetadataPath
         result2.text == CidUtils.encodeSearchOutputs([new Parameter("Path","a", "cid://1234/a.txt")], true)
 
         when: 'Cid subobject does not exist'
-        new CidPath(cidFs, '23456#notexists').getTargetPath(true)
+        new CidPath(cidFs, '23456#notexists').getTargetOrMetadataPath()
         then:
         thrown(IllegalArgumentException)
 

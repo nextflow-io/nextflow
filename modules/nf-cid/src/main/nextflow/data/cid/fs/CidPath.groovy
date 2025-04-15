@@ -140,17 +140,26 @@ class CidPath implements Path, LogicalDataPath {
     protected String getFilePath(){ this.filePath }
 
 
+
     /**
-     * Finds the target path of a CID path
-     **/
-    protected static Path findTarget(CidFileSystem fs, String filePath, boolean resultsAsPath, String[] children=[]) throws Exception{
+     * Finds the target path of a CID path.
+     * @param fs CID fileSystem associated to the CidPath to find
+     * @param filePath Path associated to the CidPath to find
+     * @param resultsAsPath True to return metadata descriptions as CidMetadataPath
+     * @param children Sub-object/path inside the description
+     * @return Path or CidMetadataPath associated to the CidPath
+     * @throws Exception
+     *      IllegalArgumentException if the filepath, filesystem or its CidStore are null.
+     *      FileNotFoundException if the filePath or children are not found in the CidStore.
+     */
+    protected static Path findTarget(CidFileSystem fs, String filePath, boolean resultsAsPath, String[] children=[]) throws Exception {
         if( !fs )
             throw new IllegalArgumentException("Cannot get target path for a relative CidPath")
         if( filePath.isEmpty() || filePath == SEPARATOR )
             throw new IllegalArgumentException("Cannot get target path for an empty CidPath")
         final store = fs.getCidStore()
         if( !store )
-            throw new Exception("CID store not found. Check Nextflow configuration.")
+            throw new IllegalArgumentException("CID store not found. Check Nextflow configuration.")
         final object = store.load(filePath)
         if ( object ){
             if( object instanceof DataOutput ) {
@@ -426,15 +435,29 @@ class CidPath implements Path, LogicalDataPath {
 
     @Override
     Path toRealPath(LinkOption... options) throws IOException {
-        return this.getTargetPath(true)
+        return this.getTargetOrMetadataPath()
     }
 
     Path toTargetPath() {
-        return getTargetPath(true)
+        return getTargetOrMetadataPath()
+    }
+    /**
+     * Get the path associated to a DataOutput metadata.
+     *
+     * @return Path associated to a DataOutput
+     * @throws FileNotFoundException if the metadata associated to the CidPath does not exist or its type is not a DataOutput.
+     */
+    protected Path getTargetPath() {
+        return findTarget(fileSystem, filePath, false, parseChildrenFormFragment(fragment))
     }
 
-    protected Path getTargetPath(boolean resultsAsPath=false){
-        return findTarget(fileSystem, filePath, resultsAsPath, parseChildrenFormFragment(fragment))
+    /**
+     * Get the path associated to any metadata object.
+     * @return Path associated to a DataOutput or CidMetadataFile with the metadata object for other types.
+     * @throws FileNotFoundException if the metadata associated to the CidPath does not exist.
+     */
+    protected Path getTargetOrMetadataPath(){
+        return findTarget(fileSystem, filePath, true, parseChildrenFormFragment(fragment))
     }
 
     @Override

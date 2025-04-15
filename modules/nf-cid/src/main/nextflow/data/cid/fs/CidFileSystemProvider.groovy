@@ -120,7 +120,7 @@ class CidFileSystemProvider extends FileSystemProvider {
     }
 
     private static InputStream newInputStream0(CidPath cid, OpenOption... options) throws IOException {
-        final realPath = cid.getTargetPath(true)
+        final realPath = cid.getTargetOrMetadataPath()
         if (realPath instanceof CidMetadataPath)
             return (realPath as CidMetadataPath).newInputStream()
         return realPath.fileSystem.provider().newInputStream(realPath, options)
@@ -198,7 +198,7 @@ class CidFileSystemProvider extends FileSystemProvider {
         if (cid instanceof CidMetadataPath) {
             return (cid as CidMetadataPath).newSeekableByteChannel()
         }
-        final realPath = cid.getTargetPath(true)
+        final realPath = cid.getTargetOrMetadataPath()
         if (realPath instanceof CidMetadataPath) {
             return (realPath as CidMetadataPath).newSeekableByteChannel()
         } else {
@@ -210,7 +210,7 @@ class CidFileSystemProvider extends FileSystemProvider {
     @Override
     DirectoryStream<Path> newDirectoryStream(Path path, DirectoryStream.Filter<? super Path> filter) throws IOException {
         final cid = toCidPath(path)
-        final real = cid.getTargetPath(false)
+        final real = cid.getTargetPath()
         final stream = real
             .getFileSystem()
             .provider()
@@ -309,7 +309,7 @@ class CidFileSystemProvider extends FileSystemProvider {
 
     @Override
     boolean isHidden(Path path) throws IOException {
-        return toCidPath(path).getTargetPath(true).isHidden()
+        return toCidPath(path).getTargetOrMetadataPath().isHidden()
     }
 
     @Override
@@ -327,7 +327,7 @@ class CidFileSystemProvider extends FileSystemProvider {
     }
 
     private void checkAccess0(CidPath cid, AccessMode... modes) {
-        final real = cid.getTargetPath(true)
+        final real = cid.getTargetOrMetadataPath()
         if (real instanceof CidMetadataPath)
             return
         real.fileSystem.provider().checkAccess(real, modes)
@@ -356,7 +356,7 @@ class CidFileSystemProvider extends FileSystemProvider {
     }
 
     private <A extends BasicFileAttributes> A readAttributes0(CidPath cid, Class<A> type, LinkOption... options) throws IOException {
-        final real = cid.getTargetPath(true)
+        final real = cid.getTargetOrMetadataPath()
         if (real instanceof CidMetadataPath)
             return (real as CidMetadataPath).readAttributes(type)
         return real.fileSystem.provider().readAttributes(real, type, options)
