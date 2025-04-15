@@ -140,10 +140,20 @@ class LinPath implements Path, LogicalDataPath {
     protected String getFilePath(){ this.filePath }
 
 
+
     /**
-     * Finds the target path of a LID path
-     **/
-    protected static Path findTarget(LinFileSystem fs, String filePath, boolean resultsAsPath, String[] children=[]) throws Exception{
+
+     * Finds the target path of a LinPath.
+     * @param fs LinFileSystem associated to the LinPath to find
+     * @param filePath Path associated to the LinPath to find
+     * @param resultsAsPath True to return metadata descriptions as LinMetadataPath
+     * @param children Sub-object/path inside the description
+     * @return Path or LinMetadataPath associated to the LinPath
+     * @throws Exception
+     *      IllegalArgumentException if the filepath, filesystem or its LinStore are null.
+     *      FileNotFoundException if the filePath or children are not found in the LinStore.
+     */
+    protected static Path findTarget(LinFileSystem fs, String filePath, boolean resultsAsPath, String[] children=[]) throws Exception {
         if( !fs )
             throw new IllegalArgumentException("Cannot get target path for a relative LinPath")
         if( filePath.isEmpty() || filePath == SEPARATOR )
@@ -426,15 +436,29 @@ class LinPath implements Path, LogicalDataPath {
 
     @Override
     Path toRealPath(LinkOption... options) throws IOException {
-        return this.getTargetPath(true)
+        return this.getTargetOrMetadataPath()
     }
 
     Path toTargetPath() {
-        return getTargetPath(true)
+        return getTargetOrMetadataPath()
+    }
+    /**
+     * Get the path associated to a DataOutput metadata.
+     *
+     * @return Path associated to a DataOutput
+     * @throws FileNotFoundException if the metadata associated to the CidPath does not exist or its type is not a DataOutput.
+     */
+    protected Path getTargetPath() {
+        return findTarget(fileSystem, filePath, false, parseChildrenFormFragment(fragment))
     }
 
-    protected Path getTargetPath(boolean resultsAsPath=false){
-        return findTarget(fileSystem, filePath, resultsAsPath, parseChildrenFormFragment(fragment))
+    /**
+     * Get the path associated to any metadata object.
+     * @return Path associated to a DataOutput or CidMetadataFile with the metadata object for other types.
+     * @throws FileNotFoundException if the metadata associated to the CidPath does not exist.
+     */
+    protected Path getTargetOrMetadataPath(){
+        return findTarget(fileSystem, filePath, true, parseChildrenFormFragment(fragment))
     }
 
     @Override

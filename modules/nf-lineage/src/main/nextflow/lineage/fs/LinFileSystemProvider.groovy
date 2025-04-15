@@ -120,7 +120,7 @@ class LinFileSystemProvider extends FileSystemProvider {
     }
 
     private static InputStream newInputStream0(LinPath lid, OpenOption... options) throws IOException {
-        final realPath = lid.getTargetPath(true)
+        final realPath = lid.getTargetOrMetadataPath()
         if (realPath instanceof LinMetadataPath)
             return (realPath as LinMetadataPath).newInputStream()
         return realPath.fileSystem.provider().newInputStream(realPath, options)
@@ -198,7 +198,7 @@ class LinFileSystemProvider extends FileSystemProvider {
         if (lid instanceof LinMetadataPath) {
             return (lid as LinMetadataPath).newSeekableByteChannel()
         }
-        final realPath = lid.getTargetPath(true)
+        final realPath = lid.getTargetOrMetadataPath()
         if (realPath instanceof LinMetadataPath) {
             return (realPath as LinMetadataPath).newSeekableByteChannel()
         } else {
@@ -210,7 +210,7 @@ class LinFileSystemProvider extends FileSystemProvider {
     @Override
     DirectoryStream<Path> newDirectoryStream(Path path, DirectoryStream.Filter<? super Path> filter) throws IOException {
         final lid = toLinPath(path)
-        final real = lid.getTargetPath(false)
+        final real = lid.getTargetPath()
         final stream = real
             .getFileSystem()
             .provider()
@@ -309,7 +309,7 @@ class LinFileSystemProvider extends FileSystemProvider {
 
     @Override
     boolean isHidden(Path path) throws IOException {
-        return toLinPath(path).getTargetPath(true).isHidden()
+        return toLinPath(path).getTargetOrMetadataPath().isHidden()
     }
 
     @Override
@@ -327,7 +327,7 @@ class LinFileSystemProvider extends FileSystemProvider {
     }
 
     private void checkAccess0(LinPath lid, AccessMode... modes) {
-        final real = lid.getTargetPath(true)
+        final real = lid.getTargetOrMetadataPath()
         if (real instanceof LinMetadataPath)
             return
         real.fileSystem.provider().checkAccess(real, modes)
@@ -356,7 +356,7 @@ class LinFileSystemProvider extends FileSystemProvider {
     }
 
     private <A extends BasicFileAttributes> A readAttributes0(LinPath lid, Class<A> type, LinkOption... options) throws IOException {
-        final real = lid.getTargetPath(true)
+        final real = lid.getTargetOrMetadataPath()
         if (real instanceof LinMetadataPath)
             return (real as LinMetadataPath).readAttributes(type)
         return real.fileSystem.provider().readAttributes(real, type, options)

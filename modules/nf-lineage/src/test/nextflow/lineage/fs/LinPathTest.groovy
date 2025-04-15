@@ -189,19 +189,19 @@ class LinPathTest extends Specification {
         thrown(FileNotFoundException)
 
         when: 'Lid description'
-        def result = new LinPath(lidFs, '5678').getTargetPath(true)
+        def result = new LinPath(lidFs, '5678').getTargetorMetadataPath()
         then:
         result instanceof LinMetadataPath
         result.text == wfResultsMetadata
 
         when: 'Lid description subobject'
-        def result2 = new LinPath(lidFs, '5678#outputs').getTargetPath(true)
+        def result2 = new LinPath(lidFs, '5678#outputs').getTargetOrMetadataPath()
         then:
         result2 instanceof LinMetadataPath
         result2.text == LinUtils.encodeSearchOutputs([new Parameter("Path","a", "lid://1234/a.txt")], true)
 
         when: 'Lid subobject does not exist'
-        new LinPath(lidFs, '23456#notexists').getTargetPath(true)
+        new LinPath(lidFs, '23456#notexists').getTargetOrMetadataPath()
         then:
         thrown(IllegalArgumentException)
     }

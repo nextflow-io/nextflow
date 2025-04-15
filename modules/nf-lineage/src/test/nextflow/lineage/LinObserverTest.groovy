@@ -180,7 +180,7 @@ class LinObserverTest extends Specification {
         def observer = new LinObserver(session, store)
         def mainScript = new DataPath("file://${scriptFile.toString()}", new Checksum("78910", "nextflow", "standard"))
         def workflow = new Workflow([mainScript],"https://nextflow.io/nf-test/", "123456" )
-        def workflowRun = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [])
+        def workflowRun = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [], config)
         when:
         observer.onFlowCreate(session)
         observer.onFlowBegin()
