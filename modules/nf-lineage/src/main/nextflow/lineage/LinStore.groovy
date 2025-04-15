@@ -60,6 +60,4 @@ interface LinStore extends Closeable {
      */
     Map<String,LinSerializable> search(String queryString)
 
-
-
 }
