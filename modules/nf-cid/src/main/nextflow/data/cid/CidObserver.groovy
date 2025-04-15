@@ -16,16 +16,18 @@
 
 package nextflow.data.cid
 
+import java.time.OffsetDateTime
+
 import static nextflow.data.cid.fs.CidPath.*
 
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
-import java.time.Instant
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.data.cid.model.Annotation
 import nextflow.data.cid.model.Checksum
 import nextflow.data.cid.model.DataOutput
 import nextflow.data.cid.model.DataPath
@@ -39,11 +41,21 @@ import nextflow.file.FileHolder
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.script.ScriptMeta
+
+import nextflow.script.params.BaseParam
+import nextflow.script.params.CmdEvalParam
 import nextflow.script.params.DefaultInParam
+import nextflow.script.params.EachInParam
+import nextflow.script.params.EnvInParam
+import nextflow.script.params.EnvOutParam
 import nextflow.script.params.FileInParam
 import nextflow.script.params.FileOutParam
 import nextflow.script.params.InParam
 import nextflow.script.params.OutParam
+import nextflow.script.params.StdInParam
+import nextflow.script.params.StdOutParam
+import nextflow.script.params.ValueInParam
+import nextflow.script.params.ValueOutParam
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
@@ -58,7 +70,18 @@ import nextflow.util.TestOnly
 @Slf4j
 @CompileStatic
 class CidObserver implements TraceObserver {
-
+    private static Map<Class<? extends BaseParam>, String> TaskParamToValue = [
+        (StdOutParam)  : "stdout",
+        (StdInParam)   : "stdin",
+        (FileInParam)  : "path",
+        (FileOutParam) : "path",
+        (ValueInParam) : "val",
+        (ValueOutParam): "val",
+        (EnvInParam)   : "env",
+        (EnvOutParam)  : "env",
+        (CmdEvalParam) : "eval",
+        (EachInParam)  : "each"
+    ]
     private String executionHash
     private CidStore store
     private Session session
@@ -91,9 +114,9 @@ class CidObserver implements TraceObserver {
         executionHash = storeWorkflowRun(normalizer)
         final executionUri = asUriString(executionHash)
         workflowResults = new WorkflowOutputs(
-            Instant.now(),
+            OffsetDateTime.now(),
             executionUri,
-            new HashMap<String, Object>()
+            new LinkedList<Parameter>()
         )
         this.store.getHistoryLog().updateRunCid(session.uniqueId, executionUri)
     }
@@ -101,8 +124,8 @@ class CidObserver implements TraceObserver {
     @Override
     void onFlowComplete(){
         if (this.workflowResults){
-            workflowResults.createdAt = Instant.now()
-            final key = executionHash + SEPARATOR + 'outputs'
+            workflowResults.createdAt = OffsetDateTime.now()
+            final key = executionHash + '#outputs'
             this.store.save(key, workflowResults)
         }
     }
@@ -142,7 +165,8 @@ class CidObserver implements TraceObserver {
             workflow,
             session.uniqueId.toString(),
             session.runName,
-            getNormalizedParams(session.params, normalizer)
+            getNormalizedParams(session.params, normalizer),
+            session.resolvedConfig
         )
         final executionHash = CacheHelper.hasher(value).hash().toString()
         store.save(executionHash, value)
@@ -151,19 +175,10 @@ class CidObserver implements TraceObserver {
 
     protected static List<Parameter> getNormalizedParams(Map<String, Object> params, PathNormalizer normalizer){
         final normalizedParams = new LinkedList<Parameter>()
-        params.each{String key, Object value ->
-            addNormalizedParam(key, value, normalizer, normalizedParams)
+        params.each{ String key, Object value ->
+            normalizedParams.add( new Parameter( getParameterType(value), key, normalizeValue(value, normalizer) ) )
         }
         return normalizedParams
-    }
-
-    private static void addNormalizedParam(String key, Object value, PathNormalizer normalizer, List<Parameter> normalizedParams){
-        if( value instanceof Path )
-            normalizedParams.add( new Parameter( Path.class.simpleName, key, normalizer.normalizePath( value as Path ) ) )
-        else if ( value instanceof CharSequence )
-            normalizedParams.add( new Parameter( String.class.simpleName, key, normalizer.normalizePath( value.toString() ) ) )
-        else
-            normalizedParams.add( new Parameter( value.class.simpleName, key, value) )
     }
 
     @Override
@@ -180,8 +195,8 @@ class CidObserver implements TraceObserver {
 
     protected String storeTaskResults(TaskRun task, PathNormalizer normalizer){
         final outputParams = getNormalizedTaskOutputs(task, normalizer)
-        final value = new TaskOutputs( asUriString(task.hash.toString()), asUriString(executionHash), Instant.now(), outputParams )
-        final key = task.hash.toString() + SEPARATOR + 'outputs'
+        final value = new TaskOutputs( asUriString(task.hash.toString()), asUriString(executionHash), OffsetDateTime.now(), outputParams )
+        final key = task.hash.toString() + '#outputs'
         store.save(key,value)
         return key
     }
@@ -197,15 +212,19 @@ class CidObserver implements TraceObserver {
 
     private void manageTaskOutputParameter(OutParam key, LinkedList<Parameter> outputParams, value, TaskRun task, PathNormalizer normalizer) {
         if (key instanceof FileOutParam) {
-            outputParams.add(new Parameter(key.class.simpleName, key.name, manageFileOutParam(value, task)))
+            outputParams.add(new Parameter(getParameterType(key), key.name, manageFileOutParam(value, task)))
         } else {
-            if (value instanceof Path)
-                outputParams.add(new Parameter(key.class.simpleName, key.name, normalizer.normalizePath(value as Path)))
-            else if (value instanceof CharSequence)
-                outputParams.add(new Parameter(key.class.simpleName, key.name, normalizer.normalizePath(value.toString())))
-            else
-                outputParams.add(new Parameter(key.class.simpleName, key.name, value))
+            outputParams.add(new Parameter(getParameterType(key), key.name, normalizeValue(value, normalizer)))
         }
+    }
+
+    private static Object normalizeValue(Object value, PathNormalizer normalizer) {
+        if (value instanceof Path)
+            return normalizer.normalizePath(value as Path)
+        else if (value instanceof CharSequence)
+            return normalizer.normalizePath(value.toString())
+        else
+            return value
     }
 
     private Object manageFileOutParam(Object value, TaskRun task) {
@@ -277,12 +296,12 @@ class CidObserver implements TraceObserver {
 
     protected String getTaskOutputKey(TaskRun task, Path path) {
         final rel = getTaskRelative(task, path)
-        return task.hash.toString() + SEPARATOR + 'outputs' + SEPARATOR + rel
+        return task.hash.toString() + SEPARATOR + rel
     }
 
     protected String getWorkflowOutputKey(Path destination) {
         final rel = getWorkflowRelative(destination)
-        return executionHash + SEPARATOR + 'outputs' + SEPARATOR + rel
+        return executionHash + SEPARATOR + rel
     }
 
     protected String getTaskRelative(TaskRun task, Path path){
@@ -340,18 +359,25 @@ class CidObserver implements TraceObserver {
                 attrs.size(),
                 CidUtils.toDate(attrs?.creationTime()),
                 CidUtils.toDate(attrs?.lastModifiedTime()),
-                annotations)
+                convertAnnotations(annotations))
             store.save(key, value)
         } catch (Throwable e) {
             log.warn("Unexpected error storing published file '${destination.toUriString()}' for workflow '${executionHash}'", e)
         }
     }
 
+    private static List<Annotation> convertAnnotations(Map annotations){
+        if( !annotations )
+            return null
+        final converted = new LinkedList<Annotation>()
+        annotations.forEach { Object key, Object value -> converted.add(new Annotation(key.toString(), value)) }
+        return converted
+    }
     String getSourceReference(Path source){
         final hash = FileHelper.getTaskHashFromPath(source, session.workDir)
         if (hash) {
             final target = FileHelper.getWorkFolder(session.workDir, hash).relativize(source).toString()
-            return asUriString(hash.toString(), 'outputs', target)
+            return asUriString(hash.toString(), target)
         }
         final storeDirReference = outputsStoreDirCid.get(source.toString())
         return storeDirReference ? asUriString(storeDirReference) : null
@@ -364,7 +390,22 @@ class CidObserver implements TraceObserver {
 
     @Override
     void onWorkflowPublish(String name, Object value){
-        workflowResults.outputs.put(name,convertPathsToCidReferences(value))
+        workflowResults.outputs.add(new Parameter(getParameterType(value), name, convertPathsToCidReferences(value)))
+    }
+
+    protected static String getParameterType(Object param) {
+        if( param instanceof BaseParam )
+            return TaskParamToValue.get(param.class)
+        // return generic types
+        if( param instanceof Path )
+            return Path.simpleName
+        if (param instanceof CharSequence)
+            return String.simpleName
+        if( param instanceof Collection )
+            return Collection.simpleName
+        if( param instanceof Map)
+            return Map.simpleName
+        return param.class.simpleName
     }
 
     private Object convertPathsToCidReferences(Object value){
@@ -421,12 +462,10 @@ class CidObserver implements TraceObserver {
     protected List<Parameter> manageTaskInputParameters(Map<InParam, Object> inputs, PathNormalizer normalizer) {
         List<Parameter> managedInputs = new LinkedList<Parameter>()
         inputs.forEach{ param, value ->
-            final type = param.class.simpleName
-            final name = param.name
             if( param instanceof FileInParam )
-                managedInputs.add( new Parameter( type, name, manageFileInParam( (List<FileHolder>)value , normalizer) ) )
+                managedInputs.add( new Parameter( getParameterType(param), param.name, manageFileInParam( (List<FileHolder>)value , normalizer) ) )
             else if( !(param instanceof DefaultInParam) )
-                managedInputs.add( new Parameter( type, name, value) )
+                managedInputs.add( new Parameter( getParameterType(param), param.name, value) )
         }
         return managedInputs
     }

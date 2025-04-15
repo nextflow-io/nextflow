@@ -32,11 +32,12 @@ import test.OutputCapture
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.ProviderMismatchException
-import java.time.Instant
 
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
+
+import java.time.OffsetDateTime
 
 /**
  * CID Path Tests
@@ -137,8 +138,8 @@ class CidPathTest extends Specification {
         cid.resolve('12345/.data.json').text = '{"type":"TaskRun"}'
         cid.resolve('12345/output1/.data.json').text = '{"type":"DataOutput", "path": "' + outputFolder.toString() + '"}'
         cid.resolve('12345/path/to/file2.txt/.data.json').text = '{"type":"DataOutput", "path": "' + outputFile.toString() + '"}'
-        def time = Instant.now()
-        def wfResultsMetadata = new CidEncoder().withPrettyPrint(true).encode(new WorkflowOutputs(time, "cid://1234", [a: "cid://1234/a.txt"]))
+        def time = OffsetDateTime.now()
+        def wfResultsMetadata = new CidEncoder().withPrettyPrint(true).encode(new WorkflowOutputs(time, "cid://1234", [new Parameter( "Path", "a", "cid://1234/a.txt")]))
         cid.resolve('5678/').mkdirs()
         cid.resolve('5678/.data.json').text = wfResultsMetadata
 
@@ -188,12 +189,12 @@ class CidPathTest extends Specification {
         def result2 = new CidPath(cidFs, '5678#outputs').getTargetPath(true)
         then:
         result2 instanceof CidMetadataPath
-        result2.text == CidUtils.encodeSearchOutputs([a: "cid://1234/a.txt"], true)
+        result2.text == CidUtils.encodeSearchOutputs([new Parameter("Path","a", "cid://1234/a.txt")], true)
 
         when: 'Cid subobject does not exist'
         new CidPath(cidFs, '23456#notexists').getTargetPath(true)
         then:
-        thrown(FileNotFoundException)
+        thrown(IllegalArgumentException)
 
         cleanup:
         cid.resolve('12345').deleteDir()
@@ -212,12 +213,12 @@ class CidPathTest extends Specification {
         p.text == '"repo"'
 
         when: 'outputs'
-        def outputs = new WorkflowOutputs(Instant.now(), "cid://12345", [ samples: ["sample1", "sample2"]])
+        def outputs = new WorkflowOutputs(OffsetDateTime.now(), "cid://12345", [ new Parameter("Collection", "samples", ["sample1", "sample2"])])
         cidFs.cidStore.save("12345/outputs", outputs)
         Path p2 = CidPath.getMetadataAsTargetPath(wf, cidFs, "12345", ["outputs"] as String[])
         then:
         p2 instanceof CidMetadataPath
-        p2.text == CidUtils.encodeSearchOutputs([ samples: ["sample1", "sample2"]], true)
+        p2.text == CidUtils.encodeSearchOutputs([new Parameter("Collection", "samples", ["sample1", "sample2"])], true)
 
         when: 'child does not exists'
         CidPath.getMetadataAsTargetPath(wf, cidFs, "12345", ["no-exist"] as String[])

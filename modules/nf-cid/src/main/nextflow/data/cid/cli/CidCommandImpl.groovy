@@ -310,7 +310,7 @@ class CidCommandImpl implements CmdCid.CidCommand {
         try {
             println CidUtils.encodeSearchOutputs(store.search(args[0]).keySet().collect {asUriString(it)}, true)
         } catch (Throwable e){
-            println "Exception searching for ${args[0]}. ${e.message}"
+            println "Error searching for ${args[0]}. ${e.message}"
         }
     }
 }

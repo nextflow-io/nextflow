@@ -21,6 +21,7 @@ import groovy.transform.CompileStatic
 import nextflow.data.cid.serde.CidSerializable
 
 import java.time.Instant
+import java.time.OffsetDateTime
 
 /**
  * Models task results.
@@ -41,7 +42,7 @@ class TaskOutputs implements CidSerializable {
     /**
      * Creation date of this task outputs description
      */
-    Instant createdAt
+    OffsetDateTime createdAt
     /**
      * Outputs of the task
      */
@@ -49,5 +50,5 @@ class TaskOutputs implements CidSerializable {
     /**
      * Annotations attached to the task outputs
      */
-    Map annotations
+    List<Annotation> annotations
 }

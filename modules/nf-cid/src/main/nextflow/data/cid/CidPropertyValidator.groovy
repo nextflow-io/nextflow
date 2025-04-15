@@ -16,7 +16,7 @@
 
 package nextflow.data.cid
 
-import groovy.util.logging.Slf4j
+import nextflow.data.cid.model.Annotation
 import nextflow.data.cid.model.Checksum
 import nextflow.data.cid.model.DataPath
 import nextflow.data.cid.model.Parameter
@@ -34,7 +34,7 @@ import java.lang.reflect.Field
  */
 class CidPropertyValidator {
 
-    private static List<Class> CID_MODEL_CLASSES = [Workflow, WorkflowRun, WorkflowOutputs, TaskRun, TaskOutputs, DataOutput, DataPath, Parameter, Checksum]
+    private static List<Class> CID_MODEL_CLASSES = [Workflow, WorkflowRun, WorkflowOutputs, TaskRun, TaskOutputs, DataOutput, DataPath, Parameter, Checksum, Annotation]
     private Set<String> validProperties
 
     CidPropertyValidator(){
@@ -46,11 +46,17 @@ class CidPropertyValidator {
         }
     }
 
-    void validate(String[] properties) {
+    void validate(Collection<String> properties) {
         for(String property: properties) {
             if (!(property in this.validProperties)) {
                 throw new IllegalArgumentException("Property '$property' doesn't exist in the CID model")
             }
+        }
+    }
+
+    void validateQueryParams (Map<String, String> params){
+        for(String key: params.keySet()) {
+           validate(key.tokenize('.'))
         }
     }
 

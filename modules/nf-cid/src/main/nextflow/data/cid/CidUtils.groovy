@@ -26,7 +26,8 @@ import nextflow.data.cid.serde.CidSerializable
 import nextflow.serde.gson.GsonEncoder
 
 import java.nio.file.attribute.FileTime
-import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 
 /**
  * Utils class for CID.
@@ -51,17 +52,12 @@ class CidUtils {
      */
     static Collection query(CidStore store, URI uri) {
         String key = uri.authority ? uri.authority + uri.path : uri.path
-        try {
-            if (key == CidPath.SEPARATOR) {
-                return globalSearch(store, uri)
-            } else {
-                final parameters = uri.query ? parseQuery(uri.query) : null
-                final children = parseChildrenFormFragment(uri.fragment)
-                return searchPath(store, key, parameters, children )
-            }
-        } catch(Throwable e){
-            log.debug("Exception querying $uri. $e.message")
-            return []
+        if (key == CidPath.SEPARATOR) {
+            return globalSearch(store, uri)
+        } else {
+            final parameters = uri.query ? parseQuery(uri.query) : null
+            final children = parseChildrenFormFragment(uri.fragment)
+            return searchPath(store, key, parameters, children )
         }
 
     }
@@ -95,6 +91,7 @@ class CidUtils {
         if( !fragment )
             return EMPTY_ARRAY
         final children = fragment.tokenize('.')
+        new CidPropertyValidator().validate(children)
         return children as String[]
     }
 
@@ -142,7 +139,7 @@ class CidUtils {
     static Object getSubObject(CidStore store, String key, CidSerializable object, String[] children) {
         if( isSearchingOutputs(object, children) ) {
             // When asking for a Workflow or task output retrieve the outputs description
-            final outputs = store.load("${key}/outputs")
+            final outputs = store.load("${key}#outputs")
             if (!outputs)
                 return null
             return navigate(outputs, children.join('.'))
@@ -187,10 +184,11 @@ class CidUtils {
         if( !queryString ) {
             return [:]
         }
-        return queryString.split('&').collectEntries {
+        final params = queryString.split('&').collectEntries {
             it.split('=').collect { URLDecoder.decode(it, 'UTF-8') }
         } as Map<String, String>
-
+        new CidPropertyValidator().validateQueryParams(params)
+        return params
     }
 
     /**
@@ -276,14 +274,14 @@ class CidUtils {
      }
 
     /**
-     * Helper function to convert from FileTime to ISO 8601.
+     * Helper function to convert from FileTime to ISO 8601 with offser.
      *
      * @param time File time to convert
-     * @return Instant or null in case of not available (null)
+     * @return  or null in case of not available (null)
      */
-    static Instant toDate(FileTime time){
+    static OffsetDateTime toDate(FileTime time){
         if (time)
-            return Instant.ofEpochMilli(time.toMillis())
+            return time.toInstant().atOffset(ZoneOffset.UTC)
         else
             return null
     }
@@ -294,10 +292,10 @@ class CidUtils {
      * @param date ISO formated time
      * @return Converted FileTime or null if date is not available (null or 'N/A')
      */
-    static FileTime toFileTime(String date){
+    static FileTime toFileTime(OffsetDateTime date){
         if (!date)
             return null
-        return FileTime.from(Instant.parse(date))
+        return FileTime.from(date.toInstant())
     }
 
     /**

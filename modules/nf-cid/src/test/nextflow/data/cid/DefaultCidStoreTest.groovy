@@ -16,21 +16,25 @@
 
 package nextflow.data.cid
 
+import nextflow.data.cid.model.Annotation
+
+import java.nio.file.Files
+import java.nio.file.Path
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
+
+import nextflow.data.cid.model.Checksum
 import nextflow.data.cid.model.DataPath
 import nextflow.data.cid.model.DataOutput
 import nextflow.data.cid.model.Parameter
 import nextflow.data.cid.model.Workflow
 import nextflow.data.cid.model.WorkflowRun
-
-import java.nio.file.Files
-import java.nio.file.Path
-import java.time.Instant
-
-import nextflow.data.cid.model.Checksum
 import nextflow.data.cid.serde.CidEncoder
 import nextflow.data.config.DataConfig
 import spock.lang.Specification
 import spock.lang.TempDir
+
 /**
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
@@ -103,17 +107,17 @@ class DefaultCidStoreTest extends Specification {
     def 'should query' () {
         given:
         def uniqueId = UUID.randomUUID()
-        def time = Instant.ofEpochMilli(1234567)
+        def time = OffsetDateTime.ofInstant(Instant.ofEpochMilli(1234567), ZoneOffset.UTC)
         def mainScript = new DataPath("file://path/to/main.nf", new Checksum("78910", "nextflow", "standard"))
         def workflow = new Workflow([mainScript],"https://nextflow.io/nf-test/", "123456" )
         def key = "testKey"
         def value1 = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [ new Parameter("String", "param1", "value1"), new Parameter("String", "param2", "value2")] )
         def key2 = "testKey2"
-        def value2 = new DataOutput("/path/tp/file1", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, [key1:"value1", key2:"value2"])
+        def value2 = new DataOutput("/path/tp/file1", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, [new Annotation("key1","value1"), new Annotation("key2","value2")])
         def key3 = "testKey3"
-        def value3 = new DataOutput("/path/tp/file2", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, [key2:"value2", key3:"value3"])
+        def value3 = new DataOutput("/path/tp/file2", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, [new Annotation("key2","value2"),  new Annotation("key3","value3")])
         def key4 = "testKey4"
-        def value4 = new DataOutput("/path/tp/file", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, [key3:"value3", key4:"value4"])
+        def value4 = new DataOutput("/path/tp/file", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, [new Annotation("key4","value4"),  new Annotation("key3","value3")])
 
         def cidStore = new DefaultCidStore()
         cidStore.open(config)
@@ -123,7 +127,7 @@ class DefaultCidStoreTest extends Specification {
         cidStore.save(key4, value4)
 
         when:
-        def results = cidStore.search("type=DataOutput&annotations.key2=value2")
+        def results = cidStore.search("type=DataOutput&annotations.key=key2&annotations.value=value2")
         then:
         results.size() == 2
         results.keySet().containsAll([key2,key3])

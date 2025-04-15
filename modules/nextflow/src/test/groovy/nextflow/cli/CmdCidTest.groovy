@@ -35,7 +35,7 @@ import org.junit.Rule
 import spock.lang.Specification
 import test.OutputCapture
 
-import java.time.Instant
+import java.time.OffsetDateTime
 
 /**
  * CLI cid Tests
@@ -136,7 +136,7 @@ class CmdCidTest extends Specification {
         def launcher = Mock(Launcher){
             getOptions() >> new CliOptions(config: [configFile.toString()])
         }
-        def time = Instant.ofEpochMilli(123456789)
+        def time = OffsetDateTime.now()
         def encoder = new CidEncoder().withPrettyPrint(true)
         def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
                 "cid://123987/file.bam","cid://12345/","cid://123987/", 1234, time, time, null)
@@ -182,7 +182,7 @@ class CmdCidTest extends Specification {
 
         then:
             stdout.size() == 1
-            stdout[0] == "No entries found for cid://12345"
+            stdout[0] == "Error loading cid://12345. Cid object 12345 not found."
 
         cleanup:
             folder?.deleteDir()
@@ -208,7 +208,7 @@ class CmdCidTest extends Specification {
         Files.createDirectories(cidFile4.parent)
         Files.createDirectories(cidFile5.parent)
         def encoder = new CidEncoder()
-        def time = Instant.ofEpochMilli(123456789)
+        def time = OffsetDateTime.now()
         def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
                 "cid://123987/file.bam", "cid://45678",null, 1234, time, time, null)
         cidFile.text = encoder.encode(entry)
@@ -279,7 +279,7 @@ class CmdCidTest extends Specification {
             getOptions() >> new CliOptions(config: [configFile.toString()])
         }
         def encoder = new CidEncoder().withPrettyPrint(true)
-        def time = Instant.ofEpochMilli(123456789)
+        def time = OffsetDateTime.now()
         def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
                 "cid://123987/file.bam", "cid://12345", "cid://123987/", 1234, time, time, null)
         def jsonSer = encoder.encode(entry)
@@ -314,7 +314,7 @@ class CmdCidTest extends Specification {
             getOptions() >> new CliOptions(config: [configFile.toString()])
         }
         def encoder = new CidEncoder().withPrettyPrint(true)
-        def time = Instant.ofEpochMilli(123456789)
+        def time = OffsetDateTime.now()
         def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
             "cid://123987/file.bam", "cid://12345", "cid://123987/", 1234, time, time, null)
         def jsonSer = encoder.encode(entry)

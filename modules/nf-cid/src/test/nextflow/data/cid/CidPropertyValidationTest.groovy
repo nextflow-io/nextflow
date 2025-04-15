@@ -24,15 +24,15 @@ class CidPropertyValidationTest extends Specification{
 
     def 'should throw exception when property does not exist'(){
         when:
-            new CidPropertyValidator().validate(['value','not_existing'] as String[])
+            new CidPropertyValidator().validate(['value','not_existing'])
         then:
             def e = thrown(IllegalArgumentException)
-            e.message == "Property 'not_existing' doesn't exist in the CID model"
+            e.message.startsWith( "Property 'not_existing' doesn't exist in the CID model")
     }
 
     def 'should not throw exception when property exist'(){
         when:
-        new CidPropertyValidator().validate(['value', 'outputs'] as String[])
+        new CidPropertyValidator().validate(['value', 'outputs'])
         then:
         noExceptionThrown()
     }

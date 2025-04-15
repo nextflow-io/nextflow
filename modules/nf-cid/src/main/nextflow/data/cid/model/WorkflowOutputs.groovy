@@ -21,6 +21,7 @@ import groovy.transform.CompileStatic
 import nextflow.data.cid.serde.CidSerializable
 
 import java.time.Instant
+import java.time.OffsetDateTime
 
 /**
  * Models the results of a workflow execution.
@@ -33,7 +34,7 @@ class WorkflowOutputs implements CidSerializable {
     /**
      * Creation date of the workflow outputs description
      */
-    Instant createdAt
+    OffsetDateTime createdAt
     /**
      * Workflow run that generated the outputs
      */
@@ -41,9 +42,9 @@ class WorkflowOutputs implements CidSerializable {
     /**
      * Workflow outputs
      */
-    Map<String, Object> outputs
+    List<Parameter> outputs
     /**
      * Annotations attached to the workflow outputs
      */
-    Map annotations
+    List<Annotation> annotations
 }

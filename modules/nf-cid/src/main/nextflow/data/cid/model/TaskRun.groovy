@@ -79,5 +79,5 @@ class TaskRun implements CidSerializable {
     /**
      * Annotations attached to the task run
      */
-    Map annotations
+    List<Annotation> annotations
 }
