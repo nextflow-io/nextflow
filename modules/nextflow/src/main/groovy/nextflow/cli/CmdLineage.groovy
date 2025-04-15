@@ -42,7 +42,7 @@ class CmdLineage extends CmdBase implements UsageAware {
     interface LinCommand extends ExtensionPoint {
         void log(ConfigMap config)
         void show(ConfigMap config, List<String> args)
-        void trace(ConfigMap config, List<String> args)
+        void render(ConfigMap config, List<String> args)
         void diff(ConfigMap config, List<String> args)
         void find(ConfigMap config, List<String> args)
     }
@@ -223,7 +223,7 @@ class CmdLineage extends CmdBase implements UsageAware {
                 return
             }
 
-            operation.trace(config, args)
+            operation.render(config, args)
         }
 
         @Override

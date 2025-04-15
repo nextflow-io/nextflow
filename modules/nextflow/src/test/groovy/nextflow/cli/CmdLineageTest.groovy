@@ -245,7 +245,7 @@ class CmdLineageTest extends Specification {
         def expectedOutput = template.replace('REPLACE_WITH_NETWORK_DATA', network)
 
         when:
-        def lidCmd = new CmdLineage(launcher: launcher, args: ["trace", "lid://12345/file.bam", outputHtml.toString()])
+        def lidCmd = new CmdLineage(launcher: launcher, args: ["render", "lid://12345/file.bam", outputHtml.toString()])
         lidCmd.run()
         def stdout = capture
             .toString()

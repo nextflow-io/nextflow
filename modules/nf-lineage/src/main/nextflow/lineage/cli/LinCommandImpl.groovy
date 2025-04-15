@@ -110,7 +110,7 @@ class LinCommandImpl implements CmdLineage.LinCommand {
     }
 
     @Override
-    void trace(ConfigMap config, List<String> args) {
+    void render(ConfigMap config, List<String> args) {
         final store = LinStoreFactory.getOrCreate(new Session(config))
         if( !store ) {
             println "Error lineage store not loaded. Check Nextflow configuration."
