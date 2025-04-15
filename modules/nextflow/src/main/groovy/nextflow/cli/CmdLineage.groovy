@@ -63,7 +63,7 @@ class CmdLineage extends CmdBase implements UsageAware {
     CmdLineage() {
         commands << new CmdLog()
         commands << new CmdShow()
-        commands << new CmdTrace()
+        commands << new CmdRender()
         commands << new CmdDiff()
         commands << new CmdFind()
     }
@@ -206,10 +206,10 @@ class CmdLineage extends CmdBase implements UsageAware {
         }
     }
 
-    class CmdTrace implements SubCmd {
+    class CmdRender implements SubCmd {
 
         @Override
-        String getName() { 'trace' }
+        String getName() { 'render' }
 
         @Override
         String getDescription() {
