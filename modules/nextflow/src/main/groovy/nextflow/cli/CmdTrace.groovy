@@ -241,7 +241,7 @@ class CmdLineage extends CmdBase implements UsageAware {
 
         @Override
         String getDescription() {
-            return 'Show differences between two Lineage descriptions'
+            return 'Show differences between two lineage descriptions'
         }
 
         void apply(List<String> args) {
