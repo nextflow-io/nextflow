@@ -208,7 +208,7 @@ class LinObserverTest extends Specification {
 
     def 'should save task run' () {
         given:
-        def folder = Files.createTempDirectory('test')
+        def folder = Files.createTempDirectory('test').toRealPath()
         def config = [workflow:[lineage:[enabled: true, store:[location:folder.toString()]]]]
         def uniqueId = UUID.randomUUID()
         def workDir = folder.resolve("work")
