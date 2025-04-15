@@ -426,7 +426,7 @@ A second preview version was introduced. See the {ref}`migration notes <workflow
 :::
 
 :::{versionchanged} 25.04.0
-A third preview version was introduced. See [Migrating from second preview](#migrating-from-second-preview) for more details.
+A third preview version was introduced. See the {ref}`migration notes <workflow-outputs-third-preview>` for details.
 :::
 
 :::{note}
@@ -660,17 +660,3 @@ output {
     }
 }
 ```
-
-### Migrating from second preview
-
-The third preview, introduced in 25.04, made the following breaking changes:
-
-- The `publish:` section can only be specified in the entry workflow.
-
-- Workflow outputs in the `publish:` section are assigned instead of using the `>>` operator. The output name must be a valid identifier.
-
-- By default, output files are published to the base output directory, rather than a subdirectory corresponding to the output name.
-
-- The syntax for dynamic publish paths has changed. Instead of defining a closure that returns a closure with the `path` directive, the outer closure should use the `>>` operator to publish individual files.
-
-- The `mapper` index directive has been removed. Use a `map` operator in the workflwo body instead.

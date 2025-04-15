@@ -9,4 +9,5 @@ The following pages contain migration notes for each stable release of Nextflow:
 
 24-04.md
 24-10.md
+25-04.md
 ```
