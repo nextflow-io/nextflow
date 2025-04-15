@@ -422,7 +422,7 @@ Workflows can also be invoked recursively:
 :::
 
 :::{versionchanged} 24.10.0
-A second preview version was introduced. See [Migrating from first preview](#migrating-from-first-preview) for more details.
+A second preview version was introduced. See the {ref}`migration notes <workflow-outputs-second-preview>` for details.
 :::
 
 :::{versionchanged} 25.04.0
@@ -674,15 +674,3 @@ The third preview, introduced in 25.04, made the following breaking changes:
 - The syntax for dynamic publish paths has changed. Instead of defining a closure that returns a closure with the `path` directive, the outer closure should use the `>>` operator to publish individual files.
 
 - The `mapper` index directive has been removed. Use a `map` operator in the workflwo body instead.
-
-### Migrating from first preview
-
-The first preview of workflow publishing was introduced in 24.04. The second preview, introduced in 24.10, made the following breaking changes:
-
-- The process `publish:` section has been removed. Channels should be published only in workflows, ideally the entry workflow.
-
-- The `directory` output directive has been replaced with the `outputDir` config option and `-output-dir` command line option, which is `results` by default. The other directives such as `mode` have been replaced with config options under `workflow.output.*`.
-
-  In other words, only target blocks can be specified in the output block, but target blocks can still specify directives such as `mode`.
-
-- Target names cannot begin or end with a slash (`/`).

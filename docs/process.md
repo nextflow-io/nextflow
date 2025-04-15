@@ -1324,6 +1324,8 @@ process foo {
 
 In this example, each task requests 8 GB of memory, plus the size of the input file rounded up to the next GB. This way, each task requests only as much memory as it needs based on the size of the inputs. The specific function that you use should be tuned for each process.
 
+(task-previous-execution-trace)=
+
 ### Dynamic task resources with previous execution trace
 
 :::{versionadded} 24.10.0
