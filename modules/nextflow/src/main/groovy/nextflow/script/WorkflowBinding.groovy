@@ -159,8 +159,11 @@ class WorkflowBinding extends Binding  {
     }
 
     void _publish_(String name, Object source) {
-        if( source instanceof ChannelOut )
-            throw new ScriptRuntimeException("Cannot assign a multi-channel to a workflow output: $name")
+        if( source instanceof ChannelOut ) {
+            if( source.size() > 1 )
+                throw new ScriptRuntimeException("Cannot assign a multi-channel to a workflow output: $name")
+            source = source[0]
+        }
 
         owner.session.outputs[name] = source instanceof DataflowWriteChannel
             ? source
