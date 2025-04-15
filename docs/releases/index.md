@@ -1,6 +1,6 @@
 (releases-page)=
 
-# Release Notes
+# Release notes
 
 The following pages contain migration notes for each stable release of Nextflow:
 
