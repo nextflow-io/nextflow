@@ -134,9 +134,7 @@ reference/operator
 :maxdepth: 1
 
 updating-nextflow
-updating-syntax
-dsl1
-releases/index
+migrations/index
 ```
 
 ```{toctree}

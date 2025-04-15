@@ -1,13 +1,15 @@
-(releases-page)=
+(migrations-page)=
 
-# Release notes
+# Migration notes
 
 The following pages contain migration notes for each stable release of Nextflow:
 
 ```{toctree}
 :maxdepth: 1
 
-24-04.md
-24-10.md
-25-04.md
+25-04
+strict-syntax
+24-10
+24-04
+dsl1
 ```
