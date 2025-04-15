@@ -489,6 +489,8 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
         private void visitPathDirective(MethodCallExpression node) {
             var code = asDslBlock(node, 1);
+            if( code == null )
+                return;
             for( var stmt : code.getStatements() ) {
                 if( visitPublishStatement(stmt) )
                     hasPublishStatements = true;
