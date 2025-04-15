@@ -327,7 +327,9 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
              * http://superuser.com/questions/422061/how-to-determine-whether-a-directory-is-on-an-nfs-mounted-drive
              */
             workDirList = FileHelper.listDirectory(task.workDir)
+            log.trace "JobId `$jobId`: running FileHelper.listDirectory()"
         }
+
 
         /*
          * when the file does not exist return null, to force the monitor to continue to wait
@@ -340,6 +342,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
                 else
                     log.trace "JobId `$jobId` exit file: ${exitFile.toUriString()} - lastModified: ${exitAttrs?.lastModifiedTime()} - size: ${exitAttrs?.size()}"
             }
+
             // -- fetch the job status before return a result
             final active = executor.checkActiveStatus(jobId, queue)
 
@@ -381,6 +384,18 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
 
             return Integer.MAX_VALUE
         }
+
+        // refresh cephfs metadata on workDir
+        // run sync on the filesystem that holds the task.workDir
+        // run simpleFind with depth 0 (stay on level) on both,
+        // the task.workDir parent and the task.workDir itself
+        if(FileHelper.getPathFsType(task.workDir) == 'ceph') {
+            log.trace "JobId `$jobId`: force refresh CEPH metadata"
+            final syncStatus = FileHelper.syncFS(task.workDir)
+            final findStatusParent = FileHelper.simpleFind(task.workDir, 0, true)
+            final findStatus = FileHelper.simpleFind(task.workDir, 0, false)
+        }
+
 
         /*
          * read the exit file, it should contain the executed process exit status

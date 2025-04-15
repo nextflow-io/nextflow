@@ -474,8 +474,7 @@ class FileHelper {
             return false
 
         final type = getPathFsType(path)
-        final result = type == 'nfs' || type == 'lustre'
-        log.debug "FS path type ($result): $path"
+        final result = type == 'nfs' || type == 'lustre' || type == 'ceph'
         return result
     }
 
@@ -559,6 +558,7 @@ class FileHelper {
 
         final begin = System.currentTimeMillis()
         final path = (self.parent ?: '/').toString()
+
         while( true ) {
             final process = Runtime.runtime.exec("ls -la ${path}")
             final status = process.waitFor()
@@ -1041,6 +1041,7 @@ class FileHelper {
 
         })
     }
+
     /**
      * List the content of a file system path
      *
@@ -1076,6 +1077,80 @@ class FileHelper {
 
         return result
     }
+
+    /**
+     * run fs sync a file system path
+     *
+     * @param path
+     *      The system system directory of the fs to sync
+     * @return
+     *      Exit status
+     */
+    static int syncFS(Path path) {
+
+        int result = 1
+        Process process = null
+        final target = Escape.path(path)
+
+        try {
+            process = Runtime.runtime.exec(['sh', '-c', "sync -f ${target}"] as String[])
+            process.waitForOrKill(10_000)
+            log.trace "Syncing filesystem: -- path: ${target}\n"
+
+            def syncStatus = process.exitValue()
+            if( syncStatus>0 ) {
+                log.debug "Can't sync filesystem: ${target} -- Exit status: $syncStatus"
+            }
+            else {
+                result = syncStatus
+            }
+        }
+        catch( IOException e ) {
+            log.debug "Can't sync filesystem: $target -- Cause: ${e.message ?: e.toString()}"
+        }
+        finally {
+            process?.destroy()
+        }
+
+        return result
+    }
+
+    /**
+     * Simple 'find': lists all files and directories under basePath up to maxDepth
+     * @param basePath The root directory to search
+     * @param maxDepth Maximum depth of recursion (0 = only basePath)
+     * @return List of matching Paths, or an empty list if an error occurs
+     */
+    static List<Path> simpleFind(Path basePath, int maxDepth = Integer.MAX_VALUE, boolean parent = false) {
+        List<Path> result = []
+        def path
+
+        try {
+            path = parent ? basePath.parent : basePath
+
+            if (!Files.exists(path)) {
+                log.debug "[ERROR] Path does not exist: $basePath"
+                return result
+            }
+            if (!Files.isReadable(path)) {
+                log.debug "[ERROR] Path is not readable: $basePath"
+                return result
+            }
+
+            Files.walk(path, maxDepth).forEach { p ->
+                result << p
+            }
+        } catch (IOException e) {
+            log.debug "[ERROR] IO exception occurred: ${e.message}"
+        } catch (SecurityException e) {
+            log.debug "[ERROR] Security exception: ${e.message}"
+        } catch (Exception e) {
+            log.debug "[ERROR] Unexpected error: ${e.message}"
+        }
+
+        return result
+    }
+
 
     static BasicFileAttributes readAttributes(Path path, LinkOption... options) {
         try {
