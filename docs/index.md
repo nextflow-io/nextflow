@@ -134,6 +134,7 @@ reference/operator
 :maxdepth: 1
 
 updating-nextflow
+strict-syntax
 migrations/index
 ```
 

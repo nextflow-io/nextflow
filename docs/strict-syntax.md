@@ -18,7 +18,7 @@ The strict syntax is a subset of DSL2. While DSL2 allows any Groovy syntax, the 
 
 The strict syntax will eventually become the only way to write Nextflow code, and new language features will be implemented only in the strict syntax, with few exceptions. Therefore, it is important to prepare for the strict syntax in order to maintain compatibility with future versions of Nextflow and be able to use new language features.
 
-This page describes the key differences between the DSL2 and the strict syntax. In general, the amount of changes that are required depends on the amount of custom Groovy code in your scripts and config files.
+This page outlines the key differences between DSL2 and the strict syntax. The extent of required changes will vary depending on the amount of custom Groovy code used within your scripts and config files.
 
 ## Removed syntax
 

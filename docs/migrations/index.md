@@ -2,13 +2,12 @@
 
 # Migration notes
 
-The following pages contain migration notes for each stable release of Nextflow:
+This section covers important information for migrating between Nextflow versions. It describes new features, enhancements, breaking changes, deprecations, and other miscellaneous updates that may require action during a migration.
 
 ```{toctree}
 :maxdepth: 1
 
 25-04
-strict-syntax
 24-10
 24-04
 dsl1
