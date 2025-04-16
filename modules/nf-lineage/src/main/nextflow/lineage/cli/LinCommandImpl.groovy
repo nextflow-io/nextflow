@@ -60,6 +60,8 @@ class LinCommandImpl implements CmdLineage.LinCommand {
         String label
     }
 
+    static final private String ERR_NOT_LOADED = 'Error lineage store not loaded - Check Nextflow configuration'
+    
     @Override
     void log(ConfigMap config) {
         final session = new Session(config)
@@ -67,21 +69,21 @@ class LinCommandImpl implements CmdLineage.LinCommand {
         if (store) {
             printHistory(store)
         } else {
-            println "Error lineage store not loaded. Check Nextflow configuration."
+            println ERR_NOT_LOADED
         }
     }
 
     private void printHistory(LinStore store) {
         final records = store.historyLog?.records
         if( !records ) {
-            println("No workflow runs LIDs found.")
+            println("No workflow runs found in lineage history log")
             return
         }
         def table = new TableBuilder(cellSeparator: '\t')
             .head('TIMESTAMP')
             .head('RUN NAME')
             .head('SESSION ID')
-            .head('RUN LID')
+            .head('LINEAGE ID')
         for (LinHistoryRecord record : records) {
             table.append(record.toList())
         }
@@ -91,10 +93,10 @@ class LinCommandImpl implements CmdLineage.LinCommand {
     @Override
     void describe(ConfigMap config, List<String> args) {
         if( !isLidUri(args[0]) )
-            throw new Exception("Identifier is not a LID URL")
+            throw new Exception("Identifier is not a lineage URL")
         final store = LinStoreFactory.getOrCreate(new Session(config))
         if ( !store ) {
-            println "Error lineage store not loaded. Check Nextflow configuration."
+            println ERR_NOT_LOADED
             return
         }
         try {
@@ -106,7 +108,7 @@ class LinCommandImpl implements CmdLineage.LinCommand {
             entries = entries.size() == 1 ? entries[0] : entries
             println LinUtils.encodeSearchOutputs(entries, true)
         } catch (Throwable e) {
-            println "Error loading ${args[0]}. ${e.message}"
+            println "Error loading ${args[0]} - ${e.message}"
         }
     }
 
@@ -114,7 +116,7 @@ class LinCommandImpl implements CmdLineage.LinCommand {
     void render(ConfigMap config, List<String> args) {
         final store = LinStoreFactory.getOrCreate(new Session(config))
         if( !store ) {
-            println "Error lineage store not loaded. Check Nextflow configuration."
+            println ERR_NOT_LOADED
             return
         }
         try {
@@ -122,7 +124,7 @@ class LinCommandImpl implements CmdLineage.LinCommand {
             renderLineage(store, args[0], renderFile)
             println("Linage graph for ${args[0]} rendered in $renderFile")
         } catch (Throwable e) {
-            println("ERROR: rendering lineage graph. ${e.message}")
+            println("ERROR: rendering lineage graph - ${e.message}")
         }
     }
 
@@ -150,7 +152,7 @@ class LinCommandImpl implements CmdLineage.LinCommand {
 
     private void processNode(List<String> lines, String nodeToRender, LinkedList<String> nodes, LinkedList<Edge> edges, LinStore store) {
         if (!isLidUri(nodeToRender))
-            throw new Exception("Identifier is not a LID URL")
+            throw new Exception("Identifier is not a lineage URL")
         final key = nodeToRender.substring(LID_PROT.size())
         final lidObject = store.load(key)
         switch (lidObject.getClass()) {
@@ -255,11 +257,11 @@ class LinCommandImpl implements CmdLineage.LinCommand {
     @Override
     void diff(ConfigMap config, List<String> args) {
         if (!isLidUri(args[0]) || !isLidUri(args[1]))
-            throw new Exception("Identifier is not a LID URL")
+            throw new Exception("Identifier is not a lineage URL")
 
         final store = LinStoreFactory.getOrCreate(new Session(config))
         if (!store) {
-            println "Error lineage store not loaded. Check Nextflow configuration."
+            println ERR_NOT_LOADED
             return
         }
         try {
@@ -315,7 +317,7 @@ class LinCommandImpl implements CmdLineage.LinCommand {
     void find(ConfigMap config, List<String> args) {
         final store = LinStoreFactory.getOrCreate(new Session(config))
         if (!store) {
-            println "Error lineage store not loaded. Check Nextflow configuration."
+            println ERR_NOT_LOADED
             return
         }
         try {

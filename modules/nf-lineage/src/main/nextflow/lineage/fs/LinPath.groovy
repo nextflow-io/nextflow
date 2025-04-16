@@ -114,7 +114,7 @@ class LinPath implements Path, LogicalDataPath {
     protected static void validateDataOutput(DataOutput lidObject) {
         final hashedPath = FileHelper.toCanonicalPath(lidObject.path as String)
         if( !hashedPath.exists() )
-            throw new FileNotFoundException("Target path $lidObject.path does not exists.")
+            throw new FileNotFoundException("Target path $lidObject.path does not exist")
         validateChecksum(lidObject.checksum, hashedPath)
     }
 
@@ -160,7 +160,7 @@ class LinPath implements Path, LogicalDataPath {
             throw new IllegalArgumentException("Cannot get target path for an empty LinPath")
         final store = fs.getStore()
         if( !store )
-            throw new Exception("Lineage store not found. Check Nextflow configuration.")
+            throw new Exception("Lineage store not found - Check Nextflow configuration")
         final object = store.load(filePath)
         if ( object ){
             if( object instanceof DataOutput ) {
@@ -181,12 +181,12 @@ class LinPath implements Path, LogicalDataPath {
                 return findTarget(fs, parent.toString(), false, newChildren as String[])
             }
         }
-        throw new FileNotFoundException("Target path '$filePath' does not exists.")
+        throw new FileNotFoundException("Target path '$filePath' does not exist")
     }
 
     protected static Path getMetadataAsTargetPath(LinSerializable results, LinFileSystem fs, String filePath, String[] children){
         if( !results ) {
-            throw new FileNotFoundException("Target path '$filePath' does not exist.")
+            throw new FileNotFoundException("Target path '$filePath' does not exist")
         }
         if (children && children.size() > 0) {
             return getSubObjectAsPath(fs, filePath, results, children)
@@ -203,14 +203,14 @@ class LinPath implements Path, LogicalDataPath {
      * @param key Parent metadata key.
      * @param object Parent object.
      * @param children Array of string in indicating the properties to navigate to get the sub-object.
-     * @return LinMetadataPath or null in it does not exist.
+     * @return LinMetadataPath or null in it does not exist
      */
     static LinMetadataPath getSubObjectAsPath(LinFileSystem fs, String key, LinSerializable object, String[] children) {
         if( isSearchingOutputs(object, children) ) {
             // When asking for a Workflow or task output retrieve the outputs description
             final outputs = fs.store.load("${key}/outputs")
             if( !outputs ) {
-                throw new FileNotFoundException("Target path '$key#outputs' does not exist.")
+                throw new FileNotFoundException("Target path '$key#outputs' does not exist")
             }
             return generateLinMetadataPath(fs, key, outputs, children)
         }
@@ -223,7 +223,7 @@ class LinPath implements Path, LogicalDataPath {
         def creationTime = toFileTime(navigate(object, 'createdAt') as OffsetDateTime ?: OffsetDateTime.now())
         final output = children ? navigate(object, children.join('.')) : object
         if( !output ) {
-            throw new FileNotFoundException("Target path '$key#${children.join('.')}' does not exist.")
+            throw new FileNotFoundException("Target path '$key#${children.join('.')}' does not exist")
         }
         return new LinMetadataPath(encodeSearchOutputs(output, true), creationTime, fs, key, children)
     }
@@ -236,7 +236,7 @@ class LinPath implements Path, LogicalDataPath {
         if (children && children.size() > 0)
             realPath = realPath.resolve(children.join(SEPARATOR))
         if (!realPath.exists())
-            throw new FileNotFoundException("Target path '$realPath' does not exist.")
+            throw new FileNotFoundException("Target path '$realPath' does not exist")
         return realPath
     }
 
@@ -455,7 +455,7 @@ class LinPath implements Path, LogicalDataPath {
     /**
      * Get the path associated to any metadata object.
      * @return Path associated to a DataOutput or LinMetadataFile with the metadata object for other types.
-     * @throws FileNotFoundException if the metadata associated to the LinPath does not exist.
+     * @throws FileNotFoundException if the metadata associated to the LinPath does not exist
      */
     protected Path getTargetOrMetadataPath(){
         return findTarget(fileSystem, filePath, true, parseChildrenFormFragment(fragment))

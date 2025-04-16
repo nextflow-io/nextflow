@@ -110,8 +110,7 @@ class LinCommandImplTest extends Specification{
 
         then:
         stdout.size() == 1
-        stdout[0] == "No workflow runs LIDs found."
-
+        stdout[0] == "No workflow runs found in lineage history log"
     }
 
     def 'should show lid content' (){
@@ -153,7 +152,7 @@ class LinCommandImplTest extends Specification{
 
         then:
         stdout.size() == 1
-        stdout[0] == "Error loading lid://12345. Lineage object 12345 not found."
+        stdout[0] == "Error loading lid://12345 - Lineage object 12345 not found"
     }
 
     def 'should get lineage lid content' (){
@@ -425,7 +424,7 @@ class LinCommandImplTest extends Specification{
             .findResults { line -> !line.contains('DEBUG') ? line : null }
             .findResults { line -> !line.contains('INFO') ? line : null }
             .findResults { line -> !line.contains('plugin') ? line : null }
-        def expectedOutput = "Error lineage store not loaded. Check Nextflow configuration."
+        def expectedOutput = "Error lineage store not loaded - Check Nextflow configuration"
         then:
         stdout.size() == 4
         stdout[0] == expectedOutput

@@ -229,19 +229,19 @@ class LinPathTest extends Specification {
         LinPath.getMetadataAsTargetPath(wf, lidFs, "123456", ["no-exist"] as String[])
         then:
         def exception = thrown(FileNotFoundException)
-        exception.message == "Target path '123456#no-exist' does not exist."
+        exception.message == "Target path '123456#no-exist' does not exist"
 
         when: 'outputs does not exists'
         LinPath.getMetadataAsTargetPath(wf, lidFs, "6789", ["outputs"] as String[])
         then:
         def exception1 = thrown(FileNotFoundException)
-        exception1.message == "Target path '6789#outputs' does not exist."
+        exception1.message == "Target path '6789#outputs' does not exist"
 
         when: 'null object'
         LinPath.getMetadataAsTargetPath(null, lidFs, "123456", ["no-exist"] as String[])
         then:
         def exception2 = thrown(FileNotFoundException)
-        exception2.message == "Target path '123456' does not exist."
+        exception2.message == "Target path '123456' does not exist"
 
         cleanup:
         meta.resolve("123456").deleteDir()

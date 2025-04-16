@@ -16,19 +16,18 @@
 
 package nextflow.lineage
 
+import java.nio.file.attribute.FileTime
+import java.time.OffsetDateTime
+import java.time.ZoneId
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.lineage.fs.LinPath
-import nextflow.lineage.model.WorkflowRun
 import nextflow.lineage.model.TaskRun
+import nextflow.lineage.model.WorkflowRun
 import nextflow.lineage.serde.LinEncoder
 import nextflow.lineage.serde.LinSerializable
 import nextflow.serde.gson.GsonEncoder
-
-import java.nio.file.attribute.FileTime
-import java.time.OffsetDateTime
-import java.time.ZoneOffset
-
 /**
  * Utils class for Lineage IDs.
  *
@@ -59,7 +58,6 @@ class LinUtils {
             final children = parseChildrenFormFragment(uri.fragment)
             return searchPath(store, key, parameters, children )
         }
-
     }
 
     private static Collection<LinSerializable> globalSearch(LinStore store, URI uri) {
@@ -106,7 +104,7 @@ class LinUtils {
     protected static List<Object> searchPath(LinStore store, String key, Map<String, String> params, String[] children = []) {
         final object = store.load(key)
         if (!object) {
-            throw new FileNotFoundException("Lineage object $key not found.")
+            throw new FileNotFoundException("Lineage object $key not found")
         }
         final results = new LinkedList<Object>()
         if (children && children.size() > 0) {
@@ -121,7 +119,7 @@ class LinUtils {
     private static void treatSubObject(LinStore store, String key, LinSerializable object, String[] children, Map<String, String> params, LinkedList<Object> results) {
         final output = getSubObject(store, key, object, children)
         if (!output) {
-            throw new FileNotFoundException("Lineage object $key#${children.join('.')} not found.")
+            throw new FileNotFoundException("Lineage object $key#${children.join('.')} not found")
         }
         treatObject(output, params, results)
     }
@@ -192,7 +190,8 @@ class LinUtils {
     }
 
     /**
-     * Check if an object fullfill the parameter-value
+     * Check if an object fulfill the parameter-value
+     * 
      * @param object Object to evaluate
      * @param params parameter-value pairs to evaluate
      * @return true if all object parameters exist and matches with the value, otherwise false.
@@ -274,16 +273,16 @@ class LinUtils {
      }
 
     /**
-     * Helper function to convert from FileTime to ISO 8601 with offser.
+     * Helper function to convert from FileTime to ISO 8601 with offset
+     * of current timezone.
      *
      * @param time File time to convert
-     * @return  or null in case of not available (null)
+     * @return The {@link OffsetDateTime} for the corresponding file time or null in case of not available (null)
      */
     static OffsetDateTime toDate(FileTime time){
-        if (time)
-            return time.toInstant().atOffset(ZoneOffset.UTC)
-        else
-            return null
+        return time!=null
+            ? time.toInstant().atZone(ZoneId.systemDefault()).toOffsetDateTime()
+            : null
     }
 
     /**

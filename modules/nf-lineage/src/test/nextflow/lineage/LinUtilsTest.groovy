@@ -16,6 +16,8 @@
 
 package nextflow.lineage
 
+import java.time.ZoneId
+
 import nextflow.lineage.model.Checksum
 import nextflow.lineage.model.DataPath
 import nextflow.lineage.model.Parameter
@@ -52,7 +54,7 @@ class LinUtilsTest extends Specification{
         where:
         FILE_TIME                   | DATE
         null                        | null
-        FileTime.fromMillis(1234)   | OffsetDateTime.ofInstant(Instant.ofEpochMilli(1234), ZoneOffset.UTC)
+        FileTime.fromMillis(1234)   | Instant.ofEpochMilli(1234).atZone(ZoneId.systemDefault())?.toOffsetDateTime()
     }
 
     def 'should convert to FileTime'(){

@@ -87,7 +87,7 @@ class LinObserver implements TraceObserver {
     private String executionHash
     private LinStore store
     private Session session
-    private WorkflowOutputs workflowResults
+    private WorkflowOutputs workflowOutputs
     private Map<String,String> outputsStoreDirLid = new HashMap<String,String>(10)
     private PathNormalizer normalizer
 
@@ -115,7 +115,7 @@ class LinObserver implements TraceObserver {
         normalizer = new PathNormalizer(session.workflowMetadata)
         executionHash = storeWorkflowRun(normalizer)
         final executionUri = asUriString(executionHash)
-        workflowResults = new WorkflowOutputs(
+        workflowOutputs = new WorkflowOutputs(
             OffsetDateTime.now(),
             executionUri,
             new LinkedList<Parameter>()
@@ -125,10 +125,10 @@ class LinObserver implements TraceObserver {
 
     @Override
     void onFlowComplete(){
-        if (this.workflowResults){
-            workflowResults.createdAt = OffsetDateTime.now()
+        if (this.workflowOutputs){
+            workflowOutputs.createdAt = OffsetDateTime.now()
             final key = executionHash + '#outputs'
-            this.store.save(key, workflowResults)
+            this.store.save(key, workflowOutputs)
         }
     }
 
@@ -392,7 +392,7 @@ class LinObserver implements TraceObserver {
 
     @Override
     void onWorkflowPublish(String name, Object value){
-        workflowResults.outputs.add(new Parameter(getParameterType(value), name, convertPathsToLidReferences(value)))
+        workflowOutputs.outputs.add(new Parameter(getParameterType(value), name, convertPathsToLidReferences(value)))
     }
 
     protected static String getParameterType(Object param) {
