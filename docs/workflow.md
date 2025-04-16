@@ -379,11 +379,11 @@ This feature requires the `nextflow.preview.recursion` feature flag to be enable
 
 Processes can be invoked recursively using the `recurse` method.
 
-```{literalinclude} ../snippets/recurse-process.nf
+```{literalinclude} snippets/recurse-process.nf
 :language: nextflow
 ```
 
-```{literalinclude} ../snippets/recurse-process.out
+```{literalinclude} snippets/recurse-process.out
 :language: console
 ```
 
@@ -400,11 +400,11 @@ count_down
 
 Workflows can also be invoked recursively:
 
-```{literalinclude} ../snippets/recurse-workflow.nf
+```{literalinclude} snippets/recurse-workflow.nf
 :language: nextflow
 ```
 
-```{literalinclude} ../snippets/recurse-workflow.out
+```{literalinclude} snippets/recurse-workflow.out
 :language: console
 ```
 
