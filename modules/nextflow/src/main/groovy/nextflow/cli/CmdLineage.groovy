@@ -34,7 +34,7 @@ import org.pf4j.ExtensionPoint
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-@Parameters(commandDescription = "Explore workflows lineage metadata")
+@Parameters(commandDescription = "Explore workflows lineage metadata", commandNames = ['li'])
 class CmdLineage extends CmdBase implements UsageAware {
 
     private static final String NAME = 'lineage'
