@@ -117,7 +117,7 @@ class CmdLineageTest extends Specification {
 
         then:
         stdout.size() == 1
-        stdout[0] == "No workflow runs LIDs found."
+        stdout[0] == "No workflow runs found in lineage history log"
 
         cleanup:
         folder?.deleteDir()
@@ -179,7 +179,7 @@ class CmdLineageTest extends Specification {
 
         then:
             stdout.size() == 1
-            stdout[0] == "Error loading lid://12345. Lineage object 12345 not found."
+            stdout[0] == "Error loading lid://12345 - Lineage object 12345 not found"
 
         cleanup:
             folder?.deleteDir()
