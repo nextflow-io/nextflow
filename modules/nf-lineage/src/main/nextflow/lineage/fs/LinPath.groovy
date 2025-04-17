@@ -16,11 +16,13 @@
 
 package nextflow.lineage.fs
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.file.FileHelper
+import nextflow.file.LogicalDataPath
 import nextflow.lineage.model.Checksum
 import nextflow.lineage.model.DataOutput
 import nextflow.lineage.serde.LinSerializable
-import nextflow.file.LogicalDataPath
 import nextflow.util.CacheHelper
 import nextflow.util.TestOnly
 
@@ -35,9 +37,6 @@ import java.nio.file.WatchEvent
 import java.nio.file.WatchKey
 import java.nio.file.WatchService
 import java.time.OffsetDateTime
-
-import groovy.transform.CompileStatic
-import nextflow.file.FileHelper
 
 /**
  * LID file system path

@@ -108,6 +108,14 @@ class OutputDsl {
 
         private Map opts = [:]
 
+        void annotations(Map value) {
+            setOption('annotations', value)
+        }
+
+        void annotations(Closure value) {
+            setOption('annotations', value)
+        }
+
         void contentType(String value) {
             setOption('contentType', value)
         }
@@ -160,14 +168,6 @@ class OutputDsl {
 
         void tags(Map value) {
             setOption('tags', value)
-        }
-
-        void annotations(Map value) {
-            setOption('annotations', value)
-        }
-
-        void annotations(Closure value) {
-            setOption('annotations', value)
         }
 
         private void setOption(String name, Object value) {

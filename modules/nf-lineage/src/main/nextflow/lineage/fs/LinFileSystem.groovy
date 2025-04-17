@@ -16,9 +16,6 @@
 
 package nextflow.lineage.fs
 
-import nextflow.lineage.LinStore
-import nextflow.lineage.LinStoreFactory
-
 import java.nio.file.FileStore
 import java.nio.file.FileSystem
 import java.nio.file.Path
@@ -28,6 +25,8 @@ import java.nio.file.attribute.UserPrincipalLookupService
 import java.nio.file.spi.FileSystemProvider
 
 import groovy.transform.CompileStatic
+import nextflow.lineage.LinStore
+import nextflow.lineage.LinStoreFactory
 import nextflow.lineage.config.LineageConfig
 
 /**

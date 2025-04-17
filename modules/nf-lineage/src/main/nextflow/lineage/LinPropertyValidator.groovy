@@ -29,26 +29,39 @@ import nextflow.lineage.model.WorkflowRun
 
 /**
  * Class to validate if the string refers to a property in the classes of the Lineage Metadata model.
+ *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
 @CompileStatic
 class LinPropertyValidator {
 
-    private static List<Class> LID_MODEL_CLASSES = [Workflow, WorkflowRun, WorkflowOutputs, TaskRun, TaskOutputs, DataOutput, DataPath, Parameter, Checksum, Annotation] as List<Class>
+    private static final List<Class> LIN_MODEL_CLASSES = [
+        Annotation,
+        Checksum,
+        DataOutput,
+        DataPath,
+        Parameter,
+        TaskOutputs,
+        TaskRun,
+        Workflow,
+        WorkflowOutputs,
+        WorkflowRun,
+    ]
+
     private Set<String> validProperties
 
-    LinPropertyValidator(){
+    LinPropertyValidator() {
         this.validProperties = new HashSet<String>()
-        for( Class clazz: LID_MODEL_CLASSES) {
-            for( MetaProperty field: clazz.metaClass.getProperties()) {
+        for( Class clazz : LIN_MODEL_CLASSES ) {
+            for( MetaProperty field : clazz.metaClass.getProperties() ) {
                 validProperties.add( field.name)
             }
         }
     }
 
     void validate(Collection<String> properties) {
-        for( String property: properties ) {
-            if( !(property in this.validProperties) ) {
+        for( String property : properties ) {
+            if( property !in this.validProperties ) {
                 def msg = "Property '$property' doesn't exist in the lineage model."
                 final matches = this.validProperties.closest(property)
                 if( matches )
@@ -58,8 +71,8 @@ class LinPropertyValidator {
         }
     }
 
-    void validateQueryParams (Map<String, String> params){
-        for(String key: params.keySet()) {
+    void validateQueryParams(Map<String, String> params) {
+        for( String key : params.keySet() ) {
            validate(key.tokenize('.'))
         }
     }

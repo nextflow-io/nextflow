@@ -16,15 +16,12 @@
 
 package nextflow.lineage
 
-import nextflow.util.SecretHelper
-
-import java.time.OffsetDateTime
-
 import static nextflow.lineage.fs.LinPath.*
 
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
+import java.time.OffsetDateTime
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -43,7 +40,6 @@ import nextflow.file.FileHolder
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.script.ScriptMeta
-
 import nextflow.script.params.BaseParam
 import nextflow.script.params.CmdEvalParam
 import nextflow.script.params.DefaultInParam
@@ -62,6 +58,7 @@ import nextflow.trace.TraceObserver
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
 import nextflow.util.PathNormalizer
+import nextflow.util.SecretHelper
 import nextflow.util.TestOnly
 
 /**
@@ -72,7 +69,7 @@ import nextflow.util.TestOnly
 @Slf4j
 @CompileStatic
 class LinObserver implements TraceObserver {
-    private static Map<Class<? extends BaseParam>, String> TaskParamToValue = [
+    private static Map<Class<? extends BaseParam>, String> taskParamToValue = [
         (StdOutParam)  : "stdout",
         (StdInParam)   : "stdin",
         (FileInParam)  : "path",
@@ -84,6 +81,7 @@ class LinObserver implements TraceObserver {
         (CmdEvalParam) : "eval",
         (EachInParam)  : "each"
     ]
+
     private String executionHash
     private LinStore store
     private Session session
@@ -248,15 +246,15 @@ class LinObserver implements TraceObserver {
     }
 
     protected String storeTaskRun(TaskRun task, PathNormalizer normalizer) {
-        final codeChecksum = Checksum.ofNextflow(session.stubRun ? task.stubSource: task.source)
+        final codeChecksum = Checksum.ofNextflow(session.stubRun ? task.stubSource : task.source)
         final scriptChecksum = Checksum.ofNextflow(task.script)
         final value = new nextflow.lineage.model.TaskRun(
             session.uniqueId.toString(),
             task.getName(),
             codeChecksum,
             scriptChecksum,
-            task.inputs ? manageTaskInputParameters(task.inputs, normalizer): null,
-            task.isContainerEnabled() ? task.getContainerFingerprint(): null,
+            task.inputs ? manageTaskInputParameters(task.inputs, normalizer) : null,
+            task.isContainerEnabled() ? task.getContainerFingerprint() : null,
             normalizer.normalizePath(task.getCondaEnv()),
             normalizer.normalizePath(task.getSpackEnv()),
             task.config?.getArchitecture()?.toString(),
@@ -375,6 +373,7 @@ class LinObserver implements TraceObserver {
         annotations.forEach { Object key, Object value -> converted.add(new Annotation(key.toString(), value)) }
         return converted
     }
+
     String getSourceReference(Path source){
         final hash = FileHelper.getTaskHashFromPath(source, session.workDir)
         if (hash) {
@@ -397,7 +396,7 @@ class LinObserver implements TraceObserver {
 
     protected static String getParameterType(Object param) {
         if( param instanceof BaseParam )
-            return TaskParamToValue.get(param.class)
+            return taskParamToValue.get(param.class)
         // return generic types
         if( param instanceof Path )
             return Path.simpleName
@@ -437,6 +436,7 @@ class LinObserver implements TraceObserver {
     void onFilePublish(Path destination, Path source, Map annotations){
         storePublishedFile( destination, source, annotations)
     }
+
     /**
      * Relativizes a path from the workflow's output dir.
      *
@@ -463,7 +463,7 @@ class LinObserver implements TraceObserver {
 
     protected List<Parameter> manageTaskInputParameters(Map<InParam, Object> inputs, PathNormalizer normalizer) {
         List<Parameter> managedInputs = new LinkedList<Parameter>()
-        inputs.forEach{ param, value ->
+        inputs.forEach { param, value ->
             if( param instanceof FileInParam )
                 managedInputs.add( new Parameter( getParameterType(param), param.name, manageFileInParam( (List<FileHolder>)value , normalizer) ) )
             else if( !(param instanceof DefaultInParam) )
@@ -476,7 +476,7 @@ class LinObserver implements TraceObserver {
         final paths = new LinkedList<Object>();
         for( FileHolder it : files ) {
             final ref = getSourceReference(it.storePath)
-            paths.add(ref ? ref : new DataPath(
+            paths.add(ref ?: new DataPath(
                 normalizer.normalizePath(it.storePath),
                 Checksum.ofNextflow(it.storePath))
             )

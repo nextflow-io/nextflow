@@ -16,8 +16,6 @@
 
 package nextflow.lineage.cli
 
-import nextflow.lineage.serde.LinEncoder
-
 import static nextflow.lineage.fs.LinPath.*
 
 import java.nio.charset.StandardCharsets
@@ -37,6 +35,7 @@ import nextflow.lineage.model.DataOutput
 import nextflow.lineage.model.Parameter
 import nextflow.lineage.model.TaskRun
 import nextflow.lineage.model.WorkflowRun
+import nextflow.lineage.serde.LinEncoder
 import nextflow.script.params.FileInParam
 import nextflow.ui.TableBuilder
 import org.eclipse.jgit.diff.DiffAlgorithm
@@ -51,6 +50,7 @@ import org.eclipse.jgit.diff.RawTextComparator
  */
 @CompileStatic
 class LinCommandImpl implements CmdLineage.LinCommand {
+
     private static Path DEFAULT_HTML_FILE = Path.of("lineage-render.html")
 
     @Canonical

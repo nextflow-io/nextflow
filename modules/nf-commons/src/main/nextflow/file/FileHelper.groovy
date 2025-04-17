@@ -238,7 +238,7 @@ class FileHelper {
         return !(path.getFileSystem().provider().scheme in UNSUPPORTED_GLOB_WILDCARDS)
     }
 
-    static Path toPath(value){
+    static Path toPath(value) {
         if( value==null )
             return null
 

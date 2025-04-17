@@ -16,15 +16,14 @@
 
 package nextflow.lineage
 
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-
 import java.nio.file.FileVisitResult
 import java.nio.file.FileVisitor
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
 
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import nextflow.lineage.serde.LinEncoder
 import nextflow.lineage.serde.LinSerializable
 import nextflow.lineage.config.LineageConfig
@@ -41,7 +40,7 @@ import nextflow.util.TestOnly
 @CompileStatic
 class DefaultLinStore implements LinStore {
 
-    private static String HISTORY_FILE_NAME =".history"
+    private static String HISTORY_FILE_NAME = ".history"
     private static final String METADATA_FILE = '.data.json'
     private static final String METADATA_PATH = '.meta'
     private static final String DEFAULT_LOCATION = 'lineage'
@@ -50,7 +49,6 @@ class DefaultLinStore implements LinStore {
     private Path location
     private LinHistoryLog historyLog
     private LinEncoder encoder
-
 
     DefaultLinStore open(LineageConfig config) {
         location = toLocationPath(config.store.location)
@@ -113,7 +111,7 @@ class DefaultLinStore implements LinStore {
         return searchAllFiles(params)
     }
 
-    private Map<String, LinSerializable> searchAllFiles (Map<String,String> params) {
+    private Map<String, LinSerializable> searchAllFiles(Map<String,String> params) {
         final results = new HashMap<String, LinSerializable>()
 
         Files.walkFileTree(metaLocation, new FileVisitor<Path>() {

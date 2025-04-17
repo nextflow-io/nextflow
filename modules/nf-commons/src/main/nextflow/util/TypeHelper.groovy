@@ -51,7 +51,7 @@ class TypeHelper {
      * </pre>
      */
     static Type getGenericType(Object object, int index) {
-        final params = (ParameterizedType) (object.getClass().getGenericSuperclass());
+        final params = (ParameterizedType) (object.getClass().getGenericSuperclass())
         return params.getActualTypeArguments()[index]
     }
 

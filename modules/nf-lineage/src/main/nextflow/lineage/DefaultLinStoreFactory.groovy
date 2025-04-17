@@ -30,8 +30,8 @@ import nextflow.plugin.Priority
 @Priority(0)
 class DefaultLinStoreFactory extends LinStoreFactory {
 
-    private static Pattern SCHEME = ~/^([a-zA-Z][a-zA-Z\d+\-.]*):/
-    private static List SUPPORTED_SCHEMES = ['file', 's3', 'gs', 'az']
+    private static final Pattern SCHEME = ~/^([a-zA-Z][a-zA-Z\d+\-.]*):/
+    private static final List<String> SUPPORTED_SCHEMES = List.of('file', 's3', 'gs', 'az')
 
     @Override
     boolean canOpen(LineageConfig config) {

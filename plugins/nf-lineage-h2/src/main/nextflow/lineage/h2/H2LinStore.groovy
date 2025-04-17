@@ -17,11 +17,10 @@
 
 package nextflow.lineage.h2
 
-import groovy.json.JsonSlurper
-
 import java.sql.Clob
 
 import com.zaxxer.hikari.HikariDataSource
+import groovy.json.JsonSlurper
 import groovy.sql.Sql
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -142,6 +141,7 @@ class H2LinStore implements LinStore {
         }
         return results
     }
+
     /**
      * JSON_MATCH implementation for h2
      * @param jsonString
@@ -158,7 +158,6 @@ class H2LinStore implements LinStore {
     void close() {
         dataSource.close()
     }
-
 
     @TestOnly
     void truncateAllTables() {

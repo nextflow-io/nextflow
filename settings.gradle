@@ -28,7 +28,6 @@ include 'nf-commons'
 include 'nf-httpfs'
 include 'nf-lang'
 include 'nf-lineage'
-include 'nf-lang'
 
 rootProject.children.each { prj ->
     prj.projectDir = new File("$rootDir/modules/$prj.name")

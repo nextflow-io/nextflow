@@ -16,12 +16,11 @@
 
 package nextflow.serde.gson
 
-import com.google.gson.stream.JsonToken
-
 import java.time.Instant
 
 import com.google.gson.TypeAdapter
 import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonToken
 import com.google.gson.stream.JsonWriter
 import groovy.transform.CompileStatic
 
@@ -39,9 +38,9 @@ class InstantAdapter extends TypeAdapter<Instant> {
 
     @Override
     Instant read(JsonReader reader) throws IOException {
-        if (reader.peek() == JsonToken.NULL) {
-            reader.nextNull();
-            return null;
+        if( reader.peek() == JsonToken.NULL ) {
+            reader.nextNull()
+            return null
         }
         return Instant.parse(reader.nextString())
     }

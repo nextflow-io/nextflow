@@ -29,7 +29,9 @@ import java.text.SimpleDateFormat
 @CompileStatic
 @EqualsAndHashCode(includes = 'runName,sessionId')
 class LinHistoryRecord {
-    public static final DateFormat TIMESTAMP_FMT = new SimpleDateFormat('yyyy-MM-dd HH:mm:ss')
+
+    static final DateFormat TIMESTAMP_FMT = new SimpleDateFormat('yyyy-MM-dd HH:mm:ss')
+
     final Date timestamp
     final String runName
     final UUID sessionId
@@ -58,7 +60,7 @@ class LinHistoryRecord {
     }
 
     static LinHistoryRecord parse(String line) {
-        def cols = line.tokenize('\t')
+        final cols = line.tokenize('\t')
         if (cols.size() == 4) {
             return new LinHistoryRecord(TIMESTAMP_FMT.parse(cols[0]), cols[1], UUID.fromString(cols[2]), cols[3])
         }

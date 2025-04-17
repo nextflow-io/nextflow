@@ -34,6 +34,6 @@ class GStringSerializer implements JsonSerializer<GString> {
     @Override
     JsonElement serialize(GString src, Type typeOfSrc, JsonSerializationContext context) {
         // Convert GString to plain String
-        return new JsonPrimitive(src.toString());
+        return new JsonPrimitive(src.toString())
     }
 }

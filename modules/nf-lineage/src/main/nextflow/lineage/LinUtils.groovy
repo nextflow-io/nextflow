@@ -41,6 +41,7 @@ class LinUtils {
 
     /**
      * Query a lineage store.
+     *
      * @param store lineage store to query.
      * @param uri Query to perform in a URI-like format.
      *      Format 'lid://<key>[?QueryString][#fragment]' where:
@@ -82,6 +83,7 @@ class LinUtils {
 
     /**
      * Get the array of the search path children elements from the fragment string
+     *
      * @param fragment String containing the elements separated by '.'
      * @return array with the parsed element
      */
@@ -95,6 +97,7 @@ class LinUtils {
 
     /**
      * Search for objects inside a description
+     *
      * @param store lineage store
      * @param key lineage key where to perform the search
      * @param params Parameter-value pairs to be evaluated in the key
@@ -126,6 +129,7 @@ class LinUtils {
 
     /**
      * Get a metadata sub-object.
+     *
      * If the requested sub-object is the workflow or task outputs, retrieves the outputs from the outputs description.
      *
      * @param store Store to retrieve lineage metadata objects.
@@ -158,6 +162,7 @@ class LinUtils {
 
     /**
      * Evaluates object or the objects in a collection matches a set of parameter-value pairs. It includes in the results collection in case of match.
+     *
      * @param object Object or collection of objects to evaluate
      * @param params parameter-value pairs to evaluate in each object
      * @param results results collection to include the matching objects
@@ -173,8 +178,10 @@ class LinUtils {
             results.add(object)
         }
     }
+
     /**
      * Parses a query string and store them in parameter-value Map.
+     *
      * @param queryString URI-like query string. (e.g. param1=value1&param2=value2).
      * @return Map containing the parameter-value pairs of the query string.
      */
@@ -210,7 +217,7 @@ class LinUtils {
         if( !value )
             return false
         if( value instanceof Collection ) {
-            for( def v : value as Collection ) {
+            for( final v : value as Collection ) {
                 if( v.toString() == expected.toString() )
                     return true
             }
@@ -221,30 +228,32 @@ class LinUtils {
 
     /**
      * Retrieves the sub-object or value indicated by a path.
+     *
      * @param obj Object to navigate
      * @param path Elements path separated by '.' e.g. field.subfield
      * @return sub-object / value
      */
-    static Object navigate(Object obj, String path){
+    static Object navigate(Object obj, String path) {
         if (!obj)
             return null
         // type has been replaced by class when evaluating LidSerializable objects
         if (obj instanceof LinSerializable && path == 'type')
-                return obj.getClass()?.simpleName
-        try{
+            return obj.getClass()?.simpleName
+        try {
             return path.tokenize('.').inject(obj) { current, key ->
-                return getSubPath(current, key)
+                getSubPath(current, key)
             }
-        } catch (Throwable e) {
+        }
+        catch (Throwable e) {
             log.debug("Error navigating to $path in object", e)
             return null
         }
     }
 
     private static Object getSubPath(current, String key) {
-        if (current == null)
+        if (current == null) {
             return null
-
+        }
         if (current instanceof Map) {
             return current[key] // Navigate Map properties
         }
@@ -258,19 +267,20 @@ class LinUtils {
         return null
     }
 
-     private static Object navigateCollection(Collection collection, String key) {
-         def results = []
-         for (Object object: collection){
-             final res = getSubPath(object, key)
-             if (res) results.add(res)
-         }
-         if (results.isEmpty() ) {
-             log.trace("No property found for $key")
-             return null
-         }
-         // Return a single object if only ine results is found.
-         return results.size() == 1 ? results[0] : results
-     }
+    private static Object navigateCollection(Collection collection, String key) {
+        final results = []
+        for (Object object : collection) {
+            final res = getSubPath(object, key)
+            if (res)
+                results.add(res)
+        }
+        if (results.isEmpty() ) {
+            log.trace("No property found for $key")
+            return null
+        }
+        // Return a single object if only ine results is found.
+        return results.size() == 1 ? results[0] : results
+    }
 
     /**
      * Helper function to convert from FileTime to ISO 8601 with offset
@@ -279,8 +289,8 @@ class LinUtils {
      * @param time File time to convert
      * @return The {@link OffsetDateTime} for the corresponding file time or null in case of not available (null)
      */
-    static OffsetDateTime toDate(FileTime time){
-        return time!=null
+    static OffsetDateTime toDate(FileTime time) {
+        return time != null
             ? time.toInstant().atZone(ZoneId.systemDefault()).toOffsetDateTime()
             : null
     }
@@ -291,7 +301,7 @@ class LinUtils {
      * @param date ISO formated time
      * @return Converted FileTime or null if date is not available (null or 'N/A')
      */
-    static FileTime toFileTime(OffsetDateTime date){
+    static FileTime toFileTime(OffsetDateTime date) {
         if (!date)
             return null
         return FileTime.from(date.toInstant())
@@ -307,7 +317,7 @@ class LinUtils {
      * @return Output encoded as a JSON string
      */
     static String encodeSearchOutputs(Object output, boolean prettyPrint) {
-        if (output instanceof LinSerializable){
+        if (output instanceof LinSerializable) {
             return new LinEncoder().withPrettyPrint(prettyPrint).encode(output)
         } else {
             return new GsonEncoder<Object>() {}

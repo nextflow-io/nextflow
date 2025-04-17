@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.serde;
+package nextflow.serde
 
 /**
  * An interface for encoding and decoding objects between two types.
@@ -40,6 +40,6 @@ interface Encoder<T,S> {
      * @param encoded the encoded representation to decode
      * @return the decoded object
      */
-    T decode(S encoded);
+    T decode(S encoded)
 
 }

@@ -991,7 +991,7 @@ class TaskRun implements Cloneable {
         return processor.session.getCondaConfig()
     }
 
-    String getStubSource(){
+    String getStubSource() {
         return config?.getStubBlock()?.source
     }
 }
