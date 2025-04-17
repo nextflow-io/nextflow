@@ -113,6 +113,8 @@ Launching from Seqera Platform provides you with:
 Seqera Cloud Basic is free for small teams. Researchers at qualifying academic institutions can apply for free access to Seqera Cloud Pro.
 See the [Seqera Platform documentation](https://docs.seqera.io/platform) for set-up information and tutorials to get started.
 
+(install-standalone)=
+
 ## Standalone distribution
 
 The Nextflow standalone distribution (i.e. the `dist` release) is a self-contained `nextflow` executable that can run without needing to download core dependencies at runtime. This distribution is useful for offline environments, as well as building and testing Nextflow locally.
