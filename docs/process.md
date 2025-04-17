@@ -209,7 +209,7 @@ Template scripts are generally discouraged due to the caveats described above. T
 ### Shell
 
 :::{deprecated} 24.11.0-edge
-Use the `script` block instead. Consider using the {ref}`strict syntax <strict-syntax>`, which provides error checking to help distinguish between Nextflow variables and Bash variables in the process script.
+Use the `script` block instead. Consider using the {ref}`strict syntax <strict-syntax-page>`, which provides error checking to help distinguish between Nextflow variables and Bash variables in the process script.
 :::
 
 The `shell` block is a string expression that defines the script that is executed by the process. It is an alternative to the {ref}`process-script` definition with one important difference: it uses the exclamation mark `!` character, instead of the usual dollar `$` character, to denote Nextflow variables.
@@ -1323,6 +1323,8 @@ process foo {
 ```
 
 In this example, each task requests 8 GB of memory, plus the size of the input file rounded up to the next GB. This way, each task requests only as much memory as it needs based on the size of the inputs. The specific function that you use should be tuned for each process.
+
+(task-previous-execution-trace)=
 
 ### Dynamic task resources with previous execution trace
 

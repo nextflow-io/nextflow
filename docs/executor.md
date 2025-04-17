@@ -205,7 +205,12 @@ Resource requests and other job characteristics can be controlled via the follow
 :::{versionadded} 22.05.0-edge
 :::
 
-:::{warning} *Experimental: may change in a future release.*
+:::{versionchanged} 24.06.0-edge
+HyperQueue 0.17.0 or later is required.
+:::
+
+:::{versionchanged} 25.01.0-edge
+HyperQueue 0.20.0 or later is required.
 :::
 
 The `hyperqueue` executor allows you to run your pipeline script by using the [HyperQueue](https://github.com/It4innovations/hyperqueue) job scheduler.
@@ -223,9 +228,6 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-cpus`
 - {ref}`process-memory`
 - {ref}`process-time`
-
-:::{note} HyperQueue version 0.20.0 or later is required.
-:::
 
 (k8s-executor)=
 

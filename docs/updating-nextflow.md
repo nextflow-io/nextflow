@@ -10,7 +10,7 @@ A stable version of Nextflow is released in the 4th and 10th month of each year.
 
 Nextflow uses [Calendar Versioning](https://calver.org). Versions are numbered as `<year>.<month>.<patch>`. For example, `23.10.1` corresponds to the first patch of the October 2023 stable release.
 
-You can find an exhaustive list of releases and updates in the [Nextflow changelog](https://github.com/nextflow-io/nextflow/blob/master/changelog.txt).
+See {ref}`migrations-page` for a list of migration guides for each stable release. See the [changelog](https://github.com/nextflow-io/nextflow/blob/master/changelog.txt) for an exhaustive list of changes across all releases.
 
 ## Self-update
 

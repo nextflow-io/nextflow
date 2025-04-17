@@ -108,7 +108,7 @@ DSL2 scripts cannot exceed 64 KB in size. Split large DSL1 scripts into modules 
 
 ## Deprecations
 
-### Processes
+<h3>Processes</h3>
 
 - The `set` process input type is no longer supported, use {ref}`tuple <process-input-tuple>` instead.
 
@@ -150,13 +150,13 @@ DSL2 scripts cannot exceed 64 KB in size. Split large DSL1 scripts into modules 
   }
   ```
 
-### Channels
+<h3>Channels</h3>
 
 - Channel method `bind` has been deprecated in DSL2.
 - Channel method `<<` has been deprecated in DSL2.
 - Channel factory `create` has been deprecated in DSL2.
 
-### Operators
+<h3>Operators</h3>
 
 - Operator `choice` has been deprecated in DSL2. Use {ref}`operator-branch` instead.
 - Operator `close` has been deprecated in DSL2.
@@ -169,7 +169,7 @@ DSL2 scripts cannot exceed 64 KB in size. Split large DSL1 scripts into modules 
 - Operator `separate` has been deprecated in DSL2.
 - Operator `spread` has been deprecated in DSL2. Use {ref}`operator-combine` instead.
 
-### DSL2 Preview
+<h3>DSL2 Preview</h3>
 
 An early preview of DSL2 was available in 2020. Note that some of that early DSL2 syntax has since changed.
 

@@ -513,6 +513,8 @@ There are multiple reasons why this can happen. They are mainly related to the C
 
 This [AWS page](https://aws.amazon.com/premiumsupport/knowledge-center/batch-job-stuck-runnable-status/) provides several resolutions and tips to investigate and work around the issue.
 
+(aws-fargate)=
+
 ## AWS Fargate
 
 :::{versionadded} 23.12.0-edge
