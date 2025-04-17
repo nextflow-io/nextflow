@@ -47,7 +47,7 @@ class ParamsDsl {
     }
 
     void apply(Session session) {
-        final cliParams = session.params
+        final cliParams = session.params ?: [:]
         final configParams = session.config.params as Map
 
         for( final name : cliParams.keySet() ) {

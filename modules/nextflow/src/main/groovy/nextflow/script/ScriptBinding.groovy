@@ -131,10 +131,10 @@ class ScriptBinding extends WorkflowBinding {
      * @param values
      */
     ScriptBinding setParams(Map<String,Object> values ) {
-        params = new ParamsMap()
-        if( values )
-            params.putAll(values)
-        super.setVariable0('params', params)
+        if( values ) {
+            params = new ParamsMap(values)
+            super.setVariable0('params', params)
+        }
         return this
     }
 
