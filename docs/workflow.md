@@ -22,35 +22,19 @@ workflow {
 }
 ```
 
-### Parameters
-
-```nextflow
-workflow my_workflow {
-    foo()
-    bar( foo.out.collect() )
-}
-
-workflow {
-    my_workflow()
-}
-```
-
-The above example defines a workflow named `my_workflow` which can be called from another workflow as `my_workflow()`. Both `foo` and `bar` could be any other process or workflow.
-
-See {ref}`syntax-workflow` for a full description of the workflow syntax.
-
-:::{note}
-Workflows were introduced in DSL2. If you are still using DSL1, see {ref}`dsl1-page` for more information about how to migrate your Nextflow pipelines to DSL2.
-:::
-
 (workflow-params-def)=
 
 ## Parameters
 
-:::{versionchanged} 25.04.0
-A new syntax for declaring parameters has been introduced. It requires the `nextflow.preview.params` feature flag to be used.
+There are two ways to declare parameters in a Nextflow script: the `params` block and *legacy* parameters.
 
-See [Legacy syntax](#legacy-syntax) for details about the existing way to declare parameters.
+### Params block
+
+:::{versionadded} 25.04.0
+:::
+
+:::{note}
+This feature requires the `nextflow.preview.params` feature flag to be enabled.
 :::
 
 A script can declare parameters using the `params` block:
@@ -86,15 +70,19 @@ Named workflows should not use params. They should receive their inputs explicit
 
 The default value can be overridden by the command line, params file, or config file. If a param does not have a default value and is not specified at runtime, the run will fail.
 
-### Legacy syntax
+### Legacy parameters
 
 Parameters can be declared by assigning a `params` property to a default value:
 
 ```nextflow
-params.data = '/some/data/file'
+params.input = '/some/data/file'
+params.save_intermeds = false
 
 workflow {
-    // ...
+    if( params.input )
+        analyze(params.input, params.save_intermeds)
+    else
+        analyze(fake_input(), params.save_intermeds)
 }
 ```
 
