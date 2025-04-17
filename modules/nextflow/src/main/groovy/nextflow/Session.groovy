@@ -110,7 +110,7 @@ class Session implements ISession {
     /**
      * Params that were specified on the command line.
      */
-    Map params
+    Map cliParams
 
     /**
      * Holds the configuration object
@@ -440,7 +440,7 @@ class Session implements ISession {
         this.workflowMetadata = new WorkflowMetadata(this, scriptFile)
 
         // configure script params
-        this.params = params
+        this.cliParams = params
         binding.setParams( (Map)config.params )
         binding.setArgs( new ScriptRunner.ArgsList(args) )
 

@@ -79,8 +79,9 @@ class ScriptBinding extends WorkflowBinding {
         params = new ParamsMap()
         if( vars.params ) {
             if( !(vars.params instanceof Map) ) throw new IllegalArgumentException("ScriptBinding 'params' must be a Map value")
-            setParams((Map)vars.params)
+            params.putAll((Map)vars.params)
         }
+        vars.params = params
     }
 
     ScriptBinding(Session session) {
@@ -134,7 +135,7 @@ class ScriptBinding extends WorkflowBinding {
      */
     ScriptBinding setParams(Map<String,Object> values ) {
         if( values )
-            params = new ParamsMap(values)
+            params.putAll(values)
         super.setVariable0('params', params)
         return this
     }

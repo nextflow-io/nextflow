@@ -12,4 +12,4 @@ $NXF_RUN -c ../../params-dsl.config -profile test | tee stdout
 
 echo
 echo "Test invalid param"
-$NXF_RUN --foobar | tee stdout
+$NXF_RUN --inputs ./data | tee stdout

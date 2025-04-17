@@ -47,7 +47,7 @@ class ParamsDsl {
     }
 
     void apply(Session session) {
-        final cliParams = session.params ?: [:]
+        final cliParams = session.cliParams ?: [:]
         final configParams = session.config.params as Map
 
         for( final name : cliParams.keySet() ) {
@@ -60,7 +60,9 @@ class ParamsDsl {
         final params = new HashMap<String,?>()
         for( final name : declarations.keySet() ) {
             final defaultValue = declarations[name]
-            if( configParams.containsKey(name) )
+            if( cliParams.containsKey(name) )
+                params[name] = cliParams[name]
+            else if( configParams.containsKey(name) )
                 params[name] = configParams[name]
             else if( defaultValue.isPresent() )
                 params[name] = defaultValue.get()
