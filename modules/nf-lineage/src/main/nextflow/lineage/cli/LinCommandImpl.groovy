@@ -51,7 +51,7 @@ import org.eclipse.jgit.diff.RawTextComparator
 @CompileStatic
 class LinCommandImpl implements CmdLineage.LinCommand {
 
-    private static Path DEFAULT_HTML_FILE = Path.of("lineage-render.html")
+    private static Path DEFAULT_HTML_FILE = Path.of("lineage.html")
 
     @Canonical
     static class Edge {
