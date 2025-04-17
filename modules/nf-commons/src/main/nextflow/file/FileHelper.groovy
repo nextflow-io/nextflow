@@ -1174,20 +1174,20 @@ class FileHelper {
     public static HashCode getTaskHashFromPath(Path sourcePath, Path workPath) {
         assert sourcePath
         assert workPath
-        if (sourcePath.startsWith(workPath)) {
-            Path relativePath = workPath.relativize(sourcePath)
-            if (relativePath.getNameCount() >= 2) {
-                final bucket = relativePath.getName(0).toString()
-                if (bucket.size() == 2) {
-                    final strHash = bucket + relativePath.getName(1).toString()
-                    try {
-                        return HashCode.fromString(strHash)
-                    } catch (Throwable e) {
-                        log.debug("String '${strHash}' is not a valid hash", e)
-                    }
-                }
-            }
+        if( !sourcePath.startsWith(workPath) )
+            return null
+        final relativePath = workPath.relativize(sourcePath)
+        if( relativePath.getNameCount() < 2 )
+            return null
+        final bucket = relativePath.getName(0).toString()
+        if( bucket.size() != 2 )
+            return null
+        final strHash = bucket + relativePath.getName(1).toString()
+        try {
+            return HashCode.fromString(strHash)
+        } catch (Throwable e) {
+            log.debug("String '${strHash}' is not a valid hash", e)
+            return null
         }
-        return null
     }
 }

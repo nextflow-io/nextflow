@@ -47,11 +47,12 @@ class LinHistoryRecord {
     protected LinHistoryRecord() {}
 
     List<String> toList() {
-        def line = new ArrayList<String>(4)
-        line << (timestamp ? TIMESTAMP_FMT.format(timestamp) : '-')
-        line << (runName ?: '-')
-        line << (sessionId.toString())
-        line << (runLid ?: '-')
+        return List.of(
+            timestamp ? TIMESTAMP_FMT.format(timestamp) : '-',
+            runName ?: '-',
+            sessionId.toString(),
+            runLid ?: '-',
+        )
     }
 
     @Override
