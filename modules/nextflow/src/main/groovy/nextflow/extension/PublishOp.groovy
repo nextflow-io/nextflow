@@ -97,7 +97,7 @@ class PublishOp {
             ? [saveAs: targetResolver]
             : [path: targetResolver]
 
-        if (publishOpts.annotations instanceof Closure){
+        if( publishOpts.annotations instanceof Closure ) {
             final annotations = publishOpts.annotations as Closure
             overrides.annotations = annotations.call(value) as Map
         }
@@ -262,7 +262,7 @@ class PublishOp {
      */
     protected Object normalizePaths(value, targetResolver) {
         if( value instanceof Path ) {
-            return List.of(value.getBaseName(), normalizePath(value, targetResolver))
+            return normalizePath(value, targetResolver)
         }
 
         if( value instanceof Collection ) {
