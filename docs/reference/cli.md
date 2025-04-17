@@ -532,6 +532,8 @@ $ nextflow info nextflow-io/hello
     v1.2 [t]
 ```
 
+(cli-inspect)=
+
 ### `inspect`
 
 :::{versionadded} 23.09.0-edge
@@ -680,6 +682,8 @@ Execute a pipeline into a Kubernetes cluster.
 ```console
 $ nextflow kuberun nextflow-io/hello
 ```
+
+(cli-lint)=
 
 ### `lint`
 
