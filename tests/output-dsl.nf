@@ -62,6 +62,19 @@ process quant {
   '''
 }
 
+process summary {
+  input:
+  path logs
+
+  output:
+  path('summary.txt'), emit: report
+
+  script:
+  '''
+  ls -1 *.log > summary.txt
+  '''
+}
+
 workflow {
   main:
   ids = Channel.of('alpha', 'beta', 'delta')
@@ -83,8 +96,15 @@ workflow {
       ]
     }
 
+  ch_logs = ch_samples
+    .map { sample -> sample.fastqc }
+    .collect()
+
+  summary(ch_logs)
+
   publish:
   samples = ch_samples
+  summary = summary.out
 }
 
 output {
@@ -100,5 +120,9 @@ output {
       header true
       sep ','
     }
+  }
+
+  summary {
+    path '.'
   }
 }

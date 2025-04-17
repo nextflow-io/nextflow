@@ -209,7 +209,7 @@ Template scripts are generally discouraged due to the caveats described above. T
 ### Shell
 
 :::{deprecated} 24.11.0-edge
-Use the `script` block instead. Consider using the {ref}`VS Code extension <vscode-page>`, which provides syntax highlighting and error checking to distinguish Nextflow variables from Bash variables in the process script.
+Use the `script` block instead. Consider using the {ref}`strict syntax <strict-syntax>`, which provides error checking to help distinguish between Nextflow variables and Bash variables in the process script.
 :::
 
 The `shell` block is a string expression that defines the script that is executed by the process. It is an alternative to the {ref}`process-script` definition with one important difference: it uses the exclamation mark `!` character, instead of the usual dollar `$` character, to denote Nextflow variables.
