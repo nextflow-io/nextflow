@@ -40,7 +40,7 @@ If you resume the pipeline using the resume option, it will pick up at the point
 
 ### Re-enable Spot retries
 
-You can re-enable Spot retries for each provider in your Nextflow configuration:
+You can re-enable Spot retries for each provider in your Nextflow config:
 
 ```groovy
 aws.batch.maxSpotAttempts = 5
