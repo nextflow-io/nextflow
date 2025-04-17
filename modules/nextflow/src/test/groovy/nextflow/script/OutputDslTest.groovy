@@ -77,7 +77,7 @@ class OutputDslTest extends Specification {
         outputDir.resolve('foo/file1.txt').text == 'Hello'
         outputDir.resolve('barbar/file2.txt').text == 'world'
         outputDir.resolve('index.csv').text == """\
-            "file2","${outputDir}/barbar/file2.txt"
+            "${outputDir}/barbar/file2.txt"
             """.stripIndent()
         and:
         1 * session.notifyFilePublish(outputDir.resolve('foo/file1.txt'), file1, null)
