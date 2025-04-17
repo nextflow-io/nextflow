@@ -84,7 +84,6 @@ class LinPath implements Path, LogicalDataPath {
         this.filePath = filepath
     }
 
-
     LinPath(LinFileSystem fs, String path) {
         this( fs, asUri( LID_PROT + norm0(path)) )
     }
@@ -138,11 +137,9 @@ class LinPath implements Path, LogicalDataPath {
     @TestOnly
     protected String getFilePath(){ this.filePath }
 
-
-
     /**
-
      * Finds the target path of a LinPath.
+     *
      * @param fs LinFileSystem associated to the LinPath to find
      * @param filePath Path associated to the LinPath to find
      * @param resultsAsPath True to return metadata descriptions as LinMetadataPath
@@ -441,6 +438,7 @@ class LinPath implements Path, LogicalDataPath {
     Path toTargetPath() {
         return getTargetOrMetadataPath()
     }
+
     /**
      * Get the path associated to a DataOutput metadata.
      *
@@ -453,6 +451,7 @@ class LinPath implements Path, LogicalDataPath {
 
     /**
      * Get the path associated to any metadata object.
+     *
      * @return Path associated to a DataOutput or LinMetadataFile with the metadata object for other types.
      * @throws FileNotFoundException if the metadata associated to the LinPath does not exist
      */
