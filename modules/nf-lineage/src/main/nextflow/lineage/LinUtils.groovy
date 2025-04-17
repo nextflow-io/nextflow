@@ -56,7 +56,7 @@ class LinUtils {
             return globalSearch(store, uri)
         } else {
             final parameters = uri.query ? parseQuery(uri.query) : null
-            final children = parseChildrenFormFragment(uri.fragment)
+            final children = parseChildrenFromFragment(uri.fragment)
             return searchPath(store, key, parameters, children )
         }
     }
@@ -87,7 +87,7 @@ class LinUtils {
      * @param fragment String containing the elements separated by '.'
      * @return array with the parsed element
      */
-    static String[] parseChildrenFormFragment(String fragment) {
+    static String[] parseChildrenFromFragment(String fragment) {
         if( !fragment )
             return EMPTY_ARRAY
         final children = fragment.tokenize('.')

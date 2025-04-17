@@ -113,7 +113,7 @@ class LinUtilsTest extends Specification{
 
     def "should parse children elements form Fragment string"() {
         expect:
-        LinUtils.parseChildrenFormFragment(FRAGMENT) == EXPECTED as String[]
+        LinUtils.parseChildrenFromFragment(FRAGMENT) == EXPECTED as String[]
 
         where:
         FRAGMENT                | EXPECTED

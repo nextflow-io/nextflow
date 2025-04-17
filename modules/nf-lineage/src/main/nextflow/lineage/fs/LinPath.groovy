@@ -448,7 +448,7 @@ class LinPath implements Path, LogicalDataPath {
      * @throws FileNotFoundException if the metadata associated to the LinPath does not exist or its type is not a DataOutput.
      */
     protected Path getTargetPath() {
-        return findTarget(fileSystem, filePath, false, parseChildrenFormFragment(fragment))
+        return findTarget(fileSystem, filePath, false, parseChildrenFromFragment(fragment))
     }
 
     /**
@@ -457,7 +457,7 @@ class LinPath implements Path, LogicalDataPath {
      * @throws FileNotFoundException if the metadata associated to the LinPath does not exist
      */
     protected Path getTargetOrMetadataPath(){
-        return findTarget(fileSystem, filePath, true, parseChildrenFormFragment(fragment))
+        return findTarget(fileSystem, filePath, true, parseChildrenFromFragment(fragment))
     }
 
     @Override
