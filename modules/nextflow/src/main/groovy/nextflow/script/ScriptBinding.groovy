@@ -76,9 +76,11 @@ class ScriptBinding extends WorkflowBinding {
         vars.put('args', args)
         
         // create and populate params
-        if( vars.params && !(vars.params instanceof Map) )
-            throw new IllegalArgumentException("ScriptBinding 'params' must be a Map value")
-        setParams((Map)vars.params)
+        params = new ParamsMap()
+        if( vars.params ) {
+            if( !(vars.params instanceof Map) ) throw new IllegalArgumentException("ScriptBinding 'params' must be a Map value")
+            setParams((Map)vars.params)
+        }
     }
 
     ScriptBinding(Session session) {
@@ -131,10 +133,9 @@ class ScriptBinding extends WorkflowBinding {
      * @param values
      */
     ScriptBinding setParams(Map<String,Object> values ) {
-        if( values ) {
+        if( values )
             params = new ParamsMap(values)
-            super.setVariable0('params', params)
-        }
+        super.setVariable0('params', params)
         return this
     }
 

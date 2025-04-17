@@ -320,14 +320,14 @@ class NextflowDSLImpl implements ASTTransformation {
                 }
 
                 final stmtX = (ExpressionStatement)stmt
-                if( !convertParamAssign(stmtX) ) {
+                if( !convertParamDecl(stmtX) ) {
                     syntaxError(stmt, "Invalid parameter declaration")
                     return
                 }
             }
         }
 
-        protected boolean convertParamAssign(ExpressionStatement stmtX) {
+        protected boolean convertParamDecl(ExpressionStatement stmtX) {
             if( stmtX.expression instanceof VariableExpression ) {
                 final target = (VariableExpression)stmtX.expression
                 stmtX.expression = callThisX('declare', args(constX(target.name)))
