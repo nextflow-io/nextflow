@@ -48,11 +48,9 @@ class ParamsDsl {
 
     void apply(Session session) {
         final cliParams = session.cliParams ?: [:]
-        final configParams = session.config.params as Map
+        final configParams = session.configParams ?: [:]
 
         for( final name : cliParams.keySet() ) {
-            // TODO: doesn't work because CLI params are added to config params
-            // TODO: need to use config params before CLI params were added
             if( !declarations.containsKey(name) && !configParams.containsKey(name) )
                 throw new ScriptRuntimeException("Parameter `$name` was specified on the command line or params file but is not declared in the script or config")
         }

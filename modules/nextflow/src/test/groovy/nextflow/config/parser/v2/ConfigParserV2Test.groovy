@@ -392,13 +392,13 @@ class ConfigParserV2Test extends Specification {
         def slurper = new ConfigParserV2().setProfiles(['alpha'])
         slurper.parse(text)
         then:
-        slurper.getProfiles() == ['alpha','beta'] as Set
+        slurper.getDeclaredProfiles() == ['alpha','beta'] as Set
 
         when:
         slurper = new ConfigParserV2().setProfiles(['omega'])
         slurper.parse(text)
         then:
-        slurper.getProfiles() == ['alpha','beta'] as Set
+        slurper.getDeclaredProfiles() == ['alpha','beta'] as Set
     }
 
     def 'should ignore config includes when specified' () {

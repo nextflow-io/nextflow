@@ -61,7 +61,7 @@ class ConfigBuilder {
 
     Path currentDir
 
-    Map<String,?> params
+    Map<String,?> cliParams
 
     boolean showAllProfiles
 
@@ -83,9 +83,11 @@ class ConfigBuilder {
 
     Map<String,String> env = new HashMap<>(System.getenv())
 
-    List<String> warnings = new ArrayList<>(10);
+    List<String> warnings = new ArrayList<>(10)
 
-    {
+    Map<String,Object> declaredParams = [:]
+
+    ConfigBuilder() {
         setHomeDir(Const.APP_HOME_DIR)
         setCurrentDir(Paths.get('.'))
     }
@@ -116,8 +118,8 @@ class ConfigBuilder {
         return this
     }
 
-    ConfigBuilder setParams( Map<String,?> params ) {
-        this.params = params
+    ConfigBuilder setCliParams( Map<String,?> cliParams ) {
+        this.cliParams = cliParams
         return this
     }
 
@@ -167,6 +169,10 @@ class ConfigBuilder {
         if( files )
             userConfigFiles.addAll(files)
         return this
+    }
+
+    Map<String,Object> getConfigParams() {
+        return declaredParams
     }
 
     static private wrapValue( value ) {
@@ -358,8 +364,8 @@ class ConfigBuilder {
                 .setIgnoreIncludes(ignoreIncludes)
         ConfigObject result = new ConfigObject()
 
-        if( params )
-            slurper.setParams(params)
+        if( cliParams )
+            slurper.setParams(cliParams)
 
         // add the user specified environment to the session env
         env.sort().each { name, value -> result.env.put(name,value) }
@@ -390,7 +396,7 @@ class ConfigBuilder {
             }
 
             if( validateProfile ) {
-                checkValidProfile(slurper.getProfiles())
+                checkValidProfile(slurper.getDeclaredProfiles())
             }
 
         }
@@ -429,6 +435,7 @@ class ConfigBuilder {
 
         def config = parse0(slurper,entry)
         validate(config,entry)
+        declaredParams.putAll(slurper.getDeclaredParams())
         result.merge(config)
     }
 
@@ -742,8 +749,8 @@ class ConfigBuilder {
         }
 
         // -- add the command line parameters to the 'taskConfig' object
-        if( params )
-            config.params = mergeMaps( (Map)config.params, params, NF.strictMode )
+        if( cliParams )
+            config.params = mergeMaps( (Map)config.params, cliParams, NF.strictMode )
 
         if( cmdRun.withoutDocker && config.docker instanceof Map ) {
             // disable docker execution

@@ -301,8 +301,6 @@ class CmdRun extends CmdBase implements HubOptions {
         final pipeline = stdin ? '-' : ( args ? args[0] : null )
         if( !pipeline )
             throw new AbortOperationException("No project name was specified")
-        if( scriptArgs )
-            log.warn "Script args are deprecated -- use params instead"
 
         if( withPodman && withoutPodman )
             throw new AbortOperationException("Command line options `-with-podman` and `-without-podman` cannot be specified at the same time")
@@ -327,17 +325,18 @@ class CmdRun extends CmdBase implements HubOptions {
         // -- specify the arguments
         final scriptFile = getScriptFile(pipeline)
 
-        // -- load params
+        // -- load command line params
         final baseDir = scriptFile.parent
-        final params = parsedParams(ConfigBuilder.getConfigVars(baseDir))
+        final cliParams = parsedParams(ConfigBuilder.getConfigVars(baseDir))
 
         // create the config object
         final builder = new ConfigBuilder()
                 .setOptions(launcher.options)
                 .setCmdRun(this)
                 .setBaseDir(baseDir)
-                .setParams(params)
-        final config = builder .build()
+                .setCliParams(cliParams)
+        final config = builder.build()
+        final configParams = builder.getConfigParams()
 
         // check DSL syntax in the config
         launchInfo(config, scriptFile)
@@ -382,7 +381,7 @@ class CmdRun extends CmdBase implements HubOptions {
         }
 
         // -- run it!
-        runner.execute(scriptArgs, params, this.entryName)
+        runner.execute(scriptArgs, cliParams, configParams, this.entryName)
     }
 
     protected void printBanner() {
