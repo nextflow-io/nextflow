@@ -284,8 +284,8 @@ class TaskProcessor {
         currentProcessor0 = this
     }
 
-    /* for testing purpose - do not remove */
-    protected TaskProcessor() { }
+    @TestOnly
+    protected TaskProcessor() {}
 
     /**
      * Create and initialize the processor object

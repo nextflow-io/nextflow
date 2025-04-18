@@ -38,6 +38,7 @@ import nextflow.k8s.model.PodMountSecret
 import nextflow.k8s.model.PodOptions
 import nextflow.k8s.model.PodSpecBuilder
 import nextflow.k8s.model.PodVolumeClaim
+import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -1027,11 +1028,12 @@ class K8sTaskHandlerTest extends Specification {
 
     def 'get fusion submit command' () {
         given:
+        def remoteWorkDir = XPath.get('http://foo/work/dir')
         def handler = Spy(K8sTaskHandler) {
             fusionEnabled() >> true
-            fusionLauncher() >> new FusionScriptLauncher(scheme: 'http')
+            fusionLauncher() >> new FusionScriptLauncher(Mock(TaskBean), 'http', remoteWorkDir)
             getTask() >> Mock(TaskRun) {
-                getWorkDir() >> XPath.get('http://foo/work/dir')
+                getWorkDir() >> remoteWorkDir
             }
         }
 

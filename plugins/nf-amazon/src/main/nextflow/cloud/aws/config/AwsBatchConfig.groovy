@@ -97,11 +97,6 @@ class AwsBatchConfig implements CloudTransferOptions {
      */
     boolean terminateUnschedulableJobs
 
-    /*
-     * only for testing
-     */
-    protected AwsBatchConfig() {}
-
     AwsBatchConfig(Map opts) {
         fargateMode = opts.platformType == 'fargate'
         cliPath = !fargateMode ? parseCliPath(opts.cliPath as String) : null
