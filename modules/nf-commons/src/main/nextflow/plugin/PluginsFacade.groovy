@@ -22,6 +22,7 @@ import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.extension.Bolts
@@ -40,6 +41,9 @@ import org.pf4j.PluginStateListener
 @CompileStatic
 class PluginsFacade implements PluginStateListener {
 
+    @PackageScope
+    final static String DEFAULT_PLUGINS_REPO = 'https://raw.githubusercontent.com/nextflow-io/plugins/main/plugins.json'
+
     private static final String DEV_MODE = 'dev'
     private static final String PROD_MODE = 'prod'
     private Map<String,String> env = SysEnv.get()
@@ -50,22 +54,25 @@ class PluginsFacade implements PluginStateListener {
     private PluginUpdater updater
     private CustomPluginManager manager
     private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
-    private String indexUrl = Plugins.DEFAULT_PLUGINS_REPO
+    private String indexUrl
     private boolean embedded
 
     PluginsFacade() {
         mode = getPluginsMode()
         root = getPluginsDir()
+        indexUrl = getPluginsIndexUrl()
         offline = env.get('NXF_OFFLINE') == 'true'
         if( mode==DEV_MODE && root.toString()=='plugins' && !isRunningFromDistArchive() )
             root = detectPluginsDevRoot()
         System.setProperty('pf4j.mode', mode)
     }
 
-    PluginsFacade(Path root, String mode=PROD_MODE, boolean offline=false) {
+    PluginsFacade(Path root, String mode=PROD_MODE, boolean offline=false,
+                  String indexUrl=DEFAULT_PLUGINS_REPO) {
         this.mode = mode
         this.root = root
         this.offline = offline
+        this.indexUrl = indexUrl
         System.setProperty('pf4j.mode', mode)
     }
 
@@ -93,6 +100,35 @@ class PluginsFacade implements PluginStateListener {
             log.trace "Using local plugins directory"
             return Paths.get('plugins')
         }
+    }
+
+    protected String getPluginsIndexUrl() {
+        final url = env.get('NXF_PLUGINS_INDEX_URL')
+        if( !url ) {
+            log.trace "Using default plugins url"
+            return DEFAULT_PLUGINS_REPO
+        }
+        log.debug "Detected NXF_PLUGINS_INDEX_URL=$url"
+
+        // sanity check url
+        if( !url.startsWith("https://") && !url.startsWith("http://") ) {
+            throw new IllegalArgumentException("Plugins registry URL must start with 'http://' or 'https://': $url")
+        }
+        if( url != DEFAULT_PLUGINS_REPO ) {
+            // warn that this is experimental behaviour
+            // (remove this warning when feature is ready)
+            log.warn """\
+                =======================================================================
+                =                                WARNING                                    =
+                = This workflow run is using a custom plugins registry.                     =
+                =                                                                           =
+                = ${url}
+                =                                                                           =
+                = This is experimental and not recommended for production workloads.        =
+                =============================================================================
+                """.stripIndent(true)
+        }
+        return url
     }
 
     private boolean isNextflowDevRoot(File file) {
@@ -320,27 +356,21 @@ class PluginsFacade implements PluginStateListener {
         new DefaultPluginManager()
     }
 
-    void start( String pluginId ) {
-        if( isEmbedded() && defaultPlugins.hasPlugin(pluginId) ) {
-            log.debug "Plugin 'start' is not required in embedded mode -- ignoring for plugin: $pluginId"
-            return
-        }
-
-        start(PluginSpec.parse(pluginId, defaultPlugins))
-    }
-
-    void start(PluginSpec plugin) {
-        if( isEmbedded() && defaultPlugins.hasPlugin(plugin.id) ) {
-            log.debug "Plugin 'start' is not required in embedded mode -- ignoring for plugin: $plugin.id"
-            return
-        }
-
-        updater.prepareAndStart(plugin.id, plugin.version)
+    void start(String pluginId) {
+        start([PluginSpec.parse(pluginId, defaultPlugins)])
     }
 
     void start(List<PluginSpec> specs) {
-        for( PluginSpec it : specs ) {
-            start(it)
+        def split = specs.split { plugin -> isEmbedded() && defaultPlugins.hasPlugin(plugin.id) }
+        def (skip, toStart) = [split[0], split[1]]
+        if( !skip.isEmpty() ) {
+            def skippedIds = skip.collect{ plugin -> plugin.id }
+            log.debug "Plugin 'start' is not required in embedded mode -- ignoring for plugins: $skippedIds"
+        }
+
+        updater.prefetchMetadata(toStart)
+        for( PluginSpec plugin : toStart ) {
+            updater.prepareAndStart(plugin.id, plugin.version)
         }
     }
 
