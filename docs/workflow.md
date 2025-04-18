@@ -68,7 +68,9 @@ workflow {
 Named workflows should not use params. They should receive their inputs explicitly through the `take:` section.
 :::
 
-The default value can be overridden by the command line, params file, or config file. If a param does not have a default value and is not specified at runtime, the run will fail.
+The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in {ref}`cli-params`.
+
+A parameter that doesn't specify a default value is a *required* param. If a required param is not given a value at runtime, the run will fail.
 
 ### Legacy parameters
 
