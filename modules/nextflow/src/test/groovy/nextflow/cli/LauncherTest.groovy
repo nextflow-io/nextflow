@@ -483,12 +483,12 @@ class LauncherTest extends Specification {
         given:
         def launcher = new Launcher()
         when:
-        launcher.printCommands( [new CmdInfo(), new CmdRun(), new CmdList()] )
+        launcher.printCommands( [new CmdInfo(), new CmdRun(), new CmdLint()] )
         then:
         capture.toString() == '''
                 Commands:
                   info   Print project and system runtime information
-                  list   List all downloaded projects
+                  lint   Lint Nextflow scripts and config files
                   run    Execute a pipeline project
 
                 '''
