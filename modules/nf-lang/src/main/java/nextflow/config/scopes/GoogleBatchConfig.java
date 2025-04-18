@@ -84,4 +84,12 @@ public class GoogleBatchConfig implements ConfigScope {
     """)
     public boolean usePrivateAddress;
 
+    @ConfigOption
+    @Description("""
+        The network tags to be applied to the instances created by Google Batch jobs (e.g., `['allow-ssh', 'allow-http']`).
+
+        [Read more](https://cloud.google.com/vpc/docs/add-remove-network-tags)
+    """)
+    public List<String> networkTags;
+
 }
