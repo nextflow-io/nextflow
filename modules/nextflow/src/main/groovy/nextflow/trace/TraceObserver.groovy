@@ -154,4 +154,15 @@ interface TraceObserver {
     default void onFilePublish(Path destination, Path source){
         onFilePublish(destination)
     }
+
+    /**
+     * Method that is invoke when an output file is staged
+     * into the work directory.
+     *
+     * @param destination
+     *      The destination path at staging folder.
+     * @param source
+     *      The source remote source path.
+     */
+    void onFileStage(Path destination, Path source){}
 }
