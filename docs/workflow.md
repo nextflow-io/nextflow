@@ -22,18 +22,69 @@ workflow {
 }
 ```
 
-### Parameters
+(workflow-params-def)=
 
-Parameters can be defined in the script with a default value that can be overridden from the CLI, params file, or config file. Parameters should only be used by the entry workflow:
+## Parameters
+
+There are two ways to declare parameters in a Nextflow script: the `params` block and *legacy* parameters.
+
+### Params block
+
+:::{versionadded} 25.04.0
+:::
+
+:::{note}
+This feature requires the `nextflow.preview.params` feature flag to be enabled.
+:::
+
+A script can declare parameters using the `params` block:
 
 ```nextflow
-params.data = '/some/data/file'
+params {
+    /**
+     * Path to input data.
+     */
+    input
+
+    /**
+     * Whether to save intermediate files.
+     */
+    save_intermeds = false
+}
+```
+
+Parameters can be used in the entry workflow:
+
+```nextflow
+workflow {
+    if( params.input )
+        analyze(params.input, params.save_intermeds)
+    else
+        analyze(fake_input(), params.save_intermeds)
+}
+```
+
+:::{note}
+Named workflows should not use params. They should receive their inputs explicitly through the `take:` section.
+:::
+
+The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in {ref}`cli-params`.
+
+A parameter that doesn't specify a default value is a *required* param. If a required param is not given a value at runtime, the run will fail.
+
+### Legacy parameters
+
+Parameters can be declared by assigning a `params` property to a default value:
+
+```nextflow
+params.input = '/some/data/file'
+params.save_intermeds = false
 
 workflow {
-    if( params.data )
-        bar(params.data)
+    if( params.input )
+        analyze(params.input, params.save_intermeds)
     else
-        bar(foo())
+        analyze(fake_input(), params.save_intermeds)
 }
 ```
 

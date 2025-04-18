@@ -75,7 +75,7 @@ class ScriptBinding extends WorkflowBinding {
         }
         vars.put('args', args)
         
-        // create and populate args
+        // create and populate params
         params = new ParamsMap()
         if( vars.params ) {
             if( !(vars.params instanceof Map) ) throw new IllegalArgumentException("ScriptBinding 'params' must be a Map value")
@@ -136,6 +136,7 @@ class ScriptBinding extends WorkflowBinding {
     ScriptBinding setParams(Map<String,Object> values ) {
         if( values )
             params.putAll(values)
+        super.setVariable0('params', params)
         return this
     }
 
@@ -235,7 +236,7 @@ class ScriptBinding extends WorkflowBinding {
         Object get(Object key) {
             if( !target.containsKey(key) ) {
                 final msg = "Access to undefined parameter `$key` -- Initialise it to a default value eg. `params.$key = some_value`"
-                if( NF.isStrictMode() )
+                if( NF.isStrictMode() || NF.isParamsDefinitionEnabled() )
                     throw new AbortOperationException(msg)
                 log.warn1(msg, firstOnly: true)
                 return null
@@ -254,6 +255,8 @@ class ScriptBinding extends WorkflowBinding {
         @Override
         String put(String name, Object value) {
             assert name
+            if( NF.isParamsDefinitionEnabled() )
+                log.warn("Legacy parameter declarations are not allowed when `nextflow.preview.params` is enabled: `params.${name}` -- use the `params` block instead")
             if( name in scriptAssignment )
                 log.warn("`params.$name` is defined multiple times -- Assignments following the first are ignored")
             else

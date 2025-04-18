@@ -39,14 +39,12 @@ import static nextflow.script.ast.ASTUtils.*;
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 public class WorkflowNode extends MethodNode {
-    public final Statement takes;
     public final Statement main;
     public final Statement emits;
     public final Statement publishers;
 
-    public WorkflowNode(String name, Statement takes, Statement main, Statement emits, Statement publishers) {
-        super(name, 0, dummyReturnType(emits), dummyParams(takes), ClassNode.EMPTY_ARRAY, EmptyStatement.INSTANCE);
-        this.takes = takes;
+    public WorkflowNode(String name, Parameter[] takes, Statement main, Statement emits, Statement publishers) {
+        super(name, 0, dummyReturnType(emits), takes, ClassNode.EMPTY_ARRAY, EmptyStatement.INSTANCE);
         this.main = main;
         this.emits = emits;
         this.publishers = publishers;
@@ -58,13 +56,6 @@ public class WorkflowNode extends MethodNode {
 
     public boolean isCodeSnippet() {
         return getLineNumber() == -1;
-    }
-
-    private static Parameter[] dummyParams(Statement takes) {
-        return asBlockStatements(takes)
-            .stream()
-            .map((stmt) -> new Parameter(ClassHelper.dynamicType(), ""))
-            .toArray(Parameter[]::new);
     }
 
     private static ClassNode dummyReturnType(Statement emits) {

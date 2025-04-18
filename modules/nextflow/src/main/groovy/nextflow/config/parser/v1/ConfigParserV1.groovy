@@ -110,6 +110,8 @@ class ConfigParserV1 implements ConfigParser {
 
     private Grengine grengine
 
+    private Map<String,Object> declaredParams
+
     @Override
     ConfigParser setProfiles(List<String> profiles) {
         final blockName = 'profiles'
@@ -123,8 +125,13 @@ class ConfigParserV1 implements ConfigParser {
     }
 
     @Override
-    Set<String> getProfiles() {
+    Set<String> getDeclaredProfiles() {
         Collections.unmodifiableSet(conditionalNames)
+    }
+
+    @Override
+    Map<String,Object> getDeclaredParams() {
+        declaredParams
     }
 
     private Grengine getGrengine() {
@@ -464,6 +471,11 @@ class ConfigParserV1 implements ConfigParser {
         script.binding = binding
         script.run()
         config.merge(overrides)
+        declaredParams = config.params as Map ?: [:]
+
+        // prevent error thrown by ConfigBuilder::validate()
+        if( !config.params )
+            config.remove('params')
 
         return config
     }

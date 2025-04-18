@@ -36,7 +36,8 @@ import nextflow.script.ast.IncompleteNode;
 import nextflow.script.ast.InvalidDeclaration;
 import nextflow.script.ast.OutputBlockNode;
 import nextflow.script.ast.OutputNode;
-import nextflow.script.ast.ParamNode;
+import nextflow.script.ast.ParamNodeV1;
+import nextflow.script.ast.ParamBlockNode;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.WorkflowNode;
@@ -286,10 +287,22 @@ public class ScriptAstBuilder {
             moduleNode.setOutputs(node);
         }
 
-        else if( ctx instanceof ParamDeclAltContext pac ) {
-            var node = paramDeclaration(pac.paramDeclaration());
+        else if( ctx instanceof ParamsDefAltContext pac ) {
+            var node = paramsDef(pac.paramsDef());
             saveLeadingComments(node, ctx);
-            moduleNode.addParam(node);
+            if( moduleNode.getParams() != null )
+                collectSyntaxError(new SyntaxException("Params block defined more than once", node));
+            if( !moduleNode.getParamsV1().isEmpty() )
+                collectSyntaxError(new SyntaxException("Params block cannot be mixed with legacy parameter declarations", node));
+            moduleNode.setParams(node);
+        }
+
+        else if( ctx instanceof ParamDeclV1AltContext pac ) {
+            var node = paramDeclarationV1(pac.paramDeclarationV1());
+            saveLeadingComments(node, ctx);
+            if( moduleNode.getParams() != null )
+                collectSyntaxError(new SyntaxException("Legacy parameter declarations cannot be mixed with the params block", node));
+            moduleNode.addParamV1(node);
         }
 
         else if( ctx instanceof ProcessDefAltContext pdac ) {
@@ -329,14 +342,43 @@ public class ScriptAstBuilder {
         return result;
     }
 
-    private ParamNode paramDeclaration(ParamDeclarationContext ctx) {
+    private ParamBlockNode paramsDef(ParamsDefContext ctx) {
+        var declarations = paramsBody(ctx.paramsBody());
+        return ast( new ParamBlockNode(declarations), ctx );
+    }
+
+    private Parameter[] paramsBody(ParamsBodyContext ctx) {
+        if( ctx == null )
+            return Parameter.EMPTY_ARRAY;
+        return ctx.paramDeclaration().stream()
+            .map(this::paramDeclaration)
+            .filter(param -> param != null)
+            .toArray(Parameter[]::new);
+    }
+
+    private Parameter paramDeclaration(ParamDeclarationContext ctx) {
+        if( ctx.statement() != null ) {
+            collectSyntaxError(new SyntaxException("Invalid parameter declaration", ast( new EmptyStatement(), ctx.statement() )));
+            return null;
+        }
+        var type = ClassHelper.dynamicType();
+        var name = identifier(ctx.identifier());
+        var defaultValue = ctx.expression() != null ? expression(ctx.expression()) : null;
+        var result = ast( param(type, name, defaultValue), ctx );
+        checkInvalidVarName(name, result);
+        groovydocManager.handle(result, ctx);
+        saveLeadingComments(result, ctx);
+        return result;
+    }
+
+    private ParamNodeV1 paramDeclarationV1(ParamDeclarationV1Context ctx) {
         Expression target = ast( varX("params"), ctx.PARAMS() );
         for( var ident : ctx.identifier() ) {
             var name = ast( constX(identifier(ident)), ident );
             target = ast( propX(target, name), target, name );
         }
         var value = expression(ctx.expression());
-        return ast( new ParamNode(target, value), ctx );
+        return ast( new ParamNodeV1(target, value), ctx );
     }
 
     private IncludeNode includeDeclaration(IncludeDeclarationContext ctx) {
@@ -491,7 +533,7 @@ public class ScriptAstBuilder {
             return "exec";
         }
         if( ctx.SHELL() != null ) {
-            collectWarning("The `shell` block is deprecated, use `script` instead", ctx.SHELL().getText(), ast( new EmptyExpression(), ctx.SHELL() ));
+            collectWarning("The `shell` block is deprecated, use `script` instead", ctx.SHELL().getText(), ast( new EmptyStatement(), ctx.SHELL() ));
             return "shell";
         }
         return "script";
@@ -507,7 +549,7 @@ public class ScriptAstBuilder {
         var name = ctx.name != null ? ctx.name.getText() : null;
 
         if( ctx.body == null ) {
-            var result = ast( new WorkflowNode(name, null, null, null, null), ctx );
+            var result = ast( new WorkflowNode(name, Parameter.EMPTY_ARRAY, null, null, null), ctx );
             groovydocManager.handle(result, ctx);
             return result;
         }
@@ -522,10 +564,10 @@ public class ScriptAstBuilder {
         );
 
         if( name == null ) {
-            if( takes instanceof BlockStatement )
-                collectSyntaxError(new SyntaxException("Entry workflow cannot have a take section", takes));
-            if( emits instanceof BlockStatement )
-                collectSyntaxError(new SyntaxException("Entry workflow cannot have an emit section", emits));
+            if( ctx.body.TAKE() != null )
+                collectSyntaxError(new SyntaxException("Entry workflow cannot have a take section", ast( new EmptyStatement(), ctx.body.TAKE() )));
+            if( ctx.body.EMIT() != null )
+                collectSyntaxError(new SyntaxException("Entry workflow cannot have an emit section", ast( new EmptyStatement(), ctx.body.EMIT() )));
         }
         if( name != null ) {
             if( publishers instanceof BlockStatement )
@@ -538,24 +580,31 @@ public class ScriptAstBuilder {
     }
 
     private WorkflowNode workflowDef(BlockStatement main) {
-        var takes = EmptyStatement.INSTANCE;
+        var takes = Parameter.EMPTY_ARRAY;
         var emits = EmptyStatement.INSTANCE;
         var publishers = EmptyStatement.INSTANCE;
         return new WorkflowNode(null, takes, main, emits, publishers);
     }
 
-    private Statement workflowTakes(WorkflowTakesContext ctx) {
+    private Parameter[] workflowTakes(WorkflowTakesContext ctx) {
         if( ctx == null )
-            return EmptyStatement.INSTANCE;
+            return Parameter.EMPTY_ARRAY;
 
-        var statements = ctx.identifier().stream()
+        return ctx.workflowTake().stream()
             .map(this::workflowTake)
-            .toList();
-        return ast( block(null, statements), ctx );
+            .filter(take -> take != null)
+            .toArray(Parameter[]::new);
     }
 
-    private Statement workflowTake(IdentifierContext ctx) {
-        var result = ast( stmt(variableName(ctx)), ctx );
+    private Parameter workflowTake(WorkflowTakeContext ctx) {
+        if( ctx.statement() != null ) {
+            collectSyntaxError(new SyntaxException("Invalid workflow take", ast( new EmptyStatement(), ctx.statement() )));
+            return null;
+        }
+        var type = ClassHelper.dynamicType();
+        var name = identifier(ctx.identifier());
+        var result = ast( param(type, name), ctx );
+        checkInvalidVarName(name, result);
         saveTrailingComment(result, ctx);
         return result;
     }

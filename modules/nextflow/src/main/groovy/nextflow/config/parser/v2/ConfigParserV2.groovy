@@ -53,7 +53,9 @@ class ConfigParserV2 implements ConfigParser {
 
     private List<String> appliedProfiles
 
-    private Set<String> parsedProfiles
+    private Set<String> declaredProfiles
+
+    private Map<String,Object> declaredParams
 
     private GroovyShell groovyShell
 
@@ -61,11 +63,6 @@ class ConfigParserV2 implements ConfigParser {
     ConfigParserV2 setProfiles(List<String> profiles) {
         this.appliedProfiles = profiles
         return this
-    }
-
-    @Override
-    Set<String> getProfiles() {
-        return parsedProfiles
     }
 
     @Override
@@ -106,6 +103,16 @@ class ConfigParserV2 implements ConfigParser {
         return this
     }
 
+    @Override
+    Set<String> getDeclaredProfiles() {
+        return declaredProfiles
+    }
+
+    @Override
+    Map<String,Object> getDeclaredParams() {
+        return declaredParams
+    }
+
     /**
      * Parse the given script as a string and return the configuration object
      *
@@ -133,9 +140,11 @@ class ConfigParserV2 implements ConfigParser {
         script.run()
 
         final target = script.getTarget()
+        // prevent error thrown by ConfigBuilder::validate()
         if( !target.params )
             target.remove('params')
-        parsedProfiles = script.getParsedProfiles()
+        declaredProfiles = script.getDeclaredProfiles()
+        declaredParams = script.getDeclaredParams()
         return Bolts.toConfigObject(target)
     }
 
