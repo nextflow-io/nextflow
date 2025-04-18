@@ -12,11 +12,9 @@ class ParamsDslTest extends Specification {
     def 'should declare workflow params with CLI overrides'() {
         given:
         def cliParams = [input: './data']
-        def config = [
-            params: [outdir: 'results']
-        ]
-        def session = new Session(config)
-        session.init(null, null, cliParams)
+        def configParams = [outdir: 'results']
+        def session = new Session()
+        session.init(null, null, cliParams, configParams)
 
         when:
         def dsl = new ParamsDsl()
@@ -24,17 +22,15 @@ class ParamsDslTest extends Specification {
         dsl.declare('save_intermeds', false)
         dsl.apply(session)
         then:
-        session.binding.getParams() == [input: './data', save_intermeds: false, outdir: 'results']
+        session.binding.getParams() == [input: './data', save_intermeds: false]
     }
 
     def 'should report error for missing required param'() {
         given:
         def cliParams = [:]
-        def config = [
-            params: [outdir: 'results']
-        ]
-        def session = new Session(config)
-        session.init(null, null, cliParams)
+        def configParams = [outdir: 'results']
+        def session = new Session()
+        session.init(null, null, cliParams, configParams)
 
         when:
         def dsl = new ParamsDsl()
@@ -49,11 +45,9 @@ class ParamsDslTest extends Specification {
     def 'should report error for invalid param'() {
         given:
         def cliParams = [inputs: './data']
-        def config = [
-            params: [outdir: 'results'] + cliParams
-        ]
-        def session = new Session(config)
-        session.init(null, null, cliParams)
+        def configParams = [outdir: 'results']
+        def session = new Session()
+        session.init(null, null, cliParams, configParams)
 
         when:
         def dsl = new ParamsDsl()
