@@ -238,7 +238,7 @@ class FileHelper {
         return !(path.getFileSystem().provider().scheme in UNSUPPORTED_GLOB_WILDCARDS)
     }
 
-    static Path toCanonicalPath(value) {
+    static Path toPath(value) {
         if( value==null )
             return null
 
@@ -252,6 +252,14 @@ class FileHelper {
         else {
             throw new IllegalArgumentException("Unexpected path value: '$value' [${value.getClass().getName()}]")
         }
+        return result
+    }
+
+    static Path toCanonicalPath(value) {
+        if( value==null )
+            return null
+
+        Path result = toPath(value)
 
         if( result.fileSystem != FileSystems.default ) {
             // remote file paths are expected to be absolute by definition
@@ -1163,4 +1171,23 @@ class FileHelper {
         return null
     }
 
+    public static HashCode getTaskHashFromPath(Path sourcePath, Path workPath) {
+        assert sourcePath
+        assert workPath
+        if( !sourcePath.startsWith(workPath) )
+            return null
+        final relativePath = workPath.relativize(sourcePath)
+        if( relativePath.getNameCount() < 2 )
+            return null
+        final bucket = relativePath.getName(0).toString()
+        if( bucket.size() != 2 )
+            return null
+        final strHash = bucket + relativePath.getName(1).toString()
+        try {
+            return HashCode.fromString(strHash)
+        } catch (Throwable e) {
+            log.debug("String '${strHash}' is not a valid hash", e)
+            return null
+        }
+    }
 }

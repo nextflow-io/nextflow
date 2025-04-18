@@ -107,7 +107,8 @@ class Launcher {
                 new CmdSelfUpdate(),
                 new CmdPlugin(),
                 new CmdInspect(),
-                new CmdLint()
+                new CmdLint(),
+                new CmdLineage()
         ]
 
         if(SecretsLoader.isEnabled())
@@ -120,11 +121,18 @@ class Launcher {
 
         options = new CliOptions()
         jcommander = new JCommander(options)
-        allCommands.each { cmd ->
+        for( CmdBase cmd : allCommands ) {
             cmd.launcher = this;
-            jcommander.addCommand(cmd.name, cmd)
+            jcommander.addCommand(cmd.name, cmd, aliases(cmd))
         }
         jcommander.setProgramName( APP_NAME )
+    }
+
+    private static final String[] EMPTY = new String[0]
+
+    private static String[] aliases(CmdBase cmd) {
+        final aliases = cmd.getClass().getAnnotation(Parameters)?.commandNames()
+        return aliases ?: EMPTY
     }
 
     /**

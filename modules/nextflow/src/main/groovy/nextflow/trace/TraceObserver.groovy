@@ -154,4 +154,19 @@ interface TraceObserver {
     default void onFilePublish(Path destination, Path source){
         onFilePublish(destination)
     }
+
+    /**
+     * Method that is invoke when an output file is published.
+     *
+     * @param destination
+     *      The destination path at `publishDir` folder.
+     * @param source
+     *      The source path at `workDir` folder.
+     * @param annotations
+     *      The annotations attached to this file
+     */
+    default void onFilePublish(Path destination, Path source, Map annotations) {
+        onFilePublish(destination, source)
+    }
+
 }

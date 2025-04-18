@@ -51,7 +51,7 @@ dependencies {
     api 'io.seqera:lib-trace:0.1.0'
 
     testImplementation 'org.subethamail:subethasmtp:3.1.7'
-
+    testImplementation (project(':nf-lineage'))
     // test configuration
     testFixturesApi ("org.apache.groovy:groovy-test:4.0.26") { exclude group: 'org.apache.groovy' }
     testFixturesApi ("org.objenesis:objenesis:3.4")

@@ -96,6 +96,11 @@ class PublishOp {
         final overrides = targetResolver instanceof Closure
             ? [saveAs: targetResolver]
             : [path: targetResolver]
+
+        if( publishOpts.annotations instanceof Closure ) {
+            final annotations = publishOpts.annotations as Closure
+            overrides.annotations = annotations.call(value) as Map
+        }
         final publisher = PublishDir.create(publishOpts + overrides)
 
         // publish files
@@ -214,7 +219,7 @@ class PublishOp {
             else {
                 log.warn "Invalid extension '${ext}' for index file '${indexPath}' -- should be CSV, JSON, or YAML"
             }
-            session.notifyFilePublish(indexPath)
+            session.notifyFilePublish(indexPath, null, publishOpts.tags as Map)
         }
 
         log.trace "Publish operator complete"
@@ -257,7 +262,7 @@ class PublishOp {
      */
     protected Object normalizePaths(value, targetResolver) {
         if( value instanceof Path ) {
-            return List.of(value.getBaseName(), normalizePath(value, targetResolver))
+            return normalizePath(value, targetResolver)
         }
 
         if( value instanceof Collection ) {
