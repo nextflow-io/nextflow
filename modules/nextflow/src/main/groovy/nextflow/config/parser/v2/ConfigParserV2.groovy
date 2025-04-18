@@ -143,6 +143,7 @@ class ConfigParserV2 implements ConfigParser {
         if( !target.params )
             target.remove('params')
         declaredProfiles = script.getDeclaredProfiles()
+        declaredParams = script.getDeclaredParams()
         return Bolts.toConfigObject(target)
     }
 

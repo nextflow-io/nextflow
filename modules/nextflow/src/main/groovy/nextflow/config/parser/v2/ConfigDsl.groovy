@@ -85,8 +85,8 @@ class ConfigDsl extends Script {
         return declaredProfiles
     }
 
-    void declareParam(String param, Object value) {
-        declaredParams.put(param, value)
+    void declareParam(String name, Object value) {
+        declaredParams.put(name, value)
     }
 
     Map<String,Object> getDeclaredParams() {
