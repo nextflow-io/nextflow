@@ -461,7 +461,7 @@ class ConfigBuilder {
      * @param file The source config file/snippet
      * @return
      */
-    protected validate(ConfigObject config, file, String parent=null, List stack = new ArrayList()) {
+    protected void validate(ConfigObject config, file, String parent=null, List stack = new ArrayList()) {
         for( String key : new ArrayList<>(config.keySet()) ) {
             final value = config.get(key)
             if( value instanceof ConfigObject ) {

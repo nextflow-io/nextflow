@@ -1,15 +1,22 @@
 
 echo "Test successful run"
-$NXF_RUN --input ./data | tee stdout
+$NXF_RUN --input ./data &> stdout
 
-echo
+[[ $(grep -c 'params.input = [./data]' stdout) == 1 ]] || false
+[[ $(grep -c 'params.save_intermeds = false' stdout) == 1 ]] || false
+
 echo "Test missing required param"
-$NXF_RUN | tee stdout
+$NXF_RUN &> stdout
 
-echo
+[[ $(grep -c 'Parameter `input` is required' stdout) == 1 ]] || false
+
 echo "Test overwrite script param from config profile"
-$NXF_RUN -c ../../params-dsl.config -profile test | tee stdout
+$NXF_RUN -c ../../params-dsl.config -profile test &> stdout
 
-echo
+[[ $(grep -c 'params.input = [alpha, beta, delta]' stdout) == 1 ]] || false
+[[ $(grep -c 'params.save_intermeds = true' stdout) == 1 ]] || false
+
 echo "Test invalid param"
-$NXF_RUN --inputs ./data | tee stdout
+$NXF_RUN --inputs ./data &> stdout
+
+[[ $(grep -c 'Parameter `inputs` was specified' stdout) == 1 ]] || false

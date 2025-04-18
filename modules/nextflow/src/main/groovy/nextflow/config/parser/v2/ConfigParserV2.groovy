@@ -140,6 +140,7 @@ class ConfigParserV2 implements ConfigParser {
         script.run()
 
         final target = script.getTarget()
+        // prevent error thrown by ConfigBuilder::validate()
         if( !target.params )
             target.remove('params')
         declaredProfiles = script.getDeclaredProfiles()
