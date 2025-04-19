@@ -36,6 +36,7 @@ import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.SysEnv
 import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigCmdAdapter
 import nextflow.config.ConfigMap
 import nextflow.config.ConfigValidator
 import nextflow.exception.AbortOperationException
@@ -58,7 +59,7 @@ import org.yaml.snakeyaml.Yaml
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Execute a pipeline project")
-class CmdRun extends CmdBase implements HubOptions {
+class CmdRun extends CmdBase implements HubAware {
 
     static final public Pattern RUN_NAME_PATTERN = Pattern.compile(/^[a-z](?:[a-z\d]|[-_](?=[a-z\d])){0,79}$/, Pattern.CASE_INSENSITIVE)
 
@@ -327,10 +328,11 @@ class CmdRun extends CmdBase implements HubOptions {
 
         // create the config object
         final builder = new ConfigBuilder()
+        final adapter = new ConfigCmdAdapter(builder)
                 .setOptions(launcher.options)
                 .setCmdRun(this)
                 .setBaseDir(scriptFile.parent)
-        final config = builder .build()
+        final config = adapter.build()
 
         // check DSL syntax in the config
         launchInfo(config, scriptFile)
@@ -355,7 +357,7 @@ class CmdRun extends CmdBase implements HubOptions {
 
         final isTowerEnabled = config.navigate('tower.enabled') as Boolean
         if( isTowerEnabled || log.isTraceEnabled() )
-            runner.session.resolvedConfig = ConfigBuilder.resolveConfig(scriptFile.parent, this)
+            runner.session.resolvedConfig = ConfigCmdAdapter.resolveConfig(scriptFile.parent, this)
         // note config files are collected during the build process
         // this line should be after `ConfigBuilder#build`
         runner.session.configFiles = builder.parsedConfigFiles
@@ -579,7 +581,7 @@ class CmdRun extends CmdBase implements HubOptions {
         /*
          * try to look for a pipeline in the repository
          */
-        def manager = new AssetManager(pipelineName, this)
+        def manager = new AssetManager(pipelineName, toHubOptions())
         def repo = manager.getProject()
 
         boolean checkForUpdate = true
