@@ -350,16 +350,6 @@ class WorkflowMetadata {
     }
 
     /**
-     * Dynamic getter for workflow metadata attributes
-     *
-     * @param field
-     * @return The value associated to the specified field
-     */
-    def get(String field) {
-        InvokerHelper.getProperty(this,field)
-    }
-
-    /**
      * Implements the following idiom in the pipeline script:
      * <pre>
      *     workflow.onError = {
