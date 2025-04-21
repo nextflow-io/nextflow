@@ -859,6 +859,11 @@ The following settings are available for Google Cloud Batch:
 `google.batch.cpuPlatform`
 : Set the minimum CPU Platform, e.g. `'Intel Skylake'`. See [Specifying a minimum CPU Platform for VM instances](https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications) (default: none).
 
+`google.batch.gcsfuseOptions`
+: :::{versionadded} 25.03.0-edge
+  :::
+: Defines one or more custom  mount options. Multiple options can be specified using a list e.g. `google.batch.gcsfuseOptions = ['-o rw', '-implicit-dirs', '-o allow_other', '--uid=1000']` (default: `['-o rw', '-implicit-dirs']`).
+
 `google.batch.maxSpotAttempts`
 : :::{versionadded} 23.11.0-edge
   :::
