@@ -444,7 +444,7 @@ The following sections describe the methods that are available for paths.
 Paths in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/Path.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/nio/file/Path.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
 :::
 
-## Operations
+<h3>Operations</h3>
 
 The following operations are supported for paths:
 
@@ -454,7 +454,7 @@ The following operations are supported for paths:
 `<< : (Path, String)`
 : Appends text to a file without replacing existing content. Equivalent to `append()`.
 
-## Getting attributes
+<h3>Getting attributes</h3>
 
 The following methods are useful for getting attributes of a file:
 
@@ -510,7 +510,7 @@ The following methods are useful for getting attributes of a file:
   assert ref.toUriString() == 's3://some-bucket/foo.txt'
   ```
 
-## Reading
+<h3>Reading</h3>
 
 The following methods are available for reading files:
 
@@ -541,7 +541,7 @@ The following methods are available for reading files:
 `withReader( action: (Reader) -> () )`
 : Opens a file for reading and lets you access it with a [Reader](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/Reader.html) object.
 
-## Writing
+<h3>Writing</h3>
 
 The following methods are available for writing to files:
 
@@ -575,7 +575,7 @@ The following methods are available for writing to files:
 `write( text: String )`
 : Writes a string to a file, replacing any existing content.
 
-## Filesystem operations
+<h3>Filesystem operations</h3>
 
 The following methods are available for manipulating files and directories in a filesystem:
 
@@ -713,7 +713,7 @@ The following methods are available for listing and traversing directories:
 `eachFileRecurse( action: (Path) -> () )`
 : Iterates through files and directories depth-first.
 
-## Splitting files
+<h3>Splitting files</h3>
 
 The following methods are available for splitting and counting the records in files:
 
