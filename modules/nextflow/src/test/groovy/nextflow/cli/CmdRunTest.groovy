@@ -158,6 +158,7 @@ class CmdRunTest extends Specification {
                     ---
                     foo: 1
                     bar: 2
+                    foo-bar: 3
                     '''.stripIndent()
 
         when:
@@ -181,6 +182,7 @@ class CmdRunTest extends Specification {
         then:
         params.foo == 1
         params.bar == 2
+        params.fooBar == 3
         and:
         cmd.hasParams()
 
@@ -190,6 +192,7 @@ class CmdRunTest extends Specification {
         then:
         params.foo == 1
         params.bar == 2
+        params.fooBar == 3
         and:
         cmd.hasParams()
 
