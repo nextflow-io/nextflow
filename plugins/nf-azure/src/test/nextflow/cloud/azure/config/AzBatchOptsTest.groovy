@@ -88,4 +88,21 @@ class AzBatchOptsTest extends Specification {
         CopyToolInstallMode.off     | [:]                                                       | true
 
     }
+
+    def 'should set maxJobTime' () {
+        when:
+        def opts1 = new AzBatchOpts([:], [:])
+        then:
+        opts1.maxJobTime.toString() == '7d'
+
+        when:
+        def opts2 = new AzBatchOpts([maxJobTime: '3d'], [:])
+        then:
+        opts2.maxJobTime.toString() == '3d'
+
+        when:
+        def opts3 = new AzBatchOpts([maxJobTime: '12h'], [:])
+        then:
+        opts3.maxJobTime.toString() == '12h'
+    }
 }

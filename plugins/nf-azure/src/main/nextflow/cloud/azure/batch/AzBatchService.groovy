@@ -32,6 +32,7 @@ import com.azure.compute.batch.models.AutoUserScope
 import com.azure.compute.batch.models.AutoUserSpecification
 import com.azure.compute.batch.models.AzureFileShareConfiguration
 import com.azure.compute.batch.models.BatchJobCreateContent
+import com.azure.compute.batch.models.BatchJobConstraints
 import com.azure.compute.batch.models.BatchJobUpdateContent
 import com.azure.compute.batch.models.BatchNodeFillType
 import com.azure.compute.batch.models.BatchPool
@@ -434,6 +435,18 @@ class AzBatchService implements Closeable {
         // create a batch job
         final jobId = makeJobId(task)
         final content = new BatchJobCreateContent(jobId, new BatchPoolInfo(poolId: poolId))
+        
+        // Add job constraints with maxWallClockTime from config
+        if (config.batch().maxJobTime) {
+            final constraints = new BatchJobConstraints()
+            // Convert nextflow.util.Duration to java.time.Duration for the Azure BatchJobConstraints
+            final long millis = config.batch().maxJobTime.toMillis()
+            final java.time.Duration maxWallTime = java.time.Duration.ofMillis(millis)
+            constraints.setMaxWallClockTime(maxWallTime)
+            content.setConstraints(constraints)
+            log.debug "[AZURE BATCH] Setting job constraint maxWallClockTime: ${config.batch().maxJobTime}"
+        }
+        
         apply(() -> client.createJob(content))
         return jobId
     }
@@ -945,7 +958,11 @@ class AzBatchService implements Closeable {
                 apply(() -> client.updateJob(jobId, jobParameter))
             }
             catch (Exception e) {
-                log.warn "Unable to terminate Azure Batch job ${jobId} - Reason: ${e.message ?: e}"
+                if (e.message?.contains('Status code 409') && e.message?.contains('JobCompleted')) {
+                    log.debug "Azure Batch job ${jobId} already terminated, skipping termination"
+                } else {
+                    log.warn "Unable to terminate Azure Batch job ${jobId} - Reason: ${e.message ?: e}"
+                }
             }
         }
     }
