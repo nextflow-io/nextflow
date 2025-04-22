@@ -38,7 +38,7 @@ class ScriptFormatterTest extends Specification {
 
     String format(String contents) {
         def source = scriptParser.parse('main.nf', contents)
-        new ScriptResolveVisitor(source, scriptParser.compiler().compilationUnit(), Types.DEFAULT_IMPORTS, Collections.emptyList()).visit()
+        new ScriptResolveVisitor(source, scriptParser.compiler().compilationUnit(), Types.DEFAULT_SCRIPT_IMPORTS, Collections.emptyList()).visit()
         assert !TestUtils.hasSyntaxErrors(source)
         def formatter = new ScriptFormattingVisitor(source, new FormattingOptions(4, true))
         formatter.visit()

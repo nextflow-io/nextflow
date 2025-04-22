@@ -345,14 +345,14 @@ class ConfigBuilder {
         assert env != null
 
         final ignoreIncludes = options ? options.ignoreConfigIncludes : false
-        final slurper = ConfigParserFactory.create()
+        final parser = ConfigParserFactory.create()
                 .setRenderClosureAsString(showClosures)
                 .setStripSecrets(stripSecrets)
                 .setIgnoreIncludes(ignoreIncludes)
         ConfigObject result = new ConfigObject()
 
         if( cmdRun && (cmdRun.hasParams()) )
-            slurper.setParams(cmdRun.parsedParams(configVars()))
+            parser.setParams(cmdRun.parsedParams(configVars()))
 
         // add the user specified environment to the session env
         env.sort().each { name, value -> result.env.put(name,value) }
@@ -365,13 +365,13 @@ class ConfigBuilder {
             binding.putAll(env)
             binding.putAll(configVars())
 
-            slurper.setBinding(binding)
+            parser.setBinding(binding)
 
             // merge of the provided configuration files
             for( def entry : configEntries ) {
 
                 try {
-                    merge0(result, slurper, entry)
+                    merge0(result, parser, entry)
                 }
                 catch( ConfigParseException e ) {
                     throw e
@@ -383,7 +383,7 @@ class ConfigBuilder {
             }
 
             if( validateProfile ) {
-                checkValidProfile(slurper.getProfiles())
+                checkValidProfile(parser.getProfiles())
             }
 
         }
@@ -400,44 +400,43 @@ class ConfigBuilder {
      * Merge the main config with a separate config file
      *
      * @param result The main {@link ConfigObject}
-     * @param slurper The {@ComposedConfigSlurper} parsed instance
+     * @param parser The {@ConfigParser} instance
      * @param entry The next config snippet/file to be parsed
      * @return
      */
-    protected void merge0(ConfigObject result, ConfigParser slurper, entry) {
+    protected void merge0(ConfigObject result, ConfigParser parser, entry) {
         if( !entry )
             return
 
         // select the profile
-        if( showAllProfiles ) {
-            def config = parse0(slurper,entry)
-            validate(config,entry)
-            result.merge(config)
-            return
+        if( !showAllProfiles ) {
+            log.debug "Applying config profile: `${profile}`"
+            parser.setProfiles(profile.tokenize(','))
         }
 
-        log.debug "Applying config profile: `${profile}`"
-        def allNames = profile.tokenize(',')
-        slurper.setProfiles(allNames)
-
-        def config = parse0(slurper,entry)
-        validate(config,entry)
+        final config = parse0(parser, entry)
+        if( NF.getSyntaxParserVersion() == 'v1' )
+            validate(config, entry)
         result.merge(config)
     }
 
-    protected ConfigObject parse0(ConfigParser slurper, entry) {
+    protected ConfigObject parse0(ConfigParser parser, entry) {
         if( entry instanceof File ) {
             final path = entry.toPath()
             parsedConfigFiles << path
-            return slurper.parse(path)
+            return parser.parse(path)
         }
 
         if( entry instanceof Path ) {
             parsedConfigFiles << entry
-            return slurper.parse(entry)
+            return parser.parse(entry)
         }
 
-        return slurper.parse(entry.toString())
+        if( entry instanceof CharSequence ) {
+            return parser.parse(entry.toString())
+        }
+
+        throw new IllegalStateException()
     }
 
     /**
@@ -447,7 +446,7 @@ class ConfigBuilder {
      * @param file The source config file/snippet
      * @return
      */
-    protected validate(ConfigObject config, file, String parent=null, List stack = new ArrayList()) {
+    protected void validate(ConfigObject config, file, String parent=null, List stack = new ArrayList()) {
         for( String key : new ArrayList<>(config.keySet()) ) {
             final value = config.get(key)
             if( value instanceof ConfigObject ) {

@@ -74,7 +74,7 @@ public class ScriptParser {
             includeResolver.visit();
             for( var error : includeResolver.getErrors() )
                 source.getErrorCollector().addErrorAndContinue(error);
-            new ScriptResolveVisitor(source, compiler.compilationUnit(), Types.DEFAULT_IMPORTS, Collections.emptyList()).visit();
+            new ScriptResolveVisitor(source, compiler.compilationUnit(), Types.DEFAULT_SCRIPT_IMPORTS, Collections.emptyList()).visit();
             if( source.getErrorCollector().hasErrors() )
                 continue;
             new TypeCheckingVisitor(source, false).visit();

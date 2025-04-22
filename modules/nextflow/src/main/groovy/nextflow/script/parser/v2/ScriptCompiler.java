@@ -71,7 +71,7 @@ public class ScriptCompiler {
         "nextflow.util.MemoryUnit"
     );
     private static final String MAIN_CLASS_NAME = "Main";
-    private static final String SCRIPT_BASE_CLASS = "nextflow.script.BaseScript";
+    private static final String BASE_CLASS_NAME = "nextflow.script.BaseScript";
 
     private final CompilerConfiguration config;
     private final GroovyClassLoader loader;
@@ -96,7 +96,7 @@ public class ScriptCompiler {
 
         var config = new CompilerConfiguration();
         config.addCompilationCustomizers(importCustomizer);
-        config.setScriptBaseClass(SCRIPT_BASE_CLASS);
+        config.setScriptBaseClass(BASE_CLASS_NAME);
         config.setPluginFactory(new ScriptParserPluginFactory());
         config.setDebug(debug);
         if( targetDirectory != null )
@@ -159,7 +159,7 @@ public class ScriptCompiler {
         // collect script classes
         var classes = (List<Class>) collector.getLoadedClasses().stream()
             .map((o) -> 
-                o instanceof Class c && SCRIPT_BASE_CLASS.equals(c.getSuperclass().getName())
+                o instanceof Class c && BASE_CLASS_NAME.equals(c.getSuperclass().getName())
                     ? c
                     : null
             )
