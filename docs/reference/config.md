@@ -673,7 +673,7 @@ The following settings are available:
 : Specifies Platform LSF *per-task* memory reserve mode. See {ref}`lsf-executor`.
 
 `executor.pollInterval`
-: Determines how often to check for process termination. Default varies for each executor (see below).
+: Defines the polling frequency for process termination detection. Default varies for each executor (see below).
 
 `executor.queueGlobalStatus`
 : :::{versionadded} 23.01.0-edge
