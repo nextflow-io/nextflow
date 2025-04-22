@@ -21,7 +21,7 @@ import groovy.util.logging.Slf4j
 import nextflow.file.FileHelper
 import nextflow.file.LogicalDataPath
 import nextflow.lineage.model.Checksum
-import nextflow.lineage.model.DataOutput
+import nextflow.lineage.model.FileOutput
 import nextflow.lineage.serde.LinSerializable
 import nextflow.util.CacheHelper
 import nextflow.util.TestOnly
@@ -109,7 +109,7 @@ class LinPath implements Path, LogicalDataPath {
         return first
     }
 
-    protected static void validateDataOutput(DataOutput lidObject) {
+    protected static void validateDataOutput(FileOutput lidObject) {
         final hashedPath = FileHelper.toCanonicalPath(lidObject.path as String)
         if( !hashedPath.exists() )
             throw new FileNotFoundException("Target path $lidObject.path does not exist")
@@ -159,7 +159,7 @@ class LinPath implements Path, LogicalDataPath {
             throw new Exception("Lineage store not found - Check Nextflow configuration")
         final object = store.load(filePath)
         if ( object ){
-            if( object instanceof DataOutput ) {
+            if( object instanceof FileOutput ) {
                 return getTargetPathFromOutput(object, children)
             }
             if( resultsAsPath ){
@@ -204,9 +204,9 @@ class LinPath implements Path, LogicalDataPath {
     static LinMetadataPath getSubObjectAsPath(LinFileSystem fs, String key, LinSerializable object, String[] children) {
         if( isSearchingOutputs(object, children) ) {
             // When asking for a Workflow or task output retrieve the outputs description
-            final outputs = fs.store.load("${key}/outputs")
+            final outputs = fs.store.load("${key}/output")
             if( !outputs ) {
-                throw new FileNotFoundException("Target path '$key#outputs' does not exist")
+                throw new FileNotFoundException("Target path '$key#output' does not exist")
             }
             return generateLinMetadataPath(fs, key, outputs, children)
         }
@@ -224,8 +224,8 @@ class LinPath implements Path, LogicalDataPath {
         return new LinMetadataPath(encodeSearchOutputs(output, true), creationTime, fs, key, children)
     }
 
-    private static Path getTargetPathFromOutput(DataOutput object, String[] children) {
-        final lidObject = object as DataOutput
+    private static Path getTargetPathFromOutput(FileOutput object, String[] children) {
+        final lidObject = object as FileOutput
         // return the real path stored in the metadata
         validateDataOutput(lidObject)
         def realPath = FileHelper.toCanonicalPath(lidObject.path as String)

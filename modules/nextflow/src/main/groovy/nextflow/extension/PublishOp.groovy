@@ -219,7 +219,12 @@ class PublishOp {
             else {
                 log.warn "Invalid extension '${ext}' for index file '${indexPath}' -- should be CSV, JSON, or YAML"
             }
-            session.notifyFilePublish(indexPath, null, publishOpts.tags as Map)
+            def annotations = publishOpts.annotations
+            if( publishOpts.annotations instanceof Closure ) {
+                final annotationClosure = publishOpts.annotations as Closure
+                annotations = annotationClosure.call() as Map
+            }
+            session.notifyFilePublish(indexPath, null, annotations as Map)
         }
 
         log.trace "Publish operator complete"

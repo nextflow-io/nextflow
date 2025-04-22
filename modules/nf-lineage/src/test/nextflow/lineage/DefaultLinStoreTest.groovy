@@ -26,7 +26,7 @@ import java.time.ZoneOffset
 
 import nextflow.lineage.model.Checksum
 import nextflow.lineage.model.DataPath
-import nextflow.lineage.model.DataOutput
+import nextflow.lineage.model.FileOutput
 import nextflow.lineage.model.Parameter
 import nextflow.lineage.model.Workflow
 import nextflow.lineage.model.WorkflowRun
@@ -70,7 +70,7 @@ class DefaultLinStoreTest extends Specification {
     def "save should store value in the correct file location"() {
         given:
         def key = "testKey"
-        def value = new DataOutput("/path/to/file", new Checksum("hash_value", "hash_algorithm", "standard"), "lid://source", "lid://workflow", "lid://task", 1234)
+        def value = new FileOutput("/path/to/file", new Checksum("hash_value", "hash_algorithm", "standard"), "lid://source", "lid://workflow", "lid://task", 1234)
         def lidStore = new DefaultLinStore()
         lidStore.open(config)
 
@@ -86,7 +86,7 @@ class DefaultLinStoreTest extends Specification {
     def "load should retrieve stored value correctly"() {
         given:
         def key = "testKey"
-        def value = new DataOutput("/path/to/file", new Checksum("hash_value", "hash_algorithm", "standard"), "lid://source", "lid://workflow", "lid://task", 1234)
+        def value = new FileOutput("/path/to/file", new Checksum("hash_value", "hash_algorithm", "standard"), "lid://source", "lid://workflow", "lid://task", 1234)
         def lidStore = new DefaultLinStore()
         lidStore.open(config)
         lidStore.save(key, value)
@@ -113,11 +113,11 @@ class DefaultLinStoreTest extends Specification {
         def key = "testKey"
         def value1 = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [ new Parameter("String", "param1", "value1"), new Parameter("String", "param2", "value2")] )
         def key2 = "testKey2"
-        def value2 = new DataOutput("/path/tp/file1", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, [new Annotation("key1","value1"), new Annotation("key2","value2")])
+        def value2 = new FileOutput("/path/tp/file1", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, [new Annotation("key1","value1"), new Annotation("key2","value2")])
         def key3 = "testKey3"
-        def value3 = new DataOutput("/path/tp/file2", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, [new Annotation("key2","value2"),  new Annotation("key3","value3")])
+        def value3 = new FileOutput("/path/tp/file2", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, [new Annotation("key2","value2"), new Annotation("key3","value3")])
         def key4 = "testKey4"
-        def value4 = new DataOutput("/path/tp/file", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, [new Annotation("key4","value4"),  new Annotation("key3","value3")])
+        def value4 = new FileOutput("/path/tp/file", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, [new Annotation("key4","value4"), new Annotation("key3","value3")])
 
         def lidStore = new DefaultLinStore()
         lidStore.open(config)
@@ -127,7 +127,7 @@ class DefaultLinStoreTest extends Specification {
         lidStore.save(key4, value4)
 
         when:
-        def results = lidStore.search("type=DataOutput&annotations.key=key2&annotations.value=value2")
+        def results = lidStore.search("type=FileOutput&annotations.key=key2&annotations.value=value2")
         then:
         results.size() == 2
         results.keySet().containsAll([key2,key3])

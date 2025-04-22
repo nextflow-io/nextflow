@@ -43,11 +43,11 @@ class TaskRun implements LinSerializable {
     /**
      * Checksum of the task script
      */
-    Checksum scriptChecksum
+    String script
     /**
-     * Task run inputs
+     * Task run input
      */
-    List<Parameter> inputs
+    List<Parameter> input
     /**
      * Container used for the task run
      */

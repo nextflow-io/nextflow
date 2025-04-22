@@ -23,7 +23,7 @@ import nextflow.lineage.DefaultLinHistoryLog
 import nextflow.lineage.LinHistoryRecord
 import nextflow.lineage.LinStoreFactory
 import nextflow.lineage.model.Checksum
-import nextflow.lineage.model.DataOutput
+import nextflow.lineage.model.FileOutput
 import nextflow.lineage.model.Parameter
 import nextflow.lineage.model.TaskRun
 import nextflow.lineage.serde.LinEncoder
@@ -135,13 +135,13 @@ class CmdLineageTest extends Specification {
         }
         def time = OffsetDateTime.now()
         def encoder = new LinEncoder().withPrettyPrint(true)
-        def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
+        def entry = new FileOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
                 "lid://123987/file.bam","lid://12345/","lid://123987/", 1234, time, time, null)
         def jsonSer = encoder.encode(entry)
         def expectedOutput = jsonSer
         lidFile.text = jsonSer
         when:
-            def lidCmd = new CmdLineage(launcher: launcher, args: ["describe", "lid://12345"])
+            def lidCmd = new CmdLineage(launcher: launcher, args: ["view", "lid://12345"])
             lidCmd.run()
             def stdout = capture
                 .toString()
@@ -168,7 +168,7 @@ class CmdLineageTest extends Specification {
         }
 
         when:
-            def lidCmd = new CmdLineage(launcher: launcher, args: ["describe", "lid://12345"])
+            def lidCmd = new CmdLineage(launcher: launcher, args: ["view", "lid://12345"])
             lidCmd.run()
             def stdout = capture
                 .toString()
@@ -206,10 +206,10 @@ class CmdLineageTest extends Specification {
         Files.createDirectories(lidFile5.parent)
         def encoder = new LinEncoder()
         def time = OffsetDateTime.now()
-        def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
+        def entry = new FileOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
                 "lid://123987/file.bam", "lid://45678",null, 1234, time, time, null)
         lidFile.text = encoder.encode(entry)
-        entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
+        entry = new FileOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
                 "lid://123987", "lid://45678", "lid://123987", 1234, time, time, null)
         lidFile2.text = encoder.encode(entry)
         entry = new TaskRun("u345-2346-1stw2", "foo",
@@ -219,7 +219,7 @@ class CmdLineageTest extends Specification {
                 new Parameter("path","reads",["lid://45678/output.txt"])],
                 null, null, null, null, [:],[], null)
         lidFile3.text = encoder.encode(entry)
-        entry  = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
+        entry  = new FileOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
                 "lid://45678", "lid://45678", null, 1234, time, time, null)
         lidFile4.text = encoder.encode(entry)
         entry = new TaskRun("u345-2346-1stw2", "bar",
@@ -277,13 +277,13 @@ class CmdLineageTest extends Specification {
         }
         def encoder = new LinEncoder().withPrettyPrint(true)
         def time = OffsetDateTime.now()
-        def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
+        def entry = new FileOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
                 "lid://123987/file.bam", "lid://12345", "lid://123987/", 1234, time, time, null)
         def jsonSer = encoder.encode(entry)
         def expectedOutput = jsonSer
         lidFile.text = jsonSer
         when:
-        def lidCmd = new CmdLineage(launcher: launcher, args: ["describe", "lid:///?type=DataOutput"])
+        def lidCmd = new CmdLineage(launcher: launcher, args: ["view", "lid:///?type=DataOutput"])
         lidCmd.run()
         def stdout = capture
                 .toString()
@@ -312,13 +312,13 @@ class CmdLineageTest extends Specification {
         }
         def encoder = new LinEncoder().withPrettyPrint(true)
         def time = OffsetDateTime.now()
-        def entry = new DataOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
+        def entry = new FileOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
             "lid://123987/file.bam", "lid://12345", "lid://123987/", 1234, time, time, null)
         def jsonSer = encoder.encode(entry)
         def expectedOutput = jsonSer
         lidFile.text = jsonSer
         when:
-        def lidCmd = new CmdLineage(launcher: launcher, args: ["describe", "lid:///?type=DataOutput"])
+        def lidCmd = new CmdLineage(launcher: launcher, args: ["view", "lid:///?type=DataOutput"])
         lidCmd.run()
         def stdout = capture
             .toString()

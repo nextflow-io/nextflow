@@ -17,11 +17,11 @@
 package nextflow.lineage.serde
 
 import groovy.transform.CompileStatic
-import nextflow.lineage.model.DataOutput
-import nextflow.lineage.model.TaskOutputs
+import nextflow.lineage.model.FileOutput
+import nextflow.lineage.model.TaskOutput
 import nextflow.lineage.model.TaskRun
 import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowOutputs
+import nextflow.lineage.model.WorkflowOutput
 import nextflow.lineage.model.WorkflowRun
 import nextflow.serde.gson.GsonEncoder
 import nextflow.serde.gson.RuntimeTypeAdapterFactory
@@ -43,11 +43,11 @@ class LinEncoder extends GsonEncoder<LinSerializable> {
     static RuntimeTypeAdapterFactory newLidTypeAdapterFactory(){
         RuntimeTypeAdapterFactory.of(LinSerializable.class, "type")
             .registerSubtype(WorkflowRun, WorkflowRun.simpleName)
-            .registerSubtype(WorkflowOutputs, WorkflowOutputs.simpleName)
+            .registerSubtype(WorkflowOutput, WorkflowOutput.simpleName)
             .registerSubtype(Workflow, Workflow.simpleName)
             .registerSubtype(TaskRun, TaskRun.simpleName)
-            .registerSubtype(TaskOutputs, TaskOutputs.simpleName)
-            .registerSubtype(DataOutput, DataOutput.simpleName)
+            .registerSubtype(TaskOutput, TaskOutput.simpleName)
+            .registerSubtype(FileOutput, FileOutput.simpleName)
     }
 
 }

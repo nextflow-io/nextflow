@@ -19,11 +19,11 @@ package nextflow.lineage.serde
 import nextflow.lineage.model.Checksum
 import nextflow.lineage.model.DataPath
 import nextflow.lineage.model.Parameter
-import nextflow.lineage.model.DataOutput
-import nextflow.lineage.model.TaskOutputs
+import nextflow.lineage.model.FileOutput
+import nextflow.lineage.model.TaskOutput
 import nextflow.lineage.model.TaskRun
 import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowOutputs
+import nextflow.lineage.model.WorkflowOutput
 import nextflow.lineage.model.WorkflowRun
 import spock.lang.Specification
 
@@ -35,7 +35,7 @@ class LinEncoderTest extends Specification{
         given:
             def encoder = new LinEncoder()
         and:
-            def output = new DataOutput("/path/to/file", new Checksum("hash_value", "hash_algorithm", "standard"),
+            def output = new FileOutput("/path/to/file", new Checksum("hash_value", "hash_algorithm", "standard"),
                 "lid://source", "lid://workflow", "lid://task", 1234)
 
         when:
@@ -43,8 +43,8 @@ class LinEncoderTest extends Specification{
             def object = encoder.decode(encoded)
 
         then:
-            object instanceof DataOutput
-            def result = object as DataOutput
+            object instanceof FileOutput
+            def result = object as FileOutput
             result.path == "/path/to/file"
             result.checksum instanceof Checksum
             result.checksum.value == "hash_value"
@@ -88,17 +88,17 @@ class LinEncoderTest extends Specification{
         def encoder = new LinEncoder()
         and:
         def time = OffsetDateTime.now()
-        def wfResults = new WorkflowOutputs(time, "lid://1234", [new Parameter("String", "a", "A"), new Parameter("String", "b", "B")])
+        def wfResults = new WorkflowOutput(time, "lid://1234", [new Parameter("String", "a", "A"), new Parameter("String", "b", "B")])
         when:
         def encoded = encoder.encode(wfResults)
         def object = encoder.decode(encoded)
 
         then:
-        object instanceof WorkflowOutputs
-        def result = object as WorkflowOutputs
+        object instanceof WorkflowOutput
+        def result = object as WorkflowOutput
         result.createdAt == time
         result.workflowRun == "lid://1234"
-        result.outputs == [new Parameter("String", "a", "A"), new Parameter("String", "b", "B")]
+        result.output == [new Parameter("String", "a", "A"), new Parameter("String", "b", "B")]
     }
 
     def 'should encode and decode TaskRun'() {
@@ -107,7 +107,7 @@ class LinEncoderTest extends Specification{
         and:
         def uniqueId = UUID.randomUUID()
         def taskRun = new TaskRun(
-            uniqueId.toString(),"name", new Checksum("78910", "nextflow", "standard"), new Checksum("74517", "nextflow", "standard"),
+            uniqueId.toString(),"name", new Checksum("78910", "nextflow", "standard"), 'this is a script',
             [new Parameter("String", "param1", "value1")], "container:version", "conda", "spack", "amd64",
             [a: "A", b: "B"], [new DataPath("path/to/file", new Checksum("78910", "nextflow", "standard"))]
         )
@@ -120,9 +120,9 @@ class LinEncoderTest extends Specification{
         result.sessionId == uniqueId.toString()
         result.name == "name"
         result.codeChecksum.value == "78910"
-        result.scriptChecksum.value == "74517"
-        result.inputs.size() == 1
-        result.inputs.get(0).name == "param1"
+        result.script == "this is a script"
+        result.input.size() == 1
+        result.input.get(0).name == "param1"
         result.container == "container:version"
         result.conda == "conda"
         result.spack == "spack"
@@ -139,32 +139,32 @@ class LinEncoderTest extends Specification{
         and:
         def time = OffsetDateTime.now()
         def parameter = new Parameter("a","b", "c")
-        def wfResults = new TaskOutputs("lid://1234", "lid://5678", time, [parameter], null)
+        def wfResults = new TaskOutput("lid://1234", "lid://5678", time, [parameter], null)
         when:
         def encoded = encoder.encode(wfResults)
         def object = encoder.decode(encoded)
 
         then:
-        object instanceof TaskOutputs
-        def result = object as TaskOutputs
+        object instanceof TaskOutput
+        def result = object as TaskOutput
         result.createdAt == time
         result.taskRun == "lid://1234"
         result.workflowRun == "lid://5678"
-        result.outputs.size() == 1
-        result.outputs[0] == parameter
+        result.output.size() == 1
+        result.output[0] == parameter
     }
 
     def 'object with null date attributes' () {
         given:
         def encoder = new LinEncoder()
         and:
-        def wfResults = new WorkflowOutputs(null, "lid://1234")
+        def wfResults = new WorkflowOutput(null, "lid://1234")
         when:
         def encoded = encoder.encode(wfResults)
         def object = encoder.decode(encoded)
         then:
-        encoded == '{"type":"WorkflowOutputs","createdAt":null,"workflowRun":"lid://1234","outputs":null,"annotations":null}'
-        def result = object as WorkflowOutputs
+        encoded == '{"type":"WorkflowOutput","createdAt":null,"workflowRun":"lid://1234","output":null,"annotations":null}'
+        def result = object as WorkflowOutput
         result.createdAt == null
 
     }

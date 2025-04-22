@@ -29,7 +29,7 @@ import java.time.OffsetDateTime
  */
 @Canonical
 @CompileStatic
-class DataOutput implements LinSerializable {
+class FileOutput implements LinSerializable {
     /**
      * Real path of the output data.
      */

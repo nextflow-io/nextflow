@@ -23,31 +23,27 @@ import nextflow.lineage.serde.LinSerializable
 import java.time.OffsetDateTime
 
 /**
- * Models task results.
+ * Models the results of a workflow execution.
  *
- * @author Jorge Ejarque <jorge.ejarque@seqera.io>
+ * @author Jorge Ejarque <jorge.ejarque@seqera.io
  */
 @Canonical
 @CompileStatic
-class TaskOutputs implements LinSerializable {
+class WorkflowOutput implements LinSerializable {
     /**
-     * Reference to the task that generated the data.
-     */
-    String taskRun
-    /**
-     * Reference to the WorkflowRun that generated the data.
-     */
-    String workflowRun
-    /**
-     * Creation date of this task outputs description
+     * Creation date of the workflow outputs description
      */
     OffsetDateTime createdAt
     /**
-     * Outputs of the task
+     * Workflow run that generated the outputs
      */
-    List<Parameter> outputs
+    String workflowRun
     /**
-     * Annotations attached to the task outputs
+     * Workflow output
+     */
+    List<Parameter> output
+    /**
+     * Annotations attached to the workflow outputs
      */
     List<Annotation> annotations
 }

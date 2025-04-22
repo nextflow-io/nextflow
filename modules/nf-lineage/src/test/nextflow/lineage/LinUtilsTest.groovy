@@ -22,7 +22,7 @@ import nextflow.lineage.model.Checksum
 import nextflow.lineage.model.DataPath
 import nextflow.lineage.model.Parameter
 import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowOutputs
+import nextflow.lineage.model.WorkflowOutput
 import nextflow.lineage.model.WorkflowRun
 import nextflow.lineage.config.LineageConfig
 import spock.lang.Specification
@@ -74,11 +74,11 @@ class LinUtilsTest extends Specification{
         def workflow = new Workflow([mainScript], "https://nextflow.io/nf-test/", "123456")
         def key = "testKey"
         def value1 = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [new Parameter("String", "param1", "value1"), new Parameter("String", "param2", "value2")])
-        def outputs1 = new WorkflowOutputs(OffsetDateTime.now(), "lid://testKey", [new Parameter( "String", "output", "name")] )
+        def outputs1 = new WorkflowOutput(OffsetDateTime.now(), "lid://testKey", [new Parameter( "String", "output", "name")] )
         def lidStore = new DefaultLinStore()
         lidStore.open(config)
         lidStore.save(key, value1)
-        lidStore.save("$key#outputs", outputs1)
+        lidStore.save("$key#output", outputs1)
 
         when:
         List<Object> params = LinUtils.query(lidStore, new URI('lid://testKey#params'))
@@ -88,7 +88,7 @@ class LinUtilsTest extends Specification{
         (params[0] as List<Parameter>).size() == 2
 
         when:
-        List<Object> outputs = LinUtils.query(lidStore, new URI('lid://testKey#outputs'))
+        List<Object> outputs = LinUtils.query(lidStore, new URI('lid://testKey#output'))
         then:
         outputs.size() == 1
         outputs[0] instanceof List<Parameter>
@@ -137,7 +137,7 @@ class LinUtilsTest extends Specification{
 
     def "should check params in an object"() {
         given:
-        def obj = [ "type": "value", "workflow": ["repository": "subvalue"], "outputs" : [ ["path":"/to/file"],["path":"file2"] ] ]
+        def obj = [ "type": "value", "workflow": ["repository": "subvalue"], "output" : [ ["path":"/to/file"],["path":"file2"] ] ]
 
         expect:
         LinUtils.checkParams(obj, PARAMS) == EXPECTED
@@ -148,9 +148,9 @@ class LinUtilsTest extends Specification{
         ["type": "wrong"]                       | false
         ["workflow.repository": "subvalue"]     | true
         ["workflow.repository": "wrong"]        | false
-        ["outputs.path": "wrong"]               | false
-        ["outputs.path": "/to/file"]            | true
-        ["outputs.path": "file2"]               | true
+        ["output.path": "wrong"]                | false
+        ["output.path": "/to/file"]             | true
+        ["output.path": "file2"]                | true
 
     }
 

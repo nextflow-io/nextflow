@@ -28,12 +28,12 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.lineage.model.Annotation
 import nextflow.lineage.model.Checksum
-import nextflow.lineage.model.DataOutput
+import nextflow.lineage.model.FileOutput
 import nextflow.lineage.model.DataPath
 import nextflow.lineage.model.Parameter
-import nextflow.lineage.model.TaskOutputs
+import nextflow.lineage.model.TaskOutput
 import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowOutputs
+import nextflow.lineage.model.WorkflowOutput
 import nextflow.lineage.model.WorkflowRun
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
@@ -85,7 +85,7 @@ class LinObserver implements TraceObserver {
     private String executionHash
     private LinStore store
     private Session session
-    private WorkflowOutputs workflowOutputs
+    private WorkflowOutput workflowOutput
     private Map<String,String> outputsStoreDirLid = new HashMap<String,String>(10)
     private PathNormalizer normalizer
 
@@ -113,7 +113,7 @@ class LinObserver implements TraceObserver {
         normalizer = new PathNormalizer(session.workflowMetadata)
         executionHash = storeWorkflowRun(normalizer)
         final executionUri = asUriString(executionHash)
-        workflowOutputs = new WorkflowOutputs(
+        workflowOutput = new WorkflowOutput(
             OffsetDateTime.now(),
             executionUri,
             new LinkedList<Parameter>()
@@ -123,10 +123,10 @@ class LinObserver implements TraceObserver {
 
     @Override
     void onFlowComplete(){
-        if (this.workflowOutputs){
-            workflowOutputs.createdAt = OffsetDateTime.now()
-            final key = executionHash + '#outputs'
-            this.store.save(key, workflowOutputs)
+        if (this.workflowOutput){
+            workflowOutput.createdAt = OffsetDateTime.now()
+            final key = executionHash + '#output'
+            this.store.save(key, workflowOutput)
         }
     }
 
@@ -195,8 +195,8 @@ class LinObserver implements TraceObserver {
 
     protected String storeTaskResults(TaskRun task, PathNormalizer normalizer){
         final outputParams = getNormalizedTaskOutputs(task, normalizer)
-        final value = new TaskOutputs( asUriString(task.hash.toString()), asUriString(executionHash), OffsetDateTime.now(), outputParams )
-        final key = task.hash.toString() + '#outputs'
+        final value = new TaskOutput( asUriString(task.hash.toString()), asUriString(executionHash), OffsetDateTime.now(), outputParams )
+        final key = task.hash.toString() + '#output'
         store.save(key,value)
         return key
     }
@@ -247,12 +247,11 @@ class LinObserver implements TraceObserver {
 
     protected String storeTaskRun(TaskRun task, PathNormalizer normalizer) {
         final codeChecksum = Checksum.ofNextflow(session.stubRun ? task.stubSource : task.source)
-        final scriptChecksum = Checksum.ofNextflow(task.script)
         final value = new nextflow.lineage.model.TaskRun(
             session.uniqueId.toString(),
             task.getName(),
             codeChecksum,
-            scriptChecksum,
+            task.script,
             task.inputs ? manageTaskInputParameters(task.inputs, normalizer) : null,
             task.isContainerEnabled() ? task.getContainerFingerprint() : null,
             normalizer.normalizePath(task.getCondaEnv()),
@@ -277,7 +276,7 @@ class LinObserver implements TraceObserver {
             final attrs = readAttributes(path)
             final key = getTaskOutputKey(task, path)
             final checksum = Checksum.ofNextflow(path)
-            final value = new DataOutput(
+            final value = new FileOutput(
                 path.toUriString(),
                 checksum,
                 asUriString(task.hash.toString()),
@@ -350,7 +349,7 @@ class LinObserver implements TraceObserver {
             final key = getWorkflowOutputKey(destination)
             final sourceReference = source ? getSourceReference(source) : asUriString(executionHash)
             final attrs = readAttributes(destination)
-            final value = new DataOutput(
+            final value = new FileOutput(
                 destination.toUriString(),
                 checksum,
                 sourceReference,
@@ -391,7 +390,7 @@ class LinObserver implements TraceObserver {
 
     @Override
     void onWorkflowPublish(String name, Object value){
-        workflowOutputs.outputs.add(new Parameter(getParameterType(value), name, convertPathsToLidReferences(value)))
+        workflowOutput.output.add(new Parameter(getParameterType(value), name, convertPathsToLidReferences(value)))
     }
 
     protected static String getParameterType(Object param) {

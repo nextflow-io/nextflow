@@ -18,7 +18,7 @@
 package nextflow.lineage
 
 import nextflow.lineage.model.Parameter
-import nextflow.lineage.model.TaskOutputs
+import nextflow.lineage.model.TaskOutput
 import nextflow.file.FileHolder
 import nextflow.processor.TaskHandler
 import nextflow.script.TokenVar
@@ -42,10 +42,10 @@ import java.nio.file.attribute.BasicFileAttributes
 import com.google.common.hash.HashCode
 import nextflow.Session
 import nextflow.lineage.model.Checksum
-import nextflow.lineage.model.DataOutput
+import nextflow.lineage.model.FileOutput
 import nextflow.lineage.model.DataPath
 import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowOutputs
+import nextflow.lineage.model.WorkflowOutput
 import nextflow.lineage.model.WorkflowRun
 import nextflow.lineage.serde.LinEncoder
 import nextflow.lineage.config.LineageConfig
@@ -289,42 +289,42 @@ class LinObserverTest extends Specification {
 
         and: 'Expected LID objects'
         def sourceHash = CacheHelper.hasher('echo task source').hash().toString()
-        def scriptHash = CacheHelper.hasher('this is the script').hash().toString()
+        def script = 'this is the script'
         def taskDescription = new nextflow.lineage.model.TaskRun(uniqueId.toString(), "foo",
             new Checksum(sourceHash, "nextflow", "standard"),
-            new Checksum(scriptHash, "nextflow", "standard"),
+            script,
             [
                 new Parameter("path", "file1", ['lid://78567890/file1.txt']),
                 new Parameter("path", "file2", [[path: normalizer.normalizePath(file), checksum: [value:fileHash, algorithm: "nextflow", mode:  "standard"]]]),
                 new Parameter("val", "id", "value")
             ], null, null, null, null, [:], [], "lid://hash", null)
-        def dataOutput1 = new DataOutput(outFile1.toString(), new Checksum(fileHash1, "nextflow", "standard"),
+        def dataOutput1 = new FileOutput(outFile1.toString(), new Checksum(fileHash1, "nextflow", "standard"),
             "lid://1234567890", "lid://hash", "lid://1234567890", attrs1.size(), LinUtils.toDate(attrs1.creationTime()), LinUtils.toDate(attrs1.lastModifiedTime()) )
-        def dataOutput2 = new DataOutput(outFile2.toString(), new Checksum(fileHash2, "nextflow", "standard"),
+        def dataOutput2 = new FileOutput(outFile2.toString(), new Checksum(fileHash2, "nextflow", "standard"),
             "lid://1234567890", "lid://hash", "lid://1234567890", attrs2.size(), LinUtils.toDate(attrs2.creationTime()), LinUtils.toDate(attrs2.lastModifiedTime()) )
 
         when:
         observer.onProcessComplete(handler, null )
         def taskRunResult = store.load("${hash.toString()}")
-        def dataOutputResult1 = store.load("${hash}/fileOut1.txt") as DataOutput
-        def dataOutputResult2 = store.load("${hash}/fileOut2.txt") as DataOutput
-        def taskOutputsResult = store.load("${hash}#outputs") as TaskOutputs
+        def dataOutputResult1 = store.load("${hash}/fileOut1.txt") as FileOutput
+        def dataOutputResult2 = store.load("${hash}/fileOut2.txt") as FileOutput
+        def taskOutputsResult = store.load("${hash}#output") as TaskOutput
         then:
         taskRunResult == taskDescription
         dataOutputResult1 == dataOutput1
         dataOutputResult2 == dataOutput2
         taskOutputsResult.taskRun == "lid://1234567890"
         taskOutputsResult.workflowRun == "lid://hash"
-        taskOutputsResult.outputs.size() == 3
-        taskOutputsResult.outputs.get(0).type == "path"
-        taskOutputsResult.outputs.get(0).name == "file1"
-        taskOutputsResult.outputs.get(0).value == "lid://1234567890/fileOut1.txt"
-        taskOutputsResult.outputs.get(1).type == "path"
-        taskOutputsResult.outputs.get(1).name == "file2"
-        taskOutputsResult.outputs.get(1).value == ["lid://1234567890/fileOut2.txt"]
-        taskOutputsResult.outputs.get(2).type == "val"
-        taskOutputsResult.outputs.get(2).name == "id"
-        taskOutputsResult.outputs.get(2).value == "value"
+        taskOutputsResult.output.size() == 3
+        taskOutputsResult.output.get(0).type == "path"
+        taskOutputsResult.output.get(0).name == "file1"
+        taskOutputsResult.output.get(0).value == "lid://1234567890/fileOut1.txt"
+        taskOutputsResult.output.get(1).type == "path"
+        taskOutputsResult.output.get(1).name == "file2"
+        taskOutputsResult.output.get(1).value == ["lid://1234567890/fileOut2.txt"]
+        taskOutputsResult.output.get(2).type == "val"
+        taskOutputsResult.output.get(2).name == "id"
+        taskOutputsResult.output.get(2).value == "value"
 
         cleanup:
         folder?.deleteDir()
@@ -360,7 +360,7 @@ class LinObserverTest extends Specification {
         }
         and:
         def attrs = Files.readAttributes(outFile, BasicFileAttributes)
-        def output = new DataOutput(outFile.toString(), new Checksum(fileHash, "nextflow", "standard"),
+        def output = new FileOutput(outFile.toString(), new Checksum(fileHash, "nextflow", "standard"),
             "lid://15cd5b07", "lid://hash", "lid://15cd5b07", attrs.size(), LinUtils.toDate(attrs.creationTime()), LinUtils.toDate(attrs.lastModifiedTime()) )
         and:
         observer.readAttributes(outFile) >> attrs
@@ -528,7 +528,7 @@ class LinObserverTest extends Specification {
         then: 'check file 1 output metadata in lid store'
             def attrs1 = Files.readAttributes(outFile1, BasicFileAttributes)
             def fileHash1 = CacheHelper.hasher(outFile1).hash().toString()
-            def output1 = new DataOutput(outFile1.toString(), new Checksum(fileHash1, "nextflow", "standard"),
+            def output1 = new FileOutput(outFile1.toString(), new Checksum(fileHash1, "nextflow", "standard"),
                 "lid://123987/file.bam", "$LID_PROT${observer.executionHash}", null,
                 attrs1.size(), LinUtils.toDate(attrs1.creationTime()), LinUtils.toDate(attrs1.lastModifiedTime()) )
             folder.resolve(".meta/${observer.executionHash}/foo/file.bam/.data.json").text == encoder.encode(output1)
@@ -542,7 +542,7 @@ class LinObserverTest extends Specification {
             observer.onFilePublish(outFile2)
             observer.onWorkflowPublish("b", outFile2)
         then: 'Check outFile2 metadata in lid store'
-            def output2 = new DataOutput(outFile2.toString(), new Checksum(fileHash2, "nextflow", "standard"),
+            def output2 = new FileOutput(outFile2.toString(), new Checksum(fileHash2, "nextflow", "standard"),
                 "lid://${observer.executionHash}" , "lid://${observer.executionHash}", null,
                 attrs2.size(), LinUtils.toDate(attrs2.creationTime()), LinUtils.toDate(attrs2.lastModifiedTime()) )
             folder.resolve(".meta/${observer.executionHash}/foo/file2.bam/.data.json").text == encoder.encode(output2)
@@ -551,8 +551,8 @@ class LinObserverTest extends Specification {
             observer.onFlowComplete()
         then: 'Check history file is updated and Workflow Result is written in the lid store'
             def finalLid = store.getHistoryLog().getRecord(uniqueId).runLid.substring(LID_PROT.size())
-            def resultsRetrieved = store.load("${finalLid}#outputs") as WorkflowOutputs
-            resultsRetrieved.outputs == [new Parameter(Path.simpleName, "a", "lid://${observer.executionHash}/foo/file.bam"), new Parameter(Path.simpleName, "b", "lid://${observer.executionHash}/foo/file2.bam")]
+            def resultsRetrieved = store.load("${finalLid}#output") as WorkflowOutput
+            resultsRetrieved.output == [new Parameter(Path.simpleName, "a", "lid://${observer.executionHash}/foo/file.bam"), new Parameter(Path.simpleName, "b", "lid://${observer.executionHash}/foo/file2.bam")]
 
         cleanup:
             folder?.deleteDir()

@@ -31,12 +31,11 @@ import nextflow.lineage.LinHistoryRecord
 import nextflow.lineage.LinStore
 import nextflow.lineage.LinStoreFactory
 import nextflow.lineage.LinUtils
-import nextflow.lineage.model.DataOutput
+import nextflow.lineage.model.FileOutput
 import nextflow.lineage.model.Parameter
 import nextflow.lineage.model.TaskRun
 import nextflow.lineage.model.WorkflowRun
 import nextflow.lineage.serde.LinEncoder
-import nextflow.script.params.FileInParam
 import nextflow.ui.TableBuilder
 import org.eclipse.jgit.diff.DiffAlgorithm
 import org.eclipse.jgit.diff.DiffFormatter
@@ -156,8 +155,8 @@ class LinCommandImpl implements CmdLineage.LinCommand {
         final key = nodeToRender.substring(LID_PROT.size())
         final lidObject = store.load(key)
         switch (lidObject.getClass()) {
-            case DataOutput:
-                processDataOutput(lidObject as DataOutput, lines, nodeToRender, nodes, edges)
+            case FileOutput:
+                processDataOutput(lidObject as FileOutput, lines, nodeToRender, nodes, edges)
                 break;
 
             case WorkflowRun:
@@ -175,7 +174,7 @@ class LinCommandImpl implements CmdLineage.LinCommand {
 
     private void processTaskRun(TaskRun taskRun, List<String> lines, String nodeToRender, LinkedList<String> nodes, LinkedList<Edge> edges) {
         lines << "    ${nodeToRender}@{shape: process, label: \"${taskRun.name} [$nodeToRender]\"}".toString()
-        final parameters = taskRun.inputs
+        final parameters = taskRun.input
         for (Parameter source : parameters) {
             if (source.type.equals("path")) {
                 manageFileInParam(lines, nodeToRender, nodes, edges, source.value)
@@ -199,7 +198,7 @@ class LinCommandImpl implements CmdLineage.LinCommand {
         }
     }
 
-    private void processDataOutput(DataOutput lidObject, List<String> lines, String nodeToRender, LinkedList<String> nodes, LinkedList<Edge> edges){
+    private void processDataOutput(FileOutput lidObject, List<String> lines, String nodeToRender, LinkedList<String> nodes, LinkedList<Edge> edges){
         lines << "    ${nodeToRender}@{shape: document, label: \"${nodeToRender}\"}".toString();
         final source = lidObject.source
         if(! source )

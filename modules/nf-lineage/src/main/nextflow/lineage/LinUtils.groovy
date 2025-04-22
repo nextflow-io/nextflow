@@ -141,7 +141,7 @@ class LinUtils {
     static Object getSubObject(LinStore store, String key, LinSerializable object, String[] children) {
         if( isSearchingOutputs(object, children) ) {
             // When asking for a Workflow or task output retrieve the outputs description
-            final outputs = store.load("${key}#outputs")
+            final outputs = store.load("${key}#output")
             if (!outputs)
                 return null
             return navigate(outputs, children.join('.'))
@@ -157,7 +157,7 @@ class LinUtils {
      * @return return 'true' if the parent is a Task/Workflow run and the first element in children is 'outputs'. Otherwise 'false'
      */
     static boolean isSearchingOutputs(LinSerializable object, String[] children) {
-        return (object instanceof WorkflowRun || object instanceof TaskRun) && children && children[0] == 'outputs'
+        return (object instanceof WorkflowRun || object instanceof TaskRun) && children && children[0] == 'output'
     }
 
     /**

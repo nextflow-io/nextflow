@@ -20,7 +20,7 @@ package nextflow.lineage.h2
 import nextflow.lineage.model.Annotation
 import nextflow.lineage.model.Checksum
 import nextflow.lineage.model.DataPath
-import nextflow.lineage.model.DataOutput
+import nextflow.lineage.model.FileOutput
 import nextflow.lineage.model.Parameter
 import nextflow.lineage.model.Workflow
 import nextflow.lineage.model.WorkflowRun
@@ -51,7 +51,7 @@ class H2LinStoreTest extends Specification {
 
     def 'should store and get a value' () {
         given:
-        def value = new DataOutput("/path/to/file", new Checksum("hash_value", "hash_algorithm", "standard"), "lid://source", "lid://workflow", "lid//task", 1234)
+        def value = new FileOutput("/path/to/file", new Checksum("hash_value", "hash_algorithm", "standard"), "lid://source", "lid://workflow", "lid//task", 1234)
         when:
         store.save('/some/key', value)
         then:
@@ -67,18 +67,18 @@ class H2LinStoreTest extends Specification {
         def key = "testKey"
         def value1 = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [new Parameter("String", "param1", "value1"), new Parameter("String", "param2", "value2")])
         def key2 = "testKey2"
-        def value2 = new DataOutput("/path/tp/file1", new Checksum("78910", "nextflow", "standard"), "testkey", "lid://workflow", "lid//task", 1234, time, time, [new Annotation("key1", "value1"), new Annotation("key2", "value2")])
+        def value2 = new FileOutput("/path/tp/file1", new Checksum("78910", "nextflow", "standard"), "testkey", "lid://workflow", "lid//task", 1234, time, time, [new Annotation("key1", "value1"), new Annotation("key2", "value2")])
         def key3 = "testKey3"
-        def value3 = new DataOutput("/path/tp/file2", new Checksum("78910", "nextflow", "standard"), "testkey", "lid://workflow", "lid//task", 1234, time, time, [new Annotation("key2", "value2"), new Annotation("key3", "value3")])
+        def value3 = new FileOutput("/path/tp/file2", new Checksum("78910", "nextflow", "standard"), "testkey", "lid://workflow", "lid//task", 1234, time, time, [new Annotation("key2", "value2"), new Annotation("key3", "value3")])
         def key4 = "testKey4"
-        def value4 = new DataOutput("/path/tp/file", new Checksum("78910", "nextflow", "standard"), "testkey", "lid://workflow", "lid//task", 1234, time, time, [new Annotation("key3", "value3"), new Annotation("key4", "value4")])
+        def value4 = new FileOutput("/path/tp/file", new Checksum("78910", "nextflow", "standard"), "testkey", "lid://workflow", "lid//task", 1234, time, time, [new Annotation("key3", "value3"), new Annotation("key4", "value4")])
 
         store.save(key, value1)
         store.save(key2, value2)
         store.save(key3, value3)
         store.save(key4, value4)
         when:
-        def results = store.search("type=DataOutput&annotations.key=key2&annotations.value=value2")
+        def results = store.search("type=FileOutput&annotations.key=key2&annotations.value=value2")
         then:
         results.size() == 2
     }

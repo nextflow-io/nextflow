@@ -20,8 +20,8 @@ import nextflow.lineage.LinUtils
 import nextflow.lineage.model.Checksum
 import nextflow.lineage.model.Parameter
 import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowOutputs
-import nextflow.lineage.model.DataOutput
+import nextflow.lineage.model.WorkflowOutput
+import nextflow.lineage.model.FileOutput
 import nextflow.lineage.model.WorkflowRun
 import nextflow.lineage.serde.LinEncoder
 import nextflow.util.CacheHelper
@@ -145,10 +145,10 @@ class LinPathTest extends Specification {
         meta.resolve('12345/output1').mkdirs()
         meta.resolve('12345/path/to/file2.txt').mkdirs()
         meta.resolve('12345/.data.json').text = '{"type":"TaskRun"}'
-        meta.resolve('12345/output1/.data.json').text = '{"type":"DataOutput", "path": "' + outputFolder.toString() + '"}'
-        meta.resolve('12345/path/to/file2.txt/.data.json').text = '{"type":"DataOutput", "path": "' + outputFile.toString() + '"}'
+        meta.resolve('12345/output1/.data.json').text = '{"type":"FileOutput", "path": "' + outputFolder.toString() + '"}'
+        meta.resolve('12345/path/to/file2.txt/.data.json').text = '{"type":"FileOutput", "path": "' + outputFile.toString() + '"}'
         def time = OffsetDateTime.now()
-        def wfResultsMetadata = new LinEncoder().withPrettyPrint(true).encode(new WorkflowOutputs(time, "lid://1234", [new Parameter( "Path", "a", "lid://1234/a.txt")]))
+        def wfResultsMetadata = new LinEncoder().withPrettyPrint(true).encode(new WorkflowOutput(time, "lid://1234", [new Parameter( "Path", "a", "lid://1234/a.txt")]))
         meta.resolve('5678/').mkdirs()
         meta.resolve('5678/.data.json').text = wfResultsMetadata
 
@@ -195,7 +195,7 @@ class LinPathTest extends Specification {
         result.text == wfResultsMetadata
 
         when: 'Lid description subobject'
-        def result2 = new LinPath(lidFs, '5678#outputs').getTargetOrMetadataPath()
+        def result2 = new LinPath(lidFs, '5678#output').getTargetOrMetadataPath()
         then:
         result2 instanceof LinMetadataPath
         result2.text == LinUtils.encodeSearchOutputs([new Parameter("Path","a", "lid://1234/a.txt")], true)
@@ -218,9 +218,9 @@ class LinPathTest extends Specification {
         p.text == '"repo"'
 
         when: 'outputs'
-        def outputs = new WorkflowOutputs(OffsetDateTime.now(), "lid://123456", [ new Parameter("Collection", "samples", ["sample1", "sample2"])])
-        lidFs.store.save("123456/outputs", outputs)
-        Path p2 = LinPath.getMetadataAsTargetPath(wf, lidFs, "123456", ["outputs"] as String[])
+        def outputs = new WorkflowOutput(OffsetDateTime.now(), "lid://123456", [new Parameter("Collection", "samples", ["sample1", "sample2"])])
+        lidFs.store.save("123456/output", outputs)
+        Path p2 = LinPath.getMetadataAsTargetPath(wf, lidFs, "123456", ["output"] as String[])
         then:
         p2 instanceof LinMetadataPath
         p2.text == LinUtils.encodeSearchOutputs([new Parameter("Collection", "samples", ["sample1", "sample2"])], true)
@@ -232,10 +232,10 @@ class LinPathTest extends Specification {
         exception.message == "Target path '123456#no-exist' does not exist"
 
         when: 'outputs does not exists'
-        LinPath.getMetadataAsTargetPath(wf, lidFs, "6789", ["outputs"] as String[])
+        LinPath.getMetadataAsTargetPath(wf, lidFs, "6789", ["output"] as String[])
         then:
         def exception1 = thrown(FileNotFoundException)
-        exception1.message == "Target path '6789#outputs' does not exist"
+        exception1.message == "Target path '6789#output' does not exist"
 
         when: 'null object'
         LinPath.getMetadataAsTargetPath(null, lidFs, "123456", ["no-exist"] as String[])
@@ -602,7 +602,7 @@ class LinPathTest extends Specification {
         def file = wdir.resolve("file.txt")
         file.text = "this is a data file"
         def hash = CacheHelper.hasher(file).hash().toString()
-        def correctData = new DataOutput(file.toString(), new Checksum(hash,"nextflow", "standard"))
+        def correctData = new FileOutput(file.toString(), new Checksum(hash,"nextflow", "standard"))
         LinPath.validateDataOutput(correctData)
         def stdout = capture
             .toString()
@@ -623,7 +623,7 @@ class LinPathTest extends Specification {
         def file = wdir.resolve("file.txt")
         file.text = "this is a data file"
         def hash = CacheHelper.hasher(file).hash().toString()
-        def correctData = new DataOutput(file.toString(), new Checksum("abscd","nextflow", "standard"))
+        def correctData = new FileOutput(file.toString(), new Checksum("abscd","nextflow", "standard"))
         LinPath.validateDataOutput(correctData)
         def stdout = capture
             .toString()
@@ -645,7 +645,7 @@ class LinPathTest extends Specification {
         def file = wdir.resolve("file.txt")
         file.text = "this is a data file"
         def hash = CacheHelper.hasher(file).hash().toString()
-        def correctData = new DataOutput(file.toString(), new Checksum(hash,"not-supported", "standard"))
+        def correctData = new FileOutput(file.toString(), new Checksum(hash,"not-supported", "standard"))
         LinPath.validateDataOutput(correctData)
         def stdout = capture
             .toString()
@@ -664,7 +664,7 @@ class LinPathTest extends Specification {
 
     def 'should throw exception when file not found validating hash'(){
         when:
-        def correctData = new DataOutput("not/existing/file", new Checksum("120741","nextflow", "standard"))
+        def correctData = new FileOutput("not/existing/file", new Checksum("120741","nextflow", "standard"))
         LinPath.validateDataOutput(correctData)
 
         then:

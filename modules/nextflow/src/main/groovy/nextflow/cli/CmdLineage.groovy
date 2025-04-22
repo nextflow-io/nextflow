@@ -152,12 +152,12 @@ class CmdLineage extends CmdBase implements UsageAware {
 
         @Override
         String getName() {
-            return 'log'
+            return 'list'
         }
 
         @Override
         String getDescription() {
-            return 'Print the lineage execution log'
+            return 'List the executions with lineage enabled'
         }
 
         @Override
@@ -181,7 +181,7 @@ class CmdLineage extends CmdBase implements UsageAware {
 
         @Override
         String getName() {
-            return 'describe'
+            return 'view'
         }
 
         @Override

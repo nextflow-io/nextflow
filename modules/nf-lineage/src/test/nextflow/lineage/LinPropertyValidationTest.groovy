@@ -32,7 +32,7 @@ class LinPropertyValidationTest extends Specification{
 
     def 'should not throw exception when property exist'(){
         when:
-        new LinPropertyValidator().validate(['value', 'outputs'])
+        new LinPropertyValidator().validate(['value', 'output'])
         then:
         noExceptionThrown()
     }
