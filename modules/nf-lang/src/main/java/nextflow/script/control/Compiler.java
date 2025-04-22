@@ -15,6 +15,7 @@
  */
 package nextflow.script.control;
 
+import java.io.File;
 import java.net.URI;
 import java.security.CodeSource;
 import java.util.HashMap;
@@ -25,6 +26,7 @@ import org.antlr.v4.runtime.RecognitionException;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.CompilationUnit;
 import org.codehaus.groovy.control.CompilerConfiguration;
+import org.codehaus.groovy.control.ErrorCollector;
 import org.codehaus.groovy.control.SourceUnit;
 
 /**
@@ -56,6 +58,27 @@ public class Compiler {
 
     protected GroovyClassLoader classLoader() {
         return compilationUnit().getClassLoader();
+    }
+
+    public SourceUnit newSourceUnit(File file) {
+        return new SourceUnit(
+            file,
+            configuration(),
+            classLoader(),
+            newErrorCollector());
+    }
+
+    public SourceUnit newSourceUnit(String name, String contents) {
+        return new SourceUnit(
+            name,
+            contents,
+            configuration(),
+            classLoader(),
+            newErrorCollector());
+    }
+
+    protected ErrorCollector newErrorCollector() {
+        return new LazyErrorCollector(configuration());
     }
 
     public void addSource(SourceUnit source) {

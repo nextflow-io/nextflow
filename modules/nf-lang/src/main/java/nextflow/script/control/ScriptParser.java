@@ -45,13 +45,13 @@ public class ScriptParser {
     }
 
     public SourceUnit parse(File file) {
-        var source = getSource(file);
+        var source = compiler.newSourceUnit(file);
         parse0(source);
         return source;
     }
 
     public SourceUnit parse(String name, String contents) {
-        var source = getSource(name, contents);
+        var source = compiler.newSourceUnit(name, contents);
         parse0(source);
         return source;
     }
@@ -66,7 +66,7 @@ public class ScriptParser {
 
     public void analyze() {
         for( var source : compiler.getSources().values() ) {
-            new ModuleResolver(compiler()).resolve(source, (uri) -> getSource(new File(uri)));
+            new ModuleResolver(compiler()).resolve(source, (uri) -> compiler.newSourceUnit(new File(uri)));
         }
 
         for( var source : compiler.getSources().values() ) {
@@ -79,23 +79,6 @@ public class ScriptParser {
                 continue;
             new TypeCheckingVisitor(source, false).visit();
         }
-    }
-
-    private SourceUnit getSource(File file) {
-        return new SourceUnit(
-            file,
-            compiler.compilationUnit().getConfiguration(),
-            compiler.compilationUnit().getClassLoader(),
-            new LazyErrorCollector(compiler.compilationUnit().getConfiguration()));
-    }
-
-    private SourceUnit getSource(String name, String contents) {
-        return new SourceUnit(
-            name,
-            contents,
-            compiler.compilationUnit().getConfiguration(),
-            compiler.compilationUnit().getClassLoader(),
-            new LazyErrorCollector(compiler.compilationUnit().getConfiguration()));
     }
 
     private static CompilerConfiguration getConfig() {
