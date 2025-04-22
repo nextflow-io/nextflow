@@ -35,6 +35,8 @@ class BatchConfig {
     
     static final private List<Integer> DEFAULT_RETRY_LIST = List.of(50001)
 
+    static final private List<String> DEFAULT_GCSFUSE_OPTS = List.<String>of('-o rw', '-implicit-dirs')
+
     private GoogleOpts googleOpts
     private GoogleCredentials credentials
     private List<String> allowedLocations
@@ -51,6 +53,7 @@ class BatchConfig {
     private String serviceAccountEmail
     private BatchRetryConfig retryConfig
     private List<Integer> autoRetryExitCodes
+    private List<String> gcsfuseOptions
 
     GoogleOpts getGoogleOpts() { return googleOpts }
     GoogleCredentials getCredentials() { return credentials }
@@ -68,6 +71,7 @@ class BatchConfig {
     String getServiceAccountEmail() { serviceAccountEmail }
     BatchRetryConfig getRetryConfig() { retryConfig }
     List<Integer> getAutoRetryExitCodes() { autoRetryExitCodes }
+    List<String> getGcsfuseOptions() { gcsfuseOptions }
 
     static BatchConfig create(Session session) {
         final result = new BatchConfig()
@@ -87,6 +91,7 @@ class BatchConfig {
         result.serviceAccountEmail = session.config.navigate('google.batch.serviceAccountEmail')
         result.retryConfig = new BatchRetryConfig( session.config.navigate('google.batch.retryPolicy') as Map ?: Map.of() )
         result.autoRetryExitCodes = session.config.navigate('google.batch.autoRetryExitCodes', DEFAULT_RETRY_LIST) as List<Integer>
+        result.gcsfuseOptions = session.config.navigate('google.batch.gcsfuseOptions', DEFAULT_GCSFUSE_OPTS) as List<String>
         return result
     }
 

@@ -49,7 +49,8 @@ rediraffe_redirects = {
     'tracing.md': 'reports.md',
     'mail.md': 'notifications.md',
     'operator.md': 'reference/operator.md',
-    'dsl2.md': 'dsl1.md'
+    'dsl1.md': 'migrations/dsl1.md',
+    'updating-syntax.md': 'strict-syntax.md'
 }
 
 # Add any paths that contain templates here, relative to this directory.
