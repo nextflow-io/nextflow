@@ -38,7 +38,6 @@ import java.nio.file.spi.FileSystemProvider
 
 import groovy.transform.CompileStatic
 import nextflow.lineage.config.LineageConfig
-
 /**
  * File System Provider for LID Paths
  *
@@ -73,17 +72,17 @@ class LinFileSystemProvider extends FileSystemProvider {
     @Override
     synchronized FileSystem newFileSystem(URI uri, Map<String, ?> config) throws IOException {
         checkScheme(uri)
-        if (!fileSystem) {
-            //Overwrite default values with provided configuration
-            final defaultConfig = LineageConfig.asMap()
-            if (config) {
-                for (Map.Entry<String, ?> e : config.entrySet()) {
-                    defaultConfig.put(e.key, e.value)
-                }
-            }
-            fileSystem = new LinFileSystem(this, new LineageConfig(defaultConfig))
+        if (fileSystem) {
+            return fileSystem
         }
-        return fileSystem
+        //Overwrite default values with provided configuration
+        final defaultConfig = LineageConfig.asMap()
+        if (config) {
+            for (Map.Entry<String, ?> e : config.entrySet()) {
+                defaultConfig.put(e.key, e.value)
+            }
+        }
+        return fileSystem = new LinFileSystem(this, new LineageConfig(defaultConfig))
     }
 
     @Override
@@ -353,7 +352,7 @@ class LinFileSystemProvider extends FileSystemProvider {
         final lid = toLinPath(path)
         if (lid instanceof LinMetadataPath)
             return (lid as LinMetadataPath).readAttributes(type)
-        readAttributes0(lid, type, options)
+        return readAttributes0(lid, type, options)
     }
 
     private <A extends BasicFileAttributes> A readAttributes0(LinPath lid, Class<A> type, LinkOption... options) throws IOException {

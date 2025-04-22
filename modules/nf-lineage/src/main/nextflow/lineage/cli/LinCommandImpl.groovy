@@ -41,7 +41,6 @@ import org.eclipse.jgit.diff.DiffAlgorithm
 import org.eclipse.jgit.diff.DiffFormatter
 import org.eclipse.jgit.diff.RawText
 import org.eclipse.jgit.diff.RawTextComparator
-
 /**
  * Implements lineage command line operations
  *
@@ -50,7 +49,7 @@ import org.eclipse.jgit.diff.RawTextComparator
 @CompileStatic
 class LinCommandImpl implements CmdLineage.LinCommand {
 
-    private static Path DEFAULT_HTML_FILE = Path.of("lineage.html")
+    private static final Path DEFAULT_HTML_FILE = Path.of("lineage.html")
 
     @Canonical
     static class Edge {

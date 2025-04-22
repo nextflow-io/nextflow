@@ -16,6 +16,10 @@
 
 package nextflow.lineage.fs
 
+import com.google.common.collect.ImmutableSet
+import nextflow.lineage.LinStore
+import nextflow.lineage.LinStoreFactory
+
 import java.nio.file.FileStore
 import java.nio.file.FileSystem
 import java.nio.file.Path
@@ -104,7 +108,7 @@ class LinFileSystem extends FileSystem {
 
     @Override
     Set<String> supportedFileAttributeViews() {
-        return null
+        return ImmutableSet.of("basic")
     }
 
     @Override
