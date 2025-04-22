@@ -46,14 +46,14 @@ public class ConfigParser {
     }
 
     public SourceUnit parse(File file) {
-        var source = getSource(file);
+        var source = compiler.createSourceUnit(file);
         compiler.addSource(source);
         compiler.compile(source);
         return source;
     }
 
     public SourceUnit parse(String name, String contents) {
-        var source = getSource(name, contents);
+        var source = compiler.createSourceUnit(name, contents);
         compiler.addSource(source);
         compiler.compile(source);
         return source;
@@ -67,23 +67,6 @@ public class ConfigParser {
                 source.getErrorCollector().addErrorAndContinue(error);
             new ConfigResolveVisitor(source, compiler.compilationUnit()).visit();
         }
-    }
-
-    private SourceUnit getSource(File file) {
-        return new SourceUnit(
-            file,
-            compiler.compilationUnit().getConfiguration(),
-            compiler.compilationUnit().getClassLoader(),
-            new LazyErrorCollector(compiler.compilationUnit().getConfiguration()));
-    }
-
-    private SourceUnit getSource(String name, String contents) {
-        return new SourceUnit(
-            name,
-            contents,
-            compiler.compilationUnit().getConfiguration(),
-            compiler.compilationUnit().getClassLoader(),
-            new LazyErrorCollector(compiler.compilationUnit().getConfiguration()));
     }
 
     private static CompilerConfiguration getConfig() {
