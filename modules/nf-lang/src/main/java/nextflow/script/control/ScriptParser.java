@@ -45,13 +45,13 @@ public class ScriptParser {
     }
 
     public SourceUnit parse(File file) {
-        var source = compiler.newSourceUnit(file);
+        var source = compiler.createSourceUnit(file);
         parse0(source);
         return source;
     }
 
     public SourceUnit parse(String name, String contents) {
-        var source = compiler.newSourceUnit(name, contents);
+        var source = compiler.createSourceUnit(name, contents);
         parse0(source);
         return source;
     }
@@ -66,7 +66,7 @@ public class ScriptParser {
 
     public void analyze() {
         for( var source : compiler.getSources().values() ) {
-            new ModuleResolver(compiler()).resolve(source, (uri) -> compiler.newSourceUnit(new File(uri)));
+            new ModuleResolver(compiler()).resolve(source, (uri) -> compiler.createSourceUnit(new File(uri)));
         }
 
         for( var source : compiler.getSources().values() ) {

@@ -60,24 +60,24 @@ public class Compiler {
         return compilationUnit().getClassLoader();
     }
 
-    public SourceUnit newSourceUnit(File file) {
+    public SourceUnit createSourceUnit(File file) {
         return new SourceUnit(
             file,
             configuration(),
             classLoader(),
-            newErrorCollector());
+            createErrorCollector());
     }
 
-    public SourceUnit newSourceUnit(String name, String contents) {
+    public SourceUnit createSourceUnit(String name, String contents) {
         return new SourceUnit(
             name,
             contents,
             configuration(),
             classLoader(),
-            newErrorCollector());
+            createErrorCollector());
     }
 
-    protected ErrorCollector newErrorCollector() {
+    protected ErrorCollector createErrorCollector() {
         return new LazyErrorCollector(configuration());
     }
 

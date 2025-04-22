@@ -145,8 +145,8 @@ public class ScriptCompiler {
         // compile main script and included modules
         var unit = new ScriptCompilationUnit(config, loader);
         var su = codeSource.getFile() != null
-            ? unit.newSourceUnit(MAIN_CLASS_NAME, codeSource.getFile())
-            : unit.newSourceUnit(codeSource.getName(), codeSource.getScriptText());
+            ? unit.createSourceUnit(MAIN_CLASS_NAME, codeSource.getFile())
+            : unit.createSourceUnit(codeSource.getName(), codeSource.getScriptText());
         var collector = new ScriptClassLoader(loader).createCollector(unit, su);
 
         compiler = new Compiler(unit);
@@ -249,7 +249,7 @@ public class ScriptCompiler {
         private void analyze(SourceUnit source) {
             // on first pass, recursively add included modules to queue
             if( entry == null ) {
-                modules = new ModuleResolver(compiler).resolve(source, uri -> newSourceUnit(uri));
+                modules = new ModuleResolver(compiler).resolve(source, uri -> createSourceUnit(uri));
                 for( var su : modules )
                     addSource(su);
                 entry = source;
@@ -281,19 +281,19 @@ public class ScriptCompiler {
             new OpXformImpl().visit(astNodes, source);
         }
 
-        SourceUnit newSourceUnit(URI uri) {
-            return newSourceUnit(uniqueClassName(uri), new File(uri));
+        SourceUnit createSourceUnit(URI uri) {
+            return createSourceUnit(uniqueClassName(uri), new File(uri));
         }
 
-        SourceUnit newSourceUnit(String name, File file) {
-            return newSourceUnit(name, new FileReaderSource(file, getConfiguration()));
+        SourceUnit createSourceUnit(String name, File file) {
+            return createSourceUnit(name, new FileReaderSource(file, getConfiguration()));
         }
 
-        SourceUnit newSourceUnit(String name, String source) {
-            return newSourceUnit(name, new StringReaderSource(source, getConfiguration()));
+        SourceUnit createSourceUnit(String name, String source) {
+            return createSourceUnit(name, new StringReaderSource(source, getConfiguration()));
         }
 
-        SourceUnit newSourceUnit(String name, ReaderSource source) {
+        SourceUnit createSourceUnit(String name, ReaderSource source) {
             return new SourceUnit(
                     name,
                     source,

@@ -46,14 +46,14 @@ public class ConfigParser {
     }
 
     public SourceUnit parse(File file) {
-        var source = compiler.newSourceUnit(file);
+        var source = compiler.createSourceUnit(file);
         compiler.addSource(source);
         compiler.compile(source);
         return source;
     }
 
     public SourceUnit parse(String name, String contents) {
-        var source = compiler.newSourceUnit(name, contents);
+        var source = compiler.createSourceUnit(name, contents);
         compiler.addSource(source);
         compiler.compile(source);
         return source;
