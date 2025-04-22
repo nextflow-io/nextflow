@@ -49,6 +49,7 @@ class BatchConfig {
     private String network
     private String subnetwork
     private String serviceAccountEmail
+    private List<String> networkTags
     private BatchRetryConfig retryConfig
     private List<Integer> autoRetryExitCodes
 
@@ -66,6 +67,7 @@ class BatchConfig {
     String getNetwork() { network }
     String getSubnetwork() { subnetwork }
     String getServiceAccountEmail() { serviceAccountEmail }
+    List<String> getNetworkTags() { networkTags }
     BatchRetryConfig getRetryConfig() { retryConfig }
     List<Integer> getAutoRetryExitCodes() { autoRetryExitCodes }
 
@@ -85,6 +87,7 @@ class BatchConfig {
         result.network = session.config.navigate('google.batch.network')
         result.subnetwork = session.config.navigate('google.batch.subnetwork')
         result.serviceAccountEmail = session.config.navigate('google.batch.serviceAccountEmail')
+        result.networkTags = session.config.navigate('google.batch.networkTags', List.of()) as List<String>
         result.retryConfig = new BatchRetryConfig( session.config.navigate('google.batch.retryPolicy') as Map ?: Map.of() )
         result.autoRetryExitCodes = session.config.navigate('google.batch.autoRetryExitCodes', DEFAULT_RETRY_LIST) as List<Integer>
         return result
