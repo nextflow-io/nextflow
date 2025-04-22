@@ -673,7 +673,7 @@ The following settings are available:
 : Specifies Platform LSF *per-task* memory reserve mode. See {ref}`lsf-executor`.
 
 `executor.pollInterval`
-: Determines how often to check for process termination. Default varies for each executor (see below).
+: Defines the polling frequency for process termination detection. Default varies for each executor (see below).
 
 `executor.queueGlobalStatus`
 : :::{versionadded} 23.01.0-edge
@@ -858,6 +858,11 @@ The following settings are available for Google Cloud Batch:
 
 `google.batch.cpuPlatform`
 : Set the minimum CPU Platform, e.g. `'Intel Skylake'`. See [Specifying a minimum CPU Platform for VM instances](https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications) (default: none).
+
+`google.batch.gcsfuseOptions`
+: :::{versionadded} 25.03.0-edge
+  :::
+: Defines a list of custom mount options for `gcsfuse` (default: `['-o rw', '-implicit-dirs']`).
 
 `google.batch.maxSpotAttempts`
 : :::{versionadded} 23.11.0-edge
