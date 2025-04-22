@@ -77,7 +77,7 @@ class CmdLineageTest extends Specification {
             lidLog.write("run_name", uniqueId, "lid://123456", date)
             def recordEntry = "${LinHistoryRecord.TIMESTAMP_FMT.format(date)}\trun_name\t${uniqueId}\tlid://123456".toString()
         when:
-            def lidCmd = new CmdLineage(launcher: launcher, args: ["log"])
+            def lidCmd = new CmdLineage(launcher: launcher, args: ["list"])
             lidCmd.run()
             def stdout = capture
                 .toString()
@@ -105,7 +105,7 @@ class CmdLineageTest extends Specification {
             getOptions() >> new CliOptions(config: [configFile.toString()])
         }
         when:
-        def lidCmd = new CmdLineage(launcher: launcher, args: ["log"])
+        def lidCmd = new CmdLineage(launcher: launcher, args: ["list"])
         lidCmd.run()
         def stdout = capture
             .toString()
@@ -214,7 +214,7 @@ class CmdLineageTest extends Specification {
         lidFile2.text = encoder.encode(entry)
         entry = new TaskRun("u345-2346-1stw2", "foo",
                 new Checksum("abcde2345","nextflow","standard"),
-                new Checksum("abfsc2375","nextflow","standard"),
+                'this is a script',
                 [new Parameter( "val", "sample_id","ggal_gut"),
                 new Parameter("path","reads",["lid://45678/output.txt"])],
                 null, null, null, null, [:],[], null)
@@ -224,7 +224,7 @@ class CmdLineageTest extends Specification {
         lidFile4.text = encoder.encode(entry)
         entry = new TaskRun("u345-2346-1stw2", "bar",
                 new Checksum("abfs2556","nextflow","standard"),
-                new Checksum("abfsc2375","nextflow","standard"),
+                'this is a script',
                 null,null, null, null, null, [:],[], null)
         lidFile5.text = encoder.encode(entry)
         final network = """flowchart BT
@@ -283,7 +283,7 @@ class CmdLineageTest extends Specification {
         def expectedOutput = jsonSer
         lidFile.text = jsonSer
         when:
-        def lidCmd = new CmdLineage(launcher: launcher, args: ["view", "lid:///?type=DataOutput"])
+        def lidCmd = new CmdLineage(launcher: launcher, args: ["view", "lid:///?type=FileOutput"])
         lidCmd.run()
         def stdout = capture
                 .toString()
@@ -318,7 +318,7 @@ class CmdLineageTest extends Specification {
         def expectedOutput = jsonSer
         lidFile.text = jsonSer
         when:
-        def lidCmd = new CmdLineage(launcher: launcher, args: ["view", "lid:///?type=DataOutput"])
+        def lidCmd = new CmdLineage(launcher: launcher, args: ["view", "lid:///?type=FileOutput"])
         lidCmd.run()
         def stdout = capture
             .toString()
