@@ -432,7 +432,7 @@ class AzBatchService implements Closeable {
 
     protected BatchJobConstraints createJobConstraints(nextflow.util.Duration time) {
         final constraints = new BatchJobConstraints()
-        if (time) {
+        if (time && time.toMillis() > 0) {
             final long millis = time.toMillis()
             final java.time.Duration maxWallTime = java.time.Duration.ofMillis(millis)
             constraints.setMaxWallClockTime(maxWallTime)
