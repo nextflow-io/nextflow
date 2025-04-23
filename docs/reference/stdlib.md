@@ -2,7 +2,7 @@
 
 # Standard library
 
-The Nextflow standard library provides a collection of built-in tools and constructs to write and manage pipelines. It includes:
+The Nextflow standard library is.... It provides a collection of built-in tools and constructs to write and manage pipelines. It includes:
 
 ```{toctree}
 :maxdepth: 1
@@ -12,9 +12,7 @@ stdlib-functions
 stdlib-types
 ```
 
-## Groovy and Java classes
-
-Any Groovy or Java class that is available to Nextflow at runtime can be used in a Nextflow script.
+Any Groovy or Java class that is available to Nextflow at runtime can be used in a Nextflow script. 
 
 ```{toctree}
 :maxdepth: 1
