@@ -126,6 +126,7 @@ reference/stdlib
 reference/process
 reference/channel
 reference/operator
+reference/lineage-model
 ```
 
 ```{toctree}

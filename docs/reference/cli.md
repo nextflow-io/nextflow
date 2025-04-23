@@ -683,6 +683,67 @@ Execute a pipeline into a Kubernetes cluster.
 $ nextflow kuberun nextflow-io/hello
 ```
 
+(cli-lineage)=
+
+### `lineage`
+
+Inspect lineage metadata for Nextflow executions.
+
+**Usage**
+
+```console
+$ nextflow lineage SUBCOMMAND [arg ..]
+```
+
+**Description**
+
+The `lineage` command is used to inspect lineage metadata.
+
+**Options**
+
+`-h, -help`
+: Print the command usage.
+
+**Examples**
+
+List the Nextflow executions with lineage metadata enabled and print the workflow run lineage ID (lid).
+
+```console
+$ nextflow lineage list
+TIMESTAMP          	RUN NAME              	SESSION ID                          	LINEAGE ID                            
+2025-04-22 14:45:43	backstabbing_heyrovsky	21bc4fad-e8b8-447d-9410-388f926a711f	lid://c914d714877cc5c882c55a5428b510b1
+```
+
+View a metadata description
+
+```console
+$ nextflow lineage view <lid>
+```
+
+View a metadata description fragment. A fragment can be a just a property of a metadata object (like `output`,`params`,...) or a set of nested properties separated by `.` (like `workflow.repository`)
+
+```console
+$ nextflow lineage view <lid#fragment>
+```
+
+Find a specific metadata description matching to a URL-like query string. The query string is a set of `key=value` statements separated by `&`. Keys are described in the same way that `fragments` in the `view` command
+
+```console
+$ nextflow lineage find "<query-string>"
+```
+
+Show the difference between two metadata descriptions. The difference between both descriptions is shown in a git-diff style.
+
+```console
+$ nextflow lineage diff <lid-1> <lid-2>
+```
+
+Render the lineage graph for a workflow or task output in an HTML file. (default file path: `./lineage.html`)
+
+```console
+$ nextflow lineage render <lid> [html-file-path]
+```
+
 (cli-lint)=
 
 ### `lint`
