@@ -66,7 +66,7 @@ class CmdLineageTest extends Specification {
         given:
             def folder = Files.createTempDirectory('test').toAbsolutePath()
             def configFile = folder.resolve('nextflow.config')
-            configFile.text = "workflow.lineage.enabled = true\nworkflow.lineage.store.location = '$folder'".toString()
+            configFile.text = "lineage.enabled = true\nlineage.store.location = '$folder'".toString()
             def historyFile = folder.resolve(".meta/.history")
             def lidLog = new DefaultLinHistoryLog(historyFile)
             def uniqueId = UUID.randomUUID()
@@ -98,7 +98,7 @@ class CmdLineageTest extends Specification {
         given:
         def folder = Files.createTempDirectory('test').toAbsolutePath()
         def configFile = folder.resolve('nextflow.config')
-        configFile.text = "workflow.lineage.enabled = true\nworkflow.lineage.store.location = '$folder'".toString()
+        configFile.text = "lineage.enabled = true\nlineage.store.location = '$folder'".toString()
         def historyFile = folder.resolve(".meta/.history")
         Files.createDirectories(historyFile.parent)
         def launcher = Mock(Launcher){
@@ -127,7 +127,7 @@ class CmdLineageTest extends Specification {
         given:
         def folder = Files.createTempDirectory('test').toAbsolutePath()
         def configFile = folder.resolve('nextflow.config')
-        configFile.text = "workflow.lineage.enabled = true\nworkflow.lineage.store.location = '$folder'".toString()
+        configFile.text = "lineage.enabled = true\nlineage.store.location = '$folder'".toString()
         def lidFile = folder.resolve(".meta/12345/.data.json")
         Files.createDirectories(lidFile.parent)
         def launcher = Mock(Launcher){
@@ -162,7 +162,7 @@ class CmdLineageTest extends Specification {
         given:
         def folder = Files.createTempDirectory('test').toAbsolutePath()
         def configFile = folder.resolve('nextflow.config')
-        configFile.text = "workflow.lineage.enabled = true\nworkflow.lineage.store.location = '$folder'".toString()
+        configFile.text = "lineage.enabled = true\nlineage.store.location = '$folder'".toString()
         def launcher = Mock(Launcher){
             getOptions() >> new CliOptions(config: [configFile.toString()])
         }
@@ -190,7 +190,7 @@ class CmdLineageTest extends Specification {
         def folder = Files.createTempDirectory('test').toAbsolutePath()
         def configFile = folder.resolve('nextflow.config')
         def outputHtml = folder.resolve('lineage.html')
-        configFile.text = "workflow.lineage.enabled = true\nworkflow.lineage.store.location = '$folder'".toString()
+        configFile.text = "lineage.enabled = true\nlineage.store.location = '$folder'".toString()
         def launcher = Mock(Launcher){
             getOptions() >> new CliOptions(config: [configFile.toString()])
         }
@@ -269,7 +269,7 @@ class CmdLineageTest extends Specification {
         given:
         def folder = Files.createTempDirectory('test').toAbsolutePath()
         def configFile = folder.resolve('nextflow.config')
-        configFile.text = "workflow.lineage.enabled = true\nworkflow.lineage.store.location = '$folder'".toString()
+        configFile.text = "lineage.enabled = true\nlineage.store.location = '$folder'".toString()
         def lidFile = folder.resolve(".meta/12345/.data.json")
         Files.createDirectories(lidFile.parent)
         def launcher = Mock(Launcher){
@@ -304,7 +304,7 @@ class CmdLineageTest extends Specification {
         given:
         def folder = Files.createTempDirectory('test').toAbsolutePath()
         def configFile = folder.resolve('nextflow.config')
-        configFile.text = "workflow.lineage.enabled = true\nworkflow.lineage.store.location = '$folder'".toString()
+        configFile.text = "lineage.enabled = true\nlineage.store.location = '$folder'".toString()
         def lidFile = folder.resolve(".meta/12345/.data.json")
         Files.createDirectories(lidFile.parent)
         def launcher = Mock(Launcher){
