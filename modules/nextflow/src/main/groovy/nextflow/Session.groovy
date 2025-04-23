@@ -1137,11 +1137,11 @@ class Session implements ISession {
         }
     }
 
-    void notifyFilePublish(Path destination, Path source=null) {
+    void notifyFilePublish(Path destination, Path source, Map annotations) {
         def copy = new ArrayList<TraceObserver>(observers)
         for( TraceObserver observer : copy  ) {
             try {
-                observer.onFilePublish(destination, source)
+                observer.onFilePublish(destination, source, annotations)
             }
             catch( Exception e ) {
                 log.error "Failed to invoke observer on file publish: $observer", e
