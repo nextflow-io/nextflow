@@ -1,5 +1,8 @@
 nf-wave changelog
 ==================
+1.7.5 - 23 Apr 2025
+- Add support for Fusion Snapshots (#5954) [76a997a3]
+
 1.7.4 - 27 Nov 2024
 - Fix missing wave response (#5547) [eb85cda8]
 
