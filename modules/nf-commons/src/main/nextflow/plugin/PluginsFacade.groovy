@@ -303,7 +303,8 @@ class PluginsFacade implements PluginStateListener {
         if( group )
             extensions = extensions.findAll(it -> group0(it)==group )
         final result = extensions.sort( it -> priority0(it) )
-        log.debug "Discovered extensions for type ${type.getName()}: ${extensions.join(',')}"
+        if( log.isTraceEnabled() )
+            log.trace "Discovered extensions for type ${type.getName()}: ${extensions.join(',')}"
         return result
     }
 
