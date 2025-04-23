@@ -121,7 +121,7 @@ class OutputDslTest extends Specification {
         then:
         outputDir.resolve('file1.txt').text == 'Hello'
         and:
-        1 * session.notifyFilePublish(outputDir.resolve('file1.txt'), file1)
+        1 * session.notifyFilePublish(outputDir.resolve('file1.txt'), file1, null)
 
         cleanup:
         SysEnv.pop()
