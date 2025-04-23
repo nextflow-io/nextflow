@@ -17,6 +17,10 @@ compileGroovy {
     options.compilerArgs = ['-XDignore.symbol.file']
 }
 
+configurations {
+    lineageImplementation
+}
+
 dependencies {
     api(project(':nf-commons'))
     api(project(':nf-httpfs'))
@@ -60,6 +64,7 @@ dependencies {
     testFixturesApi ('org.spockframework:spock-junit4:2.3-groovy-4.0') { exclude group: 'org.apache.groovy' }
     testFixturesApi 'com.google.jimfs:jimfs:1.2'
 
+    lineageImplementation (project(':nf-lineage'))
 }
 
 
@@ -77,6 +82,7 @@ run{
 }
 
 shadowJar {
+    configurations = [project.configurations.lineageImplementation]
     archiveClassifier='one'
     manifest {
         attributes 'Main-Class': "$mainClassName"
