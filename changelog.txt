@@ -1,5 +1,8 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.03.1-edge - 24 Apr 2025
+- Fix lineage packaging (#6001) [c3bb7a51]
+
 25.03.0-edge - 23 Apr 2025
 - Add Google Batch gcsfuseOptions (#5991) [1d4dd574]
 - Add `fs` command to CLI help (#5967) [c0566aad]
