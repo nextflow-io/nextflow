@@ -344,7 +344,7 @@ The following settings are available:
 `azure.batch.location`
 : The name of the batch service region, e.g. `westeurope` or `eastus2`. This is not needed when the endpoint is specified.
 
-`azure.batch.maxJobTime`
+`azure.batch.jobMaxWallClockTime`
 : :::{versionadded} 25.04.0-edge
   :::
 : The maximum elapsed time that jobs may run, measured from the time they are created. If jobs do not complete within this time limit, the Batch service terminates them and any tasks still running (default: `7d`).

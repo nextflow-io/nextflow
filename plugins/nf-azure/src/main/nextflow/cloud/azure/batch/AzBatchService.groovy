@@ -437,14 +437,14 @@ class AzBatchService implements Closeable {
         final content = new BatchJobCreateContent(jobId, new BatchPoolInfo(poolId: poolId))
         
         // Add job constraints with maxWallClockTime from config
-        if (config.batch().maxJobTime) {
+        if (config.batch().jobMaxWallClockTime) {
             final constraints = new BatchJobConstraints()
             // Convert nextflow.util.Duration to java.time.Duration for the Azure BatchJobConstraints
-            final long millis = config.batch().maxJobTime.toMillis()
+            final long millis = config.batch().jobMaxWallClockTime.toMillis()
             final java.time.Duration maxWallTime = java.time.Duration.ofMillis(millis)
             constraints.setMaxWallClockTime(maxWallTime)
             content.setConstraints(constraints)
-            log.debug "[AZURE BATCH] Setting job constraint maxWallClockTime: ${config.batch().maxJobTime}"
+            log.debug "[AZURE BATCH] Setting job constraint maxWallClockTime: ${config.batch().jobMaxWallClockTime}"
         }
         
         apply(() -> client.createJob(content))

@@ -891,10 +891,10 @@ class AzBatchServiceTest extends Specification {
 
     // TODO: Fix these tests - currently having mocking issues
     /*
-    def 'should add maxJobTime constraint to job' () {
+    def 'should add jobMaxWallClockTime constraint to job' () {
         given:
-        def maxJobTime = nextflow.util.Duration.of('4d')
-        def CONFIG = [batch:[maxJobTime: maxJobTime]]
+        def jobMaxWallClockTime = nextflow.util.Duration.of('4d')
+        def CONFIG = [batch:[jobMaxWallClockTime: jobMaxWallClockTime]]
         def exec = Mock(AzBatchExecutor) {
             getConfig() >> new AzConfig(CONFIG)
         }
@@ -919,10 +919,10 @@ class AzBatchServiceTest extends Specification {
         then:
         content.constraints
         content.constraints.maxWallClockTime
-        content.constraints.maxWallClockTime.toMillis() == maxJobTime.toMillis()
+        content.constraints.maxWallClockTime.toMillis() == jobMaxWallClockTime.toMillis()
     }
 
-    def 'should not add constraint when maxJobTime is not set' () {
+    def 'should not add constraint when jobMaxWallClockTime is not set' () {
         given: 
         def CONFIG = [:]
         def exec = Mock(AzBatchExecutor) {
