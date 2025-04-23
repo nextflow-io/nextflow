@@ -63,7 +63,7 @@ dependencies {
     testFixturesApi ("org.spockframework:spock-core:2.3-groovy-4.0") { exclude group: 'org.apache.groovy' }
     testFixturesApi ('org.spockframework:spock-junit4:2.3-groovy-4.0') { exclude group: 'org.apache.groovy' }
     testFixturesApi 'com.google.jimfs:jimfs:1.2'
-
+    // note: declare as separate dependency to avoid a circular dependency
     lineageImplementation (project(':nf-lineage'))
 }
 
@@ -82,11 +82,16 @@ run{
 }
 
 shadowJar {
-    configurations = [project.configurations.lineageImplementation]
+    // add 'lineage' because it cannot be added to this project
+    // explicitly otherwise it will result into a circular dependency
+    configurations = [project.configurations.runtimeClasspath, project.configurations.lineageImplementation]
     archiveClassifier='one'
     manifest {
         attributes 'Main-Class': "$mainClassName"
     }
     mergeServiceFiles()
     mergeGroovyExtensionModules()
+    transform(com.github.jengelman.gradle.plugins.shadow.transformers.AppendingTransformer) {
+        resource = 'META-INF/extensions.idx'
+    }
 }
