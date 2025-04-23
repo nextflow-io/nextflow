@@ -2,20 +2,25 @@
 
 # Standard library
 
-The Nextflow standard library is.... It provides a collection of built-in tools and constructs to write and manage pipelines. It includes:
+This section describes the Nextflow standard library. The standard library consists of built-in constants, functions, and types.
 
 ```{toctree}
 :maxdepth: 1
-
 stdlib-constants
 stdlib-functions
 stdlib-types
 ```
 
-Any Groovy or Java class that is available to Nextflow at runtime can be used in a Nextflow script. 
+## Groovy and Java classes
 
-```{toctree}
-:maxdepth: 1
+Any Groovy or Java class that is available to Nextflow at runtime can be used in a Nextflow script. The following classes are imported by default:
 
-stdlib-groovy
+- `groovy.lang.*`
+- `groovy.util.*`
+	@@ -270,932 +32,6 @@ def vals = [1, 2, 3]
+println groovy.json.JsonOutput.toJson(vals)
 ```
+
+:::{note}
+The set of classes in Nextflow's runtime classpath can change between different Nextflow versions. As a best practice, any code that uses classes outside the Nextflow standard library should either (1) be refactored to only use the Nextflow standard library or (2) be refactored as a {ref}`plugin <plugins-dev-page>` with explicit dependencies.
+:::
