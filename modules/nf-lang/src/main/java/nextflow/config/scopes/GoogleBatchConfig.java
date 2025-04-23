@@ -48,6 +48,12 @@ public class GoogleBatchConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        List of custom mount options for `gcsfuse` (default: `['-o rw', '-implicit-dirs']`).
+    """)
+    public List<String> gcsfuseOptions;
+
+    @ConfigOption
+    @Description("""
         Max number of execution attempts of a job interrupted by a Compute Engine spot reclaim event (default: `5`).
     """)
     public int maxSpotAttempts;
