@@ -93,7 +93,7 @@ class AzBatchOptsTest extends Specification {
         when:
         def opts1 = new AzBatchOpts([:], [:])
         then:
-        opts1.jobMaxWallClockTime.toString() == '7d'
+        opts1.jobMaxWallClockTime.toString() == '30d'
 
         when:
         def opts2 = new AzBatchOpts([jobMaxWallClockTime: '3d'], [:])

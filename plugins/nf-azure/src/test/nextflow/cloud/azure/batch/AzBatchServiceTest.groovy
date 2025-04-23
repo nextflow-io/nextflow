@@ -948,49 +948,39 @@ class AzBatchServiceTest extends Specification {
 
     def 'should verify job constraints with jobMaxWallClockTime' () {
         given:
-        def jobMaxWallClockTime = '48h'
-        def CONFIG = [batch: [jobMaxWallClockTime: jobMaxWallClockTime]]
+        def CONFIG = [batch: [jobMaxWallClockTime: WALL_CLOCK]]
         def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def service = new AzBatchService(exec)
         
         when:
-        def content = new BatchJobCreateContent('test-job-id', new BatchPoolInfo(poolId: 'test-pool-id'))
-        
-        and: 'Apply job constraints'
+        // This is what happens inside createJob0 for setting constraints
+        def content = new BatchJobCreateContent('test-job', new BatchPoolInfo(poolId: 'test-pool'))
         if (exec.getConfig().batch().jobMaxWallClockTime) {
             final constraints = new BatchJobConstraints()
-            // Convert nextflow.util.Duration to java.time.Duration for the Azure BatchJobConstraints
             final long millis = exec.getConfig().batch().jobMaxWallClockTime.toMillis()
             final java.time.Duration maxWallTime = java.time.Duration.ofMillis(millis)
             constraints.setMaxWallClockTime(maxWallTime)
             content.setConstraints(constraints)
         }
         
-        then: 'Verify constraints were set correctly'
-        content.constraints != null
-        content.constraints.maxWallClockTime.toHours() == 48
-    }
-    
-    def 'should verify job constraints are properly updated' () {
-        given:
-        def CONFIG = [batch: [jobMaxWallClockTime: '24h']] 
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
-        
-        when:
-        // Use proper constructor - this will have default constraints
-        def content = new BatchJobCreateContent('test-job-id', new BatchPoolInfo(poolId: 'test-pool-id'))
-        
-        // Make sure if there are already constraints, they're properly updated
-        if (exec.getConfig().batch().jobMaxWallClockTime) {
-            BatchJobConstraints constraints = content.constraints ?: new BatchJobConstraints()
-            final long millis = exec.getConfig().batch().jobMaxWallClockTime.toMillis()
-            final java.time.Duration maxWallTime = java.time.Duration.ofMillis(millis)
-            constraints.setMaxWallClockTime(maxWallTime)
-            content.setConstraints(constraints)
+        then:
+        if (EXPECTED_DAYS > 0) {
+            assert content.constraints != null
+            assert content.constraints.maxWallClockTime != null
+            assert content.constraints.maxWallClockTime.toDays() == EXPECTED_DAYS
+        } else {
+            // For the null case, we don't explicitly set any constraints, 
+            // but Azure SDK applies default constraints with 30 days
+            assert content.constraints != null
+            assert content.constraints.maxWallClockTime != null
+            assert content.constraints.maxWallClockTime.toDays() == 30
         }
         
-        then: 'Verify constraints were properly updated'
-        content.constraints != null
-        // Check the hours directly - should be 24 hours from our config
-        content.constraints.maxWallClockTime.toHours() == 24
+        where:
+        WALL_CLOCK | EXPECTED_DAYS
+        '48d'      | 48
+        '24h'      | 1
+        '7d'       | 7
+        null       | 30
     }
 }
