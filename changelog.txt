@@ -1,5 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
+24.10.6 - 23 Apr 2025
+- Add support for Fusion Snapshots (#5954) [76a997a3]
+- Bump nf-wave@1.7.5 [3ddf16fb]
+- Bump nf-amazon@2.9.3 [ccf672fb]
+
 24.10.5 - 4 Mar 2025
 - Improve Google Batch executor stability and error handling (#5690) [1a9e8bf5]
 - Fix Mount input file buckets in task arrays for Google Batch (#5739) [0d98442d]
