@@ -1,5 +1,11 @@
 nf-amazon changelog
 ===================
+2.14.0 - 23 Apr 2025
+- Add support for data and execution lineage  (#5715) [20e06da7]
+- Manage AWS Batch Unscheduled jobs (#5936) [44abe60c]
+- Workflow outputs (third preview) (#5909) [2e2dea42]
+- Add support for Fusion Snapshots (#5954) [d7f047f8]
+
 2.13.0 - 17 Mar 2025
 - Fix Consider AWS China as custom endpoint (#5840) [232ce9d1]
 - Fix Prevent S3 global option when using custom endpoints (#5779) [ed9da469]
