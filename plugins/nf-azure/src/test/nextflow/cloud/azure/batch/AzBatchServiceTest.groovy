@@ -946,41 +946,30 @@ class AzBatchServiceTest extends Specification {
         thrown(IllegalArgumentException)
     }
 
-    def 'should verify job constraints with jobMaxWallClockTime' () {
+    def 'should test createJobConstraints method with Duration input' () {
         given:
-        def CONFIG = [batch: [jobMaxWallClockTime: WALL_CLOCK]]
-        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        def exec = Mock(AzBatchExecutor)
         def service = new AzBatchService(exec)
+        def nfDuration = TIME_STR ? nextflow.util.Duration.of(TIME_STR) : null
         
         when:
-        // This is what happens inside createJob0 for setting constraints
-        def content = new BatchJobCreateContent('test-job', new BatchPoolInfo(poolId: 'test-pool'))
-        if (exec.getConfig().batch().jobMaxWallClockTime) {
-            final constraints = new BatchJobConstraints()
-            final long millis = exec.getConfig().batch().jobMaxWallClockTime.toMillis()
-            final java.time.Duration maxWallTime = java.time.Duration.ofMillis(millis)
-            constraints.setMaxWallClockTime(maxWallTime)
-            content.setConstraints(constraints)
-        }
+        def result = service.createJobConstraints(nfDuration)
         
         then:
-        if (EXPECTED_DAYS > 0) {
-            assert content.constraints != null
-            assert content.constraints.maxWallClockTime != null
-            assert content.constraints.maxWallClockTime.toDays() == EXPECTED_DAYS
+        result != null
+        if (TIME_STR) {
+            assert result.maxWallClockTime != null
+            assert result.maxWallClockTime.toDays() == EXPECTED_DAYS
         } else {
-            // For the null case, we don't explicitly set any constraints, 
-            // but Azure SDK applies default constraints with 30 days
-            assert content.constraints != null
-            assert content.constraints.maxWallClockTime != null
-            assert content.constraints.maxWallClockTime.toDays() == 30
+            assert result.maxWallClockTime == null
         }
         
         where:
-        WALL_CLOCK | EXPECTED_DAYS
-        '48d'      | 48
-        '24h'      | 1
-        '7d'       | 7
-        null       | 30
+        TIME_STR | EXPECTED_DAYS
+        '48d'    | 48
+        '24h'    | 1
+        '7d'     | 7
+        null     | 0
     }
+
 }
