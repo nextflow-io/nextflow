@@ -53,7 +53,7 @@ class LinCommandImplTest extends Specification{
         // clear the environment to avoid the local env pollute the test env
         SysEnv.push([:])
         storeLocation = tmpDir.resolve("store")
-        configMap = new ConfigMap([workflow: [lineage: [enabled: true, store: [location: storeLocation.toString(), logLocation: storeLocation.resolve(".log").toString()]]]])
+        configMap = new ConfigMap([lineage: [enabled: true, store: [location: storeLocation.toString(), logLocation: storeLocation.resolve(".log").toString()]]])
     }
 
     def cleanup() {

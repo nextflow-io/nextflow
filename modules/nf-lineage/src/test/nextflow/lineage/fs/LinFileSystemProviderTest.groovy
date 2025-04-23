@@ -105,7 +105,7 @@ class LinFileSystemProviderTest extends Specification {
 
     def 'should get or create a file system' () {
         given:
-        def config = [workflow:[lineage:[store:[location: data.toString()]]]]
+        def config = [lineage:[store:[location: data.toString()]]]
         Global.session = Mock(Session) { getConfig()>>config }
         and:
         def uri = LinPath.asUri('lid://12345')
@@ -124,7 +124,7 @@ class LinFileSystemProviderTest extends Specification {
 
     def 'should create new byte channel' () {
         given:
-        def config = [workflow:[lineage:[store:[location:wdir.toString()]]]]
+        def config = [lineage:[store:[location:wdir.toString()]]]
         def outputMeta = meta.resolve("12345/output.txt")
         def output = data.resolve("output.txt")
         output.text = "Hello, World!"
@@ -182,7 +182,7 @@ class LinFileSystemProviderTest extends Specification {
 
     def 'should create new byte channel for LinMetadata' () {
         given:
-        def config = [workflow:[lineage:[store:[location:wdir.toString()]]]]
+        def config = [lineage:[store:[location:wdir.toString()]]]
         def outputMeta = meta.resolve("12345")
         outputMeta.mkdirs()
         outputMeta.resolve(".data.json").text = '{"type":"WorkflowRun","sessionId":"session","name":"run_name","params":[{"type":"String","name":"param1","value":"value1"}]}'
@@ -239,7 +239,7 @@ class LinFileSystemProviderTest extends Specification {
 
     def 'should read lid' () {
         given:
-        def config = [workflow:[lineage:[store:[location:wdir.toString()]]]]
+        def config = [lineage:[store:[location:wdir.toString()]]]
         def outputMeta = meta.resolve("12345/output.txt")
         def output = data.resolve("output.txt")
         output.text = "Hello, World!"
@@ -262,7 +262,7 @@ class LinFileSystemProviderTest extends Specification {
 
     def 'should not create a directory' () {
         given:
-        def config = [workflow:[lineage:[store:[location:wdir.toString()]]]]
+        def config = [lineage:[store:[location:wdir.toString()]]]
         Global.session = Mock(Session) { getConfig()>>config }
         and:
         def provider = new LinFileSystemProvider()
@@ -288,7 +288,7 @@ class LinFileSystemProviderTest extends Specification {
         meta.resolve('12345/output1/.data.json').text = '{"type":"FileOutput", "path": "' + output1.toString() + '"}'
 
         and:
-        def config = [workflow:[lineage:[store:[location:wdir.toString()]]]]
+        def config = [lineage:[store:[location:wdir.toString()]]]
         Global.session = Mock(Session) { getConfig()>>config }
         and:
         def provider = new LinFileSystemProvider()
@@ -325,7 +325,7 @@ class LinFileSystemProviderTest extends Specification {
 
     def 'should not delete a file' () {
         given:
-        def config = [workflow:[lineage:[store:[location:wdir.toString()]]]]
+        def config = [lineage:[store:[location:wdir.toString()]]]
         Global.session = Mock(Session) { getConfig()>>config }
         and:
         def provider = new LinFileSystemProvider()
@@ -340,7 +340,7 @@ class LinFileSystemProviderTest extends Specification {
 
     def 'should not copy a file' () {
         given:
-        def config = [workflow:[lineage:[store:[location:wdir.toString()]]]]
+        def config = [lineage:[store:[location:wdir.toString()]]]
         Global.session = Mock(Session) { getConfig()>>config }
         and:
         def provider = new LinFileSystemProvider()
@@ -355,7 +355,7 @@ class LinFileSystemProviderTest extends Specification {
 
     def 'should not move a file' () {
         given:
-        def config = [workflow:[lineage:[store:[location:wdir.toString()]]]]
+        def config = [lineage:[store:[location:wdir.toString()]]]
         Global.session = Mock(Session) { getConfig()>>config }
         and:
         def provider = new LinFileSystemProvider()
@@ -371,7 +371,7 @@ class LinFileSystemProviderTest extends Specification {
     def 'should check is same file' () {
         given:
         def folder = Files.createTempDirectory('test')
-        def config = [workflow:[lineage:[store:[location:folder.toString()]]]]
+        def config = [lineage:[store:[location:folder.toString()]]]
         Global.session = Mock(Session) { getConfig()>>config }
         and:
         def provider = new LinFileSystemProvider()
@@ -392,7 +392,7 @@ class LinFileSystemProviderTest extends Specification {
     def 'should check is hidden file' () {
         given:
         def folder = Files.createTempDirectory('test')
-        def config = [workflow:[lineage:[store:[location:wdir.toString()]]]]
+        def config = [lineage:[store:[location:wdir.toString()]]]
         Global.session = Mock(Session) { getConfig()>>config }
         and:
         def output = folder.resolve('path')
@@ -416,7 +416,7 @@ class LinFileSystemProviderTest extends Specification {
 
     def 'should read file attributes' () {
         given:
-        def config = [workflow:[lineage:[store:[location:wdir.toString()]]]]
+        def config = [lineage:[store:[location:wdir.toString()]]]
         def file = data.resolve('abc')
         file.text = 'Hello'
         meta.resolve('12345/abc').mkdirs()
@@ -444,7 +444,7 @@ class LinFileSystemProviderTest extends Specification {
 
     def 'should throw exception in unsupported methods'() {
         given:
-        def config = [workflow:[lineage:[store:[location:wdir.toString()]]]]
+        def config = [lineage:[store:[location:wdir.toString()]]]
         Global.session = Mock(Session) { getConfig()>>config }
         def provider = new LinFileSystemProvider()
 
@@ -471,7 +471,7 @@ class LinFileSystemProviderTest extends Specification {
 
     def 'should throw exception when checking access mode'(){
         given:
-        def config = [workflow:[lineage:[store:[location:wdir.toString()]]]]
+        def config = [lineage:[store:[location:wdir.toString()]]]
         Global.session = Mock(Session) { getConfig()>>config }
         def provider = new LinFileSystemProvider()
         def lid1 = provider.getPath(LinPath.asUri('lid://12345/abc'))

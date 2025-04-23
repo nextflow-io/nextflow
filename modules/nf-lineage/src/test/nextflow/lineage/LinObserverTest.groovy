@@ -157,7 +157,7 @@ class LinObserverTest extends Specification {
     def 'should save workflow' (){
         given:
         def folder = Files.createTempDirectory('test')
-        def config = [workflow:[lineage:[enabled: true, store:[location:folder.toString()]]]]
+        def config = [lineage:[enabled: true, store:[location:folder.toString()]]]
         def store = new DefaultLinStore();
         def uniqueId = UUID.randomUUID()
         def scriptFile = folder.resolve("main.nf")
@@ -333,7 +333,7 @@ class LinObserverTest extends Specification {
     def 'should save task data output' () {
         given:
         def folder = Files.createTempDirectory('test')
-        def config = [workflow:[lineage:[enabled: true, store:[location:folder.toString()]]]]
+        def config = [lineage:[enabled: true, store:[location:folder.toString()]]]
         def store = new DefaultLinStore();
         def session = Mock(Session) {
             getConfig()>>config
@@ -481,7 +481,7 @@ class LinObserverTest extends Specification {
     def 'should save workflow output'() {
         given:
         def folder = Files.createTempDirectory('test')
-        def config = [workflow:[lineage:[enabled: true, store:[location:folder.toString()]]]]
+        def config = [lineage:[enabled: true, store:[location:folder.toString()]]]
         def store = new DefaultLinStore();
         def outputDir = folder.resolve('results')
         def uniqueId = UUID.randomUUID()

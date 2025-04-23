@@ -38,12 +38,12 @@ class LineageConfig {
     }
 
     static Map<String,Object> asMap() {
-        session?.config?.navigate('workflow.lineage') as Map ?: new HashMap<String,Object>()
+        session?.config?.navigate('lineage') as Map ?: new HashMap<String,Object>()
     }
 
     static LineageConfig create(Session session) {
         if( session ) {
-            return new LineageConfig( session.config.navigate('workflow.lineage') as Map ?: Map.of())
+            return new LineageConfig( session.config.navigate('lineage') as Map ?: Map.of())
         }
         else
             throw new IllegalStateException("Missing Nextflow session")
