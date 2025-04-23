@@ -191,11 +191,13 @@ class LinObserverTest extends Specification {
         folder?.deleteDir()
     }
 
+    @Unroll
     def 'should get parameter type' () {
         expect:
         LinObserver.getParameterType(PARAM) == STRING
         where:
         PARAM                                           | STRING
+        null                                            | null
         new FileInParam(null, [])                       | "path"
         new ValueOutParam(null, [])                     | "val"
         new EnvOutParam(null, [])                       | "env"
