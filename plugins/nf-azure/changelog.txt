@@ -1,5 +1,8 @@
 nf-azure changelog
 ===================
+1.15.0 - 23 Apr 2025
+- Update Azure Batch VM sizes and regions (#5985) [297150b8]
+
 1.14.1 - 19 Mar 2025
 - Fix handling of exit status with Azure Batch and Fusion (#5806) [7085862d]
 - Removing Azure vmList from log [ci fast] [67ffc8ab]
