@@ -27,6 +27,7 @@ include 'nextflow'
 include 'nf-commons'
 include 'nf-httpfs'
 include 'nf-lang'
+include 'nf-lineage'
 
 rootProject.children.each { prj ->
     prj.projectDir = new File("$rootDir/modules/$prj.name")
