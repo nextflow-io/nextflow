@@ -1,5 +1,8 @@
 nf-amazon changelog
 ===================
+2.9.3 - 23 Apr 2025
+- Add support for Fusion Snapshots (#5954) [76a997a3]
+
 2.9.2 - 27 Nov 2024
 - Prevent NPE with null AWS Batch response [3d491934]
 
