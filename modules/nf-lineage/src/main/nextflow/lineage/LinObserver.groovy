@@ -175,8 +175,10 @@ class LinObserver implements TraceObserver {
 
     protected static List<Parameter> getNormalizedParams(Map<String, Object> params, PathNormalizer normalizer){
         final normalizedParams = new LinkedList<Parameter>()
-        params.each{ String key, Object value ->
-            normalizedParams.add( new Parameter( getParameterType(value), key, normalizeValue(value, normalizer) ) )
+        for( Map.Entry<String,Object> entry : params ) {
+            final key = entry.key
+            final val = entry.value
+            normalizedParams.add( new Parameter( getParameterType(val), key, normalizeValue(val, normalizer) ) )
         }
         return normalizedParams
     }
@@ -220,7 +222,7 @@ class LinObserver implements TraceObserver {
 
     private static Object normalizeValue(Object value, PathNormalizer normalizer) {
         if (value instanceof Path)
-            return normalizer.normalizePath(value as Path)
+            return normalizer.normalizePath((Path)value)
         else if (value instanceof CharSequence)
             return normalizer.normalizePath(value.toString())
         else
@@ -405,7 +407,9 @@ class LinObserver implements TraceObserver {
             return Collection.simpleName
         if( param instanceof Map)
             return Map.simpleName
-        return param.class.simpleName
+        return param!=null
+            ? param.class.simpleName
+            : null
     }
 
     private Object convertPathsToLidReferences(Object value){
