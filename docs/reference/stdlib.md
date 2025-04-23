@@ -238,6 +238,14 @@ The following functions are available in Nextflow scripts:
 `multiMapCriteria( criteria: Closure ) -> Closure`
 : Create a multi-map criteria to use with the {ref}`operator-multiMap` operator.
 
+`print( value )`
+: Print a value to standard output.
+
+`printf( format: String, values... )`
+
+`println( value )`
+: Print a value to standard output with a newline.
+
 `sendMail( [options] )`
 : Send an email. See {ref}`mail-page` for more information.
 
