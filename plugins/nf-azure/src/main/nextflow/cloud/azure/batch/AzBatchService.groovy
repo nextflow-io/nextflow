@@ -69,6 +69,7 @@ import com.azure.core.exception.ResourceNotFoundException
 import com.azure.core.http.rest.PagedIterable
 import com.azure.identity.ClientSecretCredentialBuilder
 import com.azure.identity.ManagedIdentityCredentialBuilder
+import com.azure.identity.AzureCliCredentialBuilder
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
 import dev.failsafe.event.EventListener
@@ -369,16 +370,25 @@ class AzBatchService implements Closeable {
         return credential.build()
     }
 
+    protected TokenCredential createBatchCredentialsWithCliIdentity() {
+        final credential = new AzureCliCredentialBuilder()
+
+        log.debug '[AZURE BATCH] Creating Azure Batch client using Local Azure CLI credentials'
+
+        return credential.build()
+    }
+
     protected BatchClient createBatchClient() {
         log.debug "[AZURE BATCH] Executor options=${config.batch()}"
 
         final builder = new BatchClientBuilder()
-        if( config.managedIdentity().isConfigured() )
-            builder.credential( createBatchCredentialsWithManagedIdentity() )
-        else if( config.activeDirectory().isConfigured() )
-            builder.credential( createBatchCredentialsWithServicePrincipal() )
-        else if( config.batch().endpoint || config.batch().accountKey || config.batch().accountName )
-            builder.credential( createBatchCredentialsWithKey() )
+        // if( config.managedIdentity().isConfigured() )
+        //     builder.credential( createBatchCredentialsWithManagedIdentity() )
+        // else if( config.activeDirectory().isConfigured() )
+        //     builder.credential( createBatchCredentialsWithServicePrincipal() )
+        // else if( config.batch().endpoint || config.batch().accountKey || config.batch().accountName )
+        //     builder.credential( createBatchCredentialsWithKey() )
+        builder.credential( createBatchCredentialsWithCliIdentity() )
 
         if( config.batch().endpoint )
             builder.endpoint(config.batch().endpoint)

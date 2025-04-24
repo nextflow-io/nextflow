@@ -20,6 +20,7 @@ import java.time.OffsetDateTime
 
 import com.azure.identity.ClientSecretCredentialBuilder
 import com.azure.identity.ManagedIdentityCredentialBuilder
+import com.azure.identity.AzureCliCredentialBuilder
 import com.azure.storage.blob.BlobContainerClient
 import com.azure.storage.blob.BlobServiceClient
 import com.azure.storage.blob.BlobServiceClientBuilder
@@ -234,6 +235,21 @@ class AzHelper {
         final credentialBuilder = new ManagedIdentityCredentialBuilder()
         if( clientId )
             credentialBuilder.clientId(clientId)
+
+        return new BlobServiceClientBuilder()
+                .credential(credentialBuilder.build())
+                .endpoint(endpoint)
+                .retryOptions(requestRetryOptions())
+                .buildClient()
+    }
+
+    @Memoized
+    static synchronized BlobServiceClient getOrCreateBlobServiceWithAzureCliCredentials(String accountName) {
+        log.debug "Creating Azure blob storage client using Local Azure CLI credentials"
+
+        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName)
+
+        final credentialBuilder = new AzureCliCredentialBuilder()
 
         return new BlobServiceClientBuilder()
                 .credential(credentialBuilder.build())

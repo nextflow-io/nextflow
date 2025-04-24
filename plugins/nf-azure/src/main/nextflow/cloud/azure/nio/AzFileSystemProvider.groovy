@@ -126,6 +126,10 @@ class AzFileSystemProvider extends FileSystemProvider {
         AzHelper.getOrCreateBlobServiceWithManagedIdentity(accountName, clientId)
     }
 
+    protected BlobServiceClient createBlobServiceWithAzureCliCredentials(String accountName) {
+        AzHelper.getOrCreateBlobServiceWithAzureCliCredentials(accountName)
+    }
+
     /**
      * Constructs a new {@code FileSystem} object identified by a URI. This
      * method is invoked by the {@link java.nio.file.FileSystems#newFileSystem(URI, Map)}
@@ -204,23 +208,25 @@ class AzFileSystemProvider extends FileSystemProvider {
 
         BlobServiceClient client
 
-        if( managedIdentityUser || managedIdentitySystem ) {
-            client = createBlobServiceWithManagedIdentity(accountName, managedIdentityUser)
-        }
-        else if( servicePrincipalSecret && servicePrincipalId && tenantId ) {
-            client = createBlobServiceWithServicePrincipal(accountName, servicePrincipalId, servicePrincipalSecret, tenantId)
-        }
-        else if( sasToken ) {
-            client = createBlobServiceWithToken(accountName, sasToken)
-            this.sasToken = sasToken
-        }
-        else if( accountKey ) {
-            client = createBlobServiceWithKey(accountName, accountKey)
-            this.accountKey = accountKey
-        }
-        else {
-            throw new IllegalArgumentException("Missing Azure storage credentials: please specify a managed identity, service principal, or storage account key")
-        }
+        // if( managedIdentityUser || managedIdentitySystem ) {
+        //     client = createBlobServiceWithManagedIdentity(accountName, managedIdentityUser)
+        // }
+        // else if( servicePrincipalSecret && servicePrincipalId && tenantId ) {
+        //     client = createBlobServiceWithServicePrincipal(accountName, servicePrincipalId, servicePrincipalSecret, tenantId)
+        // }
+        // else if( sasToken ) {
+        //     client = createBlobServiceWithToken(accountName, sasToken)
+        //     this.sasToken = sasToken
+        // }
+        // else if( accountKey ) {
+        //     client = createBlobServiceWithKey(accountName, accountKey)
+        //     this.accountKey = accountKey
+        // }
+        // else {
+        //     throw new IllegalArgumentException("Missing Azure storage credentials: please specify a managed identity, service principal, or storage account key")
+        // }
+
+        client = createBlobServiceWithAzureCliCredentials(accountName)
 
         final result = createFileSystem(client, bucket, config)
         fileSystems[bucket] = result
