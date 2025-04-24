@@ -151,9 +151,22 @@ developer/plugins
 
 ```{toctree}
 :hidden:
+:caption: Plugins
+:maxdepth: 1
+
+plugins/plugins
+plugins/using-plugins
+plugins/developing-plugins
+plugins/example-nf-hello
+```
+
+```{toctree}
+:hidden:
 :caption: Guides
 :maxdepth: 1
 
+gradle-plugin
+migrating-gradle-plugin
 updating-spot-retries
 metrics
 flux
