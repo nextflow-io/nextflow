@@ -4,6 +4,7 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Session
 
 interface LinChannelEx {
-    void queryLineage(Session session, DataflowWriteChannel channel, URI uri)
+    void viewLineage(Session session, DataflowWriteChannel channel, URI uri)
 
+    void queryLineage(Session session, DataflowWriteChannel channel, String query)
 }

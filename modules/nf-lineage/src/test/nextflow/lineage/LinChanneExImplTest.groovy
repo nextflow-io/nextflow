@@ -79,7 +79,7 @@ class LinChanneExImplTest extends Specification {
 
         when:
         def results = CH.create()
-        channelLinExt.queryLineage(session, results, new URI('lid://testKey#params'))
+        channelLinExt.viewLineage(session, results, new URI('lid://testKey#params'))
         then:
         channelLinExt.getStore(session) >> lidStore
         and:
@@ -89,7 +89,7 @@ class LinChanneExImplTest extends Specification {
 
         when:
         results = CH.create()
-        channelLinExt.queryLineage(session, results, new URI('lid://testKey#output'))
+        channelLinExt.viewLineage(session, results, new URI('lid://testKey#output'))
         then:
         channelLinExt.getStore(session) >> lidStore
         and:
@@ -123,7 +123,7 @@ class LinChanneExImplTest extends Specification {
         def channelLinExt = Spy(new LinChanneExImpl())
         when:
         def results = CH.create()
-        channelLinExt.queryLineage(session, results, new URI("cid:///?type=FileOutput&annotations.key=key2&annotations.value=value2"))
+        channelLinExt.viewLineage(session, results, new URI("cid:///?type=FileOutput&annotations.key=key2&annotations.value=value2"))
         then:
         channelLinExt.getStore(session) >> lidStore
         and:
@@ -133,7 +133,7 @@ class LinChanneExImplTest extends Specification {
 
         when:
         results = CH.create()
-        channelLinExt.queryLineage(session, results, new URI("cid:///?type=FileOutput&annotations.key=key2&annotations.value=value2#path"))
+        channelLinExt.viewLineage(session, results, new URI("cid:///?type=FileOutput&annotations.key=key2&annotations.value=value2#path"))
         then:
         channelLinExt.getStore(session) >> lidStore
         and:
