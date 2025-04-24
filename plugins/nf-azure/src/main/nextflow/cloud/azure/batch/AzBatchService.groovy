@@ -960,11 +960,11 @@ class AzBatchService implements Closeable {
 
                 apply(() -> client.updateJob(jobId, jobParameter))
             }
-            catch (Exception e) {
-                if (e.message?.contains('Status code 409') && e.message?.contains('JobCompleted')) {
+            catch (HttpResponseException e) {
+                if (e.response.statusCode == 409) {
                     log.debug "Azure Batch job ${jobId} already terminated, skipping termination"
                 } else {
-                    log.warn "Unable to terminate Azure Batch job ${jobId} - Reason: ${e.message ?: e}"
+                    log.warn "Unable to terminate Azure Batch job ${jobId} - Status: ${e.response.statusCode}, Reason: ${e.message ?: e}"
                 }
             }
         }
@@ -976,7 +976,7 @@ class AzBatchService implements Closeable {
                 log.trace "Deleting Azure job ${jobId}"
                 apply(() -> client.deleteJob(jobId))
             }
-            catch (Exception e) {
+            catch (HttpResponseException e) {
                 log.warn "Unable to delete Azure Batch job ${jobId} - Reason: ${e.message ?: e}"
             }
         }
@@ -987,7 +987,7 @@ class AzBatchService implements Closeable {
             try {
                 apply(() -> client.deletePool(poolId))
             }
-            catch (Exception e) {
+            catch (HttpResponseException e) {
                 log.warn "Unable to delete Azure Batch pool ${poolId} - Reason: ${e.message ?: e}"
             }
         }
