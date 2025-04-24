@@ -16,6 +16,9 @@
 
 package nextflow
 
+import nextflow.extension.LinChannelEx
+import nextflow.plugin.Plugins
+
 import static nextflow.util.CheckHelper.*
 
 import java.nio.file.FileSystem
@@ -655,6 +658,25 @@ class Channel  {
     static private void fetchSraFiles0(SraExplorer explorer) {
         def future = CompletableFuture.runAsync ({ explorer.apply() } as Runnable)
         fromPath0Future = future.exceptionally(Channel.&handlerException)
+    }
+
+    static DataflowWriteChannel fromLineage(String uri) {
+        final result = CH.create()
+        if( NF.isDsl2() ) {
+            session.addIgniter { fromLineage0(result, uri) }
+        }
+        else {
+            fromLineage0(result, uri )
+        }
+        return result
+    }
+
+    private static void fromLineage0(DataflowWriteChannel channel, String uri) {
+        final operation = Plugins.getExtension(LinChannelEx)
+        if( !operation )
+            throw new IllegalStateException("Unable to load lineage extensions.")
+        def future = CompletableFuture.runAsync( { operation.queryLineage(session, channel, new URI(uri)) } as Runnable)
+        future.exceptionally(this.&handlerException)
     }
 
 }
