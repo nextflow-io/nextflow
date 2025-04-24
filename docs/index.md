@@ -159,6 +159,17 @@ developer/plugins
 
 ```{toctree}
 :hidden:
+:caption: Plugins
+:maxdepth: 1
+
+plugins/plugins
+plugins/using-plugins
+plugins/developing-plugins
+plugins/example-nf-hello
+```
+
+```{toctree}
+:hidden:
 :caption: Tutorials
 :maxdepth: 1
 
@@ -175,4 +186,6 @@ tutorials/flux
 
 guides/aws-java-sdk-v2
 guides/updating-spot-retries
+gradle-plugin
+migrating-gradle-plugin
 ```
