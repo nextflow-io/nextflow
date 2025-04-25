@@ -66,7 +66,7 @@ class PathVisitor {
             applyRegexPattern0(filePattern)
 
         else if( filePattern != null )
-            applyGlobPattern0(filePattern as Path)
+            applyPathPattern0(filePattern as Path)
 
         else
             throw new IllegalArgumentException("Missing file pattern argument")
@@ -101,6 +101,27 @@ class PathVisitor {
     protected void close0() {
         if( closeChannelOnComplete )
             target.bind(STOP)
+    }
+
+    private void applyPathPattern0(Path filePattern) {
+        if( isQuery(filePattern) )
+            applyQueryablePath0(filePattern as QueryablePath)
+        else
+            applyGlobPattern0(filePattern)
+    }
+
+    private static boolean isQuery(Path filePattern) {
+        log.debug("Checking if query: $filePattern.class ")
+        return filePattern instanceof QueryablePath && (filePattern as QueryablePath).hasQuery()
+    }
+
+    private boolean applyQueryablePath0(QueryablePath path) {
+        final paths = path.resolveQuery()
+        if( !paths )
+            throw new FileNotFoundException("No files found for ${path}")
+
+        paths.forEach { emit0(it) }
+        close0()
     }
 
     private void applyGlobPattern0(Path filePattern) {
