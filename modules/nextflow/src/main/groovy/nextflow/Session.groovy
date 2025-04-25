@@ -381,7 +381,7 @@ class Session implements ISession {
         this.dag = new DAG()
 
         // -- init output dir
-        this.outputDir = FileHelper.toCanonicalPath(config.outputDir ?: 'results')
+        this.outputDir = FileHelper.toCanonicalPath(config.outputDir ?: config.navigate('params.outdir')  ?: 'results')
 
         // -- init work dir
         this.workDir = FileHelper.toCanonicalPath(config.workDir ?: 'work')
