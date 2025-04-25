@@ -679,18 +679,18 @@ class Channel  {
         future.exceptionally(this.&handlerException)
     }
 
-    static DataflowWriteChannel fromLineageQuery(String queryString) {
+    static DataflowWriteChannel queryLineage(String queryString) {
         final result = CH.create()
         if( NF.isDsl2() ) {
-            session.addIgniter { fromLineageQuery0(result, queryString) }
+            session.addIgniter { queryLineage0(result, queryString) }
         }
         else {
-            fromLineageQuery0(result, queryString )
+            queryLineage0(result, queryString )
         }
         return result
     }
 
-    private static void fromLineageQuery0(DataflowWriteChannel channel, String query) {
+    private static void queryLineage0(DataflowWriteChannel channel, String query) {
         final operation = Plugins.getExtension(LinChannelEx)
         if( !operation )
             throw new IllegalStateException("Unable to load lineage extensions.")
