@@ -354,7 +354,8 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.session.disableJobsCancellation = getDisableJobsCancellation()
 
         final isTowerEnabled = config.navigate('tower.enabled') as Boolean
-        if( isTowerEnabled || log.isTraceEnabled() )
+        final isDataEnabled = config.navigate("lineage.enabled") as Boolean
+        if( isTowerEnabled || isDataEnabled || log.isTraceEnabled() )
             runner.session.resolvedConfig = ConfigBuilder.resolveConfig(scriptFile.parent, this)
         // note config files are collected during the build process
         // this line should be after `ConfigBuilder#build`

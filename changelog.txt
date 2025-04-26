@@ -1,5 +1,44 @@
 NEXTFLOW CHANGE-LOG
 ===================
+24.10.6 - 24 Apr 2025
+- Add support for Fusion Snapshots (#5954) [76a997a3]
+- Bump nf-wave@1.7.5 [3ddf16fb]
+- Bump nf-amazon@2.9.3 [ccf672fb]
+
+25.03.1-edge - 24 Apr 2025
+- Fix lineage packaging (#6001) [c3bb7a51]
+
+25.03.0-edge - 23 Apr 2025
+- Add Google Batch gcsfuseOptions (#5991) [1d4dd574]
+- Add `fs` command to CLI help (#5967) [c0566aad]
+- Add lint command (#5908) [8699cc6b]
+- Add support for Fusion Snapshots (#5954) [d7f047f8]
+- Add support for data and execution lineage  (#5715) [20e06da7]
+- Add Workflow outputs (third preview) (#5909) [2e2dea42]
+- Add Manage AWS Batch Unscheduled jobs (#5936) [44abe60c]
+- Document process/workflow recursion (#5974) [72bc4c22]
+- Document release notes (#5975) [368db5c4]
+- Fix Bash escape in build script [c8750a04]
+- Fix bugs in workflow outputs (#5978) [c7536c9a]
+- Fix kebab-case normalization for params file (#5989) [9a045f80]
+- Fix possible syntax error in Mermaid DAG renderer (#5935) [e3b8ca42]
+- Fix race condition in unit tests (#5955) [cff7bf8c]
+- Fix recursion snippets in workflow docs (#5979) [ac71280e]
+- Fix repeated warning for local executor (#5961) [11999659]
+- Fix validation of plugin config options (#5952) [60f1d1f6]
+- Refactor K8s support as core plug-in (#5965) [27ecb89d]
+- Refactor TraceObserver as interface (#5963) [8826134a]
+- Removed unused thread pool factory [fac2e4b7]
+- Revert Bump Fusion to version 2.5 [49b58d2d]
+- Support `dag.direction` for `dot` DAG format (#5941) [834cee48]
+- Update Azure Batch VM sizes and regions (#5985) [297150b8]
+- Update shell block deprecation notice (#5972) [fea67859]
+- Bump Gradle 8.13 [e19aeedb]
+- Bump nf-wave@1.12.0 [1ec04db5]
+- Bump nf-googlee@1.20.0 [5fce5092]
+- Bump nf-azure@1.15.0 [45e76d7d]
+- Bump nf-amazon@2.14.0 [8615aecb]
+
 25.02.3-edge - 8 Apr 2025
 - Fix container meta deduplication [f4600d2e]
 - Bump nf-tower@1.11.2 [220e429a]
