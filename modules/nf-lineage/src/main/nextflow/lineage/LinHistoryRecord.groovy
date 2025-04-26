@@ -30,7 +30,7 @@ import java.text.SimpleDateFormat
 @EqualsAndHashCode(includes = 'runName,sessionId')
 class LinHistoryRecord {
 
-    static final DateFormat TIMESTAMP_FMT = new SimpleDateFormat('yyyy-MM-dd HH:mm:ss')
+    static final public DateFormat TIMESTAMP_FMT = new SimpleDateFormat('yyyy-MM-dd HH:mm:ss z')
 
     final Date timestamp
     final String runName
