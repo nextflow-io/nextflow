@@ -47,15 +47,12 @@ class LinPathTest extends Specification {
     @Shared
     Path wdir
     @Shared
-    Path meta
-    @Shared
     Path data
     @Shared
     def fs = Mock(LinFileSystem)
 
     def setupSpec(){
         wdir = Files.createTempDirectory("wdir")
-        meta = wdir.resolve('.meta')
         data = wdir.resolve('work')
     }
 
@@ -142,15 +139,15 @@ class LinPathTest extends Specification {
 
         def lidFs = new LinFileSystemProvider().newFileSystem(new URI("lid:///"), [enabled: true, store: [location: wdir.toString()]])
 
-        meta.resolve('12345/output1').mkdirs()
-        meta.resolve('12345/path/to/file2.txt').mkdirs()
-        meta.resolve('12345/.data.json').text = '{"type":"TaskRun"}'
-        meta.resolve('12345/output1/.data.json').text = '{"type":"FileOutput", "path": "' + outputFolder.toString() + '"}'
-        meta.resolve('12345/path/to/file2.txt/.data.json').text = '{"type":"FileOutput", "path": "' + outputFile.toString() + '"}'
+        wdir.resolve('12345/output1').mkdirs()
+        wdir.resolve('12345/path/to/file2.txt').mkdirs()
+        wdir.resolve('12345/.data.json').text = '{"type":"TaskRun"}'
+        wdir.resolve('12345/output1/.data.json').text = '{"type":"FileOutput", "path": "' + outputFolder.toString() + '"}'
+        wdir.resolve('12345/path/to/file2.txt/.data.json').text = '{"type":"FileOutput", "path": "' + outputFile.toString() + '"}'
         def time = OffsetDateTime.now()
         def wfResultsMetadata = new LinEncoder().withPrettyPrint(true).encode(new WorkflowOutput(time, "lid://1234", [new Parameter( "Path", "a", "lid://1234/a.txt")]))
-        meta.resolve('5678/').mkdirs()
-        meta.resolve('5678/.data.json').text = wfResultsMetadata
+        wdir.resolve('5678/').mkdirs()
+        wdir.resolve('5678/.data.json').text = wfResultsMetadata
 
         expect: 'Get real path when LinPath is the output data or a subfolder'
         new LinPath(lidFs, '12345/output1').getTargetPath() == outputFolder
@@ -244,7 +241,7 @@ class LinPathTest extends Specification {
         exception2.message == "Target path '123456' does not exist"
 
         cleanup:
-        meta.resolve("123456").deleteDir()
+        wdir.resolve("123456").deleteDir()
     }
 
     def 'should get file name' () {

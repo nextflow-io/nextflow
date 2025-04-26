@@ -73,7 +73,7 @@ class LinCommandImplTest extends Specification{
 
     def 'should print executions lids' (){
         given:
-        def historyFile = storeLocation.resolve(".meta/.history")
+        def historyFile = storeLocation.resolve(".history")
         def lidLog = new DefaultLinHistoryLog(historyFile)
         def uniqueId = UUID.randomUUID()
         def date = new Date();
@@ -115,7 +115,7 @@ class LinCommandImplTest extends Specification{
 
     def 'should show lid content' (){
         given:
-        def lidFile = storeLocation.resolve(".meta/12345/.data.json")
+        def lidFile = storeLocation.resolve("12345/.data.json")
         Files.createDirectories(lidFile.parent)
         def time = OffsetDateTime.ofInstant(Instant.ofEpochMilli(123456789), ZoneOffset.UTC)
         def encoder = new LinEncoder().withPrettyPrint(true)
@@ -160,11 +160,11 @@ class LinCommandImplTest extends Specification{
 
         def outputHtml = tmpDir.resolve('lineage.html')
 
-        def lidFile = storeLocation.resolve(".meta/12345/file.bam/.data.json")
-        def lidFile2 = storeLocation.resolve(".meta/123987/file.bam/.data.json")
-        def lidFile3 = storeLocation.resolve(".meta/123987/.data.json")
-        def lidFile4 = storeLocation.resolve(".meta/45678/output.txt/.data.json")
-        def lidFile5 = storeLocation.resolve(".meta/45678/.data.json")
+        def lidFile = storeLocation.resolve("12345/file.bam/.data.json")
+        def lidFile2 = storeLocation.resolve("123987/file.bam/.data.json")
+        def lidFile3 = storeLocation.resolve("123987/.data.json")
+        def lidFile4 = storeLocation.resolve("45678/output.txt/.data.json")
+        def lidFile5 = storeLocation.resolve("45678/.data.json")
         Files.createDirectories(lidFile.parent)
         Files.createDirectories(lidFile2.parent)
         Files.createDirectories(lidFile3.parent)
@@ -235,8 +235,8 @@ class LinCommandImplTest extends Specification{
 
         def outputHtml = tmpDir.resolve('lineage.html')
 
-        def lidFile = storeLocation.resolve(".meta/12345/file.bam/.data.json")
-        def lidFile3 = storeLocation.resolve(".meta/12345/.data.json")
+        def lidFile = storeLocation.resolve("12345/file.bam/.data.json")
+        def lidFile3 = storeLocation.resolve("12345/.data.json")
         Files.createDirectories(lidFile.parent)
         Files.createDirectories(lidFile3.parent)
         def encoder = new LinEncoder()
@@ -280,7 +280,7 @@ class LinCommandImplTest extends Specification{
 
     def 'should show query results'(){
         given:
-        def lidFile = storeLocation.resolve(".meta/12345/.data.json")
+        def lidFile = storeLocation.resolve("12345/.data.json")
         Files.createDirectories(lidFile.parent)
         def encoder = new LinEncoder().withPrettyPrint(true)
         def time = OffsetDateTime.ofInstant(Instant.ofEpochMilli(123456789), ZoneOffset.UTC)
@@ -305,9 +305,9 @@ class LinCommandImplTest extends Specification{
 
     def 'should show query with fragment'(){
         given:
-        def lidFile = storeLocation.resolve(".meta/12345/.data.json")
+        def lidFile = storeLocation.resolve("12345/.data.json")
         Files.createDirectories(lidFile.parent)
-        def lidFile2 = storeLocation.resolve(".meta/67890/.data.json")
+        def lidFile2 = storeLocation.resolve("67890/.data.json")
         Files.createDirectories(lidFile2.parent)
         def encoder = new LinEncoder().withPrettyPrint(true)
         def time = OffsetDateTime.ofInstant(Instant.ofEpochMilli(123456789), ZoneOffset.UTC)
@@ -334,9 +334,9 @@ class LinCommandImplTest extends Specification{
 
     def 'should diff'(){
         given:
-        def lidFile = storeLocation.resolve(".meta/12345/.data.json")
+        def lidFile = storeLocation.resolve("12345/.data.json")
         Files.createDirectories(lidFile.parent)
-        def lidFile2 = storeLocation.resolve(".meta/67890/.data.json")
+        def lidFile2 = storeLocation.resolve("67890/.data.json")
         Files.createDirectories(lidFile2.parent)
         def encoder = new LinEncoder().withPrettyPrint(true)
         def time = OffsetDateTime.ofInstant(Instant.ofEpochMilli(123456789), ZoneOffset.UTC)
@@ -386,7 +386,7 @@ class LinCommandImplTest extends Specification{
 
     def 'should print error if no entry found diff'(){
         given:
-        def lidFile = storeLocation.resolve(".meta/12345/.data.json")
+        def lidFile = storeLocation.resolve("12345/.data.json")
         Files.createDirectories(lidFile.parent)
         def encoder = new LinEncoder().withPrettyPrint(true)
         def time = OffsetDateTime.ofInstant(Instant.ofEpochMilli(123456789), ZoneOffset.UTC)
@@ -435,9 +435,9 @@ class LinCommandImplTest extends Specification{
 
     def 'should find metadata descriptions'(){
         given:
-        def lidFile = storeLocation.resolve(".meta/123987/file.bam/.data.json")
+        def lidFile = storeLocation.resolve("123987/file.bam/.data.json")
         Files.createDirectories(lidFile.parent)
-        def lidFile2 = storeLocation.resolve(".meta/123987/file2.bam/.data.json")
+        def lidFile2 = storeLocation.resolve("123987/file2.bam/.data.json")
         Files.createDirectories(lidFile2.parent)
         def encoder = new LinEncoder().withPrettyPrint(true)
         def time = OffsetDateTime.ofInstant(Instant.ofEpochMilli(123456789), ZoneOffset.UTC)
