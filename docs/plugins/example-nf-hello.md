@@ -50,3 +50,9 @@ It also includes several classes that demonstrate different plugin functionality
 - `HelloFactory`: An example of a workflow event with custom behavior.
 - `HelloObserver`: An example of a workflow event with custom behavior.
 - `HelloPlugin`: An example of a plugin entry point.
+
+The `nf-hello` plugin can be configured via nextflow configuration files or at runtime. For example:
+
+```bash
+nextflow run hello -plugins nf-hello@0.5.0,nf-amazon@2.9.0
+```
