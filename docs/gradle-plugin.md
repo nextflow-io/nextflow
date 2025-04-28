@@ -1,3 +1,5 @@
+(gradle-plugin-page)=
+
 # Using the Gradle plugin
 
 The [Gradle plugin for Nextflow plugins](https://github.com/nextflow-io/nextflow-plugin-gradle) simplifies plugin development by configuring default dependencies needed for Nextflow integration and incorporates custom Gradle tasks that streamline building, testing, and publishing Nextflow plugins. This guide describes how to use the Gradle plugin for plugin development.
@@ -6,14 +8,15 @@ The [Gradle plugin for Nextflow plugins](https://github.com/nextflow-io/nextflow
 Nextflow Plugins can be developed without the Gradle plugin. However, this approach is only suggested if you are an advanced developer and your project is incompatible with the Gradle plugin.
 :::
 
+(gradle-plugin-create)=
+
 ## Creating a plugin
 
-The <span style="text-decoration:underline;">nf-hello </span>plugin uses the Gradle plugin and is a valuable starting point for developers.
+The [nf-hello](https://github.com/nextflow-io/nf-hello/tree/gradle-plugin-example) plugin uses the Gradle plugin and is a valuable starting point for developers.
 
 To create a Nextflow plugin with the Gradle plugin:
 
-1. Fork the [nf-hello](https://github.com/nextflow-io/nf-hello/tree/gradle-plugin-example) plugin.
-    * See <span style="text-decoration:underline;">Example: nf-hello</span> for more information about the nf-hello plugin.
+1. Fork the [nf-hello](https://github.com/nextflow-io/nf-hello/tree/gradle-plugin-example) plugin. See {ref}`nf-hello-page` for more information.
 2. Rename the forked `nf-hello` directory with your plugin name.
 3. Replace the contents of `settings.gradle` with the following:
 
@@ -72,10 +75,10 @@ To create a Nextflow plugin with the Gradle plugin:
     - `EXTENSION_POINT`: your extension point identifiers that the plugin will implement or expose—for example, `nextflow.hello.HelloFactory`.
     - `GITHUB_REPOSITORY`: your GitHub plugin repository name—for example, `nextflow-io/nf-hello`.
     - `GITHUB_INDEX_URL`: the URL of your fork of the plugins index repository—for example, [`plugins.json`](https://github.com/username/plugins/blob/main/plugins.json)</code>.
-5. Develop your plugin extension points:
-    - See <span style="text-decoration:underline;">Extension points</span> for descriptions and examples.
+5. Develop your plugin extension points. See {ref}`dev-plugins-extension` for descriptions and examples.
 6. In the plugin root directory, run `make assemble`.
 
+(gradle-plugin-install)=
 
 ## Installing a plugin
 
@@ -89,13 +92,14 @@ To install a plugin locally:
     Running `make install` will add your plugin to your `$HOME/.nextflow/plugins` directory.
     :::
 
-2. Configure your plugin.
-    * See <span style="text-decoration:underline;">Using plugins</span> for more information.
+2. Configure your plugin. See {ref}`using-plugins-page` for more information.
 3. Run your pipeline:
 
     ```bash
     nextflow run main.nf
     ```
+
+(gradle-plugin-unit-test)=
 
 ## Unit testing a plugin
 
@@ -103,12 +107,12 @@ Unit tests are small, focused tests designed to verify the behavior of individua
 
 To run unit tests:
 
-1. Develop your unit tests.
-    * See <code><span style="text-decoration:underline;">HelloDslTest.groovy</span></code> in the <code><span style="text-decoration:underline;">nf-hello</span></code> plugin for unit test examples.
+1. Develop your unit tests. See [HelloDslTest.groovy](https://github.com/nextflow-io/nf-hello/blob/gradle-plugin-example/src/test/groovy/nextflow/hello/HelloDslTest.groovy) in the [nf-hello](https://github.com/nextflow-io/nf-hello/tree/gradle-plugin-example) plugin for unit test examples.
 2. In the plugin root directory, run `make test`.
 
+(gradle-plugin-package)=
 
-### Packaging, uploading, and publishing a plugin
+## Packaging, uploading, and publishing a plugin
 
 The Gradle plugin for Nextflow plugins simplifies publishing your plugin.
 

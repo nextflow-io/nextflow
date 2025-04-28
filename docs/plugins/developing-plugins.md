@@ -1,4 +1,4 @@
-(developing-plugins-page)=
+(dev-plugins-page)=
 
 # Developing plugins
 
@@ -8,19 +8,19 @@ The Nextflow plugin framework streamlines plugin development by providing the st
 Nextflow Plugins can be developed without the Gradle plugin. However, this approach is only suggested if you are an advanced developer and your project is incompatible with the Gradle plugin.
 :::
 
-(developing-plugins-framework)=
+(dev-plugins-framework)=
 
 ## Framework
 
 Nextflow plugins use the [Plugin Framework for Java (p4fj)](https://github.com/pf4j/pf4j) framework to install, update, load, and unload plugins. p4fj creates a separate class loader for each plugin, allowing plugins to use their own versions of dependency jars. Nextflow defines several p4fj `ExtensionPoints` that plugin developers can extend.
 
-(developing-plugins-gradle)=
+(dev-plugins-gradle)=
 
 ## Gradle plugin for Nextflow plugins
 
-[Gradle](https://gradle.org/) is a flexible build automation tool optimized for Java and Groovy projects. The [Gradle plugin for Nextflow plugins](https://github.com/nextflow-io/nextflow-plugin-gradle) streamlines the development process by automatically setting up essential Nextflow dependencies and providing custom <span style="text-decoration:underline;">Gradle tasks</span> to simplify plugin building and publishing.
+[Gradle](https://gradle.org/) is a flexible build automation tool optimized for Java and Groovy projects. The [Gradle plugin for Nextflow plugins](https://github.com/nextflow-io/nextflow-plugin-gradle) streamlines the development process by automatically setting up essential Nextflow dependencies and providing custom Gradle tasks to simplify plugin building and publishing.
 
-(developing-plugins-structure)=
+(dev-plugins-structure)=
 
 ### Structure
 
@@ -61,10 +61,10 @@ This structure contains the following key files and folders:
 See {ref}`nf-hello-page` for an example of a plugin built using this structure.
 
 :::{note}
-Nextflow plugins can be developed without the Gradle plugin. However, this approach is only suggested if you are an advanced developer and your project is incompatible with the Gradle plugin. See <span style="text-decoration:underline;">nf-hello for an example of a </span>plugin with the old structure.
+Nextflow plugins can be developed without the Gradle plugin. However, this approach is only suggested if you are an advanced developer and your project is incompatible with the Gradle plugin.
 :::
 
-(developing-plugins-make)=
+(dev-plugins-make)=
 
 ### make commands
 
@@ -83,18 +83,18 @@ make assemble
 The following `make` commands are available:
 
 `assemble`
-: Compiles the Nextflow plugin code and assembles it into a zip file. See <span style="text-decoration:underline;">Creating a plugin</span> for more information.
+: Compiles the Nextflow plugin code and assembles it into a zip file. See {ref}`gradle-plugin-create` for more information.
 
 `test`
-: Runs plugin unit tests. See <span style="text-decoration:underline;">Unit testing</span> for more information.
+: Runs plugin unit tests. See {ref}`gradle-plugin-unit-test` for more information.
 
 `install`
-: Installs the plugin into the local nextflow plugins directory. See <span style="text-decoration:underline;">Running locally</span> for more information.
+: Installs the plugin into the local nextflow plugins directory. See {ref}`gradle-plugin-install` for more information.
 
 `release`
-: Publishes the plugin. See <span style="text-decoration:underline;">Packaging, uploading, and publishing</span> for more information.
+: Publishes the plugin. See {ref}`gradle-plugin-package` for more information.
 
-(developing-plugins-versioning)=
+(dev-plugins-versioning)=
 
 ### Versioning
 
@@ -108,7 +108,7 @@ plugins {
 
 See the source code in [nextflow-plugin-gradle](https://github.com/nextflow-io/nextflow-plugin-gradle) for implementation details.
 
-(developing-plugins-extension)=
+(dev-plugins-extension)=
 
 ## Extension points
 
@@ -217,7 +217,7 @@ This approach is not required to support plugin config options. However, it allo
 
 Plugins can define custom executors that can be used with the `executor` process directive.
 
-To implement an executor, create a class in your plugin that extends the <code>[Executor](https://github.com/nextflow-io/nextflow/blob/master/modules/nextflow/src/main/groovy/nextflow/executor/Executor.groovy)</code> class and implements the `ExtensionPoint` interface. Add the `@ServiceName` annotation to your class with the name of your executor. For example:
+To implement an executor, create a class in your plugin that extends the [`Executor`](https://github.com/nextflow-io/nextflow/blob/master/modules/nextflow/src/main/groovy/nextflow/executor/Executor.groovy)class and implements the `ExtensionPoint` interface. Add the `@ServiceName` annotation to your class with the name of your executor. For example:
 
 ```groovy
 import nextflow.executor.Executor
@@ -249,9 +249,9 @@ See the source code of Nextflow's built-in executors for examples of how to impl
 
 ### Filesystems
 
-Plugins can define custom filesystems that Nextflow can use to interact with external storage systems using a single interface. For more information about accessing remote files, see <span style="text-decoration:underline;">Remote files</span>.
+Plugins can define custom filesystems that Nextflow can use to interact with external storage systems using a single interface. For more information about accessing remote files, see {ref}`remote-files`.
 
-To implement a custom filesystem, create a class in your plugin that extends <code>[FileSystemProvider](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/spi/FileSystemProvider.html)</code>. Implement the `getScheme()` method to define the URI scheme for your filesystem. For example:
+To implement a custom filesystem, create a class in your plugin that extends [`FileSystemProvider`](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/spi/FileSystemProvider.html). Implement the `getScheme()` method to define the URI scheme for your filesystem. For example:
 
 ```groovy
 import java.nio.file.spi.FileSystemProvider
@@ -371,9 +371,9 @@ The above snippet is based on the <code>[nf-sqldb](https://github.com/nextflow-i
 
 ### Process directives
 
-Plugins that implement a <span style="text-decoration:underline;">custom executor</span> will likely need to access <span style="text-decoration:underline;">process directives</span> that affect the task execution. When an executor receives a task, the process directives can be accessed through that task’s configuration. Custom executors should try to support all process directives that have executor-specific behavior and are relevant to the executor.
+Plugins that implement a custom executor will likely need to access {ref}`process directives <process-directives>` that affect the task execution. When an executor receives a task, the process directives can be accessed through that task’s configuration. Custom executors should try to support all process directives that have executor-specific behavior and are relevant to the executor.
 
-Nextflow does not provide the ability to define custom process directives in a plugin. Instead, use the <code><span style="text-decoration:underline;">ext</span></code> directive to provide custom process settings to your executor. Use specific names that are not likely to conflict with other plugins or existing pipelines.
+Nextflow does not provide the ability to define custom process directives in a plugin. Instead, use the {ref}`process-ext` directive to provide custom process settings to your executor. Use specific names that are not likely to conflict with other plugins or existing pipelines.
 
 For example, a custom executor can use existing process directives and a custom setting through the `ext` directive:
 
@@ -451,6 +451,7 @@ myplugin.enabled = true
 
 See the [`TraceObserver` source code](https://github.com/nextflow-io/nextflow/blob/master/modules/nextflow/src/main/groovy/nextflow/trace/TraceObserver.groovy) for descriptions of the available workflow events.
 
+(dev-plugins-env-var)=
 
 ## Environment variables
 

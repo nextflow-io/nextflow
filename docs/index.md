@@ -67,7 +67,6 @@ config
 executor
 cache-and-resume
 reports
-plugins
 ```
 
 ```{toctree}
@@ -146,7 +145,6 @@ migrations/index
 developer/index
 developer/diagram
 developer/packages
-developer/plugins
 ```
 
 ```{toctree}
