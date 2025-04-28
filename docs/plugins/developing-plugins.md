@@ -398,6 +398,10 @@ class MyExecutor extends Executor {
 
 ### Trace observers
 
+:::{versionchanged} 25.04
+The `TraceObserver` interface is now deprecated. Use [TraceObserverV2](https://github.com/nextflow-io/nextflow/blob/master/modules/nextflow/src/main/groovy/nextflow/trace/TraceObserverV2.groovy) and [TraceObserverFactoryV2](https://github.com/nextflow-io/nextflow/blob/master/modules/nextflow/src/main/groovy/nextflow/trace/TraceObserverFactoryV2.groovy) instead.
+:::
+
 A *trace observer* is an entity that can listen and react to workflow events, such as when a workflow starts, a task is completed, or a file is published. Several components in Nextflow, such as the execution report and DAG visualization, are implemented as trace observers.
 
 Plugins can define custom trace observers that react to workflow events with custom behavior. To implement a trace observer, create a class that implements the `TraceObserver` trait and another class that implements the `TraceObserverFactory` interface. Implement any of the hooks defined in `TraceObserver` and implement the `create()` method in your observer factory. For example:
