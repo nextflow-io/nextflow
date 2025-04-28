@@ -175,8 +175,10 @@ class LinObserver implements TraceObserver {
 
     protected static List<Parameter> getNormalizedParams(Map<String, Object> params, PathNormalizer normalizer){
         final normalizedParams = new LinkedList<Parameter>()
-        params.each{ String key, Object value ->
-            normalizedParams.add( new Parameter( getParameterType(value), key, normalizeValue(value, normalizer) ) )
+        for( Map.Entry<String,Object> entry : params ) {
+            final key = entry.key
+            final val = entry.value
+            normalizedParams.add( new Parameter( getParameterType(val), key, normalizeValue(val, normalizer) ) )
         }
         return normalizedParams
     }
@@ -201,11 +203,11 @@ class LinObserver implements TraceObserver {
         return key
     }
 
-    private List<Parameter> getNormalizedTaskOutputs( TaskRun task, PathNormalizer normalizer){
+    private List<Parameter> getNormalizedTaskOutputs(TaskRun task, PathNormalizer normalizer){
         final outputs = task.getOutputs()
         final outputParams = new LinkedList<Parameter>()
-        outputs.forEach { OutParam key, Object value ->
-            manageTaskOutputParameter(key, outputParams, value, task, normalizer)
+        for( Map.Entry<OutParam,Object> entry : outputs ) {
+            manageTaskOutputParameter(entry.key, outputParams, entry.value, task, normalizer)
         }
         return outputParams
     }
@@ -220,7 +222,7 @@ class LinObserver implements TraceObserver {
 
     private static Object normalizeValue(Object value, PathNormalizer normalizer) {
         if (value instanceof Path)
-            return normalizer.normalizePath(value as Path)
+            return normalizer.normalizePath((Path)value)
         else if (value instanceof CharSequence)
             return normalizer.normalizePath(value.toString())
         else
@@ -229,7 +231,8 @@ class LinObserver implements TraceObserver {
 
     private Object manageFileOutParam(Object value, TaskRun task) {
         if (value == null) {
-            throw new IllegalArgumentException("Unexpected output null for task '${task.name}'")
+            log.debug "Unexpected lineage File output value null"
+            return null
         }
         if (value instanceof Path) {
             return asUriString(storeTaskOutput(task, (Path) value))
@@ -405,6 +408,10 @@ class LinObserver implements TraceObserver {
             return Collection.simpleName
         if( param instanceof Map)
             return Map.simpleName
+        if( param==null ) {
+            log.debug "Unexpected lineage param type null"
+            return null
+        }
         return param.class.simpleName
     }
 

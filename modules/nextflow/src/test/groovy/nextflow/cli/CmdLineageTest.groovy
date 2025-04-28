@@ -67,7 +67,7 @@ class CmdLineageTest extends Specification {
             def folder = Files.createTempDirectory('test').toAbsolutePath()
             def configFile = folder.resolve('nextflow.config')
             configFile.text = "lineage.enabled = true\nlineage.store.location = '$folder'".toString()
-            def historyFile = folder.resolve(".meta/.history")
+            def historyFile = folder.resolve(".history")
             def lidLog = new DefaultLinHistoryLog(historyFile)
             def uniqueId = UUID.randomUUID()
             def date = new Date();
@@ -99,7 +99,7 @@ class CmdLineageTest extends Specification {
         def folder = Files.createTempDirectory('test').toAbsolutePath()
         def configFile = folder.resolve('nextflow.config')
         configFile.text = "lineage.enabled = true\nlineage.store.location = '$folder'".toString()
-        def historyFile = folder.resolve(".meta/.history")
+        def historyFile = folder.resolve(".history")
         Files.createDirectories(historyFile.parent)
         def launcher = Mock(Launcher){
             getOptions() >> new CliOptions(config: [configFile.toString()])
@@ -128,7 +128,7 @@ class CmdLineageTest extends Specification {
         def folder = Files.createTempDirectory('test').toAbsolutePath()
         def configFile = folder.resolve('nextflow.config')
         configFile.text = "lineage.enabled = true\nlineage.store.location = '$folder'".toString()
-        def lidFile = folder.resolve(".meta/12345/.data.json")
+        def lidFile = folder.resolve("12345/.data.json")
         Files.createDirectories(lidFile.parent)
         def launcher = Mock(Launcher){
             getOptions() >> new CliOptions(config: [configFile.toString()])
@@ -194,11 +194,11 @@ class CmdLineageTest extends Specification {
         def launcher = Mock(Launcher){
             getOptions() >> new CliOptions(config: [configFile.toString()])
         }
-        def lidFile = folder.resolve(".meta/12345/file.bam/.data.json")
-        def lidFile2 = folder.resolve(".meta/123987/file.bam/.data.json")
-        def lidFile3 = folder.resolve(".meta/123987/.data.json")
-        def lidFile4 = folder.resolve(".meta/45678/output.txt/.data.json")
-        def lidFile5 = folder.resolve(".meta/45678/.data.json")
+        def lidFile = folder.resolve("12345/file.bam/.data.json")
+        def lidFile2 = folder.resolve("123987/file.bam/.data.json")
+        def lidFile3 = folder.resolve("123987/.data.json")
+        def lidFile4 = folder.resolve("45678/output.txt/.data.json")
+        def lidFile5 = folder.resolve("45678/.data.json")
         Files.createDirectories(lidFile.parent)
         Files.createDirectories(lidFile2.parent)
         Files.createDirectories(lidFile3.parent)
@@ -270,7 +270,7 @@ class CmdLineageTest extends Specification {
         def folder = Files.createTempDirectory('test').toAbsolutePath()
         def configFile = folder.resolve('nextflow.config')
         configFile.text = "lineage.enabled = true\nlineage.store.location = '$folder'".toString()
-        def lidFile = folder.resolve(".meta/12345/.data.json")
+        def lidFile = folder.resolve("12345/.data.json")
         Files.createDirectories(lidFile.parent)
         def launcher = Mock(Launcher){
             getOptions() >> new CliOptions(config: [configFile.toString()])
@@ -305,7 +305,7 @@ class CmdLineageTest extends Specification {
         def folder = Files.createTempDirectory('test').toAbsolutePath()
         def configFile = folder.resolve('nextflow.config')
         configFile.text = "lineage.enabled = true\nlineage.store.location = '$folder'".toString()
-        def lidFile = folder.resolve(".meta/12345/.data.json")
+        def lidFile = folder.resolve("12345/.data.json")
         Files.createDirectories(lidFile.parent)
         def launcher = Mock(Launcher){
             getOptions() >> new CliOptions(config: [configFile.toString()])

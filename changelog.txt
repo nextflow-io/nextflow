@@ -1,5 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
+24.10.6 - 24 Apr 2025
+- Add support for Fusion Snapshots (#5954) [76a997a3]
+- Bump nf-wave@1.7.5 [3ddf16fb]
+- Bump nf-amazon@2.9.3 [ccf672fb]
+
+25.03.1-edge - 24 Apr 2025
+- Fix lineage packaging (#6001) [c3bb7a51]
+
 25.03.0-edge - 23 Apr 2025
 - Add Google Batch gcsfuseOptions (#5991) [1d4dd574]
 - Add `fs` command to CLI help (#5967) [c0566aad]

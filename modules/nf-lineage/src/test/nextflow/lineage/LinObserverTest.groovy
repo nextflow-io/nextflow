@@ -185,17 +185,19 @@ class LinObserverTest extends Specification {
         observer.onFlowCreate(session)
         observer.onFlowBegin()
         then:
-        folder.resolve(".meta/${observer.executionHash}/.data.json").text == new LinEncoder().encode(workflowRun)
+        folder.resolve("${observer.executionHash}/.data.json").text == new LinEncoder().encode(workflowRun)
 
         cleanup:
         folder?.deleteDir()
     }
 
+    @Unroll
     def 'should get parameter type' () {
         expect:
         LinObserver.getParameterType(PARAM) == STRING
         where:
         PARAM                                           | STRING
+        null                                            | null
         new FileInParam(null, [])                       | "path"
         new ValueOutParam(null, [])                     | "val"
         new EnvOutParam(null, [])                       | "env"
@@ -368,7 +370,7 @@ class LinObserverTest extends Specification {
         when:
         observer.storeTaskOutput(task, outFile)
         then:
-        folder.resolve(".meta/${hash}/foo/bar/file.bam/.data.json").text == new LinEncoder().encode(output)
+        folder.resolve("${hash}/foo/bar/file.bam/.data.json").text == new LinEncoder().encode(output)
 
         cleanup:
         folder?.deleteDir()
@@ -531,7 +533,7 @@ class LinObserverTest extends Specification {
             def output1 = new FileOutput(outFile1.toString(), new Checksum(fileHash1, "nextflow", "standard"),
                 "lid://123987/file.bam", "$LID_PROT${observer.executionHash}", null,
                 attrs1.size(), LinUtils.toDate(attrs1.creationTime()), LinUtils.toDate(attrs1.lastModifiedTime()) )
-            folder.resolve(".meta/${observer.executionHash}/foo/file.bam/.data.json").text == encoder.encode(output1)
+            folder.resolve("${observer.executionHash}/foo/file.bam/.data.json").text == encoder.encode(output1)
 
         when: 'publish without source path'
         def outFile2 = outputDir.resolve('foo/file2.bam')
@@ -545,7 +547,7 @@ class LinObserverTest extends Specification {
             def output2 = new FileOutput(outFile2.toString(), new Checksum(fileHash2, "nextflow", "standard"),
                 "lid://${observer.executionHash}" , "lid://${observer.executionHash}", null,
                 attrs2.size(), LinUtils.toDate(attrs2.creationTime()), LinUtils.toDate(attrs2.lastModifiedTime()) )
-            folder.resolve(".meta/${observer.executionHash}/foo/file2.bam/.data.json").text == encoder.encode(output2)
+            folder.resolve("${observer.executionHash}/foo/file2.bam/.data.json").text == encoder.encode(output2)
 
         when: 'Workflow complete'
             observer.onFlowComplete()
