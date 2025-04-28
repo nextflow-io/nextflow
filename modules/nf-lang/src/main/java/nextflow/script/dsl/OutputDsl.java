@@ -40,6 +40,12 @@ public interface OutputDsl extends DslScope {
     Map<String,Object> getParams();
 
     @Description("""
+        Specify annotations to be be applied to every published file. Can be a map or a closure that returns a map.
+    """)
+    /* Map | Closure */
+    void annotations(Object value);
+
+    @Description("""
         *Currently only supported for S3.*
 
         Specify the media type a.k.a. [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types) of published files (default: `false`). Can be a string (e.g. `'text/html'`), or `true` to infer the content type from the file extension.

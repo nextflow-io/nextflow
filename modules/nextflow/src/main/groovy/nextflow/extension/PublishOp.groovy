@@ -196,6 +196,8 @@ class PublishOp {
      * @param value
      */
     protected static Map getAnnotations(annotations, value) {
+        if( annotations == null )
+            return [:]
         if( annotations instanceof Map )
             return annotations
         if( annotations instanceof Closure ) {
