@@ -2,9 +2,9 @@
 
 # Example: nf-hello
 
-`nf-hello` is a simple Nextflow plugin that uses the Gradle plugin for Nextflow plugins and is commonly used as a starting point for third-party plugin development.
+[`nf-hello`](https://github.com/nextflow-io/nf-hello/tree/master) is a simple Nextflow plugin that uses the Gradle plugin for Nextflow plugins and is commonly used as a starting point for third-party plugin development.
 
-The nf-hello plugin has the following structure:
+The [`nf-hello` plugin](https://github.com/nextflow-io/nf-hello/tree/master) has the following structure:
 
 ```
 nf-hello

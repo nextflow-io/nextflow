@@ -67,7 +67,6 @@ config
 executor
 cache-and-resume
 reports
-plugins
 ```
 
 ```{toctree}
@@ -154,7 +153,6 @@ developer/index
 developer/diagram
 developer/config-scopes
 developer/packages
-developer/plugins
 ```
 
 ```{toctree}

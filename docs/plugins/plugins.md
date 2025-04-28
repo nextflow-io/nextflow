@@ -28,7 +28,7 @@ Core plugins do not require configuration. The latest versions of core plugins a
 Specific versions of core plugins can be declared in Nextflow configuration files or by using the `-plugins` option. See {ref}`using-plugins-page` for more information.
 
 :::{note}
-The automatic application of core plugins can be disabled by setting `NXF_PLUGINS_DEFAULT=false`. See <span style="text-decoration:underline;">Environment variables</span> for more information.
+The automatic application of core plugins can be disabled by setting `NXF_PLUGINS_DEFAULT=false`. See {ref}`dev-plugins-env-var` for more information.
 :::
 
 <h3>Third-party plugins</h3>
@@ -64,4 +64,4 @@ Version components:
 * PATCH: Increment for backward-compatible bug fixes.
 
 Optional pre-release and build metadata can be added (e.g., 1.2.1-alpha+001) as extensions to the base version format.
-See <span style="text-decoration:underline;">Semantic Versioning</span> for more information about the specification.
+See {ref}`dev-plugins-versioning` for more information about the specification.

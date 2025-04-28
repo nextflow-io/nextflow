@@ -46,7 +46,7 @@ To migrate an existing Nextflow plugin:
 
 3. Replace the contents of `settings.gradle` with the following:
 
-    ```
+    ```groovy
     rootProject.name = '<PLUGIN_NAME>'
     ```
 
@@ -54,7 +54,7 @@ To migrate an existing Nextflow plugin:
 
 4. In the project root, create a new `build.gradle` file with the following configuration:
 
-    ```
+    ```groovy
     // Plugins
     plugins {
         id 'io.nextflow.nextflow-plugin' version '0.0.1-alpha'
@@ -131,4 +131,4 @@ To migrate an existing Nextflow plugin:
 6. Update `README.md` with information about the structure of your plugin.
 7. In the plugin root directory, run `make assemble`.
 
-The Gradle plugin for Nextflow plugins also supports publishing plugins. See <span style="text-decoration:underline;">Packaging, uploading,</span> <span style="text-decoration:underline;">and publishing</span> for more information.
+The Gradle plugin for Nextflow plugins also supports publishing plugins. See {ref}`gradle-plugin-package` for more information.
