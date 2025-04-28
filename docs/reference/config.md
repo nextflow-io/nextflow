@@ -882,6 +882,11 @@ The following settings are available for Google Cloud Batch:
   - projects/{project}/global/networks/{network}
   - global/networks/{network}
 
+`google.batch.networkTags`
+: The network tags to be applied to the instances created by Google Batch jobs. Network tags are used to apply firewall rules and control network access (e.g., `['allow-ssh', 'allow-http']`). 
+
+: Network tags are ignored when using instance templates. See [Add network tags](https://cloud.google.com/vpc/docs/add-remove-network-tags) for more information.
+
 `google.batch.serviceAccountEmail`
 : Define the Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used.
 
