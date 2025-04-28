@@ -1114,6 +1114,20 @@ The following settings are available:
 
 See the {ref}`k8s-page` page for more details.
 
+(config-lineage)=
+
+## `lineage`
+
+The `lineage` scope controls the generation of lineage metadata.
+
+The following settings are available:
+
+`lineage.enabled`
+: Enable generation of lineage metadata (default: `false`).
+
+`lineage.store.location`
+: Defines the location of the lineage metadata store (default: `./.lineage`).
+
 (config-mail)=
 
 ## `mail`
