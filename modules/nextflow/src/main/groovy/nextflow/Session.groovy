@@ -873,19 +873,22 @@ class Session implements ISession {
             final ver = "dsl${NF.dsl1 ?'1' :'2'}"
             final processDefs = ScriptMeta.allProcessDefinitions()
             log.debug "Workflow process definitions [$ver]: ${processDefs.entrySet().collect{"${it.key} ${it.value}"}.join(', ')}"
-            def resolvedNames = ScriptMeta.allResolvedProcessNames()
             // Add unaliased process names to the resolved names map
-            final mainScriptMeta = ScriptMeta.get(script)
-            mainScriptMeta.getLocalProcessNames().each { name ->
-                // The processes defined in the main script cannot be included in 
-                // other scripts, as it would create a circular inclusion.
-                // Hence, no need to check for the key existence in the map.
-                def key = Map.entry(mainScriptMeta.getScriptPath(), name)
-                def list = new ArrayList()
-                list.add(name)
-                resolvedNames.put(key, list)
+            // Skip if script is undefined (for TESTING)
+            if(script) {
+                def resolvedNames = ScriptMeta.allResolvedProcessNames()
+                final mainScriptMeta = ScriptMeta.get(script)
+                mainScriptMeta.getLocalProcessNames().each { name ->
+                    // The processes defined in the main script cannot be included in
+                    // other scripts, as it would create a circular inclusion.
+                    // Hence, no need to check for the key existence in the map.
+                    def key = Map.entry(mainScriptMeta.getScriptPath(), name)
+                    def list = new ArrayList()
+                    list.add(name)
+                    resolvedNames.put(key, list)
+                }
+                log.debug "Resolved process names: ${resolvedNames.entrySet().join(', ')}"
             }
-            log.debug "Resolved process names: ${resolvedNames.entrySet().join(', ')}"         
 
             validateConfig(names)
         }
