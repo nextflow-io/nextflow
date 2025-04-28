@@ -35,7 +35,7 @@ class TaskOutput implements LinSerializable {
      */
     String taskRun
     /**
-     * Reference to the WorkflowRun associated to the task that generated the output.
+     * Reference to the WorkflowRun that generated the output.
      */
     String workflowRun
     /**
