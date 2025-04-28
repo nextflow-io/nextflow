@@ -54,8 +54,11 @@ import nextflow.script.params.StdInParam
 import nextflow.script.params.StdOutParam
 import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
-import nextflow.trace.TraceObserver
+import nextflow.trace.TraceObserverV2
 import nextflow.trace.TraceRecord
+import nextflow.trace.event.FilePublishEvent
+import nextflow.trace.event.TaskEvent
+import nextflow.trace.event.WorkflowOutputEvent
 import nextflow.util.CacheHelper
 import nextflow.util.PathNormalizer
 import nextflow.util.SecretHelper
@@ -68,7 +71,7 @@ import nextflow.util.TestOnly
  */
 @Slf4j
 @CompileStatic
-class LinObserver implements TraceObserver {
+class LinObserver implements TraceObserverV2 {
     private static Map<Class<? extends BaseParam>, String> taskParamToValue = [
         (StdOutParam)  : "stdout",
         (StdInParam)   : "stdin",
@@ -184,8 +187,8 @@ class LinObserver implements TraceObserver {
     }
 
     @Override
-    void onProcessComplete(TaskHandler handler, TraceRecord trace) {
-        storeTaskInfo(handler.task)
+    void onTaskComplete(TaskEvent event) {
+        storeTaskInfo(event.handler.task)
     }
 
     protected void storeTaskInfo(TaskRun task) {
@@ -301,8 +304,8 @@ class LinObserver implements TraceObserver {
         return task.hash.toString() + SEPARATOR + rel
     }
 
-    protected String getWorkflowOutputKey(Path destination) {
-        final rel = getWorkflowRelative(destination)
+    protected String getWorkflowOutputKey(Path target) {
+        final rel = getWorkflowRelative(target)
         return executionHash + SEPARATOR + rel
     }
 
@@ -342,18 +345,16 @@ class LinObserver implements TraceObserver {
     }
 
     @Override
-    void onFilePublish(Path destination, Path source) {
-        storePublishedFile(destination, source)
-    }
-
-    protected void storePublishedFile(Path destination, Path source = null, Map annotations = null){
+    void onFilePublish(FilePublishEvent event) {
         try {
-            final checksum = Checksum.ofNextflow(destination)
-            final key = getWorkflowOutputKey(destination)
-            final sourceReference = source ? getSourceReference(source) : asUriString(executionHash)
-            final attrs = readAttributes(destination)
+            final checksum = Checksum.ofNextflow(event.target)
+            final key = getWorkflowOutputKey(event.target)
+            final sourceReference = event.source
+                ? getSourceReference(event.source)
+                : asUriString(executionHash)
+            final attrs = readAttributes(event.target)
             final value = new FileOutput(
-                destination.toUriString(),
+                event.target.toUriString(),
                 checksum,
                 sourceReference,
                 asUriString(executionHash),
@@ -361,10 +362,10 @@ class LinObserver implements TraceObserver {
                 attrs.size(),
                 LinUtils.toDate(attrs?.creationTime()),
                 LinUtils.toDate(attrs?.lastModifiedTime()),
-                convertAnnotations(annotations))
+                convertAnnotations(event.annotations))
             store.save(key, value)
         } catch (Throwable e) {
-            log.warn("Unexpected error storing published file '${destination.toUriString()}' for workflow '${executionHash}'", e)
+            log.warn("Unexpected error storing published file '${event.target.toUriString()}' for workflow '${executionHash}'", e)
         }
     }
 
@@ -387,13 +388,9 @@ class LinObserver implements TraceObserver {
     }
 
     @Override
-    void onFilePublish(Path destination){
-        storePublishedFile (destination)
-    }
-
-    @Override
-    void onWorkflowPublish(String name, Object value){
-        workflowOutput.output.add(new Parameter(getParameterType(value), name, convertPathsToLidReferences(value)))
+    void onWorkflowOutput(WorkflowOutputEvent event) {
+        final type = event.type ?: getParameterType(event.value)
+        workflowOutput.output.add(new Parameter(type, event.name, convertPathsToLidReferences(event.value)))
     }
 
     protected static String getParameterType(Object param) {
@@ -436,11 +433,6 @@ class LinObserver implements TraceObserver {
                 .collectEntries { k, v -> Map.entry(k, convertPathsToLidReferences(v)) }
         }
         return value
-    }
-
-    @Override
-    void onFilePublish(Path destination, Path source, Map annotations){
-        storePublishedFile( destination, source, annotations)
     }
 
     /**

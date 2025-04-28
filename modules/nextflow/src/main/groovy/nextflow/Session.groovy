@@ -64,8 +64,13 @@ import nextflow.spack.SpackConfig
 import nextflow.trace.AnsiLogObserver
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
+import nextflow.trace.TraceObserverFactoryV2
+import nextflow.trace.TraceObserverV2
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStatsObserver
+import nextflow.trace.event.FilePublishEvent
+import nextflow.trace.event.TaskEvent
+import nextflow.trace.event.WorkflowOutputEvent
 import nextflow.util.Barrier
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
@@ -248,7 +253,7 @@ class Session implements ISession {
 
     private int poolSize
 
-    private List<TraceObserver> observers = Collections.emptyList()
+    private List observers = Collections.emptyList()
 
     private Closure errorAction
 
@@ -431,7 +436,9 @@ class Session implements ISession {
         this.classesDir = FileHelper.createLocalDir()
         this.executorFactory = new ExecutorFactory(Plugins.manager)
         this.observers = createObservers()
-        this.statsEnabled = observers.any { it.enableMetrics() }
+        this.statsEnabled = observers.any { ob ->
+            (ob instanceof TraceObserver && ob.enableMetrics()) || (ob instanceof TraceObserverV2 && ob.enableMetrics())
+        }
         this.workflowMetadata = new WorkflowMetadata(this, scriptFile)
 
         // configure script params
@@ -459,7 +466,7 @@ class Session implements ISession {
      * @return A list of {@link TraceObserver} objects or an empty list
      */
     @PackageScope
-    List<TraceObserver> createObservers() {
+    List createObservers() {
 
         final result = new ArrayList(10)
 
@@ -469,6 +476,11 @@ class Session implements ISession {
 
         for( TraceObserverFactory f : Plugins.getExtensions(TraceObserverFactory) ) {
             log.debug "Observer factory: ${f.class.simpleName}"
+            result.addAll(f.create(this))
+        }
+
+        for( TraceObserverFactoryV2 f : Plugins.getExtensions(TraceObserverFactoryV2) ) {
+            log.debug "Observer factory (v2): ${f.class.simpleName}"
             result.addAll(f.create(this))
         }
 
@@ -989,7 +1001,10 @@ class Session implements ISession {
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)
             try {
-                observer.onProcessCreate(process)
+                if( observer instanceof TraceObserver )
+                    observer.onProcessCreate(process)
+                else if( observer instanceof TraceObserverV2 )
+                    observer.onProcessCreate(process)
             }
             catch( Exception e ) {
                 log.debug(e.getMessage(), e)
@@ -1001,7 +1016,10 @@ class Session implements ISession {
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)
             try {
-                observer.onProcessTerminate(process)
+                if( observer instanceof TraceObserver )
+                    observer.onProcessTerminate(process)
+                else if( observer instanceof TraceObserverV2 )
+                    observer.onProcessTerminate(process)
             }
             catch( Exception e ) {
                 log.debug(e.getMessage(), e)
@@ -1014,7 +1032,10 @@ class Session implements ISession {
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)
             try {
-                observer.onProcessPending(handler, trace)
+                if( observer instanceof TraceObserver )
+                    observer.onProcessPending(handler, trace)
+                else if( observer instanceof TraceObserverV2 )
+                    observer.onTaskPending(new TaskEvent(handler, trace))
             }
             catch( Exception e ) {
                 log.debug(e.getMessage(), e)
@@ -1035,7 +1056,10 @@ class Session implements ISession {
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)
             try {
-                observer.onProcessSubmit(handler, trace)
+                if( observer instanceof TraceObserver )
+                    observer.onProcessSubmit(handler, trace)
+                else if( observer instanceof TraceObserverV2 )
+                    observer.onTaskSubmit(new TaskEvent(handler, trace))
             }
             catch( Exception e ) {
                 log.debug(e.getMessage(), e)
@@ -1051,7 +1075,10 @@ class Session implements ISession {
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)
             try {
-                observer.onProcessStart(handler, trace)
+                if( observer instanceof TraceObserver )
+                    observer.onProcessStart(handler, trace)
+                else if( observer instanceof TraceObserverV2 )
+                    observer.onTaskStart(new TaskEvent(handler, trace))
             }
             catch( Exception e ) {
                 log.debug(e.getMessage(), e)
@@ -1079,7 +1106,10 @@ class Session implements ISession {
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)
             try {
-                observer.onProcessComplete(handler, trace)
+                if( observer instanceof TraceObserver )
+                    observer.onProcessComplete(handler, trace)
+                else if( observer instanceof TraceObserverV2 )
+                    observer.onTaskComplete(new TaskEvent(handler, trace))
             }
             catch( Exception e ) {
                 log.debug(e.getMessage(), e)
@@ -1098,7 +1128,10 @@ class Session implements ISession {
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)
             try {
-                observer.onProcessCached(handler, trace)
+                if( observer instanceof TraceObserver )
+                    observer.onProcessCached(handler, trace)
+                else if( observer instanceof TraceObserverV2 )
+                    observer.onTaskCached(new TaskEvent(handler, trace))
             }
             catch( Exception e ) {
                 log.error(e.getMessage(), e)
@@ -1115,21 +1148,29 @@ class Session implements ISession {
     }
 
     void notifyFlowBegin() {
-        for( TraceObserver trace : observers ) {
-            trace.onFlowBegin()
+        for( final observer : observers ) {
+            if( observer instanceof TraceObserver )
+                observer.onFlowBegin()
+            else if( observer instanceof TraceObserverV2 )
+                observer.onFlowBegin()
         }
     }
 
     void notifyFlowCreate() {
-        for( TraceObserver trace : observers ) {
-            trace.onFlowCreate(this)
+        for( final observer : observers ) {
+            if( observer instanceof TraceObserver )
+                observer.onFlowCreate(this)
+            else if( observer instanceof TraceObserverV2 )
+                observer.onFlowCreate(this)
         }
     }
 
-    void notifyWorkflowPublish(String name, Object value) {
-        for( final observer : observers ) {
+    void notifyWorkflowOutput(WorkflowOutputEvent event) {
+        for ( int i=0; i<observers.size(); i++) {
+            final observer = observers.get(i)
             try {
-                observer.onWorkflowPublish(name, value)
+                if( observer instanceof TraceObserverV2 )
+                    observer.onWorkflowOutput(event)
             }
             catch( Exception e ) {
                 log.error "Failed to invoke observer on workflow publish: $observer", e
@@ -1137,11 +1178,14 @@ class Session implements ISession {
         }
     }
 
-    void notifyFilePublish(Path destination, Path source, Map annotations) {
-        def copy = new ArrayList<TraceObserver>(observers)
-        for( TraceObserver observer : copy  ) {
+    void notifyFilePublish(FilePublishEvent event) {
+        for ( int i=0; i<observers.size(); i++) {
+            final observer = observers.get(i)
             try {
-                observer.onFilePublish(destination, source, annotations)
+                if( observer instanceof TraceObserver )
+                    observer.onFilePublish(event.target, event.source)
+                else if( observer instanceof TraceObserverV2 )
+                    observer.onFilePublish(event)
             }
             catch( Exception e ) {
                 log.error "Failed to invoke observer on file publish: $observer", e
@@ -1150,10 +1194,12 @@ class Session implements ISession {
     }
 
     void notifyFlowComplete() {
-        def copy = new ArrayList<TraceObserver>(observers)
-        for( TraceObserver observer : copy  ) {
+        for ( int i=0; i<observers.size(); i++) {
+            final observer = observers.get(i)
             try {
-                if( observer )
+                if( observer instanceof TraceObserver )
+                    observer.onFlowComplete()
+                else if( observer instanceof TraceObserverV2 )
                     observer.onFlowComplete()
             }
             catch( Exception e ) {
@@ -1171,10 +1217,13 @@ class Session implements ISession {
     void notifyError( TaskHandler handler ) {
 
         final trace = handler?.safeTraceRecord()
-        for ( int i=0; i<observers?.size(); i++){
+        for ( int i=0; i<observers.size(); i++) {
+            final observer = observers.get(i)
             try{
-                final observer = observers.get(i)
-                observer.onFlowError(handler, trace)
+                if( observer instanceof TraceObserver )
+                    observer.onFlowError(handler, trace)
+                else if( observer instanceof TraceObserverV2 )
+                    observer.onFlowError(new TaskEvent(handler, trace))
             } catch ( Throwable e ) {
                 log.debug(e.getMessage(), e)
             }

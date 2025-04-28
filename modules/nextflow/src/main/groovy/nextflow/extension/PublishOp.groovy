@@ -25,6 +25,8 @@ import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.file.FileHelper
 import nextflow.processor.PublishDir
+import nextflow.trace.event.FilePublishEvent
+import nextflow.trace.event.WorkflowOutputEvent
 import nextflow.util.CsvWriter
 /**
  * Publish a workflow output.
@@ -93,14 +95,13 @@ class PublishOp {
             return
 
         // create publisher
-        final overrides = targetResolver instanceof Closure
-            ? [saveAs: targetResolver]
-            : [path: targetResolver]
+        final overrides = new LinkedHashMap()
+        if( targetResolver instanceof Closure )
+            overrides.saveAs = targetResolver
+        else
+            overrides.path = targetResolver
+        overrides.annotations = getAnnotations(publishOpts.annotations, value)
 
-        if( publishOpts.annotations instanceof Closure ) {
-            final annotations = publishOpts.annotations as Closure
-            overrides.annotations = annotations.call(value) as Map
-        }
         final publisher = PublishDir.create(publishOpts + overrides)
 
         // publish files
@@ -189,42 +190,53 @@ class PublishOp {
     }
 
     /**
-     * Once all values have been published, publish the index
-     * and write it to a file (if enabled).
+     * Get or resolve the annotations of a workflow output.
+     *
+     * @param annotations Map | Closure<Map>
+     * @param value
+     */
+    protected static Map getAnnotations(annotations, value) {
+        if( annotations instanceof Map )
+            return annotations
+        if( annotations instanceof Closure ) {
+            final result = annotations.call(value)
+            if( result instanceof Map )
+                return result
+        }
+        throw new ScriptRuntimeException("Invalid output `annotations` directive -- it should be either a Map or a closure that returns a Map")
+    }
+
+    /**
+     * Once all channel values have been published, publish the final
+     * workflow output and index file (if enabled).
      */
     protected void onComplete(nope) {
         // publish individual record if source is a value channel
-        final index = CH.isValue(source)
+        final value = CH.isValue(source)
             ? indexRecords.first()
             : indexRecords
 
         // publish workflow output
-        session.notifyWorkflowPublish(name, index)
+        final indexPath = indexOpts ? indexOpts.path : null
+        session.notifyWorkflowOutput(new WorkflowOutputEvent(name, null, value, indexPath))
 
-        // write index file
-        if( indexOpts && index ) {
-            log.trace "Saving records to index file: ${index}"
-            final indexPath = indexOpts.path
+        // write value to index file
+        if( indexOpts ) {
             final ext = indexPath.getExtension()
             indexPath.parent.mkdirs()
             if( ext == 'csv' ) {
                 new CsvWriter(header: indexOpts.header, sep: indexOpts.sep).apply(indexRecords, indexPath)
             }
             else if( ext == 'json' ) {
-                indexPath.text = DumpHelper.prettyPrintJson(index)
+                indexPath.text = DumpHelper.prettyPrintJson(value)
             }
             else if( ext == 'yaml' || ext == 'yml' ) {
-                indexPath.text = DumpHelper.prettyPrintYaml(index)
+                indexPath.text = DumpHelper.prettyPrintYaml(value)
             }
             else {
                 log.warn "Invalid extension '${ext}' for index file '${indexPath}' -- should be CSV, JSON, or YAML"
             }
-            def annotations = publishOpts.annotations
-            if( publishOpts.annotations instanceof Closure ) {
-                final annotationClosure = publishOpts.annotations as Closure
-                annotations = annotationClosure.call() as Map
-            }
-            session.notifyFilePublish(indexPath, null, annotations as Map)
+            session.notifyFilePublish(new FilePublishEvent(null, indexPath))
         }
 
         log.trace "Publish operator complete"
