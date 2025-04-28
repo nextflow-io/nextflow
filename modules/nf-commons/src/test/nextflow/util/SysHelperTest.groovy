@@ -88,8 +88,8 @@ class SysHelperTest extends Specification {
 
         where:
         dateInMilis | locale | expected
-        1470901220000  | 'en' | '11-Aug-2016 09:40'
-        1470901220000  | 'es' | '11-Aug-2016 09:40'
+        1470901220000  | 'en' | '11-Aug-2016 09:40 +0200'
+        1470901220000  | 'es' | '11-Aug-2016 09:40 +0200'
     }
 
 }
