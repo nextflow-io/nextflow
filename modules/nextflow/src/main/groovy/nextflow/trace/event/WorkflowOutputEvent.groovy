@@ -34,10 +34,6 @@ class WorkflowOutputEvent {
      */
     String name
     /**
-     * The type of the workflow output.
-     */
-    String type
-    /**
      * The value of the workflow output. It will be null if the index file was specified.
      */
     Object value

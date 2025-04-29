@@ -527,7 +527,7 @@ class LinObserverTest extends Specification {
             Files.createDirectories(sourceFile1.parent)
             sourceFile1.text = 'some data1'
             observer.onFilePublish(new FilePublishEvent(sourceFile1, outFile1))
-            observer.onWorkflowOutput(new WorkflowOutputEvent("a", null, outFile1))
+            observer.onWorkflowOutput(new WorkflowOutputEvent("a", outFile1))
 
         then: 'check file 1 output metadata in lid store'
             def attrs1 = Files.readAttributes(outFile1, BasicFileAttributes)
@@ -544,7 +544,7 @@ class LinObserverTest extends Specification {
             def attrs2 = Files.readAttributes(outFile2, BasicFileAttributes)
             def fileHash2 = CacheHelper.hasher(outFile2).hash().toString()
             observer.onFilePublish(new FilePublishEvent(null, outFile2))
-            observer.onWorkflowOutput(new WorkflowOutputEvent("b", null, outFile2))
+            observer.onWorkflowOutput(new WorkflowOutputEvent("b", outFile2))
         then: 'Check outFile2 metadata in lid store'
             def output2 = new FileOutput(outFile2.toString(), new Checksum(fileHash2, "nextflow", "standard"),
                 "lid://${observer.executionHash}" , "lid://${observer.executionHash}", null,

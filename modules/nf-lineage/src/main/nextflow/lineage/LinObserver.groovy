@@ -389,7 +389,7 @@ class LinObserver implements TraceObserverV2 {
 
     @Override
     void onWorkflowOutput(WorkflowOutputEvent event) {
-        final type = event.type ?: getParameterType(event.value)
+        final type = getParameterType(event.value)
         workflowOutput.output.add(new Parameter(type, event.name, convertPathsToLidReferences(event.value)))
     }
 

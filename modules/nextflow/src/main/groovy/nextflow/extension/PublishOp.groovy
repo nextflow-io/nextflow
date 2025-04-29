@@ -220,7 +220,7 @@ class PublishOp {
 
         // publish workflow output
         final indexPath = indexOpts ? indexOpts.path : null
-        session.notifyWorkflowOutput(new WorkflowOutputEvent(name, null, value, indexPath))
+        session.notifyWorkflowOutput(new WorkflowOutputEvent(name, value, indexPath))
 
         // write value to index file
         if( indexOpts ) {
