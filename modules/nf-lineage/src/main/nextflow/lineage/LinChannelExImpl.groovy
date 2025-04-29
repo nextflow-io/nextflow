@@ -37,11 +37,7 @@ class LinChannelExImpl implements LinChannelEx {
 
     Object viewLineage(Session session, String lid) {
         final store = getStore(session)
-        final results = LinUtils.query(store, new URI(lid))
-        if( !results ) {
-            throw new FileNotFoundException("No entry found for $lid")
-        }
-        return LinUtils.encodeSearchOutputs(results.size() == 1 ? results[0] : results)
+        return store.load(LinPathFactory.create(lid).toString())
     }
 
     void queryLineage(Session session, DataflowWriteChannel channel, Map<String, String> params) {

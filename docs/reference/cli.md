@@ -732,10 +732,10 @@ View a metadata description fragment. A fragment can be a property of a metadata
 $ nextflow lineage view <lid#fragment>
 ```
 
-Find a specific metadata description that matches a URL-like query string. The query string consists of `key=value` statements separated by `&`, where keys are defined similarly to the `fragments` used in the `view` command.
+Find a specific metadata description that matches to a set of key-value parameters. Keys are defined similarly to the `fragments` used in the `view` command.
 
 ```console
-$ nextflow lineage find "<query-string>"
+$ nextflow lineage find <key-1>=<value-1> <key-2>=<value-2> ...
 ```
 
 Display a git-style diff between two metadata descriptions.

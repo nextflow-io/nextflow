@@ -59,7 +59,7 @@ class LinChannelExImplTest extends Specification {
         configMap = [linage: [enabled: true, store: [location: storeLocation.toString()]]]
     }
 
-    def 'should get metadata fragment'() {
+    def 'should get metadata'() {
 
         given:
         def uniqueId = UUID.randomUUID()
@@ -84,21 +84,15 @@ class LinChannelExImplTest extends Specification {
         then:
         channelLinExt.getStore(session) >> lidStore
         and:
-        results == LinUtils.encodeSearchOutputs(value1)
+        results == value1
 
-        when:
-        results = channelLinExt.viewLineage(session, 'lid://testKey#params')
-        then:
-        channelLinExt.getStore(session) >> lidStore
-        and:
-        results == LinUtils.encodeSearchOutputs(params)
 
         when:
         results = channelLinExt.viewLineage(session, 'lid://testKey#output')
         then:
         channelLinExt.getStore(session) >> lidStore
         and:
-        results == LinUtils.encodeSearchOutputs(outputs)
+        results == wfOutputs
     }
 
     def 'should return global query results' () {

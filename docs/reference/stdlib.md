@@ -235,6 +235,11 @@ The following functions are available in Nextflow scripts:
 `groupKey( key, size: int ) -> GroupKey`
 : Create a grouping key to use with the {ref}`operator-grouptuple` operator.
 
+`lineage( lid ) -> LinSerializable`
+: :::{versionadded} 25.04.0
+: :::
+: Get the Lineage metadata object
+
 `multiMapCriteria( criteria: Closure ) -> Closure`
 : Create a multi-map criteria to use with the {ref}`operator-multiMap` operator.
 

@@ -13,7 +13,7 @@ interface LinChannelEx {
      *
      * @param session Nextflow Session
      * @param lid Lineage Id to view
-     * @return Lineage metadata content
+     * @return Lineage metadata object
      */
     Object viewLineage(Session session, String lid)
 

@@ -1246,22 +1246,4 @@ class OperatorImpl {
                 .apply()
                 .getOutput()
     }
-
-    /**
-     * Transform the Lineage ID items emitted in the source channel by its lineage metadata description
-     *
-     * @param channel Source channel with emitted lineage IDs
-     * @return
-     */
-    DataflowWriteChannel lineage(final DataflowReadChannel source) {
-        assert source != null
-        final operation = Plugins.getExtension(LinChannelEx)
-        if( !operation )
-            throw new IllegalStateException("Unable to load lineage extensions.")
-        final closure = { operation.viewLineage(session, it) }
-        return new MapOp(source, closure).apply()
-    }
-
-
-
 }

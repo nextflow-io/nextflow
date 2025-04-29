@@ -405,6 +405,40 @@ Y
 
 See also: [channel.fromList](#fromlist) factory method.
 
+(channel-query-lineage)=
+
+## queryLineage
+
+:::{versionadded} 25.04.0
+:::
+
+:::{warning} *Experimental: may change in a future release.*
+:::
+
+The `channel.queryLineage` method allows you to create a channel that emits the IDs of the lineage metadata objects matching with a set of key-value parameters passed as arguments of the method.
+
+The following snippet shows how to create a channel (`ch`) using this method. It searches for `FileOutputs` annotated with the value 'test'. 
+The result is a set of Lineage IDs (lid) that can be consumed by processes as `path` or inspected with the `lineage` function. 
+
+```nextflow
+ process foo {
+    input:
+        path('output_file')
+ 
+    // ...
+ }
+ 
+ workflow {
+    ch = channel
+    .queryLineage('type': 'FileOutput', 'annotations.value': 'test')
+    
+    foo(ch)
+    
+    ch.map { lid -> lineage(lid) }
+ }
+
+```
+
 (channel-topic)=
 
 ## topic
