@@ -390,7 +390,8 @@ class LinObserver implements TraceObserverV2 {
     @Override
     void onWorkflowOutput(WorkflowOutputEvent event) {
         final type = getParameterType(event.value)
-        workflowOutput.output.add(new Parameter(type, event.name, convertPathsToLidReferences(event.value)))
+        final value = convertPathsToLidReferences(event.index ?: event.value)
+        workflowOutput.output.add(new Parameter(type, event.name, value))
     }
 
     protected static String getParameterType(Object param) {
@@ -422,11 +423,9 @@ class LinObserver implements TraceObserverV2 {
                 return value
             }
         }
-
         if( value instanceof Collection ) {
             return value.collect { el -> convertPathsToLidReferences(el) }
         }
-
         if( value instanceof Map ) {
             return value
                 .findAll { k, v -> v != null }
