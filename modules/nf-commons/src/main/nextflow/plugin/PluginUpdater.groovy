@@ -221,13 +221,20 @@ class PluginUpdater extends UpdateManager {
         // 2. download to temporary location
         Path downloaded = safeDownloadPlugin(id, version);
 
-        // 3. unzip the content and delete downloaded file
+        // 3. rename if filename is sha digest
+        if ( downloaded.getFileName().toString().startsWith("sha256:")) {
+            // file has been downloaded from an OCI registry, rename it to something meaningful
+            def targetName = downloaded.resolveSibling("${pluginPath.getFileName()}.zip")
+            if ( !Files.move(downloaded, targetName) ) throw new PluginRuntimeException("Failed to rename '$downloaded'")
+            downloaded = targetName
+        }
+
+        // 4. unzip the content and delete downloaded file
         Path dir = FileUtils.expandIfZip(downloaded)
         FileHelper.deletePath(downloaded)
 
-        // 4. move the final destination the plugin directory
+        // 5. move the final destination the plugin directory
         assert pluginPath.getFileName() == dir.getFileName()
-
         try {
             safeMove(dir, pluginPath)
         }
