@@ -316,7 +316,7 @@ class LinUtils {
      * @param output Output to encode
      * @return Output encoded as a JSON string
      */
-    static String encodeSearchOutputs(Object output, boolean prettyPrint = false) {
+    static String encodeSearchOutputs(Object output, boolean prettyPrint) {
         if (output instanceof LinSerializable) {
             return new LinEncoder().withPrettyPrint(prettyPrint).encode(output)
         } else {
