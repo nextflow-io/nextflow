@@ -254,6 +254,7 @@ class Session implements ISession {
 
     private int poolSize
 
+    @Deprecated
     private List<TraceObserver> observersV1 = Collections.emptyList()
 
     private List<TraceObserverV2> observersV2 = Collections.emptyList()
