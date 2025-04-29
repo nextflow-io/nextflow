@@ -512,7 +512,7 @@ throw new Exception('something failed!')
 ```
 
 :::{note}
-In general, the appropriate way to raise an error is to use the {ref}`error <stdlib-functions>` function:
+In general, the appropriate way to raise an error is to use the {ref}`error <stdlib-namespaces-global>` function:
 ```nextflow
 error 'something failed!'
 ```
