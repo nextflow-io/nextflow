@@ -17,6 +17,7 @@
 package nextflow.lineage.cli
 
 import static nextflow.lineage.fs.LinPath.*
+import static nextflow.lineage.LinUtils.*
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
@@ -319,7 +320,10 @@ class LinCommandImpl implements CmdLineage.LinCommand {
             return
         }
         try {
-            println LinUtils.encodeSearchOutputs(store.search(args[0]).keySet().collect {asUriString(it)}, true)
+            final params = args.collectEntries {
+                it.split('=').collect { URLDecoder.decode(it, 'UTF-8') }
+            } as Map<String, String>
+            println LinUtils.encodeSearchOutputs( store.search(params).keySet().collect { asUriString(it) }, true )
         } catch (Throwable e){
             println "Error searching for ${args[0]}. ${e.message}"
         }

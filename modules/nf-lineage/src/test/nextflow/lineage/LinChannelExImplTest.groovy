@@ -39,12 +39,14 @@ import spock.lang.TempDir
 
 import java.time.ZoneOffset
 
+import static nextflow.lineage.fs.LinPath.*
+
 /**
  * Lineage channel extensions tests
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
-class LinChanneExImplTest extends Specification {
+class LinChannelExImplTest extends Specification {
 
     @TempDir
     Path tempDir
@@ -75,26 +77,28 @@ class LinChanneExImplTest extends Specification {
         lidStore.open(LineageConfig.create(session))
         lidStore.save(key, value1)
         lidStore.save("$key#output", wfOutputs)
-        def channelLinExt = Spy(new LinChanneExImpl())
+        def channelLinExt = Spy(new LinChannelExImpl())
 
         when:
-        def results = CH.create()
-        channelLinExt.viewLineage(session, results, new URI('lid://testKey#params'))
+        def results = channelLinExt.viewLineage(session, 'lid://testKey')
         then:
         channelLinExt.getStore(session) >> lidStore
         and:
-        results.val == LinUtils.encodeSearchOutputs(params[0])
-        results.val == LinUtils.encodeSearchOutputs(params[1])
-        results.val == Channel.STOP
+        results == LinUtils.encodeSearchOutputs(value1)
 
         when:
-        results = CH.create()
-        channelLinExt.viewLineage(session, results, new URI('lid://testKey#output'))
+        results = channelLinExt.viewLineage(session, 'lid://testKey#params')
         then:
         channelLinExt.getStore(session) >> lidStore
         and:
-        results.val == LinUtils.encodeSearchOutputs(outputs[0])
-        results.val == Channel.STOP
+        results == LinUtils.encodeSearchOutputs(params)
+
+        when:
+        results = channelLinExt.viewLineage(session, 'lid://testKey#output')
+        then:
+        channelLinExt.getStore(session) >> lidStore
+        and:
+        results == LinUtils.encodeSearchOutputs(outputs)
     }
 
     def 'should return global query results' () {
@@ -120,25 +124,15 @@ class LinChanneExImplTest extends Specification {
         lidStore.save(key2, value2)
         lidStore.save(key3, value3)
         lidStore.save(key4, value4)
-        def channelLinExt = Spy(new LinChanneExImpl())
+        def channelLinExt = Spy(new LinChannelExImpl())
         when:
         def results = CH.create()
-        channelLinExt.viewLineage(session, results, new URI("cid:///?type=FileOutput&annotations.key=key2&annotations.value=value2"))
+        channelLinExt.queryLineage(session, results, [ "type":"FileOutput", "annotations.key":"key2", "annotations.value":"value2" ])
         then:
         channelLinExt.getStore(session) >> lidStore
         and:
-        results.val == LinUtils.encodeSearchOutputs(value2)
-        results.val == LinUtils.encodeSearchOutputs(value3)
-        results.val == Channel.STOP
-
-        when:
-        results = CH.create()
-        channelLinExt.viewLineage(session, results, new URI("cid:///?type=FileOutput&annotations.key=key2&annotations.value=value2#path"))
-        then:
-        channelLinExt.getStore(session) >> lidStore
-        and:
-        results.val == '"/path/tp/file1"'
-        results.val == '"/path/tp/file2"'
+        results.val == asUriString(key2)
+        results.val == asUriString(key3)
         results.val == Channel.STOP
     }
 }

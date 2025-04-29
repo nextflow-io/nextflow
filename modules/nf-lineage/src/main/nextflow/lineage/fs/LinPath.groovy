@@ -20,7 +20,6 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.file.FileHelper
 import nextflow.file.LogicalDataPath
-import nextflow.file.QueryablePath
 import nextflow.lineage.model.Checksum
 import nextflow.lineage.model.FileOutput
 import nextflow.lineage.serde.LinSerializable
@@ -46,7 +45,7 @@ import java.time.OffsetDateTime
  */
 @Slf4j
 @CompileStatic
-class LinPath implements Path, LogicalDataPath, QueryablePath {
+class LinPath implements Path, LogicalDataPath {
 
     static public final List<String> SUPPORTED_CHECKSUM_ALGORITHMS = ["nextflow"]
     static public final String SEPARATOR = '/'
@@ -513,42 +512,6 @@ class LinPath implements Path, LogicalDataPath, QueryablePath {
     @Override
     String toString() {
         return "$filePath${query ? '?' + query : ''}${fragment ? '#' + fragment : ''}".toString()
-    }
-
-    @Override
-    boolean hasQuery() {
-        //Lin path is a query when is root (no filepath or /) and has the query field
-        return (filePath.isEmpty() || filePath == SEPARATOR) && query && fileSystem
-    }
-
-    @Override
-    List<Path> resolveQuery() {
-        final store = fileSystem.getStore()
-        if( !store )
-            throw new Exception("Lineage store not found - Check Nextflow configuration")
-        final results = store.search(query)
-        return parseResults(results)
-    }
-
-    private List<Path> parseResults(Map<String, LinSerializable> results) {
-        if( !results )
-            throw new FileNotFoundException("No files found for ${this.toUriString()}")
-        final List<Path> parsedResults = []
-        for( def res : results ) {
-            parsedResults << parseResult(res.key, res.value)
-        }
-        return parsedResults
-    }
-
-    private Path parseResult(String key, LinSerializable object) {
-        if( fragment )
-            return getSubObjectAsPath(fileSystem, key, object, parseChildrenFromFragment(fragment))
-
-        if( object instanceof FileOutput ) {
-            return new LinPath(fileSystem, key)
-        } else {
-            return generateLinMetadataPath(fileSystem, key, object, null)
-        }
     }
 
 }

@@ -87,7 +87,6 @@ class LinObserver implements TraceObserver {
     private Session session
     private WorkflowOutput workflowOutput
     private Map<String,String> outputsStoreDirLid = new HashMap<String,String>(10)
-    private Set<String> publishedFiles = new HashSet<String>()
     private PathNormalizer normalizer
 
     LinObserver(Session session, LinStore store){
@@ -125,10 +124,6 @@ class LinObserver implements TraceObserver {
     @Override
     void onFlowComplete(){
         if (this.workflowOutput){
-            //Add publishedFiles
-            for (String path: publishedFiles){
-                workflowOutput.output.add(new Parameter(Path.simpleName, null, path))
-            }
             workflowOutput.createdAt = OffsetDateTime.now()
             final key = executionHash + '#output'
             this.store.save(key, workflowOutput)
@@ -365,7 +360,6 @@ class LinObserver implements TraceObserver {
                 LinUtils.toDate(attrs?.lastModifiedTime()),
                 convertAnnotations(annotations))
             store.save(key, value)
-            publishedFiles.add(asUriString(key))
         } catch (Throwable e) {
             log.warn("Unexpected error storing published file '${destination.toUriString()}' for workflow '${executionHash}'", e)
         }
@@ -417,9 +411,8 @@ class LinObserver implements TraceObserver {
     private Object convertPathsToLidReferences(Object value){
         if( value instanceof Path ) {
             try {
-                final key = asUriString(getWorkflowOutputKey(value))
-                publishedFiles.remove(key)
-                return key
+                final key = getWorkflowOutputKey(value)
+                return asUriString(key)
             } catch (Throwable e){
                 //Workflow output key not found
                 return value

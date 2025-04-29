@@ -33,22 +33,24 @@ import nextflow.lineage.serde.LinSerializable
  */
 @CompileStatic
 @Slf4j
-class LinChanneExImpl implements LinChannelEx{
+class LinChannelExImpl implements LinChannelEx {
 
-    void viewLineage(Session session, DataflowWriteChannel channel, URI uri) {
+    Object viewLineage(Session session, String lid) {
         final store = getStore(session)
-        emitResults(channel, LinUtils.query(store, uri))
+        final results = LinUtils.query(store, new URI(lid))
+        if( !results ) {
+            throw new FileNotFoundException("No entry found for $lid")
+        }
+        return LinUtils.encodeSearchOutputs(results.size() == 1 ? results[0] : results)
+    }
+
+    void queryLineage(Session session, DataflowWriteChannel channel, Map<String, String> params) {
+        final store = getStore(session)
+        emitSearchResults(channel, store.search(params))
         channel.bind(Channel.STOP)
     }
 
-    void queryLineage(Session session, DataflowWriteChannel channel, String query) {
-        final store = getStore(session)
-        emitSearchResults(channel, store.search(query))
-        channel.bind(Channel.STOP)
-    }
-
-
-    protected LinStore getStore(Session session){
+    protected LinStore getStore(Session session) {
         final store = LinStoreFactory.getOrCreate(session)
         if( !store ) {
             throw new Exception("Lineage store not found - Check Nextflow configuration")
@@ -56,26 +58,10 @@ class LinChanneExImpl implements LinChannelEx{
         return store
     }
 
-    private static void emitResults(DataflowWriteChannel channel, Collection results){
-        if( !results ) {
-            return
-        }
-        // Remove nested collections of a single element
-        if( results.size() == 1 ) {
-            final entry = results[0]
-            if( entry instanceof Collection ) {
-                emitResults(channel, entry)
-            } else {
-                channel.bind(LinUtils.encodeSearchOutputs(entry))
-            }
-        } else
-            results.forEach { channel.bind(LinUtils.encodeSearchOutputs(it)) }
-    }
-
     private void emitSearchResults(DataflowWriteChannel channel, Map<String, LinSerializable> results) {
         if( !results ) {
             return
         }
-        results.keySet().forEach { channel.bind(LinPathFactory.create(LinPath.LID_PROT + it)) }
+        results.keySet().forEach { channel.bind(LinPath.LID_PROT + it) }
     }
 }

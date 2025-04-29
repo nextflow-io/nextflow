@@ -36,6 +36,7 @@ import nextflow.Channel
 import nextflow.Global
 import nextflow.NF
 import nextflow.Session
+import nextflow.plugin.Plugins
 import nextflow.script.ChannelOut
 import nextflow.script.TokenBranchDef
 import nextflow.script.TokenMultiMapDef
@@ -1245,5 +1246,22 @@ class OperatorImpl {
                 .apply()
                 .getOutput()
     }
+
+    /**
+     * Transform the items emitted by a channel by applying a function to each of them
+     *
+     * @param channel
+     * @return
+     */
+    DataflowWriteChannel lineage(final DataflowReadChannel source) {
+        assert source != null
+        final operation = Plugins.getExtension(LinChannelEx)
+        if( !operation )
+            throw new IllegalStateException("Unable to load lineage extensions.")
+        final closure = { operation.viewLineage(session, it) }
+        return new MapOp(source, closure).apply()
+    }
+
+
 
 }

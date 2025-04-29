@@ -660,41 +660,22 @@ class Channel  {
         fromPath0Future = future.exceptionally(Channel.&handlerException)
     }
 
-    static DataflowWriteChannel fromLineage(String uri) {
+    static DataflowWriteChannel queryLineage(Map<String,String> params) {
         final result = CH.create()
         if( NF.isDsl2() ) {
-            session.addIgniter { fromLineage0(result, uri) }
+            session.addIgniter { queryLineage0(result, params) }
         }
         else {
-            fromLineage0(result, uri )
+            queryLineage0(result, params )
         }
         return result
     }
 
-    private static void fromLineage0(DataflowWriteChannel channel, String uri) {
+    private static void queryLineage0(DataflowWriteChannel channel, Map<String,String> params) {
         final operation = Plugins.getExtension(LinChannelEx)
         if( !operation )
             throw new IllegalStateException("Unable to load lineage extensions.")
-        def future = CompletableFuture.runAsync( { operation.viewLineage(session, channel, new URI(uri)) } as Runnable)
-        future.exceptionally(this.&handlerException)
-    }
-
-    static DataflowWriteChannel queryLineage(String queryString) {
-        final result = CH.create()
-        if( NF.isDsl2() ) {
-            session.addIgniter { queryLineage0(result, queryString) }
-        }
-        else {
-            queryLineage0(result, queryString )
-        }
-        return result
-    }
-
-    private static void queryLineage0(DataflowWriteChannel channel, String query) {
-        final operation = Plugins.getExtension(LinChannelEx)
-        if( !operation )
-            throw new IllegalStateException("Unable to load lineage extensions.")
-        def future = CompletableFuture.runAsync( { operation.queryLineage(session, channel, query) } as Runnable)
+        def future = CompletableFuture.runAsync( { operation.queryLineage(session, channel, params) } as Runnable)
         future.exceptionally(this.&handlerException)
     }
 

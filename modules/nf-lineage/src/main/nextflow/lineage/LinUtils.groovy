@@ -62,7 +62,7 @@ class LinUtils {
     }
 
     private static Collection<LinSerializable> globalSearch(LinStore store, URI uri) {
-        final results = store.search(uri.query).values()
+        final results = store.search(parseQuery(uri.query)).values()
         if (results && uri.fragment) {
             // If fragment is defined get the property of the object indicated by the fragment
             return filterResults(results, uri.fragment)
