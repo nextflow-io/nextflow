@@ -114,18 +114,25 @@ fusion
 
 ```{toctree}
 :hidden:
-:caption: Reference
+:caption: Language Reference
 :maxdepth: 1
 
-reference/syntax
-reference/cli
-reference/config
-reference/env-vars
 reference/feature-flags
+reference/syntax
 reference/stdlib
 reference/process
 reference/channel
 reference/operator
+```
+
+```{toctree}
+:hidden:
+:caption: Runtime Reference
+:maxdepth: 1
+
+reference/cli
+reference/config
+reference/env-vars
 ```
 
 ```{toctree}
