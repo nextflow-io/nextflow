@@ -22,6 +22,7 @@ import java.nio.file.Paths
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.function.Consumer
 
 import com.google.common.hash.HashCode
 import groovy.transform.CompileDynamic
@@ -253,7 +254,9 @@ class Session implements ISession {
 
     private int poolSize
 
-    private List observers = Collections.emptyList()
+    private List<TraceObserver> observersV1 = Collections.emptyList()
+
+    private List<TraceObserverV2> observersV2 = Collections.emptyList()
 
     private Closure errorAction
 
@@ -435,10 +438,9 @@ class Session implements ISession {
         this.disableRemoteBinDir = getExecConfigProp(null, 'disableRemoteBinDir', false)
         this.classesDir = FileHelper.createLocalDir()
         this.executorFactory = new ExecutorFactory(Plugins.manager)
-        this.observers = createObservers()
-        this.statsEnabled = observers.any { ob ->
-            (ob instanceof TraceObserver && ob.enableMetrics()) || (ob instanceof TraceObserverV2 && ob.enableMetrics())
-        }
+        this.observersV1 = createObservers()
+        this.observersV2 = createObserversV2()
+        this.statsEnabled = observersV1.any { ob -> ob.enableMetrics() } || observersV2.any { ob -> ob.enableMetrics() }
         this.workflowMetadata = new WorkflowMetadata(this, scriptFile)
 
         // configure script params
@@ -466,7 +468,7 @@ class Session implements ISession {
      * @return A list of {@link TraceObserver} objects or an empty list
      */
     @PackageScope
-    List createObservers() {
+    List<TraceObserver> createObservers() {
 
         final result = new ArrayList(10)
 
@@ -479,14 +481,18 @@ class Session implements ISession {
             result.addAll(f.create(this))
         }
 
+        return result
+    }
+
+    @PackageScope
+    List<TraceObserverV2> createObserversV2() {
+        final result = new ArrayList(10)
         for( TraceObserverFactoryV2 f : Plugins.getExtensions(TraceObserverFactoryV2) ) {
             log.debug "Observer factory (v2): ${f.class.simpleName}"
             result.addAll(f.create(this))
         }
-
         return result
     }
-
 
     /*
      * intercepts interruption signal i.e. CTRL+C
@@ -983,6 +989,7 @@ class Session implements ISession {
         errorMessage << message.toString()
         return false
     }
+
     /**
      * Register a shutdown hook to close services when the session terminates
      * @param Closure
@@ -998,49 +1005,19 @@ class Session implements ISession {
     }
 
     void notifyProcessCreate(TaskProcessor process) {
-        for( int i=0; i<observers.size(); i++ ) {
-            final observer = observers.get(i)
-            try {
-                if( observer instanceof TraceObserver )
-                    observer.onProcessCreate(process)
-                else if( observer instanceof TraceObserverV2 )
-                    observer.onProcessCreate(process)
-            }
-            catch( Exception e ) {
-                log.debug(e.getMessage(), e)
-            }
-        }
+        notifyAll(observersV1, ob -> ob.onProcessCreate(process))
+        notifyAll(observersV2, ob -> ob.onProcessCreate(process))
     }
 
     void notifyProcessTerminate(TaskProcessor process) {
-        for( int i=0; i<observers.size(); i++ ) {
-            final observer = observers.get(i)
-            try {
-                if( observer instanceof TraceObserver )
-                    observer.onProcessTerminate(process)
-                else if( observer instanceof TraceObserverV2 )
-                    observer.onProcessTerminate(process)
-            }
-            catch( Exception e ) {
-                log.debug(e.getMessage(), e)
-            }
-        }
+        notifyAll(observersV1, ob -> ob.onProcessTerminate(process))
+        notifyAll(observersV2, ob -> ob.onProcessTerminate(process))
     }
 
     void notifyTaskPending( TaskHandler handler ) {
         final trace = handler.getTraceRecord()
-        for( int i=0; i<observers.size(); i++ ) {
-            final observer = observers.get(i)
-            try {
-                if( observer instanceof TraceObserver )
-                    observer.onProcessPending(handler, trace)
-                else if( observer instanceof TraceObserverV2 )
-                    observer.onTaskPending(new TaskEvent(handler, trace))
-            }
-            catch( Exception e ) {
-                log.debug(e.getMessage(), e)
-            }
-        }
+        notifyAll(observersV1, ob -> ob.onProcessPending(handler, trace))
+        notifyAll(observersV2, ob -> ob.onTaskPending(new TaskEvent(handler, trace)))
     }
 
     /**
@@ -1053,18 +1030,8 @@ class Session implements ISession {
         cache.putIndexAsync(handler)
 
         final trace = handler.getTraceRecord()
-        for( int i=0; i<observers.size(); i++ ) {
-            final observer = observers.get(i)
-            try {
-                if( observer instanceof TraceObserver )
-                    observer.onProcessSubmit(handler, trace)
-                else if( observer instanceof TraceObserverV2 )
-                    observer.onTaskSubmit(new TaskEvent(handler, trace))
-            }
-            catch( Exception e ) {
-                log.debug(e.getMessage(), e)
-            }
-        }
+        notifyAll(observersV1, ob -> ob.onProcessSubmit(handler, trace))
+        notifyAll(observersV2, ob -> ob.onTaskSubmit(new TaskEvent(handler, trace)))
     }
 
     /**
@@ -1072,18 +1039,8 @@ class Session implements ISession {
      */
     void notifyTaskStart( TaskHandler handler ) {
         final trace = handler.getTraceRecord()
-        for( int i=0; i<observers.size(); i++ ) {
-            final observer = observers.get(i)
-            try {
-                if( observer instanceof TraceObserver )
-                    observer.onProcessStart(handler, trace)
-                else if( observer instanceof TraceObserverV2 )
-                    observer.onTaskStart(new TaskEvent(handler, trace))
-            }
-            catch( Exception e ) {
-                log.debug(e.getMessage(), e)
-            }
-        }
+        notifyAll(observersV1, ob -> ob.onProcessStart(handler, trace))
+        notifyAll(observersV2, ob -> ob.onTaskStart(new TaskEvent(handler, trace)))
     }
 
     /**
@@ -1102,19 +1059,8 @@ class Session implements ISession {
             failOnIgnore = true
         }
 
-        // notify the event to the observers
-        for( int i=0; i<observers.size(); i++ ) {
-            final observer = observers.get(i)
-            try {
-                if( observer instanceof TraceObserver )
-                    observer.onProcessComplete(handler, trace)
-                else if( observer instanceof TraceObserverV2 )
-                    observer.onTaskComplete(new TaskEvent(handler, trace))
-            }
-            catch( Exception e ) {
-                log.debug(e.getMessage(), e)
-            }
-        }
+        notifyAll(observersV1, ob -> ob.onProcessComplete(handler, trace))
+        notifyAll(observersV2, ob -> ob.onTaskComplete(new TaskEvent(handler, trace)))
     }
 
     void notifyTaskCached( TaskHandler handler ) {
@@ -1125,18 +1071,8 @@ class Session implements ISession {
             cache.cacheTaskAsync(handler)
         }
 
-        for( int i=0; i<observers.size(); i++ ) {
-            final observer = observers.get(i)
-            try {
-                if( observer instanceof TraceObserver )
-                    observer.onProcessCached(handler, trace)
-                else if( observer instanceof TraceObserverV2 )
-                    observer.onTaskCached(new TaskEvent(handler, trace))
-            }
-            catch( Exception e ) {
-                log.error(e.getMessage(), e)
-            }
-        }
+        notifyAll(observersV1, ob -> ob.onProcessCached(handler, trace))
+        notifyAll(observersV2, ob -> ob.onTaskCached(new TaskEvent(handler, trace)))
     }
 
     void notifyBeforeWorkflowExecution() {
@@ -1148,64 +1084,27 @@ class Session implements ISession {
     }
 
     void notifyFlowBegin() {
-        for( final observer : observers ) {
-            if( observer instanceof TraceObserver )
-                observer.onFlowBegin()
-            else if( observer instanceof TraceObserverV2 )
-                observer.onFlowBegin()
-        }
+        notifyAll(observersV1, ob -> ob.onFlowBegin())
+        notifyAll(observersV2, ob -> ob.onFlowBegin())
     }
 
     void notifyFlowCreate() {
-        for( final observer : observers ) {
-            if( observer instanceof TraceObserver )
-                observer.onFlowCreate(this)
-            else if( observer instanceof TraceObserverV2 )
-                observer.onFlowCreate(this)
-        }
+        notifyAll(observersV1, ob -> ob.onFlowCreate(this))
+        notifyAll(observersV2, ob -> ob.onFlowCreate(this))
     }
 
     void notifyWorkflowOutput(WorkflowOutputEvent event) {
-        for ( int i=0; i<observers.size(); i++) {
-            final observer = observers.get(i)
-            try {
-                if( observer instanceof TraceObserverV2 )
-                    observer.onWorkflowOutput(event)
-            }
-            catch( Exception e ) {
-                log.error "Failed to invoke observer on workflow publish: $observer", e
-            }
-        }
+        notifyAll(observersV2, ob -> ob.onWorkflowOutput(event))
     }
 
     void notifyFilePublish(FilePublishEvent event) {
-        for ( int i=0; i<observers.size(); i++) {
-            final observer = observers.get(i)
-            try {
-                if( observer instanceof TraceObserver )
-                    observer.onFilePublish(event.target, event.source)
-                else if( observer instanceof TraceObserverV2 )
-                    observer.onFilePublish(event)
-            }
-            catch( Exception e ) {
-                log.error "Failed to invoke observer on file publish: $observer", e
-            }
-        }
+        notifyAll(observersV1, ob -> ob.onFilePublish(event.target, event.source))
+        notifyAll(observersV2, ob -> ob.onFilePublish(event))
     }
 
     void notifyFlowComplete() {
-        for ( int i=0; i<observers.size(); i++) {
-            final observer = observers.get(i)
-            try {
-                if( observer instanceof TraceObserver )
-                    observer.onFlowComplete()
-                else if( observer instanceof TraceObserverV2 )
-                    observer.onFlowComplete()
-            }
-            catch( Exception e ) {
-                log.debug "Failed to invoke observer completion handler: $observer", e
-            }
-        }
+        notifyAll(observersV1, ob -> ob.onFlowComplete())
+        notifyAll(observersV2, ob -> ob.onFlowComplete())
     }
 
     /**
@@ -1217,17 +1116,8 @@ class Session implements ISession {
     void notifyError( TaskHandler handler ) {
 
         final trace = handler?.safeTraceRecord()
-        for ( int i=0; i<observers.size(); i++) {
-            final observer = observers.get(i)
-            try{
-                if( observer instanceof TraceObserver )
-                    observer.onFlowError(handler, trace)
-                else if( observer instanceof TraceObserverV2 )
-                    observer.onFlowError(new TaskEvent(handler, trace))
-            } catch ( Throwable e ) {
-                log.debug(e.getMessage(), e)
-            }
-        }
+        notifyAll(observersV1, ob -> ob.onFlowError(handler, trace))
+        notifyAll(observersV2, ob -> ob.onFlowError(new TaskEvent(handler, trace)))
 
         if( !errorAction )
             return
@@ -1237,6 +1127,18 @@ class Session implements ISession {
         }
         catch( Throwable e ) {
             log.debug(e.getMessage(), e)
+        }
+    }
+
+    private static <T> void notifyAll(List<T> observers, Consumer<T> action) {
+        for ( int i=0; i<observers.size(); i++) {
+            final observer = observers.get(i)
+            try {
+                action.accept(observer)
+            }
+            catch ( Throwable e ) {
+                log.debug(e.getMessage(), e)
+            }
         }
     }
 
