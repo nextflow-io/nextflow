@@ -337,7 +337,7 @@ def x = 42
 Multiple variables can be declared in a single statement if the initializer is a [list literal](#list) with the same number of elements and declared variables:
 
 ```nextflow
-def (x, y) = [ 1, 2 ]
+def (x, y) = [1, 2]
 ```
 
 Each variable has a *scope*, which is the region of code in which the variable can be used.
@@ -387,7 +387,7 @@ The target expression must be a [variable](#variable), [index](#binary-expressio
 Multiple variables can be assigned in a single statement as long as the source expression is a [list literal](#list) with the same number of elements and assigned variables:
 
 ```nextflow
-(x, y) = [ 1, 2 ]
+(x, y) = [1, 2]
 ```
 
 ### Expression statement
@@ -640,7 +640,7 @@ If the expression is a name or simple property expression (one or more identifie
 
 ```nextflow
 def name = [first: '<FIRST_NAME>', last: '<LAST_NAME>']
-println "Hello, ${name.first} ${name.last}!"
+println "Hello, $name.first $name.last!"
 // -> Hello, <FIRST_NAME> <LAST_NAME>!
 ```
 

@@ -88,6 +88,15 @@ This page lists all of the available namespaces in the Nextflow standard library
 `multiMapCriteria( criteria: Closure ) -> Closure`
 : Create a multi-map criteria to use with the {ref}`operator-multiMap` operator.
 
+`print( value )`
+: Print a value to standard output.
+
+`printf( format: String, values... )`
+: Print a formatted string with the given values to standard output.
+
+`println( value )`
+: Print a value to standard output with a newline.
+
 `sendMail( [options] )`
 : Send an email. See {ref}`mail-page` for more information.
 

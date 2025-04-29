@@ -15,6 +15,22 @@ import spock.lang.Specification
  */
 class OutputDslTest extends Specification {
 
+    void assignOutput(Session session, String name, List values) {
+        def ch = new DataflowQueue()
+        values.each { v -> ch.bind(v) }
+        ch.bind(Channel.STOP)
+        session.outputs.put(name, ch)
+    }
+
+    void await(OutputDsl dsl) {
+        def now = System.currentTimeMillis()
+        while( !dsl.complete ) {
+            sleep 100
+            if( System.currentTimeMillis() - now > 5_000 )
+                throw new TimeoutException()
+        }
+    }
+
     def 'should publish workflow outputs'() {
         given:
         def root = Files.createTempDirectory('test')
@@ -40,16 +56,9 @@ class OutputDslTest extends Specification {
         }
         Global.session = session
         and:
-        def ch1 = new DataflowQueue()
-        ch1.bind(file1)
-        ch1.bind(Channel.STOP)
+        assignOutput(session, 'foo', [file1])
+        assignOutput(session, 'bar', [file2])
         and:
-        def ch2 = new DataflowQueue()
-        ch2.bind(file2)
-        ch2.bind(Channel.STOP)
-        and:
-        session.outputs.put('foo', ch1)
-        session.outputs.put('bar', ch2)
         def dsl = new OutputDsl()
         and:
         SysEnv.push(NXF_FILE_ROOT: root.toString())
@@ -65,24 +74,54 @@ class OutputDslTest extends Specification {
             }
         }
         dsl.apply(session)
-
-        def now = System.currentTimeMillis()
-        while( !dsl.complete ) {
-            sleep 100
-            if( System.currentTimeMillis() - now > 5_000 )
-                throw new TimeoutException()
-        }
-
+        await(dsl)
         then:
         outputDir.resolve('foo/file1.txt').text == 'Hello'
         outputDir.resolve('barbar/file2.txt').text == 'world'
         outputDir.resolve('index.csv').text == """\
-            "file2","${outputDir}/barbar/file2.txt"
+            "${outputDir}/barbar/file2.txt"
             """.stripIndent()
         and:
-        1 * session.notifyFilePublish(outputDir.resolve('foo/file1.txt'), file1)
-        1 * session.notifyFilePublish(outputDir.resolve('barbar/file2.txt'), file2)
-        1 * session.notifyFilePublish(outputDir.resolve('index.csv'))
+        1 * session.notifyFilePublish(outputDir.resolve('foo/file1.txt'), file1, null)
+        1 * session.notifyFilePublish(outputDir.resolve('barbar/file2.txt'), file2, null)
+        1 * session.notifyFilePublish(outputDir.resolve('index.csv'), null, null)
+
+        cleanup:
+        SysEnv.pop()
+        root?.deleteDir()
+    }
+
+    def 'should accept empty output declaration'() {
+        given:
+        def root = Files.createTempDirectory('test')
+        def outputDir = root.resolve('results')
+        def workDir = root.resolve('work')
+        def work1 = workDir.resolve('ab/1234'); Files.createDirectories(work1)
+        def file1 = work1.resolve('file1.txt'); file1.text = 'Hello'
+        and:
+        def session = Mock(Session) {
+            getOutputs() >> [:]
+            getConfig() >> [:]
+            getOutputDir() >> outputDir
+            getWorkDir() >> workDir
+        }
+        Global.session = session
+        and:
+        assignOutput(session, 'foo', [file1])
+        and:
+        def dsl = new OutputDsl()
+        and:
+        SysEnv.push(NXF_FILE_ROOT: root.toString())
+
+        when:
+        dsl.declare('foo') {
+        }
+        dsl.apply(session)
+        await(dsl)
+        then:
+        outputDir.resolve('file1.txt').text == 'Hello'
+        and:
+        1 * session.notifyFilePublish(outputDir.resolve('file1.txt'), file1, null)
 
         cleanup:
         SysEnv.pop()

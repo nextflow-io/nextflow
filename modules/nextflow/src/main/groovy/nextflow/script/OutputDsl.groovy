@@ -59,12 +59,12 @@ class OutputDsl {
 
         // make sure every output was assigned
         for( final name : declarations.keySet() ) {
-            if( name !in outputs )
+            if( !outputs.containsKey(name) )
                 throw new ScriptRuntimeException("Workflow output '${name}' was declared in the output block but not assigned in the workflow")
         }
 
         for( final name : outputs.keySet() ) {
-            if( name !in declarations )
+            if( !declarations.containsKey(name) )
                 throw new ScriptRuntimeException("Workflow output '${name}' was assigned in the workflow but not declared in the output block")
         }
 
@@ -107,6 +107,14 @@ class OutputDsl {
     static class DeclareDsl {
 
         private Map opts = [:]
+
+        void annotations(Map value) {
+            setOption('annotations', value)
+        }
+
+        void annotations(Closure value) {
+            setOption('annotations', value)
+        }
 
         void contentType(String value) {
             setOption('contentType', value)

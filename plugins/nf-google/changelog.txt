@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.20.0 - 23 Apri 2025
+- Add Google Batch gcsfuseOptions (#5991) [1d4dd574]
+
 1.19.0 - 17 Mar 2025
 - Fix Google Batch autoRetryExitCodes bug (#5828) [cfeedd6f]
 - Improve Google Batch support for GPUs (#5406) [420fb17e]
