@@ -439,7 +439,7 @@ class Session implements ISession {
         this.disableRemoteBinDir = getExecConfigProp(null, 'disableRemoteBinDir', false)
         this.classesDir = FileHelper.createLocalDir()
         this.executorFactory = new ExecutorFactory(Plugins.manager)
-        this.observersV1 = createObservers()
+        this.observersV1 = createObserversV1()
         this.observersV2 = createObserversV2()
         this.statsEnabled = observersV1.any { ob -> ob.enableMetrics() } || observersV2.any { ob -> ob.enableMetrics() }
         this.workflowMetadata = new WorkflowMetadata(this, scriptFile)
@@ -469,7 +469,7 @@ class Session implements ISession {
      * @return A list of {@link TraceObserver} objects or an empty list
      */
     @PackageScope
-    List<TraceObserver> createObservers() {
+    List<TraceObserver> createObserversV1() {
 
         final result = new ArrayList(10)
 
