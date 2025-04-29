@@ -1248,9 +1248,9 @@ class OperatorImpl {
     }
 
     /**
-     * Transform the items emitted by a channel by applying a function to each of them
+     * Transform the Lineage ID items emitted in the source channel by its lineage metadata description
      *
-     * @param channel
+     * @param channel Source channel with emitted lineage IDs
      * @return
      */
     DataflowWriteChannel lineage(final DataflowReadChannel source) {
