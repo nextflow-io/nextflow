@@ -41,7 +41,7 @@ class TaskRun implements LinSerializable {
      */
     Checksum codeChecksum
     /**
-     * Checksum of the task script
+     * Resolved task script
      */
     String script
     /**

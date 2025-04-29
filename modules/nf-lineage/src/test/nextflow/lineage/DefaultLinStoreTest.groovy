@@ -45,12 +45,10 @@ class DefaultLinStoreTest extends Specification {
     Path tempDir
 
     Path storeLocation
-    Path metaLocation
     LineageConfig config
 
     def setup() {
         storeLocation = tempDir.resolve("store")
-        metaLocation = storeLocation.resolve(".meta")
         def configMap = [enabled: true, store: [location: storeLocation.toString(), logLocation: storeLocation.resolve(".log").toString()]]
         config = new LineageConfig(configMap)
     }
@@ -62,7 +60,7 @@ class DefaultLinStoreTest extends Specification {
         store.open(config)
         def historyLog = store.getHistoryLog()
         then:
-        store.getMetadataPath() == metaLocation
+        store.getLocation() == storeLocation
         historyLog != null
         historyLog instanceof DefaultLinHistoryLog
     }
@@ -78,7 +76,7 @@ class DefaultLinStoreTest extends Specification {
         lidStore.save(key, value)
 
         then:
-        def filePath = metaLocation.resolve("$key/.data.json")
+        def filePath = storeLocation.resolve("$key/.data.json")
         Files.exists(filePath)
         filePath.text == new LinEncoder().encode(value)
     }

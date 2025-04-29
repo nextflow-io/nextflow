@@ -24,13 +24,11 @@ import java.nio.file.attribute.BasicFileAttributes
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.lineage.serde.LinEncoder
-import nextflow.lineage.serde.LinSerializable
-import nextflow.lineage.config.LineageConfig
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
-import nextflow.util.TestOnly
-
+import nextflow.lineage.config.LineageConfig
+import nextflow.lineage.serde.LinEncoder
+import nextflow.lineage.serde.LinSerializable
 /**
  * Default Implementation for the a lineage store.
  *
@@ -42,22 +40,19 @@ class DefaultLinStore implements LinStore {
 
     private static String HISTORY_FILE_NAME = ".history"
     private static final String METADATA_FILE = '.data.json'
-    private static final String METADATA_PATH = '.meta'
-    private static final String DEFAULT_LOCATION = 'lineage'
+    private static final String DEFAULT_LOCATION = '.lineage'
 
-    private Path metaLocation
     private Path location
     private LinHistoryLog historyLog
     private LinEncoder encoder
 
     DefaultLinStore open(LineageConfig config) {
         location = toLocationPath(config.store.location)
-        metaLocation = location.resolve(METADATA_PATH)
         encoder = new LinEncoder()
-        if( !Files.exists(metaLocation) && !Files.createDirectories(metaLocation) ) {
-            throw new AbortOperationException("Unable to create lineage store directory: $metaLocation")
+        if( !Files.exists(location) && !Files.createDirectories(location) ) {
+            throw new AbortOperationException("Unable to create lineage store directory: $location")
         }
-        historyLog = new DefaultLinHistoryLog(metaLocation.resolve(HISTORY_FILE_NAME))
+        historyLog = new DefaultLinHistoryLog(location.resolve(HISTORY_FILE_NAME))
         return this
     }
 
@@ -69,7 +64,7 @@ class DefaultLinStore implements LinStore {
 
     @Override
     void save(String key, LinSerializable value) {
-        final path = metaLocation.resolve("$key/$METADATA_FILE")
+        final path = location.resolve("$key/$METADATA_FILE")
         Files.createDirectories(path.parent)
         log.debug "Save LID file path: $path"
         path.text = encoder.encode(value)
@@ -77,7 +72,7 @@ class DefaultLinStore implements LinStore {
 
     @Override
     LinSerializable load(String key) {
-        final path = metaLocation.resolve("$key/$METADATA_FILE")
+        final path = location.resolve("$key/$METADATA_FILE")
         log.debug("Loading from path $path")
         if (path.exists())
             return encoder.decode(path.text) as LinSerializable
@@ -87,11 +82,6 @@ class DefaultLinStore implements LinStore {
 
     Path getLocation(){
         return location
-    }
-
-    @TestOnly
-    Path getMetadataPath() {
-        return metaLocation
     }
 
     @Override
@@ -106,7 +96,7 @@ class DefaultLinStore implements LinStore {
     Map<String, LinSerializable> search(Map<String,String> params) {
         final results = new HashMap<String, LinSerializable>()
 
-        Files.walkFileTree(metaLocation, new FileVisitor<Path>() {
+        Files.walkFileTree(location, new FileVisitor<Path>() {
 
             @Override
             FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
@@ -118,7 +108,7 @@ class DefaultLinStore implements LinStore {
                 if (file.name.startsWith('.data.json') ) {
                     final lidObject = encoder.decode(file.text)
                     if (LinUtils.checkParams(lidObject, params)){
-                        results.put(metaLocation.relativize(file.getParent()).toString(), lidObject as LinSerializable)
+                        results.put(location.relativize(file.getParent()).toString(), lidObject as LinSerializable)
                     }
                 }
                 FileVisitResult.CONTINUE
