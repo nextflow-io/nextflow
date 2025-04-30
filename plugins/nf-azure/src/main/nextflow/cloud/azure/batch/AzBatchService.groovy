@@ -976,7 +976,7 @@ class AzBatchService implements Closeable {
                 log.trace "Deleting Azure job ${jobId}"
                 apply(() -> client.deleteJob(jobId))
             }
-            catch (HttpResponseException e) {
+            catch (Exception e) {
                 log.warn "Unable to delete Azure Batch job ${jobId} - Reason: ${e.message ?: e}"
             }
         }
@@ -987,7 +987,7 @@ class AzBatchService implements Closeable {
             try {
                 apply(() -> client.deletePool(poolId))
             }
-            catch (HttpResponseException e) {
+            catch (Exception e) {
                 log.warn "Unable to delete Azure Batch pool ${poolId} - Reason: ${e.message ?: e}"
             }
         }
