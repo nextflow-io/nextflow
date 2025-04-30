@@ -16,6 +16,7 @@
 
 package nextflow.trace
 
+import com.google.common.annotations.Beta
 import groovy.transform.CompileStatic
 import nextflow.Session
 import nextflow.processor.TaskProcessor
@@ -28,6 +29,7 @@ import nextflow.trace.event.WorkflowOutputEvent
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
+@Beta
 @CompileStatic
 interface TraceObserverV2 {
 
