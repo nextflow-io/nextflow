@@ -36,7 +36,6 @@ import nextflow.Channel
 import nextflow.Global
 import nextflow.NF
 import nextflow.Session
-import nextflow.plugin.Plugins
 import nextflow.script.ChannelOut
 import nextflow.script.TokenBranchDef
 import nextflow.script.TokenMultiMapDef
@@ -1246,4 +1245,5 @@ class OperatorImpl {
                 .apply()
                 .getOutput()
     }
+
 }

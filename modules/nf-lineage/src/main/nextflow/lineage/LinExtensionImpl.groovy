@@ -21,7 +21,7 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.Session
-import nextflow.extension.LinChannelEx
+import nextflow.extension.LinExtension
 import nextflow.lineage.serde.LinSerializable
 
 import static nextflow.lineage.fs.LinPath.*
@@ -33,13 +33,15 @@ import static nextflow.lineage.fs.LinPath.*
  */
 @CompileStatic
 @Slf4j
-class LinChannelExImpl implements LinChannelEx {
+class LinExtensionImpl implements LinExtension {
 
-    Object viewLineage(Session session, String lid) {
+    @Override
+    Object lineage(Session session, String lid) {
         final store = getStore(session)
         return LinUtils.getMetadataObject(store, new URI(lid))
     }
 
+    @Override
     void queryLineage(Session session, DataflowWriteChannel channel, Map<String, String> params) {
         new LinPropertyValidator().validateQueryParams(params)
         final store = getStore(session)

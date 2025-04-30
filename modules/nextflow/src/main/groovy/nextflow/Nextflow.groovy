@@ -29,7 +29,7 @@ import nextflow.ast.OpXformImpl
 import nextflow.exception.StopSplitIterationException
 import nextflow.exception.WorkflowScriptErrorException
 import nextflow.extension.GroupKey
-import nextflow.extension.LinChannelEx
+import nextflow.extension.LinExtension
 import nextflow.extension.OperatorImpl
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
@@ -425,10 +425,10 @@ class Nextflow {
     static Closure<TokenMultiMapDef> multiMapCriteria(Closure<TokenBranchDef> closure) { closure }
 
     static Object lineage( String lid ) {
-        final operation = Plugins.getExtension(LinChannelEx)
+        final operation = Plugins.getExtension(LinExtension)
         if( !operation )
             throw new IllegalStateException("Unable to load lineage extensions.")
-        return operation.viewLineage(session, lid)
+        return operation.lineage(session, lid)
     }
 
 }

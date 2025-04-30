@@ -16,28 +16,25 @@
 
 package nextflow.lineage
 
-import nextflow.Channel
-import nextflow.extension.CH
-import nextflow.lineage.model.Annotation
-import nextflow.lineage.model.FileOutput
-
 import java.nio.file.Path
 import java.time.Instant
 import java.time.OffsetDateTime
+import java.time.ZoneOffset
 
+import nextflow.Channel
 import nextflow.Session
+import nextflow.extension.CH
 import nextflow.lineage.config.LineageConfig
+import nextflow.lineage.model.Annotation
 import nextflow.lineage.model.Checksum
 import nextflow.lineage.model.DataPath
+import nextflow.lineage.model.FileOutput
 import nextflow.lineage.model.Parameter
 import nextflow.lineage.model.Workflow
 import nextflow.lineage.model.WorkflowOutput
 import nextflow.lineage.model.WorkflowRun
-
 import spock.lang.Specification
 import spock.lang.TempDir
-
-import java.time.ZoneOffset
 
 import static nextflow.lineage.fs.LinPath.*
 
@@ -46,7 +43,7 @@ import static nextflow.lineage.fs.LinPath.*
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
-class LinChannelExImplTest extends Specification {
+class LinExtensionImplTest extends Specification {
 
     @TempDir
     Path tempDir
@@ -77,26 +74,26 @@ class LinChannelExImplTest extends Specification {
         lidStore.open(LineageConfig.create(session))
         lidStore.save(key, value1)
         lidStore.save("$key#output", wfOutputs)
-        def channelLinExt = Spy(new LinChannelExImpl())
+        def linExt = Spy(new LinExtensionImpl())
 
         when:
-        def results = channelLinExt.viewLineage(session, 'lid://testKey')
+        def results = linExt.lineage(session, 'lid://testKey')
         then:
-        channelLinExt.getStore(session) >> lidStore
+        linExt.getStore(session) >> lidStore
         and:
         results == value1
 
         when:
-        results = channelLinExt.viewLineage(session, 'lid://testKey#output')
+        results = linExt.lineage(session, 'lid://testKey#output')
         then:
-        channelLinExt.getStore(session) >> lidStore
+        linExt.getStore(session) >> lidStore
         and:
         results == outputs
 
         when:
-        results = channelLinExt.viewLineage(session, 'lid://testKey#params')
+        results = linExt.lineage(session, 'lid://testKey#params')
         then:
-        channelLinExt.getStore(session) >> lidStore
+        linExt.getStore(session) >> lidStore
         and:
         results == params
     }
@@ -124,12 +121,12 @@ class LinChannelExImplTest extends Specification {
         lidStore.save(key2, value2)
         lidStore.save(key3, value3)
         lidStore.save(key4, value4)
-        def channelLinExt = Spy(new LinChannelExImpl())
+        def linExt = Spy(new LinExtensionImpl())
         when:
         def results = CH.create()
-        channelLinExt.queryLineage(session, results, [ "type":"FileOutput", "annotations.key":"key2", "annotations.value":"value2" ])
+        linExt.queryLineage(session, results, [ "type":"FileOutput", "annotations.key":"key2", "annotations.value":"value2" ])
         then:
-        channelLinExt.getStore(session) >> lidStore
+        linExt.getStore(session) >> lidStore
         and:
         results.val == asUriString(key2)
         results.val == asUriString(key3)

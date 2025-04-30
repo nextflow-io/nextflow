@@ -16,9 +16,6 @@
 
 package nextflow
 
-import nextflow.extension.LinChannelEx
-import nextflow.plugin.Plugins
-
 import static nextflow.util.CheckHelper.*
 
 import java.nio.file.FileSystem
@@ -43,6 +40,7 @@ import nextflow.datasource.SraExplorer
 import nextflow.exception.AbortOperationException
 import nextflow.extension.CH
 import nextflow.extension.GroupTupleOp
+import nextflow.extension.LinExtension
 import nextflow.extension.MapOp
 import nextflow.file.DirListener
 import nextflow.file.DirWatcher
@@ -50,6 +48,7 @@ import nextflow.file.DirWatcherV2
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
 import nextflow.file.PathVisitor
+import nextflow.plugin.Plugins
 import nextflow.plugin.extension.PluginExtensionProvider
 import nextflow.util.Duration
 import nextflow.util.TestOnly
@@ -672,10 +671,10 @@ class Channel  {
     }
 
     private static void queryLineage0(DataflowWriteChannel channel, Map<String,String> params) {
-        final operation = Plugins.getExtension(LinChannelEx)
+        final operation = Plugins.getExtension(LinExtension)
         if( !operation )
             throw new IllegalStateException("Unable to load lineage extensions.")
-        def future = CompletableFuture.runAsync( { operation.queryLineage(session, channel, params) } as Runnable)
+        final future = CompletableFuture.runAsync(() -> operation.queryLineage(session, channel, params))
         future.exceptionally(this.&handlerException)
     }
 
