@@ -68,5 +68,5 @@ class FileOutput implements LinSerializable {
     /**
      * Annotations attached to the data
      */
-    List<Annotation> annotations
+    List<String> annotations
 }

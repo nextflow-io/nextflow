@@ -23,7 +23,6 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
-import nextflow.file.FileHelper
 import nextflow.processor.PublishDir
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.WorkflowOutputEvent
@@ -192,20 +191,20 @@ class PublishOp {
     /**
      * Get or resolve the annotations of a workflow output.
      *
-     * @param annotations Map | Closure<Map>
+     * @param annotations List | Closure<List>
      * @param value
      */
-    protected static Map getAnnotations(annotations, value) {
+    protected static List getAnnotations(annotations, value) {
         if( annotations == null )
-            return [:]
-        if( annotations instanceof Map )
+            return []
+        if( annotations instanceof List )
             return annotations
         if( annotations instanceof Closure ) {
             final result = annotations.call(value)
-            if( result instanceof Map )
+            if( result instanceof List )
                 return result
         }
-        throw new ScriptRuntimeException("Invalid output `annotations` directive -- it should be either a Map or a closure that returns a Map")
+        throw new ScriptRuntimeException("Invalid output `annotations` directive -- it should be either a List or a closure that returns a List")
     }
 
     /**

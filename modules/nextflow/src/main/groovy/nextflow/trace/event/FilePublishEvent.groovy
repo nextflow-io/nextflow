@@ -40,5 +40,5 @@ class FilePublishEvent {
     /**
      * Annotations associated with the published file.
      */
-    Map<String,String> annotations
+    List<String> annotations
 }

@@ -51,5 +51,5 @@ class WorkflowRun implements LinSerializable {
     /**
      * Annotations attached to the workflow run
      */
-    List<Annotation> annotations
+    List<String> annotations
 }

@@ -113,7 +113,7 @@ class PublishDir {
     /**
      * Annotations to be associated to the target file
      */
-    private Map annotations
+    private List annotations
 
     /**
      * The content type of the file. Currently only supported by AWS S3.
@@ -218,7 +218,7 @@ class PublishDir {
             result.tags = params.tags
 
         if( params.annotations != null )
-            result.annotations = params.annotations as Map
+            result.annotations = params.annotations as List
 
         if( params.contentType instanceof Boolean )
             result.contentType = params.contentType

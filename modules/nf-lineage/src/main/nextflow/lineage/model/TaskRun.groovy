@@ -79,5 +79,5 @@ class TaskRun implements LinSerializable {
     /**
      * Annotations attached to the task run
      */
-    List<Annotation> annotations
+    List<String> annotations
 }
