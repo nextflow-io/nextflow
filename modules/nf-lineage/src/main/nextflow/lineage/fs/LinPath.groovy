@@ -168,7 +168,7 @@ class LinPath implements Path, LogicalDataPath {
         if( !fs )
             throw new IllegalArgumentException("Cannot get target path for a relative lineage path")
         if( filePath.isEmpty() || filePath == SEPARATOR )
-            throw new IllegalArgumentException("Cannot get target path for an empty lineage path")
+            throw new IllegalArgumentException("Cannot get target path for an empty lineage path (lid:///)")
         final store = fs.getStore()
         if( !store )
             throw new Exception("Lineage store not found - Check Nextflow configuration")
