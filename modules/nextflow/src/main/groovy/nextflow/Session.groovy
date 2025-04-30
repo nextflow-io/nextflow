@@ -1006,19 +1006,19 @@ class Session implements ISession {
     }
 
     void notifyProcessCreate(TaskProcessor process) {
-        notifyAll(observersV1, ob -> ob.onProcessCreate(process))
-        notifyAll(observersV2, ob -> ob.onProcessCreate(process))
+        notifyEvent(observersV1, ob -> ob.onProcessCreate(process))
+        notifyEvent(observersV2, ob -> ob.onProcessCreate(process))
     }
 
     void notifyProcessTerminate(TaskProcessor process) {
-        notifyAll(observersV1, ob -> ob.onProcessTerminate(process))
-        notifyAll(observersV2, ob -> ob.onProcessTerminate(process))
+        notifyEvent(observersV1, ob -> ob.onProcessTerminate(process))
+        notifyEvent(observersV2, ob -> ob.onProcessTerminate(process))
     }
 
     void notifyTaskPending( TaskHandler handler ) {
         final trace = handler.getTraceRecord()
-        notifyAll(observersV1, ob -> ob.onProcessPending(handler, trace))
-        notifyAll(observersV2, ob -> ob.onTaskPending(new TaskEvent(handler, trace)))
+        notifyEvent(observersV1, ob -> ob.onProcessPending(handler, trace))
+        notifyEvent(observersV2, ob -> ob.onTaskPending(new TaskEvent(handler, trace)))
     }
 
     /**
@@ -1031,8 +1031,8 @@ class Session implements ISession {
         cache.putIndexAsync(handler)
 
         final trace = handler.getTraceRecord()
-        notifyAll(observersV1, ob -> ob.onProcessSubmit(handler, trace))
-        notifyAll(observersV2, ob -> ob.onTaskSubmit(new TaskEvent(handler, trace)))
+        notifyEvent(observersV1, ob -> ob.onProcessSubmit(handler, trace))
+        notifyEvent(observersV2, ob -> ob.onTaskSubmit(new TaskEvent(handler, trace)))
     }
 
     /**
@@ -1040,8 +1040,8 @@ class Session implements ISession {
      */
     void notifyTaskStart( TaskHandler handler ) {
         final trace = handler.getTraceRecord()
-        notifyAll(observersV1, ob -> ob.onProcessStart(handler, trace))
-        notifyAll(observersV2, ob -> ob.onTaskStart(new TaskEvent(handler, trace)))
+        notifyEvent(observersV1, ob -> ob.onProcessStart(handler, trace))
+        notifyEvent(observersV2, ob -> ob.onTaskStart(new TaskEvent(handler, trace)))
     }
 
     /**
@@ -1060,8 +1060,8 @@ class Session implements ISession {
             failOnIgnore = true
         }
 
-        notifyAll(observersV1, ob -> ob.onProcessComplete(handler, trace))
-        notifyAll(observersV2, ob -> ob.onTaskComplete(new TaskEvent(handler, trace)))
+        notifyEvent(observersV1, ob -> ob.onProcessComplete(handler, trace))
+        notifyEvent(observersV2, ob -> ob.onTaskComplete(new TaskEvent(handler, trace)))
     }
 
     void notifyTaskCached( TaskHandler handler ) {
@@ -1072,8 +1072,8 @@ class Session implements ISession {
             cache.cacheTaskAsync(handler)
         }
 
-        notifyAll(observersV1, ob -> ob.onProcessCached(handler, trace))
-        notifyAll(observersV2, ob -> ob.onTaskCached(new TaskEvent(handler, trace)))
+        notifyEvent(observersV1, ob -> ob.onProcessCached(handler, trace))
+        notifyEvent(observersV2, ob -> ob.onTaskCached(new TaskEvent(handler, trace)))
     }
 
     void notifyBeforeWorkflowExecution() {
@@ -1085,27 +1085,27 @@ class Session implements ISession {
     }
 
     void notifyFlowBegin() {
-        notifyAll(observersV1, ob -> ob.onFlowBegin())
-        notifyAll(observersV2, ob -> ob.onFlowBegin())
+        notifyEvent(observersV1, ob -> ob.onFlowBegin())
+        notifyEvent(observersV2, ob -> ob.onFlowBegin())
     }
 
     void notifyFlowCreate() {
-        notifyAll(observersV1, ob -> ob.onFlowCreate(this))
-        notifyAll(observersV2, ob -> ob.onFlowCreate(this))
+        notifyEvent(observersV1, ob -> ob.onFlowCreate(this))
+        notifyEvent(observersV2, ob -> ob.onFlowCreate(this))
     }
 
     void notifyWorkflowOutput(WorkflowOutputEvent event) {
-        notifyAll(observersV2, ob -> ob.onWorkflowOutput(event))
+        notifyEvent(observersV2, ob -> ob.onWorkflowOutput(event))
     }
 
     void notifyFilePublish(FilePublishEvent event) {
-        notifyAll(observersV1, ob -> ob.onFilePublish(event.target, event.source))
-        notifyAll(observersV2, ob -> ob.onFilePublish(event))
+        notifyEvent(observersV1, ob -> ob.onFilePublish(event.target, event.source))
+        notifyEvent(observersV2, ob -> ob.onFilePublish(event))
     }
 
     void notifyFlowComplete() {
-        notifyAll(observersV1, ob -> ob.onFlowComplete())
-        notifyAll(observersV2, ob -> ob.onFlowComplete())
+        notifyEvent(observersV1, ob -> ob.onFlowComplete())
+        notifyEvent(observersV2, ob -> ob.onFlowComplete())
     }
 
     /**
@@ -1117,8 +1117,8 @@ class Session implements ISession {
     void notifyError( TaskHandler handler ) {
 
         final trace = handler?.safeTraceRecord()
-        notifyAll(observersV1, ob -> ob.onFlowError(handler, trace))
-        notifyAll(observersV2, ob -> ob.onFlowError(new TaskEvent(handler, trace)))
+        notifyEvent(observersV1, ob -> ob.onFlowError(handler, trace))
+        notifyEvent(observersV2, ob -> ob.onFlowError(new TaskEvent(handler, trace)))
 
         if( !errorAction )
             return
@@ -1131,7 +1131,7 @@ class Session implements ISession {
         }
     }
 
-    private static <T> void notifyAll(List<T> observers, Consumer<T> action) {
+    private static <T> void notifyEvent(List<T> observers, Consumer<T> action) {
         for ( int i=0; i<observers.size(); i++) {
             final observer = observers.get(i)
             try {
