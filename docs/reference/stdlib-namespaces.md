@@ -8,7 +8,9 @@ This page lists all of the available namespaces in the Nextflow standard library
 
 ## Global namespace
 
-**Properties**
+The global namespace contains globally available constants and functions.
+
+**Constants**
 
 `baseDir: Path`
 : :::{deprecated} 20.04.0
@@ -19,7 +21,7 @@ This page lists all of the available namespaces in the Nextflow standard library
 : Alias of `workflow.launchDir`.
 
 `moduleDir: Path`
-: The directory where a module script is located (equivalent to `projectDir` if used in the main script).
+: Directory where a module script is located (equivalent to `projectDir` if used in the main script).
 
 `params`
 : Map of workflow parameters specified in the config file or as command line options.
