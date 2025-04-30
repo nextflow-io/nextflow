@@ -732,7 +732,7 @@ View a metadata description fragment. A fragment can be a property of a metadata
 $ nextflow lineage view <lid#fragment>
 ```
 
-Find a specific metadata description that matches to a set of key-value parameters. Keys are defined similarly to the `fragments` used in the `view` command.
+Find all metadata descriptions that matche a set of key-value pairs. Keys are defined similarly to fragments as used in the `view` command.
 
 ```console
 $ nextflow lineage find <key-1>=<value-1> <key-2>=<value-2> ...
@@ -744,7 +744,7 @@ Display a git-style diff between two metadata descriptions.
 $ nextflow lineage diff <lid-1> <lid-2>
 ```
 
-Render the lineage graph for a workflow or task output in an HTML file. (default file path: `./lineage.html`).
+Render the lineage graph for a workflow or task output as an HTML file. (default file path: `./lineage.html`).
 
 ```console
 $ nextflow lineage render <lid> [html-file-path]
