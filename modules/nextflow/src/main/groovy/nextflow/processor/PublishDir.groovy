@@ -49,6 +49,7 @@ import nextflow.SysEnv
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.TagAwareFile
+import nextflow.trace.event.FilePublishEvent
 import nextflow.util.HashBuilder
 import nextflow.util.PathTrie
 /**
@@ -589,7 +590,7 @@ class PublishDir {
     }
 
     protected void notifyFilePublish(Path destination, Path source=null) {
-        session.notifyFilePublish(destination, source, annotations)
+        session.notifyFilePublish(new FilePublishEvent(source, destination, annotations))
     }
 
 }
