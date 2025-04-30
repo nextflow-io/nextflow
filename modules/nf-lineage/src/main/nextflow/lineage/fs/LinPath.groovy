@@ -211,7 +211,7 @@ class LinPath implements Path, LogicalDataPath {
     static LinMetadataPath getSubObjectAsPath(LinFileSystem fs, String key, LinSerializable object, String[] children) {
         if( isSearchingOutputs(object, children) ) {
             // When asking for a Workflow or task output retrieve the outputs description
-            final outputs = fs.store.load("${key}/output")
+            final outputs = fs.store.load("${key}#output")
             if( !outputs ) {
                 throw new FileNotFoundException("Target path '$key#output' does not exist")
             }

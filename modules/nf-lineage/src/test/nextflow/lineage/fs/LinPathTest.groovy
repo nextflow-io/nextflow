@@ -216,7 +216,7 @@ class LinPathTest extends Specification {
 
         when: 'outputs'
         def outputs = new WorkflowOutput(OffsetDateTime.now(), "lid://123456", [new Parameter("Collection", "samples", ["sample1", "sample2"])])
-        lidFs.store.save("123456/output", outputs)
+        lidFs.store.save("123456#output", outputs)
         Path p2 = LinPath.getMetadataAsTargetPath(wf, lidFs, "123456", ["output"] as String[])
         then:
         p2 instanceof LinMetadataPath
