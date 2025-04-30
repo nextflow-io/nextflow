@@ -144,7 +144,9 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
     List<Volume> getVolumes() {
         final result = new ArrayList(10)
         for( String it : buckets ) {
-            final mountOptions = ['-o rw', '-implicit-dirs']
+            final mountOptions = new LinkedList<String>()
+            if( config && config.gcsfuseOptions )
+                mountOptions.addAll(config.gcsfuseOptions)
             if( config && config.googleOpts.enableRequesterPaysBuckets )
                 mountOptions << "--billing-project ${config.googleOpts.projectId}".toString()
 

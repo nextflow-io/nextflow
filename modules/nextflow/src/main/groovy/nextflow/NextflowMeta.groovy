@@ -60,7 +60,7 @@ class NextflowMeta {
 
         void setOutput(Boolean output) {
             if( output )
-                log.warn "WORKFLOW OUTPUT DSL IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
+                log.warn "WORKFLOW OUTPUT DEFINITION IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
             this.output = output
         }
 

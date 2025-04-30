@@ -78,6 +78,7 @@ import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.file.FilePatternSplitter
 import nextflow.file.FilePorter
+import nextflow.file.LogicalDataPath
 import nextflow.plugin.Plugins
 import nextflow.processor.tip.TaskTipProvider
 import nextflow.prov.Prov
@@ -322,9 +323,9 @@ class TaskProcessor {
         this.maxForks = config.maxForks && config.maxForks>0 ? config.maxForks as int : 0
         this.forksCount = maxForks ? new LongAdder() : null
         this.isFair0 = config.getFair()
-        
         final arraySize = config.getArray()
         this.arrayCollector = arraySize > 0 ? new TaskArrayCollector(this, executor, arraySize) : null
+        log.debug "Creating process '$name': maxForks=${maxForks}; fair=${isFair0}; array=${arraySize}"
     }
 
     /**
@@ -1892,6 +1893,13 @@ class TaskProcessor {
         return Collections.unmodifiableMap(result)
     }
 
+    protected Path resolvePath(Object item) {
+        final result = normalizeToPath(item)
+        return result instanceof LogicalDataPath
+            ? result.toTargetPath()
+            : result
+    }
+
     /**
      * An input file parameter can be provided with any value other than a file.
      * This function normalize a generic value to a {@code Path} create a temporary file
@@ -1902,7 +1910,6 @@ class TaskProcessor {
      * @return The {@code Path} that will be staged in the task working folder
      */
     protected FileHolder normalizeInputToFile( Object input, String altName ) {
-
         /*
          * when it is a local file, just return a reference holder to it
          */
@@ -1953,9 +1960,9 @@ class TaskProcessor {
         for( def item : allItems ) {
 
             if( item instanceof Path || coerceToPath ) {
-                def path = normalizeToPath(item)
-                def target = executor.isForeignFile(path) ? foreignFiles.addToForeign(path) : path
-                def holder = new FileHolder(target)
+                final path = resolvePath(item)
+                final target = executor.isForeignFile(path) ? foreignFiles.addToForeign(path) : path
+                final holder = new FileHolder(target)
                 files << holder
             }
             else {
@@ -2287,7 +2294,7 @@ class TaskProcessor {
      * @return The list of paths of scripts in the project bin folder referenced in the task command
      */
     @Memoized
-    protected List<Path> getTaskBinEntries(String script) {
+    List<Path> getTaskBinEntries(String script) {
         List<Path> result = []
         def tokenizer = new StringTokenizer(script," \t\n\r\f()[]{};&|<>`")
         while( tokenizer.hasMoreTokens() ) {
@@ -2320,7 +2327,7 @@ class TaskProcessor {
         log.info(buffer.toString())
     }
 
-    protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
+    Map<String,Object> getTaskGlobalVars(TaskRun task) {
         final result = task.getGlobalVars(ownerScript.binding)
         final directives = getTaskExtensionDirectiveVars(task)
         result.putAll(directives)

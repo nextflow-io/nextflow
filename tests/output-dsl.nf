@@ -62,6 +62,19 @@ process quant {
   '''
 }
 
+process summary {
+  input:
+  path logs
+
+  output:
+  path('summary.txt'), emit: report
+
+  script:
+  '''
+  ls -1 *.log > summary.txt
+  '''
+}
+
 workflow {
   main:
   ids = Channel.of('alpha', 'beta', 'delta')
@@ -83,30 +96,33 @@ workflow {
       ]
     }
 
+  ch_logs = ch_samples
+    .map { sample -> sample.fastqc }
+    .collect()
+
+  summary(ch_logs)
+
   publish:
-  ch_samples >> 'samples'
+  samples = ch_samples
+  summary = summary.out
 }
 
 output {
   samples {
     path { sample ->
-      def dirs = [
-        'bam': 'align',
-        'bai': 'align',
-        'log': 'fastqc'
-      ]
-      return { filename ->
-        def ext = filename.tokenize('.').last()
-        def dir = dirs[ext]
-        dir != null
-          ? "${dir}/${filename}"
-          : "${filename}/${sample.id}"
-      }
+      sample.fastqc >> 'log/'
+      sample.bam >> 'align/'
+      sample.bai >> 'align/'
+      sample.quant >> "quant/${sample.id}"
     }
     index {
       path 'samples.csv'
       header true
       sep ','
     }
+  }
+
+  summary {
+    path '.'
   }
 }

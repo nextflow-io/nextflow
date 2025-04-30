@@ -995,5 +995,9 @@ class TaskRun implements Cloneable, ProvLink {
     CondaConfig getCondaConfig() {
         return processor.session.getCondaConfig()
     }
+
+    String getStubSource() {
+        return config?.getStubBlock()?.source
+    }
 }
 

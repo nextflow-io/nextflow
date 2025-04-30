@@ -116,6 +116,11 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     final static private Map<String,String> jobDefinitions = [:]
 
+    final static private List<String> MISCONFIGURATION_REASONS = List.of(
+        "MISCONFIGURATION:JOB_RESOURCE_REQUIREMENT",
+        "MISCONFIGURATION:COMPUTE_ENVIRONMENT_MAX_RESOURCE"
+    )
+
     /**
      * Batch context shared between multiple task handlers
      */
@@ -232,10 +237,38 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final result = job?.status in ['RUNNING', 'SUCCEEDED', 'FAILED']
         if( result )
             this.status = TaskStatus.RUNNING
+        else
+            checkIfUnschedulable(job)
         // fetch the task arn
         if( !taskArn )
             taskArn = job?.getContainer()?.getTaskArn()
         return result
+    }
+
+    protected void checkIfUnschedulable(JobDetail job) {
+        if( job ) try {
+            checkIfUnschedulable0(job)
+        }
+        catch (Throwable e) {
+            log.warn "Unable to check if job is unschedulable - ${e.message}", e
+        }
+    }
+
+    private void checkIfUnschedulable0(JobDetail job) {
+        final reason = errReason(job)
+        if( MISCONFIGURATION_REASONS.any((it) -> reason.contains(it)) ) {
+            final msg = "unschedulable AWS Batch job ${jobId} (${task.lazyName()}) - $reason"
+            // If indicated in aws.batch config kill the job an produce a failure
+            if( executor.awsOptions.terminateUnschedulableJobs() ){
+                log.warn("Terminating ${jobId}")
+                kill()
+                task.error = new ProcessException("Unschedulable AWS Batch job ${jobId} - $reason")
+                status = TaskStatus.COMPLETED
+            }
+            else {
+                log.warn "Detected $msg"
+            }
+        }
     }
 
     protected String errReason(JobDetail job){
@@ -256,6 +289,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     @Override
     boolean checkIfCompleted() {
         assert jobId
+        if( isCompleted() ) {
+            //Task can be marked as completed before running by unschedulable reason. Return true
+            return true
+        }
         if( !isRunning() )
             return false
         final job = describeJob(jobId)
@@ -300,7 +337,6 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     @Override
     protected void killTask() {
         assert jobId
-        log.trace "[AWS BATCH] Process `${task.lazyName()}` - killing job=$jobId"
         final targetId = normaliseJobId(jobId)
         if( executor.shouldDeleteJob(targetId)) {
             terminateJob(targetId)
@@ -316,11 +352,12 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     }
 
     protected void terminateJob(String jobId) {
+        log.debug "[AWS BATCH] cleanup = terminating job $jobId"
         final req = new TerminateJobRequest() .withJobId(jobId) .withReason('Job killed by NF')
         final batch = bypassProxy(client)
         executor.reaper.submit({
             final resp = batch.terminateJob(req)
-            log.debug "[AWS BATCH] killing job=$jobId; response=$resp"
+            log.debug "[AWS BATCH] cleanup = killing job $jobId"
         })
     }
 

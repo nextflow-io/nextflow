@@ -299,10 +299,13 @@ class PluginsFacade implements PluginStateListener {
      *      The extension with higher priority appears first (lower index)
      */
     def <T> List<T> getPriorityExtensions(Class<T> type,String group=null) {
-        def result = getExtensions(type)
+        def extensions = getExtensions(type)
         if( group )
-            result = result.findAll(it -> group0(it)==group )
-        return result.sort( it -> priority0(it) )
+            extensions = extensions.findAll(it -> group0(it)==group )
+        final result = extensions.sort( it -> priority0(it) )
+        if( log.isTraceEnabled() )
+            log.trace "Discovered extensions for type ${type.getName()}: ${extensions.join(',')}"
+        return result
     }
 
     protected int priority0(Object it) {
@@ -415,6 +418,9 @@ class PluginsFacade implements PluginStateListener {
 
         if( executor == 'azurebatch' || workDir?.startsWith('az://') || bucketDir?.startsWith('az://') )
             plugins << defaultPlugins.getPlugin('nf-azure')
+
+        if( executor == 'k8s' )
+            plugins << defaultPlugins.getPlugin('nf-k8s')
 
         if( Bolts.navigate(config, 'weblog.enabled'))
             plugins << new PluginSpec('nf-weblog')

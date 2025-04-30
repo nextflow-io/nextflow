@@ -49,6 +49,7 @@ import nextflow.SysEnv
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.TagAwareFile
+import nextflow.trace.event.FilePublishEvent
 import nextflow.util.HashBuilder
 import nextflow.util.PathTrie
 /**
@@ -108,6 +109,11 @@ class PublishDir {
      * Tags to be associated to the target file
      */
     private def tags
+
+    /**
+     * Annotations to be associated to the target file
+     */
+    private Map annotations
 
     /**
      * The content type of the file. Currently only supported by AWS S3.
@@ -210,6 +216,9 @@ class PublishDir {
 
         if( params.tags != null )
             result.tags = params.tags
+
+        if( params.annotations != null )
+            result.annotations = params.annotations as Map
 
         if( params.contentType instanceof Boolean )
             result.contentType = params.contentType
@@ -581,7 +590,7 @@ class PublishDir {
     }
 
     protected void notifyFilePublish(Path destination, Path source=null) {
-        session.notifyFilePublish(destination, source)
+        session.notifyFilePublish(new FilePublishEvent(source, destination, annotations))
     }
 
 }

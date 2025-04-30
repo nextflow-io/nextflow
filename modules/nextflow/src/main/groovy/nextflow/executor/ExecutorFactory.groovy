@@ -22,7 +22,6 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.executor.local.LocalExecutor
-import nextflow.k8s.K8sExecutor
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptType
@@ -57,7 +56,6 @@ class ExecutorFactory {
             'crg': CrgExecutor,
             'bsc': LsfExecutor,
             'condor': CondorExecutor,
-            'k8s': K8sExecutor,
             'nqsii': NqsiiExecutor,
             'moab': MoabExecutor,
             'oar': OarExecutor,

@@ -19,7 +19,7 @@ The extension highlights source code in red for errors and yellow for warnings.
 To view all diagnostics for the workspace, open the **Problems** tab. Here, you can search for diagnostics by diagnostic message, filename, and so on.
 
 :::{note}
-The language server parses scripts and config files according to the {ref}`Nextflow language specification <syntax-page>`, which is more strict than the Nextflow CLI. See {ref}`updating-syntax-page` for more information.
+The language server parses scripts and config files according to the {ref}`Nextflow language specification <syntax-page>`, which is more strict than the Nextflow CLI. See {ref}`strict-syntax-page` for more information.
 :::
 
 ### Hover hints
