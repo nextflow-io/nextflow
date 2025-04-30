@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,28 +14,31 @@
  * limitations under the License.
  */
 
-package nextflow.lineage
+package nextflow.trace.event
 
+import java.nio.file.Path
+
+import groovy.transform.Canonical
 import groovy.transform.CompileStatic
-import nextflow.Session
-import nextflow.trace.TraceObserverV2
-import nextflow.trace.TraceObserverFactoryV2
 
 /**
- * Implements factory for {@link LinObserver} object
+ * Models a workflow output event.
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Ben Sherman <bentshermann@gmail.com>
  */
+@Canonical
 @CompileStatic
-class LinObserverFactory implements TraceObserverFactoryV2 {
-
-    @Override
-    Collection<TraceObserverV2> create(Session session) {
-        final result = new ArrayList<TraceObserverV2>(1)
-        final store = LinStoreFactory.getOrCreate(session)
-        if( store )
-            result.add( new LinObserver(session, store) )
-        return result
-    }
-
+class WorkflowOutputEvent {
+    /**
+     * The name of the workflow output.
+     */
+    String name
+    /**
+     * The value of the workflow output. It will be null if the index file was specified.
+     */
+    Object value
+    /**
+     * The optional index file for the workflow output.
+     */
+    Path index
 }
