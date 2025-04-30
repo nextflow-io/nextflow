@@ -280,10 +280,10 @@ class CmdLineageTest extends Specification {
         def entry = new FileOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
                 "lid://123987/file.bam", "lid://12345", "lid://123987/", 1234, time, time, null)
         def jsonSer = encoder.encode(entry)
-        def expectedOutput = jsonSer
+        def expectedOutput = '[\n  "lid://12345"\n]'
         lidFile.text = jsonSer
         when:
-        def lidCmd = new CmdLineage(launcher: launcher, args: ["view", "lid:///?type=FileOutput"])
+        def lidCmd = new CmdLineage(launcher: launcher, args: ["find", "type=FileOutput"])
         lidCmd.run()
         def stdout = capture
                 .toString()
@@ -291,41 +291,6 @@ class CmdLineageTest extends Specification {
                 .findResults { line -> !line.contains('DEBUG') ? line : null }
                 .findResults { line -> !line.contains('INFO') ? line : null }
                 .findResults { line -> !line.contains('plugin') ? line : null }
-
-        then:
-        stdout.size() == expectedOutput.readLines().size()
-        stdout.join('\n') == expectedOutput
-
-        cleanup:
-        folder?.deleteDir()
-    }
-
-    def 'should show query results'(){
-        given:
-        def folder = Files.createTempDirectory('test').toAbsolutePath()
-        def configFile = folder.resolve('nextflow.config')
-        configFile.text = "lineage.enabled = true\nlineage.store.location = '$folder'".toString()
-        def lidFile = folder.resolve("12345/.data.json")
-        Files.createDirectories(lidFile.parent)
-        def launcher = Mock(Launcher){
-            getOptions() >> new CliOptions(config: [configFile.toString()])
-        }
-        def encoder = new LinEncoder().withPrettyPrint(true)
-        def time = OffsetDateTime.now()
-        def entry = new FileOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-            "lid://123987/file.bam", "lid://12345", "lid://123987/", 1234, time, time, null)
-        def jsonSer = encoder.encode(entry)
-        def expectedOutput = jsonSer
-        lidFile.text = jsonSer
-        when:
-        def lidCmd = new CmdLineage(launcher: launcher, args: ["view", "lid:///?type=FileOutput"])
-        lidCmd.run()
-        def stdout = capture
-            .toString()
-            .readLines()// remove the log part
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }
-            .findResults { line -> !line.contains('plugin') ? line : null }
 
         then:
         stdout.size() == expectedOutput.readLines().size()

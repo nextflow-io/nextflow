@@ -67,7 +67,7 @@ class LinUtilsTest extends Specification{
     }
 
 
-    def 'should query'() {
+    def 'should get metadata object'() {
         given:
         def uniqueId = UUID.randomUUID()
         def mainScript = new DataPath("file://path/to/main.nf", new Checksum("78910", "nextflow", "standard"))
@@ -81,32 +81,30 @@ class LinUtilsTest extends Specification{
         lidStore.save("$key#output", outputs1)
 
         when:
-        List<Object> params = LinUtils.query(lidStore, new URI('lid://testKey#params'))
+        def params = LinUtils.getMetadataObject(lidStore, new URI('lid://testKey#params'))
         then:
-        params.size() == 1
-        params[0] instanceof List<Parameter>
-        (params[0] as List<Parameter>).size() == 2
+        params instanceof List<Parameter>
+        (params as List<Parameter>).size() == 2
 
         when:
-        List<Object> outputs = LinUtils.query(lidStore, new URI('lid://testKey#output'))
+        def outputs = LinUtils.getMetadataObject(lidStore, new URI('lid://testKey#output'))
         then:
-        outputs.size() == 1
-        outputs[0] instanceof List<Parameter>
-        def param = (outputs[0] as List)[0] as Parameter
+        outputs instanceof List<Parameter>
+        def param = (outputs as List)[0] as Parameter
         param.name == "output"
 
         when:
-        LinUtils.query(lidStore, new URI('lid://testKey#no-exist'))
+        LinUtils.getMetadataObject(lidStore, new URI('lid://testKey#no-exist'))
         then:
         thrown(IllegalArgumentException)
 
         when:
-        LinUtils.query(lidStore, new URI('lid://testKey#outputs.no-exist'))
+        LinUtils.getMetadataObject(lidStore, new URI('lid://testKey#outputs.no-exist'))
         then:
         thrown(IllegalArgumentException)
 
         when:
-        LinUtils.query(lidStore, new URI('lid://no-exist#something'))
+        LinUtils.getMetadataObject(lidStore, new URI('lid://no-exist#something'))
         then:
         thrown(IllegalArgumentException)
     }
@@ -123,17 +121,6 @@ class LinUtilsTest extends Specification{
         ""                      | []
     }
 
-    def "should parse a query string as Map"() {
-        expect:
-        LinUtils.parseQuery(QUERY_STRING) == EXPECTED
-
-        where:
-        QUERY_STRING                | EXPECTED
-        "type=value1&taskRun=value2"   | ["type": "value1", "taskRun": "value2"]
-        "type=val with space"        | ["type": "val with space"]
-        ""                          | [:]
-        null                        | [:]
-    }
 
     def "should check params in an object"() {
         given:
@@ -152,17 +139,6 @@ class LinUtilsTest extends Specification{
         ["output.path": "/to/file"]             | true
         ["output.path": "file2"]                | true
 
-    }
-
-    def 'should parse query' (){
-        expect:
-        LinUtils.parseQuery(PARAMS) == EXPECTED
-        where:
-        PARAMS                              | EXPECTED
-        "type=value"                        | ["type": "value"]
-        "workflow.repository=subvalue"      | ["workflow.repository": "subvalue"]
-        ""                                  | [:]
-        null                                | [:]
     }
 
     def "should navigate in object params"() {
@@ -203,23 +179,6 @@ class LinUtilsTest extends Specification{
         ["nested": ["subfield": "match"]]                                       | ["nested.subfield": "match"]      | [["nested": ["subfield": "match"]]]
         ["nested": ["subfield": "nomatch"]]                                     | ["nested.subfield": "match"]      | []
         [["nested": ["subfield": "match"]], ["nested": ["subfield": "other"]]]  | ["nested.subfield": "match"]      | [["nested": ["subfield": "match"]]]
-    }
-
-    def "Should search path"() {
-        given:
-        def uniqueId = UUID.randomUUID()
-        def mainScript = new DataPath("file://path/to/main.nf", new Checksum("78910", "nextflow", "standard"))
-        def workflow = new Workflow([mainScript], "https://nextflow.io/nf-test/", "123456")
-        def key = "testKey"
-        def value1 = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [new Parameter("String", "param1", "value1"), new Parameter("String", "param2", "value2")])
-        def lidStore = new DefaultLinStore()
-        lidStore.open(config)
-        lidStore.save(key, value1)
-        when:
-        def result = LinUtils.searchPath(lidStore, key, ["name":"param1"], ["params"] as String[])
-
-        then:
-        result == [new Parameter("String", "param1", "value1")]
     }
 
     def 'should navigate' (){

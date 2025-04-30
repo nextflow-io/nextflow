@@ -72,13 +72,36 @@ class LinPathTest extends Specification {
         path.query == QUERY
 
         where:
-        URI_STRING                      | PATH              | QUERY         | FRAGMENT
-        "lid://1234/hola"               | "1234/hola"       | null          | null
-        "lid://1234/hola#frag.sub"      | "1234/hola"       | null          | "frag.sub"
-        "lid://1234/#frag.sub"          | "1234"            | null          | "frag.sub"
-        "lid://1234/?q=a&b=c"           | "1234"            | "q=a&b=c"     | null
-        "lid://1234/?q=a&b=c#frag.sub"  | "1234"            | "q=a&b=c"     | "frag.sub"
-        "lid:///"                       | "/"               | null          | null
+        URI_STRING                                  | PATH              | QUERY         | FRAGMENT
+        "lid://1234/hola"                           | "1234/hola"       | null          | null
+        "lid://1234/hola#workflow.repository"       | "1234/hola"       | null          | "workflow.repository"
+        "lid://1234/#workflow.repository"           | "1234"            | null          | "workflow.repository"
+        "lid://1234/?q=a&b=c"                       | "1234"            | "q=a&b=c"     | null
+        "lid://1234/?q=a&b=c#workflow.repository"   | "1234"            | "q=a&b=c"     | "workflow.repository"
+        "lid:///"                                   | "/"               | null          | null
+    }
+
+    def 'should throw exception if fragment contains an unknown property'() {
+        when:
+        new LinPath(fs, new URI ("lid://1234/hola#no-exist"))
+        then:
+        thrown(IllegalArgumentException)
+
+    }
+
+    def 'should warn if query is specified'() {
+        when:
+        new LinPath(fs, new URI("lid://1234/hola?query"))
+        def stdout = capture
+            .toString()
+            .readLines()// remove the log part
+            .findResults { line -> !line.contains('DEBUG') ? line : null }
+            .findResults { line -> !line.contains('INFO') ? line : null }
+            .findResults { line -> !line.contains('plugin') ? line : null }
+
+        then:
+        stdout.size() == 1
+        stdout[0].endsWith("Query string is not supported the Linage URI (lid://1234/hola?query). It will be ignored.")
     }
 
     def 'should create correct lid Path' () {

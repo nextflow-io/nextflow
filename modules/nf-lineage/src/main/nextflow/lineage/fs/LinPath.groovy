@@ -20,6 +20,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.file.FileHelper
 import nextflow.file.LogicalDataPath
+import nextflow.lineage.LinPropertyValidator
 import nextflow.lineage.model.Checksum
 import nextflow.lineage.model.FileOutput
 import nextflow.lineage.serde.LinSerializable
@@ -74,10 +75,17 @@ class LinPath implements Path, LogicalDataPath {
         this.fileSystem = fs
         setFieldsFormURI(uri)
         //Check if query and fragment are with filePath
-        if (query == null && fragment == null){
+        if( query == null && fragment == null ) {
             setFieldsFormURI(new URI(toUriString()))
         }
+        //warn if query is specified
+        if( query )
+            log.warn("Query string is not supported the Linage URI ($uri). It will be ignored.")
+        // Validate fragment
+        if( fragment )
+            new LinPropertyValidator().validate(fragment.tokenize('.'))
     }
+
     private void setFieldsFormURI(URI uri){
         this.query = uri.query
         this.fragment = uri.fragment
@@ -503,7 +511,7 @@ class LinPath implements Path, LogicalDataPath {
         if( !path.startsWith(LID_PROT) )
             throw new IllegalArgumentException("Invalid LID file system path URI - it must start with '${LID_PROT}' prefix - offendinf value: $path")
         if( path.startsWith(LID_PROT + SEPARATOR) && path.length() > 7 )
-            throw new IllegalArgumentException("Invalid LID file system path URI - make sure the schema prefix does not container more than two slash characters - offending value: $path")
+            throw new IllegalArgumentException("Invalid LID file system path URI - make sure the schema prefix does not container more than two slash characters or a query in the root '/' - offending value: $path")
         if( path == LID_PROT ) //Empty path case
             return new URI("lid:///")
         return new URI(path)

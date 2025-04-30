@@ -22,9 +22,9 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.Session
 import nextflow.extension.LinChannelEx
-import nextflow.lineage.fs.LinPath
-import nextflow.lineage.fs.LinPathFactory
 import nextflow.lineage.serde.LinSerializable
+
+import static nextflow.lineage.fs.LinPath.*
 
 /**
  * Lineage channel extensions
@@ -37,10 +37,11 @@ class LinChannelExImpl implements LinChannelEx {
 
     Object viewLineage(Session session, String lid) {
         final store = getStore(session)
-        return store.load(LinPathFactory.create(lid).toString())
+        return LinUtils.getMetadataObject(store, new URI(lid))
     }
 
     void queryLineage(Session session, DataflowWriteChannel channel, Map<String, String> params) {
+        new LinPropertyValidator().validateQueryParams(params)
         final store = getStore(session)
         emitSearchResults(channel, store.search(params))
         channel.bind(Channel.STOP)
@@ -58,6 +59,6 @@ class LinChannelExImpl implements LinChannelEx {
         if( !results ) {
             return
         }
-        results.keySet().forEach { channel.bind(LinPath.LID_PROT + it) }
+        results.keySet().forEach { channel.bind(asUriString(it)) }
     }
 }

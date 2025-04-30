@@ -86,13 +86,19 @@ class LinChannelExImplTest extends Specification {
         and:
         results == value1
 
-
         when:
         results = channelLinExt.viewLineage(session, 'lid://testKey#output')
         then:
         channelLinExt.getStore(session) >> lidStore
         and:
-        results == wfOutputs
+        results == outputs
+
+        when:
+        results = channelLinExt.viewLineage(session, 'lid://testKey#params')
+        then:
+        channelLinExt.getStore(session) >> lidStore
+        and:
+        results == params
     }
 
     def 'should return global query results' () {

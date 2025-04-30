@@ -17,7 +17,6 @@
 package nextflow.lineage.cli
 
 import static nextflow.lineage.fs.LinPath.*
-import static nextflow.lineage.LinUtils.*
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
@@ -29,6 +28,7 @@ import nextflow.cli.CmdLineage
 import nextflow.config.ConfigMap
 import nextflow.dag.MermaidHtmlRenderer
 import nextflow.lineage.LinHistoryRecord
+import nextflow.lineage.LinPropertyValidator
 import nextflow.lineage.LinStore
 import nextflow.lineage.LinStoreFactory
 import nextflow.lineage.LinUtils
@@ -99,13 +99,12 @@ class LinCommandImpl implements CmdLineage.LinCommand {
             return
         }
         try {
-            def entries = LinUtils.query(store, new URI(args[0]))
-            if( !entries ) {
-                println "No entries found for ${args[0]}"
+            def entry = LinUtils.getMetadataObject(store, new URI(args[0]))
+            if( !entry ) {
+                println "No entry found for ${args[0]}"
                 return
             }
-            entries = entries.size() == 1 ? entries[0] : entries
-            println LinUtils.encodeSearchOutputs(entries, true)
+            println LinUtils.encodeSearchOutputs(entry, true)
         } catch (Throwable e) {
             println "Error loading ${args[0]} - ${e.message}"
         }
@@ -323,6 +322,7 @@ class LinCommandImpl implements CmdLineage.LinCommand {
             final params = args.collectEntries {
                 it.split('=').collect { URLDecoder.decode(it, 'UTF-8') }
             } as Map<String, String>
+            new LinPropertyValidator().validateQueryParams(params)
             println LinUtils.encodeSearchOutputs( store.search(params).keySet().collect { asUriString(it) }, true )
         } catch (Throwable e){
             println "Error searching for ${args[0]}. ${e.message}"

@@ -16,13 +16,15 @@
 
 package nextflow.lineage
 
+import static nextflow.lineage.fs.LinFileSystemProvider.*
+import static nextflow.lineage.fs.LinPath.*
+
 import java.nio.file.attribute.FileTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.lineage.fs.LinPath
 import nextflow.lineage.model.TaskRun
 import nextflow.lineage.model.WorkflowRun
 import nextflow.lineage.serde.LinEncoder
@@ -40,45 +42,39 @@ class LinUtils {
     private static final String[] EMPTY_ARRAY = new String[] {}
 
     /**
-     * Query a lineage store.
+     * Get a metadata lineage object or fragment from the Lineage store.
      *
-     * @param store lineage store to query.
-     * @param uri Query to perform in a URI-like format.
-     *      Format 'lid://<key>[?QueryString][#fragment]' where:
-     *       - Key: Element where the query will be applied. '/' indicates query will be applied in all the elements of the lineage store.
-     *       - QueryString: all param-value pairs that the lineage element should fulfill in a URI's query string format.
+     * @param store Lineage store.
+     * @param uri Object or fragment to retrieve in URI-like format.
+     *      Format 'lid://<key>[#fragment]' where:
+     *       - Key: Metadata Element key
      *       - Fragment: Element fragment to retrieve.
-     * @return Collection of object fulfilling the query
+     * @return Lineage metadata object or fragment.
      */
-    static Collection query(LinStore store, URI uri) {
-        String key = uri.authority ? uri.authority + uri.path : uri.path
-        if (key == LinPath.SEPARATOR) {
-            return globalSearch(store, uri)
-        } else {
-            final parameters = uri.query ? parseQuery(uri.query) : null
-            final children = parseChildrenFromFragment(uri.fragment)
-            return searchPath(store, key, parameters, children )
+    static Object getMetadataObject(LinStore store, URI uri) {
+        if( uri.scheme != SCHEME ) {
+            throw new IllegalArgumentException("Invalid LID URI - scheme is different for $SCHEME")
         }
+        final key = uri.authority ? uri.authority + uri.path : uri.path
+        if( key == SEPARATOR ) {
+            throw new IllegalArgumentException("Cannot get object from the root LID URI")
+        }
+        if ( uri.query )
+            log.warn("Query string is not supported the Linage URI ($uri). It will be ignored.")
+
+        final children = parseChildrenFromFragment(uri.fragment)
+        return getMetadataObject0(store, key, children )
     }
 
-    private static Collection<LinSerializable> globalSearch(LinStore store, URI uri) {
-        final results = store.search(parseQuery(uri.query)).values()
-        if (results && uri.fragment) {
-            // If fragment is defined get the property of the object indicated by the fragment
-            return filterResults(results, uri.fragment)
+    private static Object getMetadataObject0(LinStore store, String key, String[] children = []) {
+        final object = store.load(key)
+        if (!object) {
+            throw new FileNotFoundException("Lineage object $key not found")
         }
-        return results
-    }
-
-    private static List filterResults(Collection<LinSerializable> results, String fragment) {
-        final filteredResults = []
-        results.forEach {
-            final output = navigate(it, fragment)
-            if (output) {
-                filteredResults.add(output)
-            }
+        if (children && children.size() > 0) {
+            return getSubObject(store, key, object, children)
         }
-        return filteredResults
+        return object
     }
 
     /**
@@ -93,38 +89,6 @@ class LinUtils {
         final children = fragment.tokenize('.')
         new LinPropertyValidator().validate(children)
         return children as String[]
-    }
-
-    /**
-     * Search for objects inside a description
-     *
-     * @param store lineage store
-     * @param key lineage key where to perform the search
-     * @param params Parameter-value pairs to be evaluated in the key
-     * @param children  Sub-objects to evaluate and retrieve
-     * @return List of object
-     */
-    protected static List<Object> searchPath(LinStore store, String key, Map<String, String> params, String[] children = []) {
-        final object = store.load(key)
-        if (!object) {
-            throw new FileNotFoundException("Lineage object $key not found")
-        }
-        final results = new LinkedList<Object>()
-        if (children && children.size() > 0) {
-            treatSubObject(store, key, object, children, params, results)
-        } else {
-            treatObject(object, params, results)
-        }
-
-        return results
-    }
-
-    private static void treatSubObject(LinStore store, String key, LinSerializable object, String[] children, Map<String, String> params, LinkedList<Object> results) {
-        final output = getSubObject(store, key, object, children)
-        if (!output) {
-            throw new FileNotFoundException("Lineage object $key#${children.join('.')} not found")
-        }
-        treatObject(output, params, results)
     }
 
     /**
@@ -177,23 +141,6 @@ class LinUtils {
         } else {
             results.add(object)
         }
-    }
-
-    /**
-     * Parses a query string and store them in parameter-value Map.
-     *
-     * @param queryString URI-like query string. (e.g. param1=value1&param2=value2).
-     * @return Map containing the parameter-value pairs of the query string.
-     */
-    static Map<String, String> parseQuery(String queryString) {
-        if( !queryString ) {
-            return [:]
-        }
-        final params = queryString.split('&').collectEntries {
-            it.split('=').collect { URLDecoder.decode(it, 'UTF-8') }
-        } as Map<String, String>
-        new LinPropertyValidator().validateQueryParams(params)
-        return params
     }
 
     /**
