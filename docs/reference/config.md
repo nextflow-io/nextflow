@@ -344,6 +344,11 @@ The following settings are available:
 `azure.batch.location`
 : The name of the batch service region, e.g. `westeurope` or `eastus2`. This is not needed when the endpoint is specified.
 
+`azure.batch.jobMaxWallClockTime`
+: :::{versionadded} 25.04.0
+  :::
+: The maximum elapsed time that jobs may run, measured from the time they are created. If jobs do not complete within this time limit, the Batch service terminates them and any tasks still running (default: `30d`).
+
 `azure.batch.terminateJobsOnCompletion`
 : :::{versionadded} 23.05.0-edge
   :::
@@ -882,6 +887,11 @@ The following settings are available for Google Cloud Batch:
   - projects/{project}/global/networks/{network}
   - global/networks/{network}
 
+`google.batch.networkTags`
+: The network tags to be applied to the instances created by Google Batch jobs. Network tags are used to apply firewall rules and control network access (e.g., `['allow-ssh', 'allow-http']`). 
+
+: Network tags are ignored when using instance templates. See [Add network tags](https://cloud.google.com/vpc/docs/add-remove-network-tags) for more information.
+
 `google.batch.serviceAccountEmail`
 : Define the Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used.
 
@@ -1108,6 +1118,20 @@ The following settings are available:
 : Defines the path where the workflow temporary data is stored. This must be a path in a shared K8s persistent volume (default: `<user-dir>/work`).
 
 See the {ref}`k8s-page` page for more details.
+
+(config-lineage)=
+
+## `lineage`
+
+The `lineage` scope controls the generation of lineage metadata.
+
+The following settings are available:
+
+`lineage.enabled`
+: Enable generation of lineage metadata (default: `false`).
+
+`lineage.store.location`
+: Defines the location of the lineage metadata store (default: `./.lineage`).
 
 (config-mail)=
 

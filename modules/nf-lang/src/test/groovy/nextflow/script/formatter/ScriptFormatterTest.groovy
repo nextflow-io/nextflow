@@ -53,6 +53,12 @@ class ScriptFormatterTest extends Specification {
         return true
     }
 
+    boolean checkFormat(String source) {
+        source = source.stripIndent()
+        assert format(source) == source
+        return true
+    }
+
     def 'should format a code snippet' () {
         expect:
         checkFormat(
@@ -64,6 +70,8 @@ class ScriptFormatterTest extends Specification {
             '''
         )
     }
+
+    /// SCRIPT DECLARATIONS
 
     def 'should format an include declaration' () {
         expect:
@@ -210,21 +218,6 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
-    def 'should format an operator chain' () {
-        expect:
-        checkFormat(
-            '''\
-            Channel.of( 1, 2, 3 )
-                .multiMap{v->foo:bar:v}.set{result}
-            ''',
-            '''\
-            Channel.of(1, 2, 3)
-                .multiMap { v -> foo: bar: v }
-                .set { result }
-            '''
-        )
-    }
-
     def 'should not sort script declarations by default' () {
         given:
         def source = 
@@ -250,6 +243,322 @@ class ScriptFormatterTest extends Specification {
 
         expect:
         format(source) == source
+    }
+
+    /// STATEMENTS
+
+    def 'should format an assert statement' () {
+        expect:
+        checkFormat(
+            '''\
+            assert 2+2==4:'The math broke!'
+            ''',
+            '''\
+            assert 2 + 2 == 4 : 'The math broke!'
+            '''
+        )
+    }
+
+    def 'should format a variable declaration' () {
+        expect:
+        checkFormat(
+            '''\
+            def x=42
+            def(x,y)=[1,2]
+            ''',
+            '''\
+            def x = 42
+            def (x, y) = [1, 2]
+            '''
+        )
+    }
+
+    def 'should format an assignment' () {
+        expect:
+        checkFormat(
+            '''\
+            v=42
+            list[0]='first'
+            map.key='value'
+            (x,y)=[1,2]
+            ''',
+            '''\
+            v = 42
+            list[0] = 'first'
+            map.key = 'value'
+            (x, y) = [1, 2]
+            '''
+        )
+    }
+
+    def 'should format an if-else statement' () {
+        expect:
+        checkFormat(
+            '''\
+            if(x<0.5)println('You lost.')else if(x>0.5)println('You won!')else println('You tied?')
+            ''',
+            '''\
+            if (x < 0.5) {
+                println('You lost.')
+            }
+            else if (x > 0.5) {
+                println('You won!')
+            }
+            else {
+                println('You tied?')
+            }
+            '''
+        )
+    }
+
+    def 'should format a throw statement' () {
+        expect:
+        checkFormat(
+            '''\
+            throw new Exception('something failed!')
+            '''
+        )
+    }
+
+    def 'should format a try-catch statement' () {
+        expect:
+        checkFormat(
+            '''\
+            try{println(file('foo.txt').text)}catch(IOException e){log.warn("Could not load foo.txt")}
+            ''',
+            '''\
+            try {
+                println(file('foo.txt').text)
+            }
+            catch (IOException e) {
+                log.warn("Could not load foo.txt")
+            }
+            '''
+        )
+    }
+
+    def 'should format a method chain' () {
+        expect:
+        checkFormat(
+            '''\
+            Channel.of( 1, 2, 3 )
+                .multiMap{v->foo:bar:v}.set{result}
+            ''',
+            '''\
+            Channel.of(1, 2, 3)
+                .multiMap { v -> foo: bar: v }
+                .set { result }
+            '''
+        )
+    }
+
+    /// EXPRESSIONS
+
+    def 'should format a numeric literal' () {
+        expect:
+        checkFormat(
+            '''\
+            42
+            -1
+            0b1001
+            031
+            0xabcd
+            3.14
+            -0.1
+            1.59e7
+            1.59e-7
+            '''
+        )
+    }
+
+    def 'should format a keyword literal' () {
+        expect:
+        checkFormat(
+            '''\
+            true
+            false
+            null
+            '''
+        )
+    }
+
+    def 'should format a string literal' () {
+        expect:
+        checkFormat(
+            '''\
+            "I said 'hello'"
+
+            'I said "hello" again!'
+
+            \'\'\'
+            Hello,
+            How are you today?
+            \'\'\'
+
+            """
+            We don't have to escape quotes anymore!
+            Even "double" quotes!
+            """
+
+            /no escape!/
+            '''
+        )
+    }
+
+    def 'should format a dynamic string' () {
+        expect:
+        checkFormat(
+            '''\
+            "Hello, ${names.join(' and ')}!"
+            '''
+        )
+        checkFormat(
+            '''\
+            "Hello, $name.first $name.last!"
+            ''',
+            '''\
+            "Hello, ${name.first} ${name.last}!"
+            '''
+        )
+        checkFormat(
+            '''\
+            """
+            blastp \
+                -in ${input} \
+                -out ${output} \
+                -db ${blast_db} \
+                -html
+            """
+            '''
+        )
+        checkFormat(
+            '''\
+            'Hello, ${names.join(" and ")}!'
+            '''
+        )
+    }
+
+    def 'should format a list literal' () {
+        expect:
+        checkFormat(
+            '''\
+            [1,2,3]
+            []
+            ''',
+            '''\
+            [1, 2, 3]
+            []
+            '''
+        )
+    }
+
+    def 'should format a map literal' () {
+        expect:
+        checkFormat(
+            '''\
+            [foo:1,bar:2,baz:3]
+            [:]
+            ''',
+            '''\
+            [foo: 1, bar: 2, baz: 3]
+            [:]
+            '''
+        )
+        checkFormat(
+            '''\
+            [(x):1]
+            ''',
+            '''\
+            [(x): 1]
+            '''
+        )
+    }
+
+    def 'should format a closure' () {
+        expect:
+        checkFormat(
+            '''\
+            {a,b->a+b}
+            ''',
+            '''\
+            { a, b -> a + b }
+            '''
+        )
+        checkFormat(
+            '''\
+            {v->println'Hello!';v*v}
+            ''',
+            '''\
+            { v ->
+                println('Hello!')
+                v * v
+            }
+            '''
+        )
+    }
+
+    def 'should format index and property accesses' () {
+        expect:
+        checkFormat(
+            '''\
+            myList[0]
+            myFile.text
+            myFiles*.text
+            myFile?.text
+            '''
+        )
+    }
+
+    def 'should format a function call' () {
+        expect:
+        checkFormat(
+            '''\
+            printf 'Hello %s!\\n', 'World'
+            file 'hello.txt', checkIfExists: true
+            ''',
+            '''\
+            printf('Hello %s!\\n', 'World')
+            file('hello.txt', checkIfExists: true)
+            '''
+        )
+        checkFormat(
+            '''\
+            [1, 2, 3].inject('result:') { acc, v -> acc + ' ' + v }
+            [1, 2, 3].each() { v -> println v }
+            [1, 2, 3].each { v -> println v }
+            ''',
+            '''\
+            [1, 2, 3].inject('result:') { acc, v -> acc + ' ' + v }
+            [1, 2, 3].each { v -> println(v) }
+            [1, 2, 3].each { v -> println(v) }
+            '''
+        )
+    }
+
+    def 'should format a constructor call' () {
+        expect:
+        checkFormat(
+            '''\
+            new java.util.Date()
+            new Date()
+            '''
+        )
+    }
+
+    def 'should format unary/binary/ternary expressions' () {
+        expect:
+        checkFormat(
+            '''\
+            !(2+2==4)
+            (1+2)*3
+            x%2==0?'x is even!':'x is odd!'
+            ''',
+            '''\
+            !(2 + 2 == 4)
+            (1 + 2) * 3
+            x % 2 == 0 ? 'x is even!' : 'x is odd!'
+            '''
+        )
     }
 
 }
