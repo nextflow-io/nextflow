@@ -15,12 +15,13 @@
  */
 
 package nextflow.trace
+
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
 import nextflow.Session
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
-
-import java.nio.file.Path
 
 /**
  * Defines the defaults method for application flow observer
@@ -28,32 +29,33 @@ import java.nio.file.Path
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-interface TraceObserver {
+@Deprecated
+trait TraceObserver {
 
     /**
      * This method is invoked when the flow is going to start
      */
-    default void onFlowCreate(Session session) {}
+    void onFlowCreate(Session session) {}
 
     /**
      * This method is invoked when the flow is going to start
      */
-    default void onFlowBegin() {}
+    void onFlowBegin() {}
 
     /**
      * This method is invoked when the flow is going to complete
      */
-    default void onFlowComplete() {}
+    void onFlowComplete() {}
 
     /*
      * Invoked when the process is created.
      */
-    default void onProcessCreate( TaskProcessor process ){}
+    void onProcessCreate( TaskProcessor process ){}
 
     /*
       * Invoked when all tak have been executed and process ends.
       */
-    default void onProcessTerminate( TaskProcessor process ){}
+    void onProcessTerminate( TaskProcessor process ){}
 
     /**
      * This method when a new task is created and submitted in the nextflow
@@ -63,7 +65,7 @@ interface TraceObserver {
      * @param handler
      * @param trace
      */
-    default void onProcessPending(TaskHandler handler, TraceRecord trace){}
+    void onProcessPending(TaskHandler handler, TraceRecord trace){}
 
     /**
      * This method is invoked before a process run is going to be submitted
@@ -73,7 +75,7 @@ interface TraceObserver {
      * @param trace
      *      The associated {@link TraceRecord} for the current task.
      */
-    default void onProcessSubmit(TaskHandler handler, TraceRecord trace){}
+    void onProcessSubmit(TaskHandler handler, TraceRecord trace){}
 
     /**
      * This method is invoked when a process run is going to start
@@ -83,7 +85,7 @@ interface TraceObserver {
      * @param trace
      *      The associated {@link TraceRecord} for the current task.
      */
-    default void onProcessStart(TaskHandler handler, TraceRecord trace){}
+    void onProcessStart(TaskHandler handler, TraceRecord trace){}
 
     /**
      * This method is invoked when a process run completes
@@ -93,7 +95,7 @@ interface TraceObserver {
      * @param trace
      *      The associated {@link TraceRecord} for the current task.
      */
-    default void onProcessComplete(TaskHandler handler, TraceRecord trace){}
+    void onProcessComplete(TaskHandler handler, TraceRecord trace){}
 
     /**
      * method invoked when a task execution is skipped because the result is cached (already computed)
@@ -105,12 +107,12 @@ interface TraceObserver {
      *      The trace record for the cached trace. When this event is invoked for a store task
      *      the {@code trace} record is expected to be {@code null}
      */
-    default void onProcessCached(TaskHandler handler, TraceRecord trace){}
+    void onProcessCached(TaskHandler handler, TraceRecord trace){}
 
     /**
      * @return {@code true} whenever this observer requires to collect task execution metrics
      */
-    default boolean enableMetrics(){ false }
+    boolean enableMetrics(){ false }
 
     /**
      * Method that is invoked, when a workflow fails.
@@ -120,18 +122,17 @@ interface TraceObserver {
      * @param trace
      *      The associated {@link TraceRecord} for the current task.
      */
-    default void onFlowError(TaskHandler handler, TraceRecord trace){}
+    void onFlowError(TaskHandler handler, TraceRecord trace){}
 
     /**
-     * Method that is invoked when a workflow output is published.
+     * Method that is invoked when a value is published from a channel.
      *
-     * @param name
-     *      The name of the workflow output
+     * NOTE: This method is no longer used.
+     *
      * @param value
-     *      A list if the published channel was a queue channel,
-     *      otherwise an object if the channel was a value channel
      */
-    default void onWorkflowPublish(String name, Object value){}
+    @Deprecated
+    void onWorkflowPublish(Object value){}
 
     /**
      * Method that is invoke when an output file is published
@@ -140,7 +141,7 @@ interface TraceObserver {
      * @param destination
      *      The destination path at `publishDir` folder.
      */
-    default void onFilePublish(Path destination){}
+    void onFilePublish(Path destination){}
 
     /**
      * Method that is invoke when an output file is published
@@ -151,22 +152,7 @@ interface TraceObserver {
      * @param source
      *      The source path at `workDir` folder.
      */
-    default void onFilePublish(Path destination, Path source){
+    void onFilePublish(Path destination, Path source){
         onFilePublish(destination)
     }
-
-    /**
-     * Method that is invoke when an output file is published.
-     *
-     * @param destination
-     *      The destination path at `publishDir` folder.
-     * @param source
-     *      The source path at `workDir` folder.
-     * @param annotations
-     *      The annotations attached to this file
-     */
-    default void onFilePublish(Path destination, Path source, Map annotations) {
-        onFilePublish(destination, source)
-    }
-
 }

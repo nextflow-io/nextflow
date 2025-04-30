@@ -627,6 +627,9 @@ See [Output directives](#output-directives) for the list of available index dire
 
 The following directives are available for each output in the output block:
 
+`annotations`
+: Specify annotations to be be applied to every published file. Can be a map or a closure that returns a map.
+
 `index`
 : Create an index file which will contain a record of each published value.
 
