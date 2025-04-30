@@ -32,6 +32,7 @@ import com.azure.compute.batch.models.AutoUserScope
 import com.azure.compute.batch.models.AutoUserSpecification
 import com.azure.compute.batch.models.AzureFileShareConfiguration
 import com.azure.compute.batch.models.BatchJobCreateContent
+import com.azure.compute.batch.models.BatchJobConstraints
 import com.azure.compute.batch.models.BatchJobUpdateContent
 import com.azure.compute.batch.models.BatchNodeFillType
 import com.azure.compute.batch.models.BatchPool
@@ -429,11 +430,26 @@ class AzBatchService implements Closeable {
         return jobId
     }
 
+    protected BatchJobConstraints createJobConstraints(nextflow.util.Duration time) {
+        final constraints = new BatchJobConstraints()
+        if (time && time.toMillis() > 0) {
+            final long millis = time.toMillis()
+            final java.time.Duration maxWallTime = java.time.Duration.ofMillis(millis)
+            constraints.setMaxWallClockTime(maxWallTime)
+        }
+        return constraints
+    }
+
     protected String createJob0(String poolId, TaskRun task) {
         log.debug "[AZURE BATCH] created job for ${task.processor.name} with pool ${poolId}"
         // create a batch job
         final jobId = makeJobId(task)
         final content = new BatchJobCreateContent(jobId, new BatchPoolInfo(poolId: poolId))
+
+        if (config.batch().jobMaxWallClockTime) {
+            content.setConstraints(createJobConstraints(config.batch().jobMaxWallClockTime))
+        }
+        
         apply(() -> client.createJob(content))
         return jobId
     }
@@ -944,8 +960,12 @@ class AzBatchService implements Closeable {
 
                 apply(() -> client.updateJob(jobId, jobParameter))
             }
-            catch (Exception e) {
-                log.warn "Unable to terminate Azure Batch job ${jobId} - Reason: ${e.message ?: e}"
+            catch (HttpResponseException e) {
+                if (e.response.statusCode == 409) {
+                    log.debug "Azure Batch job ${jobId} already terminated, skipping termination"
+                } else {
+                    log.warn "Unable to terminate Azure Batch job ${jobId} - Status: ${e.response.statusCode}, Reason: ${e.message ?: e}"
+                }
             }
         }
     }

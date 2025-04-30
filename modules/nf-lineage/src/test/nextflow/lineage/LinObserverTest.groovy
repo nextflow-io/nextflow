@@ -17,11 +17,32 @@
 
 package nextflow.lineage
 
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.attribute.BasicFileAttributes
+
+import com.google.common.hash.HashCode
+import nextflow.Session
+import nextflow.file.FileHolder
+import nextflow.lineage.model.Checksum
+import nextflow.lineage.model.FileOutput
+import nextflow.lineage.model.DataPath
 import nextflow.lineage.model.Parameter
 import nextflow.lineage.model.TaskOutput
-import nextflow.file.FileHolder
+import nextflow.lineage.model.Workflow
+import nextflow.lineage.model.WorkflowOutput
+import nextflow.lineage.model.WorkflowRun
+import nextflow.lineage.serde.LinEncoder
+import nextflow.lineage.config.LineageConfig
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
+import nextflow.processor.TaskId
+import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskRun
+import nextflow.script.ScriptBinding
+import nextflow.script.ScriptMeta
 import nextflow.script.TokenVar
+import nextflow.script.WorkflowMetadata
 import nextflow.script.params.EnvOutParam
 import nextflow.script.params.FileInParam
 import nextflow.script.params.FileOutParam
@@ -31,35 +52,16 @@ import nextflow.script.params.StdInParam
 import nextflow.script.params.StdOutParam
 import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
-import spock.lang.Shared
-
-import static nextflow.lineage.fs.LinPath.*
-
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.attribute.BasicFileAttributes
-
-import com.google.common.hash.HashCode
-import nextflow.Session
-import nextflow.lineage.model.Checksum
-import nextflow.lineage.model.FileOutput
-import nextflow.lineage.model.DataPath
-import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowOutput
-import nextflow.lineage.model.WorkflowRun
-import nextflow.lineage.serde.LinEncoder
-import nextflow.lineage.config.LineageConfig
-import nextflow.processor.TaskConfig
-import nextflow.processor.TaskId
-import nextflow.processor.TaskProcessor
-import nextflow.processor.TaskRun
-import nextflow.script.ScriptBinding
-import nextflow.script.ScriptMeta
-import nextflow.script.WorkflowMetadata
+import nextflow.trace.event.FilePublishEvent
+import nextflow.trace.event.TaskEvent
+import nextflow.trace.event.WorkflowOutputEvent
 import nextflow.util.CacheHelper
 import nextflow.util.PathNormalizer
+import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
+
+import static nextflow.lineage.fs.LinPath.*
 
 /**
  *
@@ -306,7 +308,7 @@ class LinObserverTest extends Specification {
             "lid://1234567890", "lid://hash", "lid://1234567890", attrs2.size(), LinUtils.toDate(attrs2.creationTime()), LinUtils.toDate(attrs2.lastModifiedTime()) )
 
         when:
-        observer.onProcessComplete(handler, null )
+        observer.onTaskComplete(new TaskEvent(handler, null))
         def taskRunResult = store.load("${hash.toString()}")
         def dataOutputResult1 = store.load("${hash}/fileOut1.txt") as FileOutput
         def dataOutputResult2 = store.load("${hash}/fileOut2.txt") as FileOutput
@@ -524,8 +526,8 @@ class LinObserverTest extends Specification {
             def sourceFile1 = workDir.resolve('12/3987/file.bam')
             Files.createDirectories(sourceFile1.parent)
             sourceFile1.text = 'some data1'
-            observer.onFilePublish(outFile1, sourceFile1)
-            observer.onWorkflowPublish("a", outFile1)
+            observer.onFilePublish(new FilePublishEvent(sourceFile1, outFile1))
+            observer.onWorkflowOutput(new WorkflowOutputEvent("a", outFile1))
 
         then: 'check file 1 output metadata in lid store'
             def attrs1 = Files.readAttributes(outFile1, BasicFileAttributes)
@@ -541,8 +543,8 @@ class LinObserverTest extends Specification {
             outFile2.text = 'some data2'
             def attrs2 = Files.readAttributes(outFile2, BasicFileAttributes)
             def fileHash2 = CacheHelper.hasher(outFile2).hash().toString()
-            observer.onFilePublish(outFile2)
-            observer.onWorkflowPublish("b", outFile2)
+            observer.onFilePublish(new FilePublishEvent(null, outFile2))
+            observer.onWorkflowOutput(new WorkflowOutputEvent("b", outFile2))
         then: 'Check outFile2 metadata in lid store'
             def output2 = new FileOutput(outFile2.toString(), new Checksum(fileHash2, "nextflow", "standard"),
                 "lid://${observer.executionHash}" , "lid://${observer.executionHash}", null,
