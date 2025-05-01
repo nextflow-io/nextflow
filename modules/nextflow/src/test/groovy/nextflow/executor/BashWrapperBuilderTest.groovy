@@ -1441,11 +1441,12 @@ class BashWrapperBuilderTest extends Specification {
         expect:
         BashWrapperBuilder.isRetryable0(ERROR) == EXPECTED
         where:
-        ERROR                           | EXPECTED
-        new RuntimeException()          | true
-        new SocketException()           | true
-        new FileSystemException('foo')  | true
-        new IOException()               | false
-        new Exception()                 | false
+        ERROR                               | EXPECTED
+        new RuntimeException()              | true
+        new SocketException()               | true
+        new SocketTimeoutException('foo')   | true
+        new FileSystemException('foo')      | true
+        new IOException()                   | false
+        new Exception()                     | false
     }
 }
