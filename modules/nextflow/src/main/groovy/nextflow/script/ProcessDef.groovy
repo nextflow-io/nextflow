@@ -131,7 +131,7 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
     ProcessDef cloneWithName(String name) {
         final path =  ScriptMeta.get(owner)?.getScriptPath()
         final safePath = path?: Paths.get(".") // Default path for path-less scripts (for TESTING)
-        ScriptMeta.addResolvedName(name, safePath, this.baseName)
+        ScriptMeta.addResolvedName(name, safePath, this.baseName, processName)
         def result = clone()
         result.@processName = name
         result.@simpleName = stripScope(name)

@@ -116,12 +116,18 @@ class ScriptMeta {
         return result
     }
 
-    static void addResolvedName(String name, Path path, String baseName) {
+    static void addResolvedName(String name, Path path, String baseName, String processName) {
         def resolvedNameList = resolvedProcessNames.get(Map.entry(path, baseName))
         if(!resolvedNameList){
             resolvedNameList = new HashSet<String>()
             resolvedProcessNames.put(Map.entry(path, baseName), resolvedNameList)
         }
+
+        // If an aliased name is re-aliased, keep only the latest name.
+        // The first name is given on inclusion, the second when the
+        // actual workflow path is resolved. Only the second name appears
+        // in execution reports.
+        resolvedNameList.remove(processName)
 
         resolvedNameList.add(name)
     }
