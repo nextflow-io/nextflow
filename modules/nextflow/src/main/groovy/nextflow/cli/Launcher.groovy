@@ -536,7 +536,7 @@ class Launcher {
         }
 
         catch( ConfigParseException e )  {
-            if( NF.getSyntaxParserVersion() == 'v2' ) {
+            if( NF.isSyntaxParserV2() ) {
                 log.error(e.message, e)
             }
             else {
