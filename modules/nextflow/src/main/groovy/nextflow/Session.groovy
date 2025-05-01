@@ -883,7 +883,7 @@ class Session implements ISession {
                     // other scripts, as it would create a circular inclusion.
                     // Hence, no need to check for the key existence in the map.
                     def key = Map.entry(mainScriptMeta.getScriptPath(), name)
-                    def list = new ArrayList()
+                    def list = new HashSet()
                     list.add(name)
                     resolvedNames.put(key, list)
                 }

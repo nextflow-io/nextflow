@@ -50,7 +50,7 @@ class ScriptMeta {
 
     static private Map<Path,BaseScript> scriptsByPath = new HashMap<>(10)
 
-    static private Map<Map.Entry<Path,String>,List<String>> resolvedProcessNames = new HashMap<>(20)
+    static private Map<Map.Entry<Path,String>,Set<String>> resolvedProcessNames = new HashMap<>(20)
 
     @TestOnly
     static void reset() {
@@ -104,12 +104,12 @@ class ScriptMeta {
      * Returns a map of all process names and their aliases within the scripts.
      * @return 
      */
-     static Map<Map.Entry<Path, String>, List<String>> allResolvedProcessNames() {
+     static Map<Map.Entry<Path, String>, Set<String>> allResolvedProcessNames() {
         // Return a deep copy of the attribute, to avoid altering the static attribute.
         def result = new HashMap(resolvedProcessNames.entrySet().size())
         resolvedProcessNames.entrySet().each { entry ->
             def key = Map.entry(entry.key.key, entry.key.value)
-            def value = new LinkedList<String>(entry.value)
+            def value = new HashSet<String>(entry.value)
             result.put(key, value)
         }
 
@@ -119,7 +119,7 @@ class ScriptMeta {
     static void addResolvedName(String name, Path path, String baseName) {
         def resolvedNameList = resolvedProcessNames.get(Map.entry(path, baseName))
         if(!resolvedNameList){
-            resolvedNameList = new LinkedList<String>()
+            resolvedNameList = new HashSet<String>()
             resolvedProcessNames.put(Map.entry(path, baseName), resolvedNameList)
         }
 
