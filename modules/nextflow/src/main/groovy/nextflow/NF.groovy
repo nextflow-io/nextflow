@@ -36,7 +36,7 @@ class NF {
         return SysEnv.get('NXF_SYNTAX_PARSER', 'v1')
     }
 
-    static String isSyntaxParserV2() {
+    static boolean isSyntaxParserV2() {
         return getSyntaxParserVersion() == 'v2'
     }
 
