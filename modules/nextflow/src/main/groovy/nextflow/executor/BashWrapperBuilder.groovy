@@ -470,6 +470,8 @@ class BashWrapperBuilder {
             return true
         if( e instanceof SocketException )
             return true
+        if( e instanceof SocketTimeoutException )
+            return true
         if( e instanceof RuntimeException )
             return true
         if( e.class.getSimpleName() == 'HttpResponseException' )
