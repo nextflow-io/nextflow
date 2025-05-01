@@ -40,7 +40,7 @@ class LinEncoder extends GsonEncoder<LinSerializable> {
         withSerializeNulls(true)
     }
 
-    static RuntimeTypeAdapterFactory newLidTypeAdapterFactory(){
+    static RuntimeTypeAdapterFactory newTypeAdapterFactory(){
         RuntimeTypeAdapterFactory.of(LinSerializable.class, "type")
             .registerSubtype(WorkflowRun, WorkflowRun.simpleName)
             .registerSubtype(WorkflowOutput, WorkflowOutput.simpleName)

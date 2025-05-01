@@ -323,7 +323,7 @@ class LinUtils {
             return new GsonEncoder<Object>() {}
                 .withPrettyPrint(prettyPrint)
                 .withSerializeNulls(true)
-                .withTypeAdapterFactory(LinEncoder.newLidTypeAdapterFactory())
+                .withTypeAdapterFactory(LinEncoder.newTypeAdapterFactory())
                 .encode(output)
         }
     }
