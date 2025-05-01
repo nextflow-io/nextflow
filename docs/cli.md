@@ -196,7 +196,7 @@ Try this feature by running the following command:
 nextflow run nextflow-io/hello
 ```
 
-It will download a trivial example from the repository published at <http://github.com/nextflow-io/hello> and execute it on your computer.
+It will download a trivial example from the repository published at [http://github.com/nextflow-io/hello](http://github.com/nextflow-io/hello) and execute it on your computer.
 
 If the `owner` is omitted, Nextflow will search your cached pipelines for a pipeline that matches the name specified. If no pipeline is found, Nextflow will try to download it using the `organization` name defined by the `NXF_ORG` environment variable (`nextflow-io` by default ).
 
