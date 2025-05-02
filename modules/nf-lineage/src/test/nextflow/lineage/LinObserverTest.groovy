@@ -301,7 +301,7 @@ class LinObserverTest extends Specification {
                 new Parameter("path", "file1", ['lid://78567890/file1.txt']),
                 new Parameter("path", "file2", [[path: normalizer.normalizePath(file), checksum: [value:fileHash, algorithm: "nextflow", mode:  "standard"]]]),
                 new Parameter("val", "id", "value")
-            ], null, null, null, null, [:], [], "lid://hash", null)
+            ], null, null, null, null, [:], [], "lid://hash")
         def dataOutput1 = new FileOutput(outFile1.toString(), new Checksum(fileHash1, "nextflow", "standard"),
             "lid://1234567890", "lid://hash", "lid://1234567890", attrs1.size(), LinUtils.toDate(attrs1.creationTime()), LinUtils.toDate(attrs1.lastModifiedTime()) )
         def dataOutput2 = new FileOutput(outFile2.toString(), new Checksum(fileHash2, "nextflow", "standard"),

@@ -163,7 +163,7 @@ class LinEncoderTest extends Specification{
         def encoded = encoder.encode(wfResults)
         def object = encoder.decode(encoded)
         then:
-        encoded == '{"type":"WorkflowOutput","createdAt":null,"workflowRun":"lid://1234","output":null,"annotations":null}'
+        encoded == '{"type":"WorkflowOutput","createdAt":null,"workflowRun":"lid://1234","output":null}'
         def result = object as WorkflowOutput
         result.createdAt == null
 

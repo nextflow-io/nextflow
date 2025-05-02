@@ -104,7 +104,7 @@ class LinUtils {
      * @param children  Sub-objects to evaluate and retrieve
      * @return List of object
      */
-    protected static List<Object> searchPath(LinStore store, String key, Map<String, String> params, String[] children = []) {
+    protected static List<Object> searchPath(LinStore store, String key, Map<String, List<String>> params, String[] children = []) {
         final object = store.load(key)
         if (!object) {
             throw new FileNotFoundException("Lineage object $key not found")
@@ -119,7 +119,7 @@ class LinUtils {
         return results
     }
 
-    private static void treatSubObject(LinStore store, String key, LinSerializable object, String[] children, Map<String, String> params, LinkedList<Object> results) {
+    private static void treatSubObject(LinStore store, String key, LinSerializable object, String[] children, Map<String, List<String>> params, LinkedList<Object> results) {
         final output = getSubObject(store, key, object, children)
         if (!output) {
             throw new FileNotFoundException("Lineage object $key#${children.join('.')} not found")
@@ -167,7 +167,7 @@ class LinUtils {
      * @param params parameter-value pairs to evaluate in each object
      * @param results results collection to include the matching objects
      */
-    protected static void treatObject(def object, Map<String, String> params, List<Object> results) {
+    protected static void treatObject(def object, Map<String, List<String>> params, List<Object> results) {
         if (params) {
             if (object instanceof Collection) {
                 (object as Collection).forEach { treatObject(it, params, results) }
@@ -181,18 +181,29 @@ class LinUtils {
 
     /**
      * Parses a query string and store them in parameter-value Map.
+     * If the queryString contains repeated params returned value is a List containing all values.
+     * It also allows values including "=". First '=' will be used as separators and other will be included as value.
      *
      * @param queryString URI-like query string. (e.g. param1=value1&param2=value2).
-     * @return Map containing the parameter-value pairs of the query string.
+     * @return Map containing the parameter-value pairs of the query string
      */
-    static Map<String, String> parseQuery(String queryString) {
+    static Map<String, List<String>> parseQuery(String queryString) {
         if( !queryString ) {
             return [:]
         }
-        final params = queryString.split('&').collectEntries {
-            it.split('=').collect { URLDecoder.decode(it, 'UTF-8') }
-        } as Map<String, String>
-        new LinPropertyValidator().validateQueryParams(params)
+        Map<String, List<String>> params = [:].withDefault { [] }
+
+        queryString.split('&').each { pair ->
+            def idx = pair.indexOf('=')
+            if( idx < 0 )
+                throw new IllegalArgumentException("Parameter $pair doesn't contain '=' separator")
+            final key = URLDecoder.decode(pair[0..<idx], 'UTF-8')
+            final value = URLDecoder.decode(pair[(idx + 1)..<pair.length()], 'UTF-8')
+            params[key] << value
+
+        }
+
+        new LinPropertyValidator().validateQueryParams(params.keySet())
         return params
     }
 
@@ -203,7 +214,7 @@ class LinUtils {
      * @param params parameter-value pairs to evaluate
      * @return true if all object parameters exist and matches with the value, otherwise false.
      */
-    static boolean checkParams(Object object, Map<String, String> params) {
+    static boolean checkParams(Object object, Map<String, List<String>> params) {
         for( final entry : params.entrySet() ) {
             final value = navigate(object, entry.key)
             if( !checkParam(value, entry.value) ) {
@@ -213,17 +224,22 @@ class LinUtils {
         return true
     }
 
-    private static boolean checkParam(Object value, Object expected) {
+    private static boolean checkParam(Object value, List<String> expected) {
         if( !value )
             return false
+
+        // If value collection, convert to String and check all expected values are in the value.
         if( value instanceof Collection ) {
-            for( final v : value as Collection ) {
-                if( v.toString() == expected.toString() )
-                    return true
-            }
+            final colValue = value as Collection
+            return colValue.collect { it.toString() }.containsAll(expected)
+        }
+
+        //Single object can't be compared with collection with one of more elements
+        if( expected.size() > 1 ) {
             return false
         }
-        return value.toString() == expected.toString()
+
+        return value.toString() == expected[0]
     }
 
     /**

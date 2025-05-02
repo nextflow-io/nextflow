@@ -42,8 +42,4 @@ class WorkflowOutput implements LinSerializable {
      * Workflow output
      */
     List<Parameter> output
-    /**
-     * Annotations attached to the workflow output
-     */
-    List<Annotation> annotations
 }
