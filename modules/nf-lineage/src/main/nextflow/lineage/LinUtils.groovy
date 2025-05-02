@@ -16,13 +16,15 @@
 
 package nextflow.lineage
 
+import static nextflow.lineage.fs.LinFileSystemProvider.*
+import static nextflow.lineage.fs.LinPath.*
+
 import java.nio.file.attribute.FileTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.lineage.fs.LinPath
 import nextflow.lineage.model.TaskRun
 import nextflow.lineage.model.WorkflowRun
 import nextflow.lineage.serde.LinEncoder
@@ -40,45 +42,37 @@ class LinUtils {
     private static final String[] EMPTY_ARRAY = new String[] {}
 
     /**
-     * Query a lineage store.
+     * Get a lineage record or fragment from the Lineage store.
      *
-     * @param store lineage store to query.
-     * @param uri Query to perform in a URI-like format.
-     *      Format 'lid://<key>[?QueryString][#fragment]' where:
-     *       - Key: Element where the query will be applied. '/' indicates query will be applied in all the elements of the lineage store.
-     *       - QueryString: all param-value pairs that the lineage element should fulfill in a URI's query string format.
+     * @param store Lineage store.
+     * @param uri Object or fragment to retrieve in URI-like format.
+     *      Format 'lid://<key>[#fragment]' where:
+     *       - Key: Metadata Element key
      *       - Fragment: Element fragment to retrieve.
-     * @return Collection of object fulfilling the query
+     * @return Lineage record or fragment.
      */
-    static Collection query(LinStore store, URI uri) {
-        String key = uri.authority ? uri.authority + uri.path : uri.path
-        if (key == LinPath.SEPARATOR) {
-            return globalSearch(store, uri)
-        } else {
-            final parameters = uri.query ? parseQuery(uri.query) : null
-            final children = parseChildrenFromFragment(uri.fragment)
-            return searchPath(store, key, parameters, children )
-        }
+    static Object getMetadataObject(LinStore store, URI uri) {
+        if( uri.scheme != SCHEME )
+            throw new IllegalArgumentException("Invalid LID URI - scheme is different for $SCHEME")
+        final key = uri.authority ? uri.authority + uri.path : uri.path
+        if( key == SEPARATOR )
+            throw new IllegalArgumentException("Cannot get record from the root LID URI")
+        if ( uri.query )
+            log.warn("Query string is not supported for Lineage URI: `$uri` -- it will be ignored")
+
+        final children = parseChildrenFromFragment(uri.fragment)
+        return getMetadataObject0(store, key, children )
     }
 
-    private static Collection<LinSerializable> globalSearch(LinStore store, URI uri) {
-        final results = store.search(uri.query).values()
-        if (results && uri.fragment) {
-            // If fragment is defined get the property of the object indicated by the fragment
-            return filterResults(results, uri.fragment)
+    private static Object getMetadataObject0(LinStore store, String key, String[] children = []) {
+        final record = store.load(key)
+        if (!record) {
+            throw new FileNotFoundException("Lineage record $key not found")
         }
-        return results
-    }
-
-    private static List filterResults(Collection<LinSerializable> results, String fragment) {
-        final filteredResults = []
-        results.forEach {
-            final output = navigate(it, fragment)
-            if (output) {
-                filteredResults.add(output)
-            }
+        if (children && children.size() > 0) {
+            return getSubObject(store, key, record, children)
         }
-        return filteredResults
+        return record
     }
 
     /**
@@ -96,127 +90,67 @@ class LinUtils {
     }
 
     /**
-     * Search for objects inside a description
+     * Get a lineage sub-record.
      *
-     * @param store lineage store
-     * @param key lineage key where to perform the search
-     * @param params Parameter-value pairs to be evaluated in the key
-     * @param children  Sub-objects to evaluate and retrieve
-     * @return List of object
+     * If the requested sub-record is the workflow or task outputs, retrieves the outputs from the outputs description.
+     *
+     * @param store Store to retrieve lineage records.
+     * @param key Parent key.
+     * @param record Parent record.
+     * @param children Array of string in indicating the properties to navigate to get the sub-record.
+     * @return Sub-record or null in it does not exist.
      */
-    protected static List<Object> searchPath(LinStore store, String key, Map<String, List<String>> params, String[] children = []) {
-        final object = store.load(key)
-        if (!object) {
-            throw new FileNotFoundException("Lineage object $key not found")
-        }
-        final results = new LinkedList<Object>()
-        if (children && children.size() > 0) {
-            treatSubObject(store, key, object, children, params, results)
-        } else {
-            treatObject(object, params, results)
-        }
-
-        return results
-    }
-
-    private static void treatSubObject(LinStore store, String key, LinSerializable object, String[] children, Map<String, List<String>> params, LinkedList<Object> results) {
-        final output = getSubObject(store, key, object, children)
-        if (!output) {
-            throw new FileNotFoundException("Lineage object $key#${children.join('.')} not found")
-        }
-        treatObject(output, params, results)
-    }
-
-    /**
-     * Get a metadata sub-object.
-     *
-     * If the requested sub-object is the workflow or task outputs, retrieves the outputs from the outputs description.
-     *
-     * @param store Store to retrieve lineage metadata objects.
-     * @param key Parent metadata key.
-     * @param object Parent object.
-     * @param children Array of string in indicating the properties to navigate to get the sub-object.
-     * @return Sub-object or null in it does not exist.
-     */
-    static Object getSubObject(LinStore store, String key, LinSerializable object, String[] children) {
-        if( isSearchingOutputs(object, children) ) {
+    static Object getSubObject(LinStore store, String key, LinSerializable record, String[] children) {
+        if( isSearchingOutputs(record, children) ) {
             // When asking for a Workflow or task output retrieve the outputs description
             final outputs = store.load("${key}#output")
             if (!outputs)
                 return null
             return navigate(outputs, children.join('.'))
         }
-        return navigate(object, children.join('.'))
+        return navigate(record, children.join('.'))
     }
 
     /**
      * Check if the Lid pseudo path or query is for Task or Workflow outputs.
      *
-     * @param object Parent Lid metadata object
-     * @param children Array of string in indicating the properties to navigate to get the sub-object.
+     * @param record Parent lineage record
+     * @param children Array of string in indicating the properties to navigate to get the sub-record.
      * @return return 'true' if the parent is a Task/Workflow run and the first element in children is 'outputs'. Otherwise 'false'
      */
-    static boolean isSearchingOutputs(LinSerializable object, String[] children) {
-        return (object instanceof WorkflowRun || object instanceof TaskRun) && children && children[0] == 'output'
+    static boolean isSearchingOutputs(LinSerializable record, String[] children) {
+        return (record instanceof WorkflowRun || record instanceof TaskRun) && children && children[0] == 'output'
     }
 
     /**
-     * Evaluates object or the objects in a collection matches a set of parameter-value pairs. It includes in the results collection in case of match.
+     * Evaluates record or the records in a collection matches a set of parameter-value pairs. It includes in the results collection in case of match.
      *
-     * @param object Object or collection of objects to evaluate
-     * @param params parameter-value pairs to evaluate in each object
-     * @param results results collection to include the matching objects
+     * @param record Object or collection of records to evaluate
+     * @param params parameter-value pairs to evaluate in each record
+     * @param results results collection to include the matching records
      */
-    protected static void treatObject(def object, Map<String, List<String>> params, List<Object> results) {
+    protected static void treatObject(def record, Map<String, List<String>> params, List<Object> results) {
         if (params) {
-            if (object instanceof Collection) {
-                (object as Collection).forEach { treatObject(it, params, results) }
-            } else if (checkParams(object, params)) {
-                results.add(object)
+            if (record instanceof Collection) {
+                (record as Collection).forEach { treatObject(it, params, results) }
+            } else if (checkParams(record, params)) {
+                results.add(record)
             }
         } else {
-            results.add(object)
+            results.add(record)
         }
     }
 
     /**
-     * Parses a query string and store them in parameter-value Map.
-     * If the queryString contains repeated params returned value is a List containing all values.
-     * It also allows values including "=". First '=' will be used as separators and other will be included as value.
-     *
-     * @param queryString URI-like query string. (e.g. param1=value1&param2=value2).
-     * @return Map containing the parameter-value pairs of the query string
-     */
-    static Map<String, List<String>> parseQuery(String queryString) {
-        if( !queryString ) {
-            return [:]
-        }
-        Map<String, List<String>> params = [:].withDefault { [] }
-
-        queryString.split('&').each { pair ->
-            def idx = pair.indexOf('=')
-            if( idx < 0 )
-                throw new IllegalArgumentException("Parameter $pair doesn't contain '=' separator")
-            final key = URLDecoder.decode(pair[0..<idx], 'UTF-8')
-            final value = URLDecoder.decode(pair[(idx + 1)..<pair.length()], 'UTF-8')
-            params[key] << value
-
-        }
-
-        new LinPropertyValidator().validateQueryParams(params.keySet())
-        return params
-    }
-
-    /**
-     * Check if an object fulfill the parameter-value
+     * Check if an record fulfill the parameter-value
      * 
-     * @param object Object to evaluate
+     * @param record Object to evaluate
      * @param params parameter-value pairs to evaluate
-     * @return true if all object parameters exist and matches with the value, otherwise false.
+     * @return true if all record parameters exist and matches with the value, otherwise false.
      */
-    static boolean checkParams(Object object, Map<String, List<String>> params) {
+    static boolean checkParams(Object record, Map<String, List<String>> params) {
         for( final entry : params.entrySet() ) {
-            final value = navigate(object, entry.key)
+            final value = navigate(record, entry.key)
             if( !checkParam(value, entry.value) ) {
                 return false
             }
@@ -234,7 +168,7 @@ class LinUtils {
             return colValue.collect { it.toString() }.containsAll(expected)
         }
 
-        //Single object can't be compared with collection with one of more elements
+        //Single record can't be compared with collection with one of more elements
         if( expected.size() > 1 ) {
             return false
         }
@@ -243,16 +177,16 @@ class LinUtils {
     }
 
     /**
-     * Retrieves the sub-object or value indicated by a path.
+     * Retrieves the sub-record or value indicated by a path.
      *
      * @param obj Object to navigate
      * @param path Elements path separated by '.' e.g. field.subfield
-     * @return sub-object / value
+     * @return sub-record / value
      */
     static Object navigate(Object obj, String path) {
         if (!obj)
             return null
-        // type has been replaced by class when evaluating LidSerializable objects
+        // type has been replaced by class when evaluating LidSerializable records
         if (obj instanceof LinSerializable && path == 'type')
             return obj.getClass()?.simpleName
         try {
@@ -261,7 +195,7 @@ class LinUtils {
             }
         }
         catch (Throwable e) {
-            log.debug("Error navigating to $path in object", e)
+            log.debug("Error navigating to $path in record", e)
             return null
         }
     }
@@ -285,8 +219,8 @@ class LinUtils {
 
     private static Object navigateCollection(Collection collection, String key) {
         final results = []
-        for (Object object : collection) {
-            final res = getSubPath(object, key)
+        for (Object record : collection) {
+            final res = getSubPath(record, key)
             if (res)
                 results.add(res)
         }
@@ -294,7 +228,7 @@ class LinUtils {
             log.trace("No property found for $key")
             return null
         }
-        // Return a single object if only ine results is found.
+        // Return a single record if only ine results is found.
         return results.size() == 1 ? results[0] : results
     }
 
@@ -325,14 +259,14 @@ class LinUtils {
 
     /**
      * Helper function to unify the encoding of outputs when querying and navigating the lineage pseudoFS.
-     * Outputs can include LinSerializable objects, collections or parts of these objects.
-     * LinSerializable objects can be encoded with the LinEncoder, but collections or parts of
-     * these objects require to extend the GsonEncoder.
+     * Outputs can include LinSerializable records, collections or parts of these records.
+     * LinSerializable records can be encoded with the LinEncoder, but collections or parts of
+     * these records require to extend the GsonEncoder.
      *
      * @param output Output to encode
      * @return Output encoded as a JSON string
      */
-    static String encodeSearchOutputs(Object output, boolean prettyPrint) {
+    static String encodeSearchOutputs(Object output, boolean prettyPrint = false) {
         if (output instanceof LinSerializable) {
             return new LinEncoder().withPrettyPrint(prettyPrint).encode(output)
         } else {
