@@ -453,20 +453,20 @@ class LinPath implements Path, LogicalDataPath {
     }
 
     /**
-     * Get the path associated to a DataOutput metadata.
+     * Get the path associated with a FileOutput record.
      *
-     * @return Path associated to a DataOutput
-     * @throws FileNotFoundException if the metadata associated to the LinPath does not exist or its type is not a DataOutput.
+     * @return Path associated with a FileOutput record
+     * @throws FileNotFoundException if the record does not exist or its type is not a FileOutput.
      */
     protected Path getTargetPath() {
         return findTarget(fileSystem, filePath, false, parseChildrenFromFragment(fragment))
     }
 
     /**
-     * Get the path associated to any metadata object.
+     * Get the path associated with a lineage record.
      *
-     * @return Path associated to a DataOutput or LinMetadataFile with the metadata object for other types.
-     * @throws FileNotFoundException if the metadata associated to the LinPath does not exist
+     * @return Path associated with a FileOutput record, or LinMetadataFile with the lineage record for other types.
+     * @throws FileNotFoundException if the record does not exist
      */
     protected Path getTargetOrMetadataPath() {
         return findTarget(fileSystem, filePath, true, parseChildrenFromFragment(fragment))
