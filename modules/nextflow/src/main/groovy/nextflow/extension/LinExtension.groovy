@@ -39,5 +39,5 @@ interface LinExtension {
      * @param channel Channel to publish the Lineage Ids matching the query params
      * @param params Parameters for the lineage metadata query
      */
-    abstract void queryLineage(Session session, DataflowWriteChannel channel, Map<String,?> params)
+    abstract void fromLineage(Session session, DataflowWriteChannel channel, Map<String,?> params)
 }

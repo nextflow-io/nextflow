@@ -81,7 +81,7 @@ class LinExtensionImplTest extends Specification {
         def linExt = Spy(new LinExtensionImpl())
         when:
         def results = CH.create()
-        linExt.queryLineage(session, results,  [labels: ["value2", "value3"]])
+        linExt.fromLineage(session, results,  [labels: ["value2", "value3"]])
         then:
         linExt.getStore(session) >> lidStore
         and:
@@ -90,7 +90,7 @@ class LinExtensionImplTest extends Specification {
 
         when:
         results = CH.create()
-        linExt.queryLineage(session, results, [taskRun: "taskid", labels: ["value4"]])
+        linExt.fromLineage(session, results, [taskRun: "taskid", labels: ["value4"]])
         then:
         linExt.getStore(session) >> lidStore
         and:
@@ -99,7 +99,7 @@ class LinExtensionImplTest extends Specification {
 
         when:
         results = CH.create()
-        linExt.queryLineage(session, results, [workflowRun: "testkey", taskRun: "taskid", labels: ["value2"]])
+        linExt.fromLineage(session, results, [workflowRun: "testkey", taskRun: "taskid", labels: ["value2"]])
         then:
         linExt.getStore(session) >> lidStore
         and:

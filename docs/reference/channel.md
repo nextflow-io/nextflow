@@ -58,6 +58,37 @@ But when more than one argument is provided, they are always managed as *single*
 channel.from( [1, 2], [5,6], [7,9] )
 ```
 
+(channel-from-lineage)=
+
+## fromLineage
+
+:::{versionadded} 25.04.0
+:::
+
+:::{warning} *Experimental: may change in a future release.*
+:::
+
+The `channel.fromLineage` factory creates a channel that emits files from the {ref}`cli-lineage` store that match the given key-value params:
+
+```nextflow
+channel
+    .fromLineage(workflowRun: 'lid://0d1d1622ced3e4edc690bec768919b45', labels: ['alpha', 'beta'])
+    .view()
+```
+
+The above snippet emits files published by the given workflow run that are labeled as `alpha` and `beta`.
+
+Available options:
+
+`labels`
+: List of labels associated with the desired files.
+
+`taskRun`
+: LID of the task run that produced the desired files.
+
+`workflowRun`
+: LID of the workflow run that produced the desired files.
+
 (channel-fromlist)=
 
 ## fromList
@@ -404,37 +435,6 @@ Y
 ```
 
 See also: [channel.fromList](#fromlist) factory method.
-
-(channel-query-lineage)=
-
-## queryLineage
-
-:::{versionadded} 25.04.0
-:::
-
-:::{warning} *Experimental: may change in a future release.*
-:::
-
-The `channel.queryLineage` factory creates a channel that emits files from the lineage store that match the given key-value params:
-
-```nextflow
-channel
-    .queryLineage(workflowRun: 'lid://0d1d1622ced3e4edc690bec768919b45', labels: ['alpha', 'beta'])
-    .view()
-```
-
-The above snippet emits files published by the given workflow run that are labeled as `alpha` and `beta`.
-
-Available options:
-
-`labels`
-: List of labels associated with the desired files.
-
-`taskRun`
-: LID of the task run that produced the desired files.
-
-`workflowRun`
-: LID of the workflow run that produced the desired files.
 
 (channel-topic)=
 

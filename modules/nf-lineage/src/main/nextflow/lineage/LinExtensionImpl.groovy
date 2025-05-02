@@ -38,7 +38,7 @@ import static nextflow.lineage.fs.LinPath.*
 class LinExtensionImpl implements LinExtension {
 
     @Override
-    void queryLineage(Session session, DataflowWriteChannel channel, Map<String,?> opts) {
+    void fromLineage(Session session, DataflowWriteChannel channel, Map<String,?> opts) {
         final queryParams = buildQueryParams(opts)
         log.trace("Querying lineage with params: $queryParams")
         new LinPropertyValidator().validateQueryParams(queryParams.keySet())
@@ -47,7 +47,7 @@ class LinExtensionImpl implements LinExtension {
         channel.bind(Channel.STOP)
     }
 
-    private static Map<String, List<String>> buildQueryParams(Map<String,?> opts){
+    private static Map<String, List<String>> buildQueryParams(Map<String,?> opts) {
         final queryParams = [type: [FileOutput.class.simpleName] ]
         if( opts.workflowRun )
             queryParams['workflowRun'] = [opts.workflowRun as String]

@@ -31,6 +31,8 @@ public interface ChannelFactory {
 
     Channel fromFilePairs(Map<String,?> opts, String pattern, Closure grouping);
 
+    Channel<Path> fromLineage(Map<String,?> opts);
+
     <E> Channel<E> fromList(Collection<E> values);
 
     Channel<Path> fromPath(Map<String,?> opts, String pattern);
@@ -38,8 +40,6 @@ public interface ChannelFactory {
     Channel fromSRA(Map<String,?> opts, String query);
 
     <E> Channel<E> of(E... values);
-
-    Channel<Path> queryLineage(Map<String,?> opts);
 
     Channel topic(String name);
 
