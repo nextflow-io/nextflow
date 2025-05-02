@@ -36,11 +36,6 @@ class BatchLogging implements Closeable {
     private String projectId
     private volatile Logging logging0
 
-    /** only for testing - do not use */
-    protected BatchLogging() {
-
-    }
-
     BatchLogging(BatchConfig config) {
         final creds = config.googleOpts.credentials
         this.projectId = config.googleOpts.projectId
