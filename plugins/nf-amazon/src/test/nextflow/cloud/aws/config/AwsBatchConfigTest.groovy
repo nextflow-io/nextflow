@@ -87,7 +87,7 @@ class AwsBatchConfigTest extends Specification {
     def 'should parse volumes list' () {
 
         given:
-        def executor = Spy(AwsBatchConfig)
+        def executor = new AwsBatchConfig([:])
 
         expect:
         executor.makeVols(OBJ) == EXPECTED
@@ -105,7 +105,7 @@ class AwsBatchConfigTest extends Specification {
 
     def 'should add a volume' () {
         given:
-        def opts = new AwsBatchConfig()
+        def opts = new AwsBatchConfig([:])
 
         when:
         opts.addVolume(Paths.get('/some/dir'))

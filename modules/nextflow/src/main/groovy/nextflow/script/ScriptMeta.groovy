@@ -133,9 +133,6 @@ class ScriptMeta {
         }
     }
 
-    /** only for testing */
-    protected ScriptMeta() {}
-
     void setScriptPath(Path path) {
         scriptsByPath.put(path, script)
         scriptPath = path
