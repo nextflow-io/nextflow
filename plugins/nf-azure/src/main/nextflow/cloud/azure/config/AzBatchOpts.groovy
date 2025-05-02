@@ -54,6 +54,7 @@ class AzBatchOpts implements CloudTransferOptions {
     Boolean deleteJobsOnCompletion
     Boolean deletePoolsOnCompletion
     Boolean deleteTasksOnCompletion
+    Boolean requireContainer
     CopyToolInstallMode copyToolInstallMode
     Duration jobMaxWallClockTime
 
@@ -68,6 +69,7 @@ class AzBatchOpts implements CloudTransferOptions {
         location = config.location
         autoPoolMode = config.autoPoolMode
         allowPoolCreation = config.allowPoolCreation
+        requireContainer = config.requireContainer == null ? true : config.requireContainer
         terminateJobsOnCompletion = config.terminateJobsOnCompletion != Boolean.FALSE
         deleteJobsOnCompletion = config.deleteJobsOnCompletion
         deletePoolsOnCompletion = config.deletePoolsOnCompletion
