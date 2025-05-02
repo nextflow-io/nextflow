@@ -1123,7 +1123,7 @@ See the {ref}`k8s-page` page for more details.
 
 ## `lineage`
 
-The `lineage` scope controls the generation of lineage metadata.
+The `lineage` scope controls the generation of {ref}`cli-lineage` metadata.
 
 The following settings are available:
 

@@ -55,9 +55,9 @@ interface LinStore extends Closeable {
 
     /**
      * Search for lineage entries.
-     * @queryString Json-path like query string. (Only simple and nested field operators are supported(No array, wildcards,etc.)
-     * @return Key-lineage entry pairs fulfilling the queryString
+     * @param params Map of query params
+     * @return Key-lineage entry pairs fulfilling the query params
      */
-    Map<String,LinSerializable> search(String queryString)
+    Map<String,LinSerializable> search(Map<String, List<String>> params)
 
 }

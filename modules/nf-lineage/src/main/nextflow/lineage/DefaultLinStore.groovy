@@ -93,15 +93,7 @@ class DefaultLinStore implements LinStore {
     void close() throws IOException { }
 
     @Override
-    Map<String, LinSerializable> search(String queryString) {
-        def params = null
-        if (queryString) {
-            params = LinUtils.parseQuery(queryString)
-        }
-        return searchAllFiles(params)
-    }
-
-    private Map<String, LinSerializable> searchAllFiles(Map<String,List<String>> params) {
+    Map<String, LinSerializable> search(Map<String,List<String>> params) {
         final results = new HashMap<String, LinSerializable>()
 
         Files.walkFileTree(location, new FileVisitor<Path>() {
