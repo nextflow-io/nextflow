@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2024-2025, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,22 +12,25 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
+package nextflow.config.control;
 
-package nextflow.lineage.model
+import java.net.URI;
 
-import groovy.transform.Canonical
-import groovy.transform.CompileStatic
+import org.codehaus.groovy.control.CompilerConfiguration;
+import org.codehaus.groovy.control.io.StringReaderSource;
 
-/**
- * Models an Annotation.
- *
- * @author Jorge Ejarque <jorge.ejarque@seqera.io
- */
-@Canonical
-@CompileStatic
-class Annotation {
-    String key
-    Object value
+public class StringReaderSourceWithURI extends StringReaderSource {
+
+    private URI uri;
+
+    public StringReaderSourceWithURI(String string, URI uri, CompilerConfiguration configuration) {
+        super(string, configuration);
+        this.uri = uri;
+    }
+
+    public URI getURI() {
+        return uri;
+    }
+
 }

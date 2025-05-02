@@ -16,8 +16,6 @@
 
 package nextflow.lineage
 
-import nextflow.lineage.model.Annotation
-
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
@@ -111,11 +109,11 @@ class DefaultLinStoreTest extends Specification {
         def key = "testKey"
         def value1 = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [ new Parameter("String", "param1", "value1"), new Parameter("String", "param2", "value2")] )
         def key2 = "testKey2"
-        def value2 = new FileOutput("/path/tp/file1", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, [new Annotation("key1","value1"), new Annotation("key2","value2")])
+        def value2 = new FileOutput("/path/tp/file1", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, ["value1", "value2"])
         def key3 = "testKey3"
-        def value3 = new FileOutput("/path/tp/file2", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, [new Annotation("key2","value2"), new Annotation("key3","value3")])
+        def value3 = new FileOutput("/path/tp/file2", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, ["value2", "value3"])
         def key4 = "testKey4"
-        def value4 = new FileOutput("/path/tp/file", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, [new Annotation("key4","value4"), new Annotation("key3","value3")])
+        def value4 = new FileOutput("/path/tp/file", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, ["value4", "value3"])
 
         def lidStore = new DefaultLinStore()
         lidStore.open(config)
@@ -125,7 +123,7 @@ class DefaultLinStoreTest extends Specification {
         lidStore.save(key4, value4)
 
         when:
-        def results = lidStore.search("type":["FileOutput"], "annotations.key":["key2"],"annotations.value": ["value2"])
+        def results = lidStore.search( [type:['FileOutput'], labels:['value2']])
         then:
         results.size() == 2
         results.keySet().containsAll([key2,key3])

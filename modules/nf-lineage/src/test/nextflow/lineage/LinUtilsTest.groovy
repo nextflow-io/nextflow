@@ -124,7 +124,7 @@ class LinUtilsTest extends Specification{
 
     def "should check params in an object"() {
         given:
-        def obj = [ "type": "value", "workflow": ["repository": "subvalue"], "output" : [ ["path":"/to/file"],["path":"file2"] ] ]
+        def obj = [ "type": "value", "workflow": ["repository": "subvalue"], "output" : [ ["path":"/to/file"],["path":"file2"] ], "labels": ["a","b"] ]
 
         expect:
         LinUtils.checkParams(obj, PARAMS) == EXPECTED
@@ -138,6 +138,11 @@ class LinUtilsTest extends Specification{
         ["output.path": ["wrong"]]              | false
         ["output.path": ["/to/file"]]           | true
         ["output.path": ["file2"]]              | true
+        ["labels": ["a"]]                       | true
+        ["labels": ["c"]]                       | false
+        ["labels": ["a","b"]]                   | true
+        ["labels": ["a","b","c"]]               | false
+        ["type" : ["value", "value2"]]          | false
 
     }
 
