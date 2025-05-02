@@ -316,7 +316,7 @@ class LinPath implements Path, LogicalDataPath {
     @Override
     Path getFileName() {
         final result = Path.of(filePath).getFileName()?.toString()
-        return result ? new LinPath(fragment, query, result, null) : null
+        return result ? new LinPath(query, fragment, result, null) : null
     }
 
     @Override
@@ -340,7 +340,7 @@ class LinPath implements Path, LogicalDataPath {
             throw new IllegalArgumentException("Path name index cannot be less than zero - offending value: $index")
         final path = Path.of(filePath)
         if( index == path.nameCount - 1 ) {
-            return new LinPath(fragment, query, path.getName(index).toString(), null)
+            return new LinPath( query, fragment, path.getName(index).toString(), null)
         }
         return new LinPath(index == 0 ? fileSystem : null, path.getName(index).toString())
     }

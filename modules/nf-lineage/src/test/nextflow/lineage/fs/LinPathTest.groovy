@@ -268,10 +268,13 @@ class LinPathTest extends Specification {
     }
 
     def 'should get file name' () {
-        when:
-        def lid1 = new LinPath(fs, '1234567890/this/file.bam')
-        then:
-        lid1.getFileName() == new LinPath(null, 'file.bam')
+        expect:
+        new LinPath(fs, PATH).getFileName() == EXPECTED
+        where:
+        PATH                        | EXPECTED
+        '1234567890/this/file.bam'  | new LinPath(null, 'file.bam')
+        '12345/hola?query#output'   | new LinPath("query", "output", "hola", null)
+
     }
 
     def 'should get file parent' () {
@@ -303,11 +306,12 @@ class LinPathTest extends Specification {
         expect:
         new LinPath(fs, PATH).getName(INDEX) == EXPECTED
         where:
-        PATH        | INDEX | EXPECTED
-        '123'       | 0     | new LinPath(fs, '123')
-        '123/a'     | 1     | new LinPath(null, 'a')
-        '123/a/'    | 1     | new LinPath(null, 'a')
-        '123/a/b'   | 2     | new LinPath(null, 'b')
+        PATH                | INDEX | EXPECTED
+        '123'               | 0     | new LinPath(fs, '123')
+        '123/a'             | 1     | new LinPath(null, 'a')
+        '123/a/'            | 1     | new LinPath(null, 'a')
+        '123/a/b'           | 2     | new LinPath(null, 'b')
+        '123/a?q#output'    | 1     | new LinPath(null, 'a?q#output')
     }
 
     @Unroll
