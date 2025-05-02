@@ -48,8 +48,4 @@ class WorkflowRun implements LinSerializable {
      * Resolved Configuration
      */
     Map config
-    /**
-     * Labels attached to the workflow run
-     */
-    List<String> labels
 }

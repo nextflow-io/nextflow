@@ -63,9 +63,9 @@ public interface OutputDsl extends DslScope {
     void index(Closure closure);
 
     @Description("""
-        Specify labels to be be applied to every published file. Can be a map or a closure that returns a map.
+        Specify labels to be be applied to every published file.
     """)
-        /* List | Closure */
+    /* List | Closure */
     void labels(Object value);
 
     @Description("""
@@ -107,7 +107,7 @@ public interface OutputDsl extends DslScope {
         void header(Object value);
 
         @Description("""
-             Specify labels to be be applied to the index file.
+             Specify labels to be applied to the index file.
         """)
         void labels(List<String> value);
 

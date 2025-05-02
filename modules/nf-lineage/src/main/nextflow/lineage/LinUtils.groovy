@@ -203,7 +203,7 @@ class LinUtils {
 
         }
 
-        new LinPropertyValidator().validateQueryParams(params)
+        new LinPropertyValidator().validateQueryParams(params.keySet())
         return params
     }
 

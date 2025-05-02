@@ -113,7 +113,7 @@ class PublishDir {
     /**
      * Labels to be associated to the target file
      */
-    private List labels
+    private List<String> labels
 
     /**
      * The content type of the file. Currently only supported by AWS S3.
@@ -218,7 +218,7 @@ class PublishDir {
             result.tags = params.tags
 
         if( params.labels != null )
-            result.labels = params.labels as List
+            result.labels = params.labels as List<String>
 
         if( params.contentType instanceof Boolean )
             result.contentType = params.contentType

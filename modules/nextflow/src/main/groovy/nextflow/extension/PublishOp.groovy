@@ -194,18 +194,18 @@ class PublishOp {
      * @param labels List | Closure<List>
      * @param value
      */
-    protected static List getLabels(labels, value) {
+    protected static List<String> getLabels(labels, value) {
         if( labels == null )
             return []
-        if( labels instanceof List )
+        if( labels instanceof List<String> )
             return labels
         if( labels instanceof Closure ) {
             try {
                 final result = labels.call(value)
-                if( result instanceof List )
+                if( result instanceof List<String> )
                     return result
-            } catch (Throwable e){
-                log.warn("Exception running the 'labels' closure for value '$value'. ${e.getMessage()}. Setting empty value '[]'")
+            } catch (Throwable e) {
+                log.warn("Exception while evaluating dynamic `labels` directive for value '$value' -- ${e.getMessage()}")
                 return []
             }
         }
@@ -369,18 +369,18 @@ class PublishOp {
     static class IndexOpts {
         Path path
         def /* boolean | List<String> */ header = false
-        String sep = ','
         List<String> labels
+        String sep = ','
 
         IndexOpts(Path targetDir, Map opts) {
             this.path = targetDir.resolve(opts.path as String)
 
             if( opts.header != null )
                 this.header = opts.header
-            if( opts.sep )
-                this.sep = opts.sep as String
             if( opts.labels )
                 this.labels = opts.labels as List<String>
+            if( opts.sep )
+                this.sep = opts.sep as String
         }
     }
 

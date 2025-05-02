@@ -42,8 +42,4 @@ class WorkflowOutput implements LinSerializable {
      * Workflow output
      */
     List<Parameter> output
-    /**
-     * Labels attached to the workflow output
-     */
-    List<String> labels
 }
