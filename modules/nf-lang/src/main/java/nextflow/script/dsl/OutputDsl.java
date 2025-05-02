@@ -40,12 +40,6 @@ public interface OutputDsl extends DslScope {
     Map<String,Object> getParams();
 
     @Description("""
-        Specify annotations to be be applied to every published file. Can be a map or a closure that returns a map.
-    """)
-    /* Map | Closure */
-    void annotations(Object value);
-
-    @Description("""
         *Currently only supported for S3.*
 
         Specify the media type a.k.a. [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types) of published files (default: `false`). Can be a string (e.g. `'text/html'`), or `true` to infer the content type from the file extension.
@@ -67,6 +61,12 @@ public interface OutputDsl extends DslScope {
         Create an index file of the values that were published.
     """)
     void index(Closure closure);
+
+    @Description("""
+        Specify labels to be be applied to every published file. Can be a map or a closure that returns a map.
+    """)
+        /* List | Closure */
+    void labels(Object value);
 
     @Description("""
         The file publishing method (default: `'symlink'`).
@@ -105,6 +105,11 @@ public interface OutputDsl extends DslScope {
         """)
         /* List<String> | Boolean */
         void header(Object value);
+
+        @Description("""
+             Specify labels to be be applied to the index file.
+        """)
+        void labels(List<String> value);
 
         @Description("""
             Closure which defines how to transform each published value into a CSV record. The closure should return a list or map. By default, no transformation is applied.

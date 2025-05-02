@@ -368,7 +368,7 @@ class LinCommandImplTest extends Specification{
 +  "size": 1235,
    "createdAt": "1970-01-02T10:17:36.789Z",
    "modifiedAt": "1970-01-02T10:17:36.789Z",
-   "annotations": null
+   "labels": null
 '''
 
         when:

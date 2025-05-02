@@ -627,8 +627,8 @@ See [Output directives](#output-directives) for the list of available index dire
 
 The following directives are available for each output in the output block:
 
-`annotations`
-: Specify annotations to be be applied to every published file. Can be a map or a closure that returns a map.
+`labels`
+: Specify labels to be applied to every published file. Can be a list or a closure that returns a list.
 
 `index`
 : Create an index file which will contain a record of each published value.
@@ -643,6 +643,9 @@ The following directives are available for each output in the output block:
 
   `sep`
   : The character used to separate values (default: `','`). Only used for CSV files.
+
+  `labels`
+  : Specify labels to be applied for the index file.
 
 `path`
 : Specify the publish path relative to the output directory (default: `'.'`). Can be a path, a closure that defines a custom directory for each published value, or a closure that publishes individual files using the `>>` operator.

@@ -149,6 +149,7 @@ class OutputDslTest extends Specification {
         dsl2.overwrite(true)
         dsl2.storageClass('someClass')
         dsl2.tags([foo:'1',bar:'2'])
+        dsl2.labels(['label'])
         then:
         dsl2.getOptions() == [
             contentType:'simple/text',
@@ -157,7 +158,8 @@ class OutputDslTest extends Specification {
             mode: 'someMode',
             overwrite: true,
             storageClass: 'someClass',
-            tags: [foo:'1',bar:'2']
+            tags: [foo:'1',bar:'2'],
+            labels: ['label']
         ]
     }
 
@@ -173,11 +175,13 @@ class OutputDslTest extends Specification {
         dsl2.header(true)
         dsl2.path('path')
         dsl2.sep(',')
+        dsl2.labels(['label'])
         then:
         dsl2.getOptions() == [
             header: true,
             path: 'path',
-            sep: ','
+            sep: ',',
+            labels: ['label']
         ]
     }
 

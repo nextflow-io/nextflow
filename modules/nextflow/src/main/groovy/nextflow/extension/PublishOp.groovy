@@ -99,7 +99,7 @@ class PublishOp {
             overrides.saveAs = targetResolver
         else
             overrides.path = targetResolver
-        overrides.annotations = getAnnotations(publishOpts.annotations, value)
+        overrides.labels = getLabels(publishOpts.labels, value)
 
         final publisher = PublishDir.create(publishOpts + overrides)
 
@@ -189,22 +189,27 @@ class PublishOp {
     }
 
     /**
-     * Get or resolve the annotations of a workflow output.
+     * Get or resolve the labels of a workflow output.
      *
-     * @param annotations List | Closure<List>
+     * @param labels List | Closure<List>
      * @param value
      */
-    protected static List getAnnotations(annotations, value) {
-        if( annotations == null )
+    protected static List getLabels(labels, value) {
+        if( labels == null )
             return []
-        if( annotations instanceof List )
-            return annotations
-        if( annotations instanceof Closure ) {
-            final result = annotations.call(value)
-            if( result instanceof List )
-                return result
+        if( labels instanceof List )
+            return labels
+        if( labels instanceof Closure ) {
+            try {
+                final result = labels.call(value)
+                if( result instanceof List )
+                    return result
+            } catch (Throwable e){
+                log.warn("Exception running the 'labels' closure for value '$value'. ${e.getMessage()}. Setting empty value '[]'")
+                return []
+            }
         }
-        throw new ScriptRuntimeException("Invalid output `annotations` directive -- it should be either a List or a closure that returns a List")
+        throw new ScriptRuntimeException("Invalid output `labels` directive -- it should be either a List or a closure that returns a List")
     }
 
     /**
@@ -237,7 +242,7 @@ class PublishOp {
             else {
                 log.warn "Invalid extension '${ext}' for index file '${indexPath}' -- should be CSV, JSON, or YAML"
             }
-            session.notifyFilePublish(new FilePublishEvent(null, indexPath))
+            session.notifyFilePublish(new FilePublishEvent(null, indexPath, indexOpts.labels))
         }
 
         log.trace "Publish operator complete"
@@ -365,6 +370,7 @@ class PublishOp {
         Path path
         def /* boolean | List<String> */ header = false
         String sep = ','
+        List<String> labels
 
         IndexOpts(Path targetDir, Map opts) {
             this.path = targetDir.resolve(opts.path as String)
@@ -373,6 +379,8 @@ class PublishOp {
                 this.header = opts.header
             if( opts.sep )
                 this.sep = opts.sep as String
+            if( opts.labels )
+                this.labels = opts.labels as List<String>
         }
     }
 

@@ -124,7 +124,7 @@ class DefaultLinStoreTest extends Specification {
         lidStore.save(key4, value4)
 
         when:
-        def results = lidStore.search("type=FileOutput&annotations=value2")
+        def results = lidStore.search("type=FileOutput&labels=value2")
         then:
         results.size() == 2
         results.keySet().containsAll([key2,key3])

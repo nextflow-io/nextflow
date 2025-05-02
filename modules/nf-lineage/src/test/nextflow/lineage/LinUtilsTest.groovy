@@ -123,21 +123,9 @@ class LinUtilsTest extends Specification{
         ""                      | []
     }
 
-    def "should parse a query string as Map"() {
-        expect:
-        LinUtils.parseQuery(QUERY_STRING) == EXPECTED
-
-        where:
-        QUERY_STRING                | EXPECTED
-        "type=value1&taskRun=value2"   | ["type": "value1", "taskRun": "value2"]
-        "type=val with space"        | ["type": "val with space"]
-        ""                          | [:]
-        null                        | [:]
-    }
-
     def "should check params in an object"() {
         given:
-        def obj = [ "type": "value", "workflow": ["repository": "subvalue"], "output" : [ ["path":"/to/file"],["path":"file2"] ] ]
+        def obj = [ "type": "value", "workflow": ["repository": "subvalue"], "output" : [ ["path":"/to/file"],["path":"file2"] ], "labels": ["a","b"] ]
 
         expect:
         LinUtils.checkParams(obj, PARAMS) == EXPECTED
@@ -151,6 +139,11 @@ class LinUtilsTest extends Specification{
         ["output.path": "wrong"]                | false
         ["output.path": "/to/file"]             | true
         ["output.path": "file2"]                | true
+        ["labels": "a" ]                        | true
+        ["labels": "c" ]                        | false
+        ["labels": ["a","b"]]                   | true
+        ["labels": ["a","b","c"]]               | false
+        ["type" : ["value", "value2"]]          | false
 
     }
 
@@ -161,6 +154,9 @@ class LinUtilsTest extends Specification{
         PARAMS                              | EXPECTED
         "type=value"                        | ["type": "value"]
         "workflow.repository=subvalue"      | ["workflow.repository": "subvalue"]
+        "type=value1&taskRun=value2"        | ["type": "value1", "taskRun": "value2"]
+        "type=val with space"               | ["type": "val with space"]
+        "type=value&labels=a&labels=b"      | ["type": "value", "labels":["a","b"]]
         ""                                  | [:]
         null                                | [:]
     }

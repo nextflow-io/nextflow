@@ -77,7 +77,7 @@ class TaskRun implements LinSerializable {
      */
     String workflowRun
     /**
-     * Annotations attached to the task run
+     * Labels attached to the task run
      */
-    List<String> annotations
+    List<String> labels
 }

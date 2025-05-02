@@ -49,7 +49,7 @@ class WorkflowRun implements LinSerializable {
      */
     Map config
     /**
-     * Annotations attached to the workflow run
+     * Labels attached to the workflow run
      */
-    List<String> annotations
+    List<String> labels
 }

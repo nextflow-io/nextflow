@@ -266,7 +266,8 @@ class LinObserver implements TraceObserverV2 {
                 normalizer.normalizePath(p.normalize()),
                 Checksum.ofNextflow(p) )
             },
-            asUriString(executionHash)
+            asUriString(executionHash),
+            task.config?.label as List
         )
 
         // store in the underlying persistence
@@ -360,7 +361,7 @@ class LinObserver implements TraceObserverV2 {
                 attrs.size(),
                 LinUtils.toDate(attrs?.creationTime()),
                 LinUtils.toDate(attrs?.lastModifiedTime()),
-                event.annotations)
+                event.labels)
             store.save(key, value)
         } catch (Throwable e) {
             log.warn("Unexpected error storing published file '${event.target.toUriString()}' for workflow '${executionHash}'", e)
