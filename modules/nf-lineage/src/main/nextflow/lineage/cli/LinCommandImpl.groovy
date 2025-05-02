@@ -320,7 +320,7 @@ class LinCommandImpl implements CmdLineage.LinCommand {
         }
         try {
             final params = parseFindArgs(args)
-            new LinPropertyValidator().validateQueryParams(params)
+            new LinPropertyValidator().validateQueryParams(params.keySet())
             println LinUtils.encodeSearchOutputs( store.search(params).keySet().collect { asUriString(it) }, true )
         } catch (Throwable e){
             println "Error searching for ${args[0]}. ${e.message}"

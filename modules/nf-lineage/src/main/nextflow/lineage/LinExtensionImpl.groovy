@@ -23,7 +23,6 @@ import nextflow.Channel
 import nextflow.Session
 import nextflow.extension.LinExtension
 import nextflow.lineage.fs.LinPathFactory
-import nextflow.lineage.model.Annotation
 import nextflow.lineage.model.FileOutput
 import nextflow.lineage.serde.LinSerializable
 
@@ -42,7 +41,7 @@ class LinExtensionImpl implements LinExtension {
     void queryLineage(Session session, DataflowWriteChannel channel, Map<String,?> opts) {
         final queryParams = buildQueryParams(opts)
         log.trace("Querying lineage with params: $queryParams")
-        new LinPropertyValidator().validateQueryParams(queryParams)
+        new LinPropertyValidator().validateQueryParams(queryParams.keySet())
         final store = getStore(session)
         emitSearchResults(channel, store.search(queryParams))
         channel.bind(Channel.STOP)
@@ -54,8 +53,8 @@ class LinExtensionImpl implements LinExtension {
             queryParams['workflowRun'] = [opts.workflowRun as String]
         if( opts.taskRun )
             queryParams['taskRun'] = [opts.taskRun as String]
-        if( opts.annotations ) {
-            queryParams['annotations'] = (opts.annotations as Map<String,String>).collect { String key, String value -> new Annotation(key, value).toString() }
+        if( opts.labels ) {
+            queryParams['labels'] = opts.labels as List<String>
         }
         return queryParams
     }

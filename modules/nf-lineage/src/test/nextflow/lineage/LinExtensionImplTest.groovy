@@ -26,7 +26,6 @@ import nextflow.Session
 import nextflow.extension.CH
 import nextflow.lineage.config.LineageConfig
 import nextflow.lineage.fs.LinPathFactory
-import nextflow.lineage.model.Annotation
 import nextflow.lineage.model.Checksum
 import nextflow.lineage.model.DataPath
 import nextflow.lineage.model.FileOutput
@@ -65,11 +64,11 @@ class LinExtensionImplTest extends Specification {
         def key = "testKey"
         def value1 = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [ new Parameter("String", "param1", "value1"), new Parameter("String", "param2", "value2")] )
         def key2 = "testKey2"
-        def value2 = new FileOutput("/path/tp/file1", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", "taskid", 1234, time, time, [new Annotation("key1","value1"), new Annotation("key2","value2")])
+        def value2 = new FileOutput("/path/tp/file1", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", "taskid", 1234, time, time, ["value1","value2"])
         def key3 = "testKey3"
-        def value3 = new FileOutput("/path/tp/file2", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, [new Annotation("key2","value2"), new Annotation("key3","value3")])
+        def value3 = new FileOutput("/path/tp/file2", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, ["value2", "value3"])
         def key4 = "testKey4"
-        def value4 = new FileOutput("/path/tp/file", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", "taskid", 1234, time, time, [new Annotation("key4","value4"), new Annotation("key3","value3")])
+        def value4 = new FileOutput("/path/tp/file", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", "taskid", 1234, time, time, ["value4","value3"])
         def lidStore = new DefaultLinStore()
         def session = Mock(Session) {
             getConfig() >> configMap
@@ -82,7 +81,7 @@ class LinExtensionImplTest extends Specification {
         def linExt = Spy(new LinExtensionImpl())
         when:
         def results = CH.create()
-        linExt.queryLineage(session, results,  [annotations: [key2:"value2", key3:"value3"]])
+        linExt.queryLineage(session, results,  [labels: ["value2", "value3"]])
         then:
         linExt.getStore(session) >> lidStore
         and:
@@ -91,7 +90,7 @@ class LinExtensionImplTest extends Specification {
 
         when:
         results = CH.create()
-        linExt.queryLineage(session, results, [taskRun: "taskid", annotations: [key4:"value4"]])
+        linExt.queryLineage(session, results, [taskRun: "taskid", labels: ["value4"]])
         then:
         linExt.getStore(session) >> lidStore
         and:
@@ -100,7 +99,7 @@ class LinExtensionImplTest extends Specification {
 
         when:
         results = CH.create()
-        linExt.queryLineage(session, results, [workflowRun: "testkey", taskRun: "taskid", annotations: [key2:"value2"]])
+        linExt.queryLineage(session, results, [workflowRun: "testkey", taskRun: "taskid", labels: ["value2"]])
         then:
         linExt.getStore(session) >> lidStore
         and:

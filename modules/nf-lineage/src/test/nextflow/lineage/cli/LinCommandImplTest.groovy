@@ -22,7 +22,6 @@ import nextflow.dag.MermaidHtmlRenderer
 import nextflow.lineage.LinHistoryRecord
 import nextflow.lineage.LinStoreFactory
 import nextflow.lineage.DefaultLinHistoryLog
-import nextflow.lineage.model.Annotation
 import nextflow.lineage.model.Checksum
 import nextflow.lineage.model.FileOutput
 import nextflow.lineage.model.DataPath
@@ -386,7 +385,7 @@ class LinCommandImplTest extends Specification{
         when:
         def config = new ConfigMap()
         new LinCommandImpl().log(config)
-        new LinCommandImpl().describe(config, ["lid:///?type=FileOutput"])
+        new LinCommandImpl().describe(config, ["lid:///12345"])
         new LinCommandImpl().render(config, ["lid://12345", "output.html"])
         new LinCommandImpl().diff(config, ["lid://89012", "lid://12345"])
 
@@ -416,9 +415,9 @@ class LinCommandImplTest extends Specification{
         def encoder = new LinEncoder().withPrettyPrint(true)
         def time = OffsetDateTime.ofInstant(Instant.ofEpochMilli(123456789), ZoneOffset.UTC)
         def entry = new FileOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-            "lid://123987/file.bam", "lid://123987/", null, 1234, time, time, [new Annotation("experiment", "test")])
+            "lid://123987/file.bam", "lid://123987/", null, 1234, time, time, ["experiment=test"])
         def entry2 = new FileOutput("path/to/file2",new Checksum("42472qet","nextflow","standard"),
-            "lid://123987/file2.bam", "lid://123987/", null, 1235, time, time, [new Annotation("experiment", "test")])
+            "lid://123987/file2.bam", "lid://123987/", null, 1235, time, time, ["experiment=test"])
         def entry3 = new FileOutput("path/to/file3",new Checksum("42472qet","nextflow","standard"),
             "lid://123987/file2.bam", "lid://123987/", null, 1235, time, time, null)
         def expectedOutput1 = '[\n  "lid://123987/file.bam",\n  "lid://123987/file2.bam"\n]'
@@ -427,7 +426,7 @@ class LinCommandImplTest extends Specification{
         lidFile2.text = encoder.encode(entry2)
         lidFile3.text = encoder.encode(entry3)
         when:
-        new LinCommandImpl().find(configMap, ["type=FileOutput", "annotations.value=test"])
+        new LinCommandImpl().find(configMap, ["type=FileOutput", "labels=experiment=test"])
         def stdout = capture
             .toString()
             .readLines()// remove the log part
