@@ -19,6 +19,7 @@ package nextflow.script
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import java.nio.file.Path
+import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -369,6 +370,12 @@ class ScriptMeta {
             imports.put(name, component.cloneWithName(name))
         }
         else {
+            // Keep track of the resolved process name
+            if(component instanceof ProcessDef) {
+                final path =  ScriptMeta.get(component.getOwner())?.getScriptPath()
+                final safePath = path?: Paths.get(".") // Default path for path-less scripts (for TESTING)
+                ScriptMeta.addResolvedName(name, safePath, component.getBaseName(), component.getName())
+            }
             imports.put(name, component)
         }
     }
