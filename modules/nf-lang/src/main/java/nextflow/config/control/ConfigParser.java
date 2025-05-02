@@ -61,11 +61,11 @@ public class ConfigParser {
 
     public void analyze() {
         for( var source : compiler.getSources().values() ) {
-            var includeResolver = new ResolveIncludeVisitor(source, compiler);
+            var includeResolver = new ResolveIncludeVisitor(source);
             includeResolver.visit();
             for( var error : includeResolver.getErrors() )
                 source.getErrorCollector().addErrorAndContinue(error);
-            new ConfigResolveVisitor(source, compiler.compilationUnit()).visit();
+            new ConfigResolveVisitor(source, compiler.compilationUnit(), Types.DEFAULT_CONFIG_IMPORTS).visit();
         }
     }
 
