@@ -720,25 +720,29 @@ TIMESTAMP          	RUN NAME              	SESSION ID                          	
 2025-04-22 14:45:43	backstabbing_heyrovsky	21bc4fad-e8b8-447d-9410-388f926a711f	lid://c914d714877cc5c882c55a5428b510b1
 ```
 
-View a metadata description.
+View a metadata record.
 
 ```console
 $ nextflow lineage view <lid>
 ```
 
-View a metadata description fragment. A fragment can be a property of a metadata description (e.g., `output` or `params`) or a set of nested properties separated by a `.` (e.g., `workflow.repository`).
+The output of a workflow run can be shown by appending `#output` to the workflow run LID:
 
 ```console
-$ nextflow lineage view <lid#fragment>
+$ nextflow lineage view <workflow-run-lid#output>
 ```
 
-Find all metadata descriptions that matche a set of key-value pairs. Keys are defined similarly to fragments as used in the `view` command.
+:::{tip}
+You can use the [jq](https://jqlang.org/) command-line tool to apply further queries and transformations on the resulting metadata record.
+:::
+
+Find all metadata records that match a set of key-value pairs:
 
 ```console
 $ nextflow lineage find <key-1>=<value-1> <key-2>=<value-2> ...
 ```
 
-Display a git-style diff between two metadata descriptions.
+Display a git-style diff between two metadata records.
 
 ```console
 $ nextflow lineage diff <lid-1> <lid-2>

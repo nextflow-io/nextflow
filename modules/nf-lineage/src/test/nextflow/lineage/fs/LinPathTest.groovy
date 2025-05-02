@@ -101,7 +101,7 @@ class LinPathTest extends Specification {
 
         then:
         stdout.size() == 1
-        stdout[0].endsWith("Query string is not supported the Linage URI (lid://1234/hola?query). It will be ignored.")
+        stdout[0].endsWith("Query string is not supported for Lineage URI: `lid://1234/hola?query` -- it will be ignored")
     }
 
     def 'should create correct lid Path' () {

@@ -29,12 +29,10 @@ import nextflow.ast.OpXformImpl
 import nextflow.exception.StopSplitIterationException
 import nextflow.exception.WorkflowScriptErrorException
 import nextflow.extension.GroupKey
-import nextflow.extension.LinExtension
 import nextflow.extension.OperatorImpl
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
 import nextflow.mail.Mailer
-import nextflow.plugin.Plugins
 import nextflow.script.TokenBranchDef
 import nextflow.script.TokenMultiMapDef
 import nextflow.splitter.FastaSplitter

@@ -74,13 +74,12 @@ class LinPath implements Path, LogicalDataPath {
         }
         this.fileSystem = fs
         setFieldsFormURI(uri)
-        //Check if query and fragment are with filePath
-        if( query == null && fragment == null ) {
+        // Check if query and fragment are with filePath
+        if( query == null && fragment == null )
             setFieldsFormURI(new URI(toUriString()))
-        }
-        //warn if query is specified
+        // Warn if query is specified
         if( query )
-            log.warn("Query string is not supported the Linage URI ($uri). It will be ignored.")
+            log.warn("Query string is not supported for Lineage URI: `$uri` -- it will be ignored")
         // Validate fragment
         if( fragment )
             new LinPropertyValidator().validate(fragment.tokenize('.'))
@@ -139,8 +138,8 @@ class LinPath implements Path, LogicalDataPath {
             return
         }
         final hash = checksum.mode
-                ? CacheHelper.hasher(hashedPath, CacheHelper.HashMode.of(checksum.mode.toString().toLowerCase())).hash().toString()
-                : CacheHelper.hasher(hashedPath).hash().toString()
+            ? CacheHelper.hasher(hashedPath, CacheHelper.HashMode.of(checksum.mode.toString().toLowerCase())).hash().toString()
+            : CacheHelper.hasher(hashedPath).hash().toString()
         if( hash != checksum.value )
             log.warn("Checksum of '$hashedPath' does not match with the one stored in the metadata")
     }

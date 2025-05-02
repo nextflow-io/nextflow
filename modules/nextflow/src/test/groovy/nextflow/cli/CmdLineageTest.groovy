@@ -179,7 +179,7 @@ class CmdLineageTest extends Specification {
 
         then:
             stdout.size() == 1
-            stdout[0] == "Error loading lid://12345 - Lineage object 12345 not found"
+            stdout[0] == "Error loading lid://12345 - Lineage record 12345 not found"
 
         cleanup:
             folder?.deleteDir()
@@ -286,11 +286,11 @@ class CmdLineageTest extends Specification {
         def lidCmd = new CmdLineage(launcher: launcher, args: ["find", "type=FileOutput"])
         lidCmd.run()
         def stdout = capture
-                .toString()
-                .readLines()// remove the log part
-                .findResults { line -> !line.contains('DEBUG') ? line : null }
-                .findResults { line -> !line.contains('INFO') ? line : null }
-                .findResults { line -> !line.contains('plugin') ? line : null }
+            .toString()
+            .readLines()// remove the log part
+            .findResults { line -> !line.contains('DEBUG') ? line : null }
+            .findResults { line -> !line.contains('INFO') ? line : null }
+            .findResults { line -> !line.contains('plugin') ? line : null }
 
         then:
         stdout.size() == expectedOutput.readLines().size()

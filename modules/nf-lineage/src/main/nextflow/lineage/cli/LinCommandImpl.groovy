@@ -331,7 +331,7 @@ class LinCommandImpl implements CmdLineage.LinCommand {
         Map<String, List<String>> params = [:].withDefault { [] }
 
         args.collectEntries { pair ->
-            def idx = pair.indexOf('=')
+            final idx = pair.indexOf('=')
             if( idx < 0 )
                 throw new IllegalArgumentException("Parameter $pair doesn't contain '=' separator")
             final key = URLDecoder.decode(pair[0..<idx], 'UTF-8')

@@ -672,10 +672,10 @@ class Channel  {
     }
 
     private static void queryLineage0(DataflowWriteChannel channel, Map<String,?> params) {
-        final operation = Plugins.getExtension(LinExtension)
-        if( !operation )
+        final linExt = Plugins.getExtension(LinExtension)
+        if( !linExt )
             throw new IllegalStateException("Unable to load lineage extensions.")
-        final future = CompletableFuture.runAsync(() -> operation.queryLineage(session, channel, params))
+        final future = CompletableFuture.runAsync(() -> linExt.queryLineage(session, channel, params))
         future.exceptionally(this.&handlerException)
     }
 }

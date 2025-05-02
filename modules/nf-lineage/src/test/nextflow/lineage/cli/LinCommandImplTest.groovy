@@ -152,7 +152,7 @@ class LinCommandImplTest extends Specification{
 
         then:
         stdout.size() == 1
-        stdout[0] == "Error loading lid://12345 - Lineage object 12345 not found"
+        stdout[0] == "Error loading lid://12345 - Lineage record 12345 not found"
     }
 
     def 'should get lineage lid content' (){
@@ -287,7 +287,7 @@ class LinCommandImplTest extends Specification{
         def entry = new FileOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
             "lid://123987/file.bam", "lid://123987/", null, 1234, time, time, null)
         def jsonSer = encoder.encode(entry)
-        def expectedOutput = "Error loading lid:///?type=FileOutput - Cannot get object from the root LID URI"
+        def expectedOutput = "Error loading lid:///?type=FileOutput - Cannot get record from the root LID URI"
         lidFile.text = jsonSer
         when:
         new LinCommandImpl().describe(configMap, ["lid:///?type=FileOutput"])

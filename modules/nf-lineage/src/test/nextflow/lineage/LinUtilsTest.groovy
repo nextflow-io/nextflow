@@ -67,7 +67,7 @@ class LinUtilsTest extends Specification{
     }
 
 
-    def 'should get metadata object'() {
+    def 'should get lineage record'() {
         given:
         def uniqueId = UUID.randomUUID()
         def mainScript = new DataPath("file://path/to/main.nf", new Checksum("78910", "nextflow", "standard"))

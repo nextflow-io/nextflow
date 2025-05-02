@@ -26,7 +26,11 @@ import nextflow.Session
  */
 interface LinExtension {
 
-    Map PARAMS = [workflowRun: [String,GString], taskRun: [String,GString], labels: List]
+    static final Map PARAMS = [
+        labels: List,
+        taskRun: [String,GString],
+        workflowRun: [String,GString],
+    ]
 
     /**
      * Query Lineage metadata to get files produced by tasks, workflows or annotations.
