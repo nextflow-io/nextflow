@@ -379,11 +379,11 @@ This feature requires the `nextflow.preview.recursion` feature flag to be enable
 
 Processes can be invoked recursively using the `recurse` method.
 
-```{literalinclude} ../snippets/recurse-process.nf
+```{literalinclude} snippets/recurse-process.nf
 :language: nextflow
 ```
 
-```{literalinclude} ../snippets/recurse-process.out
+```{literalinclude} snippets/recurse-process.out
 :language: console
 ```
 
@@ -400,11 +400,11 @@ count_down
 
 Workflows can also be invoked recursively:
 
-```{literalinclude} ../snippets/recurse-workflow.nf
+```{literalinclude} snippets/recurse-workflow.nf
 :language: nextflow
 ```
 
-```{literalinclude} ../snippets/recurse-workflow.out
+```{literalinclude} snippets/recurse-workflow.out
 :language: console
 ```
 
@@ -422,11 +422,11 @@ Workflows can also be invoked recursively:
 :::
 
 :::{versionchanged} 24.10.0
-A second preview version was introduced. See [Migrating from first preview](#migrating-from-first-preview) for more details.
+A second preview version was introduced. See the {ref}`migration notes <workflow-outputs-second-preview>` for details.
 :::
 
 :::{versionchanged} 25.04.0
-A third preview version was introduced. See [Migrating from second preview](#migrating-from-second-preview) for more details.
+A third preview version was introduced. See the {ref}`migration notes <workflow-outputs-third-preview>` for details.
 :::
 
 :::{note}
@@ -463,6 +463,8 @@ output {
 ```
 
 In the above example, the output of process `fetch` is assigned to the `samples` workflow output. How this output is published to a directory structure is described in the next section.
+
+(workflow-publishing-files)=
 
 ### Publishing files
 
@@ -633,11 +635,17 @@ The following directives are available for each output in the output block:
   `header`
   : When `true`, the keys of the first record are used as the column names (default: `false`). Can also be a list of column names. Only used for CSV files.
 
+  `labels`
+  : Specify labels to be applied to the index file as a list of strings.
+
   `path`
   : The name of the index file relative to the base output directory (required). Can be a CSV, JSON, or YAML file.
 
   `sep`
   : The character used to separate values (default: `','`). Only used for CSV files.
+
+`labels`
+: Specify labels to be applied to every published file. Can be a list of strings or a closure that returns a list.
 
 `path`
 : Specify the publish path relative to the output directory (default: `'.'`). Can be a path, a closure that defines a custom directory for each published value, or a closure that publishes individual files using the `>>` operator.
@@ -660,29 +668,3 @@ output {
     }
 }
 ```
-
-### Migrating from second preview
-
-The third preview, introduced in 25.04, made the following breaking changes:
-
-- The `publish:` section can only be specified in the entry workflow.
-
-- Workflow outputs in the `publish:` section are assigned instead of using the `>>` operator. The output name must be a valid identifier.
-
-- By default, output files are published to the base output directory, rather than a subdirectory corresponding to the output name.
-
-- The syntax for dynamic publish paths has changed. Instead of defining a closure that returns a closure with the `path` directive, the outer closure should use the `>>` operator to publish individual files.
-
-- The `mapper` index directive has been removed. Use a `map` operator in the workflwo body instead.
-
-### Migrating from first preview
-
-The first preview of workflow publishing was introduced in 24.04. The second preview, introduced in 24.10, made the following breaking changes:
-
-- The process `publish:` section has been removed. Channels should be published only in workflows, ideally the entry workflow.
-
-- The `directory` output directive has been replaced with the `outputDir` config option and `-output-dir` command line option, which is `results` by default. The other directives such as `mode` have been replaced with config options under `workflow.output.*`.
-
-  In other words, only target blocks can be specified in the output block, but target blocks can still specify directives such as `mode`.
-
-- Target names cannot begin or end with a slash (`/`).

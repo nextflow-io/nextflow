@@ -20,7 +20,6 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import nextflow.Session
-import nextflow.cli.StandardErrorListener
 import nextflow.exception.ScriptCompilationException
 import nextflow.script.BaseScript
 import nextflow.script.ScriptBinding

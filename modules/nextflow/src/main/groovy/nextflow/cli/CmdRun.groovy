@@ -340,7 +340,7 @@ class CmdRun extends CmdBase implements HubOptions {
         Plugins.load(cfg)
 
         // -- validate config options
-        if( NF.getSyntaxParserVersion() == 'v2' )
+        if( NF.isSyntaxParserV2() )
             new ConfigValidator().validate(config)
 
         // -- create a new runner instance
@@ -354,7 +354,8 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.session.disableJobsCancellation = getDisableJobsCancellation()
 
         final isTowerEnabled = config.navigate('tower.enabled') as Boolean
-        if( isTowerEnabled || log.isTraceEnabled() )
+        final isDataEnabled = config.navigate("lineage.enabled") as Boolean
+        if( isTowerEnabled || isDataEnabled || log.isTraceEnabled() )
             runner.session.resolvedConfig = ConfigBuilder.resolveConfig(scriptFile.parent, this)
         // note config files are collected during the build process
         // this line should be after `ConfigBuilder#build`
@@ -630,6 +631,8 @@ class CmdRun extends CmdBase implements HubOptions {
     Map parsedParams(Map configVars) {
 
         final result = [:]
+
+        // apply params file
         final file = getParamsFile()
         if( file ) {
             def path = validateParamsFile(file)
@@ -640,7 +643,7 @@ class CmdRun extends CmdBase implements HubOptions {
                 readYamlFile(path, configVars, result)
         }
 
-        // set the CLI params
+        // apply CLI params
         if( !params )
             return result
 
@@ -747,8 +750,10 @@ class CmdRun extends CmdBase implements HubOptions {
     private void readJsonFile(Path file, Map configVars, Map result) {
         try {
             def text = configVars ? replaceVars0(file.text, configVars) : file.text
-            def json = (Map)new JsonSlurper().parseText(text)
-            result.putAll(json)
+            def json = (Map<String,Object>) new JsonSlurper().parseText(text)
+            json.forEach((name, value) -> {
+                addParam0(result, name, value)
+            })
         }
         catch (NoSuchFileException | FileNotFoundException e) {
             throw new AbortOperationException("Specified params file does not exist: ${file.toUriString()}")
@@ -761,8 +766,10 @@ class CmdRun extends CmdBase implements HubOptions {
     private void readYamlFile(Path file, Map configVars, Map result) {
         try {
             def text = configVars ? replaceVars0(file.text, configVars) : file.text
-            def yaml = (Map)new Yaml().load(text)
-            result.putAll(yaml)
+            def yaml = (Map<String,Object>) new Yaml().load(text)
+            yaml.forEach((name, value) -> {
+                addParam0(result, name, value)
+            })
         }
         catch (NoSuchFileException | FileNotFoundException e) {
             throw new AbortOperationException("Specified params file does not exist: ${file.toUriString()}")

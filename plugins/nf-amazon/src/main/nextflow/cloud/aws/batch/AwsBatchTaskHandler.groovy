@@ -338,7 +338,6 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     @Override
     protected void killTask() {
         assert jobId
-        log.trace "[AWS BATCH] Process `${task.lazyName()}` - killing job=$jobId"
         final targetId = normaliseJobId(jobId)
         if( executor.shouldDeleteJob(targetId)) {
             terminateJob(targetId)
@@ -354,11 +353,12 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     }
 
     protected void terminateJob(String jobId) {
+        log.debug "[AWS BATCH] cleanup = terminating job $jobId"
         final req = new TerminateJobRequest() .withJobId(jobId) .withReason('Job killed by NF')
         final batch = bypassProxy(client)
         executor.reaper.submit({
             final resp = batch.terminateJob(req)
-            log.debug "[AWS BATCH] killing job=$jobId; response=$resp"
+            log.debug "[AWS BATCH] cleanup = killing job $jobId"
         })
     }
 

@@ -28,8 +28,8 @@ import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import nextflow.cli.HubOptions
-import nextflow.config.ConfigParserFactory
 import nextflow.config.Manifest
+import nextflow.config.parser.v1.ConfigParserV1
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AmbiguousPipelineNameException
 import nextflow.script.ScriptFile
@@ -455,7 +455,7 @@ class AssetManager {
         }
 
         if( text ) try {
-            def config = ConfigParserFactory.create().setIgnoreIncludes(true).setStrict(false).parse(text)
+            def config = new ConfigParserV1().setIgnoreIncludes(true).setStrict(false).parse(text)
             result = (ConfigObject)config.manifest
         }
         catch( Exception e ) {
