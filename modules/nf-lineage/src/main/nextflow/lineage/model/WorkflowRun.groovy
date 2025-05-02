@@ -48,8 +48,4 @@ class WorkflowRun implements LinSerializable {
      * Resolved Configuration
      */
     Map config
-    /**
-     * Annotations attached to the workflow run
-     */
-    List<Annotation> annotations
 }

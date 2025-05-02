@@ -84,8 +84,8 @@ class OutputDslTest extends Specification {
             "${outputDir}/barbar/file2.txt"
             """.stripIndent()
         and:
-        1 * session.notifyFilePublish(new FilePublishEvent(file1, outputDir.resolve('foo/file1.txt'), [:]))
-        1 * session.notifyFilePublish(new FilePublishEvent(file2, outputDir.resolve('barbar/file2.txt'), [:]))
+        1 * session.notifyFilePublish(new FilePublishEvent(file1, outputDir.resolve('foo/file1.txt'), []))
+        1 * session.notifyFilePublish(new FilePublishEvent(file2, outputDir.resolve('barbar/file2.txt'), []))
         1 * session.notifyWorkflowOutput(new WorkflowOutputEvent('foo', [outputDir.resolve('foo/file1.txt')], null))
         1 * session.notifyWorkflowOutput(new WorkflowOutputEvent('bar', [outputDir.resolve('barbar/file2.txt')], outputDir.resolve('index.csv')))
         1 * session.notifyFilePublish(new FilePublishEvent(null, outputDir.resolve('index.csv'), null))
@@ -125,7 +125,7 @@ class OutputDslTest extends Specification {
         then:
         outputDir.resolve('file1.txt').text == 'Hello'
         and:
-        1 * session.notifyFilePublish(new FilePublishEvent(file1, outputDir.resolve('file1.txt'), [:]))
+        1 * session.notifyFilePublish(new FilePublishEvent(file1, outputDir.resolve('file1.txt'), []))
         1 * session.notifyWorkflowOutput(new WorkflowOutputEvent('foo', [outputDir.resolve('file1.txt')], null))
 
         cleanup:
@@ -149,6 +149,7 @@ class OutputDslTest extends Specification {
         dsl2.overwrite(true)
         dsl2.storageClass('someClass')
         dsl2.tags([foo:'1',bar:'2'])
+        dsl2.labels(['label'])
         then:
         dsl2.getOptions() == [
             contentType:'simple/text',
@@ -157,7 +158,8 @@ class OutputDslTest extends Specification {
             mode: 'someMode',
             overwrite: true,
             storageClass: 'someClass',
-            tags: [foo:'1',bar:'2']
+            tags: [foo:'1',bar:'2'],
+            labels: ['label']
         ]
     }
 
@@ -173,11 +175,13 @@ class OutputDslTest extends Specification {
         dsl2.header(true)
         dsl2.path('path')
         dsl2.sep(',')
+        dsl2.labels(['label'])
         then:
         dsl2.getOptions() == [
             header: true,
             path: 'path',
-            sep: ','
+            sep: ',',
+            labels: ['label']
         ]
     }
 

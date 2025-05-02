@@ -23,7 +23,6 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
-import nextflow.file.FileHelper
 import nextflow.processor.PublishDir
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.WorkflowOutputEvent
@@ -100,7 +99,7 @@ class PublishOp {
             overrides.saveAs = targetResolver
         else
             overrides.path = targetResolver
-        overrides.annotations = getAnnotations(publishOpts.annotations, value)
+        overrides.labels = getLabels(publishOpts.labels, value)
 
         final publisher = PublishDir.create(publishOpts + overrides)
 
@@ -190,22 +189,27 @@ class PublishOp {
     }
 
     /**
-     * Get or resolve the annotations of a workflow output.
+     * Get or resolve the labels of a workflow output.
      *
-     * @param annotations Map | Closure<Map>
+     * @param labels List | Closure<List>
      * @param value
      */
-    protected static Map getAnnotations(annotations, value) {
-        if( annotations == null )
-            return [:]
-        if( annotations instanceof Map )
-            return annotations
-        if( annotations instanceof Closure ) {
-            final result = annotations.call(value)
-            if( result instanceof Map )
-                return result
+    protected static List<String> getLabels(labels, value) {
+        if( labels == null )
+            return []
+        if( labels instanceof List<String> )
+            return labels
+        if( labels instanceof Closure ) {
+            try {
+                final result = labels.call(value)
+                if( result instanceof List<String> )
+                    return result
+            } catch (Throwable e) {
+                log.warn("Exception while evaluating dynamic `labels` directive for value '$value' -- ${e.getMessage()}")
+                return []
+            }
         }
-        throw new ScriptRuntimeException("Invalid output `annotations` directive -- it should be either a Map or a closure that returns a Map")
+        throw new ScriptRuntimeException("Invalid output `labels` directive -- it should be either a List or a closure that returns a List")
     }
 
     /**
@@ -238,7 +242,7 @@ class PublishOp {
             else {
                 log.warn "Invalid extension '${ext}' for index file '${indexPath}' -- should be CSV, JSON, or YAML"
             }
-            session.notifyFilePublish(new FilePublishEvent(null, indexPath))
+            session.notifyFilePublish(new FilePublishEvent(null, indexPath, indexOpts.labels))
         }
 
         log.trace "Publish operator complete"
@@ -365,6 +369,7 @@ class PublishOp {
     static class IndexOpts {
         Path path
         def /* boolean | List<String> */ header = false
+        List<String> labels
         String sep = ','
 
         IndexOpts(Path targetDir, Map opts) {
@@ -372,6 +377,8 @@ class PublishOp {
 
             if( opts.header != null )
                 this.header = opts.header
+            if( opts.labels )
+                this.labels = opts.labels as List<String>
             if( opts.sep )
                 this.sep = opts.sep as String
         }
