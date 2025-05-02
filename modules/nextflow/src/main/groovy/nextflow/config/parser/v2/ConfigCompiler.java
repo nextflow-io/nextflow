@@ -83,7 +83,6 @@ public class ConfigCompiler {
         var importCustomizer = new ImportCustomizer();
         for ( var name : DEFAULT_IMPORT_NAMES )
             importCustomizer.addImports(name);
-        importCustomizer.addImport("channel", "nextflow.Channel");
 
         var config = new CompilerConfiguration();
         config.addCompilationCustomizers(importCustomizer);
