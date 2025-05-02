@@ -27,10 +27,12 @@ import com.sun.net.httpserver.HttpServer
 import nextflow.SysEnv
 import nextflow.config.ConfigBuilder
 import nextflow.config.ConfigClosurePlaceholder
+import nextflow.exception.ConfigParseException
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
-import org.codehaus.groovy.control.CompilationFailedException
 import spock.lang.Specification
+
+import static test.TestHelper.createInMemTempFile
 
 /**
  *
@@ -82,62 +84,39 @@ class ConfigParserV2Test extends Specification {
     def 'should parse composed config files' () {
 
         given:
-        def folder = File.createTempDir()
-        def snippet1 = new File(folder,'config1.txt').absoluteFile
-        def snippet2 = new File(folder,'config2.txt').absoluteFile
+        def folder = Files.createTempDirectory('test')
+        def main = folder.resolve('nextflow.config')
+        def snippet1 = folder.resolve('snippet1.config')
+        def snippet2 = folder.resolve('snippet2.config')
 
-        def text = """
-            process {
-                name = 'alpha'
-                resources {
-                    disk = '1TB'
+        main.text = """
+            profiles {
+                alpha {
+                    process.disk = '1TB'
                     includeConfig "$snippet1"
                 }
             }
             """
 
         snippet1.text = """
-            cpus = 4
-            memory = '8GB'
-            nested {
-                includeConfig("$snippet2")
-            }
+            process.cpus = 4
+            process.memory = '8GB'
+            includeConfig "$snippet2"
             """
 
         snippet2.text = '''
-            foo = 1
-            bar = 2
+            process.ext.foo = 1
+            process.ext.bar = 2
             '''
 
         when:
-        def config = new ConfigParserV2().parse(text)
+        def config = new ConfigParserV2().parse(main)
         then:
-        config.process.name == 'alpha'
-        config.process.resources.cpus == 4
-        config.process.resources.memory == '8GB'
-        config.process.resources.disk == '1TB'
-        config.process.resources.nested.foo == 1
-        config.process.resources.nested.bar == 2
-
-        when:
-        def buffer = new StringWriter()
-        config.writeTo(buffer)
-        def str = buffer.toString().replaceAll('\t', '    ')
-        then:
-        str == '''
-            process {
-                name='alpha'
-                resources {
-                    disk='1TB'
-                    cpus=4
-                    memory='8GB'
-                    nested {
-                        foo=1
-                        bar=2
-                    }
-                }
-            }
-            '''.stripIndent().leftTrim()
+        config.profiles.alpha.process.cpus == 4
+        config.profiles.alpha.process.memory == '8GB'
+        config.profiles.alpha.process.disk == '1TB'
+        config.profiles.alpha.process.ext.foo == 1
+        config.profiles.alpha.process.ext.bar == 2
 
         cleanup:
         folder?.deleteDir()
@@ -147,12 +126,14 @@ class ConfigParserV2Test extends Specification {
     def 'should parse include config using dot properties syntax' () {
 
         given:
-        def folder = File.createTempDir()
-        def snippet1 = new File(folder,'config1.txt').absoluteFile
-        def snippet2 = new File(folder,'config2.txt').absoluteFile
+        def folder = Files.createTempDirectory('test')
+        def main = folder.resolve('nextflow.config')
+        def snippet1 = folder.resolve('snippet1.config')
+        def snippet2 = folder.resolve('snippet2.config')
 
-        def text = """
+        main.text = """
             process.name = 'alpha'
+
             includeConfig "$snippet1"
             """
 
@@ -162,7 +143,7 @@ class ConfigParserV2Test extends Specification {
             process.cpus = 4
             process.memory = '8GB'
 
-            includeConfig("$snippet2")
+            includeConfig "$snippet2"
             """
 
         snippet2.text = '''
@@ -173,7 +154,7 @@ class ConfigParserV2Test extends Specification {
             '''
 
         when:
-        def config = new ConfigParserV2().setBinding().parse(text)
+        def config = new ConfigParserV2().parse(main)
         then:
         config.params.xxx == 'x'
         config.params.yyy == 'y'
@@ -192,11 +173,11 @@ class ConfigParserV2Test extends Specification {
     def 'should parse multiple relative files' () {
 
         given:
-        def folder = File.createTempDir()
-        def main = new File(folder, 'main.config')
-        def folder1 = new File(folder, 'dir1')
-        def folder2 = new File(folder, 'dir2')
-        def folder3 = new File(folder, 'dir3')
+        def folder = Files.createTempDirectory('test')
+        def main = folder.resolve('main.config')
+        def folder1 = folder.resolve('dir1')
+        def folder2 = folder.resolve('dir2')
+        def folder3 = folder.resolve('dir3')
         folder1.mkdirs()
         folder2.mkdirs()
         folder3.mkdirs()
@@ -215,30 +196,30 @@ class ConfigParserV2Test extends Specification {
             }
             '''
 
-        new File(folder,'dir1/config').text = '''
-            cpus = 4
-            memory = '8GB'
+        folder.resolve('dir1/config').text = '''
+            process.cpus = 4
+            process.memory = '8GB'
             '''
 
-        new File(folder, 'dir2/config').text = '''
-            cpus = MIN
-            memory = '6GB'
+        folder.resolve('dir2/config').text = '''
+            process.cpus = 1
+            process.memory = '6GB'
             '''
 
-        new File(folder, 'dir3/config').text = '''
-            cpus = MAX
-            disk = '500GB'
+        folder.resolve('dir3/config').text = '''
+            process.cpus = 32
+            process.disk = '500GB'
             '''
 
         when:
-        def config = new ConfigParserV2().setBinding([MIN: 1, MAX: 32]).parse(main)
+        def config = new ConfigParserV2().parse(main)
         then:
-        config.profiles.proc1.cpus == 4
-        config.profiles.proc1.memory == '8GB'
-        config.profiles.proc2.cpus == 1
-        config.profiles.proc2.memory == '6GB'
-        config.profiles.proc3.cpus == 32
-        config.profiles.proc3.disk == '500GB'
+        config.profiles.proc1.process.cpus == 4
+        config.profiles.proc1.process.memory == '8GB'
+        config.profiles.proc2.process.cpus == 1
+        config.profiles.proc2.process.memory == '6GB'
+        config.profiles.proc3.process.cpus == 32
+        config.profiles.proc3.process.disk == '500GB'
 
         cleanup:
         folder?.deleteDir()
@@ -248,58 +229,51 @@ class ConfigParserV2Test extends Specification {
     def 'should parse nested relative files' () {
 
         given:
-        def folder = File.createTempDir()
-        def main = new File(folder, 'main.config')
-        def folder1 = new File(folder, 'dir1/dir3')
-        def folder2 = new File(folder, 'dir2')
+        def folder = Files.createTempDirectory('test')
+        def main = folder.resolve('main.config')
+        def folder1 = folder.resolve('dir1/dir3')
+        def folder2 = folder.resolve('dir2')
         folder1.mkdirs()
         folder2.mkdirs()
 
         main. text = """
-            process {
-                name = 'foo'
-                resources {
-                    disk = '1TB'
+            profiles {
+                foo {
+                    process.disk = '1TB'
                     includeConfig "dir1/nextflow.config"
-                }
-
-                commands {
                     includeConfig "dir2/nextflow.config"
                 }
             }
             """
 
-        new File(folder,'dir1/nextflow.config').text = """
-            cpus = 4
-            memory = '8GB'
-            nested {
-                includeConfig 'dir3/nextflow.config'
-            }
+        folder.resolve('dir1/nextflow.config').text = """
+            process.cpus = 4
+            process.memory = '8GB'
+            includeConfig 'dir3/nextflow.config'
             """
 
-        new File(folder, 'dir1/dir3/nextflow.config').text = '''
-            alpha = 1
-            delta = 2
+        folder.resolve('dir1/dir3/nextflow.config').text = '''
+            process.ext.alpha = 1
+            process.ext.delta = 2
             '''
 
-        new File(folder, 'dir2/nextflow.config').text = '''
-            cmd1 = 'echo true'
-            cmd2 = 'echo false'
+        folder.resolve('dir2/nextflow.config').text = '''
+            process.ext.cmd1 = 'echo true'
+            process.ext.cmd2 = 'echo false'
             '''
 
         when:
         def config = new ConfigParserV2().parse(main)
         then:
-        config.process.name == 'foo'
-        config.process.resources.cpus == 4
-        config.process.resources.memory == '8GB'
-        config.process.resources.disk == '1TB'
+        config.profiles.foo.process.cpus == 4
+        config.profiles.foo.process.memory == '8GB'
+        config.profiles.foo.process.disk == '1TB'
 
-        config.process.resources.nested.alpha == 1
-        config.process.resources.nested.delta == 2
+        config.profiles.foo.process.ext.alpha == 1
+        config.profiles.foo.process.ext.delta == 2
 
-        config.process.commands.cmd1 == 'echo true'
-        config.process.commands.cmd2 == 'echo false'
+        config.profiles.foo.process.ext.cmd1 == 'echo true'
+        config.profiles.foo.process.ext.cmd2 == 'echo false'
 
         cleanup:
         folder?.deleteDir()
@@ -309,9 +283,10 @@ class ConfigParserV2Test extends Specification {
     def 'should load selected profile configuration' () {
 
         given:
-        def folder = File.createTempDir()
-        def snippet1 = new File(folder,'config1.txt').absoluteFile
-        def snippet2 = new File(folder,'config2.txt').absoluteFile
+        def folder = Files.createTempDirectory('test')
+        def main = folder.resolve('nextflow.config')
+        def snippet1 = folder.resolve('snippet1.config')
+        def snippet2 = folder.resolve('snippet2.config')
 
         snippet1.text = '''
             process {
@@ -329,7 +304,7 @@ class ConfigParserV2Test extends Specification {
             }
             '''
 
-        def configText = """
+        main.text = """
             workDir = '/my/scratch'
 
             profiles {
@@ -351,7 +326,7 @@ class ConfigParserV2Test extends Specification {
         when:
         def config1 = new ConfigParserV2()
                         .setProfiles(['slow'])
-                        .parse(configText)
+                        .parse(main)
         then:
         config1.workDir == '/my/scratch'
         config1.process.cpus == 1
@@ -361,13 +336,12 @@ class ConfigParserV2Test extends Specification {
         when:
         def config2 = new ConfigParserV2()
                         .setProfiles(['fast'])
-                        .parse(configText)
+                        .parse(main)
         then:
         config2.workDir == '/fast/scratch'
         config2.process.cpus == 8
         config2.process.memory == '20GB'
         config2.process.disk == '2TB'
-
 
         cleanup:
         folder.deleteDir()
@@ -426,8 +400,8 @@ class ConfigParserV2Test extends Specification {
 
     def 'should parse file named as a top config scope' () {
         given:
-        def folder = File.createTempDir()
-        def configFile = new File(folder, 'XXX.config')
+        def folder = Files.createTempDirectory('test')
+        def configFile = folder.resolve('XXX.config')
         configFile.text = 'XXX.enabled = true'
 
         when:
@@ -442,47 +416,42 @@ class ConfigParserV2Test extends Specification {
     def 'should access node metadata' () {
 
         given:
-        Map params
-        def CONFIG = '''
+        def configText = '''
            params.str1 = 'hello'
            params.str2 = "${params.str1} world"
-           params.closure1 = { "$str" }
-           params.map1 = [foo: 'hello', bar: { world }]
+           process.clusterOptions = { "$params.str1" }
+           process.ext = [foo: 'hello', bar: { params.str2 }]
            '''
 
         when:
-        params = new ConfigParserV2()
-                .parse(CONFIG)
-                .params
+        def config = new ConfigParserV2()
+                .parse(configText)
         then:
-        params.str1 instanceof String
-        params.str2 instanceof GString
-        params.closure1 instanceof Closure
-        params.map1.bar instanceof Closure
+        config.params.str1 instanceof String
+        config.params.str2 instanceof GString
+        config.process.clusterOptions instanceof Closure
+        config.process.ext.bar instanceof Closure
 
         when:
-        params = new ConfigParserV2()
+        config = new ConfigParserV2()
                 .setRenderClosureAsString(false)
-                .parse(CONFIG)
-                .params
+                .parse(configText)
         then:
-        params.str1 instanceof String
-        params.str2 instanceof GString
-        params.closure1 instanceof Closure
-        params.map1.bar instanceof Closure
+        config.params.str1 instanceof String
+        config.params.str2 instanceof GString
+        config.process.clusterOptions instanceof Closure
+        config.process.ext.bar instanceof Closure
 
         when:
-        params = new ConfigParserV2()
-                    .setRenderClosureAsString(true)
-                    .parse(CONFIG)
-                    .params
+        config = new ConfigParserV2()
+                .setRenderClosureAsString(true)
+                .parse(configText)
         then:
-        params.str1 == 'hello'
-        params.str2 == 'hello world'
-        params.closure1 instanceof ConfigClosurePlaceholder
-        params.closure1 == new ConfigClosurePlaceholder('{ "$str" }')
-        params.map1.foo == 'hello'
-        params.map1.bar == new ConfigClosurePlaceholder('{ world }')
+        config.params.str1 == 'hello'
+        config.params.str2 == 'hello world'
+        config.process.clusterOptions == new ConfigClosurePlaceholder('{ "$params.str1" }')
+        config.process.ext.foo == 'hello'
+        config.process.ext.bar == new ConfigClosurePlaceholder('{ params.str2 }')
 
     }
 
@@ -647,9 +616,9 @@ class ConfigParserV2Test extends Specification {
     def 'should share params with included config files' () {
 
         given:
-        def folder = File.createTempDir()
-        def main = new File(folder, 'nextflow.config')
-        def included = new File(folder, 'included.config')
+        def folder = Files.createTempDirectory('test')
+        def main = folder.resolve('nextflow.config')
+        def included = folder.resolve('included.config')
 
         main.text = """
             params.repo = 'foo/bar'
@@ -675,9 +644,9 @@ class ConfigParserV2Test extends Specification {
     def 'should not evaluate profile blocks that were not selected' () {
 
         given:
-        def folder = File.createTempDir()
-        def main = new File(folder, 'nextflow.config')
-        def included = new File(folder, 'included.config')
+        def folder = Files.createTempDirectory('test')
+        def main = folder.resolve('nextflow.config')
+        def included = folder.resolve('included.config')
 
         main.text = """
             profiles {
@@ -701,12 +670,12 @@ class ConfigParserV2Test extends Specification {
         when:
         new ConfigParserV2().setProfiles(['bar']).parse(main)
         then:
-        thrown(CompilationFailedException)
+        thrown(ConfigParseException)
 
         when:
         new ConfigParserV2().parse(main)
         then:
-        thrown(CompilationFailedException)
+        thrown(ConfigParseException)
 
         cleanup:
         folder?.deleteDir()
