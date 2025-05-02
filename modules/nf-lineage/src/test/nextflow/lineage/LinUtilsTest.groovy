@@ -132,15 +132,15 @@ class LinUtilsTest extends Specification{
 
         where:
         PARAMS                                  | EXPECTED
-        ["type": "value"]                       | true
-        ["type": "wrong"]                       | false
-        ["workflow.repository": "subvalue"]     | true
-        ["workflow.repository": "wrong"]        | false
-        ["output.path": "wrong"]                | false
-        ["output.path": "/to/file"]             | true
-        ["output.path": "file2"]                | true
-        ["labels": "a" ]                        | true
-        ["labels": "c" ]                        | false
+        ["type": ["value"]]                     | true
+        ["type": ["wrong"]]                     | false
+        ["workflow.repository": ["subvalue"]]   | true
+        ["workflow.repository": ["wrong"]]      | false
+        ["output.path": ["wrong"]]              | false
+        ["output.path": ["/to/file"]]           | true
+        ["output.path": ["file2"]]              | true
+        ["labels": ["a"]]                       | true
+        ["labels": ["c"]]                       | false
         ["labels": ["a","b"]]                   | true
         ["labels": ["a","b","c"]]               | false
         ["type" : ["value", "value2"]]          | false
@@ -152,11 +152,11 @@ class LinUtilsTest extends Specification{
         LinUtils.parseQuery(PARAMS) == EXPECTED
         where:
         PARAMS                              | EXPECTED
-        "type=value"                        | ["type": "value"]
-        "workflow.repository=subvalue"      | ["workflow.repository": "subvalue"]
-        "type=value1&taskRun=value2"        | ["type": "value1", "taskRun": "value2"]
-        "type=val with space"               | ["type": "val with space"]
-        "type=value&labels=a&labels=b"      | ["type": "value", "labels":["a","b"]]
+        "type=value"                        | ["type": ["value"]]
+        "workflow.repository=subvalue"      | ["workflow.repository": ["subvalue"]]
+        "type=value1&taskRun=value2"        | ["type": ["value1"], "taskRun": ["value2"]]
+        "type=val with space"               | ["type": ["val with space"]]
+        "type=value&labels=a&labels=b"      | ["type": ["value"], "labels":["a","b"]]
         ""                                  | [:]
         null                                | [:]
     }
@@ -192,13 +192,13 @@ class LinUtilsTest extends Specification{
 
         where:
         OBJECT                                                                  | PARAMS                            | EXPECTED
-        ["field": "value"]                                                      | ["field": "value"]                | [["field": "value"]]
-        ["field": "wrong"]                                                      | ["field": "value"]                | []
-        [["field": "value"], ["field": "x"]]                                    | ["field": "value"]                | [["field": "value"]]
+        ["field": "value"]                                                      | ["field": ["value"]]              | [["field": "value"]]
+        ["field": "wrong"]                                                      | ["field": ["value"]]              | []
+        [["field": "value"], ["field": "x"]]                                    | ["field": ["value"]]              | [["field": "value"]]
         "string"                                                                | [:]                               | ["string"]
-        ["nested": ["subfield": "match"]]                                       | ["nested.subfield": "match"]      | [["nested": ["subfield": "match"]]]
-        ["nested": ["subfield": "nomatch"]]                                     | ["nested.subfield": "match"]      | []
-        [["nested": ["subfield": "match"]], ["nested": ["subfield": "other"]]]  | ["nested.subfield": "match"]      | [["nested": ["subfield": "match"]]]
+        ["nested": ["subfield": "match"]]                                       | ["nested.subfield": ["match"]]    | [["nested": ["subfield": "match"]]]
+        ["nested": ["subfield": "nomatch"]]                                     | ["nested.subfield": ["match"]]    | []
+        [["nested": ["subfield": "match"]], ["nested": ["subfield": "other"]]]  | ["nested.subfield": ["match"]]    | [["nested": ["subfield": "match"]]]
     }
 
     def "Should search path"() {
@@ -212,7 +212,7 @@ class LinUtilsTest extends Specification{
         lidStore.open(config)
         lidStore.save(key, value1)
         when:
-        def result = LinUtils.searchPath(lidStore, key, ["name":"param1"], ["params"] as String[])
+        def result = LinUtils.searchPath(lidStore, key, ["name":["param1"]], ["params"] as String[])
 
         then:
         result == [new Parameter("String", "param1", "value1")]

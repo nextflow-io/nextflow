@@ -101,7 +101,7 @@ class DefaultLinStore implements LinStore {
         return searchAllFiles(params)
     }
 
-    private Map<String, LinSerializable> searchAllFiles(Map<String,Object> params) {
+    private Map<String, LinSerializable> searchAllFiles(Map<String,List<String>> params) {
         final results = new HashMap<String, LinSerializable>()
 
         Files.walkFileTree(location, new FileVisitor<Path>() {

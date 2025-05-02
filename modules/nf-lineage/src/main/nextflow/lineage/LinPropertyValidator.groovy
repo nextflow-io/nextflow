@@ -70,7 +70,7 @@ class LinPropertyValidator {
         }
     }
 
-    void validateQueryParams(Map<String, Object> params) {
+    void validateQueryParams(Map<String, List<String>> params) {
         for( String key : params.keySet() ) {
            validate(key.tokenize('.'))
         }
