@@ -105,22 +105,12 @@ public class ScriptCompiler {
         return config;
     }
 
-    public CompileResult compile(String scriptText) {
-        try {
-            return compile0(new GroovyCodeSource(scriptText, MAIN_CLASS_NAME, DEFAULT_CODE_BASE));
-        }
-        catch( IOException e ) {
-            return null;
-        }
+    public CompileResult compile(String scriptText) throws IOException {
+        return compile0(new GroovyCodeSource(scriptText, MAIN_CLASS_NAME, DEFAULT_CODE_BASE));
     }
 
-    public CompileResult compile(File file) {
-        try {
-            return compile0(new GroovyCodeSource(file, config.getSourceEncoding()));
-        }
-        catch( IOException e ) {
-            return null;
-        }
+    public CompileResult compile(File file) throws IOException {
+        return compile0(new GroovyCodeSource(file, config.getSourceEncoding()));
     }
 
     public Collection<SourceUnit> getSources() {

@@ -92,13 +92,8 @@ public class ConfigCompiler {
         return config;
     }
 
-    public Script compile(String text, Path path) {
-        try {
-            return compile0(text, path);
-        }
-        catch( IOException e ) {
-            return null;
-        }
+    public Script compile(String text, Path path) throws IOException {
+        return compile0(text, path);
     }
 
     private Script compile0(String text, Path path) throws IOException {
