@@ -444,7 +444,7 @@ See also: [channel.fromList](#fromlist) factory method.
 :::
 
 :::{note}
-This feature requires the `nextflow.preview.topic` feature flag to be enabled.
+In versions of Nextflow prior to 25.04, this feature requires the `nextflow.preview.topic` feature flag to be enabled.
 :::
 
 A *topic channel* is a queue channel that can receive values from many source channels *implicitly* based on a matching *topic name*.
