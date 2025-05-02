@@ -46,6 +46,7 @@ import nextflow.executor.Executor
 import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.Architecture
 import nextflow.processor.BatchContext
+import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -1029,13 +1030,15 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getTags() == [a:'b']
         req.getPropagateTags() == true
     }
+
     def 'get fusion submit command' () {
         given:
+        def remoteWorkDir = S3PathFactory.parse('s3://my-bucket/work/dir')
         def handler = Spy(AwsBatchTaskHandler) {
             fusionEnabled() >> true
-            fusionLauncher() >> new FusionScriptLauncher(scheme: 's3')
+            fusionLauncher() >> new FusionScriptLauncher(Mock(TaskBean), 's3', remoteWorkDir)
             getTask() >> Mock(TaskRun) {
-                getWorkDir() >> S3PathFactory.parse('s3://my-bucket/work/dir')
+                getWorkDir() >> remoteWorkDir
             }
         }
 
