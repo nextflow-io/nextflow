@@ -58,6 +58,6 @@ interface LinStore extends Closeable {
      * @params Map of query params
      * @return Key-lineage entry pairs fulfilling the query params
      */
-    Map<String,LinSerializable> search(Map<String,String> params)
+    Map<String,LinSerializable> search(Map<String, List<String>> params)
 
 }

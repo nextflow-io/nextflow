@@ -131,13 +131,13 @@ class LinUtilsTest extends Specification{
 
         where:
         PARAMS                                  | EXPECTED
-        ["type": "value"]                       | true
-        ["type": "wrong"]                       | false
-        ["workflow.repository": "subvalue"]     | true
-        ["workflow.repository": "wrong"]        | false
-        ["output.path": "wrong"]                | false
-        ["output.path": "/to/file"]             | true
-        ["output.path": "file2"]                | true
+        ["type": ["value"]]                     | true
+        ["type": ["wrong"]]                     | false
+        ["workflow.repository": ["subvalue"]]   | true
+        ["workflow.repository": ["wrong"]]      | false
+        ["output.path": ["wrong"]]              | false
+        ["output.path": ["/to/file"]]           | true
+        ["output.path": ["file2"]]              | true
 
     }
 
@@ -172,13 +172,13 @@ class LinUtilsTest extends Specification{
 
         where:
         OBJECT                                                                  | PARAMS                            | EXPECTED
-        ["field": "value"]                                                      | ["field": "value"]                | [["field": "value"]]
-        ["field": "wrong"]                                                      | ["field": "value"]                | []
-        [["field": "value"], ["field": "x"]]                                    | ["field": "value"]                | [["field": "value"]]
+        ["field": "value"]                                                      | ["field": ["value"]]              | [["field": "value"]]
+        ["field": "wrong"]                                                      | ["field": ["value"]]              | []
+        [["field": "value"], ["field": "x"]]                                    | ["field": ["value"]]              | [["field": "value"]]
         "string"                                                                | [:]                               | ["string"]
-        ["nested": ["subfield": "match"]]                                       | ["nested.subfield": "match"]      | [["nested": ["subfield": "match"]]]
-        ["nested": ["subfield": "nomatch"]]                                     | ["nested.subfield": "match"]      | []
-        [["nested": ["subfield": "match"]], ["nested": ["subfield": "other"]]]  | ["nested.subfield": "match"]      | [["nested": ["subfield": "match"]]]
+        ["nested": ["subfield": "match"]]                                       | ["nested.subfield": ["match"]]    | [["nested": ["subfield": "match"]]]
+        ["nested": ["subfield": "nomatch"]]                                     | ["nested.subfield": ["match"]]    | []
+        [["nested": ["subfield": "match"]], ["nested": ["subfield": "other"]]]  | ["nested.subfield": ["match"]]    | [["nested": ["subfield": "match"]]]
     }
 
     def 'should navigate' (){

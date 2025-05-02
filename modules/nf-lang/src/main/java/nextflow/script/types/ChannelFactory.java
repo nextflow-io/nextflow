@@ -39,6 +39,8 @@ public interface ChannelFactory {
 
     <E> Channel<E> of(E... values);
 
+    Channel<Path> queryLineage(Map<String,?> params);
+
     Channel topic(String name);
 
     <E> Channel<E> value(E value);

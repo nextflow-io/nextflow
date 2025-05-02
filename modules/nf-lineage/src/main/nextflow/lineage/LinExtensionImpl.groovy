@@ -22,6 +22,9 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.Session
 import nextflow.extension.LinExtension
+import nextflow.lineage.fs.LinPathFactory
+import nextflow.lineage.model.Annotation
+import nextflow.lineage.model.FileOutput
 import nextflow.lineage.serde.LinSerializable
 
 import static nextflow.lineage.fs.LinPath.*
@@ -36,17 +39,25 @@ import static nextflow.lineage.fs.LinPath.*
 class LinExtensionImpl implements LinExtension {
 
     @Override
-    Object lineage(Session session, String lid) {
+    void queryLineage(Session session, DataflowWriteChannel channel, Map<String,?> opts) {
+        final queryParams = buildQueryParams(opts)
+        log.trace("Querying lineage with params: $queryParams")
+        new LinPropertyValidator().validateQueryParams(queryParams)
         final store = getStore(session)
-        return LinUtils.getMetadataObject(store, new URI(lid))
+        emitSearchResults(channel, store.search(queryParams))
+        channel.bind(Channel.STOP)
     }
 
-    @Override
-    void queryLineage(Session session, DataflowWriteChannel channel, Map<String, String> params) {
-        new LinPropertyValidator().validateQueryParams(params)
-        final store = getStore(session)
-        emitSearchResults(channel, store.search(params))
-        channel.bind(Channel.STOP)
+    private static Map<String, List<String>> buildQueryParams(Map<String,?> opts){
+        final queryParams = [type: [FileOutput.class.simpleName] ]
+        if( opts.workflowRun )
+            queryParams['workflowRun'] = [opts.workflowRun as String]
+        if( opts.taskRun )
+            queryParams['taskRun'] = [opts.taskRun as String]
+        if( opts.annotations ) {
+            queryParams['annotations'] = (opts.annotations as Map<String,String>).collect { String key, String value -> new Annotation(key, value).toString() }
+        }
+        return queryParams
     }
 
     protected LinStore getStore(Session session) {
@@ -61,6 +72,6 @@ class LinExtensionImpl implements LinExtension {
         if( !results ) {
             return
         }
-        results.keySet().forEach { channel.bind(asUriString(it)) }
+        results.keySet().forEach { channel.bind( LinPathFactory.create( asUriString(it) ) ) }
     }
 }

@@ -93,7 +93,7 @@ class DefaultLinStore implements LinStore {
     void close() throws IOException { }
 
     @Override
-    Map<String, LinSerializable> search(Map<String,String> params) {
+    Map<String, LinSerializable> search(Map<String,List<String>> params) {
         final results = new HashMap<String, LinSerializable>()
 
         Files.walkFileTree(location, new FileVisitor<Path>() {

@@ -424,11 +424,4 @@ class Nextflow {
      */
     static Closure<TokenMultiMapDef> multiMapCriteria(Closure<TokenBranchDef> closure) { closure }
 
-    static Object lineage( String lid ) {
-        final operation = Plugins.getExtension(LinExtension)
-        if( !operation )
-            throw new IllegalStateException("Unable to load lineage extensions.")
-        return operation.lineage(session, lid)
-    }
-
 }

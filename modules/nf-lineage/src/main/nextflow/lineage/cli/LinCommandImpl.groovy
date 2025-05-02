@@ -319,13 +319,25 @@ class LinCommandImpl implements CmdLineage.LinCommand {
             return
         }
         try {
-            final params = args.collectEntries {
-                it.split('=').collect { URLDecoder.decode(it, 'UTF-8') }
-            } as Map<String, String>
+            final params = parseFindArgs(args)
             new LinPropertyValidator().validateQueryParams(params)
             println LinUtils.encodeSearchOutputs( store.search(params).keySet().collect { asUriString(it) }, true )
         } catch (Throwable e){
             println "Error searching for ${args[0]}. ${e.message}"
         }
+    }
+
+    private Map<String, List<String>> parseFindArgs(List<String> args){
+        Map<String, List<String>> params = [:].withDefault { [] }
+
+        args.collectEntries { pair ->
+            def idx = pair.indexOf('=')
+            if( idx < 0 )
+                throw new IllegalArgumentException("Parameter $pair doesn't contain '=' separator")
+            final key = URLDecoder.decode(pair[0..<idx], 'UTF-8')
+            final value = URLDecoder.decode(pair[(idx + 1)..<pair.length()], 'UTF-8')
+            params[key] << value
+        }
+        return params
     }
 }

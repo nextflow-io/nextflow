@@ -25,21 +25,15 @@ import nextflow.Session
  * @author Jorge Ejarque <jorge.ejarque@seqera.io
  */
 interface LinExtension {
-    /**
-     * Get the lineage record for a given id.
-     *
-     * @param session Nextflow Session
-     * @param lid Lineage Id to view
-     * @return Lineage metadata object
-     */
-    Object lineage(Session session, String lid)
+
+    Map PARAMS = [workflowRun: [String,GString], taskRun: [String,GString], annotations: Map]
 
     /**
-     * Query Lineage metadata.
+     * Query Lineage metadata to get files produced by tasks, workflows or annotations.
      *
      * @param session Nextflow Session
      * @param channel Channel to publish the Lineage Ids matching the query params
-     * @param params Query parameters
+     * @param params Parameters for the lineage metadata query
      */
-    void queryLineage(Session session, DataflowWriteChannel channel, Map<String,String> params)
+    abstract void queryLineage(Session session, DataflowWriteChannel channel, Map<String,?> params)
 }

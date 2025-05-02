@@ -659,7 +659,8 @@ class Channel  {
         fromPath0Future = future.exceptionally(Channel.&handlerException)
     }
 
-    static DataflowWriteChannel queryLineage(Map<String,String> params) {
+    static DataflowWriteChannel queryLineage(Map<String,?> params) {
+        checkParams('queryLineage', params, LinExtension.PARAMS)
         final result = CH.create()
         if( NF.isDsl2() ) {
             session.addIgniter { queryLineage0(result, params) }
@@ -670,12 +671,11 @@ class Channel  {
         return result
     }
 
-    private static void queryLineage0(DataflowWriteChannel channel, Map<String,String> params) {
+    private static void queryLineage0(DataflowWriteChannel channel, Map<String,?> params) {
         final operation = Plugins.getExtension(LinExtension)
         if( !operation )
             throw new IllegalStateException("Unable to load lineage extensions.")
         final future = CompletableFuture.runAsync(() -> operation.queryLineage(session, channel, params))
         future.exceptionally(this.&handlerException)
     }
-
 }

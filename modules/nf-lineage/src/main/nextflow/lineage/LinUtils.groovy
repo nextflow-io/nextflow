@@ -131,7 +131,7 @@ class LinUtils {
      * @param params parameter-value pairs to evaluate in each object
      * @param results results collection to include the matching objects
      */
-    protected static void treatObject(def object, Map<String, String> params, List<Object> results) {
+    protected static void treatObject(def object, Map<String, List<String>> params, List<Object> results) {
         if (params) {
             if (object instanceof Collection) {
                 (object as Collection).forEach { treatObject(it, params, results) }
@@ -150,7 +150,7 @@ class LinUtils {
      * @param params parameter-value pairs to evaluate
      * @return true if all object parameters exist and matches with the value, otherwise false.
      */
-    static boolean checkParams(Object object, Map<String, String> params) {
+    static boolean checkParams(Object object, Map<String, List<String>> params) {
         for( final entry : params.entrySet() ) {
             final value = navigate(object, entry.key)
             if( !checkParam(value, entry.value) ) {
@@ -160,17 +160,22 @@ class LinUtils {
         return true
     }
 
-    private static boolean checkParam(Object value, Object expected) {
+    private static boolean checkParam(Object value, List<String> expected) {
         if( !value )
             return false
+
+        // If value collection, convert to String and check all expected values are in the value.
         if( value instanceof Collection ) {
-            for( final v : value as Collection ) {
-                if( v.toString() == expected.toString() )
-                    return true
-            }
+            final colValue = value as Collection
+            return colValue.collect { it.toString() }.containsAll(expected)
+        }
+
+        //Single object can't be compared with collection with one of more elements
+        if( expected.size() > 1 ) {
             return false
         }
-        return value.toString() == expected.toString()
+
+        return value.toString() == expected[0]
     }
 
     /**

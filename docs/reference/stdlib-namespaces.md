@@ -87,11 +87,6 @@ The global namespace contains globally available constants and functions.
 `groupKey( key, size: int ) -> GroupKey`
 : Create a grouping key to use with the {ref}`operator-grouptuple` operator.
 
-`lineage( lid ) -> ?`
-: :::{versionadded} 25.04.0
-: :::
-: Get the metadata record for a lineage ID.
-
 `multiMapCriteria( criteria: Closure ) -> Closure`
 : Create a multi-map criteria to use with the {ref}`operator-multiMap` operator.
 
