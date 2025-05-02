@@ -26,7 +26,6 @@ import java.time.OffsetDateTime
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.lineage.model.Annotation
 import nextflow.lineage.model.Checksum
 import nextflow.lineage.model.FileOutput
 import nextflow.lineage.model.DataPath
@@ -37,7 +36,6 @@ import nextflow.lineage.model.WorkflowOutput
 import nextflow.lineage.model.WorkflowRun
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
-import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.script.ScriptMeta
 import nextflow.script.params.BaseParam
@@ -55,7 +53,6 @@ import nextflow.script.params.StdOutParam
 import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
 import nextflow.trace.TraceObserverV2
-import nextflow.trace.TraceRecord
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.TaskEvent
 import nextflow.trace.event.WorkflowOutputEvent
@@ -362,19 +359,11 @@ class LinObserver implements TraceObserverV2 {
                 attrs.size(),
                 LinUtils.toDate(attrs?.creationTime()),
                 LinUtils.toDate(attrs?.lastModifiedTime()),
-                convertAnnotations(event.annotations))
+                event.labels)
             store.save(key, value)
         } catch (Throwable e) {
             log.warn("Unexpected error storing published file '${event.target.toUriString()}' for workflow '${executionHash}'", e)
         }
-    }
-
-    private static List<Annotation> convertAnnotations(Map annotations){
-        if( !annotations )
-            return null
-        final converted = new LinkedList<Annotation>()
-        annotations.forEach { Object key, Object value -> converted.add(new Annotation(key.toString(), value)) }
-        return converted
     }
 
     String getSourceReference(Path source){

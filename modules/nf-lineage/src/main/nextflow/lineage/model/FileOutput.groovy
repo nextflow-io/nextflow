@@ -66,7 +66,7 @@ class FileOutput implements LinSerializable {
      */
     OffsetDateTime modifiedAt
     /**
-     * Annotations attached to the data
+     * Labels attached to the data
      */
-    List<Annotation> annotations
+    List<String> labels
 }

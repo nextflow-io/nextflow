@@ -108,14 +108,6 @@ class OutputDsl {
 
         private Map opts = [:]
 
-        void annotations(Map value) {
-            setOption('annotations', value)
-        }
-
-        void annotations(Closure value) {
-            setOption('annotations', value)
-        }
-
         void contentType(String value) {
             setOption('contentType', value)
         }
@@ -139,6 +131,14 @@ class OutputDsl {
             cl.setDelegate(dsl)
             cl.call()
             setOption('index', dsl.getOptions())
+        }
+
+        void labels(List<String> value) {
+            setOption('labels', value)
+        }
+
+        void labels(Closure value) {
+            setOption('labels', value)
         }
 
         void mode(String value) {
@@ -192,6 +192,10 @@ class OutputDsl {
 
         void header(List<String> value) {
             setOption('header', value)
+        }
+
+        void labels(List<String> value) {
+            setOption('labels', value)
         }
 
         void path(String value) {
