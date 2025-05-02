@@ -28,6 +28,7 @@ import nextflow.cli.CmdLineage
 import nextflow.config.ConfigMap
 import nextflow.dag.MermaidHtmlRenderer
 import nextflow.lineage.LinHistoryRecord
+import nextflow.lineage.LinPropertyValidator
 import nextflow.lineage.LinStore
 import nextflow.lineage.LinStoreFactory
 import nextflow.lineage.LinUtils
@@ -98,13 +99,12 @@ class LinCommandImpl implements CmdLineage.LinCommand {
             return
         }
         try {
-            def entries = LinUtils.query(store, new URI(args[0]))
-            if( !entries ) {
-                println "No entries found for ${args[0]}"
+            def entry = LinUtils.getMetadataObject(store, new URI(args[0]))
+            if( !entry ) {
+                println "No entry found for ${args[0]}"
                 return
             }
-            entries = entries.size() == 1 ? entries[0] : entries
-            println LinUtils.encodeSearchOutputs(entries, true)
+            println LinUtils.encodeSearchOutputs(entry, true)
         } catch (Throwable e) {
             println "Error loading ${args[0]} - ${e.message}"
         }
@@ -319,9 +319,25 @@ class LinCommandImpl implements CmdLineage.LinCommand {
             return
         }
         try {
-            println LinUtils.encodeSearchOutputs(store.search(args[0]).keySet().collect {asUriString(it)}, true)
+            final params = parseFindArgs(args)
+            new LinPropertyValidator().validateQueryParams(params.keySet())
+            println LinUtils.encodeSearchOutputs( store.search(params).keySet().collect { asUriString(it) }, true )
         } catch (Throwable e){
             println "Error searching for ${args[0]}. ${e.message}"
         }
+    }
+
+    private Map<String, List<String>> parseFindArgs(List<String> args){
+        Map<String, List<String>> params = [:].withDefault { [] }
+
+        args.collectEntries { pair ->
+            final idx = pair.indexOf('=')
+            if( idx < 0 )
+                throw new IllegalArgumentException("Parameter $pair doesn't contain '=' separator")
+            final key = URLDecoder.decode(pair[0..<idx], 'UTF-8')
+            final value = URLDecoder.decode(pair[(idx + 1)..<pair.length()], 'UTF-8')
+            params[key] << value
+        }
+        return params
     }
 }

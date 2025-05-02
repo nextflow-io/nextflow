@@ -152,7 +152,7 @@ class LinCommandImplTest extends Specification{
 
         then:
         stdout.size() == 1
-        stdout[0] == "Error loading lid://12345 - Lineage object 12345 not found"
+        stdout[0] == "Error loading lid://12345 - Lineage record 12345 not found"
     }
 
     def 'should get lineage lid content' (){
@@ -278,7 +278,7 @@ class LinCommandImplTest extends Specification{
         outputHtml.text == expectedOutput
     }
 
-    def 'should show query results'(){
+    def 'should show an error if trying to do a query'(){
         given:
         def lidFile = storeLocation.resolve("12345/.data.json")
         Files.createDirectories(lidFile.parent)
@@ -287,7 +287,7 @@ class LinCommandImplTest extends Specification{
         def entry = new FileOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
             "lid://123987/file.bam", "lid://123987/", null, 1234, time, time, null)
         def jsonSer = encoder.encode(entry)
-        def expectedOutput = jsonSer
+        def expectedOutput = "Error loading lid:///?type=FileOutput - Cannot get record from the root LID URI"
         lidFile.text = jsonSer
         when:
         new LinCommandImpl().describe(configMap, ["lid:///?type=FileOutput"])
@@ -301,35 +301,6 @@ class LinCommandImplTest extends Specification{
         then:
         stdout.size() == expectedOutput.readLines().size()
         stdout.join('\n') == expectedOutput
-    }
-
-    def 'should show query with fragment'(){
-        given:
-        def lidFile = storeLocation.resolve("12345/.data.json")
-        Files.createDirectories(lidFile.parent)
-        def lidFile2 = storeLocation.resolve("67890/.data.json")
-        Files.createDirectories(lidFile2.parent)
-        def encoder = new LinEncoder().withPrettyPrint(true)
-        def time = OffsetDateTime.ofInstant(Instant.ofEpochMilli(123456789), ZoneOffset.UTC)
-        def entry = new FileOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-            "lid://123987/file.bam", "lid://123987/", null, 1234, time, time, null)
-        def entry2 = new FileOutput("path/to/file2",new Checksum("42472qet","nextflow","standard"),
-            "lid://123987/file2.bam", "lid://123987/", null, 1235, time, time, null)
-        def expectedOutput1 = '[\n  "path/to/file",\n  "path/to/file2"\n]'
-        def expectedOutput2 = '[\n  "path/to/file2",\n  "path/to/file"\n]'
-        lidFile.text = encoder.encode(entry)
-        lidFile2.text = encoder.encode(entry2)
-        when:
-        new LinCommandImpl().describe(configMap, ["lid:///?type=FileOutput#path"])
-        def stdout = capture
-            .toString()
-            .readLines()// remove the log part
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }
-            .findResults { line -> !line.contains('plugin') ? line : null }
-
-        then:
-        stdout.join('\n') == expectedOutput1 || stdout.join('\n') == expectedOutput2
     }
 
     def 'should diff'(){
@@ -414,7 +385,7 @@ class LinCommandImplTest extends Specification{
         when:
         def config = new ConfigMap()
         new LinCommandImpl().log(config)
-        new LinCommandImpl().describe(config, ["lid:///?type=FileOutput"])
+        new LinCommandImpl().describe(config, ["lid:///12345"])
         new LinCommandImpl().render(config, ["lid://12345", "output.html"])
         new LinCommandImpl().diff(config, ["lid://89012", "lid://12345"])
 
@@ -439,18 +410,23 @@ class LinCommandImplTest extends Specification{
         Files.createDirectories(lidFile.parent)
         def lidFile2 = storeLocation.resolve("123987/file2.bam/.data.json")
         Files.createDirectories(lidFile2.parent)
+        def lidFile3 = storeLocation.resolve(".meta/123987/file3.bam/.data.json")
+        Files.createDirectories(lidFile3.parent)
         def encoder = new LinEncoder().withPrettyPrint(true)
         def time = OffsetDateTime.ofInstant(Instant.ofEpochMilli(123456789), ZoneOffset.UTC)
         def entry = new FileOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-            "lid://123987/file.bam", "lid://123987/", null, 1234, time, time, null)
+            "lid://123987/file.bam", "lid://123987/", null, 1234, time, time, ["experiment=test"])
         def entry2 = new FileOutput("path/to/file2",new Checksum("42472qet","nextflow","standard"),
+            "lid://123987/file2.bam", "lid://123987/", null, 1235, time, time, ["experiment=test"])
+        def entry3 = new FileOutput("path/to/file3",new Checksum("42472qet","nextflow","standard"),
             "lid://123987/file2.bam", "lid://123987/", null, 1235, time, time, null)
         def expectedOutput1 = '[\n  "lid://123987/file.bam",\n  "lid://123987/file2.bam"\n]'
         def expectedOutput2 = '[\n  "lid://123987/file2.bam",\n  "lid://123987/file.bam"\n]'
         lidFile.text = encoder.encode(entry)
         lidFile2.text = encoder.encode(entry2)
+        lidFile3.text = encoder.encode(entry3)
         when:
-        new LinCommandImpl().find(configMap, ["type=FileOutput"])
+        new LinCommandImpl().find(configMap, ["type=FileOutput", "labels=experiment=test"])
         def stdout = capture
             .toString()
             .readLines()// remove the log part
