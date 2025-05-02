@@ -1624,7 +1624,7 @@ process foo {
 }
 
 workflow {
-  Channel.of('alpha', 'gamma', 'omega') | foo
+  channel.of('alpha', 'gamma', 'omega') | foo
 }
 ```
 
