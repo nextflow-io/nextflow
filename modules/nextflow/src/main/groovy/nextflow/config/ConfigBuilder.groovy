@@ -436,7 +436,7 @@ class ConfigBuilder {
             return parser.parse(entry.toString())
         }
 
-        throw new IllegalStateException()
+        throw new IllegalStateException("Unexpected config entry: ${entry}")
     }
 
     /**
