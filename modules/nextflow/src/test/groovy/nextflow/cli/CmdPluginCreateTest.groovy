@@ -19,6 +19,7 @@ package nextflow.cli
 import java.nio.file.Files
 import java.nio.file.Path
 
+import nextflow.plugin.Plugins
 import spock.lang.IgnoreIf
 import spock.lang.Specification
 /**
@@ -27,7 +28,10 @@ import spock.lang.Specification
  */
 class CmdPluginCreateTest extends Specification {
 
-//    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def cleanup() {
+        Plugins.stop()
+    }
+
     @IgnoreIf({System.getenv('NXF_SMOKE')})
     def 'should clone and create a plugin project' () {
         given:
