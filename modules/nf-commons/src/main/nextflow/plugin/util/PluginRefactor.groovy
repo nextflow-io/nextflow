@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-package nextflow.util
+package nextflow.plugin.util
+
 
 import java.util.regex.Matcher
 import java.util.regex.Pattern
@@ -22,6 +23,7 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
+import nextflow.extension.FilesEx
 
 @Slf4j
 @CompileStatic
@@ -54,7 +56,7 @@ class PluginRefactor {
     }
 
     PluginRefactor withPluginDir(File directory) {
-        this.pluginDir = directory
+        this.pluginDir = directory.absoluteFile.canonicalFile
         return this
     }
 
@@ -109,12 +111,14 @@ class PluginRefactor {
         }
 
         rootDir.eachFileRecurse { file ->
-            if (file.isFile() && file.name.startsWith('My') && file.extension in ['groovy']) {
+            if (file.isFile() && file.name.startsWith('My') && FilesEx.getExtension(file) in ['groovy']) {
                 final newName = file.name.replaceFirst(/^My/, newPrefix)
                 final renamedFile = new File(file.parentFile, newName)
                 if (file.renameTo(renamedFile)) {
                     log.debug "Renamed: ${file.name} -> ${renamedFile.name}"
-                    tokenMapping.put(file.baseName, renamedFile.baseName)
+                    final source = FilesEx.getBaseName(file)
+                    final target = FilesEx.getBaseName(renamedFile)
+                    tokenMapping.put(source, target)
                 }
                 else {
                     throw new IllegalStateException("Failed to rename: ${file.name}")
@@ -125,7 +129,7 @@ class PluginRefactor {
 
     protected void updateClassNames(File rootDir) {
         rootDir.eachFileRecurse { file ->
-            if (file.isFile() && file.extension in ['groovy','gradle']) {
+            if (file.isFile() && FilesEx.getExtension(file) in ['groovy','gradle']) {
                 replaceTokensInFile(file, tokenMapping)
             }
         }
@@ -198,4 +202,6 @@ class PluginRefactor {
         name = name.replaceFirst(/^\d+/, '')
         return name ?: null
     }
+
+
 }

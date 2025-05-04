@@ -27,7 +27,7 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
-import nextflow.util.PluginRefactor
+import nextflow.plugin.util.PluginRefactor
 import org.eclipse.jgit.api.Git
 /**
  * Plugin manager command
@@ -64,7 +64,7 @@ class CmdPlugin extends CmdBase {
             Plugins.pull(args[1].tokenize(','))
         }
         else if( args[0] == 'create' ) {
-            createPlugin()
+            createPlugin(args)
         }
         // plugin run command
         else if( args[0].contains(CMD_SEP) ) {
@@ -98,27 +98,38 @@ class CmdPlugin extends CmdBase {
         }
     }
 
-    def createPlugin() {
+    static createPlugin(List<String> args) {
+        if( args != ['create'] && (args[0] != 'create' || !(args.size() in [3, 4])) )
+            throw new AbortOperationException("Invalid create parameters - usage: nextflow plugin create <Plugin name> <Organization name>")
+
         final refactor = new PluginRefactor()
+        if( args.size()>1 ) {
+            refactor.withPluginName(args[1])
+            refactor.withOrgName(args[2])
+            refactor.withPluginDir(Path.of(args[3] ?: refactor.pluginName).toFile())
+        }
+        else {
+            // Prompt for plugin name
+            print "Enter plugin name: "
+            refactor.withPluginName(readLine())
 
-        // Prompt for plugin name
-        print "Enter plugin name: "
-        refactor.withPluginName(readLine())
+            // Prompt for maintainer organization
+            print "Enter organization: "
 
-        // Prompt for maintainer organization
-        print "Enter organization: "
-        refactor.withOrgName(readLine())
+            // Prompt for plugin path (default to the normalised plugin name)
+            refactor.withOrgName(readLine())
+            print "Enter project path [${refactor.pluginName}]: "
+            refactor.withPluginDir(Path.of(readLine() ?: refactor.pluginName).toFile())
 
-        // Prompt for plugin path (default to the normalised plugin name)
-        print "Enter project path [${refactor.pluginName}]: "
-        final targetDir = Path.of(readLine() ?: refactor.pluginName).toFile()
-        refactor.withPluginDir(targetDir)
+            // confirm and proceed
+            print "All good, are you OK to continue [y/N]? "
+            final confirm = readLine()
+            if( confirm!='y' )
+                return
+        }
 
-        // confirm and proceed
-        print "All good, are you OK to continue [y/N]? "
-        final confirm = readLine()
-        if( confirm!='y' )
-            return
+        // the final directory where the plugin is created
+        final File targetDir = refactor.getPluginDir()
 
         // clone the template repo
         clonePluginTemplate(targetDir)
@@ -130,14 +141,14 @@ class CmdPlugin extends CmdBase {
         println "Plugin created successfully at path: $targetDir"
     }
 
-    private String readLine() {
+    static private String readLine() {
         final console = System.console()
         return console != null
             ? console.readLine()
             : new BufferedReader(new InputStreamReader(System.in)).readLine()
     }
 
-    private void clonePluginTemplate(File targetDir) {
+    static private void clonePluginTemplate(File targetDir) {
         final templateUri = "https://github.com/nextflow-io/nf-plugin-template.git"
         try {
             Git.cloneRepository()
@@ -152,7 +163,7 @@ class CmdPlugin extends CmdBase {
         }
     }
 
-    private void cleanup(File targetDir) {
+    static private void cleanup(File targetDir) {
         new File(targetDir, '.git').deleteDir()
         new File(targetDir, '.github').deleteDir()
     }

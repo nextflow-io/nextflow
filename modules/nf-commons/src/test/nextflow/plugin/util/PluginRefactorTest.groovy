@@ -14,30 +14,15 @@
  * limitations under the License.
  */
 
-package nextflow.util
+package nextflow.plugin.util
 
-import spock.lang.Ignore
+
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class PluginRefactorTest extends Specification {
-
-    @Ignore
-    def 'should refactor plugin' () {
-        given:
-        def refactor = new PluginRefactor()
-            .withOrgName('seqera')
-            .withPluginName('Hello')
-            .withPluginDir(new File('/Users/pditommaso/Projects/nf-plugin-template'))
-
-        when:
-        refactor.apply()
-        then:
-        noExceptionThrown()
-    }
 
 
     def "should normalize strings into PascalCase class names"() {
