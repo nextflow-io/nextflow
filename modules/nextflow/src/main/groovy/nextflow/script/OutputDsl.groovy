@@ -59,12 +59,12 @@ class OutputDsl {
 
         // make sure every output was assigned
         for( final name : declarations.keySet() ) {
-            if( name !in outputs )
+            if( !outputs.containsKey(name) )
                 throw new ScriptRuntimeException("Workflow output '${name}' was declared in the output block but not assigned in the workflow")
         }
 
         for( final name : outputs.keySet() ) {
-            if( name !in declarations )
+            if( !declarations.containsKey(name) )
                 throw new ScriptRuntimeException("Workflow output '${name}' was assigned in the workflow but not declared in the output block")
         }
 
@@ -133,6 +133,14 @@ class OutputDsl {
             setOption('index', dsl.getOptions())
         }
 
+        void labels(List<String> value) {
+            setOption('labels', value)
+        }
+
+        void labels(Closure value) {
+            setOption('labels', value)
+        }
+
         void mode(String value) {
             setOption('mode', value)
         }
@@ -184,6 +192,10 @@ class OutputDsl {
 
         void header(List<String> value) {
             setOption('header', value)
+        }
+
+        void labels(List<String> value) {
+            setOption('labels', value)
         }
 
         void path(String value) {

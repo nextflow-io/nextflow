@@ -1180,27 +1180,33 @@ public class ScriptAstBuilder {
     }
 
     private Expression integerLiteral(IntegerLiteralAltContext ctx) {
+        var text = ctx.getText();
         Number num = null;
         try {
-            num = Numbers.parseInteger(ctx.getText());
+            num = Numbers.parseInteger(text);
         }
         catch( Exception e ) {
             numberFormatError = new Tuple2(ctx, e);
         }
 
-        return constX(num, true);
+        var result = constX(num, true);
+        result.putNodeMetaData(ASTNodeMarker.VERBATIM_TEXT, text);
+        return result;
     }
 
     private Expression floatingPointLiteral(FloatingPointLiteralAltContext ctx) {
+        var text = ctx.getText();
         Number num = null;
         try {
-            num = Numbers.parseDecimal(ctx.getText());
+            num = Numbers.parseDecimal(text);
         }
         catch( Exception e ) {
             numberFormatError = new Tuple2(ctx, e);
         }
 
-        return constX(num, true);
+        var result = constX(num, true);
+        result.putNodeMetaData(ASTNodeMarker.VERBATIM_TEXT, text);
+        return result;
     }
 
     private ConstantExpression string(ParserRuleContext ctx) {

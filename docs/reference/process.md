@@ -630,7 +630,7 @@ The following error strategies are available:
 
 `ignore`
 : When a task fails, ignore it and continue the pipeline execution. If the `workflow.failOnIgnore` config option is set to `true`, the pipeline will report an error (i.e. return a non-zero exit code) upon completion. Otherwise, the pipeline will complete successfully.
-: See {ref}`stdlib-constants` for more information on `workflow.failOnIgnore`.
+: See the {ref}`stdlib-namespaces-workflow` namespace for more information.
 
 `retry`
 : When a task fails, retry it.

@@ -21,7 +21,7 @@ A block comment starts with `/*` and includes all subsequent characters up to th
 println 'Hello again!'
 ```
 
-## Top-level declarations
+## Script declarations
 
 A Nextflow script may contain the following top-level declarations:
 
@@ -37,7 +37,7 @@ A Nextflow script may contain the following top-level declarations:
 
 Script declarations are in turn composed of statements and expressions.
 
-If there are no top-level declarations, a script may contain one or more [statements](#statements), in which case the entire script is treated as an entry workflow. For example:
+If there are no script declarations, a script may contain one or more [statements](#statements), in which case the entire script is treated as an entry workflow. For example:
 
 ```nextflow
 println 'Hello world!'
@@ -52,7 +52,7 @@ workflow {
 ```
 
 :::{warning}
-Statements and top-level declarations can not be mixed at the same level. If your script has top-level declarations, all statements must be contained within top-level declarations such as the entry workflow.
+Statements and script declarations can not be mixed at the same level.
 :::
 
 ### Shebang
@@ -169,7 +169,7 @@ workflow {
 
 - The publish section consists of one or more *publish statements*. A publish statement is a [right-shift expression](#binary-expressions), where the left-hand side is an expression that refers to a value in the workflow body, and the right-hand side is an expression that returns a string.
 
-In order for a script to be executable, it must either define an entry workflow or use the implicit workflow syntax described [above](#top-level-declarations).
+In order for a script to be executable, it must either define an entry workflow or be a code snippet as described [above](#script-declarations).
 
 Entry workflow definitions are ignored when a script is included as a module. This way, the same script can be included as a module or executed as a pipeline.
 
@@ -337,7 +337,7 @@ def x = 42
 Multiple variables can be declared in a single statement if the initializer is a [list literal](#list) with the same number of elements and declared variables:
 
 ```nextflow
-def (x, y) = [ 1, 2 ]
+def (x, y) = [1, 2]
 ```
 
 Each variable has a *scope*, which is the region of code in which the variable can be used.
@@ -387,7 +387,7 @@ The target expression must be a [variable](#variable), [index](#binary-expressio
 Multiple variables can be assigned in a single statement as long as the source expression is a [list literal](#list) with the same number of elements and assigned variables:
 
 ```nextflow
-(x, y) = [ 1, 2 ]
+(x, y) = [1, 2]
 ```
 
 ### Expression statement
@@ -512,7 +512,7 @@ throw new Exception('something failed!')
 ```
 
 :::{note}
-In general, the appropriate way to raise an error is to use the {ref}`error <stdlib-functions>` function:
+In general, the appropriate way to raise an error is to use the {ref}`error <stdlib-namespaces-global>` function:
 ```nextflow
 error 'something failed!'
 ```
@@ -640,7 +640,7 @@ If the expression is a name or simple property expression (one or more identifie
 
 ```nextflow
 def name = [first: '<FIRST_NAME>', last: '<LAST_NAME>']
-println "Hello, ${name.first} ${name.last}!"
+println "Hello, $name.first $name.last!"
 // -> Hello, <FIRST_NAME> <LAST_NAME>!
 ```
 
