@@ -17,14 +17,18 @@
 
 package nextflow.cli
 
+import static nextflow.cli.PluginExecAware.*
+
+import java.nio.file.Path
+
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
-import static nextflow.cli.PluginExecAware.CMD_SEP
-
+import nextflow.util.PluginRefactor
+import org.eclipse.jgit.api.Git
 /**
  * Plugin manager command
  * 
@@ -59,6 +63,9 @@ class CmdPlugin extends CmdBase {
                 throw new AbortOperationException("Missing plugin install target - usage: nextflow plugin install <pluginId,..>")
             Plugins.pull(args[1].tokenize(','))
         }
+        else if( args[0] == 'create' ) {
+            createPlugin()
+        }
         // plugin run command
         else if( args[0].contains(CMD_SEP) ) {
             final head = args.pop()
@@ -91,4 +98,62 @@ class CmdPlugin extends CmdBase {
         }
     }
 
+    def createPlugin() {
+        final refactor = new PluginRefactor()
+
+        // Prompt for plugin name
+        print "Enter plugin name: "
+        refactor.withPluginName(readLine())
+
+        // Prompt for maintainer organization
+        print "Enter organization: "
+        refactor.withOrgName(readLine())
+
+        // Prompt for plugin path (default to the normalised plugin name)
+        print "Enter project path [${refactor.pluginName}]: "
+        final targetDir = Path.of(readLine() ?: refactor.pluginName).toFile()
+        refactor.withPluginDir(targetDir)
+
+        // confirm and proceed
+        print "All good, are you OK to continue [y/N]? "
+        final confirm = readLine()
+        if( confirm!='y' )
+            return
+
+        // clone the template repo
+        clonePluginTemplate(targetDir)
+        // now refactor the template code
+        refactor.apply()
+        // remove git plat
+        cleanup(targetDir)
+        // done
+        println "Plugin created successfully at path: $targetDir"
+    }
+
+    private String readLine() {
+        final console = System.console()
+        return console != null
+            ? console.readLine()
+            : new BufferedReader(new InputStreamReader(System.in)).readLine()
+    }
+
+    private void clonePluginTemplate(File targetDir) {
+        final templateUri = "https://github.com/nextflow-io/nf-plugin-template.git"
+        try {
+            Git.cloneRepository()
+                .setURI(templateUri)
+                .setDirectory(targetDir)
+                .setBranchesToClone(["refs/tags/v1.0.0"])
+                .setBranch("refs/tags/v1.0.0")
+                .call()
+        }
+        catch (Exception e) {
+            throw new AbortOperationException("Unable to clone pluging template repository - cause: ${e.message}")
+        }
+    }
+
+    private void cleanup(File targetDir) {
+        new File(targetDir, '.git').deleteDir()
+        new File(targetDir, '.github').deleteDir()
+    }
 }
