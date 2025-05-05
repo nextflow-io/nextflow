@@ -16,7 +16,6 @@
 
 package nextflow.plugin.util
 
-
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
@@ -103,7 +102,6 @@ class PluginRefactor {
         renameDirectory(new File(pluginDir, "src/test/groovy/acme"), new File(pluginDir, "src/test/groovy/${orgName}"))
         updateClassNames(pluginDir)
     }
-
 
     protected void replacePrefixInFiles(File rootDir, String newPrefix) {
         if (!rootDir.exists() || !rootDir.isDirectory()) {
@@ -202,6 +200,5 @@ class PluginRefactor {
         name = name.replaceFirst(/^\d+/, '')
         return name ?: null
     }
-
 
 }
