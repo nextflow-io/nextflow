@@ -272,7 +272,7 @@ class CmdLineage extends CmdBase implements UsageAware {
         }
 
         void apply(List<String> args) {
-            if (args.size() != 1) {
+            if (args.size() < 1) {
                 println("ERROR: Incorrect number of parameters")
                 usage()
                 return
