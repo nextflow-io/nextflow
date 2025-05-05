@@ -51,7 +51,7 @@ See {ref}`using-plugins-page` for more information.
 
 ## Nextflow plugin registry
 
-The Nextflow plugin registry is a centralized repository of assembled plugins. It hosts an index of plugin metadata that supports plugin discovery, accessibility, and version tracking. The registry is integrated with the Nextflow runtime. Nextflow is able to automatically locate and download configured plugins. Developers can upload plugins to the registry, with built-in support from the Gradle plugin for Nextflow plugins.
+The Nextflow plugin registry is a centralized repository of assembled plugins. It hosts an index of plugin metadata that supports plugin discovery, accessibility, and version tracking. The registry is integrated with the Nextflow runtime. Nextflow is able to automatically locate and download configured plugins.
 
 ## Versioning
 

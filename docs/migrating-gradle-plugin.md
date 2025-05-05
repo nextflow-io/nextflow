@@ -17,8 +17,6 @@ The Gradle plugin is versioned and published to the [Gradle Plugin Portal](https
 
 The Nextflow plugin registry is a centralized repository of assembled plugins. It hosts an index of plugin metadata that supports plugin discovery, accessibility, and version tracking. The registry is integrated with the Nextflow runtime. Nextflow will automatically locate and download configured plugins.
 
-Developers can upload plugins to the plugin registry. The Gradle plugin for Nextflow plugins supports this process with Gradle tasks that package, upload, and publish plugins.
-
 ## Impact on users and developers
 
 The impact of the Gradle plugin for Nextflow plugins and Nextflow plugin registry differs for plugin users and developers.
