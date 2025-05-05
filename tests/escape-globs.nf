@@ -19,7 +19,7 @@ process foo {
 }
 
 workflow {
-    Channel.fromPath("$baseDir/data/file\\[a-b\\].txt") | foo
+    channel.fromPath("$baseDir/data/file\\[a-b\\].txt") | foo
 
     foo.out[0].view { "match: ${it.name}" }
     foo.out[1].view { "match: ${it.name}" }

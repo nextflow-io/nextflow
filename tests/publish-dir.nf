@@ -66,7 +66,7 @@ process foo {
 }
 
 workflow {
-  def input = Channel.of('alpha','beta','delta')
+  def input = channel.of('alpha','beta','delta')
   align(input)
 
   def bam = align.out[0].toSortedList { it.name }

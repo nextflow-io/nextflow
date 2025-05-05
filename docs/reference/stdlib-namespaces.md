@@ -79,7 +79,7 @@ The global namespace contains globally available constants and functions.
   `type: String`
   : Type of paths returned, can be `'file'`, `'dir'` or `'any'` (default: `'file'`)
 
-: See also: {ref}`Channel.fromPath <channel-path>`.
+: See also: {ref}`channel.fromPath <channel-path>`.
 
 `files( filePattern: String, [options] ) -> List<Path>`
 : Get a collection of files from a file name or glob pattern. Supports the same options as `file()`.
