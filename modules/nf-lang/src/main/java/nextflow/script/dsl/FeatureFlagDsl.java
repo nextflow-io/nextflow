@@ -55,10 +55,4 @@ public class FeatureFlagDsl {
     """)
     public boolean previewRecursion;
 
-    @FeatureFlag("nextflow.preview.topic")
-    @Description("""
-        When `true`, enables the use of [topic channels](https://nextflow.io/docs/latest/reference/channel.html#topic).
-    """)
-    public boolean previewTopic;
-
 }

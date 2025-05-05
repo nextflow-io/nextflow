@@ -1,6 +1,4 @@
 
-nextflow.preview.topic = true
-
 process foo {
   input:
   val(index)
