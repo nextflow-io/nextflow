@@ -154,7 +154,7 @@ An *entry workflow* has no name and may consist of a *main* and *publish* sectio
 ```nextflow
 workflow {
     main:
-    greetings = Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola')
+    greetings = channel.of('Bonjour', 'Ciao', 'Hello', 'Hola')
     messages = greetings.map { v -> "$v world!" }
     greetings.view { it -> '$it world!' }
 
