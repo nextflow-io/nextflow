@@ -71,6 +71,8 @@ class OutputDslTest extends Specification {
         }
         dsl.declare('bar') {
             path { v -> "${'barbar'}" }
+            label 'foo'
+            label 'bar'
             index {
                 path 'index.csv'
             }
@@ -85,10 +87,10 @@ class OutputDslTest extends Specification {
             """.stripIndent()
         and:
         1 * session.notifyFilePublish(new FilePublishEvent(file1, outputDir.resolve('foo/file1.txt'), null))
-        1 * session.notifyFilePublish(new FilePublishEvent(file2, outputDir.resolve('barbar/file2.txt'), null))
+        1 * session.notifyFilePublish(new FilePublishEvent(file2, outputDir.resolve('barbar/file2.txt'), ['foo', 'bar']))
         1 * session.notifyWorkflowOutput(new WorkflowOutputEvent('foo', [outputDir.resolve('foo/file1.txt')], null))
         1 * session.notifyWorkflowOutput(new WorkflowOutputEvent('bar', [outputDir.resolve('barbar/file2.txt')], outputDir.resolve('index.csv')))
-        1 * session.notifyFilePublish(new FilePublishEvent(null, outputDir.resolve('index.csv')))
+        1 * session.notifyFilePublish(new FilePublishEvent(null, outputDir.resolve('index.csv'), ['foo', 'bar']))
 
         cleanup:
         SysEnv.pop()
@@ -149,8 +151,6 @@ class OutputDslTest extends Specification {
         dsl2.overwrite(true)
         dsl2.storageClass('someClass')
         dsl2.tags([foo:'1',bar:'2'])
-        dsl2.label('foo')
-        dsl2.label('bar')
         then:
         dsl2.getOptions() == [
             contentType:'simple/text',
@@ -160,7 +160,6 @@ class OutputDslTest extends Specification {
             overwrite: true,
             storageClass: 'someClass',
             tags: [foo:'1',bar:'2'],
-            labels: ['foo', 'bar']
         ]
     }
 

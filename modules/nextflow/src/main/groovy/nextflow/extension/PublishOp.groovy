@@ -217,7 +217,7 @@ class PublishOp {
             else {
                 log.warn "Invalid extension '${ext}' for index file '${indexPath}' -- should be CSV, JSON, or YAML"
             }
-            session.notifyFilePublish(new FilePublishEvent(null, indexPath))
+            session.notifyFilePublish(new FilePublishEvent(null, indexPath, publishOpts.labels as List))
         }
 
         log.trace "Publish operator complete"
