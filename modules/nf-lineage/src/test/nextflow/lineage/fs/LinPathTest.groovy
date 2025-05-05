@@ -38,6 +38,8 @@ import spock.lang.Unroll
 
 import java.time.OffsetDateTime
 
+import static nextflow.lineage.serde.LinTypeAdapterFactory.*
+
 /**
  * LID Path Tests
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
@@ -164,9 +166,12 @@ class LinPathTest extends Specification {
 
         wdir.resolve('12345/output1').mkdirs()
         wdir.resolve('12345/path/to/file2.txt').mkdirs()
-        wdir.resolve('12345/.data.json').text = '{"type":"TaskRun"}'
-        wdir.resolve('12345/output1/.data.json').text = '{"type":"FileOutput", "path": "' + outputFolder.toString() + '"}'
-        wdir.resolve('12345/path/to/file2.txt/.data.json').text = '{"type":"FileOutput", "path": "' + outputFile.toString() + '"}'
+        wdir.resolve('12345/.data.json').text = '{"' + VERSION_FIELD + '":"' + CURRENT_VERSION + '",' +
+            '"type":"TaskRun"}'
+        wdir.resolve('12345/output1/.data.json').text = '{"' + VERSION_FIELD + '":"' + CURRENT_VERSION + '",' +
+            '"type":"FileOutput", "path": "' + outputFolder.toString() + '"}'
+        wdir.resolve('12345/path/to/file2.txt/.data.json').text = '{"' + VERSION_FIELD + '":"' + CURRENT_VERSION + '",' +
+            '"type":"FileOutput", "path": "' + outputFile.toString() + '"}'
         def time = OffsetDateTime.now()
         def wfResultsMetadata = new LinEncoder().withPrettyPrint(true).encode(new WorkflowOutput(time, "lid://1234", [new Parameter( "Path", "a", "lid://1234/a.txt")]))
         wdir.resolve('5678/').mkdirs()

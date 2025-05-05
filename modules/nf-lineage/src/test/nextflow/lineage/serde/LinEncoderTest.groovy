@@ -29,6 +29,8 @@ import spock.lang.Specification
 
 import java.time.OffsetDateTime
 
+import static nextflow.lineage.serde.LinTypeAdapterFactory.*
+
 class LinEncoderTest extends Specification{
 
     def 'should encode and decode Outputs'(){
@@ -163,7 +165,8 @@ class LinEncoderTest extends Specification{
         def encoded = encoder.encode(wfResults)
         def object = encoder.decode(encoded)
         then:
-        encoded == '{"type":"WorkflowOutput","createdAt":null,"workflowRun":"lid://1234","output":null}'
+        encoded == '{"' + VERSION_FIELD + '":"' + CURRENT_VERSION + '",' +
+            '"type":"WorkflowOutput","createdAt":null,"workflowRun":"lid://1234","output":null}'
         def result = object as WorkflowOutput
         result.createdAt == null
 
