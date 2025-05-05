@@ -44,7 +44,6 @@ class NextflowMeta {
         @Deprecated boolean strict
         boolean output
         boolean recursion
-        boolean topic
         boolean moduleBinaries
 
         @Deprecated
@@ -68,12 +67,6 @@ class NextflowMeta {
             if( recursion )
                 log.warn "NEXTFLOW RECURSION IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
             this.recursion = recursion
-        }
-
-        void setTopic(Boolean topic) {
-            if( topic )
-                log.warn "CHANNEL TOPICS ARE A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
-            this.topic = topic
         }
     }
 

@@ -68,7 +68,7 @@ The first line of a script can be a [shebang](https://en.wikipedia.org/wiki/Sheb
 A feature flag declaration is an assignment. The target should be a valid {ref}`feature flag <config-feature-flags>` and the source should be a literal (i.e. number, string, boolean):
 
 ```nextflow
-nextflow.preview.topic = true
+nextflow.preview.recursion = true
 ```
 
 ### Include
