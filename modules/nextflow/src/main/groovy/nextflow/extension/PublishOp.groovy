@@ -192,24 +192,25 @@ class PublishOp {
      * Get or resolve the labels of a workflow output.
      *
      * @param labels List | Closure<List>
-     * @param value
+     * @param context
      */
-    protected static List<String> getLabels(labels, value) {
+    protected static List<String> getLabels(Object labels, Object context) {
         if( labels == null )
             return []
+        if( labels instanceof CharSequence )
+            return [labels.toString()]
         if( labels instanceof List<String> )
             return labels
         if( labels instanceof Closure ) {
             try {
-                final result = labels.call(value)
-                if( result instanceof List<String> )
-                    return result
-            } catch (Throwable e) {
-                log.warn("Exception while evaluating dynamic `labels` directive for value '$value' -- ${e.getMessage()}")
+                return getLabels(labels.call(context), Map.of())
+            }
+            catch (Throwable e) {
+                log.warn("Exception while evaluating dynamic `labels` directive for value '$context' -- ${e.getMessage()}")
                 return []
             }
         }
-        throw new ScriptRuntimeException("Invalid output `labels` directive -- it should be either a List or a closure that returns a List")
+        throw new ScriptRuntimeException("Invalid output `labels` directive -- offending value: ${context}")
     }
 
     /**

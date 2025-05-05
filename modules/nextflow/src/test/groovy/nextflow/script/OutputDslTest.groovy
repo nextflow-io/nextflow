@@ -163,6 +163,18 @@ class OutputDslTest extends Specification {
         ]
     }
 
+    def 'should add labels one by one' () {
+        given:
+        def dsl2 = new OutputDsl.DeclareDsl()
+
+        when:
+        dsl2.label('foo')
+        dsl2.label('bar')
+
+        then:
+        dsl2.options.labels == ['foo','bar']
+    }
+
     def 'should set index directives' () {
         when:
         def dsl1 = new OutputDsl.IndexDsl()
