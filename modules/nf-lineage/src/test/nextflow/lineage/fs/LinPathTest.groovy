@@ -72,13 +72,36 @@ class LinPathTest extends Specification {
         path.query == QUERY
 
         where:
-        URI_STRING                      | PATH              | QUERY         | FRAGMENT
-        "lid://1234/hola"               | "1234/hola"       | null          | null
-        "lid://1234/hola#frag.sub"      | "1234/hola"       | null          | "frag.sub"
-        "lid://1234/#frag.sub"          | "1234"            | null          | "frag.sub"
-        "lid://1234/?q=a&b=c"           | "1234"            | "q=a&b=c"     | null
-        "lid://1234/?q=a&b=c#frag.sub"  | "1234"            | "q=a&b=c"     | "frag.sub"
-        "lid:///"                       | "/"               | null          | null
+        URI_STRING                                  | PATH              | QUERY         | FRAGMENT
+        "lid://1234/hola"                           | "1234/hola"       | null          | null
+        "lid://1234/hola#workflow.repository"       | "1234/hola"       | null          | "workflow.repository"
+        "lid://1234/#workflow.repository"           | "1234"            | null          | "workflow.repository"
+        "lid://1234/?q=a&b=c"                       | "1234"            | "q=a&b=c"     | null
+        "lid://1234/?q=a&b=c#workflow.repository"   | "1234"            | "q=a&b=c"     | "workflow.repository"
+        "lid:///"                                   | "/"               | null          | null
+    }
+
+    def 'should throw exception if fragment contains an unknown property'() {
+        when:
+        new LinPath(fs, new URI ("lid://1234/hola#no-exist"))
+        then:
+        thrown(IllegalArgumentException)
+
+    }
+
+    def 'should warn if query is specified'() {
+        when:
+        new LinPath(fs, new URI("lid://1234/hola?query"))
+        def stdout = capture
+            .toString()
+            .readLines()// remove the log part
+            .findResults { line -> !line.contains('DEBUG') ? line : null }
+            .findResults { line -> !line.contains('INFO') ? line : null }
+            .findResults { line -> !line.contains('plugin') ? line : null }
+
+        then:
+        stdout.size() == 1
+        stdout[0].endsWith("Query string is not supported for Lineage URI: `lid://1234/hola?query` -- it will be ignored")
     }
 
     def 'should create correct lid Path' () {
@@ -216,7 +239,7 @@ class LinPathTest extends Specification {
 
         when: 'outputs'
         def outputs = new WorkflowOutput(OffsetDateTime.now(), "lid://123456", [new Parameter("Collection", "samples", ["sample1", "sample2"])])
-        lidFs.store.save("123456/output", outputs)
+        lidFs.store.save("123456#output", outputs)
         Path p2 = LinPath.getMetadataAsTargetPath(wf, lidFs, "123456", ["output"] as String[])
         then:
         p2 instanceof LinMetadataPath
@@ -245,10 +268,13 @@ class LinPathTest extends Specification {
     }
 
     def 'should get file name' () {
-        when:
-        def lid1 = new LinPath(fs, '1234567890/this/file.bam')
-        then:
-        lid1.getFileName() == new LinPath(null, 'file.bam')
+        expect:
+        new LinPath(fs, PATH).getFileName() == EXPECTED
+        where:
+        PATH                        | EXPECTED
+        '1234567890/this/file.bam'  | new LinPath(null, 'file.bam')
+        '12345/hola?query#output'   | new LinPath("query", "output", "hola", null)
+
     }
 
     def 'should get file parent' () {
@@ -280,11 +306,12 @@ class LinPathTest extends Specification {
         expect:
         new LinPath(fs, PATH).getName(INDEX) == EXPECTED
         where:
-        PATH        | INDEX | EXPECTED
-        '123'       | 0     | new LinPath(fs, '123')
-        '123/a'     | 1     | new LinPath(null, 'a')
-        '123/a/'    | 1     | new LinPath(null, 'a')
-        '123/a/b'   | 2     | new LinPath(null, 'b')
+        PATH                | INDEX | EXPECTED
+        '123'               | 0     | new LinPath(fs, '123')
+        '123/a'             | 1     | new LinPath(null, 'a')
+        '123/a/'            | 1     | new LinPath(null, 'a')
+        '123/a/b'           | 2     | new LinPath(null, 'b')
+        '123/a?q#output'    | 1     | new LinPath(null, 'a?q#output')
     }
 
     @Unroll

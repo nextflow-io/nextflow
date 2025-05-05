@@ -703,7 +703,7 @@ $ nextflow lineage SUBCOMMAND [arg ..]
 
 **Description**
 
-The `lineage` command is used to inspect lineage metadata.
+The `lineage` command is used to inspect lineage metadata. Data lineage can be enabled by setting `lineage.enabled` to `true` in your Nextflow configuration (see the {ref}`config-lineage` config scope for details).
 
 **Options**
 
@@ -720,31 +720,35 @@ TIMESTAMP          	RUN NAME              	SESSION ID                          	
 2025-04-22 14:45:43	backstabbing_heyrovsky	21bc4fad-e8b8-447d-9410-388f926a711f	lid://c914d714877cc5c882c55a5428b510b1
 ```
 
-View a metadata description.
+View a lineage record.
 
 ```console
 $ nextflow lineage view <lid>
 ```
 
-View a metadata description fragment. A fragment can be a property of a metadata description (e.g., `output` or `params`) or a set of nested properties separated by a `.` (e.g., `workflow.repository`).
+The output of a workflow run can be shown by appending `#output` to the workflow run LID:
 
 ```console
-$ nextflow lineage view <lid#fragment>
+$ nextflow lineage view lid://c914d714877cc5c882c55a5428b510b1#output
 ```
 
-Find a specific metadata description that matches a URL-like query string. The query string consists of `key=value` statements separated by `&`, where keys are defined similarly to the `fragments` used in the `view` command.
+:::{tip}
+You can use the [jq](https://jqlang.org/) command-line tool to apply further queries and transformations on the resulting lineage record.
+:::
+
+Find all lineage records that match a set of key-value pairs:
 
 ```console
-$ nextflow lineage find "<query-string>"
+$ nextflow lineage find <key-1>=<value-1> <key-2>=<value-2> ...
 ```
 
-Display a git-style diff between two metadata descriptions.
+Display a git-style diff between two lineage records.
 
 ```console
 $ nextflow lineage diff <lid-1> <lid-2>
 ```
 
-Render the lineage graph for a workflow or task output in an HTML file. (default file path: `./lineage.html`).
+Render the lineage graph for a workflow or task output as an HTML file. (default file path: `./lineage.html`).
 
 ```console
 $ nextflow lineage render <lid> [html-file-path]
@@ -1378,7 +1382,7 @@ process sayHello {
 }
 
 workflow {
-  Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
+  channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
 }
 ```
 
@@ -1418,6 +1422,6 @@ process sayHello {
 }
 
 workflow {
-  Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
+  channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
 }
 ```

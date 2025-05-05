@@ -15,6 +15,6 @@ process python_version {
 }
 
 workflow {
-    python_version(Channel.of(1,2,3), params.array_file_path) | view
+    python_version(channel.of(1,2,3), params.array_file_path) | view
 }
 

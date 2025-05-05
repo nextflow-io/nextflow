@@ -35,12 +35,12 @@ import nextflow.serde.gson.RuntimeTypeAdapterFactory
 class LinEncoder extends GsonEncoder<LinSerializable> {
 
     LinEncoder() {
-        withTypeAdapterFactory(newLidTypeAdapterFactory())
+        withTypeAdapterFactory(newTypeAdapterFactory())
         // enable rendering of null values
         withSerializeNulls(true)
     }
 
-    static RuntimeTypeAdapterFactory newLidTypeAdapterFactory(){
+    static RuntimeTypeAdapterFactory newTypeAdapterFactory(){
         RuntimeTypeAdapterFactory.of(LinSerializable.class, "type")
             .registerSubtype(WorkflowRun, WorkflowRun.simpleName)
             .registerSubtype(WorkflowOutput, WorkflowOutput.simpleName)

@@ -6,7 +6,9 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.function.Predicate
 
+import com.azure.compute.batch.BatchClient
 import com.azure.compute.batch.models.BatchPool
+import com.azure.compute.batch.models.BatchJobCreateContent
 import com.azure.compute.batch.models.ElevationLevel
 import com.azure.core.exception.HttpResponseException
 import com.azure.core.http.HttpResponse
@@ -29,6 +31,8 @@ import nextflow.util.MemoryUnit
 import reactor.core.publisher.Flux
 import spock.lang.Specification
 import spock.lang.Unroll
+import com.azure.compute.batch.models.BatchJobConstraints
+import com.azure.compute.batch.models.BatchPoolInfo
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -941,4 +945,31 @@ class AzBatchServiceTest extends Specification {
         1 * service.createPool(spec) >> { throw new IllegalArgumentException("Some other error") }
         thrown(IllegalArgumentException)
     }
+
+    def 'should test createJobConstraints method with Duration input' () {
+        given:
+        def exec = Mock(AzBatchExecutor)
+        def service = new AzBatchService(exec)
+        def nfDuration = TIME_STR ? nextflow.util.Duration.of(TIME_STR) : null
+        
+        when:
+        def result = service.createJobConstraints(nfDuration)
+        
+        then:
+        result != null
+        if (TIME_STR) {
+            assert result.maxWallClockTime != null
+            assert result.maxWallClockTime.toDays() == EXPECTED_DAYS
+        } else {
+            assert result.maxWallClockTime == null
+        }
+        
+        where:
+        TIME_STR | EXPECTED_DAYS
+        '48d'    | 48
+        '24h'    | 1
+        '7d'     | 7
+        null     | 0
+    }
+
 }

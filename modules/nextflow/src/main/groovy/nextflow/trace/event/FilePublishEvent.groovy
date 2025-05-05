@@ -12,22 +12,33 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
-package nextflow.lineage.model
+package nextflow.trace.event
+
+import java.nio.file.Path
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 
 /**
- * Models an Annotation.
+ * Models a file publish event.
  *
- * @author Jorge Ejarque <jorge.ejarque@seqera.io
+ * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Canonical
 @CompileStatic
-class Annotation {
-    String key
-    Object value
+class FilePublishEvent {
+    /**
+     * The source path.
+     */
+    Path source
+    /**
+     * The target path.
+     */
+    Path target
+    /**
+     * Labels associated with the published file.
+     */
+    List<String> labels
 }

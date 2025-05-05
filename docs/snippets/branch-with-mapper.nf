@@ -1,4 +1,4 @@
-Channel.of(1, 2, 3, 40, 50)
+channel.of(1, 2, 3, 40, 50)
     .branch { v ->
         foo: v < 10
             return v + 2
