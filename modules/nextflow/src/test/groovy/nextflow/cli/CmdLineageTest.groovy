@@ -278,12 +278,12 @@ class CmdLineageTest extends Specification {
         def encoder = new LinEncoder().withPrettyPrint(true)
         def time = OffsetDateTime.now()
         def entry = new FileOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-                "lid://123987/file.bam", "lid://12345", "lid://123987/", 1234, time, time, null)
+                "lid://123987/file.bam", "lid://12345", "lid://123987/", 1234, time, time, ['foo', 'bar'])
         def jsonSer = encoder.encode(entry)
         def expectedOutput = '[\n  "lid://12345"\n]'
         lidFile.text = jsonSer
         when:
-        def lidCmd = new CmdLineage(launcher: launcher, args: ["find", "type=FileOutput"])
+        def lidCmd = new CmdLineage(launcher: launcher, args: ["find", "type=FileOutput", "labels=foo"])
         lidCmd.run()
         def stdout = capture
             .toString()
