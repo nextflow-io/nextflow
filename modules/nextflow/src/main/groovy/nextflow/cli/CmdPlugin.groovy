@@ -17,7 +17,7 @@
 
 package nextflow.cli
 
-import static nextflow.cli.PluginExecAware.*
+import static nextflow.cli.PluginExecAware.CMD_SEP
 
 import java.nio.file.Path
 
