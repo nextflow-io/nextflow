@@ -53,8 +53,8 @@ class LinExtensionImpl implements LinExtension {
             queryParams['workflowRun'] = [opts.workflowRun as String]
         if( opts.taskRun )
             queryParams['taskRun'] = [opts.taskRun as String]
-        if( opts.labels )
-            queryParams['labels'] = opts.labels as List<String>
+        if( opts.label )
+            queryParams['label'] = opts.label as List<String>
         return queryParams
     }
 
