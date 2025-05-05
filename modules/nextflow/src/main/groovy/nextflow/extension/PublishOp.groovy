@@ -99,7 +99,6 @@ class PublishOp {
             overrides.saveAs = targetResolver
         else
             overrides.path = targetResolver
-        overrides.labels = getLabels(publishOpts.labels, value)
 
         final publisher = PublishDir.create(publishOpts + overrides)
 
@@ -189,31 +188,6 @@ class PublishOp {
     }
 
     /**
-     * Get or resolve the labels of a workflow output.
-     *
-     * @param labels List | Closure<List>
-     * @param context
-     */
-    protected static List<String> getLabels(Object labels, Object context) {
-        if( labels == null )
-            return []
-        if( labels instanceof CharSequence )
-            return [labels.toString()]
-        if( labels instanceof List<String> )
-            return labels
-        if( labels instanceof Closure ) {
-            try {
-                return getLabels(labels.call(context), Map.of())
-            }
-            catch (Throwable e) {
-                log.warn("Exception while evaluating dynamic `labels` directive for value '$context' -- ${e.getMessage()}")
-                return []
-            }
-        }
-        throw new ScriptRuntimeException("Invalid output `labels` directive -- offending value: ${context}")
-    }
-
-    /**
      * Once all channel values have been published, publish the final
      * workflow output and index file (if enabled).
      */
@@ -243,7 +217,7 @@ class PublishOp {
             else {
                 log.warn "Invalid extension '${ext}' for index file '${indexPath}' -- should be CSV, JSON, or YAML"
             }
-            session.notifyFilePublish(new FilePublishEvent(null, indexPath, indexOpts.labels))
+            session.notifyFilePublish(new FilePublishEvent(null, indexPath))
         }
 
         log.trace "Publish operator complete"
@@ -370,7 +344,6 @@ class PublishOp {
     static class IndexOpts {
         Path path
         def /* boolean | List<String> */ header = false
-        List<String> labels
         String sep = ','
 
         IndexOpts(Path targetDir, Map opts) {
@@ -378,8 +351,6 @@ class PublishOp {
 
             if( opts.header != null )
                 this.header = opts.header
-            if( opts.labels )
-                this.labels = opts.labels as List<String>
             if( opts.sep )
                 this.sep = opts.sep as String
         }

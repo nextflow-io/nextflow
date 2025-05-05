@@ -16,7 +16,6 @@
 
 package nextflow.script
 
-
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -129,18 +128,6 @@ class OutputDsl {
             setOption('index', dsl.getOptions())
         }
 
-        void labels(List<String> value) {
-            setOption('labels', value)
-        }
-
-        void labels(Closure value) {
-            setOption('labels', value)
-        }
-
-        void labels(CharSequence value) {
-            setOption('labels', value)
-        }
-
         void label(CharSequence value) {
             final opts = getOptions()
             final current = opts.get('labels')
@@ -201,10 +188,6 @@ class OutputDsl {
 
         void header(List<String> value) {
             setOption('header', value)
-        }
-
-        void labels(List<String> value) {
-            setOption('labels', value)
         }
 
         void path(String value) {

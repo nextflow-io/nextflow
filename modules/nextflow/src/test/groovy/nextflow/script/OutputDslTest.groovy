@@ -84,11 +84,11 @@ class OutputDslTest extends Specification {
             "${outputDir}/barbar/file2.txt"
             """.stripIndent()
         and:
-        1 * session.notifyFilePublish(new FilePublishEvent(file1, outputDir.resolve('foo/file1.txt'), []))
-        1 * session.notifyFilePublish(new FilePublishEvent(file2, outputDir.resolve('barbar/file2.txt'), []))
+        1 * session.notifyFilePublish(new FilePublishEvent(file1, outputDir.resolve('foo/file1.txt'), null))
+        1 * session.notifyFilePublish(new FilePublishEvent(file2, outputDir.resolve('barbar/file2.txt'), null))
         1 * session.notifyWorkflowOutput(new WorkflowOutputEvent('foo', [outputDir.resolve('foo/file1.txt')], null))
         1 * session.notifyWorkflowOutput(new WorkflowOutputEvent('bar', [outputDir.resolve('barbar/file2.txt')], outputDir.resolve('index.csv')))
-        1 * session.notifyFilePublish(new FilePublishEvent(null, outputDir.resolve('index.csv'), null))
+        1 * session.notifyFilePublish(new FilePublishEvent(null, outputDir.resolve('index.csv')))
 
         cleanup:
         SysEnv.pop()
@@ -125,7 +125,7 @@ class OutputDslTest extends Specification {
         then:
         outputDir.resolve('file1.txt').text == 'Hello'
         and:
-        1 * session.notifyFilePublish(new FilePublishEvent(file1, outputDir.resolve('file1.txt'), []))
+        1 * session.notifyFilePublish(new FilePublishEvent(file1, outputDir.resolve('file1.txt'), null))
         1 * session.notifyWorkflowOutput(new WorkflowOutputEvent('foo', [outputDir.resolve('file1.txt')], null))
 
         cleanup:
@@ -149,7 +149,8 @@ class OutputDslTest extends Specification {
         dsl2.overwrite(true)
         dsl2.storageClass('someClass')
         dsl2.tags([foo:'1',bar:'2'])
-        dsl2.labels(['label'])
+        dsl2.label('foo')
+        dsl2.label('bar')
         then:
         dsl2.getOptions() == [
             contentType:'simple/text',
@@ -159,20 +160,8 @@ class OutputDslTest extends Specification {
             overwrite: true,
             storageClass: 'someClass',
             tags: [foo:'1',bar:'2'],
-            labels: ['label']
+            labels: ['foo', 'bar']
         ]
-    }
-
-    def 'should add labels one by one' () {
-        given:
-        def dsl2 = new OutputDsl.DeclareDsl()
-
-        when:
-        dsl2.label('foo')
-        dsl2.label('bar')
-
-        then:
-        dsl2.options.labels == ['foo','bar']
     }
 
     def 'should set index directives' () {
@@ -187,13 +176,11 @@ class OutputDslTest extends Specification {
         dsl2.header(true)
         dsl2.path('path')
         dsl2.sep(',')
-        dsl2.labels(['label'])
         then:
         dsl2.getOptions() == [
             header: true,
             path: 'path',
             sep: ',',
-            labels: ['label']
         ]
     }
 
