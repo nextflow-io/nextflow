@@ -283,7 +283,7 @@ class CmdLineageTest extends Specification {
         def expectedOutput = '[\n  "lid://12345"\n]'
         lidFile.text = jsonSer
         when:
-        def lidCmd = new CmdLineage(launcher: launcher, args: ["find", "type=FileOutput", "labels=foo"])
+        def lidCmd = new CmdLineage(launcher: launcher, args: ["find", "type=FileOutput", "label=foo"])
         lidCmd.run()
         def stdout = capture
             .toString()

@@ -164,7 +164,6 @@ class CmdLineage extends CmdBase implements UsageAware {
         void apply(List<String> args) {
             if (args.size() != 0) {
                 println("ERROR: Incorrect number of parameters")
-                usage()
                 return
             }
             operation.log(config)
@@ -192,7 +191,6 @@ class CmdLineage extends CmdBase implements UsageAware {
         void apply(List<String> args) {
             if (args.size() != 1) {
                 println("ERROR: Incorrect number of parameters")
-                usage()
                 return
             }
 
@@ -219,7 +217,6 @@ class CmdLineage extends CmdBase implements UsageAware {
         void apply(List<String> args) {
             if (args.size() < 1 || args.size() > 2) {
                 println("ERROR: Incorrect number of parameters")
-                usage()
                 return
             }
 
@@ -247,7 +244,6 @@ class CmdLineage extends CmdBase implements UsageAware {
         void apply(List<String> args) {
             if (args.size() != 2) {
                 println("ERROR: Incorrect number of parameters")
-                usage()
                 return
             }
             operation.diff(config, args)
@@ -274,7 +270,6 @@ class CmdLineage extends CmdBase implements UsageAware {
         void apply(List<String> args) {
             if (args.size() < 1) {
                 println("ERROR: Incorrect number of parameters")
-                usage()
                 return
             }
             operation.find(config, args)

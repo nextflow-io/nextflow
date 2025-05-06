@@ -742,6 +742,17 @@ Find all lineage records that match a set of key-value pairs:
 $ nextflow lineage find <key-1>=<value-1> <key-2>=<value-2> ...
 ```
 
+Use any object property defined in the [Lineage metadata model](https://github.com/nextflow-io/nextflow/tree/master/modules/nf-lineage/src/main/nextflow/lineage/model) as a key. Use the `type` key to refer to a metadata object class:
+
+```console
+$ nextflow lineage find type=FileOutput workflowRun=lid://c914d714877cc5c882c55a5428b510b1 label=foo
+```
+Find all tasks executed by a workflow:
+
+```console
+$ nextflow lineage find type=TaskRun workflowRun=lid://c914d714877cc5c882c55a5428b510b1
+```
+
 Display a git-style diff between two lineage records.
 
 ```console
