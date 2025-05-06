@@ -426,7 +426,7 @@ class LinCommandImplTest extends Specification{
         lidFile2.text = encoder.encode(entry2)
         lidFile3.text = encoder.encode(entry3)
         when:
-        new LinCommandImpl().find(configMap, ["type=FileOutput", "labels=experiment=test"])
+        new LinCommandImpl().find(configMap, ["type=FileOutput", "label=experiment=test"])
         def stdout = capture
             .toString()
             .readLines()// remove the log part

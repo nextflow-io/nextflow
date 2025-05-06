@@ -334,8 +334,13 @@ class LinCommandImpl implements CmdLineage.LinCommand {
             final idx = pair.indexOf('=')
             if( idx < 0 )
                 throw new IllegalArgumentException("Parameter $pair doesn't contain '=' separator")
-            final key = URLDecoder.decode(pair[0..<idx], 'UTF-8')
+            def key = URLDecoder.decode(pair[0..<idx], 'UTF-8')
             final value = URLDecoder.decode(pair[(idx + 1)..<pair.length()], 'UTF-8')
+
+            // Convert 'label' key in the CLI to 'labels' property in the model
+            if( key == 'label' )
+                key = 'labels'
+
             params[key] << value
         }
         return params
