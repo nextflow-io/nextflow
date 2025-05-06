@@ -49,5 +49,5 @@ class TaskOutput implements LinSerializable {
     /**
      * Labels attached to the task output
      */
-    List<String> label
+    List<String> labels
 }

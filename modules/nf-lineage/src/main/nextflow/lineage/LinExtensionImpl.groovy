@@ -54,7 +54,7 @@ class LinExtensionImpl implements LinExtension {
         if( opts.taskRun )
             queryParams['taskRun'] = [opts.taskRun as String]
         if( opts.label )
-            queryParams['label'] = opts.label as List<String>
+            queryParams['labels'] = opts.label as List<String>
         return queryParams
     }
 
