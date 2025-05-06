@@ -105,7 +105,7 @@ class LinUtils {
             // When asking for a Workflow or task output retrieve the outputs description
             final outputs = store.load("${key}#output")
             if (!outputs)
-                return null
+                return []
             return navigate(outputs, children.join('.'))
         }
         return navigate(record, children.join('.'))
