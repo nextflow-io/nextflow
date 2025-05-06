@@ -72,7 +72,7 @@ The `channel.fromLineage` factory creates a channel that emits files from the {r
 
 ```nextflow
 channel
-    .fromLineage(workflowRun: 'lid://0d1d1622ced3e4edc690bec768919b45', labels: ['alpha', 'beta'])
+    .fromLineage(workflowRun: 'lid://0d1d1622ced3e4edc690bec768919b45', label: ['alpha', 'beta'])
     .view()
 ```
 
@@ -80,7 +80,7 @@ The above snippet emits files published by the given workflow run that are label
 
 Available options:
 
-`labels`
+`label`
 : List of labels associated with the desired files.
 
 `taskRun`

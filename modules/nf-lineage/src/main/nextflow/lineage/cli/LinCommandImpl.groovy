@@ -62,7 +62,7 @@ class LinCommandImpl implements CmdLineage.LinCommand {
     static final private String ERR_NOT_LOADED = 'Error lineage store not loaded - Check Nextflow configuration'
     
     @Override
-    void log(ConfigMap config) {
+    void list(ConfigMap config) {
         final session = new Session(config)
         final store = LinStoreFactory.getOrCreate(session)
         if (store) {
@@ -90,7 +90,7 @@ class LinCommandImpl implements CmdLineage.LinCommand {
     }
 
     @Override
-    void describe(ConfigMap config, List<String> args) {
+    void view(ConfigMap config, List<String> args) {
         if( !isLidUri(args[0]) )
             throw new Exception("Identifier is not a lineage URL")
         final store = LinStoreFactory.getOrCreate(new Session(config))
@@ -100,7 +100,7 @@ class LinCommandImpl implements CmdLineage.LinCommand {
         }
         try {
             def entry = LinUtils.getMetadataObject(store, new URI(args[0]))
-            if( !entry ) {
+            if( entry == null ) {
                 println "No entry found for ${args[0]}"
                 return
             }
@@ -334,8 +334,13 @@ class LinCommandImpl implements CmdLineage.LinCommand {
             final idx = pair.indexOf('=')
             if( idx < 0 )
                 throw new IllegalArgumentException("Parameter $pair doesn't contain '=' separator")
-            final key = URLDecoder.decode(pair[0..<idx], 'UTF-8')
+            def key = URLDecoder.decode(pair[0..<idx], 'UTF-8')
             final value = URLDecoder.decode(pair[(idx + 1)..<pair.length()], 'UTF-8')
+
+            // Convert 'label' key in the CLI to 'labels' property in the model
+            if( key == 'label' )
+                key = 'labels'
+
             params[key] << value
         }
         return params
