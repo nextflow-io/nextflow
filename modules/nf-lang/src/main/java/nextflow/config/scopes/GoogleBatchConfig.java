@@ -66,6 +66,14 @@ public class GoogleBatchConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        The network tags to be applied to the instances created by Google Batch jobs (e.g., `['allow-ssh', 'allow-http']`).
+
+        [Read more](https://cloud.google.com/vpc/docs/add-remove-network-tags)
+    """)
+    public List<String> networkTags;
+
+    @ConfigOption
+    @Description("""
         The Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used.
 
         [Read more](https://www.nextflow.io/docs/latest/google.html#credentials)

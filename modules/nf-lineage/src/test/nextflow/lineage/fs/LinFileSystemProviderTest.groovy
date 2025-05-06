@@ -41,16 +41,12 @@ import spock.lang.Specification
 class LinFileSystemProviderTest extends Specification {
 
     @Shared def wdir = Files.createTempDirectory('wdir')
-    @Shared def meta = wdir.resolve('.meta')
-    @Shared def data = wdir.resolve('work')
+    @Shared def data = Files.createTempDirectory('work')
 
-    def setupSpec(){
-        meta.mkdirs()
-        data.mkdirs()
-    }
 
     def cleanupSpec(){
         wdir.deleteDir()
+        data.deleteDir()
     }
 
     def 'should return lid scheme' () {
@@ -125,7 +121,7 @@ class LinFileSystemProviderTest extends Specification {
     def 'should create new byte channel' () {
         given:
         def config = [lineage:[store:[location:wdir.toString()]]]
-        def outputMeta = meta.resolve("12345/output.txt")
+        def outputMeta = wdir.resolve("12345/output.txt")
         def output = data.resolve("output.txt")
         output.text = "Hello, World!"
         outputMeta.mkdirs()
@@ -183,7 +179,7 @@ class LinFileSystemProviderTest extends Specification {
     def 'should create new byte channel for LinMetadata' () {
         given:
         def config = [lineage:[store:[location:wdir.toString()]]]
-        def outputMeta = meta.resolve("12345")
+        def outputMeta = wdir.resolve("12345")
         outputMeta.mkdirs()
         outputMeta.resolve(".data.json").text = '{"type":"WorkflowRun","sessionId":"session","name":"run_name","params":[{"type":"String","name":"param1","value":"value1"}]}'
 
@@ -240,7 +236,7 @@ class LinFileSystemProviderTest extends Specification {
     def 'should read lid' () {
         given:
         def config = [lineage:[store:[location:wdir.toString()]]]
-        def outputMeta = meta.resolve("12345/output.txt")
+        def outputMeta = wdir.resolve("12345/output.txt")
         def output = data.resolve("output.txt")
         output.text = "Hello, World!"
         outputMeta.mkdirs()
@@ -282,10 +278,10 @@ class LinFileSystemProviderTest extends Specification {
         output1.resolve('file1.txt').text = 'file1'
         output1.resolve('file2.txt').text = 'file2'
         output1.resolve('file3.txt').text = 'file3'
-        meta.resolve('12345/output1').mkdirs()
-        meta.resolve('12345/output2').mkdirs()
-        meta.resolve('12345/.data.json').text = '{"type":"TaskRun"}'
-        meta.resolve('12345/output1/.data.json').text = '{"type":"FileOutput", "path": "' + output1.toString() + '"}'
+        wdir.resolve('12345/output1').mkdirs()
+        wdir.resolve('12345/output2').mkdirs()
+        wdir.resolve('12345/.data.json').text = '{"type":"TaskRun"}'
+        wdir.resolve('12345/output1/.data.json').text = '{"type":"FileOutput", "path": "' + output1.toString() + '"}'
 
         and:
         def config = [lineage:[store:[location:wdir.toString()]]]
@@ -318,7 +314,7 @@ class LinFileSystemProviderTest extends Specification {
         ] as Set
 
         cleanup:
-        meta.resolve('12345').deleteDir()
+        wdir.resolve('12345').deleteDir()
         output1.deleteDir()
 
     }
@@ -399,8 +395,8 @@ class LinFileSystemProviderTest extends Specification {
         output.mkdir()
         output.resolve('abc').text = 'file1'
         output.resolve('.foo').text = 'file2'
-        meta.resolve('12345/output').mkdirs()
-        meta.resolve('12345/output/.data.json').text = '{"type":"FileOutput", "path": "' + output.toString() + '"}'
+        wdir.resolve('12345/output').mkdirs()
+        wdir.resolve('12345/output/.data.json').text = '{"type":"FileOutput", "path": "' + output.toString() + '"}'
         and:
         def provider = new LinFileSystemProvider()
         def lid1 = provider.getPath(LinPath.asUri('lid://12345/output/abc'))
@@ -419,8 +415,8 @@ class LinFileSystemProviderTest extends Specification {
         def config = [lineage:[store:[location:wdir.toString()]]]
         def file = data.resolve('abc')
         file.text = 'Hello'
-        meta.resolve('12345/abc').mkdirs()
-        meta.resolve('12345/abc/.data.json').text = '{"type":"FileOutput", "path": "' + file.toString() + '"}'
+        wdir.resolve('12345/abc').mkdirs()
+        wdir.resolve('12345/abc/.data.json').text = '{"type":"FileOutput", "path": "' + file.toString() + '"}'
         Global.session = Mock(Session) { getConfig()>>config }
         and:
         def provider = new LinFileSystemProvider()
@@ -439,7 +435,7 @@ class LinFileSystemProviderTest extends Specification {
 
         cleanup:
         file?.delete()
-        meta.resolve('12345').deleteDir()
+        wdir.resolve('12345').deleteDir()
     }
 
     def 'should throw exception in unsupported methods'() {

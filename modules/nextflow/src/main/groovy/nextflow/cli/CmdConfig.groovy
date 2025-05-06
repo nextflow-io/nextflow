@@ -118,7 +118,7 @@ class CmdConfig extends CmdBase {
         final config = builder.buildConfigObject()
 
         // -- validate config options
-        if( NF.getSyntaxParserVersion() == 'v2' ) {
+        if( NF.isSyntaxParserV2() ) {
             Plugins.load(config)
             new ConfigValidator().validate(config)
         }
