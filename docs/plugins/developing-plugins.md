@@ -214,6 +214,10 @@ import nextflow.script.dsl.Description
 ''')
 class MyPluginConfig implements ConfigScope {
 
+    // no-arg constructor is required to enable validation of config options
+    MyPluginConfig() {
+    }
+
     MyPluginConfig(Map opts) {
         this.createMessage = opts.createMessage
     }
