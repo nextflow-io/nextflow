@@ -562,4 +562,42 @@ class LinObserverTest extends Specification {
             folder?.deleteDir()
     }
 
+    def 'should not save workflow output entry when no outputs'() {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def config = [lineage: [enabled: true, store: [location: folder.toString()]]]
+        def store = new DefaultLinStore();
+        def outputDir = folder.resolve('results')
+        def uniqueId = UUID.randomUUID()
+        def scriptFile = folder.resolve("main.nf")
+        def workDir = folder.resolve("work")
+        def metadata = Mock(WorkflowMetadata) {
+            getRepository() >> "https://nextflow.io/nf-test/"
+            getCommitId() >> "123456"
+            getScriptId() >> "78910"
+            getScriptFile() >> scriptFile
+            getProjectDir() >> folder.resolve("projectDir")
+            getWorkDir() >> workDir
+        }
+        def session = Mock(Session) {
+            getConfig() >> config
+            getOutputDir() >> outputDir
+            getWorkDir() >> workDir
+            getWorkflowMetadata() >> metadata
+            getUniqueId() >> uniqueId
+            getRunName() >> "test_run"
+            getParams() >> new ScriptBinding.ParamsMap()
+        }
+        store.open(LineageConfig.create(session))
+        def observer = new LinObserver(session, store)
+
+        when:
+        observer.onFlowCreate(session)
+        observer.onFlowBegin()
+        observer.onFlowComplete()
+        def finalLid = store.getHistoryLog().getRecord(uniqueId).runLid.substring(LID_PROT.size())
+        def resultFile = folder.resolve("${finalLid}#output")
+        then:
+        !resultFile.exists()
+    }
 }

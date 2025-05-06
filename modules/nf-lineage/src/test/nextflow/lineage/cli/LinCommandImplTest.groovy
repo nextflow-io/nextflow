@@ -80,7 +80,7 @@ class LinCommandImplTest extends Specification{
         def recordEntry = "${LinHistoryRecord.TIMESTAMP_FMT.format(date)}\trun_name\t${uniqueId}\tlid://123456".toString()
         lidLog.write("run_name", uniqueId, "lid://123456", date)
         when:
-        new LinCommandImpl().log(configMap)
+        new LinCommandImpl().list(configMap)
         def stdout = capture
             .toString()
             .readLines()// remove the log part
@@ -99,7 +99,7 @@ class LinCommandImplTest extends Specification{
         Files.createDirectories(historyFile.parent)
 
         when:
-        new LinCommandImpl().log(configMap)
+        new LinCommandImpl().list(configMap)
         def stdout = capture
             .toString()
             .readLines()// remove the log part
@@ -125,7 +125,58 @@ class LinCommandImplTest extends Specification{
         def expectedOutput = jsonSer
         lidFile.text = jsonSer
         when:
-        new LinCommandImpl().describe(configMap, ["lid://12345"])
+        new LinCommandImpl().view(configMap, ["lid://12345"])
+        def stdout = capture
+            .toString()
+            .readLines()// remove the log part
+            .findResults { line -> !line.contains('DEBUG') ? line : null }
+            .findResults { line -> !line.contains('INFO') ? line : null }
+            .findResults { line -> !line.contains('plugin') ? line : null }
+
+        then:
+        stdout.size() == expectedOutput.readLines().size()
+        stdout.join('\n') == expectedOutput
+    }
+
+    def 'should show empty lists content' (){
+        given:
+        def lidFile = storeLocation.resolve("12345/.data.json")
+        Files.createDirectories(lidFile.parent)
+        def time = OffsetDateTime.ofInstant(Instant.ofEpochMilli(123456789), ZoneOffset.UTC)
+        def encoder = new LinEncoder().withPrettyPrint(true)
+        def entry = new FileOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
+            "lid://123987/file.bam","lid://123987/", null, 1234, time, time, [])
+        def jsonSer = encoder.encode(entry)
+        def expectedOutput = '[]'
+        lidFile.text = jsonSer
+        when:
+        new LinCommandImpl().view(configMap, ["lid://12345#labels"])
+        def stdout = capture
+            .toString()
+            .readLines()// remove the log part
+            .findResults { line -> !line.contains('DEBUG') ? line : null }
+            .findResults { line -> !line.contains('INFO') ? line : null }
+            .findResults { line -> !line.contains('plugin') ? line : null }
+
+        then:
+        stdout.size() == expectedOutput.readLines().size()
+        stdout.join('\n') == expectedOutput
+    }
+
+    def 'should show empty lists when no outputs' () {
+        def lidFile = storeLocation.resolve("12345/.data.json")
+        Files.createDirectories(lidFile.parent)
+        def time = OffsetDateTime.ofInstant(Instant.ofEpochMilli(123456789), ZoneOffset.UTC)
+        def encoder = new LinEncoder().withPrettyPrint(true)
+        def expectedOutput = '[]'
+        def wf = new Workflow([new DataPath("/path/to/main.nf)")], "hello-nf", "aasdklk")
+        def entry = new WorkflowRun(wf, "sessionId", "run_name",
+            [new Parameter("String", "sample_id", "ggal_gut"),
+             new Parameter("Integer", "reads", 2)])
+        lidFile.text = encoder.encode(entry)
+
+        when:
+        new LinCommandImpl().view(configMap, ["lid://12345#output"])
         def stdout = capture
             .toString()
             .readLines()// remove the log part
@@ -142,7 +193,7 @@ class LinCommandImplTest extends Specification{
         given:
 
         when:
-        new LinCommandImpl().describe(configMap, ["lid://12345"])
+        new LinCommandImpl().view(configMap, ["lid://12345"])
         def stdout = capture
             .toString()
             .readLines()// remove the log part
@@ -290,7 +341,7 @@ class LinCommandImplTest extends Specification{
         def expectedOutput = "Error loading lid:///?type=FileOutput - Cannot get record from the root LID URI"
         lidFile.text = jsonSer
         when:
-        new LinCommandImpl().describe(configMap, ["lid:///?type=FileOutput"])
+        new LinCommandImpl().view(configMap, ["lid:///?type=FileOutput"])
         def stdout = capture
             .toString()
             .readLines()// remove the log part
@@ -384,8 +435,8 @@ class LinCommandImplTest extends Specification{
     def 'should print error store is not found in diff'(){
         when:
         def config = new ConfigMap()
-        new LinCommandImpl().log(config)
-        new LinCommandImpl().describe(config, ["lid:///12345"])
+        new LinCommandImpl().list(config)
+        new LinCommandImpl().view(config, ["lid:///12345"])
         new LinCommandImpl().render(config, ["lid://12345", "output.html"])
         new LinCommandImpl().diff(config, ["lid://89012", "lid://12345"])
 
