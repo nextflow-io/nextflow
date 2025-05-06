@@ -1,3 +1,5 @@
+(migrating-plugin-page)=
+
 # Migrating to the Gradle plugin for Nextflow plugins
 
 This page introduces the Gradle plugin for Nextflow plugins, the Nextflow plugin registry, and how to migrate to the new plugin framework.
@@ -19,7 +21,7 @@ The Nextflow plugin registry is a centralized repository of assembled plugins. I
 
 ## Impact on users and developers
 
-The impact of the Gradle plugin for Nextflow plugins and Nextflow plugin registry differs for plugin users and developers.
+The impact of the Gradle plugin for Nextflow plugins differs for plugin users and developers.
 
 ### Plugin Users
 
@@ -36,7 +38,7 @@ To migrate an existing Nextflow plugin:
     - `nextflow.config`
     - `launch.sh`
     - `plugins/build.gradle`
-2. If your plugin uses a `plugins` directory, move the `src` directory to the project root. \
+2. If your plugin uses a `plugins` directory, move the `src` directory to the project root.
 
     :::{note}
     Plugin sources should be in `src/main/groovy` or `src/main/java`.
@@ -55,7 +57,7 @@ To migrate an existing Nextflow plugin:
     ```groovy
     // Plugins
     plugins {
-        id 'io.nextflow.nextflow-plugin' version '0.0.1-alpha'
+        id 'io.nextflow.nextflow-plugin' version '0.0.1-alpha3'
     }
 
     // Dependencies (optional)
@@ -93,12 +95,12 @@ To migrate an existing Nextflow plugin:
 
     - `DEPENDENCY`: (Optional) Your plugins dependency libraries—for example, `commons-io:commons-io:2.18.0`.
     - `PLUGIN_VERSION:` Your plugin version—for example, `0.5.0`.
-    - `MINIMUM_NEXTFLOW_VERSION`: The minimum Nextflow version required to run your plugin—for example, `24.11.0-edge`.
-    - `PROVIDER`: Your name or organization—for example, `nextflow`.
-    - `CLASS_NAME`: Your plugin class name—for example, `nextflow.hello.HelloPlugin`.
-    - `EXTENSION_POINT`: Your extension point identifiers that the plugin will implement or expose—for example, `nextflow.hello.HelloFactory`.
-    - `GITHUB_REPOSITORY`: Your GitHub plugin repository name—for example, `nextflow-io/nf-hello`.
-    - `GITHUB_INDEX_URL`: The URL of your fork of the plugins index repository—for example, [`plugins.json`](https://github.com/username/plugins/blob/main/plugins.json).
+    - `MINIMUM_NEXTFLOW_VERSION`: The minimum Nextflow version required to run your plugin—for example, `25.03.0-edge`.
+    - `PROVIDER`: Your name or organization—for example, `acme`.
+    - `CLASS_NAME`: Your plugin class name—for example, `acme.plugin.MyPlugin`.
+    - `EXTENSION_POINT`: Your extension point identifiers that the plugin will implement or expose—for example, `acme.plugin.MyFactory`.
+    - `GITHUB_REPOSITORY`: Your GitHub plugin repository name—for example, `nextflow-io/nf-plugin-template`.
+    - `GITHUB_INDEX_URL`: The URL of your fork of the plugins index repository—for example, [`https://github.com/nextflow-io/plugins/blob/main/plugins.json`](https://github.com/nextflow-io/plugins/blob/main/plugins.json).
 
 5. Replace the contents of `Makefile` with the following:
 

@@ -20,61 +20,15 @@ Nextflow plugins use the [Plugin Framework for Java (p4fj)](https://github.com/p
 
 [Gradle](https://gradle.org/) is a flexible build automation tool optimized for Java and Groovy projects. The [Gradle plugin for Nextflow plugins](https://github.com/nextflow-io/nextflow-plugin-gradle) streamlines the development process by automatically setting up essential Nextflow dependencies and providing custom Gradle tasks to simplify plugin building and publishing.
 
-(dev-plugins-structure)=
-
-### Structure
-
-Plugins built with the Gradle plugin for Nextflow plugins follow a standard project layout. This structure includes source directories, build configuration files, and metadata required for development, testing, and publishing. Depending on the developer’s preference, plugins can be written in Java or Groovy.
-
-A typical plugin built with the Gradle plugin for Nextflow plugins has the following structure:
-
-```
-.
-├── COPYING
-├── Makefile
-├── README.md
-├── build.gradle
-├── gradle
-│   └── wrapper
-│       └── ...
-├── gradlew
-├── settings.gradle
-└── src
-    ├── main
-    │   └── ...
-    └── test
-        └── ...
-```
-
-This structure contains the following key files and folders:
-
-- `gradle/wrapper/`: Holds files related to the Gradle Wrapper.
-- `src/main/`: The main source directory containing the plugin's implementation and resources.​
-- `src/test/`: The main source directory containing the plugin's unit testing.
-- `COPYING`: Contains the licensing information for the project, detailing the terms under which the code can be used and distributed.​
-- `Makefile`: Defines a set of tasks and commands for building and managing the project with the `make` automation tool.​
-- `README.md`: Provides an overview of the project, including its purpose, features, and instructions for usage and development.​
-- `build.gradle`: The primary build script for Gradle.
-- `gradlew`: A script for executing the Gradle Wrapper.
-- `settings.gradle`: Configures the Gradle build, specifying project-specific settings such as the project name and included modules.
-
-See {ref}`nf-hello-page` for an example of a plugin built using this structure.
-
-:::{note}
-Nextflow plugins can be developed without the Gradle plugin. However, this approach is only suggested if you are an advanced developer and your project is incompatible with the Gradle plugin.
-:::
-
-(dev-plugins-make)=
-
 ### make commands
 
-The Gradle plugin for Nextflow plugins defines tasks that can be executed with `./gradlew`. For example:
+The [Gradle plugin for Nextflow plugins](https://github.com/nextflow-io/nextflow-plugin-gradle) defines tasks that can be executed with `./gradlew`. For example:
 
 ```bash
 ./gradlew assemble
 ```
 
-For convenience, the more important tasks are wrapped in a makefile and can be executed with the `make` command. For example:
+For convenience, the most important tasks are wrapped in a `Makefile` and can be executed with the `make` command. For example:
 
 ```bash
 make assemble
@@ -98,15 +52,74 @@ The following `make` commands are available:
 
 ### Versioning
 
-The Gradle plugin is versioned and published to a [Gradle Plugin Portal](https://plugins.gradle.org/). It can be declared and managed like any other dependency in the `build.gradle` file:
+The Gradle plugin is versioned and published to the [Gradle Plugin Portal](https://plugins.gradle.org/). It can be declared and managed like any other dependency in the `build.gradle` file:
 
 ```nextflow
 plugins {
-    id 'io.nextflow.nextflow-plugin' version '0.0.1-alpha'
+    id 'io.nextflow.nextflow-plugin' version '0.0.1-alpha3'
 }
 ```
 
 See the source code in [nextflow-plugin-gradle](https://github.com/nextflow-io/nextflow-plugin-gradle) for implementation details.
+
+(dev-plugins-template)=
+
+## nf-plugin-template
+
+The [`nf-plugin-template`](https://github.com/nextflow-io/nf-plugin-template/) is a scaffold for plugin development. It incorporates the {ref}`dev-plugins-gradle` by default. You can use the `nextflow plugin create` sub-command to create plugins with the [`nf-plugin-template`](https://github.com/nextflow-io/nf-plugin-template/) scaffold. See {ref}`gradle-plugin-create` for more information.
+
+(dev-plugins-structure)=
+
+### Structure
+
+Plugins built with [`nf-plugin-template`](https://github.com/nextflow-io/nf-plugin-template/) includes the [Gradle plugin for Nextflow plugins](https://github.com/nextflow-io/nextflow-plugin-gradle). The template includes the source directories, build configuration files, and metadata required for development, testing, and publishing. Depending on the developer’s preference, plugins can be written in Java or Groovy.
+
+Plugins built with the [`nf-plugin-template`](https://github.com/nextflow-io/nf-plugin-template/) have the following structure:
+
+```
+.
+├── build.gradle
+├── COPYING
+├── gradle
+│   └── wrapper
+│       └── ...
+├── gradlew
+├── Makefile
+├── README.md
+├── settings.gradle
+└── src
+    ├── main
+    │   └── groovy
+    │       └── <ORGANIZATION>
+    │           └── plugin
+    │               └── ...
+    └── test
+        └── groovy
+            └── <ORGANIZATION>
+                └── plugin
+                    └── ...
+```
+
+This structure contains the following key files and folders:
+
+- `build.gradle`: The primary build script for Gradle.
+- `COPYING`: Contains the licensing information for the project, detailing the terms under which the code can be used and distributed.​
+- `gradle/wrapper/`: Holds files related to the Gradle Wrapper.
+- `gradlew`: A script for executing the Gradle Wrapper.
+- `Makefile`: Defines a set of tasks and commands for building and managing the project with the `make` automation tool.​
+- `README.md`: Provides an overview of the project, including its purpose, features, and instructions for usage and development.​
+- `settings.gradle`: Configures the Gradle build, specifying project-specific settings such as the project name and included modules.
+- `src/main/groovy/<ORGANIZATION>/plugin/`: The main source directory containing the plugin's implementation and resources.​
+- `src/test/groovy/<ORGANIZATION>/plugin/`: The main source directory containing the plugin's unit testing.
+
+See {ref}`nf-hello-page` for an example of a plugin built using this structure.
+
+:::{note}
+Nextflow plugins can be developed without the Gradle plugin. However, this approach is only suggested if you are an advanced developer and your project is incompatible with the Gradle plugin.
+:::
+
+(dev-plugins-make)=
+
 
 (dev-plugins-extension)=
 
