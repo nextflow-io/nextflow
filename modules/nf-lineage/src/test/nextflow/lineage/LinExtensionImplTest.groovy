@@ -99,7 +99,7 @@ class LinExtensionImplTest extends Specification {
 
         when:
         results = CH.create()
-        linExt.fromLineage(session, results, [workflowRun: "testkey", taskRun: "taskid", label: ["value2"]])
+        linExt.fromLineage(session, results, [workflowRun: "testkey", taskRun: "taskid", label: "value2"])
         then:
         linExt.getStore(session) >> lidStore
         and:

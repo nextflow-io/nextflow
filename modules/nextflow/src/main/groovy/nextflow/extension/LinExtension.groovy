@@ -27,7 +27,7 @@ import nextflow.Session
 interface LinExtension {
 
     static final Map PARAMS = [
-        label: List,
+        label: [List,String,GString],
         taskRun: [String,GString],
         workflowRun: [String,GString],
     ]

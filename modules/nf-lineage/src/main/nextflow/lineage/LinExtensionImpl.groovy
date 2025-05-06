@@ -53,10 +53,15 @@ class LinExtensionImpl implements LinExtension {
             queryParams['workflowRun'] = [opts.workflowRun as String]
         if( opts.taskRun )
             queryParams['taskRun'] = [opts.taskRun as String]
-        if( opts.label )
-            queryParams['labels'] = opts.label as List<String>
+        if( opts.label ) {
+            if( opts.label instanceof List )
+                queryParams['labels'] = opts.label as List<String>
+            else
+                queryParams['labels'] = [ opts.label.toString() ]
+        }
         return queryParams
     }
+
 
     protected LinStore getStore(Session session) {
         final store = LinStoreFactory.getOrCreate(session)
