@@ -16,6 +16,8 @@
 
 package nextflow.lineage
 
+import nextflow.lineage.exception.OutputRelativePathException
+
 import static nextflow.lineage.fs.LinPath.*
 
 import java.nio.file.Files
@@ -361,7 +363,11 @@ class LinObserver implements TraceObserverV2 {
                 LinUtils.toDate(attrs?.lastModifiedTime()),
                 event.labels)
             store.save(key, value)
-        } catch (Throwable e) {
+        }
+        catch (OutputRelativePathException ignored ){
+            log.warn1("Lineage for workflow output is not supported by publishDir directive")
+        }
+        catch (Throwable e) {
             log.warn("Unexpected error storing published file '${event.target.toUriString()}' for workflow '${executionHash}'", e)
         }
     }
@@ -436,14 +442,17 @@ class LinObserver implements TraceObserverV2 {
             if (path.startsWith(outputDirAbs)) {
                 return outputDirAbs.relativize(path).toString()
             }
-            throw new IllegalArgumentException("Cannot access relative path for workflow output '${path.toUriString()}'")
+            log.debug("Cannot get relative path for workflow output '${path.toUriString()}'")
+            throw new OutputRelativePathException()
         }
         final pathAbs = path.toAbsolutePath()
         if (pathAbs.startsWith(outputDirAbs)) {
             return outputDirAbs.relativize(pathAbs).toString()
         }
-        if (path.normalize().getName(0).toString() == "..")
-            throw new IllegalArgumentException("Cannot access relative path for workflow output '${path.toUriString()}'")
+        if (path.normalize().getName(0).toString() == "..") {
+            log.debug("Cannot get relative path for workflow output '${path.toUriString()}'")
+            throw new OutputRelativePathException()
+        }
         return path.normalize().toString()
     }
 

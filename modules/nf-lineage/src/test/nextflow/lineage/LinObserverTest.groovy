@@ -17,6 +17,8 @@
 
 package nextflow.lineage
 
+import nextflow.lineage.exception.OutputRelativePathException
+
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
@@ -474,8 +476,7 @@ class LinObserverTest extends Specification {
             def observer = new LinObserver(session, store)
             observer.getWorkflowRelative(PATH)
         then:
-            def e = thrown(IllegalArgumentException)
-            e.message == "Cannot access relative path for workflow output '$PATH'"
+            thrown(OutputRelativePathException)
         where:
         OUTPUT_DIR                      | PATH                                  | EXPECTED
         Path.of('/path/to/outDir')      | Path.of('/another/path/')             | "relative"
