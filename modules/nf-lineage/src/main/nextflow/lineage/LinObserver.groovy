@@ -123,7 +123,7 @@ class LinObserver implements TraceObserverV2 {
 
     @Override
     void onFlowComplete(){
-        if( this.workflowOutput && this.workflowOutput.output ){
+        if(workflowOutput?.output ){
             workflowOutput.createdAt = OffsetDateTime.now()
             final key = executionHash + '#output'
             this.store.save(key, workflowOutput)
