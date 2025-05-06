@@ -1041,13 +1041,13 @@ By default, the first item is used as the initial accumulated value. You can opt
 The `set` operator assigns a source channel to a variable, whose name is specified as a closure parameter:
 
 ```nextflow
-Channel.of(10, 20, 30).set { my_channel }
+channel.of(10, 20, 30).set { my_channel }
 ```
 
 Using `set` is semantically equivalent to assigning a variable:
 
 ```nextflow
-my_channel = Channel.of(10, 20, 30)
+my_channel = channel.of(10, 20, 30)
 ```
 
 See also: [tap](#tap)
@@ -1236,7 +1236,7 @@ Channel
 ```
 
 :::{note}
-`Channel.fromFilePairs()` requires the `flat: true` option in order to emit the file pairs as separate elements in the produced tuples.
+`channel.fromFilePairs()` requires the `flat: true` option in order to emit the file pairs as separate elements in the produced tuples.
 :::
 
 :::{note}

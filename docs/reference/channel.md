@@ -72,7 +72,7 @@ The `channel.fromLineage` factory creates a channel that emits files from the {r
 
 ```nextflow
 channel
-    .fromLineage(workflowRun: 'lid://0d1d1622ced3e4edc690bec768919b45', labels: ['alpha', 'beta'])
+    .fromLineage(workflowRun: 'lid://0d1d1622ced3e4edc690bec768919b45', label: ['alpha', 'beta'])
     .view()
 ```
 
@@ -80,7 +80,7 @@ The above snippet emits files published by the given workflow run that are label
 
 Available options:
 
-`labels`
+`label`
 : List of labels associated with the desired files.
 
 `taskRun`
@@ -362,7 +362,7 @@ Available retry policy properties:
 | `maxAttempts` | Max attempts when retrying failed SRA requests. | `3`     |
 | `maxDelay`    | Max delay when retrying failed SRA requests.    | `30s`   |
 
-The following code snippet shows an example for using the `Channel.fromSRA` factory method with a custom `retryPolicy`.
+The following code snippet shows an example for using the `channel.fromSRA` factory method with a custom `retryPolicy`.
 
   ```nextflow
   channel.fromSRA(ids, retryPolicy: [delay: '250ms', maxAttempts: 5])
@@ -375,16 +375,16 @@ The following code snippet shows an example for using the `Channel.fromSRA` fact
 The `interval` method emits an incrementing index (starting from zero) at a periodic interval. For example:
 
 ```nextflow
-Channel.interval('1s').view()
+channel.interval('1s').view()
 ```
 
 The above snippet will emit 0, 1, 2, and so on, every second, forever. You can use an operator such as {ref}`operator-take` or {ref}`operator-until` to close the channel based on a stopping condition.
 
-An optional closure can be used to transform the index. Additionally, returning `Channel.STOP` will close the channel. For example:
+An optional closure can be used to transform the index. Additionally, returning `channel.STOP` will close the channel. For example:
 
 ```nextflow
-ch = Channel.interval('1s') { i ->
-    i == 10 ? Channel.STOP : i
+ch = channel.interval('1s') { i ->
+    i == 10 ? channel.STOP : i
 }
 ch.view()
 ```
@@ -444,7 +444,7 @@ See also: [channel.fromList](#fromlist) factory method.
 :::
 
 :::{note}
-This feature requires the `nextflow.preview.topic` feature flag to be enabled.
+In versions of Nextflow prior to 25.04, this feature requires the `nextflow.preview.topic` feature flag to be enabled.
 :::
 
 A *topic channel* is a queue channel that can receive values from many source channels *implicitly* based on a matching *topic name*.
