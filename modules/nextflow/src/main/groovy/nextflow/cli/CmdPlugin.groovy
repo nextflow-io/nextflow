@@ -154,8 +154,8 @@ class CmdPlugin extends CmdBase {
             Git.cloneRepository()
                 .setURI(templateUri)
                 .setDirectory(targetDir)
-                .setBranchesToClone(["refs/tags/v1.0.0"])
-                .setBranch("refs/tags/v1.0.0")
+                .setBranchesToClone(["refs/tags/v0.1.0"])
+                .setBranch("refs/tags/v0.1.0")
                 .call()
         }
         catch (Exception e) {
