@@ -341,7 +341,7 @@ class CmdRun extends CmdBase implements HubOptions {
         Plugins.load(cfg)
 
         // -- validate config options
-        if( NF.getSyntaxParserVersion() == 'v2' )
+        if( NF.isSyntaxParserV2() )
             new ConfigValidator().validate(config)
 
         // -- create a new runner instance

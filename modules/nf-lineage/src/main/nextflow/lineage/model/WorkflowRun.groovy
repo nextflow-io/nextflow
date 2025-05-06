@@ -29,7 +29,7 @@ import nextflow.lineage.serde.LinSerializable
 @CompileStatic
 class WorkflowRun implements LinSerializable {
     /**
-     * Description of the workflow associated to the workflow run.
+     * Description of the workflow associated with the workflow run.
      */
     Workflow workflow
     /**
@@ -48,8 +48,4 @@ class WorkflowRun implements LinSerializable {
      * Resolved Configuration
      */
     Map config
-    /**
-     * Annotations attached to the workflow run
-     */
-    List<Annotation> annotations
 }

@@ -31,19 +31,15 @@ import java.time.OffsetDateTime
 @CompileStatic
 class WorkflowOutput implements LinSerializable {
     /**
-     * Creation date of the workflow outputs description
+     * Creation date of the workflow output
      */
     OffsetDateTime createdAt
     /**
-     * Workflow run that generated the outputs
+     * Workflow run that generated the output
      */
     String workflowRun
     /**
      * Workflow output
      */
     List<Parameter> output
-    /**
-     * Annotations attached to the workflow outputs
-     */
-    List<Annotation> annotations
 }

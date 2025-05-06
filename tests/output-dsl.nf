@@ -77,7 +77,7 @@ process summary {
 
 workflow {
   main:
-  ids = Channel.of('alpha', 'beta', 'delta')
+  ids = channel.of('alpha', 'beta', 'delta')
   ch_fastqc = fastqc(ids)
   (ch_bam, ch_bai) = align(ids)
   ch_quant = quant(ids)

@@ -683,6 +683,77 @@ Execute a pipeline into a Kubernetes cluster.
 $ nextflow kuberun nextflow-io/hello
 ```
 
+(cli-lineage)=
+
+### `lineage`
+
+:::{versionadded} 25.04.0
+:::
+
+:::{warning} *Experimental: may change in a future release.*
+:::
+
+Inspect lineage metadata for Nextflow runs.
+
+**Usage**
+
+```console
+$ nextflow lineage SUBCOMMAND [arg ..]
+```
+
+**Description**
+
+The `lineage` command is used to inspect lineage metadata. Data lineage can be enabled by setting `lineage.enabled` to `true` in your Nextflow configuration (see the {ref}`config-lineage` config scope for details).
+
+**Options**
+
+`-h, -help`
+: Print the command usage.
+
+**Examples**
+
+List the Nextflow runs with lineage metadata enabled, printing the corresponding lineage ID (LID) for each run.
+
+```console
+$ nextflow lineage list
+TIMESTAMP          	RUN NAME              	SESSION ID                          	LINEAGE ID                            
+2025-04-22 14:45:43	backstabbing_heyrovsky	21bc4fad-e8b8-447d-9410-388f926a711f	lid://c914d714877cc5c882c55a5428b510b1
+```
+
+View a lineage record.
+
+```console
+$ nextflow lineage view <lid>
+```
+
+The output of a workflow run can be shown by appending `#output` to the workflow run LID:
+
+```console
+$ nextflow lineage view lid://c914d714877cc5c882c55a5428b510b1#output
+```
+
+:::{tip}
+You can use the [jq](https://jqlang.org/) command-line tool to apply further queries and transformations on the resulting lineage record.
+:::
+
+Find all lineage records that match a set of key-value pairs:
+
+```console
+$ nextflow lineage find <key-1>=<value-1> <key-2>=<value-2> ...
+```
+
+Display a git-style diff between two lineage records.
+
+```console
+$ nextflow lineage diff <lid-1> <lid-2>
+```
+
+Render the lineage graph for a workflow or task output as an HTML file. (default file path: `./lineage.html`).
+
+```console
+$ nextflow lineage render <lid> [html-file-path]
+```
+
 (cli-lint)=
 
 ### `lint`
@@ -1311,7 +1382,7 @@ process sayHello {
 }
 
 workflow {
-  Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
+  channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
 }
 ```
 
@@ -1351,6 +1422,6 @@ process sayHello {
 }
 
 workflow {
-  Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
+  channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
 }
 ```
