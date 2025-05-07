@@ -517,7 +517,7 @@ class LinObserverTest extends Specification {
             observer.onFlowCreate(session)
             observer.onFlowBegin()
         then: 'History file should contain execution hash'
-            def lid = store.getHistoryLog().getRecord(uniqueId).runLid.substring(LID_PROT.size())
+            def lid = store.getHistoryLog().getRecord("test_run", uniqueId).runLid.substring(LID_PROT.size())
             lid == observer.executionHash
 
         when: ' publish output with source file'
@@ -555,7 +555,7 @@ class LinObserverTest extends Specification {
         when: 'Workflow complete'
             observer.onFlowComplete()
         then: 'Check history file is updated and Workflow Result is written in the lid store'
-            def finalLid = store.getHistoryLog().getRecord(uniqueId).runLid.substring(LID_PROT.size())
+            def finalLid = store.getHistoryLog().getRecord("test_run", uniqueId).runLid.substring(LID_PROT.size())
             def resultsRetrieved = store.load("${finalLid}#output") as WorkflowOutput
             resultsRetrieved.output == [new Parameter(Path.simpleName, "a", "lid://${observer.executionHash}/foo/file.bam"), new Parameter(Path.simpleName, "b", "lid://${observer.executionHash}/foo/file2.bam")]
 
@@ -596,7 +596,7 @@ class LinObserverTest extends Specification {
         observer.onFlowCreate(session)
         observer.onFlowBegin()
         observer.onFlowComplete()
-        def finalLid = store.getHistoryLog().getRecord(uniqueId).runLid.substring(LID_PROT.size())
+        def finalLid = store.getHistoryLog().getRecord("test_run", uniqueId).runLid.substring(LID_PROT.size())
         def resultFile = folder.resolve("${finalLid}#output")
         then:
         !resultFile.exists()
