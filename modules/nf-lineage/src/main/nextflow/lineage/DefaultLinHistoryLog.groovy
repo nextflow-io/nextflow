@@ -39,9 +39,10 @@ class DefaultLinHistoryLog implements LinHistoryLog {
     }
 
     void write(String name, UUID key, String runLid, Date date = null) {
+        assert name
         assert key
         def timestamp = date ?: new Date()
-        final recordFile = path.resolve(key.toString())
+        final recordFile = path.resolve("$key-$name")
         try {
             recordFile.text = new LinHistoryRecord(timestamp, name, key, runLid).toString()
             log.trace("Record for $key written in lineage history log ${FilesEx.toUriString(this.path)}")
@@ -50,11 +51,12 @@ class DefaultLinHistoryLog implements LinHistoryLog {
         }
     }
 
-    void updateRunLid(UUID id, String runLid) {
+    void updateRunLid(String name, UUID id, String runLid) {
+        assert name
         assert id
-        final recordFile = path.resolve(id.toString())
+        final recordFile = path.resolve("$id-$name")
         try {
-            def current = LinHistoryRecord.parse(path.resolve(id.toString()).text)
+            def current = LinHistoryRecord.parse(recordFile.text)
             recordFile.text = new LinHistoryRecord(current.timestamp, current.runName, id, runLid).toString()
         }
         catch (Throwable e) {
@@ -73,9 +75,10 @@ class DefaultLinHistoryLog implements LinHistoryLog {
         return list.sort {it.timestamp }
     }
 
-    LinHistoryRecord getRecord(UUID id) {
+    LinHistoryRecord getRecord(String name, UUID id) {
+        assert name
         assert id
-        final recordFile = path.resolve(id.toString())
+        final recordFile = path.resolve("$id-$name")
         try {
             return LinHistoryRecord.parse(recordFile.text)
         } catch( Throwable e ) {

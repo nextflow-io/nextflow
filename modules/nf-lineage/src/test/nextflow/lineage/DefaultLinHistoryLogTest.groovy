@@ -69,7 +69,7 @@ class DefaultLinHistoryLogTest extends Specification {
         linHistoryLog.write(runName, sessionId, runLid)
 
         when:
-        def record = linHistoryLog.getRecord(sessionId)
+        def record = linHistoryLog.getRecord(runName, sessionId)
         then:
         record.sessionId == sessionId
         record.runName == runName
@@ -78,7 +78,7 @@ class DefaultLinHistoryLogTest extends Specification {
 
     def "should return null and warn if session does not exist"() {
         expect:
-        linHistoryLog.getRecord(UUID.randomUUID()) == null
+        linHistoryLog.getRecord("name", UUID.randomUUID()) == null
     }
 
     def "update should modify existing Lid for given session"() {
@@ -91,7 +91,7 @@ class DefaultLinHistoryLogTest extends Specification {
         linHistoryLog.write(runName, sessionId, 'run-lid-initial')
 
         when:
-        linHistoryLog.updateRunLid(sessionId, runLidUpdated)
+        linHistoryLog.updateRunLid(runName, sessionId, runLidUpdated)
 
         then:
         def files = historyFile.listFiles()
@@ -110,7 +110,7 @@ class DefaultLinHistoryLogTest extends Specification {
         linHistoryLog.write(runName, existingSessionId, runLid)
 
         when:
-        linHistoryLog.updateRunLid(nonExistingSessionId, "new-lid")
+        linHistoryLog.updateRunLid(runName, nonExistingSessionId, "new-lid")
         then:
         def files = historyFile.listFiles()
         files.size() == 1

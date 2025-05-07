@@ -33,10 +33,11 @@ interface LinHistoryLog {
     /**
      * Updates the run LID for a given session ID.
      *
+     * @param name Workflow execution name.
      * @param sessionId Workflow session ID.
      * @param runLid Workflow run Lineage ID.
      */
-    void updateRunLid(UUID sessionId, String runLid)
+    void updateRunLid(String name, UUID sessionId, String runLid)
 
     /**
      * Get the store records in the Lineage History Log.
@@ -47,9 +48,10 @@ interface LinHistoryLog {
 
     /**
      * Get the record for a given
+     * @param name Workflow execution name.
      * @param sessionId Workflow session ID.
      * @return LinHistoryRecord for the given ID.
      */
-    LinHistoryRecord getRecord(UUID sessionId)
+    LinHistoryRecord getRecord(String name, UUID sessionId)
 
 }

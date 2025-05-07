@@ -120,7 +120,7 @@ class LinObserver implements TraceObserverV2 {
             executionUri,
             new LinkedList<Parameter>()
         )
-        this.store.getHistoryLog().updateRunLid(session.uniqueId, executionUri)
+        this.store.getHistoryLog().updateRunLid(session.runName, session.uniqueId, executionUri)
     }
 
     @Override
@@ -152,7 +152,7 @@ class LinObserver implements TraceObserverV2 {
             final dataPath = new DataPath(normalizer.normalizePath(it.normalize()), Checksum.ofNextflow(it.text))
             result.add(dataPath)
         }
-        return result
+        return result.sort{it.path}
     }
 
     protected String storeWorkflowRun(PathNormalizer normalizer) {
