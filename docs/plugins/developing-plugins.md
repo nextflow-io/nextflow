@@ -68,7 +68,7 @@ See {ref}`nf-hello-page` for an example of a plugin built with the plugin templa
 
 ### Nextflow Gradle plugin
 
-The [Nextflow Gradle plugin](https://github.com/nextflow-io/nextflow-plugin-gradle) simplifies plugin development by providing default configuration, Nextflow dependencies, and custom Gradle tasks for building and publishing plugins.
+The [Nextflow Gradle plugin](https://github.com/nextflow-io/nextflow-plugin-gradle) simplifies the development of Nextflow plugins. It provides default configuration required for Nextflow integration, as well as custom Gradle tasks for building, testing, and publishing plugins.
 
 It is versioned and published to the [Gradle Plugin Portal](https://plugins.gradle.org/), and can be declared and managed like any other dependency in the `build.gradle` file:
 
