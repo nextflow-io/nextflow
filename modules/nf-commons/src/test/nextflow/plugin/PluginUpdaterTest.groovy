@@ -1,5 +1,7 @@
 package nextflow.plugin
 
+import nextflow.util.CacheHelper
+
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
@@ -70,6 +72,36 @@ class PluginUpdaterTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should install a plugin from a digest-based repository' () {
+        given:
+        def PLUGIN = "$PLUGIN_ID-1.0.0"
+        def folder = Files.createTempDirectory('test')
+        and:
+        def remote = remoteDigestRepository(folder.resolve('repo'), ['1.0.0', '2.0.0'])
+        and:
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, remote, false)
+
+        when:
+        updater.installPlugin( PLUGIN_ID, '1.0.0' )
+
+        then:
+        manager.getPlugin(PLUGIN_ID).plugin.class == FooPlugin.class
+        manager.getPlugin(PLUGIN_ID).descriptor.getPluginId() == PLUGIN_ID
+        manager.getPlugin(PLUGIN_ID).descriptor.getVersion() == '1.0.0'
+        and:
+        local.resolve(PLUGIN).exists()
+        local.resolve(PLUGIN).isDirectory()
+        local.resolve(PLUGIN).resolve('MANIFEST.MF').isFile()
+        and:
+        manager.localRoot.resolve(PLUGIN).exists()
+        manager.localRoot.resolve(PLUGIN).isLink()
+        manager.localRoot.resolve(PLUGIN).resolve('MANIFEST.MF').text == local.resolve(PLUGIN).resolve('MANIFEST.MF').text
+
+        cleanup:
+        folder?.deleteDir()
+    }
 
     def 'should update a plugin' () {
         given:
@@ -441,10 +473,28 @@ class PluginUpdaterTest extends Specification {
         return createRepositoryIndex(dir, plugins).toUri().toURL()
     }
 
+    static private URL remoteDigestRepository(Path dir, List<String> versions) {
+        Files.createDirectory(dir)
+        List<MockPlugin> plugins = versions.collect { v -> createDigestPlugin(dir, v) }
+        return createRepositoryIndex(dir, plugins).toUri().toURL()
+    }
+
     static private Path localCache(Path dir, List<String> versions) {
         Files.createDirectory(dir)
         versions.each { version -> createPlugin(dir, version) }
         return dir
+    }
+
+    // create a plugin 'hosted' at a digest url (eg an OCI registry)
+    static private MockPlugin createDigestPlugin(Path baseDir, String ver) {
+        // construct plugin as normal
+        def plugin = createPlugin(baseDir, ver)
+        def zipped = zipDir(plugin.path)
+        // but rename the zip file to a digest-based path
+        def digest = CacheHelper.hasher(zipped, CacheHelper.HashMode.SHA256).hash().toString()
+        plugin.zip = zipped.resolveSibling("sha256:$digest")
+        Files.move(zipped, plugin.zip)
+        return plugin
     }
 
     static private MockPlugin createPlugin(Path baseDir, String ver) {

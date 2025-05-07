@@ -34,7 +34,7 @@ process foo {
 }
 
 workflow {
-  Channel.fromPath("$baseDir/data/p{1,2,3}.fa") \
+  channel.fromPath("$baseDir/data/p{1,2,3}.fa") \
     | toList \
     | foo \
     | flatten \

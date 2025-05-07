@@ -41,7 +41,7 @@ class TaskRun implements LinSerializable {
      */
     Checksum codeChecksum
     /**
-     * Checksum of the task script
+     * Resolved task script
      */
     String script
     /**
@@ -76,8 +76,4 @@ class TaskRun implements LinSerializable {
      * Workflow run associated to the task run
      */
     String workflowRun
-    /**
-     * Annotations attached to the task run
-     */
-    List<Annotation> annotations
 }

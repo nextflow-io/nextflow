@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2025, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,22 +12,14 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
-
-package nextflow.lineage.model
-
-import groovy.transform.Canonical
-import groovy.transform.CompileStatic
+package nextflow.lineage.exception
 
 /**
- * Models an Annotation.
+ * Exception to indicate the an output path is not relative to the output dir.
+ * It is used to detect the cases where publishDir is used with Data Lineage.
  *
- * @author Jorge Ejarque <jorge.ejarque@seqera.io
+ * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
-@Canonical
-@CompileStatic
-class Annotation {
-    String key
-    Object value
+class OutputRelativePathException extends Exception {
 }

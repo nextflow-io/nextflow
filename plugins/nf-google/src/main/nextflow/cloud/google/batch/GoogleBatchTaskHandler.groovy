@@ -52,6 +52,7 @@ import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
+import nextflow.util.TestOnly
 /**
  * Implements a task handler for Google Batch executor
  * 
@@ -117,6 +118,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
     }
 
+    @TestOnly
+    protected GoogleBatchTaskHandler() {}
+
     /**
      * Resolve the `jobName` property defined in the nextflow config file
      *
@@ -149,11 +153,6 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 .withIsArray(task.isArray())
         }
     }
-
-    /*
-     * Only for testing -- do not use
-     */
-    protected GoogleBatchTaskHandler() {}
 
     protected GoogleBatchLauncherSpec spec0(BashWrapperBuilder launcher) {
         if( launcher instanceof GoogleBatchLauncherSpec )
@@ -293,6 +292,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
         allocationPolicy.putAllLabels( task.config.getResourceLabels() )
 
+        // Add network tags if configured
+        if( executor.config.networkTags )
+            allocationPolicy.addAllTags( executor.config.networkTags )
+
         // use instance template if specified
         if( task.config.getMachineType()?.startsWith('template://') ) {
             if( task.config.getAccelerator() )
@@ -306,6 +309,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
             if( executor.config.cpuPlatform )
                 log.warn1 'Config option `google.batch.cpuPlatform` ignored because an instance template was specified'
+
+            if( executor.config.networkTags )
+                log.warn1 'Config option `google.batch.networkTags` ignored because an instance template was specified'
 
             if( executor.config.preemptible )
                 log.warn1 'Config option `google.batch.premptible` ignored because an instance template was specified'

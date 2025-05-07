@@ -31,23 +31,23 @@ import java.time.OffsetDateTime
 @CompileStatic
 class TaskOutput implements LinSerializable {
     /**
-     * Reference to the task that generated the data.
+     * Reference to the task that generated the output.
      */
     String taskRun
     /**
-     * Reference to the WorkflowRun that generated the data.
+     * Reference to the WorkflowRun that generated the output.
      */
     String workflowRun
     /**
-     * Creation date of this task outputs description
+     * Creation date of this task output description
      */
     OffsetDateTime createdAt
     /**
-     * Outputs of the task
+     * Output of the task
      */
     List<Parameter> output
     /**
-     * Annotations attached to the task outputs
+     * Labels attached to the task output
      */
-    List<Annotation> annotations
+    List<String> labels
 }

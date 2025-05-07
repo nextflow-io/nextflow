@@ -67,7 +67,7 @@ class CmdLineageTest extends Specification {
             def folder = Files.createTempDirectory('test').toAbsolutePath()
             def configFile = folder.resolve('nextflow.config')
             configFile.text = "lineage.enabled = true\nlineage.store.location = '$folder'".toString()
-            def historyFile = folder.resolve(".meta/.history")
+            def historyFile = folder.resolve(".history")
             def lidLog = new DefaultLinHistoryLog(historyFile)
             def uniqueId = UUID.randomUUID()
             def date = new Date();
@@ -99,7 +99,7 @@ class CmdLineageTest extends Specification {
         def folder = Files.createTempDirectory('test').toAbsolutePath()
         def configFile = folder.resolve('nextflow.config')
         configFile.text = "lineage.enabled = true\nlineage.store.location = '$folder'".toString()
-        def historyFile = folder.resolve(".meta/.history")
+        def historyFile = folder.resolve(".history")
         Files.createDirectories(historyFile.parent)
         def launcher = Mock(Launcher){
             getOptions() >> new CliOptions(config: [configFile.toString()])
@@ -128,7 +128,7 @@ class CmdLineageTest extends Specification {
         def folder = Files.createTempDirectory('test').toAbsolutePath()
         def configFile = folder.resolve('nextflow.config')
         configFile.text = "lineage.enabled = true\nlineage.store.location = '$folder'".toString()
-        def lidFile = folder.resolve(".meta/12345/.data.json")
+        def lidFile = folder.resolve("12345/.data.json")
         Files.createDirectories(lidFile.parent)
         def launcher = Mock(Launcher){
             getOptions() >> new CliOptions(config: [configFile.toString()])
@@ -179,7 +179,7 @@ class CmdLineageTest extends Specification {
 
         then:
             stdout.size() == 1
-            stdout[0] == "Error loading lid://12345 - Lineage object 12345 not found"
+            stdout[0] == "Error loading lid://12345 - Lineage record 12345 not found"
 
         cleanup:
             folder?.deleteDir()
@@ -194,11 +194,11 @@ class CmdLineageTest extends Specification {
         def launcher = Mock(Launcher){
             getOptions() >> new CliOptions(config: [configFile.toString()])
         }
-        def lidFile = folder.resolve(".meta/12345/file.bam/.data.json")
-        def lidFile2 = folder.resolve(".meta/123987/file.bam/.data.json")
-        def lidFile3 = folder.resolve(".meta/123987/.data.json")
-        def lidFile4 = folder.resolve(".meta/45678/output.txt/.data.json")
-        def lidFile5 = folder.resolve(".meta/45678/.data.json")
+        def lidFile = folder.resolve("12345/file.bam/.data.json")
+        def lidFile2 = folder.resolve("123987/file.bam/.data.json")
+        def lidFile3 = folder.resolve("123987/.data.json")
+        def lidFile4 = folder.resolve("45678/output.txt/.data.json")
+        def lidFile5 = folder.resolve("45678/.data.json")
         Files.createDirectories(lidFile.parent)
         Files.createDirectories(lidFile2.parent)
         Files.createDirectories(lidFile3.parent)
@@ -270,7 +270,7 @@ class CmdLineageTest extends Specification {
         def folder = Files.createTempDirectory('test').toAbsolutePath()
         def configFile = folder.resolve('nextflow.config')
         configFile.text = "lineage.enabled = true\nlineage.store.location = '$folder'".toString()
-        def lidFile = folder.resolve(".meta/12345/.data.json")
+        def lidFile = folder.resolve("12345/.data.json")
         Files.createDirectories(lidFile.parent)
         def launcher = Mock(Launcher){
             getOptions() >> new CliOptions(config: [configFile.toString()])
@@ -278,47 +278,12 @@ class CmdLineageTest extends Specification {
         def encoder = new LinEncoder().withPrettyPrint(true)
         def time = OffsetDateTime.now()
         def entry = new FileOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-                "lid://123987/file.bam", "lid://12345", "lid://123987/", 1234, time, time, null)
+                "lid://123987/file.bam", "lid://12345", "lid://123987/", 1234, time, time, ['foo', 'bar'])
         def jsonSer = encoder.encode(entry)
-        def expectedOutput = jsonSer
+        def expectedOutput = '[\n  "lid://12345"\n]'
         lidFile.text = jsonSer
         when:
-        def lidCmd = new CmdLineage(launcher: launcher, args: ["view", "lid:///?type=FileOutput"])
-        lidCmd.run()
-        def stdout = capture
-                .toString()
-                .readLines()// remove the log part
-                .findResults { line -> !line.contains('DEBUG') ? line : null }
-                .findResults { line -> !line.contains('INFO') ? line : null }
-                .findResults { line -> !line.contains('plugin') ? line : null }
-
-        then:
-        stdout.size() == expectedOutput.readLines().size()
-        stdout.join('\n') == expectedOutput
-
-        cleanup:
-        folder?.deleteDir()
-    }
-
-    def 'should show query results'(){
-        given:
-        def folder = Files.createTempDirectory('test').toAbsolutePath()
-        def configFile = folder.resolve('nextflow.config')
-        configFile.text = "lineage.enabled = true\nlineage.store.location = '$folder'".toString()
-        def lidFile = folder.resolve(".meta/12345/.data.json")
-        Files.createDirectories(lidFile.parent)
-        def launcher = Mock(Launcher){
-            getOptions() >> new CliOptions(config: [configFile.toString()])
-        }
-        def encoder = new LinEncoder().withPrettyPrint(true)
-        def time = OffsetDateTime.now()
-        def entry = new FileOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
-            "lid://123987/file.bam", "lid://12345", "lid://123987/", 1234, time, time, null)
-        def jsonSer = encoder.encode(entry)
-        def expectedOutput = jsonSer
-        lidFile.text = jsonSer
-        when:
-        def lidCmd = new CmdLineage(launcher: launcher, args: ["view", "lid:///?type=FileOutput"])
+        def lidCmd = new CmdLineage(launcher: launcher, args: ["find", "type=FileOutput", "label=foo"])
         lidCmd.run()
         def stdout = capture
             .toString()
