@@ -148,4 +148,25 @@ class TaskPollingMonitorTest extends Specification {
         3 * session.notifyTaskSubmit(handler)
     }
 
+    def 'should not submit an array exceeding capacity' (){
+        given:
+        def session = Mock(Session)
+        def monitor = new TaskPollingMonitor(name: 'foo', session: session, capacity : 2, pollInterval: Duration.of('1min'))
+        and:
+        def handler = Mock(TaskHandler) {
+            getTask() >> Mock(TaskRun)
+        }
+        def arrayHandler = Mock(TaskHandler) {
+            getTask() >> Mock(TaskArrayRun) {
+                children >> (1..3).collect( i -> handler )
+            }
+        }
+
+        expect:
+        monitor.capacity == 2
+        monitor.runningQueue.size() == 0
+        monitor.canSubmit(arrayHandler) == false
+
+    }
+
 }
