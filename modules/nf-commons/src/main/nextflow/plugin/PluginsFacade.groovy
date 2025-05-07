@@ -528,7 +528,7 @@ class PluginsFacade implements PluginStateListener {
         return isAllowed(plugin.id)
     }
 
-    protected allowedPluginsString() {
+    private String allowedPluginsString() {
         final list = getAllowedPlugins()
         if( list == null )
             return '(all)'
