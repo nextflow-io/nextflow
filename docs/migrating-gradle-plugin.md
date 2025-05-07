@@ -83,9 +83,8 @@ To migrate an existing Nextflow plugin:
             '<EXTENSION_POINT>'
         ]
 
-    publishing {
+        publishing {
             registry {
-                url = 'https://nf-plugins-registry.dev-tower.net/api'
                 authToken = project.findProperty('pluginRegistry.accessToken')
             }
         }
