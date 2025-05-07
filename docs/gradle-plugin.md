@@ -47,7 +47,7 @@ Plugins can also be installed locally without being published. To install a plug
 
 ## Testing a plugin
 
-### Unit tests
+<h3> Unit tests </h3>
 
 Unit tests are small, focused tests designed to verify the behavior of individual plugin components.
 
@@ -57,7 +57,7 @@ To run unit tests:
 
 2. In the plugin root directory, run `make test`.
 
-### End-to-end tests
+<h3> End-to-end tests </h3>
 
 End-to-end tests are comprehensive tests that verify the behavior of an entire plugin as it would be used in a Nextflow pipeline. See [nf-hello](https://github.com/nextflow-io/nf-hello) for an example of an end-to-end test for a Nextflow plugin.
 
