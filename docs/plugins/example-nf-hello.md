@@ -54,7 +54,7 @@ It also includes several classes that demonstrate different plugin functionality
 The `nf-hello` plugin can be configured via nextflow configuration files or at runtime. For example:
 
 ```bash
-nextflow run hello -plugins nf-hello@0.5.0,nf-amazon@2.9.0
+nextflow run hello -plugins nf-hello@0.5.0
 ```
 
 See the [nf-hello plugin repository](https://github.com/nextflow-io/nf-hello/tree/gradle-plugin-example) for the plugin source code.
