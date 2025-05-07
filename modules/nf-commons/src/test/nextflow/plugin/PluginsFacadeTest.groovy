@@ -469,4 +469,37 @@ class PluginsFacadeTest extends Specification {
 
     }
 
+    @Unroll
+    def 'should parse allowed plugins' () {
+        given:
+        def facade  = new PluginsFacade()
+
+        expect:
+        facade.parseAllowedPlugins(ENV) == EXPECTED
+
+        where:
+        ENV                             | EXPECTED
+        [:]                             | null
+        [NXF_PLUGINS_ALLOWED:'']                    | []
+        [NXF_PLUGINS_ALLOWED:'nf-amazon,nf-google'] | [PluginSpec.parse('nf-amazon'), PluginSpec.parse('nf-google')]
+    }
+
+    @Unroll
+    def 'should should validate is allowed' () {
+        given:
+        def facade  = new PluginsFacade(env:ENV)
+
+        expect:
+        facade.isAllowed(REQUEST) == EXPECTED
+        facade.isAllowed(PluginSpec.parse(REQUEST)) == EXPECTED
+
+        where:
+        ENV                                         | REQUEST       | EXPECTED
+        [:]                                         | 'nf-amz'      | true
+        [NXF_PLUGINS_ALLOWED:'']                    | 'nf-amz'      | false
+        [NXF_PLUGINS_ALLOWED:'nf-amz,nf-gcp']       | 'nf-amz'      | true
+        [NXF_PLUGINS_ALLOWED:'nf-amz,nf-gcp']       | 'nf-gcp'      | true
+        [NXF_PLUGINS_ALLOWED:'nf-amz,nf-gcp']       | 'nf-foo'      | false
+    }
+
 }
