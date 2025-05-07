@@ -1,17 +1,17 @@
 (migrating-plugin-page)=
 
-# Migrating to the Gradle plugin for Nextflow plugins
+# Migrating to the Nextflow Gradle plugin
 
-This page introduces the Gradle plugin for Nextflow plugins, the Nextflow plugin registry, and how to migrate to the new plugin framework.
+This page introduces the Nextflow Gradle plugin, the Nextflow plugin registry, and how to migrate to the new plugin framework.
 
 
 ## Improvements to the plugin framework
 
 The Nextflow plugin ecosystem is evolving to support a more robust and user-friendly experience by simplifying plugin development, streamlining publishing and discovery, and improving how plugins are loaded into workflows. These improvements make plugins more accessible, maintainable, and interoperable with Nextflow.
 
-### Gradle plugin for Nextflow plugins 
+### Nextflow Gradle plugin 
 
-The Gradle plugin for Nextflow plugins simplifies and standardizes the development of Nextflow plugins. It configures default dependencies required for Nextflow integration and introduces custom Gradle tasks to streamline building, testing, packaging, and publishing plugins.
+The Nextflow Gradle plugin simplifies and standardizes the development of Nextflow plugins. It configures default dependencies required for Nextflow integration and introduces custom Gradle tasks to streamline building, testing, packaging, and publishing plugins.
 
 The Gradle plugin is versioned and published to the [Gradle Plugin Portal](https://plugins.gradle.org/), allowing developers to manage it like any other dependency. As the plugin ecosystem evolves, this Gradle plugin will enable easier maintenance and adoption of ongoing improvements to the Nextflow plugin framework.
 
@@ -25,7 +25,7 @@ The Nextflow Plugin Registry is currently available as private beta technology. 
 
 ## Impact on users and developers
 
-The impact of the Gradle plugin for Nextflow plugins differs for plugin users and developers.
+The impact of the Nextflow Gradle plugin differs for plugin users and developers.
 
 ### Plugin Users
 
@@ -33,7 +33,7 @@ If you are a plugin user, no immediate actions are required. The plugin configur
 
 ### Plugin developers
 
-Developers are encouraged to migrate to the Gradle plugin for Nextflow plugins and benefit from features that simplify plugin development and integration with the wider plugin ecosystem.
+Developers are encouraged to migrate to the Nextflow Gradle plugin and benefit from features that simplify plugin development and integration with the wider plugin ecosystem.
 
 To migrate an existing Nextflow plugin:
 
@@ -130,4 +130,4 @@ To migrate an existing Nextflow plugin:
 6. Update `README.md` with information about the structure of your plugin.
 7. In the plugin root directory, run `make assemble`.
 
-The Gradle plugin for Nextflow plugins also supports publishing plugins. See {ref}`gradle-plugin-package` for more information.
+The Nextflow Gradle plugin also supports publishing plugins. See {ref}`gradle-plugin-publish` for more information.

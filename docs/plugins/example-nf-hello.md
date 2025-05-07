@@ -2,9 +2,9 @@
 
 # Example: nf-hello
 
-[`nf-hello`](https://github.com/nextflow-io/nf-hello/tree/gradle-plugin-example) is a simple Nextflow plugin that uses the Gradle plugin for Nextflow plugins and is commonly used as a starting point for third-party plugin development.
+[nf-hello](https://github.com/nextflow-io/nf-hello) is a simple Nextflow plugin that uses the Nextflow Gradle plugin and provides examples for various plugin extension points.
 
-The [`nf-hello` plugin](https://github.com/nextflow-io/nf-hello/tree/gradle-plugin-example) has the following structure:
+The `nf-hello` plugin has the following structure:
 
 ```
 nf-hello
@@ -36,20 +36,13 @@ nf-hello
                     └── HelloFactoryTest.groovy
 ```
 
-It includes examples of different plugin extensions:
+It includes the following extensions:
 
-- A custom trace observer that prints a message when the workflow starts and when the workflow completes.
-- A custom channel factory called reverse.
-- A custom operator called goodbye.
-- A custom function called randomString.
-
-It also includes several classes that demonstrate different plugin functionality:
-
-- `HelloConfig`: An example of how to handle options from the Nextflow configuration.
-- `HelloExtension`: An example of how to create custom channel factories, operators, and functions that can be included in pipeline scripts.
-- `HelloFactory`: An example of a workflow event with custom behavior.
-- `HelloObserver`: An example of a workflow event with custom behavior.
-- `HelloPlugin`: An example of a plugin entry point.
+- A custom `hello` config scope (see `HelloConfig`).
+- A custom trace observer that prints a message when the workflow starts and when the workflow completes (see `HelloObserver`).
+- A custom channel factory called `reverse` (see `HelloExtension`).
+- A custom operator called `goodbye` (see `HelloExtension`).
+- A custom function called `randomString` (see `HelloExtension`).
 
 The `nf-hello` plugin can be configured via nextflow configuration files or at runtime. For example:
 
@@ -57,4 +50,4 @@ The `nf-hello` plugin can be configured via nextflow configuration files or at r
 nextflow run hello -plugins nf-hello@0.5.0
 ```
 
-See the [nf-hello plugin repository](https://github.com/nextflow-io/nf-hello/tree/gradle-plugin-example) for the plugin source code.
+See the [nf-hello plugin repository](https://github.com/nextflow-io/nf-hello) for the plugin source code.

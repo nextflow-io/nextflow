@@ -146,16 +146,6 @@ migrations/index
 
 ```{toctree}
 :hidden:
-:caption: Contributing
-:maxdepth: 1
-
-developer/index
-developer/diagram
-developer/packages
-```
-
-```{toctree}
-:hidden:
 :caption: Plugins
 :maxdepth: 1
 
@@ -163,6 +153,16 @@ plugins/plugins
 plugins/using-plugins
 plugins/developing-plugins
 plugins/example-nf-hello
+```
+
+```{toctree}
+:hidden:
+:caption: Contributing
+:maxdepth: 1
+
+developer/index
+developer/diagram
+developer/packages
 ```
 
 ```{toctree}
