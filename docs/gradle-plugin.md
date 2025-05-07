@@ -1,6 +1,6 @@
 (gradle-plugin-page)=
 
-# Using the Gradle plugin
+# Using the Nextflow Gradle plugin
 
 The [Nextflow Gradle plugin](https://github.com/nextflow-io/nextflow-plugin-gradle) simplifies plugin development by configuring default dependencies needed for Nextflow integration and defining Gradle tasks for building, testing, and publishing Nextflow plugins.
 
@@ -15,21 +15,17 @@ Nextflow plugins can be developed without the Gradle plugin. However, this appro
 :::{versionadded} 25.04.0
 :::
 
-The easiest way to boostrap a Nextflow plugin based on the Nextflow Gradle plugin is to use the `nextflow plugin create` sub-command, which creates a plugin project based on the [Nextflow plugin template](https://github.com/nextflow-io/nf-plugin-template/).
+The easiest way to get started with the Nextflow Gradle plugin is to use the `nextflow plugin create` sub-command, which creates a plugin project based on the [Nextflow plugin template](https://github.com/nextflow-io/nf-plugin-template/), which in turn uses the Gradle plugin.
 
 To create a Nextflow plugin with the Gradle plugin, simply run `nextflow plugin create` on the command line. It will prompt you for your plugin name, organization name, and project path.
 
-See {ref}`dev-plugins-extension` for more information about developing a plugin.
-
-1. Run `nextflow plugin create`. 
-2. Develop your plugin extension points. 
-3. In the plugin root directory, run `make assemble`.
+See {ref}`dev-plugins-extension` for more information about available plugin extension points.
 
 ## Building a plugin
 
-Plugins can be installed locally without being published.
+To build a plugin, simply run `make assemble`.
 
-To install a plugin locally:
+Plugins can also be installed locally without being published. To install a plugin locally:
 
 1. In the plugin root directory, run `make install`.
 
@@ -51,13 +47,19 @@ To install a plugin locally:
 
 ## Testing a plugin
 
-Unit tests are small, focused tests designed to verify the behavior of individual plugin components and are an important part of software development.
+### Unit tests
+
+Unit tests are small, focused tests designed to verify the behavior of individual plugin components.
 
 To run unit tests:
 
 1. Develop your unit tests. See [MyObserverTest.groovy](https://github.com/nextflow-io/nf-plugin-template/blob/main/src/test/groovy/acme/plugin/MyObserverTest.groovy) in [nf-plugin-template](https://github.com/nextflow-io/nf-plugin-template) for unit test examples.
 
 2. In the plugin root directory, run `make test`.
+
+### End-to-end tests
+
+End-to-end tests are comprehensive tests that verify the behavior of an entire plugin as it would be used in a Nextflow pipeline. See [nf-hello](https://github.com/nextflow-io/nf-hello) for an example of an end-to-end test for a Nextflow plugin.
 
 (gradle-plugin-publish)=
 

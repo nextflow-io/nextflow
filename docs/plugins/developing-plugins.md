@@ -97,14 +97,14 @@ The following `make` commands are available:
 `assemble`
 : Compiles the Nextflow plugin code and assembles it into a zip archive.
 
-`test`
-: Runs plugin unit tests. See {ref}`gradle-plugin-test` for more information.
-
 `install`
 : Installs the plugin into the local Nextflow plugins directory.
 
 `release`
 : Publishes the plugin. See {ref}`gradle-plugin-publish` for more information.
+
+`test`
+: Runs plugin unit tests. See {ref}`gradle-plugin-test` for more information.
 
 (dev-plugins-extension)=
 
