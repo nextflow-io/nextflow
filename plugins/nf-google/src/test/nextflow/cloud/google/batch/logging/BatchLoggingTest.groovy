@@ -42,6 +42,7 @@ import spock.lang.Timeout
 @Slf4j
 class BatchLoggingTest extends Specification {
 
+    @Requires({System.getenv('GOOGLE_APPLICATION_CREDENTIALS')})
     def 'should parse stdout and stderr' () {
         given:
         def OUT_ENTRY1 = LogEntry.newBuilder(StringPayload.of('No user sessions are running outdated binaries.\n')).setSeverity(Severity.INFO).build()
