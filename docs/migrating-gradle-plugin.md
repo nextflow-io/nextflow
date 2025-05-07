@@ -15,9 +15,13 @@ The Gradle plugin for Nextflow plugins simplifies and standardizes the developme
 
 The Gradle plugin is versioned and published to the [Gradle Plugin Portal](https://plugins.gradle.org/), allowing developers to manage it like any other dependency. As the plugin ecosystem evolves, this Gradle plugin will enable easier maintenance and adoption of ongoing improvements to the Nextflow plugin framework.
 
-### Nextflow plugin registry
+### Nextflow Plugin Registry
 
 The Nextflow plugin registry is a centralized repository of assembled plugins. It hosts an index of plugin metadata that supports plugin discovery, accessibility, and version tracking. The registry is integrated with the Nextflow runtime. Nextflow will automatically locate and download configured plugins.
+
+:::{note}
+The Nextflow Plugin Registry is currently available as private beta technology. Contact [info@nextflow.io](mailto:info@nextflow.io) to learn how to get access.
+:::
 
 ## Impact on users and developers
 
@@ -57,7 +61,7 @@ To migrate an existing Nextflow plugin:
     ```groovy
     // Plugins
     plugins {
-        id 'io.nextflow.nextflow-plugin' version '0.0.1-alpha3'
+        id 'io.nextflow.nextflow-plugin' version '0.0.1-alpha4'
     }
 
     // Dependencies (optional)
@@ -79,13 +83,10 @@ To migrate an existing Nextflow plugin:
             '<EXTENSION_POINT>'
         ]
 
-        publishing {
-            github {
-                repository = '<GITHUB_REPOSITORY>'
-                userName = project.findProperty('github_username')
-                authToken = project.findProperty('github_access_token')
-                email = project.findProperty('github_commit_email')
-                indexUrl = '<GITHUB_INDEX_URL>'
+    publishing {
+            registry {
+                url = 'https://nf-plugins-registry.dev-tower.net/api'
+                authToken = project.findProperty('pluginRegistry.accessToken')
             }
         }
     }
@@ -99,8 +100,6 @@ To migrate an existing Nextflow plugin:
     - `PROVIDER`: Your name or organization—for example, `acme`.
     - `CLASS_NAME`: Your plugin class name—for example, `acme.plugin.MyPlugin`.
     - `EXTENSION_POINT`: Your extension point identifiers that the plugin will implement or expose—for example, `acme.plugin.MyFactory`.
-    - `GITHUB_REPOSITORY`: Your GitHub plugin repository name—for example, `nextflow-io/nf-plugin-template`.
-    - `GITHUB_INDEX_URL`: The URL of your fork of the plugins index repository—for example, [`https://github.com/nextflow-io/plugins/blob/main/plugins.json`](https://github.com/nextflow-io/plugins/blob/main/plugins.json).
 
 5. Replace the contents of `Makefile` with the following:
 

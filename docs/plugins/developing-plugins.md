@@ -56,7 +56,7 @@ The Gradle plugin is versioned and published to the [Gradle Plugin Portal](https
 
 ```nextflow
 plugins {
-    id 'io.nextflow.nextflow-plugin' version '0.0.1-alpha3'
+    id 'io.nextflow.nextflow-plugin' version '0.0.1-alpha4'
 }
 ```
 

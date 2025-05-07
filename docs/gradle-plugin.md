@@ -65,25 +65,21 @@ To run unit tests:
 
 ## Packaging, uploading, and publishing a plugin
 
-The Gradle plugin for Nextflow plugins simplifies publishing your plugin.
+The Gradle plugin for Nextflow plugins simplifies publishing your plugin to the Nextflow Plugin Registry.
 
-To package, upload, and publish your plugin:
+:::{note}
+The Nextflow Plugin Registry is currently available as private beta technology. Contact [info@nextflow.io](mailto:info@nextflow.io) to learn how to get access.
+:::
 
-1. Fork the [Nextfow plugins index repository](https://github.com/nextflow-io/plugins).
-2. In the plugin root directory, open `build.gradle` and ensure that:
-    * `github.repository` matches the plugin repository.
-    * `github.indexUrl` matches your fork of the plugins index repository.
-3. Create a file named `$HOME/.gradle/gradle.properties` and add the following:
+To package, upload, and publish your plugin to the Nextflow Plugin Registry:
+
+1. Create a file named `$HOME/.gradle/gradle.properties`, where `$HOME` is your home directory.
+2. Add the following properties:
 
     ```bash
-    github_username=<GITHUB_USERNAME>
-    github_access_token=<GITHUB_ACCESS_TOKEN>
-    github_commit_email=<GITHUB_EMAIL>
+    pluginRegistry.accessToken=<REGISTRY_ACCESS_TOKEN>
     ```
 
-    Replace the following:
-    * `GITHUB_USERNAME`: your GitHub username granting access to the plugin repository.
-    * `GITHUB_ACCESS_TOKEN`: your GitHub access token with permission to upload and commit changes to the plugin repository.
-    * `GITHUB_EMAIL`: your email address associated with your GitHub account.
-4. Run `make release`.
-5. Create a pull request against the [Nextfow plugins index repository](https://github.com/nextflow-io/plugins) from your fork.
+    Replace <REGISTRY_ACCESS_TOKEN> with your plugin registry access token.
+
+3. Run `make release`.
