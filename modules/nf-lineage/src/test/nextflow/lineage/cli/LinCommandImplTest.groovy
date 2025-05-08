@@ -246,22 +246,21 @@ class LinCommandImplTest extends Specification{
             'this is a script',
             null,null, null, null, null, [:],[])
         lidFile5.text = encoder.encode(entry)
-        final network = """flowchart BT
-    lid://12345/file.bam@{shape: document, label: "lid://12345/file.bam"}
-    lid://123987/file.bam@{shape: document, label: "lid://123987/file.bam"}
-    lid://123987@{shape: process, label: "foo [lid://123987]"}
-    ggal_gut@{shape: document, label: "ggal_gut"}
-    path/to/file@{shape: document, label: "path/to/file"}
-    lid://45678/output.txt@{shape: document, label: "lid://45678/output.txt"}
-    lid://45678@{shape: process, label: "bar [lid://45678]"}
-
-    lid://123987/file.bam -->lid://12345/file.bam
-    lid://123987 -->lid://123987/file.bam
-    ggal_gut -->lid://123987
-    lid://45678/output.txt -->lid://123987
-    path/to/file -->lid://123987
-    lid://45678 -->lid://45678/output.txt
-"""
+        final network = """\
+            flowchart TB
+                lid://12345/file.bam["lid://12345/file.bam"]
+                lid://123987/file.bam["lid://123987/file.bam"]
+                lid://123987(["foo [lid://123987]"])
+                ggal_gut["ggal_gut"]
+                path/to/file["path/to/file"]
+                lid://45678/output.txt["lid://45678/output.txt"]
+                lid://45678(["bar [lid://45678]"])
+                lid://123987/file.bam --> lid://12345/file.bam
+                lid://123987 --> lid://123987/file.bam
+                ggal_gut --> lid://123987
+                lid://45678/output.txt --> lid://123987
+                path/to/file --> lid://123987
+                lid://45678 --> lid://45678/output.txt""".stripIndent()
         final template = MermaidHtmlRenderer.readTemplate()
         def expectedOutput = template.replace('REPLACE_WITH_NETWORK_DATA', network)
 
@@ -276,7 +275,7 @@ class LinCommandImplTest extends Specification{
 
         then:
         stdout.size() == 1
-        stdout[0] == "Linage graph for lid://12345/file.bam rendered in ${outputHtml}"
+        stdout[0] == "Rendered lineage graph for lid://12345/file.bam to ${outputHtml}"
         outputHtml.exists()
         outputHtml.text == expectedOutput
     }
@@ -300,16 +299,15 @@ class LinCommandImplTest extends Specification{
             [new Parameter( "String", "sample_id","ggal_gut"),
              new Parameter("Integer","reads",2)])
         lidFile3.text = encoder.encode(entry)
-        final network = """flowchart BT
-    lid://12345/file.bam@{shape: document, label: "lid://12345/file.bam"}
-    lid://12345@{shape: processes, label: "run_name [lid://12345]"}
-    ggal_gut@{shape: document, label: "ggal_gut"}
-    2.0@{shape: document, label: "2.0"}
-
-    lid://12345 -->lid://12345/file.bam
-    ggal_gut -->lid://12345
-    2.0 -->lid://12345
-"""
+        final network = """\
+            flowchart TB
+                lid://12345/file.bam["lid://12345/file.bam"]
+                lid://12345(["run_name [lid://12345]"])
+                ggal_gut["ggal_gut"]
+                2.0["2.0"]
+                lid://12345 --> lid://12345/file.bam
+                ggal_gut --> lid://12345
+                2.0 --> lid://12345""".stripIndent()
         final template = MermaidHtmlRenderer.readTemplate()
         def expectedOutput = template.replace('REPLACE_WITH_NETWORK_DATA', network)
 
@@ -324,7 +322,7 @@ class LinCommandImplTest extends Specification{
 
         then:
         stdout.size() == 1
-        stdout[0] == "Linage graph for lid://12345/file.bam rendered in ${outputHtml}"
+        stdout[0] == "Rendered lineage graph for lid://12345/file.bam to ${outputHtml}"
         outputHtml.exists()
         outputHtml.text == expectedOutput
     }

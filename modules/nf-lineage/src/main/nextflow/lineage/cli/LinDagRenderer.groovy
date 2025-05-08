@@ -120,17 +120,16 @@ class LinDagRenderer {
     }
 
     private void visitTaskRun(String lid, TaskRun taskRun) {
-        addNode(lid, taskRun.name, NodeType.TASK)
+        addNode(lid, "${taskRun.name} [${lid}]", NodeType.TASK)
         for( final param : taskRun.input ) {
-            if( param.type == "path" )
-                visitParameter(lid, param.value)
+            visitParameter(lid, param.value)
         }
     }
 
     private void visitWorkflowRun(String lid, WorkflowRun workflowRun) {
         addNode(lid, "${workflowRun.name} [${lid}]", NodeType.TASK)
         for( final param : workflowRun.params ) {
-            visitParameter(lid, param.value)
+            visitParameter0(lid, param.value.toString())
         }
     }
 
@@ -145,6 +144,9 @@ class LinDagRenderer {
                 enqueue(source)
                 addEdge(source, lid)
             }
+            else {
+                visitParameter0(lid, source)
+            }
         }
         else if( value instanceof Map && value.path ) {
             final path = value.path.toString()
@@ -153,18 +155,19 @@ class LinDagRenderer {
                 addEdge(path, lid)
             }
             else {
-                final id = safeId(path)
-                final label = safeLabel(path)
-                addNode(id, label, NodeType.FILE)
-                addEdge(id, lid)
+                visitParameter0(lid, path)
             }
         }
         else {
-            final id = safeId(value.toString())
-            final label = safeLabel(value.toString())
-            addNode(id, label, NodeType.FILE)
-            addEdge(id, lid)
+            visitParameter0(lid, value.toString())
         }
+    }
+
+    private void visitParameter0(String lid, String value) {
+        final id = safeId(value)
+        final label = safeLabel(value)
+        addNode(id, label, NodeType.FILE)
+        addEdge(id, lid)
     }
 
     private static String rawLid(String lid) {
