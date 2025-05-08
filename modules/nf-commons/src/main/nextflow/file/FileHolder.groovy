@@ -56,7 +56,7 @@ class FileHolder implements CacheFunnel {
         assert path != null
 
         this.sourceObj = origin
-        this.storePath = path
+        this.storePath = real(path)
         this.stageName = norm(path.getFileName())
     }
 
