@@ -16,6 +16,8 @@
 
 package nextflow.lineage
 
+import nextflow.lineage.exception.OutputRelativePathException
+
 import static nextflow.lineage.fs.LinPath.*
 
 import java.nio.file.Files
@@ -94,11 +96,6 @@ class LinObserver implements TraceObserverV2 {
         this.store = store
     }
 
-    @Override
-    void onFlowCreate(Session session) {
-        this.store.getHistoryLog().write(session.runName, session.uniqueId, '-')
-    }
-
     @TestOnly
     String getExecutionHash(){ executionHash }
 
@@ -118,12 +115,12 @@ class LinObserver implements TraceObserverV2 {
             executionUri,
             new LinkedList<Parameter>()
         )
-        this.store.getHistoryLog().updateRunLid(session.uniqueId, executionUri)
+        this.store.getHistoryLog().write(session.runName, session.uniqueId, executionUri)
     }
 
     @Override
     void onFlowComplete(){
-        if (this.workflowOutput){
+        if(workflowOutput?.output ){
             workflowOutput.createdAt = OffsetDateTime.now()
             final key = executionHash + '#output'
             this.store.save(key, workflowOutput)
@@ -150,7 +147,7 @@ class LinObserver implements TraceObserverV2 {
             final dataPath = new DataPath(normalizer.normalizePath(it.normalize()), Checksum.ofNextflow(it.text))
             result.add(dataPath)
         }
-        return result
+        return result.sort{it.path}
     }
 
     protected String storeWorkflowRun(PathNormalizer normalizer) {
@@ -361,7 +358,11 @@ class LinObserver implements TraceObserverV2 {
                 LinUtils.toDate(attrs?.lastModifiedTime()),
                 event.labels)
             store.save(key, value)
-        } catch (Throwable e) {
+        }
+        catch (OutputRelativePathException ignored ){
+            log.warn1("Lineage for workflow output is not supported by publishDir directive")
+        }
+        catch (Throwable e) {
             log.warn("Unexpected error storing published file '${event.target.toUriString()}' for workflow '${executionHash}'", e)
         }
     }
@@ -436,14 +437,17 @@ class LinObserver implements TraceObserverV2 {
             if (path.startsWith(outputDirAbs)) {
                 return outputDirAbs.relativize(path).toString()
             }
-            throw new IllegalArgumentException("Cannot access relative path for workflow output '${path.toUriString()}'")
+            log.debug("Cannot get relative path for workflow output '${path.toUriString()}'")
+            throw new OutputRelativePathException()
         }
         final pathAbs = path.toAbsolutePath()
         if (pathAbs.startsWith(outputDirAbs)) {
             return outputDirAbs.relativize(pathAbs).toString()
         }
-        if (path.normalize().getName(0).toString() == "..")
-            throw new IllegalArgumentException("Cannot access relative path for workflow output '${path.toUriString()}'")
+        if (path.normalize().getName(0).toString() == "..") {
+            log.debug("Cannot get relative path for workflow output '${path.toUriString()}'")
+            throw new OutputRelativePathException()
+        }
         return path.normalize().toString()
     }
 

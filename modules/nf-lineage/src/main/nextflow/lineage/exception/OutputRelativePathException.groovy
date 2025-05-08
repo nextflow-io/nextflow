@@ -13,28 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.lineage
+package nextflow.lineage.exception
 
 /**
- * Interface to log workflow executions and their corresponding Lineage IDs
+ * Exception to indicate the an output path is not relative to the output dir.
+ * It is used to detect the cases where publishDir is used with Data Lineage.
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
-interface LinHistoryLog {
-    /**
-     * Write a workflow execution linage history log record.
-     *
-     * @param name Workflow execution name.
-     * @param sessionId Workflow session ID.
-     * @param runLid Workflow run ID.
-     */
-    void write(String name, UUID sessionId, String runLid)
-
-    /**
-     * Get the store records in the Lineage History Log.
-     *
-     * @return List of stored lineage history records.
-     */
-    List<LinHistoryRecord> getRecords()
-
+class OutputRelativePathException extends Exception {
 }

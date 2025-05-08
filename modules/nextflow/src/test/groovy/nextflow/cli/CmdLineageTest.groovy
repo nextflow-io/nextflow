@@ -227,20 +227,19 @@ class CmdLineageTest extends Specification {
                 'this is a script',
                 null,null, null, null, null, [:],[], null)
         lidFile5.text = encoder.encode(entry)
-        final network = """flowchart BT
-    lid://12345/file.bam@{shape: document, label: "lid://12345/file.bam"}
-    lid://123987/file.bam@{shape: document, label: "lid://123987/file.bam"}
-    lid://123987@{shape: process, label: "foo [lid://123987]"}
-    ggal_gut@{shape: document, label: "ggal_gut"}
-    lid://45678/output.txt@{shape: document, label: "lid://45678/output.txt"}
-    lid://45678@{shape: process, label: "bar [lid://45678]"}
-
-    lid://123987/file.bam -->lid://12345/file.bam
-    lid://123987 -->lid://123987/file.bam
-    ggal_gut -->lid://123987
-    lid://45678/output.txt -->lid://123987
-    lid://45678 -->lid://45678/output.txt
-"""
+        final network = """\
+            flowchart TB
+                lid://12345/file.bam["lid://12345/file.bam"]
+                lid://123987/file.bam["lid://123987/file.bam"]
+                lid://123987(["foo [lid://123987]"])
+                ggal_gut["ggal_gut"]
+                lid://45678/output.txt["lid://45678/output.txt"]
+                lid://45678(["bar [lid://45678]"])
+                lid://123987/file.bam --> lid://12345/file.bam
+                lid://123987 --> lid://123987/file.bam
+                ggal_gut --> lid://123987
+                lid://45678/output.txt --> lid://123987
+                lid://45678 --> lid://45678/output.txt""".stripIndent()
         final template = MermaidHtmlRenderer.readTemplate()
         def expectedOutput = template.replace('REPLACE_WITH_NETWORK_DATA', network)
 
@@ -256,7 +255,7 @@ class CmdLineageTest extends Specification {
 
         then:
         stdout.size() == 1
-        stdout[0] == "Linage graph for lid://12345/file.bam rendered in ${outputHtml}"
+        stdout[0] == "Rendered lineage graph for lid://12345/file.bam to ${outputHtml}"
         outputHtml.exists()
         outputHtml.text == expectedOutput
 
@@ -283,7 +282,7 @@ class CmdLineageTest extends Specification {
         def expectedOutput = '[\n  "lid://12345"\n]'
         lidFile.text = jsonSer
         when:
-        def lidCmd = new CmdLineage(launcher: launcher, args: ["find", "type=FileOutput", "labels=foo"])
+        def lidCmd = new CmdLineage(launcher: launcher, args: ["find", "type=FileOutput", "label=foo"])
         lidCmd.run()
         def stdout = capture
             .toString()

@@ -555,7 +555,6 @@ class TaskConfig extends LazyMap implements Cloneable {
         if( code == null )
             return defValue
 
-        log.warn1 "The `when` process section is deprecated -- use conditional logic in the calling workflow instead"
         String source = null
         try {
             if( code instanceof Closure ) {

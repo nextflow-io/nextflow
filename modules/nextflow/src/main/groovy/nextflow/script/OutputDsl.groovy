@@ -16,17 +16,12 @@
 
 package nextflow.script
 
-import java.nio.file.Path
-
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
-import nextflow.extension.MixOp
 import nextflow.extension.PublishOp
-import nextflow.file.FileHelper
 /**
  * Implements the DSL for publishing workflow outputs
  *
@@ -133,12 +128,13 @@ class OutputDsl {
             setOption('index', dsl.getOptions())
         }
 
-        void labels(List<String> value) {
-            setOption('labels', value)
-        }
-
-        void labels(Closure value) {
-            setOption('labels', value)
+        void label(CharSequence value) {
+            final opts = getOptions()
+            final current = opts.get('labels')
+            if( current instanceof List )
+                current.add(value)
+            else
+                opts.put('labels', [value])
         }
 
         void mode(String value) {
@@ -192,10 +188,6 @@ class OutputDsl {
 
         void header(List<String> value) {
             setOption('header', value)
-        }
-
-        void labels(List<String> value) {
-            setOption('labels', value)
         }
 
         void path(String value) {
