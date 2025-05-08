@@ -45,7 +45,6 @@ class AwsOptions implements CloudTransferOptions {
 
     volatile Boolean fetchInstanceType
 
-    /* Only for testing purpose */
     @TestOnly
     protected AwsOptions() {
         this.awsConfig=new AwsConfig(Collections.emptyMap())
@@ -105,7 +104,7 @@ class AwsOptions implements CloudTransferOptions {
         return awsConfig.batchConfig.getMaxTransferAttempts()
     }
 
-    int getMaxSpotAttempts() {
+    Integer getMaxSpotAttempts() {
         return awsConfig.batchConfig.getMaxSpotAttempts()
     }
 
@@ -159,6 +158,10 @@ class AwsOptions implements CloudTransferOptions {
 
     String getExecutionRole() {
         return awsConfig.batchConfig.getExecutionRole()
+    }
+
+    boolean terminateUnschedulableJobs() {
+        return awsConfig.batchConfig.terminateUnschedulableJobs
     }
 
 }

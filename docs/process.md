@@ -171,7 +171,7 @@ process templateExample {
 }
 
 workflow {
-    Channel.of('this', 'that') | templateExample
+    channel.of('this', 'that') | templateExample
 }
 ```
 
@@ -209,7 +209,7 @@ Template scripts are generally discouraged due to the caveats described above. T
 ### Shell
 
 :::{deprecated} 24.11.0-edge
-Use the `script` block instead. Consider using the {ref}`VS Code extension <vscode-page>`, which provides syntax highlighting and error checking to distinguish Nextflow variables from Bash variables in the process script.
+Use the `script` block instead. Consider using the {ref}`strict syntax <strict-syntax-page>`, which provides error checking to help distinguish between Nextflow variables and Bash variables in the process script.
 :::
 
 The `shell` block is a string expression that defines the script that is executed by the process. It is an alternative to the {ref}`process-script` definition with one important difference: it uses the exclamation mark `!` character, instead of the usual dollar `$` character, to denote Nextflow variables.
@@ -228,7 +228,7 @@ process myTask {
 }
 
 workflow {
-    Channel.of('Hello', 'Hola', 'Bonjour') | myTask
+    channel.of('Hello', 'Hola', 'Bonjour') | myTask
 }
 ```
 
@@ -258,7 +258,7 @@ process simpleSum {
 }
 
 workflow {
-    Channel.of('a', 'b', 'c') | simpleSum
+    channel.of('a', 'b', 'c') | simpleSum
 }
 ```
 
@@ -352,7 +352,7 @@ process basicExample {
 }
 
 workflow {
-  def num = Channel.of(1,2,3)
+  def num = channel.of(1,2,3)
   basicExample(num)
 }
 ```
@@ -384,7 +384,7 @@ process basicExample {
 }
 
 workflow {
-  Channel.of(1,2,3) | basicExample
+  channel.of(1,2,3) | basicExample
 }
 ```
 :::
@@ -407,7 +407,7 @@ process blastThemAll {
 }
 
 workflow {
-  def proteins = Channel.fromPath( '/some/path/*.fa' )
+  def proteins = channel.fromPath( '/some/path/*.fa' )
   blastThemAll(proteins)
 }
 ```
@@ -444,7 +444,7 @@ process blastThemAll {
 }
 
 workflow {
-  def proteins = Channel.fromPath( '/some/path/*.fa' )
+  def proteins = channel.fromPath( '/some/path/*.fa' )
   blastThemAll(proteins)
 }
 ```
@@ -455,7 +455,7 @@ In this example, each file received by the process is staged with the name `quer
 This feature allows you to execute the process command multiple times without worrying about the file names changing. In other words, Nextflow helps you write pipeline tasks that are self-contained and decoupled from the execution environment. As a best practice, you should avoid referencing files in your process script other than those defined in your input block.
 :::
 
-Channel factories like `Channel.fromPath` produce file objects, but a `path` input can also accept a string literal path. The string value should be an absolute path, i.e. it must be prefixed with a `/` character or a supported URI protocol (`file://`, `http://`, `s3://`, etc), and it cannot contain special characters (`\n`, etc).
+Channel factories like `channel.fromPath` produce file objects, but a `path` input can also accept a string literal path. The string value should be an absolute path, i.e. it must be prefixed with a `/` character or a supported URI protocol (`file://`, `http://`, `s3://`, etc), and it cannot contain special characters (`\n`, etc).
 
 ```nextflow
 process foo {
@@ -501,7 +501,7 @@ process blastThemAll {
 }
 
 workflow {
-    def fasta = Channel.fromPath( "/some/path/*.fa" ).buffer(size: 3)
+    def fasta = channel.fromPath( "/some/path/*.fa" ).buffer(size: 3)
     blastThemAll(fasta)
 }
 ```
@@ -543,7 +543,7 @@ process blastThemAll {
 }
 
 workflow {
-    def fasta = Channel.fromPath( "/some/path/*.fa" ).buffer(size: 3)
+    def fasta = channel.fromPath( "/some/path/*.fa" ).buffer(size: 3)
     blastThemAll(fasta)
 }
 ```
@@ -609,7 +609,7 @@ process printEnv {
 }
 
 workflow {
-    Channel.of('hello', 'hola', 'bonjour', 'ciao') | printEnv
+    channel.of('hello', 'hola', 'bonjour', 'ciao') | printEnv
 }
 ```
 
@@ -636,7 +636,7 @@ process printAll {
 }
 
 workflow {
-  Channel.of('hello', 'hola', 'bonjour', 'ciao')
+  channel.of('hello', 'hola', 'bonjour', 'ciao')
     | map { v -> v + '\n' }
     | printAll
 }
@@ -670,7 +670,7 @@ process tupleExample {
 }
 
 workflow {
-  Channel.of( [1, 'alpha.txt'], [2, 'beta.txt'], [3, 'delta.txt'] ) | tupleExample
+  channel.of( [1, 'alpha.txt'], [2, 'beta.txt'], [3, 'delta.txt'] ) | tupleExample
 }
 ```
 
@@ -695,7 +695,7 @@ process alignSequences {
 }
 
 workflow {
-  sequences = Channel.fromPath('*.fa')
+  sequences = channel.fromPath('*.fa')
   methods = ['regular', 'espresso', 'psicoffee']
 
   alignSequences(sequences, methods)
@@ -720,7 +720,7 @@ process alignSequences {
 }
 
 workflow {
-  sequences = Channel.fromPath('*.fa')
+  sequences = channel.fromPath('*.fa')
   methods = ['regular', 'espresso']
   libraries = [ file('PQ001.lib'), file('PQ002.lib'), file('PQ003.lib') ]
 
@@ -763,8 +763,8 @@ process foo {
 }
 
 workflow {
-  x = Channel.of(1, 2)
-  y = Channel.of('a', 'b', 'c')
+  x = channel.of(1, 2)
+  y = channel.of('a', 'b', 'c')
   foo(x, y)
 }
 ```
@@ -776,7 +776,7 @@ The process `foo` is executed two times because the `x` channel emits only two v
 2 and b
 ```
 
-A different semantic is applied when using a {ref}`value channel <channel-type-value>`. This kind of channel is created by the {ref}`Channel.value <channel-value>` factory method or implicitly when a process is invoked with an argument that is not a channel. By definition, a value channel is bound to a single value and it can be read an unlimited number of times without consuming its content. Therefore, when mixing a value channel with one or more (queue) channels, it does not affect the process termination because the underlying value is applied repeatedly.
+A different semantic is applied when using a {ref}`value channel <channel-type-value>`. This kind of channel is created by the {ref}`channel.value <channel-value>` factory method or implicitly when a process is invoked with an argument that is not a channel. By definition, a value channel is bound to a single value and it can be read an unlimited number of times without consuming its content. Therefore, when mixing a value channel with one or more (queue) channels, it does not affect the process termination because the underlying value is applied repeatedly.
 
 To better understand this behavior, compare the previous example with the following one:
 
@@ -793,8 +793,8 @@ process bar {
 }
 
 workflow {
-  x = Channel.value(1)
-  y = Channel.of('a', 'b', 'c')
+  x = channel.value(1)
+  y = channel.of('a', 'b', 'c')
   foo(x, y)
 }
 ```
@@ -887,7 +887,7 @@ process foo {
 }
 
 workflow {
-  ch_dummy = Channel.fromPath('*').first()
+  ch_dummy = channel.fromPath('*').first()
   (ch_var, ch_str, ch_exp) = foo(ch_dummy)
 
   ch_var.view { var -> "ch_var: $var" }
@@ -1074,8 +1074,8 @@ process blast {
 }
 
 workflow {
-  ch_species = Channel.of('human', 'cow', 'horse')
-  ch_query = Channel.fromPath('*.fa')
+  ch_species = channel.of('human', 'cow', 'horse')
+  ch_query = channel.fromPath('*.fa')
 
   blast(ch_species, ch_query)
 }
@@ -1323,6 +1323,8 @@ process foo {
 ```
 
 In this example, each task requests 8 GB of memory, plus the size of the input file rounded up to the next GB. This way, each task requests only as much memory as it needs based on the size of the inputs. The specific function that you use should be tuned for each process.
+
+(task-previous-execution-trace)=
 
 ### Dynamic task resources with previous execution trace
 

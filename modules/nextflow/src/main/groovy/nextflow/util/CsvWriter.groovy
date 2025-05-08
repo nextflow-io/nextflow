@@ -62,12 +62,23 @@ class CsvWriter {
                     ? record.subMap(columns).values()
                     : record.values()
             }
+            else if( isSerializable(record) ) {
+                values = [ record ]
+            }
             else {
-                throw new IllegalArgumentException('Records must be list or map objects')
+                throw new IllegalArgumentException("Record of type `${record.class.name}` can not be serialized to CSV")
             }
 
             path << values.collect(v -> "\"${toCsvString(v)}\"").join(sep) << '\n'
         }
+    }
+
+    private static boolean isSerializable(value) {
+        return value == null
+            || value instanceof Boolean
+            || value instanceof CharSequence
+            || value instanceof Number
+            || value instanceof Path
     }
 
     private static String toCsvString(value) {
