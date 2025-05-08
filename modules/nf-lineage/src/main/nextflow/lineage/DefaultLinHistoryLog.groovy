@@ -21,6 +21,8 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.extension.FilesEx
+
+import static nextflow.lineage.fs.LinPath.*
 /**
  * File to store a history of the workflow executions and their corresponding LIDs
  *
@@ -42,25 +44,12 @@ class DefaultLinHistoryLog implements LinHistoryLog {
         assert name
         assert key
         def timestamp = date ?: new Date()
-        final recordFile = path.resolve("$key-$name")
+        final recordFile = path.resolve(runLid.substring(LID_PROT.size()))
         try {
             recordFile.text = new LinHistoryRecord(timestamp, name, key, runLid).toString()
             log.trace("Record for $key written in lineage history log ${FilesEx.toUriString(this.path)}")
         }catch (Throwable e) {
             log.warn("Can't write record $key file ${FilesEx.toUriString(recordFile)}", e.message)
-        }
-    }
-
-    void updateRunLid(String name, UUID id, String runLid) {
-        assert name
-        assert id
-        final recordFile = path.resolve("$id-$name")
-        try {
-            def current = LinHistoryRecord.parse(recordFile.text)
-            recordFile.text = new LinHistoryRecord(current.timestamp, current.runName, id, runLid).toString()
-        }
-        catch (Throwable e) {
-            log.warn("Can't read session $id file: ${FilesEx.toUriString(recordFile)}", e.message)
         }
     }
 
@@ -73,18 +62,6 @@ class DefaultLinHistoryLog implements LinHistoryLog {
             log.warn "Exception reading records from lineage history folder: ${FilesEx.toUriString(this.path)}", e.message
         }
         return list.sort {it.timestamp }
-    }
-
-    LinHistoryRecord getRecord(String name, UUID id) {
-        assert name
-        assert id
-        final recordFile = path.resolve("$id-$name")
-        try {
-            return LinHistoryRecord.parse(recordFile.text)
-        } catch( Throwable e ) {
-            log.warn("Can't find session $id in file: ${FilesEx.toUriString(recordFile)}", e.message)
-            return null
-        }
     }
 
 }

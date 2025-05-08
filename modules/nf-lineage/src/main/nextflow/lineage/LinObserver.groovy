@@ -96,11 +96,6 @@ class LinObserver implements TraceObserverV2 {
         this.store = store
     }
 
-    @Override
-    void onFlowCreate(Session session) {
-        this.store.getHistoryLog().write(session.runName, session.uniqueId, '-')
-    }
-
     @TestOnly
     String getExecutionHash(){ executionHash }
 
@@ -120,7 +115,7 @@ class LinObserver implements TraceObserverV2 {
             executionUri,
             new LinkedList<Parameter>()
         )
-        this.store.getHistoryLog().updateRunLid(session.runName, session.uniqueId, executionUri)
+        this.store.getHistoryLog().write(session.runName, session.uniqueId, executionUri)
     }
 
     @Override
