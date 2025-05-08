@@ -24,6 +24,7 @@ import nextflow.dag.MermaidHtmlRenderer
 import nextflow.lineage.LinStore
 import nextflow.lineage.model.FileOutput
 import nextflow.lineage.model.TaskRun
+import nextflow.lineage.model.WorkflowRun
 
 import static nextflow.lineage.fs.LinPath.LID_PROT
 import static nextflow.lineage.fs.LinPath.isLidUri
@@ -95,8 +96,10 @@ class LinDagRenderer {
             visitFileOutput(lid, record)
         else if( record instanceof TaskRun )
             visitTaskRun(lid, record)
+        else if( record instanceof WorkflowRun )
+            visitWorkflowRun(lid, record)
         else
-            throw new Exception("Cannot render lineage for type ${record.getClass().getSimpleName()} -- must be a FileOutput or TaskRun")
+            throw new Exception("Cannot render lineage for type ${record.getClass().getSimpleName()} -- must be a FileOutput, TaskRun, or WorkflowRun")
     }
 
     private void visitFileOutput(String lid, FileOutput fileOutput) {
@@ -118,16 +121,23 @@ class LinDagRenderer {
 
     private void visitTaskRun(String lid, TaskRun taskRun) {
         addNode(lid, taskRun.name, NodeType.TASK)
-        for( final source : taskRun.input ) {
-            if( source.type == "path" )
-                visitFileParam(lid, source.value)
+        for( final param : taskRun.input ) {
+            if( param.type == "path" )
+                visitParameter(lid, param.value)
         }
     }
 
-    private void visitFileParam(String lid, Object value) {
+    private void visitWorkflowRun(String lid, WorkflowRun workflowRun) {
+        addNode(lid, "${workflowRun.name} [${lid}]", NodeType.TASK)
+        for( final param : workflowRun.params ) {
+            visitParameter(lid, param.value)
+        }
+    }
+
+    private void visitParameter(String lid, Object value) {
         if( value instanceof Collection ) {
             for( final el : value )
-                visitFileParam(lid, el)
+                visitParameter(lid, el)
         }
         else if( value instanceof CharSequence ) {
             final source = value.toString()
