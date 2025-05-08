@@ -25,6 +25,7 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
+import nextflow.exception.AbortOperationException
 import nextflow.extension.Bolts
 import nextflow.extension.FilesEx
 import org.pf4j.DefaultPluginManager
@@ -375,6 +376,10 @@ class PluginsFacade implements PluginStateListener {
     }
 
     void start(List<PluginSpec> specs) {
+        final disallow = specs.find(it-> !isAllowed(it))
+        if( disallow ) {
+            throw new AbortOperationException("Refuse to use plugin '${disallow.id}' - allowed plugins are: ${allowedPluginsString()}")
+        }
         // when running in embedded mode, default plugins should not be started
         // the following split partition the "specs" collection in to list
         // - the first holding the plugins for which "start" is not required
@@ -538,4 +543,44 @@ class PluginsFacade implements PluginStateListener {
         }
         return new ArrayList<PluginSpec>(map.values())
     }
+
+    protected List<PluginSpec> parseAllowedPlugins(Map<String,String> env) {
+        final list = env.get('NXF_PLUGINS_ALLOWED')
+        // note: empty string means no plugins is allowed
+        return list!=null
+            ? list.tokenize(',').collect(it-> PluginSpec.parse(it))
+            : null
+    }
+
+    /**
+     * The list of allowed plugins to be used defined by the variable NXF_PLUGINS_ALLOWED
+     *
+     * @return
+     *      The list of allowed plugins. {@code null} mean all. Empty list means none
+     */
+    @Memoized
+    protected List<PluginSpec> getAllowedPlugins() {
+        return parseAllowedPlugins(env)
+    }
+
+    protected boolean isAllowed(String pluginId) {
+        final list = getAllowedPlugins()
+        return list != null
+            ? list.any(it->it.id==pluginId)
+            : true
+    }
+
+    protected isAllowed(PluginSpec plugin) {
+        return isAllowed(plugin.id)
+    }
+
+    private String allowedPluginsString() {
+        final list = getAllowedPlugins()
+        if( list == null )
+            return '(all)'
+        if( list.isEmpty() )
+            return '(none)'
+        return list.collect(it->it.id).join('')
+    }
+
 }

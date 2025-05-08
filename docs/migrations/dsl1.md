@@ -152,6 +152,7 @@ DSL2 scripts cannot exceed 64 KB in size. Split large DSL1 scripts into modules 
 
 <h3>Channels</h3>
 
+- Channel factories should be accessed through the `channel` namespace instead of the `Channel` type, although they can still be accessed through either method.
 - Channel method `bind` has been deprecated in DSL2.
 - Channel method `<<` has been deprecated in DSL2.
 - Channel factory `create` has been deprecated in DSL2.

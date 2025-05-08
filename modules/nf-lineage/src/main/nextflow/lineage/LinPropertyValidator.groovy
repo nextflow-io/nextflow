@@ -17,9 +17,9 @@
 package nextflow.lineage
 
 import groovy.transform.CompileStatic
-import nextflow.lineage.model.Annotation
 import nextflow.lineage.model.Checksum
 import nextflow.lineage.model.DataPath
+import nextflow.lineage.model.FileOutput
 import nextflow.lineage.model.Parameter
 import nextflow.lineage.model.TaskOutput
 import nextflow.lineage.model.TaskRun
@@ -36,10 +36,9 @@ import nextflow.lineage.model.WorkflowRun
 class LinPropertyValidator {
 
     private static final List<Class> LIN_MODEL_CLASSES = [
-        Annotation,
         Checksum,
-        DataOutput,
         DataPath,
+        FileOutput,
         Parameter,
         TaskOutput,
         TaskRun,
@@ -71,8 +70,8 @@ class LinPropertyValidator {
         }
     }
 
-    void validateQueryParams(Map<String, String> params) {
-        for( String key : params.keySet() ) {
+    void validateQueryParams(Collection<String> keys) {
+        for( final key : keys ) {
            validate(key.tokenize('.'))
         }
     }

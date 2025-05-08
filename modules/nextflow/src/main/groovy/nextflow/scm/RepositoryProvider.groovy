@@ -185,7 +185,7 @@ abstract class RepositoryProvider {
 
         log.debug "Request [credentials ${getAuthObfuscated() ?: '-'}] -> $api"
         def connection = new URL(api).openConnection() as URLConnection
-        connection.setConnectTimeout(5_000)
+        connection.setConnectTimeout(60_000)
 
         auth(connection)
 

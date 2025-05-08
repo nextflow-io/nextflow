@@ -1,4 +1,4 @@
-Channel.of( 'a', 'b', 'c' )
+channel.of( 'a', 'b', 'c' )
     .tap { log1 }
     .map { v -> v * 2 }
     .tap { log2 }

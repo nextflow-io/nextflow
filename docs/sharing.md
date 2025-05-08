@@ -156,7 +156,7 @@ The `DNASequence` class is available in the execution context:
 ```nextflow
 // main.nf
 workflow {
-    Channel.of('ACGTTGCAATGCCGTA', 'GCGTACGGTACGTTAC')
+    channel.of('ACGTTGCAATGCCGTA', 'GCGTACGGTACGTTAC')
         .map { seq -> new DNASequence(seq) }
         .view { dna ->
             "Found sequence '$dna' with melting temperaure ${dna.getMeltingTemperature()}°C"

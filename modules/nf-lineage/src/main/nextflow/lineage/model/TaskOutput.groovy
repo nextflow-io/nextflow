@@ -47,7 +47,7 @@ class TaskOutput implements LinSerializable {
      */
     List<Parameter> output
     /**
-     * Annotations attached to the task output
+     * Labels attached to the task output
      */
-    List<Annotation> annotations
+    List<String> labels
 }

@@ -16,7 +16,7 @@ A script can define up to one *entry workflow*, which does not have a name and s
 
 ```nextflow
 workflow {
-    Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola')
+    channel.of('Bonjour', 'Ciao', 'Hello', 'Hola')
         | map { v -> "$v world!" }
         | view
 }
@@ -74,7 +74,7 @@ Inputs can be specified like arguments when calling the workflow:
 
 ```nextflow
 workflow {
-    my_workflow( Channel.of('/some/data') )
+    my_workflow( channel.of('/some/data') )
 }
 ```
 
@@ -152,7 +152,7 @@ workflow flow {
 }
 
 workflow {
-    data = Channel.fromPath('/some/path/*.txt')
+    data = channel.fromPath('/some/path/*.txt')
     flow(data)
 }
 ```
@@ -178,7 +178,7 @@ workflow flow {
 }
 
 workflow {
-    data = Channel.fromPath('/some/path/*.txt')
+    data = channel.fromPath('/some/path/*.txt')
     flow_out = flow(data)
 }
 ```
@@ -199,7 +199,7 @@ workflow flow {
 }
 
 workflow {
-    data = Channel.fromPath('/some/path/*.txt')
+    data = channel.fromPath('/some/path/*.txt')
     flow_out = flow(data)
     bar_out = flow_out.bar
 }
@@ -221,7 +221,7 @@ workflow flow {
 }
 
 workflow {
-    data = Channel.fromPath('/some/path/*.txt')
+    data = channel.fromPath('/some/path/*.txt')
     flow(data)
     flow.out.bar.view()
 }
@@ -263,7 +263,7 @@ workflow flow2 {
 }
 
 workflow {
-    data = Channel.fromPath('/some/path/*.txt')
+    data = channel.fromPath('/some/path/*.txt')
     flow1(data)
     flow2(flow1.out)
 }
@@ -298,7 +298,7 @@ process foo {
 }
 
 workflow {
-    Channel.of('Hello','Hola','Ciao')
+    channel.of('Hello','Hola','Ciao')
         | foo
         | map { v -> v.toUpperCase() }
         | view
@@ -311,7 +311,7 @@ The same code can also be written as:
 
 ```nextflow
 workflow {
-    ch1 = Channel.of('Hello','Hola','Ciao')
+    ch1 = channel.of('Hello','Hola','Ciao')
     ch2 = foo( ch1 )
     ch2.map { v -> v.toUpperCase() }.view()
 }
@@ -345,7 +345,7 @@ process bar {
 }
 
 workflow {
-    Channel.of('Hello')
+    channel.of('Hello')
         | map { v -> v.reverse() }
         | (foo & bar)
         | mix
@@ -359,7 +359,7 @@ The same code can also be written as:
 
 ```nextflow
 workflow {
-    ch = Channel.of('Hello').map { v -> v.reverse() }
+    ch = channel.of('Hello').map { v -> v.reverse() }
     ch_foo = foo(ch)
     ch_bar = bar(ch)
     ch_foo.mix(ch_bar).view()
@@ -519,7 +519,7 @@ All files received by an output will be published into the specified directory. 
 ```nextflow
 workflow {
     main:
-    ch_samples = Channel.of(
+    ch_samples = channel.of(
         [ [id: 'SAMP1'], [ file('1.txt'), file('2.txt') ] ]
     )
 
@@ -533,7 +533,7 @@ The `path` directive can also be a closure which defines a custom publish path f
 ```nextflow
 workflow {
     main:
-    ch_samples = Channel.of(
+    ch_samples = channel.of(
         [id: 'SAMP1', fastq_1: file('1.fastq'), fastq_1: file('2.fastq')]
     )
 
@@ -574,7 +574,7 @@ For example:
 ```nextflow
 workflow {
     main:
-    ch_samples = Channel.of(
+    ch_samples = channel.of(
         [id: 1, name: 'sample 1', fastq_1: '1a.fastq', fastq_2: '1b.fastq'],
         [id: 2, name: 'sample 2', fastq_1: '2a.fastq', fastq_2: '2b.fastq'],
         [id: 3, name: 'sample 3', fastq_1: '3a.fastq', fastq_2: '3b.fastq']
@@ -640,6 +640,9 @@ The following directives are available for each output in the output block:
 
   `sep`
   : The character used to separate values (default: `','`). Only used for CSV files.
+
+`label`
+: Specify a label to be applied to every published file. Can be specified multiple times.
 
 `path`
 : Specify the publish path relative to the output directory (default: `'.'`). Can be a path, a closure that defines a custom directory for each published value, or a closure that publishes individual files using the `>>` operator.

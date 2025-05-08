@@ -21,7 +21,7 @@ A block comment starts with `/*` and includes all subsequent characters up to th
 println 'Hello again!'
 ```
 
-## Top-level declarations
+## Script declarations
 
 A Nextflow script may contain the following top-level declarations:
 
@@ -37,7 +37,7 @@ A Nextflow script may contain the following top-level declarations:
 
 Script declarations are in turn composed of statements and expressions.
 
-If there are no top-level declarations, a script may contain one or more [statements](#statements), in which case the entire script is treated as an entry workflow. For example:
+If there are no script declarations, a script may contain one or more [statements](#statements), in which case the entire script is treated as an entry workflow. For example:
 
 ```nextflow
 println 'Hello world!'
@@ -52,7 +52,7 @@ workflow {
 ```
 
 :::{warning}
-Statements and top-level declarations can not be mixed at the same level. If your script has top-level declarations, all statements must be contained within top-level declarations such as the entry workflow.
+Statements and script declarations can not be mixed at the same level.
 :::
 
 ### Shebang
@@ -68,7 +68,7 @@ The first line of a script can be a [shebang](https://en.wikipedia.org/wiki/Sheb
 A feature flag declaration is an assignment. The target should be a valid {ref}`feature flag <config-feature-flags>` and the source should be a literal (i.e. number, string, boolean):
 
 ```nextflow
-nextflow.preview.topic = true
+nextflow.preview.recursion = true
 ```
 
 ### Include
@@ -154,7 +154,7 @@ An *entry workflow* has no name and may consist of a *main* and *publish* sectio
 ```nextflow
 workflow {
     main:
-    greetings = Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola')
+    greetings = channel.of('Bonjour', 'Ciao', 'Hello', 'Hola')
     messages = greetings.map { v -> "$v world!" }
     greetings.view { it -> '$it world!' }
 
@@ -169,7 +169,7 @@ workflow {
 
 - The publish section consists of one or more *publish statements*. A publish statement is a [right-shift expression](#binary-expressions), where the left-hand side is an expression that refers to a value in the workflow body, and the right-hand side is an expression that returns a string.
 
-In order for a script to be executable, it must either define an entry workflow or use the implicit workflow syntax described [above](#top-level-declarations).
+In order for a script to be executable, it must either define an entry workflow or be a code snippet as described [above](#script-declarations).
 
 Entry workflow definitions are ignored when a script is included as a module. This way, the same script can be included as a module or executed as a pipeline.
 
@@ -512,7 +512,7 @@ throw new Exception('something failed!')
 ```
 
 :::{note}
-In general, the appropriate way to raise an error is to use the {ref}`error <stdlib-functions>` function:
+In general, the appropriate way to raise an error is to use the {ref}`error <stdlib-namespaces-global>` function:
 ```nextflow
 error 'something failed!'
 ```
