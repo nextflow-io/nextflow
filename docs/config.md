@@ -206,7 +206,7 @@ process {
 }
 ```
 
-The above configuration snippet requests 2 cpus and 4 GB of memory for processes labeled as `foo` and processes labeled as `bar`.
+The above configuration snippet requests 2 cpus and 4 GB of memory for processes labeled as `foo` or `bar`.
 
 A process selector can be negated prefixing it with the special character `!`. For example:
 
