@@ -371,20 +371,26 @@ class PluginsFacade implements PluginStateListener {
     }
 
     void start(String pluginId) {
-        start([PluginSpec.parse(pluginId, defaultPlugins)])
+        start(List.of(PluginSpec.parse(pluginId, defaultPlugins)))
     }
 
     void start(List<PluginSpec> specs) {
-        // don't start default plugins in embedded mode
-        def split = specs.split { plugin -> isEmbedded() && defaultPlugins.hasPlugin(plugin.id) }
-        def (skip, toStart) = [split[0], split[1]]
-        if( !skip.isEmpty() ) {
-            def skippedIds = skip.collect{ plugin -> plugin.id }
+        // when running in embedded mode, default plugins should not be started
+        // the following split partition the "specs" collection in to list
+        // - the first holding the plugins for which "start" is not required
+        // - the second all remaining plugins that requires a start invocation
+        final split = specs.split(plugin -> isEmbedded() && defaultPlugins.hasPlugin(plugin.id))
+        final skippable = split[0]
+        final startable = split[1]
+        // just report a debug line for the skipped ones
+        if( skippable ) {
+            final skippedIds = skippable.collect{ plugin -> plugin.id }
             log.debug "Plugin 'start' is not required in embedded mode -- ignoring for plugins: $skippedIds"
         }
-
-        updater.prefetchMetadata(toStart)
-        for( PluginSpec plugin : toStart ) {
+        // prefetch the plugins meta
+        updater.prefetchMetadata(startable)
+        // finally start the plugins
+        for( PluginSpec plugin : startable ) {
             updater.prepareAndStart(plugin.id, plugin.version)
         }
     }
