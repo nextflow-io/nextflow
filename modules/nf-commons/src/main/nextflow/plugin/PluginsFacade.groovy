@@ -376,6 +376,7 @@ class PluginsFacade implements PluginStateListener {
     }
 
     void start(List<PluginSpec> specs) {
+        // check if the plugins are allowed to start
         final disallow = specs.find(it-> !isAllowed(it))
         if( disallow ) {
             throw new AbortOperationException("Refuse to use plugin '${disallow.id}' - allowed plugins are: ${allowedPluginsString()}")
