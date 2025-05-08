@@ -1,6 +1,6 @@
-(nf-hello-page)=
+(nf-template-page)=
 
-# Example: nf-hello
+# Example: nf-plugin-template
 
 [nf-hello](https://github.com/nextflow-io/nf-hello) is a simple Nextflow plugin that uses the Nextflow Gradle plugin and provides examples for various plugin extension points.
 
