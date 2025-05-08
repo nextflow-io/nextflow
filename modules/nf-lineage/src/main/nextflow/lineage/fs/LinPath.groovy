@@ -23,6 +23,8 @@ import nextflow.file.LogicalDataPath
 import nextflow.lineage.LinPropertyValidator
 import nextflow.lineage.model.Checksum
 import nextflow.lineage.model.FileOutput
+import nextflow.lineage.model.TaskRun
+import nextflow.lineage.model.WorkflowRun
 import nextflow.lineage.serde.LinSerializable
 import nextflow.util.CacheHelper
 import nextflow.util.TestOnly
@@ -151,6 +153,17 @@ class LinPath implements Path, LogicalDataPath {
     @TestOnly
     protected String getFilePath() { this.filePath }
 
+    protected List<Path> getSubPaths(){
+        if( !fileSystem )
+            throw new IllegalArgumentException("Cannot get sub-paths for a relative lineage path")
+        if( filePath.isEmpty() || filePath == SEPARATOR )
+            throw new IllegalArgumentException("Cannot get sub-paths for an empty lineage path (lid:///)")
+        final store = fileSystem.getStore()
+        if( !store )
+            throw new Exception("Lineage store not found - Check Nextflow configuration")
+        return store.getSubKeys(filePath).collect {new LinPath(fileSystem as LinFileSystem, it)} as List<Path>
+    }
+
     /**
      * Finds the target path of a LinPath.
      *
@@ -178,6 +191,9 @@ class LinPath implements Path, LogicalDataPath {
             }
             if( resultsAsPath ) {
                 return getMetadataAsTargetPath(object, fs, filePath, children)
+            }
+            if( object instanceof WorkflowRun || object instanceof TaskRun ) {
+                return new LinIntermediatePath(fs, filePath, children)
             }
         } else {
             // If there isn't metadata check the parent to check if it is a subfolder of a task/workflow output

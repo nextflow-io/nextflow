@@ -19,6 +19,9 @@ package nextflow.lineage
 import groovy.transform.CompileStatic
 import nextflow.lineage.serde.LinSerializable
 import nextflow.lineage.config.LineageConfig
+
+import java.nio.file.Path
+
 /**
  * Interface for the lineage store
  *
@@ -60,4 +63,10 @@ interface LinStore extends Closeable {
      */
     Map<String,LinSerializable> search(Map<String, List<String>> params)
 
+    /**
+     * Search for keys starting with a parent key.
+     * @param parentKey
+     * @return list of keys
+     */
+    List<String> getSubKeys(String parentKey)
 }

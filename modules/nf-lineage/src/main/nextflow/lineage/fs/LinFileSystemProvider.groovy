@@ -34,10 +34,14 @@ import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileAttribute
 import java.nio.file.attribute.FileAttributeView
+import java.nio.file.attribute.FileTime
 import java.nio.file.spi.FileSystemProvider
 
 import groovy.transform.CompileStatic
 import nextflow.lineage.config.LineageConfig
+
+import java.time.Instant
+
 /**
  * File System Provider for LID Paths
  *
@@ -210,6 +214,23 @@ class LinFileSystemProvider extends FileSystemProvider {
     DirectoryStream<Path> newDirectoryStream(Path path, DirectoryStream.Filter<? super Path> filter) throws IOException {
         final lid = toLinPath(path)
         final real = lid.getTargetPath()
+        if (real instanceof LinIntermediatePath)
+            return getDirectoryStreamFromSubPath(lid)
+        return getDirectoryStreamFromRealPath(real, lid)
+    }
+    private static DirectoryStream<Path> getDirectoryStreamFromSubPath(LinPath lid){
+        List<Path> paths = lid.getSubPaths()
+        if( !paths )
+            throw new FileNotFoundException("Sub paths for '$lid' do not exist")
+        return new DirectoryStream<Path>() {
+            Iterator<Path> iterator() {
+                return paths.iterator()
+            }
+
+            void close() {}
+        }
+    }
+    private DirectoryStream<Path> getDirectoryStreamFromRealPath(Path real, LinPath lid) {
         final stream = real
             .getFileSystem()
             .provider()
@@ -356,7 +377,7 @@ class LinFileSystemProvider extends FileSystemProvider {
     }
 
     private <A extends BasicFileAttributes> A readAttributes0(LinPath lid, Class<A> type, LinkOption... options) throws IOException {
-        final real = lid.getTargetOrMetadataPath()
+        final real = lid.getTargetPath()
         if (real instanceof LinMetadataPath)
             return (real as LinMetadataPath).readAttributes(type)
         return real.fileSystem.provider().readAttributes(real, type, options)
