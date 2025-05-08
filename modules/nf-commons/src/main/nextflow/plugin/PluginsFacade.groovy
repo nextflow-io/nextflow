@@ -22,6 +22,7 @@ import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
@@ -41,6 +42,9 @@ import org.pf4j.PluginStateListener
 @CompileStatic
 class PluginsFacade implements PluginStateListener {
 
+    @PackageScope
+    final static String DEFAULT_PLUGINS_REPO = 'https://raw.githubusercontent.com/nextflow-io/plugins/main/plugins.json'
+
     private static final String DEV_MODE = 'dev'
     private static final String PROD_MODE = 'prod'
     private Map<String,String> env = SysEnv.get()
@@ -51,22 +55,25 @@ class PluginsFacade implements PluginStateListener {
     private PluginUpdater updater
     private CustomPluginManager manager
     private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
-    private String indexUrl = Plugins.DEFAULT_PLUGINS_REPO
+    private String indexUrl
     private boolean embedded
 
     PluginsFacade() {
         mode = getPluginsMode()
         root = getPluginsDir()
+        indexUrl = getPluginsIndexUrl()
         offline = env.get('NXF_OFFLINE') == 'true'
         if( mode==DEV_MODE && root.toString()=='plugins' && !isRunningFromDistArchive() )
             root = detectPluginsDevRoot()
         System.setProperty('pf4j.mode', mode)
     }
 
-    PluginsFacade(Path root, String mode=PROD_MODE, boolean offline=false) {
+    PluginsFacade(Path root, String mode=PROD_MODE, boolean offline=false,
+                  String indexUrl=DEFAULT_PLUGINS_REPO) {
         this.mode = mode
         this.root = root
         this.offline = offline
+        this.indexUrl = indexUrl
         System.setProperty('pf4j.mode', mode)
     }
 
@@ -94,6 +101,45 @@ class PluginsFacade implements PluginStateListener {
             log.trace "Using local plugins directory"
             return Paths.get('plugins')
         }
+    }
+
+    static protected boolean isSupportedIndex(String url) {
+        if( !url ) {
+            throw new IllegalArgumentException("Missing plugins registry URL")
+        }
+        if( !url.startsWith('https://') && !url.startsWith('http://') ) {
+            throw new IllegalArgumentException("Plugins registry URL must start with 'http://' or 'https://': $url")
+        }
+        if( url == DEFAULT_PLUGINS_REPO ) {
+            return true
+        }
+        final hostname = URI.create(url).authority
+        return hostname.endsWith('.nextflow.io')
+            || hostname.endsWith('.nextflow.com')
+            || hostname.endsWith('.seqera.io')
+    }
+
+    protected String getPluginsIndexUrl() {
+        final url = env.get('NXF_PLUGINS_INDEX_URL')
+        if( !url ) {
+            log.trace "Using default plugins url"
+            return DEFAULT_PLUGINS_REPO
+        }
+        log.debug "Detected NXF_PLUGINS_INDEX_URL=$url"
+        if( !isSupportedIndex(url) ) {
+            // warn that this is experimental behaviour
+            log.warn """\
+                =======================================================================
+                =                                WARNING                                    =
+                = This workflow run us using an unofficial plugins registry.                =
+                =                                                                           =
+                = ${url}
+                =                                                                           =
+                = Its usage is unsupported and not recommended for production workloads.    =
+                =============================================================================
+                """.stripIndent(true)
+        }
+        return url
     }
 
     private boolean isNextflowDevRoot(File file) {
@@ -324,33 +370,33 @@ class PluginsFacade implements PluginStateListener {
         new DefaultPluginManager()
     }
 
-    void start( String pluginId ) {
-        if( !isAllowed(pluginId) ) {
-            throw new AbortOperationException("Refuse to use plugin '$pluginId' - allowed plugins are: ${allowedPluginsString()}")
-        }
-        if( isEmbedded() && defaultPlugins.hasPlugin(pluginId) ) {
-            log.debug "Plugin 'start' is not required in embedded mode -- ignoring for plugin: $pluginId"
-            return
-        }
-
-        start(PluginSpec.parse(pluginId, defaultPlugins))
-    }
-
-    void start(PluginSpec plugin) {
-        if( !isAllowed(plugin) ) {
-            throw new AbortOperationException("Refuse to use plugin '$plugin' -- allowed plugins are: ${allowedPluginsString()}")
-        }
-        if( isEmbedded() && defaultPlugins.hasPlugin(plugin.id) ) {
-            log.debug "Plugin 'start' is not required in embedded mode -- ignoring for plugin: $plugin.id"
-            return
-        }
-
-        updater.prepareAndStart(plugin.id, plugin.version)
+    void start(String pluginId) {
+        start(List.of(PluginSpec.parse(pluginId, defaultPlugins)))
     }
 
     void start(List<PluginSpec> specs) {
-        for( PluginSpec it : specs ) {
-            start(it)
+        // check if the plugins are allowed to start
+        final disallow = specs.find(it-> !isAllowed(it))
+        if( disallow ) {
+            throw new AbortOperationException("Refuse to use plugin '${disallow.id}' - allowed plugins are: ${allowedPluginsString()}")
+        }
+        // when running in embedded mode, default plugins should not be started
+        // the following split partition the "specs" collection in to list
+        // - the first holding the plugins for which "start" is not required
+        // - the second all remaining plugins that requires a start invocation
+        final split = specs.split(plugin -> isEmbedded() && defaultPlugins.hasPlugin(plugin.id))
+        final skippable = split[0]
+        final startable = split[1]
+        // just report a debug line for the skipped ones
+        if( skippable ) {
+            final skippedIds = skippable.collect{ plugin -> plugin.id }
+            log.debug "Plugin 'start' is not required in embedded mode -- ignoring for plugins: $skippedIds"
+        }
+        // prefetch the plugins meta
+        updater.prefetchMetadata(startable)
+        // finally start the plugins
+        for( PluginSpec plugin : startable ) {
+            updater.prepareAndStart(plugin.id, plugin.version)
         }
     }
 
