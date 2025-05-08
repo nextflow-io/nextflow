@@ -1,5 +1,9 @@
 nf-amazon changelog
 ===================
+2.15.0 - 8 May 2025
+- Add verbose AWS Batch job cleanup logging [504bd2df]
+- Remove test constructors or mark as TestOnly (#5216) [d4fadd42]
+
 2.14.0 - 23 Apr 2025
 - Add support for data and execution lineage  (#5715) [20e06da7]
 - Manage AWS Batch Unscheduled jobs (#5936) [44abe60c]
