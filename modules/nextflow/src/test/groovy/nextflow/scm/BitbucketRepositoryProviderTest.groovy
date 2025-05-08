@@ -22,7 +22,7 @@ import spock.lang.Requires
 import spock.lang.Specification
 import spock.lang.Timeout
 
-@Timeout(10)
+@Timeout(30)
 @IgnoreIf({System.getenv('NXF_SMOKE')})
 class BitbucketRepositoryProviderTest extends Specification {
 
@@ -122,29 +122,44 @@ class BitbucketRepositoryProviderTest extends Specification {
         and:
         def repo = new BitbucketRepositoryProvider('pditommaso/tutorial', config)
 
-        expect:
-        repo.readText('main.nf').contains('world')
-        !repo.readText('main.nf').contains('WORLD')
+        when:
+        def data = repo.readText('main.nf')
+        then:
+        data.contains('world')
+        !data.contains('WORLD')
 
-        and:
+        when:
+        sleep 1_000
         repo.setRevision('test-branch')
-        repo.readText('main.nf').contains('world')
-        !repo.readText('main.nf').contains('WORLD')
-
         and:
+        data = repo.readText('main.nf')
+        then:
+        data.contains('world')
+        !data.contains('WORLD')
+
+        when:
         repo.setRevision('feature/with-slash')
-        !repo.readText('main.nf').contains('world')
-        repo.readText('main.nf').contains('WORLD')
-
         and:
+        data = repo.readText('main.nf')
+        then:
+        !data.contains('world')
+        data.contains('WORLD')
+
+        when:
         repo.setRevision('v1.1')
-        repo.readText('main.nf').contains('world')
-        !repo.readText('main.nf').contains('WORLD')
-
         and:
+        data = repo.readText('main.nf')
+        then:
+        data.contains('world')
+        !data.contains('WORLD')
+
+        when:
         repo.setRevision('test/tag/v2')
-        !repo.readText('main.nf').contains('world')
-        repo.readText('main.nf').contains('mundo')
+        and:
+        data = repo.readText('main.nf')
+        then:
+        !data.contains('world')
+        data.contains('mundo')
 
     }
 }
