@@ -70,10 +70,11 @@ class PublishOp {
     boolean getComplete() { complete }
 
     PublishOp apply() {
-        final events = new HashMap(2)
-        events.onNext = this.&onNext
-        events.onComplete = this.&onComplete
-        DataflowHelper.subscribeImpl(source, events)
+        new SubscribeOp()
+            .withInput(source)
+            .withOnNext(this.&onNext)
+            .withOnComplete(this.&onComplete)
+            .apply()
         return this
     }
 

@@ -47,59 +47,59 @@ class ChannelTest extends Specification {
         when:
         result = Channel.of('a')
         then:
-        result.val == 'a'
-        result.val == Channel.STOP
+        result.unwrap() == 'a'
+        result.unwrap() == Channel.STOP
 
         when:
         result = Channel.of('a','b','c')
         then:
-        result.val == 'a'
-        result.val == 'b'
-        result.val == 'c'
-        result.val == Channel.STOP
+        result.unwrap() == 'a'
+        result.unwrap() == 'b'
+        result.unwrap() == 'c'
+        result.unwrap() == Channel.STOP
 
         when:
         result = Channel.of([1,2,3])
         then:
-        result.val == [1,2,3]
-        result.val == Channel.STOP
+        result.unwrap() == [1,2,3]
+        result.unwrap() == Channel.STOP
 
         when:
         result = Channel.of([1,2], [3,4])
         then:
-        result.val == [1,2]
-        result.val == [3,4]
-        result.val == Channel.STOP
+        result.unwrap() == [1,2]
+        result.unwrap() == [3,4]
+        result.unwrap() == Channel.STOP
 
         when:
         result = Channel.of([])
         then:
-        result.val == []
-        result.val == Channel.STOP
+        result.unwrap() == []
+        result.unwrap() == Channel.STOP
 
         when:
         result = Channel.of()
         then:
-        result.val == Channel.STOP
+        result.unwrap() == Channel.STOP
 
         when:
         result = Channel.of([1,2,3].toArray())
         then:
-        result.val == 1
-        result.val == 2
-        result.val == 3
-        result.val == Channel.STOP
+        result.unwrap() == 1
+        result.unwrap() == 2
+        result.unwrap() == 3
+        result.unwrap() == Channel.STOP
 
         when:
         result = Channel.of([].toArray())
         then:
-        result.val == Channel.STOP
+        result.unwrap() == Channel.STOP
 
         when:
         result = Channel.of(null)
         then:
-        result.val == null
-        result.val == Channel.STOP
+        result.unwrap() == null
+        result.unwrap() == Channel.STOP
         
 
     }
@@ -111,30 +111,30 @@ class ChannelTest extends Specification {
         when:
         result = Channel.of(1..3)
         then:
-        result.val == 1
-        result.val == 2
-        result.val == 3
-        result.val == Channel.STOP
+        result.unwrap() == 1
+        result.unwrap() == 2
+        result.unwrap() == 3
+        result.unwrap() == Channel.STOP
 
         when:
         result = Channel.of(1..3,'X','Y')
         then:
-        result.val == 1
-        result.val == 2
-        result.val == 3
-        result.val == 'X'
-        result.val == 'Y'
-        result.val == Channel.STOP
+        result.unwrap() == 1
+        result.unwrap() == 2
+        result.unwrap() == 3
+        result.unwrap() == 'X'
+        result.unwrap() == 'Y'
+        result.unwrap() == Channel.STOP
 
         when:
         result = Channel.of(1..3,'X'..'Y')
         then:
-        result.val == 1
-        result.val == 2
-        result.val == 3
-        result.val == 'X'
-        result.val == 'Y'
-        result.val == Channel.STOP
+        result.unwrap() == 1
+        result.unwrap() == 2
+        result.unwrap() == 3
+        result.unwrap() == 'X'
+        result.unwrap() == 'Y'
+        result.unwrap() == Channel.STOP
     }
 
     def 'should create channel from a list'() {
@@ -145,26 +145,26 @@ class ChannelTest extends Specification {
         when:
         result = Channel.fromList(['alpha','delta'])
         then:
-        result.val == 'alpha'
-        result.val == 'delta'
-        result.val == Channel.STOP
+        result.unwrap() == 'alpha'
+        result.unwrap() == 'delta'
+        result.unwrap() == Channel.STOP
 
         when:
         result = Channel.fromList([])
         then:
-        result.val == Channel.STOP
+        result.unwrap() == Channel.STOP
 
         when:
         result = Channel.fromList(null)
         then:
-        result.val == Channel.STOP
+        result.unwrap() == Channel.STOP
 
         when:
         result = Channel.fromList([1..3, 'X'..'Y'])
         then:
-        result.val == 1..3
-        result.val == 'X'..'Y'
-        result.val == Channel.STOP
+        result.unwrap() == 1..3
+        result.unwrap() == 'X'..'Y'
+        result.unwrap() == Channel.STOP
     }
 
     def testFrom() {
@@ -174,27 +174,27 @@ class ChannelTest extends Specification {
         when:
         result = Channel.from('hola')
         then:
-        result.val == 'hola'
-        result.val == Channel.STOP
+        result.unwrap() == 'hola'
+        result.unwrap() == Channel.STOP
 
         when:
         result = Channel.from('alpha','delta')
         then:
-        result.val == 'alpha'
-        result.val == 'delta'
-        result.val == Channel.STOP
+        result.unwrap() == 'alpha'
+        result.unwrap() == 'delta'
+        result.unwrap() == Channel.STOP
 
         when:
         result = Channel.from(['alpha','delta'])
         then:
-        result.val == 'alpha'
-        result.val == 'delta'
-        result.val == Channel.STOP
+        result.unwrap() == 'alpha'
+        result.unwrap() == 'delta'
+        result.unwrap() == Channel.STOP
 
         when:
         result = Channel.from([])
         then:
-        result.val == Channel.STOP
+        result.unwrap() == Channel.STOP
     }
 
     def testSingleFile() {
@@ -202,12 +202,12 @@ class ChannelTest extends Specification {
         when:
         def channel = Channel.fromPath('/some/file.txt')
         then:
-        channel.val == Paths.get('/some/file.txt')
+        channel.unwrap() == Paths.get('/some/file.txt')
 
         when:
         channel = Channel.fromPath('/some/f{i}le.txt')
         then:
-        channel.val == Paths.get('/some/f{i}le.txt')
+        channel.unwrap() == Paths.get('/some/f{i}le.txt')
 
     }
 
@@ -228,42 +228,42 @@ class ChannelTest extends Specification {
         when:
         def result = Channel
                         .fromPath("$folder/{alpha,gamma}.txt")
-                        .toSortedList().getVal().collect { it -> it.name }
+                        .toSortedList().unwrap().collect { it -> it.name }
         then:
         result == [ 'alpha.txt', 'gamma.txt' ]
 
         when:
         result = Channel
                         .fromPath("$folder/file?.txt")
-                        .toSortedList().getVal().collect { it -> it.name }
+                        .toSortedList().unwrap().collect { it -> it.name }
         then:
         result == [ 'file4.txt', 'file5.txt' ]
 
         when:
         result = Channel
                     .fromPath("$folder/file*.txt")
-                    .toSortedList().getVal().collect { it -> it.name }
+                    .toSortedList().unwrap().collect { it -> it.name }
         then:
         result == [ 'file4.txt', 'file5.txt', 'file66.txt' ]
 
         when:
         result = Channel
                 .fromPath("$folder/{alpha,}.txt")
-                .toSortedList().getVal().collect { it -> it.name }
+                .toSortedList().unwrap().collect { it -> it.name }
         then:
         result == ['alpha.txt']
 
         when:
         result = Channel
                 .fromPath("$folder/{,beta}.txt")
-                .toSortedList().getVal().collect { it -> it.name }
+                .toSortedList().unwrap().collect { it -> it.name }
         then:
         result == ['beta.txt']
 
         when:
         result = Channel
                 .fromPath("$folder/alpha.txt{,}")
-                .toSortedList().getVal().collect { it -> it.name }
+                .toSortedList().unwrap().collect { it -> it.name }
         then:
         result == ['alpha.txt']
     }
@@ -276,21 +276,21 @@ class ChannelTest extends Specification {
         when:
         def result = Channel
                 .fromPath([relative:false], 'alpha.txt')
-                .toSortedList().getVal()
+                .toSortedList().unwrap()
         then:
         result*.toString() == [ file1.absolutePath ]
 
         when:
         result = Channel
                 .fromPath([relative:true], 'alpha.txt')
-                .toSortedList().getVal()
+                .toSortedList().unwrap()
         then:
         result*.toString() == [ 'alpha.txt' ]
 
         when:
         result = Channel
                 .fromPath([:], 'alpha.txt') //no relative option set
-                .toSortedList().getVal()
+                .toSortedList().unwrap()
         then:
         result*.toString() == [ file1.absolutePath ]
 
@@ -308,17 +308,17 @@ class ChannelTest extends Specification {
         def file4 = Files.createFile(folder.resolve('gamma.txt'))
 
         when:
-        def result = Channel.fromPath("$folder/*").toSortedList().getVal()
+        def result = Channel.fromPath("$folder/*").toSortedList().unwrap()
         then:
         result == [file3, file4]
 
         when:
-        result = Channel.fromPath("$folder/.*").toSortedList().getVal()
+        result = Channel.fromPath("$folder/.*").toSortedList().unwrap()
         then:
         result == [file1, file2]
 
         when:
-        result = Channel.fromPath("$folder/{.*,*}", hidden: true).toSortedList().getVal()
+        result = Channel.fromPath("$folder/{.*,*}", hidden: true).toSortedList().unwrap()
         then:
         result == [file1, file2, file3, file4]
 
@@ -337,17 +337,17 @@ class ChannelTest extends Specification {
         def file6 = Files.createFile(sub1.resolve('file6.txt'))
 
         when:
-        def result = Channel.fromPath("$folder/*.txt").toSortedList().getVal()
+        def result = Channel.fromPath("$folder/*.txt").toSortedList().unwrap()
         then:
         result == [file1, file2, file3]
 
         when:
-        def result2 = Channel.fromPath("$folder/**.txt").toSortedList().getVal()
+        def result2 = Channel.fromPath("$folder/**.txt").toSortedList().unwrap()
         then:
         result2 == [file1, file2, file3, file6]
 
         when:
-        def result3 = Channel.fromPath("$folder/sub1/**.log").toSortedList().getVal()
+        def result3 = Channel.fromPath("$folder/sub1/**.log").toSortedList().unwrap()
         then:
         result3 == [file5]
 
@@ -365,17 +365,17 @@ class ChannelTest extends Specification {
         def file6 = Files.createFile(sub1.resolve('file6.txt'))
 
         when:
-        def result = Channel.fromPath("$folder/file\\*.txt").toSortedList().getVal()
+        def result = Channel.fromPath("$folder/file\\*.txt").toSortedList().unwrap()
         then:
         result == [file2]
 
         when:
-        result = Channel.fromPath("$folder/file*.txt", glob: false).toSortedList().getVal()
+        result = Channel.fromPath("$folder/file*.txt", glob: false).toSortedList().unwrap()
         then:
         result == [file2]
 
         when:
-        result = Channel.fromPath("$folder/sub\\[a-b\\]/file*").toSortedList().getVal()
+        result = Channel.fromPath("$folder/sub\\[a-b\\]/file*").toSortedList().unwrap()
         then:
         result == [file5,file6]
 
@@ -395,56 +395,56 @@ class ChannelTest extends Specification {
         when:
         List<Path> result = Channel
                                 .fromPath( folder.toAbsolutePath().toString() + '/*.txt' )
-                                .toSortedList().getVal().collect { it.name }
+                                .toSortedList().unwrap().collect { it.name }
         then:
         result == [ 'file1.txt', 'file2.txt' ]
 
         when:
         result = Channel
                     .fromPath( folder.toAbsolutePath().toString() + '/*' )
-                    .toSortedList().getVal().collect { it.name }
+                    .toSortedList().unwrap().collect { it.name }
         then:
         result == [ 'file1.txt', 'file2.txt', 'file3.log' ]
 
         when:
         result = Channel
                     .fromPath( folder.toAbsolutePath().toString() + '/*', type: 'file' )
-                    .toSortedList().getVal().collect { it.name }
+                    .toSortedList().unwrap().collect { it.name }
         then:
         result == [ 'file1.txt', 'file2.txt', 'file3.log' ]
 
         when:
         result = Channel
                     .fromPath( folder.toAbsolutePath().toString() + '/*', type: 'dir' )
-                    .toSortedList().getVal().collect { it.name }
+                    .toSortedList().unwrap().collect { it.name }
         then:
         result == ['sub1']
 
         when:
         result = Channel
                     .fromPath( folder.toAbsolutePath().toString() + '/*', type: 'any' )
-                    .toSortedList().getVal().collect { it.name }
+                    .toSortedList().unwrap().collect { it.name }
         then:
         result == [ 'file1.txt', 'file2.txt', 'file3.log', 'sub1' ]
 
         when:
         result = Channel
                     .fromPath( folder.toAbsolutePath().toString() + '/**', type: 'file' )
-                    .toSortedList() .getVal() .collect { it.name }
+                    .toSortedList() .unwrap() .collect { it.name }
         then:
         result == [ 'file1.txt', 'file2.txt', 'file3.log', 'file5.log' ]
 
         when:
         def result2 = Channel
                     .fromPath( folder.toAbsolutePath().toString() + '/**', type: 'file', maxDepth: 0 )
-                    .toSortedList() .getVal() .collect { it.name }
+                    .toSortedList() .unwrap() .collect { it.name }
         then:
         result2 == ['file1.txt', 'file2.txt', 'file3.log' ]
 
         when:
         def result3 = Channel
                         .fromPath (folder.toAbsolutePath().toString() + '/{file1.txt,sub1/file5.log}')
-                        .toSortedList() .val .collect { it.name }
+                        .toSortedList() .unwrap() .collect { it.name }
         then:
         result3 == ['file1.txt','file5.log']
 
@@ -472,14 +472,14 @@ class ChannelTest extends Specification {
         when:
         List<Path> result = Channel
                 .fromPath( '*.txt' )
-                .toSortedList().getVal().collect { it.toString() }
+                .toSortedList().unwrap().collect { it.toString() }
         then:
         result == [ file1.toString(), file2.toString() ]
 
         when:
         result = Channel
                 .fromPath( '*.txt', relative: true )
-                .toSortedList().getVal().collect { it.toString() }
+                .toSortedList().unwrap().collect { it.toString() }
         then:
         result == [ file1.name, file2.name ]
 
@@ -499,14 +499,14 @@ class ChannelTest extends Specification {
         when:
         List<Path> result = Channel
                 .fromPath( 'file3.log' )
-                .toSortedList().getVal().collect { it.toString() }
+                .toSortedList().unwrap().collect { it.toString() }
         then:
         result == [ file3.toString() ]
 
         when:
         result = Channel
                 .fromPath( 'file3.log', relative: true )
-                .toSortedList().getVal().collect { it.toString() }
+                .toSortedList().unwrap().collect { it.toString() }
         then:
         result == [ file3.name ]
 
@@ -531,13 +531,13 @@ class ChannelTest extends Specification {
         
         // -- by default traverse symlinks
         when:
-        def result = Channel.fromPath( folder.toAbsolutePath().toString() + '/**/*.txt' ).toSortedList({it.name}).getVal().collect { it.getName() }
+        def result = Channel.fromPath( folder.toAbsolutePath().toString() + '/**/*.txt' ).toSortedList({it.name}).unwrap().collect { it.getName() }
         then:
         result == ['file3.txt','file3.txt','file4.txt','file4.txt']
 
         // -- switch off symlinks traversing
         when:
-        def result2 = Channel.fromPath( folder.toAbsolutePath().toString() + '/**/*.txt', followLinks: false ).toSortedList({it.name}).getVal().collect { it.getName() }
+        def result2 = Channel.fromPath( folder.toAbsolutePath().toString() + '/**/*.txt', followLinks: false ).toSortedList({it.name}).unwrap().collect { it.getName() }
         then:
         result2 == ['file3.txt','file4.txt']
 
@@ -554,17 +554,17 @@ class ChannelTest extends Specification {
 
         // -- by default no hidden
         when:
-        def result = Channel.fromPath( folder.toAbsolutePath().toString() + '/*.txt' ).toSortedList({it.name}).getVal().collect { it.getName() }
+        def result = Channel.fromPath( folder.toAbsolutePath().toString() + '/*.txt' ).toSortedList({it.name}).unwrap().collect { it.getName() }
         then:
         result == ['file1.txt','file2.txt']
 
         when:
-        result = Channel.fromPath( folder.toAbsolutePath().toString() + '/.*.txt' ).toSortedList({it.name}).getVal().collect { it.getName() }
+        result = Channel.fromPath( folder.toAbsolutePath().toString() + '/.*.txt' ).toSortedList({it.name}).unwrap().collect { it.getName() }
         then:
         result == ['.file_hidden.txt']
 
         when:
-        result = Channel.fromPath( folder.toAbsolutePath().toString() + '/*.txt', hidden: true ).toSortedList({it.name}).getVal().collect { it.getName() }
+        result = Channel.fromPath( folder.toAbsolutePath().toString() + '/*.txt', hidden: true ).toSortedList({it.name}).unwrap().collect { it.getName() }
         then:
         result == ['.file_hidden.txt', 'file1.txt','file2.txt']
 
@@ -580,17 +580,17 @@ class ChannelTest extends Specification {
         folder.resolve('file3.fq').text = 'Ciao'
 
         when:
-        def result = Channel.fromPath( ["$folder/*.txt", "$folder/*.fq"] ).toSortedList({it.name}).getVal().collect { it.getName() }
+        def result = Channel.fromPath( ["$folder/*.txt", "$folder/*.fq"] ).toSortedList({it.name}).unwrap().collect { it.getName() }
         then:
         result == [ 'file1.txt', 'file2.txt', 'file3.fq' ]
 
         when:
-        result = Channel.fromPath( ["$folder/file1.txt", "$folder/file2.txt", "$folder/file3.fq"] ).toSortedList({it.name}).getVal().collect { it.getName() }
+        result = Channel.fromPath( ["$folder/file1.txt", "$folder/file2.txt", "$folder/file3.fq"] ).toSortedList({it.name}).unwrap().collect { it.getName() }
         then:
         result == [ 'file1.txt', 'file2.txt', 'file3.fq' ]
 
         when:
-        result = Channel.fromPath( ["$folder/*"] ).toSortedList({it.name}).getVal().collect { it.getName() }
+        result = Channel.fromPath( ["$folder/*"] ).toSortedList({it.name}).unwrap().collect { it.getName() }
         then:
         result == [ 'file1.txt', 'file2.txt', 'file3.fq' ]
     }
@@ -611,21 +611,21 @@ class ChannelTest extends Specification {
         when:
         def ch = Channel.fromPath(file1.toString())
         then:
-        ch.getVal() == file1
-        ch.getVal() == Channel.STOP
+        ch.unwrap() == file1
+        ch.unwrap() == Channel.STOP
 
         when:
         ch = Channel.fromPath([file1.toString(), file2.toString()])
         then:
-        ch.getVal() == file1
-        ch.getVal() == file2
-        ch.getVal() == Channel.STOP
+        ch.unwrap() == file1
+        ch.unwrap() == file2
+        ch.unwrap() == Channel.STOP
 
         when:
         ch = Channel.fromPath(file1.toString(), checkIfExists: true)
         then:
-        ch.getVal() == file1
-        ch.getVal() == Channel.STOP
+        ch.unwrap() == file1
+        ch.unwrap() == Channel.STOP
 
         when:
         def session = new Session()
@@ -680,7 +680,7 @@ class ChannelTest extends Specification {
         when:
         def result = Channel.fromPath("$folder/*.txt", checkIfExists: true)
         then:
-        result.getVal() instanceof Path
+        result.unwrap() instanceof Path
         !session.terminated
 
         when:
@@ -743,18 +743,18 @@ class ChannelTest extends Specification {
         when:
         def pairs = Channel.fromFilePairs(folder.resolve("*_{1,2}.*"))
         then:
-        pairs.val == ['alpha', [a1, a2]]
-        pairs.val == ['beta', [b1, b2]]
-        pairs.val == ['delta', [d1, d2]]
-        pairs.val == Channel.STOP
+        pairs.unwrap() == ['alpha', [a1, a2]]
+        pairs.unwrap() == ['beta', [b1, b2]]
+        pairs.unwrap() == ['delta', [d1, d2]]
+        pairs.unwrap() == Channel.STOP
 
         when:
         pairs = Channel.fromFilePairs(folder.resolve("*_{1,2}.fa") , flat: true)
         then:
-        pairs.val == ['alpha', a1, a2]
-        pairs.val == ['beta', b1, b2]
-        pairs.val == ['delta', d1, d2]
-        pairs.val == Channel.STOP
+        pairs.unwrap() == ['alpha', a1, a2]
+        pairs.unwrap() == ['beta', b1, b2]
+        pairs.unwrap() == ['delta', d1, d2]
+        pairs.unwrap() == Channel.STOP
     }
 
     def 'should group files with the same prefix and root path' () {
@@ -771,7 +771,7 @@ class ChannelTest extends Specification {
         SysEnv.push(NXF_FILE_ROOT: folder.toString())
 
         when:
-        def pairs = Channel .fromFilePairs("*_{1,2}.*") .toList(). getVal() .sort { it[0] }
+        def pairs = Channel .fromFilePairs("*_{1,2}.*") .toList() .unwrap() .sort { it[0] }
         then:
         pairs == [
                 ['aa', [a1, a2]],
@@ -797,9 +797,9 @@ class ChannelTest extends Specification {
         def grouping = { Path file -> file.name.substring(0,1) }
         def pairs = Channel.fromFilePairs(folder.resolve("*_{1,2}.*"), grouping, size:-1)
         then:
-        pairs.val == ['c', [c1, c2]]
-        pairs.val == ['h', [a1, a2, b1, b2]]
-        pairs.val == Channel.STOP
+        pairs.unwrap() == ['c', [c1, c2]]
+        pairs.unwrap() == ['h', [a1, a2, b1, b2]]
+        pairs.unwrap() == Channel.STOP
 
     }
 
@@ -824,26 +824,26 @@ class ChannelTest extends Specification {
         // default size == 2
         def pairs = Channel.fromFilePairs(folder.resolve("*_{1,2,3}.fa"))
         then:
-        pairs.val == ['alpha', [a1, a2]]
-        pairs.val == ['beta', [b1, b2]]
-        pairs.val == ['delta', [d1, d2]]
-        pairs.val == Channel.STOP
+        pairs.unwrap() == ['alpha', [a1, a2]]
+        pairs.unwrap() == ['beta', [b1, b2]]
+        pairs.unwrap() == ['delta', [d1, d2]]
+        pairs.unwrap() == Channel.STOP
 
         when:
         pairs = Channel.fromFilePairs(folder.resolve("*_{1,2,3,4}.fa"), size: 3)
         then:
-        pairs.val == ['alpha', [a1, a2, a3]]
-        pairs.val == ['beta', [b1, b2, b3]]
-        pairs.val == ['delta', [d1, d2, d3]]
-        pairs.val == Channel.STOP
+        pairs.unwrap() == ['alpha', [a1, a2, a3]]
+        pairs.unwrap() == ['beta', [b1, b2, b3]]
+        pairs.unwrap() == ['delta', [d1, d2, d3]]
+        pairs.unwrap() == Channel.STOP
 
         when:
         pairs = Channel.fromFilePairs(folder.resolve("*_{1,2,3,4}.fa"), size: -1)
         then:
-        pairs.val == ['alpha', [a1, a2, a3]]
-        pairs.val == ['beta', [b1, b2, b3]]
-        pairs.val == ['delta', [d1, d2, d3, d4]]
-        pairs.val == Channel.STOP
+        pairs.unwrap() == ['alpha', [a1, a2, a3]]
+        pairs.unwrap() == ['beta', [b1, b2, b3]]
+        pairs.unwrap() == ['delta', [d1, d2, d3, d4]]
+        pairs.unwrap() == Channel.STOP
 
     }
 
@@ -864,11 +864,11 @@ class ChannelTest extends Specification {
         when:
         def pairs = Channel.fromFilePairs([folder.resolve("*_{1,2}.fa"), folder.resolve("$folder/*_{1,2}.fq")])
         then:
-        pairs.val == ['alpha', [a1, a2]]
-        pairs.val == ['beta', [b1, b2]]
-        pairs.val == ['delta', [d1, d2]]
-        pairs.val == ['gamma', [g1, g2]]
-        pairs.val == Channel.STOP
+        pairs.unwrap() == ['alpha', [a1, a2]]
+        pairs.unwrap() == ['beta', [b1, b2]]
+        pairs.unwrap() == ['delta', [d1, d2]]
+        pairs.unwrap() == ['gamma', [g1, g2]]
+        pairs.unwrap() == Channel.STOP
 
     }
 
@@ -881,9 +881,9 @@ class ChannelTest extends Specification {
         when:
         def files = Channel.fromFilePairs(folder.resolve('*.fa'), size:1)
         then:
-        files.val == ['alpha_1', [a1]]
-        files.val == ['alpha_2', [a2]]
-        files.val == Channel.STOP
+        files.unwrap() == ['alpha_1', [a1]]
+        files.unwrap() == ['alpha_2', [a2]]
+        files.unwrap() == Channel.STOP
     }
 
     def 'should return singleton' () {
@@ -894,8 +894,8 @@ class ChannelTest extends Specification {
         when:
         def files = Channel.fromFilePairs(a1, size:1)
         then:
-        files.val == ['alpha_1', [a1]]
-        files.val == Channel.STOP
+        files.unwrap() == ['alpha_1', [a1]]
+        files.unwrap() == Channel.STOP
     }
 
     def 'should use size one by default' () {
@@ -906,8 +906,8 @@ class ChannelTest extends Specification {
         when:
         def files = Channel.fromFilePairs(a1)
         then:
-        files.val == ['alpha_1', [a1]]
-        files.val == Channel.STOP
+        files.unwrap() == ['alpha_1', [a1]]
+        files.unwrap() == Channel.STOP
     }
 
     def 'should watch and emit a file' () {
@@ -919,14 +919,14 @@ class ChannelTest extends Specification {
         sleep 500
         Files.createFile(folder.resolve('hello.txt'))
         then:
-        result.val == folder.resolve('hello.txt')
+        result.unwrap() == folder.resolve('hello.txt')
 
         when:
         result = Channel.watchPath(folder.toString())
         sleep 500
         Files.createFile(folder.resolve('ciao.txt'))
         then:
-        result.val == folder.resolve('ciao.txt')
+        result.unwrap() == folder.resolve('ciao.txt')
 
         cleanup:
         folder?.deleteDir()
@@ -938,7 +938,7 @@ class ChannelTest extends Specification {
         when:
         def result = Channel.watchPath("$folder/foo/*")
         then:
-        result.val == Channel.STOP
+        result.unwrap() == Channel.STOP
         cleanup:
         folder?.deleteDir()
     }
@@ -954,10 +954,10 @@ class ChannelTest extends Specification {
         when:
         def result = Channel.fromFilePairs(files)
         then:
-        result.val == ['SRR389222_sub1', [Paths.get('/data/SRR389222_sub1.fastq.gz')]]
-        result.val == ['SRR389222_sub2', [Paths.get('/data/SRR389222_sub2.fastq.gz')]]
-        result.val == ['SRR389222_sub3', [Paths.get('/data/SRR389222_sub3.fastq.gz')]]
-        result.val == Channel.STOP
+        result.unwrap() == ['SRR389222_sub1', [Paths.get('/data/SRR389222_sub1.fastq.gz')]]
+        result.unwrap() == ['SRR389222_sub2', [Paths.get('/data/SRR389222_sub2.fastq.gz')]]
+        result.unwrap() == ['SRR389222_sub3', [Paths.get('/data/SRR389222_sub3.fastq.gz')]]
+        result.unwrap() == Channel.STOP
     }
 
     def 'should check file pair exists' () {
@@ -984,9 +984,9 @@ class ChannelTest extends Specification {
         when:
         def result = Channel.fromFilePairs([ftp1, ftp2])
         then:
-        result.val == ['SRR389222_sub1', [ftp1]]
-        result.val == ['SRR389222_sub2', [ftp2]]
-        result.val == Channel.STOP
+        result.unwrap() == ['SRR389222_sub1', [ftp1]]
+        result.unwrap() == ['SRR389222_sub2', [ftp2]]
+        result.unwrap() == Channel.STOP
 
     }
 

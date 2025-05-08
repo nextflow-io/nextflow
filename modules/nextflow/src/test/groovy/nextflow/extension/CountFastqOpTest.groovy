@@ -16,6 +16,7 @@
 
 package nextflow.extension
 
+import nextflow.Session
 import spock.lang.Specification
 
 import nextflow.Channel
@@ -27,8 +28,11 @@ import test.TestHelper
  */
 class CountFastqOpTest extends Specification {
 
-    def 'should count fastq records' () {
+    def setup() {
+        new Session()
+    }
 
+    def 'should count fastq records' () {
         given:
         String READS = '''
         @SRR636272.19519409/1
@@ -68,8 +72,7 @@ class CountFastqOpTest extends Specification {
         when:
         def result = Channel.of( READS, READS2 ).countFastq()
         then:
-        result.val == 7
-
+        result.unwrap() == 7
     }
 
     def 'should count fastq records from files' () {
@@ -124,7 +127,7 @@ class CountFastqOpTest extends Specification {
         when:
         def result = Channel.of(file1, file2).countFastq()
         then:
-        result.val == 9
+        result.unwrap() == 9
 
     }
 }

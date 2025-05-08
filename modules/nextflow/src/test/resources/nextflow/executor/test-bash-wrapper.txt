@@ -2,6 +2,7 @@
 #BSUB -x 1
 #BSUB -y 2
 ### ---
+### id: '100'
 ### name: 'Hello 1'
 ### ...
 set -e
