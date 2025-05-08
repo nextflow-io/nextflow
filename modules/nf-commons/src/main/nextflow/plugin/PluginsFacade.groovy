@@ -117,7 +117,6 @@ class PluginsFacade implements PluginStateListener {
         return hostname.endsWith('.nextflow.io')
             || hostname.endsWith('.nextflow.com')
             || hostname.endsWith('.seqera.io')
-            || hostname.endsWith('.seqera.com')
     }
 
     protected String getPluginsIndexUrl() {
