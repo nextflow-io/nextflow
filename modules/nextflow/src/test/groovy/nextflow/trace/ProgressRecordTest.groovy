@@ -57,8 +57,9 @@ class ProgressRecordTest extends Specification {
         def SUBMITTED = 2
         def RUNNING = 3
         def SUCCEEDED = 4
-        def FAILED = 5
-        def IGNORED = 6
+        def FAILED = 7
+        def IGNORED = 5
+        def RETRIES = 1
         def CACHED = 7
         def STORED = 8
         def ABORTED = 9
@@ -72,13 +73,14 @@ class ProgressRecordTest extends Specification {
         rec.succeeded = SUCCEEDED
         rec.failed = FAILED
         rec.ignored = IGNORED
+        rec.retries = RETRIES
         rec.cached = CACHED
         rec.stored = STORED
         rec.aborted = ABORTED
 
         then:
         rec.getCompletedCount() == SUCCEEDED + IGNORED + CACHED + STORED
-        rec.getTotalCount() == PENDING + SUBMITTED + RUNNING  + SUCCEEDED + IGNORED + CACHED + STORED + ABORTED
+        rec.getTotalCount() == PENDING + SUBMITTED + RUNNING  + SUCCEEDED + FAILED - RETRIES + CACHED + STORED + ABORTED
     }
 
 
