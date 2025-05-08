@@ -181,8 +181,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         if( node.main instanceof BlockStatement block )
             copyVariableScope(block.getVariableScope());
 
-        visitWorkflowEmits(node.emits);
-        visit(node.publishers);
+        visitWorkflowOutputs(node.emits, "emit");
+        visitWorkflowOutputs(node.publishers, "output");
 
         currentDefinition = null;
         vsc.popScope();
@@ -204,24 +204,24 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         }
     }
 
-    private void visitWorkflowEmits(Statement emits) {
-        var declaredEmits = new HashMap<String,ASTNode>();
-        for( var stmt : asBlockStatements(emits) ) {
-            var stmtX = (ExpressionStatement)stmt;
-            var emit = stmtX.getExpression();
-            if( emit instanceof AssignmentExpression assign ) {
+    private void visitWorkflowOutputs(Statement outputs, String typeLabel) {
+        var declaredOutputs = new HashMap<String,ASTNode>();
+        for( var stmt : asBlockStatements(outputs) ) {
+            var es = (ExpressionStatement)stmt;
+            var output = es.getExpression();
+            if( output instanceof AssignmentExpression assign ) {
                 visit(assign.getRightExpression());
 
                 var target = (VariableExpression)assign.getLeftExpression();
                 var name = target.getName();
-                var other = declaredEmits.get(name);
+                var other = declaredOutputs.get(name);
                 if( other != null )
-                    vsc.addError("Workflow emit `" + name + "` is already declared", target, "First declared here", other);
+                    vsc.addError("Workflow " + typeLabel + " `" + name + "` is already declared", target, "First declared here", other);
                 else
-                    declaredEmits.put(name, target);
+                    declaredOutputs.put(name, target);
             }
             else {
-                visit(emit);
+                visit(output);
             }
         }
     }
@@ -318,7 +318,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         if( mn != null )
             call.putNodeMetaData(ASTNodeMarker.METHOD_TARGET, mn);
         else
-            vsc.addError("Invalid " + typeLabel + " `" + name + "`", node);
+            vsc.addError("Unrecognized " + typeLabel + " `" + name + "`", node);
         return call;
     }
 
@@ -354,27 +354,13 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitOutput(OutputNode node) {
-        if( node.body instanceof BlockStatement block )
-            visitOutputBody(block);
-    }
-
-    private void visitOutputBody(BlockStatement block) {
-        block.setVariableScope(currentScope());
-
-        asDirectives(block).forEach((call) -> {
-            var code = asDslBlock(call, 1);
-            if( code != null )
-                visitTargetBody(code);
-        });
-    }
-
-    private void visitTargetBody(BlockStatement block) {
         vsc.pushScope(OutputDsl.class);
+        var block = (BlockStatement) node.body;
         block.setVariableScope(currentScope());
 
         asBlockStatements(block).forEach((stmt) -> {
-            // validate target directive
-            var call = checkDirective(stmt, "output target directive", true);
+            // validate output directive
+            var call = checkDirective(stmt, "output directive", true);
             if( call == null )
                 return;
 
@@ -423,10 +409,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             var target = ae.getLeftExpression();
             visit(source);
             if( checkImplicitDeclaration(target) ) {
-                var de = new DeclarationExpression(target, ae.getOperation(), source);
-                de.setSourcePosition(ae);
-                de.putNodeMetaData(ASTNodeMarker.IMPLICIT_DECLARATION, Boolean.TRUE);
-                node.setExpression(de);
+                ae.putNodeMetaData(ASTNodeMarker.IMPLICIT_DECLARATION, Boolean.TRUE);
             }
             else {
                 visitMutatedVariable(target);
@@ -441,16 +424,16 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
      * In processes and workflows, variables can be declared without `def`
      * and are treated as variables scoped to the process or workflow.
      *
-     * @param node
+     * @param target
      */
-    private boolean checkImplicitDeclaration(Expression node) {
-        if( node instanceof TupleExpression te ) {
+    private boolean checkImplicitDeclaration(Expression target) {
+        if( target instanceof TupleExpression te ) {
             var result = false;
             for( var el : te.getExpressions() )
                 result |= declareAssignedVariable((VariableExpression) el);
             return result;
         }
-        else if( node instanceof VariableExpression ve ) {
+        else if( target instanceof VariableExpression ve ) {
             return declareAssignedVariable(ve);
         }
         return false;
@@ -466,7 +449,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         }
         else if( currentDefinition instanceof ProcessNode || currentDefinition instanceof WorkflowNode ) {
             if( currentClosure != null )
-                addError("Variables in a closure should be declared with `def`", ve);
+                vsc.addError("Variables in a closure should be declared with `def`", ve);
             var scope = currentScope();
             currentScope(currentDefinition.getVariableScope());
             vsc.declare(ve);
@@ -506,10 +489,10 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         var variable = vsc.findVariableDeclaration(target.getName(), target);
         if( isDslVariable(variable) ) {
             if( "params".equals(variable.getName()) )
-                sourceUnit.addWarning("Params should be declared at the top-level (i.e. outside the workflow)", target);
+                vsc.addWarning("Params should be declared at the top-level (i.e. outside the workflow)", target.getName(), target);
             // TODO: re-enable after workflow.onComplete bug is fixed
             // else
-            //     addError("Built-in variable cannot be mutated", target);
+            //     vsc.addError("Built-in variable cannot be mutated", target);
         }
         else if( variable != null ) {
             checkExternalWriteInAsyncClosure(target, variable);
@@ -524,7 +507,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         var scope = currentClosure.getVariableScope();
         var name = variable.getName();
         if( inOperatorCall && scope.isReferencedLocalVariable(name) && scope.getDeclaredVariable(name) == null )
-            sourceUnit.addWarning("Mutating an external variable in an operator closure can lead to a race condition", target);
+            vsc.addWarning("Mutating an external variable in an operator closure can lead to a race condition", target.getName(), target);
     }
 
     // expressions
@@ -577,7 +560,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         if( !node.isImplicitThis() )
             return;
         var name = node.getMethodAsString();
-        var mn = vsc.findDslFunction(name, node);
+        var mn = vsc.findDslFunction(name, node.getMethod());
         if( mn != null ) {
             if( VariableScopeChecker.isDataflowMethod(mn) )
                 checkDataflowMethod(node, mn);
@@ -685,7 +668,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         var mn = asMethodVariable(variable);
         if( mn != null && mn.getDeclaringClass().getTypeClass() == ScriptDsl.class ) {
             if( WARN_GLOBALS.contains(variable.getName()) )
-                sourceUnit.addWarning("The use of `" + variable.getName() + "` in a process is discouraged -- input files should be provided as process inputs", context);
+                vsc.addWarning("The use of `" + variable.getName() + "` in a process is discouraged -- input files should be provided as process inputs", variable.getName(), context);
         }
     }
 

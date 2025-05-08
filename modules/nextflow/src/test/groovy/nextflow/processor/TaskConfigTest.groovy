@@ -15,11 +15,11 @@
  */
 
 package nextflow.processor
+
 import java.nio.file.Paths
 
 import nextflow.exception.FailedGuardException
 import nextflow.exception.ProcessUnrecoverableException
-import nextflow.k8s.model.PodOptions
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
 import nextflow.script.TaskClosure
@@ -409,7 +409,7 @@ class TaskConfigTest extends Specification {
         config.put('when', closure)
 
         when:
-        config.getGuard('when')
+        config.getWhenGuard()
         then:
         FailedGuardException ex = thrown()
         ex.source == '{closure source code}'
@@ -417,12 +417,12 @@ class TaskConfigTest extends Specification {
         when:
         config.context = [x: 'Hello', count: 1]
         then:
-        config.getGuard('when')
+        config.getWhenGuard()
 
         when:
         config.context = [x: 'Hello', count: 3]
         then:
-        !config.getGuard('when')
+        !config.getWhenGuard()
     }
 
     def 'should create ext config properties' () {
@@ -545,9 +545,9 @@ class TaskConfigTest extends Specification {
                     [secret: 'foo', mountPath: '/this'],
                     [secret: 'bar', env: 'BAR_XXX'] ]
 
-        process.createTaskConfig().getPodOptions() == new PodOptions([
-                    [secret: 'foo', mountPath: '/this'],
-                    [secret: 'bar', env: 'BAR_XXX'] ])
+        process.createTaskConfig().get('pod') == [
+            [secret: 'foo', mountPath: '/this'],
+            [secret: 'bar', env: 'BAR_XXX'] ]
     }
 
     def 'should get gpu resources' () {

@@ -183,15 +183,19 @@ public class Formatter extends CodeVisitorSupport {
         currentRootExpr = node.getExpression();
         appendLeadingComments(node);
         appendIndent();
-        if( node.getStatementLabels() != null ) {
-            for( var label : node.getStatementLabels() ) {
-                append(label);
-                append(": ");
-            }
-        }
+        visitStatementLabels(node);
         visit(node.getExpression());
         appendNewLine();
         currentRootExpr = cre;
+    }
+
+    private void visitStatementLabels(ExpressionStatement node) {
+        if( node.getStatementLabels() == null )
+            return;
+        for( var label : DefaultGroovyMethods.asReversed(node.getStatementLabels()) ) {
+            append(label);
+            append(": ");
+        }
     }
 
     @Override
@@ -213,7 +217,7 @@ public class Formatter extends CodeVisitorSupport {
         append("assert ");
         visit(node.getBooleanExpression());
         if( !(node.getMessageExpression() instanceof ConstantExpression ce && ce.isNullExpression()) ) {
-            append(", ");
+            append(" : ");
             visit(node.getMessageExpression());
         }
         appendNewLine();
@@ -276,11 +280,14 @@ public class Formatter extends CodeVisitorSupport {
             inWrappedMethodChain = true;
 
         if( !node.isImplicitThis() ) {
-            visit(node.getObjectExpression());
+            var receiver = node.getObjectExpression();
+            visit(receiver);
             if( inWrappedMethodChain ) {
-                appendNewLine();
                 incIndent();
-                appendIndent();
+                if( !(receiver instanceof ClassExpression) ) {
+                    appendNewLine();
+                    appendIndent();
+                }
             }
             if( node.isSpreadSafe() )
                 append('*');
@@ -364,8 +371,7 @@ public class Formatter extends CodeVisitorSupport {
     @Override
     public void visitBinaryExpression(BinaryExpression node) {
         if( node instanceof DeclarationExpression ) {
-            if( node.getNodeMetaData(ASTNodeMarker.IMPLICIT_DECLARATION) != Boolean.TRUE )
-                append("def ");
+            append("def ");
             inVariableDeclaration = true;
             visit(node.getLeftExpression());
             inVariableDeclaration = false;
@@ -477,6 +483,7 @@ public class Formatter extends CodeVisitorSupport {
         }
         else if( code.getStatements().size() == 1 && code.getStatements().get(0) instanceof ExpressionStatement es && !shouldWrapExpression(node) ) {
             append(' ');
+            visitStatementLabels(es);
             visit(es.getExpression());
             append(" }");
         }

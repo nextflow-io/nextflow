@@ -15,8 +15,6 @@
  */
 package nextflow.script.control;
 
-import java.util.Optional;
-
 import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
@@ -24,10 +22,14 @@ import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
+import nextflow.script.types.TypeChecker;
 import nextflow.script.types.Types;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.Variable;
+import org.codehaus.groovy.ast.expr.BinaryExpression;
+import org.codehaus.groovy.ast.expr.DeclarationExpression;
+import org.codehaus.groovy.ast.expr.EmptyExpression;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.PropertyExpression;
@@ -81,6 +83,18 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             addError("Type mismatch for feature flag '" + node.name + "' -- expected a " + Types.getName(expectedType) + " but received a " + Types.getName(actualType), node);
     }
 
+    // statements
+
+    @Override
+    public void visitExpressionStatement(ExpressionStatement node) {
+        var exp = node.getExpression();
+        if( exp instanceof AssignmentExpression ae && ae.getNodeMetaData(ASTNodeMarker.IMPLICIT_DECLARATION) != null ) {
+            applyDeclaration(ae);
+            return;
+        }
+        super.visitExpressionStatement(node);
+    }
+
     // expressions
 
     @Override
@@ -93,83 +107,44 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
 
     private void checkMethodCallArguments(MethodCallExpression node, MethodNode defNode) {
         var argsCount = asMethodCallArguments(node).size();
-        var paramsCount = numberOfParameters(defNode);
+        var paramsCount = defNode.getParameters().length;
         if( argsCount != paramsCount )
             addError(String.format("Incorrect number of call arguments, expected %d but received %d", paramsCount, argsCount), node);
     }
 
-    private static int numberOfParameters(MethodNode node) {
-        if( node instanceof ProcessNode pn ) {
-            return (int) asBlockStatements(pn.inputs).size();
-        }
-        if( node instanceof WorkflowNode wn ) {
-            return (int) asBlockStatements(wn.takes).size();
-        }
-        return node.getParameters().length;
+    @Override
+    public void visitDeclarationExpression(DeclarationExpression node) {
+        applyDeclaration(node);
+    }
+
+    private void applyDeclaration(BinaryExpression node) {
+        var target = node.getLeftExpression();
+        var source = node.getRightExpression();
+        if( source instanceof EmptyExpression )
+            return;
+        visit(target);
+        visit(source);
+        var sourceType = TypeChecker.getType(source);
+        target.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, sourceType);
     }
 
     @Override
     public void visitPropertyExpression(PropertyExpression node) {
-        var mn = asMethodOutput(node);
-        if( mn instanceof ProcessNode pn )
-            checkProcessOut(node, pn);
-        else if( mn instanceof WorkflowNode wn )
-            checkWorkflowOut(node, wn);
-        else
-            super.visitPropertyExpression(node);
-    }
+        super.visitPropertyExpression(node);
 
-    private MethodNode asMethodOutput(PropertyExpression node) {
-        if( node.getObjectExpression() instanceof PropertyExpression pe ) {
-            if( pe.getObjectExpression() instanceof VariableExpression ve && "out".equals(pe.getPropertyAsString()) )
-                return asMethodVariable(ve.getAccessedVariable());
+        if( TypeChecker.getType(node) == null ) {
+            var mn = asMethodNamedOutput(node);
+            var property = node.getPropertyAsString();
+            if( mn instanceof ProcessNode pn )
+                addError("Unrecognized output `" + property + "` for process `" + pn.getName() + "`", node);
+            else if( mn instanceof WorkflowNode wn )
+                addError("Unrecognized output `" + property + "` for workflow `" + wn.getName() + "`", node);
         }
-        return null;
     }
 
-    private void checkProcessOut(PropertyExpression node, ProcessNode process) {
-        var property = node.getPropertyAsString();
-        var result = asDirectives(process.outputs)
-            .filter(call -> property.equals(getProcessEmitName(call)))
-            .findFirst();
-
-        if( !result.isPresent() )
-            addError("Unrecognized output `" + property + "` for process `" + process.getName() + "`", node);
-    }
-
-    private String getProcessEmitName(MethodCallExpression output) {
-        return Optional.of(output)
-            .flatMap(call -> Optional.ofNullable(asNamedArgs(call)))
-            .flatMap(namedArgs ->
-                namedArgs.stream()
-                    .filter(entry -> "emit".equals(entry.getKeyExpression().getText()))
-                    .findFirst()
-            )
-            .flatMap(entry -> Optional.ofNullable(
-                entry.getValueExpression() instanceof VariableExpression ve ? ve.getName() : null
-            ))
-            .orElse(null);
-    }
-
-    private void checkWorkflowOut(PropertyExpression node, WorkflowNode workflow) {
-        var property = node.getPropertyAsString();
-        var result = asBlockStatements(workflow.emits).stream()
-            .map(stmt -> ((ExpressionStatement) stmt).getExpression())
-            .filter(emit -> property.equals(getWorkflowEmitName(emit)))
-            .findFirst();
-
-        if( !result.isPresent() )
-            addError("Unrecognized output `" + property + "` for workflow `" + workflow.getName() + "`", node);
-    }
-
-    private String getWorkflowEmitName(Expression emit) {
-        if( emit instanceof VariableExpression ve ) {
-            return ve.getName();
-        }
-        else if( emit instanceof AssignmentExpression ae ) {
-            var left = (VariableExpression)ae.getLeftExpression();
-            return left.getName();
-        }
+    private static MethodNode asMethodNamedOutput(PropertyExpression node) {
+        if( node.getObjectExpression() instanceof PropertyExpression pe )
+            return asMethodOutput(pe);
         return null;
     }
 

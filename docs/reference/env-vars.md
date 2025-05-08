@@ -145,6 +145,11 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_PID_FILE`
 : Name of the file where the process PID is saved when Nextflow is launched in background.
 
+`NXF_PLUGINS_ALLOWED`
+: :::{versionadded} 25.04.0
+  :::
+: Comma separated list of plugin IDs that can be used in a workflow executions e.g. `NXF_PLUGINS_ALLOWED=nf-amazon,nf-tower,nf-wave`. Use empty string to disallow all plugins.
+
 `NXF_PLUGINS_DEFAULT`
 : Whether to use the default plugins when no plugins are specified in the Nextflow configuration (default: `true`).
 
@@ -185,7 +190,7 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_SYNTAX_PARSER`
 : :::{versionadded} 25.02.0-edge
   :::
-: Set to `'v2'` to use the {ref}`strict syntax <updating-syntax-page>` for Nextflow scripts and config files (default: `'v1'`).
+: Set to `'v2'` to use the {ref}`strict syntax <strict-syntax-page>` for Nextflow scripts and config files (default: `'v1'`).
 
 `NXF_TEMP`
 : Directory where temporary files are stored

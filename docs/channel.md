@@ -20,7 +20,7 @@ In Nextflow there are two kinds of channels: *queue channels* and *value channel
 ### Queue channel
 
 A *queue channel* is a non-blocking unidirectional FIFO queue connecting a *producer* process (i.e. outputting a value)
-to a consumer process, or an operators.
+to a consumer process or an operator.
 
 A queue channel can be created by factory methods ({ref}`channel-of`, {ref}`channel-path`, etc), operators ({ref}`operator-map`, {ref}`operator-flatmap`, etc), and processes (see {ref}`Process outputs <process-output>`).
 
@@ -66,15 +66,11 @@ See also: {ref}`process-multiple-input-channels`.
 
 Channel factories are functions that can create channels.
 
-For example, the `Channel.of()` factory can be used to create a channel from an arbitrary list of arguments:
+For example, the `channel.of()` factory can be used to create a channel from an arbitrary list of arguments:
 
 ```nextflow
-Channel.of(1, 2, 3).view()
+channel.of(1, 2, 3).view()
 ```
-
-:::{versionadded} 20.07.0
-`channel` was introduced as an alias of `Channel`, allowing factory methods to be specified as `channel.of()` or `Channel.of()`, and so on.
-:::
 
 See {ref}`channel-factory` for the full list of channel factories.
 

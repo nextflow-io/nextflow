@@ -238,7 +238,7 @@ public class ConfigAstBuilder {
             .toList();
         var result = ast( new ConfigApplyBlockNode(name, statements), ctx );
         if( !"plugins".equals(name) )
-            collectSyntaxError(new SyntaxException("Config directives (i.e. statements without `=`) are only allowed in the `plugins` scope", result));
+            collectSyntaxError(new SyntaxException("Config settings must be assigned with an equals sign (`=`)", result));
         return result;
     }
 
@@ -501,36 +501,36 @@ public class ConfigAstBuilder {
     }
 
     private Statement assignment(MultipleAssignmentStatementContext ctx) {
-        var left = variableNames(ctx.variableNames());
-        var right = expression(ctx.expression());
-        return stmt(ast( assignX(left, right), ctx ));
+        var target = variableNames(ctx.variableNames());
+        var source = expression(ctx.expression());
+        return stmt(ast( assignX(target, source), ctx ));
     }
 
     private Statement assignment(AssignmentStatementContext ctx) {
-        var left = expression(ctx.left);
-        if( left instanceof VariableExpression && isInsideParentheses(left) ) {
-            if( left.<Number>getNodeMetaData(ASTNodeMarker.INSIDE_PARENTHESES_LEVEL).intValue() > 1 )
+        var target = expression(ctx.target);
+        if( target instanceof VariableExpression && isInsideParentheses(target) ) {
+            if( target.<Number>getNodeMetaData(ASTNodeMarker.INSIDE_PARENTHESES_LEVEL).intValue() > 1 )
                 throw createParsingFailedException("Nested parenthesis is not allowed in multiple assignment, e.g. ((a)) = b", ctx);
 
-            var tuple = ast( new TupleExpression(left), ctx.left );
-            return stmt(ast( binX(tuple, token(ctx.op), expression(ctx.right)), ctx ));
+            var tuple = ast( new TupleExpression(target), ctx.target );
+            return stmt(ast( binX(tuple, token(ctx.op), expression(ctx.source)), ctx ));
         }
 
-        if ( isAssignmentLhsValid(left) )
-            return stmt(ast( binX(left, token(ctx.op), expression(ctx.right)), ctx ));
+        if ( isValidAssignmentTarget(target) )
+            return stmt(ast( binX(target, token(ctx.op), expression(ctx.source)), ctx ));
 
         throw createParsingFailedException("Invalid assignment target -- must be a variable, index, or property expression", ctx);
     }
 
-    private boolean isAssignmentLhsValid(Expression left) {
+    private boolean isValidAssignmentTarget(Expression target) {
         // e.g. p = 123
-        if( left instanceof VariableExpression && !isInsideParentheses(left) )
+        if( target instanceof VariableExpression && !isInsideParentheses(target) )
             return true;
         // e.g. obj.p = 123
-        if( left instanceof PropertyExpression )
+        if( target instanceof PropertyExpression )
             return true;
         // e.g. map[a] = 123 OR map['a'] = 123 OR map["$a"] = 123
-        if( left instanceof BinaryExpression be && be.getOperation().getType() == Types.LEFT_SQUARE_BRACKET )
+        if( target instanceof BinaryExpression be && be.getOperation().getType() == Types.LEFT_SQUARE_BRACKET )
             return true;
         return false;
     }
@@ -833,27 +833,33 @@ public class ConfigAstBuilder {
     }
 
     private Expression integerLiteral(IntegerLiteralAltContext ctx) {
+        var text = ctx.getText();
         Number num = null;
         try {
-            num = Numbers.parseInteger(ctx.getText());
+            num = Numbers.parseInteger(text);
         }
         catch( Exception e ) {
             numberFormatError = new Tuple2(ctx, e);
         }
 
-        return constX(num, true);
+        var result = constX(num, true);
+        result.putNodeMetaData(ASTNodeMarker.VERBATIM_TEXT, text);
+        return result;
     }
 
     private Expression floatingPointLiteral(FloatingPointLiteralAltContext ctx) {
+        var text = ctx.getText();
         Number num = null;
         try {
-            num = Numbers.parseDecimal(ctx.getText());
+            num = Numbers.parseDecimal(text);
         }
         catch( Exception e ) {
             numberFormatError = new Tuple2(ctx, e);
         }
 
-        return constX(num, true);
+        var result = constX(num, true);
+        result.putNodeMetaData(ASTNodeMarker.VERBATIM_TEXT, text);
+        return result;
     }
 
     private ConstantExpression string(ParserRuleContext ctx) {
@@ -1432,15 +1438,6 @@ public class ConfigAstBuilder {
             public void syntaxError(Recognizer recognizer, Object offendingSymbol, int line, int charPositionInLine, String msg, RecognitionException e) {
                 collectSyntaxError(new SyntaxException(msg, line, charPositionInLine + 1));
             }
-
-            @Override
-            public void reportAmbiguity(Parser recognizer, DFA dfa, int startIndex, int stopIndex, boolean exact, BitSet ambigAlts, ATNConfigSet configs) {}
-
-            @Override
-            public void reportAttemptingFullContext(Parser recognizer, DFA dfa, int startIndex, int stopIndex, BitSet conflictingAlts, ATNConfigSet configs) {}
-
-            @Override
-            public void reportContextSensitivity(Parser recognizer, DFA dfa, int startIndex, int stopIndex, int prediction, ATNConfigSet configs) {}
         };
     }
 

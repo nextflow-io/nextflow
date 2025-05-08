@@ -1,4 +1,4 @@
-Channel.of( 1, 2, 3, 4 )
+channel.of( 1, 2, 3, 4 )
     .multiMap { v ->
         foo: v + 1
         bar: v * v

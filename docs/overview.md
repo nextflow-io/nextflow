@@ -55,7 +55,7 @@ process extractTopHits {
 }
 
 workflow {
-  def query_ch = Channel.fromPath(params.query)
+  def query_ch = channel.fromPath(params.query)
   blastSearch(query_ch, params.db)
   extractTopHits(blastSearch.out, params.db).view()
 }

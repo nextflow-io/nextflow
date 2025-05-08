@@ -30,7 +30,6 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.AcceleratorResource
 import nextflow.executor.res.DiskResource
-import nextflow.k8s.model.PodOptions
 import nextflow.script.TaskClosure
 import nextflow.util.CmdLineHelper
 import nextflow.util.CmdLineOptionMap
@@ -499,10 +498,6 @@ class TaskConfig extends LazyMap implements Cloneable {
         get('retryCount') as Integer ?: 0
     }
 
-    PodOptions getPodOptions() {
-        new PodOptions((List)get('pod'))
-    }
-
     AcceleratorResource getAccelerator() {
         final value = get('accelerator')
         if( value instanceof Number )
@@ -550,17 +545,17 @@ class TaskConfig extends LazyMap implements Cloneable {
     }
 
     /**
-     * Get a closure guard condition and evaluate to a boolean result
+     * Get the when guard condition if present and evaluate it
      *
-     * @param name The name of the guard to test e.g. {@code when}
      * @return {@code true} when the condition is verified
      */
-    protected boolean getGuard( String name, boolean defValue=true ) throws FailedGuardException {
+    protected boolean getWhenGuard(boolean defValue=true) throws FailedGuardException {
 
-        final code = target.get(name)
+        final code = target.get(NextflowDSLImpl.PROCESS_WHEN)
         if( code == null )
             return defValue
 
+        log.warn1 "The `when` process section is deprecated -- use conditional logic in the calling workflow instead"
         String source = null
         try {
             if( code instanceof Closure ) {
@@ -571,7 +566,7 @@ class TaskConfig extends LazyMap implements Cloneable {
             return code as Boolean
         }
         catch( Throwable e ) {
-            throw new FailedGuardException("Cannot evaluate `$name` expression", source, e)
+            throw new FailedGuardException("Cannot evaluate `when` expression", source, e)
         }
     }
 

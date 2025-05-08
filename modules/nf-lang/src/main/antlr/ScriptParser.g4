@@ -266,11 +266,12 @@ outputDef
     ;
 
 outputBody
-    :   sep? outputTargetBody (sep outputTargetBody)*
+    :   sep? outputDeclaration (sep outputDeclaration)*
     ;
 
-outputTargetBody
-    : statement
+outputDeclaration
+    :   identifier LBRACE nls blockStatements? RBRACE
+    |   statement
     ;
 
 // -- function definition
@@ -281,7 +282,7 @@ functionDef
 
 // -- incomplete script declaration
 incompleteScriptDeclaration
-    :   identifier (DOT identifier)* DOT?
+    :   identifier (DOT identifier)* DOT
     ;
 
 
@@ -349,7 +350,7 @@ multipleAssignmentStatement
     ;
 
 assignmentStatement
-    :   left=expression nls
+    :   target=expression nls
         op=(ASSIGN
         |   ADD_ASSIGN
         |   SUB_ASSIGN
@@ -365,7 +366,7 @@ assignmentStatement
         |   POWER_ASSIGN
         |   ELVIS_ASSIGN
         ) nls
-        right=expression
+        source=expression
     ;
 
 // -- expression statement
@@ -497,7 +498,7 @@ indexPropertyArgs
     :   LBRACK expressionList RBRACK
     ;
 
-// -- variable, type identifiers
+// -- variable, function, type identifiers
 identifier
     :   Identifier
     |   CapitalizedIdentifier

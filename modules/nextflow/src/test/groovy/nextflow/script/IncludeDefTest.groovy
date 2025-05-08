@@ -24,7 +24,7 @@ class IncludeDefTest extends Specification {
 
         given:
         def script = '/some/path/main.nf' as Path
-        def include = Spy(IncludeDef)
+        def include = Spy(new IncludeDef([]))
         include.getOwnerPath() >> script
 
         expect:
@@ -46,7 +46,7 @@ class IncludeDefTest extends Specification {
         def script = folder.resolve('main.nf'); script.text = 'echo ciao'
         def module = folder.resolve('mod-x.nf'); module.text = 'blah blah'
 
-        def include = Spy(IncludeDef)
+        def include = Spy(new IncludeDef([]))
         include.getOwnerPath() >> script
         
         when:
@@ -76,7 +76,7 @@ class IncludeDefTest extends Specification {
         module.text = "I'm the module script"
 
         and:
-        def include = Spy(IncludeDef)
+        def include = Spy(new IncludeDef([]))
         include.getOwnerPath() >> script
 
         // when the module name reference a directory that contains
@@ -101,7 +101,7 @@ class IncludeDefTest extends Specification {
 
     def 'should check valid path' () {
         given:
-        def include = Spy(IncludeDef)
+        def include = new IncludeDef([])
 
         when:
         include.checkValidPath('./module.nf')
@@ -141,8 +141,8 @@ class IncludeDefTest extends Specification {
         boolean loadInvoked
 
         TestInclude(IncludeDef include) {
+            super(include.modules)
             this.path = include.path
-            this.modules = include.modules
         }
 
         @Override

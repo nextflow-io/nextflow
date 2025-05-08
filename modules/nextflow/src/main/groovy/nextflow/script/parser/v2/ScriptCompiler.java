@@ -36,6 +36,7 @@ import nextflow.script.control.Compiler;
 import nextflow.script.control.ModuleResolver;
 import nextflow.script.control.ResolveIncludeVisitor;
 import nextflow.script.control.ScriptResolveVisitor;
+import nextflow.script.control.ScriptToGroovyVisitor;
 import nextflow.script.control.TypeCheckingVisitor;
 import nextflow.script.parser.ScriptParserPluginFactory;
 import org.codehaus.groovy.ast.ASTNode;
@@ -70,7 +71,7 @@ public class ScriptCompiler {
         "nextflow.util.MemoryUnit"
     );
     private static final String MAIN_CLASS_NAME = "Main";
-    private static final String SCRIPT_BASE_CLASS = "nextflow.script.BaseScript";
+    private static final String BASE_CLASS_NAME = "nextflow.script.BaseScript";
 
     private final CompilerConfiguration config;
     private final GroovyClassLoader loader;
@@ -95,7 +96,7 @@ public class ScriptCompiler {
 
         var config = new CompilerConfiguration();
         config.addCompilationCustomizers(importCustomizer);
-        config.setScriptBaseClass(SCRIPT_BASE_CLASS);
+        config.setScriptBaseClass(BASE_CLASS_NAME);
         config.setPluginFactory(new ScriptParserPluginFactory());
         config.setDebug(debug);
         if( targetDirectory != null )
@@ -104,22 +105,12 @@ public class ScriptCompiler {
         return config;
     }
 
-    public CompileResult compile(String scriptText) {
-        try {
-            return compile0(new GroovyCodeSource(scriptText, MAIN_CLASS_NAME, DEFAULT_CODE_BASE));
-        }
-        catch( IOException e ) {
-            return null;
-        }
+    public CompileResult compile(String scriptText) throws IOException {
+        return compile0(new GroovyCodeSource(scriptText, MAIN_CLASS_NAME, DEFAULT_CODE_BASE));
     }
 
-    public CompileResult compile(File file) {
-        try {
-            return compile0(new GroovyCodeSource(file, config.getSourceEncoding()));
-        }
-        catch( IOException e ) {
-            return null;
-        }
+    public CompileResult compile(File file) throws IOException {
+        return compile0(new GroovyCodeSource(file, config.getSourceEncoding()));
     }
 
     public Collection<SourceUnit> getSources() {
@@ -144,8 +135,8 @@ public class ScriptCompiler {
         // compile main script and included modules
         var unit = new ScriptCompilationUnit(config, loader);
         var su = codeSource.getFile() != null
-            ? unit.getSource(MAIN_CLASS_NAME, codeSource.getFile())
-            : unit.getSource(codeSource.getName(), codeSource.getScriptText());
+            ? unit.createSourceUnit(MAIN_CLASS_NAME, codeSource.getFile())
+            : unit.createSourceUnit(codeSource.getName(), codeSource.getScriptText());
         var collector = new ScriptClassLoader(loader).createCollector(unit, su);
 
         compiler = new Compiler(unit);
@@ -158,7 +149,7 @@ public class ScriptCompiler {
         // collect script classes
         var classes = (List<Class>) collector.getLoadedClasses().stream()
             .map((o) -> 
-                o instanceof Class c && SCRIPT_BASE_CLASS.equals(c.getSuperclass().getName())
+                o instanceof Class c && BASE_CLASS_NAME.equals(c.getSuperclass().getName())
                     ? c
                     : null
             )
@@ -248,7 +239,7 @@ public class ScriptCompiler {
         private void analyze(SourceUnit source) {
             // on first pass, recursively add included modules to queue
             if( entry == null ) {
-                modules = new ModuleResolver(compiler).resolve(source, uri -> getSource(uri));
+                modules = new ModuleResolver(compiler).resolve(source, uri -> createSourceUnit(uri));
                 for( var su : modules )
                     addSource(su);
                 entry = source;
@@ -262,7 +253,7 @@ public class ScriptCompiler {
             var cn = source.getAST().getClasses().get(0);
 
             // perform strict syntax checking
-            var includeResolver = new ResolveIncludeVisitor(source, compiler, Collections.emptySet());
+            var includeResolver = new ResolveIncludeVisitor(source, compiler);
             includeResolver.visit();
             for( var error : includeResolver.getErrors() )
                 source.getErrorCollector().addErrorAndContinue(error);
@@ -280,19 +271,19 @@ public class ScriptCompiler {
             new OpXformImpl().visit(astNodes, source);
         }
 
-        SourceUnit getSource(URI uri) {
-            return getSource(uniqueClassName(uri), new File(uri));
+        SourceUnit createSourceUnit(URI uri) {
+            return createSourceUnit(uniqueClassName(uri), new File(uri));
         }
 
-        SourceUnit getSource(String name, File file) {
-            return getSource(name, new FileReaderSource(file, getConfiguration()));
+        SourceUnit createSourceUnit(String name, File file) {
+            return createSourceUnit(name, new FileReaderSource(file, getConfiguration()));
         }
 
-        SourceUnit getSource(String name, String source) {
-            return getSource(name, new StringReaderSource(source, getConfiguration()));
+        SourceUnit createSourceUnit(String name, String source) {
+            return createSourceUnit(name, new StringReaderSource(source, getConfiguration()));
         }
 
-        SourceUnit getSource(String name, ReaderSource source) {
+        SourceUnit createSourceUnit(String name, ReaderSource source) {
             return new SourceUnit(
                     name,
                     source,
