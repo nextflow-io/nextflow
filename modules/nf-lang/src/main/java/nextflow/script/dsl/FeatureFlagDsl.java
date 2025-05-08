@@ -17,7 +17,6 @@ package nextflow.script.dsl;
 
 public class FeatureFlagDsl {
 
-    @Deprecated
     @FeatureFlag("nextflow.enable.configProcessNamesValidation")
     @Description("""
         When `true`, prints a warning for every `withName:` process selector that doesn't match a process in the pipeline (default: `true`).
