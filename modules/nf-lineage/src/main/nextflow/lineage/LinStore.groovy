@@ -65,6 +65,10 @@ interface LinStore extends Closeable {
 
     /**
      * Search for keys starting with a parent key.
+     * For example, if a LinStore contains the following keys: '123abc', '123abc/samples/file1.txt' and '123abc/summary',
+     * The execution of the function with parentKey='123abc' will return a list with '123abc/samples/file1.txt' and '123abc/summary'.
+     * Similarly, the execution of the function with parentKey='123abc/samples' will just return '123abc/samples/file1.txt"
+     *
      * @param parentKey
      * @return list of keys
      */

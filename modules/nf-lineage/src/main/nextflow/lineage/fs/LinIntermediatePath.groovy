@@ -7,8 +7,8 @@ import java.time.Instant
 
 class LinIntermediatePath extends LinMetadataPath{
 
-    LinIntermediatePath(LinFileSystem fs, String path, String[] children) {
-        super("", FileTime.from(Instant.now()), fs, path + children.join('/'), null)
+    LinIntermediatePath(LinFileSystem fs, String path) {
+        super("", FileTime.from(Instant.now()), fs, path, null)
     }
 
     @Override
