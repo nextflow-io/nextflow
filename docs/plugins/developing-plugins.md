@@ -12,7 +12,9 @@ The [Nextflow plugin template](https://github.com/nextflow-io/nf-plugin-template
 
 You can use the `nextflow plugin create` sub-command to create plugins from the plugin template. See {ref}`gradle-plugin-create` for more information.
 
-(dev-plugins-structure)=
+:::{note}
+The Nextflow Gradle plugin is currently available as a private beta. See the {ref}`migration guide <migrating-plugin-page>` for more information.
+:::
 
 ### Structure
 
@@ -121,7 +123,7 @@ The following `make` commands are available:
 `test`
 : Runs plugin unit tests. See {ref}`gradle-plugin-test` for more information.
 
-(dev-plugins-extension)=
+(dev-plugins-extension-points)=
 
 ## Extension points
 

@@ -171,7 +171,7 @@ developer/packages
 
 data-lineage
 gradle-plugin
-migrating-gradle-plugin
+migrating-plugin-registry
 updating-spot-retries
 metrics
 flux

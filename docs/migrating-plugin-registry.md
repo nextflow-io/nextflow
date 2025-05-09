@@ -4,15 +4,15 @@
 
 The Nextflow plugin ecosystem is evolving to support a more robust and user-friendly experience by simplifying the development, publishing, and discovery of Nextflow plugins. This page introduces the Nextflow plugin registry, the Nextflow Gradle plugin, and how to migrate to them.
 
+:::{note}
+The Nextflow plugin registry and Gradle plugin are currently available as a private beta. Plugin developers are encouraged to contact [info@nextflow.io](mailto:info@nextflow.io) for more information about accessing the registry.
+:::
+
 ## Overview
 
 ### Nextflow plugin registry
 
-The Nextflow plugin registry is a central repository for Nextflow plugins. It hosts an index of plugin metadata that supports plugin discovery, accessibility, and version tracking. The registry is integrated with the Nextflow runtime. It is intended as a replacement for the [plugins index](https://github.com/nextflow-io/plugins) hosted on GitHub.
-
-:::{note}
-The Nextflow plugin registry is currently available as a private beta. Contact [info@nextflow.io](mailto:info@nextflow.io) for more information.
-:::
+The Nextflow plugin registry is a central repository for Nextflow plugins. It hosts an index of plugin metadata that supports plugin discovery, accessibility, and version tracking. Nextflow 25.04 and later can use the plugin registry instead of the [legacy plugins index](https://github.com/nextflow-io/plugins) hosted on GitHub.
 
 ### Nextflow Gradle plugin
 
@@ -35,7 +35,7 @@ To migrate an existing Nextflow plugin:
     - `launch.sh`
     - `plugins/build.gradle`
 
-2. If your plugin uses a `plugins` directory, move the `src` directory to the project root.
+2. If your plugin has a `plugins` directory, move the `src` directory to the project root.
 
     :::{note}
     Plugin sources should be in `src/main/groovy` or `src/main/java`.
@@ -95,7 +95,7 @@ To migrate an existing Nextflow plugin:
 
 5. Replace the contents of `Makefile` with the following:
 
-    ```
+    ```Makefile
     # Build the plugin
     assemble:
         ./gradlew assemble
