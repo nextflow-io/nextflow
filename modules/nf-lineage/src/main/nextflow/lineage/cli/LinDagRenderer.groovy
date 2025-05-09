@@ -20,6 +20,7 @@ import java.nio.file.Path
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import nextflow.dag.MermaidHtmlRenderer
 import nextflow.lineage.LinStore
 import nextflow.lineage.model.FileOutput
@@ -33,12 +34,13 @@ import static nextflow.lineage.fs.LinPath.isLidUri
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class LinDagRenderer {
 
     private final LinStore store
 
-    private List<String> queue
+    private Queue<String> queue
 
     private List<Node> nodes
 
@@ -48,7 +50,7 @@ class LinDagRenderer {
         this.store = store
     }
 
-    private void enqueue(String lid) {
+    private void enqueueLid(String lid) {
         queue.add(lid)
     }
 
@@ -66,9 +68,9 @@ class LinDagRenderer {
         this.nodes = new LinkedList<Node>()
         this.edges = new LinkedList<Edge>()
 
-        enqueue(lid)
+        enqueueLid(lid)
         while( !queue.isEmpty() )
-            visitLid(queue.pop())
+            visitLid(queue.remove())
 
         // render Mermaid diagram
         final lines = new LinkedList<String>()
@@ -92,6 +94,10 @@ class LinDagRenderer {
         if( !isLidUri(lid) )
             throw new Exception("Identifier is not a lineage URL: ${lid}")
         final record = store.load(rawLid(lid))
+        if( !record ) {
+            log.warn "Lineage record references an LID that does not exist: ${lid}"
+            return
+        }
         if( record instanceof FileOutput )
             visitFileOutput(lid, record)
         else if( record instanceof TaskRun )
@@ -108,7 +114,7 @@ class LinDagRenderer {
         if( !source )
             return
         if( isLidUri(source) ) {
-            enqueue(source)
+            enqueueLid(source)
             addEdge(source, lid)
         }
         else {
@@ -141,7 +147,7 @@ class LinDagRenderer {
         else if( value instanceof CharSequence ) {
             final source = value.toString()
             if( isLidUri(source) ) {
-                enqueue(source)
+                enqueueLid(source)
                 addEdge(source, lid)
             }
             else {
@@ -151,7 +157,7 @@ class LinDagRenderer {
         else if( value instanceof Map && value.path ) {
             final path = value.path.toString()
             if( isLidUri(path) ) {
-                enqueue(path)
+                enqueueLid(path)
                 addEdge(path, lid)
             }
             else {
