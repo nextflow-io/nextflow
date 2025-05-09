@@ -16,6 +16,7 @@
 
 package nextflow.lineage
 
+import com.google.common.annotations.Beta
 import groovy.transform.CompileStatic
 import nextflow.lineage.serde.LinSerializable
 import nextflow.lineage.config.LineageConfig
@@ -24,6 +25,7 @@ import nextflow.lineage.config.LineageConfig
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Beta
 @CompileStatic
 interface LinStore extends Closeable {
 
