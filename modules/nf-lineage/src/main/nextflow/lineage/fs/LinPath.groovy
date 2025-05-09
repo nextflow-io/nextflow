@@ -144,7 +144,7 @@ class LinPath implements Path, LogicalDataPath {
             ? CacheHelper.hasher(hashedPath, CacheHelper.HashMode.of(checksum.mode.toString().toLowerCase())).hash().toString()
             : CacheHelper.hasher(hashedPath).hash().toString()
         if( hash != checksum.value )
-            log.warn("Checksum of '$hashedPath' does not match with the one stored in the metadata")
+            log.warn("Checksum of '$hashedPath' does not match with lineage metadata")
     }
 
     protected static isAlgorithmSupported(String algorithm) {
