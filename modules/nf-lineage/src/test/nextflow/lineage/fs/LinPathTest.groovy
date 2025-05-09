@@ -668,7 +668,7 @@ class LinPathTest extends Specification {
 
         then:
         stdout.size() == 1
-        stdout[0].endsWith("Checksum of '$file' does not match with the one stored in the metadata")
+        stdout[0].endsWith("Checksum of '$file' does not match with lineage metadata")
 
         cleanup:
         file.delete()
