@@ -37,6 +37,8 @@ class BatchConfig {
 
     static final private List<String> DEFAULT_GCSFUSE_OPTS = List.<String>of('-o rw', '-implicit-dirs')
 
+    static final private String DEFAULT_MOUNT_ROOT = '/mnt/disks'
+
     private GoogleOpts googleOpts
     private GoogleCredentials credentials
     private List<String> allowedLocations
@@ -55,6 +57,7 @@ class BatchConfig {
     private BatchRetryConfig retryConfig
     private List<Integer> autoRetryExitCodes
     private List<String> gcsfuseOptions
+    private String mountRoot
 
     GoogleOpts getGoogleOpts() { return googleOpts }
     GoogleCredentials getCredentials() { return credentials }
@@ -74,6 +77,7 @@ class BatchConfig {
     BatchRetryConfig getRetryConfig() { retryConfig }
     List<Integer> getAutoRetryExitCodes() { autoRetryExitCodes }
     List<String> getGcsfuseOptions() { gcsfuseOptions }
+    String getMountRoot() { mountRoot }
 
     static BatchConfig create(Session session) {
         final result = new BatchConfig()
@@ -95,6 +99,7 @@ class BatchConfig {
         result.retryConfig = new BatchRetryConfig( session.config.navigate('google.batch.retryPolicy') as Map ?: Map.of() )
         result.autoRetryExitCodes = session.config.navigate('google.batch.autoRetryExitCodes', DEFAULT_RETRY_LIST) as List<Integer>
         result.gcsfuseOptions = session.config.navigate('google.batch.gcsfuseOptions', DEFAULT_GCSFUSE_OPTS) as List<String>
+        result.mountRoot = session.config.navigate('google.batch.mountRoot', DEFAULT_MOUNT_ROOT) as String
         return result
     }
 

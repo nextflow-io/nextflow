@@ -43,8 +43,6 @@ import nextflow.util.TestOnly
 @CompileStatic
 class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatchLauncherSpec {
 
-    private static final String MOUNT_ROOT = '/mnt/disks'
-
     private BatchConfig config
     private CloudStoragePath remoteWorkDir
     private Path remoteBinDir
@@ -55,8 +53,11 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
     @TestOnly
     protected GoogleBatchScriptLauncher() {}
 
-    GoogleBatchScriptLauncher(TaskBean bean, Path remoteBinDir) {
+    GoogleBatchScriptLauncher(TaskBean bean, Path remoteBinDir, BatchConfig config) {
         super(bean)
+        // Initialize config first before using any methods that depend on it
+        this.config = config
+        
         // keep track the google storage work dir
         this.remoteWorkDir = (CloudStoragePath) bean.workDir
         this.remoteBinDir = toContainerMount(remoteBinDir)
@@ -116,7 +117,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         if( path instanceof CloudStoragePath ) {
             buckets.add(path.bucket())
             pathTrie.add( (parent ? "/${path.bucket()}${path.parent}" : "/${path.bucket()}${path}").toString() )
-            final containerMount = containerMountPath(path)
+            final containerMount = containerMountPath(path, config.getMountRoot())
             log.trace "Path ${FilesEx.toUriString(path)} to container mount: $containerMount"
             return Paths.get(containerMount)
         }
@@ -135,8 +136,9 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
     @Override
     List<String> getContainerMounts() {
         final result = new ArrayList(10)
+        final mountRoot = config.getMountRoot()
         for( String it : pathTrie.longest() ) {
-            result.add( "${MOUNT_ROOT}${it}:${MOUNT_ROOT}${it}:rw".toString() )
+            result.add( "${mountRoot}${it}:${mountRoot}${it}:rw".toString() )
         }
         return result
     }
@@ -144,6 +146,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
     @Override
     List<Volume> getVolumes() {
         final result = new ArrayList(10)
+        final mountRoot = config.getMountRoot()
         for( String it : buckets ) {
             final mountOptions = new LinkedList<String>()
             if( config && config.gcsfuseOptions )
@@ -157,7 +160,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
                         GCS.newBuilder()
                             .setRemotePath(it)
                     )
-                    .setMountPath( "${MOUNT_ROOT}/${it}".toString() )
+                    .setMountPath( "${mountRoot}/${it}".toString() )
                     .addAllMountOptions( mountOptions )
                     .build()
             )
@@ -184,11 +187,6 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         return remoteWorkDir.resolve(TaskRun.CMD_INFILE)
     }
 
-    GoogleBatchScriptLauncher withConfig(BatchConfig config) {
-        this.config = config
-        return this
-    }
-
     GoogleBatchScriptLauncher withIsArray(boolean value) {
         this.isArray = value
         return this
@@ -207,7 +205,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         "trap \"{ cp ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}; }\" ERR; /bin/bash ${workDir}/${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
     }
 
-    static String containerMountPath(CloudStoragePath path) {
-        return "$MOUNT_ROOT/${path.bucket()}${path}"
+    static String containerMountPath(CloudStoragePath path, String mountRoot) {
+        return "${mountRoot}/${path.bucket()}${path}"
     }
 }

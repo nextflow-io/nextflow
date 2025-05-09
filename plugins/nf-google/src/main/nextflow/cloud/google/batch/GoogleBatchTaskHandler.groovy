@@ -37,6 +37,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.cloud.google.batch.client.BatchClient
+import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.exception.ProcessException
@@ -148,8 +149,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
         else {
             final taskBean = task.toTaskBean()
-            return new GoogleBatchScriptLauncher(taskBean, executor.remoteBinDir)
-                .withConfig(executor.config)
+            final config = executor.config ?: new BatchConfig()
+            return new GoogleBatchScriptLauncher(taskBean, executor.remoteBinDir, config)
                 .withIsArray(task.isArray())
         }
     }

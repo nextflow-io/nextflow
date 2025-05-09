@@ -878,6 +878,11 @@ The following settings are available for Google Cloud Batch:
 : Max number of execution attempts of a job interrupted by a Compute Engine Spot reclaim event (default: `0`).
 : See also: `google.batch.autoRetryExitCodes`
 
+`google.batch.mountRoot`
+: :::{versionadded} 25.05.0-edge
+  :::
+: The root directory for GCS mounting in the container (default: `/mnt/disks`).
+
 `google.batch.network`
 : The URL of an existing network resource to which the VM will be attached.
 
