@@ -46,6 +46,7 @@ import nextflow.trace.TraceObserver
 import nextflow.trace.TraceRecord
 import nextflow.util.Duration
 import nextflow.util.LoggerHelper
+import nextflow.util.PathTrie
 import nextflow.util.ProcessHelper
 import nextflow.util.SimpleHttpClient
 import nextflow.util.TestOnly
@@ -69,6 +70,8 @@ class TowerClient implements TraceObserver {
     static private final Duration ALIVE_INTERVAL = Duration.of('1 min')
 
     static private final String TOKEN_PREFIX = '@token:'
+
+    final PathTrie trie = new PathTrie()
 
     @TupleConstructor
     static class Response {
@@ -408,6 +411,7 @@ class TowerClient implements TraceObserver {
         final req = makeCompleteReq(session)
         final resp = sendHttpMessage(urlTraceComplete, req, 'PUT')
         logHttpResponse(urlTraceComplete, resp)
+        log.info "Output dir=${trie.longest()}"
     }
 
     @Override
@@ -487,6 +491,7 @@ class TowerClient implements TraceObserver {
     @Override
     void onFilePublish(Path destination) {
         reports.filePublish(destination)
+        trie.add(destination)
     }
 
     protected void refreshToken(String refresh) {
