@@ -76,7 +76,7 @@ class BatchLogging implements Closeable {
         return [ stdout.toString(), stderr.toString() ]
     }
 
-    protected void parseOutput(LogEntry logEntry, StringBuilder stdout, StringBuilder stderr) {
+    protected static void parseOutput(LogEntry logEntry, StringBuilder stdout, StringBuilder stderr) {
         final output = logEntry.payload.data.toString()
         if (logEntry.severity == Severity.ERROR) {
             stderr.append(output)
