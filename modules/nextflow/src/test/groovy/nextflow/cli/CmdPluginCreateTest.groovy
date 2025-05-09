@@ -53,16 +53,18 @@ class CmdPluginCreateTest extends Specification {
         Files.exists(folder.resolve('hello/src/main/groovy/foo/plugin/HelloWorldPlugin.groovy'))
         Files.exists(folder.resolve('hello/src/main/groovy/foo/plugin/HelloWorldObserver.groovy'))
         Files.exists(folder.resolve('hello/src/main/groovy/foo/plugin/HelloWorldFactory.groovy'))
+        Files.exists(folder.resolve('hello/src/main/groovy/foo/plugin/HelloWorldExtension.groovy'))
         and:
         Files.exists(folder.resolve('hello/src/test/groovy/foo/plugin/HelloWorldObserverTest.groovy'))
         and:
         Path.of(folder.resolve('hello/settings.gradle').toUri()).text.contains("rootProject.name = 'hello-world-plugin'")
         Path.of(folder.resolve('hello/build.gradle').toUri()).text.contains("provider = 'foo'")
         Path.of(folder.resolve('hello/build.gradle').toUri()).text.contains("className = 'foo.plugin.HelloWorldPlugin'")
+        Path.of(folder.resolve('hello/build.gradle').toUri()).text.contains("'foo.plugin.HelloWorldExtension'")
+        Path.of(folder.resolve('hello/build.gradle').toUri()).text.contains("'foo.plugin.HelloWorldFactory'")
         and:
         Path.of(folder.resolve('hello/README.md').toUri()).text.contains("# hello-world-plugin plugin")
         Path.of(folder.resolve('hello/README.md').toUri()).text.contains("nextflow run hello -plugins hello-world-plugin@0.1.0")
-
         cleanup:
         folder?.deleteDir()
     }
