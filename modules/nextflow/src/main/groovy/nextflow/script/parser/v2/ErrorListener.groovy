@@ -221,7 +221,7 @@ class StandardErrorListener implements ErrorListener {
     @Override
     void afterAll(ErrorSummary summary) {
         final term = ansi()
-        term.cursorUp(1).eraseLine().cursorUp(1).eraseLine()
+        term.cursorUp(1).eraseLine()
         // print extra newline if no code is being shown
         if( mode == 'concise' )
             term.newline()
