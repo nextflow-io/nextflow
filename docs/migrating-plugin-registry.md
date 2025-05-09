@@ -12,7 +12,7 @@ The Nextflow plugin registry and Gradle plugin are currently available as a priv
 
 ### Nextflow plugin registry
 
-The Nextflow plugin registry is a central repository for Nextflow plugins. It hosts an index of plugin metadata that supports plugin discovery, accessibility, and version tracking. Nextflow 25.04 and later can use the plugin registry instead of the [legacy plugins index](https://github.com/nextflow-io/plugins) hosted on GitHub.
+The Nextflow plugin registry is a central repository for Nextflow plugins. It hosts an index of plugin metadata that supports plugin discovery, accessibility, and version tracking. Nextflow 25.04 and later can use the plugin registry as a drop-in replacement for the [legacy plugin index](https://github.com/nextflow-io/plugins) hosted on GitHub.
 
 ### Nextflow Gradle plugin
 
@@ -20,13 +20,41 @@ The [Nextflow Gradle plugin](https://github.com/nextflow-io/nextflow-plugin-grad
 
 The Gradle plugin is versioned and published to the [Gradle Plugin Portal](https://plugins.gradle.org/), allowing developers to manage it like any other dependency. As the plugin ecosystem evolves, this Gradle plugin will enable easier maintenance and adoption of ongoing improvements to the Nextflow plugin framework.
 
+## Timeline
+
+The [legacy plugin index](https://github.com/nextflow-io/plugins) will be deprecated in favor of the Nextflow plugin registry.
+
+:::{note}
+The following timeline is tentative and subject to modification.
+:::
+
+### Nextflow 25.04
+
+The Nextflow plugin registry is available as a private beta. Nextflow 25.04 can use the Nextflow plugin registry as an opt-in feature. The Nextflow plugin registry will be automatically kept up-to-date with the [legacy plugin index](https://github.com/nextflow-io/plugins).
+
+During this time, plugin developers are encouraged to experiment with the Gradle plugin and plugin registry.
+
+### Nextflow 25.10
+
+The Nextflow plugin registry will be generally available. Nextflow 25.10 will use the plugin registry by default. The legacy plugin index will be **closed to new pull requests**.
+
+Developers will be required to publish to the Nextflow plugin registry instead. To ensure continued support for older versions of Nextflow, the legacy plugin index will be automatically kept up-to-date with the Nextflow plugin registry.
+
+### Nextflow 26.04
+
+Nextflow 25.10 will only be able to use the Nextflow plugin registry.
+
+At some point in the future, the legacy plugin index will be **frozen** -- it will no longer receives updates from the Nextflow plugin registry. To ensure continued support for older versions of Nextflow, the legacy plugin index will remain available indefinitely.
+
 ## Impact on plugin users
 
-If you are a plugin user, no immediate actions are required. The plugin configuration has not changed.
+No immediate actions are required for plugin users. The plugin configuration has not changed.
 
 ## Impact on plugin developers
 
-Developers are encouraged to migrate to the Nextflow Gradle plugin in order to take advantage of the simplified development and publishing process.
+Plugin developers will need to update their plugin to publish to the Nextflow plugin registry instead of the legacy plugin index. The easiest way to do this is to migrate to the Nextflow Gradle plugin, which simplifies the development process and supports publishing to the plugin registry from the command line.
+
+### Migrating to the Nextflow Gradle plugin
 
 To migrate an existing Nextflow plugin:
 
@@ -123,4 +151,10 @@ To migrate an existing Nextflow plugin:
 
 7. In the plugin root directory, run `make assemble`.
 
-The Nextflow Gradle plugin also supports publishing plugins. See {ref}`gradle-plugin-publish` for more information.
+Alternatively, use the `nextflow plugin create` command to re-create your plugin with the plugin template, add your existing plugin code as needed. See {ref}`dev-plugins-template` for more information about the plugin template.
+
+### Publishing to the Nextflow plugin registry
+
+The Nextflow Gradle plugin supports publishing plugins from the command line. See {ref}`gradle-plugin-publish` for more information.
+
+Once you migrate to the Gradle plugin, you will no longer be able to publish to the legacy plugin index. See the [transition timeline](#timeline) for more information.
