@@ -90,7 +90,7 @@ class StandardErrorListener implements ErrorListener {
 
     @Override
     void onError(SyntaxException error, String filename, SourceUnit source) {
-        term.bold().a(filename).reset()
+        term.bold().a("error: ").a(filename).reset()
         term.a(":${error.getStartLine()}:${error.getStartColumn()}: ")
         term = highlightString(error.getOriginalMessage(), term)
         if( mode != 'concise' ) {
@@ -103,7 +103,7 @@ class StandardErrorListener implements ErrorListener {
     @Override
     void onWarning(WarningMessage warning, String filename, SourceUnit source) {
         final token = warning.getContext().getRoot()
-        term.bold().a(filename).reset()
+        term.bold().a("warning: ").a(filename).reset()
         term.a(":${token.getStartLine()}:${token.getStartColumn()}: ")
         term.fg(Ansi.Color.YELLOW).a(warning.getMessage()).fg(Ansi.Color.DEFAULT)
         if( mode != 'concise' ) {
