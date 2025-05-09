@@ -152,7 +152,6 @@ migrations/index
 plugins/plugins
 plugins/using-plugins
 plugins/developing-plugins
-plugins/example-nf-hello
 ```
 
 ```{toctree}

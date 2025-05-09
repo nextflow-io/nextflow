@@ -18,53 +18,68 @@ You can use the `nextflow plugin create` sub-command to create plugins from the 
 
 The plugin template includes the source directories, build configuration files, and metadata required for development, testing, and publishing. Depending on the developer’s preference, plugins can be written in Java or Groovy.
 
-Plugins built with the plugin template have the following structure:
+For example, a plugin created from the plugin template with the name `nf-hello` and organization `nextflow` will have the following structure:
 
-```
-.
-├── build.gradle
+```console
+nf-hello
 ├── COPYING
-├── gradle
-│   └── wrapper
-│       └── ...
-├── gradlew
 ├── Makefile
 ├── README.md
+├── build.gradle
+├── gradle
+│   └── wrapper
+│       ├── gradle-wrapper.jar
+│       └── gradle-wrapper.properties
+├── gradlew
 ├── settings.gradle
-└── src
-    ├── main
-    │   └── groovy
-    │       └── <ORGANIZATION>
-    │           └── plugin
-    │               └── ...
-    └── test
-        └── groovy
-            └── <ORGANIZATION>
-                └── plugin
-                    └── ...
+├── src
+│   ├── main
+│   │   └── groovy
+│   │       └── nextflow
+│   │           └── hello
+│   │               ├── HelloExtension.groovy
+│   │               ├── HelloFactory.groovy
+│   │               ├── HelloObserver.groovy
+│   │               └── HelloPlugin.groovy
+│   └── test
+│       └── groovy
+│           └── nextflow
+│               └── hello
+│                   └── HelloObserverTest.groovy
+└── validation
+    └── main.nf
+    └── nextflow.config
 ```
 
 This structure contains the following key files and folders:
 
-- `build.gradle`: The primary build script for Gradle.
+- `.github/workflows`: GitHub Action which implements continuous integration for the plugin.
 
-- `COPYING`: Contains the licensing information for the project, detailing the terms under which the code can be used and distributed.​
+- `build.gradle`: The Gradle build script.
 
-- `gradle/wrapper/`: Holds files related to the Gradle Wrapper.
+- `COPYING`: The project license, detailing the terms under which the code can be used and distributed.​
+
+- `gradle/wrapper/`: Helper files for the Gradle Wrapper.
 
 - `gradlew`: The Gradle Wrapper script, which allows you to use Gradle without installing it into your environment.
 
-- `Makefile`: Defines a set of tasks and commands for building and managing the project with the `make` automation tool.​
+- `Makefile`: Defines common tasks for building, testing, and publishing the plugin with Make.​
 
-- `README.md`: Provides an overview of the project, including its purpose, features, and instructions for usage and development.​
+- `README.md`: The project README, which provides an overview of the project, including its purpose, features, and instructions for usage and development.​
 
-- `settings.gradle`: Configures the Gradle build, specifying project-specific settings such as the project name and included modules.
+- `settings.gradle`: The Gradle project configuration, which specifies project-specific settings such as the project name and included modules.
 
-- `src/main/groovy/<ORGANIZATION>/plugin/`: The main source directory containing the plugin's implementation and resources.​
+- `src/main/groovy/<ORGANIZATION>/<NAME>/`: The main source directory, which contains the plugin source code and resources.​
 
-- `src/test/groovy/<ORGANIZATION>/plugin/`: The main source directory containing the plugin's unit tests.
+- `src/test/groovy/<ORGANIZATION>/<NAME>/`: The test source directory, which contains the plugin unit tests.
 
-See {ref}`nf-hello-page` for an example of a plugin built with the plugin template.
+- `validation`: A small Nextflow pipeline which serves as an end-to-end test for the plugin.
+
+The plugin template also implements the following example features:
+
+- A custom trace observer that prints a message when the workflow starts and when the workflow completes (see `HelloObserver`).
+
+- A custom function called `sayHello` (see `HelloExtension`).
 
 ### Nextflow Gradle plugin
 

@@ -53,13 +53,13 @@ Unit tests are small, focused tests designed to verify the behavior of individua
 
 To run unit tests:
 
-1. Develop your unit tests. See [MyObserverTest.groovy](https://github.com/nextflow-io/nf-plugin-template/blob/main/src/test/groovy/acme/plugin/MyObserverTest.groovy) in [nf-plugin-template](https://github.com/nextflow-io/nf-plugin-template) for unit test examples.
+1. Develop your unit tests. See [MyObserverTest.groovy](https://github.com/nextflow-io/nf-plugin-template/blob/main/src/test/groovy/acme/plugin/MyObserverTest.groovy) in the [plugin template](https://github.com/nextflow-io/nf-plugin-template) for an example unit test.
 
 2. In the plugin root directory, run `make test`.
 
 <h3> End-to-end tests </h3>
 
-End-to-end tests are comprehensive tests that verify the behavior of an entire plugin as it would be used in a Nextflow pipeline. See [nf-hello](https://github.com/nextflow-io/nf-hello) for an example of an end-to-end test for a Nextflow plugin.
+End-to-end tests are comprehensive tests that verify the behavior of an entire plugin as it would be used in a Nextflow pipeline. End-to-end tests should be tailored to the needs of your plugin, but generally take the form of a small Nextflow pipeline. See the `validation` directory in the [plugin template](https://github.com/nextflow-io/nf-plugin-template) for an example end-to-end test.
 
 (gradle-plugin-publish)=
 
@@ -77,7 +77,7 @@ To publish your plugin:
 
 2. Add the following properties:
 
-    ```bash
+    ```
     pluginRegistry.accessToken=<REGISTRY_ACCESS_TOKEN>
     ```
 
