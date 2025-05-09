@@ -1,5 +1,9 @@
 nf-azure changelog
 ===================
+1.16.0 - 8 May 2025
+- Add azure.batch.jobMaxWallClockTime config option (#5996) [74963fdc]
+- Remove test constructors or mark as TestOnly (#5216) [d4fadd42]
+
 1.15.0 - 23 Apr 2025
 - Update Azure Batch VM sizes and regions (#5985) [297150b8]
 

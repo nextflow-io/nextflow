@@ -703,67 +703,32 @@ $ nextflow lineage SUBCOMMAND [arg ..]
 
 **Description**
 
-The `lineage` command is used to inspect lineage metadata. Data lineage can be enabled by setting `lineage.enabled` to `true` in your Nextflow configuration (see the {ref}`config-lineage` config scope for details).
+The `lineage` command is used to inspect lineage metadata.
+
+See the {ref}`data-lineage-page` guide to learn how to get started with data lineage.
 
 **Options**
 
 `-h, -help`
 : Print the command usage.
 
-**Examples**
+**Subcommands**
 
-List the Nextflow runs with lineage metadata enabled, printing the corresponding lineage ID (LID) for each run.
+`diff <lid-1> <lid-2>`
+: Display a git-style diff between two lineage records.
 
-```console
-$ nextflow lineage list
-TIMESTAMP          	RUN NAME              	SESSION ID                          	LINEAGE ID                            
-2025-04-22 14:45:43	backstabbing_heyrovsky	21bc4fad-e8b8-447d-9410-388f926a711f	lid://c914d714877cc5c882c55a5428b510b1
-```
+`find <field-1>=<value-1> [<field-2>=<value-2> ...]`
+: Find all lineage records that match the given field values.
 
-View a lineage record.
+`list`
+: List the Nextflow runs with lineage enabled, printing the corresponding lineage ID (LID) for each run.
 
-```console
-$ nextflow lineage view <lid>
-```
+`render <lid> [path]`
+: Render the lineage graph for a lineage record as an HTML file (default output path: `./lineage.html`).
+: The lineage record should be of type `FileOutput`, `TaskRun`, or `WorkflowRun`.
 
-The output of a workflow run can be shown by appending `#output` to the workflow run LID:
-
-```console
-$ nextflow lineage view lid://c914d714877cc5c882c55a5428b510b1#output
-```
-
-:::{tip}
-You can use the [jq](https://jqlang.org/) command-line tool to apply further queries and transformations on the resulting lineage record.
-:::
-
-Find all lineage records that match a set of key-value pairs:
-
-```console
-$ nextflow lineage find <key-1>=<value-1> <key-2>=<value-2> ...
-```
-
-Use any object property defined in the [Lineage metadata model](https://github.com/nextflow-io/nextflow/tree/master/modules/nf-lineage/src/main/nextflow/lineage/model) as a key. Use the `type` key to refer to a metadata object class:
-
-```console
-$ nextflow lineage find type=FileOutput workflowRun=lid://c914d714877cc5c882c55a5428b510b1 label=foo
-```
-Find all tasks executed by a workflow:
-
-```console
-$ nextflow lineage find type=TaskRun workflowRun=lid://c914d714877cc5c882c55a5428b510b1
-```
-
-Display a git-style diff between two lineage records.
-
-```console
-$ nextflow lineage diff <lid-1> <lid-2>
-```
-
-Render the lineage graph for a workflow or task output as an HTML file. (default file path: `./lineage.html`).
-
-```console
-$ nextflow lineage render <lid> [html-file-path]
-```
+`view <lid>`
+: View a lineage record.
 
 (cli-lint)=
 

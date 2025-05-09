@@ -474,28 +474,36 @@ A more concise syntax for workflow handlers will be addressed in a future versio
 
 ## Deprecated syntax
 
-The following patterns are deprecated. The language server reports _paranoid warnings_ for these patterns, which are disabled by default. Enable them by setting the error reporiting mode (**Nextflow > Paranoid Warnings** in the extension settings) to `paranoid`. These warnings may become errors in the future.
+The following patterns are deprecated, and the strict syntax reports warnings for them. These warnings will become errors in the future.
+
+### Process shell section
+
+The process `shell` section is deprecated. Use the `script` section instead. The strict syntax provides error checking to help distinguish between Nextflow variables and Bash variables.
+
+## Best practices
+
+The following patterns are discouraged. The language server reports informative messages for these patterns, which are disabled by default. Enable them by setting the error reporiting mode (**Nextflow > Error reporting mode** in the extension settings) to `paranoid`. These messages may become warnings or errors in the future.
 
 ### Implicit closure parameter
 
 In Groovy, a closure with no parameters is assumed to have a single parameter named `it`:
 
 ```nextflow
-ch | map { it * 2 }
+ch.map { it * 2 }
 ```
 
-In the strict syntax, the closure parameter should be explicitly declared:
+As a best practice, the closure parameter should be explicitly declared:
 
 ```nextflow
-ch | map { v -> v * 2 }   // correct
-ch | map { it -> it * 2 } // also correct
+ch.map { v -> v * 2 }   // correct
+ch.map { it -> it * 2 } // also correct
 ```
 
 ### Using params outside the entry workflow
 
 While params can be used anywhere in the pipeline code, they are only intended to be used in the entry workflow.
 
-In the strict syntax, processes and workflows should receive params as explicit inputs:
+As a best practice, processes and workflows should receive params as explicit inputs:
 
 ```nextflow
 process foo {
@@ -518,17 +526,9 @@ workflow {
 }
 ```
 
-### Process each input
-
-The `each` process input is deprecated. Use the `combine` or `cross` operator to explicitly repeat over inputs in the calling workflow.
-
 ### Process when section
 
-The process `when` section is deprecated. Use conditional logic, such as an `if` statement or the `filter` operator, to control the process invocation in the calling workflow.
-
-### Process shell section
-
-The process `shell` section is deprecated. Use the `script` block instead. The strict syntax provides error checking to help distinguish between Nextflow variables and Bash variables.
+The process {ref}`process-when` section is discouraged. As a best practice, conditional logic should be implemented in the calling workflow (e.g. using an `if` statement or {ref}`operator-filter` operator) instead of the process definition.
 
 (updating-config-syntax)=
 

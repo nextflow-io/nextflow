@@ -115,19 +115,7 @@ class LinUtilsTest extends Specification{
         when:
         LinUtils.getMetadataObject(lidStore, new URI('lid://no-exist#something'))
         then:
-        thrown(IllegalArgumentException)
-    }
-
-    def "should parse children elements form Fragment string"() {
-        expect:
-        LinUtils.parseChildrenFromFragment(FRAGMENT) == EXPECTED as String[]
-
-        where:
-        FRAGMENT                | EXPECTED
-        "workflow"              | ["workflow"]
-        "workflow.repository"   | ["workflow", "repository"]
-        null                    | []
-        ""                      | []
+        thrown(FileNotFoundException)
     }
 
 

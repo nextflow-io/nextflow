@@ -24,13 +24,13 @@ See {ref}`syntax-process` for a full description of the process syntax.
 
 ## Script
 
-The `script` block defines, as a string expression, the script that is executed by the process.
+The `script` section defines, as a string expression, the script that is executed by the process.
 
-A process may contain only one script, and if the `script` guard is not explicitly declared, the script must be the final statement in the process block.
+A process may contain only one script, and if the `script` guard is not explicitly declared, the script must be the final statement in the process definition.
 
 The script string is executed as a [Bash](<http://en.wikipedia.org/wiki/Bash_(Unix_shell)>) script in the host environment. It can be any command or script that you would normally execute on the command line or in a Bash script. Naturally, the script may only use commands that are available in the host environment.
 
-The script block can be a simple string or a multi-line string. The latter approach makes it easier to write scripts with multiple commands spanning multiple lines. For example:
+The script section can be a simple string or a multi-line string. The latter approach makes it easier to write scripts with multiple commands spanning multiple lines. For example:
 
 ```nextflow
 process doMoreThings {
@@ -54,7 +54,7 @@ Since Nextflow uses the same Bash syntax for variable substitutions in strings, 
 
 When you need to access a system environment variable in your script, you have two options.
 
-If you don't need to access any Nextflow variables, you can define your script block with single-quotes:
+If you don't need to access any Nextflow variables, you can define your script section with single-quotes:
 
 ```nextflow
 process printPath {
@@ -119,7 +119,7 @@ Since the actual location of the interpreter binary file can differ across platf
 
 ### Conditional scripts
 
-The `script` block is like a function that returns a string. This means that you can write arbitrary code to determine the script, as long as the final statement is a string.
+The `script` section is like a function that returns a string. This means that you can write arbitrary code to determine the script, as long as the final statement is a string.
 
 If-else statements based on task inputs can be used to produce a different script. For example:
 
@@ -209,10 +209,10 @@ Template scripts are generally discouraged due to the caveats described above. T
 ### Shell
 
 :::{deprecated} 24.11.0-edge
-Use the `script` block instead. Consider using the {ref}`strict syntax <strict-syntax-page>`, which provides error checking to help distinguish between Nextflow variables and Bash variables in the process script.
+Use the `script` section instead. Consider using the {ref}`strict syntax <strict-syntax-page>`, which provides error checking to help distinguish between Nextflow variables and Bash variables in the process script.
 :::
 
-The `shell` block is a string expression that defines the script that is executed by the process. It is an alternative to the {ref}`process-script` definition with one important difference: it uses the exclamation mark `!` character, instead of the usual dollar `$` character, to denote Nextflow variables.
+The `shell` section is a string expression that defines the script that is executed by the process. It is an alternative to the {ref}`process-script` definition with one important difference: it uses the exclamation mark `!` character, instead of the usual dollar `$` character, to denote Nextflow variables.
 
 This way, it is possible to use both Nextflow and Bash variables in the same script without having to escape the latter, which makes process scripts easier to read and maintain. For example:
 
@@ -244,7 +244,7 @@ In the above example, `$USER` is treated as a Bash variable, while `!{str}` is t
 
 ### Native execution
 
-The `exec` block executes the given code without launching a job.
+The `exec` section executes the given code without launching a job.
 
 For example:
 
@@ -304,7 +304,7 @@ process INDEX {
 }
 ```
 
-The `stub` block can be defined before or after the `script` block. When the pipeline is executed with the `-stub-run` option and a process's `stub` is not defined, the `script` block is executed.
+The `stub` section can be defined before or after the `script` section. When the pipeline is executed with the `-stub-run` option and a process's `stub` is not defined, the `script` section is executed.
 
 This feature makes it easier to quickly prototype the workflow logic without using the real commands. The developer can use it to provide a dummy script that mimics the execution of the real one in a quicker manner. In other words, it is a way to perform a dry-run.
 
@@ -312,9 +312,9 @@ This feature makes it easier to quickly prototype the workflow logic without usi
 
 ## Inputs
 
-The `input` block allows you to define the input channels of a process, similar to function arguments. A process may have at most one input block, and it must contain at least one input.
+The `input` section allows you to define the input channels of a process, similar to function arguments. A process may have at most one input section, which must contain at least one input declaration.
 
-The input block follows the syntax shown below:
+The input section follows the syntax shown below:
 
 ```
 input:
@@ -323,7 +323,7 @@ input:
 
 An input definition consists of a *qualifier* and a *name*. The input qualifier defines the type of data to be received. This information is used by Nextflow to apply the semantic rules associated with each qualifier, and handle it properly depending on the target execution platform (grid, cloud, etc).
 
-When a process is invoked in a workflow block, it must be provided a channel for each channel in the process input block, similar to calling a function with specific arguments. The examples provided in the following sections demonstrate how a process is invoked with input channels.
+When a process is invoked in a workflow, it must be provided a channel for each channel in the process input section, similar to calling a function with specific arguments. The examples provided in the following sections demonstrate how a process is invoked with input channels.
 
 The following input qualifiers are available:
 
@@ -452,7 +452,7 @@ workflow {
 In this example, each file received by the process is staged with the name `query.fa` in a different execution context (i.e. the folder where a task is executed).
 
 :::{tip}
-This feature allows you to execute the process command multiple times without worrying about the file names changing. In other words, Nextflow helps you write pipeline tasks that are self-contained and decoupled from the execution environment. As a best practice, you should avoid referencing files in your process script other than those defined in your input block.
+This feature allows you to execute the process command multiple times without worrying about the file names changing. In other words, Nextflow helps you write pipeline tasks that are self-contained and decoupled from the execution environment. As a best practice, you should avoid referencing files in your process script other than those defined in your input section.
 :::
 
 Channel factories like `channel.fromPath` produce file objects, but a `path` input can also accept a string literal path. The string value should be an absolute path, i.e. it must be prefixed with a `/` character or a supported URI protocol (`file://`, `http://`, `s3://`, etc), and it cannot contain special characters (`\n`, etc).
@@ -817,9 +817,9 @@ See also: {ref}`channel-types`.
 
 ## Outputs
 
-The `output` block allows you to define the output channels of a process, similar to function outputs. A process may have at most one output block, and it must contain at least one output.
+The `output` section allows you to define the output channels of a process, similar to function outputs. A process may have at most one output section, which must contain at least one output declaration.
 
-The output block follows the syntax shown below:
+The output section follows the syntax shown below:
 
 ```
 output:
@@ -843,7 +843,7 @@ Refer to the {ref}`process reference <process-reference-outputs>` for the full l
 
 ### Output variables (`val`)
 
-The `val` qualifier allows you to output any Nextflow variable defined in the process. A common use case is to output a variable that was defined in the `input` block, as shown in the following example:
+The `val` qualifier allows you to output any Nextflow variable defined in the process. A common use case is to output a variable that was defined in the `input` section, as shown in the following example:
 
 ```nextflow
 process foo {
@@ -983,7 +983,7 @@ When a task completes, Nextflow will check whether the produced files for each p
 
 ### Dynamic output file names
 
-When an output file name needs to be expressed dynamically, it is possible to define it using a dynamic string which references variables in the `input` block or in the script global context. For example:
+When an output file name needs to be expressed dynamically, it is possible to define it using a dynamic string which references variables in the `input` section or in the script global context. For example:
 
 ```nextflow
 process align {
@@ -1164,11 +1164,11 @@ While this option can be used with any process output, it cannot be applied to i
 
 ## When
 
-:::{deprecated} 24.10.0
-Use conditional logic (e.g. `if` statement, {ref}`operator-filter` operator) in the calling workflow instead.
+:::{node}
+As a best practice, conditional logic should be implemented in the calling workflow (e.g. using an `if` statement or {ref}`operator-filter` operator) instead of the process definition.
 :::
 
-The `when` block allows you to define a condition that must be satisfied in order to execute the process. The condition can be any expression that returns a boolean value.
+The `when` section allows you to define a condition that must be satisfied in order to execute the process. The condition can be any expression that returns a boolean value.
 
 It can be useful to enable/disable the process execution depending on the state of various inputs and parameters. For example:
 

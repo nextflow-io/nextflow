@@ -16,6 +16,7 @@
 package nextflow.script.control;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 
 import groovy.lang.GroovyClassLoader;
@@ -65,7 +66,8 @@ public class ScriptParser {
     }
 
     public void analyze() {
-        for( var source : compiler.getSources().values() ) {
+        var sources = new ArrayList<>(compiler.getSources().values());
+        for( var source : sources ) {
             new ModuleResolver(compiler()).resolve(source, (uri) -> compiler.createSourceUnit(new File(uri)));
         }
 

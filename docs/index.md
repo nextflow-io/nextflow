@@ -170,6 +170,7 @@ developer/packages
 :caption: Guides
 :maxdepth: 1
 
+data-lineage
 gradle-plugin
 migrating-gradle-plugin
 updating-spot-retries

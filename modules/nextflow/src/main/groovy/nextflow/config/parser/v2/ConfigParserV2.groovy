@@ -130,18 +130,23 @@ class ConfigParserV2 implements ConfigParser {
             return Bolts.toConfigObject(target)
         }
         catch( CompilationFailedException e ) {
-            final source = compiler.getSource()
-            final errorListener = new StandardErrorListener('full', false)
-            println()
-            errorListener.beforeErrors()
-            for( final message : compiler.getErrors() ) {
-                final cause = message.getCause()
-                final filename = getRelativePath(source, path)
-                errorListener.onError(cause, filename, source)
-            }
-            errorListener.afterErrors()
+            if( path )
+                printErrors(path)
             throw new ConfigParseException("Config parsing failed", e)
         }
+    }
+
+    private void printErrors(Path path) {
+        final source = compiler.getSource()
+        final errorListener = new StandardErrorListener('full', false)
+        println()
+        errorListener.beforeErrors()
+        for( final message : compiler.getErrors() ) {
+            final cause = message.getCause()
+            final filename = getRelativePath(source, path)
+            errorListener.onError(cause, filename, source)
+        }
+        errorListener.afterErrors()
     }
 
     private String getRelativePath(SourceUnit source, Path path) {
