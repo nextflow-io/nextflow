@@ -371,7 +371,7 @@ class LinCommandImplTest extends Specification{
 +++ 67890
 @@ -1,16 +1,16 @@
  {
-   "lineage-version": "1.0-beta",
+   "version": "lineage/v1beta1",
    "type": "FileOutput",
 -  "path": "path/to/file",
 +  "path": "path/to/file2",

@@ -16,30 +16,25 @@
 
 package nextflow.lineage.fs
 
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.ProviderMismatchException
+import java.time.OffsetDateTime
+
 import nextflow.lineage.LinUtils
 import nextflow.lineage.model.Checksum
+import nextflow.lineage.model.FileOutput
 import nextflow.lineage.model.Parameter
 import nextflow.lineage.model.Workflow
 import nextflow.lineage.model.WorkflowOutput
-import nextflow.lineage.model.FileOutput
 import nextflow.lineage.model.WorkflowRun
 import nextflow.lineage.serde.LinEncoder
 import nextflow.util.CacheHelper
 import org.junit.Rule
-import test.OutputCapture
-
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.ProviderMismatchException
-
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
-
-import java.time.OffsetDateTime
-
-import static nextflow.lineage.serde.LinTypeAdapterFactory.*
-
+import test.OutputCapture
 /**
  * LID Path Tests
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
@@ -166,12 +161,9 @@ class LinPathTest extends Specification {
 
         wdir.resolve('12345/output1').mkdirs()
         wdir.resolve('12345/path/to/file2.txt').mkdirs()
-        wdir.resolve('12345/.data.json').text = '{"' + VERSION_FIELD + '":"' + CURRENT_VERSION + '",' +
-            '"type":"TaskRun"}'
-        wdir.resolve('12345/output1/.data.json').text = '{"' + VERSION_FIELD + '":"' + CURRENT_VERSION + '",' +
-            '"type":"FileOutput", "path": "' + outputFolder.toString() + '"}'
-        wdir.resolve('12345/path/to/file2.txt/.data.json').text = '{"' + VERSION_FIELD + '":"' + CURRENT_VERSION + '",' +
-            '"type":"FileOutput", "path": "' + outputFile.toString() + '"}'
+        wdir.resolve('12345/.data.json').text = '{"version":"lineage/v1beta1","type":"TaskRun"}'
+        wdir.resolve('12345/output1/.data.json').text = '{"version":"lineage/v1beta1","type":"FileOutput", "path": "' + outputFolder.toString() + '"}'
+        wdir.resolve('12345/path/to/file2.txt/.data.json').text = '{"version":"lineage/v1beta1","type":"FileOutput", "path": "' + outputFile.toString() + '"}'
         def time = OffsetDateTime.now()
         def wfResultsMetadata = new LinEncoder().withPrettyPrint(true).encode(new WorkflowOutput(time, "lid://1234", [new Parameter( "Path", "a", "lid://1234/a.txt")]))
         wdir.resolve('5678/').mkdirs()

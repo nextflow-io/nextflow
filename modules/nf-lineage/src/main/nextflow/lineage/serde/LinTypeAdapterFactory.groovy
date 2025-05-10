@@ -27,6 +27,7 @@ import com.google.gson.stream.JsonWriter
 
 import groovy.transform.CompileStatic
 import nextflow.lineage.model.FileOutput
+import nextflow.lineage.model.LinModel
 import nextflow.lineage.model.TaskOutput
 import nextflow.lineage.model.TaskRun
 import nextflow.lineage.model.Workflow
@@ -41,8 +42,8 @@ import nextflow.serde.gson.RuntimeTypeAdapterFactory
  */
 @CompileStatic
 class LinTypeAdapterFactory<T> extends RuntimeTypeAdapterFactory<T> {
-    public static final String VERSION_FIELD = 'lineage-version'
-    public static final String CURRENT_VERSION = '1.0-beta'
+    public static final String VERSION_FIELD = 'version'
+    public static final String CURRENT_VERSION = LinModel.VERSION
 
     LinTypeAdapterFactory() {
         super(LinSerializable.class, "type", false)
@@ -54,7 +55,6 @@ class LinTypeAdapterFactory<T> extends RuntimeTypeAdapterFactory<T> {
             .registerSubtype(FileOutput, FileOutput.simpleName)
 
     }
-
 
     @Override
     <R> TypeAdapter<R> create(Gson gson, TypeToken<R> type) {

@@ -16,9 +16,6 @@
 
 package nextflow.lineage.fs
 
-import nextflow.lineage.DefaultLinStore
-import spock.lang.Shared
-
 import java.nio.ByteBuffer
 import java.nio.channels.NonWritableChannelException
 import java.nio.file.AccessDeniedException
@@ -32,10 +29,9 @@ import java.nio.file.attribute.BasicFileAttributes
 
 import nextflow.Global
 import nextflow.Session
+import nextflow.lineage.DefaultLinStore
+import spock.lang.Shared
 import spock.lang.Specification
-
-import static nextflow.lineage.serde.LinTypeAdapterFactory.*
-
 /**
  * LID File system provider tests
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
@@ -127,8 +123,7 @@ class LinFileSystemProviderTest extends Specification {
         def output = data.resolve("output.txt")
         output.text = "Hello, World!"
         outputMeta.mkdirs()
-        outputMeta.resolve(".data.json").text = '{"' + VERSION_FIELD + '":"' + CURRENT_VERSION + '",' +
-            '"type":"FileOutput","path":"'+output.toString()+'"}'
+        outputMeta.resolve(".data.json").text = '{"version":"lineage/v1beta1","type":"FileOutput","path":"'+output.toString()+'"}'
 
         Global.session = Mock(Session) { getConfig()>>config }
         and:
@@ -184,8 +179,7 @@ class LinFileSystemProviderTest extends Specification {
         def config = [lineage:[store:[location:wdir.toString()]]]
         def outputMeta = wdir.resolve("12345")
         outputMeta.mkdirs()
-        outputMeta.resolve(".data.json").text = '{"' + VERSION_FIELD + '":"' + CURRENT_VERSION + '",' +
-            '"type":"WorkflowRun","sessionId":"session","name":"run_name","params":[{"type":"String","name":"param1","value":"value1"}]}'
+        outputMeta.resolve(".data.json").text = '{"version":"lineage/v1beta1","type":"WorkflowRun","sessionId":"session","name":"run_name","params":[{"type":"String","name":"param1","value":"value1"}]}'
 
         Global.session = Mock(Session) { getConfig()>>config }
         and:
@@ -244,8 +238,7 @@ class LinFileSystemProviderTest extends Specification {
         def output = data.resolve("output.txt")
         output.text = "Hello, World!"
         outputMeta.mkdirs()
-        outputMeta.resolve(".data.json").text = '{"' + VERSION_FIELD + '":"' + CURRENT_VERSION + '",' +
-            '"type":"FileOutput","path":"'+output.toString()+'"}'
+        outputMeta.resolve(".data.json").text = '{"version":"lineage/v1beta1","type":"FileOutput","path":"'+output.toString()+'"}'
 
         Global.session = Mock(Session) { getConfig()>>config }
         and:
@@ -285,9 +278,8 @@ class LinFileSystemProviderTest extends Specification {
         output1.resolve('file3.txt').text = 'file3'
         wdir.resolve('12345/output1').mkdirs()
         wdir.resolve('12345/output2').mkdirs()
-        wdir.resolve('12345/.data.json').text = '{"' + VERSION_FIELD + '":"' + CURRENT_VERSION + '",' + '"type":"TaskRun"}'
-        wdir.resolve('12345/output1/.data.json').text = '{"' + VERSION_FIELD + '":"' + CURRENT_VERSION + '",' +
-            '"type":"FileOutput", "path": "' + output1.toString() + '"}'
+        wdir.resolve('12345/.data.json').text = '{"version":"lineage/v1beta1","type":"TaskRun"}'
+        wdir.resolve('12345/output1/.data.json').text = '{"version":"lineage/v1beta1","type":"FileOutput", "path": "' + output1.toString() + '"}'
 
         and:
         def config = [lineage:[store:[location:wdir.toString()]]]
@@ -411,8 +403,7 @@ class LinFileSystemProviderTest extends Specification {
         output.resolve('abc').text = 'file1'
         output.resolve('.foo').text = 'file2'
         wdir.resolve('12345/output').mkdirs()
-        wdir.resolve('12345/output/.data.json').text = '{"' + VERSION_FIELD + '":"' + CURRENT_VERSION + '",' +
-            '"type":"FileOutput", "path": "' + output.toString() + '"}'
+        wdir.resolve('12345/output/.data.json').text = '{"version":"lineage/v1beta1","type":"FileOutput", "path": "' + output.toString() + '"}'
         and:
         def provider = new LinFileSystemProvider()
         def lid1 = provider.getPath(LinPath.asUri('lid://12345/output/abc'))
@@ -432,8 +423,8 @@ class LinFileSystemProviderTest extends Specification {
         def file = data.resolve('abc')
         file.text = 'Hello'
         wdir.resolve('12345/abc').mkdirs()
-        wdir.resolve('12345/abc/.data.json').text = '{"' + VERSION_FIELD + '":"' + CURRENT_VERSION + '",'+
-            '"type":"FileOutput", "path": "' + file.toString() + '"}'
+        wdir.resolve('12345/abc/.data.json').text = '{"version":"lineage/v1beta1","type":"FileOutput", "path":"' + file.toString() + '"}'
+        and:
         Global.session = Mock(Session) { getConfig()>>config }
         and:
         def provider = new LinFileSystemProvider()
