@@ -296,6 +296,7 @@ class LinFileSystemProviderTest extends Specification {
         def provider = new LinFileSystemProvider()
         def lid = provider.getPath(LinPath.asUri('lid://12345/output1'))
         def lid2 = provider.getPath(LinPath.asUri('lid://12345'))
+        def lid3 = provider.getPath(LinPath.asUri('lid://678'))
 
         expect:
         Files.exists(lid)
@@ -304,7 +305,7 @@ class LinFileSystemProviderTest extends Specification {
         Files.exists(lid.resolve('file3.txt'))
 
         when:
-        provider.newDirectoryStream(lid2, (p) -> true)
+        provider.newDirectoryStream(lid3, (p) -> true)
         then:
         thrown(FileNotFoundException)
 
@@ -318,6 +319,14 @@ class LinFileSystemProviderTest extends Specification {
             lid.resolve('file2.txt'),
             lid.resolve('file3.txt')
         ] as Set
+
+        when:
+        stream = provider.newDirectoryStream(lid2, (p) -> true)
+        and:
+        result = stream.toList()
+        then:
+        result.size() == 1
+        result[0] ==  lid2.resolve('output1')
 
         cleanup:
         wdir.resolve('12345').deleteDir()

@@ -26,6 +26,7 @@ NEXTFLOW CHANGE-LOG
 - Fix false error in workflow output (#5982) [039ad401]
 - Fix small formatting inconsistencies  (#6024) [c3a47605]
 - Fix task progress percentage with failed tasks (#5868) [7e931e83]
+- Fix timeout in failing test [cf3e1661]
 - Improve plugin template update [d33c5063]
 - Improve process creation logging [0121670c]
 - Make plugins log less verbose [38410fd0]
@@ -40,6 +41,9 @@ NEXTFLOW CHANGE-LOG
 - Use the same antlr4 dep as Groovy 4 (#5990) [bd33a76e]
 - Bump plugin template v0.1.0 [b54e78f3]
 - Bump repository provider connection timeout to 60 secs [39aaa831]
+- Bump nf-google@1.21.0 [b7aba74d]
+- Bump nf-azure@1.16.0 [e8304c1e]
+- Bump nf-amazon@2.15.0 [c5100f6d]
 
 24.10.6 - 24 Apr 2025
 - Add support for Fusion Snapshots (#5954) [76a997a3]

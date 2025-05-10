@@ -12,6 +12,8 @@ All task executions are automatically saved to the task cache, regardless of the
 
 The task cache is used in conjunction with the [work directory](#work-directory) to recover cached tasks in a resumed run. It is also used by the {ref}`cli-log` sub-command to query task metadata.
 
+(cache-resume-task-hash)=
+
 ### Task hash
 
 The task hash is computed from the following metadata:
@@ -227,3 +229,7 @@ diff run_1.tasks.log run_2.tasks.log
 ```
 
 You can then view the `diff` output or use a graphical diff viewer to compare `run_1.tasks.log` and `run_2.tasks.log`.
+
+:::{versionadded} 25.04.0
+Nextflow now has a built-in way to compare two task runs. See the {ref}`data-lineage-page` guide for details.
+:::

@@ -213,8 +213,18 @@ class LinPathTest extends Specification {
         then:
         thrown(FileNotFoundException)
 
+        when: 'LinPath is not an output data description but is a workflow/task run'
+        def result = new LinPath(lidFs, '12345').getTargetOrIntermediatePath()
+        then:
+        result instanceof LinIntermediatePath
+
+        when: 'LinPath is a subpath of a workflow/task run data description'
+        result = new LinPath(lidFs, '12345/path').getTargetOrIntermediatePath()
+        then:
+        result instanceof LinIntermediatePath
+
         when: 'Lid description'
-        def result = new LinPath(lidFs, '5678').getTargetOrMetadataPath()
+        result = new LinPath(lidFs, '5678').getTargetOrMetadataPath()
         then:
         result instanceof LinMetadataPath
         result.text == wfResultsMetadata
@@ -237,7 +247,7 @@ class LinPathTest extends Specification {
         def wf = new WorkflowRun(new Workflow([],"repo", "commit"), "sessionId", "runId", [new Parameter("String", "param1", "value1")])
 
         when: 'workflow repo in workflow run'
-        Path p = LinPath.getMetadataAsTargetPath(wf, lidFs, "123456", ["workflow", "repository"] as String[])
+        Path p = LinPath.getMetadataAsTargetPath(wf, lidFs, "123456", "workflow.repository")
         then:
         p instanceof LinMetadataPath
         p.text == '"repo"'
@@ -245,25 +255,25 @@ class LinPathTest extends Specification {
         when: 'outputs'
         def outputs = new WorkflowOutput(OffsetDateTime.now(), "lid://123456", [new Parameter("Collection", "samples", ["sample1", "sample2"])])
         lidFs.store.save("123456#output", outputs)
-        Path p2 = LinPath.getMetadataAsTargetPath(wf, lidFs, "123456", ["output"] as String[])
+        Path p2 = LinPath.getMetadataAsTargetPath(wf, lidFs, "123456", "output")
         then:
         p2 instanceof LinMetadataPath
         p2.text == LinUtils.encodeSearchOutputs([new Parameter("Collection", "samples", ["sample1", "sample2"])], true)
 
         when: 'child does not exists'
-        LinPath.getMetadataAsTargetPath(wf, lidFs, "123456", ["no-exist"] as String[])
+        LinPath.getMetadataAsTargetPath(wf, lidFs, "123456", "no-exist")
         then:
         def exception = thrown(FileNotFoundException)
         exception.message == "Target path '123456#no-exist' does not exist"
 
         when: 'outputs does not exists'
-        LinPath.getMetadataAsTargetPath(wf, lidFs, "6789", ["output"] as String[])
+        LinPath.getMetadataAsTargetPath(wf, lidFs, "6789", "output")
         then:
         def exception1 = thrown(FileNotFoundException)
         exception1.message == "Target path '6789#output' does not exist"
 
         when: 'null object'
-        LinPath.getMetadataAsTargetPath(null, lidFs, "123456", ["no-exist"] as String[])
+        LinPath.getMetadataAsTargetPath(null, lidFs, "123456", "no-exist")
         then:
         def exception2 = thrown(FileNotFoundException)
         exception2.message == "Target path '123456' does not exist"
@@ -663,7 +673,7 @@ class LinPathTest extends Specification {
 
         then:
         stdout.size() == 1
-        stdout[0].endsWith("Checksum of '$file' does not match with the one stored in the metadata")
+        stdout[0].endsWith("Checksum of '$file' does not match with lineage metadata")
 
         cleanup:
         file.delete()
