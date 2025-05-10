@@ -92,7 +92,7 @@ class StandardErrorListener implements ErrorListener {
     void onError(SyntaxException error, String filename, SourceUnit source) {
         term.bold().a(filename).reset()
         term.a(":${error.getStartLine()}:${error.getStartColumn()}: ")
-        term = highlightString(error.getOriginalMessage(), term)
+        term = highlightString("error: ${error.getOriginalMessage()}", term)
         if( mode != 'concise' ) {
             term.newline()
             term = printCodeBlock(source, Range.of(error), term, Ansi.Color.RED)
@@ -105,7 +105,7 @@ class StandardErrorListener implements ErrorListener {
         final token = warning.getContext().getRoot()
         term.bold().a(filename).reset()
         term.a(":${token.getStartLine()}:${token.getStartColumn()}: ")
-        term.fg(Ansi.Color.YELLOW).a(warning.getMessage()).fg(Ansi.Color.DEFAULT)
+        term.fg(Ansi.Color.YELLOW).a("warning: ${warning.getMessage()}").fg(Ansi.Color.DEFAULT)
         if( mode != 'concise' ) {
             term.newline()
             term = printCodeBlock(source, Range.of(warning), term, Ansi.Color.YELLOW)
@@ -221,7 +221,7 @@ class StandardErrorListener implements ErrorListener {
     @Override
     void afterAll(ErrorSummary summary) {
         final term = ansi()
-        term.cursorUp(1).eraseLine().cursorUp(1).eraseLine()
+        term.cursorUp(1).eraseLine()
         // print extra newline if no code is being shown
         if( mode == 'concise' )
             term.newline()
