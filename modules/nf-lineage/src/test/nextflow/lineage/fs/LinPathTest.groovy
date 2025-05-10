@@ -629,65 +629,45 @@ class LinPathTest extends Specification {
     }
 
     def 'should validate correct hash'(){
-        when:
+        given:
         def file = wdir.resolve("file.txt")
         file.text = "this is a data file"
         def hash = CacheHelper.hasher(file).hash().toString()
         def correctData = new FileOutput(file.toString(), new Checksum(hash,"nextflow", "standard"))
-        LinPath.validateDataOutput(correctData)
-        def stdout = capture
-            .toString()
-            .readLines()// remove the log part
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }
-            .findResults { line -> !line.contains('plugin') ? line : null }
-
+        when:
+        def error = LinPath.validateDataOutput(correctData)
         then:
-        stdout.size() == 0
+        !error
 
         cleanup:
         file.delete()
     }
 
     def 'should warn with incorrect hash'(){
-        when:
+        given:
         def file = wdir.resolve("file.txt")
         file.text = "this is a data file"
         def hash = CacheHelper.hasher(file).hash().toString()
         def correctData = new FileOutput(file.toString(), new Checksum("abscd","nextflow", "standard"))
-        LinPath.validateDataOutput(correctData)
-        def stdout = capture
-            .toString()
-            .readLines()// remove the log part
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }
-            .findResults { line -> !line.contains('plugin') ? line : null }
-
+        when:
+        def error = LinPath.validateDataOutput(correctData)
         then:
-        stdout.size() == 1
-        stdout[0].endsWith("Checksum of '$file' does not match with lineage metadata")
+        error == "Checksum of '$file' does not match with lineage metadata"
 
         cleanup:
         file.delete()
     }
 
     def 'should warn when hash algorithm is not supported'(){
-        when:
+        given:
         def file = wdir.resolve("file.txt")
         file.text = "this is a data file"
         def hash = CacheHelper.hasher(file).hash().toString()
         def correctData = new FileOutput(file.toString(), new Checksum(hash,"not-supported", "standard"))
-        LinPath.validateDataOutput(correctData)
-        def stdout = capture
-            .toString()
-            .readLines()// remove the log part
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }
-            .findResults { line -> !line.contains('plugin') ? line : null }
-
+        when:
+        def error = LinPath.validateDataOutput(correctData)
         then:
-        stdout.size() == 1
-        stdout[0].endsWith("Checksum of '$file' can't be validated. Algorithm 'not-supported' is not supported")
+        error == "Checksum of '$file' can't be validated - algorithm 'not-supported' is not supported"
 
         cleanup:
         file.delete()
@@ -700,7 +680,6 @@ class LinPathTest extends Specification {
 
         then:
         thrown(FileNotFoundException)
-
     }
 
 

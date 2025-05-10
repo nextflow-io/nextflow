@@ -16,7 +16,20 @@
 
 package nextflow.lineage.fs
 
+import static nextflow.lineage.LinUtils.*
+import static nextflow.lineage.fs.LinFileSystemProvider.*
+
+import java.nio.file.FileSystem
+import java.nio.file.LinkOption
+import java.nio.file.Path
+import java.nio.file.ProviderMismatchException
+import java.nio.file.WatchEvent
+import java.nio.file.WatchKey
+import java.nio.file.WatchService
+import java.time.OffsetDateTime
+
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.file.FileHelper
 import nextflow.file.LogicalDataPath
@@ -29,19 +42,6 @@ import nextflow.lineage.model.v1beta1.WorkflowRun
 import nextflow.lineage.serde.LinSerializable
 import nextflow.util.CacheHelper
 import nextflow.util.TestOnly
-
-import static LinFileSystemProvider.*
-import static nextflow.lineage.LinUtils.*
-
-import java.nio.file.FileSystem
-import java.nio.file.LinkOption
-import java.nio.file.Path
-import java.nio.file.ProviderMismatchException
-import java.nio.file.WatchEvent
-import java.nio.file.WatchKey
-import java.nio.file.WatchService
-import java.time.OffsetDateTime
-
 /**
  * LID file system path
  *
@@ -126,25 +126,26 @@ class LinPath implements Path, LogicalDataPath {
         return first
     }
 
-    protected static void validateDataOutput(FileOutput lidObject) {
+    @Memoized
+    protected static String validateDataOutput(FileOutput lidObject) {
         final hashedPath = FileHelper.toCanonicalPath(lidObject.path as String)
         if( !hashedPath.exists() )
             throw new FileNotFoundException("Target path $lidObject.path does not exist")
-        validateChecksum(lidObject.checksum, hashedPath)
+        return validateChecksum(lidObject.checksum, hashedPath)
     }
 
-    protected static void validateChecksum(Checksum checksum, Path hashedPath) {
+    protected static String validateChecksum(Checksum checksum, Path hashedPath) {
         if( !checksum )
-            return
+            return null
         if( !isAlgorithmSupported(checksum.algorithm) ) {
-            log.warn("Checksum of '$hashedPath' can't be validated. Algorithm '${checksum.algorithm}' is not supported")
-            return
+            return "Checksum of '$hashedPath' can't be validated - algorithm '${checksum.algorithm}' is not supported"
         }
         final hash = checksum.mode
             ? CacheHelper.hasher(hashedPath, CacheHelper.HashMode.of(checksum.mode.toString().toLowerCase())).hash().toString()
             : CacheHelper.hasher(hashedPath).hash().toString()
-        if( hash != checksum.value )
-            log.warn("Checksum of '$hashedPath' does not match with lineage metadata")
+        return hash != checksum.value
+            ? "Checksum of '$hashedPath' does not match with lineage metadata"
+            : null
     }
 
     protected static isAlgorithmSupported(String algorithm) {
@@ -292,8 +293,11 @@ class LinPath implements Path, LogicalDataPath {
 
     private static Path getTargetPathFromOutput(FileOutput object, List<String> children) {
         final lidObject = object as FileOutput
+        // verify checksum validation
+        final violation = validateDataOutput(lidObject)
+        if( violation )
+            log.warn1(violation)
         // return the real path stored in the metadata
-        validateDataOutput(lidObject)
         def realPath = FileHelper.toCanonicalPath(lidObject.path as String)
         if( children && children.size() > 0 )
             realPath = realPath.resolve(children.join(SEPARATOR))
