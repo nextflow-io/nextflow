@@ -39,6 +39,7 @@ import nextflow.SysEnv
 import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.executor.BatchCleanup
 import nextflow.executor.GridTaskHandler
+import nextflow.file.FileHelper
 import nextflow.util.Duration
 import nextflow.util.SysHelper
 import nextflow.util.Threads
@@ -421,7 +422,19 @@ class TaskPollingMonitor implements TaskMonitor {
 
             // if no task has been submitted wait for a new slot to be available
             if( !processed ) {
-                Throttle.after(dumpInterval) { dumpSubmitQueue() }
+                Throttle.after(dumpInterval) { 
+                dumpSubmitQueue() 
+
+                    // Try to refresh CEPH metadata
+                    // run simpleFind on session.workDir down to 2 levels
+                    if(FileHelper.getPathFsType(session.workDir) == 'ceph') {
+                        log.trace "Refresh CEPH metadata: submitLoop()"
+                        FileHelper.syncFS(session.workDir)
+                        FileHelper.simpleFind(session.workDir, 2, false)
+                    }
+
+                }
+
                 awaitSlots()
             }
         }
@@ -442,6 +455,14 @@ class TaskPollingMonitor implements TaskMonitor {
             if( log.isTraceEnabled() && sz!=previous ) {
                 log.trace "Scheduler queue size: ${sz} (iteration: ${iteration})"
                 previous = sz
+            }
+
+            // Try to refresh CEPH metadata
+            // run simpleFind on session.workDir down to 2 levels
+            if(FileHelper.getPathFsType(session.workDir) == 'ceph') {
+                log.trace "Refresh CEPH metadata: pollLoop()"
+                FileHelper.syncFS(session.workDir)
+                FileHelper.simpleFind(session.workDir, 2, false)
             }
 
             // check all running tasks for termination
