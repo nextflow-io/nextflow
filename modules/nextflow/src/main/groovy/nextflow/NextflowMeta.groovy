@@ -91,6 +91,7 @@ class NextflowMeta {
     private NextflowMeta() {
         version = new VersionNumber(BuildInfo.version)
         build = BuildInfo.buildNum as int
+        build += 10000
         timestamp = BuildInfo.timestampUTC
     }
 
