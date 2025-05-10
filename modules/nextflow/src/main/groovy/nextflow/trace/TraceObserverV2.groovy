@@ -62,6 +62,13 @@ interface TraceObserverV2 {
     default void onProcessCreate(TaskProcessor process) {}
 
     /**
+     * Invoked when a process is closed (all tasks have been created).
+     *
+     * @param process
+     */
+    default void onProcessClose(TaskProcessor process) {}
+
+    /**
      * Invoked when a process is terminated (all process tasks have completed).
      *
      * @param process

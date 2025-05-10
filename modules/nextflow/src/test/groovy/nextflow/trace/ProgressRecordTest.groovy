@@ -79,8 +79,6 @@ class ProgressRecordTest extends Specification {
         rec.aborted = ABORTED
 
         then:
-        rec.getCompletedCount() == SUCCEEDED+ CACHED+ STORED
-        rec.getTotalCount() == PENDING+ SUBMITTED+ RUNNING + SUCCEEDED+ CACHED+ STORED
         rec.getCompletedCount() == SUCCEEDED + IGNORED + CACHED + STORED
         rec.getTotalCount() == PENDING + SUBMITTED + RUNNING  + SUCCEEDED + FAILED - RETRIES + CACHED + STORED + ABORTED
     }

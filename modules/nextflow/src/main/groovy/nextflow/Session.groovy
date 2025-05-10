@@ -439,6 +439,7 @@ class Session implements ISession {
         this.disableRemoteBinDir = getExecConfigProp(null, 'disableRemoteBinDir', false)
         this.classesDir = FileHelper.createLocalDir()
         this.executorFactory = new ExecutorFactory(Plugins.manager)
+        this.statsObserver = new WorkflowStatsObserver(this)
         this.observersV1 = createObserversV1()
         this.observersV2 = createObserversV2()
         this.statsEnabled = observersV1.any { ob -> ob.enableMetrics() } || observersV2.any { ob -> ob.enableMetrics() }
@@ -470,24 +471,18 @@ class Session implements ISession {
      */
     @PackageScope
     List<TraceObserver> createObserversV1() {
-
         final result = new ArrayList(10)
-
-        // stats is created as first because others may depend on it
-        statsObserver = new WorkflowStatsObserver(this)
-        result.add(statsObserver)
-
         for( TraceObserverFactory f : Plugins.getExtensions(TraceObserverFactory) ) {
             log.debug "Observer factory: ${f.class.simpleName}"
             result.addAll(f.create(this))
         }
-
         return result
     }
 
     @PackageScope
     List<TraceObserverV2> createObserversV2() {
         final result = new ArrayList(10)
+        result.add(statsObserver)
         for( TraceObserverFactoryV2 f : Plugins.getExtensions(TraceObserverFactoryV2) ) {
             log.debug "Observer factory (v2): ${f.class.simpleName}"
             result.addAll(f.create(this))
@@ -1011,14 +1006,7 @@ class Session implements ISession {
     }
 
     void notifyProcessClose(TaskProcessor process) {
-        for( def observer : observers ) {
-            try {
-                observer.onProcessClose(process)
-            }
-            catch( Exception e ) {
-                log.debug(e.getMessage(), e)
-            }
-        }
+        notifyEvent(observersV2, ob -> ob.onProcessClose(process))
     }
 
     void notifyProcessTerminate(TaskProcessor process) {

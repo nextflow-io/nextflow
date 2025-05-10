@@ -23,6 +23,7 @@ import jline.TerminalFactory
 import nextflow.Session
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
+import nextflow.trace.event.TaskEvent
 import nextflow.util.Duration
 import nextflow.util.Threads
 import org.fusesource.jansi.Ansi
@@ -39,7 +40,7 @@ import static org.fusesource.jansi.Ansi.ansi
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class AnsiLogObserver implements TraceObserver {
+class AnsiLogObserver implements TraceObserverV2 {
 
     static final private String NEWLINE = '\n'
 
@@ -508,14 +509,10 @@ class AnsiLogObserver implements TraceObserver {
         renderer.join()
     }
 
-    /**
-     * This method is invoked before a process run is going to be submitted
-     * @param handler
-     */
     @Override
-    synchronized void onProcessSubmit(TaskHandler handler, TraceRecord trace){
+    synchronized void onTaskSubmit(TaskEvent event) {
         // executor counter
-        final exec = handler.task.processor.executor.name
+        final exec = event.handler.task.processor.executor.name
         Integer count = executors[exec] ?: 0
         executors[exec] = count+1
         markModified()

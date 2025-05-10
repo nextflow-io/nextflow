@@ -15,6 +15,7 @@
 #
 
 nextflow.trace.DefaultObserverFactory
+nextflow.trace.DefaultObserverFactoryV2
 nextflow.util.DefaultSerializers
 nextflow.secret.LocalSecretsProvider
 nextflow.cache.DefaultCacheFactory

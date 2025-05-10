@@ -52,11 +52,6 @@ trait TraceObserver {
      */
     void onProcessCreate( TaskProcessor process ){}
 
-    /**
-     * Invoked when the process is closed (all tasks have been created).
-     */
-    void onProcessClose( TaskProcessor process ){}
-
     /*
       * Invoked when all tak have been executed and process ends.
       */
