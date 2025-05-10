@@ -127,7 +127,7 @@ class PluginRefactor {
 
     protected void updateClassNamesAndSymbols(File rootDir) {
         rootDir.eachFileRecurse { file ->
-            if (file.isFile() && FilesEx.getExtension(file) in ['groovy','gradle', 'md']) {
+            if (file.isFile() && FilesEx.getExtension(file) in ['groovy','gradle','md']) {
                 replaceTokensInFile(file, tokenMapping)
             }
         }

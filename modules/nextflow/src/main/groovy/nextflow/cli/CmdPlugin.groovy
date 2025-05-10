@@ -154,8 +154,8 @@ class CmdPlugin extends CmdBase {
             Git.cloneRepository()
                 .setURI(templateUri)
                 .setDirectory(targetDir)
-                .setBranchesToClone(["refs/tags/v0.1.0"])
-                .setBranch("refs/tags/v0.1.0")
+                .setBranchesToClone(["refs/tags/v0.2.0"])
+                .setBranch("refs/tags/v0.2.0")
                 .call()
         }
         catch (Exception e) {
@@ -166,5 +166,6 @@ class CmdPlugin extends CmdBase {
     static private void cleanup(File targetDir) {
         new File(targetDir, '.git').deleteDir()
         new File(targetDir, '.github').deleteDir()
+        new File(targetDir, 'validation').deleteDir()
     }
 }
