@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.lineage.model
+package nextflow.lineage.model.v1beta1
 
 import java.nio.file.Path
 

@@ -22,10 +22,10 @@ import nextflow.file.FileHelper
 import nextflow.file.LogicalDataPath
 import nextflow.lineage.LinPropertyValidator
 import nextflow.lineage.LinStore
-import nextflow.lineage.model.Checksum
-import nextflow.lineage.model.FileOutput
-import nextflow.lineage.model.TaskRun
-import nextflow.lineage.model.WorkflowRun
+import nextflow.lineage.model.v1beta1.Checksum
+import nextflow.lineage.model.v1beta1.FileOutput
+import nextflow.lineage.model.v1beta1.TaskRun
+import nextflow.lineage.model.v1beta1.WorkflowRun
 import nextflow.lineage.serde.LinSerializable
 import nextflow.util.CacheHelper
 import nextflow.util.TestOnly

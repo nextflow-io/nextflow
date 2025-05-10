@@ -14,31 +14,25 @@
  * limitations under the License.
  */
 
-package nextflow.lineage.model
+package nextflow.lineage.model.v1beta1
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
-import nextflow.lineage.serde.LinSerializable
-
 
 /**
- * Models a workflow definition.
+ * Models a data path which includes the path and a checksum to validate the content of the path.
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io
  */
 @Canonical
 @CompileStatic
-class Workflow implements LinSerializable {
+class DataPath {
     /**
-     * List of script files defining a workflow
+     * Real path of the output data.
      */
-    List<DataPath> scriptFiles
+    String path
     /**
-     * Workflow repository
+     * Checksum of the output data.
      */
-    String repository
-    /**
-     * Workflow commit identifier
-     */
-    String commitId
+    Checksum checksum
 }

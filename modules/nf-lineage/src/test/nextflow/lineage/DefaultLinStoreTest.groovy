@@ -22,12 +22,12 @@ import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
-import nextflow.lineage.model.Checksum
-import nextflow.lineage.model.DataPath
-import nextflow.lineage.model.FileOutput
-import nextflow.lineage.model.Parameter
-import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowRun
+import nextflow.lineage.model.v1beta1.Checksum
+import nextflow.lineage.model.v1beta1.DataPath
+import nextflow.lineage.model.v1beta1.FileOutput
+import nextflow.lineage.model.v1beta1.Parameter
+import nextflow.lineage.model.v1beta1.Workflow
+import nextflow.lineage.model.v1beta1.WorkflowRun
 import nextflow.lineage.serde.LinEncoder
 import nextflow.lineage.config.LineageConfig
 import spock.lang.Specification

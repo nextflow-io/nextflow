@@ -23,7 +23,7 @@ import nextflow.Channel
 import nextflow.Session
 import nextflow.extension.LinExtension
 import nextflow.lineage.fs.LinPathFactory
-import nextflow.lineage.model.FileOutput
+import nextflow.lineage.model.v1beta1.FileOutput
 import nextflow.lineage.serde.LinSerializable
 
 import static nextflow.lineage.fs.LinPath.*

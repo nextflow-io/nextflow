@@ -26,13 +26,13 @@ import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
 
 import groovy.transform.CompileStatic
-import nextflow.lineage.model.FileOutput
-import nextflow.lineage.model.LinModel
-import nextflow.lineage.model.TaskOutput
-import nextflow.lineage.model.TaskRun
-import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowOutput
-import nextflow.lineage.model.WorkflowRun
+import nextflow.lineage.model.v1beta1.FileOutput
+import nextflow.lineage.model.v1beta1.LinModel
+import nextflow.lineage.model.v1beta1.TaskOutput
+import nextflow.lineage.model.v1beta1.TaskRun
+import nextflow.lineage.model.v1beta1.Workflow
+import nextflow.lineage.model.v1beta1.WorkflowOutput
+import nextflow.lineage.model.v1beta1.WorkflowRun
 import nextflow.serde.gson.RuntimeTypeAdapterFactory
 
 /**
@@ -46,7 +46,7 @@ class LinTypeAdapterFactory<T> extends RuntimeTypeAdapterFactory<T> {
     public static final String CURRENT_VERSION = LinModel.VERSION
 
     LinTypeAdapterFactory() {
-        super(LinSerializable.class, "type", false)
+        super(LinSerializable.class, "kind", false)
         this.registerSubtype(WorkflowRun, WorkflowRun.simpleName)
             .registerSubtype(WorkflowOutput, WorkflowOutput.simpleName)
             .registerSubtype(Workflow, Workflow.simpleName)
