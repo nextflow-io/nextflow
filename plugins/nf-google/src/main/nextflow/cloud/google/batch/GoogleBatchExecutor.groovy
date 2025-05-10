@@ -168,7 +168,10 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
     String getArrayWorkDir(TaskHandler handler) {
         return isFusionEnabled() || isWorkDirDefaultFS()
             ? TaskArrayExecutor.super.getArrayWorkDir(handler)
-            : containerMountPath(handler.task.workDir as CloudStoragePath)
+            : containerMountPath(
+                handler.task.workDir as CloudStoragePath, 
+                config.getMountRoot()
+            )
     }
 
     @Override
