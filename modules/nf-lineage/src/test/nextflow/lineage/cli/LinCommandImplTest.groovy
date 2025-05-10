@@ -369,8 +369,9 @@ class LinCommandImplTest extends Specification{
         def expectedOutput = '''diff --git 12345 67890
 --- 12345
 +++ 67890
-@@ -1,15 +1,15 @@
+@@ -1,16 +1,16 @@
  {
+   "version": "lineage/v1beta1",
    "type": "FileOutput",
 -  "path": "path/to/file",
 +  "path": "path/to/file2",
