@@ -24,15 +24,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         createReportObserver(result)
         createTimelineObserver(result)
         createDagObserver(result)
-        createAnsiLogObserver(result)
         return result
-    }
-
-    protected void createAnsiLogObserver(Collection<TraceObserver> result) {
-        if( session.ansiLog ) {
-            session.ansiLogObserver = new AnsiLogObserver()
-            result << session.ansiLogObserver
-        }
     }
 
     /**

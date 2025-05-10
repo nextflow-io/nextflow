@@ -2443,6 +2443,7 @@ class TaskProcessor {
 
     protected void closeProcess() {
         arrayCollector?.close()
+        session.notifyProcessClose(this)
     }
 
     protected void terminateProcess() {
