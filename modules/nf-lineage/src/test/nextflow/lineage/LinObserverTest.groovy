@@ -26,14 +26,14 @@ import java.nio.file.attribute.BasicFileAttributes
 import com.google.common.hash.HashCode
 import nextflow.Session
 import nextflow.file.FileHolder
-import nextflow.lineage.model.Checksum
-import nextflow.lineage.model.FileOutput
-import nextflow.lineage.model.DataPath
-import nextflow.lineage.model.Parameter
-import nextflow.lineage.model.TaskOutput
-import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowOutput
-import nextflow.lineage.model.WorkflowRun
+import nextflow.lineage.model.v1beta1.Checksum
+import nextflow.lineage.model.v1beta1.FileOutput
+import nextflow.lineage.model.v1beta1.DataPath
+import nextflow.lineage.model.v1beta1.Parameter
+import nextflow.lineage.model.v1beta1.TaskOutput
+import nextflow.lineage.model.v1beta1.Workflow
+import nextflow.lineage.model.v1beta1.WorkflowOutput
+import nextflow.lineage.model.v1beta1.WorkflowRun
 import nextflow.lineage.serde.LinEncoder
 import nextflow.lineage.config.LineageConfig
 import nextflow.processor.TaskConfig
@@ -296,7 +296,7 @@ class LinObserverTest extends Specification {
         and: 'Expected LID objects'
         def sourceHash = CacheHelper.hasher('echo task source').hash().toString()
         def script = 'this is the script'
-        def taskDescription = new nextflow.lineage.model.TaskRun(uniqueId.toString(), "foo",
+        def taskDescription = new nextflow.lineage.model.v1beta1.TaskRun(uniqueId.toString(), "foo",
             new Checksum(sourceHash, "nextflow", "standard"),
             script,
             [
