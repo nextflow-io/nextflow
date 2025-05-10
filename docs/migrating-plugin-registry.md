@@ -18,7 +18,7 @@ The Nextflow plugin registry is a central repository for Nextflow plugins. It ho
 
 The [Nextflow Gradle plugin](https://github.com/nextflow-io/nextflow-plugin-gradle) simplifies the development of Nextflow plugins. It provides default configuration required for Nextflow integration, as well as custom Gradle tasks for building, testing, and publishing plugins.
 
-The Gradle plugin is versioned and published to the [Gradle Plugin Portal](https://plugins.gradle.org/), allowing developers to manage it like any other dependency. As the plugin ecosystem evolves, this Gradle plugin will enable easier maintenance and adoption of ongoing improvements to the Nextflow plugin framework.
+The Gradle plugin is versioned and published to the [Gradle Plugin Portal](https://plugins.gradle.org/), allowing developers to manage it like any other dependency. As the plugin ecosystem evolves, the Gradle plugin will enable easier maintenance and adoption of ongoing improvements to the Nextflow plugin framework.
 
 ## Timeline
 
@@ -38,7 +38,7 @@ During this time, plugin developers are encouraged to experiment with the Gradle
 
 The Nextflow plugin registry will be generally available. Nextflow 25.10 will use the plugin registry by default. The legacy plugin index will be **closed to new pull requests**.
 
-Developers will be required to publish to the Nextflow plugin registry instead. To ensure continued support for older versions of Nextflow, the legacy plugin index will be automatically kept up-to-date with the Nextflow plugin registry.
+Developers will be required to publish to the Nextflow plugin registry. To ensure continued support for older versions of Nextflow, the legacy plugin index will be automatically kept up-to-date with the Nextflow plugin registry.
 
 ### Nextflow 26.04
 
@@ -151,7 +151,7 @@ To migrate an existing Nextflow plugin:
 
 7. In the plugin root directory, run `make assemble`.
 
-Alternatively, use the `nextflow plugin create` command to re-create your plugin with the plugin template, add your existing plugin code as needed. See {ref}`dev-plugins-template` for more information about the plugin template.
+Alternatively, use the `nextflow plugin create` command to re-create your plugin with the plugin template and add your existing plugin code. See {ref}`dev-plugins-template` for more information about the plugin template.
 
 ### Publishing to the Nextflow plugin registry
 
