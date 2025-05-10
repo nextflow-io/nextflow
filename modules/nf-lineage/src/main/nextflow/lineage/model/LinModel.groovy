@@ -14,23 +14,13 @@
  * limitations under the License.
  */
 
-package nextflow.lineage.serde
-
-import groovy.transform.CompileStatic
-import nextflow.serde.gson.GsonEncoder
+package nextflow.lineage.model
 
 /**
- * Implements a JSON encoder for lineage model objects
+ * Marker interface holding lineage model common definitions
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@CompileStatic
-class LinEncoder extends GsonEncoder<LinSerializable> {
-
-    LinEncoder() {
-        withTypeAdapterFactory(new LinTypeAdapterFactory())
-        // enable rendering of null values
-        withSerializeNulls(true)
-    }
-
+interface LinModel {
+    static final public String VERSION = 'lineage/v1beta1'
 }

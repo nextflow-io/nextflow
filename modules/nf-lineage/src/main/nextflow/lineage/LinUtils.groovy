@@ -29,6 +29,7 @@ import nextflow.lineage.model.TaskRun
 import nextflow.lineage.model.WorkflowRun
 import nextflow.lineage.serde.LinEncoder
 import nextflow.lineage.serde.LinSerializable
+import nextflow.lineage.serde.LinTypeAdapterFactory
 import nextflow.serde.gson.GsonEncoder
 /**
  * Utils class for Lineage IDs.
@@ -258,7 +259,7 @@ class LinUtils {
             return new GsonEncoder<Object>() {}
                 .withPrettyPrint(prettyPrint)
                 .withSerializeNulls(true)
-                .withTypeAdapterFactory(LinEncoder.newTypeAdapterFactory())
+                .withTypeAdapterFactory(new LinTypeAdapterFactory())
                 .encode(output)
         }
     }
