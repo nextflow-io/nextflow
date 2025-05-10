@@ -72,7 +72,7 @@ The `channel.fromLineage` factory creates a channel that emits files from the {r
 
 ```nextflow
 channel
-    .fromLineage(workflowRun: 'lid://0d1d1622ced3e4edc690bec768919b45', label: ['alpha', 'beta'])
+    .fromLineage(workflowLaunch: 'lid://0d1d1622ced3e4edc690bec768919b45', label: ['alpha', 'beta'])
     .view()
 ```
 
@@ -86,7 +86,7 @@ Available options:
 `taskRun`
 : LID of the task run that produced the desired files.
 
-`workflowRun`
+`workflowLaunch`
 : LID of the workflow run that produced the desired files.
 
 (channel-fromlist)=

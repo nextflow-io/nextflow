@@ -44,11 +44,11 @@ class DefaultLinHistoryLogTest extends Specification {
     def "write should add a new file to the history folder"() {
         given:
         UUID sessionId = UUID.randomUUID()
-        String runName = "TestRun"
-        String runLid = "lid://123"
+        def runName = "TestRun"
+        def launchLid = "lid://123"
 
         when:
-        linHistoryLog.write(runName, sessionId, runLid)
+        linHistoryLog.write(runName, sessionId, launchLid)
 
         then:
         def files = historyFile.listFiles()
@@ -56,16 +56,40 @@ class DefaultLinHistoryLogTest extends Specification {
         def parsedRecord = LinHistoryRecord.parse(files[0].text)
         parsedRecord.sessionId == sessionId
         parsedRecord.runName == runName
+        parsedRecord.launchLid == launchLid
+        parsedRecord.runLid == '-'
+        parsedRecord.status == '-'
+    }
+
+    def "update should modify log record for given lid"() {
+        given:
+        UUID sessionId = UUID.randomUUID()
+        def runName = "Run1"
+        def launchLid = "launch-lid"
+        def runLid = "run-lid"
+        def status = "SUCCEEDED"
+
+        and:
+        linHistoryLog.write(runName, sessionId, launchLid)
+
+        when:
+        linHistoryLog.finalize(launchLid, runLid, status)
+
+        then:
+        def files = historyFile.listFiles()
+        files.size() == 1
+        def parsedRecord = LinHistoryRecord.parse(files[0].text)
         parsedRecord.runLid == runLid
+        parsedRecord.status == status
     }
 
     def 'should get records' () {
         given:
         UUID sessionId = UUID.randomUUID()
-        String runName = "Run1"
-        String runLid = "lid://123"
+        def runName = "Run1"
+        def launchLid = "lid://123"
         and:
-        linHistoryLog.write(runName, sessionId, runLid)
+        linHistoryLog.write(runName, sessionId, launchLid)
 
         when:
         def records = linHistoryLog.getRecords()
@@ -73,7 +97,9 @@ class DefaultLinHistoryLogTest extends Specification {
         records.size() == 1
         records[0].sessionId == sessionId
         records[0].runName == runName
-        records[0].runLid == runLid
+        records[0].launchLid == launchLid
+        records[0].runLid == '-'
+        records[0].status == '-'
     }
 }
 

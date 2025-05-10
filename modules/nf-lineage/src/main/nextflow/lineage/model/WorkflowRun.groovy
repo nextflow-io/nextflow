@@ -16,12 +16,14 @@
 
 package nextflow.lineage.model
 
+import java.time.OffsetDateTime
+
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import nextflow.lineage.serde.LinSerializable
 
 /**
- * Models a Workflow Execution
+ * Models the completion of a workflow execution.
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io
  */
@@ -29,23 +31,19 @@ import nextflow.lineage.serde.LinSerializable
 @CompileStatic
 class WorkflowRun implements LinSerializable {
     /**
-     * Description of the workflow associated with the workflow run.
+     * Creation date of the workflow run
      */
-    Workflow workflow
+    OffsetDateTime createdAt
     /**
-     * Session identifier used in the workflow run
+     * Workflow launch that generated the run
      */
-    String sessionId
+    String workflowLaunch
     /**
-     * Workflow run name
+     * Completion status of the workflow run, can be SUCCEEDED, FAILED, or CANCELLED
      */
-    String name
+    String status
     /**
-     * Workflow parameters
+     * Workflow output
      */
-    List<Parameter> params
-    /**
-     * Resolved Configuration
-     */
-    Map config
+    List<Parameter> output
 }

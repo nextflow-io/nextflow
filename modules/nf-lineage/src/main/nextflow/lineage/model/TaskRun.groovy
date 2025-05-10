@@ -73,7 +73,7 @@ class TaskRun implements LinSerializable {
      */
     List<DataPath> binEntries
     /**
-     * Workflow run associated to the task run
+     * Workflow launch associated to the task run
      */
-    String workflowRun
+    String workflowLaunch
 }

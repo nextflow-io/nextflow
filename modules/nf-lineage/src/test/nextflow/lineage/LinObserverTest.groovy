@@ -30,9 +30,8 @@ import nextflow.lineage.model.Checksum
 import nextflow.lineage.model.FileOutput
 import nextflow.lineage.model.DataPath
 import nextflow.lineage.model.Parameter
-import nextflow.lineage.model.TaskOutput
 import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowOutput
+import nextflow.lineage.model.WorkflowLaunch
 import nextflow.lineage.model.WorkflowRun
 import nextflow.lineage.serde.LinEncoder
 import nextflow.lineage.config.LineageConfig
@@ -184,12 +183,12 @@ class LinObserverTest extends Specification {
         def observer = new LinObserver(session, store)
         def mainScript = new DataPath("file://${scriptFile.toString()}", new Checksum("78910", "nextflow", "standard"))
         def workflow = new Workflow([mainScript],"https://nextflow.io/nf-test/", "123456" )
-        def workflowRun = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [], config)
+        def workflowLaunch = new WorkflowLaunch(workflow, uniqueId.toString(), "test_run", [], config)
         when:
         observer.onFlowCreate(session)
         observer.onFlowBegin()
         then:
-        folder.resolve("${observer.executionHash}/.data.json").text == new LinEncoder().encode(workflowRun)
+        folder.resolve("${observer.launchId}/.data.json").text == new LinEncoder().encode(workflowLaunch)
 
         cleanup:
         folder?.deleteDir()
@@ -237,7 +236,7 @@ class LinObserverTest extends Specification {
         and:
         def observer = new LinObserver(session, store)
         def normalizer = new PathNormalizer(metadata)
-        observer.executionHash = "hash"
+        observer.launchId = "hash"
         observer.normalizer = normalizer
         and:
         def hash = HashCode.fromString("1234567890")
@@ -314,23 +313,10 @@ class LinObserverTest extends Specification {
         def taskRunResult = store.load("${hash.toString()}")
         def dataOutputResult1 = store.load("${hash}/fileOut1.txt") as FileOutput
         def dataOutputResult2 = store.load("${hash}/fileOut2.txt") as FileOutput
-        def taskOutputsResult = store.load("${hash}#output") as TaskOutput
         then:
         taskRunResult == taskDescription
         dataOutputResult1 == dataOutput1
         dataOutputResult2 == dataOutput2
-        taskOutputsResult.taskRun == "lid://1234567890"
-        taskOutputsResult.workflowRun == "lid://hash"
-        taskOutputsResult.output.size() == 3
-        taskOutputsResult.output.get(0).type == "path"
-        taskOutputsResult.output.get(0).name == "file1"
-        taskOutputsResult.output.get(0).value == "lid://1234567890/fileOut1.txt"
-        taskOutputsResult.output.get(1).type == "path"
-        taskOutputsResult.output.get(1).name == "file2"
-        taskOutputsResult.output.get(1).value == ["lid://1234567890/fileOut2.txt"]
-        taskOutputsResult.output.get(2).type == "val"
-        taskOutputsResult.output.get(2).name == "id"
-        taskOutputsResult.output.get(2).value == "value"
 
         cleanup:
         folder?.deleteDir()
@@ -346,7 +332,7 @@ class LinObserverTest extends Specification {
         }
         store.open(LineageConfig.create(session))
         def observer = Spy(new LinObserver(session, store))
-        observer.executionHash = "hash"
+        observer.launchId = "hash"
         and:
         def workDir = folder.resolve('12/34567890')
         Files.createDirectories(workDir)
@@ -483,7 +469,7 @@ class LinObserverTest extends Specification {
         Path.of('/path/to/outDir')      | Path.of('../relative')                | "relative"
     }
 
-    def 'should save workflow output'() {
+    def 'should save workflow run'() {
         given:
         def folder = Files.createTempDirectory('test')
         def config = [lineage:[enabled: true, store:[location:folder.toString()]]]
@@ -508,19 +494,14 @@ class LinObserverTest extends Specification {
             getUniqueId()>>uniqueId
             getRunName()>>"test_run"
             getParams() >> new ScriptBinding.ParamsMap()
+            isSuccess() >> true
         }
         store.open(LineageConfig.create(session))
         def observer = new LinObserver(session, store)
         def encoder = new LinEncoder()
-
-        when: 'Starting workflow'
-            observer.onFlowCreate(session)
-            observer.onFlowBegin()
-        then: 'History file should contain execution hash'
-            def lid = LinHistoryRecord.parse(folder.resolve(".history/${observer.executionHash}").text)
-            lid.runLid == asUriString(observer.executionHash)
-            lid.sessionId == uniqueId
-            lid.runName == "test_run"
+        and:
+        observer.onFlowCreate(session)
+        observer.onFlowBegin()
 
         when: ' publish output with source file'
             def outFile1 = outputDir.resolve('foo/file.bam')
@@ -536,9 +517,9 @@ class LinObserverTest extends Specification {
             def attrs1 = Files.readAttributes(outFile1, BasicFileAttributes)
             def fileHash1 = CacheHelper.hasher(outFile1).hash().toString()
             def output1 = new FileOutput(outFile1.toString(), new Checksum(fileHash1, "nextflow", "standard"),
-                "lid://123987/file.bam", "$LID_PROT${observer.executionHash}", null,
+                "lid://123987/file.bam", "$LID_PROT${observer.launchId}", null,
                 attrs1.size(), LinUtils.toDate(attrs1.creationTime()), LinUtils.toDate(attrs1.lastModifiedTime()) )
-            folder.resolve("${observer.executionHash}/foo/file.bam/.data.json").text == encoder.encode(output1)
+            folder.resolve("${observer.launchId}/foo/file.bam/.data.json").text == encoder.encode(output1)
 
         when: 'publish without source path'
         def outFile2 = outputDir.resolve('foo/file2.bam')
@@ -550,15 +531,17 @@ class LinObserverTest extends Specification {
             observer.onWorkflowOutput(new WorkflowOutputEvent("b", outFile2))
         then: 'Check outFile2 metadata in lid store'
             def output2 = new FileOutput(outFile2.toString(), new Checksum(fileHash2, "nextflow", "standard"),
-                "lid://${observer.executionHash}" , "lid://${observer.executionHash}", null,
+                "lid://${observer.launchId}" , "lid://${observer.launchId}", null,
                 attrs2.size(), LinUtils.toDate(attrs2.creationTime()), LinUtils.toDate(attrs2.lastModifiedTime()) )
-            folder.resolve("${observer.executionHash}/foo/file2.bam/.data.json").text == encoder.encode(output2)
+            folder.resolve("${observer.launchId}/foo/file2.bam/.data.json").text == encoder.encode(output2)
 
         when: 'Workflow complete'
             observer.onFlowComplete()
-        then: 'Check WorkflowOutput is written in the lid store'
-            def resultsRetrieved = store.load("${observer.executionHash}#output") as WorkflowOutput
-            resultsRetrieved.output == [new Parameter(Path.simpleName, "a", "lid://${observer.executionHash}/foo/file.bam"), new Parameter(Path.simpleName, "b", "lid://${observer.executionHash}/foo/file2.bam")]
+        then: 'Check history file is updated and Workflow Result is written in the lid store'
+            def finalLid = store.getHistoryLog().getRecord(uniqueId).runLid.substring(LID_PROT.size())
+            def workflowRun = store.load(finalLid) as WorkflowRun
+            workflowRun.status == "SUCCEEDED"
+            workflowRun.output == [new Parameter(Path.simpleName, "a", "lid://${observer.launchId}/foo/file.bam"), new Parameter(Path.simpleName, "b", "lid://${observer.launchId}/foo/file2.bam")]
 
         cleanup:
             folder?.deleteDir()

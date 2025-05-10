@@ -18,10 +18,10 @@ package nextflow.lineage.fs
 
 import nextflow.lineage.LinUtils
 import nextflow.lineage.model.Checksum
+import nextflow.lineage.model.FileOutput
 import nextflow.lineage.model.Parameter
 import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowOutput
-import nextflow.lineage.model.FileOutput
+import nextflow.lineage.model.WorkflowLaunch
 import nextflow.lineage.model.WorkflowRun
 import nextflow.lineage.serde.LinEncoder
 import nextflow.util.CacheHelper
@@ -68,25 +68,15 @@ class LinPathTest extends Specification {
         def path = new LinPath(fs, new URI( URI_STRING ))
         then:
         path.filePath == PATH
-        path.fragment == FRAGMENT
-        path.query == QUERY
 
         where:
-        URI_STRING                                  | PATH              | QUERY         | FRAGMENT
-        "lid://1234/hola"                           | "1234/hola"       | null          | null
-        "lid://1234/hola#workflow.repository"       | "1234/hola"       | null          | "workflow.repository"
-        "lid://1234/#workflow.repository"           | "1234"            | null          | "workflow.repository"
-        "lid://1234/?q=a&b=c"                       | "1234"            | "q=a&b=c"     | null
-        "lid://1234/?q=a&b=c#workflow.repository"   | "1234"            | "q=a&b=c"     | "workflow.repository"
-        "lid:///"                                   | "/"               | null          | null
-    }
-
-    def 'should throw exception if fragment contains an unknown property'() {
-        when:
-        new LinPath(fs, new URI ("lid://1234/hola#no-exist"))
-        then:
-        thrown(IllegalArgumentException)
-
+        URI_STRING                                  | PATH
+        "lid://1234/hola"                           | "1234/hola"
+        "lid://1234/hola#workflow.repository"       | "1234/hola"
+        "lid://1234/#workflow.repository"           | "1234"
+        "lid://1234/?q=a&b=c"                       | "1234"
+        "lid://1234/?q=a&b=c#workflow.repository"   | "1234"
+        "lid:///"                                   | "/"
     }
 
     def 'should warn if query is specified'() {
@@ -168,14 +158,15 @@ class LinPathTest extends Specification {
         wdir.resolve('12345/output1/.data.json').text = '{"type":"FileOutput", "path": "' + outputFolder.toString() + '"}'
         wdir.resolve('12345/path/to/file2.txt/.data.json').text = '{"type":"FileOutput", "path": "' + outputFile.toString() + '"}'
         def time = OffsetDateTime.now()
-        def wfResultsMetadata = new LinEncoder().withPrettyPrint(true).encode(new WorkflowOutput(time, "lid://1234", [new Parameter( "Path", "a", "lid://1234/a.txt")]))
+        def workflowRun = new WorkflowRun(time, "lid://1234", "SUCCEEDED", [new Parameter( "Path", "a", "lid://1234/a.txt")])
+        def wfResultsMetadata = new LinEncoder().withPrettyPrint(true).encode(workflowRun)
         wdir.resolve('5678/').mkdirs()
         wdir.resolve('5678/.data.json').text = wfResultsMetadata
 
         expect: 'Get real path when LinPath is the output data or a subfolder'
         new LinPath(lidFs, '12345/output1').getTargetPath() == outputFolder
-        new LinPath(lidFs,'12345/output1/some/path').getTargetPath() == outputSubFolder
-        new LinPath(lidFs,'12345/output1/some/path/file1.txt').getTargetPath().text == outputSubFolderFile.text
+        new LinPath(lidFs, '12345/output1/some/path').getTargetPath() == outputSubFolder
+        new LinPath(lidFs, '12345/output1/some/path/file1.txt').getTargetPath().text == outputSubFolderFile.text
         new LinPath(lidFs, '12345/path/to/file2.txt').getTargetPath().text == outputFile.text
 
         when: 'LinPath fs is null'
@@ -223,58 +214,6 @@ class LinPathTest extends Specification {
         then:
         result instanceof LinMetadataPath
         result.text == wfResultsMetadata
-
-        when: 'Lid description subobject'
-        def result2 = new LinPath(lidFs, '5678#output').getTargetOrMetadataPath()
-        then:
-        result2 instanceof LinMetadataPath
-        result2.text == LinUtils.encodeSearchOutputs([new Parameter("Path","a", "lid://1234/a.txt")], true)
-
-        when: 'Lid subobject does not exist'
-        new LinPath(lidFs, '23456#notexists').getTargetOrMetadataPath()
-        then:
-        thrown(IllegalArgumentException)
-    }
-
-    def 'should get subobjects as path' (){
-        given:
-        def lidFs = new LinFileSystemProvider().newFileSystem(new URI("lid:///"), [enabled: true, store: [location: wdir.toString()]])
-        def wf = new WorkflowRun(new Workflow([],"repo", "commit"), "sessionId", "runId", [new Parameter("String", "param1", "value1")])
-
-        when: 'workflow repo in workflow run'
-        Path p = LinPath.getMetadataAsTargetPath(wf, lidFs, "123456", "workflow.repository")
-        then:
-        p instanceof LinMetadataPath
-        p.text == '"repo"'
-
-        when: 'outputs'
-        def outputs = new WorkflowOutput(OffsetDateTime.now(), "lid://123456", [new Parameter("Collection", "samples", ["sample1", "sample2"])])
-        lidFs.store.save("123456#output", outputs)
-        Path p2 = LinPath.getMetadataAsTargetPath(wf, lidFs, "123456", "output")
-        then:
-        p2 instanceof LinMetadataPath
-        p2.text == LinUtils.encodeSearchOutputs([new Parameter("Collection", "samples", ["sample1", "sample2"])], true)
-
-        when: 'child does not exists'
-        LinPath.getMetadataAsTargetPath(wf, lidFs, "123456", "no-exist")
-        then:
-        def exception = thrown(FileNotFoundException)
-        exception.message == "Target path '123456#no-exist' does not exist"
-
-        when: 'outputs does not exists'
-        LinPath.getMetadataAsTargetPath(wf, lidFs, "6789", "output")
-        then:
-        def exception1 = thrown(FileNotFoundException)
-        exception1.message == "Target path '6789#output' does not exist"
-
-        when: 'null object'
-        LinPath.getMetadataAsTargetPath(null, lidFs, "123456", "no-exist")
-        then:
-        def exception2 = thrown(FileNotFoundException)
-        exception2.message == "Target path '123456' does not exist"
-
-        cleanup:
-        wdir.resolve("123456").deleteDir()
     }
 
     def 'should get file name' () {
@@ -283,7 +222,6 @@ class LinPathTest extends Specification {
         where:
         PATH                        | EXPECTED
         '1234567890/this/file.bam'  | new LinPath(null, 'file.bam')
-        '12345/hola?query#output'   | new LinPath("query", "output", "hola", null)
 
     }
 
@@ -321,7 +259,6 @@ class LinPathTest extends Specification {
         '123/a'             | 1     | new LinPath(null, 'a')
         '123/a/'            | 1     | new LinPath(null, 'a')
         '123/a/b'           | 2     | new LinPath(null, 'b')
-        '123/a?q#output'    | 1     | new LinPath(null, 'a?q#output')
     }
 
     @Unroll
@@ -637,7 +574,7 @@ class LinPathTest extends Specification {
         file.text = "this is a data file"
         def hash = CacheHelper.hasher(file).hash().toString()
         def correctData = new FileOutput(file.toString(), new Checksum(hash,"nextflow", "standard"))
-        LinPath.validateDataOutput(correctData)
+        LinPath.validateFileOutput(correctData)
         def stdout = capture
             .toString()
             .readLines()// remove the log part
@@ -658,7 +595,7 @@ class LinPathTest extends Specification {
         file.text = "this is a data file"
         def hash = CacheHelper.hasher(file).hash().toString()
         def correctData = new FileOutput(file.toString(), new Checksum("abscd","nextflow", "standard"))
-        LinPath.validateDataOutput(correctData)
+        LinPath.validateFileOutput(correctData)
         def stdout = capture
             .toString()
             .readLines()// remove the log part
@@ -680,7 +617,7 @@ class LinPathTest extends Specification {
         file.text = "this is a data file"
         def hash = CacheHelper.hasher(file).hash().toString()
         def correctData = new FileOutput(file.toString(), new Checksum(hash,"not-supported", "standard"))
-        LinPath.validateDataOutput(correctData)
+        LinPath.validateFileOutput(correctData)
         def stdout = capture
             .toString()
             .readLines()// remove the log part
@@ -699,7 +636,7 @@ class LinPathTest extends Specification {
     def 'should throw exception when file not found validating hash'(){
         when:
         def correctData = new FileOutput("not/existing/file", new Checksum("120741","nextflow", "standard"))
-        LinPath.validateDataOutput(correctData)
+        LinPath.validateFileOutput(correctData)
 
         then:
         thrown(FileNotFoundException)

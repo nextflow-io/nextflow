@@ -74,8 +74,8 @@ class CmdLineageTest extends Specification {
             def launcher = Mock(Launcher){
                 getOptions() >> new CliOptions(config: [configFile.toString()])
             }
-            lidLog.write("run_name", uniqueId, "lid://123456", date)
-            def recordEntry = "${LinHistoryRecord.TIMESTAMP_FMT.format(date)}\trun_name\t${uniqueId}\tlid://123456".toString()
+            lidLog.write("run_name", uniqueId, "lid://123456","lid://567890", date)
+            def recordEntry = "${LinHistoryRecord.TIMESTAMP_FMT.format(date)}\trun_name\t${uniqueId}\tlid://123456\tlid://567890".toString()
         when:
             def lidCmd = new CmdLineage(launcher: launcher, args: ["list"])
             lidCmd.run()

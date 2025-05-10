@@ -29,27 +29,27 @@ import java.nio.file.attribute.FileTime
  */
 @CompileStatic
 class LinMetadataPath extends LinPath {
-    private byte[] results
+    private byte[] bytes
     private FileTime creationTime
 
-    LinMetadataPath(String resultsObject, FileTime creationTime, LinFileSystem fs, String path, String fragment) {
-        super(fs, "${path}${fragment ? '#'+ fragment : ''}")
-        this.results = resultsObject.getBytes("UTF-8")
+    LinMetadataPath(String metadata, FileTime creationTime, LinFileSystem fs, String path) {
+        super(fs, path)
+        this.bytes = metadata.getBytes("UTF-8")
         this.creationTime = creationTime
     }
 
     InputStream newInputStream() {
-        return new ByteArrayInputStream(results)
+        return new ByteArrayInputStream(bytes)
     }
 
     SeekableByteChannel newSeekableByteChannel(){
-        return new LinMetadataSeekableByteChannel(results)
+        return new LinMetadataSeekableByteChannel(bytes)
     }
 
     <A extends BasicFileAttributes> A readAttributes(Class<A> type){
         return (A) new BasicFileAttributes() {
             @Override
-            long size() { return results.length }
+            long size() { return bytes.length }
 
             @Override
             FileTime lastModifiedTime() { return creationTime }

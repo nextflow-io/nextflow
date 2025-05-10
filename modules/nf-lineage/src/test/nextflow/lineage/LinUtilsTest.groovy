@@ -22,7 +22,7 @@ import nextflow.lineage.model.Checksum
 import nextflow.lineage.model.DataPath
 import nextflow.lineage.model.Parameter
 import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowOutput
+import nextflow.lineage.model.WorkflowLaunch
 import nextflow.lineage.model.WorkflowRun
 import nextflow.lineage.config.LineageConfig
 import spock.lang.Specification
@@ -72,52 +72,24 @@ class LinUtilsTest extends Specification{
         def uniqueId = UUID.randomUUID()
         def mainScript = new DataPath("file://path/to/main.nf", new Checksum("78910", "nextflow", "standard"))
         def workflow = new Workflow([mainScript], "https://nextflow.io/nf-test/", "123456")
-        def key1 = "testKey"
-        def value1 = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [new Parameter("String", "param1", "value1"), new Parameter("String", "param2", "value2")])
-        def outputs1 = new WorkflowOutput(OffsetDateTime.now(), "lid://testKey", [new Parameter( "String", "output", "name")] )
-        def key2 = "testKey2"
-        def value2 = new WorkflowRun(workflow, uniqueId.toString(), "test_run2", [new Parameter("String", "param1", "value1"), new Parameter("String", "param2", "value2")])
+        def launchId = "testLaunch"
+        def workflowLaunch = new WorkflowLaunch(workflow, uniqueId.toString(), "test_run", [new Parameter("String", "param1", "value1"), new Parameter("String", "param2", "value2")])
         def lidStore = new DefaultLinStore()
         lidStore.open(config)
-        lidStore.save(key1, value1)
-        lidStore.save("$key1#output", outputs1)
-        lidStore.save(key2, value2)
+        lidStore.save(launchId, workflowLaunch)
 
         when:
-        def params = LinUtils.getMetadataObject(lidStore, new URI('lid://testKey#params'))
+        def record = LinUtils.getMetadataObject(lidStore, new URI('lid://testLaunch'))
         then:
-        params instanceof List<Parameter>
-        (params as List<Parameter>).size() == 2
+        record instanceof WorkflowLaunch
+        record.name == "test_run"
+        record.params.size() == 2
 
         when:
-        def outputs = LinUtils.getMetadataObject(lidStore, new URI('lid://testKey#output'))
-        then:
-        outputs instanceof List<Parameter>
-        def param = (outputs as List)[0] as Parameter
-        param.name == "output"
-
-        when:
-        outputs = LinUtils.getMetadataObject(lidStore, new URI('lid://testKey2#output'))
-        then:
-        outputs instanceof List
-        (outputs as List).isEmpty()
-
-        when:
-        LinUtils.getMetadataObject(lidStore, new URI('lid://testKey#no-exist'))
-        then:
-        thrown(IllegalArgumentException)
-
-        when:
-        LinUtils.getMetadataObject(lidStore, new URI('lid://testKey#outputs.no-exist'))
-        then:
-        thrown(IllegalArgumentException)
-
-        when:
-        LinUtils.getMetadataObject(lidStore, new URI('lid://no-exist#something'))
+        LinUtils.getMetadataObject(lidStore, new URI('lid://no-exist'))
         then:
         thrown(FileNotFoundException)
     }
-
 
     def "should check params in an object"() {
         given:
@@ -187,7 +159,7 @@ class LinUtilsTest extends Specification{
         def uniqueId = UUID.randomUUID()
         def mainScript = new DataPath("file://path/to/main.nf", new Checksum("78910", "nextflow", "standard"))
         def workflow = new Workflow([mainScript], "https://nextflow.io/nf-test/", "123456")
-        def wfRun = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [new Parameter("String", "param1", [key: "value1"]), new Parameter("String", "param2", "value2")])
+        def wfRun = new WorkflowLaunch(workflow, uniqueId.toString(), "test_run", [new Parameter("String", "param1", [key: "value1"]), new Parameter("String", "param2", "value2")])
 
         expect:
             LinUtils.navigate(wfRun, "workflow.commitId") == "123456"
