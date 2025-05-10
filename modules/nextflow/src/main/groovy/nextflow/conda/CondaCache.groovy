@@ -287,9 +287,6 @@ class CondaCache {
         log.info "Creating env using ${binaryName}: $condaEnv [cache $prefixPath]"
 
         String opts = createOptions ? "$createOptions " : ''
-        // micromamba does not and might never support the mkdir flag, since the mkdir behaviour is the default
-        if( binaryName != 'micromamba' )
-            opts += '--mkdir '
 
         def cmd
         if( isYamlFilePath(condaEnv) ) {

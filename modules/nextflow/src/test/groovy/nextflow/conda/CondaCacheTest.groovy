@@ -209,7 +209,7 @@ class CondaCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand( "conda create --mkdir --yes --quiet --prefix $PREFIX $ENV" ) >> null
+        1 * cache.runCommand( "conda create --yes --quiet --prefix $PREFIX $ENV" ) >> null
         result == PREFIX
 
     }
@@ -235,7 +235,7 @@ class CondaCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand("mamba create --mkdir --yes --quiet --prefix $PREFIX $ENV") >> null
+        1 * cache.runCommand("mamba create --yes --quiet --prefix $PREFIX $ENV") >> null
         result == PREFIX
 
     }
@@ -330,7 +330,7 @@ class CondaCacheTest extends Specification {
         1 * cache.isYamlFilePath(ENV)
         1 * cache.isTextFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand( "conda create --this --that --mkdir --yes --quiet --prefix $PREFIX $ENV" ) >> null
+        1 * cache.runCommand( "conda create --this --that --yes --quiet --prefix $PREFIX $ENV" ) >> null
         result == PREFIX
     }
 
@@ -347,7 +347,7 @@ class CondaCacheTest extends Specification {
         1 * cache.isYamlFilePath(ENV)
         1 * cache.isTextFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand("mamba create --this --that --mkdir --yes --quiet --prefix $PREFIX $ENV") >> null
+        1 * cache.runCommand("mamba create --this --that --yes --quiet --prefix $PREFIX $ENV") >> null
         result == PREFIX
     }
 
@@ -381,7 +381,7 @@ class CondaCacheTest extends Specification {
         1 * cache.isYamlFilePath(ENV)
         1 * cache.isTextFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand("conda create --mkdir --yes --quiet --prefix /foo/bar -c bioconda -c defaults bwa=1.1.1") >> null
+        1 * cache.runCommand("conda create --yes --quiet --prefix /foo/bar -c bioconda -c defaults bwa=1.1.1") >> null
         result == PREFIX
     }
 
@@ -435,7 +435,7 @@ class CondaCacheTest extends Specification {
         1 * cache.isYamlFilePath(ENV)
         1 * cache.isTextFilePath(ENV)
         1 * cache.makeAbsolute(ENV) >> Paths.get('/usr/base').resolve(ENV)
-        1 * cache.runCommand( "conda create --this --that --mkdir --yes --quiet --prefix $PREFIX --file /usr/base/foo.txt" ) >> null
+        1 * cache.runCommand( "conda create --this --that --yes --quiet --prefix $PREFIX --file /usr/base/foo.txt" ) >> null
         result == PREFIX
 
     }
