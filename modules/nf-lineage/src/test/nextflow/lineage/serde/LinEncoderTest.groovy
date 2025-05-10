@@ -16,18 +16,18 @@
 
 package nextflow.lineage.serde
 
+import java.time.OffsetDateTime
+
 import nextflow.lineage.model.Checksum
 import nextflow.lineage.model.DataPath
-import nextflow.lineage.model.Parameter
 import nextflow.lineage.model.FileOutput
+import nextflow.lineage.model.Parameter
 import nextflow.lineage.model.TaskOutput
 import nextflow.lineage.model.TaskRun
 import nextflow.lineage.model.Workflow
 import nextflow.lineage.model.WorkflowOutput
 import nextflow.lineage.model.WorkflowRun
 import spock.lang.Specification
-
-import java.time.OffsetDateTime
 
 class LinEncoderTest extends Specification{
 
@@ -163,7 +163,7 @@ class LinEncoderTest extends Specification{
         def encoded = encoder.encode(wfResults)
         def object = encoder.decode(encoded)
         then:
-        encoded == '{"type":"WorkflowOutput","createdAt":null,"workflowRun":"lid://1234","output":null}'
+        encoded == '{"version":"lineage/v1beta1","type":"WorkflowOutput","createdAt":null,"workflowRun":"lid://1234","output":null}'
         def result = object as WorkflowOutput
         result.createdAt == null
 
