@@ -377,9 +377,9 @@ class WaveClient {
     }
 
     protected URL fusionArm64(boolean snapshots) {
-        if( snapshots )
-            throw new IllegalArgumentException("Fusion does not support arm64 snapshots (yet)")
-        return URI.create(FusionConfig.DEFAULT_FUSION_ARM64_URL).toURL()
+        return snapshots
+            ? URI.create(FusionConfig.DEFAULT_SNAPSHOT_ARM64_URL).toURL()
+            : URI.create(FusionConfig.DEFAULT_FUSION_ARM64_URL).toURL()
     }
 
     protected URL defaultS5cmdUrl(String platform) {
