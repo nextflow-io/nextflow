@@ -33,6 +33,7 @@ import nextflow.config.Manifest
 import nextflow.exception.WorkflowScriptErrorException
 import nextflow.trace.WorkflowStats
 import nextflow.util.Duration
+import nextflow.util.TestOnly
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Models workflow metadata properties and notification handler
@@ -140,6 +141,11 @@ class WorkflowMetadata {
     Path launchDir
 
     /**
+     * Workflow output directory
+     */
+    Path outputDir
+
+    /**
      * Workflow working directory
      */
     Path workDir
@@ -190,9 +196,27 @@ class WorkflowMetadata {
     boolean stubRun
 
     /**
+     * Returns ``true`` whenever the current instance is in preview mode
+     */
+    boolean preview
+
+    /**
      * Which container engine was used to execute the workflow
      */
     String containerEngine
+
+    /**
+     * Metadata specific to Wave, including:
+     * <li>enabled: whether Wave is enabled
+     */
+    WaveMetadata wave
+
+    /**
+     * Metadata specific to Fusion, including:
+     * <li>enabled: whether Fusion is enabled
+     * <li>version: the version of Fusion in use
+     */
+    FusionMetadata fusion
 
     /**
      * The list of files that concurred to create the config object
@@ -208,6 +232,11 @@ class WorkflowMetadata {
      * The workflow manifest
      */
     Manifest manifest
+
+    /**
+     * whenever it should terminate with a failure when one or more task execution failed in an error strategy
+     */
+    boolean failOnIgnore
 
     private Session session
 
@@ -234,12 +263,14 @@ class WorkflowMetadata {
         this.container = session.fetchContainers()
         this.commandLine = session.commandLine
         this.nextflow = NextflowMeta.instance
+        this.outputDir = session.outputDir
         this.workDir = session.workDir
         this.launchDir = Paths.get('.').complete()
         this.profile = session.profile ?: ConfigBuilder.DEFAULT_PROFILE
         this.sessionId = session.uniqueId
         this.resume = session.resumeMode
         this.stubRun = session.stubRun
+        this.preview = session.preview
         this.runName = session.runName
         this.containerEngine = containerEngine0(session)
         this.configFiles = session.configFiles?.collect { it.toAbsolutePath() }
@@ -247,6 +278,9 @@ class WorkflowMetadata {
         this.userName = System.getProperty('user.name')
         this.homeDir = Paths.get(System.getProperty('user.home'))
         this.manifest = session.getManifest()
+        this.wave = new WaveMetadata(session)
+        this.fusion = new FusionMetadata(session)
+        this.failOnIgnore = session.failOnIgnore()
 
         // check if there's a onComplete action in the config file
         registerConfigAction(session.config.workflow as Map)
@@ -259,11 +293,8 @@ class WorkflowMetadata {
        return config.isEnabled() ? config.getEngine() : null
     }
 
-    /**
-     * Only for testing purpose -- do not use
-     */
-    @PackageScope
-    WorkflowMetadata() {}
+    @TestOnly
+    protected WorkflowMetadata() {}
 
     /**
      * Implements the following idiom in the pipeline script:

@@ -1,6 +1,6 @@
 (amazons3-page)=
 
-# AWS S3 storage
+# Amazon S3
 
 Nextflow includes support for AWS S3 storage. Files stored in an S3 bucket can be accessed transparently in your pipeline script like any other file in the local file system.
 
@@ -16,11 +16,11 @@ s3://my-bucket/data/sequences.fa
 
 The usual file operations can be applied to a path handle with the above notation. For example, the content of an S3 file can be printed as follows:
 
-```groovy
+```nextflow
 println file('s3://my-bucket/data/sequences.fa').text
 ```
 
-See the {ref}`script-file-io` section to learn more about available file operations.
+See {ref}`working-with-files` and the {ref}`stdlib-types-path` reference to learn more about available file operations.
 
 ## Security credentials
 

@@ -12,20 +12,22 @@ All task executions are automatically saved to the task cache, regardless of the
 
 The task cache is used in conjunction with the [work directory](#work-directory) to recover cached tasks in a resumed run. It is also used by the {ref}`cli-log` sub-command to query task metadata.
 
+(cache-resume-task-hash)=
+
 ### Task hash
 
 The task hash is computed from the following metadata:
 
-- Session ID (see `workflow.sessionId` in {ref}`metadata-workflow`)
+- Session ID (see `workflow.sessionId` in the {ref}`stdlib-namespaces-workflow` namespace)
 - Task name (see `name` in {ref}`trace-report`)
 - Task container image (if applicable)
 - Task {ref}`environment modules <process-module>` (if applicable)
 - Task {ref}`Conda environment <process-conda>` (if applicable)
 - Task {ref}`Spack environment <process-spack>` and {ref}`CPU architecture <process-arch>` (if applicable)
-- Task {ref}`process-ext` directive (if applicable)
 - Task {ref}`inputs <process-input>`
 - Task {ref}`script <process-script>`
 - Any global variables referenced in the task script
+- Any task {ref}`process-ext` properties referenced in the task script
 - Any {ref}`bundled scripts <bundling-executables>` used in the task script
 - Whether the task is a {ref}`stub run <process-stub>`
 - Task attempt
@@ -112,9 +114,9 @@ While Nextflow tries to make it easy to write safe concurrent code, it is still 
 
 Consider the following example:
 
-```groovy
-Channel.of(1,2,3) | map { it -> X=it; X+=2 } | view { "ch1 = $it" }
-Channel.of(1,2,3) | map { it -> X=it; X*=2 } | view { "ch2 = $it" }
+```nextflow
+channel.of(1,2,3) | map { v -> X=v; X+=2 } | view { v -> "ch1 = $v" }
+channel.of(1,2,3) | map { v -> X=v; X*=2 } | view { v -> "ch2 = $v" }
 ```
 
 The problem here is that `X` is declared in each `map` closure without the `def` keyword (or other type qualifier). Using the `def` keyword makes the variable local to the enclosing scope; omitting the `def` keyword makes the variable global to the entire script.
@@ -123,12 +125,12 @@ Because `X` is global, and operators are executed concurrently, there is a *race
 
 The solution is to not use a global variable where a local variable is enough (or in this simple example, avoid the variable altogether):
 
-```groovy
+```nextflow
 // local variable
-Channel.of(1,2,3) | map { it -> def X=it; X+=2 } | view { "ch1 = $it" }
+channel.of(1,2,3) | map { v -> def X=v; X+=2 } | view { v -> "ch1 = $v" }
 
 // no variable
-Channel.of(1,2,3) | map { it -> it * 2 } | view { "ch2 = $it" }
+channel.of(1,2,3) | map { v -> v * 2 } | view { v -> "ch2 = $v" }
 ```
 
 (cache-nondeterministic-inputs)=
@@ -137,10 +139,10 @@ Channel.of(1,2,3) | map { it -> it * 2 } | view { "ch2 = $it" }
 
 Sometimes a process needs to merge inputs from different sources. Consider the following example:
 
-```groovy
+```nextflow
 workflow {
-    ch_foo = Channel.of( ['1', '1.foo'], ['2', '2.foo'] )
-    ch_bar = Channel.of( ['2', '2.bar'], ['1', '1.bar'] )
+    ch_foo = channel.of( ['1', '1.foo'], ['2', '2.foo'] )
+    ch_bar = channel.of( ['2', '2.bar'], ['1', '1.bar'] )
     gather(ch_foo, ch_bar)
 }
 
@@ -148,6 +150,8 @@ process gather {
     input:
     tuple val(id), file(foo)
     tuple val(id), file(bar)
+
+    script:
     """
     merge_command $foo $bar
     """
@@ -158,16 +162,18 @@ It is tempting to assume that the process inputs will be matched by `id` like th
 
 The solution is to explicitly join the two channels before the process invocation:
 
-```groovy
+```nextflow
 workflow {
-    ch_foo = Channel.of( ['1', '1.foo'], ['2', '2.foo'] )
-    ch_bar = Channel.of( ['2', '2.bar'], ['1', '1.bar'] )
+    ch_foo = channel.of( ['1', '1.foo'], ['2', '2.foo'] )
+    ch_bar = channel.of( ['2', '2.bar'], ['1', '1.bar'] )
     gather(ch_foo.join(ch_bar))
 }
 
 process gather {
     input:
     tuple val(id), file(foo), file(bar)
+
+    script:
     """
     merge_command $foo $bar
     """
@@ -223,3 +229,7 @@ diff run_1.tasks.log run_2.tasks.log
 ```
 
 You can then view the `diff` output or use a graphical diff viewer to compare `run_1.tasks.log` and `run_2.tasks.log`.
+
+:::{versionadded} 25.04.0
+Nextflow now has a built-in way to compare two task runs. See the {ref}`data-lineage-page` guide for details.
+:::

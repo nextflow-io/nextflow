@@ -16,6 +16,7 @@
 
 package nextflow.executor
 
+import java.nio.file.FileSystemException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -27,6 +28,7 @@ import nextflow.container.DockerBuilder
 import nextflow.container.SingularityBuilder
 import nextflow.processor.TaskBean
 import nextflow.util.MustacheTemplateEngine
+import org.yaml.snakeyaml.Yaml
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -51,6 +53,8 @@ class BashWrapperBuilderTest extends Specification {
             bean.script = 'echo Hello world!'
         if( !bean.containsKey('inputFiles') )
             bean.inputFiles = [:]
+        if( !bean.containsKey('outputFiles') )
+            bean.outputFiles = []
         new BashWrapperBuilder(bean as TaskBean) {
             @Override
             protected String getSecretsEnv() {
@@ -89,7 +93,6 @@ class BashWrapperBuilderTest extends Specification {
 
 
     def 'should create bash launcher files' () {
-
         given:
         def folder = Files.createTempDirectory('test')
 
@@ -120,7 +123,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should create bash launcher files with trace' () {
-
         given:
         def folder = Files.createTempDirectory('test')
 
@@ -191,10 +193,9 @@ class BashWrapperBuilderTest extends Specification {
         wrapper.moduleLoad('foo/bar/')  == 'nxf_module_load foo/bar '
     }
 
-
     def 'should create container env' () {
         given:
-        def bash = Spy(BashWrapperBuilder)
+        def bash = Spy(new BashWrapperBuilder(Mock(TaskBean)))
         and:
         bash.getEnvironment() >> [:]
         bash.getBinDirs() >> [Paths.get('/my/bin') ]
@@ -209,6 +210,7 @@ class BashWrapperBuilderTest extends Specification {
         bash.getContainerCpus() >> null
         bash.getContainerCpuset() >> null
         bash.getContainerOptions() >> null
+        bash.getContainerPlatform() >> 'amd64'
         bash.isSecretNative() >> false
         bash.getSecretNames() >> []
 
@@ -219,12 +221,11 @@ class BashWrapperBuilderTest extends Specification {
         builder.env == ['NXF_TASK_WORKDIR', 'FOO','BAR']
         builder.workDir == Paths.get('/my/work/dir')
         builder.mounts == [ Paths.get('/my/bin') ]
-        
     }
 
     def 'should add resolved inputs'() {
         given:
-        def bash = Spy(new BashWrapperBuilder(bean: Mock(TaskBean)))
+        def bash = Spy(new BashWrapperBuilder(Mock(TaskBean)))
         bash.getContainerConfig() >> [engine: 'docker']
 
         def BUILDER = Mock(DockerBuilder)
@@ -249,7 +250,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should render launcher script' () {
-
         given:
         def folder = Files.createTempDirectory('test')
 
@@ -273,7 +273,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should render launcher script with trace' () {
-
         given:
         def folder = Files.createTempDirectory('test')
 
@@ -295,7 +294,6 @@ class BashWrapperBuilderTest extends Specification {
 
     @Unroll
     def 'test change to scratchDir' () {
-
         setup:
         def builder = newBashWrapperBuilder()
 
@@ -312,7 +310,6 @@ class BashWrapperBuilderTest extends Specification {
         '$SOME_DIR' | 'NXF_SCRATCH="$(set +u; nxf_mktemp $SOME_DIR)"'
         '/my/temp'  | 'NXF_SCRATCH="$(set +u; nxf_mktemp /my/temp)"'
         'ram-disk'  | 'NXF_SCRATCH="$(nxf_mktemp /dev/shm)"'
-
     }
 
     def 'should return task name' () {
@@ -332,11 +329,97 @@ class BashWrapperBuilderTest extends Specification {
         bash = newBashWrapperBuilder(headerScript: '#BSUB -x 1\n#BSUB -y 2')
         then:
         bash.makeBinding().header_script == '#BSUB -x 1\n#BSUB -y 2'
+    }
 
+    def 'should create task metadata string' () {
+        given:
+        def builder = newBashWrapperBuilder(
+            name: 'foo',
+            arrayIndexName: 'SLURM_ARRAY_TASK_ID',
+            arrayIndexStart: 0,
+            arrayWorkDirs: [ Path.of('/work/01'), Path.of('/work/02'), Path.of('/work/03') ],
+            containerConfig: [enabled: true],
+            containerImage: 'quay.io/nextflow:bash',
+            outputFiles: ['foo.txt', '*.bar', '**/baz']
+        )
+
+        when:
+        def meta = builder.getTaskMetadata()
+        then:
+        meta == '''\
+            ### ---
+            ### name: 'foo'
+            ### array:
+            ###   index-name: SLURM_ARRAY_TASK_ID
+            ###   index-start: 0
+            ###   work-dirs:
+            ###   - /work/01
+            ###   - /work/02
+            ###   - /work/03
+            ### container: 'quay.io/nextflow:bash'
+            ### outputs:
+            ### - 'foo.txt'
+            ### - '*.bar'
+            ### - '**/baz'
+            ### ...
+            '''.stripIndent()
+
+        when:
+        def yaml = meta.readLines().collect(it-> it.substring(4)).join('\n')
+        def obj = new Yaml().load(yaml) as Map
+        then:
+        obj.name == 'foo'
+        obj.array == [
+            'index-name':'SLURM_ARRAY_TASK_ID',
+            'index-start':0,
+            'work-dirs':['/work/01', '/work/02', '/work/03']
+        ]
+        obj.container == 'quay.io/nextflow:bash'
+        obj.outputs == ['foo.txt', '*.bar', '**/baz']
+    }
+
+    def 'should add task metadata' () {
+        when:
+        def bash = newBashWrapperBuilder([name:'task1'])
+        then:
+        bash.makeBinding().containsKey('task_metadata')
+        bash.makeBinding().task_metadata == '''\
+            ### ---
+            ### name: 'task1'
+            ### ...
+            '''.stripIndent()
+
+        when:
+        bash = newBashWrapperBuilder(
+            name: 'task2',
+            arrayIndexName: 'SLURM_ARRAY_TASK_ID',
+            arrayIndexStart: 0,
+            arrayWorkDirs: [ Path.of('/work/01'), Path.of('/work/02'), Path.of('/work/03') ],
+            containerConfig: [enabled: true],
+            containerImage: 'quay.io/nextflow:bash',
+            outputFiles: ['foo.txt', '*.bar', '**/baz']
+        )
+        then:
+        bash.makeBinding().task_metadata == '''\
+            ### ---
+            ### name: 'task2'
+            ### array:
+            ###   index-name: SLURM_ARRAY_TASK_ID
+            ###   index-start: 0
+            ###   work-dirs:
+            ###   - /work/01
+            ###   - /work/02
+            ###   - /work/03
+            ### container: 'quay.io/nextflow:bash'
+            ### outputs:
+            ### - 'foo.txt'
+            ### - '*.bar'
+            ### - '**/baz'
+            ### ...
+            '''.stripIndent()
     }
 
     def 'should copy control files' () {
-
         when:
         def binding = newBashWrapperBuilder(scratch: false).makeBinding()
         then:
@@ -359,11 +442,9 @@ class BashWrapperBuilderTest extends Specification {
                 cp .command.err /work/dir/.command.err || true
                 cp .command.trace /work/dir/.command.trace || true
                 '''.stripIndent()
-
     }
 
     def 'should stage inputs' () {
-
         given:
         def folder = Paths.get('/work/dir')
         def inputs = [
@@ -439,7 +520,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should unstage outputs' () {
-
         given:
         def folder = Paths.get('/work/dir')
         def outputs = ['test.bam','test.bai']
@@ -467,7 +547,7 @@ class BashWrapperBuilderTest extends Specification {
         binding.unstage_outputs == '''\
                 IFS=$'\\n'
                 for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
-                    nxf_fs_copy "$name" /work/dir || true
+                    nxf_fs_copy "$name" /work/dir
                 done
                 unset IFS
                 '''.stripIndent().rightTrim()
@@ -484,14 +564,13 @@ class BashWrapperBuilderTest extends Specification {
         binding.unstage_outputs == '''\
                 IFS=$'\\n'
                 for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
-                    nxf_fs_move "$name" /another/dir || true
+                    nxf_fs_move "$name" /another/dir
                 done
                 unset IFS
                 '''.stripIndent().rightTrim()
     }
 
     def 'should create env' () {
-
         when:
         def binding = newBashWrapperBuilder().makeBinding()
         then:
@@ -540,7 +619,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should create secret env' () {
-
         when:
         def binding0 = newBashWrapperBuilder().makeBinding()
         then:
@@ -568,7 +646,6 @@ class BashWrapperBuilderTest extends Specification {
         binding2.secrets_env == null
     }
 
-
     def 'should enable trace feature' () {
         when:
         def binding = newBashWrapperBuilder(statsEnabled: false).makeBinding()
@@ -593,11 +670,40 @@ class BashWrapperBuilderTest extends Specification {
                         cp .command.err /work/dir/.command.err || true
                         cp .command.trace /work/dir/.command.trace || true
                         '''.stripIndent()
+    }
 
+    def 'should enable trace feature with custom shell' () {
+        when:
+        def binding = newBashWrapperBuilder(statsEnabled: false, shell: ['/bin/bash', '-ue']).makeBinding()
+        then:
+        binding.launch_cmd == '/bin/bash -ue /work/dir/.command.sh'
+        binding.unstage_controls == null
+        binding.containsKey('unstage_controls')
+
+        when:
+        binding = newBashWrapperBuilder(statsEnabled: true, shell: ['/bin/bash', '-eu']).makeBinding()
+        then:
+        binding.launch_cmd == '/bin/bash -eu /work/dir/.command.run nxf_trace'
+        binding.unstage_controls == null
+        binding.containsKey('unstage_controls')
+
+        when:
+        binding = newBashWrapperBuilder(statsEnabled: true, scratch: true, shell: ['/bin/bash', '-eu']).makeBinding()
+        then:
+        binding.launch_cmd == '/bin/bash -eu /work/dir/.command.run nxf_trace'
+        binding.unstage_controls == '''\
+                        cp .command.out /work/dir/.command.out || true
+                        cp .command.err /work/dir/.command.err || true
+                        cp .command.trace /work/dir/.command.trace || true
+                        '''.stripIndent()
+
+        when:
+        binding = newBashWrapperBuilder(statsEnabled: true, shell: ['/usr/local/bin/bash', '-ue']).makeBinding()
+        then:
+        binding.launch_cmd == '/usr/local/bin/bash -ue /work/dir/.command.run nxf_trace'
     }
 
     def 'should create launcher command with input' () {
-
         when:
         def binding = newBashWrapperBuilder().makeBinding()
         then:
@@ -638,7 +744,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should create module load snippet' () {
-
         when:
         def binding = newBashWrapperBuilder().makeBinding()
         then:
@@ -670,11 +775,9 @@ class BashWrapperBuilderTest extends Specification {
                 }
                 
                 '''.stripIndent()
-
     }
 
     def 'should create conda activate snippet' () {
-
         when:
         def binding = newBashWrapperBuilder().makeBinding()
         then:
@@ -689,11 +792,26 @@ class BashWrapperBuilderTest extends Specification {
                 # conda environment
                 source $(conda info --json | awk '/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }')/bin/activate /some/conda/env/foo
                 '''.stripIndent()
+    }
 
+    def 'should create micromamba activate snippet' () {
+        when:
+        def binding = newBashWrapperBuilder().makeBinding()
+        then:
+        binding.conda_activate == null
+        binding.containsKey('conda_activate')
+
+        when:
+        def CONDA = Paths.get('/some/conda/env/foo')
+        binding = newBashWrapperBuilder([condaEnv: CONDA, 'useMicromamba': true]).makeBinding()
+        then:
+        binding.conda_activate == '''\
+                # conda environment
+                eval "$(micromamba shell hook --shell bash)" && micromamba activate /some/conda/env/foo
+                '''.stripIndent()
     }
 
     def 'should create spack activate snippet' () {
-
         when:
         def binding = newBashWrapperBuilder().makeBinding()
         then:
@@ -712,7 +830,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should cleanup scratch dir' () {
-
         when:
         def binding = newBashWrapperBuilder().makeBinding()
         then:
@@ -881,6 +998,20 @@ class BashWrapperBuilderTest extends Specification {
         binding.launch_cmd == 'docker run -i -e "NXF_TASK_WORKDIR" -v /work/dir:/work/dir -w "$NXF_TASK_WORKDIR" -v /foo:/bar --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
         binding.kill_cmd == 'docker stop $NXF_BOXID'
         binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
+    }
+
+    def 'should create wrapper with container platform' () {
+        when:
+        def binding = newBashWrapperBuilder(
+            containerImage: 'busybox',
+            containerEnabled: true,
+            containerPlatform: 'linux/arm64',
+            containerConfig: [engine: 'docker', temp: 'auto', enabled: true] ).makeBinding()
+
+        then:
+        binding.launch_cmd == 'docker run -i --platform linux/arm64 -e "NXF_TASK_WORKDIR" -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$NXF_TASK_WORKDIR" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
+        binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
+        binding.kill_cmd == 'docker stop $NXF_BOXID'
     }
 
     def 'should create wrapper with sarus'() {
@@ -1079,15 +1210,16 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should include fix ownership command' () {
-
         given:
         def bean = Mock(TaskBean) {
             inputFiles >> [:]
+            shell >> BashWrapperBuilder.BASH
+            outputFiles >> []
         }
         def copy = Mock(ScriptFileCopyStrategy)
         bean.workDir >> Paths.get('/work/dir')
         and:
-        def builder = Spy(new BashWrapperBuilder(bean:bean))
+        def builder = Spy(new BashWrapperBuilder(bean))
         builder.copyStrategy = copy
 
         when:
@@ -1117,10 +1249,9 @@ class BashWrapperBuilderTest extends Specification {
         binding.containsKey('after_script')
     }
 
-
     def 'should get output env capture snippet' () {
         given:
-        def builder = new BashWrapperBuilder()
+        def builder = new BashWrapperBuilder(Mock(TaskBean))
 
         when:
         def str = builder.getOutputEnvCaptureSnippet(['FOO','BAR'], Map.of())
@@ -1152,10 +1283,10 @@ class BashWrapperBuilderTest extends Specification {
 
     def 'should return env & cmd capture snippet' () {
         given:
-        def builder = new BashWrapperBuilder()
+        def builder = new BashWrapperBuilder(Mock(TaskBean))
 
         when:
-        def str = builder.getOutputEnvCaptureSnippet(['FOO'], [THIS: 'this --cmd', THAT: 'other --cmd'])
+        def str = builder.getOutputEnvCaptureSnippet(['FOO'], [THIS: 'this --cmd', THAT: 'other "quoted" --cmd'])
         then:
         str == '''
             # capture process environment
@@ -1176,7 +1307,7 @@ class BashWrapperBuilderTest extends Specification {
             echo FOO="${FOO[@]}" >> .command.env
             echo /FOO/ >> .command.env
             #
-            nxf_eval_cmd STDOUT STDERR this --cmd
+            nxf_eval_cmd STDOUT STDERR bash -c "this --cmd"
             status=$?
             if [ $status -eq 0 ]; then
               echo THIS="$STDOUT" >> .command.env
@@ -1186,7 +1317,7 @@ class BashWrapperBuilderTest extends Specification {
               echo /THIS/=exit:$status >> .command.env
             fi
             #
-            nxf_eval_cmd STDOUT STDERR other --cmd
+            nxf_eval_cmd STDOUT STDERR bash -c "other \\"quoted\\" --cmd"
             status=$?
             if [ $status -eq 0 ]; then
               echo THAT="$STDOUT" >> .command.env
@@ -1201,7 +1332,7 @@ class BashWrapperBuilderTest extends Specification {
 
     def 'should validate bash interpreter' () {
         given:
-        def builder = new BashWrapperBuilder()
+        def builder = new BashWrapperBuilder(Mock(TaskBean))
         expect:
         builder.isBash('/bin/bash')
         builder.isBash('/usr/bin/bash')
@@ -1212,7 +1343,6 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     def 'should get stage and unstage commands' () {
-
         when:
         def builder = newBashWrapperBuilder()
         then:
@@ -1224,9 +1354,47 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.stage_cmd == 'nxf_stage'
         binding.unstage_cmd == 'nxf_unstage'
-        
     }
 
+    def 'should get unstage control script'(){
+        given:
+        BashWrapperBuilder builder
+        when:
+        builder = newBashWrapperBuilder()
+        then:
+        builder.getUnstageControls() == '''\
+                cp .command.out /work/dir/.command.out || true
+                cp .command.err /work/dir/.command.err || true
+                '''.stripIndent()
+
+
+        when:
+        builder = newBashWrapperBuilder(statsEnabled: true)
+        then:
+        builder.getUnstageControls() == '''\
+                cp .command.out /work/dir/.command.out || true
+                cp .command.err /work/dir/.command.err || true
+                cp .command.trace /work/dir/.command.trace || true
+                '''.stripIndent()
+
+        when:
+        builder = newBashWrapperBuilder(outputEnvNames: ['some-data'])
+        then:
+        builder.getUnstageControls() == '''\
+                cp .command.out /work/dir/.command.out || true
+                cp .command.err /work/dir/.command.err || true
+                cp .command.env /work/dir/.command.env || true
+                '''.stripIndent()
+
+        when:
+        builder = newBashWrapperBuilder(outputEvals: [some:'data'])
+        then:
+        builder.getUnstageControls() == '''\
+                cp .command.out /work/dir/.command.out || true
+                cp .command.err /work/dir/.command.err || true
+                cp .command.env /work/dir/.command.env || true
+                '''.stripIndent()
+    }
 
     def 'should create wrapper with podman' () {
         when:
@@ -1266,5 +1434,19 @@ class BashWrapperBuilderTest extends Specification {
         binding.launch_cmd == 'podman run -i -e "NXF_TASK_WORKDIR" -v /work/dir:/work/dir -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
         binding.cleanup_cmd == 'rm -rf $NXF_SCRATCH || true\npodman rm $NXF_BOXID &>/dev/null || true\n'
         binding.kill_cmd == 'podman stop $NXF_BOXID'
+    }
+
+    @Unroll
+    def 'should check retryable errors' () {
+        expect:
+        BashWrapperBuilder.isRetryable0(ERROR) == EXPECTED
+        where:
+        ERROR                               | EXPECTED
+        new RuntimeException()              | true
+        new SocketException()               | true
+        new SocketTimeoutException('foo')   | true
+        new FileSystemException('foo')      | true
+        new IOException()                   | false
+        new Exception()                     | false
     }
 }

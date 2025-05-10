@@ -25,4 +25,4 @@ echo "Test Wave running rnaseq-nf with Fusion on AWS Batch"
 (cd wave-tests/example6; bash run-aws.sh)
 
 echo "Test Wave running rnaseq-nf with Fusion on Google Batch"
-(cd wave-tests/example6; bash run-aws.sh)
+(cd wave-tests/example6; bash run-gcp.sh)

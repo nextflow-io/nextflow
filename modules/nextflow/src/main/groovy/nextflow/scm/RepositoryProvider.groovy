@@ -73,9 +73,21 @@ abstract class RepositoryProvider {
         return this
     }
 
+    String getRevision() {
+        return this.revision
+    }
+
     RepositoryProvider setRevision(String revision) {
         this.revision = revision
         return this
+    }
+
+    String getProject() {
+        return this.project
+    }
+
+    ProviderConfig getConfig() {
+        return this.config
     }
 
     boolean hasCredentials() {
@@ -173,7 +185,7 @@ abstract class RepositoryProvider {
 
         log.debug "Request [credentials ${getAuthObfuscated() ?: '-'}] -> $api"
         def connection = new URL(api).openConnection() as URLConnection
-        connection.setConnectTimeout(5_000)
+        connection.setConnectTimeout(60_000)
 
         auth(connection)
 
@@ -241,8 +253,15 @@ abstract class RepositoryProvider {
         }
     }
 
-    @Memoized
     protected <T> List<T> invokeAndResponseWithPaging(String request, Closure<T> parse) {
+        // this is needed because apparently bytebuddy used by testing framework is not able
+        // to handle properly this method signature using both generics and `@Memoized` annotation.
+        // therefore the `@Memoized` has been moved to the inner method invocation
+        return invokeAndResponseWithPaging0(request, parse)
+    }
+
+    @Memoized
+    protected List invokeAndResponseWithPaging0(String request, Closure parse) {
         int page = 0
         final result = new ArrayList()
         while( true ) {
@@ -296,7 +315,6 @@ abstract class RepositoryProvider {
         def bytes = readBytes(path)
         return bytes ? new String(bytes) : null
     }
-
 
     /**
      * Validate the repository for the specified file.

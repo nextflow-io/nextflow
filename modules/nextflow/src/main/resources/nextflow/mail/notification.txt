@@ -37,6 +37,8 @@ The command used to launch the workflow was as follows:
   Workflow profile  : ${workflow.profile ?: '-'}
   Workflow container: ${workflow.container ?: '-'}
   Container engine  : ${workflow.containerEngine?:'-'}
+  Wave enabled      : ${workflow.wave.enabled}
+  Fusion enabled    : ${workflow.fusion.enabled}, version ${workflow.fusion.enabled ? workflow.fusion.version : '-'}
   Nextflow version  : ${workflow.nextflow.version}, build ${workflow.nextflow.build} (${workflow.nextflow.timestamp})
 
 --

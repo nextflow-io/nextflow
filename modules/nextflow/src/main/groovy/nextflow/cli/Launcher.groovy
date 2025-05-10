@@ -30,6 +30,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
+import nextflow.NF
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.exception.ConfigParseException
@@ -41,6 +42,9 @@ import nextflow.util.LoggerHelper
 import nextflow.util.ProxyConfig
 import nextflow.util.SpuriousDeps
 import org.eclipse.jgit.api.errors.GitAPIException
+
+import static nextflow.util.SysHelper.dumpThreads
+
 /**
  * Main application entry point. It parses the command line and
  * launch the pipeline execution.
@@ -103,7 +107,9 @@ class Launcher {
                 new CmdHelp(),
                 new CmdSelfUpdate(),
                 new CmdPlugin(),
-                new CmdInspect()
+                new CmdInspect(),
+                new CmdLint(),
+                new CmdLineage()
         ]
 
         if(SecretsLoader.isEnabled())
@@ -116,11 +122,18 @@ class Launcher {
 
         options = new CliOptions()
         jcommander = new JCommander(options)
-        allCommands.each { cmd ->
+        for( CmdBase cmd : allCommands ) {
             cmd.launcher = this;
-            jcommander.addCommand(cmd.name, cmd)
+            jcommander.addCommand(cmd.name, cmd, aliases(cmd))
         }
         jcommander.setProgramName( APP_NAME )
+    }
+
+    private static final String[] EMPTY = new String[0]
+
+    private static String[] aliases(CmdBase cmd) {
+        final aliases = cmd.getClass().getAnnotation(Parameters)?.commandNames()
+        return aliases ?: EMPTY
     }
 
     /**
@@ -523,11 +536,16 @@ class Launcher {
         }
 
         catch( ConfigParseException e )  {
-            def message = e.message
-            if( e.cause?.message ) {
-                message += "\n\n${e.cause.message.toString().indent('  ')}"
+            if( NF.isSyntaxParserV2() ) {
+                log.error(e.message, e)
             }
-            log.error(message, e.cause ?: e)
+            else {
+                def message = e.message
+                if( e.cause?.message ) {
+                    message += "\n\n${e.cause.message.toString().indent('  ')}"
+                }
+                log.error(message, e.cause ?: e)
+            }
             return(1)
         }
 
@@ -551,24 +569,6 @@ class Launcher {
             return(1)
         }
 
-    }
-
-    /**
-     * Dump th stack trace of current running threads
-     * @return
-     */
-    private String dumpThreads() {
-
-        def buffer = new StringBuffer()
-        Map<Thread, StackTraceElement[]> m = Thread.getAllStackTraces();
-        for(Map.Entry<Thread,  StackTraceElement[]> e : m.entrySet()) {
-            buffer.append('\n').append(e.getKey().toString()).append('\n')
-            for (StackTraceElement s : e.getValue()) {
-                buffer.append("  " + s).append('\n')
-            }
-        }
-
-        return buffer.toString()
     }
 
     /**
@@ -669,6 +669,7 @@ class Launcher {
      * @param args The program options as specified by the user on the CLI
      */
     static void main(String... args)  {
+        LoggerHelper.bootstrapLogger()
         final status = new Launcher() .command(args) .run()
         if( status )
             System.exit(status)

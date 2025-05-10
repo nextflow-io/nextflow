@@ -19,8 +19,11 @@ package nextflow.script
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.NF
 import nextflow.exception.IllegalInvocationException
+import nextflow.exception.ScriptRuntimeException
+import nextflow.extension.CH
 import nextflow.extension.OpCall
 /**
  * Models the execution context of a workflow component
@@ -153,6 +156,18 @@ class WorkflowBinding extends Binding  {
 
             throw e
         }
+    }
+
+    void _publish_(String name, Object source) {
+        if( source instanceof ChannelOut ) {
+            if( source.size() > 1 )
+                throw new ScriptRuntimeException("Cannot assign a multi-channel to a workflow output: $name")
+            source = source[0]
+        }
+
+        owner.session.outputs[name] = source instanceof DataflowWriteChannel
+            ? source
+            : CH.value(source)
     }
 
 }

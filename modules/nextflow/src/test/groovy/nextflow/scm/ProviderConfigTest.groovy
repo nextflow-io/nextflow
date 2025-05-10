@@ -238,8 +238,9 @@ class ProviderConfigTest extends Specification {
         'a/b/c'       | 'http://dot.com/a'      | 'b/c'
         'a/b/c'       | 'http://dot.com/a/'     | 'b/c'
         and:
-        'paolo0758/nf-azure-repo'                    | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo'
-        'paolo0758/nf-azure-repo/_git/nf-azure-repo' | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo'
+        'paolo0758/nf-azure-repo'                    | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo/nf-azure-repo'
+        'paolo0758/nf-azure-repo/_git/nf-azure-repo' | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo/nf-azure-repo'
+        'paolo0758/nf-azure-repo/_git/another-azure-repo' | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo/another-azure-repo'
     }
 
 }

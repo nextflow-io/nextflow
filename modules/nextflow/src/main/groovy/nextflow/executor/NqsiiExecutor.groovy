@@ -71,9 +71,7 @@ class NqsiiExecutor extends AbstractGridExecutor {
         }
 
         // -- at the end append the command script wrapped file name
-        if( task.config.clusterOptions ) {
-            result << task.config.clusterOptions.toString() << ''
-        }
+        addClusterOptionsDirective(task.config, result)
 
         return result
     }

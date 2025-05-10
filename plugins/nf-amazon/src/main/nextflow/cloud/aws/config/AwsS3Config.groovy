@@ -49,6 +49,8 @@ class AwsS3Config {
 
     private Boolean anonymous
 
+    private Boolean requesterPays
+
     AwsS3Config(Map opts) {
         this.debug = opts.debug as Boolean
         this.endpoint = opts.endpoint ?: SysEnv.get('AWS_S3_ENDPOINT')
@@ -60,6 +62,7 @@ class AwsS3Config {
         this.pathStyleAccess = opts.s3PathStyleAccess as Boolean
         this.anonymous = opts.anonymous as Boolean
         this.s3Acl = parseS3Acl(opts.s3Acl as String)
+        this.requesterPays = opts.requesterPays as Boolean
     }
 
     private String parseStorageClass(String value) {
@@ -115,7 +118,11 @@ class AwsS3Config {
         return anonymous
     }
 
+    Boolean getRequesterPays() {
+        return requesterPays
+    }
+
     boolean isCustomEndpoint() {
-        endpoint && !endpoint.contains(".amazonaws.com")
+        endpoint && !endpoint.endsWith(".amazonaws.com")
     }
 }

@@ -35,6 +35,8 @@ import nextflow.file.FileHelper
 @CompileStatic
 class SysHelper {
 
+    public static final String DEFAULT_DOCKER_PLATFORM = 'linux/amd64'
+
     private static String DATE_FORMAT = 'dd-MMM-yyyy HH:mm'
 
     /**
@@ -176,6 +178,24 @@ class SysHelper {
     static String getArch() {
         final os = (java.lang.management.OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean()
         return os.getArch()
+    }
+
+    /**
+     * Dump th stack trace of current running threads
+     * @return
+     */
+    static String dumpThreads() {
+
+        def buffer = new StringBuffer()
+        Map<Thread, StackTraceElement[]> m = Thread.getAllStackTraces();
+        for(Map.Entry<Thread,  StackTraceElement[]> e : m.entrySet()) {
+            buffer.append('\n').append(e.getKey().toString()).append('\n')
+            for (StackTraceElement s : e.getValue()) {
+                buffer.append("  " + s).append('\n')
+            }
+        }
+
+        return buffer.toString()
     }
 
 }

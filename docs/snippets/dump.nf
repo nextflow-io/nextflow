@@ -1,7 +1,7 @@
-Channel.of( 1, 2, 3 )
-    .map { it+1 }
+channel.of( 1, 2, 3 )
+    .map { v -> v + 1 }
     .dump(tag: 'foo')
 
-Channel.of( 1, 2, 3 )
-    .map { it^2 }
+channel.of( 1, 2, 3 )
+    .map { v -> v ^ 2 }
     .dump(tag: 'bar')

@@ -1,5 +1,43 @@
 nf-tower changelog
 ===================
+1.11.2 - 8 Apr 2025
+- Fix container meta deduplication [f4600d2e]
+
+1.11.1 - 5 Apr 2025
+- Fix date format in Wave containers meta (#5903) [59536c0a]
+
+1.11.0 - 17 Mar 2025
+- Add Wave container metadata to Platform traces (#5724) [b81178c5]
+- Update Platform token error message [18b69349]
+- Bump groovy 4.0.26 [f740bc56]
+
+1.10.0 - 12 Feb 2025
+- Add Fusion token validation (#5614) [ci fast] [1dcb18d6]
+- Bump groovy 4.0.25 [19c40a4a]
+
+1.9.4 - 20 Jan 2025
+- Bump logback 1.5.13 + slf4j 2.0.16 [cc0163ac]
+- Bump groovy 4.0.24 missing deps [40670f7e]
+
+1.9.3 - 27 Oct 2024
+- Fix nf-tower plugin to upload logs when early failures  (#5434) [4222442a]
+
+1.9.2 - 5 Aug 2024
+- Bump pf4j to version 3.12.0 [96117b9a]
+
+1.9.1 - 13 May 2024
+- Fix NPE in LogsCheckpoint class [deb3076d]
+
+1.9.0 - 15 Apr 2024
+- Update Platform API endpoint (#4855) [4842423a]
+- Publish built-in reports as Tower reports (#4760) [b710d923]
+- Bump groovy 4.0.21 [9e08390b]
+
+1.8.1 - 10 Mar 2024
+- Add NXF_CACHE_DIR environment var (#4655) [4b00170a]
+- Rename Tower -> Seqera Platform in docs and log messages (#4727) [7caffef9]
+- Bump groovy 4.0.19 [854dc1f0]
+
 1.8.0 - 5 Feb 2024
 - Truncate max size exceeded error message (#4644) [36090b70]
 - Bump Groovy 4 (#4443) [9d32503b]
@@ -7,6 +45,9 @@ nf-tower changelog
 1.7.0 - 24 Nov 2023
 - Fix security vulnerabilities (#4513) [a310c777]
 - Remove deprecated TowerArchiver feature [ff8e06a3]
+
+1.6.3-patch1 - 28 May 2024
+- Bump dependency with Nextflow 23.10.2
 
 1.6.3 - 10 Oct 2023
 - Add -cloudcache CLI option (#4385) [73fda582]

@@ -24,12 +24,13 @@ process storeCache  {
     output:
     file "${cheers}.txt" 
 
+    script:
     "printf $cheers > ${cheers}.txt"
 
 }
 
 workflow {
-  Channel.of('Hello', 'Ciao', 'Hola') \
+  channel.of('Hello', 'Ciao', 'Hola') \
    | storeCache \
    | view
 }

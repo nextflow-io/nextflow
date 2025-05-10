@@ -16,14 +16,13 @@
 
 package nextflow
 
-import static nextflow.Const.*
-
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.function.Consumer
 
 import com.google.common.hash.HashCode
 import groovy.transform.CompileDynamic
@@ -32,6 +31,7 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
@@ -48,8 +48,6 @@ import nextflow.executor.ExecutorFactory
 import nextflow.extension.CH
 import nextflow.file.FileHelper
 import nextflow.file.FilePorter
-import nextflow.util.Threads
-import nextflow.util.ThreadPoolManager
 import nextflow.plugin.Plugins
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskFault
@@ -67,13 +65,22 @@ import nextflow.spack.SpackConfig
 import nextflow.trace.AnsiLogObserver
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
+import nextflow.trace.TraceObserverFactoryV2
+import nextflow.trace.TraceObserverV2
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStatsObserver
+import nextflow.trace.event.FilePublishEvent
+import nextflow.trace.event.TaskEvent
+import nextflow.trace.event.WorkflowOutputEvent
 import nextflow.util.Barrier
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
+import nextflow.util.LoggerHelper
 import nextflow.util.NameGenerator
+import nextflow.util.SysHelper
+import nextflow.util.ThreadPoolManager
+import nextflow.util.Threads
 import nextflow.util.VersionNumber
 import org.apache.commons.lang.exception.ExceptionUtils
 import sun.misc.Signal
@@ -93,6 +100,8 @@ class Session implements ISession {
     final Collection<DataflowProcessor> allOperators = new ConcurrentLinkedQueue<>()
 
     final List<Closure> igniters = new ArrayList<>(20)
+
+    final Map<String,DataflowWriteChannel> outputs = [:]
 
     /**
      * Creates process executors
@@ -118,6 +127,11 @@ class Session implements ISession {
      * whenever it has been launched in resume mode
      */
     boolean resumeMode
+
+    /**
+     * The folder where workflow outputs are stored
+     */
+    Path outputDir
 
     /**
      * The folder where tasks temporary files are stored
@@ -153,6 +167,11 @@ class Session implements ISession {
      * Enable stub run mode
      */
     boolean stubRun
+
+    /**
+     * Enable preview mode
+     */
+    boolean preview
 
     /**
      * Folder(s) containing libs and classes to be added to the classpath
@@ -215,6 +234,8 @@ class Session implements ISession {
 
     private Barrier monitorsBarrier = new Barrier()
 
+    private volatile boolean failOnIgnore
+
     private volatile boolean cancelled
 
     private volatile boolean aborted
@@ -233,7 +254,10 @@ class Session implements ISession {
 
     private int poolSize
 
-    private List<TraceObserver> observers = Collections.emptyList()
+    @Deprecated
+    private List<TraceObserver> observersV1 = Collections.emptyList()
+
+    private List<TraceObserverV2> observersV2 = Collections.emptyList()
 
     private Closure errorAction
 
@@ -346,6 +370,9 @@ class Session implements ISession {
         // -- dry run
         this.stubRun = config.stubRun
 
+        // -- preview
+        this.preview = config.preview
+
         // -- normalize taskConfig object
         if( config.process == null ) config.process = [:]
         if( config.env == null ) config.env = [:]
@@ -362,8 +389,11 @@ class Session implements ISession {
         // -- DAG object
         this.dag = new DAG()
 
+        // -- init output dir
+        this.outputDir = FileHelper.toCanonicalPath(config.outputDir ?: 'results')
+
         // -- init work dir
-        this.workDir = ((config.workDir ?: 'work') as Path).complete()
+        this.workDir = FileHelper.toCanonicalPath(config.workDir ?: 'work')
         this.setLibDir( config.libDir as String )
 
         // -- init cloud cache path
@@ -409,8 +439,9 @@ class Session implements ISession {
         this.disableRemoteBinDir = getExecConfigProp(null, 'disableRemoteBinDir', false)
         this.classesDir = FileHelper.createLocalDir()
         this.executorFactory = new ExecutorFactory(Plugins.manager)
-        this.observers = createObservers()
-        this.statsEnabled = observers.any { it.enableMetrics() }
+        this.observersV1 = createObserversV1()
+        this.observersV2 = createObserversV2()
+        this.statsEnabled = observersV1.any { ob -> ob.enableMetrics() } || observersV2.any { ob -> ob.enableMetrics() }
         this.workflowMetadata = new WorkflowMetadata(this, scriptFile)
 
         // configure script params
@@ -438,7 +469,7 @@ class Session implements ISession {
      * @return A list of {@link TraceObserver} objects or an empty list
      */
     @PackageScope
-    List<TraceObserver> createObservers() {
+    List<TraceObserver> createObserversV1() {
 
         final result = new ArrayList(10)
 
@@ -454,6 +485,15 @@ class Session implements ISession {
         return result
     }
 
+    @PackageScope
+    List<TraceObserverV2> createObserversV2() {
+        final result = new ArrayList(10)
+        for( TraceObserverFactoryV2 f : Plugins.getExtensions(TraceObserverFactoryV2) ) {
+            log.debug "Observer factory (v2): ${f.class.simpleName}"
+            result.addAll(f.create(this))
+        }
+        return result
+    }
 
     /*
      * intercepts interruption signal i.e. CTRL+C
@@ -666,8 +706,9 @@ class Session implements ISession {
     void destroy() {
         try {
             log.trace "Session > destroying"
-            // shutdown publish dir executor
-            publishPoolManager.shutdown(aborted)
+            // shutdown thread pools
+            finalizePoolManager?.shutdownOrAbort(aborted,this)
+            publishPoolManager?.shutdownOrAbort(aborted,this)
             // invoke shutdown callbacks
             shutdown0()
             log.trace "Session > after cleanup"
@@ -681,9 +722,6 @@ class Session implements ISession {
 
             // -- close db
             cache?.close()
-
-            // -- shutdown plugins
-            Plugins.stop()
 
             // -- cleanup script classes dir
             classesDir?.deleteDir()
@@ -768,15 +806,19 @@ class Session implements ISession {
      */
     void abort(Throwable cause = null) {
         if( aborted ) return
-        if( !(cause instanceof ScriptCompilationException) )
+        if( cause !instanceof ScriptCompilationException )
             log.debug "Session aborted -- Cause: ${cause?.message ?: cause ?: '-'}"
         aborted = true
         error = cause
+        LoggerHelper.aborted = true
         try {
             // log the dataflow network status
             def status = dumpNetworkStatus()
             if( status )
                 log.debug(status)
+            // dump threads status
+            if( log.isTraceEnabled() )
+                log.trace(SysHelper.dumpThreads())
             // force termination
             notifyError(null)
             ansiLogObserver?.forceTermination()
@@ -813,7 +855,13 @@ class Session implements ISession {
 
     boolean isCancelled() { cancelled }
 
-    boolean isSuccess() { !aborted && !cancelled }
+    boolean isSuccess() { !aborted && !cancelled && !failOnIgnore }
+
+    boolean canSubmitTasks() {
+        // tasks should be submitted even when 'failOnIgnore' is set to true
+        // https://github.com/nextflow-io/nextflow/issues/5291
+        return !aborted && !cancelled
+    }
 
     void processRegister(TaskProcessor process) {
         log.trace ">>> barrier register (process: ${process.name})"
@@ -850,7 +898,11 @@ class Session implements ISession {
     }
 
     boolean enableModuleBinaries() {
-        config.navigate('nextflow.enable.moduleBinaries', false) as boolean
+        NF.isModuleBinariesEnabled()
+    }
+
+    boolean failOnIgnore() {
+        config.navigate('workflow.failOnIgnore', false) as boolean
     }
 
     @PackageScope VersionNumber getCurrentVersion() {
@@ -938,6 +990,7 @@ class Session implements ISession {
         errorMessage << message.toString()
         return false
     }
+
     /**
      * Register a shutdown hook to close services when the session terminates
      * @param Closure
@@ -953,15 +1006,8 @@ class Session implements ISession {
     }
 
     void notifyProcessCreate(TaskProcessor process) {
-        for( int i=0; i<observers.size(); i++ ) {
-            final observer = observers.get(i)
-            try {
-                observer.onProcessCreate(process)
-            }
-            catch( Exception e ) {
-                log.debug(e.getMessage(), e)
-            }
-        }
+        notifyEvent(observersV1, ob -> ob.onProcessCreate(process))
+        notifyEvent(observersV2, ob -> ob.onProcessCreate(process))
     }
 
     void notifyProcessClose(TaskProcessor process) {
@@ -976,28 +1022,14 @@ class Session implements ISession {
     }
 
     void notifyProcessTerminate(TaskProcessor process) {
-        for( int i=0; i<observers.size(); i++ ) {
-            final observer = observers.get(i)
-            try {
-                observer.onProcessTerminate(process)
-            }
-            catch( Exception e ) {
-                log.debug(e.getMessage(), e)
-            }
-        }
+        notifyEvent(observersV1, ob -> ob.onProcessTerminate(process))
+        notifyEvent(observersV2, ob -> ob.onProcessTerminate(process))
     }
 
     void notifyTaskPending( TaskHandler handler ) {
         final trace = handler.getTraceRecord()
-        for( int i=0; i<observers.size(); i++ ) {
-            final observer = observers.get(i)
-            try {
-                observer.onProcessPending(handler, trace)
-            }
-            catch( Exception e ) {
-                log.debug(e.getMessage(), e)
-            }
-        }
+        notifyEvent(observersV1, ob -> ob.onProcessPending(handler, trace))
+        notifyEvent(observersV2, ob -> ob.onTaskPending(new TaskEvent(handler, trace)))
     }
 
     /**
@@ -1010,15 +1042,8 @@ class Session implements ISession {
         cache.putIndexAsync(handler)
 
         final trace = handler.getTraceRecord()
-        for( int i=0; i<observers.size(); i++ ) {
-            final observer = observers.get(i)
-            try {
-                observer.onProcessSubmit(handler, trace)
-            }
-            catch( Exception e ) {
-                log.debug(e.getMessage(), e)
-            }
-        }
+        notifyEvent(observersV1, ob -> ob.onProcessSubmit(handler, trace))
+        notifyEvent(observersV2, ob -> ob.onTaskSubmit(new TaskEvent(handler, trace)))
     }
 
     /**
@@ -1026,15 +1051,8 @@ class Session implements ISession {
      */
     void notifyTaskStart( TaskHandler handler ) {
         final trace = handler.getTraceRecord()
-        for( int i=0; i<observers.size(); i++ ) {
-            final observer = observers.get(i)
-            try {
-                observer.onProcessStart(handler, trace)
-            }
-            catch( Exception e ) {
-                log.debug(e.getMessage(), e)
-            }
-        }
+        notifyEvent(observersV1, ob -> ob.onProcessStart(handler, trace))
+        notifyEvent(observersV2, ob -> ob.onTaskStart(new TaskEvent(handler, trace)))
     }
 
     /**
@@ -1047,16 +1065,14 @@ class Session implements ISession {
         final trace = handler.safeTraceRecord()
         cache.putTaskAsync(handler, trace)
 
-        // notify the event to the observers
-        for( int i=0; i<observers.size(); i++ ) {
-            final observer = observers.get(i)
-            try {
-                observer.onProcessComplete(handler, trace)
-            }
-            catch( Exception e ) {
-                log.debug(e.getMessage(), e)
-            }
+        // set the pipeline to return non-exit code if specified
+        if( handler.task.errorAction == ErrorStrategy.IGNORE && failOnIgnore() ) {
+            log.debug "Setting fail-on-ignore flag due to ignored task '${handler.task.lazyName()}'"
+            failOnIgnore = true
         }
+
+        notifyEvent(observersV1, ob -> ob.onProcessComplete(handler, trace))
+        notifyEvent(observersV2, ob -> ob.onTaskComplete(new TaskEvent(handler, trace)))
     }
 
     void notifyTaskCached( TaskHandler handler ) {
@@ -1067,15 +1083,8 @@ class Session implements ISession {
             cache.cacheTaskAsync(handler)
         }
 
-        for( int i=0; i<observers.size(); i++ ) {
-            final observer = observers.get(i)
-            try {
-                observer.onProcessCached(handler, trace)
-            }
-            catch( Exception e ) {
-                log.error(e.getMessage(), e)
-            }
-        }
+        notifyEvent(observersV1, ob -> ob.onProcessCached(handler, trace))
+        notifyEvent(observersV2, ob -> ob.onTaskCached(new TaskEvent(handler, trace)))
     }
 
     void notifyBeforeWorkflowExecution() {
@@ -1087,40 +1096,27 @@ class Session implements ISession {
     }
 
     void notifyFlowBegin() {
-        for( TraceObserver trace : observers ) {
-            trace.onFlowBegin()
-        }
+        notifyEvent(observersV1, ob -> ob.onFlowBegin())
+        notifyEvent(observersV2, ob -> ob.onFlowBegin())
     }
 
     void notifyFlowCreate() {
-        for( TraceObserver trace : observers ) {
-            trace.onFlowCreate(this)
-        }
+        notifyEvent(observersV1, ob -> ob.onFlowCreate(this))
+        notifyEvent(observersV2, ob -> ob.onFlowCreate(this))
     }
 
-    void notifyFilePublish(Path destination, Path source=null) {
-        def copy = new ArrayList<TraceObserver>(observers)
-        for( TraceObserver observer : copy  ) {
-            try {
-                observer.onFilePublish(destination, source)
-            }
-            catch( Exception e ) {
-                log.error "Failed to invoke observer on file publish: $observer", e
-            }
-        }
+    void notifyWorkflowOutput(WorkflowOutputEvent event) {
+        notifyEvent(observersV2, ob -> ob.onWorkflowOutput(event))
+    }
+
+    void notifyFilePublish(FilePublishEvent event) {
+        notifyEvent(observersV1, ob -> ob.onFilePublish(event.target, event.source))
+        notifyEvent(observersV2, ob -> ob.onFilePublish(event))
     }
 
     void notifyFlowComplete() {
-        def copy = new ArrayList<TraceObserver>(observers)
-        for( TraceObserver observer : copy  ) {
-            try {
-                if( observer )
-                    observer.onFlowComplete()
-            }
-            catch( Exception e ) {
-                log.debug "Failed to invoke observer completion handler: $observer", e
-            }
-        }
+        notifyEvent(observersV1, ob -> ob.onFlowComplete())
+        notifyEvent(observersV2, ob -> ob.onFlowComplete())
     }
 
     /**
@@ -1132,14 +1128,8 @@ class Session implements ISession {
     void notifyError( TaskHandler handler ) {
 
         final trace = handler?.safeTraceRecord()
-        for ( int i=0; i<observers?.size(); i++){
-            try{
-                final observer = observers.get(i)
-                observer.onFlowError(handler, trace)
-            } catch ( Throwable e ) {
-                log.debug(e.getMessage(), e)
-            }
-        }
+        notifyEvent(observersV1, ob -> ob.onFlowError(handler, trace))
+        notifyEvent(observersV2, ob -> ob.onFlowError(new TaskEvent(handler, trace)))
 
         if( !errorAction )
             return
@@ -1149,6 +1139,18 @@ class Session implements ISession {
         }
         catch( Throwable e ) {
             log.debug(e.getMessage(), e)
+        }
+    }
+
+    private static <T> void notifyEvent(List<T> observers, Consumer<T> action) {
+        for ( int i=0; i<observers.size(); i++) {
+            final observer = observers.get(i)
+            try {
+                action.accept(observer)
+            }
+            catch ( Throwable e ) {
+                log.debug(e.getMessage(), e)
+            }
         }
     }
 
@@ -1170,10 +1172,13 @@ class Session implements ISession {
         if( aborted || cancelled || error )
             return
 
-        CacheDB db = null
-        try {
-            log.trace "Cleaning-up workdir"
-            db = CacheFactory.create(uniqueId, runName).openForRead()
+        if( workDir.scheme != 'file' ) {
+            log.warn "The `cleanup` option is not supported for remote work directory: ${workDir.toUriString()}"
+            return
+        }
+
+        log.trace "Cleaning-up workdir"
+        try (CacheDB db = CacheFactory.create(uniqueId, runName).openForRead()) {
             db.eachRecord { HashCode hash, TraceRecord record ->
                 def deleted = db.removeTaskEntry(hash)
                 if( deleted ) {
@@ -1184,10 +1189,7 @@ class Session implements ISession {
             log.trace "Clean workdir complete"
         }
         catch( Exception e ) {
-            log.warn("Failed to cleanup work dir: ${workDir.toUriString()}")
-        }
-        finally {
-            db.close()
+            log.warn("Failed to cleanup work dir: ${workDir.toUriString()}", e)
         }
     }
 
@@ -1442,10 +1444,25 @@ class Session implements ISession {
         ansiLogObserver ? ansiLogObserver.appendInfo(file.text) : Files.copy(file, System.out)
     }
 
-    private ThreadPoolManager publishPoolManager = new ThreadPoolManager('PublishDir')
+    private volatile ThreadPoolManager finalizePoolManager
+
+    @Memoized
+    synchronized ExecutorService taskFinalizerExecutorService() {
+        finalizePoolManager = new ThreadPoolManager('TaskFinalizer')
+        return finalizePoolManager
+                .withConfig(config)
+                .withShutdownMessage(
+                    "Waiting for remaining tasks to complete (%d tasks)",
+                    "Exiting before some tasks were completed"
+                )
+                .create()
+    }
+
+    private volatile ThreadPoolManager publishPoolManager
 
     @Memoized
     synchronized ExecutorService publishDirExecutorService() {
+        publishPoolManager = new ThreadPoolManager('PublishDir')
         return publishPoolManager
                 .withConfig(config)
                 .create()

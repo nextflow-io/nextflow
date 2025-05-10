@@ -17,6 +17,8 @@
 
 package io.seqera.wave.plugin.config
 
+import io.seqera.wave.api.ScanLevel
+import io.seqera.wave.api.ScanMode
 import nextflow.util.Duration
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -86,7 +88,7 @@ class WaveConfigTest extends Specification {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.condaOpts().mambaImage == 'mambaorg/micromamba:1.5.5'
+        opts.condaOpts().mambaImage == 'mambaorg/micromamba:1.5.10-noble'
         opts.condaOpts().commands == null
 
         when:
@@ -94,21 +96,6 @@ class WaveConfigTest extends Specification {
         then:
         opts.condaOpts().mambaImage == 'mambaorg/foo:1'
         opts.condaOpts().commands == ['USER hola']
-        
-    }
-
-    def 'should get spack config' () {
-        when:
-        def opts = new WaveConfig([:])
-        then:
-        opts.spackOpts().basePackages == null
-        opts.spackOpts().commands == null
-
-        when:
-        opts = new WaveConfig([build:[spack:[ basePackages: 'foo bar', commands:['USER hola'] ]]])
-        then:
-        opts.spackOpts().basePackages == 'foo bar'
-        opts.spackOpts().commands == ['USER hola']
         
     }
 
@@ -131,7 +118,7 @@ class WaveConfigTest extends Specification {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.strategy() == ['container','dockerfile','conda','spack']
+        opts.strategy() == ['container','dockerfile','conda']
 
         when:
         opts = new WaveConfig([strategy:STRATEGY])
@@ -140,13 +127,12 @@ class WaveConfigTest extends Specification {
 
         where:
         STRATEGY                | EXPECTED
-        null                    | ['container','dockerfile','conda','spack']
+        null                    | ['container','dockerfile','conda']
         'dockerfile'            | ['dockerfile']
         'conda,container'       | ['conda','container']
         'conda , container'     | ['conda','container']
         ['conda','container']   | ['conda','container']
         [' conda',' container'] | ['conda','container']
-        'spack'                 | ['spack']
     }
 
     def 'should fail to set strategy' () {
@@ -199,10 +185,10 @@ class WaveConfigTest extends Specification {
         given:
         def config = new WaveConfig([enabled: true])
         expect:
-        config.toString() == 'WaveConfig(enabled:true, endpoint:https://wave.seqera.io, containerConfigUrl:[], tokensCacheMaxDuration:30m, condaOpts:CondaOpts(mambaImage=mambaorg/micromamba:1.5.5; basePackages=conda-forge::procps-ng, commands=null), spackOpts:SpackOpts(basePackages=null, commands=null), strategy:[container, dockerfile, conda, spack], bundleProjectResources:null, buildRepository:null, cacheRepository:null, retryOpts:RetryOpts(delay:450ms, maxDelay:1m 30s, maxAttempts:10, jitter:0.25), httpClientOpts:HttpOpts(), freezeMode:null, preserveFileTimestamp:null)'
+        config.toString() == 'WaveConfig(enabled:true, endpoint:https://wave.seqera.io, containerConfigUrl:[], tokensCacheMaxDuration:30m, condaOpts:CondaOpts(mambaImage=mambaorg/micromamba:1.5.10-noble; basePackages=conda-forge::procps-ng, commands=null), strategy:[container, dockerfile, conda], bundleProjectResources:null, buildRepository:null, cacheRepository:null, retryOpts:RetryOpts(delay:450ms, maxDelay:1m 30s, maxAttempts:10, jitter:0.25), httpClientOpts:HttpOpts(), freezeMode:null, preserveFileTimestamp:null, buildMaxDuration:40m, mirrorMode:null, scanMode:null, scanAllowedLevels:null)'
     }
 
-    def 'should not allow invalid settinga' () {
+    def 'should not allow invalid setting' () {
         when:
         new WaveConfig(endpoint: 'foo')
         then:
@@ -238,6 +224,40 @@ class WaveConfigTest extends Specification {
         config = new WaveConfig(preserveFileTimestamp: true)
         then:
         config.preserveFileTimestamp()
+    }
+
+    def 'should enabled mirror mode' () {
+        expect:
+        !new WaveConfig([:]).mirrorMode()
+        and:
+        new WaveConfig([mirror:true]).mirrorMode()
+    }
+
+    @Unroll
+    def 'should validate scan mode' () {
+        expect:
+        new WaveConfig(scan: [mode: MODE]).scanMode() == EXPECTED
+        where:
+        MODE        | EXPECTED
+        null        | null
+        'none'      | ScanMode.none
+        'async'     | ScanMode.async
+        'required'  | ScanMode.required
+    }
+
+    @Unroll
+    def 'should validate scan levels' () {
+        expect:
+        new WaveConfig(scan: [allowedLevels: LEVEL]).scanAllowedLevels() == EXPECTED
+        where:
+        LEVEL               | EXPECTED
+        null                | null
+        'low'               | List.of(ScanLevel.LOW)
+        'LOW'               | List.of(ScanLevel.LOW)
+        'low,high'          | List.of(ScanLevel.LOW,ScanLevel.HIGH)
+        'LOW, HIGH'         | List.of(ScanLevel.LOW,ScanLevel.HIGH)
+        ['medium','high']   | List.of(ScanLevel.MEDIUM,ScanLevel.HIGH)
+
     }
 
 }

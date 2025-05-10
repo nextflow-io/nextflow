@@ -35,6 +35,17 @@ class NextflowTest extends Specification {
         System.getenv('CI_GROOVY_VERSION') == GroovySystem.getVersion()
     }
 
+    def 'should get an environment variable' () {
+        given:
+        SysEnv.push(FOO: 'FOO_VALUE')
+
+        expect:
+        Nextflow.env('FOO') == 'FOO_VALUE'
+
+        cleanup:
+        SysEnv.pop()
+    }
+
     def testFile() {
         expect:
         Nextflow.file('file.log').toFile() == new File('file.log').canonicalFile
@@ -336,6 +347,12 @@ class NextflowTest extends Specification {
         then:
         def e = thrown(NoSuchFileException)
         e.message == foo.toString()
+
+        when:
+        Nextflow.file("$folder/*.txt", checkIfExists: true)
+        then:
+        e = thrown(NoSuchFileException)
+        e.message == "$folder/*.txt"
 
         cleanup:
         folder?.deleteDir()

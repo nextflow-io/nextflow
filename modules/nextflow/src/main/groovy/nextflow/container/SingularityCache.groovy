@@ -52,10 +52,6 @@ class SingularityCache {
 
     private Duration pullTimeout = Duration.of('20min')
 
-    /** Only for debugging purpose - do not use */
-    @PackageScope
-    SingularityCache() {}
-
     protected String getBinaryName() { return 'singularity' }
 
     protected String getAppName() { getBinaryName().capitalize() }
@@ -303,7 +299,7 @@ class SingularityCache {
         def status = proc.exitValue()
         if( status != 0 ) {
             consumer.join()
-            def msg = "Failed to pull singularity image\n  command: $cmd\n  status : $status\n  message:\n"
+            def msg = "Failed to pull singularity image\n  command: $cmd\n  status : $status\n  hint   : Try and increase ${binaryName}.pullTimeout in the config (current is \"${pullTimeout}\")\n  message:\n"
             msg += err.toString().trim().indent('    ')
             throw new IllegalStateException(msg)
         }

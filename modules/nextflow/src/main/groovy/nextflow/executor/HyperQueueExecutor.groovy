@@ -59,12 +59,12 @@ class HyperQueueExecutor extends AbstractGridExecutor {
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
         result << '--name' << getJobNameFor(task)
-        result << '--log' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
+        result << '--stream' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
         result << '--cwd' << quote(task.workDir)
 
         // No enforcement, Hq just makes sure that the allocated value is below the limit
         if( task.config.getMemory() )
-            result << '--resource' << "mem=${task.config.getMemory().toBytes()}".toString()
+            result << '--resource' << "mem=${task.config.getMemory().toMega()}".toString()
         if( task.config.hasCpus() )
             result << '--cpus'<< task.config.getCpus().toString()
         if( task.config.getTime() )
@@ -73,9 +73,7 @@ class HyperQueueExecutor extends AbstractGridExecutor {
             result << '--resource' << "gpus=${task.config.getAccelerator().limit}".toString()
 
         // -- At the end append the command script wrapped file name
-        if( task.config.clusterOptions ) {
-            result << task.config.clusterOptions.toString() << ''
-        }
+        addClusterOptionsDirective(task.config, result)
 
         return result
     }

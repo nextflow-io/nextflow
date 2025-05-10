@@ -4,6 +4,7 @@ process splitLetters {
     output:
     path 'chunk_*'
 
+    script:
     """
     printf '${params.str}' | split -b 6 - chunk_
     """
@@ -16,11 +17,12 @@ process convertToUpper {
     output:
     stdout
 
+    script:
     """
     cat $x | tr '[a-z]' '[A-Z]'
     """
 }
 
 workflow {
-    splitLetters | flatten | convertToUpper | view { it.trim() }
+    splitLetters | flatten | convertToUpper | view { v -> v.trim() }
 }

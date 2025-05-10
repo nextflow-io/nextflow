@@ -41,6 +41,7 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.MemoryUnit
+import nextflow.util.TestOnly
 /**
  * Task handler for Google Pipelines.
  *
@@ -103,10 +104,8 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
     }
 
 
-    /* ONLY FOR TESTING PURPOSE */
-    protected GoogleLifeSciencesTaskHandler() {
-
-    }
+    @TestOnly
+    protected GoogleLifeSciencesTaskHandler() {}
 
     Operation getOperation() { operation }
 
@@ -286,7 +285,7 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
     }
 
     @Override
-    void kill() {
+    protected void killTask() {
         if( !operation ) return
         log.debug "[GLS] Killing task > $task.name - Pipeline Id: $pipelineId"
         helper.cancelOperation(operation)

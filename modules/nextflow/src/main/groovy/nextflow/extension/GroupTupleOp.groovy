@@ -35,7 +35,6 @@ class GroupTupleOp {
 
     static private List<Integer> GROUP_DEFAULT_INDEX = [0]
 
-
     /**
      * Comparator used to sort tuple entries (when required)
      */

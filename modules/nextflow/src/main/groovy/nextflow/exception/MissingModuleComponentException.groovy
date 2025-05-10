@@ -19,7 +19,7 @@ class MissingModuleComponentException extends ProcessException {
     @PackageScope
     static String message(ScriptMeta meta, String name) {
         def result = "Cannot find a component with name '$name' in module: $meta.scriptPath"
-        def names = meta.getDefinitions().collect { it.name }
+        def names = meta.getDefinitions().findAll { it.name }.collect { it.name }
         def matches = names.closest(name)
         if( matches )
             result += "\n\nDid you mean any of these?\n" + matches.collect { "  $it"}.join('\n') + '\n'

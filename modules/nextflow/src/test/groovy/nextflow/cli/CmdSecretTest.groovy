@@ -51,8 +51,7 @@ class CmdSecretTest extends Specification {
         secretFile = new File("$tempDir/store.json")
         SysEnv.push([NXF_SECRETS_FILE: secretFile.toString()])
         //required to run all test due collisions with others
-        def memoized = SecretsLoader.instance.memoizedMethodClosure$load
-        memoized.@cache.clear()
+        SecretsLoader.instance.reset()
     }
 
     def cleanupSpec() {

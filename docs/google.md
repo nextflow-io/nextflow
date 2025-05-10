@@ -35,6 +35,9 @@ Then, define the following variable replacing the path in the example with the o
 export GOOGLE_APPLICATION_CREDENTIALS="/path/your/file/creds.json"
 ```
 
+See [Get started with Nextflow on Google Cloud Batch](https://www.nextflow.io/blog/2023/nextflow-with-gbatch.html) for more information on how to use Google Cloud Batch, 
+including how to set the required roles for your service account.
+
 (google-batch)=
 
 ## Cloud Batch
@@ -96,11 +99,12 @@ location and that fits the requested resources. If `memory` is not specified, 1 
 The `machineType` directive can be used to request a specific VM instance type. It can be any predefined Google Compute
 Platform [machine type](https://cloud.google.com/compute/docs/machine-types) or [custom machine type](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type).
 
-```groovy
+```nextflow
 process myTask {
     cpus 8
     memory '40 GB'
 
+    script:
     """
     your_command --here
     """
@@ -109,6 +113,7 @@ process myTask {
 process anotherTask {
     machineType 'n1-highmem-8'
 
+    script:
     """
     your_command --here
     """
@@ -121,12 +126,13 @@ process anotherTask {
 The `machineType` directive can also be a comma-separated list of patterns. The pattern can contain a `*` to match any
 number of characters and `?` to match any single character. Examples of valid patterns: `c2-*`, `m?-standard*`, `n*`.
 
-```groovy
+```nextflow
 process myTask {
     cpus 8
     memory '20 GB'
     machineType 'n2-*,c2-*,m3-*'
 
+    script:
     """
     your_command --here
     """
@@ -139,12 +145,13 @@ process myTask {
 The `machineType` directive can also be an [Instance Template](https://cloud.google.com/compute/docs/instance-templates),
 specified as `template://<instance-template>`. For example:
 
-```groovy
+```nextflow
 process myTask {
     cpus 8
     memory '20 GB'
     machineType 'template://my-template'
 
+    script:
     """
     your_command --here
     """
@@ -153,7 +160,7 @@ process myTask {
 
 :::{note}
 Using an instance template will overwrite the `accelerator` and `disk` directives, as well as the following Google Batch
-config options: `cpuPlatform`, `preemptible`, and `spot`.
+config options: `bootDiskImage`, `cpuPlatform`, `preemptible`, and `spot`.
 :::
 
 To use an instance template with GPUs, you must also set the `google.batch.installGpuDrivers` config option to `true`.
@@ -169,7 +176,7 @@ The `disk` directive can be used to set the boot disk size or provision a disk f
 
 Examples:
 
-```groovy
+```nextflow
 // set the boot disk size
 disk 100.GB
 
@@ -198,9 +205,9 @@ Any input data **not** stored in a Google Storage bucket will automatically be t
 The Google Storage path needs to contain at least sub-directory. Don't use only the bucket name e.g. `gs://my-bucket`.
 :::
 
-### Spot instances
+### Spot Instances
 
-Spot instances are supported adding the following setting in the Nextflow config file:
+Spot Instances are supported by adding the following setting in the Nextflow config file:
 
 ```groovy
 google {
@@ -225,29 +232,13 @@ process {
 :::{versionadded} 23.02.0-edge
 :::
 
-The Google Batch executor supports the use of {ref}`fusion-page`. Fusion allows the use of Google Cloud Storage as a virtual distributed file system, optimising the data transfer and speeding up most job I/O operations.
+The Google Batch executor supports the use of {ref}`fusion-page`. Fusion allows the use of Google Cloud Storage as a virtual distributed file system, optimizing the data transfer and speeding up most job I/O operations.
 
-To enable the use of Fusion file system in your pipeline, add the following snippet to your Nextflow configuration file:
-
-```groovy
-fusion.enabled = true
-wave.enabled = true
-process.scratch = false
-tower.accessToken = '<YOUR ACCESS TOKEN>'
-```
-
-The [Seqera Platform](https://cloud.tower.nf) access token is optional, but it enables higher API rate limits for the {ref}`wave-page` service required by Fusion.
-
-By default, Fusion mounts a local SSD disk to the VM at `/tmp`, using a machine type that can attach local SSD disks. If you specify your own machine type or machine series, they should be able to attach local SSD disks, otherwise the job scheduling will fail.
-
-:::{versionadded} 23.06.0-edge
-:::
-
-The `disk` directive can be used to override the disk requested by Fusion. See the {ref}`Process definition <google-batch-process>` section above for examples. Note that local SSD disks must be a multiple of 375 GB in size, otherwise the size will be increased to the next multiple of 375 GB.
+See [Google Cloud Batch](https://docs.seqera.io/fusion/guide/gcp-batch) for more information about configuring Fusion for Google Cloud Batch.
 
 ### Supported directives
 
-The integration with Google Batch is a developer preview feature. Currently, the following Nextflow directives are supported:
+Currently, the following Nextflow directives are supported by the Google Batch executor:
 
 - {ref}`process-accelerator`
 - {ref}`process-container`
@@ -332,22 +323,24 @@ The process `machineType` directive may optionally be used to specify a predefin
 
 Examples:
 
-```groovy
+```nextflow
 process custom_resources_task {
     cpus 8
     memory '40 GB'
     disk '200 GB'
 
+    script:
     """
-    <Your script here>
+    your_command --here
     """
 }
 
 process predefined_resources_task {
     machineType 'n1-highmem-8'
 
+    script:
     """
-    <Your script here>
+    your_command --here
     """
 }
 ```
@@ -395,25 +388,26 @@ For an exhaustive list of error codes, refer to the official Google Life Science
 
 ### Hybrid execution
 
-Nextflow allows the use of multiple executors in the same workflow. This feature enables the deployment of hybrid workloads, in which some jobs are executed in the local computer or local computing cluster, and some jobs are offloaded to Google Life Sciences.
+Nextflow allows the use of multiple executors in the same workflow. This feature enables the deployment of hybrid workloads, in which some jobs are executed in the local computer or local computing cluster, and some jobs are offloaded to Google Cloud (either Google Batch or Google Life Sciences).
 
-To enable this feature, use one or more {ref}`config-process-selectors` in your Nextflow configuration file to apply the Google Life Sciences executor to the subset of processes that you want to offload. For example:
+To enable this feature, use one or more {ref}`config-process-selectors` in your Nextflow configuration file to apply the Google Cloud executor to the subset of processes that you want to offload. For example:
 
 ```groovy
 process {
     withLabel: bigTask {
-        executor = 'google-lifesciences'
+        executor = 'google-batch' // or 'google-lifesciences'
         container = 'my/image:tag'
     }
 }
 
 google {
     project = 'your-project-id'
-    zone = 'europe-west1-b'
+    location = 'us-central1' // for Google Batch
+    // zone = 'us-central1-a' // for Google Life Sciences
 }
 ```
 
-Then launch the pipeline with the `-bucket-dir` option to specify a Google Storage path for the jobs computed with Google Life Sciences and, optionally, the `-work-dir` to specify the local storage for the jobs computed locally:
+Then launch the pipeline with the `-bucket-dir` option to specify a Google Storage path for the jobs computed with Google Cloud and, optionally, the `-work-dir` to specify the local storage for the jobs computed locally:
 
 ```bash
 nextflow run <script or project name> -bucket-dir gs://my-bucket/some/path
@@ -421,6 +415,10 @@ nextflow run <script or project name> -bucket-dir gs://my-bucket/some/path
 
 :::{warning}
 The Google Storage path needs to contain at least one sub-directory (e.g. `gs://my-bucket/work` rather than `gs://my-bucket`).
+:::
+
+:::{note}
+Nextflow will automatically manage the transfer of input and output files between the local and cloud environments when using hybrid workloads.
 :::
 
 ### Limitations

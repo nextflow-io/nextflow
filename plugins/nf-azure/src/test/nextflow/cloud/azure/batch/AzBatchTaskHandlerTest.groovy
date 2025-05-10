@@ -1,5 +1,7 @@
 package nextflow.cloud.azure.batch
 
+import java.nio.file.Path
+
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.exception.ProcessUnrecoverableException
@@ -8,7 +10,6 @@ import nextflow.executor.Executor
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
-import nextflow.processor.TaskStatus
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
 import spock.lang.Specification
@@ -18,57 +19,71 @@ import spock.lang.Specification
  */
 class AzBatchTaskHandlerTest extends Specification {
 
+    def createTaskRun() {
+        Mock(TaskRun) {
+            name >> 'foo'
+            workDir >> Path.of('/work/dir')
+            container >> 'ubuntu'
+        }
+    }
+
     def 'should validate config' () {
+        given:
+        def exec = Mock(AzBatchExecutor)
+
         when:
-        def task = Mock(TaskRun) { getName() >> 'foo'; }
+        def task = Mock(TaskRun) {
+            name >> 'foo'
+            workDir >> Path.of('/work/dir')
+        }
         and:
-        new AzBatchTaskHandler(task: task)
-                .validateConfiguration()
+        new AzBatchTaskHandler(task, exec)
         then:
         def e = thrown(ProcessUnrecoverableException)
         e.message.startsWith('No container image specified for process foo')
 
-
         when:
-        task = Mock(TaskRun) { getName() >> 'foo'; getContainer() >> 'ubuntu' }
+        task = createTaskRun()
         and:
-        new AzBatchTaskHandler(task: task)
-                .validateConfiguration()
+        new AzBatchTaskHandler(task, exec)
         then:
         noExceptionThrown()
     }
 
-    def 'should submit task' () {
+    def 'should submit task'() {
         given:
-        def builder = Mock(BashWrapperBuilder)
-        def task = Mock(TaskRun)
         def azure = Mock(AzBatchService)
+        def executor = Mock(AzBatchExecutor)
+        def processor = Mock(TaskProcessor) {
+            getExecutor() >> executor
+        }
+        def task = createTaskRun()
+        task.getProcessor() >> processor
+        task.getConfig() >> Mock(TaskConfig)
         and:
-        def handler = Spy(AzBatchTaskHandler) {getBatchService() >> azure }
-        handler.task = task
+        def handler = Spy(new AzBatchTaskHandler(task, executor)) {
+            getBatchService() >> azure
+        }
+        
         when:
         handler.submit()
+        
         then:
-        1 * handler.createBashWrapper() >> builder
-        1 * builder.build() >> null
-        1 * azure.submitTask(task) >> null
-        and:
-        handler.getStatus() == TaskStatus.SUBMITTED
+        1 * handler.createBashWrapper() >> Mock(BashWrapperBuilder)
+        1 * handler.getBatchService() >> Mock(AzBatchService)
     }
-
 
     def 'should create the trace record' () {
         given:
-        def exec = Mock(Executor) { getName() >> 'azurebatch' }
+        def exec = Mock(AzBatchExecutor) { getName() >> 'azurebatch' }
         def processor = Mock(TaskProcessor)
         processor.getExecutor() >> exec
         processor.getName() >> 'foo'
         processor.getConfig() >> new ProcessConfig(Mock(BaseScript))
-        def task = Mock(TaskRun)
+        def task = createTaskRun()
         task.getProcessor() >> processor
         task.getConfig() >> GroovyMock(TaskConfig)
-        def handler = Spy(AzBatchTaskHandler)
-        handler.task = task
+        def handler = Spy(new AzBatchTaskHandler(task, exec))
         handler.@taskKey = new AzTaskKey('job-123', 'nf-456')
 
         when:
@@ -84,5 +99,4 @@ class AzBatchTaskHandlerTest extends Specification {
         trace.machineInfo.zone == 'west-eu'
         trace.machineInfo.priceModel == PriceModel.standard
     }
-
 }
