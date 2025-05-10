@@ -181,19 +181,20 @@ class LinFileSystemProviderTest extends Specification {
         def config = [lineage:[store:[location:wdir.toString()]]]
         def outputMeta = wdir.resolve("12345")
         outputMeta.mkdirs()
-        outputMeta.resolve(".data.json").text = '{"type":"WorkflowRun","sessionId":"session","name":"run_name","params":[{"type":"String","name":"param1","value":"value1"}]}'
+        def metadata = '{\n  "type": "WorkflowRun",\n  "createdAt": null,\n  "workflowLaunch": null,\n  "status": null,\n  "output": null\n}'
+        outputMeta.resolve(".data.json").text = metadata
 
         Global.session = Mock(Session) { getConfig()>>config }
         and:
         def provider = new LinFileSystemProvider()
-        def lid = provider.getPath(LinPath.asUri('lid://12345#name'))
+        def lid = provider.getPath(LinPath.asUri('lid://12345'))
 
         when:
         def channel = provider.newByteChannel(lid, Set.of(StandardOpenOption.READ))
         then:
         channel.isOpen()
         channel.position() == 0
-        channel.size() == '"run_name"'.getBytes().size()
+        channel.size() == metadata.getBytes().size()
 
         when:
         channel.truncate(25)
@@ -206,7 +207,7 @@ class LinFileSystemProviderTest extends Specification {
         def bytes = new byte[read]
         buffer.get(0,bytes)
         then:
-        bytes =='"run_name"'.getBytes()
+        bytes == metadata.getBytes()
 
         when:
         channel.position(2)

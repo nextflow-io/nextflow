@@ -20,11 +20,8 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.file.FileHelper
 import nextflow.file.LogicalDataPath
-import nextflow.lineage.LinPropertyValidator
-import nextflow.lineage.LinStore
 import nextflow.lineage.model.Checksum
 import nextflow.lineage.model.FileOutput
-import nextflow.lineage.model.TaskRun
 import nextflow.lineage.model.WorkflowRun
 import nextflow.lineage.serde.LinSerializable
 import nextflow.util.CacheHelper
@@ -62,10 +59,6 @@ class LinPath implements Path, LogicalDataPath {
     // String with the lineage file path
     private String filePath
 
-    private String query
-
-    private String fragment
-
     /*
      * Only needed to prevent serialization issues - see https://github.com/nextflow-io/nextflow/issues/5208
      */
@@ -76,29 +69,18 @@ class LinPath implements Path, LogicalDataPath {
             throw new IllegalArgumentException("Invalid LID URI - scheme is different for $SCHEME")
         }
         this.fileSystem = fs
-        setFieldsFormURI(uri)
-        // Check if query and fragment are with filePath
-        if( query == null && fragment == null )
-            setFieldsFormURI(new URI(toUriString()))
-        // Warn if query is specified
-        if( query )
-            log.warn("Query string is not supported for Lineage URI: `$uri` -- it will be ignored")
-        // Validate fragment
-        if( fragment )
-            new LinPropertyValidator().validate(fragment.tokenize('.'))
-    }
-
-    private void setFieldsFormURI(URI uri){
-        this.query = uri.query
-        this.fragment = uri.fragment
         this.filePath = resolve0(fileSystem, norm0("${uri.authority?:''}${uri.path}") )
+        // Warn if query is specified
+        if( uri.query )
+            log.warn("Query string is not supported for Lineage URI: `$uri` -- it will be ignored")
+        // Warn if fragment is specified
+        if( uri.fragment )
+            log.warn("Fragment is not supported for Lineage URI: `$uri` -- it will be ignored")
     }
 
-    protected LinPath(String query, String fragment, String filepath, LinFileSystem fs) {
+    protected LinPath(String filePath, LinFileSystem fs) {
         this.fileSystem = fs
-        this.query = query
-        this.fragment = fragment
-        this.filePath = filepath
+        this.filePath = filePath
     }
 
     LinPath(LinFileSystem fs, String path) {
@@ -126,7 +108,7 @@ class LinPath implements Path, LogicalDataPath {
         return first
     }
 
-    protected static void validateDataOutput(FileOutput lidObject) {
+    protected static void validateFileOutput(FileOutput lidObject) {
         final hashedPath = FileHelper.toCanonicalPath(lidObject.path as String)
         if( !hashedPath.exists() )
             throw new FileNotFoundException("Target path $lidObject.path does not exist")
@@ -176,16 +158,14 @@ class LinPath implements Path, LogicalDataPath {
      *
      * @param fs LinFileSystem associated to the LinPath to find
      * @param filePath Path to look for the target path
-     * @param fragment String with path to sub-object inside the description
      * @param asMetadata Flag to indicate if other metadata descriptions must be returned as LinMetadataPath.
      * @param asIntermediate Flag to indicate if WorkflowRun and TaskRun subpaths must be returned as LinIntermediatePath.
-     * @param subpath subpath associated to the target path to find. Used when looking for a parent path
      * @return Real Path, LinMetadataPath or LinIntermediatePath path associated to the LinPath
      * @throws Exception
-     *      IllegalArgumentException if the filepath, filesystem or its LinStore are null.
-     *      FileNotFoundException if the filePath, subpath and fragment is not found.
+     *      IllegalArgumentException if the filePath, filesystem or its LinStore are null.
+     *      FileNotFoundException if the filePath is not found in the LinStore.
      */
-    protected static Path findTarget(LinFileSystem fs, String filePath, String fragment, boolean asMetadata, boolean asIntermediate) throws Exception {
+    protected static Path findTarget(LinFileSystem fs, String filePath, boolean asMetadata, String subPath=null) throws Exception {
         if( !fs )
             throw new IllegalArgumentException("Cannot get target path for a relative lineage path")
         if( filePath.isEmpty() || filePath == SEPARATOR )
@@ -193,111 +173,38 @@ class LinPath implements Path, LogicalDataPath {
         final store = fs.getStore()
         if( !store )
             throw new Exception("Lineage store not found - Check Nextflow configuration")
-        findTarget0(fs, store, filePath, fragment, asMetadata, asIntermediate, [])
-    }
-    
-    private static Path findTarget0(LinFileSystem fs, LinStore store, String filePath, String fragment, boolean asMetadata, boolean asIntermediate, List<String> subpath) {
-        final object = store.load(filePath)
-        if( object ) {
-            return getTargetPathFromObject(object, fs, filePath, fragment, asMetadata, asIntermediate, subpath)
-        } else {
-            if( fragment ) {
-                // If object doesn't exit, it's not possible to get fragment.
-                throw new FileNotFoundException("Target path '$filePath#$fragment' does not exist")
-            }
-            return findTargetFromParent(fs, store, filePath, asIntermediate, subpath)
-        }
-    }
-
-    private static Path findTargetFromParent(LinFileSystem fs, LinStore store, String filePath, boolean asIntermediate, List<String> subpath) {
+        final record = store.load(filePath)
+        if( record instanceof FileOutput )
+            return getFileOutputAsTargetPath(record, subPath)
+        if( record && asMetadata )
+            return getMetadataAsTargetPath(record, fs, filePath)
+        // recursively check parent paths for metadata descriptions
         final currentPath = Path.of(filePath)
-        final parent = Path.of(filePath).getParent()
-        if( !parent ) {
-            throw new FileNotFoundException("Target path '$filePath/${subpath.join('/')} does not exist")
+        final parent = currentPath.getParent()
+        if( parent ) {
+            final filename = currentPath.getFileName().toString()
+            subPath = subPath
+                ? "${filename}${SEPARATOR}${subPath}".toString()
+                : filename
+            return findTarget(fs, parent.toString(), false, subPath)
         }
-        ArrayList<String> newChildren = new ArrayList<String>()
-        newChildren.add(currentPath.getFileName().toString())
-        newChildren.addAll(subpath)
-        //As Metadata set as false because parent path only inspected for FileOutput or intermediate.
-        return findTarget0(fs, store, parent.toString(), null, false, asIntermediate, newChildren)
+        throw new FileNotFoundException("Target path '${filePath}' does not exist")
     }
 
-    private static Path getTargetPathFromObject(LinSerializable object, LinFileSystem fs, String filePath, String fragment, boolean asMetadataPath, boolean asIntermediatePath,List<String> subpath) {
-        // It's not possible to get a target path with both fragment and subpath
-        if( fragment && subpath ) {
-            throw new FileNotFoundException("Unable to get a target path for '$filePath' with fragments and subpath")
-        }
-        // If metadata flag is active and looks for a fragment returns the metadata despite the type of object
-        if( asMetadataPath && fragment ){
-           return getMetadataAsTargetPath(object, fs, filePath, fragment)
-        }
-        // Return real files when FileOutput sub-path
-        if( object instanceof FileOutput ) {
-            return getTargetPathFromOutput(object, subpath)
-        }
-        // Intermediate run case
-        if( asIntermediatePath && (object instanceof WorkflowRun || object instanceof TaskRun) ) {
-            return new LinIntermediatePath(fs, "$filePath/${subpath.join('/')}")
-        }
-
-        // It is not possible to get a metadata path with subpath. For other cases return metadata path if activated or throw exception
-        if( asMetadataPath && !subpath)
-            return getMetadataAsTargetPath(object, fs, filePath, fragment)
-        else
-            throw new FileNotFoundException("Target path '${filePath}/${subpath ? '/' + subpath.join('/') : ''}${fragment ? '#' + fragment : ''}' does not exist")
-    }
-
-    protected static Path getMetadataAsTargetPath(LinSerializable results, LinFileSystem fs, String filePath, String fragment) {
-        if( !results ) {
+    protected static Path getMetadataAsTargetPath(record, LinFileSystem fs, String filePath) {
+        if( !record )
             throw new FileNotFoundException("Target path '$filePath' does not exist")
-        }
-        if( fragment ) {
-            return getSubObjectAsPath(fs, filePath, results, fragment)
-        } else {
-            return generateLinMetadataPath(fs, filePath, results, fragment)
-        }
+        final creationTime = toFileTime(navigate(record, 'createdAt') as OffsetDateTime ?: OffsetDateTime.now())
+        return new LinMetadataPath(encodeSearchOutputs(record, true), creationTime, fs, filePath)
     }
 
-    /**
-     * Get a metadata sub-object as LinMetadataPath.
-     * If the requested sub-object is the workflow or task outputs, retrieves the outputs from the outputs description.
-     *
-     * @param fs LinFilesystem for the te.
-     * @param key Parent metadata key.
-     * @param object Parent object.
-     * @param children Array of string in indicating the properties to navigate to get the sub-object.
-     * @return LinMetadataPath or null in it does not exist
-     */
-    static LinMetadataPath getSubObjectAsPath(LinFileSystem fs, String key, LinSerializable object, String fragment) {
-        if( isSearchingOutputs(object, fragment) ) {
-            // When asking for a Workflow or task output retrieve the outputs description
-            final outputs = fs.store.load("${key}#output")
-            if( !outputs ) {
-                throw new FileNotFoundException("Target path '$key#output' does not exist")
-            }
-            return generateLinMetadataPath(fs, key, outputs, fragment)
-        } else {
-            return generateLinMetadataPath(fs, key, object, fragment)
-        }
-    }
-
-    private static LinMetadataPath generateLinMetadataPath(LinFileSystem fs, String key, Object object, String fragment) {
-        def creationTime = toFileTime(navigate(object, 'createdAt') as OffsetDateTime ?: OffsetDateTime.now())
-        final output = fragment ? navigate(object, fragment) : object
-        if( !output ) {
-            throw new FileNotFoundException("Target path '$key#${fragment}' does not exist")
-        }
-        return new LinMetadataPath(encodeSearchOutputs(output, true), creationTime, fs, key, fragment)
-    }
-
-    private static Path getTargetPathFromOutput(FileOutput object, List<String> children) {
-        final lidObject = object as FileOutput
+    private static Path getFileOutputAsTargetPath(FileOutput record, String subPath) {
         // return the real path stored in the metadata
-        validateDataOutput(lidObject)
-        def realPath = FileHelper.toCanonicalPath(lidObject.path as String)
-        if( children && children.size() > 0 )
-            realPath = realPath.resolve(children.join(SEPARATOR))
-        if( !realPath.exists() )
+        validateFileOutput(record)
+        def realPath = FileHelper.toCanonicalPath(record.path as String)
+        if( subPath )
+            realPath = realPath.resolve(subPath)
+        if (!realPath.exists())
             throw new FileNotFoundException("Target path '$realPath' does not exist")
         return realPath
     }
@@ -368,7 +275,7 @@ class LinPath implements Path, LogicalDataPath {
     @Override
     Path getFileName() {
         final result = Path.of(filePath).getFileName()?.toString()
-        return result ? new LinPath(query, fragment, result, null) : null
+        return result ? new LinPath(result, null) : null
     }
 
     @Override
@@ -392,7 +299,7 @@ class LinPath implements Path, LogicalDataPath {
             throw new IllegalArgumentException("Path name index cannot be less than zero - offending value: $index")
         final path = Path.of(filePath)
         if( index == path.nameCount - 1 ) {
-            return new LinPath( query, fragment, path.getName(index).toString(), null)
+            return new LinPath(path.getName(index).toString(), null)
         }
         return new LinPath(index == 0 ? fileSystem : null, path.getName(index).toString())
     }
@@ -443,7 +350,7 @@ class LinPath implements Path, LogicalDataPath {
             return that
         } else {
             final newPath = Path.of(filePath).resolve(that.toString())
-            return new LinPath(that.query, that.fragment, newPath.toString(), fileSystem)
+            return new LinPath(newPath.toString(), fileSystem)
         }
     }
 
@@ -479,12 +386,12 @@ class LinPath implements Path, LogicalDataPath {
             // Compare 'filePath' as relative paths
             path = Path.of(filePath).relativize(Path.of(lidOther.filePath))
         }
-        return new LinPath(lidOther.query, lidOther.fragment, path.getNameCount() > 0 ? path.toString() : SEPARATOR, null)
+        return new LinPath(path.getNameCount() > 0 ? path.toString() : SEPARATOR, null)
     }
 
     @Override
     URI toUri() {
-        return asUri("${SCHEME}://${filePath}${query ? '?' + query : ''}${fragment ? '#' + fragment : ''}")
+        return asUri("${SCHEME}://${filePath}")
     }
 
     String toUriString() {
@@ -512,7 +419,7 @@ class LinPath implements Path, LogicalDataPath {
      * @throws FileNotFoundException if the record does not exist or its type is not a FileOutput.
      */
     protected Path getTargetPath() {
-        return findTarget(fileSystem, filePath, fragment, false, false)
+        return findTarget(fileSystem, filePath, false, false)
     }
 
     /**
@@ -522,7 +429,7 @@ class LinPath implements Path, LogicalDataPath {
      * @throws FileNotFoundException if the record does not exist or its type is not a FileOutput or a intermediate directory
      */
     protected Path getTargetOrIntermediatePath() {
-        return findTarget(fileSystem, filePath, fragment, false, true)
+        return findTarget(fileSystem, filePath, false, true)
     }
 
     /**
@@ -532,7 +439,7 @@ class LinPath implements Path, LogicalDataPath {
      * @throws FileNotFoundException if the record does not exist
      */
     protected Path getTargetOrMetadataPath() {
-        return findTarget(fileSystem, filePath, fragment,true, false)
+        return findTarget(fileSystem, filePath, true, false)
     }
 
     @Override
@@ -581,7 +488,7 @@ class LinPath implements Path, LogicalDataPath {
 
     @Override
     String toString() {
-        return "$filePath${query ? '?' + query : ''}${fragment ? '#' + fragment : ''}".toString()
+        return filePath
     }
 
 }

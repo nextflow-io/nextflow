@@ -21,10 +21,9 @@ import nextflow.lineage.model.Checksum
 import nextflow.lineage.model.DataPath
 import nextflow.lineage.model.FileOutput
 import nextflow.lineage.model.Parameter
-import nextflow.lineage.model.TaskOutput
 import nextflow.lineage.model.TaskRun
 import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowOutput
+import nextflow.lineage.model.WorkflowLaunch
 import nextflow.lineage.model.WorkflowRun
 
 /**
@@ -40,10 +39,9 @@ class LinPropertyValidator {
         DataPath,
         FileOutput,
         Parameter,
-        TaskOutput,
         TaskRun,
         Workflow,
-        WorkflowOutput,
+        WorkflowLaunch,
         WorkflowRun,
     ]
 

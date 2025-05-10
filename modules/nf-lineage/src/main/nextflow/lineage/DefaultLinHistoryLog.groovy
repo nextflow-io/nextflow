@@ -40,19 +40,34 @@ class DefaultLinHistoryLog implements LinHistoryLog {
             Files.createDirectories(path)
     }
 
-    void write(String name, UUID key, String runLid, Date date = null) {
+    @Override
+    void write(String name, UUID id, String launchLid, Date date = null) {
         assert name
-        assert key
-        def timestamp = date ?: new Date()
-        final recordFile = path.resolve(runLid.substring(LID_PROT.size()))
+        assert id
+        final timestamp = date ?: new Date()
+        final recordFile = path.resolve(launchId.substring(LID_PROT.size()))
         try {
-            recordFile.text = new LinHistoryRecord(timestamp, name, key, runLid).toString()
-            log.trace("Record for $key written in lineage history log ${FilesEx.toUriString(this.path)}")
+            recordFile.text = new LinHistoryRecord(timestamp, name, id, null, launchLid, null).toString()
+            log.trace("Record for $launchLid written in lineage history log ${FilesEx.toUriString(this.path)}")
         }catch (Throwable e) {
-            log.warn("Can't write record $key file ${FilesEx.toUriString(recordFile)}", e.message)
+            log.warn("Can't write record $launchLid file ${FilesEx.toUriString(recordFile)}", e.message)
         }
     }
 
+    @Override
+    void finalize(String launchLid, String runLid, String status) {
+        assert id
+        final recordFile = path.resolve(launchId.substring(LID_PROT.size()))
+        try {
+            final current = LinHistoryRecord.parse(recordFile.text)
+            recordFile.text = new LinHistoryRecord(current.timestamp, current.runName, id, status, current.launchLid, runLid).toString()
+        }
+        catch (Throwable e) {
+            log.warn("Can't read record $launchId file: ${FilesEx.toUriString(recordFile)}", e.message)
+        }
+    }
+
+    @Override
     List<LinHistoryRecord> getRecords(){
         List<LinHistoryRecord> list = new LinkedList<LinHistoryRecord>()
         try {

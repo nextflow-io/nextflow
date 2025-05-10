@@ -25,7 +25,7 @@ import nextflow.dag.MermaidHtmlRenderer
 import nextflow.lineage.LinStore
 import nextflow.lineage.model.FileOutput
 import nextflow.lineage.model.TaskRun
-import nextflow.lineage.model.WorkflowRun
+import nextflow.lineage.model.WorkflowLaunch
 
 import static nextflow.lineage.fs.LinPath.LID_PROT
 import static nextflow.lineage.fs.LinPath.isLidUri
@@ -102,10 +102,10 @@ class LinDagRenderer {
             visitFileOutput(lid, record)
         else if( record instanceof TaskRun )
             visitTaskRun(lid, record)
-        else if( record instanceof WorkflowRun )
+        else if( record instanceof WorkflowLaunch )
             visitWorkflowRun(lid, record)
         else
-            throw new Exception("Cannot render lineage for type ${record.getClass().getSimpleName()} -- must be a FileOutput, TaskRun, or WorkflowRun")
+            throw new Exception("Cannot render lineage for type ${record.getClass().getSimpleName()} -- must be a FileOutput, TaskRun, or WorkflowLaunch")
     }
 
     private void visitFileOutput(String lid, FileOutput fileOutput) {
@@ -132,9 +132,9 @@ class LinDagRenderer {
         }
     }
 
-    private void visitWorkflowRun(String lid, WorkflowRun workflowRun) {
-        addNode(lid, "${workflowRun.name} [${lid}]", NodeType.TASK)
-        for( final param : workflowRun.params ) {
+    private void visitWorkflowRun(String lid, WorkflowLaunch workflowLaunch) {
+        addNode(lid, "${workflowLaunch.name} [${lid}]", NodeType.TASK)
+        for( final param : workflowLaunch.params ) {
             visitParameter0(lid, param.value.toString())
         }
     }

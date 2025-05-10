@@ -31,11 +31,11 @@ class LinHistoryRecordTest extends Specification {
         thrown(IllegalArgumentException)
     }
 
-    def "LinHistoryRecord parse should handle 4-column record"() {
+    def "LinHistoryRecord parse should handle TSV record"() {
         given:
         def timestamp = new Date()
         def formattedTimestamp = LinHistoryRecord.TIMESTAMP_FMT.format(timestamp)
-        def line = "${formattedTimestamp}\trun-1\t${UUID.randomUUID()}\tlid://123"
+        def line = "${formattedTimestamp}\trun-1\t${UUID.randomUUID()}\tSUCCEEDED\tlid://123\tlid://456"
 
         when:
         def record = LinHistoryRecord.parse(line)
@@ -43,19 +43,21 @@ class LinHistoryRecordTest extends Specification {
         then:
         record.timestamp != null
         record.runName == "run-1"
-        record.runLid == "lid://123"
+        record.status == "SUCCEEDED"
+        record.launchLid == "lid://123"
+        record.runLid == "lid://456"
     }
 
     def "LinHistoryRecord toString should produce tab-separated format"() {
         given:
         UUID sessionId = UUID.randomUUID()
-        def record = new LinHistoryRecord(new Date(), "TestRun", sessionId, "lid://123")
+        def record = new LinHistoryRecord(new Date(), "TestRun", sessionId, "SUCCEEDED", "lid://123", "lid://456")
 
         when:
         def line = record.toString()
 
         then:
         line.contains("\t")
-        line.split("\t").size() == 4
+        line.split("\t").size() == 6
     }
 }

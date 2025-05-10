@@ -49,8 +49,8 @@ class LinExtensionImpl implements LinExtension {
 
     private static Map<String, List<String>> buildQueryParams(Map<String,?> opts) {
         final queryParams = [type: [FileOutput.class.simpleName] ]
-        if( opts.workflowRun )
-            queryParams['workflowRun'] = [opts.workflowRun as String]
+        if( opts.workflowLaunch )
+            queryParams['workflowLaunch'] = [opts.workflowLaunch as String]
         if( opts.taskRun )
             queryParams['taskRun'] = [opts.taskRun as String]
         if( opts.label ) {

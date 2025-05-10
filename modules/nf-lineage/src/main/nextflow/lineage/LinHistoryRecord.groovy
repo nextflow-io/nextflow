@@ -35,12 +35,16 @@ class LinHistoryRecord {
     final Date timestamp
     final String runName
     final UUID sessionId
+    final String status
+    final String launchLid
     final String runLid
 
-    LinHistoryRecord(Date timestamp, String name, UUID sessionId, String runLid) {
+    LinHistoryRecord(Date timestamp, String name, UUID sessionId, String status, String launchLid, String runLid) {
         this.timestamp = timestamp
         this.runName = name
         this.sessionId = sessionId
+        this.status = status
+        this.launchLid = launchLid
         this.runLid = runLid
     }
 
@@ -51,6 +55,8 @@ class LinHistoryRecord {
             timestamp ? TIMESTAMP_FMT.format(timestamp) : '-',
             runName ?: '-',
             sessionId.toString(),
+            status ?: '-',
+            launchLid ?: '-',
             runLid ?: '-',
         )
     }
@@ -62,8 +68,8 @@ class LinHistoryRecord {
 
     static LinHistoryRecord parse(String line) {
         final cols = line.tokenize('\t')
-        if (cols.size() == 4) {
-            return new LinHistoryRecord(TIMESTAMP_FMT.parse(cols[0]), cols[1], UUID.fromString(cols[2]), cols[3])
+        if (cols.size() == 6) {
+            return new LinHistoryRecord(TIMESTAMP_FMT.parse(cols[0]), cols[1], UUID.fromString(cols[2]), cols[3], cols[4], cols[5])
         }
         throw new IllegalArgumentException("Not a valid history entry: `$line`")
     }

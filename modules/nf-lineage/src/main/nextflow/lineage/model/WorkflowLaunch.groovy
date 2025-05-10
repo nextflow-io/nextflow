@@ -20,34 +20,32 @@ import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import nextflow.lineage.serde.LinSerializable
 
-import java.time.OffsetDateTime
-
 /**
- * Models task results.
+ * Models the launch of a workflow execution
  *
- * @author Jorge Ejarque <jorge.ejarque@seqera.io>
+ * @author Jorge Ejarque <jorge.ejarque@seqera.io
  */
 @Canonical
 @CompileStatic
-class TaskOutput implements LinSerializable {
+class WorkflowLaunch implements LinSerializable {
     /**
-     * Reference to the task that generated the output.
+     * Description of the workflow associated with the workflow run.
      */
-    String taskRun
+    Workflow workflow
     /**
-     * Reference to the WorkflowRun that generated the output.
+     * Session identifier used in the workflow run
      */
-    String workflowRun
+    String sessionId
     /**
-     * Creation date of this task output description
+     * Workflow run name
      */
-    OffsetDateTime createdAt
+    String name
     /**
-     * Output of the task
+     * Workflow parameters
      */
-    List<Parameter> output
+    List<Parameter> params
     /**
-     * Labels attached to the task output
+     * Resolved Configuration
      */
-    List<String> labels
+    Map config
 }

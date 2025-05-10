@@ -27,7 +27,7 @@ import nextflow.lineage.model.DataPath
 import nextflow.lineage.model.FileOutput
 import nextflow.lineage.model.Parameter
 import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowRun
+import nextflow.lineage.model.WorkflowLaunch
 import nextflow.lineage.serde.LinEncoder
 import nextflow.lineage.config.LineageConfig
 import spock.lang.Specification
@@ -107,7 +107,7 @@ class DefaultLinStoreTest extends Specification {
         def mainScript = new DataPath("file://path/to/main.nf", new Checksum("78910", "nextflow", "standard"))
         def workflow = new Workflow([mainScript],"https://nextflow.io/nf-test/", "123456" )
         def key = "testKey"
-        def value1 = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [ new Parameter("String", "param1", "value1"), new Parameter("String", "param2", "value2")] )
+        def value1 = new WorkflowLaunch(workflow, uniqueId.toString(), "test_run", [ new Parameter("String", "param1", "value1"), new Parameter("String", "param2", "value2")] )
         def key2 = "testKey2"
         def value2 = new FileOutput("/path/tp/file1", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, ["value1", "value2"])
         def key3 = "testKey3"
