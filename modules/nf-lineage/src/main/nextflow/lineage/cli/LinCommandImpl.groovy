@@ -30,7 +30,6 @@ import nextflow.lineage.LinPropertyValidator
 import nextflow.lineage.LinStore
 import nextflow.lineage.LinStoreFactory
 import nextflow.lineage.LinUtils
-import nextflow.lineage.model.Parameter
 import nextflow.lineage.serde.LinEncoder
 import nextflow.ui.TableBuilder
 import org.eclipse.jgit.diff.DiffAlgorithm

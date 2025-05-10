@@ -25,8 +25,8 @@ import java.time.ZoneId
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.lineage.model.TaskRun
-import nextflow.lineage.model.WorkflowRun
+import nextflow.lineage.model.v1beta1.TaskRun
+import nextflow.lineage.model.v1beta1.WorkflowRun
 import nextflow.lineage.serde.LinEncoder
 import nextflow.lineage.serde.LinSerializable
 import nextflow.lineage.serde.LinTypeAdapterFactory

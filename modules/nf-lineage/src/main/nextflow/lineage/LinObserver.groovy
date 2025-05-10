@@ -28,14 +28,14 @@ import java.time.OffsetDateTime
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.lineage.model.Checksum
-import nextflow.lineage.model.FileOutput
-import nextflow.lineage.model.DataPath
-import nextflow.lineage.model.Parameter
-import nextflow.lineage.model.TaskOutput
-import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowOutput
-import nextflow.lineage.model.WorkflowRun
+import nextflow.lineage.model.v1beta1.Checksum
+import nextflow.lineage.model.v1beta1.FileOutput
+import nextflow.lineage.model.v1beta1.DataPath
+import nextflow.lineage.model.v1beta1.Parameter
+import nextflow.lineage.model.v1beta1.TaskOutput
+import nextflow.lineage.model.v1beta1.Workflow
+import nextflow.lineage.model.v1beta1.WorkflowOutput
+import nextflow.lineage.model.v1beta1.WorkflowRun
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.processor.TaskRun
@@ -247,7 +247,7 @@ class LinObserver implements TraceObserverV2 {
 
     protected String storeTaskRun(TaskRun task, PathNormalizer normalizer) {
         final codeChecksum = Checksum.ofNextflow(session.stubRun ? task.stubSource : task.source)
-        final value = new nextflow.lineage.model.TaskRun(
+        final value = new nextflow.lineage.model.v1beta1.TaskRun(
             session.uniqueId.toString(),
             task.getName(),
             codeChecksum,

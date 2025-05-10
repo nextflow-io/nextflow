@@ -14,32 +14,13 @@
  * limitations under the License.
  */
 
-package nextflow.lineage.model
-
-import groovy.transform.Canonical
-import groovy.transform.CompileStatic
-import nextflow.lineage.serde.LinSerializable
-
-import java.time.OffsetDateTime
+package nextflow.lineage.model.v1beta1
 
 /**
- * Models the results of a workflow execution.
+ * Marker interface holding lineage model common definitions
  *
- * @author Jorge Ejarque <jorge.ejarque@seqera.io
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Canonical
-@CompileStatic
-class WorkflowOutput implements LinSerializable {
-    /**
-     * Creation date of the workflow output
-     */
-    OffsetDateTime createdAt
-    /**
-     * Workflow run that generated the output
-     */
-    String workflowRun
-    /**
-     * Workflow output
-     */
-    List<Parameter> output
+interface LinModel {
+    static final public String VERSION = 'lineage/v1beta1'
 }

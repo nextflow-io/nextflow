@@ -23,9 +23,9 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.dag.MermaidHtmlRenderer
 import nextflow.lineage.LinStore
-import nextflow.lineage.model.FileOutput
-import nextflow.lineage.model.TaskRun
-import nextflow.lineage.model.WorkflowRun
+import nextflow.lineage.model.v1beta1.FileOutput
+import nextflow.lineage.model.v1beta1.TaskRun
+import nextflow.lineage.model.v1beta1.WorkflowRun
 
 import static nextflow.lineage.fs.LinPath.LID_PROT
 import static nextflow.lineage.fs.LinPath.isLidUri
