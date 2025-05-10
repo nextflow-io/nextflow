@@ -17,6 +17,8 @@
 package nextflow.scm
 
 import spock.lang.IgnoreIf
+import spock.lang.Tag
+import spock.lang.Unroll
 
 import nextflow.exception.AbortOperationException
 import org.eclipse.jgit.api.Git
@@ -83,6 +85,7 @@ class AssetManagerTest extends Specification {
         return defaultBranch
     }
 
+    @Tag("core")
     def testList() {
 
         given:
@@ -104,59 +107,49 @@ class AssetManagerTest extends Specification {
     }
 
 
-    def testResolveName() {
-
+    @Tag("core")
+    @Unroll
+    def 'should resolve name #input to #expected'() {
         given:
         def folder = tempDir.getRoot()
         folder.resolve('cbcrg/pipe1').mkdirs()
         folder.resolve('cbcrg/pipe2').mkdirs()
         folder.resolve('ncbi/blast').mkdirs()
+        def manager = new AssetManager()
 
+        expect:
+        manager.resolveName(input) == expected
+
+        where:
+        input                   | expected
+        'x/y'                  | 'x/y'
+        'blast'                | 'ncbi/blast'
+        'ncbi/blast/script.nf' | 'ncbi/blast'
+        'blast/script.nf'      | 'ncbi/blast'
+    }
+
+    @Tag("core")
+    @Unroll
+    def 'should throw exception for invalid name #input'() {
+        given:
+        def folder = tempDir.getRoot()
+        folder.resolve('cbcrg/pipe1').mkdirs()
+        folder.resolve('cbcrg/pipe2').mkdirs()
+        folder.resolve('ncbi/blast').mkdirs()
         def manager = new AssetManager()
 
         when:
-        def result = manager.resolveName('x/y')
-        then:
-        result == 'x/y'
+        manager.resolveName(input)
 
-        when:
-        result = manager.resolveName('blast')
-        then:
-        result == 'ncbi/blast'
-
-        when:
-        result = manager.resolveName('ncbi/blast/script.nf')
-        then:
-        result == 'ncbi/blast'
-
-        when:
-        result = manager.resolveName('blast/script.nf')
-        then:
-        result == 'ncbi/blast'
-
-        when:
-        manager.resolveName('pipe')
         then:
         thrown(AbortOperationException)
 
-        when:
-        manager.resolveName('pipe/alpha/beta')
-        then:
-        thrown(AbortOperationException)
-
-        when:
-        result = manager.resolveName('../blast/script.nf')
-        then:
-        thrown(AbortOperationException)
-
-        when:
-        result = manager.resolveName('./blast/script.nf')
-        then:
-        thrown(AbortOperationException)
-
+        where:
+        input << ['pipe', 'pipe/alpha/beta', '../blast/script.nf', './blast/script.nf']
     }
 
 
+    @Tag("git")
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testPull() {
 
@@ -178,6 +171,7 @@ class AssetManagerTest extends Specification {
     }
 
 
+    @Tag("git")
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testPullTagTwice() {
 
@@ -198,6 +192,7 @@ class AssetManagerTest extends Specification {
     }
 
     // The hashes used here are NOT associated with tags.
+    @Tag("git")
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testPullHashTwice() {
 
@@ -221,6 +216,7 @@ class AssetManagerTest extends Specification {
 
     // Downloading a branch first and then pulling the branch
     // should work fine, unlike with tags.
+    @Tag("git")
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testPullBranchTwice() {
 
@@ -244,6 +240,7 @@ class AssetManagerTest extends Specification {
     // when you execute nextflow.
     // Note that while the download will work, execution will fail subsequently
     // at a separate check - this just tests that we don't fail because of a detached head.
+    @Tag("git")
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testPullTagThenBranch() {
 
@@ -264,6 +261,7 @@ class AssetManagerTest extends Specification {
     }
 
 
+    @Tag("git")
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testClone() {
 
@@ -281,6 +279,7 @@ class AssetManagerTest extends Specification {
 
     }
 
+    @Tag("config")
     def testGetScriptName() {
 
         given:
@@ -338,35 +337,22 @@ class AssetManagerTest extends Specification {
 
     }
 
-    def testCreateProviderFor(){
-
+    @Tag("core")
+    @Unroll
+    def 'should create hub provider for #providerName'() {
         when:
         def manager = new AssetManager()
-        def repo = manager.createHubProvider('github')
-        then:
-        repo instanceof GithubRepositoryProvider
+        def repo = manager.createHubProvider(providerName)
 
-        when:
-        manager = new AssetManager()
-        repo = manager.createHubProvider('bitbucket')
         then:
-        repo instanceof BitbucketRepositoryProvider
+        repo instanceof RepositoryProvider
 
-        when:
-        manager = new AssetManager()
-        repo = manager.createHubProvider('gitlab')
-        then:
-        repo instanceof GitlabRepositoryProvider
-
-        when:
-        manager = [:] as AssetManager
-        manager.createHubProvider('xxx')
-        then:
-        thrown(AbortOperationException)
-
+        where:
+        providerName << ['github', 'bitbucket', 'gitlab']
     }
 
 
+    @Tag("config")
     def 'should read manifest file' () {
 
         given:
@@ -389,15 +375,18 @@ class AssetManagerTest extends Specification {
         when:
         def holder = new AssetManager()
         holder.build('foo/bar')
-        then:
-        holder.getMainScriptName() == 'hello.nf'
-        holder.manifest.getDefaultBranch() == 'super-stuff'
-        holder.manifest.getHomePage() == 'http://foo.com'
-        holder.manifest.getDescription() == 'This pipeline do this and that'
-        holder.manifest.getAuthor() == 'Hi Dude'
 
+        then:
+        with(holder) {
+            getMainScriptName() == 'hello.nf'
+            manifest.getDefaultBranch() == 'super-stuff'
+            manifest.getHomePage() == 'http://foo.com'
+            manifest.getDescription() == 'This pipeline do this and that'
+            manifest.getAuthor() == 'Hi Dude'
+        }
     }
 
+    @Tag("config")
     def 'should return default main script file' () {
 
         given:
@@ -412,43 +401,117 @@ class AssetManagerTest extends Specification {
         holder.build('foo/bar')
 
         then:
-        holder.getMainScriptName() == 'main.nf'
-        holder.getHomePage() == 'https://github.com/foo/bar'
-        holder.manifest.getDefaultBranch() == null
-        holder.manifest.getDescription() == null
-
+        with(holder) {
+            getMainScriptName() == 'main.nf'
+            getHomePage() == 'https://github.com/foo/bar'
+            manifest.getDefaultBranch() == null
+            manifest.getDescription() == null
+        }
     }
 
-    def 'should parse git config and return the remote url' () {
+    @Tag("git")
+    @Unroll
+    def 'should parse Git URL #url'() {
+        given:
+        def manager = new AssetManager()
+        // Add provider configurations before testing
+        manager.providerConfigs.add(new ProviderConfig('local-scm', [platform: 'github', server: 'http://foo.bar.com']))
+        manager.providerConfigs.add(new ProviderConfig('gitea', [platform: 'gitea', server: 'http://my-server.org/sub1']))
 
+        when:
+        def result = manager.resolveNameFromGitUrl(url)
+
+        then:
+        result == expected
+        manager.hub == hub
+
+        where:
+        url                                         | expected            | hub
+        'nextflow/pipe'                            | null                | null
+        'https://gitlab.com/pditommaso/hello.git'  | 'pditommaso/hello'  | 'gitlab'
+        'file:/user/repo/projects/hello.git'       | 'local/hello'       | 'file:/user/repo/projects'
+        'https://foo.bar.com/project/xyz.git'      | 'project/xyz'       | 'local-scm'
+        'http://my-server.org/sub1/foo/bar.git'    | 'foo/bar'          | 'gitea'
+    }
+
+    @Tag("git")
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    @Unroll
+    def 'should verify ref #refName is remote branch: #isRemote'() {
+        given:
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
+        manager.download()
+        def branches = manager.getBranchList()
+
+        when:
+        def ref = branches.find { it.name == refName }
+
+        then:
+        with(ref) {
+            it != null
+            AssetManager.isRemoteBranch(it) == isRemote
+        }
+
+        where:
+        refName                         | isRemote
+        'refs/remotes/origin/HEAD'      | false
+        'refs/remotes/origin/master'    | true
+        'refs/heads/master'             | false
+    }
+
+    @Tag("git")
+    @Unroll
+    def "should parse Git config for #testCase"() {
         given:
         def dir = tempDir.root
-        dir.resolve('.git').mkdir()
-        dir.resolve('.git/config').text = GIT_CONFIG_LONG
+        // Initialize git repo with proper configuration
+        def init = Git.init()
+        init.setInitialBranch('master')
+        def repo = init.setDirectory(dir.toFile()).call()
+        dir.resolve('.git/config').text = configText
+        repo.add().addFilepattern('.').call()
+        repo.commit().setSign(false).setAll(true).setMessage('First commit').call()
+        repo.close()
 
         when:
         def manager = new AssetManager().setLocalPath(dir.toFile())
-        then:
-        manager.getGitConfigRemoteUrl() == 'git@github.com:nextflow-io/nextflow.git'
 
+        then:
+        manager.getGitConfigRemoteUrl() == expectedUrl
+
+        where:
+        testCase                        | configText                | expectedUrl
+        'simple origin URL'             | GIT_CONFIG_TEXT           | 'https://github.com/nextflow-io/nextflow.git'
+        'SSH origin URL'                | GIT_CONFIG_LONG           | 'git@github.com:nextflow-io/nextflow.git'
+        'multiple remotes'             | '''
+            [remote "origin"]
+                url = https://github.com/foo/bar.git
+            [remote "upstream"]
+                url = https://git.example.com/group/project.git
+            [branch "master"]
+                remote = origin
+                merge = refs/heads/master
+        '''.stripIndent()               | 'https://github.com/foo/bar.git'
+        'non-default branch'            | '''
+            [remote "origin"]
+                url = https://gitlab.com/user/repo.git
+            [branch "dev"]
+                remote = origin
+                merge = refs/heads/dev
+        '''.stripIndent()               | 'https://gitlab.com/user/repo.git'
+        'custom default branch'         | '''
+            [remote "origin"]
+                url = https://github.com/org/repo.git
+            [branch "main"]
+                remote = origin
+                merge = refs/heads/main
+        '''.stripIndent()               | 'https://github.com/org/repo.git'
     }
 
-    def 'should parse git config and return the remote host' () {
-
-        given:
-        def dir = tempDir.root
-        dir.resolve('.git').mkdir()
-        dir.resolve('.git/config').text = GIT_CONFIG_LONG
-
-        when:
-        def manager = new AssetManager().setLocalPath(dir.toFile())
-        then:
-        manager.getGitConfigRemoteDomain() == 'github.com'
-
-    }
-
-    def 'should create a script file object' () {
-
+    @Tag("script")
+    def "should create script file object correctly"() {
         given:
         def dir = tempDir.root
         // create the repo dir
@@ -456,14 +519,13 @@ class AssetManagerTest extends Specification {
         dir.resolve('nextflow.config').text = 'manifest {  }'
         dir.resolve('foo.nf').text = 'this is foo content'
 
+        // Initialize git repo with proper configuration
         def init = Git.init()
-        def repo = init.setDirectory( dir.toFile() ).call()
+        init.setInitialBranch('master')
+        def repo = init.setDirectory(dir.toFile()).call()
         repo.add().addFilepattern('.').call()
         def commit = repo.commit().setSign(false).setAll(true).setMessage('First commit').call()
         repo.close()
-
-        // append fake remote data
-        dir.resolve('.git/config').text = GIT_CONFIG_TEXT
 
         when:
         def p = Mock(RepositoryProvider) { getRepositoryUrl() >> 'https://github.com/nextflow-io/nextflow' }
@@ -473,14 +535,17 @@ class AssetManagerTest extends Specification {
                 .setProject('nextflow-io/nextflow')
         and:
         def script = manager.getScriptFile()
+
         then:
-        script.localPath == dir
-        script.commitId == commit.name()
-        script.revision == getLocalDefaultBranch()
-        script.parent == dir
-        script.text == "println 'Hello world'"
-        script.repository == 'https://github.com/nextflow-io/nextflow'
-        script.projectName == 'nextflow-io/nextflow'
+        with(script) {
+            localPath == dir
+            commitId == commit.name()
+            revision == getLocalDefaultBranch()
+            parent == dir
+            text == "println 'Hello world'"
+            repository == 'https://github.com/nextflow-io/nextflow'
+            projectName == 'nextflow-io/nextflow'
+        }
 
         when:
         p = Mock(RepositoryProvider) { getRepositoryUrl() >> 'https://github.com/nextflow-io/nextflow' }
@@ -490,61 +555,20 @@ class AssetManagerTest extends Specification {
                 .setProject('nextflow-io/nextflow')
         and:
         script = manager.getScriptFile('foo.nf')
-        then:
-        script.localPath == dir
-        script.commitId == commit.name()
-        script.revision == getLocalDefaultBranch()
-        script.parent == dir
-        script.text == "this is foo content"
-        script.repository == 'https://github.com/nextflow-io/nextflow'
-        script.projectName == 'nextflow-io/nextflow'
 
+        then:
+        with(script) {
+            localPath == dir
+            commitId == commit.name()
+            revision == getLocalDefaultBranch()
+            parent == dir
+            text == "this is foo content"
+            repository == 'https://github.com/nextflow-io/nextflow'
+            projectName == 'nextflow-io/nextflow'
+        }
     }
 
-    def 'should return project name from git url' () {
-
-        AssetManager manager
-        String result
-
-        when:
-        manager = new AssetManager()
-        result = manager.resolveNameFromGitUrl('nextflow/pipe')
-        then:
-        result == null
-        manager.hub == null
-
-        when:
-        manager = new AssetManager()
-        result = manager.resolveNameFromGitUrl('https://gitlab.com/pditommaso/hello.git')
-        then:
-        result == 'pditommaso/hello'
-        manager.hub == 'gitlab'
-
-        when:
-        manager = new AssetManager()
-        result = manager.resolveNameFromGitUrl('file:/user/repo/projects/hello.git')
-        then:
-        result == 'local/hello'
-        manager.hub == 'file:/user/repo/projects'
-
-        when:
-        manager = new AssetManager()
-        manager.providerConfigs.add( new ProviderConfig('local-scm', [platform: 'github', server: 'http://foo.bar.com']) )
-        result = manager.resolveNameFromGitUrl('https://foo.bar.com/project/xyz.git')
-        then:
-        result == 'project/xyz'
-        manager.hub == 'local-scm'
-
-        when:
-        manager = new AssetManager()
-        manager.providerConfigs.add( new ProviderConfig('gitea', [platform: 'gitea', server: 'http://my-server.org/sub1']) )
-        result = manager.resolveNameFromGitUrl('http://my-server.org/sub1/foo/bar.git')
-        then:
-        result == 'foo/bar'
-        manager.hub == 'gitea'
-
-    }
-
+    @Tag("git")
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'should download branch specified'() {
 
@@ -566,6 +590,7 @@ class AssetManagerTest extends Specification {
         noExceptionThrown()
     }
 
+    @Tag("git")
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'should fetch main script from branch specified'() {
 
@@ -580,6 +605,7 @@ class AssetManagerTest extends Specification {
 
     }
 
+    @Tag("git")
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'should download tag specified'() {
 
@@ -601,6 +627,7 @@ class AssetManagerTest extends Specification {
         noExceptionThrown()
     }
 
+    @Tag("git")
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'should identify default branch when downloading repo'() {
 
@@ -623,6 +650,7 @@ class AssetManagerTest extends Specification {
         noExceptionThrown()
     }
 
+    @Tag("git")
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'can filter remote branches'() {
         given:
@@ -649,6 +677,192 @@ class AssetManagerTest extends Specification {
         then:
         local_master != null
         !AssetManager.isRemoteBranch(local_master)
+    }
+
+    @Tag("config")
+    @Unroll
+    def 'should handle manifest with #format gitmodules configuration'() {
+        given:
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = config
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        if (gitmodulesContent) {
+            dir.resolve('foo/bar/.gitmodules').text = gitmodulesContent
+        }
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar')
+
+        then:
+        with(holder.manifest) {
+            gitmodules == expected || gitmodules.tokenize(', ') == expected
+            recurseSubmodules == true
+        }
+
+        where:
+        format      | config                                                          | gitmodulesContent                                     | expected
+        'array'     | '''
+                     manifest {
+                         gitmodules = ['module1', 'module2']
+                         recurseSubmodules = true
+                     }
+                     '''                                                              | '''
+                                                                                        [submodule "module1"]
+                                                                                            path = module1
+                                                                                            url = https://github.com/org/module1.git
+                                                                                        [submodule "module2"]
+                                                                                            path = module2
+                                                                                            url = https://github.com/org/module2.git
+                                                                                        '''                                                    | ['module1', 'module2']
+        'string'    | '''
+                     manifest {
+                         gitmodules = 'module1, module2'
+                         recurseSubmodules = true
+                     }
+                     '''                                                              | null                                                  | ['module1', 'module2']
+    }
+
+    @Tag("git")
+    def 'should handle malformed manifest file'() {
+        given:
+        def config = '''
+            manifest {
+                malformed syntax here
+            }
+            '''
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = config
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar')
+        and:
+        holder.getManifest()
+
+        then:
+        thrown(AbortOperationException)
+    }
+
+    @Tag("git")
+    def 'should handle missing manifest file'() {
+        given:
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar')
+        def manifest = holder.getManifest()
+
+        then:
+        manifest != null
+        manifest.getMainScript() == 'main.nf'
+        manifest.getDefaultBranch() == null
+        manifest.getHomePage() == null
+    }
+
+    @Tag("git")
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should handle submodule operations'() {
+        given:
+        def dir = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        dir.resolve('foo/bar').mkdirs()
+        def mainDir = dir.resolve('foo/bar').toFile()
+
+        // Initialize main repo with proper configuration
+        def init = Git.init()
+        init.setInitialBranch('master')
+        def repo = init.setDirectory(mainDir).call()
+
+        // Set up Git config with remote URL
+        mainDir.resolve('.git/config').text = """[core]
+        repositoryformatversion = 0
+        filemode = true
+        bare = false
+        logallrefupdates = true
+[remote "origin"]
+        url = https://github.com/nextflow-io/hello.git
+        fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "master"]
+        remote = origin
+        merge = refs/heads/master"""
+
+        // Create and add a submodule
+        def submoduleDir = dir.resolve('foo/submodule').toFile()
+        submoduleDir.mkdirs()
+        def subInit = Git.init()
+        subInit.setInitialBranch('master')
+        def subRepo = subInit.setDirectory(submoduleDir).call()
+        new File(submoduleDir, 'test.txt').text = 'test content'
+        subRepo.add().addFilepattern('.').call()
+        subRepo.commit().setSign(false).setMessage('First commit in submodule').call()
+
+        // Add submodule to main repo
+        repo.submoduleAdd()
+            .setPath('submodule')
+            .setURI(submoduleDir.toURI().toString())
+            .call()
+        repo.add().addFilepattern('.').call()
+        repo.commit().setSign(false).setMessage('Added submodule').call()
+
+        // Create manifest with submodule config
+        new File(mainDir, 'nextflow.config').text = '''
+            manifest {
+                gitmodules = ['submodule']
+                recurseSubmodules = true
+            }
+            '''
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar', [providers: [github: [auth: token]]])
+        holder.updateModules()
+
+        then:
+        new File(mainDir, '.gitmodules').exists()
+        new File(mainDir, 'submodule/test.txt').exists()
+    }
+
+    @Tag("git")
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should handle repository errors'() {
+        given:
+        def dir = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        dir.resolve('foo/bar').mkdirs()
+        def mainDir = dir.resolve('foo/bar').toFile()
+
+        // Set up Git config with non-existent repository
+        mainDir.resolve('.git').mkdirs()
+        mainDir.resolve('.git/config').text = """[core]
+        repositoryformatversion = 0
+        filemode = true
+        bare = false
+        logallrefupdates = true
+[remote "origin"]
+        url = https://github.com/nextflow-io/non-existent-repo.git
+        fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "master"]
+        remote = origin
+        merge = refs/heads/master"""
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar', [providers: [github: [auth: token]]])
+        holder.getGit()
+
+        then:
+        thrown(RepositoryNotFoundException)
     }
 
 }
