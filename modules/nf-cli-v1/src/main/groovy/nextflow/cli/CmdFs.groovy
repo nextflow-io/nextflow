@@ -30,7 +30,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
-import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigCmdAdapter
 import nextflow.exception.AbortOperationException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
@@ -202,7 +202,7 @@ class CmdFs extends CmdBase implements UsageAware {
 
     private Session createSession() {
         // create the config
-        final config = new ConfigBuilder()
+        final config = new ConfigCmdAdapter()
                 .setOptions(getLauncher().getOptions())
                 .setBaseDir(Paths.get('.'))
                 .build()

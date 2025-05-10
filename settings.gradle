@@ -24,6 +24,7 @@ plugins {
 rootProject.name = 'nextflow-prj'
 
 include 'nextflow'
+include 'nf-cli-v1'
 include 'nf-commons'
 include 'nf-httpfs'
 include 'nf-lang'

@@ -29,7 +29,7 @@ configurations {
 }
 
 dependencies {
-    compileOnly project(':nextflow')
+    compileOnly project(':nf-cli-v1')
     compileOnly 'org.slf4j:slf4j-api:2.0.16'
     compileOnly 'org.pf4j:pf4j:3.12.0'
 

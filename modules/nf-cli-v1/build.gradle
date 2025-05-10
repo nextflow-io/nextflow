@@ -1,0 +1,63 @@
+plugins {
+    id "com.gradleup.shadow" version "8.3.5"
+}
+apply plugin: 'groovy'
+apply plugin: 'application'
+
+sourceSets {
+    main.java.srcDirs = []
+    main.groovy.srcDirs = ['src/main/java', 'src/main/groovy']
+    main.resources.srcDirs = ['src/main/resources']
+    test.java.srcDirs = []
+    test.groovy.srcDirs = ['src/test/groovy']
+    test.resources.srcDirs = ['src/test/resources']
+}
+
+compileGroovy {
+    options.compilerArgs = ['-XDignore.symbol.file']
+}
+
+configurations {
+    lineageImplementation
+}
+
+dependencies {
+    api(project(':nextflow'))
+    api "com.beust:jcommander:1.35"
+    // note: declare as separate dependency to avoid a circular dependency
+    lineageImplementation (project(':nf-lineage'))
+
+    testImplementation 'org.subethamail:subethasmtp:3.1.7'
+
+    // test configuration
+    testImplementation(testFixtures(project(":nextflow")))
+    testFixturesImplementation(project(":nextflow"))
+}
+
+test {
+    minHeapSize = "512m"
+    maxHeapSize = "4096m"
+}
+
+application {
+    mainClass = 'nextflow.cli.Launcher'
+}
+
+run {
+    args( (project.hasProperty("runCmd") ? project.findProperty("runCmd") : "set a cmd to run").split(' ') )
+}
+
+shadowJar {
+    // add 'lineage' because it cannot be added to this project
+    // explicitly otherwise it will result into a circular dependency
+    configurations = [project.configurations.runtimeClasspath, project.configurations.lineageImplementation]
+    archiveClassifier='one'
+    manifest {
+        attributes 'Main-Class': "$mainClassName"
+    }
+    mergeServiceFiles()
+    mergeGroovyExtensionModules()
+    transform(com.github.jengelman.gradle.plugins.shadow.transformers.AppendingTransformer) {
+        resource = 'META-INF/extensions.idx'
+    }
+}

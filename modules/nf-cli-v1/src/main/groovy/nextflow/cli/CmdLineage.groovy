@@ -22,7 +22,7 @@ import java.nio.file.Paths
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
-import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigCmdAdapter
 import nextflow.config.ConfigMap
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
@@ -85,7 +85,7 @@ class CmdLineage extends CmdBase implements UsageAware {
         // setup the plugins system and load the secrets provider
         Plugins.init()
         // load the config
-        this.config = new ConfigBuilder()
+        this.config = new ConfigCmdAdapter()
             .setOptions(launcher.options)
             .setBaseDir(Paths.get('.'))
             .build()

@@ -11,7 +11,7 @@ configurations {
 }
 
 dependencies {
-    api project(':nextflow')
+    api project(':nf-cli-v1')
     // include Ivy at runtime in order to have Grape @Grab work correctly
     defaultCfg "org.apache.ivy:ivy:2.5.2"
     // default cfg = runtime + httpfs + lineage + amazon + tower client + wave client
@@ -91,21 +91,22 @@ protected coordinates( it ) {
 /*
  * Compile and pack all packages
  */
-task packOne( dependsOn: [compile, ":nextflow:shadowJar"]) {
+task packOne( dependsOn: [compile, ":nf-cli-v1:shadowJar"]) {
     doLast {
-        def source = "modules/nextflow/build/libs/nextflow-${version}-one.jar"
-        ant.copy(file: source, todir: releaseDir, overwrite: true)
-        ant.copy(file: source, todir: nextflowDir, overwrite: true)
-        println "\n+ Nextflow package `ONE` copied to: $releaseDir/nextflow-${version}-one.jar"
+        def source = "modules/nf-cli-v1/build/libs/nf-cli-v1-${version}-one.jar"
+        def targetName = "nextflow-${version}-one.jar"
+        "cp $source $releaseDir/$targetName".execute()
+        "cp $source $nextflowDir/$targetName".execute()
+        println "\n+ Nextflow package `ONE` copied to: $releaseDir/$targetName"
     }
 }
 
-task packDist( dependsOn: [compile, ":nextflow:shadowJar"]) {
+task packDist( dependsOn: [compile, ":nf-cli-v1:shadowJar"]) {
 
     doLast {
         file(releaseDir).mkdirs()
         // cleanup
-        def source = file("modules/nextflow/build/libs/nextflow-${version}-one.jar")
+        def source = file("modules/nf-cli-v1/build/libs/nf-cli-v1-${version}-one.jar")
         def target = file("$releaseDir/nextflow-${version}-dist"); target.delete()
         // append the big jar
         target.withOutputStream {
@@ -115,7 +116,7 @@ task packDist( dependsOn: [compile, ":nextflow:shadowJar"]) {
         // execute permission
         "chmod +x $target".execute()
         // done
-        println "+ Nextflow package `ALL` copied to: $target\n"
+        println "+ Nextflow package `DIST` copied to: $target\n"
     }
 }
 
@@ -123,7 +124,6 @@ task packDist( dependsOn: [compile, ":nextflow:shadowJar"]) {
  * Compile and pack all packages
  */
 task pack( dependsOn: [packOne, packDist]) {
-
 }
 
 task deploy( type: Exec, dependsOn: [clean, compile, pack]) {

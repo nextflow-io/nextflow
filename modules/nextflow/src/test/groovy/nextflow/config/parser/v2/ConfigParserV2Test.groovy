@@ -510,7 +510,7 @@ class ConfigParserV2Test extends Specification {
 
         when:
         def url = 'http://localhost:9900/nextflow.config' as Path
-        def cfg = new ConfigBuilder().buildGivenFiles(url)
+        def cfg = new ConfigBuilder().build([url])
         then:
         cfg.params.foo == 'Hello'
         cfg.params.bar == 'world!'

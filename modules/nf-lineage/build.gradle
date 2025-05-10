@@ -30,7 +30,7 @@ configurations {
 }
 
 dependencies {
-    api project(':nextflow')
+    api project(':nf-cli-v1')
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation "org.apache.groovy:groovy:4.0.26"
