@@ -470,8 +470,8 @@ class LinCommandImplTest extends Specification{
             "lid://123987/file2.bam", "lid://123987/", null, 1235, time, time, ["experiment=test"])
         def entry3 = new FileOutput("path/to/file3",new Checksum("42472qet","nextflow","standard"),
             "lid://123987/file2.bam", "lid://123987/", null, 1235, time, time, null)
-        def expectedOutput1 = '[\n  "lid://123987/file.bam",\n  "lid://123987/file2.bam"\n]'
-        def expectedOutput2 = '[\n  "lid://123987/file2.bam",\n  "lid://123987/file.bam"\n]'
+        def expectedOutput1 = 'lid://123987/file.bam\nlid://123987/file2.bam'
+        def expectedOutput2 = 'lid://123987/file2.bam\nlid://123987/file.bam'
         lidFile.text = encoder.encode(entry)
         lidFile2.text = encoder.encode(entry2)
         lidFile3.text = encoder.encode(entry3)

@@ -16,11 +16,9 @@
 
 package nextflow.lineage
 
-import java.nio.file.FileVisitResult
-import java.nio.file.FileVisitor
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.attribute.BasicFileAttributes
+import java.util.stream.Stream
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -93,70 +91,32 @@ class DefaultLinStore implements LinStore {
     void close() throws IOException {}
 
     @Override
-    Map<String, LinSerializable> search(Map<String, List<String>> params) {
-        final results = new HashMap<String, LinSerializable>()
-
-        Files.walkFileTree(location, new FileVisitor<Path>() {
-
-            @Override
-            FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-                FileVisitResult.CONTINUE
+    Stream<String> search(Map<String, List<String>> params) {
+        return Files.walk(location)
+            .filter { path ->
+                Files.isRegularFile(path) && path.fileName.toString().startsWith('.data.json')
             }
-
-            @Override
-            FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                if( file.name.startsWith('.data.json') ) {
-                    final lidObject = encoder.decode(file.text)
-                    if( LinUtils.checkParams(lidObject, params) ) {
-                        results.put(location.relativize(file.getParent()).toString(), lidObject as LinSerializable)
-                    }
-                }
-                FileVisitResult.CONTINUE
+            .map { path ->
+                def lidObject = encoder.decode(path.text)
+                def key = location.relativize(path.parent).toString()
+                return new AbstractMap.SimpleEntry<String, LinSerializable>(key, lidObject)
             }
-
-            @Override
-            FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-                FileVisitResult.CONTINUE
+            .filter { entry ->
+                LinUtils.checkParams(entry.value, params)
             }
-
-            @Override
-            FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                FileVisitResult.CONTINUE
-            }
-        })
-
-        return results
+            .map { it.key }
     }
 
     @Override
-    List<String> getSubKeys(String parentKey) {
-        final results = new LinkedList<String>()
-        final startPath = location.resolve(parentKey)
-        Files.walkFileTree(startPath, new FileVisitor<Path>() {
+    Stream<String> getSubKeys(String parentKey) {
+        def startPath = location.resolve(parentKey)
 
-            @Override
-            FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-                FileVisitResult.CONTINUE
+        return Files.walk(startPath)
+            .filter { path ->
+                Files.isRegularFile(path) && path.fileName.toString().startsWith('.data.json') && path.parent != startPath
             }
-
-            @Override
-            FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                if( file.name.startsWith('.data.json') && file.parent != startPath ) {
-                    results << location.relativize(file.parent).toString()
-                }
-                FileVisitResult.CONTINUE
+            .map { path ->
+                location.relativize(path.parent).toString()
             }
-
-            @Override
-            FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-                FileVisitResult.CONTINUE
-            }
-
-            @Override
-            FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                FileVisitResult.CONTINUE
-            }
-        })
-        return results
     }
 }

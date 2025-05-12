@@ -27,6 +27,7 @@ import java.nio.file.WatchEvent
 import java.nio.file.WatchKey
 import java.nio.file.WatchService
 import java.time.OffsetDateTime
+import java.util.stream.Stream
 
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -155,7 +156,7 @@ class LinPath implements Path, LogicalDataPath {
     @TestOnly
     protected String getFilePath() { this.filePath }
 
-    protected List<Path> getSubPaths(){
+    protected Stream<Path> getSubPaths(){
         if( !fileSystem )
             throw new IllegalArgumentException("Cannot get sub-paths for a relative lineage path")
         if( filePath.isEmpty() || filePath == SEPARATOR )
@@ -163,7 +164,7 @@ class LinPath implements Path, LogicalDataPath {
         final store = fileSystem.getStore()
         if( !store )
             throw new Exception("Lineage store not found - Check Nextflow configuration")
-        return store.getSubKeys(filePath).collect {new LinPath(fileSystem as LinFileSystem, it)} as List<Path>
+        return store.getSubKeys(filePath).map {new LinPath(fileSystem as LinFileSystem, it) as Path }
     }
 
     /**
