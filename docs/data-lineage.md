@@ -133,7 +133,7 @@ $ nextflow lineage view lid://16b31030474f2e96c55f4940bca3ab64/multiqc_report.ht
 
 You should see output similar to the following:
 
-```
+```console
 {
   "type": "FileOutput",
   "path": "/results/multiqc_report.html",
