@@ -174,6 +174,10 @@ class StandardErrorListener implements ErrorListener {
             int adjStart = Math.max(0, start - windowStart)
             int adjEnd = Math.max(adjStart + 1, Math.min(end - windowStart, line.length()))
 
+            // Color block
+            if(i == toLine && i !== startLine) term.fg(color).a("╰").reset().a(" ")
+            else term.fg(color).a("│").reset().a(" ")
+
             // Line number
             term.fg(Ansi.Color.BLUE).a(String.format("%3d | ", i)).reset()
 
@@ -182,6 +186,10 @@ class StandardErrorListener implements ErrorListener {
                 term.a(Ansi.Attribute.INTENSITY_FAINT).a(line.substring(0, adjStart)).reset()
                 term.fg(color).a(line.substring(adjStart, adjEnd)).reset()
                 term.a(Ansi.Attribute.INTENSITY_FAINT).a(line.substring(adjEnd)).reset().newline()
+
+                // Color block
+                if(i == toLine) term.fg(color).a("╰").reset().a(" ")
+                else term.fg(color).a("│").reset().a(" ")
 
                 // Print carets underneath the range
                 String marker = ' ' * adjStart
