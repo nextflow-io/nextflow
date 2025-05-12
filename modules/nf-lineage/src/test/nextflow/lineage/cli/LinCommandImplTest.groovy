@@ -22,13 +22,13 @@ import nextflow.dag.MermaidHtmlRenderer
 import nextflow.lineage.LinHistoryRecord
 import nextflow.lineage.LinStoreFactory
 import nextflow.lineage.DefaultLinHistoryLog
-import nextflow.lineage.model.Checksum
-import nextflow.lineage.model.FileOutput
-import nextflow.lineage.model.DataPath
-import nextflow.lineage.model.Parameter
-import nextflow.lineage.model.TaskRun
-import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowRun
+import nextflow.lineage.model.v1beta1.Checksum
+import nextflow.lineage.model.v1beta1.FileOutput
+import nextflow.lineage.model.v1beta1.DataPath
+import nextflow.lineage.model.v1beta1.Parameter
+import nextflow.lineage.model.v1beta1.TaskRun
+import nextflow.lineage.model.v1beta1.Workflow
+import nextflow.lineage.model.v1beta1.WorkflowRun
 import nextflow.lineage.serde.LinEncoder
 import nextflow.plugin.Plugins
 import org.junit.Rule
@@ -369,9 +369,10 @@ class LinCommandImplTest extends Specification{
         def expectedOutput = '''diff --git 12345 67890
 --- 12345
 +++ 67890
-@@ -1,15 +1,15 @@
+@@ -1,16 +1,16 @@
  {
-   "type": "FileOutput",
+   "version": "lineage/v1beta1",
+   "kind": "FileOutput",
 -  "path": "path/to/file",
 +  "path": "path/to/file2",
    "checksum": {

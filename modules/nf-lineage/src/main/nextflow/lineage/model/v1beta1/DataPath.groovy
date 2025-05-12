@@ -14,23 +14,25 @@
  * limitations under the License.
  */
 
-package nextflow.lineage.serde
+package nextflow.lineage.model.v1beta1
 
+import groovy.transform.Canonical
 import groovy.transform.CompileStatic
-import nextflow.serde.gson.GsonEncoder
 
 /**
- * Implements a JSON encoder for lineage model objects
+ * Models a data path which includes the path and a checksum to validate the content of the path.
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Jorge Ejarque <jorge.ejarque@seqera.io
  */
+@Canonical
 @CompileStatic
-class LinEncoder extends GsonEncoder<LinSerializable> {
-
-    LinEncoder() {
-        withTypeAdapterFactory(new LinTypeAdapterFactory())
-        // enable rendering of null values
-        withSerializeNulls(true)
-    }
-
+class DataPath {
+    /**
+     * Real path of the output data.
+     */
+    String path
+    /**
+     * Checksum of the output data.
+     */
+    Checksum checksum
 }

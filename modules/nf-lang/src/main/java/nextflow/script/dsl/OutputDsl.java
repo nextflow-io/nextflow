@@ -63,10 +63,9 @@ public interface OutputDsl extends DslScope {
     void index(Closure closure);
 
     @Description("""
-        Specify labels to be be applied to every published file.
+        Specify a label to be applied to every published file. Can be specified multiple times.
     """)
-    /* List | Closure */
-    void labels(Object value);
+    void label(String value);
 
     @Description("""
         The file publishing method (default: `'symlink'`).
@@ -105,11 +104,6 @@ public interface OutputDsl extends DslScope {
         """)
         /* List<String> | Boolean */
         void header(Object value);
-
-        @Description("""
-             Specify labels to be applied to the index file.
-        """)
-        void labels(List<String> value);
 
         @Description("""
             Closure which defines how to transform each published value into a CSV record. The closure should return a list or map. By default, no transformation is applied.

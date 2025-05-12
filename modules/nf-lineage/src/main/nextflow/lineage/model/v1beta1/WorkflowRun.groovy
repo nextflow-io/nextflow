@@ -14,20 +14,38 @@
  * limitations under the License.
  */
 
-package nextflow.lineage.model
+package nextflow.lineage.model.v1beta1
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import nextflow.lineage.serde.LinSerializable
 
 /**
- * Model Workflow and Task Parameters.
+ * Models a Workflow Execution
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io
  */
 @Canonical
 @CompileStatic
-class Parameter {
-    String type
+class WorkflowRun implements LinSerializable {
+    /**
+     * Description of the workflow associated with the workflow run.
+     */
+    Workflow workflow
+    /**
+     * Session identifier used in the workflow run
+     */
+    String sessionId
+    /**
+     * Workflow run name
+     */
     String name
-    Object value
+    /**
+     * Workflow parameters
+     */
+    List<Parameter> params
+    /**
+     * Resolved Configuration
+     */
+    Map config
 }

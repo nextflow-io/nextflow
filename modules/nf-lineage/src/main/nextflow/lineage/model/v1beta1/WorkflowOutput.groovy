@@ -14,31 +14,32 @@
  * limitations under the License.
  */
 
-package nextflow.lineage.model
+package nextflow.lineage.model.v1beta1
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import nextflow.lineage.serde.LinSerializable
 
+import java.time.OffsetDateTime
 
 /**
- * Models a workflow definition.
+ * Models the results of a workflow execution.
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io
  */
 @Canonical
 @CompileStatic
-class Workflow implements LinSerializable {
+class WorkflowOutput implements LinSerializable {
     /**
-     * List of script files defining a workflow
+     * Creation date of the workflow output
      */
-    List<DataPath> scriptFiles
+    OffsetDateTime createdAt
     /**
-     * Workflow repository
+     * Workflow run that generated the output
      */
-    String repository
+    String workflowRun
     /**
-     * Workflow commit identifier
+     * Workflow output
      */
-    String commitId
+    List<Parameter> output
 }

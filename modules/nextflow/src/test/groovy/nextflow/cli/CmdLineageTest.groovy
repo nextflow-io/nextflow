@@ -22,10 +22,10 @@ import nextflow.dag.MermaidHtmlRenderer
 import nextflow.lineage.DefaultLinHistoryLog
 import nextflow.lineage.LinHistoryRecord
 import nextflow.lineage.LinStoreFactory
-import nextflow.lineage.model.Checksum
-import nextflow.lineage.model.FileOutput
-import nextflow.lineage.model.Parameter
-import nextflow.lineage.model.TaskRun
+import nextflow.lineage.model.v1beta1.Checksum
+import nextflow.lineage.model.v1beta1.FileOutput
+import nextflow.lineage.model.v1beta1.Parameter
+import nextflow.lineage.model.v1beta1.TaskRun
 import nextflow.lineage.serde.LinEncoder
 import nextflow.plugin.Plugins
 import java.nio.file.Files

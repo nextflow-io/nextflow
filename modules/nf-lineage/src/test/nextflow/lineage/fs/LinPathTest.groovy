@@ -16,28 +16,25 @@
 
 package nextflow.lineage.fs
 
-import nextflow.lineage.LinUtils
-import nextflow.lineage.model.Checksum
-import nextflow.lineage.model.Parameter
-import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowOutput
-import nextflow.lineage.model.FileOutput
-import nextflow.lineage.model.WorkflowRun
-import nextflow.lineage.serde.LinEncoder
-import nextflow.util.CacheHelper
-import org.junit.Rule
-import test.OutputCapture
-
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.ProviderMismatchException
+import java.time.OffsetDateTime
 
+import nextflow.lineage.LinUtils
+import nextflow.lineage.model.v1beta1.Checksum
+import nextflow.lineage.model.v1beta1.FileOutput
+import nextflow.lineage.model.v1beta1.Parameter
+import nextflow.lineage.model.v1beta1.Workflow
+import nextflow.lineage.model.v1beta1.WorkflowOutput
+import nextflow.lineage.model.v1beta1.WorkflowRun
+import nextflow.lineage.serde.LinEncoder
+import nextflow.util.CacheHelper
+import org.junit.Rule
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
-
-import java.time.OffsetDateTime
-
+import test.OutputCapture
 /**
  * LID Path Tests
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
@@ -164,9 +161,9 @@ class LinPathTest extends Specification {
 
         wdir.resolve('12345/output1').mkdirs()
         wdir.resolve('12345/path/to/file2.txt').mkdirs()
-        wdir.resolve('12345/.data.json').text = '{"type":"TaskRun"}'
-        wdir.resolve('12345/output1/.data.json').text = '{"type":"FileOutput", "path": "' + outputFolder.toString() + '"}'
-        wdir.resolve('12345/path/to/file2.txt/.data.json').text = '{"type":"FileOutput", "path": "' + outputFile.toString() + '"}'
+        wdir.resolve('12345/.data.json').text = '{"version":"lineage/v1beta1","kind":"TaskRun"}'
+        wdir.resolve('12345/output1/.data.json').text = '{"version":"lineage/v1beta1","kind":"FileOutput", "path": "' + outputFolder.toString() + '"}'
+        wdir.resolve('12345/path/to/file2.txt/.data.json').text = '{"version":"lineage/v1beta1","kind":"FileOutput", "path": "' + outputFile.toString() + '"}'
         def time = OffsetDateTime.now()
         def wfResultsMetadata = new LinEncoder().withPrettyPrint(true).encode(new WorkflowOutput(time, "lid://1234", [new Parameter( "Path", "a", "lid://1234/a.txt")]))
         wdir.resolve('5678/').mkdirs()
@@ -632,65 +629,45 @@ class LinPathTest extends Specification {
     }
 
     def 'should validate correct hash'(){
-        when:
+        given:
         def file = wdir.resolve("file.txt")
         file.text = "this is a data file"
         def hash = CacheHelper.hasher(file).hash().toString()
         def correctData = new FileOutput(file.toString(), new Checksum(hash,"nextflow", "standard"))
-        LinPath.validateDataOutput(correctData)
-        def stdout = capture
-            .toString()
-            .readLines()// remove the log part
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }
-            .findResults { line -> !line.contains('plugin') ? line : null }
-
+        when:
+        def error = LinPath.validateDataOutput(correctData)
         then:
-        stdout.size() == 0
+        !error
 
         cleanup:
         file.delete()
     }
 
     def 'should warn with incorrect hash'(){
-        when:
+        given:
         def file = wdir.resolve("file.txt")
         file.text = "this is a data file"
         def hash = CacheHelper.hasher(file).hash().toString()
         def correctData = new FileOutput(file.toString(), new Checksum("abscd","nextflow", "standard"))
-        LinPath.validateDataOutput(correctData)
-        def stdout = capture
-            .toString()
-            .readLines()// remove the log part
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }
-            .findResults { line -> !line.contains('plugin') ? line : null }
-
+        when:
+        def error = LinPath.validateDataOutput(correctData)
         then:
-        stdout.size() == 1
-        stdout[0].endsWith("Checksum of '$file' does not match with lineage metadata")
+        error == "Checksum of '$file' does not match with lineage metadata"
 
         cleanup:
         file.delete()
     }
 
     def 'should warn when hash algorithm is not supported'(){
-        when:
+        given:
         def file = wdir.resolve("file.txt")
         file.text = "this is a data file"
         def hash = CacheHelper.hasher(file).hash().toString()
         def correctData = new FileOutput(file.toString(), new Checksum(hash,"not-supported", "standard"))
-        LinPath.validateDataOutput(correctData)
-        def stdout = capture
-            .toString()
-            .readLines()// remove the log part
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }
-            .findResults { line -> !line.contains('plugin') ? line : null }
-
+        when:
+        def error = LinPath.validateDataOutput(correctData)
         then:
-        stdout.size() == 1
-        stdout[0].endsWith("Checksum of '$file' can't be validated. Algorithm 'not-supported' is not supported")
+        error == "Checksum of '$file' can't be validated - algorithm 'not-supported' is not supported"
 
         cleanup:
         file.delete()
@@ -703,7 +680,6 @@ class LinPathTest extends Specification {
 
         then:
         thrown(FileNotFoundException)
-
     }
 
 

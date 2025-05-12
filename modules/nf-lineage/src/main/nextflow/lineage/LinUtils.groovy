@@ -25,10 +25,11 @@ import java.time.ZoneId
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.lineage.model.TaskRun
-import nextflow.lineage.model.WorkflowRun
+import nextflow.lineage.model.v1beta1.TaskRun
+import nextflow.lineage.model.v1beta1.WorkflowRun
 import nextflow.lineage.serde.LinEncoder
 import nextflow.lineage.serde.LinSerializable
+import nextflow.lineage.serde.LinTypeAdapterFactory
 import nextflow.serde.gson.GsonEncoder
 /**
  * Utils class for Lineage IDs.
@@ -258,7 +259,7 @@ class LinUtils {
             return new GsonEncoder<Object>() {}
                 .withPrettyPrint(prettyPrint)
                 .withSerializeNulls(true)
-                .withTypeAdapterFactory(LinEncoder.newTypeAdapterFactory())
+                .withTypeAdapterFactory(new LinTypeAdapterFactory())
                 .encode(output)
         }
     }

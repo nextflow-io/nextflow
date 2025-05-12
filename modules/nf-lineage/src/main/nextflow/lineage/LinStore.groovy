@@ -18,11 +18,8 @@ package nextflow.lineage
 
 import com.google.common.annotations.Beta
 import groovy.transform.CompileStatic
-import nextflow.lineage.serde.LinSerializable
 import nextflow.lineage.config.LineageConfig
-
-import java.nio.file.Path
-
+import nextflow.lineage.serde.LinSerializable
 /**
  * Interface for the lineage store
  *
