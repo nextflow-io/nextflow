@@ -5,7 +5,7 @@
 Data lineage in Nextflow provides comprehensive tracking of workflow runs, task executions, and output files. This feature helps you verify the integrity and reproducibility of your pipeline results by maintaining a complete history of computations and intermediate data.
 
 :::{warning}
-Data lineage is an experimental feature added in Nextflow 25.04. The API and functionality may change in future releases.
+Data lineage is an experimental feature added in Nextflow 25.04. The functionality may change in future releases.
 :::
 
 ## Overview
