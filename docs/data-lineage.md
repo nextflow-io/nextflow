@@ -70,7 +70,7 @@ TIMESTAMP               RUN NAME                SESSION ID                      
 
 The *lineage ID* (LID) is the unique identifier for the workflow run and the entrypoint for exploring the lineage.
 
-To view the lineage record for the workflow run, run the `view` subcommand:
+To view the lineage record for the workflow run, run the `view` subcommand. For example:
 
 ```console
 $ nextflow lineage view lid://16b31030474f2e96c55f4940bca3ab64
@@ -125,7 +125,7 @@ results/fastqc_ggal_gut_logs/ggal_gut_2_fastqc.zip
 results/multiqc_report.html
 ```
 
-To view the lineage record for an output file, use the workflow LID and relative path to the file:
+To view the lineage record for an output file, use the workflow LID and relative path to the file. For example:
 
 ```console
 $ nextflow lineage view lid://16b31030474f2e96c55f4940bca3ab64/multiqc_report.html
@@ -157,7 +157,7 @@ Every output file is represented in the lineage store as a `FileOutput` record. 
 As this record is a workflow output, it is not linked directly to a task run. Instead, it is linked to the original task output. Any LID in a lineage record can be viewed, allowing you to traverse the lineage metadata interactively.
 
 
-To view the original task output, use the value of `source`:
+To view the original task output, use the value of `source`. For example:
 
 ```console
 $ nextflow lineage view lid://862df53160e07cd823c0c3960545e747/multiqc_report.html
@@ -186,7 +186,7 @@ You should see output similar to the following:
 
 This record is the task output for the same file -- it has a value for `taskRun` which is the same as its `source`.
 
-To view the lineage record for the task that produced this file, use the value of `taskRun` or `source`:
+To view the lineage record for the task that produced this file, use the value of `taskRun` or `source`. For example:
 
 ```console
 $ nextflow lineage view lid://862df53160e07cd823c0c3960545e747
@@ -241,7 +241,7 @@ You should see output similar to the following:
 
 Every task run is represented in the lineage store as a `TaskRun`, which includes information such as the name, script, inputs, and software dependencies. From here, you can continue traversing through the file inputs to view upstream tasks.
 
-To generate a visual lineage graph, run the `render` subcommand:
+To generate a visual lineage graph, run the `render` subcommand. For example:
 
 ```console
 $ nextflow lineage render lid://16b31030474f2e96c55f4940bca3ab64/multiqc_report.html
@@ -259,7 +259,7 @@ Open the HTML report in a web browser to view the lineage graph.
 
 To find a lineage record, you normally have to know the LID of the record or a downstream record (such as a workflow run) from which you can traverse to the desired record. However, you can also query the entire lineage store by fields to quickly find relevant records and aggregate records from different runs.
 
-To search lineage records by their properties, run the `find` subcommand:
+To search lineage records by their properties, run the `find` subcommand. For example:
 
 ```console
 $ nextflow lineage find type=TaskRun workflowRun=lid://16b31030474f2e96c55f4940bca3ab64
@@ -312,7 +312,7 @@ This section builds on above [`rnaseq-nf` example](#generate-lineage-metadata) t
     The `MULTIQC` hash from the above example is `9433dda73f2193491f9a26e3e23cd8a1`.
     :::
 
-4. Compare the task hash of the initial run to that of the resumed run:
+4. Compare the task hash of the initial run to that of the resumed run. For example:
 
     ```console
     $ nextflow lineage diff lid://862df53160e07cd823c0c3960545e747 lid://9433dda73f2193491f9a26e3e23cd8a1
@@ -365,7 +365,7 @@ To view outputs declared in the `output` block:
     $ nextflow -r preview-25-04 -profile conda
     ```
 
-2. View the workflow output in the lineage metadata:
+2. View the workflow output in the lineage metadata. For example:
 
     ```console
     $ nextflow lineage view lid://9410d13abeec617640b5fe9735ba12fc#output
@@ -396,7 +396,7 @@ See {ref}`workflow-output-def` for more information about the `output` block.
 
 Since lineage IDs are valid URIs, output files in the lineage store can be accessed by their LID in a Nextflow script, like any other path. The LID path returns the *real* path as defined by the `path` field in the `FileOutput` record.
 
-Use the `samples.json` from the previous example as an input samplesheet:
+Use the `samples.json` from the previous example as an input samplesheet. For example:
 
 ```nextflow
 channel.fromPath('lid://9410d13abeec617640b5fe9735ba12fc/samples.json')
