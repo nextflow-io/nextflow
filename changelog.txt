@@ -1,6 +1,23 @@
 NEXTFLOW CHANGE-LOG
 ===================
-24.04.0 - 8 May 2025
+25.04.1 - 12 May 2025
+- Add Beta annotation to LinStore [3bd0d731]
+- Add data lineage guide (#6044) [7f7fb631]
+- Add more excludes to cmd lint [fc52c843]
+- Add support for ARM and Snapshots (#6057) [ef4c3865]
+- Add version to Lineage data model  (#6037) [5c2c2834]
+- Fix IllegalArgumentException on publish operator [ecdbe21b]
+- Fix linting of output `label` directive (#6065) [74bf33a2]
+- Fix selector expression documentation (#6050) [548c87bd]
+- Improve lineage checksum validation [d708bf09]
+- Improve not found error in lineage `render` (#6061) [e55419ad]
+- Make config parser v2 compatible with AssetManager (#6042) [aab5574b]
+- Refactor lineage model using v1beta1 package name [63d59154]
+- Support fromPath with pattern in Lineage Pseudo-FS (#6054) [ce165c0e]
+- Bump plugin template to v0.2.0 (#6062) [96c88931]
+- Bump nf-wave@1.12.1 [8cabfd74]
+
+25.04.0 - 8 May 2025
 - Add Support for Google Batch network tags (#5951) [d6e4d6c2]
 - Add Trace observer v2 (#6014) [c4437c1a]
 - Add allowed plugins list (#6049) [e22882e3]
