@@ -104,7 +104,7 @@ class StandardErrorListener implements ErrorListener {
     @Override
     void onWarning(WarningMessage warning, String filename, SourceUnit source) {
         final token = warning.getContext().getRoot()
-        term.reset().fg(Ansi.Color.YELLOW).a(Ansi.Attribute.NEGATIVE_ON).a(" Warning ").reset()
+        term.reset().fg(Ansi.Color.YELLOW).a(Ansi.Attribute.NEGATIVE_ON).a(" Warn  ").reset()
         term.bold().a(" ${filename}").reset()
         term.a(":${token.getStartLine()}:${token.getStartColumn()}: ")
         term = highlightString(warning.getMessage(), term)
