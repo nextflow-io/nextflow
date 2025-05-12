@@ -48,7 +48,7 @@ See the {ref}`config-lineage` configuration scope for details.
 To generate lineage metadata, enable data lineage and run your Nextflow pipeline. For example:
 
 ```bash
-nextflow run rnaseq-nf -profile conda
+$ nextflow run rnaseq-nf -profile conda
 ```
 
 The pipeline execution will automatically record all workflow runs, task executions, and output files in the lineage store.
