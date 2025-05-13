@@ -18,12 +18,12 @@ plugins {
 }
 
 dependencies {
-  antlr 'org.antlr:antlr4:4.9.2'
+  antlr 'me.sunlan:antlr4:4.13.2.6'
   api 'org.apache.groovy:groovy:4.0.26'
   api 'org.pf4j:pf4j:3.12.0'
 
-  testImplementation ('net.bytebuddy:byte-buddy:1.14.17')
-  testImplementation ('org.spockframework:spock-core:2.3-groovy-4.0') { exclude group: 'org.apache.groovy' }
+  testFixturesApi 'com.google.jimfs:jimfs:1.2'
+  testImplementation(testFixtures(project(":nextflow")))
 }
 
 generateGrammarSource {

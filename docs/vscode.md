@@ -2,7 +2,9 @@
 
 # VS Code integration
 
-The [Nextflow VS Code extension](https://marketplace.visualstudio.com/items?itemName=nextflow.nextflow) provides IDE support for Nextflow pipelines.
+The [Nextflow VS Code extension](https://marketplace.visualstudio.com/items?itemName=nextflow.nextflow) provides language support for Nextflow pipelines in [VS Code](https://code.visualstudio.com/).
+
+This page describes the [Nextflow language server](https://github.com/nextflow-io/language-server) used by the extension. See the extension README in [GitHub](https://github.com/nextflow-io/vscode-language-nextflow) or the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=nextflow.nextflow) for details on additional extension features.
 
 ## Features
 
@@ -17,7 +19,7 @@ The extension highlights source code in red for errors and yellow for warnings.
 To view all diagnostics for the workspace, open the **Problems** tab. Here, you can search for diagnostics by diagnostic message, filename, and so on.
 
 :::{note}
-The language server parses scripts and config files according to the {ref}`Nextflow language specification <syntax-page>`, which is more strict than the Nextflow CLI. See {ref}`updating-syntax-page` for more information.
+The language server parses scripts and config files according to the {ref}`Nextflow language specification <syntax-page>`, which is more strict than the Nextflow CLI. See {ref}`strict-syntax-page` for more information.
 :::
 
 ### Hover hints
@@ -36,7 +38,7 @@ The extension suggests auto-completions for variable names, function names, conf
 
 ### Formatting
 
-The extension can format your scripts and config files based on a standard set of formatting rules. Rules can be customized using the **Nextflow > Formatting** [extension settings](#settings).
+The extension can format your scripts and config files based on a standard set of formatting rules. Rules can be customized using the **Nextflow > Formatting** extension settings.
 
 Use the **Format Document** command in the command palette to format the current file.
 
@@ -59,44 +61,6 @@ To preview the DAG of a workflow, select the **Preview DAG** CodeLens above the 
 :::{note}
 The **Preview DAG** CodeLens is only available when the script does not contain any errors.
 :::
-
-(vscode-commands)=
-
-## Commands
-
-The following commands are available from the Command Palette:
-
-- Restart language server
-- Stop language server
-
-(vscode-settings)=
-
-## Settings
-
-The following settings are available:
-
-`nextflow.debug`
-: Enable debug logging and debug information in hover hints.
-
-`nextflow.files.exclude`
-: Configure glob patterns for excluding folders from being searched for Nextflow scripts and configuration files.
-
-`nextflow.formatting.harshilAlignment`
-: Use the [Harshil Alignment™️](https://nf-co.re/docs/contributing/code_editors_and_styling/harshil_alignment) when formatting Nextflow scripts and config files.
-
-`nextflow.java.home`
-: Specifies the folder path to the JDK. Use this setting if the extension cannot find Java automatically.
-
-`nextflow.paranoidWarnings`
-: Enable additional warnings for future deprecations, potential problems, and other discouraged patterns.
-
-(vscode-language-server)=
-
-## Language server
-
-Most of the functionality of the VS Code extension is provided by the [Nextflow language server](https://github.com/nextflow-io/language-server), which implements the [Language Server Protocol (LSP)](https://microsoft.github.io/language-server-protocol/) for Nextflow scripts and config files.
-
-The language server is distributed as a standalone Java application. It can be integrated with any editor that functions as an LSP client. Currently, only the VS Code integration is officially supported, but community contributions for other editors are welcome.
 
 ## Troubleshooting
 
@@ -142,7 +106,24 @@ The language server does not recognize configuration options from third-party pl
 The language server provides limited support for Groovy scripts in the lib directory. Errors in Groovy scripts are not reported as diagnostics, and changing a Groovy script does not automatically re-compile the Nextflow scripts that reference it.
 
 To resolve this issue, edit or close and re-open the Nextflow script to refresh the diagnostics.
+Report issues at [nextflow-io/vscode-language-nextflow](https://github.com/nextflow-io/vscode-language-nextflow) or [nextflow-io/language-server](https://github.com/nextflow-io/language-server). When reporting, include a minimal code snippet that reproduces the issue and any error logs from the server. To view logs, open the **Output** tab and select **Nextflow Language Server** from the dropdown. Enable **Nextflow > Debug** in the extension settings to show additional log messages while debugging.
 
 ### Reporting issues
 
 Report issues at [nextflow-io/vscode-language-nextflow](https://github.com/nextflow-io/vscode-language-nextflow) or [nextflow-io/language-server](https://github.com/nextflow-io/language-server). When reporting issues, include a minimal code snippet that reproduces the issue and any error logs from the server.
+
+## Limitations
+
+- The language server does not detect certain filesystem changes, such as changing the current Git branch. Restart the language server from the command palette to sync it with your workspace.
+
+- The language server does not recognize configuration options from third-party plugins and will report "Unrecognized config option" warnings for them.
+
+- The language server provides limited support for Groovy scripts in the `lib` directory. Errors in Groovy scripts are not reported as diagnostics, and changing a Groovy script does not automatically re-compile the Nextflow scripts that reference it. Edit the Nextflow script or close and re-open it to refresh the diagnostics.
+
+(vscode-language-server)=
+
+## Language server
+
+The Nextflow language server implements the [Language Server Protocol (LSP)](https://microsoft.github.io/language-server-protocol/) for Nextflow scripts and config files. It is distributed as a standalone Java application and can be integrated with any editor that functions as an LSP client.
+
+Currently, only the VS Code integration is officially supported, but community contributions for other editors are welcome. Visit the [GitHub issues](https://github.com/nextflow-io/language-server/issues) page for the latest updates on community-led integrations.

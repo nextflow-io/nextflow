@@ -366,8 +366,20 @@ class WaveClient {
     protected URL defaultFusionUrl(String platform) {
         final isArm = platform.tokenize('/')?.contains('arm64')
         return isArm
-                ? new URL(FusionConfig.DEFAULT_FUSION_ARM64_URL)
-                : new URL(FusionConfig.DEFAULT_FUSION_AMD64_URL)
+                ? fusionArm64(fusion.snapshotsEnabled())
+                : fusionAmd64(fusion.snapshotsEnabled())
+    }
+
+    protected URL fusionAmd64(boolean snapshots) {
+        return snapshots
+                ? URI.create(FusionConfig.DEFAULT_SNAPSHOT_AMD64_URL).toURL()
+                : URI.create(FusionConfig.DEFAULT_FUSION_AMD64_URL).toURL()
+    }
+
+    protected URL fusionArm64(boolean snapshots) {
+        return snapshots
+            ? URI.create(FusionConfig.DEFAULT_SNAPSHOT_ARM64_URL).toURL()
+            : URI.create(FusionConfig.DEFAULT_FUSION_ARM64_URL).toURL()
     }
 
     protected URL defaultS5cmdUrl(String platform) {

@@ -532,6 +532,8 @@ $ nextflow info nextflow-io/hello
     v1.2 [t]
 ```
 
+(cli-inspect)=
+
 ### `inspect`
 
 :::{versionadded} 23.09.0-edge
@@ -679,6 +681,109 @@ Execute a pipeline into a Kubernetes cluster.
 
 ```console
 $ nextflow kuberun nextflow-io/hello
+```
+
+(cli-lineage)=
+
+### `lineage`
+
+:::{versionadded} 25.04.0
+:::
+
+:::{warning} *Experimental: may change in a future release.*
+:::
+
+Inspect lineage metadata for Nextflow runs.
+
+**Usage**
+
+```console
+$ nextflow lineage SUBCOMMAND [arg ..]
+```
+
+**Description**
+
+The `lineage` command is used to inspect lineage metadata.
+
+See the {ref}`data-lineage-page` guide to learn how to get started with data lineage.
+
+**Options**
+
+`-h, -help`
+: Print the command usage.
+
+**Subcommands**
+
+`diff <lid-1> <lid-2>`
+: Display a git-style diff between two lineage records.
+
+`find <field-1>=<value-1> [<field-2>=<value-2> ...]`
+: Find all lineage records that match the given field values.
+
+`list`
+: List the Nextflow runs with lineage enabled, printing the corresponding lineage ID (LID) for each run.
+
+`render <lid> [path]`
+: Render the lineage graph for a lineage record as an HTML file (default output path: `./lineage.html`).
+: The lineage record should be of type `FileOutput`, `TaskRun`, or `WorkflowRun`.
+
+`view <lid>`
+: View a lineage record.
+
+(cli-lint)=
+
+### `lint`
+
+Lint Nextflow scripts and config files.
+
+**Usage**
+
+```console
+$ nextflow lint [options] [paths]
+```
+
+**Description**
+
+The `lint` command parses and analyzes the given Nextflow scripts and config files, formats them if specified, and prints any errors. Directories are recursively scanned for scripts and config files to lint.
+
+**Options**
+
+`-exclude`
+: File pattern to exclude from linting. Can be specified multiple times (default: `.git, .nf-test, work`).
+
+`-format`
+: Format scripts and config files that have no errors.
+
+`-o, -output`
+: Output mode for reporting errors: `full`, `extended`, `concise`, `json` (default: `full`).
+
+`-sort-declarations`
+: Sort script declarations in Nextflow scripts (default: `false`).
+
+`-spaces`
+: Number of spaces to indent (default: `4`).
+
+`-tabs`
+: Indent with tabs (default: `false`).
+
+**Examples**
+
+Lint a specific file.
+
+```console
+$ nextflow lint main.nf
+```
+
+Lint all files in the current directory (and subdirectories) with concise output.
+
+```console
+$ nextflow lint -o concise .
+```
+
+Lint and format all files in the current directory (and subdirectories) and use two spaces per indent.
+
+```console
+$ nextflow lint -format -spaces 2 .
 ```
 
 ### `list`
@@ -1253,7 +1358,7 @@ process sayHello {
 }
 
 workflow {
-  Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
+  channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
 }
 ```
 
@@ -1293,6 +1398,6 @@ process sayHello {
 }
 
 workflow {
-  Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
+  channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
 }
 ```

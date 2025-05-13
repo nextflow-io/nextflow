@@ -21,11 +21,11 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 100
     strategy:
       fail-fast: false
       matrix:
-        java_version: [17, 23]
+        java_version: [17, 24]
 
     steps:
       - name: Checkout
@@ -43,13 +43,13 @@ jobs:
                 COMMIT_MESSAGE="$(curl -s \
                   -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                   https://api.github.com/repos/${{ github.repository }}/commits/$COMMIT_SHA | jq -r '.commit.message')"
-                echo "Commit message=$COMMIT_MESSAGE" | head -n 1
-                echo "commit_message=$COMMIT_MESSAGE" | head -n 1 >> $GITHUB_OUTPUT
+                echo "Commit message=$(printf "%q" "$COMMIT_MESSAGE")" | head -n 1
+                echo "commit_message=$(printf "%q" "$COMMIT_MESSAGE")" | head -n 1 >> $GITHUB_OUTPUT
             else
                 echo "GitHub event=${{ github.event_name }}"
                 COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
-                echo "Commit message=$COMMIT_MESSAGE" | head -n 1
-                echo "commit_message=$COMMIT_MESSAGE" | head -n 1 >> $GITHUB_OUTPUT
+                echo "Commit message=$(printf "%q" "$COMMIT_MESSAGE")" | head -n 1
+                echo "commit_message=$(printf "%q" "$COMMIT_MESSAGE")" | head -n 1 >> $GITHUB_OUTPUT
             fi
 
       - name: Setup env
@@ -112,7 +112,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java_version: [17, 23]
+        java_version: [17, 24]
         test_mode: ["test_integration", "test_parser_v2", "test_docs", "test_aws", "test_azure", "test_google", "test_wave"]
     steps:
       - name: Checkout

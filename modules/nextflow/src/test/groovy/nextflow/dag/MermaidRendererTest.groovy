@@ -50,8 +50,8 @@ class MermaidRendererTest extends Specification {
                 subgraph " "
                 v0[" "]
                 end
-                v1([Op1])
-                v2([Op2])
+                v1(["Op1"])
+                v2(["Op2"])
                 subgraph " "
                 v3[" "]
                 end

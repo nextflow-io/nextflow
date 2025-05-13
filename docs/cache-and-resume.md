@@ -12,11 +12,13 @@ All task executions are automatically saved to the task cache, regardless of the
 
 The task cache is used in conjunction with the [work directory](#work-directory) to recover cached tasks in a resumed run. It is also used by the {ref}`cli-log` sub-command to query task metadata.
 
+(cache-resume-task-hash)=
+
 ### Task hash
 
 The task hash is computed from the following metadata:
 
-- Session ID (see `workflow.sessionId` in {ref}`stdlib-constants`)
+- Session ID (see `workflow.sessionId` in the {ref}`stdlib-namespaces-workflow` namespace)
 - Task name (see `name` in {ref}`trace-report`)
 - Task container image (if applicable)
 - Task {ref}`environment modules <process-module>` (if applicable)
@@ -133,8 +135,8 @@ Some shared file systems, such as NFS, may report inconsistent file timestamps. 
 Race conditions can in disrupt caching behavior of your pipeline. For example:
 
 ```nextflow
-Channel.of(1,2,3) | map { v -> X=v; X+=2 } | view { v -> "ch1 = $v" }
-Channel.of(1,2,3) | map { v -> X=v; X*=2 } | view { v -> "ch2 = $v" }
+channel.of(1,2,3) | map { v -> X=v; X+=2 } | view { v -> "ch1 = $v" }
+channel.of(1,2,3) | map { v -> X=v; X*=2 } | view { v -> "ch2 = $v" }
 ```
 
 In the above example, `X` is declared in each `map` closure. Without the `def` keyword, or other type qualifier, the variable `X` is global to the entire script. Operators and executed concurrently and, as `X` is global, there is a *race condition* that causes the emitted values to vary depending on the order of the concurrent operations. If these values were passed to a process as inputs the process would execute different tasks during each run due to the race condition.
@@ -142,13 +144,13 @@ In the above example, `X` is declared in each `map` closure. Without the `def` k
 To resolve this failure type, ensure the variable is not global by using a local variable:
 
 ```nextflow
-Channel.of(1,2,3) | map { v -> def X=v; X+=2 } | view { v -> "ch1 = $v" }
+channel.of(1,2,3) | map { v -> def X=v; X+=2 } | view { v -> "ch1 = $v" }
 ```
 
 Alternatively, remove the variable:
 
 ```nextflow
-Channel.of(1,2,3) | map { v -> v * 2 } | view { v -> "ch2 = $v" }
+channel.of(1,2,3) | map { v -> v * 2 } | view { v -> "ch2 = $v" }
 ```
 
 (cache-nondeterministic-inputs)=
@@ -159,8 +161,8 @@ A process that merges inputs from different sources non-deterministically may in
 
 ```nextflow
 workflow {
-    ch_foo = Channel.of( ['1', '1.foo'], ['2', '2.foo'] )
-    ch_bar = Channel.of( ['2', '2.bar'], ['1', '1.bar'] )
+    ch_foo = channel.of( ['1', '1.foo'], ['2', '2.foo'] )
+    ch_bar = channel.of( ['2', '2.bar'], ['1', '1.bar'] )
     gather(ch_foo, ch_bar)
 }
 process gather {
@@ -180,8 +182,8 @@ To resolve this failure type, ensure channels are deterministic by joining them 
 
 ```nextflow
 workflow {
-    ch_foo = Channel.of( ['1', '1.foo'], ['2', '2.foo'] )
-    ch_bar = Channel.of( ['2', '2.bar'], ['1', '1.bar'] )
+    ch_foo = channel.of( ['1', '1.foo'], ['2', '2.foo'] )
+    ch_bar = channel.of( ['2', '2.bar'], ['1', '1.bar'] )
     gather(ch_foo.join(ch_bar))
 }
 process gather {
@@ -262,3 +264,9 @@ get_hashes run_1.log > run_1.tasks.log
 get_hashes run_2.log > run_2.tasks.log
 diff run_1.tasks.log run_2.tasks.log
 ```
+
+You can then view the `diff` output or use a graphical diff viewer to compare `run_1.tasks.log` and `run_2.tasks.log`.
+
+:::{versionadded} 25.04.0
+Nextflow now has a built-in way to compare two task runs. See the {ref}`data-lineage-page` guide for details.
+:::

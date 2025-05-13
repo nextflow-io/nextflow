@@ -511,6 +511,8 @@ This error occurs when a job remains stuck in the RUNNABLE state in AWS Batch an
 
 See [Why is my AWS Batch job stuck in RUNNABLE status?](https://repost.aws/knowledge-center/batch-job-stuck-runnable-status) for several resolutions and tips to investigate this error.
 
+(aws-fargate)=
+
 ## AWS Fargate
 
 :::{versionadded} 23.12.0-edge
