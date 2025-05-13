@@ -16,15 +16,24 @@
 
 package nextflow.lineage.cli
 
+import java.nio.file.Files
+import java.nio.file.Path
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
+
 import nextflow.SysEnv
 import nextflow.config.ConfigMap
 import nextflow.dag.MermaidHtmlRenderer
+import nextflow.exception.AbortOperationException
+import nextflow.file.FileHelper
+import nextflow.lineage.DefaultLinHistoryLog
 import nextflow.lineage.LinHistoryRecord
 import nextflow.lineage.LinStoreFactory
-import nextflow.lineage.DefaultLinHistoryLog
+import nextflow.lineage.fs.LinFileSystemProvider
 import nextflow.lineage.model.v1beta1.Checksum
-import nextflow.lineage.model.v1beta1.FileOutput
 import nextflow.lineage.model.v1beta1.DataPath
+import nextflow.lineage.model.v1beta1.FileOutput
 import nextflow.lineage.model.v1beta1.Parameter
 import nextflow.lineage.model.v1beta1.TaskRun
 import nextflow.lineage.model.v1beta1.Workflow
@@ -33,26 +42,32 @@ import nextflow.lineage.serde.LinEncoder
 import nextflow.plugin.Plugins
 import nextflow.util.CacheHelper
 import org.junit.Rule
+import spock.lang.Shared
 import spock.lang.Specification
-import spock.lang.TempDir
 import test.OutputCapture
-import java.nio.file.Files
-import java.nio.file.Path
-import java.time.Instant
-import java.time.OffsetDateTime
-import java.time.ZoneOffset
 
 class LinCommandImplTest extends Specification{
 
-    @TempDir
+    @Shared
     Path tmpDir
 
+    @Shared
     Path storeLocation
+
+    @Shared
     ConfigMap configMap
 
+    def reset() {
+        def provider = FileHelper.getProviderFor('lid') as LinFileSystemProvider
+        provider?.reset()
+        LinStoreFactory.reset()
+    }
+
     def setup() {
+        reset()
         // clear the environment to avoid the local env pollute the test env
         SysEnv.push([:])
+        tmpDir = Files.createTempDirectory('tmp')
         storeLocation = tmpDir.resolve("store")
         configMap = new ConfigMap([lineage: [enabled: true, store: [location: storeLocation.toString(), logLocation: storeLocation.resolve(".log").toString()]]])
     }
@@ -61,11 +76,13 @@ class LinCommandImplTest extends Specification{
         Plugins.stop()
         LinStoreFactory.reset()
         SysEnv.pop()
+        tmpDir?.deleteDir()
     }
 
     def setupSpec() {
-        LinStoreFactory.reset()
+        reset()
     }
+
     /*
      * Read more http://mrhaki.blogspot.com.es/2015/02/spocklight-capture-and-assert-system.html
      */
@@ -494,7 +511,9 @@ class LinCommandImplTest extends Specification{
         def outputFolder = tmpDir.resolve('output')
         Files.createDirectories(outputFolder)
         def outputFile = outputFolder.resolve('file1.txt')
-        outputFile.text = "this is file1"
+        outputFile.text = "this   is file1  == "
+
+        and:
         def encoder = new LinEncoder().withPrettyPrint(true)
         def hash = CacheHelper.hasher(outputFile).hash().toString()
         def correctData = new FileOutput(outputFile.toString(), new Checksum(hash,"nextflow", "standard"))
@@ -507,19 +526,22 @@ class LinCommandImplTest extends Specification{
         lid2.text = encoder.encode(incorrectData)
         when:
         new LinCommandImpl().check(configMap, ["lid://12345/output/file1.txt"])
-        new LinCommandImpl().check(configMap, ["lid://12345/output/file2.txt"])
         def stdout = capture
             .toString()
             .readLines()// remove the log part
             .findResults { line -> !line.contains('DEBUG') ? line : null }
             .findResults { line -> !line.contains('INFO') ? line : null }
             .findResults { line -> !line.contains('plugin') ? line : null }
-        def expectedOutput1 = "Checksum for 'lid://12345/output/file1.txt' is correct"
-        def expectedOutput2 = "Error validating checksum for 'lid://12345/output/file2.txt' - Checksum of '$outputFile' does not match with lineage metadata"
+        def expectedOutput1 = "Checksum validation succeed"
         then:
-        stdout.size() == 2
+        stdout.size() == 1
         stdout[0] == expectedOutput1
-        stdout[1] == expectedOutput2
+
+        when:
+        new LinCommandImpl().check(configMap, ["lid://12345/output/file2.txt"])
+        then:
+        def err = thrown(AbortOperationException)
+        err.message == "Checksum of '${outputFile}' does not match with lineage metadata"
     }
 
 }

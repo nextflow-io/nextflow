@@ -699,20 +699,19 @@ class LinPathTest extends Specification {
         def lidFs = new LinFileSystemProvider().newFileSystem(new URI("lid:///"), [enabled: true, store: [location: wdir.toString()]])
 
         when:
-        new LinPath(lidFs, '12345/output/file1.txt').validate()
+        def succeed = new LinPath(lidFs, '12345/output/file1.txt').validate()
         then:
-        noExceptionThrown()
+        succeed
 
         when:
-        new LinPath(lidFs, '12345/output/file2.txt').validate()
+        succeed = new LinPath(lidFs, '12345/output/file2.txt').validate()
         then:
-        def e =thrown(Exception)
-        e.getMessage() == "Checksum of '$outputFile' does not match with lineage metadata"
+        !succeed
 
         when:
-        new LinPath(lidFs, '12345/output/file3.txt').validate()
+        succeed = new LinPath(lidFs, '12345/output/file3.txt').validate()
         then:
-        thrown(FileNotFoundException)
+        !succeed
 
         cleanup:
         outputFile.delete()
