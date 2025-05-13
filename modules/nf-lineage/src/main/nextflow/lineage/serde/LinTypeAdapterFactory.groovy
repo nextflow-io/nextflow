@@ -43,8 +43,10 @@ import nextflow.serde.gson.RuntimeTypeAdapterFactory
 @CompileStatic
 class LinTypeAdapterFactory<T> extends RuntimeTypeAdapterFactory<T> {
     public static final String VERSION_FIELD = 'version'
+    public static final String SPEC_FIELD = 'spec'
     public static final String CURRENT_VERSION = LinModel.VERSION
 
+    private labelToClass = [:]
     LinTypeAdapterFactory() {
         super(LinSerializable.class, "kind", false)
         this.registerSubtype(WorkflowRun, WorkflowRun.simpleName)
@@ -70,39 +72,31 @@ class LinTypeAdapterFactory<T> extends RuntimeTypeAdapterFactory<T> {
         return new TypeAdapter<R>() {
             @Override
             void write(JsonWriter out, R value) throws IOException {
-                def json = delegate.toJsonTree(value)
-                if (json instanceof JsonObject) {
-                    json = addVersion(json)
-                }
-                gson.toJson(json, out)
+                final object = new JsonObject()
+                object.addProperty(VERSION_FIELD, CURRENT_VERSION)
+                String label = getLabelFromSubtype(value.class)
+                if (!label)
+                     throw new JsonParseException("Not registered class ${value.class}")
+                object.addProperty(getTypeFieldName(), label)
+                def json = gson.toJsonTree(value)
+                object.add(SPEC_FIELD, json)
+                gson.toJson(object, out)
             }
 
             @Override
             R read(JsonReader reader) throws IOException {
-                def json = JsonParser.parseReader(reader)
-                if (json instanceof JsonObject) {
-                    def obj = (JsonObject) json
-                    def versionEl = obj.get(VERSION_FIELD)
-                    if (versionEl == null || versionEl.asString != CURRENT_VERSION) {
-                        throw new JsonParseException("Invalid or missing version")
-                    }
-                    obj.remove(VERSION_FIELD)
+                def json = JsonParser.parseReader(reader).asJsonObject
+                def obj = (JsonObject) json
+                def versionEl = obj.get(VERSION_FIELD)
+                if (versionEl == null || versionEl.asString != CURRENT_VERSION) {
+                    throw new JsonParseException("Invalid or missing version")
                 }
-                return delegate.fromJsonTree(json)
+                final typeEl = obj.get(getTypeFieldName())
+                final specEl = obj.get(SPEC_FIELD).asJsonObject
+                specEl.add(getTypeFieldName(), typeEl)
+                return delegate.fromJsonTree(specEl)
             }
         }
-    }
-
-    private static JsonObject addVersion(JsonObject json){
-        if( json.has(VERSION_FIELD) )
-            throw new JsonParseException("object already defines a field named ${VERSION_FIELD}")
-
-        JsonObject clone = new JsonObject();
-        clone.addProperty(VERSION_FIELD, CURRENT_VERSION)
-        for (Map.Entry<String, JsonElement> e : json.entrySet()) {
-            clone.add(e.getKey(), e.getValue());
-        }
-        return clone
     }
 
 }
