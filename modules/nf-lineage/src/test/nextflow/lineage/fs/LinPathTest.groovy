@@ -682,5 +682,40 @@ class LinPathTest extends Specification {
         thrown(FileNotFoundException)
     }
 
+    def 'should validate path' () {
+        given:
+        def outputFolder = data.resolve('output')
+        outputFolder.mkdirs()
+        def outputFile = outputFolder.resolve('file1.txt')
+        outputFile.text = "this is file1"
+       def encoder = new LinEncoder()
+        def hash = CacheHelper.hasher(outputFile).hash().toString()
+        def correctData = new FileOutput(outputFile.toString(), new Checksum(hash,"nextflow", "standard"))
+        def incorrectData = new FileOutput(outputFile.toString(), new Checksum("incorrectHash","nextflow", "standard"))
+        wdir.resolve('12345/output/file1.txt').mkdirs()
+        wdir.resolve('12345/output/file2.txt').mkdirs()
+        wdir.resolve('12345/output/file1.txt/.data.json').text = encoder.encode(correctData)
+        wdir.resolve('12345/output/file2.txt/.data.json').text = encoder.encode(incorrectData)
+        def lidFs = new LinFileSystemProvider().newFileSystem(new URI("lid:///"), [enabled: true, store: [location: wdir.toString()]])
+
+        when:
+        def succeed = new LinPath(lidFs, '12345/output/file1.txt').validate()
+        then:
+        succeed
+
+        when:
+        succeed = new LinPath(lidFs, '12345/output/file2.txt').validate()
+        then:
+        !succeed
+
+        when:
+        succeed = new LinPath(lidFs, '12345/output/file3.txt').validate()
+        then:
+        !succeed
+
+        cleanup:
+        outputFile.delete()
+    }
+
 
 }
