@@ -26,6 +26,7 @@ import nextflow.Session
 import nextflow.cli.CmdLineage
 import nextflow.config.ConfigMap
 import nextflow.lineage.LinHistoryRecord
+import nextflow.lineage.fs.LinPathFactory
 import nextflow.lineage.LinPropertyValidator
 import nextflow.lineage.LinStore
 import nextflow.lineage.LinStoreFactory
@@ -185,6 +186,21 @@ class LinCommandImpl implements CmdLineage.LinCommand {
             println LinUtils.encodeSearchOutputs( store.search(params).keySet().collect { asUriString(it) }, true )
         } catch (Throwable e){
             println "Error searching for ${args[0]}. ${e.message}"
+        }
+    }
+
+    @Override
+    void check(ConfigMap config, List<String> args) {
+         final store = LinStoreFactory.getOrCreate(new Session(config))
+        if (!store) {
+            println ERR_NOT_LOADED
+            return
+        }
+        try {
+            LinPathFactory.create(args[0]).validate()
+            println("Checksum for '${args[0]}' is correct")
+        } catch (Throwable e){
+            println "Error validating checksum for '${args[0]}' - ${e.message}"
         }
     }
 

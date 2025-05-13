@@ -45,6 +45,7 @@ class CmdLineage extends CmdBase implements UsageAware {
         void render(ConfigMap config, List<String> args)
         void diff(ConfigMap config, List<String> args)
         void find(ConfigMap config, List<String> args)
+        void check(ConfigMap config, List<String> args)
     }
 
     interface SubCmd {
@@ -66,6 +67,7 @@ class CmdLineage extends CmdBase implements UsageAware {
         commands << new CmdRender()
         commands << new CmdDiff()
         commands << new CmdFind()
+        commands << new CmdCheck()
     }
 
     @Parameter(hidden = true)
@@ -279,6 +281,32 @@ class CmdLineage extends CmdBase implements UsageAware {
         void usage() {
             println description
             println "Usage: nextflow $NAME $name <query>"
+        }
+
+    }
+
+    class CmdCheck implements SubCmd {
+
+        @Override
+        String getName() { 'check' }
+
+        @Override
+        String getDescription() {
+            return 'Checks the integrity of an output file'
+        }
+
+        void apply(List<String> args) {
+            if (args.size() != 1) {
+                println("ERROR: Incorrect number of parameters")
+                return
+            }
+            operation.check(config, args)
+        }
+
+        @Override
+        void usage() {
+            println description
+            println "Usage: nextflow $NAME $name <lid-file>"
         }
 
     }
