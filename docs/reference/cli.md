@@ -714,6 +714,9 @@ See the {ref}`data-lineage-page` guide to learn how to get started with data lin
 
 **Subcommands**
 
+`check <lid>`
+: Validate the checksum of output lineage record.
+
 `diff <lid-1> <lid-2>`
 : Display a git-style diff between two lineage records.
 
