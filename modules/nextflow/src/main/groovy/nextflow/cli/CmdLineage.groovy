@@ -292,7 +292,7 @@ class CmdLineage extends CmdBase implements UsageAware {
 
         @Override
         String getDescription() {
-            return 'Checks the integrity of an output file'
+            return 'Checks the integrity of an lineage file path'
         }
 
         void apply(List<String> args) {
