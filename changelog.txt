@@ -1,5 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.04.2 - 13 May 2025
+- Add check subcommand in lineage (#6074) [5ba67bca]
+- Fix issues with `lint` console output (#6064) [7405f513]
+- Remove obsolete conda create --mkdir option (#6010) [9fc44f76]
+
 25.04.1 - 12 May 2025
 - Add Beta annotation to LinStore [3bd0d731]
 - Add data lineage guide (#6044) [7f7fb631]
