@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.lineage.model
+package nextflow.lineage.model.v1beta1
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
@@ -66,7 +66,7 @@ class FileOutput implements LinSerializable {
      */
     OffsetDateTime modifiedAt
     /**
-     * Annotations attached to the data
+     * Labels attached to the data
      */
-    List<Annotation> annotations
+    List<String> labels
 }

@@ -189,16 +189,16 @@ The following settings are available:
 : One or more container mounts. Mounts can be specified as simple e.g. `/some/path` or canonical format e.g. `/host/path:/mount/path[:ro|rw]`. Multiple mounts can be specified separating them with a comma or using a list object.
 
 `aws.client.anonymous`
-: Allow the access of public S3 buckets without the need to provide AWS credentials. Any service that does not accept unsigned requests will return a service access error.
+: Allow the access of public S3 buckets without the need to provide AWS credentials (default: `false`). Any service that does not accept unsigned requests will return a service access error.
 
 `aws.client.s3Acl`
-: Allow the setting of predefined bucket permissions, also known as *canned ACL*. Permitted values are `Private`, `PublicRead`, `PublicReadWrite`, `AuthenticatedRead`, `LogDeliveryWrite`, `BucketOwnerRead`, `BucketOwnerFullControl`, and `AwsExecRead`. See [Amazon docs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl) for details.
+: Allow the setting of predefined bucket permissions, also known as *canned ACL*. Permitted values are `Private`, `PublicRead`, `PublicReadWrite`, `AuthenticatedRead`, `LogDeliveryWrite`, `BucketOwnerRead`, `BucketOwnerFullControl`, and `AwsExecRead` (default: none). See [Amazon docs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl) for details.
 
 `aws.client.connectionTimeout`
-: The amount of time to wait (in milliseconds) when initially establishing a connection before timing out.
+: The amount of time to wait (in milliseconds) when initially establishing a connection before timing out (default: `10000`).
 
 `aws.client.endpoint`
-: The AWS S3 API entry point e.g. `https://s3-us-west-1.amazonaws.com`. Note: the endpoint must include the protocol prefix e.g. `https://`.
+: The AWS S3 API entry point e.g. `https://s3-us-west-1.amazonaws.com`. The endpoint must include the protocol prefix e.g. `https://`.
 
 `aws.client.glacierAutoRetrieval`
 : :::{deprecated} 24.02.0-edge
@@ -217,19 +217,19 @@ The following settings are available:
 : The retrieval tier to use when restoring objects from Glacier, one of [`Expedited`, `Standard`, `Bulk`].
 
 `aws.client.maxConnections`
-: The maximum number of allowed open HTTP connections.
+: The maximum number of allowed open HTTP connections (default: `50`).
 
 `aws.client.maxErrorRetry`
-: The maximum number of retry attempts for failed retryable requests.
+: The maximum number of retry attempts for failed retryable requests (default: `-1`).
 
 `aws.client.protocol`
-: The protocol (i.e. HTTP or HTTPS) to use when connecting to AWS.
+: The protocol to use when connecting to AWS. Can be `http` or `https` (default: `'https'`).
 
 `aws.client.proxyHost`
 : The proxy host to connect through.
 
 `aws.client.proxyPort`
-: The port on the proxy host to connect through.
+: The port to use when connecting through a proxy.
 
 `aws.client.proxyUsername`
 : The user name to use when connecting through a proxy.
@@ -240,25 +240,25 @@ The following settings are available:
 `aws.client.requesterPays`
 : :::{versionadded} 24.05.0-edge
   :::
-: Enable the requester pays feature for S3 buckets.
+: Use [Rrequester Pays](https://docs.aws.amazon.com/AmazonS3/latest/userguide/RequesterPaysBuckets.html) for S3 buckets (default: `false`).
 
 `aws.client.s3PathStyleAccess`
-: Enable the use of path-based access model that is used to specify the address of an object in S3-compatible storage systems.
+: Enable the use of path-based access model that is used to specify the address of an object in S3-compatible storage systems (default: `false`).
 
 `aws.client.signerOverride`
 : The name of the signature algorithm to use for signing requests made by the client.
 
 `aws.client.socketSendBufferSizeHint`
-: The Size hint (in bytes) for the low level TCP send buffer.
+: The Size hint (in bytes) for the low level TCP send buffer (default: `0`).
 
 `aws.client.socketRecvBufferSizeHint`
-: The Size hint (in bytes) for the low level TCP receive buffer.
+: The Size hint (in bytes) for the low level TCP receive buffer (default: `0`).
 
 `aws.client.socketTimeout`
-: The amount of time to wait (in milliseconds) for data to be transferred over an established, open connection before the connection is timed out.
+: The amount of time to wait (in milliseconds) for data to be transferred over an established, open connection before the connection is timed out (default: `50000`).
 
 `aws.client.storageEncryption`
-: The S3 server side encryption to be used when saving objects on S3, either `AES256` or `aws:kms` values are allowed.
+: The S3 server side encryption to be used when saving objects on S3. Can be `AES256` or `aws:kms` (default: none).
 
 `aws.client.storageKmsKeyId`
 : :::{versionadded} 22.05.0-edge
@@ -275,13 +275,13 @@ The following settings are available:
 : The maximum number of upload attempts after which a multipart upload returns an error (default: `5`).
 
 `aws.client.uploadMaxThreads`
-: The maximum number of threads used for multipart upload.
+: The maximum number of threads used for multipart upload (default: `10`).
 
 `aws.client.uploadRetrySleep`
 : The time to wait after a failed upload attempt to retry the part upload (default: `500ms`).
 
 `aws.client.uploadStorageClass`
-: The S3 storage class applied to stored objects, one of \[`STANDARD`, `STANDARD_IA`, `ONEZONE_IA`, `INTELLIGENT_TIERING`\] (default: `STANDARD`).
+: The S3 storage class applied to stored objects. Can be `STANDARD`, `STANDARD_IA`, `ONEZONE_IA`, or `INTELLIGENT_TIERING` (default: `STANDARD`).
 
 (config-azure)=
 
@@ -1123,7 +1123,7 @@ See the {ref}`k8s-page` page for more details.
 
 ## `lineage`
 
-The `lineage` scope controls the generation of lineage metadata.
+The `lineage` scope controls the generation of {ref}`cli-lineage` metadata.
 
 The following settings are available:
 

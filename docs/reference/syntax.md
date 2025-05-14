@@ -68,7 +68,7 @@ The first line of a script can be a [shebang](https://en.wikipedia.org/wiki/Sheb
 A feature flag declaration is an assignment. The target should be a valid {ref}`feature flag <config-feature-flags>` and the source should be a literal (i.e. number, string, boolean):
 
 ```nextflow
-nextflow.preview.topic = true
+nextflow.preview.recursion = true
 ```
 
 ### Include
@@ -154,7 +154,7 @@ An *entry workflow* has no name and may consist of a *main* and *publish* sectio
 ```nextflow
 workflow {
     main:
-    greetings = Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola')
+    greetings = channel.of('Bonjour', 'Ciao', 'Hello', 'Hola')
     messages = greetings.map { v -> "$v world!" }
     greetings.view { it -> '$it world!' }
 
@@ -512,7 +512,7 @@ throw new Exception('something failed!')
 ```
 
 :::{note}
-In general, the appropriate way to raise an error is to use the {ref}`error <stdlib-functions>` function:
+In general, the appropriate way to raise an error is to use the {ref}`error <stdlib-namespaces-global>` function:
 ```nextflow
 error 'something failed!'
 ```

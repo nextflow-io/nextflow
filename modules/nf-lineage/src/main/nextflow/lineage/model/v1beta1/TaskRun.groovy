@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.lineage.model
+package nextflow.lineage.model.v1beta1
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
@@ -76,8 +76,4 @@ class TaskRun implements LinSerializable {
      * Workflow run associated to the task run
      */
     String workflowRun
-    /**
-     * Annotations attached to the task run
-     */
-    List<Annotation> annotations
 }

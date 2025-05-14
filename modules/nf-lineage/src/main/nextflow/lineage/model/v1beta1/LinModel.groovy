@@ -14,25 +14,13 @@
  * limitations under the License.
  */
 
-package nextflow.lineage.model
-
-import groovy.transform.Canonical
-import groovy.transform.CompileStatic
+package nextflow.lineage.model.v1beta1
 
 /**
- * Models a data path which includes the path and a checksum to validate the content of the path.
+ * Marker interface holding lineage model common definitions
  *
- * @author Jorge Ejarque <jorge.ejarque@seqera.io
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Canonical
-@CompileStatic
-class DataPath {
-    /**
-     * Real path of the output data.
-     */
-    String path
-    /**
-     * Checksum of the output data.
-     */
-    Checksum checksum
+interface LinModel {
+    static final public String VERSION = 'lineage/v1beta1'
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.lineage.model
+package nextflow.lineage.model.v1beta1
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
@@ -47,7 +47,7 @@ class TaskOutput implements LinSerializable {
      */
     List<Parameter> output
     /**
-     * Annotations attached to the task output
+     * Labels attached to the task output
      */
-    List<Annotation> annotations
+    List<String> labels
 }

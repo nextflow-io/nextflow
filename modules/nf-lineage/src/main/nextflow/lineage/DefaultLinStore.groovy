@@ -74,34 +74,26 @@ class DefaultLinStore implements LinStore {
     LinSerializable load(String key) {
         final path = location.resolve("$key/$METADATA_FILE")
         log.debug("Loading from path $path")
-        if (path.exists())
+        if( path.exists() )
             return encoder.decode(path.text) as LinSerializable
         log.debug("File for key $key not found")
         return null
     }
 
-    Path getLocation(){
+    Path getLocation() {
         return location
     }
 
     @Override
-    LinHistoryLog getHistoryLog(){
+    LinHistoryLog getHistoryLog() {
         return historyLog
     }
 
     @Override
-    void close() throws IOException { }
+    void close() throws IOException {}
 
     @Override
-    Map<String, LinSerializable> search(String queryString) {
-        def params = null
-        if (queryString) {
-            params = LinUtils.parseQuery(queryString)
-        }
-        return searchAllFiles(params)
-    }
-
-    private Map<String, LinSerializable> searchAllFiles(Map<String,String> params) {
+    Map<String, LinSerializable> search(Map<String, List<String>> params) {
         final results = new HashMap<String, LinSerializable>()
 
         Files.walkFileTree(location, new FileVisitor<Path>() {
@@ -113,9 +105,9 @@ class DefaultLinStore implements LinStore {
 
             @Override
             FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                if (file.name.startsWith('.data.json') ) {
+                if( file.name.startsWith('.data.json') ) {
                     final lidObject = encoder.decode(file.text)
-                    if (LinUtils.checkParams(lidObject, params)){
+                    if( LinUtils.checkParams(lidObject, params) ) {
                         results.put(location.relativize(file.getParent()).toString(), lidObject as LinSerializable)
                     }
                 }
@@ -133,6 +125,38 @@ class DefaultLinStore implements LinStore {
             }
         })
 
+        return results
+    }
+
+    @Override
+    List<String> getSubKeys(String parentKey) {
+        final results = new LinkedList<String>()
+        final startPath = location.resolve(parentKey)
+        Files.walkFileTree(startPath, new FileVisitor<Path>() {
+
+            @Override
+            FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+                FileVisitResult.CONTINUE
+            }
+
+            @Override
+            FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                if( file.name.startsWith('.data.json') && file.parent != startPath ) {
+                    results << location.relativize(file.parent).toString()
+                }
+                FileVisitResult.CONTINUE
+            }
+
+            @Override
+            FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+                FileVisitResult.CONTINUE
+            }
+
+            @Override
+            FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                FileVisitResult.CONTINUE
+            }
+        })
         return results
     }
 }

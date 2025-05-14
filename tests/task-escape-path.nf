@@ -43,7 +43,7 @@ process foo4 {
 
 workflow {
     f1 = file('file AA.txt')
-    ch = Channel.fromPath(['file1.txt', 'file2.txt', 'fil BB.txt']).collect()
+    ch = channel.fromPath(['file1.txt', 'file2.txt', 'fil BB.txt']).collect()
     foo1(f1,ch)
     foo2(f1,ch)
     foo3(f1,ch)

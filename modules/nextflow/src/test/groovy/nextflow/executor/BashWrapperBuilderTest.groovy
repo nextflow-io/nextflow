@@ -196,7 +196,7 @@ class BashWrapperBuilderTest extends Specification {
 
     def 'should create container env' () {
         given:
-        def bash = Spy(BashWrapperBuilder)
+        def bash = Spy(new BashWrapperBuilder(Mock(TaskBean)))
         and:
         bash.getEnvironment() >> [:]
         bash.getBinDirs() >> [Paths.get('/my/bin') ]
@@ -226,7 +226,7 @@ class BashWrapperBuilderTest extends Specification {
 
     def 'should add resolved inputs'() {
         given:
-        def bash = Spy(new BashWrapperBuilder(bean: Mock(TaskBean)))
+        def bash = Spy(new BashWrapperBuilder(Mock(TaskBean)))
         bash.getContainerConfig() >> [engine: 'docker']
 
         def BUILDER = Mock(DockerBuilder)
@@ -1235,7 +1235,7 @@ class BashWrapperBuilderTest extends Specification {
         def copy = Mock(ScriptFileCopyStrategy)
         bean.workDir >> Paths.get('/work/dir')
         and:
-        def builder = Spy(new BashWrapperBuilder(bean:bean))
+        def builder = Spy(new BashWrapperBuilder(bean))
         builder.copyStrategy = copy
 
         when:
@@ -1267,7 +1267,7 @@ class BashWrapperBuilderTest extends Specification {
 
     def 'should get output env capture snippet' () {
         given:
-        def builder = new BashWrapperBuilder()
+        def builder = new BashWrapperBuilder(Mock(TaskBean))
 
         when:
         def str = builder.getOutputEnvCaptureSnippet(['FOO','BAR'], Map.of())
@@ -1299,7 +1299,7 @@ class BashWrapperBuilderTest extends Specification {
 
     def 'should return env & cmd capture snippet' () {
         given:
-        def builder = new BashWrapperBuilder()
+        def builder = new BashWrapperBuilder(Mock(TaskBean))
 
         when:
         def str = builder.getOutputEnvCaptureSnippet(['FOO'], [THIS: 'this --cmd', THAT: 'other "quoted" --cmd'])
@@ -1348,7 +1348,7 @@ class BashWrapperBuilderTest extends Specification {
 
     def 'should validate bash interpreter' () {
         given:
-        def builder = new BashWrapperBuilder()
+        def builder = new BashWrapperBuilder(Mock(TaskBean))
         expect:
         builder.isBash('/bin/bash')
         builder.isBash('/usr/bin/bash')
@@ -1457,11 +1457,12 @@ class BashWrapperBuilderTest extends Specification {
         expect:
         BashWrapperBuilder.isRetryable0(ERROR) == EXPECTED
         where:
-        ERROR                           | EXPECTED
-        new RuntimeException()          | true
-        new SocketException()           | true
-        new FileSystemException('foo')  | true
-        new IOException()               | false
-        new Exception()                 | false
+        ERROR                               | EXPECTED
+        new RuntimeException()              | true
+        new SocketException()               | true
+        new SocketTimeoutException('foo')   | true
+        new FileSystemException('foo')      | true
+        new IOException()                   | false
+        new Exception()                     | false
     }
 }

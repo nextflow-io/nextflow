@@ -38,7 +38,7 @@ class FilePublishEvent {
      */
     Path target
     /**
-     * Annotations associated with the published file.
+     * Labels associated with the published file.
      */
-    Map<String,String> annotations
+    List<String> labels
 }
