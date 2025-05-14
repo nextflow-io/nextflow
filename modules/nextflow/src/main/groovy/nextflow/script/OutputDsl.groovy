@@ -16,17 +16,12 @@
 
 package nextflow.script
 
-import java.nio.file.Path
-
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
-import nextflow.extension.MixOp
 import nextflow.extension.PublishOp
-import nextflow.file.FileHelper
 /**
  * Implements the DSL for publishing workflow outputs
  *
@@ -59,12 +54,12 @@ class OutputDsl {
 
         // make sure every output was assigned
         for( final name : declarations.keySet() ) {
-            if( name !in outputs )
+            if( !outputs.containsKey(name) )
                 throw new ScriptRuntimeException("Workflow output '${name}' was declared in the output block but not assigned in the workflow")
         }
 
         for( final name : outputs.keySet() ) {
-            if( name !in declarations )
+            if( !declarations.containsKey(name) )
                 throw new ScriptRuntimeException("Workflow output '${name}' was assigned in the workflow but not declared in the output block")
         }
 
@@ -131,6 +126,15 @@ class OutputDsl {
             cl.setDelegate(dsl)
             cl.call()
             setOption('index', dsl.getOptions())
+        }
+
+        void label(CharSequence value) {
+            final opts = getOptions()
+            final current = opts.get('labels')
+            if( current instanceof List )
+                current.add(value)
+            else
+                opts.put('labels', [value])
         }
 
         void mode(String value) {

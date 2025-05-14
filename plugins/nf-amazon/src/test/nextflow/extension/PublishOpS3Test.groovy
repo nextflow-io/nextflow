@@ -41,6 +41,7 @@ class PublishOpS3Test extends BaseSpec {
             getBucketDir() >> BUCKET_DIR
         }
 
+
         def op = new PublishOp(sess, 'foo', Mock(DataflowReadChannel), [to:'/target'])
 
         when:

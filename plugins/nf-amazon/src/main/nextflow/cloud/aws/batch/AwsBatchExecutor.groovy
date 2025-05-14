@@ -273,12 +273,15 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
     boolean shouldDeleteJob(String jobId) {
         if( jobId in deletedJobs ) {
             // if the job is already in the list if has been already deleted
+            log.debug "[AWS BATCH] cleanup = already deleted job $jobId"
             return false
         }
         synchronized (deletedJobs) {
             // add the job id to the set of deleted jobs, if it's a new id, the `add` method
             // returns true therefore the job should be deleted
-            return deletedJobs.add(jobId)
+            final result = deletedJobs.add(jobId)
+            log.debug "[AWS BATCH] cleanup = should delete job $jobId: $result"
+            return result
         }
     }
 

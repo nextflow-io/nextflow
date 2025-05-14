@@ -30,7 +30,7 @@ process storeCache  {
 }
 
 workflow {
-  Channel.of('Hello', 'Ciao', 'Hola') \
+  channel.of('Hello', 'Ciao', 'Hola') \
    | storeCache \
    | view
 }

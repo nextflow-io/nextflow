@@ -12,11 +12,13 @@ All task executions are automatically saved to the task cache, regardless of the
 
 The task cache is used in conjunction with the [work directory](#work-directory) to recover cached tasks in a resumed run. It is also used by the {ref}`cli-log` sub-command to query task metadata.
 
+(cache-resume-task-hash)=
+
 ### Task hash
 
 The task hash is computed from the following metadata:
 
-- Session ID (see `workflow.sessionId` in {ref}`stdlib-constants`)
+- Session ID (see `workflow.sessionId` in the {ref}`stdlib-namespaces-workflow` namespace)
 - Task name (see `name` in {ref}`trace-report`)
 - Task container image (if applicable)
 - Task {ref}`environment modules <process-module>` (if applicable)
@@ -113,8 +115,8 @@ While Nextflow tries to make it easy to write safe concurrent code, it is still 
 Consider the following example:
 
 ```nextflow
-Channel.of(1,2,3) | map { v -> X=v; X+=2 } | view { v -> "ch1 = $v" }
-Channel.of(1,2,3) | map { v -> X=v; X*=2 } | view { v -> "ch2 = $v" }
+channel.of(1,2,3) | map { v -> X=v; X+=2 } | view { v -> "ch1 = $v" }
+channel.of(1,2,3) | map { v -> X=v; X*=2 } | view { v -> "ch2 = $v" }
 ```
 
 The problem here is that `X` is declared in each `map` closure without the `def` keyword (or other type qualifier). Using the `def` keyword makes the variable local to the enclosing scope; omitting the `def` keyword makes the variable global to the entire script.
@@ -125,10 +127,10 @@ The solution is to not use a global variable where a local variable is enough (o
 
 ```nextflow
 // local variable
-Channel.of(1,2,3) | map { v -> def X=v; X+=2 } | view { v -> "ch1 = $v" }
+channel.of(1,2,3) | map { v -> def X=v; X+=2 } | view { v -> "ch1 = $v" }
 
 // no variable
-Channel.of(1,2,3) | map { v -> v * 2 } | view { v -> "ch2 = $v" }
+channel.of(1,2,3) | map { v -> v * 2 } | view { v -> "ch2 = $v" }
 ```
 
 (cache-nondeterministic-inputs)=
@@ -139,8 +141,8 @@ Sometimes a process needs to merge inputs from different sources. Consider the f
 
 ```nextflow
 workflow {
-    ch_foo = Channel.of( ['1', '1.foo'], ['2', '2.foo'] )
-    ch_bar = Channel.of( ['2', '2.bar'], ['1', '1.bar'] )
+    ch_foo = channel.of( ['1', '1.foo'], ['2', '2.foo'] )
+    ch_bar = channel.of( ['2', '2.bar'], ['1', '1.bar'] )
     gather(ch_foo, ch_bar)
 }
 
@@ -162,8 +164,8 @@ The solution is to explicitly join the two channels before the process invocatio
 
 ```nextflow
 workflow {
-    ch_foo = Channel.of( ['1', '1.foo'], ['2', '2.foo'] )
-    ch_bar = Channel.of( ['2', '2.bar'], ['1', '1.bar'] )
+    ch_foo = channel.of( ['1', '1.foo'], ['2', '2.foo'] )
+    ch_bar = channel.of( ['2', '2.bar'], ['1', '1.bar'] )
     gather(ch_foo.join(ch_bar))
 }
 
@@ -227,3 +229,7 @@ diff run_1.tasks.log run_2.tasks.log
 ```
 
 You can then view the `diff` output or use a graphical diff viewer to compare `run_1.tasks.log` and `run_2.tasks.log`.
+
+:::{versionadded} 25.04.0
+Nextflow now has a built-in way to compare two task runs. See the {ref}`data-lineage-page` guide for details.
+:::

@@ -18,7 +18,7 @@ plugins {
 }
 
 dependencies {
-  antlr 'org.antlr:antlr4:4.9.2'
+  antlr 'me.sunlan:antlr4:4.13.2.6'
   api 'org.apache.groovy:groovy:4.0.26'
   api 'org.pf4j:pf4j:3.12.0'
 

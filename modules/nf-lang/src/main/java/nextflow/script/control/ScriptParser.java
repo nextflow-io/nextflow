@@ -16,6 +16,7 @@
 package nextflow.script.control;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 
 import groovy.lang.GroovyClassLoader;
@@ -45,13 +46,13 @@ public class ScriptParser {
     }
 
     public SourceUnit parse(File file) {
-        var source = getSource(file);
+        var source = compiler.createSourceUnit(file);
         parse0(source);
         return source;
     }
 
     public SourceUnit parse(String name, String contents) {
-        var source = getSource(name, contents);
+        var source = compiler.createSourceUnit(name, contents);
         parse0(source);
         return source;
     }
@@ -65,8 +66,9 @@ public class ScriptParser {
     }
 
     public void analyze() {
-        for( var source : compiler.getSources().values() ) {
-            new ModuleResolver(compiler()).resolve(source, (uri) -> getSource(new File(uri)));
+        var sources = new ArrayList<>(compiler.getSources().values());
+        for( var source : sources ) {
+            new ModuleResolver(compiler()).resolve(source, (uri) -> compiler.createSourceUnit(new File(uri)));
         }
 
         for( var source : compiler.getSources().values() ) {
@@ -74,28 +76,11 @@ public class ScriptParser {
             includeResolver.visit();
             for( var error : includeResolver.getErrors() )
                 source.getErrorCollector().addErrorAndContinue(error);
-            new ScriptResolveVisitor(source, compiler.compilationUnit(), Types.DEFAULT_IMPORTS, Collections.emptyList()).visit();
+            new ScriptResolveVisitor(source, compiler.compilationUnit(), Types.DEFAULT_SCRIPT_IMPORTS, Collections.emptyList()).visit();
             if( source.getErrorCollector().hasErrors() )
                 continue;
             new TypeCheckingVisitor(source, false).visit();
         }
-    }
-
-    private SourceUnit getSource(File file) {
-        return new SourceUnit(
-            file,
-            compiler.compilationUnit().getConfiguration(),
-            compiler.compilationUnit().getClassLoader(),
-            new LazyErrorCollector(compiler.compilationUnit().getConfiguration()));
-    }
-
-    private SourceUnit getSource(String name, String contents) {
-        return new SourceUnit(
-            name,
-            contents,
-            compiler.compilationUnit().getConfiguration(),
-            compiler.compilationUnit().getClassLoader(),
-            new LazyErrorCollector(compiler.compilationUnit().getConfiguration()));
     }
 
     private static CompilerConfiguration getConfig() {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2025, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,32 +12,22 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
-package nextflow.util
+package nextflow.lineage.model.v1beta1
 
-import java.time.Instant
-
-import com.google.gson.TypeAdapter
-import com.google.gson.stream.JsonReader
-import com.google.gson.stream.JsonWriter
+import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 
 /**
- * Implements a Gson adapter for {@link Instant}
+ * Model Workflow and Task Parameters.
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Jorge Ejarque <jorge.ejarque@seqera.io
  */
+@Canonical
 @CompileStatic
-class GsonInstantAdapter extends TypeAdapter<Instant> {
-    @Override
-    void write(JsonWriter writer, Instant value) throws IOException {
-        writer.value(value?.toString())
-    }
-
-    @Override
-    Instant read(JsonReader reader) throws IOException {
-        return Instant.parse(reader.nextString())
-    }
+class Parameter {
+    String type
+    String name
+    Object value
 }

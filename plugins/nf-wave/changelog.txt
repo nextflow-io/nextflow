@@ -1,5 +1,12 @@
 nf-wave changelog
 ==================
+1.12.1 - 12 May 2025
+- Add support for ARM and Snapshots (#6057) [ef4c3865]
+
+1.12.0 - 23 Apr 2025
+- Add support for Fusion Snapshots (#5954) [d7f047f8]
+- Revert Bump Fusion to version 2.5 [49b58d2d]
+
 1.11.1 - 5 Apr 2025
 - Fix date format in Wave containers meta (#5903) [59536c0a]
 

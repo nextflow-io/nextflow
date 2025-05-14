@@ -63,6 +63,11 @@ public interface OutputDsl extends DslScope {
     void index(Closure closure);
 
     @Description("""
+        Specify a label to be applied to every published file. Can be specified multiple times.
+    """)
+    void label(String value);
+
+    @Description("""
         The file publishing method (default: `'symlink'`).
     """)
     void mode(String value);

@@ -683,6 +683,56 @@ Execute a pipeline into a Kubernetes cluster.
 $ nextflow kuberun nextflow-io/hello
 ```
 
+(cli-lineage)=
+
+### `lineage`
+
+:::{versionadded} 25.04.0
+:::
+
+:::{warning} *Experimental: may change in a future release.*
+:::
+
+Inspect lineage metadata for Nextflow runs.
+
+**Usage**
+
+```console
+$ nextflow lineage SUBCOMMAND [arg ..]
+```
+
+**Description**
+
+The `lineage` command is used to inspect lineage metadata.
+
+See the {ref}`data-lineage-page` guide to learn how to get started with data lineage.
+
+**Options**
+
+`-h, -help`
+: Print the command usage.
+
+**Subcommands**
+
+`check <lid>`
+: Validate the checksum of output lineage record.
+
+`diff <lid-1> <lid-2>`
+: Display a git-style diff between two lineage records.
+
+`find <field-1>=<value-1> [<field-2>=<value-2> ...]`
+: Find all lineage records that match the given field values.
+
+`list`
+: List the Nextflow runs with lineage enabled, printing the corresponding lineage ID (LID) for each run.
+
+`render <lid> [path]`
+: Render the lineage graph for a lineage record as an HTML file (default output path: `./lineage.html`).
+: The lineage record should be of type `FileOutput`, `TaskRun`, or `WorkflowRun`.
+
+`view <lid>`
+: View a lineage record.
+
 (cli-lint)=
 
 ### `lint`
@@ -1311,7 +1361,7 @@ process sayHello {
 }
 
 workflow {
-  Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
+  channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
 }
 ```
 
@@ -1351,6 +1401,6 @@ process sayHello {
 }
 
 workflow {
-  Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
+  channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
 }
 ```
