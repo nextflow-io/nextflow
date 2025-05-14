@@ -93,29 +93,29 @@ class DefaultLinStore implements LinStore {
     @Override
     Stream<String> search(Map<String, List<String>> params) {
         return Files.walk(location)
-            .filter { path ->
+            .filter { Path path ->
                 Files.isRegularFile(path) && path.fileName.toString().startsWith('.data.json')
             }
-            .map { path ->
-                def lidObject = encoder.decode(path.text)
-                def key = location.relativize(path.parent).toString()
-                return new AbstractMap.SimpleEntry<String, LinSerializable>(key, lidObject)
+            .map { Path path ->
+                final obj = encoder.decode(path.text)
+                final key = location.relativize(path.parent).toString()
+                return new AbstractMap.SimpleEntry<String, LinSerializable>(key, obj)
             }
             .filter { entry ->
                 LinUtils.checkParams(entry.value, params)
             }
-            .map { it.key }
+            .map {it->  it.key }
     }
 
     @Override
     Stream<String> getSubKeys(String parentKey) {
-        def startPath = location.resolve(parentKey)
+        final startPath = location.resolve(parentKey)
 
         return Files.walk(startPath)
-            .filter { path ->
+            .filter { Path path ->
                 Files.isRegularFile(path) && path.fileName.toString().startsWith('.data.json') && path.parent != startPath
             }
-            .map { path ->
+            .map { Path path ->
                 location.relativize(path.parent).toString()
             }
     }

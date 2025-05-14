@@ -35,12 +35,10 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileAttribute
 import java.nio.file.attribute.FileAttributeView
 import java.nio.file.spi.FileSystemProvider
-import java.util.stream.Stream
 
 import groovy.transform.CompileStatic
 import nextflow.lineage.config.LineageConfig
 import nextflow.util.TestOnly
-
 /**
  * File System Provider for LID Paths
  *
@@ -219,7 +217,7 @@ class LinFileSystemProvider extends FileSystemProvider {
     }
 
     private static DirectoryStream<Path> getDirectoryStreamFromSubPath(LinPath lid){
-        Stream<Path> paths = lid.getSubPaths()
+        final paths = lid.getSubPaths()
         if( !paths )
             throw new FileNotFoundException("Sub paths for '$lid' do not exist")
         return new DirectoryStream<Path>() {
