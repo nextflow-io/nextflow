@@ -25,7 +25,7 @@ import test.Dsl2Spec
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Timeout(5)
-class ConcatOp2Test extends Dsl2Spec {
+class ConcatOpTest extends Dsl2Spec {
 
     def 'should concat two channel'() {
 
@@ -36,13 +36,13 @@ class ConcatOp2Test extends Dsl2Spec {
             c1.concat(c2)
         ''')
         then:
-        result.val == 1
-        result.val == 2
-        result.val == 3
-        result.val == 'a'
-        result.val == 'b'
-        result.val == 'c'
-        result.val == Channel.STOP
+        result.unwrap() == 1
+        result.unwrap() == 2
+        result.unwrap() == 3
+        result.unwrap() == 'a'
+        result.unwrap() == 'b'
+        result.unwrap() == 'c'
+        result.unwrap() == Channel.STOP
     }
 
     def 'should concat value with channel'() {
@@ -53,10 +53,10 @@ class ConcatOp2Test extends Dsl2Spec {
             ch1.concat(ch2)        
         ''')
         then:
-        result.val == 1
-        result.val == 2
-        result.val == 3
-        result.val == Channel.STOP
+        result.unwrap() == 1
+        result.unwrap() == 2
+        result.unwrap() == 3
+        result.unwrap() == Channel.STOP
     }
 
     def 'should concat two value channels'() {
@@ -67,9 +67,9 @@ class ConcatOp2Test extends Dsl2Spec {
             ch1.concat(ch2)        
         ''')
         then:
-        result.val == 1
-        result.val == 2
-        result.val == Channel.STOP
+        result.unwrap() == 1
+        result.unwrap() == 2
+        result.unwrap() == Channel.STOP
     }
 
     def 'should concat with empty'() {
@@ -80,8 +80,8 @@ class ConcatOp2Test extends Dsl2Spec {
             ch1.concat(ch2)        
         ''')
         then:
-        result.val == 1
-        result.val == Channel.STOP
+        result.unwrap() == 1
+        result.unwrap() == Channel.STOP
         
         when:
         result = dsl_eval('''
@@ -90,7 +90,7 @@ class ConcatOp2Test extends Dsl2Spec {
             ch1.concat(ch2)        
         ''')
         then:
-        result.val == Channel.STOP
+        result.unwrap() == Channel.STOP
     }
 
 }

@@ -19,6 +19,7 @@ package nextflow.plugin.extension
 
 import java.nio.file.Path
 
+import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Channel
 import nextflow.exception.DuplicateModuleFunctionException
 import nextflow.plugin.Plugins
@@ -67,11 +68,11 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
             '''
 
         when:
-        def result = dsl_eval(SCRIPT_TEXT)
+        def result = dsl_eval(SCRIPT_TEXT) as DataflowReadChannel
 
         then:
-        result.val == 'Bye bye folks'
-        result.val == Channel.STOP
+        result.unwrap() == 'Bye bye folks'
+        result.unwrap() == Channel.STOP
     }
 
     def 'should execute custom operator extension/2' () {
@@ -85,11 +86,11 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
               .goodbye()             
             '''
         when:
-        def result = dsl_eval(SCRIPT_TEXT)
+        def result = dsl_eval(SCRIPT_TEXT) as DataflowReadChannel
 
         then:
-        result.val == 'Bye bye folks'
-        result.val == Channel.STOP
+        result.unwrap() == 'Bye bye folks'
+        result.unwrap() == Channel.STOP
 
     }
 
@@ -102,12 +103,12 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
             '''
 
         when:
-        def result = dsl_eval(SCRIPT_TEXT)
+        def result = dsl_eval(SCRIPT_TEXT) as DataflowReadChannel
 
         then:
         result
-        result.val == 'a string'.reverse()
-        result.val == Channel.STOP
+        result.unwrap() == 'a string'.reverse()
+        result.unwrap() == Channel.STOP
 
     }
 
@@ -122,12 +123,12 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
             '''
 
         when:
-        def result = dsl_eval(SCRIPT_TEXT)
+        def result = dsl_eval(SCRIPT_TEXT) as DataflowReadChannel
 
         then:
         result
-        result.val == 'a string'.reverse()
-        result.val == Channel.STOP
+        result.unwrap() == 'a string'.reverse()
+        result.unwrap() == Channel.STOP
 
     }
 
@@ -142,13 +143,13 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
             '''
 
         when:
-        def result = dsl_eval(SCRIPT_TEXT)
+        def result = dsl_eval(SCRIPT_TEXT) as DataflowReadChannel
 
         then:
-        result.val == 100
-        result.val == 200
-        result.val == 300
-        result.val == Channel.STOP
+        result.unwrap() == 100
+        result.unwrap() == 200
+        result.unwrap() == 300
+        result.unwrap() == Channel.STOP
     }
 
     def 'should execute custom factory as alias extension' () {
@@ -161,12 +162,12 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
             '''
 
         when:
-        def result = dsl_eval(SCRIPT_TEXT)
+        def result = dsl_eval(SCRIPT_TEXT) as DataflowReadChannel
 
         then:
         result
-        result.val == 'reverse this string'.reverse()
-        result.val == Channel.STOP
+        result.unwrap() == 'reverse this string'.reverse()
+        result.unwrap() == Channel.STOP
 
     }
 
@@ -207,11 +208,11 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
 
     def 'should execute custom functions'() {
         when:
-        def result = dsl_eval(SCRIPT_TEXT)
+        def result = dsl_eval(SCRIPT_TEXT) as DataflowReadChannel
 
         then:
-        result.val == EXPECTED
-        result.val == Channel.STOP
+        result.unwrap() == EXPECTED
+        result.unwrap() == Channel.STOP
 
         where:
         SCRIPT_TEXT                                                                           | EXPECTED
@@ -223,13 +224,13 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
 
     def 'should call init plugin in custom functions'() {
         when:
-        def result = dsl_eval("""
+        dsl_eval("""
             include { sayHello } from 'plugin/nf-test-plugin-hello' 
             sayHello()
         """)
 
         then:
-        true
+        noExceptionThrown()
     }
 
     def 'should throw function not found'() {
@@ -279,11 +280,11 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         '''
 
         when:
-        def result = dsl_eval(SCRIPT_TEXT)
+        def result = dsl_eval(SCRIPT_TEXT) as DataflowReadChannel
 
         then:
-        result.val == 'hi'
-        result.val == Channel.STOP
+        result.unwrap() == 'hi'
+        result.unwrap() == Channel.STOP
     }
 
     def 'should not include a non annotated function'() {
@@ -334,10 +335,10 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         '''
 
         when:
-        def result = dsl_eval(SCRIPT)
+        def result = dsl_eval(SCRIPT) as DataflowReadChannel
 
         then:
-        result.val == 'hi'
+        result.unwrap() == 'hi'
 
     }
 
@@ -390,10 +391,10 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         '''
 
         when:
-        def result = dsl_eval(SCRIPT)
+        def result = dsl_eval(SCRIPT) as DataflowReadChannel
 
         then:
-        result.val == 'hola'
+        result.unwrap() == 'hola'
     }
 
     def 'should execute custom functions and channel extension at the same time'() {
@@ -403,11 +404,11 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         SCRIPT.text = SCRIPT_TEXT
 
         when:
-        def result = dsl_eval(SCRIPT)
+        def result = dsl_eval(SCRIPT) as DataflowReadChannel
 
         then:
-        result.val == EXPECTED
-        result.val == Channel.STOP
+        result.unwrap() == EXPECTED
+        result.unwrap() == Channel.STOP
 
         where:
         SCRIPT_TEXT                                                                                           | EXPECTED

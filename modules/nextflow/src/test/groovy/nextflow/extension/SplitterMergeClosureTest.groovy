@@ -16,6 +16,7 @@
 
 package nextflow.extension
 
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import spock.lang.Specification
 /**
  *
@@ -26,7 +27,7 @@ class SplitterMergeClosureTest extends Specification {
     def 'should merge splits' () {
 
         when:
-        def merge = new SplitterMergeClosure([1,2])
+        def merge = new SplitterMergeClosure([1,2], Mock(DataflowWriteChannel))
         def output1 = ['pair_1', 'a', ['x','y'], 'any']
         def output2 = ['pair_1', ['a','b'], 'x', 'any']
         def result = merge.call( [output1, output2] as Object[] )
@@ -34,7 +35,7 @@ class SplitterMergeClosureTest extends Specification {
         result == ['pair_1', 'a', 'x', 'any']
 
         when:
-        merge = new SplitterMergeClosure([2,3])
+        merge = new SplitterMergeClosure([2,3], Mock(DataflowWriteChannel))
         output1 = ['pair_1', 'any' , 'a', ['x','y']]
         output2 = ['pair_1', 'any', ['a','b'], 'x']
         result = merge.call( [output1, output2] as Object[] )
@@ -42,7 +43,7 @@ class SplitterMergeClosureTest extends Specification {
         result == ['pair_1', 'any', 'a', 'x']
 
         when:
-        merge = new SplitterMergeClosure([0,1])
+        merge = new SplitterMergeClosure([0,1], Mock(DataflowWriteChannel))
         output1 = ['a', ['x','y'], 'pair_1', 'any' ]
         output2 = [['a','b'], 'x', 'pair_1', 'any']
         result = merge.call( [output1, output2] as Object[] )

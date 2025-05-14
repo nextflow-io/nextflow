@@ -26,49 +26,38 @@ import test.TestHelper
  */
 class StringSplitterTest extends Specification {
 
-
     def testSplitString () {
-
         expect:
         new StringSplitter().options(by: 5).target('012345678901234567') .list() == ['01234','56789','01234','567']
-
     }
 
     def testSplitStringWithLimit () {
-
         expect:
         new StringSplitter().options(by:5, limit: 11).target('012345678901234567') .list() == ['01234','56789','0']
-
     }
 
     def testSplitWithClosure() {
-
         expect:
         new StringSplitter()
             .target('012345678901234567')
             .options(by:5, each: {it.reverse()} )
             .list()  == ['43210','98765','43210','765']
-
     }
 
     def testSplitChannel() {
-
         when:
         def q = new StringSplitter().target('012345678901234567') .options(by:5). channel()
         then:
-        q.val == '01234'
-        q.val == '56789'
-        q.val == '01234'
-        q.val == '567'
-        q.val == PoisonPill.instance
-
+        q.unwrap() == '01234'
+        q.unwrap() == '56789'
+        q.unwrap() == '01234'
+        q.unwrap() == '567'
+        q.unwrap() == PoisonPill.instance
     }
 
     def testSplitStringByOne () {
-
         expect:
         new StringSplitter().options(by: 1).target('ABC') .list() == ['A','B','C']
-
     }
 
     def testSplitToFile() {
@@ -81,7 +70,6 @@ class StringSplitterTest extends Specification {
         chunks[0].text == 'Hell'
         chunks[1].text == 'o wo'
         chunks[2].text == 'rld'
-
     }
 
 }

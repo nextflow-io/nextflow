@@ -63,7 +63,11 @@ class TransposeOp {
     }
 
     DataflowWriteChannel apply() {
-        DataflowHelper.subscribeImpl(source, DataflowHelper.eventsMap(this.&transpose, this.&done))
+        new SubscribeOp()
+            .withInput(source)
+            .withOnNext(this.&transpose)
+            .withOnComplete(this.&done)
+            .apply()
         return target
     }
 

@@ -31,13 +31,12 @@ class CombineOpTest extends Specification {
         new Session()
     }
 
-
     def 'should make a tuple' () {
         given:
         def op = new CombineOp(Mock(DataflowQueue), Mock(DataflowQueue))
 
         expect:
-        op.tuple(pivot, left,right) == result
+        op.tuple(pivot, left, right) == result
 
         where:
         pivot       | left              | right             | result
@@ -63,7 +62,7 @@ class CombineOpTest extends Specification {
 
         when:
         def result = op.apply()
-        def all = (List) ToListOp.apply(result).val
+        def all = (List) ToListOp.apply(result).unwrap()
         then:
         all.size() == 9
         ['a', 1] in all
@@ -86,14 +85,13 @@ class CombineOpTest extends Specification {
         def op = new CombineOp(left,right)
         op.setPivot([0])
         def result = op.apply()
-        def all = (List) ToListOp.apply(result).val
+        def all = (List) ToListOp.apply(result).unwrap()
         println all
         then:
         true
     }
 
     def 'should combine a channel with a list' () {
-
         given:
         def left = Channel.of('a','b')
         def right = [1,2,3,4]
@@ -101,7 +99,7 @@ class CombineOpTest extends Specification {
 
         when:
         def result = op.apply()
-        def all = (List) ToListOp.apply(result).val
+        def all = (List) ToListOp.apply(result).unwrap()
         then:
         all.size() == 8
         ['a', 1] in all
@@ -115,7 +113,6 @@ class CombineOpTest extends Specification {
     }
 
     def 'should combine a value with a list' () {
-
         given:
         def left = Channel.value('x')
         def right = [1,2,3,4]
@@ -123,7 +120,7 @@ class CombineOpTest extends Specification {
 
         when:
         def result = op.apply()
-        def all = (List) ToListOp.apply(result).val
+        def all = (List) ToListOp.apply(result).unwrap()
         then:
         all.size() == 4
         ['x', 1] in all
@@ -133,7 +130,6 @@ class CombineOpTest extends Specification {
     }
 
     def 'should combine two values' () {
-
         given:
         def left = Channel.value('x')
         def right = Channel.value('z')
@@ -141,7 +137,7 @@ class CombineOpTest extends Specification {
 
         when:
         def result = op.apply()
-        def all = (List) ToListOp.apply(result).val
+        def all = (List) ToListOp.apply(result).unwrap()
         then:
         all.size() == 1
         ['x', 'z'] in all
@@ -155,11 +151,10 @@ class CombineOpTest extends Specification {
         when:
         def result = op.apply()
         then:
-        result.val == Channel.STOP
+        result.unwrap() == Channel.STOP
     }
 
     def 'should chain combine ops flat default' () {
-
         given:
         def ch2 = Channel.of('a','b','c')
         def ch3 = Channel.of('x','y')
@@ -167,7 +162,7 @@ class CombineOpTest extends Specification {
 
         when:
         def result = new CombineOp(new CombineOp(ch1, ch2).apply(), ch3).apply()
-        def all = (List) ToListOp.apply(result).val
+        def all = (List) ToListOp.apply(result).unwrap()
         then:
         all.size() == 12
 
@@ -184,11 +179,9 @@ class CombineOpTest extends Specification {
         [2,'b','y'] in all
         [2,'c','x'] in all
         [2,'c','y'] in all
-
     }
 
     def 'should chain combine ops flat true' () {
-
         given:
         def ch1 = Channel.of(1,2)
         def ch2 = Channel.of('a','b','c')
@@ -196,7 +189,7 @@ class CombineOpTest extends Specification {
 
         when:
         def result = new CombineOp(new CombineOp(ch1, ch2).apply(), ch3).apply()
-        def all = (List) ToListOp.apply(result).val
+        def all = (List) ToListOp.apply(result).unwrap()
         then:
         all.size() == 12
 
@@ -216,13 +209,12 @@ class CombineOpTest extends Specification {
     }
 
     def 'should combine with tuples' () {
-
         when:
         def left = Channel.of([1, 'x'], [2,'y'], [3, 'z'])
         def right = ['alpha','beta','gamma']
 
         def result = new CombineOp(left, right).apply()
-        def all = (List) ToListOp.apply(result).val
+        def all = (List) ToListOp.apply(result).unwrap()
 
         then:
         all.size() == 9
@@ -238,7 +230,6 @@ class CombineOpTest extends Specification {
         [3, 'z', 'alpha'] in all
         [3, 'z', 'beta'] in all
         [3, 'z', 'gamma'] in all
-
     }
 
     def 'should combine with map' () {
@@ -247,7 +238,7 @@ class CombineOpTest extends Specification {
         def left = Channel.of([id:1, val:'x'], [id:2,val:'y'], [id:3, val:'z'])
         def right = ['alpha','beta','gamma']
         def result = left.combine(right)
-        def all = (List) ToListOp.apply(result).val
+        def all = (List) ToListOp.apply(result).unwrap()
 
         then:
         all.size() == 9
@@ -262,17 +253,13 @@ class CombineOpTest extends Specification {
         [[id:3, val:'z'], 'alpha'] in all
         [[id:3, val:'z'], 'beta'] in all
         [[id:3, val:'z'], 'gamma'] in all
-
     }
 
-
-
     def 'should combine items'() {
-
         when:
         def left = Channel.of(1,2,3)
         def right = ['a','b']
-        def result = left.combine(right).toSortedList().val.iterator()
+        def result = left.combine(right).toSortedList().unwrap().iterator()
         then:
         result.next() == [1, 'a']
         result.next() == [1, 'b']
@@ -284,7 +271,7 @@ class CombineOpTest extends Specification {
         when:
         left = Channel.of(1,2)
         right = Channel.of('a','b','c')
-        result = left.combine(right).toSortedList().val.iterator()
+        result = left.combine(right).toSortedList().unwrap().iterator()
         then:
         result.next() == [1, 'a']
         result.next() == [1, 'b']
@@ -292,15 +279,13 @@ class CombineOpTest extends Specification {
         result.next() == [2, 'a']
         result.next() == [2, 'b']
         result.next() == [2, 'c']
-
     }
 
     def 'should chain combine'() {
-
         when:
         def str1 = Channel.of('a','b','c')
         def str2 = Channel.of('x','y')
-        def result = Channel.of(1,2).combine(str1).combine(str2).toSortedList().val.iterator()
+        def result = Channel.of(1,2).combine(str1).combine(str2).toSortedList().unwrap().iterator()
         then:
         result.next() == [1,'a','x']
         result.next() == [1,'a','y']
@@ -318,7 +303,7 @@ class CombineOpTest extends Specification {
         when:
         str1 = Channel.of('a','b','c')
         str2 = Channel.of('x','y')
-        result = Channel.of(1,2).combine(str1).combine(str2,flat:false).toSortedList().val.iterator()
+        result = Channel.of(1,2).combine(str1).combine(str2,flat:false).toSortedList().unwrap().iterator()
         then:
         result.next() == [1,'a','x']
         result.next() == [1,'a','y']
@@ -335,7 +320,6 @@ class CombineOpTest extends Specification {
     }
 
     def 'should combine by first element' () {
-
         given:
         def left = Channel.of( ['A',1], ['A',2], ['B',1], ['B',2] )
         def right = Channel.of( ['A',1], ['A',2], ['B',1], ['B',2] )
@@ -344,7 +328,7 @@ class CombineOpTest extends Specification {
         def op = new CombineOp(left, right)
         op.pivot = 0
         def result = op.apply()
-        def all = (List) ToListOp.apply(result).val
+        def all = (List) ToListOp.apply(result).unwrap()
 
         then:
         all.size() == 8
@@ -367,7 +351,7 @@ class CombineOpTest extends Specification {
 
         when:
         def result = left.channel().combine(right.channel())
-        def all = (List) ToListOp.apply(result).val
+        def all = (List) ToListOp.apply(result).unwrap()
         then:
         all.size() == 9
         [1, 'a', 2, 'p'] in all
@@ -384,7 +368,7 @@ class CombineOpTest extends Specification {
 
         when:
         result = left.channel().combine(right.channel(), by: 0)
-        all = (List) ToListOp.apply(result).val
+        all = (List) ToListOp.apply(result).unwrap()
         then:
         all.size() == 4
         [1, 'a', 'r'] in all
@@ -394,7 +378,7 @@ class CombineOpTest extends Specification {
 
         when:
         result = left.channel().combine(right.channel(), by: [0])
-        all = (List) ToListOp.apply(result).val
+        all = (List) ToListOp.apply(result).unwrap()
         then:
         all.size() == 4
         [1, 'a', 'r'] in all
