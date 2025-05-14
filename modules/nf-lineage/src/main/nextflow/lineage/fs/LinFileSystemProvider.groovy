@@ -39,7 +39,7 @@ import java.util.stream.Stream
 
 import groovy.transform.CompileStatic
 import nextflow.lineage.config.LineageConfig
-
+import nextflow.util.TestOnly
 
 /**
  * File System Provider for LID Paths
@@ -395,4 +395,8 @@ class LinFileSystemProvider extends FileSystemProvider {
         throw new UnsupportedOperationException("Set file attributes not supported by ${getScheme().toUpperCase()} file system provider")
     }
 
+    @TestOnly
+    void reset() {
+        fileSystem=null
+    }
 }

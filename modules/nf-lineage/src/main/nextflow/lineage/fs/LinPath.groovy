@@ -30,6 +30,7 @@ import java.time.OffsetDateTime
 import java.util.stream.Stream
 
 import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.file.FileHelper
@@ -588,6 +589,38 @@ class LinPath implements Path, LogicalDataPath {
     String toString() {
         return "$filePath${query ? '?' + query : ''}${fragment ? '#' + fragment : ''}".toString()
     }
+    /**
+     * Validates the integrity of the LinPath. If there is a problem with the validation an exception is thrown.
+     * To validate just try to get the find target target path. It checks if lid exists, it is a FileOutput,
+     * the target path exists and the checksum is the same as the stored in the metadata.
+     */
+    FileCheck validate() throws Exception{
+        final obj = fileSystem.store.load(filePath)
+        if( !obj )
+            return new FileCheck("File cannot be found")
+        if( obj instanceof FileOutput ) {
+            final res = validateDataOutput(obj as FileOutput)
+            return new FileCheck(res, obj)
+        }
+        return new FileCheck("Unexpected lineage object type: ${obj.getClass().getName()}")
+    }
 
+    @EqualsAndHashCode
+    static class FileCheck {
+        final String error
+        final FileOutput file
+
+        FileCheck(String error, FileOutput out=null) {
+            this.error = error
+            this.file = out
+        }
+
+        /**
+         * Implements groovy truth
+         */
+        boolean asBoolean() {
+            return error==null && file!=null
+        }
+    }
 }
 

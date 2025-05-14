@@ -25,11 +25,13 @@ import groovy.transform.CompileStatic
 import nextflow.Session
 import nextflow.cli.CmdLineage
 import nextflow.config.ConfigMap
+import nextflow.exception.AbortOperationException
 import nextflow.lineage.LinHistoryRecord
 import nextflow.lineage.LinPropertyValidator
 import nextflow.lineage.LinStore
 import nextflow.lineage.LinStoreFactory
 import nextflow.lineage.LinUtils
+import nextflow.lineage.fs.LinPathFactory
 import nextflow.lineage.serde.LinEncoder
 import nextflow.ui.TableBuilder
 import org.eclipse.jgit.diff.DiffAlgorithm
@@ -188,6 +190,20 @@ class LinCommandImpl implements CmdLineage.LinCommand {
         } catch (Throwable e){
             println "Error searching for ${args[0]}. ${e.message}"
         }
+    }
+
+    @Override
+    void check(ConfigMap config, List<String> args) {
+        final store = LinStoreFactory.getOrCreate(new Session(config))
+        if (!store) {
+            println ERR_NOT_LOADED
+            return
+        }
+        final valid = LinPathFactory.create(args[0]).validate()
+        if( !valid )
+            throw new AbortOperationException(valid.error)
+        else
+            println("Checksum validation succeed")
     }
 
     private Map<String, List<String>> parseFindArgs(List<String> args){
