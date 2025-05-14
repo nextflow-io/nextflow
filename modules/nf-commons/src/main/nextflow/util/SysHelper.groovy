@@ -38,7 +38,7 @@ class SysHelper {
 
     public static final String DEFAULT_DOCKER_PLATFORM = 'linux/amd64'
 
-    private static String DATE_FORMAT = 'dd-MMM-yyyy HH:mm Z'
+    private static final String DATE_FORMAT = 'dd-MMM-yyyy HH:mm'
 
     /**
      * Given a timestamp as epoch time convert to a string representation
