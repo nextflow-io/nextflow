@@ -19,6 +19,7 @@ package nextflow.util
 import java.lang.management.ManagementFactory
 
 import com.sun.management.OperatingSystemMXBean
+import nextflow.SysEnv
 import nextflow.file.FileHelper
 import spock.lang.Specification
 /**
@@ -74,6 +75,9 @@ class SysHelperTest extends Specification {
 
     def 'should format date string' () {
         given:
+        def env = dateFormat ? [NXF_DATE_FORMAT:dateFormat] : [:]
+        SysEnv.push(env)
+        and:
         def defLocale = Locale.getDefault(Locale.Category.FORMAT)
         def useLocale = new Locale.Builder().setLanguage(locale).build()
         Locale.setDefault(Locale.Category.FORMAT, useLocale)
@@ -85,11 +89,18 @@ class SysHelperTest extends Specification {
 
         cleanup:
         Locale.setDefault(Locale.Category.FORMAT, defLocale)
+        SysEnv.pop()
 
         where:
-        dateInMilis | locale | expected
-        1470901220000  | 'en' | '11-Aug-2016 09:40 +0200'
-        1470901220000  | 'es' | '11-Aug-2016 09:40 +0200'
+        dateInMilis    | locale | dateFormat    | expected
+        1470901220000  | 'en'   | null          | '11-Aug-2016 09:40'
+        1470901220000  | 'es'   | null          | '11-Aug-2016 09:40'
+        and:
+        1470901220000  | 'en'   | 'iso'         | '2016-08-11T09:40:20+02:00'
+        1470901220000  | 'es'   | 'iso'         | '2016-08-11T09:40:20+02:00'
+        and:
+        1470901220000  | 'en'   | "yyyy-MM-dd'T'HH:mm:ss.SSS"         | '2016-08-11T09:40:20.000'
+        1470901220000  | 'es'   | "yyyy-MM-dd'T'HH:mm:ss.SSS"         | '2016-08-11T09:40:20.000'
     }
 
 }

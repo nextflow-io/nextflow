@@ -25,6 +25,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 import nextflow.file.FileHelper
 /**
  * System helper methods
@@ -66,9 +67,16 @@ class SysHelper {
      *      The formatted date string
      */
     static String fmtDate(Date date, TimeZone tz=null) {
-        def formatter=new SimpleDateFormat(DATE_FORMAT, Locale.ENGLISH)
+        final formatter=new SimpleDateFormat(fmtEnv(), Locale.ENGLISH)
         if(tz) formatter.setTimeZone(tz)
         formatter.format(date)
+    }
+
+    static private String fmtEnv() {
+        final result = SysEnv.get('NXF_DATE_FORMAT', DATE_FORMAT)
+        return result.toLowerCase() == 'iso'
+            ? "yyyy-MM-dd'T'HH:mm:ssXXX"
+            : result
     }
 
     /**
