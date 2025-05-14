@@ -85,14 +85,19 @@ class LinTypeAdapterFactory<T> extends RuntimeTypeAdapterFactory<T> {
 
             @Override
             R read(JsonReader reader) throws IOException {
-                def json = JsonParser.parseReader(reader).asJsonObject
-                def obj = (JsonObject) json
+                def obj = JsonParser.parseReader(reader)?.asJsonObject
+                if( !obj )
+                    throw new JsonParseException("Parsed object is null")
                 def versionEl = obj.get(VERSION_FIELD)
                 if (versionEl == null || versionEl.asString != CURRENT_VERSION) {
-                    throw new JsonParseException("Invalid or missing version")
+                    throw new JsonParseException("'Invalid or missing '${VERSION_FIELD}' property")
                 }
                 final typeEl = obj.get(getTypeFieldName())
-                final specEl = obj.get(SPEC_FIELD).asJsonObject
+                if( !typeEl )
+                    throw new JsonParseException("'${getTypeFieldName()}' not found")
+                final specEl = obj.get(SPEC_FIELD)?.asJsonObject
+                if ( !specEl )
+                    throw new JsonParseException("'Invalid or missing '${SPEC_FIELD}' property")
                 specEl.add(getTypeFieldName(), typeEl)
                 return delegate.fromJsonTree(specEl)
             }
