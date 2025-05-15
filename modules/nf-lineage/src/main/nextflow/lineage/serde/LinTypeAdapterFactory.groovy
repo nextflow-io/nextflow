@@ -90,7 +90,7 @@ class LinTypeAdapterFactory<T> extends RuntimeTypeAdapterFactory<T> {
                     throw new JsonParseException("Parsed object is null")
                 def versionEl = obj.get(VERSION_FIELD)
                 if (versionEl == null || versionEl.asString != CURRENT_VERSION) {
-                    throw new JsonParseException("'Invalid or missing '${VERSION_FIELD}' property")
+                    throw new JsonParseException("Invalid or missing '${VERSION_FIELD}' property")
                 }
                 final typeEl = obj.get(getTypeFieldName())
                 if( !typeEl )
