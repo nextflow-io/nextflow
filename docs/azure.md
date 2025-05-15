@@ -257,6 +257,15 @@ This section describes how to configure and use Azure Batch with Nextflow for ef
 
 For comprehensive information about Azure Batch features and capabilities, refer to the [official Azure Batch documentation](https://learn.microsoft.com/en-us/azure/batch/).
 
+### Overview
+
+TODO: How it works here.
+
+- pools
+- jobs
+- tasks
+- shared file system using Blob Storage
+
 ### Pool Management
 
 :::{warning}
@@ -493,6 +502,8 @@ azure.batch.pools.<pool-name>.startTask {
     privileged = true  // optional, default: false
 }
 ```
+
+### Advanced Features
 
 #### Azure File Shares
 
