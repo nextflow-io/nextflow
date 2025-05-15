@@ -160,34 +160,6 @@ azure {
 }
 ```
 
-:::{note}
-Environment variables can be used instead of config settings:
-- `AZURE_STORAGE_ACCOUNT_NAME` - Storage account name
-- `AZURE_STORAGE_ACCOUNT_KEY` - Storage account key
-- `AZURE_BATCH_ACCOUNT_NAME` - Batch account name
-- `AZURE_BATCH_ACCOUNT_KEY` - Batch account key
-:::
-
-## Storage Services
-
-Azure Storage provides several services for storing and accessing data in the cloud. Nextflow primarily supports Azure Blob Storage for most workloads, with limited support for Azure File Shares for specific use cases. This section describes how to configure and use Azure Storage with Nextflow, focusing on the recommended Blob Storage approach.
-
-### Azure Blob Storage
-
-When using Azure Storage with Nextflow, you can access your data using the `az://` URI scheme, which allows transparent access to files stored in Azure Blob Storage. Once the Blob Storage credentials are configured, you can access files in any blob container as if they were local files by prepending the path with `az://` followed by the container name.
-
-Azure Blob Storage provides scalable object storage for any type of data. It's designed for storing massive amounts of unstructured data such as text or binary data, making it ideal for bioinformatics workflows. Once configured, you can access blob storage using the `az://` prefix followed by the container name and path:
-
-```groovy
-// Access a file in a container
-file('az://my-container/path/to/file.txt')
-```
-
-```groovy
-// Use as a work directory
-nextflow run <PIPELINE> -w az://my-container/work
-```
-
 You can also use a Shared Access Token (SAS) instead of an account key:
 
 ```groovy
@@ -198,6 +170,31 @@ azure.storage.sasToken = '<YOUR SAS TOKEN>'
 When creating a SAS token, ensure you enable these permissions: `Read`, `Write`, `Delete`, `List`, `Add`, `Create` on the resource types `Container` and `Object`.
 The value of `sasToken` should be stripped of the leading `?` character.
 :::
+
+:::{note}
+Environment variables can be used instead of config settings:
+- `AZURE_STORAGE_ACCOUNT_NAME` - Storage account name
+- `AZURE_STORAGE_ACCOUNT_KEY` - Storage account key
+- `AZURE_BATCH_ACCOUNT_NAME` - Batch account name
+- `AZURE_BATCH_ACCOUNT_KEY` - Batch account key
+- `AZURE_STORAGE_SAS_TOKEN` - Storage SAS token
+:::
+
+
+
+## Storage Services
+
+Azure Storage provides several services for storing and accessing data in the cloud. Nextflow primarily supports Azure Blob Storage for most workloads, with limited support for Azure File Shares for specific use cases. This section describes how to configure and use Azure Storage with Nextflow, focusing on the recommended Blob Storage approach.
+
+### Azure Blob Storage
+
+When using Azure Storage with Nextflow, you can access your data using the `az://` URI scheme, which allows transparent access to files stored in Azure Blob Storage. Once the Blob Storage credentials are configured, you can access files in any blob container as if they were local files by prepending the path with `az://` followed by the container name.
+
+For example:
+```groovy
+// Access a file in a container
+file('az://my-container/path/to/file.txt')
+```
 
 ## Compute Services
 
@@ -343,7 +340,7 @@ The above example defines the configuration for two node pools. The first will p
 When Nextflow is configured to use a pool already available in the Batch account, the target pool must satisfy the following requirements:
 
 - The pool must be declared as dockerCompatible (Container Type property).
-- The task slots per node must match the number of cores for the selected VM. Otherwise, Nextflow will return an error like “Azure Batch pool ‘ID’ slots per node does not match the VM num cores (slots: N, cores: Y)”.
+- The task slots per node must match the number of cores for the selected VM. Otherwise, Nextflow will return an error like "Azure Batch pool 'ID' slots per node does not match the VM num cores (slots: N, cores: Y)".
 - Unless you are using Fusion, all tasks must have AzCopy available in the path. If `azure.batch.copyToolInstallMode = 'node'` this will require every node to have the azcopy binary located at `$AZ_BATCH_NODE_SHARED_DIR/bin/`.
 
 #### Task Packing
@@ -453,7 +450,7 @@ Public container images from Docker Hub or other public registries can still be 
 
 Azure File Shares provide fully managed file shares that can be mounted to compute nodes. This is useful for sharing reference data or tools across tasks. Files become immediately available in the file system and can be accessed as local files within processes.
 
-The Azure File share must exist in the storage account configured for Blob Storage. The name of the source Azure File share and mount path (the destination path where the files are mounted) must be provided. Additional mount options (see the Azure Files documentation) can be set as well for further customisation of the mounting process.
+The Azure File share must exist in the storage account configured for Blob Storage. The name of the source Azure File share and mount path (the destination path where the files are mounted) must be provided. Additional mount options (see the [Azure Files documentation](https://learn.microsoft.com/en-us/azure/storage/files/storage-files-introduction)) can be set as well for further customisation of the mounting process.
 
 Configuration:
 
@@ -487,14 +484,14 @@ File shares require storage account key authentication - Managed Identity and Se
   ```
   
   :::{warning}
-  Virtual Networks require Microsoft Entra authentication
+  Virtual Networks require Microsoft Entra authentication (Service Principal or Managed Identity)
   :::
 
 - **Start Tasks**: Run setup commands when nodes join the pool:
   ```groovy
   azure.batch.pools.<pool-name>.startTask {
       script = 'setup.sh'
-      privileged = true
+      privileged = true  // optional, default: false
   }
   ```
 
