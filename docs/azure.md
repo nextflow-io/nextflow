@@ -60,9 +60,9 @@ Replacing `<PIPELINE NAME>`  with a pipeline name e.g. `nextflow-io/rnaseq-nf` a
 
 There are three ways to authenticate with Azure services, listed in order of recommended usage:
 
-1. **Managed Identities** (Most secure, Azure-only) - Use Azure-managed credentials without storing secrets
-2. **Service Principals** (Secure, works anywhere) - Use Microsoft Entra credentials for authentication
-3. **Access Keys** (Basic) - Use direct access keys for authentication
+1. **Managed Identities** (Most secure, Azure-only): Use Azure-managed credentials without storing secrets
+2. **Service Principals** (Secure, works anywhere): Use Microsoft Entra credentials for authentication
+3. **Access Keys** (Basic): Use direct access keys for authentication
 
 ### Required Roles
 
@@ -112,7 +112,7 @@ azure {
 ```
 
 :::{note}
-Environment variable: `AZURE_MANAGED_IDENTITY_SYSTEM=true` can be used instead of the config setting
+If the managedIdentity config item is not provided Nextflow will read the environment variable: `AZURE_MANAGED_IDENTITY_SYSTEM=true`
 :::
 
 #### User-Assigned Managed Identity
@@ -142,7 +142,7 @@ azure {
 ```
 
 :::{note}
-Environment variable: `AZURE_MANAGED_IDENTITY_USER` can be used instead of the clientId setting
+If the managedIdentity config item is not provided Nextflow will read the environment variable: `AZURE_MANAGED_IDENTITY_USER_ASSIGNED_ID`
 :::
 
 ### Service Principals
@@ -170,10 +170,10 @@ azure {
 ```
 
 :::{note}
-Environment variables can be used instead of config settings:
-- `AZURE_CLIENT_ID` - Service principal client ID
-- `AZURE_CLIENT_SECRET` - Service principal secret
-- `AZURE_TENANT_ID` - Tenant ID
+If the service principal credentials are not provided Nextflow will read the following environment variables:
+- `AZURE_CLIENT_ID`: Service principal client ID
+- `AZURE_CLIENT_SECRET`: Service principal secret
+- `AZURE_TENANT_ID`: Tenant ID
 :::
 
 ### Access Keys
@@ -212,12 +212,12 @@ The value of `sasToken` should be stripped of the leading `?` character.
 :::
 
 :::{note}
-Environment variables can be used instead of config settings:
-- `AZURE_STORAGE_ACCOUNT_NAME` - Storage account name
-- `AZURE_STORAGE_ACCOUNT_KEY` - Storage account key
-- `AZURE_BATCH_ACCOUNT_NAME` - Batch account name
-- `AZURE_BATCH_ACCOUNT_KEY` - Batch account key
-- `AZURE_STORAGE_SAS_TOKEN` - Storage SAS token
+If the access keys are not provided as config items Nextflow will read the following environment variables:
+- `AZURE_STORAGE_ACCOUNT_NAME`: Storage account name
+- `AZURE_STORAGE_ACCOUNT_KEY`: Storage account key
+- `AZURE_BATCH_ACCOUNT_NAME`: Batch account name
+- `AZURE_BATCH_ACCOUNT_KEY`: Batch account key
+- `AZURE_STORAGE_SAS_TOKEN`: Storage SAS token
 :::
 
 ## Azure Blob Storage
@@ -425,8 +425,8 @@ Custom formulas can be provided via the `azure.batch.pools.<pool-name>.scaleForm
 
 When Nextflow creates a pool of compute nodes, it selects:
 
-- The virtual machine image reference - defines the OS and software to be installed on the node
-- The Batch node agent SKU - a program that runs on each node and provides the interface between the node and the Azure Batch service
+- The virtual machine image reference: defines the OS and software to be installed on the node
+- The Batch node agent SKU: a program that runs on each node and provides the interface between the node and the Azure Batch service
 
 Together, these settings determine the operating system, version, and available features for each compute node in your pool.
 
@@ -454,9 +454,9 @@ azure.batch.pools.<name> {
 
 #### Container Support
 
-Using Azure Batch requires the use of containers for every process to ensure portability and reproducibility of your workflows. 
+Using Azure Batch requires the use of containers for every process to ensure portability and reproducibility of your workflows.
 
-Containers can be pulled from a public repository such as community.wave.seqera.io/ but Nextflow also supports the use of private container images, including those stored in private registries like Azure Container Registry (ACR). When using private container images, the Azure Batch compute nodes need proper authentication to pull these images. If Nextflow is responsible for creating the Batch pool, you can configure the necessary registry credentials to enable seamless container access using the following configuration.
+Containers can be pulled from a public repository such as community.wave.seqera.io/ but Nextflow also supports the use of private container images, including those stored in private registries like Azure Container Registry (ACR). When using private container images, the Azure Batch compute nodes need to be authenticated to pull these images. If Nextflow is responsible for creating the Batch pool, you can configure the necessary registry credentials to enable seamless container access using the following configuration.
 
 ```groovy
 azure.registry {
@@ -467,7 +467,7 @@ azure.registry {
 ```
 
 :::{note}
-Nextflow will read the following environment variables for registry authentication:
+If the registry credentials are not provided Nextflow will read the following environment variables:
   - `AZURE_REGISTRY_USER_NAME`
   - `AZURE_REGISTRY_PASSWORD`
 :::
@@ -530,7 +530,7 @@ azure {
 ```
 
 :::{warning}
-File shares require storage account key authentication - Managed Identity and Service Principal are not supported
+File shares require storage account key authentication. Managed Identity and Service Principal are not supported
 :::
 
 #### Hybrid Workloads
