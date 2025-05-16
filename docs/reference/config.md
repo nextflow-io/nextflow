@@ -1096,6 +1096,18 @@ The following settings are available:
 `k8s.pullPolicy`
 : Defines the strategy to be used to pull the container image e.g. `pullPolicy: 'Always'`.
 
+`k8s.retryPolicy.delay`
+: Delay when retrying failed API requests (default: `500ms`).
+
+`k8s.retryPolicy.jitter`
+: Jitter value when retrying failed API requests (default: `0.25`).
+
+`k8s.retryPolicy.maxAttempts`
+: Max attempts when retrying failed API requests (default: `4`).
+
+`k8s.retryPolicy.maxDelay`
+: Max delay when retrying failed API requests (default: `90s`).
+
 `k8s.runAsUser`
 : Defines the user ID to be used to run the containers. Shortcut for the `securityContext` option.
 
