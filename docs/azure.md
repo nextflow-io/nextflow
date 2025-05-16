@@ -90,19 +90,19 @@ To assign roles to a Managed Identity or Service Principal, refer to the [offici
 :::{versionadded} 24.05.0-edge
 :::
 
-[Managed Identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) is the recommended authentication method when running Nextflow within Azure. It provides automatic credential management without the need to store secrets.
+[Managed Identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) is the recommended authentication method when running Nextflow within Azure. It automatically manages credentials without requiring you to store secrets.
 
-When using a Managed Identity, an Azure resource can authenticate based on what it is, rather than using access keys. For example, if Nextflow is running on an Azure Virtual Machine with a managed identity enabled and appropriate permissions, it can run workflows on Azure Batch and access private storage accounts without additional credentials.
+When using a Managed Identity, an Azure resource can authenticate based on what it is, rather than using access keys. For example, if Nextflow is running on an Azure Virtual Machine with a managed identity and the necessary permissions, it can submit jobs to Azure Batch and access private storage accounts without requiring additional credentials.
 
 There are two types of managed identities:
 
-#### System-Assigned Managed Identity
+**System-assigned managed identity**
 
 A system-assigned identity is tied to a specific Azure resource. To use it:
 
-1. [Enable system-assigned Managed Identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities?pivots=qs-configure-portal-windows-vm#system-assigned-managed-identity) on your Azure resource
-2. Configure the required role assignments (see [Required Roles](#required-roles) below)
-3. Use this configuration:
+1. [Enable system-assigned Managed Identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities?pivots=qs-configure-portal-windows-vm#system-assigned-managed-identity) on your Azure resource.
+2. Configure the required role assignments. See [Required Roles](#required-roles) below for more information.
+3. Add this configuration:
 
 ```groovy
 azure {
@@ -110,11 +110,11 @@ azure {
         system = true
     }
     storage {
-        accountName = '<YOUR STORAGE ACCOUNT NAME>'
+        accountName = '<STORAGE_ACCOUNT_NAME>'
     }
     batch {
-        accountName = '<YOUR BATCH ACCOUNT NAME>'
-        location = '<YOUR BATCH ACCOUNT LOCATION>'
+        accountName = '<BATCH_ACCOUNT_NAME>'
+        location = '<BATCH_ACCOUNT_LOCATION>'
     }
 }
 ```
@@ -123,7 +123,7 @@ azure {
 If the managedIdentity config item is not provided Nextflow will read the environment variable: `AZURE_MANAGED_IDENTITY_SYSTEM=true`
 :::
 
-#### User-Assigned Managed Identity
+**User-assigned managed identity**
 
 A user-assigned identity can be shared across multiple Azure resources and its lifecycle is not tied to any specific resource. See [Azure Documentation](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/managed-identity-best-practice-recommendations#choosing-system-or-user-assigned-managed-identities) for details.
 
@@ -132,19 +132,19 @@ To use it:
 1. [Create a Managed Identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-manage-user-assigned-managed-identities?pivots=identity-mi-methods-azp#create-a-user-assigned-managed-identity)
 2. Configure the required role assignments
 3. [Assign the identity to your Azure resource](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities?pivots=qs-configure-portal-windows-vm#user-assigned-managed-identity)
-4. Use this configuration:
+4. Add this configuration:
 
 ```groovy
 azure {
     managedIdentity {
-        clientId = '<USER ASSIGNED MANAGED IDENTITY CLIENT ID>'
+        clientId = '<USER_ASSIGNED_MANAGED_IDENTITY_CLIENT_ID>'
     }
     storage {
         accountName = '<YOUR STORAGE ACCOUNT NAME>'
     }
     batch {
-        accountName = '<YOUR BATCH ACCOUNT NAME>'
-        location = '<YOUR BATCH ACCOUNT LOCATION>'
+        accountName = '<BATCH_ACCOUNT_NAME>'
+        location = '<BATCH_ACCOUNT_LOCATION>'
     }
 }
 ```
@@ -153,7 +153,7 @@ azure {
 If the managedIdentity config item is not provided Nextflow will read the environment variable: `AZURE_MANAGED_IDENTITY_USER_ASSIGNED_ID`
 :::
 
-### Service Principals
+### Service principals
 
 :::{versionadded} 22.11.0-edge
 :::
@@ -163,16 +163,16 @@ If the managedIdentity config item is not provided Nextflow will read the enviro
 ```groovy
 azure {
     activeDirectory {
-        servicePrincipalId = '<YOUR SERVICE PRINCIPAL CLIENT ID>'
-        servicePrincipalSecret = '<YOUR SERVICE PRINCIPAL CLIENT SECRET>'
-        tenantId = '<YOUR TENANT ID>'
+        servicePrincipalId = '<SERVICE_PRINCIPAL_CLIENT_ID>'
+        servicePrincipalSecret = '<SERVICE_PRINCIPAL_CLIENT_SECRET>'
+        tenantId = '<TENANT_ID>'
     }
     storage {
-        accountName = '<YOUR STORAGE ACCOUNT NAME>'
+        accountName = '<STORAGE_ACCOUNT_NAME>'
     }
     batch {
-        accountName = '<YOUR BATCH ACCOUNT NAME>'
-        location = '<YOUR BATCH ACCOUNT LOCATION>'
+        accountName = '<BATCH_ACCOUNT_NAME>'
+        location = '<BATCH_ACCOUNT_LOCATION>'
     }
 }
 ```
@@ -184,26 +184,26 @@ If the service principal credentials are not provided Nextflow will read the fol
 - `AZURE_TENANT_ID`: Tenant ID
 :::
 
-### Access Keys
+### Access keys
 
 The basic authentication method using direct access keys. While simple, it's less secure than Managed Identities or Service Principals. This approach requires you to obtain and manage the access keys for your Azure Storage and Batch accounts.
 
 You can find your access keys in the Azure Portal:
-- For Storage accounts: Navigate to your Storage account → "Access keys" in the left menu
-- For Batch accounts: Navigate to your Batch account → "Keys" in the left menu
+- For Storage accounts, navigate to your Storage account and select **Access keys** in the left-hand navigation menu.
+- For Batch accounts, navigate to your Batch account and select **Keys** in the left-hand navigation menu.
 
-These keys should be kept secure and rotated periodically as they provide full access to your resources. Consider using environment variables rather than hardcoding them in configuration files, especially in shared or version-controlled environments.
+Keep access keys secure and rotate them regularly, as they provide full access to your resources. To reduce risk, avoid hardcoding keys in configuration files, use environment variables instead, especially in shared or version-controlled environments.
 
 ```groovy
 azure {
     storage {
-        accountName = '<YOUR STORAGE ACCOUNT NAME>'
-        accountKey = '<YOUR STORAGE ACCOUNT KEY>'
+        accountName = '<STORAGE_ACCOUNT_NAME>'
+        accountKey = '<STORAGE_ACCOUNT_KEY>'
     }
     batch {
         accountName = '<YOUR BATCH ACCOUNT NAME>'
         accountKey = '<YOUR BATCH ACCOUNT KEY>'
-        location = '<YOUR LOCATION>'
+        location = '<LOCATION>'
     }
 }
 ```
@@ -211,7 +211,7 @@ azure {
 You can also use a Shared Access Token (SAS) instead of an account key:
 
 ```groovy
-azure.storage.sasToken = '<YOUR SAS TOKEN>'
+azure.storage.sasToken = '<SAS_TOKEN>'
 ```
 
 :::{tip}
