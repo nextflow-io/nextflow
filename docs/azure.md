@@ -259,12 +259,23 @@ For comprehensive information about Azure Batch features and capabilities, refer
 
 ### Overview
 
-TODO: How it works here.
+Nextflow integrates with Azure Batch by mapping its execution model to Azure Batch's structure. A Nextflow process corresponds to an Azure Batch job, and each instance of that process (a Nextflow task) becomes an Azure Batch task. These Azure Batch tasks are executed on compute nodes within an Azure Batch pool, which is a collection of virtual machines that can scale up or down based on an autoscale formula.
 
-- pools
-- jobs
-- tasks
-- shared file system using Blob Storage
+Nextflow manages these pools dynamically. You can assign processes to specific, pre-existing pools using the `process.queue` directive. If a pool doesn't exist, Nextflow can create it, provided `azure.batch.allowPoolCreation` is set to true. Alternatively, `autoPoolMode` enables Nextflow to automatically create multiple pools based on the CPU and memory requirements defined in your processes.
+
+For each Nextflow process instance, an Azure Batch task is created. This task first downloads the necessary input files from Azure Blob Storage to its assigned compute node. It then runs the process script. Finally, it uploads any output files back to Azure Blob Storage.
+
+Once the entire Nextflow pipeline finishes, Nextflow ensures that the corresponding Azure Batch jobs are marked as terminated. The compute pools, if configured for auto-scaling, will then automatically scale down according to their defined formula, helping to manage costs. Nextflow can also be configured to delete these node pools after pipeline completion.
+
+#### Azure Batch Quotas
+
+Azure Batch enforces quotas on resources like pools, jobs, and VMs.
+
+- **Pools:** A maximum number of pools can exist at one time. If Nextflow attempts to create a pool when this quota is met, it will throw an error. To proceed, you must delete existing pools.
+- **Active Jobs:** There is a limit on the number of active jobs. Completed jobs should be terminated. If this limit is reached, Nextflow will throw an error. You must terminate or delete jobs before running additional pipelines.
+- **VM Cores:** Each Azure VM family has a maximum core quota. If you request a VM family size for which you lack sufficient core quota, Nextflow will create jobs and tasks, but they will remain pending as the pool cannot scale due to the quota. This can cause your pipeline to hang indefinitely.
+
+You can increase your quota on the Azure Portal by going to the Batch account and clicking on the "Quotas" link in the left menu, then requesting an increase in quota numbers.
 
 ### Pool Management
 
@@ -372,21 +383,6 @@ When Nextflow is configured to use a pool already available in the Batch account
 - The task slots per node must match the number of cores for the selected VM. Otherwise, Nextflow will return an error like "Azure Batch pool 'ID' slots per node does not match the VM num cores (slots: N, cores: Y)".
 - Unless you are using Fusion, all tasks must have AzCopy available in the path. If `azure.batch.copyToolInstallMode = 'node'` this will require every node to have the azcopy binary located at `$AZ_BATCH_NODE_SHARED_DIR/bin/`.
 
-#### Task Packing
-
-Each Azure Batch node is allocated a specific number of task slots, determining how many tasks can run concurrently on that node. The number of slots is calculated based on the virtual machine's available CPUs. Nextflow intelligently assigns task slots to each process based on the proportion of total node resources requested through the `cpus`, `memory`, and `disk` directives.
-
-For example, consider a Standard_D4d_v5 machine with 4 vCPUs, 16 GB of memory, and 150 GB local disk:
-
-- If a process requests `cpus 2`, `memory 8.GB`, or `disk 75.GB`, it will be allocated two task slots (50% of resources), allowing two tasks to run concurrently on the node.
-- If a process requests `cpus 4`, `memory 16.GB`, or `disk 150.GB`, it will be allocated four task slots (100% of resources), allowing only one task to run on the node.
-
-Resource overprovisioning can occur if tasks consume more than their allocated share of resources. For instance, if a process with `cpus 2` uses more than 8 GB of memory or 75 GB of disk space, the node may become overloaded, resulting in performance degradation or task failure. It's important to accurately specify resource requirements to ensure optimal performance and prevent task failures.
-
-:::{warning}
-Tasks may fail if they exceed their allocated resources
-:::
-
 #### Auto-scaling
 
 Azure Batch can automatically scale pools based on parameters that you define, saving you time and money. With automatic scaling, Batch dynamically adds nodes to a pool as task demands increase, and removes compute nodes as task demands decrease.
@@ -421,36 +417,20 @@ $NodeDeallocationOption = taskcompletion;
 
 Custom formulas can be provided via the `azure.batch.pools.<pool-name>.scaleFormula` configuration option.
 
-#### Operating Systems
+#### Task Packing
 
-When Nextflow creates a pool of compute nodes, it selects:
+Each Azure Batch node is allocated a specific number of task slots, determining how many tasks can run concurrently on that node. The number of slots is calculated based on the virtual machine's available CPUs. Nextflow intelligently assigns task slots to each process based on the proportion of total node resources requested through the `cpus`, `memory`, and `disk` directives.
 
-- The virtual machine image reference: defines the OS and software to be installed on the node
-- The Batch node agent SKU: a program that runs on each node and provides the interface between the node and the Azure Batch service
+For example, consider a Standard_D4d_v5 machine with 4 vCPUs, 16 GB of memory, and 150 GB local disk:
 
-Together, these settings determine the operating system, version, and available features for each compute node in your pool.
+- If a process requests `cpus 2`, `memory 8.GB`, or `disk 75.GB`, it will be allocated two task slots (50% of resources), allowing two tasks to run concurrently on the node.
+- If a process requests `cpus 4`, `memory 16.GB`, or `disk 150.GB`, it will be allocated four task slots (100% of resources), allowing only one task to run on the node.
 
-By default, Nextflow creates pool nodes based on Ubuntu 22.04, which is suitable for most bioinformatics workloads. However, you can customize the operating system in your pool configuration to meet specific requirements. Below are example configurations for common operating systems used in scientific computing.
+Resource overprovisioning can occur if tasks consume more than their allocated share of resources. For instance, if a process with `cpus 2` uses more than 8 GB of memory or 75 GB of disk space, the node may become overloaded, resulting in performance degradation or task failure. It's important to accurately specify resource requirements to ensure optimal performance and prevent task failures.
 
-For Ubuntu 22.04 (default):
-
-```groovy
-azure.batch.pools.<name> {
-    sku = "batch.node.ubuntu 22.04"
-    offer = "ubuntu-hpc"
-    publisher = "microsoft-dsvm"
-}
-```
-
-CentOS 8:
-
-```groovy
-azure.batch.pools.<name> {
-    sku = "batch.node.centos 8"
-    offer = "centos-container"
-    publisher = "microsoft-azure-batch"
-}
-```
+:::{warning}
+Tasks may fail if they exceed their allocated resources
+:::
 
 #### Container Support
 
@@ -500,6 +480,37 @@ Start tasks are optional commands that can be run when nodes join the pool. They
 azure.batch.pools.<pool-name>.startTask {
     script = 'setup.sh'
     privileged = true  // optional, default: false
+}
+```
+
+#### Operating Systems
+
+When Nextflow creates a pool of compute nodes, it selects:
+
+- The virtual machine image reference: defines the OS and software to be installed on the node
+- The Batch node agent SKU: a program that runs on each node and provides the interface between the node and the Azure Batch service
+
+Together, these settings determine the operating system, version, and available features for each compute node in your pool.
+
+By default, Nextflow creates pool nodes based on Ubuntu 22.04, which is suitable for most bioinformatics workloads. However, you can customize the operating system in your pool configuration to meet specific requirements. Below are example configurations for common operating systems used in scientific computing.
+
+For Ubuntu 22.04 (default):
+
+```groovy
+azure.batch.pools.<name> {
+    sku = "batch.node.ubuntu 22.04"
+    offer = "ubuntu-hpc"
+    publisher = "microsoft-dsvm"
+}
+```
+
+CentOS 8:
+
+```groovy
+azure.batch.pools.<name> {
+    sku = "batch.node.centos 8"
+    offer = "centos-container"
+    publisher = "microsoft-azure-batch"
 }
 ```
 
