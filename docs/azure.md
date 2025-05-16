@@ -298,6 +298,10 @@ Finally, launch your pipeline with the above configuration:
 nextflow run <PIPELINE NAME> -w az://YOUR-CONTAINER/
 ```
 
+:::{note}
+If the batch account name is not provided Nextflow will read the environment variable: `AZURE_BATCH_ACCOUNT_NAME`
+:::
+
 #### Azure Batch Quotas
 
 Azure Batch enforces quotas on resources like pools, jobs, and VMs.
