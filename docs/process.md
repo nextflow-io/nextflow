@@ -1164,7 +1164,7 @@ While this option can be used with any process output, it cannot be applied to i
 
 ## When
 
-:::{node}
+:::{note}
 As a best practice, conditional logic should be implemented in the calling workflow (e.g. using an `if` statement or {ref}`operator-filter` operator) instead of the process definition.
 :::
 
