@@ -381,7 +381,7 @@ The pool is not removed when the pipeline terminates, unless the configuration s
 
 **Named pools**
 
-If you want to have more precise control over the compute node pools used in your pipeline, such as using a different pool depending on the task in your pipeline, you can use the queue directive in Nextflow to specify the ID of a Azure Batch compute pool that should be used to execute that process.
+To control which compute node pool is used for a specific task in your pipeline, use the queue directive in Nextflow to specify the ID of the Azure Batch compute pool that should run the process.
 
 The pool is expected to be already available in the Batch environment, unless the setting `azure.batch.allowPoolCreation = true` is provided in the `azure.batch` config scope in the pipeline configuration file. In the latter case, Nextflow will create the pools on-demand.
 
