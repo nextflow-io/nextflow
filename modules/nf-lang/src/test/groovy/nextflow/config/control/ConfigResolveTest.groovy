@@ -121,4 +121,67 @@ class ConfigResolveTest extends Specification {
         deleteDir(root)
     }
 
+    def 'should check variables in a closure' () {
+        when:
+        def errors = check(
+            '''\
+            process {
+                clusterOptions = {
+                    args_list = []
+                    args_list.join(' ')
+                }()
+            }
+            '''
+        )
+        then:
+        errors.size() == 2
+        errors[0].getStartLine() == 3
+        errors[0].getStartColumn() == 9
+        errors[0].getOriginalMessage() == '`args_list` was assigned but not declared'
+        errors[1].getStartLine() == 4
+        errors[1].getStartColumn() == 9
+        errors[1].getOriginalMessage() == '`args_list` is not defined'
+
+        when:
+        errors = check(
+            '''\
+            process {
+                clusterOptions = {
+                    def args_list = []
+                    args_list.join(' ')
+                }()
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
+    def 'should allow dynamic process directives to reference process inputs' () {
+        when:
+        def errors = check(
+            '''\
+            process {
+                ext.prefix = { "${meta.id}.filter1" }
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+
+        when:
+        errors = check(
+            '''\
+            process {
+                ext.prefix = { "${meta.id}.filter1" }()
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 2
+        errors[0].getStartColumn() == 23
+        errors[0].getOriginalMessage() == '`meta` is not defined'
+    }
+
 }
