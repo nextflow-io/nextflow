@@ -186,11 +186,15 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
     @Override
     public void visitExpressionStatement(ExpressionStatement node) {
         var exp = node.getExpression();
+        if( exp instanceof DeclarationExpression de ) {
+            visitDeclarationExpression(de);
+            return;
+        }
         if( exp instanceof BinaryExpression be && Types.isAssignment(be.getOperation().getType()) ) {
             var source = be.getRightExpression();
             var target = be.getLeftExpression();
             visit(source);
-            if( !checkImplicitDeclaration(target) ) {
+            if( !visitAssignment(target) ) {
                 visit(target);
             }
             return;
@@ -198,20 +202,20 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
         super.visitExpressionStatement(node);
     }
 
-    private boolean checkImplicitDeclaration(Expression node) {
+    private boolean visitAssignment(Expression node) {
         if( node instanceof TupleExpression te ) {
             var result = false;
             for( var el : te.getExpressions() )
-                result |= declareAssignedVariable((VariableExpression) el);
+                result |= visitAssignedVariable((VariableExpression) el);
             return result;
         }
         else if( node instanceof VariableExpression ve ) {
-            return declareAssignedVariable(ve);
+            return visitAssignedVariable(ve);
         }
         return false;
     }
 
-    private boolean declareAssignedVariable(VariableExpression ve) {
+    private boolean visitAssignedVariable(VariableExpression ve) {
         var variable = vsc.findVariableDeclaration(ve.getName(), ve);
         if( variable != null ) {
             ve.setAccessedVariable(variable);
