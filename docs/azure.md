@@ -38,6 +38,7 @@ azure {
         location = '<YOUR LOCATION>'
         accountName = '<YOUR BATCH ACCOUNT NAME>'
         autoPoolMode = true
+        allowPoolCreation = true
     }
 }
 ```
@@ -222,13 +223,13 @@ If the access keys are not provided as config items Nextflow will read the follo
 
 ## Azure Blob Storage
 
-Azure Storage provides several services for storing and accessing data in Azure. Nextflow primarily supports Azure Blob Storage for most workloads, with limited support for Azure File Shares for specific use cases. This section describes how to configure and use Azure Storage with Nextflow, focusing on the recommended Blob Storage approach.
+Azure Storage provides several services for storing and accessing data in Azure. Nextflow primarily supports Azure Blob Storage for most workloads, with limited support for Azure File Shares for specific use cases. This section describes how to configure and use Azure Blob Storage with Nextflow.
 
-When using Azure Storage with Nextflow, you can access your data using the `az://` URI scheme, which allows transparent access to files stored in Azure Blob Storage. Once the Blob Storage credentials are configured, you can access files in any blob container as if they were local files by prepending the path with `az://` followed by the container name.
+Nextflow enables transparent access to files stored in Azure Blob Storage using the `az://` URI scheme. Once Azure Storage is configured (including authentication, as detailed in the {ref}`Authentication` section), you can use this scheme to reference files in any blob container as if they were local. For example, a file named `foo.txt` within a container `my-data` can be accessed in your Nextflow script as `az://my-data/foo.txt`.
 
-For example:
+Here's an example of how to use the `az://` URI for a file at path `/path/to/file.txt` in a container named `my-container`:
+
 ```groovy
-// Access a file in a container
 file('az://my-container/path/to/file.txt')
 ```
 
@@ -237,10 +238,14 @@ The Blob storage account name and key need to be provided in the Nextflow config
 ```groovy
 azure {
     storage {
-        accountName = "<YOUR BLOB ACCOUNT NAME>"
+        accountName = '<YOUR BLOB ACCOUNT NAME>'
     }
 }
 ```
+
+:::{note}
+If the storage account name is not provided Nextflow will read the environment variable: `AZURE_STORAGE_ACCOUNT_NAME`
+:::
 
 ## Azure Batch
 
@@ -267,6 +272,32 @@ For each Nextflow process instance, an Azure Batch task is created. This task fi
 
 Once the entire Nextflow pipeline finishes, Nextflow ensures that the corresponding Azure Batch jobs are marked as terminated. The compute pools, if configured for auto-scaling, will then automatically scale down according to their defined formula, helping to manage costs. Nextflow can also be configured to delete these node pools after pipeline completion.
 
+To use Azure Batch, simply set the `executor` directive to `azurebatch` in your Nextflow configuration file and add a working directory on Azure Blob Storage:
+
+```groovy
+process {
+    executor = 'azurebatch'
+}
+
+azure {
+    storage {
+        accountName = '<YOUR STORAGE ACCOUNT NAME>'
+    }
+    batch {
+        location = '<YOUR LOCATION>'
+        accountName = '<YOUR BATCH ACCOUNT NAME>'
+        autoPoolMode = true
+        allowPoolCreation = true
+    }
+}
+```
+
+Finally, launch your pipeline with the above configuration:
+
+```bash
+nextflow run <PIPELINE NAME> -w az://YOUR-CONTAINER/
+```
+
 #### Azure Batch Quotas
 
 Azure Batch enforces quotas on resources like pools, jobs, and VMs.
@@ -287,11 +318,11 @@ Nextflow supports two approaches for managing Batch pools:
 
 #### Auto Pools
 
-When using the autoPoolMode option, Nextflow automatically creates pools of compute nodes appropriate for your pipeline.
+When using the `autoPoolMode` mode, Nextflow automatically creates pools of compute nodes appropriate for your pipeline.
 
 By default, the cpus and memory directives are used to find the smallest machine type that fits the requested resources in the Azure machine family, specified by machineType. If memory is not specified, 1 GB of memory is allocated per CPU. When no options are specified, it only uses one compute node of the type Standard_D4_v3.
 
-To use autoPoolMode, you need to enable it in the azure.batch config scope:
+To use `autoPoolMode`, you need to enable it in the azure.batch config scope:
 
 ```groovy
 azure.batch {
