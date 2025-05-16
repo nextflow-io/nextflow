@@ -327,7 +327,7 @@ To avoid any extra charges in the Batch account, remember to clean up the Batch 
 
 Nextflow supports two approaches for managing Batch pools:
 
-#### Auto Pools
+**Auto pools**
 
 When using the `autoPoolMode` mode, Nextflow automatically creates pools of compute nodes appropriate for your pipeline.
 
@@ -514,7 +514,7 @@ The subnet ID must be in the following format:
 Virtual Networks require Microsoft Entra authentication (Service Principal or Managed Identity)
 :::
 
-#### Start Tasks
+**Start tasks**
 
 Start tasks are optional commands that can be run when nodes join the pool. They are useful for setting up the node environment or for running any other commands that need to be executed when the node is created.
 
@@ -558,7 +558,7 @@ azure.batch.pools.<name> {
 
 ### Advanced Features
 
-#### Azure File Shares
+**Azure file shares**
 
 :::{versionadded} nf-azure 0.11.0
 :::
@@ -628,6 +628,6 @@ nextflow run <script> -bucket-dir az://my-container/some/path
 - With [Fusion](./fusion.md), `-bucket-dir` is optional
 :::
 
-## Advanced Configuration
+## Advanced configuration
 
 See the {ref}`Azure configuration<config-azure>` section for all available configuration options.
