@@ -230,7 +230,8 @@ class WaveClient {
                 dryRun: ContainerInspectMode.dryRun(),
                 mirror: config.mirrorMode(),
                 scanMode: config.scanMode(),
-                scanLevels: config.scanAllowedLevels()
+                scanLevels: config.scanAllowedLevels(),
+                buildCompression: config.buildCompression()
         )
     }
 
@@ -257,7 +258,8 @@ class WaveClient {
                 dryRun: ContainerInspectMode.dryRun(),
                 mirror: config.mirrorMode(),
                 scanMode: config.scanMode(),
-                scanLevels: config.scanAllowedLevels()
+                scanLevels: config.scanAllowedLevels(),
+                buildCompression: config.buildCompression()
         )
         return sendRequest(request)
     }

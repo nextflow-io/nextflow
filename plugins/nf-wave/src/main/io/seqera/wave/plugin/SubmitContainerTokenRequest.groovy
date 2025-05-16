@@ -21,6 +21,7 @@ package io.seqera.wave.plugin
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+import io.seqera.wave.api.BuildCompression
 import io.seqera.wave.api.ImageNameStrategy
 import io.seqera.wave.api.PackagesSpec
 import io.seqera.wave.api.ScanLevel
@@ -153,5 +154,10 @@ class SubmitContainerTokenRequest {
      * Empty or null means no vulnerabilities are allowed.
      */
     List<ScanLevel> scanLevels
+
+    /**
+     * Model build compression option
+     */
+    BuildCompression buildCompression
 
 }
