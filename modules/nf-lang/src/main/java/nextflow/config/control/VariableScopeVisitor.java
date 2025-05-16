@@ -105,14 +105,18 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
         checkMethodCall(node);
     }
 
+    private boolean inProcess;
+
+    private boolean inClosure;
+
     @Override
     public void visitConfigAssign(ConfigAssignNode node) {
         for( int i = 0; i < node.names.size() - 1; i++ )
             configScopes.add(node.names.get(i));
 
         var scopes = currentConfigScopes();
-        var inProcess = !scopes.isEmpty() && "process".equals(scopes.get(0));
-        var inClosure = node.value instanceof ClosureExpression;
+        inProcess = !scopes.isEmpty() && "process".equals(scopes.get(0));
+        inClosure = node.value instanceof ClosureExpression;
         if( inClosure && !inProcess && !isWorkflowHandler(scopes, node) )
             vsc.addError("Dynamic config options are only allowed in the `process` scope", node);
         if( inClosure ) {
@@ -128,6 +132,8 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
                 vsc.popScope();
             vsc.popScope();
         }
+        inClosure = false;
+        inProcess = false;
 
         for( int i = 0; i < node.names.size() - 1; i++ )
             configScopes.pop();
@@ -292,6 +298,9 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
         if( variable == null ) {
             if( "it".equals(name) ) {
                 vsc.addParanoidWarning("Implicit closure parameter `it` will not be supported in a future version", node);
+            }
+            else if( inProcess && inClosure ) {
+                // dynamic process directives can reference process inputs which are not known at this point
             }
             else {
                 variable = new DynamicVariable(name, false);

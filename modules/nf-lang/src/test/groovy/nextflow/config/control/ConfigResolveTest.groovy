@@ -126,10 +126,10 @@ class ConfigResolveTest extends Specification {
         def errors = check(
             '''\
             process {
-                ext.args = {
+                clusterOptions = {
                     args_list = []
                     args_list.join(' ')
-                }
+                }()
             }
             '''
         )
@@ -146,15 +146,42 @@ class ConfigResolveTest extends Specification {
         errors = check(
             '''\
             process {
-                ext.args = {
+                clusterOptions = {
                     def args_list = []
                     args_list.join(' ')
-                }
+                }()
             }
             '''
         )
         then:
         errors.size() == 0
+    }
+
+    def 'should allow dynamic process directives to reference process inputs' () {
+        when:
+        def errors = check(
+            '''\
+            process {
+                ext.prefix = { "${meta.id}.filter1" }
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+
+        when:
+        errors = check(
+            '''\
+            process {
+                ext.prefix = { "${meta.id}.filter1" }()
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 2
+        errors[0].getStartColumn() == 23
+        errors[0].getOriginalMessage() == '`meta` is not defined'
     }
 
 }
