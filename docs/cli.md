@@ -297,8 +297,8 @@ Parameters are applied in the following order (from lowest to highest priority):
 
 1. Parameters defined in pipeline scripts (e.g. `main.nf`)
 2. Parameters defined in {ref}`config files <config-params>`
-6. Parameters specified in a params file (`-params-file`)
-7. Parameters specified on the command line (`--something value`)
+3. Parameters specified in a params file (`-params-file`)
+4. Parameters specified on the command line (`--something value`)
 
 ## Managing projects
 

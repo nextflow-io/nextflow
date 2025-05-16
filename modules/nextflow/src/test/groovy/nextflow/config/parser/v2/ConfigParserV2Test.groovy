@@ -348,7 +348,7 @@ class ConfigParserV2Test extends Specification {
 
     }
 
-    def 'should return the set of parsed profiles' () {
+    def 'should return the set of declared profiles' () {
 
         given:
         def text = '''
@@ -366,13 +366,42 @@ class ConfigParserV2Test extends Specification {
         def slurper = new ConfigParserV2().setProfiles(['alpha'])
         slurper.parse(text)
         then:
-        slurper.getProfiles() == ['alpha','beta'] as Set
+        slurper.getDeclaredProfiles() == ['alpha','beta'] as Set
 
         when:
         slurper = new ConfigParserV2().setProfiles(['omega'])
         slurper.parse(text)
         then:
-        slurper.getProfiles() == ['alpha','beta'] as Set
+        slurper.getDeclaredProfiles() == ['alpha','beta'] as Set
+    }
+
+    def 'should return the map of declared params' () {
+
+        given:
+        def text = '''
+        params {
+            a = 1
+            b = 2
+        }
+
+        profiles {
+            alpha {
+                params.a = 3
+            }
+        }
+        '''
+
+        when:
+        def slurper = new ConfigParserV2().setParams([c: 4])
+        slurper.parse(text)
+        then:
+        slurper.getDeclaredParams() == [a: 1, b: 2]
+
+        when:
+        slurper = new ConfigParserV2().setParams([c: 4]).setProfiles(['alpha'])
+        slurper.parse(text)
+        then:
+        slurper.getDeclaredParams() == [a: 3, b: 2]
     }
 
     def 'should ignore config includes when specified' () {
