@@ -259,11 +259,12 @@ If the storage account name is not provided Nextflow will read the environment v
 [Azure Batch](https://learn.microsoft.com/en-us/azure/batch/) is a managed computing service that enables large-scale parallel and high-performance computing (HPC) batch jobs in Azure. Nextflow provides a built-in executor for Azure Batch, allowing you to offload your workflows to the cloud for scalable and cost-effective execution.
 
 Nextflow integrates seamlessly with Azure Batch to:
-- Dynamically create and manage compute pools based on workflow requirements
-- Automatically scale nodes up and down as needed during workflow execution
-- Support both regular and low-priority VMs for cost optimization
-- Handle container execution across distributed compute resources
-- Manage task dependencies and data transfers between Azure Storage and compute nodes
+
+- Dynamically create and manage compute pools based on workflow requirements.
+- Automatically scale nodes up and down as needed during workflow execution.
+- Support both regular and low-priority VMs for cost optimization.
+- Handle container execution across distributed compute resources.
+- Manage task dependencies and data transfers between Azure Storage and compute nodes.
 
 This section describes how to configure and use Azure Batch with Nextflow for efficient cloud-based workflow execution.
 
@@ -319,7 +320,7 @@ Azure Batch enforces quotas on resources like pools, jobs, and VMs.
 
 You can increase your quota on the Azure Portal by going to the Batch account and clicking on the "Quotas" link in the left menu, then requesting an increase in quota numbers.
 
-### Pool Management
+### Pool management
 
 :::{warning}
 To avoid any extra charges in the Batch account, remember to clean up the Batch pools or use auto scaling.
