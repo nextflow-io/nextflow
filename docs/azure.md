@@ -6,24 +6,24 @@
 :::
 
 :::{tip}
-For an automated setup of Azure infrastructure, consider using [Batch Forge](https://docs.seqera.io/platform/latest/compute-envs/azure-batch#compute-environment) in [Seqera Platform](https://seqera.io/platform/).
+For automated Azure infrastructure setup, consider using [Batch Forge](https://docs.seqera.io/platform/latest/compute-envs/azure-batch#compute-environment) in [Seqera Platform](https://seqera.io/platform/).
 :::
 
 ## Overview
 
 Nextflow provides built-in support for Azure cloud services, allowing you to:
 
-- **Storage**: Store and access data using Azure Blob Storage and Azure File Shares
-- **Compute**: Execute workflows using Azure Batch compute service
+- Store and access data using Azure Blob Storage and Azure File Shares.
+- Execute workflows using Azure Batch compute service.
 
-## Quick Start
+## Quick start
 
 1. Create an Azure Batch account in the Azure portal.
-2. Increase the quotas in your Azure Batch account to the pipeline's needs. Quotas impact the number of Pools, CPUs and Jobs you can create.
+2. Increase the quotas in your Azure Batch account to the pipeline's needs. Quotas impact the number of Pools, CPUs, and Jobs you can create.
 3. Create a Storage account and Blob Container in the same region as the Batch account.
 4. Ensure Nextflow processes specify Docker containers using the {ref}`process-container` directive. 
 
-A minimal Nextflow configuration excluding authentication for Azure Batch looks like the following snippet:
+The following snippet shows a minimal Nextflow configuration that excludes authentication for Azure Batch.
 
 ```groovy
 process {
@@ -32,18 +32,22 @@ process {
 
 azure {
     storage {
-        accountName = '<YOUR STORAGE ACCOUNT NAME>'
+        accountName = '<STORAGE_ACCOUNT_NAME>'
     }
     batch {
-        location = '<YOUR LOCATION>'
-        accountName = '<YOUR BATCH ACCOUNT NAME>'
+        location = '<LOCATION>'
+        accountName = '<BATCH_ACCOUNT_NAME>'
         autoPoolMode = true
         allowPoolCreation = true
     }
 }
 ```
 
-In the above example, replace the location placeholder with the name of your Azure region and the account placeholders with the values corresponding to your configuration.
+Replace the following:
+
+- `STORAGE_ACCOUNT_NAME`: your account name.
+- `LOCATION`: your Azure region.
+- `ACCOUNT_NAME`: your batch account name.
 
 :::{tip}
 List Azure regions with: `az account list-locations -o table`
@@ -52,20 +56,23 @@ List Azure regions with: `az account list-locations -o table`
 Finally, launch your pipeline with the above configuration:
 
 ```bash
-nextflow run <PIPELINE NAME> -w az://YOUR-CONTAINER/
+nextflow run <PIPELINE_NAME> -w az://<CONTAINER>/
 ```
 
-Replacing `<PIPELINE NAME>`  with a pipeline name e.g. `nextflow-io/rnaseq-nf` and `YOUR-CONTAINER` with a blob container in the storage account defined in the above configuration.
+Replacing the following:
+
+- `PIPELINE_NAME`:  your pipeline—for example, `nextflow-io/rnaseq-nf`.
+- `CONTAINER`: your blob container from the storage account defined in your configuration.
 
 ## Authentication
 
-There are three ways to authenticate with Azure services, listed in order of recommended usage:
+You can authenticate with Azure services in three ways, listed in order of recommended usage:
 
 1. **Managed Identities** (Most secure, Azure-only): Use Azure-managed credentials without storing secrets
 2. **Service Principals** (Secure, works anywhere): Use Microsoft Entra credentials for authentication
 3. **Access Keys** (Basic): Use direct access keys for authentication
 
-### Required Roles
+### Required roles
 
 To use Azure services, the following role assignments are required:
 
@@ -78,7 +85,7 @@ For Azure Batch:
 
 To assign roles to a Managed Identity or Service Principal, refer to the [official Azure documentation](https://learn.microsoft.com/en-us/azure/role-based-access-control/role-assignments-portal?tabs=current).
 
-### Managed Identities
+### Managed identities
 
 :::{versionadded} 24.05.0-edge
 :::
