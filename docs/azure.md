@@ -418,7 +418,7 @@ The above example defines the configuration for two node pools. The first will p
 - Wrap hyphenated names in quotes: `'pool-1'`.
 :::
 
-##### Requirements on pre-existing named pools
+**Requirements on pre-existing named pools**
 
 When Nextflow is configured to use a pool already available in the Batch account, the target pool must satisfy the following requirements:
 
@@ -426,7 +426,7 @@ When Nextflow is configured to use a pool already available in the Batch account
 - The task slots per node must match the number of cores for the selected VM. Otherwise, Nextflow will return an error like "Azure Batch pool 'ID' slots per node does not match the VM num cores (slots: N, cores: Y)".
 - Unless you are using Fusion, all tasks must have AzCopy available in the path. If `azure.batch.copyToolInstallMode = 'node'` this will require every node to have the azcopy binary located at `$AZ_BATCH_NODE_SHARED_DIR/bin/`.
 
-#### Auto-scaling
+**Auto-scaling**
 
 Azure Batch can automatically scale pools based on parameters that you define, saving you time and money. With automatic scaling, Batch dynamically adds nodes to a pool as task demands increase, and removes compute nodes as task demands decrease.
 
@@ -475,7 +475,7 @@ Resource overprovisioning can occur if tasks consume more than their allocated s
 Tasks may fail if they exceed their allocated resources
 :::
 
-#### Container Support
+**Container support**
 
 Using Azure Batch requires the use of containers for every process to ensure portability and reproducibility of your workflows.
 
@@ -497,15 +497,15 @@ If the registry credentials are not provided Nextflow will read the following en
 
 Public container images from Docker Hub or other public registries can still be used without additional configuration, even when a private registry is configured. The Docker service on the nodes will automatically use the appropriate registry based on the container image reference in your process definitions.
 
-#### Virtual Networks
+**Virtual networks**
 
 Pools can be configured to use a virtual network to connect to your existing network infrastructure.
 
 ```groovy
-azure.batch.pools.<pool-name>.virtualNetwork = '<SUBNET ID>'
+azure.batch.pools.<POOL_NAME>.virtualNetwork = '<SUBNET_ID>'
 ```
 
-The subnet ID must be in the following format:
+The `SUBNET_ID> must be in the following format:
 
 ```
 /subscriptions/<SUBSCRIPTION>/resourceGroups/<GROUP>/providers/Microsoft.Network/virtualNetworks/<VNET>/subnets/<SUBNET>
@@ -564,9 +564,9 @@ azure.batch.pools.<name> {
 :::{versionadded} nf-azure 0.11.0
 :::
 
-Azure File Shares provide fully managed file shares that can be mounted to compute nodes. This is useful for sharing reference data or tools across tasks. Files become immediately available in the file system and can be accessed as local files within processes.
+Azure file shares provide fully managed file shares that can be mounted to compute nodes. This is useful for sharing reference data or tools across tasks. Files become immediately available in the file system and can be accessed as local files within processes.
 
-The Azure File share must exist in the storage account configured for Blob Storage. The name of the source Azure File share and mount path (the destination path where the files are mounted) must be provided. Additional mount options (see the [Azure Files documentation](https://learn.microsoft.com/en-us/azure/storage/files/storage-files-introduction)) can be set as well for further customisation of the mounting process.
+The Azure File share must exist in the storage account configured for Blob Storage. The name of the source Azure file share and mount path (the destination path where the files are mounted) must be provided. Additional mount options (see the [Azure Files documentation](https://learn.microsoft.com/en-us/azure/storage/files/storage-files-introduction)) can be set as well for further customisation of the mounting process.
 
 Configuration:
 
@@ -587,7 +587,7 @@ azure {
 File shares require storage account key authentication. Managed Identity and Service Principal are not supported
 :::
 
-#### Hybrid Workloads
+**Hybrid Workloads**
 
 Nextflow allows the use of multiple executors in the same workflow application. This feature enables the deployment of hybrid workloads in which some jobs are executed in the local computer or local computing cluster and some jobs are offloaded to Azure Batch.
 
@@ -620,13 +620,13 @@ With the above configuration, processes with the bigTask label will run on Azure
 Then launch the pipeline with the -bucket-dir option to specify an Azure Blob Storage path for the jobs computed with Azure Batch, and optionally, use the -work-dir option to specify the local storage for the jobs computed locally:
 
 ```bash
-nextflow run <script> -bucket-dir az://my-container/some/path
+nextflow run <SCRIPT> -bucket-dir az://my-container/some/path
 ```
 
 :::{warning}
-- Blob Storage path needs a subdirectory (e.g., `az://container/work` not `az://container`)
-- Nextflow handles file transfers between local and cloud
-- With [Fusion](./fusion.md), `-bucket-dir` is optional
+- Blob Storage path needs a subdirectory, for example, `az://container/work`, not `az://container`.
+- Nextflow handles file transfers between local and cloud.
+- With [Fusion](./fusion.md), `-bucket-dir` is optional.
 :::
 
 ## Advanced configuration
