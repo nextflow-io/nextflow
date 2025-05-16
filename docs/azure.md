@@ -37,9 +37,9 @@ Once the Blob Storage credentials are set, you can access the files in the blob 
 :::{tip}
 Nextflow will read the following environment variables if a config item is not provided:
 
-- `AZURE_STORAGE_ACCOUNT_NAME` - The name of your Azure Storage account
-- `AZURE_STORAGE_ACCOUNT_KEY` - The access key for your Azure Storage account
-- `AZURE_STORAGE_SAS_TOKEN` - A shared access signature (SAS) token for Azure Storage access
+- `AZURE_STORAGE_ACCOUNT_NAME`: The name of your Azure Storage account.
+- `AZURE_STORAGE_ACCOUNT_KEY`: The access key for your Azure Storage account.
+- `AZURE_STORAGE_SAS_TOKEN`: A shared access signature (SAS) token for Azure Storage access.
 :::
 
 ## Azure File Shares
@@ -166,8 +166,8 @@ See the [Batch documentation](https://docs.microsoft.com/en-us/azure/batch/quick
 :::{tip}
 Nextflow will read the following environment variables if a config item is not provided:
 
-- `AZURE_BATCH_ACCOUNT_NAME` - The name of your Azure Batch account
-- `AZURE_BATCH_ACCOUNT_KEY` - The access key for your Azure Batch account
+- `AZURE_BATCH_ACCOUNT_NAME`: The name of your Azure Batch account.
+- `AZURE_BATCH_ACCOUNT_KEY`: The access key for your Azure Batch account.
 :::
 
 ### Autopools
@@ -551,7 +551,7 @@ azure {
 :::{note}
 Nextflow will read the following environment variables if a config item is not provided:
 
-- `AZURE_MANAGED_IDENTITY_SYSTEM` - When set to "true", enables system-assigned managed identity
+- `AZURE_MANAGED_IDENTITY_SYSTEM`: When set to `true`, enables system-assigned managed identity.
 :::
 
 #### User Assigned Managed Identity
@@ -587,7 +587,7 @@ azure {
 :::{note}
 Nextflow will read the following environment variables if a config item is not provided:
 
-- `AZURE_MANAGED_IDENTITY_USER` - The client ID for a user-assigned managed identity
+- `AZURE_MANAGED_IDENTITY_USER`: The client ID for a user-assigned managed identity.
 :::
 
 (azure-service-principal)=
@@ -623,9 +623,9 @@ azure {
 :::{note}
 Nextflow will read the following environment variables if a config item is not provided:
 
-- `AZURE_CLIENT_ID` - The service principal client ID (also known as application ID)
-- `AZURE_CLIENT_SECRET` - The service principal secret key
-- `AZURE_TENANT_ID` - The Azure Active Directory tenant ID
+- `AZURE_CLIENT_ID`: The service principal client ID (also known as application ID).
+- `AZURE_CLIENT_SECRET`: The service principal secret key.
+- `AZURE_TENANT_ID`: The Azure Active Directory tenant ID.
 :::
 
 ## Advanced configuration
