@@ -379,7 +379,7 @@ process EXAMPLE_PROCESS {
 
 The pool is not removed when the pipeline terminates, unless the configuration setting `azure.batch.deletePoolsOnCompletion` is enabled in your Nextflow configuration file.
 
-#### Named Pools
+**Named pools**
 
 If you want to have more precise control over the compute node pools used in your pipeline, such as using a different pool depending on the task in your pipeline, you can use the queue directive in Nextflow to specify the ID of a Azure Batch compute pool that should be used to execute that process.
 
