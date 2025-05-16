@@ -520,7 +520,7 @@ process runThisWithDocker {
 ```
 
 :::{warning}
-This feature is not supported by the {ref}`k8s-executor` and {ref}`google-lifesciences-executor` executors.
+This feature is not supported by the {ref}`k8s-executor` executor.
 :::
 
 (process-cpus)=
@@ -682,7 +682,6 @@ The following executors are available:
 | `awsbatch`            | [AWS Batch](https://aws.amazon.com/batch/) service                                          |
 | `azurebatch`          | [Azure Batch](https://azure.microsoft.com/en-us/services/batch/) service                    |
 | `condor`              | [HTCondor](https://research.cs.wisc.edu/htcondor/) job scheduler                            |
-| `google-lifesciences` | [Google Genomics Pipelines](https://cloud.google.com/life-sciences) service                 |
 | `k8s`                 | [Kubernetes](https://kubernetes.io/) cluster                                                |
 | `local`               | The computer where `Nextflow` is launched                                                   |
 | `lsf`                 | [Platform LSF](http://en.wikipedia.org/wiki/Platform_LSF) job scheduler                     |
@@ -821,7 +820,7 @@ See also: [resourceLabels](#resourcelabels)
 :::{versionadded} 19.07.0
 :::
 
-The `machineType` can be used to specify a predefined Google Compute Platform [machine type](https://cloud.google.com/compute/docs/machine-types) when running using the {ref}`Google Batch <google-batch-executor>` or {ref}`Google Life Sciences <google-lifesciences-executor>` executor, or when using the autopools feature of the {ref}`Azure Batch executor<azurebatch-executor>`.
+The `machineType` can be used to specify a predefined Google Compute Platform [machine type](https://cloud.google.com/compute/docs/machine-types) when running using the {ref}`Google Batch <google-batch-executor>`, or when using the autopools feature of the {ref}`Azure Batch executor<azurebatch-executor>`.
 
 This directive is optional and if specified overrides the cpus and memory directives:
 
@@ -1379,7 +1378,6 @@ Resource labels are currently supported by the following executors:
 - {ref}`awsbatch-executor`
 - {ref}`azurebatch-executor`
 - {ref}`google-batch-executor`
-- {ref}`google-lifesciences-executor`
 - {ref}`k8s-executor`
 
 :::{versionadded} 23.09.0-edge

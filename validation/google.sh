@@ -77,14 +77,4 @@ $NXF_CMD -C ./google.config \
     run nextflow-io/hello \
     -process.array 10
 
-## Legacy GLS tests
-
-## run test-subdirs inputs/outputs
-$NXF_CMD -C ./gls.config -q run ./test-subdirs.nf
-
-## run publishDir overwrite
-$NXF_CMD -C ./gls.config run ./test-overwrite.nf
-
-## re-executing should overwrite the published file
-[ `$NXF_CMD -C ./gls.config run ./test-overwrite.nf -resume | { grep 'Failed to publish file' -c || true; }` == 0 ] && echo OK || { echo 'Failed to publish file' && false; }
 
