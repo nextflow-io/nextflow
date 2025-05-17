@@ -201,23 +201,37 @@ class CmdLint extends CmdBase {
     private void printErrors(SourceUnit source) {
         errorListener.beforeErrors()
 
-        final errorMessages = source.getErrorCollector().getErrors()
-        for( final message : errorMessages ) {
-            if( message instanceof SyntaxErrorMessage ) {
-                final cause = message.getCause()
+        source.getErrorCollector().getErrors().stream()
+            .filter(message -> message instanceof SyntaxErrorMessage)
+            .map(message -> ((SyntaxErrorMessage) message).getCause())
+            .sorted(ERROR_COMPARATOR)
+            .forEach((cause) -> {
                 errorListener.onError(cause, source.getName(), source)
                 summary.errors += 1
-            }
-        }
+            })
 
-        final warningMessages = source.getErrorCollector().getWarnings()
-        for( final warning : warningMessages ) {
-            if( warning instanceof ParanoidWarning )
-                continue
-            errorListener.onWarning(warning, source.getName(), source)
-        }
+        source.getErrorCollector().getWarnings().stream()
+            .filter(warning -> warning !instanceof ParanoidWarning)
+            .sorted(WARNING_COMPARATOR)
+            .forEach((warning) -> {
+                errorListener.onWarning(warning, source.getName(), source)
+            })
 
         errorListener.afterErrors()
+    }
+
+    private static final Comparator<SyntaxException> ERROR_COMPARATOR = (SyntaxException a, SyntaxException b) -> {
+        return a.getStartLine() != b.getStartLine()
+            ? a.getStartLine() - b.getStartLine()
+            : a.getStartColumn() - b.getStartColumn()
+    }
+
+    private static final Comparator<WarningMessage> WARNING_COMPARATOR = (WarningMessage w1, WarningMessage w2) -> {
+        final a = w1.getContext()
+        final b = w2.getContext()
+        return a.getStartLine() != b.getStartLine()
+            ? a.getStartLine() - b.getStartLine()
+            : a.getStartColumn() - b.getStartColumn()
     }
 
     private void format(File file) {
