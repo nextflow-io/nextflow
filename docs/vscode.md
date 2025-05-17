@@ -58,11 +58,59 @@ The extension can generate a workflow DAG that includes the workflow inputs, out
 
 To preview the DAG of a workflow, select the **Preview DAG** CodeLens above the workflow definition.
 
+:::{note}
+The **Preview DAG** CodeLens is only available when the script does not contain any errors.
+:::
+
 ## Troubleshooting
 
-In the event of a language server error, you can use the **Nextflow: Restart language server** command in the command palette to restart the language server.
+### Stop and restart
 
+In the event of an error, stop or restart the language server from the Command Palette. The following stop and restart commands are available:
+
+- `Nextflow: Stop language server`
+- `Nextflow: Restart language server`
+
+See {ref}`vscode-commands` for a fill list of Nextflow VS Code extension commands.
+
+### View logs
+
+Error logs can be useful for troubleshooting errors.
+
+To view logs in VS Code:
+
+1. Open the **Output** tab in your console.
+2. Select **Nextflow Language Server** from the dropdown.
+
+To show additional log messages in VS Code:
+
+1. Open the **Extensions** view in the left-hand menu.
+2. Select the **Nextflow** extension.
+3. Select the **Manage** icon.
+3. Enable **Nextflow > Debug** in the extension settings.
+
+### Common errors
+
+<h4>Filesystem changes</h4>
+
+The language server does not detect certain filesystem changes. For example, changing the current Git branch.
+
+To resolve this issue, restart the language server from the command palette to sync it with your workspace. See [Stop and restart](#stop-and-restart) for more information.
+
+<h4>Third-party plugins</h4>
+
+The language server does not recognize configuration options from third-party plugins and will report unrecognized config option warnings. There is currently no solution to suppress them.
+
+<h4>Groovy scripts</h4>
+
+The language server provides limited support for Groovy scripts in the lib directory. Errors in Groovy scripts are not reported as diagnostics, and changing a Groovy script does not automatically re-compile the Nextflow scripts that reference it.
+
+To resolve this issue, edit or close and re-open the Nextflow script to refresh the diagnostics.
 Report issues at [nextflow-io/vscode-language-nextflow](https://github.com/nextflow-io/vscode-language-nextflow) or [nextflow-io/language-server](https://github.com/nextflow-io/language-server). When reporting, include a minimal code snippet that reproduces the issue and any error logs from the server. To view logs, open the **Output** tab and select **Nextflow Language Server** from the dropdown. Enable **Nextflow > Debug** in the extension settings to show additional log messages while debugging.
+
+### Reporting issues
+
+Report issues at [nextflow-io/vscode-language-nextflow](https://github.com/nextflow-io/vscode-language-nextflow) or [nextflow-io/language-server](https://github.com/nextflow-io/language-server). When reporting issues, include a minimal code snippet that reproduces the issue and any error logs from the server.
 
 ## Limitations
 
