@@ -59,9 +59,8 @@ Nextflow provides built-in support for Azure cloud services, allowing you to:
 
     Replacing the following:
 
-    - `PIPELINE_NAME`:  your pipeline—for example, `nextflow-io/rnaseq-nf`.
+    - `PIPELINE_NAME`:  your pipeline; for example, `nextflow-io/rnaseq-nf`.
     - `CONTAINER`: your blob container from the storage account defined in your configuration.
-
 
     :::{tip}
     You can list Azure regions with: `az account list-locations -o table`
@@ -69,7 +68,7 @@ Nextflow provides built-in support for Azure cloud services, allowing you to:
 
 ## Authentication
 
-You can authenticate with Azure services in three ways, listed in order of recommended usage:
+Nextflow supports three authentication methods for Azure services, listed in order of security and recommended usage:
 
 1. **Managed Identities** (Most secure, Azure-only): Azure-managed credentials without storing secrets.
 2. **Service Principals** (Secure, works anywhere): Microsoft Entra credentials for authentication.
@@ -126,12 +125,12 @@ azure {
 
 Replace the following:
 
-- `STORAGE_ACCOUNT_NAME`: your storage account name.
-- `BATCH_ACCOUNT_NAME`: your batch account name.
-- `BATCH_ACCOUNT_LOCATION`: your batch account location.
+- `STORAGE_ACCOUNT_NAME`: The name of your Azure Storage account.
+- `BATCH_ACCOUNT_NAME`: The name of your Azure Batch account.
+- `BATCH_ACCOUNT_LOCATION`: The location of your Azure Batch account.
 
 :::{note}
-If the managedIdentity config item is not provided Nextflow will read the environment variable: `AZURE_MANAGED_IDENTITY_SYSTEM=true`
+If the `managedIdentity` config item is not provided, Nextflow will read the environment variable `AZURE_MANAGED_IDENTITY_SYSTEM=true`.
 :::
 
 **User-assigned managed identity**
@@ -162,13 +161,13 @@ azure {
 
 Replace the following:
 
-- `USER_ASSIGNED_MANAGED_IDENTITY_CLIENT_ID`: your user assigned managed identity.
-- `STORAGE_ACCOUNT_NAME`: your storage account name.
-- `BATCH_ACCOUNT_NAME`: your batch account name.
-- `BATCH_ACCOUNT_LOCATION`: your batch account location.
+- `USER_ASSIGNED_MANAGED_IDENTITY_CLIENT_ID`: The object ID of your user assigned managed identity.
+- `STORAGE_ACCOUNT_NAME`: The name of your Azure Storage account.
+- `BATCH_ACCOUNT_NAME`: The name of your Azure Batch account.
+- `BATCH_ACCOUNT_LOCATION`: The location of your Azure Batch account.
 
 :::{note}
-If the `managedIdentity` config item is not provided Nextflow will read the environment variable: `AZURE_MANAGED_IDENTITY_USER_ASSIGNED_ID`
+If the `managedIdentity` config item is not provided, Nextflow will read the environment variable `AZURE_MANAGED_IDENTITY_USER_ASSIGNED_ID`.
 :::
 
 ### Service principals
@@ -176,7 +175,7 @@ If the `managedIdentity` config item is not provided Nextflow will read the envi
 :::{versionadded} 22.11.0-edge
 :::
 
-[Service Principal](https://learn.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal) credentials can be used to access Azure Batch and Storage accounts. Similar to a Managed Identity, a Service Principal is an application identity that can have specific permissions and role-based access. Unlike Managed Identities, Service Principals require a secret key for authentication. This approach allows you to authenticate with Azure resources when operating outside of the Azure environment, such as from your local machine or a non-Azure cloud. For example:
+[Service Principal](https://learn.microsoft.com/en-us/entra/identity-platform/app-objects-and-service-principals) credentials can be used to access Azure Batch and Storage accounts. Similar to a Managed Identity, a Service Principal is an application identity that can have specific permissions and role-based access. Unlike Managed Identities, Service Principals require a secret key for authentication which is less secure but allows you to authenticate with Azure resources when operating outside of the Azure environment, such as from your local machine or a non-Azure cloud. To create a Service Principal, follow the steps in the [official Azure documentation](https://learn.microsoft.com/en-us/entra/identity-platform/howto-create-service-principal-portal) and enter the credentials in the Nextflow configuration file, for example:
 
 ```groovy
 azure {
@@ -198,16 +197,17 @@ azure {
 :::{note}
 If the service principal credentials are not provided Nextflow will read the following environment variables:
 
-- `AZURE_CLIENT_ID`: your service principal client ID.
-- `AZURE_CLIENT_SECRET`: your service principal secret.
-- `AZURE_TENANT_ID`: your tenant ID.
+- `AZURE_CLIENT_ID`: The Application ID of your Azure Service Principal.
+- `AZURE_CLIENT_SECRET`: The secret of your Azure Service Principal.
+- `AZURE_TENANT_ID`: The tenant ID of your Azure Entra Account.
 :::
 
 ### Access keys
 
-The basic authentication method using direct access keys. While simple, it's less secure than Managed Identities or Service Principals. This approach requires you to obtain and manage the access keys for your Azure Storage and Batch accounts.
+The basic authentication method using direct access keys. While simple, it's less secure than Managed Identities or Service Principals because it provides full access to your resources. This approach requires you to obtain and manage the access keys for your Azure Storage and Batch accounts.
 
 You can find your access keys in the Azure Portal:
+
 - For Storage accounts, navigate to your Storage account and select **Access keys** in the left-hand navigation menu.
 - For Batch accounts, navigate to your Batch account and select **Keys** in the left-hand navigation menu.
 
@@ -227,7 +227,7 @@ azure {
 }
 ```
 
-You can also use a Shared Access Token (SAS) instead of an account key:
+You can also use a Shared Access Token (SAS) instead of an account key to provide time-limited access to your storage account:
 
 ```groovy
 azure.storage.sasToken = '<SAS_TOKEN>'
@@ -241,11 +241,11 @@ The value of `sasToken` should be stripped of the leading `?` character.
 :::{note}
 If the access keys are not provided as config items Nextflow will read the following environment variables:
 
-- `AZURE_STORAGE_ACCOUNT_NAME`: storage account name
-- `AZURE_STORAGE_ACCOUNT_KEY`: storage account key
-- `AZURE_BATCH_ACCOUNT_NAME`: Batch account name
-- `AZURE_BATCH_ACCOUNT_KEY`: Batch account key
-- `AZURE_STORAGE_SAS_TOKEN`: storage SAS token
+- `AZURE_STORAGE_ACCOUNT_NAME`: The name of your Azure Storage account.
+- `AZURE_STORAGE_ACCOUNT_KEY`: The key of your Azure Storage account.
+- `AZURE_BATCH_ACCOUNT_NAME`: The name of your Azure Batch account.
+- `AZURE_BATCH_ACCOUNT_KEY`: The key of your Azure Batch account.
+- `AZURE_STORAGE_SAS_TOKEN`: The SAS token of your Azure Storage account.
 :::
 
 ## Azure Blob Storage
@@ -283,7 +283,6 @@ Nextflow integrates seamlessly with Azure Batch to:
 - Dynamically create and manage compute pools based on workflow requirements.
 - Automatically scale nodes up and down as needed during workflow execution.
 - Support both regular and low-priority VMs for cost optimization.
-- Handle container execution across distributed compute resources.
 - Manage task dependencies and data transfers between Azure Storage and compute nodes.
 
 This section describes how to configure and use Azure Batch with Nextflow for efficient cloud-based workflow execution.
@@ -459,7 +458,7 @@ azure.batch.pools.<POOL_NAME> {
 }
 ```
 
-The default auto-scaling formula initializes the pool with the number of VMs specified by the `vmCount` option. It then dynamically scales up the pool based on the number of pending tasks, up to the limit defined by `maxVmCount`. When no jobs are submitted for execution, the formula automatically scales the pool down to zero nodes to minimize costs. The formula balances responsiveness with efficiency by analyzing task patterns over time. The complete default formula is shown below:
+The default auto-scaling formula initializes the pool with the number of VMs specified by the `vmCount` option. It then dynamically scales up the pool based on the number of pending tasks, up to the limit defined by `maxVmCount`. When no jobs are submitted for execution, the formula automatically scales the pool down to zero nodes to minimize costs. The complete default formula is shown below:
 
 ```
 // Get pool lifetime since creation.
@@ -498,7 +497,7 @@ Tasks may fail if they exceed their allocated resources
 
 Using Azure Batch requires the use of containers for every process to ensure portability and reproducibility of your workflows.
 
-Containers can be pulled from a public repository such as community.wave.seqera.io/ but Nextflow also supports the use of private container images, including those stored in private registries like Azure Container Registry (ACR). When using private container images, the Azure Batch compute nodes need to be authenticated to pull these images. If Nextflow is responsible for creating the Batch pool, you can configure the necessary registry credentials to enable seamless container access using the following configuration:
+Nextflow supports both public and private container images. While public images can be pulled from repositories like https://community.wave.seqera.io/, private images require authentication. For private registries like Azure Container Registry (ACR), the Batch pool must be authenticated. If Nextflow is responsible for creating the pool, this can be configured by adding ACR credentials to the `azure.registry` config scope:
 
 ```groovy
 azure.registry {
@@ -514,7 +513,7 @@ If the registry credentials are not provided Nextflow will read the following en
   - `AZURE_REGISTRY_PASSWORD`
 :::
 
-Public container images from Docker Hub or other public registries can still be used without additional configuration, even when a private registry is configured. The Docker service on the nodes will automatically use the appropriate registry based on the container image reference in your process definitions.
+Public container images from Docker Hub or other public registries can still be used without additional configuration, even when a private registry is configured. The Docker service on the nodes will automatically use the appropriate registry based on the container image reference in your process container directive.
 
 **Virtual networks**
 
@@ -524,7 +523,7 @@ Pools can be configured to use a virtual network to connect to your existing net
 azure.batch.pools.<POOL_NAME>.virtualNetwork = '<SUBNET_ID>'
 ```
 
-The `SUBNET_ID> must be in the following format:
+The subnet ID must be in the following format:
 
 ```
 /subscriptions/<SUBSCRIPTION>/resourceGroups/<GROUP>/providers/Microsoft.Network/virtualNetworks/<VNET>/subnets/<SUBNET>
@@ -534,13 +533,15 @@ The `SUBNET_ID> must be in the following format:
 Virtual Networks require Microsoft Entra authentication (Service Principal or Managed Identity)
 :::
 
+Nextflow can submit tasks to existing pools that are already attached to a virtual network without requiring additional configuration.
+
 **Start tasks**
 
 Start tasks are optional commands that can be run when nodes join the pool. They are useful for setting up the node environment or for running any other commands that need to be executed when the node is created.
 
 ```groovy
 azure.batch.pools.<POOL_NAME>.startTask {
-    script = 'setup.sh'
+    script = 'echo "Hello, world!"'
     privileged = true  // optional, default: false
 }
 ```
