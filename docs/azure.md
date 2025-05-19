@@ -21,7 +21,7 @@ Nextflow provides built-in support for Azure cloud services, allowing you to:
 1. Create an Azure Batch account in the Azure portal.
 2. Increase the quotas in your Azure Batch account to the pipeline's needs. Quotas impact the number of Pools, CPUs, and Jobs you can create.
 3. Create a Storage account and Blob Container in the same region as the Batch account.
-4. Ensure Nextflow processes specify Docker containers using the {ref}`process-container` directive. For example:
+4. Configure Nextflow to submit processes to Azure Batch using configuration, for example:
 
     ```groovy
     process {
@@ -48,14 +48,10 @@ Nextflow provides built-in support for Azure cloud services, allowing you to:
     - `ACCOUNT_NAME`: your batch account name.
 
     :::{note}
-    The above snippet shows a minimal Nextflow configuration that excludes authentication for Azure Batch.
+    The above snippet excludes authentication for Azure services. See {ref}`Authentication` for more information.
     :::
 
-    :::{tip}
-    List Azure regions with: `az account list-locations -o table`
-    :::
-
-5. Launch your pipeline with the above configuration:
+5. Launch your pipeline with the above configuration and add a working directory on Azure Blob Storage:
 
     ```bash
     nextflow run <PIPELINE_NAME> -w az://<CONTAINER>/
@@ -65,6 +61,11 @@ Nextflow provides built-in support for Azure cloud services, allowing you to:
 
     - `PIPELINE_NAME`:  your pipeline—for example, `nextflow-io/rnaseq-nf`.
     - `CONTAINER`: your blob container from the storage account defined in your configuration.
+
+
+    :::{tip}
+    You can list Azure regions with: `az account list-locations -o table`
+    :::
 
 ## Authentication
 
