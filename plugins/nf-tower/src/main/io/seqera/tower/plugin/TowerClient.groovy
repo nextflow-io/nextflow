@@ -48,6 +48,7 @@ import nextflow.util.Duration
 import nextflow.util.LoggerHelper
 import nextflow.util.ProcessHelper
 import nextflow.util.SimpleHttpClient
+import nextflow.util.TestOnly
 import nextflow.util.Threads
 /**
  * Send out messages via HTTP to a configured URL on different workflow
@@ -141,7 +142,7 @@ class TowerClient implements TraceObserver {
 
     private TowerReports reports
 
-    private Map<String,Map<String,Object>> allContainers = new ConcurrentHashMap<>()
+    private Map<String,Boolean> allContainers = new ConcurrentHashMap<>()
 
     /**
      * Constructor that consumes a URL and creates
@@ -161,9 +162,7 @@ class TowerClient implements TraceObserver {
         return this
     }
 
-    /**
-     * only for testing purpose -- do not use
-     */
+    @TestOnly
     protected TowerClient() {
         this.generator = TowerJsonGenerator.create(Collections.EMPTY_MAP)
     }
@@ -720,8 +719,10 @@ class TowerClient implements TraceObserver {
         final result = new ArrayList<ContainerMeta>()
         for( TraceRecord it : tasks ) {
             final meta = it.getContainerMeta()
-            if( meta && !allContainers.containsKey(meta.targetImage) )
+            if( meta && !allContainers.get(meta.targetImage) ) {
+                allContainers.put(meta.targetImage, Boolean.TRUE)
                 result.add(meta)
+            }
         }
         return result
     }

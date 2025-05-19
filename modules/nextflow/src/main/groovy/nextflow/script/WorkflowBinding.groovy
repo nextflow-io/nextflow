@@ -22,6 +22,8 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.NF
 import nextflow.exception.IllegalInvocationException
+import nextflow.exception.ScriptRuntimeException
+import nextflow.extension.CH
 import nextflow.extension.OpCall
 /**
  * Models the execution context of a workflow component
@@ -156,13 +158,16 @@ class WorkflowBinding extends Binding  {
         }
     }
 
-    void _publish_target(DataflowWriteChannel source, String name) {
-        owner.session.publishTargets[source] = name
-    }
+    void _publish_(String name, Object source) {
+        if( source instanceof ChannelOut ) {
+            if( source.size() > 1 )
+                throw new ScriptRuntimeException("Cannot assign a multi-channel to a workflow output: $name")
+            source = source[0]
+        }
 
-    void _publish_target(ChannelOut out, String name) {
-        for( final ch : out )
-            _publish_target(ch, name)
+        owner.session.outputs[name] = source instanceof DataflowWriteChannel
+            ? source
+            : CH.value(source)
     }
 
 }

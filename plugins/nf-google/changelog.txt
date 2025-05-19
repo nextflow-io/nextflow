@@ -1,5 +1,12 @@
 nf-google changelog
 ===================
+1.21.0 - 8 May 2025
+- Add Support for Google Batch network tags (#5951) [d6e4d6c2]
+- Remove test constructors or mark as TestOnly (#5216) [d4fadd42]
+
+1.20.0 - 23 Apr 2025
+- Add Google Batch gcsfuseOptions (#5991) [1d4dd574]
+
 1.19.0 - 17 Mar 2025
 - Fix Google Batch autoRetryExitCodes bug (#5828) [cfeedd6f]
 - Improve Google Batch support for GPUs (#5406) [420fb17e]

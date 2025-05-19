@@ -630,7 +630,7 @@ The following error strategies are available:
 
 `ignore`
 : When a task fails, ignore it and continue the pipeline execution. If the `workflow.failOnIgnore` config option is set to `true`, the pipeline will report an error (i.e. return a non-zero exit code) upon completion. Otherwise, the pipeline will complete successfully.
-: See {ref}`stdlib-constants` for more information on `workflow.failOnIgnore`.
+: See the {ref}`stdlib-namespaces-workflow` namespace for more information.
 
 `retry`
 : When a task fails, retry it.
@@ -1429,6 +1429,34 @@ Resource limits are a useful way to specify environment-specific limits alongsid
 
 (process-scratch)=
 
+### secret
+
+The `secret` directive allows a process to access secrets.
+
+Secrets can be added to a process as follows:
+
+```nextflow
+process someJob {
+    secret 'MY_ACCESS_KEY'
+    secret 'MY_SECRET_KEY'
+
+    script:
+    """
+    your_command --access \$MY_ACCESS_KEY --secret \$MY_SECRET_KEY
+    """
+}
+```
+
+See {ref}`secrets-page` for more information. 
+
+:::{warning}
+Secrets are made available as environment variables in the process command context. To prevent evaluation in the Nextflow script context, escape variable names with a backslash (e.g., `\$MY_ACCESS_KEY`) as shown in the above example.
+:::
+
+:::{note}
+This feature is only available for local or grid executors (e.g., Slurm or Grid Engine). The AWS Batch executor allows the use of secrets when deploying pipelines via Seqera Platform.
+:::
+
 ### scratch
 
 The `scratch` directive allows you to execute the process in a temporary folder that is local to the execution node.
@@ -1624,7 +1652,7 @@ process foo {
 }
 
 workflow {
-  Channel.of('alpha', 'gamma', 'omega') | foo
+  channel.of('alpha', 'gamma', 'omega') | foo
 }
 ```
 

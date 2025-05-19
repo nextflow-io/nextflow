@@ -33,7 +33,7 @@ process sort {
 
 
 workflow {
-    ch_fasta = Channel.fromPath(params.query)
+    ch_fasta = channel.fromPath(params.query)
         | splitFasta( by: params.chunkSize, file:true )
 
     blast(ch_fasta, params.db)

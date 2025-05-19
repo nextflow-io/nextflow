@@ -71,22 +71,19 @@ class IncludeDef {
         this.modules = new ArrayList<>(modules)
     }
 
-    /** only for testing purpose -- do not use */
-    protected IncludeDef() { }
-
     IncludeDef from(Object path) {
         this.path = path
         return this
     }
 
     IncludeDef params(Map args) {
-        log.warn "Include with `params()` is deprecated -- pass params as a workflow or process input instead"
+        log.warn1 "Include with `params()` is deprecated -- pass params as a workflow or process input instead"
         this.params = args != null ? new HashMap(args) : null
         return this
     }
 
     IncludeDef addParams(Map args) {
-        log.warn "Include with `addParams()` is deprecated -- pass params as a workflow or process input instead"
+        log.warn1 "Include with `addParams()` is deprecated -- pass params as a workflow or process input instead"
         this.addedParams = args
         return this
     }
@@ -111,7 +108,7 @@ class IncludeDef {
         // -- resolve the concrete against the current script
         final moduleFile = realModulePath(path).normalize()
         // -- load the module
-        final moduleScript = NF.getSyntaxParserVersion() == 'v2'
+        final moduleScript = NF.isSyntaxParserV2()
             ? loadModuleV2(moduleFile, ownerParams, session)
             : loadModuleV1(moduleFile, resolveParams(ownerParams), session)
         // -- add it to the inclusions

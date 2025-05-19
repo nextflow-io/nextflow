@@ -6,7 +6,9 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.function.Predicate
 
+import com.azure.compute.batch.BatchClient
 import com.azure.compute.batch.models.BatchPool
+import com.azure.compute.batch.models.BatchJobCreateContent
 import com.azure.compute.batch.models.ElevationLevel
 import com.azure.core.exception.HttpResponseException
 import com.azure.core.http.HttpResponse
@@ -29,6 +31,8 @@ import nextflow.util.MemoryUnit
 import reactor.core.publisher.Flux
 import spock.lang.Specification
 import spock.lang.Unroll
+import com.azure.compute.batch.models.BatchJobConstraints
+import com.azure.compute.batch.models.BatchPoolInfo
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -676,7 +680,7 @@ class AzBatchServiceTest extends Specification {
         result.id == 'nf-01000000'
         result.requiredSlots == 4
         and:
-        result.commandLine == "sh -c 'bash .command.run 2>&1 | tee .command.log'"
+        result.commandLine == "bash -o pipefail -c 'bash .command.run 2>&1 | tee .command.log'"
         and:
         result.containerSettings.imageName == 'ubuntu:latest'
         result.containerSettings.containerRunOptions == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro '
@@ -720,7 +724,7 @@ class AzBatchServiceTest extends Specification {
         result.id == 'nf-02000000'
         result.requiredSlots == 4
         and:
-        result.commandLine == "sh -c 'bash .command.run 2>&1 | tee .command.log'"
+        result.commandLine == "bash -o pipefail -c 'bash .command.run 2>&1 | tee .command.log'"
         and:
         result.containerSettings.imageName == 'ubuntu:latest'
         result.containerSettings.containerRunOptions == '--cpu-shares 4096 --memory 8192m -v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro '
@@ -765,7 +769,7 @@ class AzBatchServiceTest extends Specification {
         result.id == 'nf-02000000'
         result.requiredSlots == 4
         and:
-        result.commandLine == "sh -c 'bash .command.run 2>&1 | tee .command.log'"
+        result.commandLine == "bash -o pipefail -c 'bash .command.run 2>&1 | tee .command.log'"
         and:
         result.containerSettings.imageName == 'ubuntu:latest'
         result.containerSettings.containerRunOptions == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro -v /mnt/batch/tasks/fsmounts/file1:mountPath1:rw -v /foo:/foo '
@@ -941,4 +945,31 @@ class AzBatchServiceTest extends Specification {
         1 * service.createPool(spec) >> { throw new IllegalArgumentException("Some other error") }
         thrown(IllegalArgumentException)
     }
+
+    def 'should test createJobConstraints method with Duration input' () {
+        given:
+        def exec = Mock(AzBatchExecutor)
+        def service = new AzBatchService(exec)
+        def nfDuration = TIME_STR ? nextflow.util.Duration.of(TIME_STR) : null
+        
+        when:
+        def result = service.createJobConstraints(nfDuration)
+        
+        then:
+        result != null
+        if (TIME_STR) {
+            assert result.maxWallClockTime != null
+            assert result.maxWallClockTime.toDays() == EXPECTED_DAYS
+        } else {
+            assert result.maxWallClockTime == null
+        }
+        
+        where:
+        TIME_STR | EXPECTED_DAYS
+        '48d'    | 48
+        '24h'    | 1
+        '7d'     | 7
+        null     | 0
+    }
+
 }
