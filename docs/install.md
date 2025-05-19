@@ -56,7 +56,7 @@ To install Java with SDKMAN:
 
 Nextflow is distributed as an easy to use self-installing package. It is also distributed via Conda and as a standalone distribution.
 
-### Self-installing
+### Self-install
 
 In order to make the installation process as simple as possible, Nextflow is distributed as a self-installing package.
 
@@ -93,7 +93,7 @@ To install Nextflow with the self-installing package:
     :::
 
     :::{warning}
-    Nextflow will update its executable during the self update process, therefore the update can fail if the executable is placed in a directory with restricted permissions.
+    Nextflow updates its executable during the self-install process, therefore the update can fail if the executable is placed in a directory with restricted permissions.
     :::
 
 4. Confirm Nextflow is installed correctly:
@@ -107,7 +107,7 @@ To install Nextflow with the self-installing package:
 
 To install Nextflow with Conda:
 
-1. Add the Bioconda and conda-forge channels to your Conda configuration:
+1. Add the `bioconda` and `conda-forge` channels to your Conda configuration:
     
     ```{code-block} bash
     :class: copyable
@@ -122,7 +122,7 @@ To install Nextflow with Conda:
     conda create --name nf_env nextflow
     ```
 
-3. Active the environment:
+3. Activate the environment:
 
     ```{code-block} bash
     :class: copyable
@@ -142,7 +142,7 @@ Installing Nextflow via Conda may lead to outdated versions, dependency conflict
 
 ### Standalone distribution
 
-The Nextflow standalone distribution (i.e. the `dist` release) is a self-contained `nextflow` executable that can run without needing to download core dependencies at runtime. This distribution is useful for offline environments, as well as building and testing Nextflow locally.
+The Nextflow standalone distribution (i.e., the `dist` release) is a self-contained `nextflow` executable that can run without needing to download core dependencies at runtime. This distribution is useful for offline environments as well as building and testing Nextflow locally.
 
 To use the standalone distribution:
 
@@ -178,4 +178,4 @@ Launching from Seqera Platform provides you with:
 - Advanced analytics with resource optimization.
 
 Seqera Cloud Basic is free for small teams. Researchers at qualifying academic institutions can apply for free access to Seqera Cloud Pro.
-See the [Seqera Platform documentation](https://docs.seqera.io/platform) for set-up information and tutorials to get started.
+See the [Seqera Platform documentation](https://docs.seqera.io/platform) for tutorials to get started.
