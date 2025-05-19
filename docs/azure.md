@@ -197,9 +197,9 @@ azure {
 :::{note}
 If the service principal credentials are not provided Nextflow will read the following environment variables:
 
-- `AZURE_CLIENT_ID`: your service principal client ID
-- `AZURE_CLIENT_SECRET`: your service principal secret
-- `AZURE_TENANT_ID`: your tenant ID
+- `AZURE_CLIENT_ID`: your service principal client ID.
+- `AZURE_CLIENT_SECRET`: your service principal secret.
+- `AZURE_TENANT_ID`: your tenant ID.
 :::
 
 ### Access keys
@@ -390,10 +390,10 @@ process EXAMPLE_PROCESS {
 ```
 
 :::{note}
-- For tasks using <4 CPUs, Nextflow creates pools with 4x CPUs to enable task packing
-- For tasks using <8 CPUs, Nextflow uses 2x CPUs
-- Override this by specifying exact machine type (e.g., `Standard_E2d_v5`)
-- Use regex to avoid certain machines (e.g., `standard_*[^p]_v*` avoids ARM-based machines)
+- For tasks using <4 CPUs, Nextflow creates pools with 4x CPUs to enable task packing.
+- For tasks using <8 CPUs, Nextflow uses 2x CPUs.
+- Override this by specifying exact machine type (e.g., `Standard_E2d_v5`).
+- Use regex to avoid certain machines (e.g., `standard_*[^p]_v*` avoids ARM-based machines).
 :::
 
 The pool is not removed when the pipeline terminates, unless the configuration setting `azure.batch.deletePoolsOnCompletion` is enabled in your Nextflow configuration file.
@@ -433,8 +433,7 @@ process {
 The above example defines the configuration for two node pools. The first will provision 10 compute nodes of type Standard_D2_v2, the second 5 nodes of type Standard_E2_v3. See the Azure configuration section for the complete list of available configuration options.
 
 :::{warning}
-- Pool names can only contain alphanumeric, hyphen and underscore characters.
-- Wrap hyphenated names in quotes: `'pool-1'`.
+Pool names can only contain alphanumeric, hyphen and underscore characters. Wrap hyphenated names in quotes: `'pool-1'`.
 :::
 
 **Requirements on pre-existing named pools**
