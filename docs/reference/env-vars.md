@@ -118,6 +118,12 @@ The following environment variables control the configuration of the Nextflow ru
 : The file storage path against which relative file paths are resolved.
 : For example, with `NXF_FILE_ROOT=/some/root/path`, the use of `file('hello')` will be resolved to the absolute path `/some/root/path/hello`. A remote root path can be specified using the usual protocol prefix, e.g. `NXF_FILE_ROOT=s3://my-bucket/data`. Files defined using an absolute path are not affected by this setting.
 
+`NXF_GLOBALCACHE_PATH`
+: :::{versionadded} 26.04.0
+  :::
+: Enable global caching, using the given path as cache root.
+: This allows cached tasks to be re-used by different runs. Enabling global caching implicitly enables resume, and sets the work directory to `${NXF_GLOBALCACHE_PATH}/work`.
+
 `NXF_HOME`
 : Nextflow home directory (default: `$HOME/.nextflow`).
 

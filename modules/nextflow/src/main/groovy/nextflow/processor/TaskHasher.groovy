@@ -50,11 +50,11 @@ class TaskHasher {
 
         final keys = new ArrayList<Object>()
 
-        // add session UUID
-        keys << session.uniqueId
-
-        // add fully-qualified process name
-        keys << task.processor.name
+        // add session id and process name if global caching is not enabled
+        if( session.uniqueId != new UUID(0L, 0L) ) {
+            keys << session.uniqueId
+            keys << task.processor.name
+        }
 
         // add source code of `script:` or `exec:` block
         //
