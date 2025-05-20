@@ -51,7 +51,6 @@ class GoogleOpts {
     private GoogleStorageOpts storageOpts
 
     String getProjectId() { projectId }
-    File getCredsFile() { credsFile }
     String getLocation() { location ?: DEFAULT_LOCATION }
     boolean getEnableRequesterPaysBuckets() { enableRequesterPaysBuckets }
     Duration getHttpConnectTimeout() { httpConnectTimeout }
