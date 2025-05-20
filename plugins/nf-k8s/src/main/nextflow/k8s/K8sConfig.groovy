@@ -239,7 +239,7 @@ class K8sConfig implements Map<String,Object> {
             result.retryConfig = new K8sRetryConfig(target.retryPolicy as Map)
 
         if( target.maxErrorRetry )
-            log.warn("'k8s.maxErrorRetry' is deprecated. Change it to 'k8s.retryPolicy.maxAttempts'")
+            log.warn("Config setting 'k8s.maxErrorRetry' is deprecated. Change it to 'k8s.retryPolicy.maxAttempts'")
 
         return result
     }

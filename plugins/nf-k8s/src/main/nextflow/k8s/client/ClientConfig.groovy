@@ -135,7 +135,7 @@ class ClientConfig {
         if( opts.retryPolicy )
             result.retryConfig = new K8sRetryConfig(opts.retryPolicy as Map)
         if( opts.maxErrorRetry )
-            log.warn("'k8s.maxErrorRetry' is deprecated - change it to 'k8s.retryPolicy.maxAttempts'")
+            log.warn("Config setting 'k8s.maxErrorRetry' is deprecated - change it to 'k8s.retryPolicy.maxAttempts'")
 
         return result
     }
