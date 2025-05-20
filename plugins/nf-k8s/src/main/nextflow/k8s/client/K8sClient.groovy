@@ -741,7 +741,7 @@ class K8sClient {
         final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
             @Override
             void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
-                log.debug("Azure TooManyRequests response error - attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}")
+                log.debug("K8s response error - attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}")
             }
         }
         return RetryPolicy.<T>builder()
@@ -768,9 +768,9 @@ class K8sClient {
             boolean test(Throwable t) {
                 if ( t instanceof K8sResponseException && t.response.code in RETRY_CODES )
                     return true
-                if( t instanceof IOException || t.cause instanceof IOException )
+                if( t instanceof SocketException || t.cause instanceof SocketException )
                     return true
-                if( t instanceof TimeoutException || t.cause instanceof TimeoutException )
+                if( t instanceof SocketTimeoutException || t.cause instanceof SocketTimeoutException )
                     return true
                 return false
             }
