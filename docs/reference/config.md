@@ -1600,16 +1600,6 @@ The following settings are available:
 `wave.build.conda.mambaImage`
 : The Mamba container image is used to build Conda based container. This is expected to be [micromamba-docker](https://github.com/mamba-org/micromamba-docker) image.
 
-`wave.build.spack.basePackages`
-: :::{versionadded} 22.06.0-edge
-  :::
-: One or more Spack packages to be always added in the resulting container.
-
-`wave.build.spack.commands`
-: :::{versionadded} 22.06.0-edge
-  :::
-: One or more commands to be added to the Dockerfile used to build a Spack based image.
-
 `wave.endpoint`
 : The Wave service endpoint (default: `https://wave.seqera.io`).
 
