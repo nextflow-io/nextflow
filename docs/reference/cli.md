@@ -714,6 +714,9 @@ See the {ref}`data-lineage-page` guide to learn how to get started with data lin
 
 **Subcommands**
 
+`check <lid>`
+: Validate the checksum of output lineage record.
+
 `diff <lid-1> <lid-2>`
 : Display a git-style diff between two lineage records.
 
@@ -1278,6 +1281,61 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
   ```
 
   See {ref}`cli-params` for more information about writing custom parameters files.
+
+### `secrets`
+
+Manage pipeline secrets.
+
+**Usage**
+
+```console
+$ nextflow secrets <SUBCOMMAND> [OPTIONS]
+```
+
+**Options**
+
+`-h, -help`
+: Print the command usage.
+
+**Subcommands**
+
+`list`
+: List secrets available in the current store.
+
+`get <secret>`
+: Retrieve a secret value.
+
+`set <secret> <value> `
+: Create or update a secret.
+
+`delete <secret>`
+: Delete a secret.
+
+**Examples**
+
+- Set a secret:
+
+    ```console
+    $ nextflow secrets set FOO "Hello world"
+    ```
+
+- List secrets:
+
+    ```console
+    $ nextflow secrets list
+    ```
+
+- Get a secret:
+
+    ```console
+    $ nextflow secrets get FOO
+    ```
+
+- Delete a secret:
+
+    ```console
+    $ nextflow secrets delete FOO
+    ```
 
 ### `self-update`
 

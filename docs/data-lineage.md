@@ -2,49 +2,55 @@
 
 # Data lineage
 
-This guide shows how to get started with native provenance tracking, also known as *data lineage*, introduced in {ref}`Nextflow 25.04 <migrating-25-04-page>`.
+Data lineage in Nextflow provides comprehensive tracking of workflow runs, task executions, and output files. This feature helps you verify the integrity and reproducibility of your pipeline results by maintaining a complete history of computations and intermediate data.
 
 :::{warning}
-Data lineage is an experimental feature. It may change in future releases.
+Data lineage is an experimental feature added in Nextflow 25.04. The functionality may change in future releases.
 :::
 
 ## Overview
 
-The *provenance* or *lineage* of a data entity, such as a file or record, is the history of computations and intermediate data that produced the entity. Data lineage is useful for verifying the integrity and reproducibility of pipeline results.
+Data lineage tracks the complete history of your Nextflow runs, including:
 
-Nextflow's built-in data lineage, when enabled, tracks all of your workflow runs, task runs, and outputs in a single place as *lineage records*. You can then query these records from the command line, or use them in a Nextflow script. Every lineage record has a unique hash called a *lineage ID* (LID) by which it is accessed.
+- Workflow runs and their configurations
+- Task executions and their inputs/outputs
+- File outputs and their provenance
+
+Each lineage record has a unique identifier called a *lineage ID* (LID) that you can use to access and query the data.
+
+:::{note}
+The data model for every lineage record is defined in the Nextflow [source code](https://github.com/nextflow-io/nextflow/tree/master/modules/nf-lineage/src/main/nextflow/lineage/model).
+:::
 
 ## Enable data lineage
 
-To get started, enable data lineage in your Nextflow configuraiton:
+To enable data lineage tracking, add the following to your Nextflow configuration:
 
 ```groovy
 lineage.enabled = true
 ```
 
-Optionally, set the location of the lineage store:
+By default, lineage data is stored in the `.lineage` directory in your current working directory. You can customize this location:
 
 ```groovy
-lineage.store.location = '.lineage'
+lineage.store.location = '<PATH_TO_STORAGE>'
 ```
 
-It defaults to `.lineage` in the current directory.
-
 :::{tip}
-Place these settings in `~/.nextflow/config` to apply them globally.
+For global configuration, add these settings to `$HOME/.nextflow/config`.
 :::
 
-See the {ref}`config-lineage` config scope for details.
+See the {ref}`config-lineage` configuration scope for details.
 
 ## Generate lineage metadata
 
 Run a Nextflow pipeline to generate some lineage metadata. For example:
 
-```bash
-nextflow run rnaseq-nf -profile conda
+```console
+$ nextflow run rnaseq-nf -profile conda
 ```
 
-This pipeline will execute several tasks and publish several output files, all of which will be recorded in the lineage store.
+Nextflow will automatically record the workflow run, task executions, and output files in the lineage store.
 
 ## Explore lineage
 
@@ -65,6 +71,7 @@ Use the `view` subcommand to view the lineage record for the workflow run:
 ```console
 $ nextflow lineage view lid://16b31030474f2e96c55f4940bca3ab64
 {
+  "version": "lineage/v1beta1",
   "type": "WorkflowRun",
   "workflow": {
     "scriptFiles": [
@@ -84,13 +91,9 @@ $ nextflow lineage view lid://16b31030474f2e96c55f4940bca3ab64
 }
 ```
 
-Every workflow run is represented in the lineage store as a `WorkflowRun` record, which includes information such as the pipeline repository, revision, run name, parameters, and resolved config.
+Every workflow run is represented in the lineage store as a `WorkflowRun` record. It includes information such as the pipeline repository, revision, run name, parameters, and resolved config.
 
-:::{note}
-The data model for every lineage record is defined in the Nextflow [source code](https://github.com/nextflow-io/nextflow/tree/master/modules/nf-lineage/src/main/nextflow/lineage/model).
-:::
-
-The output files of a workflow run can be accessed as `lid://<workflow-run-hash>/<path>`, where `<path>` is the file path relative to the workflow output directory.
+The output files of a workflow run can be accessed as `lid://<WORKFLOW_RUN_HASH>/<PATH>`, where `<PATH>` is the file path relative to the workflow output directory.
 
 :::{note}
 Files must be published to the workflow output directory as defined by the `outputDir` config option (or `-output-dir` command line option) in order to be recorded as workflow outputs in the lineage store.
@@ -114,6 +117,7 @@ Now, use the workflow LID and relative path to view the lineage record for an ou
 ```console
 $ nextflow lineage view lid://16b31030474f2e96c55f4940bca3ab64/multiqc_report.html
 {
+  "version": "lineage/v1beta1",
   "type": "FileOutput",
   "path": "/results/multiqc_report.html",
   "checksum": {
@@ -131,15 +135,16 @@ $ nextflow lineage view lid://16b31030474f2e96c55f4940bca3ab64/multiqc_report.ht
 }
 ```
 
-Every output file is represented in the lineage store as a `FileOutput` record, which includes basic file information such as the real path, checksum, file size and created/modified timestamps. It also includes lineage information, such as the workflow run and task run that produced it.
+Every output file is represented in the lineage store as a `FileOutput` record. It includes basic file information, such as the real path, checksum, file size and created/modified timestamps, as well as lineage information, such as the workflow run and task run that produced it.
 
-Since this record is a workflow output, it is not linked directly to a task run, but rather to the original task output.
+As this record is a workflow output, it is not linked directly to a task run. Instead, it is linked to the original task output.
 
-Any LID in a lineage record can itself be viewed, allowing you to traverse the lineage metadata interactively. Use the value of `source` to view the original task output:
+Any LID in a lineage record can be viewed, allowing you to traverse the lineage metadata interactively. Use the value of `source` to view the original task output:
 
 ```console
 $ nextflow lineage view lid://862df53160e07cd823c0c3960545e747/multiqc_report.html
 {
+  "version": "lineage/v1beta1",
   "type": "FileOutput",
   "path": "/work/86/2df53160e07cd823c0c3960545e747/multiqc_report.html",
   "checksum": {
@@ -164,6 +169,7 @@ View the lineage record for the task that produced this file:
 ```console
 $ nextflow lineage view lid://862df53160e07cd823c0c3960545e747
 {
+  "version": "lineage/v1beta1",
   "type": "TaskRun",
   "sessionId": "065bdc6b-89b4-42ee-92c1-2a5af37f2c50",
   "name": "MULTIQC",
@@ -220,7 +226,7 @@ Open the HTML report in a web browser to view the lineage graph.
 
 ## Query lineage records
 
-To find a lineage record, you normally have to know the LID of the record, or you have to know the LID of a downstream record (such as a workflow run) from which you can traverse to the desired record. However, you can also query the entire lineage store by fields, allowing you to quickly find relevant records and aggregate records from different runs.
+To find a lineage record, you normally have to know the LID of the record or a downstream record (such as a workflow run) from which you can traverse to the desired record. However, you can also query the entire lineage store by fields to quickly find relevant records and aggregate records from different runs.
 
 Use the `find` subcommand to find all tasks executed by a workflow run:
 
@@ -234,26 +240,26 @@ $ nextflow lineage find type=TaskRun workflowRun=lid://16b31030474f2e96c55f4940b
 ]
 ```
 
-You can use any field defined the [lineage data model](https://github.com/nextflow-io/nextflow/tree/master/modules/nf-lineage/src/main/nextflow/lineage/model).
+You can use any field defined in the [lineage data model](https://github.com/nextflow-io/nextflow/tree/master/modules/nf-lineage/src/main/nextflow/lineage/model).
 
 :::{tip}
 Since the `find` and `view` subcommands always output JSON, you can use JSON processing tools such as [jq](https://jqlang.org/) to further query and transform results.
 :::
 
-## Compare two task runs
+## Compare task runs
 
-Since task run LIDs are based on the standard {ref}`task hash <cache-resume-task-hash>`, it is easy to compare two task runs in the lineage metadata. This is especially useful when a task is unexpectedly re-executed during a resumed run. As long as lineage is enabled for the initial and resumed runs, the two tasks can be compared without any additional runs.
+Task run LIDs are based on the standard {ref}`task hash <cache-resume-task-hash>`, which makes it easy to compare two task runs in the lineage metadata. For example, if a task is unexpectedly re-executed during a resumed run, as long as lineage is enabled for both the initial and resumed runs, the two tasks can be compared without any additional runs.
 
-This section builds on the previous `rnaseq-nf` example to demonstrate how to compare two task runs in the event of a cache invalidation.
+This section builds on the above [`rnaseq-nf` example](#generate-lineage-metadata) to demonstrate how to compare two task runs in the event of a cache invalidation.
 
-First, modify the pipeline in a way that invalidates the cache, such as modifying the script of the `MULTIQC` process.
+First, modify the pipeline in a way that invalidates the cache for the `MULTIQC` process. For example, modify the process script.
 
-Resume the pipeline, which should re-execute the `MULTIQC` task:
+Resume the pipeline. It will re-execute the `MULTIQC` process:
 
 ```console
 $ nextflow run rnaseq-nf -profile conda -resume
 
- ...  
+...
 
 [6d/3bff36] process > RNASEQ:INDEX (ggal_1_48850000_49020000) [100%] 1 of 1, cached: 1 ✔
 [2d/8bd92c] process > RNASEQ:FASTQC (FASTQC on ggal_gut)      [100%] 1 of 1, cached: 1 ✔
@@ -261,9 +267,7 @@ $ nextflow run rnaseq-nf -profile conda -resume
 [94/33dda7] process > MULTIQC                                 [100%] 1 of 1 ✔
 ```
 
-Retrieve the hash of the MULTIQC run from the log file or work directory -- in this case it is `9433dda73f2193491f9a26e3e23cd8a1`.
-
-Finally, compare the task hash of the initial run (taken from the original example) to that of the resumed run:
+Retrieve the hash of the `MULTIQC` run from the log file or work directory. Compare it to the task hash of the initial run:
 
 ```console
 $ nextflow lineage diff lid://862df53160e07cd823c0c3960545e747 lid://9433dda73f2193491f9a26e3e23cd8a1
@@ -297,9 +301,9 @@ Note the difference between the task scripts, highlighting the change that cause
 
 ## Use lineage with workflow outputs
 
-Workflow outputs declared in the `output` block are also recorded in the lineage store. The output of a workflow run can be accessed as `lid://<workflow-run-hash>#output`.
+Workflow outputs declared in the `output` block are also recorded in the lineage store. The output of a workflow run is accessible as `lid://<WORKFLOW_RUN_HASH>#output`.
 
-Run the `rnaseq-nf` pipeline using the `preview-25-04` branch, which uses the `output` block to publish outputs:
+For example, run the `rnaseq-nf` pipeline using the `preview-25-04` branch, which uses the `output` block to publish outputs:
 
 ```console
 $ nextflow -r preview-25-04 -profile conda
@@ -338,6 +342,8 @@ channel.fromPath('lid://9410d13abeec617640b5fe9735ba12fc/samples.json')
     .splitJson()
     .view()
 ```
+
+It should produce the following output:
 
 ```console
 [id:gut, quant:/results/gut/quant, fastqc:/results/gut/fastqc]
