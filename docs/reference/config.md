@@ -912,17 +912,17 @@ The following settings are available for Google Cloud Batch:
 `google.batch.usePrivateAddress`
 : When `true` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: `false`).
 
-`google.storage.maxAttempts`
+`google.storage.retryPolicy.maxAttempts`
 : :::{versionadded} 23.11.0-edge
   :::
 : Max attempts when retrying failed API requests to Cloud Storage (default: `10`).
 
-`google.storage.maxDelay`
+`google.storage.retryPolicy.maxDelay`
 : :::{versionadded} 23.11.0-edge
   :::
 : Max delay when retrying failed API requests to Cloud Storage (default: `'90s'`).
 
-`google.storage.multiplier`
+`google.storage.retryPolicy.multiplier`
 : :::{versionadded} 23.11.0-edge
   :::
 : Delay multiplier when retrying failed API requests to Cloud Storage (default: `2.0`).
@@ -955,31 +955,6 @@ The following settings are available for Cloud Life Sciences:
 
 `google.zone`
 : The Google Cloud zone where jobs are executed. Multiple zones can be provided as a comma-separated list. Cannot be used with the `google.region` option. See the [Google Cloud documentation](https://cloud.google.com/compute/docs/regions-zones/) for a list of available regions and zones.
-
-`google.storage.delayBetweenAttempts`
-: :::{versionadded} 21.06.0-edge
-  :::
-: Delay between download attempts from Google Storage (default `10 sec`).
-
-`google.storage.downloadMaxComponents`
-: :::{versionadded} 21.06.0-edge
-  :::
-: Defines the value for the option `GSUtil:sliced_object_download_max_components` used by `gsutil` for transfer input and output data (default: `8`).
-
-`google.storage.maxParallelTransfers`
-: :::{versionadded} 21.06.0-edge
-  :::
-: Max parallel upload/download transfer operations *per job* (default: `4`).
-
-`google.storage.maxTransferAttempts`
-: :::{versionadded} 21.06.0-edge
-  :::
-: Max number of downloads attempts from Google Storage (default: `1`).
-
-`google.storage.parallelThreadCount`
-: :::{versionadded} 21.06.0-edge
-  :::
-: Defines the value for the option `GSUtil:parallel_thread_count` used by `gsutil` for transfer input and output data (default: `1`).
 
 (config-k8s)=
 
