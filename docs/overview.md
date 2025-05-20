@@ -1,5 +1,3 @@
-(overview-page)=
-
 # Overview
 
 ## Why Nextflow?
@@ -65,7 +63,7 @@ The above example defines two processes. Their execution order is not determined
 
 When the workflow is started, it will create two processes and one channel (`query_ch`) and it will link all of them. Both processes will be started at the same time and they will listen to their respective input channels. Whenever `blastSearch` emits a value, `extractTopHits` will receive it (i.e. `extractTopHits` consumes the channel in a *reactive* way).
 
-Read the {ref}`Channel <channel-page>` and {ref}`Process <process-page>` sections to learn more about these features.
+Read the LINK and LINK sections to learn more about these features.
 
 ## Execution abstraction
 
@@ -93,13 +91,13 @@ The following cloud platforms are supported:
 - [Google Cloud Platform (GCP)](https://cloud.google.com/)
 - [Kubernetes](https://kubernetes.io/)
 
-Read the {ref}`executor-page` to learn more about the Nextflow executors.
+Read the LINK to learn more about the Nextflow executors.
 
 ## Scripting language
 
 Nextflow is a workflow language based on [Java](https://en.wikipedia.org/wiki/Java_(programming_language)) and [Groovy](https://groovy-lang.org/). It is designed to simplify writing scalable and reproducible pipelines. In most cases, users can leverage their existing programming skills to develop Nextflow pipelines without the steep learning curve that usually comes with a new programming language.
 
-See {ref}`script-page` for more information about the Nextflow scripting language.
+See LINK for more information about the Nextflow scripting language.
 
 ## Configuration options
 
@@ -116,4 +114,4 @@ process {
 }
 ```
 
-Read the {ref}`config-page` section to learn more about the Nextflow configuration file and settings.
+Read the LINK section to learn more about the Nextflow configuration file and settings.
