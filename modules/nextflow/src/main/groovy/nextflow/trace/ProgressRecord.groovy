@@ -43,6 +43,7 @@ class ProgressRecord implements Cloneable {
     int stored
     int ignored
     int retries
+    boolean closed
     boolean terminated
     boolean errored
 
