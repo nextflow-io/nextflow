@@ -405,8 +405,8 @@ When using containers hosted in a private registry, the registry name must also 
 :::{tip}
 Nextflow will read the following environment variables if a config item is not provided:
 
-- `AZURE_REGISTRY_USER_NAME` - The username for Azure Container Registry authentication
-- `AZURE_REGISTRY_PASSWORD` - The password for Azure Container Registry authentication
+- `AZURE_REGISTRY_USER_NAME`: The username for Azure Container Registry authentication
+- `AZURE_REGISTRY_PASSWORD`: The password for Azure Container Registry authentication
 :::
 
 ### Virtual Network
