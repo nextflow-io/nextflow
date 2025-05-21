@@ -107,29 +107,21 @@ To install Nextflow with the self-installing package:
 
 To install Nextflow with Conda:
 
-1. Add the `bioconda` and `conda-forge` channels to your Conda configuration:
-    
-    ```{code-block} bash
-    :class: copyable
-    conda config --add channels bioconda
-    conda config --add channels conda-forge
-    ```
-
-2. Create an environment:
+1. Create an environment with Nextflow:
 
     ```{code-block} bash
     :class: copyable
-    conda create --name nf-env nextflow
+    conda create --name nf-env bioconda::nextflow
     ```
 
-3. Activate the environment:
+2. Activate the environment:
 
     ```{code-block} bash
     :class: copyable
     source activate nf_env
     ```
 
-4. Confirm Nextflow is installed correctly:
+3. Confirm Nextflow is installed correctly:
 
     ```{code-block} bash
     :class: copyable
