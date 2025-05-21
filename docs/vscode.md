@@ -71,8 +71,6 @@ In the event of an error, stop or restart the language server from the Command P
 - `Nextflow: Stop language server`
 - `Nextflow: Restart language server`
 
-See {ref}`vscode-commands` for a fill list of Nextflow VS Code extension commands.
-
 ### View logs
 
 Error logs can be useful for troubleshooting errors.
