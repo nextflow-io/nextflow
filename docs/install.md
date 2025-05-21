@@ -119,7 +119,7 @@ To install Nextflow with Conda:
 
     ```{code-block} bash
     :class: copyable
-    conda create --name nf_env nextflow
+    conda create --name nf-env nextflow
     ```
 
 3. Activate the environment:
