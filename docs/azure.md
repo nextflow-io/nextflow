@@ -35,7 +35,7 @@ The value of `sasToken` is the token stripped by the character `?` from the begi
 Once the Blob Storage credentials are set, you can access the files in the blob container like local files by prepending the file path with `az://` followed by the container name. For example, a blob container named `my-data` with a file named `foo.txt` can be specified in your Nextflow script as `az://my-data/foo.txt`.
 
 :::{tip}
-Nextflow will read the following environment variables if a config item is not provided:
+Nextflow will use the following environment variables if storage settings are not provided in the Nextflow config file:
 
 - `AZURE_STORAGE_ACCOUNT_NAME`: The name of your Azure Storage account.
 - `AZURE_STORAGE_ACCOUNT_KEY`: The access key for your Azure Storage account.
@@ -164,7 +164,7 @@ Replacing `<PIPELINE NAME>` with a pipeline name e.g. `nextflow-io/rnaseq-nf` an
 See the [Batch documentation](https://docs.microsoft.com/en-us/azure/batch/quick-create-portal) for further details about the configuration for Azure Batch.
 
 :::{tip}
-Nextflow will read the following environment variables if a config item is not provided:
+Nextflow will use the following environment variables if the Batch settings are not provided in the Nextflow config file:
 
 - `AZURE_BATCH_ACCOUNT_NAME`: The name of your Azure Batch account.
 - `AZURE_BATCH_ACCOUNT_KEY`: The access key for your Azure Batch account.
@@ -403,7 +403,7 @@ When using containers hosted in a private registry, the registry name must also 
 :::
 
 :::{tip}
-Nextflow will read the following environment variables if a config item is not provided:
+Nextflow will use the following environment variables if the registry credentials are not provided in the Nextflow config file:
 
 - `AZURE_REGISTRY_USER_NAME`: The username for Azure Container Registry authentication
 - `AZURE_REGISTRY_PASSWORD`: The password for Azure Container Registry authentication
@@ -549,7 +549,7 @@ azure {
 ```
 
 :::{note}
-Nextflow will read the following environment variables if a config item is not provided:
+Nextflow will use the following environment variable if the managed identity setting is not provided in the Nextflow config file:
 
 - `AZURE_MANAGED_IDENTITY_SYSTEM`: When set to `true`, enables system-assigned managed identity.
 :::
@@ -585,7 +585,7 @@ azure {
 ```
 
 :::{note}
-Nextflow will read the following environment variables if a config item is not provided:
+Nextflow will use the following environment variable if the managed identity client ID is not provided in the Nextflow config file:
 
 - `AZURE_MANAGED_IDENTITY_USER`: The client ID for a user-assigned managed identity.
 :::
@@ -621,7 +621,7 @@ azure {
 ```
 
 :::{note}
-Nextflow will read the following environment variables if a config item is not provided:
+Nextflow will use the following environment variables if the service principal settings are not provided in the Nextflow config file:
 
 - `AZURE_CLIENT_ID`: The service principal client ID (also known as application ID).
 - `AZURE_CLIENT_SECRET`: The service principal secret key.
