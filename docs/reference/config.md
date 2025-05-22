@@ -294,13 +294,13 @@ Read the {ref}`azure-page` page for more information.
 The following settings are available:
 
 `azure.activeDirectory.servicePrincipalId`
-: The service principal client ID
+: The service principal client ID. Defaults to environment variable `AZURE_CLIENT_ID`.
 
 `azure.activeDirectory.servicePrincipalSecret`
-: The service principal client secret
+: The service principal client secret. Defaults to environment variable `AZURE_CLIENT_SECRET`.
 
 `azure.activeDirectory.tenantId`
-: The Azure tenant ID
+: The Azure tenant ID. Defaults to environment variable `AZURE_TENANT_ID`.
 
 `azure.azcopy.blobTier`
 : The blob [access tier](https://learn.microsoft.com/en-us/azure/storage/blobs/access-tiers-overview) used by `azcopy` to upload files to Azure Blob Storage. Valid options are `None`, `Hot`, or `Cool` (default: `None`).
@@ -309,10 +309,10 @@ The following settings are available:
 : The block size (in MB) used by `azcopy` to transfer files between Azure Blob Storage and compute nodes (default: 4).
 
 `azure.batch.accountName`
-: The batch service account name.
+: The batch service account name. Defaults to environment variable `AZURE_BATCH_ACCOUNT_NAME`.
 
 `azure.batch.accountKey`
-: The batch service account key.
+: The batch service account key. Defaults to environment variable `AZURE_BATCH_ACCOUNT_KEY`.
 
 `azure.batch.allowPoolCreation`
 : Enable the automatic creation of batch pools specified in the Nextflow configuration file (default: `false`).
@@ -415,10 +415,10 @@ The following settings are available:
 : Specify the virtual machine type used by the pool identified with `<name>`.
 
 `azure.managedIdentity.clientId`
-: Specify the client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview). See {ref}`azure-managed-identities` for more details.
+: Specify the client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview). See {ref}`azure-managed-identities` for more details. Defaults to environment variable `AZURE_MANAGED_IDENTITY_USER`.
 
 `azure.managedIdentity.system`
-: When `true`, use the system-assigned [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) to authenticate Azure resources. See {ref}`azure-managed-identities` for more details.
+: When `true`, uses the system-assigned [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) to authenticate Azure resources. See {ref}`azure-managed-identities` for more details. Defaults to environment variable `AZURE_MANAGED_IDENTITY_SYSTEM`.
 
 `azure.registry.server`
 : Specify the container registry from which to pull the Docker images (default: `docker.io`).
