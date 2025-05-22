@@ -377,8 +377,6 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     List<String> getShell() {
         final value = get('shell')
-        println '>>> VALIDATE SHELL CALLED'
-        println value
         if( !value )
             return BashWrapperBuilder.BASH
 
