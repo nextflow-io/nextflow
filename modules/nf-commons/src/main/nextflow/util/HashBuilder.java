@@ -352,7 +352,9 @@ public class HashBuilder {
                     // the file relative base
                     if( base!=null )
                         hasher.putUnencodedChars(base.relativize(path).toString());
+                    // ↓ wouldn't this cause a null pointer exception when base is null?
                     hasher.putUnencodedChars(base.relativize(path).toString());
+                    // it looks like this code block might not get triggered?
                     return FileVisitResult.CONTINUE;
                 }
             });
