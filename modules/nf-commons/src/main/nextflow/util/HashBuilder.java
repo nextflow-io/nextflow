@@ -25,6 +25,8 @@ import java.nio.file.ProviderMismatchException;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -324,16 +326,20 @@ public class HashBuilder {
 
     static protected Hasher hashDirSha256( Hasher hasher, Path dir, Path base ) {
         try {
+            // temporarily store the information for later hashing
+            ArrayList<String> strs = new ArrayList<>();
+
+            // walk the directory and hash all the files
+            // NOTE: the order of the files not be guaranteed on some file systems
             Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
                 public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
                     log.trace("Hash sha-256 dir content [FILE] path={} - base={}", path, base);
                     try {
                         // the file relative base
-                        if( base!=null )
-                            hasher.putUnencodedChars(base.relativize(path).toString());
+                        String prefix = base != null ? base.relativize(path).toString() + " " : "";
                         // the file content sha-256 checksum
                         String sha256 = sha256Cache.get(path);
-                        hasher.putUnencodedChars(sha256);
+                        strs.add(prefix + sha256);
                         return FileVisitResult.CONTINUE;
                     }
                     catch (ExecutionException t) {
@@ -350,6 +356,14 @@ public class HashBuilder {
                     return FileVisitResult.CONTINUE;
                 }
             });
+
+            // sort the file hashes
+            Collections.sort(strs);
+
+            // hash the directory content
+            for (String str : strs) {
+                hasher.putUnencodedChars(str);
+            }
         }
         catch (IOException t) {
             Throwable err = t.getCause()!=null ? t.getCause() : t;
