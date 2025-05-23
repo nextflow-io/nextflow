@@ -2,7 +2,7 @@
 # Nextflow
 
 *"Dataflow variables are spectacularly expressive in concurrent programming"*
-<br>[Henri E. Bal , Jennifer G. Steiner , Andrew S. Tanenbaum](https://dl.acm.org/doi/abs/10.1145/72551.72552)
+<br />[Henri E. Bal , Jennifer G. Steiner , Andrew S. Tanenbaum](https://dl.acm.org/doi/abs/10.1145/72551.72552)
 
 [![Nextflow CI](https://github.com/nextflow-io/nextflow/workflows/Nextflow%20CI/badge.svg)](https://github.com/nextflow-io/nextflow/actions/workflows/build.yml?query=branch%3Amaster+event%3Apush)
 [![Nextflow version](https://img.shields.io/github/release/nextflow-io/nextflow.svg?colorB=58bd9f&style=popout)](https://github.com/nextflow-io/nextflow/releases/latest)
@@ -114,14 +114,11 @@ fusion
 
 ```{toctree}
 :hidden:
-:caption: Reference
+:caption: Language Reference
 :maxdepth: 1
 
-reference/syntax
-reference/cli
-reference/config
-reference/env-vars
 reference/feature-flags
+reference/syntax
 reference/stdlib
 reference/process
 reference/channel
@@ -130,12 +127,22 @@ reference/operator
 
 ```{toctree}
 :hidden:
+:caption: Runtime Reference
+:maxdepth: 1
+
+reference/cli
+reference/config
+reference/env-vars
+```
+
+```{toctree}
+:hidden:
 :caption: Updates
 :maxdepth: 1
 
 updating-nextflow
-updating-syntax
-dsl1
+strict-syntax
+migrations/index
 ```
 
 ```{toctree}
@@ -154,6 +161,7 @@ developer/plugins
 :caption: Guides
 :maxdepth: 1
 
+data-lineage
 updating-spot-retries
 metrics
 flux

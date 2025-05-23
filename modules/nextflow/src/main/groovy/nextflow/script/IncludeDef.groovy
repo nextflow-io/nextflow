@@ -71,9 +71,6 @@ class IncludeDef {
         this.modules = new ArrayList<>(modules)
     }
 
-    /** only for testing purpose -- do not use */
-    protected IncludeDef() { }
-
     IncludeDef from(Object path) {
         this.path = path
         return this
@@ -111,7 +108,7 @@ class IncludeDef {
         // -- resolve the concrete against the current script
         final moduleFile = realModulePath(path).normalize()
         // -- load the module
-        final moduleScript = NF.getSyntaxParserVersion() == 'v2'
+        final moduleScript = NF.isSyntaxParserV2()
             ? loadModuleV2(moduleFile, ownerParams, session)
             : loadModuleV1(moduleFile, resolveParams(ownerParams), session)
         // -- add it to the inclusions

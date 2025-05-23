@@ -31,7 +31,10 @@ import org.pf4j.PluginManager
 @CompileStatic
 class Plugins {
 
-    public static final String DEFAULT_PLUGINS_REPO = 'https://raw.githubusercontent.com/nextflow-io/plugins/main/plugins.json'
+    // this is deprecated and should not be used to avoid accessing this static attribute
+    // cause the instantiation of the PluginsFacade class
+    @Deprecated
+    public static final String DEFAULT_PLUGINS_REPO = PluginsFacade.DEFAULT_PLUGINS_REPO
 
     private final static PluginsFacade INSTANCE = new PluginsFacade()
 
