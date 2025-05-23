@@ -1,0 +1,13 @@
+name: Security SCA Scan
+
+on:
+    pull_request:
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Security SCA Scan
+        uses: ./.github/actions/security-scan-branch
+        with:
+          branch: "v25.04.2"
