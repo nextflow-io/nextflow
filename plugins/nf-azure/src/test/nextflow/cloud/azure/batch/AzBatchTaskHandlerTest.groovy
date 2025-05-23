@@ -2,10 +2,10 @@ package nextflow.cloud.azure.batch
 
 import java.nio.file.Path
 
-import nextflow.cloud.azure.batch.AzVmPoolSpec
 import nextflow.cloud.azure.config.AzPoolOpts
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
+import nextflow.cloud.azure.batch.AzVmPoolSpec
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.Executor

@@ -548,11 +548,9 @@ class AzBatchService implements Closeable {
 
         log.trace "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
 
-        // Add environment variables for managed identity if configured
+        // Add environment variables for managed identity if configured for Fusion only
         final env = [:] as Map<String,String>
-        if( pool?.opts?.managedIdentityId ) {
-            env.put('AZCOPY_AUTO_LOGIN_TYPE', 'MSI') // azcopy
-            env.put('AZCOPY_MSI_CLIENT_ID', pool.opts.managedIdentityId) // azcopy
+        if( pool?.opts?.managedIdentityId && fusionEnabled ) {
             env.put('FUSION_AZ_MSI_CLIENT_ID', pool.opts.managedIdentityId) // fusion
         }
 
@@ -606,9 +604,9 @@ class AzBatchService implements Closeable {
             int slots,
             BatchTaskConstraints constraints,
             Map<String,String> env) {
-        
+
         log.trace "[AZURE BATCH] Task details: id=$taskId, slots=$slots, constraints=${constraints?.maxWallClockTime}"
-        
+
         return new BatchTaskCreateContent(taskId, cmd)
                 .setUserIdentity(userIdentity)
                 .setContainerSettings(containerSettings)

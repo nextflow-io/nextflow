@@ -163,24 +163,15 @@ class AzFileCopyStrategyTest extends Specification {
                     local target=${2%/} ## remove ending slash
                     local base_name="$(basename "$name")"
                     local dir_name="$(dirname "$name")"
-        
-                    local auth_args=""
-                    if [[ ! -z "$AZCOPY_MSI_CLIENT_ID" ]]; then
-                        # When using managed identity, no additional args needed
-                        auth_args=""
-                    else
-                        # Use SAS token authentication
-                        auth_args="?$AZ_SAS"
-                    fi
 
                     if [[ -d $name ]]; then
                       if [[ "$base_name" == "$name" ]]; then
-                        azcopy cp "$name" "$target$auth_args" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                        azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                       else
-                        azcopy cp "$name" "$target/$dir_name$auth_args" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                        azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                       fi
                     else
-                      azcopy cp "$name" "$target/$name$auth_args" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                      azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                     fi
                 }
                 
@@ -189,22 +180,13 @@ class AzFileCopyStrategyTest extends Specification {
                     local target=$2
                     local basedir=$(dirname $2)
                     local ret
-                    
-                    local auth_args=""
-                    if [[ ! -z "$AZCOPY_MSI_CLIENT_ID" ]]; then
-                        # When using managed identity, no additional args needed
-                        auth_args=""
-                    else
-                        # Use SAS token authentication
-                        auth_args="?$AZ_SAS"
-                    fi
 
                     mkdir -p "$basedir"
                 
-                    ret=$(azcopy cp "$source$auth_args" "$target" 2>&1) || {
+                    ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
                         ## if fails check if it was trying to download a directory
                         mkdir -p $target
-                        azcopy cp "$source/*$auth_args" "$target" --recursive >/dev/null || {
+                        azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                             rm -rf $target
                             >&2 echo "Unable to download path: $source"
                             exit 1
@@ -247,9 +229,8 @@ class AzFileCopyStrategyTest extends Specification {
         binding.task_env == '''\
                     export FOO="1"
                     export BAR="any"
-                    export PATH="$AZ_BATCH_TASK_DIR/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH"
-                    export AZCOPY_LOG_LOCATION="$AZ_BATCH_TASK_DIR/.azcopy_log"
-                    export AZCOPY_JOB_PLAN_LOCATION="$AZ_BATCH_TASK_DIR/.azcopy_log"
+                    export PATH="$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH"
+                    export AZCOPY_LOG_LOCATION="$PWD/.azcopy_log"
                     export AZ_SAS="12345"
                     '''.stripIndent()
 
@@ -320,24 +301,15 @@ class AzFileCopyStrategyTest extends Specification {
                     local target=${2%/} ## remove ending slash
                     local base_name="$(basename "$name")"
                     local dir_name="$(dirname "$name")"
-        
-                    local auth_args=""
-                    if [[ ! -z "$AZCOPY_MSI_CLIENT_ID" ]]; then
-                        # When using managed identity, no additional args needed
-                        auth_args=""
-                    else
-                        # Use SAS token authentication
-                        auth_args="?$AZ_SAS"
-                    fi
 
                     if [[ -d $name ]]; then
                       if [[ "$base_name" == "$name" ]]; then
-                        azcopy cp "$name" "$target$auth_args" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                        azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                       else
-                        azcopy cp "$name" "$target/$dir_name$auth_args" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                        azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                       fi
                     else
-                      azcopy cp "$name" "$target/$name$auth_args" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                      azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                     fi
                 }
                 
@@ -346,22 +318,13 @@ class AzFileCopyStrategyTest extends Specification {
                     local target=$2
                     local basedir=$(dirname $2)
                     local ret
-                    
-                    local auth_args=""
-                    if [[ ! -z "$AZCOPY_MSI_CLIENT_ID" ]]; then
-                        # When using managed identity, no additional args needed
-                        auth_args=""
-                    else
-                        # Use SAS token authentication
-                        auth_args="?$AZ_SAS"
-                    fi
 
                     mkdir -p "$basedir"
                 
-                    ret=$(azcopy cp "$source$auth_args" "$target" 2>&1) || {
+                    ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
                         ## if fails check if it was trying to download a directory
                         mkdir -p $target
-                        azcopy cp "$source/*$auth_args" "$target" --recursive >/dev/null || {
+                        azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                             rm -rf $target
                             >&2 echo "Unable to download path: $source"
                             exit 1
@@ -428,9 +391,8 @@ class AzFileCopyStrategyTest extends Specification {
         binding.launch_cmd == '/bin/bash .command.run nxf_trace'
 
         binding.task_env == '''\
-                    export PATH="$AZ_BATCH_TASK_DIR/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH"
-                    export AZCOPY_LOG_LOCATION="$AZ_BATCH_TASK_DIR/.azcopy_log"
-                    export AZCOPY_JOB_PLAN_LOCATION="$AZ_BATCH_TASK_DIR/.azcopy_log"
+                    export PATH="$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH"
+                    export AZCOPY_LOG_LOCATION="$PWD/.azcopy_log"
                     export AZ_SAS="12345"
                     '''.stripIndent()
 
@@ -502,23 +464,14 @@ class AzFileCopyStrategyTest extends Specification {
                         local base_name="$(basename "$name")"
                         local dir_name="$(dirname "$name")"
             
-                        local auth_args=""
-                        if [[ ! -z "$AZCOPY_MSI_CLIENT_ID" ]]; then
-                            # When using managed identity, no additional args needed
-                            auth_args=""
-                        else
-                            # Use SAS token authentication
-                            auth_args="?$AZ_SAS"
-                        fi
-
                         if [[ -d $name ]]; then
                           if [[ "$base_name" == "$name" ]]; then
-                            azcopy cp "$name" "$target$auth_args" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                            azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                           else
-                            azcopy cp "$name" "$target/$dir_name$auth_args" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                            azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                           fi
                         else
-                          azcopy cp "$name" "$target/$name$auth_args" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                          azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                         fi
                     }
                     
@@ -528,21 +481,12 @@ class AzFileCopyStrategyTest extends Specification {
                         local basedir=$(dirname $2)
                         local ret
                         
-                        local auth_args=""
-                        if [[ ! -z "$AZCOPY_MSI_CLIENT_ID" ]]; then
-                            # When using managed identity, no additional args needed
-                            auth_args=""
-                        else
-                            # Use SAS token authentication
-                            auth_args="?$AZ_SAS"
-                        fi
-
                         mkdir -p "$basedir"
                     
-                        ret=$(azcopy cp "$source$auth_args" "$target" 2>&1) || {
+                        ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
                             ## if fails check if it was trying to download a directory
                             mkdir -p $target
-                            azcopy cp "$source/*$auth_args" "$target" --recursive >/dev/null || {
+                            azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
                                 rm -rf $target
                                 >&2 echo "Unable to download path: $source"
                                 exit 1
