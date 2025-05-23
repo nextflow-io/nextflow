@@ -16,21 +16,22 @@
 
 package nextflow.cloud.aws.batch
 
+import static nextflow.cloud.aws.util.S3PathFactory.*
+
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
-import com.amazonaws.services.batch.AWSBatch
-import com.amazonaws.services.batch.model.AWSBatchException
-import com.amazonaws.services.ecs.model.AccessDeniedException
-import com.amazonaws.services.logs.model.ResourceNotFoundException
+import software.amazon.awssdk.awscore.exception.AwsServiceException
+import software.amazon.awssdk.services.batch.BatchClient
+import software.amazon.awssdk.services.ecs.model.AccessDeniedException
+import software.amazon.awssdk.services.cloudwatchlogs.model.ResourceNotFoundException
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.cloud.aws.AwsClientFactory
-import nextflow.cloud.aws.config.AwsConfig
-import nextflow.cloud.aws.nio.S3Path
+import nextflow.cloud.aws.v2.AwsClientFactory
+import nextflow.cloud.aws.v2.config.AwsConfig
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
@@ -119,7 +120,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
         /*
          * make sure the work dir is a S3 bucket
          */
-        if( !(workDir instanceof S3Path) ) {
+        if( !isS3Path(workDir) ) {
             session.abort()
             throw new AbortOperationException("When using `$name` executor an S3 bucket must be provided as working directory using either the `-bucket-dir` or `-work-dir` command line option")
         }
@@ -177,7 +178,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
     }
 
     @PackageScope
-    AWSBatch getClient() {
+    BatchClient getClient() {
         client
     }
 
@@ -238,7 +239,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
         final size = Runtime.runtime.availableProcessors() * 5
 
         final opts = new ThrottlingExecutor.Options()
-                .retryOn { Throwable t -> t instanceof AWSBatchException && (t.errorCode=='TooManyRequestsException' || t.statusCode in RETRYABLE_STATUS) }
+                .retryOn { Throwable t -> t instanceof AwsServiceException && (t.awsErrorDetails().errorCode() == 'TooManyRequestsException' || t.awsErrorDetails().sdkHttpResponse().statusCode() in RETRYABLE_STATUS) }
                 .onFailure { Throwable t -> session?.abort(t) }
                 .onRateLimitChange { RateUnit rate -> logRateLimitChange(rate) }
                 .withRateLimit(limit)
