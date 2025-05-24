@@ -18,6 +18,7 @@ package nextflow.lineage
 
 import com.google.common.annotations.Beta
 import groovy.transform.CompileStatic
+import java.util.stream.Stream
 import nextflow.lineage.config.LineageConfig
 import nextflow.lineage.serde.LinSerializable
 /**
@@ -58,18 +59,18 @@ interface LinStore extends Closeable {
     /**
      * Search for lineage entries.
      * @param params Map of query params
-     * @return Key-lineage entry pairs fulfilling the query params
+     * @return Stream with keys fulfilling the query params
      */
-    Map<String,LinSerializable> search(Map<String, List<String>> params)
+    Stream<String> search(Map<String, List<String>> params)
 
     /**
      * Search for keys starting with a parent key.
      * For example, if a LinStore contains the following keys: '123abc', '123abc/samples/file1.txt' and '123abc/summary',
-     * The execution of the function with parentKey='123abc' will return a list with '123abc/samples/file1.txt' and '123abc/summary'.
+     * The execution of the function with parentKey='123abc' will return a stream with '123abc/samples/file1.txt' and '123abc/summary'.
      * Similarly, the execution of the function with parentKey='123abc/samples' will just return '123abc/samples/file1.txt"
      *
      * @param parentKey
-     * @return list of keys
+     * @return Stream of keys starting with parentKey
      */
-    List<String> getSubKeys(String parentKey)
+    Stream<String> getSubKeys(String parentKey)
 }

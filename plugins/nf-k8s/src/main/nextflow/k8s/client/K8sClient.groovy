@@ -16,6 +16,12 @@
 
 package nextflow.k8s.client
 
+import dev.failsafe.Failsafe
+import dev.failsafe.FailsafeException
+import dev.failsafe.RetryPolicy
+import dev.failsafe.event.EventListener
+import dev.failsafe.event.ExecutionAttemptedEvent
+import dev.failsafe.function.CheckedSupplier
 import nextflow.exception.K8sOutOfCpuException
 import nextflow.exception.K8sOutOfMemoryException
 
@@ -38,6 +44,11 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.NodeTerminationException
 import nextflow.exception.ProcessFailedException
 import org.yaml.snakeyaml.Yaml
+
+import java.time.temporal.ChronoUnit
+import java.util.concurrent.TimeoutException
+import java.util.function.Predicate
+
 /**
  * Kubernetes API client
  *
@@ -621,23 +632,7 @@ class K8sClient {
      *      the second element is the text (json) response
      */
     protected K8sResponseApi makeRequest(String method, String path, String body=null) throws K8sResponseException {
-
-        final int maxRetries = config.maxErrorRetry
-        int attempt = 0
-
-        while ( true ) {
-            try {
-                return makeRequestCall( method, path, body )
-            } catch ( K8sResponseException | SocketException | SocketTimeoutException e ) {
-                if ( e instanceof K8sResponseException && e.response.code != 500 )
-                    throw e
-                if ( ++attempt > maxRetries )
-                    throw e
-                log.debug "[K8s] API request threw socket exception: $e.message for $method $path - Retrying request (attempt=$attempt)"
-                final long delay = (Math.pow(3, attempt - 1) as long) * 250
-                sleep( delay )
-            }
-        }
+        return apply(() -> makeRequestCall( method, path, body ) )
     }
 
 
@@ -733,6 +728,61 @@ class K8sClient {
         def resp = get(action)
         trace('GET', action, resp.text)
         return new K8sResponseJson(resp.text)
+    }
+
+    /**
+     * Creates a retry policy using the configuration specified by {@link nextflow.k8s.client.K8sRetryConfig}
+     *
+     * @param cond A predicate that determines when a retry should be triggered
+     * @return The {@link dev.failsafe.RetryPolicy} instance
+     */
+    protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond) {
+        final cfg = config.retryConfig
+        final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
+            @Override
+            void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
+                log.debug("K8s response error - attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}")
+            }
+        }
+        return RetryPolicy.<T>builder()
+            .handleIf(cond)
+            .withBackoff(cfg.delay.toMillis(), cfg.maxDelay.toMillis(), ChronoUnit.MILLIS)
+            .withMaxAttempts(cfg.maxAttempts)
+            .withJitter(cfg.jitter)
+            .onRetry(listener)
+            .build()
+    }
+
+    final private static List<Integer> RETRY_CODES = List.of(408, 429, 500, 502, 503, 504)
+
+    /**
+     * Carry out the invocation of the specified action using a retry policy.
+     *
+     * @param action A {@link dev.failsafe.function.CheckedSupplier} instance modeling the action to be performed in a safe manner
+     * @return The result of the supplied action
+     */
+    protected <T> T apply(CheckedSupplier<T> action) {
+        // define the retry condition
+        final cond = new Predicate<? extends Throwable>() {
+            @Override
+            boolean test(Throwable t) {
+                if ( t instanceof K8sResponseException && t.response.code in RETRY_CODES )
+                    return true
+                if( t instanceof SocketException || t.cause instanceof SocketException )
+                    return true
+                if( t instanceof SocketTimeoutException || t.cause instanceof SocketTimeoutException )
+                    return true
+                return false
+            }
+        }
+        // create the retry policy object
+        final policy = retryPolicy(cond)
+        // apply the action with and throw the original cause
+        try {
+            return Failsafe.with(policy).get(action)
+        }catch(FailsafeException e){
+            throw e.getCause()
+        }
     }
 
 
