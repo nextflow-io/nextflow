@@ -25,10 +25,14 @@ import java.nio.file.ProviderMismatchException;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.Comparator;
 import java.util.concurrent.ExecutionException;
 
 import com.google.common.cache.CacheBuilder;
@@ -324,16 +328,21 @@ public class HashBuilder {
 
     static protected Hasher hashDirSha256( Hasher hasher, Path dir, Path base ) {
         try {
+            // temporarily store the information for later hashing
+            List<Map.Entry<String, String>> pathShaPairs = new ArrayList<>();
+
+            // walk the directory and hash all the files
+            // NOTE: the order of the files not be guaranteed on some file systems
             Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
                 public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
                     log.trace("Hash sha-256 dir content [FILE] path={} - base={}", path, base);
                     try {
                         // the file relative base
-                        if( base!=null )
-                            hasher.putUnencodedChars(base.relativize(path).toString());
+                        String entry = base != null ? base.relativize(path).toString() : null;
                         // the file content sha-256 checksum
-                        String sha256 = sha256Cache.get(path);
-                        hasher.putUnencodedChars(sha256);
+                        String value = sha256Cache.get(path);
+                        // store the file path and sha-256 checksum
+                        pathShaPairs.add(Map.entry(entry, value));
                         return FileVisitResult.CONTINUE;
                     }
                     catch (ExecutionException t) {
@@ -344,12 +353,25 @@ public class HashBuilder {
                 public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes attrs) {
                     log.trace("Hash sha-256 dir content [DIR] path={} - base={}", path, base);
                     // the file relative base
-                    if( base!=null )
-                        hasher.putUnencodedChars(base.relativize(path).toString());
-                    hasher.putUnencodedChars(base.relativize(path).toString());
+                    String entry = base != null ? base.relativize(path).toString() : null;
+                    // ↓ wouldn't this cause a null pointer exception when base is null?
+                    String value = base.relativize(path).toString();
+                    
+                    pathShaPairs.add(Map.entry(entry, value));
                     return FileVisitResult.CONTINUE;
                 }
             });
+
+            // sort the file hashes
+            Collections.sort(pathShaPairs, Comparator.comparing(Map.Entry::getKey));
+
+            // hash the directory content
+            for (Map.Entry<String, String> pair : pathShaPairs) {
+                if (pair.getKey() != null) {
+                    hasher.putUnencodedChars(pair.getKey());
+                }
+                hasher.putUnencodedChars(pair.getValue());
+            }
         }
         catch (IOException t) {
             Throwable err = t.getCause()!=null ? t.getCause() : t;
