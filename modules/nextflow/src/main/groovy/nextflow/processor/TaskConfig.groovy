@@ -394,12 +394,10 @@ class TaskConfig extends LazyMap implements Cloneable {
             if( !it )
                 throw new IllegalArgumentException("Directive `process.shell` cannot contain empty values - offending value: ${shell}")
             if( !it || it.contains('\n') || it.contains('\r') ) {
-                log.warn1 "Directive `process.shell` cannot contain new-line characters - offending value: ${shell}"
-                break
+                throw new IllegalArgumentException("Directive `process.shell` cannot contain new-line characters - offending value: ${shell}")
             }
             if( it.startsWith(' ') || it.endsWith(' ')) {
-                log.warn "Directive `process.shell` cannot contain leading or tralining blanks - offending value: ${shell}"
-                break
+                throw new IllegalArgumentException("Directive `process.shell` cannot contain leading or tralining blanks - offending value: ${shell}")
             }
         }
         return shell
