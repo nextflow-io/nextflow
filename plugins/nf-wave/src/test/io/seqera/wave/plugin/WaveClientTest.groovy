@@ -34,6 +34,7 @@ import com.sun.net.httpserver.HttpServer
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.wave.api.BuildCompression
 import io.seqera.wave.api.BuildStatusResponse
 import io.seqera.wave.api.ContainerStatus
 import io.seqera.wave.api.ContainerStatusResponse
@@ -276,6 +277,27 @@ class WaveClientTest extends Specification {
         and:
         req.scanMode == ScanMode.required
         req.scanLevels == List.of(ScanLevel.LOW, ScanLevel.MEDIUM)
+        and:
+        req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
+        req.timestamp instanceof String
+    }
+
+    def 'should create request object with build compression' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [wave:[build:[compression:[mode:'estargz', level:11]]]]}
+        def IMAGE =  'foo:latest'
+        def wave = new WaveClient(session)
+
+        when:
+        def req = wave.makeRequest(WaveAssets.fromImage(IMAGE))
+        then:
+        req.containerImage == IMAGE
+        !req.containerPlatform
+        !req.containerFile
+        !req.condaFile
+        !req.containerConfig.layers
+        and:
+        req.buildCompression == new BuildCompression().withMode(BuildCompression.Mode.estargz).withLevel(11)
         and:
         req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
         req.timestamp instanceof String
