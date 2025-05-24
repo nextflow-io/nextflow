@@ -98,10 +98,10 @@ class ChannelFactoryInstanceTest extends Specification {
         def runner = new MockScriptRunner()
         def result = runner.setScript(SCRIPT).execute()
         then:
-        result.val == 'one'
-        result.val == 'two'
-        result.val == 'three'
-        result.val == Channel.STOP
+        result.unwrap() == 'one'
+        result.unwrap() == 'two'
+        result.unwrap() == 'three'
+        result.unwrap() == Channel.STOP
         and:
         ext1.initCount == 1
         ext1.initSession instanceof Session
@@ -128,10 +128,10 @@ class ChannelFactoryInstanceTest extends Specification {
         def runner = new MockScriptRunner()
         def result = runner.setScript(SCRIPT).execute()
         then:
-        result.val == 'one'
-        result.val == 'two'
-        result.val == 'three'
-        result.val == Channel.STOP
+        result.unwrap() == 'one'
+        result.unwrap() == 'two'
+        result.unwrap() == 'three'
+        result.unwrap() == Channel.STOP
         and:
         ext1.initCount == 1
         ext1.initSession instanceof Session
@@ -178,7 +178,7 @@ class ChannelFactoryInstanceTest extends Specification {
         def runner = new MockScriptRunner()
         def result = runner.setScript(SCRIPT).execute()
         then:
-        result.val == ['1 X', '2 Y', '3 Z']
+        result.unwrap() == ['1 X', '2 Y', '3 Z']
 
         and:
         ext1.initCount == 1
@@ -209,9 +209,9 @@ class ChannelFactoryInstanceTest extends Specification {
         def runner = new MockScriptRunner()
         def result = runner.setScript(SCRIPT).execute()
         then:
-        result.val == 2
-        result.val == 3
-        result.val == 4
+        result.unwrap() == 2
+        result.unwrap() == 3
+        result.unwrap() == 4
 
         and:
         ext1.initCount == 1
