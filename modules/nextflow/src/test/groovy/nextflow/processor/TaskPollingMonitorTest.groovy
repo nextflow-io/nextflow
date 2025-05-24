@@ -20,7 +20,12 @@ package nextflow.processor
 import nextflow.Session
 import nextflow.util.Duration
 import nextflow.util.RateUnit
+import nextflow.util.ThrottlingExecutor
 import spock.lang.Specification
+import spock.lang.Unroll
+
+import java.util.concurrent.atomic.AtomicInteger
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -146,6 +151,39 @@ class TaskPollingMonitorTest extends Specification {
         0 * handler.prepareLauncher()
         0 * handler.submit()
         3 * session.notifyTaskSubmit(handler)
+    }
+
+
+    @Unroll
+    def 'should validate can submit method' () {
+        given:
+        def session = Mock(Session)
+        def monitor = Spy(new TaskPollingMonitor(name: 'foo', session: session, capacity : CAPACITY, pollInterval: Duration.of('1min')))
+        and:
+        def handler = Mock(TaskHandler) {
+            getTask() >> Mock(TaskRun)
+        }
+        def arrayHandler = Mock(TaskHandler) {
+            getTask() >> Mock(TaskArrayRun) {
+                getArraySize() >> ARRAY
+            }
+            canForkProcess() >> true
+            isReady() >> true
+        }
+
+        and:
+        SUBMIT.times { monitor.runningQueue.add(handler)  }
+
+        expect:
+        monitor.runningQueue.size() == SUBMIT
+        monitor.canSubmit(arrayHandler) == EXPECTED
+
+        where:
+        CAPACITY    | SUBMIT | ARRAY | EXPECTED
+        0           |   0    | 2     | true
+        2           |   0    | 4     | false
+        10          |   5    | 5     | true
+        10          |   8    | 5     | false
     }
 
 }
