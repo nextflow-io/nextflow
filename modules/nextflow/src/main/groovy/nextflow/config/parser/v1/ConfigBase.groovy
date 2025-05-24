@@ -25,8 +25,11 @@ import nextflow.SysEnv
 import nextflow.config.StripSecretsXform
 import nextflow.exception.IllegalConfigException
 import nextflow.file.FileHelper
+import nextflow.util.Duration
+import nextflow.util.MemoryUnit
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
+import org.codehaus.groovy.control.customizers.ImportCustomizer
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 /**
@@ -119,6 +122,11 @@ abstract class ConfigBase extends Script {
         if( renderClosureAsString )
             params.put('renderClosureAsString', true)
         config.addCompilationCustomizers(new ASTTransformationCustomizer(params, ConfigTransform))
+        //  -- add implicit types
+        def importCustomizer = new ImportCustomizer()
+        importCustomizer.addImports( Duration.name )
+        importCustomizer.addImports( MemoryUnit.name )
+        config.addCompilationCustomizers(importCustomizer)
 
         // -- setup the grengine instance
         def engine = new Grengine(this.class.classLoader,config)
