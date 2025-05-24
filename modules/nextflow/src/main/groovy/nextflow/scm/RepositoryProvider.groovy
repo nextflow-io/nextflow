@@ -185,7 +185,7 @@ abstract class RepositoryProvider {
 
         log.debug "Request [credentials ${getAuthObfuscated() ?: '-'}] -> $api"
         def connection = new URL(api).openConnection() as URLConnection
-        connection.setConnectTimeout(5_000)
+        connection.setConnectTimeout(60_000)
 
         auth(connection)
 
@@ -315,7 +315,6 @@ abstract class RepositoryProvider {
         def bytes = readBytes(path)
         return bytes ? new String(bytes) : null
     }
-
 
     /**
      * Validate the repository for the specified file.

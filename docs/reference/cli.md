@@ -532,6 +532,8 @@ $ nextflow info nextflow-io/hello
     v1.2 [t]
 ```
 
+(cli-inspect)=
+
 ### `inspect`
 
 :::{versionadded} 23.09.0-edge
@@ -680,6 +682,58 @@ Execute a pipeline into a Kubernetes cluster.
 ```console
 $ nextflow kuberun nextflow-io/hello
 ```
+
+(cli-lineage)=
+
+### `lineage`
+
+:::{versionadded} 25.04.0
+:::
+
+:::{warning} *Experimental: may change in a future release.*
+:::
+
+Inspect lineage metadata for Nextflow runs.
+
+**Usage**
+
+```console
+$ nextflow lineage SUBCOMMAND [arg ..]
+```
+
+**Description**
+
+The `lineage` command is used to inspect lineage metadata.
+
+See the {ref}`data-lineage-page` guide to learn how to get started with data lineage.
+
+**Options**
+
+`-h, -help`
+: Print the command usage.
+
+**Subcommands**
+
+`check <lid>`
+: Validate the checksum of output lineage record.
+
+`diff <lid-1> <lid-2>`
+: Display a git-style diff between two lineage records.
+
+`find <field-1>=<value-1> [<field-2>=<value-2> ...]`
+: Find all lineage records that match the given field values.
+
+`list`
+: List the Nextflow runs with lineage enabled, printing the corresponding lineage ID (LID) for each run.
+
+`render <lid> [path]`
+: Render the lineage graph for a lineage record as an HTML file (default output path: `./lineage.html`).
+: The lineage record should be of type `FileOutput`, `TaskRun`, or `WorkflowRun`.
+
+`view <lid>`
+: View a lineage record.
+
+(cli-lint)=
 
 ### `lint`
 
@@ -1228,6 +1282,61 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 
   See {ref}`cli-params` for more information about writing custom parameters files.
 
+### `secrets`
+
+Manage pipeline secrets.
+
+**Usage**
+
+```console
+$ nextflow secrets <SUBCOMMAND> [OPTIONS]
+```
+
+**Options**
+
+`-h, -help`
+: Print the command usage.
+
+**Subcommands**
+
+`list`
+: List secrets available in the current store.
+
+`get <secret>`
+: Retrieve a secret value.
+
+`set <secret> <value> `
+: Create or update a secret.
+
+`delete <secret>`
+: Delete a secret.
+
+**Examples**
+
+- Set a secret:
+
+    ```console
+    $ nextflow secrets set FOO "Hello world"
+    ```
+
+- List secrets:
+
+    ```console
+    $ nextflow secrets list
+    ```
+
+- Get a secret:
+
+    ```console
+    $ nextflow secrets get FOO
+    ```
+
+- Delete a secret:
+
+    ```console
+    $ nextflow secrets delete FOO
+    ```
+
 ### `self-update`
 
 Update the nextflow runtime to the latest available version.
@@ -1307,7 +1416,7 @@ process sayHello {
 }
 
 workflow {
-  Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
+  channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
 }
 ```
 
@@ -1347,6 +1456,6 @@ process sayHello {
 }
 
 workflow {
-  Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
+  channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
 }
 ```

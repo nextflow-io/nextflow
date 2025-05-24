@@ -30,7 +30,6 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.AcceleratorResource
 import nextflow.executor.res.DiskResource
-import nextflow.k8s.model.PodOptions
 import nextflow.script.TaskClosure
 import nextflow.util.CmdLineHelper
 import nextflow.util.CmdLineOptionMap
@@ -499,10 +498,6 @@ class TaskConfig extends LazyMap implements Cloneable {
         get('retryCount') as Integer ?: 0
     }
 
-    PodOptions getPodOptions() {
-        new PodOptions((List)get('pod'))
-    }
-
     AcceleratorResource getAccelerator() {
         final value = get('accelerator')
         if( value instanceof Number )
@@ -560,7 +555,6 @@ class TaskConfig extends LazyMap implements Cloneable {
         if( code == null )
             return defValue
 
-        log.warn1 "The `when` process section is deprecated -- use conditional logic in the calling workflow instead"
         String source = null
         try {
             if( code instanceof Closure ) {

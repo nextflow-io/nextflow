@@ -144,33 +144,6 @@ Resource requests and other job characteristics can be controlled via the follow
 
 See the {ref}`Google Cloud Batch <google-batch>` page for further configuration details.
 
-(google-lifesciences-executor)=
-
-## Google Life Sciences
-
-:::{versionadded} 20.01.0
-:::
-
-[Google Cloud Life Sciences](https://cloud.google.com/life-sciences) is a managed computing service that allows the execution of containerized workloads in the Google Cloud Platform infrastructure.
-
-Nextflow provides built-in support for the Life Sciences API, which allows the seamless deployment of a Nextflow pipeline in the cloud, offloading the process executions as pipelines.
-
-The pipeline processes must specify the Docker image to use by defining the `container` directive, either in the pipeline script or the `nextflow.config` file. Additionally, the pipeline work directory must be located in a Google Storage bucket.
-
-To enable this executor, set `process.executor = 'google-lifesciences'` in the `nextflow.config` file.
-
-Resource requests and other job characteristics can be controlled via the following process directives:
-
-- {ref}`process-accelerator`
-- {ref}`process-cpus`
-- {ref}`process-disk`
-- {ref}`process-machineType`
-- {ref}`process-memory`
-- {ref}`process-resourcelabels`
-- {ref}`process-time`
-
-See the {ref}`Google Life Sciences <google-lifesciences>` page for further configuration details.
-
 (htcondor-executor)=
 
 ## HTCondor
@@ -205,7 +178,12 @@ Resource requests and other job characteristics can be controlled via the follow
 :::{versionadded} 22.05.0-edge
 :::
 
-:::{warning} *Experimental: may change in a future release.*
+:::{versionchanged} 24.06.0-edge
+HyperQueue 0.17.0 or later is required.
+:::
+
+:::{versionchanged} 25.01.0-edge
+HyperQueue 0.20.0 or later is required.
 :::
 
 The `hyperqueue` executor allows you to run your pipeline script by using the [HyperQueue](https://github.com/It4innovations/hyperqueue) job scheduler.
@@ -223,9 +201,6 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-cpus`
 - {ref}`process-memory`
 - {ref}`process-time`
-
-:::{note} HyperQueue version 0.20.0 or later is required.
-:::
 
 (k8s-executor)=
 

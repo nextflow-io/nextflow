@@ -132,7 +132,12 @@ public interface ScriptDsl extends DslScope {
     @Description("""
         Print a value to standard output.
     """)
-    void print(Object object);
+    void print(Object value);
+
+    @Description("""
+        Print a formatted string with the given values to standard output.
+    """)
+    void printf(String format, Object... values);
 
     @Description("""
         Print a newline to standard output.
@@ -142,7 +147,7 @@ public interface ScriptDsl extends DslScope {
     @Description("""
         Print a value to standard output with a newline.
     """)
-    void println(Object object);
+    void println(Object value);
 
     @Description("""
         Send an email.
@@ -155,7 +160,7 @@ public interface ScriptDsl extends DslScope {
     void sleep(long milliseconds);
 
     @Description("""
-        Create a tuple object from the given arguments.
+        Create a tuple from the given arguments.
     """)
     List<?> tuple(Object... args);
 

@@ -986,6 +986,7 @@ class WaveClientTest extends Specification {
         'linux/arm64/v8'    | null  | 'https://fusionfs.seqera.io/releases/v2.4-arm64.json'
         and:
         'linux/amd64'       | true  | 'https://fusionfs.seqera.io/releases/v2.4-snap_amd64.json'
+        'linux/arm64'       | true  | 'https://fusionfs.seqera.io/releases/v2.4-snap_arm64.json'
     }
 
     @Unroll
