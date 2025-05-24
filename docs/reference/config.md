@@ -1520,6 +1520,21 @@ The following settings are available:
 `wave.build.cacheRepository`
 : The container repository used to cache image layers built by the Wave service (note: the corresponding credentials must be provided in your Seqera Platform account).
 
+`wave.build.compression.mode`
+: :::{versionadded} 25.05.0-edge
+  :::
+: Defines the compression algorithm that should be used when building the container. Allowed values are: `gzip`, `estargz` and `zstd` (default: `gzip`).
+
+`wave.build.compression.level`
+: :::{versionadded} 25.05.0-edge
+  :::
+: Level of compression used when building a container depending the chosen algorithm: gzip, estargz (0-9) and zstd (0-22).
+   .
+`wave.build.compression.force`
+: :::{versionadded} 25.05.0-edge
+  :::
+: Forcefully apply compression option to all layers, including already existing layers (default: `false`).
+
 `wave.build.conda.basePackages`
 : One or more Conda packages to be always added in the resulting container (default: `conda-forge::procps-ng`).
 
