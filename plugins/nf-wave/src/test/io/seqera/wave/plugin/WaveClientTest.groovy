@@ -206,7 +206,6 @@ class WaveClientTest extends Specification {
         req.containerImage == IMAGE
         !req.containerPlatform
         !req.containerFile
-        !req.condaFile
         !req.containerConfig.layers
         !req.freeze
         !req.dryRun
@@ -227,7 +226,6 @@ class WaveClientTest extends Specification {
         req.containerImage == IMAGE
         !req.containerPlatform
         !req.containerFile
-        !req.condaFile
         !req.containerConfig.layers
         !req.mirror
         and:
@@ -249,7 +247,6 @@ class WaveClientTest extends Specification {
         req.containerImage == IMAGE
         !req.containerPlatform
         !req.containerFile
-        !req.condaFile
         !req.containerConfig.layers
         !req.freeze
         and:
@@ -272,7 +269,6 @@ class WaveClientTest extends Specification {
         req.containerImage == IMAGE
         !req.containerPlatform
         !req.containerFile
-        !req.condaFile
         !req.containerConfig.layers
         and:
         req.scanMode == ScanMode.required
@@ -294,7 +290,6 @@ class WaveClientTest extends Specification {
         req.containerImage == IMAGE
         !req.containerPlatform
         !req.containerFile
-        !req.condaFile
         !req.containerConfig.layers
         and:
         req.buildCompression == new BuildCompression().withMode(BuildCompression.Mode.estargz).withLevel(11)
@@ -316,7 +311,6 @@ class WaveClientTest extends Specification {
         req.containerImage == IMAGE
         !req.containerPlatform
         !req.containerFile
-        !req.condaFile
         !req.containerConfig.layers
         and:
         req.dryRun
@@ -342,7 +336,6 @@ class WaveClientTest extends Specification {
         req.containerPlatform == PLATFORM
         and:
         !req.containerFile
-        !req.condaFile
         !req.containerConfig.layers
         and:
         req.fingerprint == 'd31044e6594126479585c0cdca15c15e'
@@ -360,7 +353,6 @@ class WaveClientTest extends Specification {
         then:
         !req.containerImage
         new String(req.containerFile.decodeBase64()) == DOCKERFILE
-        !req.condaFile
         !req.containerConfig.layers
     }
 
@@ -383,7 +375,6 @@ class WaveClientTest extends Specification {
         then:
         !req.containerImage
         new String(req.containerFile.decodeBase64()) == SINGULARITY_FILE
-        !req.condaFile
         !req.containerConfig.layers
         and:
         req.format == 'sif'
@@ -402,7 +393,6 @@ class WaveClientTest extends Specification {
         req.cacheRepository == 'some/cache'
         !req.containerImage
         new String(req.containerFile.decodeBase64()) == DOCKERFILE
-        !req.condaFile
         !req.containerConfig.layers
     }
 
@@ -422,7 +412,6 @@ class WaveClientTest extends Specification {
         then:
         !req.containerImage
         !req.containerFile
-        !req.condaFile
         !req.containerConfig.layers
         and:
         req.packages == SPEC
