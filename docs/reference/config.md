@@ -364,7 +364,7 @@ The following settings are available:
 : Enable the use of low-priority VMs (default: `false`).
 
 `azure.batch.pools.<name>.managedIdentityId`
-: :::{versionadded} 25.01.0-edge
+: :::{versionadded} 25.05.0-edge
   :::
 : Specify the pool has a managed identity attached. This is only compatible with Fusion. This is passed to Fusion as the environment variable `FUSION_AZ_MSI_CLIENT_ID`.
 
