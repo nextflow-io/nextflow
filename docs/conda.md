@@ -125,7 +125,7 @@ bioconda::multiqc=1.4
 ```
 
 :::{note}
-Dependency files must be a TXT file with the `.txt` extension.
+Dependency files must be a text file with the `.txt` extension.
 :::
 
 ### Conda lock files
