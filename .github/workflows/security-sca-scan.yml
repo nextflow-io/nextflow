@@ -1,4 +1,4 @@
-name: Security SCA Scan
+name: Security SCA Scan 
 
 on:
     pull_request:
@@ -9,10 +9,15 @@ jobs:
     permissions:
       contents: read
       id-token: write  
+    strategy:
+      matrix:
+        branch: 
+          - "v25.04.2"
+          - "v24.10.6"
 
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 #v4.2.2
       - name: Run Security SCA Scan
         uses: ./.github/actions/security-scan-branch
         with:
-          branch: "v25.04.2"
+          branch: matrix.branch
