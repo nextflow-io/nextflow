@@ -10,6 +10,7 @@ jobs:
       contents: read
       id-token: write  
     strategy:
+      fail-fast: false
       matrix:
         branch: 
           - "v25.04.2"
