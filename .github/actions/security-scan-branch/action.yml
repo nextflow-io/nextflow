@@ -37,7 +37,7 @@ runs:
       id: inspector
       uses: aws-actions/vulnerability-scan-github-action-for-amazon-inspector@5dc8a4bafed85c4c3d7070b4a7ada5b9d94041e3 #v1.2.1
       with:
-        artifact-type: "repository"
+        artifact_type: "repository"
         artifact_path: './'
         display_vulnerability_findings: "enabled"
         critical_threshold: 1
