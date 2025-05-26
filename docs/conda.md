@@ -166,7 +166,7 @@ https://conda.anaconda.org/conda-forge/linux-64/libgcc-ng-13.2.0-h77fa898_7.cond
 To use a Conda lock file with Nextflow, set the `conda` directive to the path of the lock file.
 
 :::{note}
-Conda lock files must be a TXT file with the `.txt` extension.
+Conda lock files must be a text file with the `.txt` extension.
 :::
 
 ### Use existing Conda environments
