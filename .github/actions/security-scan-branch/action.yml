@@ -15,10 +15,10 @@ runs:
         ref: ${{ inputs.branch }}
         fetch-depth: 0
 
-    - name: Setup Java ${{ matrix.java_version }}
+    - name: Setup Java 24
       uses: actions/setup-java@v4
       with:
-        java-version: ${{matrix.java_version}}
+        java-version: 24
         distribution: 'temurin'
         architecture: x64
         cache: gradle
