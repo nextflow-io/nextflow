@@ -16,6 +16,16 @@
 
 package nextflow.scm
 
+import dev.failsafe.Failsafe
+import dev.failsafe.RetryPolicy
+import dev.failsafe.event.EventListener
+import dev.failsafe.event.ExecutionAttemptedEvent
+import dev.failsafe.function.CheckedSupplier
+
+import java.time.temporal.ChronoUnit
+import java.util.concurrent.TimeoutException
+import java.util.function.Predicate
+
 import static nextflow.util.StringUtils.*
 
 import groovy.json.JsonSlurper
@@ -181,6 +191,10 @@ abstract class RepositoryProvider {
      * @return The remote service response as a text
      */
     protected String invoke( String api ) {
+        return apply(()-> invoke0(api))
+    }
+
+    protected String invoke0( String api ) {
         assert api
 
         log.debug "Request [credentials ${getAuthObfuscated() ?: '-'}] -> $api"
@@ -340,6 +354,55 @@ abstract class RepositoryProvider {
         catch( IOException e ) {
             throw new AbortOperationException("Cannot find `$project` -- Make sure exists a ${name.capitalize()} repository at this address `${getRepositoryUrl()}`", e)
         }
+    }
+
+    /**
+     * Creates a retry policy using the configuration specified by {@link nextflow.scm.ProviderRetryConfig}
+     *
+     * @param cond A predicate that determines when a retry should be triggered
+     * @return The {@link dev.failsafe.RetryPolicy} instance
+     */
+    protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond) {
+        final cfg = config.retryConfig()
+        final listener = new EventListener<ExecutionAttemptedEvent<?>>() {
+            @Override
+            void accept(ExecutionAttemptedEvent<?> event) throws Throwable {
+                log.debug("Provider invoke response error - attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}")
+            }
+        }
+        return RetryPolicy.<T>builder()
+            .handleIf(cond)
+            .withBackoff(cfg.delay.toMillis(), cfg.maxDelay.toMillis(), ChronoUnit.MILLIS)
+            .withMaxAttempts(cfg.maxAttempts)
+            .withJitter(cfg.jitter)
+            .onRetry(listener as EventListener)
+            .build()
+    }
+
+    /**
+     * Carry out the invocation of the specified action using a retry policy.
+     *
+     * @param action A {@link dev.failsafe.function.CheckedSupplier} instance modeling the action to be performed in a safe manner
+     * @return The result of the supplied action
+     */
+    protected <T> T apply(CheckedSupplier<T> action) {
+        // define the retry condition
+        final cond = new Predicate<? extends Throwable>() {
+            @Override
+            boolean test(Throwable t) {
+                // checkResponse method can throw RateLimitExceedExceptions which are retried and AbortedException which not retried.
+                // Other methods can throw IOExceptions including for 50x response codes which are retried by default.
+                if( t instanceof RateLimitExceededException || t.cause instanceof RateLimitExceededException)
+                    return true
+                if( t instanceof IOException || t.cause instanceof IOException )
+                    return true
+                return false
+            }
+        }
+        // create the retry policy object
+        final policy = (RetryPolicy<T>) retryPolicy(cond)
+        // apply the action with
+        return Failsafe.with(policy).get(action)
     }
 
 }

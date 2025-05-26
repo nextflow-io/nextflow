@@ -16,6 +16,7 @@
 
 package nextflow.scm
 
+import nextflow.util.Duration
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -31,6 +32,12 @@ class ProviderConfigTest extends Specification {
                 user = '12732'
                 password = '35454'
                 server = 'https://github.com'
+                retryPolicy {
+                  delay = '500ms'
+                  maxDelay = '30s'
+                  maxAttempts = 5
+                  jitter = 0.1
+                }
               }
 
               custom {
@@ -59,11 +66,19 @@ class ProviderConfigTest extends Specification {
         obj1.domain == 'github.com'
         obj1.platform == 'github'
         obj1.endpoint == 'https://api.github.com'
+        obj1.retryConfig().delay == new Duration('500ms')
+        obj1.retryConfig().maxDelay == new Duration('30s')
+        obj1.retryConfig().maxAttempts == 5
+        obj1.retryConfig().jitter == 0.1d
 
         obj2.name == 'custom'
         obj2.server == 'http://local.host'
         obj2.platform == 'gitlab'
         obj2.endpoint == 'http://local.host'
+        obj2.retryConfig().delay == new Duration('250ms')
+        obj2.retryConfig().maxDelay == new Duration('90s')
+        obj2.retryConfig().maxAttempts == 10
+        obj2.retryConfig().jitter == 0.25d
 
         obj3.platform == 'file'
         obj3.path == '/home/data/projects'

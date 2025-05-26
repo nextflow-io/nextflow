@@ -16,6 +16,7 @@
 
 package nextflow.scm
 
+import dev.failsafe.FailsafeException
 import spock.lang.Specification
 
 /**
@@ -108,4 +109,32 @@ class RepositoryProviderTest extends Specification {
         and:
         1 * conn.setRequestProperty('Authorization', "Basic ${'foo:bar'.bytes.encodeBase64()}")
     }
+
+    def 'should test retries ' () {
+        given:
+        def CONFIG = '''
+        providers {
+              github {
+                server = 'https://github.com'
+                retryPolicy {
+                  delay = '10ms'
+                  maxDelay = '30s'
+                  maxAttempts = 3
+                  jitter = 0.1
+                }
+              }
+        }
+        '''
+        def config = new ConfigSlurper().parse(CONFIG)
+        def provider = Spy(RepositoryProvider)
+        def provConfig = new ProviderConfig('github', config.providers.github as ConfigObject)
+        provider.@config = provConfig
+        when:
+        provider.invoke('https://api.github.com/repos/project/x')
+        then:
+        3 * provider.invoke0(_) >> {throw new IOException("exception")}
+        def e = thrown(IOException)
+        e.message == "exception"
+    }
+
 }
