@@ -58,5 +58,9 @@ runs:
           ${{ steps.inspector.outputs.artifact_sbom }}
           ${{ steps.inspector.outputs.inspector_scan_results_markdown }}
 
+    - name: On vulnerability threshold exceeded
+      run: exit ${{ steps.inspector.outputs.vulnerability_threshold_exceeded }}
+      shell: bash
+
 
 
