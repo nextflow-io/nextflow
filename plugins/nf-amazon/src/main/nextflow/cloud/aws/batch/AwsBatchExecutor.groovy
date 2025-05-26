@@ -30,8 +30,8 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.cloud.aws.v2.AwsClientFactory
-import nextflow.cloud.aws.v2.config.AwsConfig
+import nextflow.cloud.aws.AwsClientFactory
+import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
