@@ -13,6 +13,7 @@ runs:
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 #v4.2.2
 
     - name: Checkout target branch
+      if: ${{ inputs.branch != '' }}
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 #v4.2.2
       with:
         ref: ${{ inputs.branch }}
@@ -30,7 +31,11 @@ runs:
 
     - name: Compile
       shell: bash
-      run: cd target-branch && make assemble
+      run: |
+        if [ -d target-branch ]; then
+          cd target-branch
+        fi
+        make assemble
 
     - name: assume role
       uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df #v4.2.1
