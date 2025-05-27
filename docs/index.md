@@ -161,6 +161,7 @@ developer/plugins
 :caption: Guides
 :maxdepth: 1
 
+data-lineage
 updating-spot-retries
 metrics
 flux

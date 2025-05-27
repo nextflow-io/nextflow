@@ -14,7 +14,7 @@ process foo {
 }
 
 workflow {
-    Channel.fromPath(params.input)
+    channel.fromPath(params.input)
         | splitFasta(by: params.chunkSize)
         | foo
 }

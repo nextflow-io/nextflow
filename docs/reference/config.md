@@ -294,13 +294,13 @@ Read the {ref}`azure-page` page for more information.
 The following settings are available:
 
 `azure.activeDirectory.servicePrincipalId`
-: The service principal client ID
+: The service principal client ID. Defaults to environment variable `AZURE_CLIENT_ID`.
 
 `azure.activeDirectory.servicePrincipalSecret`
-: The service principal client secret
+: The service principal client secret. Defaults to environment variable `AZURE_CLIENT_SECRET`.
 
 `azure.activeDirectory.tenantId`
-: The Azure tenant ID
+: The Azure tenant ID. Defaults to environment variable `AZURE_TENANT_ID`.
 
 `azure.azcopy.blobTier`
 : The blob [access tier](https://learn.microsoft.com/en-us/azure/storage/blobs/access-tiers-overview) used by `azcopy` to upload files to Azure Blob Storage. Valid options are `None`, `Hot`, or `Cool` (default: `None`).
@@ -309,10 +309,10 @@ The following settings are available:
 : The block size (in MB) used by `azcopy` to transfer files between Azure Blob Storage and compute nodes (default: 4).
 
 `azure.batch.accountName`
-: The batch service account name.
+: The batch service account name. Defaults to environment variable `AZURE_BATCH_ACCOUNT_NAME`.
 
 `azure.batch.accountKey`
-: The batch service account key.
+: The batch service account key. Defaults to environment variable `AZURE_BATCH_ACCOUNT_KEY`.
 
 `azure.batch.allowPoolCreation`
 : Enable the automatic creation of batch pools specified in the Nextflow configuration file (default: `false`).
@@ -415,10 +415,10 @@ The following settings are available:
 : Specify the virtual machine type used by the pool identified with `<name>`.
 
 `azure.managedIdentity.clientId`
-: Specify the client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview). See {ref}`azure-managed-identities` for more details.
+: Specify the client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview). See {ref}`azure-managed-identities` for more details. Defaults to environment variable `AZURE_MANAGED_IDENTITY_USER`.
 
 `azure.managedIdentity.system`
-: When `true`, use the system-assigned [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) to authenticate Azure resources. See {ref}`azure-managed-identities` for more details.
+: When `true`, uses the system-assigned [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) to authenticate Azure resources. See {ref}`azure-managed-identities` for more details. Defaults to environment variable `AZURE_MANAGED_IDENTITY_SYSTEM`.
 
 `azure.registry.server`
 : Specify the container registry from which to pull the Docker images (default: `docker.io`).
@@ -816,7 +816,7 @@ The following settings are available:
 
 ## `google`
 
-The `google` scope allows you to configure the interactions with Google Cloud, including Google Cloud Batch, Google Life Sciences, and Google Cloud Storage.
+The `google` scope allows you to configure the interactions with Google Cloud, including Google Cloud Batch and Google Cloud Storage.
 
 Read the {ref}`google-page` page for more information.
 
@@ -912,17 +912,17 @@ The following settings are available for Google Cloud Batch:
 `google.batch.usePrivateAddress`
 : When `true` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: `false`).
 
-`google.storage.maxAttempts`
+`google.storage.retryPolicy.maxAttempts`
 : :::{versionadded} 23.11.0-edge
   :::
 : Max attempts when retrying failed API requests to Cloud Storage (default: `10`).
 
-`google.storage.maxDelay`
+`google.storage.retryPolicy.maxDelay`
 : :::{versionadded} 23.11.0-edge
   :::
 : Max delay when retrying failed API requests to Cloud Storage (default: `'90s'`).
 
-`google.storage.multiplier`
+`google.storage.retryPolicy.multiplier`
 : :::{versionadded} 23.11.0-edge
   :::
 : Delay multiplier when retrying failed API requests to Cloud Storage (default: `2.0`).
@@ -955,77 +955,6 @@ The following settings are available for Cloud Life Sciences:
 
 `google.zone`
 : The Google Cloud zone where jobs are executed. Multiple zones can be provided as a comma-separated list. Cannot be used with the `google.region` option. See the [Google Cloud documentation](https://cloud.google.com/compute/docs/regions-zones/) for a list of available regions and zones.
-
-`google.lifeSciences.bootDiskSize`
-: Set the size of the virtual machine boot disk e.g `50.GB` (default: none).
-
-`google.lifeSciences.copyImage`
-: The container image run to copy input and output files. It must include the `gsutil` tool (default: `google/cloud-sdk:alpine`).
-
-`google.lifeSciences.cpuPlatform`
-: Set the minimum CPU Platform e.g. `'Intel Skylake'`. See [Specifying a minimum CPU Platform for VM instances](https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications) (default: none).
-
-`google.lifeSciences.debug`
-: When `true` copies the `/google` debug directory in that task bucket directory (default: `false`).
-
-`google.lifeSciences.keepAliveOnFailure`
-: :::{versionadded} 21.06.0-edge
-  :::
-: When `true` and a task complete with an unexpected exit status the associated compute node is kept up for 1 hour. This options implies `sshDaemon=true` (default: `false`).
-
-`google.lifeSciences.network`
-: :::{versionadded} 21.03.0-edge
-  :::
-: Set network name to attach the VM's network interface to. The value will be prefixed with `global/networks/` unless it contains a `/`, in which case it is assumed to be a fully specified network resource URL. If unspecified, the global default network is used.
-
-`google.lifeSciences.preemptible`
-: When `true` enables the usage of *preemptible* virtual machines or `false` otherwise (default: `true`).
-
-`google.lifeSciences.serviceAccountEmail`
-: :::{versionadded} 20.05.0-edge
-  :::
-: Define the Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used.
-
-`google.lifeSciences.subnetwork`
-: :::{versionadded} 21.03.0-edge
-  :::
-: Define the name of the subnetwork to attach the instance to must be specified here, when the specified network is configured for custom subnet creation. The value is prefixed with `regions/subnetworks/` unless it contains a `/`, in which case it is assumed to be a fully specified subnetwork resource URL.
-
-`google.lifeSciences.sshDaemon`
-: When `true` runs SSH daemon in the VM carrying out the job to which it's possible to connect for debugging purposes (default: `false`).
-
-`google.lifeSciences.sshImage`
-: The container image used to run the SSH daemon (default: `gcr.io/cloud-genomics-pipelines/tools`).
-
-`google.lifeSciences.usePrivateAddress`
-: :::{versionadded} 20.03.0-edge
-  :::
-: When `true` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: `false`).
-
-`google.storage.delayBetweenAttempts`
-: :::{versionadded} 21.06.0-edge
-  :::
-: Delay between download attempts from Google Storage (default `10 sec`).
-
-`google.storage.downloadMaxComponents`
-: :::{versionadded} 21.06.0-edge
-  :::
-: Defines the value for the option `GSUtil:sliced_object_download_max_components` used by `gsutil` for transfer input and output data (default: `8`).
-
-`google.storage.maxParallelTransfers`
-: :::{versionadded} 21.06.0-edge
-  :::
-: Max parallel upload/download transfer operations *per job* (default: `4`).
-
-`google.storage.maxTransferAttempts`
-: :::{versionadded} 21.06.0-edge
-  :::
-: Max number of downloads attempts from Google Storage (default: `1`).
-
-`google.storage.parallelThreadCount`
-: :::{versionadded} 21.06.0-edge
-  :::
-: Defines the value for the option `GSUtil:parallel_thread_count` used by `gsutil` for transfer input and output data (default: `1`).
 
 (config-k8s)=
 
@@ -1096,6 +1025,18 @@ The following settings are available:
 `k8s.pullPolicy`
 : Defines the strategy to be used to pull the container image e.g. `pullPolicy: 'Always'`.
 
+`k8s.retryPolicy.delay`
+: Delay when retrying failed API requests (default: `500ms`).
+
+`k8s.retryPolicy.jitter`
+: Jitter value when retrying failed API requests (default: `0.25`).
+
+`k8s.retryPolicy.maxAttempts`
+: Max attempts when retrying failed API requests (default: `4`).
+
+`k8s.retryPolicy.maxDelay`
+: Max delay when retrying failed API requests (default: `90s`).
+
 `k8s.runAsUser`
 : Defines the user ID to be used to run the containers. Shortcut for the `securityContext` option.
 
@@ -1123,7 +1064,7 @@ See the {ref}`k8s-page` page for more details.
 
 ## `lineage`
 
-The `lineage` scope controls the generation of lineage metadata.
+The `lineage` scope controls the generation of {ref}`cli-lineage` metadata.
 
 The following settings are available:
 
@@ -1579,6 +1520,21 @@ The following settings are available:
 `wave.build.cacheRepository`
 : The container repository used to cache image layers built by the Wave service (note: the corresponding credentials must be provided in your Seqera Platform account).
 
+`wave.build.compression.mode`
+: :::{versionadded} 25.05.0-edge
+  :::
+: Defines the compression algorithm that should be used when building the container. Allowed values are: `gzip`, `estargz` and `zstd` (default: `gzip`).
+
+`wave.build.compression.level`
+: :::{versionadded} 25.05.0-edge
+  :::
+: Level of compression used when building a container depending the chosen algorithm: gzip, estargz (0-9) and zstd (0-22).
+   .
+`wave.build.compression.force`
+: :::{versionadded} 25.05.0-edge
+  :::
+: Forcefully apply compression option to all layers, including already existing layers (default: `false`).
+
 `wave.build.conda.basePackages`
 : One or more Conda packages to be always added in the resulting container (default: `conda-forge::procps-ng`).
 
@@ -1587,16 +1543,6 @@ The following settings are available:
 
 `wave.build.conda.mambaImage`
 : The Mamba container image is used to build Conda based container. This is expected to be [micromamba-docker](https://github.com/mamba-org/micromamba-docker) image.
-
-`wave.build.spack.basePackages`
-: :::{versionadded} 22.06.0-edge
-  :::
-: One or more Spack packages to be always added in the resulting container.
-
-`wave.build.spack.commands`
-: :::{versionadded} 22.06.0-edge
-  :::
-: One or more commands to be added to the Dockerfile used to build a Spack based image.
 
 `wave.endpoint`
 : The Wave service endpoint (default: `https://wave.seqera.io`).

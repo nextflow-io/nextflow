@@ -306,7 +306,6 @@ public abstract class Channel<E> {
     """)
     public abstract Channel max(Closure comparator);
 
-    @Deprecated
     @Operator
     @Description("""
         The `merge` operator joins the values from two or more channels into a new channel.

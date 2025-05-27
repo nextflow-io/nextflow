@@ -705,50 +705,33 @@ $ nextflow lineage SUBCOMMAND [arg ..]
 
 The `lineage` command is used to inspect lineage metadata.
 
+See the {ref}`data-lineage-page` guide to learn how to get started with data lineage.
+
 **Options**
 
 `-h, -help`
 : Print the command usage.
 
-**Examples**
+**Subcommands**
 
-List the Nextflow runs with lineage metadata enabled, printing the corresponding lineage ID (LID) for each run.
+`check <lid>`
+: Validate the checksum of output lineage record.
 
-```console
-$ nextflow lineage list
-TIMESTAMP          	RUN NAME              	SESSION ID                          	LINEAGE ID                            
-2025-04-22 14:45:43	backstabbing_heyrovsky	21bc4fad-e8b8-447d-9410-388f926a711f	lid://c914d714877cc5c882c55a5428b510b1
-```
+`diff <lid-1> <lid-2>`
+: Display a git-style diff between two lineage records.
 
-View a metadata description.
+`find <field-1>=<value-1> [<field-2>=<value-2> ...]`
+: Find all lineage records that match the given field values.
 
-```console
-$ nextflow lineage view <lid>
-```
+`list`
+: List the Nextflow runs with lineage enabled, printing the corresponding lineage ID (LID) for each run.
 
-View a metadata description fragment. A fragment can be a property of a metadata description (e.g., `output` or `params`) or a set of nested properties separated by a `.` (e.g., `workflow.repository`).
+`render <lid> [path]`
+: Render the lineage graph for a lineage record as an HTML file (default output path: `./lineage.html`).
+: The lineage record should be of type `FileOutput`, `TaskRun`, or `WorkflowRun`.
 
-```console
-$ nextflow lineage view <lid#fragment>
-```
-
-Find a specific metadata description that matches a URL-like query string. The query string consists of `key=value` statements separated by `&`, where keys are defined similarly to the `fragments` used in the `view` command.
-
-```console
-$ nextflow lineage find "<query-string>"
-```
-
-Display a git-style diff between two metadata descriptions.
-
-```console
-$ nextflow lineage diff <lid-1> <lid-2>
-```
-
-Render the lineage graph for a workflow or task output in an HTML file. (default file path: `./lineage.html`).
-
-```console
-$ nextflow lineage render <lid> [html-file-path]
-```
+`view <lid>`
+: View a lineage record.
 
 (cli-lint)=
 
@@ -1299,6 +1282,61 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 
   See {ref}`cli-params` for more information about writing custom parameters files.
 
+### `secrets`
+
+Manage pipeline secrets.
+
+**Usage**
+
+```console
+$ nextflow secrets <SUBCOMMAND> [OPTIONS]
+```
+
+**Options**
+
+`-h, -help`
+: Print the command usage.
+
+**Subcommands**
+
+`list`
+: List secrets available in the current store.
+
+`get <secret>`
+: Retrieve a secret value.
+
+`set <secret> <value> `
+: Create or update a secret.
+
+`delete <secret>`
+: Delete a secret.
+
+**Examples**
+
+- Set a secret:
+
+    ```console
+    $ nextflow secrets set FOO "Hello world"
+    ```
+
+- List secrets:
+
+    ```console
+    $ nextflow secrets list
+    ```
+
+- Get a secret:
+
+    ```console
+    $ nextflow secrets get FOO
+    ```
+
+- Delete a secret:
+
+    ```console
+    $ nextflow secrets delete FOO
+    ```
+
 ### `self-update`
 
 Update the nextflow runtime to the latest available version.
@@ -1378,7 +1416,7 @@ process sayHello {
 }
 
 workflow {
-  Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
+  channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
 }
 ```
 
@@ -1418,6 +1456,6 @@ process sayHello {
 }
 
 workflow {
-  Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
+  channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
 }
 ```

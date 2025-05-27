@@ -23,7 +23,6 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
-import nextflow.file.FileHelper
 import nextflow.processor.PublishDir
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.WorkflowOutputEvent
@@ -100,7 +99,6 @@ class PublishOp {
             overrides.saveAs = targetResolver
         else
             overrides.path = targetResolver
-        overrides.annotations = getAnnotations(publishOpts.annotations, value)
 
         final publisher = PublishDir.create(publishOpts + overrides)
 
@@ -190,25 +188,6 @@ class PublishOp {
     }
 
     /**
-     * Get or resolve the annotations of a workflow output.
-     *
-     * @param annotations Map | Closure<Map>
-     * @param value
-     */
-    protected static Map getAnnotations(annotations, value) {
-        if( annotations == null )
-            return [:]
-        if( annotations instanceof Map )
-            return annotations
-        if( annotations instanceof Closure ) {
-            final result = annotations.call(value)
-            if( result instanceof Map )
-                return result
-        }
-        throw new ScriptRuntimeException("Invalid output `annotations` directive -- it should be either a Map or a closure that returns a Map")
-    }
-
-    /**
      * Once all channel values have been published, publish the final
      * workflow output and index file (if enabled).
      */
@@ -238,7 +217,7 @@ class PublishOp {
             else {
                 log.warn "Invalid extension '${ext}' for index file '${indexPath}' -- should be CSV, JSON, or YAML"
             }
-            session.notifyFilePublish(new FilePublishEvent(null, indexPath))
+            session.notifyFilePublish(new FilePublishEvent(null, indexPath, publishOpts.labels as List))
         }
 
         log.trace "Publish operator complete"
@@ -330,10 +309,15 @@ class PublishOp {
 
         // if the target resolver is a directory, resolve the source
         // filename against it
-        if( targetResolver instanceof Path )
-            return targetResolver.resolve(sourceDir.relativize(path)).normalize()
+        if( targetResolver instanceof Path ) {
+            // note: make sure to convert the relative path to as a string to prevent
+            // an exception when mixing different path providers e.g. local fs and remove cloud
+            // thrown by {@link Path#resolve) method
+            final relPath = sourceDir.relativize(path).toString()
+            return targetResolver.resolve(relPath).normalize()
+        }
 
-        throw new IllegalStateException()
+        throw new IllegalStateException("Unexpected targetResolver argument: ${targetResolver}")
     }
 
     /**

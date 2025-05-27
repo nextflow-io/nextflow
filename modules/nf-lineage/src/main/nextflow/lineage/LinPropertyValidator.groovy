@@ -17,15 +17,15 @@
 package nextflow.lineage
 
 import groovy.transform.CompileStatic
-import nextflow.lineage.model.Annotation
-import nextflow.lineage.model.Checksum
-import nextflow.lineage.model.DataPath
-import nextflow.lineage.model.Parameter
-import nextflow.lineage.model.TaskOutput
-import nextflow.lineage.model.TaskRun
-import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowOutput
-import nextflow.lineage.model.WorkflowRun
+import nextflow.lineage.model.v1beta1.Checksum
+import nextflow.lineage.model.v1beta1.DataPath
+import nextflow.lineage.model.v1beta1.FileOutput
+import nextflow.lineage.model.v1beta1.Parameter
+import nextflow.lineage.model.v1beta1.TaskOutput
+import nextflow.lineage.model.v1beta1.TaskRun
+import nextflow.lineage.model.v1beta1.Workflow
+import nextflow.lineage.model.v1beta1.WorkflowOutput
+import nextflow.lineage.model.v1beta1.WorkflowRun
 
 /**
  * Class to validate if the string refers to a property in the classes of the Lineage Metadata model.
@@ -36,10 +36,9 @@ import nextflow.lineage.model.WorkflowRun
 class LinPropertyValidator {
 
     private static final List<Class> LIN_MODEL_CLASSES = [
-        Annotation,
         Checksum,
-        DataOutput,
         DataPath,
+        FileOutput,
         Parameter,
         TaskOutput,
         TaskRun,
@@ -71,8 +70,8 @@ class LinPropertyValidator {
         }
     }
 
-    void validateQueryParams(Map<String, String> params) {
-        for( String key : params.keySet() ) {
+    void validateQueryParams(Collection<String> keys) {
+        for( final key : keys ) {
            validate(key.tokenize('.'))
         }
     }

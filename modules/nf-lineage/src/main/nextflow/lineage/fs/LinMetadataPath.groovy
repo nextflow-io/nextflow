@@ -32,8 +32,8 @@ class LinMetadataPath extends LinPath {
     private byte[] results
     private FileTime creationTime
 
-    LinMetadataPath(String resultsObject, FileTime creationTime, LinFileSystem fs, String path, String[] childs) {
-        super(fs, "${path}${childs ? '#'+ childs.join('.') : ''}")
+    LinMetadataPath(String resultsObject, FileTime creationTime, LinFileSystem fs, String path, String fragment) {
+        super(fs, "${path}${fragment ? '#'+ fragment : ''}")
         this.results = resultsObject.getBytes("UTF-8")
         this.creationTime = creationTime
     }

@@ -55,7 +55,7 @@ process convertToUpper {
 
 // Workflow block
 workflow {
-    ch_str = Channel.of(params.str)     // Create a channel using parameter input
+    ch_str = channel.of(params.str)     // Create a channel using parameter input
     ch_chunks = splitString(ch_str)     // Split string into chunks and create a named channel
     convertToUpper(ch_chunks.flatten()) // Convert lowercase letters to uppercase letters
 }

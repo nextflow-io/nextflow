@@ -31,6 +31,8 @@ public interface ChannelFactory {
 
     Channel fromFilePairs(Map<String,?> opts, String pattern, Closure grouping);
 
+    Channel<Path> fromLineage(Map<String,?> opts);
+
     <E> Channel<E> fromList(Collection<E> values);
 
     Channel<Path> fromPath(Map<String,?> opts, String pattern);

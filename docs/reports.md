@@ -72,7 +72,7 @@ script:
 
     $script
 
-exist status: $exit
+exit status: $exit
 task status: $status
 task folder: $folder
 ```

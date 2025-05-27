@@ -145,6 +145,11 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_PID_FILE`
 : Name of the file where the process PID is saved when Nextflow is launched in background.
 
+`NXF_PLUGINS_ALLOWED`
+: :::{versionadded} 25.04.0
+  :::
+: Comma separated list of plugin IDs that can be used in a workflow executions e.g. `NXF_PLUGINS_ALLOWED=nf-amazon,nf-tower,nf-wave`. Use empty string to disallow all plugins.
+
 `NXF_PLUGINS_DEFAULT`
 : Whether to use the default plugins when no plugins are specified in the Nextflow configuration (default: `true`).
 

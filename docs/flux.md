@@ -38,7 +38,7 @@ Here is an example pipeline that we will use:
 
 ```nextflow
 workflow {
-    breakfast = Channel.of '🥞️', '🥑️', '🥧️', '🍵️', '🍞️'
+    breakfast = channel.of '🥞️', '🥑️', '🥧️', '🍵️', '🍞️'
     haveMeal(breakfast)
 }
 
