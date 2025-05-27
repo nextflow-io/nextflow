@@ -34,77 +34,62 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.regions.Region;
-import com.amazonaws.regions.RegionUtils;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.Headers;
-import com.amazonaws.services.s3.model.AccessControlList;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.Bucket;
-import com.amazonaws.services.s3.model.CannedAccessControlList;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
-import com.amazonaws.services.s3.model.CopyObjectRequest;
-import com.amazonaws.services.s3.model.CopyPartRequest;
-import com.amazonaws.services.s3.model.CopyPartResult;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.GetObjectTaggingRequest;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
-import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.ObjectTagging;
-import com.amazonaws.services.s3.model.Owner;
-import com.amazonaws.services.s3.model.PartETag;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectResult;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.SSEAlgorithm;
-import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
-import com.amazonaws.services.s3.model.StorageClass;
-import com.amazonaws.services.s3.model.Tag;
-import com.amazonaws.services.s3.transfer.Download;
-import com.amazonaws.services.s3.transfer.MultipleFileUpload;
-import com.amazonaws.services.s3.transfer.ObjectCannedAclProvider;
-import com.amazonaws.services.s3.transfer.ObjectMetadataProvider;
-import com.amazonaws.services.s3.transfer.ObjectTaggingProvider;
-import com.amazonaws.services.s3.transfer.TransferManager;
-import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
-import com.amazonaws.services.s3.transfer.Upload;
-import com.amazonaws.services.s3.transfer.UploadContext;
+import software.amazon.awssdk.AmazonClientException;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.http.ClientConfiguration;
+import software.amazon.awssdk.auth.credentials.AwsStaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.Headers;
+import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.model.AccessControlList;
+import software.amazon.awssdk.services.s3.model.AmazonS3Exception;
+import software.amazon.awssdk.services.s3.model.CannedAccessControlList;
+import software.amazon.awssdk.services.s3.model.CopyPartRequest;
+import software.amazon.awssdk.services.s3.model.InitiateMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.InitiateMultipartUploadResult;
+import software.amazon.awssdk.services.s3.model.ObjectListing;
+import software.amazon.awssdk.services.s3.model.ObjectMetadata;
+import software.amazon.awssdk.services.s3.model.ObjectTagging;
+import software.amazon.awssdk.services.s3.model.PartETag;
+import software.amazon.awssdk.services.s3.model.PutObjectResult;
+import software.amazon.awssdk.services.s3.model.SSEAlgorithm;
+import software.amazon.awssdk.services.s3.model.SSEAwsKeyManagementParams;
+import software.amazon.awssdk.transfer.s3.model.Download;
+import software.amazon.awssdk.transfer.s3.model.MultipleFileUpload;
+import software.amazon.awssdk.transfer.s3.model.ObjectCannedAclProvider;
+import software.amazon.awssdk.services.s3.transfer.ObjectMetadataProvider;
+import software.amazon.awssdk.services.s3.transfer.ObjectTaggingProvider;
+import software.amazon.awssdk.transfer.s3.S3TransferManager;
+import software.amazon.awssdk.transfer.s3.model.Upload;
+import software.amazon.awssdk.services.s3.transfer.UploadContext;
 import nextflow.cloud.aws.nio.util.S3MultipartOptions;
 import nextflow.cloud.aws.util.AwsHelper;
 import nextflow.extension.FilesEx;
-import nextflow.util.Duration;
-import nextflow.util.ThreadPoolHelper;
 import nextflow.util.ThreadPoolManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.transfer.s3.model.UploadRequest;
 
 import static nextflow.cloud.aws.nio.util.S3UploadHelper.*;
 
 /**
  * Client Amazon S3
- * @see com.amazonaws.services.s3.AmazonS3Client
+ * @see software.amazon.awssdk.services.s3.S3Client
  */
 public class S3Client {
 
 	private static final Logger log = LoggerFactory.getLogger(S3Client.class);
 
-	private AmazonS3 client;
+	private software.amazon.awssdk.services.s3.S3Client client;
 
-	private CannedAccessControlList cannedAcl;
+	private ObjectCannedACL cannedAcl;
 
 	private String kmsKeyId;
 
-	private SSEAlgorithm storageEncryption;
+	private ServerSideEncryption storageEncryption;
 
-	private TransferManager transferManager;
+	private S3TransferManager transferManager;
 
 	private ExecutorService transferPool;
 
@@ -114,131 +99,124 @@ public class S3Client {
 
     private Boolean isRequesterPaysEnabled = false;
 
-	public S3Client(AmazonS3 client) {
+	public S3Client(software.amazon.awssdk.services.s3.S3Client client) {
 		this.client = client;
 	}
 
-	public S3Client(ClientConfiguration config, AWSCredentials creds, String region) {
-		this.client = AmazonS3ClientBuilder
-				.standard()
-				.withCredentials(new AWSStaticCredentialsProvider(creds))
-				.withClientConfiguration(config)
-				.withRegion(region)
-				.build();
-	}
 
 	/**
-	 * @see com.amazonaws.services.s3.AmazonS3Client#listBuckets()
+	 * @see software.amazon.awssdk.services.s3.S3Client#listBuckets()
 	 */
 	public List<Bucket> listBuckets() {
-		return client.listBuckets();
+		return client.listBuckets().buckets();
 	}
 	/**
-	 * @see com.amazonaws.services.s3.AmazonS3Client#listObjects(ListObjectsRequest)
+	 * @see software.amazon.awssdk.services.s3.S3Client#listObjects(ListObjectsRequest)
 	 */
-	public ObjectListing listObjects(ListObjectsRequest request) {
+	public ListObjectsResponse listObjects(ListObjectsRequest request) {
 		return client.listObjects(request);
 	}
 	/**
-	 * @see com.amazonaws.services.s3.AmazonS3Client#getObject(String, String)
+	 * @see software.amazon.awssdk.services.s3.S3Client#getObject
 	 */
-	public S3Object getObject(String bucketName, String key) {
-        GetObjectRequest req = new GetObjectRequest(bucketName, key, isRequesterPaysEnabled);
-		return client.getObject(req);
+	public ResponseInputStream<GetObjectResponse> getObject(String bucketName, String key) {
+		GetObjectRequest.Builder reqBuilder = GetObjectRequest.builder().bucket(bucketName).key(key);
+        if( this.isRequesterPaysEnabled )
+            reqBuilder.requestPayer(RequestPayer.REQUESTER);
+        return client.getObject(reqBuilder.build());
 	}
 	/**
-	 * @see com.amazonaws.services.s3.AmazonS3Client#putObject(String, String, File)
+	 * @see software.amazon.awssdk.services.s3.S3Client#putObject
 	 */
-	public PutObjectResult putObject(String bucket, String key, File file) {
-		PutObjectRequest req = new PutObjectRequest(bucket, key, file);
+	public PutObjectResponse putObject(String bucket, String key, File file) {
+		PutObjectRequest.Builder builder = PutObjectRequest.builder().bucket(bucket).key(key);
 		if( cannedAcl != null ) {
 			log.trace("Setting canned ACL={}; bucket={}; key={}", cannedAcl, bucket, key);
-			req.withCannedAcl(cannedAcl);
+			builder.acl(cannedAcl);
 		}
-		return client.putObject(req);
+		return client.putObject(builder.build(), file.toPath());
 	}
 
-	private PutObjectRequest preparePutObjectRequest(PutObjectRequest req, ObjectMetadata metadata, List<Tag> tags, String contentType, String storageClass) {
-		req.withMetadata(metadata);
+	private PutObjectRequest preparePutObjectRequest(PutObjectRequest.Builder reqBuilder, List<Tag> tags, String contentType, String storageClass) {
 		if( cannedAcl != null ) {
-			req.withCannedAcl(cannedAcl);
+			reqBuilder.acl(cannedAcl);
 		}
 		if( tags != null && tags.size()>0 ) {
-			req.setTagging(new ObjectTagging(tags));
+			reqBuilder.tagging(Tagging.builder().tagSet(tags).build());
 		}
 		if( kmsKeyId != null ) {
-			req.withSSEAwsKeyManagementParams( new SSEAwsKeyManagementParams(kmsKeyId) );
+			reqBuilder.ssekmsKeyId(kmsKeyId);
 		}
 		if( storageEncryption!=null ) {
-			metadata.setSSEAlgorithm(storageEncryption.toString());
+			reqBuilder.serverSideEncryption(storageEncryption);
 		}
 		if( contentType!=null ) {
-			metadata.setContentType(contentType);
+			reqBuilder.contentType(contentType);
 		}
 		if( storageClass!=null ) {
-			req.setStorageClass(storageClass);
+			reqBuilder.storageClass(storageClass);
 		}
-		return req;
+		return reqBuilder;
 	}
 
 	/**
-	 * @see com.amazonaws.services.s3.AmazonS3Client#putObject(String, String, java.io.InputStream, ObjectMetadata)
+	 * @see software.amazon.awssdk.services.s3.S3Client#putObject
 	 */
-	public PutObjectResult putObject(String bucket, String keyName, InputStream inputStream, ObjectMetadata metadata, List<Tag> tags, String contentType) {
-		PutObjectRequest req = new PutObjectRequest(bucket, keyName, inputStream, metadata);
+	public PutObjectResponse putObject(String bucket, String keyName, InputStream inputStream, List<Tag> tags, String contentType, long contentLength) {
+		PutObjectRequest.Builder reqBuilder = PutObjectRequest.builder()
+            .bucket(bucket)
+            .key(keyName);
 		if( cannedAcl != null ) {
-			req.withCannedAcl(cannedAcl);
+			reqBuilder.acl(cannedAcl);
 		}
 		if( tags != null && tags.size()>0 ) {
-			req.setTagging(new ObjectTagging(tags));
+			reqBuilder.tagging(Tagging.builder().tagSet(tags).build());
 		}
 		if( kmsKeyId != null ) {
-			req.withSSEAwsKeyManagementParams( new SSEAwsKeyManagementParams(kmsKeyId) );
+			reqBuilder.ssekmsKeyId(kmsKeyId);
 		}
 		if( storageEncryption!=null ) {
-			metadata.setSSEAlgorithm(storageEncryption.toString());
+			reqBuilder.serverSideEncryption(storageEncryption);
 		}
 		if( contentType!=null ) {
-			metadata.setContentType(contentType);
+			reqBuilder.contentType(contentType);
 		}
+        PutObjectRequest req = reqBuilder.build();
 		if( log.isTraceEnabled() ) {
 			log.trace("S3 PutObject request {}", req);
 		}
-		return client.putObject(req);
+		return client.putObject(req, RequestBody.fromInputStream(inputStream, contentLength));
 	}
 	/**
-	 * @see com.amazonaws.services.s3.AmazonS3Client#deleteObject(String, String)
+	 * @see software.amazon.awssdk.services.s3.S3Client#deleteObject
 	 */
 	public void deleteObject(String bucket, String key) {
-		client.deleteObject(bucket, key);
+		client.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build());
 	}
 
 	/**
-	 * @see com.amazonaws.services.s3.AmazonS3Client#copyObject(CopyObjectRequest)
+	 * @see software.amazon.awssdk.services.s3.S3Client#copyObject(CopyObjectRequest)
 	 */
-	public void copyObject(CopyObjectRequest req, List<Tag> tags, String contentType, String storageClass) {
+	public void copyObject(CopyObjectRequest.Builder reqBuilder, List<Tag> tags, String contentType, String storageClass) {
 		if( tags !=null && tags.size()>0 ) {
-			req.setNewObjectTagging(new ObjectTagging(tags));
+			reqBuilder.tagging(Tagging.builder().tagSet(tags).build());
 		}
 		if( cannedAcl != null ) {
-			req.withCannedAccessControlList(cannedAcl);
+			reqBuilder.acl(cannedAcl);
 		}
-		// getNewObjectMetadata returns null if no object metadata has been specified.
-		ObjectMetadata meta = req.getNewObjectMetadata() != null ? req.getNewObjectMetadata() : new ObjectMetadata();
 		if( storageEncryption != null ) {
-			meta.setSSEAlgorithm(storageEncryption.toString());
-			req.setNewObjectMetadata(meta);
+			reqBuilder.serverSideEncryption(storageEncryption);
 		}
 		if( kmsKeyId !=null ) {
-			req.withSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams(kmsKeyId));
+            reqBuilder.ssekmsKeyId(kmsKeyId);
 		}
 		if( contentType!=null ) {
-			meta.setContentType(contentType);
-			req.setNewObjectMetadata(meta);
+			reqBuilder.contentType(contentType);
 		}
 		if( storageClass!=null ) {
-			req.setStorageClass(storageClass);
+			reqBuilder.storageClass(storageClass);
 		}
+        CopyObjectRequest req = reqBuilder.build();
 		if( log.isTraceEnabled() ) {
 			log.trace("S3 CopyObject request {}", req);
 		}
@@ -247,19 +225,20 @@ public class S3Client {
 	}
 
 	/**
-	 * @see com.amazonaws.services.s3.AmazonS3Client#getBucketAcl(String)
+	 * @see software.amazon.awssdk.services.s3.S3Client#getBucketAcl
 	 */
-	public AccessControlList getBucketAcl(String bucket) {
-		return client.getBucketAcl(bucket);
+	public AccessControlPolicy getBucketAcl(String bucket) {
+		GetBucketAclResponse response = client.getBucketAcl(GetBucketAclRequest.builder().bucket(bucket).build());
+        return AccessControlPolicy.builder().grants(response.grants()).owner(response.owner()).build();
 	}
 	/**
-	 * @see com.amazonaws.services.s3.AmazonS3Client#getS3AccountOwner()
+	 * @see software.amazon.awssdk.services.s3.AmazonS3Client#getS3AccountOwner()
 	 */
 	public Owner getS3AccountOwner() {
-		return client.getS3AccountOwner();
+		return client.accountOwner();
 	}
 	/**
-	 * @see com.amazonaws.services.s3.AmazonS3Client#setEndpoint(String)
+	 * @see software.amazon.awssdk.services.s3.AmazonS3Client#setEndpoint(String)
 	 */
 	public void setEndpoint(String endpoint) {
 		client.setEndpoint(endpoint);
@@ -282,7 +261,7 @@ public class S3Client {
 	public void setStorageEncryption(String alg) {
 		if( alg == null )
 			return;
-		this.storageEncryption = SSEAlgorithm.fromString(alg);
+		this.storageEncryption = ServerSideEncryption.fromValue(alg);
 		log.debug("Setting S3 SSE storage encryption algorithm={}", alg);
 	}
 
@@ -319,41 +298,42 @@ public class S3Client {
 		}
 	}
 
-	public CannedAccessControlList getCannedAcl() {
+	public ObjectCannedACL getCannedAcl() {
 		return cannedAcl;
 	}
 
-	public AmazonS3 getClient() {
+	public software.amazon.awssdk.services.s3.S3Client getClient() {
 		return client;
 	}
 
 	public void setRegion(String regionName) {
-		Region region = RegionUtils.getRegion(regionName);
+		Region region = Region.of(regionName);
 		if( region == null )
 			throw new IllegalArgumentException("Not a valid S3 region name: " + regionName);
-		client.setRegion(region);
+		client.region(region);
 	}
 
 
 	/**
-	 * @see com.amazonaws.services.s3.AmazonS3Client#getObjectAcl(String, String)
+	 * @see software.amazon.awssdk.services.s3.S3Client#getObjectAcl
 	 */
-	public AccessControlList getObjectAcl(String bucketName, String key) {
-		return client.getObjectAcl(bucketName, key);
+	public AccessControlPolicy getObjectAcl(String bucketName, String key) {
+		GetObjectAclResponse response = client.getObjectAcl(GetObjectAclRequest.builder().bucket(bucketName).key(key).build());
+        return AccessControlPolicy.builder().grants(response.grants()).owner(response.owner()).build();
 	}
 	/**
-	 * @see com.amazonaws.services.s3.AmazonS3Client#getObjectMetadata(String, String)
+	 * @see software.amazon.awssdk.services.s3.S3Client#headObject
 	 */
-	public ObjectMetadata getObjectMetadata(String bucketName, String key) {
-		return client.getObjectMetadata(bucketName, key);
+	public HeadObjectResponse getObjectMetadata(String bucketName, String key) {
+		return client.headObject(HeadObjectRequest.builder().bucket(bucketName).key(key).build());
 	}
 
 	public List<Tag> getObjectTags(String bucketName, String key) {
-		return client.getObjectTagging(new GetObjectTaggingRequest(bucketName,key)).getTagSet();
+		return client.getObjectTagging(GetObjectTaggingRequest.builder().bucket(bucketName).key(key).build()).tagSet();
 	}
 
 	/**
-     * @see com.amazonaws.services.s3.AmazonS3Client#listNextBatchOfObjects(com.amazonaws.services.s3.model.ObjectListing)
+     * @see software.amazon.awssdk.services.s3.AmazonS3Client#listNextBatchOfObjects(software.amazon.awssdk.services.s3.model.ObjectListing)
      */
     public ObjectListing listNextBatchOfObjects(ObjectListing objectListing) {
         return client.listNextBatchOfObjects(objectListing);
@@ -395,11 +375,11 @@ public class S3Client {
 			initiateRequest.setStorageClass(StorageClass.fromValue(storageClass));
 		}
 
-		InitiateMultipartUploadResult initResult = client.initiateMultipartUpload(initiateRequest);
+		InitiateMultipartUploadResponse initResult = client.initiateMultipartUpload(initiateRequest);
 
 
 		// Step 3: Save upload Id.
-		String uploadId = initResult.getUploadId();
+		String uploadId = initResult.uploadId();
 
 		// Multipart upload and copy allows max 10_000 parts
 		// each part can be up to 5 GB
@@ -503,14 +483,14 @@ public class S3Client {
 
 	// ===== transfer manager section =====
 
-	synchronized TransferManager transferManager() {
+	synchronized S3TransferManager transferManager() {
 		if( transferManager==null ) {
 			log.debug("Creating S3 transfer manager pool - chunk-size={}; max-treads={};", uploadChunkSize, uploadMaxThreads);
 			transferPool = ThreadPoolManager.create("S3TransferManager", uploadMaxThreads);
-			transferManager = TransferManagerBuilder.standard()
-					.withS3Client(getClient())
-					.withMinimumUploadPartSize(uploadChunkSize)
-					.withExecutorFactory(() -> transferPool)
+			transferManager = S3TransferManager.builder()
+					.s3Client(getClient())
+					.minimumUploadPartSize(uploadChunkSize)
+					.executorFactory(() -> transferPool)
 					.build();
 		}
 		return transferManager;
@@ -589,14 +569,13 @@ public class S3Client {
 	}
 
 	public void uploadFile(File source, S3Path target) {
-		PutObjectRequest req = new PutObjectRequest(target.getBucket(), target.getKey(), source);
-		ObjectMetadata metadata = new ObjectMetadata();
-		preparePutObjectRequest(req, metadata, target.getTagsList(), target.getContentType(), target.getStorageClass());
+		PutObjectRequest.Builder req = PutObjectRequest.builder().bucket(target.getBucket()).key(target.getKey());
+		preparePutObjectRequest(req, target.getTagsList(), target.getContentType(), target.getStorageClass());
 		// initiate transfer
-		Upload upload = transferManager() .upload(req);
+		Upload upload = transferManager().upload(UploadRequest.builder().putObjectRequest(req.build())..build());
 		// await for completion
 		try {
-			upload.waitForCompletion();
+			upload.completionFuture().join();
 		}
 		catch (InterruptedException e) {
 			log.debug("S3 upload file: s3://{}/{} interrupted", target.getBucket(), target.getKey());
