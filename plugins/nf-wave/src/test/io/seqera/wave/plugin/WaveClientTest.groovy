@@ -34,6 +34,7 @@ import com.sun.net.httpserver.HttpServer
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.wave.api.BuildCompression
 import io.seqera.wave.api.BuildStatusResponse
 import io.seqera.wave.api.ContainerStatus
 import io.seqera.wave.api.ContainerStatusResponse
@@ -205,7 +206,6 @@ class WaveClientTest extends Specification {
         req.containerImage == IMAGE
         !req.containerPlatform
         !req.containerFile
-        !req.condaFile
         !req.containerConfig.layers
         !req.freeze
         !req.dryRun
@@ -226,7 +226,6 @@ class WaveClientTest extends Specification {
         req.containerImage == IMAGE
         !req.containerPlatform
         !req.containerFile
-        !req.condaFile
         !req.containerConfig.layers
         !req.mirror
         and:
@@ -248,7 +247,6 @@ class WaveClientTest extends Specification {
         req.containerImage == IMAGE
         !req.containerPlatform
         !req.containerFile
-        !req.condaFile
         !req.containerConfig.layers
         !req.freeze
         and:
@@ -271,11 +269,30 @@ class WaveClientTest extends Specification {
         req.containerImage == IMAGE
         !req.containerPlatform
         !req.containerFile
-        !req.condaFile
         !req.containerConfig.layers
         and:
         req.scanMode == ScanMode.required
         req.scanLevels == List.of(ScanLevel.LOW, ScanLevel.MEDIUM)
+        and:
+        req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
+        req.timestamp instanceof String
+    }
+
+    def 'should create request object with build compression' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [wave:[build:[compression:[mode:'estargz', level:11]]]]}
+        def IMAGE =  'foo:latest'
+        def wave = new WaveClient(session)
+
+        when:
+        def req = wave.makeRequest(WaveAssets.fromImage(IMAGE))
+        then:
+        req.containerImage == IMAGE
+        !req.containerPlatform
+        !req.containerFile
+        !req.containerConfig.layers
+        and:
+        req.buildCompression == new BuildCompression().withMode(BuildCompression.Mode.estargz).withLevel(11)
         and:
         req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
         req.timestamp instanceof String
@@ -294,7 +311,6 @@ class WaveClientTest extends Specification {
         req.containerImage == IMAGE
         !req.containerPlatform
         !req.containerFile
-        !req.condaFile
         !req.containerConfig.layers
         and:
         req.dryRun
@@ -320,7 +336,6 @@ class WaveClientTest extends Specification {
         req.containerPlatform == PLATFORM
         and:
         !req.containerFile
-        !req.condaFile
         !req.containerConfig.layers
         and:
         req.fingerprint == 'd31044e6594126479585c0cdca15c15e'
@@ -338,7 +353,6 @@ class WaveClientTest extends Specification {
         then:
         !req.containerImage
         new String(req.containerFile.decodeBase64()) == DOCKERFILE
-        !req.condaFile
         !req.containerConfig.layers
     }
 
@@ -361,7 +375,6 @@ class WaveClientTest extends Specification {
         then:
         !req.containerImage
         new String(req.containerFile.decodeBase64()) == SINGULARITY_FILE
-        !req.condaFile
         !req.containerConfig.layers
         and:
         req.format == 'sif'
@@ -380,7 +393,6 @@ class WaveClientTest extends Specification {
         req.cacheRepository == 'some/cache'
         !req.containerImage
         new String(req.containerFile.decodeBase64()) == DOCKERFILE
-        !req.condaFile
         !req.containerConfig.layers
     }
 
@@ -400,7 +412,6 @@ class WaveClientTest extends Specification {
         then:
         !req.containerImage
         !req.containerFile
-        !req.condaFile
         !req.containerConfig.layers
         and:
         req.packages == SPEC

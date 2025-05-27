@@ -124,31 +124,31 @@ bioconda::bwa=0.7.15
 bioconda::multiqc=1.4
 ```
 
-:::{warning}
-Like before, the extension matters. Make sure the dependencies file has a `.txt` extension.
+:::{note}
+Dependency files must be a text file with the `.txt` extension.
 :::
 
 ### Conda lock files
 
-The final way to provide packages to Conda is with [Conda lock files](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#identical-conda-envs).
+The final method for providing packages to Conda is by using [Conda lock files](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#identical-conda-envs).
 
-These are generated from existing Conda environments using the following command:
+To generate a lock file from an existing Conda environment, run the following command:
 
 ```bash
 conda list --explicit > spec-file.txt
 ```
 
-or if using Mamba / Micromamba:
+If you're using Mamba or Micromamba, use this command instead:
 
 ```bash
 micromamba env export --explicit > spec-file.txt
 ```
 
-Conda lock files can also be downloaded from [Wave](https://seqera.io/wave/) build pages.
+You can also download Conda lock files from  [Wave](https://seqera.io/wave/) build pages.
 
-These files include every package and their dependencies. As such, no Conda environment resolution step is needed. This is faster and more reproducible.
+These files list every package and its dependencies, so Conda doesn't need to resolve the environment. This makes environment setup faster and more reproducible.
 
-The files contain package URLs and an optional md5hash for each download to confirm identity:
+Each file includes package URLs and, optionally, an MD5 hash for verifying file integrity:
 
 ```
 # micromamba env export --explicit
@@ -163,7 +163,11 @@ https://conda.anaconda.org/conda-forge/linux-64/libgcc-ng-13.2.0-h77fa898_7.cond
 # .. and so on
 ```
 
-To use with Nextflow, simply set the `conda` directive to the lock file path.
+To use a Conda lock file with Nextflow, set the `conda` directive to the path of the lock file.
+
+:::{note}
+Conda lock files must be a text file with the `.txt` extension.
+:::
 
 ### Use existing Conda environments
 
