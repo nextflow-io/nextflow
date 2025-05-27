@@ -491,6 +491,8 @@ Resource overprovisioning can occur if tasks consume more than their allocated s
 
 :::{warning}
 Tasks may fail if they exceed their allocated resources
+
+This is particularly important for storage. Azure virtual machines come with fixed storage disks, which are not expandable. If the sum of all processes requests more storage than the machine has available, the task will fail.
 :::
 
 **Container support**
