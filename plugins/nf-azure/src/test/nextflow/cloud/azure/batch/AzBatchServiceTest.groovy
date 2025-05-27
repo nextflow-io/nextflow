@@ -999,4 +999,102 @@ class AzBatchServiceTest extends Specification {
         null     | 0
     }
 
+    def 'should create task constraints' () {
+        given:
+        def exec = Mock(AzBatchExecutor)
+        def service = new AzBatchService(exec)
+        def task = Mock(TaskRun) {
+            getConfig() >> Mock(TaskConfig) {
+                getTime() >> TIME
+            }
+        }
+        
+        when:
+        def result = service.constraints(task)
+        
+        then:
+        result != null
+        if (TIME) {
+            assert result.maxWallClockTime != null
+            assert result.maxWallClockTime.toMillis() == TIME.toMillis()
+        } else {
+            assert result.maxWallClockTime == null
+        }
+        
+        where:
+        TIME << [
+            null,
+            Duration.of('1h'),
+            Duration.of('30m'),
+            Duration.of('2d')
+        ]
+    }
+
+    def 'should create batch task content' () {
+        given:
+        def exec = Mock(AzBatchExecutor)
+        def service = new AzBatchService(exec)
+        
+        and:
+        def taskId = 'test-task-123'
+        def cmd = 'bash script.sh'
+        def userIdentity = GroovyMock(com.azure.compute.batch.models.UserIdentity)
+        def containerSettings = GroovyMock(com.azure.compute.batch.models.BatchTaskContainerSettings)
+        def resourceFiles = [GroovyMock(com.azure.compute.batch.models.ResourceFile)]
+        def outputFiles = [GroovyMock(com.azure.compute.batch.models.OutputFile)]
+        def slots = 4
+        def constraints = GroovyMock(com.azure.compute.batch.models.BatchTaskConstraints)
+        def env = [VAR1: 'value1', VAR2: 'value2']
+        
+        when:
+        def result = service.createBatchTaskContent(
+            taskId, cmd, userIdentity, containerSettings, 
+            resourceFiles, outputFiles, slots, constraints, env
+        )
+        
+        then:
+        result != null
+        result.id == taskId
+        result.commandLine == cmd
+        result.userIdentity == userIdentity
+        result.containerSettings == containerSettings
+        result.resourceFiles == resourceFiles
+        result.outputFiles == outputFiles
+        result.requiredSlots == slots
+        result.constraints == constraints
+        result.environmentSettings.size() == 2
+        result.environmentSettings.find { it.name == 'VAR1' }.value == 'value1'
+        result.environmentSettings.find { it.name == 'VAR2' }.value == 'value2'
+    }
+
+    def 'should create batch task content with empty environment' () {
+        given:
+        def exec = Mock(AzBatchExecutor)
+        def service = new AzBatchService(exec)
+        
+        and:
+        def taskId = 'test-task-456'
+        def cmd = 'echo hello'
+        def userIdentity = GroovyMock(com.azure.compute.batch.models.UserIdentity)
+        def containerSettings = GroovyMock(com.azure.compute.batch.models.BatchTaskContainerSettings)
+        def resourceFiles = []
+        def outputFiles = []
+        def slots = 1
+        def constraints = GroovyMock(com.azure.compute.batch.models.BatchTaskConstraints)
+        def env = [:]
+        
+        when:
+        def result = service.createBatchTaskContent(
+            taskId, cmd, userIdentity, containerSettings, 
+            resourceFiles, outputFiles, slots, constraints, env
+        )
+        
+        then:
+        result != null
+        result.id == taskId
+        result.commandLine == cmd
+        result.requiredSlots == slots
+        result.environmentSettings.isEmpty()
+    }
+
 }
