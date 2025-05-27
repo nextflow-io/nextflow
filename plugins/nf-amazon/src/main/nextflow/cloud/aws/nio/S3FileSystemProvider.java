@@ -60,19 +60,10 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.Protocol;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.s3.model.AccessControlList;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.CopyObjectRequest;
-import com.amazonaws.services.s3.model.Grant;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.Owner;
-import com.amazonaws.services.s3.model.Permission;
-import com.amazonaws.services.s3.model.S3ObjectId;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.amazonaws.services.s3.model.Tag;
+import nextflow.cloud.aws.nio.util.S3ObjectId;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.model.S3Object;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -209,14 +200,12 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 			result = s3Path
 					.getFileSystem()
 					.getClient()
-					.getObject(s3Path.getBucket(), s3Path.getKey())
-					.getObjectContent();
+					.getObject(s3Path.getBucket(), s3Path.getKey());
 
 			if (result == null)
 				throw new IOException(String.format("The specified path is a directory: %s", FilesEx.toUriString(s3Path)));
-		}
-		catch (AmazonS3Exception e) {
-			if (e.getStatusCode() == 404)
+		}catch (AwsServiceException e) {
+			if (e.statusCode() == 404)
 				throw new NoSuchFileException(path.toString());
 			// otherwise throws a generic IO exception
 			throw new IOException(String.format("Cannot access file: %s", FilesEx.toUriString(s3Path)),e);
@@ -368,16 +357,15 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
 		try {
 			InputStream is = s3Path.getFileSystem().getClient()
-					.getObject(s3Path.getBucket(), s3Path.getKey())
-					.getObjectContent();
+					.getObject(s3Path.getBucket(), s3Path.getKey());
 
 			if (is == null)
 				throw new IOException(String.format("The specified path is a directory: %s", path));
 
 			Files.write(tempFile, IOUtils.toByteArray(is));
 		}
-		catch (AmazonS3Exception e) {
-			if (e.getStatusCode() != 404)
+		catch (S3Exception e) {
+			if (e.awsErrorDetails().sdkHttpResponse().statusCode() != 404)
 				throw new IOException(String.format("Cannot access file: %s", path),e);
 		}
 
@@ -401,11 +389,6 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 				seekable.close();
 				// upload the content where the seekable ends (close)
                 if (Files.exists(tempFile)) {
-                    ObjectMetadata metadata = new ObjectMetadata();
-                    metadata.setContentLength(Files.size(tempFile));
-                    // FIXME: #20 ServiceLoader can't load com.upplication.s3fs.util.FileTypeDetector when this library is used inside a ear :(
-					metadata.setContentType(Files.probeContentType(tempFile));
-
                     try (InputStream stream = Files.newInputStream(tempFile)) {
                         /*
                          FIXME: if the stream is {@link InputStream#markSupported()} i can reuse the same stream
@@ -414,7 +397,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
                         */
                         s3Path.getFileSystem()
                                 .getClient()
-                                .putObject(s3Path.getBucket(), s3Path.getKey(), stream, metadata, tags, contentType);
+                                .putObject(s3Path.getBucket(), s3Path.getKey(), stream, tags, contentType, Files.size(tempFile));
                     }
                 }
                 else {
@@ -477,15 +460,13 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 				"attrs not yet supported: %s", ImmutableList.copyOf(attrs)); // TODO
 
 		List<Tag> tags = s3Path.getTagsList();
-		ObjectMetadata metadata = new ObjectMetadata();
-		metadata.setContentLength(0);
 
 		String keyName = s3Path.getKey()
 				+ (s3Path.getKey().endsWith("/") ? "" : "/");
 
 		s3Path.getFileSystem()
 				.getClient()
-				.putObject(s3Path.getBucket(), keyName, new ByteArrayInputStream(new byte[0]), metadata, tags, null);
+				.putObject(s3Path.getBucket(), keyName, new ByteArrayInputStream(new byte[0]), tags, null, 0);
 	}
 
 	@Override
@@ -548,18 +529,22 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		S3Client client = s3Source.getFileSystem() .getClient();
 		Properties props = s3Target.getFileSystem().properties();
 
-		final ObjectMetadata sourceObjMetadata = s3Source.getFileSystem().getClient().getObjectMetadata(s3Source.getBucket(), s3Source.getKey());
+		final HeadObjectResponse sourceObjMetadata = s3Source.getFileSystem().getClient().getObjectMetadata(s3Source.getBucket(), s3Source.getKey());
 		final S3MultipartOptions opts = props != null ? new S3MultipartOptions(props) : new S3MultipartOptions();
 		final long maxSize = opts.getMaxCopySize();
-		final long length = sourceObjMetadata.getContentLength();
+		final long length = sourceObjMetadata.contentLength();
 		final List<Tag> tags = ((S3Path) target).getTagsList();
 		final String contentType = ((S3Path) target).getContentType();
 		final String storageClass = ((S3Path) target).getStorageClass();
 
 		if( length <= maxSize ) {
-			CopyObjectRequest copyObjRequest = new CopyObjectRequest(s3Source.getBucket(), s3Source.getKey(),s3Target.getBucket(), s3Target.getKey());
+			CopyObjectRequest.Builder reqBuilder = CopyObjectRequest.builder()
+                .sourceBucket(s3Source.getBucket())
+                .sourceKey(s3Source.getKey())
+                .destinationBucket(s3Target.getBucket())
+                .destinationKey(s3Target.getKey());
 			log.trace("Copy file via copy object - source: source={}, target={}, tags={}, storageClass={}", s3Source, s3Target, tags, storageClass);
-			client.copyObject(copyObjRequest, tags, contentType, storageClass);
+			client.copyObject(reqBuilder, tags, contentType, storageClass);
 		}
 		else {
 			log.trace("Copy file via multipart upload - source: source={}, target={}, tags={}, storageClass={}", s3Source, s3Target, tags, storageClass);
@@ -609,7 +594,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		}
 
 		// get ACL and check if the file exists as a side-effect
-		AccessControlList acl = getAccessControl(s3Path);
+		AccessControlPolicy acl = getAccessControl(s3Path);
 
 		for (AccessMode accessMode : modes) {
 			switch (accessMode) {
@@ -643,7 +628,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
      * @param permissions almost one
      * @return
      */
-	private boolean hasPermissions(AccessControlList acl, Owner owner,
+	private boolean hasPermissions(Access acl, Owner owner,
 			EnumSet<Permission> permissions) {
 		boolean result = false;
 		for (Grant grant : acl.getGrants()) {
@@ -923,7 +908,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 	 * @return AccessControlList
 	 * @throws NoSuchFileException if not found the path and any child
 	 */
-	private AccessControlList getAccessControl(S3Path path) throws NoSuchFileException{
+	private AccessControlPolicy getAccessControl(S3Path path) throws NoSuchFileException{
 		S3ObjectSummary obj = s3ObjectSummaryLookup.lookup(path);
 		// check first for file:
         return path.getFileSystem().getClient().getObjectAcl(obj.getBucketName(), obj.getKey());

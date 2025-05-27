@@ -29,9 +29,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectAttributesRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.S3Object;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import org.slf4j.Logger;
@@ -47,17 +50,17 @@ public class S3ParallelDownload {
 
     static final private Logger log = LoggerFactory.getLogger(S3ParallelDownload.class);
 
-    private final AmazonS3 s3Client;
+    private final S3Client s3Client;
     private ExecutorService executor;
     private ChunkBufferFactory bufferFactory;
     private static List<S3ParallelDownload> instances = new ArrayList<>(10);
     private final DownloadOpts opts;
 
-    S3ParallelDownload(AmazonS3 client) {
+    S3ParallelDownload(S3Client client) {
         this(client, new DownloadOpts());
     }
 
-    S3ParallelDownload(AmazonS3 client, DownloadOpts opts) {
+    S3ParallelDownload(S3Client client, DownloadOpts opts) {
         if( opts.chunkSize() > opts.bufferMaxSize().toBytes() ) {
             String msg = String.format("S3 download chunk size cannot be greater than download max buffer size - offending values chunk size=%s, buffer size=%s", opts.chunkSizeMem(), opts.bufferMaxSize());
             throw new IllegalArgumentException(msg);
@@ -70,7 +73,7 @@ public class S3ParallelDownload {
         log.debug("Creating S3 download thread pool: {}; pool-capacity={}", opts, poolCapacity);
     }
 
-    static public S3ParallelDownload create(AmazonS3 client, DownloadOpts opts) {
+    static public S3ParallelDownload create(S3Client client, DownloadOpts opts) {
         S3ParallelDownload result = new S3ParallelDownload(client, opts);
         instances.add(result);
         return result;
@@ -99,13 +102,13 @@ public class S3ParallelDownload {
 
     protected List<GetObjectRequest> prepareGetPartRequests(String bucketName, String key) {
         // Use range to download in parallel
-        long size = s3Client.getObjectMetadata(bucketName, key).getContentLength();
+        long size = s3Client.getObjectAttributes(GetObjectAttributesRequest.builder().bucket(bucketName).key(key).build()).objectSize();
         int numberOfParts = (int) Math.ceil((double) size / opts.chunkSize());
         List<GetObjectRequest> result = new ArrayList<>(numberOfParts);
         for( int index=0; index<numberOfParts; index++ ) {
             long x = (long)index * opts.chunkSize();
             long y = (long)(index + 1) * opts.chunkSize() > size ? size - 1 : (long)(index + 1) * opts.chunkSize() - 1;
-            result.add( new GetObjectRequest(bucketName, key).withRange(x, y) );
+            result.add( GetObjectRequest.builder().bucket(bucketName).key(key).range(x, y) );
         }
         return result;
     }
@@ -129,13 +132,13 @@ public class S3ParallelDownload {
     }
 
     private ChunkBuffer doDownload(final GetObjectRequest req) throws IOException {
-        try (S3Object chunk = s3Client.getObject(req)) {
-            final long start = req.getRange()[0];
+        try (ResponseInputStream<GetObjectResponse> chunk = s3Client.getObject(req)) {
+            final long start = req.range()[0];
             final long end = req.getRange()[1];
             final String path = "s3://" + req.getBucketName() + '/' + req.getKey();
 
             ChunkBuffer result = bufferFactory.create();
-            try (InputStream stream = chunk.getObjectContent()) {
+            try (InputStream stream = chunk) {
                 result.fill(stream);
             }
             catch (Throwable e) {
