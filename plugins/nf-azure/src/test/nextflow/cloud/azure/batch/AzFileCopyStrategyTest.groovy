@@ -180,9 +180,8 @@ class AzFileCopyStrategyTest extends Specification {
                     local target=$2
                     local basedir=$(dirname $2)
                     local ret
-
                     mkdir -p "$basedir"
-                
+
                     ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
                         ## if fails check if it was trying to download a directory
                         mkdir -p $target
@@ -318,9 +317,8 @@ class AzFileCopyStrategyTest extends Specification {
                     local target=$2
                     local basedir=$(dirname $2)
                     local ret
-
                     mkdir -p "$basedir"
-                
+
                     ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
                         ## if fails check if it was trying to download a directory
                         mkdir -p $target
@@ -480,9 +478,8 @@ class AzFileCopyStrategyTest extends Specification {
                         local target=$2
                         local basedir=$(dirname $2)
                         local ret
-                        
                         mkdir -p "$basedir"
-                    
+
                         ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
                             ## if fails check if it was trying to download a directory
                             mkdir -p $target
