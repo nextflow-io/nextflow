@@ -36,9 +36,6 @@ import org.pf4j.Extension
 @CompileStatic
 @Slf4j
 class AzFusionEnv implements FusionEnv {
-
-    private String scheme 
-    private FusionConfig config
     private AzPoolOpts poolOpts
 
     /**
@@ -82,7 +79,6 @@ class AzFusionEnv implements FusionEnv {
         // If pool has a managed identity, ONLY add the MSI client ID
         // DO NOT add any SAS token or reference cfg.storage().sasToken
         if (managedIdentityId) {
-            log.debug("Azure Fusion environment - Using managed identity for authentication: ${managedIdentityId}")
             result.FUSION_AZ_MSI_CLIENT_ID = managedIdentityId
             // No SAS token is added or generated
             return result
@@ -99,7 +95,6 @@ class AzFusionEnv implements FusionEnv {
      * authentication method.
      */
     synchronized String getOrCreateSasToken() {
-        log.debug("Azure Fusion environment - Generating SAS token for authentication")
         final cfg = AzConfig.config
 
         // Check for incompatible configuration
