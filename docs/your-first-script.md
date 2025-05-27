@@ -1,5 +1,3 @@
-(your-first-script)=
-
 # Your first script
 
 This guide details fundamental skills to run a basic Nextflow pipeline. It includes:
@@ -12,14 +10,13 @@ This guide details fundamental skills to run a basic Nextflow pipeline. It inclu
 
 You will need the following to get started:
 
-- Nextflow: See {ref}`install-page` for installation instructions.
+- Nextflow: See [Installation][install-page] for installation instructions.
 
 ## Run a pipeline
 
 You will run a basic Nextflow pipeline that splits a string of text into two files and then converts lowercase letters to uppercase letters. You can see the pipeline here:
 
-```{code-block} groovy
-:class: copyable
+```groovy
 // Default parameter input
 params.str = "Hello world!"
 
@@ -79,8 +76,7 @@ To run your pipeline:
 2. Copy and save the above pipeline to your new file
 3. Run your pipeline using the following command:
 
-    ```{code-block}
-    :class: copyable
+    ```bash
     nextflow run main.nf
     ```
 
@@ -98,11 +94,10 @@ executor >  local (3)
 
 Nextflow creates a `work` directory to store files used during a pipeline run. Each execution of a process is run as a separate task. The `splitString` process is run as one task and the `convertToUpper` process is run as two tasks. The hexadecimal string, for example, `82/457482`, is the beginning of a unique hash. It is a prefix used to identify the task directory where the script was executed.
 
-:::{tip}
+:::tip
 Run your pipeline with `-ansi-log false` to see each task printed on a separate line:
 
-```{code-block} bash
-:class: copyable
+```bash
 nextflow run main.nf -ansi-log false
 ```
 
@@ -118,8 +113,6 @@ Launching `main.nf` [peaceful_watson] DSL2 - revision: 13a41a8946
 
 ::: 
 
-(getstarted-resume)=
-
 ## Modify and resume
 
 Nextflow tracks task executions in a task cache, a key-value store of previously executed tasks. The task cache is used in conjunction with the work directory to recover cached tasks. If you modify and resume your pipeline, only the processes that are changed will be re-executed. The cached results will be used for tasks that don't change.
@@ -129,8 +122,7 @@ You can enable resumability using the `-resume` flag when running a pipeline. To
 1. Open `main.nf`
 2. Replace the `convertToUpper` process with the following:
 
-    ```{code-block} groovy
-    :class: copyable
+    ```groovy
     process convertToUpper {
         publishDir "results/upper"
         tag "$y"
@@ -151,8 +143,7 @@ You can enable resumability using the `-resume` flag when running a pipeline. To
 3. Save your changes
 4. Run your updated pipeline using the following command:
 
-    ```{code-block} bash
-    :class: copyable
+    ```bash
     nextflow run main.nf -resume
     ```
 
@@ -170,9 +161,7 @@ executor >  local (2)
 
 Nextflow skips the execution of the `splitString` process and retrieves the results from the cache. The `convertToUpper` process is executed twice.
 
-See {ref}`cache-resume-page` for more information about Nextflow cache and resume functionality. 
-
-(getstarted-params)=
+See [Caching and resuming][cache-resume-page] for more information about Nextflow cache and resume functionality. 
 
 ## Pipeline parameters
 
@@ -182,8 +171,7 @@ You can configure the `str` parameter in your pipeline. To modify your `str` par
 
 1. Run your pipeline using the following command:
 
-    ```{code-block} bash
-    :class: copyable
+    ```bash
     nextflow run main.nf --str 'Bonjour le monde'
     ```
 
@@ -201,8 +189,12 @@ executor >  local (4)
 
 The input string is now longer and the `splitString` process splits it into three chunks. The `convertToUpper` process is run three times.
 
-See {ref}`cli-params` for more information about modifying pipeline parameters.
+See [Pipeline parameters][cli-params] for more information about modifying pipeline parameters.
 
 <h2>Next steps</h2>
 
 Your first script is a brief introduction to running pipelines, modifying and resuming pipelines, and pipeline parameters. See [training.nextflow.io](https://training.nextflow.io/) for further Nextflow training modules.
+
+[cache-resume-page]: /nextflow_docs/nextflow_repo/docs/cache-and-resume.md
+[cli-params]: /nextflow_docs/nextflow_repo/docs/cli.md#pipeline-parameters
+[install-page]: /nextflow_docs/nextflow_repo/docs/install
