@@ -442,10 +442,10 @@ The following settings are available:
 : Max delay when retrying failed API requests (default: `90s`).
 
 `azure.storage.accountName`
-: The blob storage account name. Defaults to environment variable `AZURE_STORAE_ACCOUNT_NAME`.
+: The blob storage account name. Defaults to environment variable `AZURE_STORAGE_ACCOUNT_NAME`.
 
 `azure.storage.accountKey`
-: The blob storage account key. Defaults to environment variable `AZURE_STORAE_ACCOUNT_KEY`.
+: The blob storage account key. Defaults to environment variable `AZURE_STORAGE_ACCOUNT_KEY`.
 
 `azure.storage.sasToken`
 : The blob storage shared access signature token, which can be provided as an alternative to `accountKey`. Defaults to environment variable `AZURE_STORAGE_SAS_TOKEN`.
