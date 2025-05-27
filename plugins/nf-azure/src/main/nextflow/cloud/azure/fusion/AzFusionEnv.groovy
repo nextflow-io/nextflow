@@ -36,21 +36,15 @@ import org.pf4j.Extension
 @CompileStatic
 @Slf4j
 class AzFusionEnv implements FusionEnv {
-    private AzPoolOpts poolOpts
-
-    /**
-     * Set the pool options to be used when getting the environment
-     * 
-     * @param poolOpts The pool options
-     */
-    void setPoolOpts(AzPoolOpts poolOpts) {
-        this.poolOpts = poolOpts
-    }
 
     @Override
     Map<String, String> getEnvironment(String scheme, FusionConfig config) {
-        // Delegate to the 3-parameter version with null managedIdentityId
-        return getEnvironment(scheme, config, poolOpts?.managedIdentityId)
+        if (scheme != 'az') {
+            return Collections.<String, String> emptyMap()
+        }
+        // Delegate to the 3-parameter version with poolIdentityClientId from batch config
+        final cfg = AzConfig.config
+        return getEnvironment(scheme, config, cfg.batch().poolIdentityClientId)
     }
 
     /**

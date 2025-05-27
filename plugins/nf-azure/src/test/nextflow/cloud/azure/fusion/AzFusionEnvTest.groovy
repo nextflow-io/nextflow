@@ -220,21 +220,20 @@ class AzFusionEnvTest extends Specification {
         env.size() == 2  // Only account name and managed identity
     }
     
-    def 'should set pool options correctly and use them for environment'() {
+    def 'should use pool identity from batch config when available'() {
         given:
         def NAME = 'myaccount'
         def POOL_MSI_ID = 'pool-managed-identity-id'
         Global.session = Mock(Session) {
-            getConfig() >> [azure: [storage: [accountName: NAME]]]
-        }
-        def poolOpts = Mock(nextflow.cloud.azure.config.AzPoolOpts) {
-            getManagedIdentityId() >> POOL_MSI_ID
+            getConfig() >> [azure: [
+                storage: [accountName: NAME],
+                batch: [poolIdentityClientId: POOL_MSI_ID]
+            ]]
         }
 
         when:
         def config = Mock(FusionConfig)
         def fusionEnv = new AzFusionEnv()
-        fusionEnv.setPoolOpts(poolOpts)
         def env = fusionEnv.getEnvironment('az', config)
 
         then:

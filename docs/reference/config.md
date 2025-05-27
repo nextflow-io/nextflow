@@ -419,6 +419,11 @@ The following settings are available:
 `azure.batch.pools.<name>.vmType`
 : Specify the virtual machine type used by the pool identified with `<name>`.
 
+`azure.batch.poolIdentityClientId`
+: :::{versionadded} 25.05.0-edge
+  :::
+: Specify the client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) that is available on all Azure Batch node pools. This identity will be used for task-level authentication to Azure services. See {ref}`azure-managed-identities` for more details.
+
 `azure.managedIdentity.clientId`
 : Specify the client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview). See {ref}`azure-managed-identities` for more details. Defaults to environment variable `AZURE_MANAGED_IDENTITY_USER`.
 

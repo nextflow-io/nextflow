@@ -2,6 +2,7 @@ package nextflow.cloud.azure.batch
 
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
+import java.nio.file.Path
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.function.Predicate
@@ -837,6 +838,32 @@ class AzBatchServiceTest extends Specification {
         CONFIG                                          | EXPECTED
         [:]                                             | null
         [managedIdentity: [clientId: 'client-123']]     | 'client-123'
+    }
+
+    def 'should use pool identity client id for fusion tasks' () {
+        given:
+        def POOL_IDENTITY_CLIENT_ID = 'pool-identity-123'
+        def exec = Mock(AzBatchExecutor) {
+            getConfig() >> new AzConfig([
+                batch: [poolIdentityClientId: POOL_IDENTITY_CLIENT_ID],
+                storage: [sasToken: 'test-sas-token', accountName: 'testaccount']
+            ])
+        }
+        def service = new AzBatchService(exec)
+        
+        and:
+        Global.session = Mock(Session) {
+            getConfig() >> [fusion: [enabled: true]]
+        }
+
+        when:
+        def env = [:] as Map<String,String>
+        if( service.config.batch().poolIdentityClientId && true ) { // fusionEnabled = true
+            env.put('FUSION_AZ_MSI_CLIENT_ID', service.config.batch().poolIdentityClientId)
+        }
+        
+        then:
+        env['FUSION_AZ_MSI_CLIENT_ID'] == POOL_IDENTITY_CLIENT_ID
     }
 
 

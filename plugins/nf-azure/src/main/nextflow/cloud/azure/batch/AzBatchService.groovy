@@ -517,20 +517,19 @@ class AzBatchService implements Closeable {
             final taskBean = task.toTaskBean()
             final launcher = FusionScriptLauncher.create(taskBean, 'az')
             
-            // Create the adapter that will manage the Fusion env with pool options
-            // TaskRun doesn't implement FusionAwareTask directly, so we need a wrapper
-            final adapter = new AzureBatchFusionAdapter(new AzFusionTaskWrapper(task), launcher, pool?.opts)
-            
             // Add container options
             opts += "--privileged "
 
-            // Add all environment variables from the adapter
-            for( Map.Entry<String,String> it : adapter.getEnvironment() ) {
-                opts += "-e $it.key=$it.value "
+            // Add all environment variables from the launcher
+            final fusionEnv = launcher.fusionEnv()
+            if( fusionEnv ) {
+                for( Map.Entry<String,String> it : fusionEnv ) {
+                    opts += "-e $it.key=$it.value "
+                }
             }
             
             // Get the fusion submit command
-            final List<String> cmdList = adapter.fusionSubmitCli()
+            final List<String> cmdList = launcher.fusionSubmitCli(task)
             fusionCmd = cmdList ? String.join(' ', cmdList) : null
         }
         
@@ -550,8 +549,8 @@ class AzBatchService implements Closeable {
 
         // Add environment variables for managed identity if configured for Fusion only
         final env = [:] as Map<String,String>
-        if( pool?.opts?.managedIdentityId && fusionEnabled ) {
-            env.put('FUSION_AZ_MSI_CLIENT_ID', pool.opts.managedIdentityId) // fusion
+        if( config.batch().poolIdentityClientId && fusionEnabled ) {
+            env.put('FUSION_AZ_MSI_CLIENT_ID', config.batch().poolIdentityClientId)
         }
 
         return createBatchTaskContent(
