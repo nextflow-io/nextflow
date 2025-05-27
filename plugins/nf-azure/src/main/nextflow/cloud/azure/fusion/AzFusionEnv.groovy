@@ -22,7 +22,6 @@ import nextflow.Global
 import nextflow.cloud.azure.batch.AzHelper
 import groovy.transform.CompileStatic
 import nextflow.cloud.azure.config.AzConfig
-import nextflow.cloud.azure.config.AzPoolOpts
 import nextflow.fusion.FusionConfig
 import nextflow.fusion.FusionEnv
 import org.pf4j.Extension
