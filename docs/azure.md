@@ -62,9 +62,9 @@ Nextflow provides built-in support for Azure cloud services, allowing you to:
     - `PIPELINE_NAME`:  your pipeline; for example, `nextflow-io/rnaseq-nf`.
     - `CONTAINER`: your blob container from the storage account defined in your configuration.
 
-    :::{tip}
-    You can list Azure regions with: `az account list-locations -o table`
-    :::
+:::{tip}
+You can list Azure regions with: `az account list-locations -o table`
+:::
 
 ## Authentication
 
@@ -129,7 +129,7 @@ Replace the following:
 - `BATCH_ACCOUNT_NAME`: The name of your Azure Batch account.
 - `BATCH_ACCOUNT_LOCATION`: The location of your Azure Batch account.
 
-:::{note}
+:::{tip}
 Nextflow will use the following environment variable if the managed identity setting is not provided in the Nextflow config file:
 
 - `AZURE_MANAGED_IDENTITY_SYSTEM`: When set to `true`, enables system-assigned managed identity.
@@ -168,7 +168,7 @@ Replace the following:
 - `BATCH_ACCOUNT_NAME`: The name of your Azure Batch account.
 - `BATCH_ACCOUNT_LOCATION`: The location of your Azure Batch account.
 
-:::{note}
+:::{tip}
 Nextflow will use the following environment variable if the managed identity client ID is not provided in the Nextflow config file:
 
 - `AZURE_MANAGED_IDENTITY_USER`: The client ID for a user-assigned managed identity.
