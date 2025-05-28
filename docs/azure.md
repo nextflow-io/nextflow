@@ -130,7 +130,9 @@ Replace the following:
 - `BATCH_ACCOUNT_LOCATION`: The location of your Azure Batch account.
 
 :::{note}
-If the `managedIdentity` config item is not provided, Nextflow will read the environment variable `AZURE_MANAGED_IDENTITY_SYSTEM=true`.
+Nextflow will use the following environment variable if the managed identity setting is not provided in the Nextflow config file:
+
+- `AZURE_MANAGED_IDENTITY_SYSTEM`: When set to `true`, enables system-assigned managed identity.
 :::
 
 **User-assigned managed identity**
@@ -167,7 +169,9 @@ Replace the following:
 - `BATCH_ACCOUNT_LOCATION`: The location of your Azure Batch account.
 
 :::{note}
-If the `managedIdentity` config item is not provided, Nextflow will read the environment variable `AZURE_MANAGED_IDENTITY_USER_ASSIGNED_ID`.
+Nextflow will use the following environment variable if the managed identity client ID is not provided in the Nextflow config file:
+
+- `AZURE_MANAGED_IDENTITY_USER`: The client ID for a user-assigned managed identity.
 :::
 
 ### Service principals
@@ -194,8 +198,8 @@ azure {
 }
 ```
 
-:::{note}
-If the service principal credentials are not provided Nextflow will read the following environment variables:
+:::{tip}
+Nextflow will use the following environment variables if storage settings are not provided in the Nextflow config file:
 
 - `AZURE_CLIENT_ID`: The Application ID of your Azure Service Principal.
 - `AZURE_CLIENT_SECRET`: The secret of your Azure Service Principal.
@@ -238,8 +242,8 @@ When creating a SAS token, ensure you enable these permissions: `Read`, `Write`,
 The value of `sasToken` should be stripped of the leading `?` character.
 :::
 
-:::{note}
-If the access keys are not provided as config items Nextflow will read the following environment variables:
+:::{tip}
+Nextflow will use the following environment variables if storage settings are not provided in the Nextflow config file:
 
 - `AZURE_STORAGE_ACCOUNT_NAME`: The name of your Azure Storage account.
 - `AZURE_STORAGE_ACCOUNT_KEY`: The key of your Azure Storage account.
@@ -270,8 +274,12 @@ azure {
 }
 ```
 
-:::{note}
-If the storage account name is not provided Nextflow will read the environment variable: `AZURE_STORAGE_ACCOUNT_NAME`
+:::{tip}
+Nextflow will use the following environment variables if storage settings are not provided in the Nextflow config file:
+
+- `AZURE_STORAGE_ACCOUNT_NAME`: The name of your Azure Storage account.
+- `AZURE_STORAGE_ACCOUNT_KEY`: The access key for your Azure Storage account.
+- `AZURE_STORAGE_SAS_TOKEN`: A shared access signature (SAS) token for Azure Storage access.
 :::
 
 ## Azure Batch
@@ -325,8 +333,11 @@ Finally, launch your pipeline with the above configuration:
 nextflow run <PIPELINE_NAME> -w az://<CONTAINER>/
 ```
 
-:::{note}
-If the batch account name is not provided Nextflow will read the environment variable: `AZURE_BATCH_ACCOUNT_NAME`
+:::{tip}
+Nextflow will use the following environment variables if the Batch settings are not provided in the Nextflow config file:
+
+- `AZURE_BATCH_ACCOUNT_NAME`: The name of your Azure Batch account.
+- `AZURE_BATCH_ACCOUNT_KEY`: The access key for your Azure Batch account.
 :::
 
 #### Azure Batch Quotas
@@ -509,10 +520,11 @@ azure.registry {
 }
 ```
 
-:::{note}
-If the registry credentials are not provided Nextflow will read the following environment variables:
-  - `AZURE_REGISTRY_USER_NAME`
-  - `AZURE_REGISTRY_PASSWORD`
+:::{tip}
+Nextflow will use the following environment variables if the registry credentials are not provided in the Nextflow config file:
+
+- `AZURE_REGISTRY_USER_NAME`: The username for Azure Container Registry authentication
+- `AZURE_REGISTRY_PASSWORD`: The password for Azure Container Registry authentication
 :::
 
 Public container images from Docker Hub or other public registries can still be used without additional configuration, even when a private registry is configured. The Docker service on the nodes will automatically use the appropriate registry based on the container image reference in your process container directive.

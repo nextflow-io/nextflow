@@ -16,6 +16,7 @@
 
 package nextflow.k8s.client
 
+import groovy.util.logging.Slf4j
 import nextflow.util.Duration
 
 import javax.net.ssl.KeyManager
@@ -31,6 +32,7 @@ import groovy.transform.EqualsAndHashCode
  */
 @EqualsAndHashCode
 @CompileStatic
+@Slf4j
 class ClientConfig {
 
     boolean verifySsl
@@ -55,7 +57,7 @@ class ClientConfig {
 
     KeyManager[] keyManagers
 
-    Integer maxErrorRetry = 4
+    K8sRetryConfig retryConfig
 
     /**
      * Timeout when reading from Input stream when a connection is established to a resource.
@@ -77,11 +79,11 @@ class ClientConfig {
     String getNamespace() { namespace ?: 'default' }
 
     ClientConfig() {
-
+        retryConfig = new K8sRetryConfig()
     }
 
     String toString() {
-        "${this.class.getSimpleName()}[ server=$server, namespace=$namespace, serviceAccount=$serviceAccount, token=${cut(token)}, sslCert=${cut(sslCert)}, clientCert=${cut(clientCert)}, clientKey=${cut(clientKey)}, verifySsl=$verifySsl, fromFile=$isFromCluster, httpReadTimeout=$httpReadTimeout, httpConnectTimeout=$httpConnectTimeout, maxErrorRetry=$maxErrorRetry ]"
+        "${this.class.getSimpleName()}[ server=$server, namespace=$namespace, serviceAccount=$serviceAccount, token=${cut(token)}, sslCert=${cut(sslCert)}, clientCert=${cut(clientCert)}, clientKey=${cut(clientKey)}, verifySsl=$verifySsl, fromFile=$isFromCluster, httpReadTimeout=$httpReadTimeout, httpConnectTimeout=$httpConnectTimeout, retryConfig=$retryConfig ]"
     }
 
     private String cut(String str) {
@@ -130,9 +132,10 @@ class ClientConfig {
             result.clientKey = opts.clientKey.toString().decodeBase64()
         else if( opts.clientKeyFile )
             result.clientKey = Paths.get(opts.clientKeyFile.toString()).bytes
-
+        if( opts.retryPolicy )
+            result.retryConfig = new K8sRetryConfig(opts.retryPolicy as Map)
         if( opts.maxErrorRetry )
-            result.maxErrorRetry = opts.maxErrorRetry as Integer
+            log.warn("Config setting 'k8s.maxErrorRetry' is deprecated - change it to 'k8s.retryPolicy.maxAttempts'")
 
         return result
     }
