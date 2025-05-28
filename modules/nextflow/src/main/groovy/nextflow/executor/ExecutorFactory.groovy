@@ -22,6 +22,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.executor.local.LocalExecutor
+import nextflow.plugin.Priority
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptType
@@ -94,7 +95,10 @@ class ExecutorFactory {
             final name = findNameByClass(clazz)
             final current = executorsMap.get(name)
             if( current ) {
-                if( current.getAnnotation(ServiceName)?.important() ) {
+                final currentPrio = current.getAnnotation(Priority)?.value() ?: 0
+                final newPrio = clazz.getAnnotation(Priority)?.value() ?: 0
+                // prefer priority over important as the latter is deprecated and will be removed in the future
+                if( currentPrio < newPrio || current.getAnnotation(ServiceName)?.important() ) {
                     log.debug "Executor ${current.getSimpleName()} has priority - skipping ${clazz}"
                     continue
                 }

@@ -17,6 +17,7 @@
 package nextflow.executor
 
 import nextflow.executor.local.LocalExecutor
+import nextflow.plugin.Priority
 import spock.lang.Specification
 
 import nextflow.Session
@@ -127,11 +128,42 @@ class ExecutorFactoryTest extends Specification {
         ExecutorFactory.findNameByClass( SgeExecutor ) == 'sge'
         ExecutorFactory.findNameByClass(XExecutor) == 'my_fancy_name'
     }
+
+    def 'should init with higher priority independent of ordering'() {
+        when:
+        def factory = new ExecutorFactory()
+        factory.init0( [XExecutor, XExecutor2] )
+        def result = factory.getExecutorClass('my_fancy_name')
+        then:
+        result == XExecutor
+
+        when:
+        factory = new ExecutorFactory()
+        factory.init0( [XExecutor2, XExecutor] )
+        result = factory.getExecutorClass('my_fancy_name')
+        then:
+        result == XExecutor
+    }
+
 }
 
-
+@Priority(-100)
 @ServiceName('my_fancy_name')
 class XExecutor extends Executor {
+    @Override
+    protected TaskMonitor createTaskMonitor() {
+        return null
+    }
+
+    @Override
+    TaskHandler createTaskHandler(TaskRun task) {
+        return null
+    }
+}
+
+@Priority(100)
+@ServiceName('my_fancy_name')
+class XExecutor2 extends Executor {
     @Override
     protected TaskMonitor createTaskMonitor() {
         return null
