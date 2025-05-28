@@ -83,5 +83,40 @@ class ScriptLoaderV2Test extends Specification {
         cleanup:
         file.parent.deleteDir()
     }
-    
+
+    def 'should register workflow definition' () {
+
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+
+            workflow hello {
+                take:
+                foo ; bar
+
+                main:
+                def foobar = foo + bar
+
+                emit:
+                result = foobar
+            }
+
+            workflow {
+                hello('foo', 'bar')
+            }
+            '''
+
+        when:
+        parser.parse(TEXT)
+        parser.runScript()
+        def meta = ScriptMeta.get(parser.getScript())
+
+        then:
+        meta.definitions.size() == 2
+        meta.getWorkflow('hello').declaredInputs == ['foo', 'bar']
+        meta.getWorkflow('hello').declaredOutputs == ['result']
+    }
+
 }
