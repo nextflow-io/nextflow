@@ -17,17 +17,14 @@ The following task properties are defined in the process body:
 
 `task.hash`
 : *Available only in `exec:` blocks*
-: The task unique hash ID.
-
-`task.id`
-: The pipeline-level task index. Corresponds to `task_id` in the {ref}`execution trace <trace-report>`.
+: The task hash.
 
 `task.index`
 : The process-level task index.
 
 `task.name`
 : *Available only in `exec:` blocks*
-: The current task name.
+: The task name.
 
 `task.previousException`
 : :::{versionadded} 24.10.0
@@ -45,7 +42,7 @@ The following task properties are defined in the process body:
 : This is useful when retrying a task execution to access the previous task attempt runtime metrics e.g. used memory and CPUs.
 
 `task.process`
-: The current process name.
+: The process name.
 
 `task.workDir`
 : *Available only in `exec:` blocks*
