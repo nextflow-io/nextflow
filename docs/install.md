@@ -167,8 +167,7 @@ To use the standalone distribution:
 
 2. Grant execution permissions to the downloaded file. For example:
 
-    ```{code-block} bash
-    :class: copyable
+    ```bash
     chmod +x nextflow-24.10.1-dist
     ```
 
@@ -178,7 +177,7 @@ To use the standalone distribution:
     ./nextflow-24.10.1-dist run info
     ```
 
-:::{note}
+:::note
 The standalone distribution will still download core and third-party plugins as needed at runtime.
 :::
 

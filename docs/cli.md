@@ -2,10 +2,10 @@
 
 Nextflow provides a robust command line interface (CLI) for the management and execution pipelines.
 
-Simply run `nextflow` with no options or `nextflow -h` to see the list of available top-level options and commands. See {ref}`cli-reference` for the full list of subcommands with examples.
+Simply run `nextflow` with no options or `nextflow -h` to see the list of available top-level options and commands. See [CLI reference][cli-reference] for the full list of subcommands with examples.
 
 :::note
-Nextflow options use a single dash prefix, e.g. `-foo`. Do not confuse with double dash notation, e.g. `--foo`, which is instead used for {ref}`Pipeline parameters <cli-params>`.
+Nextflow options use a single dash prefix, e.g. `-foo`. Do not confuse with double dash notation, e.g. `--foo`, which is instead used for [Pipeline parameters][cli-params].
 :::
 
 ## Basic usage
@@ -36,7 +36,7 @@ nextflow -Dkey=value COMMAND [arg...]
 
 This options allows the definition of custom Java system properties that can be used to properly configure or fine tuning the JVM instance used by the Nextflow runtime.
 
-For specifying other JVM level options, please refer to the {ref}`config-env-vars` section.
+For specifying other JVM level options, please refer to the [Environment variables][config-env-vars] section.
 
 - Add JVM properties to the invoked pipeline:
 
@@ -199,7 +199,7 @@ It will download a trivial example from the repository published at [http://gith
 If the `owner` is omitted, Nextflow will search your cached pipelines for a pipeline that matches the name specified. If no pipeline is found, Nextflow will try to download it using the `organization` name defined by the `NXF_ORG` environment variable (`nextflow-io` by default).
 
 :::note
-To access a private repository, specify the access credentials using the `-user` command line option. Then follow the interactive prompts to enter your password. Alternatively, define your private repository access credentials using Git. See {ref}`Git configuration <git-page>` for more information.
+To access a private repository, specify the access credentials using the `-user` command line option. Then follow the interactive prompts to enter your password. Alternatively, define your private repository access credentials using Git. See [Git configuration][git-page] for more information.
 :::
 
 ### Using a specific revision
@@ -208,6 +208,7 @@ Any Git branch, tag, or commit of a project repository can be used when launchin
 
 ```bash
 nextflow run nextflow-io/hello -r mybranch
+```
 
 or
 
@@ -216,8 +217,6 @@ nextflow run nextflow-io/hello -r v1.1
 ```
 
 These commands will execute two different project revisions based on the given Git branch/tag/commit.
-
-(cli-params)=
 
 ### Pipeline parameters
 
@@ -294,7 +293,7 @@ Or in JSON format:
 Parameters are applied in the following order (from lowest to highest priority):
 
 1. Parameters defined in pipeline scripts (e.g. `main.nf`)
-2. Parameters defined in {ref}`config files <config-params>`
+2. Parameters defined in [config files][config-params]
 6. Parameters specified in a params file (`-params-file`)
 7. Parameters specified on the command line (`--something value`)
 
@@ -385,3 +384,9 @@ Downloaded pipelines can be deleted by using the `drop` command, as shown below:
 ```bash
 nextflow drop nextflow-io/hello
 ```
+
+[cli-params]: /nextflow_docs/nextflow_repo/docs/cli#pipeline-parameters
+[cli-reference]: /nextflow_docs/nextflow_repo/docs/reference/cli
+[config-env-vars]: /nextflow_docs/nextflow_repo/docs/reference/env-vars#environment-variables
+[config-params]: /nextflow_docs/nextflow_repo/docs/config#parameters
+[git-page]: /nextflow_docs/nextflow_repo/docs/cli
