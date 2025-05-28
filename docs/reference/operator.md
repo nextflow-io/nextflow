@@ -1058,7 +1058,7 @@ See also: [tap](#tap)
 
 *Returns: queue channel*
 
-The `splitCsv` operator parses and splits [CSV-formatted](http://en.wikipedia.org/wiki/Comma-separated_values) text from a source channel into records, or groups of records with a given size.
+The `splitCsv` operator parses and splits [CSV](http://en.wikipedia.org/wiki/Comma-separated_values) files or text from a source channel into records.
 
 For example:
 
@@ -1130,7 +1130,7 @@ Available options:
 
 *Returns: queue channel*
 
-The `splitFasta` operator splits [FASTA-formatted](http://en.wikipedia.org/wiki/FASTA_format) text from a source channel into individual sequences.
+The `splitFasta` operator splits [FASTA](http://en.wikipedia.org/wiki/FASTA_format) files or text from a source channel into individual sequences.
 
 The `by` option can be used to group sequences into chunks of a given size. The following example shows how to read a FASTA file and split it into chunks of 10 sequences each:
 
@@ -1202,7 +1202,7 @@ See also: [countFasta](#countfasta)
 
 *Returns: queue channel*
 
-The `splitFastq` operator splits [FASTQ formatted](http://en.wikipedia.org/wiki/FASTQ_format) text from a source channel into individual sequences.
+The `splitFastq` operator splits [FASTQ](http://en.wikipedia.org/wiki/FASTQ_format) files or text from a source channel into individual sequences.
 
 The `by` option can be used to group sequences into chunks of a given size. The following example shows how to read a FASTQ file and split it into chunks of 10 sequences each:
 
@@ -1285,7 +1285,7 @@ See also: [countFastq](#countfastq)
 
 *Returns: queue channel*
 
-The `splitJson` operator splits [JSON formatted](https://en.wikipedia.org/wiki/JSON) text from a source channel into individual records.
+The `splitJson` operator splits [JSON](https://en.wikipedia.org/wiki/JSON) files or text from a source channel into individual records.
 
 If the source item is a JSON array, each element of the array will be emitted:
 
