@@ -34,6 +34,14 @@ The value of `sasToken` is the token stripped by the character `?` from the begi
 
 Once the Blob Storage credentials are set, you can access the files in the blob container like local files by prepending the file path with `az://` followed by the container name. For example, a blob container named `my-data` with a file named `foo.txt` can be specified in your Nextflow script as `az://my-data/foo.txt`.
 
+:::{tip}
+Nextflow will use the following environment variables if storage settings are not provided in the Nextflow config file:
+
+- `AZURE_STORAGE_ACCOUNT_NAME`: The name of your Azure Storage account.
+- `AZURE_STORAGE_ACCOUNT_KEY`: The access key for your Azure Storage account.
+- `AZURE_STORAGE_SAS_TOKEN`: A shared access signature (SAS) token for Azure Storage access.
+:::
+
 ## Azure File Shares
 
 *New in `nf-azure` version `0.11.0`*
@@ -154,6 +162,13 @@ nextflow run <PIPELINE NAME> -w az://YOUR-CONTAINER/work
 Replacing `<PIPELINE NAME>` with a pipeline name e.g. `nextflow-io/rnaseq-nf` and `YOUR-CONTAINER` with a blob container in the storage account defined in the above configuration.
 
 See the [Batch documentation](https://docs.microsoft.com/en-us/azure/batch/quick-create-portal) for further details about the configuration for Azure Batch.
+
+:::{tip}
+Nextflow will use the following environment variables if the Batch settings are not provided in the Nextflow config file:
+
+- `AZURE_BATCH_ACCOUNT_NAME`: The name of your Azure Batch account.
+- `AZURE_BATCH_ACCOUNT_KEY`: The access key for your Azure Batch account.
+:::
 
 ### Autopools
 
@@ -387,6 +402,13 @@ The private registry is an addition, not a replacement, to the existing configur
 When using containers hosted in a private registry, the registry name must also be provided in the container name specified via the {ref}`container <process-container>` directive using the format: `[server]/[your-organization]/[your-image]:[tag]`. Read more about fully qualified image names in the [Docker documentation](https://docs.docker.com/engine/reference/commandline/pull/#pull-from-a-different-registry).
 :::
 
+:::{tip}
+Nextflow will use the following environment variables if the registry credentials are not provided in the Nextflow config file:
+
+- `AZURE_REGISTRY_USER_NAME`: The username for Azure Container Registry authentication
+- `AZURE_REGISTRY_PASSWORD`: The password for Azure Container Registry authentication
+:::
+
 ### Virtual Network
 
 :::{versionadded} 23.03.0-edge
@@ -526,6 +548,12 @@ azure {
 }
 ```
 
+:::{note}
+Nextflow will use the following environment variable if the managed identity setting is not provided in the Nextflow config file:
+
+- `AZURE_MANAGED_IDENTITY_SYSTEM`: When set to `true`, enables system-assigned managed identity.
+:::
+
 #### User Assigned Managed Identity
 
 A system-assigned managed identity is essentially 'anonymous' and is tied to a single resource. By comparison, a user-assigned managed identity is created by the user and can be assigned to multiple resources, furthermore the lifecycle of a user-assigned managed identity is not tied to the resource. See [the Azure Documentation](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/managed-identity-best-practice-recommendations#choosing-system-or-user-assigned-managed-identities) for further details.
@@ -556,6 +584,12 @@ azure {
 }
 ```
 
+:::{note}
+Nextflow will use the following environment variable if the managed identity client ID is not provided in the Nextflow config file:
+
+- `AZURE_MANAGED_IDENTITY_USER`: The client ID for a user-assigned managed identity.
+:::
+
 (azure-service-principal)=
 
 ### Service Principals
@@ -585,6 +619,14 @@ azure {
     }
 }
 ```
+
+:::{note}
+Nextflow will use the following environment variables if the service principal settings are not provided in the Nextflow config file:
+
+- `AZURE_CLIENT_ID`: The service principal client ID (also known as application ID).
+- `AZURE_CLIENT_SECRET`: The service principal secret key.
+- `AZURE_TENANT_ID`: The Azure Active Directory tenant ID.
+:::
 
 ## Advanced configuration
 
