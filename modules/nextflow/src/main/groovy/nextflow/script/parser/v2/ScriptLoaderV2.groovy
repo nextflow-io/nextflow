@@ -115,18 +115,23 @@ class ScriptLoaderV2 implements ScriptLoader {
             })
         }
         catch( CompilationFailedException e ) {
-            final errorListener = new StandardErrorListener('full', false)
-            println()
-            errorListener.beforeErrors()
-            for( final message : compiler.getErrors() ) {
-                final cause = message.getCause()
-                final source = getSource(cause.getSourceLocator(), compiler)
-                final filename = getRelativePath(source, scriptPath)
-                errorListener.onError(cause, filename, source)
-            }
-            errorListener.afterErrors()
+            if( scriptPath )
+                printErrors(scriptPath)
             throw new ScriptCompilationException("Script compilation failed", e)
         }
+    }
+
+    private void printErrors(Path path) {
+        final errorListener = new StandardErrorListener('full', false)
+        println()
+        errorListener.beforeErrors()
+        for( final message : compiler.getErrors() ) {
+            final cause = message.getCause()
+            final source = getSource(cause.getSourceLocator(), compiler)
+            final filename = getRelativePath(source, path)
+            errorListener.onError(cause, filename, source)
+        }
+        errorListener.afterErrors()
     }
 
     private SourceUnit getSource(String sourceLocator, ScriptCompiler compiler) {
