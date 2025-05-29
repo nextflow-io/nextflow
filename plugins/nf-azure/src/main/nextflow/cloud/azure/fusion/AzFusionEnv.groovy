@@ -36,16 +36,6 @@ import org.pf4j.Extension
 @Slf4j
 class AzFusionEnv implements FusionEnv {
 
-    @Override
-    Map<String, String> getEnvironment(String scheme, FusionConfig config) {
-        if (scheme != 'az') {
-            return Collections.<String, String> emptyMap()
-        }
-        // Delegate to the 3-parameter version with poolIdentityClientId from batch config
-        final cfg = AzConfig.config
-        return getEnvironment(scheme, config, cfg.batch().poolIdentityClientId)
-    }
-
     /**
      * Get the environment variables for Fusion with Azure, taking into 
      * account a managed identity ID if provided
@@ -55,12 +45,14 @@ class AzFusionEnv implements FusionEnv {
      * @param managedIdentityId Optional managed identity client ID from pool options
      * @return Map of environment variables
      */
-    Map<String, String> getEnvironment(String scheme, FusionConfig config, String managedIdentityId) {
+    @Override
+    Map<String, String> getEnvironment(String scheme, FusionConfig config) {
         if (scheme != 'az') {
             return Collections.<String, String> emptyMap()
         }
 
         final cfg = AzConfig.config
+        final managedIdentityId = cfg.batch().poolIdentityClientId
         final result = new LinkedHashMap(10)
 
         if (!cfg.storage().accountName) {

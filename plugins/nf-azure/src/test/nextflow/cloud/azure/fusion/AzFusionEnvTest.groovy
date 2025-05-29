@@ -205,13 +205,13 @@ class AzFusionEnvTest extends Specification {
         def NAME = 'myaccount'
         def POOL_MSI_ID = 'pool-managed-identity-id'
         Global.session = Mock(Session) {
-            getConfig() >> [azure: [storage: [accountName: NAME]]]
+            getConfig() >> [azure: [storage: [accountName: NAME], batch: [poolIdentityClientId: POOL_MSI_ID]]]
         }
 
         when:
         def config = Mock(FusionConfig)
         def fusionEnv = new AzFusionEnv()
-        def env = fusionEnv.getEnvironment('az', config, POOL_MSI_ID)
+        def env = fusionEnv.getEnvironment('az', config)
 
         then:
         env.AZURE_STORAGE_ACCOUNT == NAME
