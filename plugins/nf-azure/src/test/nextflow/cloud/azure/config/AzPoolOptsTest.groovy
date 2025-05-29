@@ -16,7 +16,7 @@
  */
 
 package nextflow.cloud.azure.config
-import nextflow.cloud.azure.config.AzPoolOpts
+
 import nextflow.util.Duration
 import spock.lang.Specification
 /**

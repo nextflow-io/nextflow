@@ -82,6 +82,7 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
+import nextflow.cloud.azure.config.AzBatchOpts
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzFileShareOpts
 import nextflow.cloud.azure.config.AzPoolOpts
@@ -469,7 +470,6 @@ class AzBatchService implements Closeable {
         return key.size()>MAX_LEN ? key.substring(0,MAX_LEN) : key
     }
 
-
     protected BatchTaskCreateContent createTask(String poolId, String jobId, TaskRun task) {
         assert poolId, 'Missing Azure Batch poolId argument'
         assert jobId, 'Missing Azure Batch jobId argument'
@@ -511,7 +511,6 @@ class AzBatchService implements Closeable {
         // Handle Fusion settings
         final fusionEnabled = FusionHelper.isFusionEnabled((Session)Global.session)
         String fusionCmd = null
-        
         if( fusionEnabled ) {
             // Create the FusionScriptLauncher from the TaskBean
             final taskBean = task.toTaskBean()
@@ -532,10 +531,11 @@ class AzBatchService implements Closeable {
             final List<String> cmdList = launcher.fusionSubmitCli(task)
             fusionCmd = cmdList ? String.join(' ', cmdList) : null
         }
-        
+
+        // Create container settings
         final containerOpts = new BatchTaskContainerSettings(container)
                 .setContainerRunOptions(opts)
-        
+
         // submit command line
         final String cmd = fusionEnabled && fusionCmd
                     ? fusionCmd
@@ -543,27 +543,24 @@ class AzBatchService implements Closeable {
         // cpus and memory
         final slots = computeSlots(task, pool)
         // max wall time
-        final constraints = constraints(task)
+        final constraints = taskConstraints(task)
 
         log.trace "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
+        return new BatchTaskCreateContent(taskId, cmd)
+                .setUserIdentity(userIdentity(pool.opts.privileged, pool.opts.runAs, AutoUserScope.TASK))
+                .setContainerSettings(containerOpts)
+                .setResourceFiles(resourceFileUrls(task, sas))
+                .setOutputFiles(outputFileUrls(task, sas))
+                .setRequiredSlots(slots)
+                .setConstraints(constraints)
+                .setEnvironmentSettings(taskEnv(config.batch()))
+    }
 
-        // Add environment variables for managed identity if configured for Fusion only
-        final env = [:] as Map<String,String>
-        if( config.batch().poolIdentityClientId && fusionEnabled ) {
-            env.put('FUSION_AZ_MSI_CLIENT_ID', config.batch().poolIdentityClientId)
-        }
-
-        return createBatchTaskContent(
-            taskId, 
-            cmd, 
-            userIdentity(pool.opts.privileged, pool.opts.runAs, AutoUserScope.TASK),
-            containerOpts,
-            resourceFileUrls(task, sas),
-            outputFileUrls(task, sas),
-            slots,
-            constraints,
-            env
-        )
+    protected List<EnvironmentSetting> taskEnv(AzBatchOpts opts) {
+        return opts.poolIdentityClientId
+            ? List.of(new EnvironmentSetting("FUSION_AZ_MSI_CLIENT_ID")
+                .setValue(opts.poolIdentityClientId))
+            : List.<EnvironmentSetting>of()
     }
 
     /**
@@ -572,50 +569,11 @@ class AzBatchService implements Closeable {
      * @param task The task run to create constraints for
      * @return The BatchTaskConstraints object
      */
-    protected BatchTaskConstraints constraints(TaskRun task) {
+    protected BatchTaskConstraints taskConstraints(TaskRun task) {
         final constraints = new BatchTaskConstraints()
         if( task.config.getTime() )
             constraints.setMaxWallClockTime( Duration.of(task.config.getTime().toMillis(), ChronoUnit.MILLIS) )
         return constraints
-    }
-
-    /**
-     * Create a BatchTaskCreateContent object with the given parameters
-     * 
-     * @param taskId Task ID
-     * @param cmd Command to run
-     * @param userIdentity User identity
-     * @param containerSettings Container settings
-     * @param resourceFiles Resource files
-     * @param outputFiles Output files
-     * @param slots Required slots
-     * @param constraints Task constraints
-     * @param env Environment variables
-     * @return The BatchTaskCreateContent object
-     */
-    protected BatchTaskCreateContent createBatchTaskContent(
-            String taskId, 
-            String cmd, 
-            UserIdentity userIdentity, 
-            BatchTaskContainerSettings containerSettings,
-            List<ResourceFile> resourceFiles,
-            List<OutputFile> outputFiles,
-            int slots,
-            BatchTaskConstraints constraints,
-            Map<String,String> env) {
-
-        log.trace "[AZURE BATCH] Task details: id=$taskId, slots=$slots, constraints=${constraints?.maxWallClockTime}"
-
-        return new BatchTaskCreateContent(taskId, cmd)
-                .setUserIdentity(userIdentity)
-                .setContainerSettings(containerSettings)
-                .setResourceFiles(resourceFiles)
-                .setOutputFiles(outputFiles)
-                .setRequiredSlots(slots)
-                .setConstraints(constraints)
-                .setEnvironmentSettings(env.collect { name, value -> 
-                    new EnvironmentSetting(name).setValue(value)
-                })
     }
 
     AzTaskKey runTask(String poolId, String jobId, TaskRun task) {

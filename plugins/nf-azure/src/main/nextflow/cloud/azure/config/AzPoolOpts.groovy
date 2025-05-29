@@ -67,7 +67,7 @@ class AzPoolOpts implements CacheFunnel {
     String virtualNetwork
     boolean lowPriority
     AzStartTaskOpts startTask
-
+    
     AzPoolOpts() {
         this(Collections.emptyMap())
     }

@@ -79,10 +79,10 @@ class AzFusionEnv implements FusionEnv {
         
         // If no managed identity, use the standard environment with SAS token
         result.AZURE_STORAGE_SAS_TOKEN = getOrCreateSasToken()
-        
+
         return result
     }
-    
+
     /**
      * Return the SAS token if it is defined in the configuration, otherwise generate one based on the requested
      * authentication method.

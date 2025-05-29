@@ -2,15 +2,13 @@ package nextflow.cloud.azure.batch
 
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
-import java.nio.file.Path
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.function.Predicate
 
-import com.azure.compute.batch.BatchClient
 import com.azure.compute.batch.models.BatchPool
-import com.azure.compute.batch.models.BatchJobCreateContent
 import com.azure.compute.batch.models.ElevationLevel
+import com.azure.compute.batch.models.EnvironmentSetting
 import com.azure.core.exception.HttpResponseException
 import com.azure.core.http.HttpResponse
 import com.azure.identity.ManagedIdentityCredential
@@ -18,6 +16,7 @@ import com.google.common.hash.HashCode
 import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.cloud.azure.config.AzBatchOpts
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzManagedIdentityOpts
 import nextflow.cloud.azure.config.AzPoolOpts
@@ -32,8 +31,6 @@ import nextflow.util.MemoryUnit
 import reactor.core.publisher.Flux
 import spock.lang.Specification
 import spock.lang.Unroll
-import com.azure.compute.batch.models.BatchJobConstraints
-import com.azure.compute.batch.models.BatchPoolInfo
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -1010,7 +1007,7 @@ class AzBatchServiceTest extends Specification {
         }
         
         when:
-        def result = service.constraints(task)
+        def result = service.taskConstraints(task)
         
         then:
         result != null
@@ -1030,71 +1027,24 @@ class AzBatchServiceTest extends Specification {
         ]
     }
 
-    def 'should create batch task content' () {
+    @Unroll
+    def 'should create task env' () {
         given:
         def exec = Mock(AzBatchExecutor)
         def service = new AzBatchService(exec)
-        
-        and:
-        def taskId = 'test-task-123'
-        def cmd = 'bash script.sh'
-        def userIdentity = GroovyMock(com.azure.compute.batch.models.UserIdentity)
-        def containerSettings = GroovyMock(com.azure.compute.batch.models.BatchTaskContainerSettings)
-        def resourceFiles = [GroovyMock(com.azure.compute.batch.models.ResourceFile)]
-        def outputFiles = [GroovyMock(com.azure.compute.batch.models.OutputFile)]
-        def slots = 4
-        def constraints = GroovyMock(com.azure.compute.batch.models.BatchTaskConstraints)
-        def env = [VAR1: 'value1', VAR2: 'value2']
-        
-        when:
-        def result = service.createBatchTaskContent(
-            taskId, cmd, userIdentity, containerSettings, 
-            resourceFiles, outputFiles, slots, constraints, env
-        )
-        
-        then:
-        result != null
-        result.id == taskId
-        result.commandLine == cmd
-        result.userIdentity == userIdentity
-        result.containerSettings == containerSettings
-        result.resourceFiles == resourceFiles
-        result.outputFiles == outputFiles
-        result.requiredSlots == slots
-        result.constraints == constraints
-        result.environmentSettings.size() == 2
-        result.environmentSettings.find { it.name == 'VAR1' }.value == 'value1'
-        result.environmentSettings.find { it.name == 'VAR2' }.value == 'value2'
-    }
+        List<EnvironmentSetting> env
 
-    def 'should create batch task content with empty environment' () {
-        given:
-        def exec = Mock(AzBatchExecutor)
-        def service = new AzBatchService(exec)
-        
-        and:
-        def taskId = 'test-task-456'
-        def cmd = 'echo hello'
-        def userIdentity = GroovyMock(com.azure.compute.batch.models.UserIdentity)
-        def containerSettings = GroovyMock(com.azure.compute.batch.models.BatchTaskContainerSettings)
-        def resourceFiles = []
-        def outputFiles = []
-        def slots = 1
-        def constraints = GroovyMock(com.azure.compute.batch.models.BatchTaskConstraints)
-        def env = [:]
-        
         when:
-        def result = service.createBatchTaskContent(
-            taskId, cmd, userIdentity, containerSettings, 
-            resourceFiles, outputFiles, slots, constraints, env
-        )
-        
+        env = service.taskEnv(new AzBatchOpts([:]))
         then:
-        result != null
-        result.id == taskId
-        result.commandLine == cmd
-        result.requiredSlots == slots
-        result.environmentSettings.isEmpty()
+        env == []
+
+        when:
+        env = service.taskEnv(new AzBatchOpts([poolIdentityClientId:'12345']))
+        then:
+        env.size() == 1
+        env.first.name == 'FUSION_AZ_MSI_CLIENT_ID'
+        env.first.value == '12345'
     }
 
 }

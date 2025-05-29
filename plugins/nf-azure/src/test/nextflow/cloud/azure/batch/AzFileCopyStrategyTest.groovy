@@ -163,7 +163,7 @@ class AzFileCopyStrategyTest extends Specification {
                     local target=${2%/} ## remove ending slash
                     local base_name="$(basename "$name")"
                     local dir_name="$(dirname "$name")"
-
+        
                     if [[ -d $name ]]; then
                       if [[ "$base_name" == "$name" ]]; then
                         azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
@@ -181,7 +181,7 @@ class AzFileCopyStrategyTest extends Specification {
                     local basedir=$(dirname $2)
                     local ret
                     mkdir -p "$basedir"
-
+                
                     ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
                         ## if fails check if it was trying to download a directory
                         mkdir -p $target
@@ -300,7 +300,7 @@ class AzFileCopyStrategyTest extends Specification {
                     local target=${2%/} ## remove ending slash
                     local base_name="$(basename "$name")"
                     local dir_name="$(dirname "$name")"
-
+        
                     if [[ -d $name ]]; then
                       if [[ "$base_name" == "$name" ]]; then
                         azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
@@ -318,7 +318,7 @@ class AzFileCopyStrategyTest extends Specification {
                     local basedir=$(dirname $2)
                     local ret
                     mkdir -p "$basedir"
-
+                
                     ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
                         ## if fails check if it was trying to download a directory
                         mkdir -p $target
@@ -479,7 +479,7 @@ class AzFileCopyStrategyTest extends Specification {
                         local basedir=$(dirname $2)
                         local ret
                         mkdir -p "$basedir"
-
+                    
                         ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
                             ## if fails check if it was trying to download a directory
                             mkdir -p $target
