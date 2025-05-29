@@ -56,7 +56,9 @@ class AzFusionEnvTest extends Specification {
         }
 
         when:
-        def config = Mock(FusionConfig)
+        def config = Mock(FusionConfig) {
+            exportStorageCredentials() >> true
+        }
         def fusionEnv = Spy(AzFusionEnv)
         1 * fusionEnv.getOrCreateSasToken() >> 'generatedSasToken'
         def env = fusionEnv.getEnvironment('az', config)
@@ -89,7 +91,9 @@ class AzFusionEnvTest extends Specification {
         }
 
         when:
-        def config = Mock(FusionConfig)
+        def config = Mock(FusionConfig) {
+            exportStorageCredentials() >> true
+        }
         def fusionEnv = Spy(AzFusionEnv)
         1 * fusionEnv.getOrCreateSasToken() >> 'generatedSasToken'
         def env = fusionEnv.getEnvironment('az', config)
@@ -118,7 +122,9 @@ class AzFusionEnvTest extends Specification {
         }
 
         when:
-        def config = Mock(FusionConfig)
+        def config = Mock(FusionConfig) {
+            exportStorageCredentials() >> true
+        }
         def fusionEnv = Spy(AzFusionEnv)
         1 * fusionEnv.getOrCreateSasToken() >> 'generatedSasToken'
         def env = fusionEnv.getEnvironment('az', config)
@@ -146,7 +152,9 @@ class AzFusionEnvTest extends Specification {
         }
 
         when:
-        def config = Mock(FusionConfig)
+        def config = Mock(FusionConfig) {
+            exportStorageCredentials() >> true
+        }
         def fusionEnv = Spy(AzFusionEnv)
         1 * fusionEnv.getOrCreateSasToken() >> 'generatedSasToken'
         def env = fusionEnv.getEnvironment('az', config)
@@ -165,7 +173,9 @@ class AzFusionEnvTest extends Specification {
         and:
 
         when:
-        def config = Mock(FusionConfig)
+        def config = Mock(FusionConfig) {
+            exportStorageCredentials() >> true
+        }
         def env = new AzFusionEnv().getEnvironment('az', config)
         then:
         env == [AZURE_STORAGE_ACCOUNT: 'x1', AZURE_STORAGE_SAS_TOKEN: 'y1']
@@ -184,20 +194,21 @@ class AzFusionEnvTest extends Specification {
         thrown(IllegalArgumentException)
     }
 
-    def 'should throw an exception when both account key and SAS token are present'() {
+    def 'should not include credentials when exportStorageCredentials is false'() {
         given:
         Global.session = Mock(Session) {
             getConfig() >> [azure: [storage: [accountName: 'x1', accountKey: 'y1', sasToken: 'z1']]]
         }
         
         when:
-        def config = Mock(FusionConfig)
+        def config = Mock(FusionConfig) {
+            exportStorageCredentials() >> false
+        }
         def fusionEnv = new AzFusionEnv()
         def env = fusionEnv.getEnvironment('az', config)
         
         then:
-        def ex = thrown(IllegalArgumentException)
-        ex.message.contains('Azure Storage Access key and SAS token detected')
+        env == [AZURE_STORAGE_ACCOUNT: 'x1']
     }
 
     def 'should skip SAS token generation when pool-specific managed identity ID is provided'() {
@@ -209,7 +220,9 @@ class AzFusionEnvTest extends Specification {
         }
 
         when:
-        def config = Mock(FusionConfig)
+        def config = Mock(FusionConfig) {
+            exportStorageCredentials() >> true
+        }
         def fusionEnv = new AzFusionEnv()
         def env = fusionEnv.getEnvironment('az', config)
 
@@ -232,7 +245,9 @@ class AzFusionEnvTest extends Specification {
         }
 
         when:
-        def config = Mock(FusionConfig)
+        def config = Mock(FusionConfig) {
+            exportStorageCredentials() >> true
+        }
         def fusionEnv = new AzFusionEnv()
         def env = fusionEnv.getEnvironment('az', config)
 
