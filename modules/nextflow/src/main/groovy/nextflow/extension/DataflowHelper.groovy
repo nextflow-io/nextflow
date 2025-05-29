@@ -360,7 +360,7 @@ class DataflowHelper {
         if( !(entry instanceof List) ) {
             if( pivot != [0] )
                 throw new IllegalArgumentException("Not a valid `by` index: $pivot")
-            result.keys = [entry]
+            result.addKey(entry)
             result.values = []
             return result
         }

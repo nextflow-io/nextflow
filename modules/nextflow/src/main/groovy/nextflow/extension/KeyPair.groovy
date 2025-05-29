@@ -19,6 +19,7 @@ package nextflow.extension
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+import nextflow.extension.GroupKey
 
 /**
  * Implements an helper key-value helper object used in dataflow operators
@@ -33,6 +34,9 @@ class KeyPair {
     List values
 
     void addKey(el) {
+        if (keys == null) {
+            keys = []
+        }
         keys.add(safeStr(el))
     }
 
@@ -41,6 +45,10 @@ class KeyPair {
     }
 
     static private safeStr(key) {
-        key instanceof GString ? key.toString() : key
+        if (key instanceof GString)
+            return key.toString()
+        if (key instanceof GroupKey)
+            return key.getGroupTarget()
+        return key
     }
 }
