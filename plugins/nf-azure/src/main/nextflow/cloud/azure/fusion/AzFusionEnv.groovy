@@ -52,32 +52,25 @@ class AzFusionEnv implements FusionEnv {
         }
 
         final cfg = AzConfig.config
+        final managedIdentityId = cfg.batch().poolIdentityClientId
         final result = new LinkedHashMap(10)
 
         if (!cfg.storage().accountName) {
             throw new IllegalArgumentException("Missing Azure Storage account name")
         }
 
-        // Always include the storage account name (configuration, not credentials)
         result.AZURE_STORAGE_ACCOUNT = cfg.storage().accountName
 
-        // Only include storage credentials if fusion config allows it
-        if (config.exportStorageCredentials()) {
-            final managedIdentityId = cfg.batch().poolIdentityClientId
-            
-            // Priority 1: Use pool-specific managed identity if available
-            if (managedIdentityId) {
-                result.FUSION_AZ_MSI_CLIENT_ID = managedIdentityId
-            }
-            // Priority 2: Use existing SAS token if available
-            else if (cfg.storage().sasToken) {
-                result.AZURE_STORAGE_SAS_TOKEN = cfg.storage().sasToken
-            }
-            // Priority 3: Generate a new SAS token
-            else {
-                result.AZURE_STORAGE_SAS_TOKEN = getOrCreateSasToken()
-            }
+        // If pool has a managed identity, ONLY add the MSI client ID
+        // DO NOT add any SAS token or reference cfg.storage().sasToken
+        if (managedIdentityId) {
+            result.FUSION_AZ_MSI_CLIENT_ID = managedIdentityId
+            // No SAS token is added or generated
+            return result
         }
+        
+        // If no managed identity, use the standard environment with SAS token
+        result.AZURE_STORAGE_SAS_TOKEN = getOrCreateSasToken()
 
         return result
     }
@@ -88,6 +81,11 @@ class AzFusionEnv implements FusionEnv {
      */
     synchronized String getOrCreateSasToken() {
         final cfg = AzConfig.config
+
+        // Check for incompatible configuration
+        if (cfg.storage().accountKey && cfg.storage().sasToken) {
+            throw new IllegalArgumentException("Azure Storage Access key and SAS token detected. Only one is allowed")
+        }
 
         // If a SAS token is already defined in the configuration, just return it
         if (cfg.storage().sasToken) {
