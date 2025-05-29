@@ -14,32 +14,38 @@
  * limitations under the License.
  */
 
-package nextflow.lineage.model
+package nextflow.lineage.model.v1beta1
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import nextflow.lineage.serde.LinSerializable
 
-import java.time.OffsetDateTime
-
 /**
- * Models the results of a workflow execution.
+ * Models a Workflow Execution
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io
  */
 @Canonical
 @CompileStatic
-class WorkflowOutput implements LinSerializable {
+class WorkflowRun implements LinSerializable {
     /**
-     * Creation date of the workflow output
+     * Description of the workflow associated with the workflow run.
      */
-    OffsetDateTime createdAt
+    Workflow workflow
     /**
-     * Workflow run that generated the output
+     * Session identifier used in the workflow run
      */
-    String workflowRun
+    String sessionId
     /**
-     * Workflow output
+     * Workflow run name
      */
-    List<Parameter> output
+    String name
+    /**
+     * Workflow parameters
+     */
+    List<Parameter> params
+    /**
+     * Resolved Configuration
+     */
+    Map config
 }

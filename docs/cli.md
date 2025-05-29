@@ -210,6 +210,7 @@ Any Git branch, tag, or commit of a project repository can be used when launchin
 
 ```console
 $ nextflow run nextflow-io/hello -r mybranch
+```
 
 or
 

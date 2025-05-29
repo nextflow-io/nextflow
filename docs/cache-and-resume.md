@@ -12,6 +12,8 @@ All task executions are automatically saved to the task cache, regardless of the
 
 The task cache is used in conjunction with the [work directory](#work-directory) to recover cached tasks in a resumed run. It is also used by the {ref}`cli-log` sub-command to query task metadata.
 
+(cache-resume-task-hash)=
+
 ### Task hash
 
 The task hash is computed from the following metadata:
@@ -28,7 +30,10 @@ The task hash is computed from the following metadata:
 - Any task {ref}`process-ext` properties referenced in the task script
 - Any {ref}`bundled scripts <bundling-executables>` used in the task script
 - Whether the task is a {ref}`stub run <process-stub>`
-- Task attempt
+
+:::note
+Nextflow also includes an incrementing component in the hash generation process, which allows it to iterate through multiple hash values until it finds one that does not match an existing execution directory. This mechanism typically usually aligns with task retries (i.e., task attempts), however this is not guaranteed.
+:::
 
 :::{versionchanged} 23.09.2-edge
 The {ref}`process-ext` directive was added to the task hash.
@@ -36,7 +41,7 @@ The {ref}`process-ext` directive was added to the task hash.
 
 Nextflow computes this hash for every task when it is created but before it is executed. If resumability is enabled and there is an entry in the task cache with the same hash, Nextflow tries to recover the previous task execution. A cache hit does not guarantee that the task will be resumed, because it must also recover the task outputs from the [work directory](#work-directory).
 
-Note that files are hashed differently depending on the caching mode. See the {ref}`process-cache` directive for more details.
+Files are hashed differently depending on the caching mode. See the {ref}`process-cache` directive for more details.
 
 ### Task entry
 
@@ -227,3 +232,7 @@ diff run_1.tasks.log run_2.tasks.log
 ```
 
 You can then view the `diff` output or use a graphical diff viewer to compare `run_1.tasks.log` and `run_2.tasks.log`.
+
+:::{versionadded} 25.04.0
+Nextflow now has a built-in way to compare two task runs. See the {ref}`data-lineage-page` guide for details.
+:::

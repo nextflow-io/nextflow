@@ -21,12 +21,16 @@ To update to the latest stable release of Nextflow, run the `self-update` comman
 nextflow self-update
 ```
 
-To use the latest edge release, set `NXF_EDGE=1` when you self-update Nextflow:
+To use the latest edge release, set `NXF_EDGE=1` when updating Nextflow:
 
 ```{code-block} bash
 :class: copyable
 NXF_EDGE=1 nextflow self-update
 ```
+
+:::{note}
+When updating from an edge release to a stable release, you must explicitly set `NXF_EDGE=0`.
+:::
 
 :::{warning}
 Nextflow will update its executable during the self-update process. The update can fail if the Nextflow executable is in a directory with restricted permissions.

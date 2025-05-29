@@ -25,10 +25,11 @@ import java.time.ZoneId
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.lineage.model.TaskRun
-import nextflow.lineage.model.WorkflowRun
+import nextflow.lineage.model.v1beta1.TaskRun
+import nextflow.lineage.model.v1beta1.WorkflowRun
 import nextflow.lineage.serde.LinEncoder
 import nextflow.lineage.serde.LinSerializable
+import nextflow.lineage.serde.LinTypeAdapterFactory
 import nextflow.serde.gson.GsonEncoder
 /**
  * Utils class for Lineage IDs.
@@ -59,34 +60,19 @@ class LinUtils {
             throw new IllegalArgumentException("Cannot get record from the root LID URI")
         if ( uri.query )
             log.warn("Query string is not supported for Lineage URI: `$uri` -- it will be ignored")
-
-        final children = parseChildrenFromFragment(uri.fragment)
-        return getMetadataObject0(store, key, children )
+        return getMetadataObject0(store, key, uri.fragment )
     }
 
-    private static Object getMetadataObject0(LinStore store, String key, String[] children = []) {
+    private static Object getMetadataObject0(LinStore store, String key, String fragment) {
         final record = store.load(key)
-        if (!record) {
+        if( !record ) {
             throw new FileNotFoundException("Lineage record $key not found")
         }
-        if (children && children.size() > 0) {
-            return getSubObject(store, key, record, children)
+        if( fragment ) {
+            new LinPropertyValidator().validate(fragment.tokenize('.'))
+            return getSubObject(store, key, record, fragment)
         }
         return record
-    }
-
-    /**
-     * Get the array of the search path children elements from the fragment string
-     *
-     * @param fragment String containing the elements separated by '.'
-     * @return array with the parsed element
-     */
-    static String[] parseChildrenFromFragment(String fragment) {
-        if( !fragment )
-            return EMPTY_ARRAY
-        final children = fragment.tokenize('.')
-        new LinPropertyValidator().validate(children)
-        return children as String[]
     }
 
     /**
@@ -97,29 +83,29 @@ class LinUtils {
      * @param store Store to retrieve lineage records.
      * @param key Parent key.
      * @param record Parent record.
-     * @param children Array of string in indicating the properties to navigate to get the sub-record.
+     * @param fragment String in indicating the properties to navigate to get the sub-record.
      * @return Sub-record or null in it does not exist.
      */
-    static Object getSubObject(LinStore store, String key, LinSerializable record, String[] children) {
-        if( isSearchingOutputs(record, children) ) {
+    static Object getSubObject(LinStore store, String key, LinSerializable record, String fragment) {
+        if( isSearchingOutputs(record, fragment) ) {
             // When asking for a Workflow or task output retrieve the outputs description
             final outputs = store.load("${key}#output")
             if (!outputs)
-                return null
-            return navigate(outputs, children.join('.'))
+                return []
+            return navigate(outputs, fragment)
         }
-        return navigate(record, children.join('.'))
+        return navigate(record, fragment)
     }
 
     /**
      * Check if the Lid pseudo path or query is for Task or Workflow outputs.
      *
      * @param record Parent lineage record
-     * @param children Array of string in indicating the properties to navigate to get the sub-record.
-     * @return return 'true' if the parent is a Task/Workflow run and the first element in children is 'outputs'. Otherwise 'false'
+     * @param fragment Fragment indicating the properties to navigate to get the sub-record.
+     * @return return 'true' if the parent is a Task/Workflow run and the first element in fragment is 'output'. Otherwise 'false'
      */
-    static boolean isSearchingOutputs(LinSerializable record, String[] children) {
-        return (record instanceof WorkflowRun || record instanceof TaskRun) && children && children[0] == 'output'
+    static boolean isSearchingOutputs(LinSerializable record, String fragment) {
+        return (record instanceof WorkflowRun || record instanceof TaskRun) && fragment && fragment.tokenize('.')[0] == 'output'
     }
 
     /**
@@ -273,7 +259,7 @@ class LinUtils {
             return new GsonEncoder<Object>() {}
                 .withPrettyPrint(prettyPrint)
                 .withSerializeNulls(true)
-                .withTypeAdapterFactory(LinEncoder.newTypeAdapterFactory())
+                .withTypeAdapterFactory(new LinTypeAdapterFactory())
                 .encode(output)
         }
     }

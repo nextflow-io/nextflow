@@ -13,21 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package nextflow.lineage.model
-
-import groovy.transform.Canonical
-import groovy.transform.CompileStatic
+package nextflow.lineage.exception
 
 /**
- * Model Workflow and Task Parameters.
+ * Exception to indicate the an output path is not relative to the output dir.
+ * It is used to detect the cases where publishDir is used with Data Lineage.
  *
- * @author Jorge Ejarque <jorge.ejarque@seqera.io
+ * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
-@Canonical
-@CompileStatic
-class Parameter {
-    String type
-    String name
-    Object value
+class OutputRelativePathException extends Exception {
 }

@@ -100,7 +100,7 @@ class PluginRefactor {
         replacePrefixInFiles(pluginDir, pluginClassPrefix)
         renameDirectory(new File(pluginDir, "src/main/groovy/acme"), new File(pluginDir, "src/main/groovy/${orgName}"))
         renameDirectory(new File(pluginDir, "src/test/groovy/acme"), new File(pluginDir, "src/test/groovy/${orgName}"))
-        updateClassNames(pluginDir)
+        updateClassNamesAndSymbols(pluginDir)
     }
 
     protected void replacePrefixInFiles(File rootDir, String newPrefix) {
@@ -125,9 +125,9 @@ class PluginRefactor {
         }
     }
 
-    protected void updateClassNames(File rootDir) {
+    protected void updateClassNamesAndSymbols(File rootDir) {
         rootDir.eachFileRecurse { file ->
-            if (file.isFile() && FilesEx.getExtension(file) in ['groovy','gradle']) {
+            if (file.isFile() && FilesEx.getExtension(file) in ['groovy','gradle','md']) {
                 replaceTokensInFile(file, tokenMapping)
             }
         }

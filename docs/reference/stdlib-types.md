@@ -305,7 +305,7 @@ The following operations are supported for maps:
 : Given a map and a key, returns the value for the given key in the map, or `null` if the key is not in the map.
 
 `in, !in : (K, Map<K,V>) -> boolean`
-: Given a key and a map, returns `true` if the map contains the key (or not).
+: Given a key and a map, returns `true` if the map contains the key and the corresponding value is *truthy* (e.g. not `null`, `0`, or `false`).
 
 The following methods are available for a map:
 

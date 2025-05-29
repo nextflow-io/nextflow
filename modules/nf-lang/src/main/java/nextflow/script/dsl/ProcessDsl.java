@@ -362,7 +362,6 @@ public interface ProcessDsl extends DslScope {
         """)
         void tuple(Object... args);
 
-        @Deprecated
         @Description("""
             Declare an `each` input.
         """)

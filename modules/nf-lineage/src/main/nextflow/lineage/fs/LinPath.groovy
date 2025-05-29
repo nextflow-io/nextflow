@@ -16,19 +16,8 @@
 
 package nextflow.lineage.fs
 
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import nextflow.file.FileHelper
-import nextflow.file.LogicalDataPath
-import nextflow.lineage.LinPropertyValidator
-import nextflow.lineage.model.Checksum
-import nextflow.lineage.model.FileOutput
-import nextflow.lineage.serde.LinSerializable
-import nextflow.util.CacheHelper
-import nextflow.util.TestOnly
-
-import static LinFileSystemProvider.*
 import static nextflow.lineage.LinUtils.*
+import static nextflow.lineage.fs.LinFileSystemProvider.*
 
 import java.nio.file.FileSystem
 import java.nio.file.LinkOption
@@ -38,7 +27,23 @@ import java.nio.file.WatchEvent
 import java.nio.file.WatchKey
 import java.nio.file.WatchService
 import java.time.OffsetDateTime
+import java.util.stream.Stream
 
+import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.Memoized
+import groovy.util.logging.Slf4j
+import nextflow.file.FileHelper
+import nextflow.file.LogicalDataPath
+import nextflow.lineage.LinPropertyValidator
+import nextflow.lineage.LinStore
+import nextflow.lineage.model.v1beta1.Checksum
+import nextflow.lineage.model.v1beta1.FileOutput
+import nextflow.lineage.model.v1beta1.TaskRun
+import nextflow.lineage.model.v1beta1.WorkflowRun
+import nextflow.lineage.serde.LinSerializable
+import nextflow.util.CacheHelper
+import nextflow.util.TestOnly
 /**
  * LID file system path
  *
@@ -123,25 +128,26 @@ class LinPath implements Path, LogicalDataPath {
         return first
     }
 
-    protected static void validateDataOutput(FileOutput lidObject) {
+    @Memoized
+    protected static String validateDataOutput(FileOutput lidObject) {
         final hashedPath = FileHelper.toCanonicalPath(lidObject.path as String)
         if( !hashedPath.exists() )
             throw new FileNotFoundException("Target path $lidObject.path does not exist")
-        validateChecksum(lidObject.checksum, hashedPath)
+        return validateChecksum(lidObject.checksum, hashedPath)
     }
 
-    protected static void validateChecksum(Checksum checksum, Path hashedPath) {
+    protected static String validateChecksum(Checksum checksum, Path hashedPath) {
         if( !checksum )
-            return
+            return null
         if( !isAlgorithmSupported(checksum.algorithm) ) {
-            log.warn("Checksum of '$hashedPath' can't be validated. Algorithm '${checksum.algorithm}' is not supported")
-            return
+            return "Checksum of '$hashedPath' can't be validated - algorithm '${checksum.algorithm}' is not supported"
         }
         final hash = checksum.mode
             ? CacheHelper.hasher(hashedPath, CacheHelper.HashMode.of(checksum.mode.toString().toLowerCase())).hash().toString()
             : CacheHelper.hasher(hashedPath).hash().toString()
-        if( hash != checksum.value )
-            log.warn("Checksum of '$hashedPath' does not match with the one stored in the metadata")
+        return hash != checksum.value
+            ? "Checksum of '$hashedPath' does not match with lineage metadata"
+            : null
     }
 
     protected static isAlgorithmSupported(String algorithm) {
@@ -151,19 +157,38 @@ class LinPath implements Path, LogicalDataPath {
     @TestOnly
     protected String getFilePath() { this.filePath }
 
+    protected Stream<Path> getSubPaths(){
+        if( !fileSystem )
+            throw new IllegalArgumentException("Cannot get sub-paths for a relative lineage path")
+        if( filePath.isEmpty() || filePath == SEPARATOR )
+            throw new IllegalArgumentException("Cannot get sub-paths for an empty lineage path (lid:///)")
+        final store = fileSystem.getStore()
+        if( !store )
+            throw new Exception("Lineage store not found - Check Nextflow configuration")
+        return store.getSubKeys(filePath).map {new LinPath(fileSystem as LinFileSystem, it) as Path }
+    }
+
     /**
      * Finds the target path of a LinPath.
+     * This method return the different types depending on the type of metadata pointing:
+     * - When the LinPath point to FileOutput metadata or a subpath, it returns the real path.
+     * - When it points other lineage metadata or a fragment of a lineage metadata and asMetadata is true, it returns a LinMetadataPath
+     *   which contains in memory the lineage metadata description or the requested fragment of this description.
+     * - When it points to a WorkflowRun or TaskRun metadata or subpath and asIntermediate is set to true. LinIntermediatePath, which is representing a directory
+     * In other cases it will return a FileNotFoundException
      *
      * @param fs LinFileSystem associated to the LinPath to find
-     * @param filePath Path associated to the LinPath to find
-     * @param resultsAsPath True to return metadata descriptions as LinMetadataPath
-     * @param children Sub-object/path inside the description
-     * @return Path or LinMetadataPath associated to the LinPath
+     * @param filePath Path to look for the target path
+     * @param fragment String with path to sub-object inside the description
+     * @param asMetadata Flag to indicate if other metadata descriptions must be returned as LinMetadataPath.
+     * @param asIntermediate Flag to indicate if WorkflowRun and TaskRun subpaths must be returned as LinIntermediatePath.
+     * @param subpath subpath associated to the target path to find. Used when looking for a parent path
+     * @return Real Path, LinMetadataPath or LinIntermediatePath path associated to the LinPath
      * @throws Exception
      *      IllegalArgumentException if the filepath, filesystem or its LinStore are null.
-     *      FileNotFoundException if the filePath or children are not found in the LinStore.
+     *      FileNotFoundException if the filePath, subpath and fragment is not found.
      */
-    protected static Path findTarget(LinFileSystem fs, String filePath, boolean resultsAsPath, String[] children = []) throws Exception {
+    protected static Path findTarget(LinFileSystem fs, String filePath, String fragment, boolean asMetadata, boolean asIntermediate) throws Exception {
         if( !fs )
             throw new IllegalArgumentException("Cannot get target path for a relative lineage path")
         if( filePath.isEmpty() || filePath == SEPARATOR )
@@ -171,37 +196,68 @@ class LinPath implements Path, LogicalDataPath {
         final store = fs.getStore()
         if( !store )
             throw new Exception("Lineage store not found - Check Nextflow configuration")
+        findTarget0(fs, store, filePath, fragment, asMetadata, asIntermediate, [])
+    }
+    
+    private static Path findTarget0(LinFileSystem fs, LinStore store, String filePath, String fragment, boolean asMetadata, boolean asIntermediate, List<String> subpath) {
         final object = store.load(filePath)
         if( object ) {
-            if( object instanceof FileOutput ) {
-                return getTargetPathFromOutput(object, children)
-            }
-            if( resultsAsPath ) {
-                return getMetadataAsTargetPath(object, fs, filePath, children)
-            }
+            return getTargetPathFromObject(object, fs, filePath, fragment, asMetadata, asIntermediate, subpath)
         } else {
-            // If there isn't metadata check the parent to check if it is a subfolder of a task/workflow output
-            final currentPath = Path.of(filePath)
-            final parent = Path.of(filePath).getParent()
-            if( parent ) {
-                ArrayList<String> newChildren = new ArrayList<String>()
-                newChildren.add(currentPath.getFileName().toString())
-                newChildren.addAll(children)
-                //resultsAsPath set to false because parent paths are only inspected for DataOutputs
-                return findTarget(fs, parent.toString(), false, newChildren as String[])
+            if( fragment ) {
+                // If object doesn't exit, it's not possible to get fragment.
+                throw new FileNotFoundException("Target path '$filePath#$fragment' does not exist")
             }
+            return findTargetFromParent(fs, store, filePath, asIntermediate, subpath)
         }
-        throw new FileNotFoundException("Target path '$filePath' does not exist")
     }
 
-    protected static Path getMetadataAsTargetPath(LinSerializable results, LinFileSystem fs, String filePath, String[] children) {
+    private static Path findTargetFromParent(LinFileSystem fs, LinStore store, String filePath, boolean asIntermediate, List<String> subpath) {
+        final currentPath = Path.of(filePath)
+        final parent = Path.of(filePath).getParent()
+        if( !parent ) {
+            throw new FileNotFoundException("Target path '$filePath/${subpath.join('/')} does not exist")
+        }
+        ArrayList<String> newChildren = new ArrayList<String>()
+        newChildren.add(currentPath.getFileName().toString())
+        newChildren.addAll(subpath)
+        //As Metadata set as false because parent path only inspected for FileOutput or intermediate.
+        return findTarget0(fs, store, parent.toString(), null, false, asIntermediate, newChildren)
+    }
+
+    private static Path getTargetPathFromObject(LinSerializable object, LinFileSystem fs, String filePath, String fragment, boolean asMetadataPath, boolean asIntermediatePath,List<String> subpath) {
+        // It's not possible to get a target path with both fragment and subpath
+        if( fragment && subpath ) {
+            throw new FileNotFoundException("Unable to get a target path for '$filePath' with fragments and subpath")
+        }
+        // If metadata flag is active and looks for a fragment returns the metadata despite the type of object
+        if( asMetadataPath && fragment ){
+           return getMetadataAsTargetPath(object, fs, filePath, fragment)
+        }
+        // Return real files when FileOutput sub-path
+        if( object instanceof FileOutput ) {
+            return getTargetPathFromOutput(object, subpath)
+        }
+        // Intermediate run case
+        if( asIntermediatePath && (object instanceof WorkflowRun || object instanceof TaskRun) ) {
+            return new LinIntermediatePath(fs, "$filePath/${subpath.join('/')}")
+        }
+
+        // It is not possible to get a metadata path with subpath. For other cases return metadata path if activated or throw exception
+        if( asMetadataPath && !subpath)
+            return getMetadataAsTargetPath(object, fs, filePath, fragment)
+        else
+            throw new FileNotFoundException("Target path '${filePath}/${subpath ? '/' + subpath.join('/') : ''}${fragment ? '#' + fragment : ''}' does not exist")
+    }
+
+    protected static Path getMetadataAsTargetPath(LinSerializable results, LinFileSystem fs, String filePath, String fragment) {
         if( !results ) {
             throw new FileNotFoundException("Target path '$filePath' does not exist")
         }
-        if( children && children.size() > 0 ) {
-            return getSubObjectAsPath(fs, filePath, results, children)
+        if( fragment ) {
+            return getSubObjectAsPath(fs, filePath, results, fragment)
         } else {
-            return generateLinMetadataPath(fs, filePath, results, children)
+            return generateLinMetadataPath(fs, filePath, results, fragment)
         }
     }
 
@@ -215,32 +271,35 @@ class LinPath implements Path, LogicalDataPath {
      * @param children Array of string in indicating the properties to navigate to get the sub-object.
      * @return LinMetadataPath or null in it does not exist
      */
-    static LinMetadataPath getSubObjectAsPath(LinFileSystem fs, String key, LinSerializable object, String[] children) {
-        if( isSearchingOutputs(object, children) ) {
+    static LinMetadataPath getSubObjectAsPath(LinFileSystem fs, String key, LinSerializable object, String fragment) {
+        if( isSearchingOutputs(object, fragment) ) {
             // When asking for a Workflow or task output retrieve the outputs description
             final outputs = fs.store.load("${key}#output")
             if( !outputs ) {
                 throw new FileNotFoundException("Target path '$key#output' does not exist")
             }
-            return generateLinMetadataPath(fs, key, outputs, children)
+            return generateLinMetadataPath(fs, key, outputs, fragment)
         } else {
-            return generateLinMetadataPath(fs, key, object, children)
+            return generateLinMetadataPath(fs, key, object, fragment)
         }
     }
 
-    private static LinMetadataPath generateLinMetadataPath(LinFileSystem fs, String key, Object object, String[] children) {
+    private static LinMetadataPath generateLinMetadataPath(LinFileSystem fs, String key, Object object, String fragment) {
         def creationTime = toFileTime(navigate(object, 'createdAt') as OffsetDateTime ?: OffsetDateTime.now())
-        final output = children ? navigate(object, children.join('.')) : object
+        final output = fragment ? navigate(object, fragment) : object
         if( !output ) {
-            throw new FileNotFoundException("Target path '$key#${children.join('.')}' does not exist")
+            throw new FileNotFoundException("Target path '$key#${fragment}' does not exist")
         }
-        return new LinMetadataPath(encodeSearchOutputs(output, true), creationTime, fs, key, children)
+        return new LinMetadataPath(encodeSearchOutputs(output, true), creationTime, fs, key, fragment)
     }
 
-    private static Path getTargetPathFromOutput(FileOutput object, String[] children) {
+    private static Path getTargetPathFromOutput(FileOutput object, List<String> children) {
         final lidObject = object as FileOutput
+        // verify checksum validation
+        final violation = validateDataOutput(lidObject)
+        if( violation )
+            log.warn1(violation)
         // return the real path stored in the metadata
-        validateDataOutput(lidObject)
         def realPath = FileHelper.toCanonicalPath(lidObject.path as String)
         if( children && children.size() > 0 )
             realPath = realPath.resolve(children.join(SEPARATOR))
@@ -459,17 +518,27 @@ class LinPath implements Path, LogicalDataPath {
      * @throws FileNotFoundException if the record does not exist or its type is not a FileOutput.
      */
     protected Path getTargetPath() {
-        return findTarget(fileSystem, filePath, false, parseChildrenFromFragment(fragment))
+        return findTarget(fileSystem, filePath, fragment, false, false)
+    }
+
+    /**
+     * Get the path associated with a FileOutput record or an intermediate subpath.
+     *
+     * @return Path associated with a FileOutput record or a LinIntermediatePath if LinPath points to a workflow and task run subpath.
+     * @throws FileNotFoundException if the record does not exist or its type is not a FileOutput or a intermediate directory
+     */
+    protected Path getTargetOrIntermediatePath() {
+        return findTarget(fileSystem, filePath, fragment, false, true)
     }
 
     /**
      * Get the path associated with a lineage record.
      *
-     * @return Path associated with a FileOutput record, or LinMetadataFile with the lineage record for other types.
+     * @return Path associated with a FileOutput record or a LinMetadataFile with the lineage record for other types, or a intermediate directory
      * @throws FileNotFoundException if the record does not exist
      */
     protected Path getTargetOrMetadataPath() {
-        return findTarget(fileSystem, filePath, true, parseChildrenFromFragment(fragment))
+        return findTarget(fileSystem, filePath, fragment,true, false)
     }
 
     @Override
@@ -520,6 +589,38 @@ class LinPath implements Path, LogicalDataPath {
     String toString() {
         return "$filePath${query ? '?' + query : ''}${fragment ? '#' + fragment : ''}".toString()
     }
+    /**
+     * Validates the integrity of the LinPath. If there is a problem with the validation an exception is thrown.
+     * To validate just try to get the find target target path. It checks if lid exists, it is a FileOutput,
+     * the target path exists and the checksum is the same as the stored in the metadata.
+     */
+    FileCheck validate() throws Exception{
+        final obj = fileSystem.store.load(filePath)
+        if( !obj )
+            return new FileCheck("File cannot be found")
+        if( obj instanceof FileOutput ) {
+            final res = validateDataOutput(obj as FileOutput)
+            return new FileCheck(res, obj)
+        }
+        return new FileCheck("Unexpected lineage object type: ${obj.getClass().getName()}")
+    }
 
+    @EqualsAndHashCode
+    static class FileCheck {
+        final String error
+        final FileOutput file
+
+        FileCheck(String error, FileOutput out=null) {
+            this.error = error
+            this.file = out
+        }
+
+        /**
+         * Implements groovy truth
+         */
+        boolean asBoolean() {
+            return error==null && file!=null
+        }
+    }
 }
 

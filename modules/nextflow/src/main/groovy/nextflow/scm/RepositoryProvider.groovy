@@ -316,7 +316,6 @@ abstract class RepositoryProvider {
         return bytes ? new String(bytes) : null
     }
 
-
     /**
      * Validate the repository for the specified file.
      * It tries to read the content of the specified file throwing an {@link AbortOperationException} if it does not exist
