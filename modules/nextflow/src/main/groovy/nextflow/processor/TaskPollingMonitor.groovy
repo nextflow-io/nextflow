@@ -198,18 +198,12 @@ class TaskPollingMonitor implements TaskMonitor {
      *      by the polling monitor
      */
     protected boolean canSubmit(TaskHandler handler) {
-        // Task array are added in the running queue one by one, but to submit we need to check if there is capacity for all children.(#5920)
-        int slots = getConsumedSlots(handler)
-        if( capacity > 0 && slots > capacity ) {
-            //Waning because this condition could make a workflow running until timeout.
-            log.warn1("Submission of task array ${handler.task.name} is exceeding the executor capacity (requested: $slots, capacity: $capacity)")
+        int slots = handler.getForksCount()
+        if( capacity > 0 && slots > capacity )
+            throw new IllegalArgumentException("Job array ${handler.task.name} exceeds the queue size (array size: $slots, queue size: $capacity)")
+        if( capacity > 0 && runningQueue.size() + slots > capacity )
             return false
-        }
-        (capacity>0 ? runningQueue.size() + slots <= capacity : true) && handler.canForkProcess() && handler.isReady()
-    }
-
-    protected static int getConsumedSlots(TaskHandler handler){
-        handler.task instanceof TaskArrayRun ? (handler.task as TaskArrayRun).getArraySize() : 1
+        return handler.canForkProcess() && handler.isReady()
     }
 
     /**
