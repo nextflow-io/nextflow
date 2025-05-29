@@ -20,7 +20,6 @@ runs:
         fetch-depth: 0
         path: target-branch
 
-
     - name: Setup Java 
       uses: actions/setup-java@v4
       with:
@@ -48,7 +47,7 @@ runs:
       uses: aws-actions/vulnerability-scan-github-action-for-amazon-inspector@5dc8a4bafed85c4c3d7070b4a7ada5b9d94041e3 #v1.2.1
       with:
         artifact_type: "repository"
-        artifact_path: './target-branch'
+        artifact_path: ${{ inputs.branch != '' && './target-branch' || '.' }}
         display_vulnerability_findings: "enabled"
         critical_threshold: 1
         high_threshold: 1
