@@ -309,7 +309,7 @@ abstract class RepositoryProvider {
      * @param path The relative path of a file stored in the repository
      * @return The file content a
      */
-    abstract protected byte[] readBytes( String path )
+    abstract byte[] readBytes( String path )
 
     String readText( String path ) {
         def bytes = readBytes(path)
