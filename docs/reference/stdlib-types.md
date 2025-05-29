@@ -938,4 +938,6 @@ The following methods are available for a VersionNumber:
   }
   ```
 
+: Multiple constraints can be specified as a comma-separated list, e.g. `>=23.10, <=24.10`.
+
 : Alternatively, the version can be postfixed with `+`, which is similar to `==` but also allows the last version part to be greater. For example, `23.10.1+` is satisfied by `23.10.1` and `23.10.2`, but not `23.11.x` or `23.09.x`. Additionally, `23.10.+` is equivalent to `23.10.0+`. This operator is a useful way to enforce a specific version while allowing for newer patch releases.
