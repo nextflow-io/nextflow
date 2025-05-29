@@ -2,8 +2,6 @@ name: Security SCA Scan Cron weekly
 # This workflow runs a security scan on the specified branches of the Nextflow repository once a week
 
 on:
-  pull_request:
-
   schedule:
     - cron: '0 0 * * 0'
 
