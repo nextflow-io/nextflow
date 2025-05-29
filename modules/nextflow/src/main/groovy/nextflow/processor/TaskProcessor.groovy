@@ -72,6 +72,7 @@ import nextflow.executor.CachedTaskHandler
 import nextflow.executor.Executor
 import nextflow.executor.StoredTaskHandler
 import nextflow.extension.CH
+import nextflow.extension.ChannelEx
 import nextflow.extension.DataflowHelper
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
@@ -823,6 +824,12 @@ class TaskProcessor {
             if( exists ) {
                 tries++
                 continue
+            }
+
+            if( session.dryRun ) {
+                log.info "[DRY RUN] execute task > ${safeTaskName(task)} [${hash}]"
+                ChannelEx.update(state) { StateObj it -> it.incCompleted() }
+                break
             }
 
             final lock = lockManager.acquire(hash)
