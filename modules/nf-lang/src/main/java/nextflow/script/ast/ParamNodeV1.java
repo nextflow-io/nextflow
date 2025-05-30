@@ -15,31 +15,20 @@
  */
 package nextflow.script.ast;
 
-import org.codehaus.groovy.ast.ClassNode;
-import org.codehaus.groovy.ast.GroovyCodeVisitor;
+import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.expr.Expression;
 
-public interface ScriptVisitor extends GroovyCodeVisitor {
+/**
+ * A legacy parameter declaration.
+ *
+ * @author Ben Sherman <bentshermann@gmail.com>
+ */
+public class ParamNodeV1 extends ASTNode {
+    public final Expression target;
+    public Expression value;
 
-    void visit(ScriptNode node);
-
-    void visitFeatureFlag(FeatureFlagNode node);
-
-    void visitInclude(IncludeNode node);
-
-    void visitParams(ParamBlockNode node);
-
-    void visitParamV1(ParamNodeV1 node);
-
-    void visitWorkflow(WorkflowNode node);
-
-    void visitProcess(ProcessNode node);
-
-    void visitFunction(FunctionNode node);
-
-    void visitEnum(ClassNode node);
-
-    void visitOutputs(OutputBlockNode node);
-
-    void visitOutput(OutputNode node);
-
+    public ParamNodeV1(Expression target, Expression value) {
+        this.target = target;
+        this.value = value;
+    }
 }
