@@ -64,7 +64,13 @@ class AzFusionEnv implements FusionEnv {
         // If pool has a managed identity, ONLY add the MSI client ID
         // DO NOT add any SAS token or reference cfg.storage().sasToken
         if (managedIdentityId) {
-            result.FUSION_AZ_MSI_CLIENT_ID = managedIdentityId
+            // Fusion will try and pick up a managed identity that is available.
+            // We recommend explicitly setting the config item to the managed ID so you know which one is being used.
+            // However if set to 'true' it will use whichever is available.
+            // This can be helpful if the pools have different managed identities.
+            if (managedIdentityId != 'true') {
+                result.FUSION_AZ_MSI_CLIENT_ID = managedIdentityId
+            }
             // No SAS token is added or generated
             return result
         }

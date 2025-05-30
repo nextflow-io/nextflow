@@ -243,4 +243,26 @@ class AzFusionEnvTest extends Specification {
         env.size() == 2  // Only account name and managed identity
     }
 
+    def 'should not provide explicit managed identity when pool identity is set to true'() {
+        given:
+        def NAME = 'myaccount'
+        Global.session = Mock(Session) {
+            getConfig() >> [azure: [
+                storage: [accountName: NAME],
+                batch: [poolIdentityClientId: 'true']
+            ]]
+        }
+
+        when:
+        def config = Mock(FusionConfig)
+        def fusionEnv = new AzFusionEnv()
+        def env = fusionEnv.getEnvironment('az', config)
+
+        then:
+        env.AZURE_STORAGE_ACCOUNT == NAME
+        !env.FUSION_AZ_MSI_CLIENT_ID
+        !env.AZURE_STORAGE_SAS_TOKEN  // SAS token should NOT be present
+        env.size() == 1  // Only account name
+    }
+
 }
