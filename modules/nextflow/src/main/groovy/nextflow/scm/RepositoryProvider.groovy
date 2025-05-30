@@ -77,18 +77,21 @@ abstract class RepositoryProvider {
      */
     protected String revision
 
+    protected RetryConfig retryConfig
+
     RepositoryProvider setCredentials(String userName, String password) {
         config.user = userName
         config.password = password
         return this
     }
 
-    String getRevision() {
-        return this.revision
-    }
-
     RepositoryProvider setRevision(String revision) {
         this.revision = revision
+        return this
+    }
+
+    RepositoryProvider setRetryConfig(RetryConfig retryConfig) {
+        this.retryConfig = retryConfig
         return this
     }
 
@@ -98,6 +101,10 @@ abstract class RepositoryProvider {
 
     ProviderConfig getConfig() {
         return this.config
+    }
+
+    String getRevision() {
+        return this.revision
     }
 
     boolean hasCredentials() {
@@ -363,7 +370,6 @@ abstract class RepositoryProvider {
      * @return The {@link dev.failsafe.RetryPolicy} instance
      */
     protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond) {
-        final cfg = new RetryConfig()
         final listener = new EventListener<ExecutionAttemptedEvent<?>>() {
             @Override
             void accept(ExecutionAttemptedEvent<?> event) throws Throwable {
@@ -372,9 +378,9 @@ abstract class RepositoryProvider {
         }
         return RetryPolicy.<T>builder()
             .handleIf(cond)
-            .withBackoff(cfg.delay.toMillis(), cfg.maxDelay.toMillis(), ChronoUnit.MILLIS)
-            .withMaxAttempts(cfg.maxAttempts)
-            .withJitter(cfg.jitter)
+            .withBackoff(retryConfig.delay.toMillis(), retryConfig.maxDelay.toMillis(), ChronoUnit.MILLIS)
+            .withMaxAttempts(retryConfig.maxAttempts)
+            .withJitter(retryConfig.jitter)
             .onRetry(listener as EventListener)
             .build()
     }

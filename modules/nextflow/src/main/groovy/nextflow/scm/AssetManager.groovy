@@ -34,6 +34,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.exception.AmbiguousPipelineNameException
 import nextflow.script.ScriptFile
 import nextflow.util.IniFile
+import nextflow.util.RetryConfig
 import org.eclipse.jgit.api.CreateBranchCommand
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.ListBranchCommand
@@ -358,6 +359,7 @@ class AssetManager {
             throw new AbortOperationException("Unknown repository configuration provider: $providerName")
 
         return RepositoryFactory.newRepositoryProvider(config, project)
+            .setRetryConfig(getRetryConfig())
     }
 
     AssetManager setLocalPath(File path) {
@@ -438,35 +440,43 @@ class AssetManager {
 
     @Memoized
     Manifest getManifest() {
-        getManifest0()
+        try {
+            def config = getConfig0()
+            def manifestOpts = config.manifest as Map ?: Collections.emptyMap()
+            return new Manifest(manifestOpts)
+        }
+        catch( Exception e ) {
+            log.warn "Cannot read project config -- Cause: ${e.message ?: e}"
+        }
     }
 
-    protected Manifest getManifest0() {
-        String text = null
-        ConfigObject result = null
+    @Memoized
+    RetryConfig getRetryConfig() {
         try {
-            text = localPath.exists() ? new File(localPath, MANIFEST_FILE_NAME).text : provider.readText(MANIFEST_FILE_NAME)
+            def config = getConfig0()
+            def retryOpts = config.navigate('nextflow.retryPolicy') as Map ?: Collections.emptyMap()
+            return new RetryConfig(retryOpts)
+        }
+        catch( Exception e ) {
+            log.warn "Cannot read project config -- Cause: ${e.message ?: e}"
+        }
+    }
+
+    protected ConfigObject getConfig0() {
+        String text = null
+        try {
+            text = localPath.exists()
+                ? new File(localPath, MANIFEST_FILE_NAME).text
+                : provider.readText(MANIFEST_FILE_NAME)
         }
         catch( FileNotFoundException e ) {
-            log.debug "Project manifest does not exist: ${e.message}"
-        }
-        catch( Exception e ) {
-            log.warn "Cannot read project manifest -- Cause: ${e.message ?: e}", e
+            log.debug "Project configuration does not exist: ${e.message}"
         }
 
-        if( text ) try {
-            def config = ConfigParserFactory.create().setIgnoreIncludes(true).setStrict(false).parse(text)
-            result = (ConfigObject)config.manifest
-        }
-        catch( Exception e ) {
-            log.warn "Cannot read project manifest -- Cause:  ${e.message ?: e}"
-        }
+        if( !text )
+            return new ConfigObject()
 
-        // by default return an empty object
-        if( result == null )
-            result = new ConfigObject()
-
-        return new Manifest(result)
+        return ConfigParserFactory.create().setIgnoreIncludes(true).setStrict(false).parse(text)
     }
 
     Path getConfigFile() {
