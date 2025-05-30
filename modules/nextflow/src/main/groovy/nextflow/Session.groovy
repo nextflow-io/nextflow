@@ -37,6 +37,7 @@ import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
 import nextflow.conda.CondaConfig
 import nextflow.config.Manifest
+import nextflow.pixi.PixiConfig
 import nextflow.container.ContainerConfig
 import nextflow.dag.DAG
 import nextflow.exception.AbortOperationException
@@ -1192,6 +1193,12 @@ class Session implements ISession {
     SpackConfig getSpackConfig() {
         final cfg = config.spack as Map ?: Collections.emptyMap()
         return new SpackConfig(cfg, getSystemEnv())
+    }
+
+    @Memoized
+    PixiConfig getPixiConfig() {
+        final cfg = config.pixi as Map ?: Collections.emptyMap()
+        return new PixiConfig(cfg, getSystemEnv())
     }
 
     /**

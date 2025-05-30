@@ -1702,6 +1702,35 @@ class ConfigBuilderTest extends Specification {
 
     }
 
+    def 'should run with pixi' () {
+
+        when:
+        def config = new ConfigBuilder().setCmdRun(new CmdRun(withPixi: '/some/path/pixi.toml')).build()
+        then:
+        config.process.pixi == '/some/path/pixi.toml'
+
+    }
+
+    def 'should disable pixi env' () {
+        given:
+        def file = Files.createTempFile('test','config')
+        file.deleteOnExit()
+        file.text =
+                '''
+                pixi {
+                    enabled = true
+                }
+                '''
+
+        when:
+        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
+        def run = new CmdRun(withoutPixi: true)
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        then:
+        !config.pixi.enabled
+        !config.process.pixi
+    }
+
     def 'should warn about missing attribute' () {
 
         given:

@@ -335,6 +335,7 @@ class BashWrapperBuilder {
         binding.before_script = getBeforeScriptSnippet()
         binding.conda_activate = getCondaActivateSnippet()
         binding.spack_activate = getSpackActivateSnippet()
+        binding.pixi_activate = getPixiActivateSnippet()
 
         /*
          * add the task environment
@@ -551,6 +552,17 @@ class BashWrapperBuilder {
         def result = "# spack environment\n"
         result += 'spack env activate -d '
         result += "${Escape.path(spackEnv)}\n"
+        return result
+    }
+
+    private String getPixiActivateSnippet() {
+        if( !pixiEnv )
+            return null
+        def result = "# pixi environment\n"
+        result += 'eval "$('
+        result += 'pixi shell-hook --manifest-path '
+        result += "${Escape.path(pixiEnv)}/pixi.toml"
+        result += ')"\n'
         return result
     }
 

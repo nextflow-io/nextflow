@@ -2245,6 +2245,11 @@ class TaskProcessor {
             }
         }
 
+        final pixi = task.getPixiEnv()
+        if( pixi ) {
+            keys.add(pixi)
+        }
+
         if( session.stubRun && task.config.getStubBlock() ) {
             keys.add('stub-run')
         }

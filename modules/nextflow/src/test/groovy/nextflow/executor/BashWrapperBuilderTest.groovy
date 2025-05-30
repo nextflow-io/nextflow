@@ -829,6 +829,24 @@ class BashWrapperBuilderTest extends Specification {
 
     }
 
+    def 'should create pixi activate snippet' () {
+        when:
+        def binding = newBashWrapperBuilder().makeBinding()
+        then:
+        binding.pixi_activate == null
+        binding.containsKey('pixi_activate')
+
+        when:
+        def PIXI = Paths.get('/some/pixi/env/foo')
+        binding = newBashWrapperBuilder(pixiEnv: PIXI).makeBinding()
+        then:
+        binding.pixi_activate == '''\
+                # pixi environment
+                eval "$(pixi shell-hook --manifest-path /some/pixi/env/foo/pixi.toml)"
+                '''.stripIndent()
+
+    }
+
     def 'should cleanup scratch dir' () {
         when:
         def binding = newBashWrapperBuilder().makeBinding()

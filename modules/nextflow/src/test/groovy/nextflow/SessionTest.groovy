@@ -620,4 +620,27 @@ class SessionTest extends Specification {
         true  | true
 
     }
+
+    def 'test getPixiConfig'() {
+        given:
+        def session = new Session()
+        
+        when:
+        session.config = [pixi: [enabled: true]]
+        then:
+        session.getPixiConfig() != null
+        session.getPixiConfig().isEnabled()
+
+        when:
+        session.config = [pixi: [enabled: false]]
+        then:
+        session.getPixiConfig() != null
+        !session.getPixiConfig().isEnabled()
+
+        when:
+        session.config = [:]
+        then:
+        session.getPixiConfig() != null
+        !session.getPixiConfig().isEnabled()
+    }
 }
