@@ -80,7 +80,6 @@ class ExecutorFactory {
                 .collect { it.class }
             // reverse order as init overwrites previous executors
                 .reverse() as List<Class<Executor>>
-            log.info( "Found ${executors.size()} executor plugins: ${executors.collect { it.simpleName }.join(', ')}")
             log.debug "Extension executors providers=${executors.simpleName}"
             init0(executors)
         }
