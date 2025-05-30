@@ -67,7 +67,6 @@ config
 executor
 cache-and-resume
 reports
-plugins
 ```
 
 ```{toctree}
@@ -147,13 +146,22 @@ migrations/index
 
 ```{toctree}
 :hidden:
+:caption: Plugins
+:maxdepth: 1
+
+plugins/plugins
+plugins/using-plugins
+plugins/developing-plugins
+```
+
+```{toctree}
+:hidden:
 :caption: Contributing
 :maxdepth: 1
 
 developer/index
 developer/diagram
 developer/packages
-developer/plugins
 ```
 
 ```{toctree}
@@ -162,6 +170,8 @@ developer/plugins
 :maxdepth: 1
 
 data-lineage
+gradle-plugin
+migrating-plugin-registry
 updating-spot-retries
 metrics
 flux
