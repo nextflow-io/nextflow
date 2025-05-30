@@ -489,6 +489,26 @@ $NodeDeallocationOption = taskcompletion;
 
 Custom formulas can be provided via the `azure.batch.pools.<POOL_NAME>.scaleFormula` configuration option.
 
+#### Task authentication
+
+By default, Nextflow creates SAS tokens for specific containers and passes them to tasks to enable file operations with Azure Storage.
+
+When using the Fusion file system, you can authenticate to Azure Storage using a managed identity. This requires:
+
+1. Manually attaching a user-assigned managed identity to the node pool
+2. Assigning the Azure Storage Blob Data Contributor role to this identity for your storage account
+3. Configuring Nextflow to use this identity via the `azure.managedIdentity.clientId` setting:
+
+```groovy
+azure {
+    managedIdentity {
+        clientId = '<MANAGED_IDENTITY_CLIENT_ID>'
+    }
+}
+```
+
+Each task will now authenticate as this managed identity and download and upload files to Azure Storage using these credentials.
+
 #### Task Packing
 
 Each Azure Batch node is allocated a specific number of task slots, determining how many tasks can run concurrently on that node. The number of slots is calculated based on the virtual machine's available CPUs. Nextflow intelligently assigns task slots to each process based on the proportion of total node resources requested through the `cpus`, `memory`, and `disk` directives.
