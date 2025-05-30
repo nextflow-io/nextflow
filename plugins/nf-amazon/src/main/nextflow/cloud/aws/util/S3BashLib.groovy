@@ -19,7 +19,7 @@ package nextflow.cloud.aws.util
 import groovy.transform.CompileStatic
 import nextflow.Global
 import nextflow.Session
-import nextflow.cloud.aws.v2.batch.AwsOptions
+import nextflow.cloud.aws.batch.AwsOptions
 import nextflow.executor.BashFunLib
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 

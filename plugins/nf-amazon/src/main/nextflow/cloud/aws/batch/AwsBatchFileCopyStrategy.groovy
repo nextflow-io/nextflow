@@ -95,8 +95,8 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
     String stageInputFile( Path path, String targetName ) {
         // third param should not be escaped, because it's used in the grep match rule
         def stage_cmd = opts.maxTransferAttempts > 1 && !opts.retryMode
-                ? "downloads+=(\"nxf_cp_retry nxf_s3_download ${Escape.uriPath(path)} ${Escape.path(targetName)}\")"
-                : "downloads+=(\"nxf_s3_download ${Escape.uriPath(path)} ${Escape.path(targetName)}\")"
+                ? "downloads+=(\"nxf_cp_retry nxf_s3_download s3:/${Escape.path(path)} ${Escape.path(targetName)}\")"
+                : "downloads+=(\"nxf_s3_download s3:/${Escape.path(path)} ${Escape.path(targetName)}\")"
         return stage_cmd
     }
 
@@ -121,7 +121,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
             uploads=()
             IFS=\$'\\n'
             for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
-                uploads+=("nxf_s3_upload '\$name' ${Escape.uriPath(targetDir)}")
+                uploads+=("nxf_s3_upload '\$name' s3:/${Escape.path(targetDir)}")
             done
             unset IFS
             nxf_parallel "\${uploads[@]}"
@@ -133,7 +133,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String touchFile( Path file ) {
-        "echo start | nxf_s3_upload - ${Escape.uriPath(file)}"
+        "echo start | nxf_s3_upload - s3:/${Escape.path(file)}"
     }
 
     /**
@@ -149,18 +149,18 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String copyFile( String name, Path target ) {
-        "nxf_s3_upload ${Escape.path(name)} ${Escape.uriPath(target.getParent())}"
+        "nxf_s3_upload ${Escape.path(name)} s3:/${Escape.path(target.getParent())}"
     }
 
     static String uploadCmd( String source, Path target ) {
-        "nxf_s3_upload ${Escape.path(source)} ${Escape.uriPath(target)}"
+        "nxf_s3_upload ${Escape.path(source)} s3:/${Escape.path(target)}"
     }
 
     /**
      * {@inheritDoc}
      */
     String exitFile( Path path ) {
-        "| nxf_s3_upload - ${Escape.uriPath(path)} || true"
+        "| nxf_s3_upload - s3:/${Escape.path(path)} || true"
     }
 
     /**

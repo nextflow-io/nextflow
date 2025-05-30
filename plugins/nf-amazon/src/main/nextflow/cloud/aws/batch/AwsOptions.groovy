@@ -25,7 +25,7 @@ import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.cloud.CloudTransferOptions
-import nextflow.cloud.aws.v2.config.AwsConfig
+import nextflow.cloud.aws.config.AwsConfig
 import nextflow.util.Duration
 import nextflow.util.TestOnly
 /**

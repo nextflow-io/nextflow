@@ -17,13 +17,11 @@
 
 package nextflow.cloud.aws.nio.util;
 
-import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.util.List;
 
 import nextflow.cloud.aws.nio.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
-import software.amazon.awssdk.services.s3.model.Listing;
 import nextflow.cloud.aws.nio.S3Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +33,7 @@ public class S3ObjectSummaryLookup {
     /**
      * Get the {@link software.amazon.awssdk.services.s3.model.S3Object} that represent this Path or its first child if the path does not exist
      * @param s3Path {@link S3Path}
-     * @return {@link software.amazon.awssdk.services.s3.model.}
+     * @return {@link software.amazon.awssdk.services.s3.model.S3Object}
      * @throws java.nio.file.NoSuchFileException if not found the path and any child
      */
     public S3Object lookup(S3Path s3Path) throws NoSuchFileException {
@@ -58,12 +56,13 @@ public class S3ObjectSummaryLookup {
             if( meta == null )
                 throw new NoSuchFileException("s3://" + s3Path.getBucket());
 
-            summary = new S3ObjectSummary();
-            summary.setBucketName(s3Path.getBucket());
-            summary.setETag(meta.getETag());
-            summary.setKey(s3Path.getKey());
-            summary.setLastModified(meta.getLastModified());
-            summary.setSize(meta.getContentLength());
+            summary = S3Object.builder()
+                    .eTag(meta.eTag())
+                    .key(s3Path.getKey())
+                    .lastModified(meta.lastModified())
+                    .size(meta.contentLength())
+                    .build();
+
             // TODO summary.setOwner(?);
             // TODO summary.setStorageClass(?);
             return summary;
@@ -96,7 +95,7 @@ public class S3ObjectSummaryLookup {
             }
 
             if( listing.isTruncated() )
-                marker = listing.getNextMarker();
+                marker = listing.nextMarker();
             else
                 break;
         }
@@ -123,55 +122,6 @@ public class S3ObjectSummaryLookup {
         S3Client client = s3Path.getFileSystem().getClient();
         try {
             return client.getObjectMetadata(s3Path.getBucket(), s3Path.getKey());
-        }
-        catch (S3Exception e){
-            if (e.statusCode() != 404){
-                throw e;
-            }
-            return null;
-        }
-    }
-
-    /**
-     * get S3Object represented by this S3Path try to access with or without end slash '/'
-     * @param s3Path S3Path
-     * @return S3Object or null if it does not exist
-     */
-    @Deprecated
-    private S3Object getS3Object(S3Path s3Path){
-
-        S3Client client = s3Path.getFileSystem()
-                .getClient();
-
-        S3Object object = getS3Object(s3Path.getBucket(), s3Path.getKey(), client);
-
-        if (object != null) {
-            return object;
-        }
-        else{
-            return getS3Object(s3Path.getBucket(), s3Path.getKey() + "/", client);
-        }
-    }
-
-    /**
-     * get s3Object with S3Object#getObjectContent closed
-     * @param bucket String bucket
-     * @param key String key
-     * @param client S3Client client
-     * @return S3Object
-     */
-    private S3Object getS3Object(String bucket, String key, S3Client client){
-        try {
-            S3Object object = client.getObject(bucket, key);
-            if (object.objectContent() != null){
-                try {
-                    object.close();
-                }
-                catch (IOException e ) {
-                    log.debug("Error while closing S3Object for bucket: `{}` and key: `{}` -- Cause: {}",bucket, key, e.getMessage());
-                }
-            }
-            return object;
         }
         catch (S3Exception e){
             if (e.statusCode() != 404){
