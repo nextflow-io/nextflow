@@ -30,8 +30,9 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributes
 
-import com.amazonaws.services.s3.AmazonS3
-import com.amazonaws.services.s3.model.Tag
+import software.amazon.awssdk.services.s3.S3Client
+import software.amazon.awssdk.services.s3.model.S3Exception
+import software.amazon.awssdk.services.s3.model.Tag
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
@@ -57,9 +58,9 @@ import spock.lang.Unroll
 class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
     @Shared
-    private AmazonS3 s3Client0
+    static S3Client s3Client0
 
-    AmazonS3 getS3Client() { s3Client0 }
+    S3Client getS3Client() { s3Client0 }
 
     static private Map config0() {
         def accessKey = System.getenv('AWS_S3FS_ACCESS_KEY')
