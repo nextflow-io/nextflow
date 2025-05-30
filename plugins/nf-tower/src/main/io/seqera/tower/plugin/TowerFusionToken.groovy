@@ -82,8 +82,11 @@ class TowerFusionToken implements FusionToken {
     // Platform access token to use for requests
     private String accessToken
 
-    // Platform client
-    private TowerClient client
+    // Platform workflowId
+    private String workspaceId
+
+    // Platform workflowId
+    private String workflowId
 
     TowerFusionToken() {
         final config = PlatformHelper.config()
@@ -92,16 +95,10 @@ class TowerFusionToken implements FusionToken {
         if( !endpoint )
             throw new IllegalArgumentException("Missing Seqera Platform endpoint")
         this.accessToken = PlatformHelper.getAccessToken(config, env)
-    }
-
-    protected void validateConfig() {
-        if( !endpoint )
-            throw new IllegalArgumentException("Missing Seqera Platform endpoint")
         if( !accessToken )
             throw new IllegalArgumentException("Missing Seqera Platform access token")
-        client = TowerFactory.client()
-        if( !client )
-            throw new IllegalArgumentException("Seqera Platform client is not enabled")
+        this.workflowId = env.get('TOWER_WORKFLOW_ID')
+        this.workspaceId = PlatformHelper.getWorkspaceId(config, env)
     }
 
     /**
@@ -125,7 +122,6 @@ class TowerFusionToken implements FusionToken {
     }
 
     protected Map<String,String> getEnvironment0(String scheme, FusionConfig config) {
-        validateConfig()
         final product = config.sku()
         final version = config.version()
         final token = getLicenseToken(product, version)
@@ -144,8 +140,8 @@ class TowerFusionToken implements FusionToken {
         final req = new GetLicenseTokenRequest(
             product: product,
             version: version ?: 'unknown',
-            workflowId: client.getWorkflowId(),
-            workspaceId: client.getWorkspaceId()
+            workflowId: workflowId,
+            workspaceId: workspaceId
         )
         final key = '${product}-${version}'
         try {

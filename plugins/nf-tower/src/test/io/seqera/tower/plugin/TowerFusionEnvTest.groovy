@@ -247,23 +247,19 @@ class TowerFusionEnvTest extends Specification {
         SysEnv.pop()
     }
 
-    def 'should get a license token'() {
-        given: 'a TowerFusionEnv provider'
-        Global.session = Mock(Session) {
-            config >> [
-                tower: [
-                    endpoint   : wireMockServer.baseUrl(),
-                    accessToken: 'abc123'
-                ]
-            ]
-        }
+    def 'should get a license token with config'() {
+        given:
+        def config = [
+            endpoint   : wireMockServer.baseUrl(),
+            accessToken: 'abc123',
+            workspaceId: '67890'
+        ]
+        def PRODUCT = 'some-product'
+        def VERSION = 'some-version'
         and:
-        def client = Mock(TowerClient) {
-            getWorkflowId() >> '12345'
-            getWorkspaceId() >> '67890'
-        }
+        Global.session = Mock(Session) {getConfig() >> [ tower: config ] }
         and:
-        def provider = new TowerFusionToken(client: client)
+        def provider = new TowerFusionToken()
 
         and: 'a mock endpoint returning a valid token'
         final now = Instant.now()
@@ -271,7 +267,8 @@ class TowerFusionEnvTest extends Specification {
         wireMockServer.stubFor(
             WireMock.post(urlEqualTo("/license/token/"))
                 .withHeader('Authorization', equalTo('Bearer abc123'))
-                .withRequestBody(matchingJsonPath('$.workflowId', equalTo("12345")))
+                .withRequestBody(matchingJsonPath('$.product', equalTo("some-product")))
+                .withRequestBody(matchingJsonPath('$.version', equalTo("some-version")))
                 .withRequestBody(matchingJsonPath('$.workspaceId', equalTo("67890")))
                 .willReturn(
                     WireMock.aResponse()
@@ -291,14 +288,53 @@ class TowerFusionEnvTest extends Specification {
         wireMockServer.verify(1, WireMock.postRequestedFor(WireMock.urlEqualTo("/license/token/"))
             .withHeader('Authorization', WireMock.equalTo('Bearer abc123')))
 
-        where:
-        PRODUCT        | VERSION
-        'some-product' | 'some-version'
-        'some-product' | null
-        null           | 'some-version'
-        null           | null
     }
 
+    def 'should get a license token with environment'() {
+        given:
+        SysEnv.push([
+            TOWER_WORKFLOW_ID: '12345',
+            TOWER_ACCESS_TOKEN: 'abc123',
+            TOWER_WORKSPACE_ID: '67890',
+            TOWER_API_ENDPOINT: wireMockServer.baseUrl()
+        ])
+        def PRODUCT = 'some-product'
+        def VERSION = 'some-version'
+        and:
+        Global.session = Mock(Session) {getConfig() >> [:] }
+        and:
+        def provider = new TowerFusionToken()
+
+        and: 'a mock endpoint returning a valid token'
+        final now = Instant.now()
+        final expirationDate = GsonHelper.toJson(now.plus(1, ChronoUnit.DAYS))
+        wireMockServer.stubFor(
+            WireMock.post(urlEqualTo("/license/token/"))
+                .withHeader('Authorization', equalTo('Bearer abc123'))
+                .withRequestBody(matchingJsonPath('$.product', equalTo("some-product")))
+                .withRequestBody(matchingJsonPath('$.version', equalTo("some-version")))
+                .withRequestBody(matchingJsonPath('$.workspaceId', equalTo("67890")))
+                .willReturn(
+                    WireMock.aResponse()
+                        .withStatus(200)
+                        .withHeader('Content-Type', 'application/json')
+                        .withBody('{"signedToken":"xyz789", "expiresAt":' + expirationDate + '}')
+                )
+        )
+
+        when: 'a license token is requested'
+        final token = provider.getLicenseToken(PRODUCT, VERSION)
+
+        then: 'the token has the expected value'
+        token == 'xyz789'
+
+        and: 'the request is correct'
+        wireMockServer.verify(1, WireMock.postRequestedFor(WireMock.urlEqualTo("/license/token/"))
+            .withHeader('Authorization', WireMock.equalTo('Bearer abc123')))
+
+        cleanup:
+        SysEnv.pop()
+    }
 
 
     def 'should throw UnauthorizedException if getting a token fails with 401'() {
@@ -312,7 +348,7 @@ class TowerFusionEnvTest extends Specification {
             ]
         }
         and:
-        def provider = new TowerFusionToken(client: Mock(TowerClient))
+        def provider = new TowerFusionToken()
 
         and: 'a mock endpoint returning an error'
         wireMockServer.stubFor(
