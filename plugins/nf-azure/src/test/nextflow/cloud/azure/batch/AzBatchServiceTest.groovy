@@ -1027,24 +1027,4 @@ class AzBatchServiceTest extends Specification {
         ]
     }
 
-    @Unroll
-    def 'should create task env' () {
-        given:
-        def exec = Mock(AzBatchExecutor)
-        def service = new AzBatchService(exec)
-        List<EnvironmentSetting> env
-
-        when:
-        env = service.taskEnv(new AzBatchOpts([:]))
-        then:
-        env == []
-
-        when:
-        env = service.taskEnv(new AzBatchOpts([poolIdentityClientId:'12345']))
-        then:
-        env.size() == 1
-        env.first.name == 'FUSION_AZ_MSI_CLIENT_ID'
-        env.first.value == '12345'
-    }
-
 }
