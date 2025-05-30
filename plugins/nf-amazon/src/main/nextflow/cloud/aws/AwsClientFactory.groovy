@@ -16,20 +16,25 @@
 
 package nextflow.cloud.aws
 
+import nextflow.cloud.aws.nio.util.S3AsyncClientConfiguration
+import nextflow.cloud.aws.nio.util.S3ClientConfiguration
 import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration
 import software.amazon.awssdk.core.exception.SdkClientException
 import software.amazon.awssdk.http.SdkHttpClient
+import software.amazon.awssdk.http.async.SdkAsyncHttpClient
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.regions.providers.InstanceProfileRegionProvider
 import software.amazon.awssdk.services.batch.BatchClient
 import software.amazon.awssdk.services.cloudwatchlogs.CloudWatchLogsClient
 import software.amazon.awssdk.services.ec2.Ec2Client
 import software.amazon.awssdk.services.ecs.EcsClient
+import software.amazon.awssdk.services.s3.S3AsyncClient
 import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.S3Configuration
 import software.amazon.awssdk.services.sts.StsClient
@@ -195,23 +200,54 @@ class AwsClientFactory {
         return CloudWatchLogsClient.builder().region(getRegionObj(region)).credentialsProvider(getCredentialsProvider0()).build()
     }
 
-    S3Client getS3Client(SdkHttpClient httpClient = null, boolean global = false) {
+    S3Client getS3Client(S3ClientConfiguration s3ClientConfig, boolean global = false) {
+        final SdkHttpClient httpClient = s3ClientConfig.getHttpClient()
+        final ClientOverrideConfiguration overrideConfiguration = s3ClientConfig.getClientOverrideConfiguration()
         def builder = S3Client.builder()
+            .crossRegionAccessEnabled(global)
             .credentialsProvider(config.s3Config.anonymous ? AnonymousCredentialsProvider.create() : new S3CredentialsProvider(getCredentialsProvider0()))
             .serviceConfiguration(S3Configuration.builder()
                 .pathStyleAccessEnabled(config.s3Config.pathStyleAccess)
+                .multiRegionEnabled(global)
                 .build())
-
         if (config.s3Config.endpoint) {
             builder.endpointOverride(URI.create(config.s3Config.endpoint))
         } else {
             builder.region(getRegionObj(region))
         }
-
         if (httpClient != null) {
             builder.httpClient(httpClient)
         }
+        if (overrideConfiguration != null) {
+            builder.overrideConfiguration(overrideConfiguration)
+        }
+        return builder.build()
+    }
 
+    S3AsyncClient getS3AsyncClient(S3AsyncClientConfiguration s3ClientConfig, Long uploadChunkSize, boolean global = false) {
+        final SdkAsyncHttpClient httpClient = s3ClientConfig.getHttpClient()
+        final ClientOverrideConfiguration overrideConfiguration = s3ClientConfig.getClientOverrideConfiguration()
+        def builder = S3AsyncClient.builder()
+            .crossRegionAccessEnabled(global)
+            .credentialsProvider(config.s3Config.anonymous ? AnonymousCredentialsProvider.create() : new S3CredentialsProvider(getCredentialsProvider0()))
+            .multipartConfiguration {cfg -> }
+            .serviceConfiguration(S3Configuration.builder()
+                .pathStyleAccessEnabled(config.s3Config.pathStyleAccess)
+                .build())
+        if (uploadChunkSize > 0){
+            builder.multipartConfiguration(cfg -> cfg.minimumPartSizeInBytes(uploadChunkSize))
+        }
+        if (config.s3Config.endpoint) {
+            builder.endpointOverride(URI.create(config.s3Config.endpoint))
+        } else {
+            builder.region(getRegionObj(region))
+        }
+        if (httpClient != null) {
+            builder.httpClient(httpClient)
+        }
+        if (overrideConfiguration != null) {
+            builder.overrideConfiguration(overrideConfiguration)
+        }
         return builder.build()
     }
 

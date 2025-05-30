@@ -33,7 +33,7 @@ import software.amazon.awssdk.services.cloudwatchlogs.model.OutputLogEvent
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
-import nextflow.cloud.aws.v2.AwsClientFactory
+import nextflow.cloud.aws.AwsClientFactory
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 /**

@@ -60,7 +60,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import nextflow.cloud.aws.nio.util.S3ObjectId;
+import nextflow.cloud.aws.nio.util.*;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.model.S3Object;
@@ -70,15 +70,16 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import nextflow.cloud.aws.AwsClientFactory;
 import nextflow.cloud.aws.config.AwsConfig;
-import nextflow.cloud.aws.nio.util.IOUtils;
-import nextflow.cloud.aws.nio.util.S3MultipartOptions;
-import nextflow.cloud.aws.nio.util.S3ObjectSummaryLookup;
 import nextflow.extension.FilesEx;
 import nextflow.file.CopyOptions;
 import nextflow.file.FileHelper;
 import nextflow.file.FileSystemTransferAware;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.model.GetCallerIdentityRequest;
+import software.amazon.awssdk.services.sts.model.StsException;
+
 import static com.google.common.collect.Sets.difference;
 import static java.lang.String.format;
 
@@ -603,14 +604,14 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 						"file is not executable");
 			case READ:
 				if (!hasPermissions(acl, client.getS3AccountOwner(),
-						EnumSet.of(Permission.FullControl, Permission.Read))) {
+						EnumSet.of(Permission.FULL_CONTROL, Permission.READ))) {
 					throw new AccessDeniedException(s3Path.toString(), null,
 							"file is not readable");
 				}
 				break;
 			case WRITE:
 				if (!hasPermissions(acl, client.getS3AccountOwner(),
-						EnumSet.of(Permission.FullControl, Permission.Write))) {
+						EnumSet.of(Permission.FULL_CONTROL, Permission.WRITE))) {
 					throw new AccessDeniedException(s3Path.toString(), null,
 							format("bucket '%s' is not writable",
 									s3Path.getBucket()));
@@ -628,12 +629,12 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
      * @param permissions almost one
      * @return
      */
-	private boolean hasPermissions(Access acl, Owner owner,
+	private boolean hasPermissions(AccessControlPolicy acl, String owner,
 			EnumSet<Permission> permissions) {
 		boolean result = false;
-		for (Grant grant : acl.getGrants()) {
-			if (grant.getGrantee().getIdentifier().equals(owner.getId())
-					&& permissions.contains(grant.getPermission())) {
+		for (Grant grant : acl.grants()) {
+			if (grant.grantee().id().equals(owner)
+					&& permissions.contains(grant.permission())) {
 				result = true;
 				break;
 			}
@@ -685,24 +686,24 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 	}
 
 	private S3FileAttributes readAttr0(S3Path s3Path) throws IOException {
-		S3ObjectSummary objectSummary = s3ObjectSummaryLookup.lookup(s3Path);
+		S3Object objectSummary = s3ObjectSummaryLookup.lookup(s3Path);
 
 		// parse the data to BasicFileAttributes.
 		FileTime lastModifiedTime = null;
-		if( objectSummary.getLastModified() != null ) {
-			lastModifiedTime = FileTime.from(objectSummary.getLastModified().getTime(), TimeUnit.MILLISECONDS);
+		if( objectSummary.lastModified() != null ) {
+			lastModifiedTime = FileTime.from(objectSummary.lastModified().toEpochMilli(), TimeUnit.MILLISECONDS);
 		}
 
-		long size =  objectSummary.getSize();
+		long size =  objectSummary.size();
 		boolean directory = false;
 		boolean regularFile = false;
-		String key = objectSummary.getKey();
+		String key = objectSummary.key();
 		// check if is a directory and the key of this directory exists in amazon s3
-		if (objectSummary.getKey().equals(s3Path.getKey() + "/") && objectSummary.getKey().endsWith("/")) {
+		if (objectSummary.key().equals(s3Path.getKey() + "/") && objectSummary.key().endsWith("/")) {
 			directory = true;
 		}
 		// is a directory but does not exist in amazon s3
-		else if ((!objectSummary.getKey().equals(s3Path.getKey()) || "".equals(s3Path.getKey())) && objectSummary.getKey().startsWith(s3Path.getKey())){
+		else if ((!objectSummary.key().equals(s3Path.getKey()) || "".equals(s3Path.getKey())) && objectSummary.key().startsWith(s3Path.getKey())){
 			directory = true;
 			// no metadata, we fake one
 			size = 0;
@@ -728,105 +729,19 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		throw new UnsupportedOperationException();
 	}
 
-	protected ClientConfiguration createClientConfig(Properties props) {
-		ClientConfiguration config = new ClientConfiguration();
-
-		if( props == null )
-			return config;
-
-		if( props.containsKey("connection_timeout") ) {
-			log.trace("AWS client config - connection_timeout: {}", props.getProperty("connection_timeout"));
-			config.setConnectionTimeout(Integer.parseInt(props.getProperty("connection_timeout")));
-		}
-
-		if( props.containsKey("max_connections")) {
-			log.trace("AWS client config - max_connections: {}", props.getProperty("max_connections"));
-			config.setMaxConnections(Integer.parseInt(props.getProperty("max_connections")));
-		}
-
-		if( props.containsKey("max_error_retry")) {
-			log.trace("AWS client config - max_error_retry: {}", props.getProperty("max_error_retry"));
-			config.setMaxErrorRetry(Integer.parseInt(props.getProperty("max_error_retry")));
-		}
-
-		if( props.containsKey("protocol")) {
-			log.trace("AWS client config - protocol: {}", props.getProperty("protocol"));
-			config.setProtocol(Protocol.valueOf(props.getProperty("protocol").toUpperCase()));
-		}
-
-		if( props.containsKey("proxy_domain")) {
-			log.trace("AWS client config - proxy_domain: {}", props.getProperty("proxy_domain"));
-			config.setProxyDomain(props.getProperty("proxy_domain"));
-		}
-
-		if( props.containsKey("proxy_host")) {
-			log.trace("AWS client config - proxy_host: {}", props.getProperty("proxy_host"));
-			config.setProxyHost(props.getProperty("proxy_host"));
-		}
-
-		if( props.containsKey("proxy_port")) {
-			log.trace("AWS client config - proxy_port: {}", props.getProperty("proxy_port"));
-			config.setProxyPort(Integer.parseInt(props.getProperty("proxy_port")));
-		}
-
-		if( props.containsKey("proxy_username")) {
-			log.trace("AWS client config - proxy_username: {}", props.getProperty("proxy_username"));
-			config.setProxyUsername(props.getProperty("proxy_username"));
-		}
-
-		if( props.containsKey("proxy_password")) {
-			log.trace("AWS client config - proxy_password: {}", props.getProperty("proxy_password"));
-			config.setProxyPassword(props.getProperty("proxy_password"));
-		}
-
-		if ( props.containsKey("proxy_workstation")) {
-			log.trace("AWS client config - proxy_workstation: {}", props.getProperty("proxy_workstation"));
-			config.setProxyWorkstation(props.getProperty("proxy_workstation"));
-		}
-
-		if ( props.containsKey("signer_override")) {
-			log.debug("AWS client config - signerOverride: {}", props.getProperty("signer_override"));
-			config.setSignerOverride(props.getProperty("signer_override"));
-		}
-
-		if( props.containsKey("socket_send_buffer_size_hints") || props.containsKey("socket_recv_buffer_size_hints") ) {
-			log.trace("AWS client config - socket_send_buffer_size_hints: {}, socket_recv_buffer_size_hints: {}", props.getProperty("socket_send_buffer_size_hints","0"), props.getProperty("socket_recv_buffer_size_hints", "0"));
-			int send = Integer.parseInt(props.getProperty("socket_send_buffer_size_hints","0"));
-			int recv = Integer.parseInt(props.getProperty("socket_recv_buffer_size_hints", "0"));
-			config.setSocketBufferSizeHints(send,recv);
-		}
-
-		if( props.containsKey("socket_timeout")) {
-			log.trace("AWS client config - socket_timeout: {}", props.getProperty("socket_timeout"));
-			config.setSocketTimeout(Integer.parseInt(props.getProperty("socket_timeout")));
-		}
-
-		if( props.containsKey("user_agent")) {
-			log.trace("AWS client config - user_agent: {}", props.getProperty("user_agent"));
-			config.setUserAgent(props.getProperty("user_agent"));
-		}
-
-		return config;
-	}
-
-	// ~~
-
 	protected S3FileSystem createFileSystem(URI uri, AwsConfig awsConfig) {
 		// try to load amazon props
 		Properties props = loadAmazonProperties();
 		// add properties for legacy compatibility
 		props.putAll(awsConfig.getS3LegacyProperties());
 
-		S3Client client;
-		ClientConfiguration clientConfig = createClientConfig(props);
-
 		final String bucketName = S3Path.bucketName(uri);
         // do not use `global` flag for custom endpoint because
         // when enabling that flag, it overrides S3 endpoints with AWS global endpoint
         // see https://github.com/nextflow-io/nextflow/pull/5779
 		final boolean global = bucketName!=null && !awsConfig.getS3Config().isCustomEndpoint();
-		final AwsClientFactory factory = new AwsClientFactory(awsConfig, globalRegion(awsConfig));
-		client = new S3Client(factory.getS3Client(clientConfig, global));
+		final AwsClientFactory factory = new AwsClientFactory(awsConfig, awsConfig.getS3GlobalRegion());
+		final S3Client client = new S3Client(factory, props, global, getCallerIdentityAccount());
 
 		// set the client acl
 		client.setCannedAcl(getProp(props, "s_3_acl", "s3_acl", "s3Acl"));
@@ -842,11 +757,15 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		return new S3FileSystem(this, client, uri, props);
 	}
 
-    protected String globalRegion(AwsConfig awsConfig) {
-        return awsConfig.getRegion() != null && awsConfig.getS3Config().isCustomEndpoint()
-                ? awsConfig.getRegion()
-                : Regions.US_EAST_1.getName();
-    }
+	private String getCallerIdentityAccount(){
+		try{
+            StsClient stsClient = StsClient.create();
+            return stsClient.getCallerIdentity(GetCallerIdentityRequest.builder().build()).account();
+        } catch ( StsException e) {
+            log.trace( "Unable to fetch Caller Identity -- Cause: {}", e.getMessage());
+            return null;
+        }
+	}
 
 	protected String getProp(Properties props, String... keys) {
 		for( String k : keys ) {
@@ -909,9 +828,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 	 * @throws NoSuchFileException if not found the path and any child
 	 */
 	private AccessControlPolicy getAccessControl(S3Path path) throws NoSuchFileException{
-		S3ObjectSummary obj = s3ObjectSummaryLookup.lookup(path);
-		// check first for file:
-        return path.getFileSystem().getClient().getObjectAcl(obj.getBucketName(), obj.getKey());
+        return path.getFileSystem().getClient().getObjectAcl(path.getBucket(), path.getKey());
 	}
 
     /**
@@ -922,5 +839,4 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
     protected Path createTempDir() throws IOException {
         return Files.createTempDirectory("temp-s3-");
     }
-
 }

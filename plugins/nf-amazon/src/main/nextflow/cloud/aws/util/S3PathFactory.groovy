@@ -17,6 +17,7 @@ package nextflow.cloud.aws.util
 
 import java.nio.file.Path
 
+import nextflow.cloud.aws.nio.S3Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Global
@@ -36,7 +37,8 @@ class S3PathFactory extends FileSystemPathFactory {
     protected Path parseUri(String str) {
         // normalise 's3' path
         if( str.startsWith('s3://') && str[5]!='/' ) {
-            return create(str)
+            final path = "s3:///${str.substring(5)}"
+            return create(path)
         }
         return null
     }
@@ -48,7 +50,7 @@ class S3PathFactory extends FileSystemPathFactory {
 
     @Override
     protected String toUriString(Path path) {
-        return isS3Path(path) ? path.toUri().toString() : null
+        return path instanceof S3Path ? "s3:/$path".toString() : null
     }
 
     @Override
@@ -58,7 +60,7 @@ class S3PathFactory extends FileSystemPathFactory {
 
     @Override
     protected String getUploadCmd(String source, Path target) {
-        return isS3Path(target)
+        return target instanceof S3Path
                 ? AwsBatchFileCopyStrategy.uploadCmd(source,target)
                 : null
     }
@@ -74,15 +76,11 @@ class S3PathFactory extends FileSystemPathFactory {
      * @return
      *      The corresponding {@link S3Path}
      */
-    static Path create(String path) {
+    static S3Path create(String path) {
         if( !path ) throw new IllegalArgumentException("Missing S3 path argument")
-        if( !path.startsWith('s3://') ) throw new IllegalArgumentException("S3 path must start with s3:/// prefix -- offending value '$path'")
+        if( !path.startsWith('s3:///') ) throw new IllegalArgumentException("S3 path must start with s3:/// prefix -- offending value '$path'")
         // note: this URI constructor parse the path parameter and extract the `scheme` and `authority` components
-        final uri = URI.create(path)
-        return FileHelper.getOrCreateFileSystemFor(uri,config()).provider().getPath(uri)
-    }
-
-    static boolean isS3Path(Path path){
-        return path.fileSystem.provider().scheme == "s3"
+        final uri = new URI(null,null, path,null,null)
+        return (S3Path)FileHelper.getOrCreateFileSystemFor(uri,config()).provider().getPath(uri)
     }
 }
