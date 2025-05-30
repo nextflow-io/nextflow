@@ -18,7 +18,13 @@ package nextflow.scm
 
 import static nextflow.Const.*
 
+import java.nio.file.Files
 import java.nio.file.Path
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.GZIPInputStream
+import java.io.IOException
+import java.util.Comparator
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
@@ -32,6 +38,7 @@ import nextflow.config.Manifest
 import nextflow.config.ConfigParserFactory
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AmbiguousPipelineNameException
+import nextflow.file.FileHelper
 import nextflow.script.ScriptFile
 import nextflow.util.IniFile
 import org.eclipse.jgit.api.CreateBranchCommand
@@ -58,10 +65,12 @@ class AssetManager {
     private static final String REMOTE_REFS_ROOT = "refs/remotes/origin/"
     private static final String REMOTE_DEFAULT_HEAD = REMOTE_REFS_ROOT + "HEAD"
 
+    // Archive file extensions that will be supported
+    private static final List<String> SUPPORTED_ARCHIVE_EXTENSIONS = ['.zip', '.tar.gz', '.tgz']
+
     /**
      * The folder all pipelines scripts are installed
      */
-    @PackageScope
     static File root = DEFAULT_ROOT
 
     /**
@@ -312,6 +321,15 @@ class AssetManager {
             return null
 
         try {
+            // Handle archive URLs 
+            if( isArchiveUrl(repository) ) {
+                // For archives, we'll download them and treat them like local repositories
+                // So we're not actually setting a project name here
+                log.debug "Archive URL detected: $repository - Treating as local repository"
+                return null
+            }
+            
+            // Handle regular Git URLs
             def url = new GitUrl(repository)
 
             def result
@@ -382,7 +400,15 @@ class AssetManager {
             return localPath.toURI().toString()
         }
 
-        provider.getCloneUrl()
+        // Check if provider URL is an archive
+        String repoUrl = provider.getCloneUrl()
+        if (isArchiveUrl(repoUrl)) {
+            // For archive URLs, return the original URL
+            return repoUrl
+        }
+
+        // For Git repositories, use the original behavior
+        return repoUrl
     }
 
     File getLocalPath() { localPath }
@@ -512,6 +538,11 @@ class AssetManager {
      *         and the current HEAD, false if differences do exist
      */
     boolean isClean() {
+        // For archives (non-Git repositories), always return true
+        if (isLocalArchiveRepo()) {
+            return true
+        }
+
         try {
             git.status().call().isClean()
         }
@@ -574,6 +605,227 @@ class AssetManager {
     }
 
     /**
+     * Check if the URL points to an archive file (.zip, .tar.gz, etc.)
+     * 
+     * @param url The URL to check
+     * @return True if the URL points to a supported archive format
+     */
+    @PackageScope
+    boolean isArchiveUrl(String url) {
+        if (!url) return false
+        return SUPPORTED_ARCHIVE_EXTENSIONS.any { ext -> url.toLowerCase().endsWith(ext) }
+    }
+
+    /**
+     * Downloads and extracts an archive file from a URL
+     * 
+     * @param archiveUrl The URL to the archive file
+     * @param targetPath The path where the archive should be extracted
+     * @return The path to the extracted archive
+     */
+    Path downloadAndExtractArchive(String archiveUrl, File targetPath) {
+        assert archiveUrl
+        assert targetPath
+
+        log.debug "Downloading archive: $archiveUrl to: $targetPath"
+        
+        // Create a temporary file to download the archive
+        File tempFile = File.createTempFile('nxf-archive-', getArchiveExtension(archiveUrl))
+        tempFile.deleteOnExit()
+        
+        // Download the archive
+        def conn = new URL(archiveUrl).openConnection()
+        tempFile.withOutputStream { out ->
+            conn.inputStream.withStream { in ->
+                out << in
+            }
+        }
+        
+        // Extract the archive
+        extractArchive(tempFile.toPath(), targetPath.toPath())
+        
+        // Delete the temporary file
+        tempFile.delete()
+        
+        return targetPath.toPath()
+    }
+    
+    /**
+     * Extracts an archive file to a target directory
+     * 
+     * @param archivePath The path to the archive file
+     * @param targetPath The path where the archive should be extracted
+     * @return The path to the extracted archive
+     */
+    Path extractArchive(Path archivePath, Path targetPath) {
+        assert archivePath
+        assert targetPath
+        
+        log.debug "Extracting archive: $archivePath to: $targetPath"
+        
+        if (!Files.exists(targetPath)) {
+            Files.createDirectories(targetPath)
+        }
+        
+        String fileName = archivePath.fileName.toString().toLowerCase()
+        
+        if (fileName.endsWith('.zip')) {
+            extractZip(archivePath, targetPath)
+        }
+        else if (fileName.endsWith('.tar.gz') || fileName.endsWith('.tgz')) {
+            extractTarGz(archivePath, targetPath)
+        }
+        else {
+            throw new IllegalArgumentException("Unsupported archive format: $fileName")
+        }
+        
+        return targetPath
+    }
+    
+    /**
+     * Extract a ZIP archive
+     */
+    void extractZip(Path zipFile, Path targetDir) {
+        ZipInputStream zipIn = new ZipInputStream(Files.newInputStream(zipFile))
+        ZipEntry entry
+        
+        while ((entry = zipIn.getNextEntry()) != null) {
+            Path filePath = targetDir.resolve(entry.getName())
+            
+            if (entry.isDirectory()) {
+                Files.createDirectories(filePath)
+            } 
+            else {
+                // Create parent directories if they don't exist
+                Files.createDirectories(filePath.getParent())
+                Files.copy(zipIn, filePath)
+            }
+            zipIn.closeEntry()
+        }
+        zipIn.close()
+    }
+    
+    /**
+     * Extract a TAR.GZ archive
+     */
+    void extractTarGz(Path tarGzFile, Path targetDir) {
+        // Create a temporary directory to extract the tar.gz file
+        Path tempDir = Files.createTempDirectory("nxf-targz-")
+        try {
+            // First, extract the tar.gz to a temporary directory using external process
+            // This is more reliable than trying to implement TAR extraction in Java
+            def process = ["tar", "-xzf", tarGzFile.toString(), "-C", tempDir.toString()].execute()
+            def exitCode = process.waitFor()
+            if (exitCode != 0) {
+                throw new IOException("Failed to extract tar.gz archive. Exit code: $exitCode\nError: ${process.err.text}")
+            }
+            
+            // Now copy all extracted files to the target directory
+            Files.list(tempDir).forEach { path ->
+                def targetPath = targetDir.resolve(path.fileName.toString())
+                if (Files.isDirectory(path)) {
+                    copyDirectory(path, targetPath)
+                } else {
+                    Files.copy(path, targetPath)
+                }
+            }
+        } finally {
+            // Clean up temporary directory
+            deleteDirectory(tempDir)
+        }
+    }
+    
+    /**
+     * Recursively copies a directory
+     */
+    void copyDirectory(Path source, Path target) {
+        if (!Files.exists(target)) {
+            Files.createDirectories(target)
+        }
+        
+        Files.list(source).forEach { path ->
+            def targetPath = target.resolve(path.fileName.toString())
+            if (Files.isDirectory(path)) {
+                copyDirectory(path, targetPath)
+            } else {
+                Files.copy(path, targetPath)
+            }
+        }
+    }
+    
+    /**
+     * Recursively deletes a directory
+     */
+    void deleteDirectory(Path directory) {
+        if (Files.exists(directory)) {
+            Files.walk(directory)
+                .sorted(Comparator.reverseOrder())
+                .forEach { Files.delete(it) }
+        }
+    }
+    
+    /**
+     * Get the file extension from an archive URL
+     */
+    String getArchiveExtension(String url) {
+        for (String ext : SUPPORTED_ARCHIVE_EXTENSIONS) {
+            if (url.toLowerCase().endsWith(ext)) {
+                return ext
+            }
+        }
+        return '.tmp'
+    }
+
+    /**
+     * Resolves the real project directory after extraction
+     * Handles cases where the archive might contain a single root directory
+     */
+    @PackageScope
+    File resolveProjectDir(File extractedDir) {
+        if (!extractedDir.exists()) {
+            return extractedDir
+        }
+        
+        // Check if there's a single directory in the root
+        File[] files = extractedDir.listFiles()
+        if (files && files.length == 1 && files[0].isDirectory()) {
+            // If it's a single directory and contains either main.nf or nextflow.config, use it
+            File singleDir = files[0]
+            
+            // Check if this is a GitHub-style archive structure where the root has the form:
+            // repository-branch or repository-version
+            // (GitHub adds the branch/tag name to the root directory)
+            if (singleDir.name.matches('.*-[\\d\\.\\w-]+') || 
+                singleDir.name.matches('.*-main') || 
+                singleDir.name.matches('.*-master') ||
+                singleDir.name.matches('.*-dev.*')) {
+                
+                if (new File(singleDir, DEFAULT_MAIN_FILE_NAME).exists() || 
+                    new File(singleDir, MANIFEST_FILE_NAME).exists()) {
+                    log.debug "Using extracted GitHub-style subdirectory as project root: $singleDir"
+                    return singleDir
+                }
+            }
+            
+            // Check for any directory with Nextflow files
+            if (new File(singleDir, DEFAULT_MAIN_FILE_NAME).exists() || 
+                new File(singleDir, MANIFEST_FILE_NAME).exists()) {
+                log.debug "Using extracted subdirectory as project root: $singleDir"
+                return singleDir
+            }
+        }
+        
+        // If the extracted directory itself contains the Nextflow files, use it
+        if (new File(extractedDir, DEFAULT_MAIN_FILE_NAME).exists() || 
+            new File(extractedDir, MANIFEST_FILE_NAME).exists()) {
+            return extractedDir
+        }
+        
+        // Fallback - just use the extracted directory
+        return extractedDir
+    }
+
+    /**
      * Download a pipeline from a remote Github repository
      *
      * @param revision The revision to download
@@ -587,11 +839,40 @@ class AssetManager {
          */
         if( !localPath.exists() ) {
             localPath.parentFile.mkdirs()
+            
+            // Get the repository URL
+            final repoUrl = getGitRepositoryUrl()
+            log.debug "Pulling $project -- Using remote url: ${repoUrl}"
+            
+            // Check if this is an archive URL
+            if (isArchiveUrl(repoUrl)) {
+                log.debug "Detected archive URL: $repoUrl"
+                
+                try {
+                    // For archives, store in assets/artefacts directory using URL path as subdirectory structure
+                    File artefactPath = getArtefactPath(repoUrl)
+                    artefactPath.parentFile.mkdirs()
+                    
+                    // Download and extract the archive
+                    downloadAndExtractArchive(repoUrl, artefactPath)
+                    
+                    // Just use the downloaded directory directly - no need for symlinks
+                    localPath = artefactPath
+                    
+                    // Validate that the archive contains the required Nextflow files
+                    checkValidArchiveRepo(localPath)
+                    
+                    log.debug "Downloaded and extracted archive - Project path: $localPath"
+                    return "downloaded and extracted from archive ${repoUrl}"
+                }
+                catch (Exception e) {
+                    throw new AbortOperationException("Failed to download and extract archive from $repoUrl: ${e.message}", e)
+                }
+            }
+            
+            // Regular Git repository handling below
             // make sure it contains a valid repository
             checkValidRemoteRepo(revision)
-
-            final cloneURL = getGitRepositoryUrl()
-            log.debug "Pulling $project -- Using remote clone url: ${cloneURL}"
 
             // clone it, but don't specify a revision - jgit will checkout the default branch
             def clone = Git.cloneRepository()
@@ -599,7 +880,7 @@ class AssetManager {
                 clone.setCredentialsProvider( provider.getGitCredentials() )
 
             clone
-                .setURI(cloneURL)
+                .setURI(repoUrl)
                 .setDirectory(localPath)
                 .setCloneSubmodules(manifest.recurseSubmodules)
             if( deep )
@@ -619,7 +900,7 @@ class AssetManager {
                     .newUpdate(REMOTE_DEFAULT_HEAD, true)
                     .link(REMOTE_REFS_ROOT + headName)
             } else {
-                log.debug "Unable to determine default branch of repo ${cloneURL}, symbolic ref not created"
+                log.debug "Unable to determine default branch of repo ${repoUrl}, symbolic ref not created"
             }
 
             // now the default branch is recorded in the repo, explicitly checkout the revision (if specified).
@@ -630,7 +911,13 @@ class AssetManager {
             }
 
             // return status message
-            return "downloaded from ${cloneURL}"
+            return "downloaded from ${repoUrl}"
+        }
+
+        // Skip Git operations for archives
+        if (isLocalArchiveRepo()) {
+            log.debug "Repository is archive-based, skipping Git pull operations"
+            return "archive repository already exists"
         }
 
         log.debug "Pull pipeline $project  -- Using local path: $localPath"
@@ -682,7 +969,65 @@ class AssetManager {
             throw new AbortOperationException("Cannot pull project `$project` -- ${result.toString()}")
 
         return result?.mergeResult?.mergeStatus?.toString()
-
+    }
+    
+    /**
+     * Creates a path for storing the downloaded artefact based on the URL
+     * 
+     * @param url The URL of the artefact
+     * @return A File object representing the path where the artefact will be stored
+     */
+    File getArtefactPath(String url) {
+        // Remove protocol prefix (http:// or https://)
+        String pathPart = url.replaceFirst('^https?://', '')
+        // Create the artefact path under the root/artefacts directory
+        File artefactsRoot = new File(root, "artefacts")
+        // Replace any illegal file system characters
+        pathPart = pathPart.replaceAll("[<>:\"|?*]", "_")
+        return new File(artefactsRoot, pathPart)
+    }
+    
+    /**
+     * Creates a symbolic link from target to source
+     * 
+     * @param target The target path (where the link will be created)
+     * @param source The source path (where the link will point to)
+     */
+    protected void createSymbolicLink(File target, File source) {
+        try {
+            // Create parent directories if they don't exist
+            target.parentFile.mkdirs()
+            
+            // If target already exists, remove it first
+            if (target.exists()) {
+                if (target.isDirectory()) {
+                    deleteDirectory(target.toPath())
+                } else {
+                    target.delete()
+                }
+            }
+            
+            // Create symbolic link
+            Files.createSymbolicLink(target.toPath(), source.toPath())
+            log.debug "Created symbolic link from $target to $source"
+        } catch (Exception e) {
+            log.warn "Could not create symbolic link from $target to $source: ${e.message}"
+            log.warn "Falling back to copying files"
+            
+            // If symbolic link creation fails, fall back to copying the files
+            if (source.isDirectory()) {
+                copyDirectory(source.toPath(), target.toPath())
+            } else {
+                Files.copy(source.toPath(), target.toPath())
+            }
+        }
+    }
+    
+    /**
+     * Check if the local repository is an archive-based repository (not Git)
+     */
+    boolean isLocalArchiveRepo() {
+        return localPath.exists() && !new File(localPath, '.git').exists()
     }
 
     /**
@@ -718,6 +1063,18 @@ class AssetManager {
      * @return The symbolic name of the current revision i.e. the current checked out branch or tag
      */
     String getCurrentRevision() {
+        // For archive-based repositories, extract version from directory name if possible
+        if (isLocalArchiveRepo()) {
+            // Extract the version from the directory name if possible
+            def dirName = localPath.name
+            def matcher = dirName =~ /.*-(\d+\.\d+\.\d+.*)/
+            if (matcher.matches()) {
+                return matcher.group(1)
+            }
+            // If no version found in directory name, return unknown
+            return '(unknown)'
+        }
+
         Ref head = git.getRepository().findRef(Constants.HEAD);
         if( !head )
             return '(unknown)'
@@ -734,6 +1091,19 @@ class AssetManager {
     }
 
     RevisionInfo getCurrentRevisionAndName() {
+        // For archive-based repositories, extract version from directory name if possible
+        if (isLocalArchiveRepo()) {
+            // Extract the version from the directory name if possible
+            def dirName = localPath.name
+            def matcher = dirName =~ /.*-(\d+\.\d+\.\d+.*)/
+            if (matcher.matches()) {
+                String version = matcher.group(1)
+                return new RevisionInfo(version, version, RevisionInfo.Type.TAG)
+            }
+            // If no version found in directory name, return unknown
+            return new RevisionInfo("unknown", null, RevisionInfo.Type.TAG)
+        }
+
         Ref head = git.getRepository().findRef(Constants.HEAD);
         if( !head )
             return null
@@ -936,6 +1306,12 @@ class AssetManager {
     void checkout( String revision = null ) {
         assert localPath
 
+        // Skip checkout for archive-based repositories
+        if (isLocalArchiveRepo()) {
+            log.debug "Skipping checkout for archive-based repository at: $localPath"
+            return
+        }
+
         def current = getCurrentRevision()
         if( current != defaultBranch ) {
             if( !revision ) {
@@ -957,7 +1333,6 @@ class AssetManager {
         catch( RefNotFoundException e ) {
             checkoutRemoteBranch(revision)
         }
-
     }
 
 
@@ -1174,5 +1549,32 @@ class AssetManager {
 
             return commitId
         }
+    }
+
+    /**
+     * Validates that the extracted archive contains the necessary Nextflow files
+     *
+     * @param path The path to the extracted archive
+     * @return This object instance
+     * @throws AbortOperationException if the archive doesn't contain required Nextflow files
+     */
+    @PackageScope
+    AssetManager checkValidArchiveRepo(File path) {
+        log.debug "Checking archive validity at path: $path"
+        
+        // Check if main script exists
+        final scriptName = mainScript ?: DEFAULT_MAIN_FILE_NAME
+        final mainScript = new File(path, scriptName)
+        final configFile = new File(path, MANIFEST_FILE_NAME)
+        
+        // Either main script or config must exist
+        if (!mainScript.exists() && !configFile.exists()) {
+            throw new AbortOperationException(
+                "Cannot find Nextflow script or config file in the archive. " +
+                "Archive must contain either '$scriptName' or '$MANIFEST_FILE_NAME' in the root directory."
+            )
+        }
+        
+        return this
     }
 }
