@@ -12,7 +12,7 @@ When a pipeline script is launched, Nextflow looks for configuration files in mu
 4. Config files specified using the `-c <config-files>` option
 
 :::{tip}
-You can alternatively use the `-C <config-file>` option to specify a fixed set of configuration files and ignore all other files.
+You can alternatively use the `-c <config-file>` option to specify a fixed set of configuration files and ignore all other files.
 :::
 
 (config-syntax)=
