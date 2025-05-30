@@ -50,7 +50,6 @@ import com.azure.compute.batch.models.ContainerConfiguration
 import com.azure.compute.batch.models.ContainerRegistryReference
 import com.azure.compute.batch.models.ContainerType
 import com.azure.compute.batch.models.ElevationLevel
-import com.azure.compute.batch.models.EnvironmentSetting
 import com.azure.compute.batch.models.MetadataItem
 import com.azure.compute.batch.models.MountConfiguration
 import com.azure.compute.batch.models.NetworkConfiguration
@@ -553,14 +552,6 @@ class AzBatchService implements Closeable {
                 .setOutputFiles(outputFileUrls(task, sas))
                 .setRequiredSlots(slots)
                 .setConstraints(constraints)
-                .setEnvironmentSettings(taskEnv(config.batch()))
-    }
-
-    protected List<EnvironmentSetting> taskEnv(AzBatchOpts opts) {
-        return opts.poolIdentityClientId
-            ? List.of(new EnvironmentSetting("FUSION_AZ_MSI_CLIENT_ID")
-                .setValue(opts.poolIdentityClientId))
-            : List.<EnvironmentSetting>of()
     }
 
     /**
