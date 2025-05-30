@@ -37,21 +37,25 @@ class AwsContainerOptionsMapper {
 
     @Deprecated
     static ContainerProperties createContainerOpts(CmdLineOptionMap options) {
+        return createContainerProperties(options)
+    }
+
+    static ContainerProperties createContainerProperties(CmdLineOptionMap options) {
         final builder = ContainerProperties.builder()
         addCmdOptions(options, builder)
         return builder.build()
     }
 
-    static void addCmdOptions(CmdLineOptionMap options, ContainerProperties.Builder containerProperties) {
+    static void addCmdOptions(CmdLineOptionMap options, ContainerProperties.Builder builder){
         if ( options?.hasOptions() ) {
-            checkPrivileged(options, containerProperties)
-            checkEnvVars(options, containerProperties)
-            checkUser(options, containerProperties)
-            checkReadOnly(options, containerProperties)
-            checkUlimit(options, containerProperties)
+            checkPrivileged(options, builder)
+            checkEnvVars(options, builder)
+            checkUser(options, builder)
+            checkReadOnly(options, builder)
+            checkUlimit(options, builder)
             LinuxParameters params = checkLinuxParameters(options)
             if ( params != null )
-                containerProperties.linuxParameters(params)
+                builder.linuxParameters(params)
         }
     }
 
