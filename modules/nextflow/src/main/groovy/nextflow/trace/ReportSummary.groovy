@@ -64,8 +64,6 @@ class ReportSummary {
         }
     }
 
-
-
     /**
      * Hold the summary for each series ie. cpu, memory, time, disk reads, disk writes
      */
