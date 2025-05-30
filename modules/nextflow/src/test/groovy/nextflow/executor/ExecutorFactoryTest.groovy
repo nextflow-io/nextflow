@@ -129,18 +129,11 @@ class ExecutorFactoryTest extends Specification {
         ExecutorFactory.findNameByClass(XExecutor) == 'my_fancy_name'
     }
 
-    def 'should init with higher priority independent of ordering'() {
+    def 'last in list becomes Executor'() {
         when:
-        def factory = new ExecutorFactory()
-        factory.init0( [XExecutor, XExecutor2] )
-        def result = factory.getExecutorClass('my_fancy_name')
-        then:
-        result == XExecutor
-
-        when:
-        factory = new ExecutorFactory()
+        final factory = new ExecutorFactory()
         factory.init0( [XExecutor2, XExecutor] )
-        result = factory.getExecutorClass('my_fancy_name')
+        final result = factory.getExecutorClass('my_fancy_name')
         then:
         result == XExecutor
     }

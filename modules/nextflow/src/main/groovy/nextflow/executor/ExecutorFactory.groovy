@@ -22,6 +22,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.executor.local.LocalExecutor
+import nextflow.plugin.Plugins
 import nextflow.plugin.Priority
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
@@ -75,7 +76,11 @@ class ExecutorFactory {
 
     ExecutorFactory(PluginManager manager) {
         if( manager!=null ) {
-            final executors = manager.getExtensionClasses(Executor)
+            final executors = Plugins.getPriorityExtensions(Executor.class)
+                .collect { it.class }
+            // reverse order as init overwrites previous executors
+                .reverse() as List<Class<Executor>>
+            log.info( "Found ${executors.size()} executor plugins: ${executors.collect { it.simpleName }.join(', ')}")
             log.debug "Extension executors providers=${executors.simpleName}"
             init0(executors)
         }
@@ -95,10 +100,7 @@ class ExecutorFactory {
             final name = findNameByClass(clazz)
             final current = executorsMap.get(name)
             if( current ) {
-                final currentPrio = current.getAnnotation(Priority)?.value() ?: 0
-                final newPrio = clazz.getAnnotation(Priority)?.value() ?: 0
-                // prefer priority over important as the latter is deprecated and will be removed in the future
-                if( currentPrio < newPrio || current.getAnnotation(ServiceName)?.important() ) {
+                if( current.getAnnotation(ServiceName)?.important() ) {
                     log.debug "Executor ${current.getSimpleName()} has priority - skipping ${clazz}"
                     continue
                 }
