@@ -58,8 +58,6 @@ class ProviderConfig {
 
     private Map attr
 
-    private ProviderRetryConfig retryConfig
-
     ProviderConfig( String name, Map values ) {
         this.name = name
         this.attr = new HashMap(values)
@@ -105,8 +103,6 @@ class ProviderConfig {
         if( attr.auth ) {
             setAuth(attr.auth.toString())
         }
-
-        this.retryConfig = new ProviderRetryConfig((Map)attr.retryPolicy ?: Collections.emptyMap())
     }
 
     ProviderConfig( String name ) {
@@ -242,10 +238,6 @@ class ProviderConfig {
 
     String getToken() { attr.token }
 
-    /**
-     * @return The provider retry configuration
-     */
-    ProviderRetryConfig retryConfig() { this.retryConfig }
 
     String toString() {
         "ProviderConfig[name: $name, platform: $platform, server: $server]"

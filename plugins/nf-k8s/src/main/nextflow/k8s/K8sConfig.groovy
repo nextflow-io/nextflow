@@ -16,8 +16,6 @@
 
 package nextflow.k8s
 
-import nextflow.k8s.client.K8sRetryConfig
-
 import javax.annotation.Nullable
 
 import groovy.transform.CompileStatic
@@ -34,6 +32,7 @@ import nextflow.k8s.model.PodSecurityContext
 import nextflow.k8s.model.PodVolumeClaim
 import nextflow.k8s.model.ResourceType
 import nextflow.util.Duration
+import nextflow.util.RetryConfig
 /**
  * Model Kubernetes specific settings defined in the nextflow
  * configuration file
@@ -51,8 +50,9 @@ class K8sConfig implements Map<String,Object> {
 
     private PodOptions podOptions
 
-    K8sConfig(Map<String,Object> config) {
+    K8sConfig(Map<String,Object> config, Map<String,Object> nextflowOpts) {
         target = config ?: Collections.<String,Object>emptyMap()
+        target.retryPolicy = nextflowOpts.retryPolicy as Map ?: Collections.<String,Object>emptyMap()
 
         this.podOptions = createPodOptions(target.pod)
         if( getStorageClaimName() ) {
@@ -236,10 +236,10 @@ class K8sConfig implements Map<String,Object> {
             result.httpReadTimeout = target.httpReadTimeout as Duration
 
         if( target.retryPolicy )
-            result.retryConfig = new K8sRetryConfig(target.retryPolicy as Map)
+            result.retryConfig = new RetryConfig(target.retryPolicy as Map)
 
         if( target.maxErrorRetry )
-            log.warn("Config setting 'k8s.maxErrorRetry' is deprecated. Change it to 'k8s.retryPolicy.maxAttempts'")
+            log.warn("Config setting 'k8s.maxErrorRetry' is deprecated -- use 'nextflow.retryPolicy.maxAttempts' instead")
 
         return result
     }

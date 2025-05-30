@@ -1025,18 +1025,6 @@ The following settings are available:
 `k8s.pullPolicy`
 : Defines the strategy to be used to pull the container image e.g. `pullPolicy: 'Always'`.
 
-`k8s.retryPolicy.delay`
-: Delay when retrying failed API requests (default: `500ms`).
-
-`k8s.retryPolicy.jitter`
-: Jitter value when retrying failed API requests (default: `0.25`).
-
-`k8s.retryPolicy.maxAttempts`
-: Max attempts when retrying failed API requests (default: `4`).
-
-`k8s.retryPolicy.maxDelay`
-: Max delay when retrying failed API requests (default: `90s`).
-
 `k8s.runAsUser`
 : Defines the user ID to be used to run the containers. Shortcut for the `securityContext` option.
 
@@ -1224,9 +1212,25 @@ Read the {ref}`sharing-page` page to learn how to publish your pipeline to GitHu
 
 ## `nextflow`
 
-:::{deprecated} 24.10.0
-The `nextflow.publish` scope has been renamed to `workflow.output`. See {ref}`config-workflow` for more information.
+:::{versionchanged} 24.10.0
+The `nextflow.publish.retryPolicy` settings were moved to `workflow.output.retryPolicy`.
 :::
+
+:::{versionchanged} 25.05.0-edge
+The `k8s.retryPolicy` and `workflow.output.retryPolicy` settings were moved to `nextflow.retryPolicy`.
+:::
+
+`retryPolicy.delay`
+: Delay used for retryable operations (default: `350ms`).
+
+`retryPolicy.jitter`
+: Jitter value used for retryable operations (default: `0.25`).
+
+`retryPolicy.maxAttempts`
+: Max attempts used for retryable operations (default: `5`).
+
+`retryPolicy.maxDelay`
+: Max delay used for retryable operations (default: `90s`).
 
 (config-notification)=
 
@@ -1679,18 +1683,6 @@ The `workflow` scope provides workflow execution options.
 
   `'standard'`
   : Overwrite existing files when the file size or last modified timestamp is different.
-
-`workflow.output.retryPolicy.delay`
-: Delay when retrying a failed publish operation (default: `350ms`).
-
-`workflow.output.retryPolicy.jitter`
-: Jitter value when retrying a failed publish operation (default: `0.25`).
-
-`workflow.output.retryPolicy.maxAttempt`
-: Max attempts when retrying a failed publish operation (default: `5`).
-
-`workflow.output.retryPolicy.maxDelay`
-: Max delay when retrying a failed publish operation (default: `90s`).
 
 `workflow.output.storageClass`
 : *Currently only supported for S3.*

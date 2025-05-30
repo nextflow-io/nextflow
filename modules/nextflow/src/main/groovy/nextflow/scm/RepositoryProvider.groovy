@@ -16,18 +16,17 @@
 
 package nextflow.scm
 
-import dev.failsafe.Failsafe
-import dev.failsafe.RetryPolicy
-import dev.failsafe.event.EventListener
-import dev.failsafe.event.ExecutionAttemptedEvent
-import dev.failsafe.function.CheckedSupplier
-
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
 
 import static nextflow.util.StringUtils.*
 
+import dev.failsafe.Failsafe
+import dev.failsafe.RetryPolicy
+import dev.failsafe.event.EventListener
+import dev.failsafe.event.ExecutionAttemptedEvent
+import dev.failsafe.function.CheckedSupplier
 import groovy.json.JsonSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
@@ -36,6 +35,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.exception.RateLimitExceededException
+import nextflow.util.RetryConfig
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.transport.CredentialsProvider
@@ -363,7 +363,7 @@ abstract class RepositoryProvider {
      * @return The {@link dev.failsafe.RetryPolicy} instance
      */
     protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond) {
-        final cfg = config.retryConfig()
+        final cfg = new RetryConfig()
         final listener = new EventListener<ExecutionAttemptedEvent<?>>() {
             @Override
             void accept(ExecutionAttemptedEvent<?> event) throws Throwable {

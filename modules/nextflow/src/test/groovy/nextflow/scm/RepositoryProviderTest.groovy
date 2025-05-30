@@ -110,25 +110,11 @@ class RepositoryProviderTest extends Specification {
         1 * conn.setRequestProperty('Authorization', "Basic ${'foo:bar'.bytes.encodeBase64()}")
     }
 
-    def 'should test retries ' () {
+    def 'should test retries' () {
         given:
-        def CONFIG = '''
-        providers {
-              github {
-                server = 'https://github.com'
-                retryPolicy {
-                  delay = '10ms'
-                  maxDelay = '30s'
-                  maxAttempts = 3
-                  jitter = 0.1
-                }
-              }
-        }
-        '''
-        def config = new ConfigSlurper().parse(CONFIG)
         def provider = Spy(RepositoryProvider)
-        def provConfig = new ProviderConfig('github', config.providers.github as ConfigObject)
-        provider.@config = provConfig
+        provider.@config = new ProviderConfig('github', [server: 'https://github.com'] as ConfigObject)
+
         when:
         provider.invoke('https://api.github.com/repos/project/x')
         then:

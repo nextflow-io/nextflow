@@ -25,8 +25,6 @@ import nextflow.script.types.Duration;
 
 public class K8sConfig implements ConfigScope {
 
-    public K8sRetryConfig retryPolicy;
-
     @ConfigOption
     @Description("""
         When `true`, host paths are automatically mounted into the task pods (default: `false`). Only intended for development purposes when using a single node.

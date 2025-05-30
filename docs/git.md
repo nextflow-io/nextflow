@@ -47,18 +47,6 @@ The following configuration properties are supported for each provider configura
 : *Required only for private SCM servers*
 : SCM API `endpoint` URL e.g. `https://api.github.com` (default: the same as `providers.<provider>.server`).
 
-`providers.<provider>.retryPolicy.delay`
-: Delay when retrying failed requests (default: `500ms`).
-
-`providers.<provider>.retryPolicy.jitter`
-: Jitter value when retrying failed requests (default: `0.25`).
-
-`providers.<provider>.retryPolicy.maxAttempts`
-: Max attempts when retrying failed requests (default: `10`).
-
-`providers.<provider>.retryPolicy.maxDelay`
-: Max delay when retrying failed requests (default: `90s`).
-
 ## Git providers
 
 ### BitBucket
