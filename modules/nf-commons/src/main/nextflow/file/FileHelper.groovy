@@ -879,7 +879,9 @@ class FileHelper {
 
             @Override
             FileVisitResult visitFile(Path fullPath, BasicFileAttributes attrs) throws IOException {
-                final path = folder.relativize(fullPath)
+                def path = fullPath
+                if( fullPath.isAbsolute() )
+                    path = folder.relativize(fullPath)
                 log.trace "visitFiles > file=$path; includeFile=$includeFile; matches=${matcher.matches(path)}; isRegularFile=${attrs.isRegularFile()}"
 
                 if (includeFile && matcher.matches(path) && (attrs.isRegularFile() || (options.followLinks == false && attrs.isSymbolicLink())) && (includeHidden || !isHidden(fullPath))) {
@@ -911,7 +913,9 @@ class FileHelper {
     }
 
     static protected Path relativize0(Path folder, Path fullPath) {
-        def result = folder.relativize(fullPath)
+        def result = fullPath
+        if( fullPath.isAbsolute() )
+            result = folder.relativize(fullPath)
         String str
         if( folder.is(FileSystems.default) || !(str=result.toString()).endsWith('/') )
             return result

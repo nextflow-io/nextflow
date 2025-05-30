@@ -15,11 +15,12 @@
  */
 package nextflow.cloud.aws
 
-import nextflow.cloud.aws.nio.S3FileSystemProvider
 import groovy.transform.CompileStatic
 import nextflow.file.FileHelper
 import nextflow.plugin.BasePlugin
 import org.pf4j.PluginWrapper
+import software.amazon.nio.spi.s3.S3FileSystemProvider
+
 /**
  * Nextflow plugin for Amazon extensions
  *
@@ -35,8 +36,6 @@ class AmazonPlugin extends BasePlugin {
     @Override
     void start() {
         super.start()
-        // disable aws sdk v1 warning
-        System.setProperty("aws.java.v1.disableDeprecationAnnouncement", "true")
         FileHelper.getOrInstallProvider(S3FileSystemProvider)
     }
 
