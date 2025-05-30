@@ -82,13 +82,19 @@ class TowerFusionToken implements FusionToken {
     // Platform access token to use for requests
     private String accessToken
 
+    // Platform workflowId
+    private String workspaceId
+
+    // Platform workflowId
+    private String workflowId
+
     TowerFusionToken() {
         final config = PlatformHelper.config()
         final env = SysEnv.get()
         this.endpoint = PlatformHelper.getEndpoint(config, env)
-        if( !endpoint )
-            throw new IllegalArgumentException("Missing Seqera Platform endpoint")
         this.accessToken = PlatformHelper.getAccessToken(config, env)
+        this.workflowId = env.get('TOWER_WORKFLOW_ID')
+        this.workspaceId = PlatformHelper.getWorkspaceId(config, env)
     }
 
     protected void validateConfig() {
@@ -96,9 +102,6 @@ class TowerFusionToken implements FusionToken {
             throw new IllegalArgumentException("Missing Seqera Platform endpoint")
         if( !accessToken )
             throw new IllegalArgumentException("Missing Seqera Platform access token")
-        final client = TowerFactory.client()
-        if( !client )
-            throw new IllegalArgumentException("Seqera Platform client is not enabled")
     }
 
     /**
@@ -138,7 +141,12 @@ class TowerFusionToken implements FusionToken {
      * @return The signed JWT token
      */
     protected String getLicenseToken(String product, String version) {
-        final req = new GetLicenseTokenRequest(product: product, version: version ?: 'unknown')
+        final req = new GetLicenseTokenRequest(
+            product: product,
+            version: version ?: 'unknown',
+            workflowId: workflowId,
+            workspaceId: workspaceId
+        )
         final key = '${product}-${version}'
         try {
             final now = Instant.now()
