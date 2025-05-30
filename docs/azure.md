@@ -491,13 +491,16 @@ Custom formulas can be provided via the `azure.batch.pools.<POOL_NAME>.scaleForm
 
 #### Task authentication
 
-By default, Nextflow creates SAS tokens for specific containers and passes them to tasks to enable file operations with Azure Storage.
+By default, Nextflow creates SAS tokens for specific containers and passes them to tasks to enable file operations with Azure Storage. The SAS token will expire after a set period of time, which is configurable via the `azure.storage.tokenDuration` setting which is set to 48 hours by default.
 
-When using the Fusion file system, you can authenticate to Azure Storage using a managed identity. This requires:
+:::{versionadded} 25.05.0-edge
+:::
 
-1. Manually attaching a user-assigned managed identity to the node pool
-2. Assigning the Azure Storage Blob Data Contributor role to this identity for your storage account
-3. Configuring Nextflow to use this identity via the `azure.managedIdentity.clientId` setting:
+When using the Fusion file system, you can also authenticate to Azure Storage using a managed identity. This requires:
+
+1. Creating a user-assigned managed identity with the Azure Storage Blob Data Contributor role for your storage account
+2. Manually attaching the user-assigned managed identity to the node pool
+3. Configuring Nextflow to use this identity via the `azure.managedIdentity.clientId` setting.
 
 ```groovy
 azure {
@@ -507,7 +510,7 @@ azure {
 }
 ```
 
-Each task will now authenticate as this managed identity and download and upload files to Azure Storage using these credentials.
+Each task will now authenticate as this managed identity and download and upload files to Azure Storage using these credentials. It is possible to attach more than one managed identity to a pool, and Fusion will use the one specified with the `azure.managedIdentity.clientId` setting.
 
 #### Task Packing
 
