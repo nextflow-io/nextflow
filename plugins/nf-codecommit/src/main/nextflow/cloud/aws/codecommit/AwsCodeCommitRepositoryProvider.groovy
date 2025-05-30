@@ -134,7 +134,7 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
     // called by AssetManager
     // called by RepositoryProvider.readText()
     @Override
-    protected byte[] readBytes( String path ) {
+    byte[] readBytes( String path ) {
 
         final request = new GetFileRequest()
             .withRepositoryName(repositoryName)
