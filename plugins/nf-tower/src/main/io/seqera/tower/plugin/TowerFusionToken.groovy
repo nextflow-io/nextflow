@@ -144,8 +144,8 @@ class TowerFusionToken implements FusionToken {
         final req = new GetLicenseTokenRequest(
             product: product,
             version: version ?: 'unknown',
-            workspaceId: client.getWorkspaceId(),
-            workflowId: client.getWorkflowId()
+            workflowId: client.getWorkflowId(),
+            workspaceId: client.getWorkspaceId()
         )
         final key = '${product}-${version}'
         try {
