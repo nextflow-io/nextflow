@@ -12,6 +12,9 @@ import nextflow.SysEnv
 import nextflow.util.GsonHelper
 import spock.lang.Shared
 import spock.lang.Specification
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*
+
 /**
  * Test cases for the TowerFusionEnv class.
  *
@@ -254,14 +257,22 @@ class TowerFusionEnvTest extends Specification {
                 ]
             ]
         }
-        def provider = new TowerFusionToken()
+        and:
+        def client = Mock(TowerClient) {
+            getWorkflowId() >> '12345'
+            getWorkspaceId() >> '67890'
+        }
+        and:
+        def provider = new TowerFusionToken(client: client)
 
         and: 'a mock endpoint returning a valid token'
         final now = Instant.now()
         final expirationDate = GsonHelper.toJson(now.plus(1, ChronoUnit.DAYS))
         wireMockServer.stubFor(
-            WireMock.post(WireMock.urlEqualTo("/license/token/"))
-                .withHeader('Authorization', WireMock.equalTo('Bearer abc123'))
+            WireMock.post(urlEqualTo("/license/token/"))
+                .withHeader('Authorization', equalTo('Bearer abc123'))
+                .withRequestBody(matchingJsonPath('$.workflowId', equalTo("12345")))
+                .withRequestBody(matchingJsonPath('$.workspaceId', equalTo("67890")))
                 .willReturn(
                     WireMock.aResponse()
                         .withStatus(200)
@@ -300,7 +311,8 @@ class TowerFusionEnvTest extends Specification {
                 ]
             ]
         }
-        def provider = new TowerFusionToken()
+        and:
+        def provider = new TowerFusionToken(client: Mock(TowerClient))
 
         and: 'a mock endpoint returning an error'
         wireMockServer.stubFor(
