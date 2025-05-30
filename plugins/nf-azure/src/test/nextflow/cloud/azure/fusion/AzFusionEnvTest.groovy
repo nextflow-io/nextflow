@@ -249,7 +249,7 @@ class AzFusionEnvTest extends Specification {
         Global.session = Mock(Session) {
             getConfig() >> [azure: [
                 storage: [accountName: NAME],
-                batch: [poolIdentityClientId: 'true']
+                batch: [poolIdentityClientId: 'auto']
             ]]
         }
 

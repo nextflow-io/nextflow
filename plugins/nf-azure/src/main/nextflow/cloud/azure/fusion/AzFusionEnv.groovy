@@ -68,7 +68,7 @@ class AzFusionEnv implements FusionEnv {
             // We recommend explicitly setting the config item to the managed ID so you know which one is being used.
             // However if set to 'true' it will use whichever is available.
             // This can be helpful if the pools have different managed identities.
-            if (managedIdentityId != 'true') {
+            if (managedIdentityId != 'auto') {
                 result.FUSION_AZ_MSI_CLIENT_ID = managedIdentityId
             }
             // No SAS token is added or generated
