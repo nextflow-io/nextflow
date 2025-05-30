@@ -447,6 +447,7 @@ class AssetManager {
         }
         catch( Exception e ) {
             log.warn "Cannot read project config -- Cause: ${e.message ?: e}"
+            return new Manifest(Collections.emptyMap())
         }
     }
 
@@ -459,6 +460,7 @@ class AssetManager {
         }
         catch( Exception e ) {
             log.warn "Cannot read project config -- Cause: ${e.message ?: e}"
+            return new RetryConfig()
         }
     }
 

@@ -17,6 +17,7 @@
 package nextflow.scm
 
 import dev.failsafe.FailsafeException
+import nextflow.util.RetryConfig
 import spock.lang.Specification
 
 /**
@@ -114,11 +115,12 @@ class RepositoryProviderTest extends Specification {
         given:
         def provider = Spy(RepositoryProvider)
         provider.@config = new ProviderConfig('github', [server: 'https://github.com'] as ConfigObject)
+        provider.@retryConfig = new RetryConfig()
 
         when:
         provider.invoke('https://api.github.com/repos/project/x')
         then:
-        3 * provider.invoke0(_) >> {throw new IOException("exception")}
+        5 * provider.invoke0(_) >> { throw new IOException("exception") }
         def e = thrown(IOException)
         e.message == "exception"
     }

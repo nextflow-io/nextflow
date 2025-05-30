@@ -50,9 +50,9 @@ class K8sConfig implements Map<String,Object> {
 
     private PodOptions podOptions
 
-    K8sConfig(Map<String,Object> config, Map<String,Object> nextflowOpts) {
-        target = config ?: Collections.<String,Object>emptyMap()
-        target.retryPolicy = nextflowOpts.retryPolicy as Map ?: Collections.<String,Object>emptyMap()
+    K8sConfig(Map config = null, Map nextflowOpts = null) {
+        target = new HashMap<>(config ?: Collections.emptyMap())
+        target.retryPolicy = nextflowOpts?.retryPolicy as Map ?: Collections.emptyMap()
 
         this.podOptions = createPodOptions(target.pod)
         if( getStorageClaimName() ) {
