@@ -31,12 +31,17 @@ import nextflow.extension.GroupKey
 @EqualsAndHashCode
 class KeyPair {
     List keys
+    List originalKeys
     List values
 
+    KeyPair() {
+        this.keys = []
+        this.originalKeys = []
+        this.values = []
+    }
+
     void addKey(el) {
-        if (keys == null) {
-            keys = []
-        }
+        originalKeys.add(el)
         keys.add(safeStr(el))
     }
 
