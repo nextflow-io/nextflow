@@ -16,8 +16,17 @@
 
 package nextflow.scm
 
+import java.time.temporal.ChronoUnit
+import java.util.concurrent.TimeoutException
+import java.util.function.Predicate
+
 import static nextflow.util.StringUtils.*
 
+import dev.failsafe.Failsafe
+import dev.failsafe.RetryPolicy
+import dev.failsafe.event.EventListener
+import dev.failsafe.event.ExecutionAttemptedEvent
+import dev.failsafe.function.CheckedSupplier
 import groovy.json.JsonSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
@@ -26,6 +35,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.exception.RateLimitExceededException
+import nextflow.util.RetryConfig
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.transport.CredentialsProvider
@@ -67,18 +77,21 @@ abstract class RepositoryProvider {
      */
     protected String revision
 
+    protected RetryConfig retryConfig = new RetryConfig()
+
     RepositoryProvider setCredentials(String userName, String password) {
         config.user = userName
         config.password = password
         return this
     }
 
-    String getRevision() {
-        return this.revision
-    }
-
     RepositoryProvider setRevision(String revision) {
         this.revision = revision
+        return this
+    }
+
+    RepositoryProvider setRetryConfig(RetryConfig retryConfig) {
+        this.retryConfig = retryConfig
         return this
     }
 
@@ -88,6 +101,10 @@ abstract class RepositoryProvider {
 
     ProviderConfig getConfig() {
         return this.config
+    }
+
+    String getRevision() {
+        return this.revision
     }
 
     boolean hasCredentials() {
@@ -181,6 +198,10 @@ abstract class RepositoryProvider {
      * @return The remote service response as a text
      */
     protected String invoke( String api ) {
+        return apply(()-> invoke0(api))
+    }
+
+    protected String invoke0( String api ) {
         assert api
 
         log.debug "Request [credentials ${getAuthObfuscated() ?: '-'}] -> $api"
@@ -340,6 +361,54 @@ abstract class RepositoryProvider {
         catch( IOException e ) {
             throw new AbortOperationException("Cannot find `$project` -- Make sure exists a ${name.capitalize()} repository at this address `${getRepositoryUrl()}`", e)
         }
+    }
+
+    /**
+     * Creates a retry policy using the configuration specified by {@link nextflow.scm.ProviderRetryConfig}
+     *
+     * @param cond A predicate that determines when a retry should be triggered
+     * @return The {@link dev.failsafe.RetryPolicy} instance
+     */
+    protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond) {
+        final listener = new EventListener<ExecutionAttemptedEvent<?>>() {
+            @Override
+            void accept(ExecutionAttemptedEvent<?> event) throws Throwable {
+                log.debug("Provider invoke response error - attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}")
+            }
+        }
+        return RetryPolicy.<T>builder()
+            .handleIf(cond)
+            .withBackoff(retryConfig.delay.toMillis(), retryConfig.maxDelay.toMillis(), ChronoUnit.MILLIS)
+            .withMaxAttempts(retryConfig.maxAttempts)
+            .withJitter(retryConfig.jitter)
+            .onRetry(listener as EventListener)
+            .build()
+    }
+
+    /**
+     * Carry out the invocation of the specified action using a retry policy.
+     *
+     * @param action A {@link dev.failsafe.function.CheckedSupplier} instance modeling the action to be performed in a safe manner
+     * @return The result of the supplied action
+     */
+    protected <T> T apply(CheckedSupplier<T> action) {
+        // define the retry condition
+        final cond = new Predicate<? extends Throwable>() {
+            @Override
+            boolean test(Throwable t) {
+                // checkResponse method can throw RateLimitExceedExceptions which are retried and AbortedException which not retried.
+                // Other methods can throw IOExceptions including for 50x response codes which are retried by default.
+                if( t instanceof RateLimitExceededException || t.cause instanceof RateLimitExceededException)
+                    return true
+                if( t instanceof IOException || t.cause instanceof IOException )
+                    return true
+                return false
+            }
+        }
+        // create the retry policy object
+        final policy = (RetryPolicy<T>) retryPolicy(cond)
+        // apply the action with
+        return Failsafe.with(policy).get(action)
     }
 
 }

@@ -16,15 +16,15 @@
 
 package nextflow.k8s.client
 
-import groovy.util.logging.Slf4j
-import nextflow.util.Duration
-
 import javax.net.ssl.KeyManager
 import java.nio.file.Path
 import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+import groovy.util.logging.Slf4j
+import nextflow.util.Duration
+import nextflow.util.RetryConfig
 /**
  * Models the kubernetes cluster client configuration settings
  *
@@ -57,7 +57,7 @@ class ClientConfig {
 
     KeyManager[] keyManagers
 
-    K8sRetryConfig retryConfig
+    RetryConfig retryConfig
 
     /**
      * Timeout when reading from Input stream when a connection is established to a resource.
@@ -79,7 +79,7 @@ class ClientConfig {
     String getNamespace() { namespace ?: 'default' }
 
     ClientConfig() {
-        retryConfig = new K8sRetryConfig()
+        retryConfig = new RetryConfig()
     }
 
     String toString() {
@@ -132,10 +132,6 @@ class ClientConfig {
             result.clientKey = opts.clientKey.toString().decodeBase64()
         else if( opts.clientKeyFile )
             result.clientKey = Paths.get(opts.clientKeyFile.toString()).bytes
-        if( opts.retryPolicy )
-            result.retryConfig = new K8sRetryConfig(opts.retryPolicy as Map)
-        if( opts.maxErrorRetry )
-            log.warn("Config setting 'k8s.maxErrorRetry' is deprecated - change it to 'k8s.retryPolicy.maxAttempts'")
 
         return result
     }
