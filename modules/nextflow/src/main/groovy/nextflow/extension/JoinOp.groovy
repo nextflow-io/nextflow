@@ -201,26 +201,7 @@ class JoinOp {
         def result = []
         
         // Find the best key (prefer GroupKey) from all channels
-        def bestOriginalKeys = null
-        for (Map.Entry<Integer,List> entry : channels.entrySet()) {
-            def channelItems = entry.getValue()
-            if (channelItems && channelItems.size() > 0) {
-                def keyPair = channelItems[0] as KeyPair
-                if (bestOriginalKeys == null) {
-                    bestOriginalKeys = keyPair.originalKeys
-                } else {
-                    // Check if this channel has a GroupKey version
-                    for (int i = 0; i < keyPair.originalKeys.size(); i++) {
-                        def candidateKey = keyPair.originalKeys[i]
-                        def currentKey = bestOriginalKeys instanceof List ? bestOriginalKeys[i] : bestOriginalKeys
-                        if (candidateKey instanceof GroupKey && !(currentKey instanceof GroupKey)) {
-                            bestOriginalKeys = keyPair.originalKeys
-                            break
-                        }
-                    }
-                }
-            }
-        }
+        def bestOriginalKeys = findBestOriginalKeys(channels)
         
         // add the key
         addToList(result, bestOriginalKeys ?: item0.originalKeys)
@@ -257,26 +238,7 @@ class JoinOp {
                 def result = new ArrayList(count+1)
                 
                 // Find the best original key from available channels
-                def bestOriginalKey = null
-                for( int i=0; i<count; i++ ) {
-                    List items = entry[i]
-                    if( items && items.size() > 0 ) {
-                        def keyPair = items[0] as KeyPair
-                        if (bestOriginalKey == null) {
-                            bestOriginalKey = keyPair.originalKeys
-                        } else {
-                            // Check if this channel has a GroupKey version
-                            for (int j = 0; j < keyPair.originalKeys.size(); j++) {
-                                def candidateKey = keyPair.originalKeys[j]
-                                def currentKey = bestOriginalKey instanceof List ? bestOriginalKey[j] : bestOriginalKey
-                                if (candidateKey instanceof GroupKey && !(currentKey instanceof GroupKey)) {
-                                    bestOriginalKey = keyPair.originalKeys
-                                    break
-                                }
-                            }
-                        }
-                    }
-                }
+                def bestOriginalKey = findBestOriginalKeys(entry)
                 
                 // Use the best available original key, or fall back to the map key
                 def originalKey = bestOriginalKey ?: key
@@ -308,6 +270,38 @@ class JoinOp {
             }
 
         }
+    }
+
+    /**
+     * Finds the best original keys from a map of channel items, preferring GroupKey over plain keys
+     * 
+     * @param channelItems Map of channel index to list of items (KeyPair objects)
+     * @return The best original keys found, or null if no items available
+     */
+    private def findBestOriginalKeys(Map<Integer,List> channelItems) {
+        def bestOriginalKeys = null
+        
+        for (Map.Entry<Integer,List> entry : channelItems.entrySet()) {
+            def items = entry.getValue()
+            if (items && items.size() > 0) {
+                def keyPair = items[0] as KeyPair
+                if (bestOriginalKeys == null) {
+                    bestOriginalKeys = keyPair.originalKeys
+                } else {
+                    // Check if this channel has a GroupKey version
+                    for (int i = 0; i < keyPair.originalKeys.size(); i++) {
+                        def candidateKey = keyPair.originalKeys[i]
+                        def currentKey = bestOriginalKeys instanceof List ? bestOriginalKeys[i] : bestOriginalKeys
+                        if (candidateKey instanceof GroupKey && !(currentKey instanceof GroupKey)) {
+                            bestOriginalKeys = keyPair.originalKeys
+                            break
+                        }
+                    }
+                }
+            }
+        }
+        
+        return bestOriginalKeys
     }
 
     protected void checkForDuplicate( key, value, int dir, boolean add ) {
