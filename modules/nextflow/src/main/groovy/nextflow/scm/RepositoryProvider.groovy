@@ -77,7 +77,7 @@ abstract class RepositoryProvider {
      */
     protected String revision
 
-    protected RetryConfig retryConfig
+    protected RetryConfig retryConfig = new RetryConfig()
 
     RepositoryProvider setCredentials(String userName, String password) {
         config.user = userName
