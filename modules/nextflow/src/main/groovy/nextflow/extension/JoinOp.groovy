@@ -58,8 +58,6 @@ class JoinOp {
 
     private Set uniqueKeys = new LinkedHashSet()
 
-    private Map<Object,Object> originalKeyMap = new HashMap()
-
     JoinOp( DataflowReadChannel source, DataflowReadChannel target, Map params = null ) {
         CheckHelper.checkParams('join', params, JOIN_PARAMS)
         this.source = source
@@ -175,24 +173,6 @@ class JoinOp {
         // get the index key for this object
         final item0 = DataflowHelper.makeKey(pivot, data)
 
-        // Store the mapping from normalized key to original key
-        // Prefer GroupKey over plain keys
-        def existingOriginal = originalKeyMap.get(item0.keys)
-        if (existingOriginal == null) {
-            originalKeyMap[item0.keys] = item0.originalKeys
-        } else {
-            // Check if any of the new original keys is a GroupKey
-            // If so, replace the existing mapping
-            for (int i = 0; i < item0.originalKeys.size(); i++) {
-                def newKey = item0.originalKeys[i]
-                def oldKey = existingOriginal instanceof List ? existingOriginal[i] : existingOriginal
-                if (newKey instanceof GroupKey && !(oldKey instanceof GroupKey)) {
-                    originalKeyMap[item0.keys] = item0.originalKeys
-                    break
-                }
-            }
-        }
-
         // check for unique keys
         checkForDuplicate(item0.keys, item0.values, index, false)
 
@@ -210,7 +190,6 @@ class JoinOp {
         def entries = channels[index]
 
         // add the received item to the list
-        // Store the full KeyPair to preserve original keys
         entries << item0
         setSingleton(index, item0.values.size()==0)
 
@@ -265,16 +244,6 @@ class JoinOp {
         return result
     }
 
-    // Helper method to retrieve original data from buffer
-    private def getOriginalDataFromBuffer(Map<Object,Map<Integer,List>> buffer, Object key, int channelIndex) {
-        def channels = buffer.get(key)
-        if (channels == null) return null
-        def items = channels.get(channelIndex)
-        if (items == null || items.isEmpty()) return null
-        // Need to reconstruct the original data from the values and the key
-        // This is a simplified version - in reality we'd need to track the full original items
-        return null  // For now, we'll use a different approach
-    }
 
     private final void checkRemainder(Map<Object,Map<Integer,List>> buffers, int count, DataflowWriteChannel target ) {
        log.trace "Operator `join` remainder buffer: ${-> buffers}"
@@ -310,7 +279,7 @@ class JoinOp {
                 }
                 
                 // Use the best available original key, or fall back to the map key
-                def originalKey = bestOriginalKey ?: originalKeyMap.get(key) ?: key
+                def originalKey = bestOriginalKey ?: key
                 addToList(result, originalKey)
 
                 for( int i=0; i<count; i++ ) {
