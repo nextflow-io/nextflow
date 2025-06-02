@@ -162,6 +162,7 @@ nxf_main() {
     {{module_load}}
     {{conda_activate}}
     {{spack_activate}}
+    {{pixi_activate}}
     set -u
     {{task_env}}
     {{secrets_env}}

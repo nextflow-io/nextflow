@@ -341,6 +341,7 @@ class BashWrapperBuilder {
         binding.before_script = getBeforeScriptSnippet()
         binding.conda_activate = getCondaActivateSnippet()
         binding.spack_activate = getSpackActivateSnippet()
+        binding.pixi_activate = getPixiActivateSnippet()
 
         /*
          * add the task environment
@@ -394,7 +395,7 @@ class BashWrapperBuilder {
         binding.fix_ownership = fixOwnership() ? "[ \${NXF_OWNER:=''} ] && (shopt -s extglob; GLOBIGNORE='..'; chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*}) || true" : null
 
         binding.trace_script = isTraceRequired() ? getTraceScript(binding) : null
-        
+
         return binding
     }
 
@@ -560,6 +561,29 @@ class BashWrapperBuilder {
         return result
     }
 
+    private String getPixiActivateSnippet() {
+        if( !pixiEnv )
+            return null
+        def result = "# pixi environment\n"
+
+        // Check if there's a .pixi file that points to the project directory
+        final pixiFile = pixiEnv.resolve('.pixi')
+        if( pixiFile.exists() ) {
+            // Read the project directory path
+            final projectDir = pixiFile.text.trim()
+            result += "cd ${Escape.path(projectDir as String)} && "
+            result += "eval \"\$(pixi shell-hook --shell bash)\" && "
+            result += "cd \"\$OLDPWD\"\n"
+        }
+        else {
+            // Direct activation from environment directory
+            result += "cd ${Escape.path(pixiEnv)} && "
+            result += "eval \"\$(pixi shell-hook --shell bash)\" && "
+            result += "cd \"\$OLDPWD\"\n"
+        }
+        return result
+    }
+
     protected String getTraceCommand(String interpreter) {
         String result = "${interpreter} ${fileStr(scriptFile)}"
         if( input != null )
@@ -628,7 +652,7 @@ class BashWrapperBuilder {
     private String copyFileToWorkDir(String fileName) {
         copyFile(fileName, workDir.resolve(fileName))
     }
-    
+
 
     String getCleanupCmd(String scratch) {
         String result = ''
