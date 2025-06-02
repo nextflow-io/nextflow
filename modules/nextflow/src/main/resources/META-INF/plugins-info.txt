@@ -5,5 +5,5 @@ nf-codecommit@0.2.3
 nf-console@1.2.1
 nf-google@1.21.0
 nf-k8s@1.0.0
-nf-tower@1.11.2
+nf-tower@1.11.3
 nf-wave@1.12.1
