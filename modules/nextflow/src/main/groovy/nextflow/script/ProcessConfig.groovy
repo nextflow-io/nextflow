@@ -90,6 +90,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'memory',
             'module',
             'penv',
+            'pixi',
             'pod',
             'publishDir',
             'queue',
