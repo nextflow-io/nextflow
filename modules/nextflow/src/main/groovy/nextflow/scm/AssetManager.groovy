@@ -438,7 +438,6 @@ class AssetManager {
         return remoteHead?.getTarget()?.getName()?.substring(REMOTE_REFS_ROOT.length())
     }
 
-    @Memoized
     Manifest getManifest() {
         try {
             def config = getConfig0()
@@ -451,7 +450,6 @@ class AssetManager {
         }
     }
 
-    @Memoized
     RetryConfig getRetryConfig() {
         try {
             def config = getConfig0()
@@ -464,6 +462,7 @@ class AssetManager {
         }
     }
 
+    @Memoized
     protected ConfigObject getConfig0() {
         String text = null
         try {
