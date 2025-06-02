@@ -190,7 +190,7 @@ class ConfigBuilder {
 
         def result = []
         if ( files ) {
-            for( String fileName : files ) { 
+            for( String fileName : files ) {
                 def thisFile = currentDir.resolve(fileName)
                 if(!thisFile.exists()) {
                     throw new AbortOperationException("The specified configuration file does not exist: $thisFile -- check the name or choose another file")
@@ -594,6 +594,19 @@ class ConfigBuilder {
             config.spack.enabled = true
         }
 
+        if( cmdRun.withoutPixi && config.pixi instanceof Map ) {
+            // disable pixi execution
+            log.debug "Disabling execution with Pixi as requested by command-line option `-without-pixi`"
+            config.pixi.enabled = false
+        }
+
+        // -- apply the pixi environment
+        if( cmdRun.withPixi ) {
+            if( cmdRun.withPixi != '-' )
+                config.process.pixi = cmdRun.withPixi
+            config.pixi.enabled = true
+        }
+
         // -- sets the resume option
         if( cmdRun.resume )
             config.resume = cmdRun.resume
@@ -861,7 +874,7 @@ class ConfigBuilder {
             final value = entry.value
             final previous = getConfigVal0(config, key)
             keys << entry.key
-            
+
             if( previous==null ) {
                 config[key] = value
             }

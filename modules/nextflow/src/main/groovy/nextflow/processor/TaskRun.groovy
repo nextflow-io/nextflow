@@ -52,6 +52,8 @@ import nextflow.script.params.InParam
 import nextflow.script.params.OutParam
 import nextflow.script.params.StdInParam
 import nextflow.script.params.ValueOutParam
+import nextflow.pixi.PixiCache
+import nextflow.pixi.PixiConfig
 import nextflow.spack.SpackCache
 /**
  * Models a task instance
@@ -648,6 +650,25 @@ class TaskRun implements Cloneable {
         cache.getCachePathFor(config.conda as String)
     }
 
+    Path getPixiEnv() {
+        // note: use an explicit function instead of a closure or lambda syntax, otherwise
+        // when calling this method from a subclass it will result into a MissingMethodExeception
+        // see  https://issues.apache.org/jira/browse/GROOVY-2433
+        cache0.computeIfAbsent('pixiEnv', new Function<String,Path>() {
+            @Override
+            Path apply(String it) {
+                return getPixiEnv0()
+            }})
+    }
+
+    private Path getPixiEnv0() {
+        if( !config.pixi || !processor.session.getPixiConfig().isEnabled() )
+            return null
+
+        final cache = new PixiCache(processor.session.getPixiConfig())
+        cache.getCachePathFor(config.pixi as String)
+    }
+
     Path getSpackEnv() {
         // note: use an explicit function instead of a closure or lambda syntax, otherwise
         // when calling this method from a subclass it will result into a MissingMethodExeception
@@ -727,7 +748,7 @@ class TaskRun implements Cloneable {
             ? containerResolver().getContainerMeta(containerKey)
             : null
     }
-    
+
     String getContainerPlatform() {
         final result = config.getArchitecture()
         return result ? result.dockerArch : containerResolver().defaultContainerPlatform()
@@ -990,6 +1011,10 @@ class TaskRun implements Cloneable {
 
     CondaConfig getCondaConfig() {
         return processor.session.getCondaConfig()
+    }
+
+    PixiConfig getPixiConfig() {
+        return processor.session.getPixiConfig()
     }
 
     String getStubSource() {
