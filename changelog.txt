@@ -1,5 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.04.3 - 2 Jun 2025
+- Add Platform info to Fusion license (#6142) [375db65a]
+- Force overwritting to trace file (#6105) [59e9d88d]
+- Bump nf-tower@1.11.3 [f7509bce] 
+
 25.04.2 - 13 May 2025
 - Add check subcommand in lineage (#6074) [5ba67bca]
 - Fix issues with `lint` console output (#6064) [7405f513]
