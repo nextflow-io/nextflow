@@ -140,9 +140,7 @@ Replace the following:
 - `BATCH_ACCOUNT_LOCATION`: your Azure Batch account location
 
 :::{tip}
-Nextflow uses the `AZURE_MANAGED_IDENTITY_SYSTEM` environment variable if the managed identity is not set in the Nextflow configuration file. 
-
-- `AZURE_MANAGED_IDENTITY_SYSTEM`: When set to `true`, enables system-assigned managed identity.
+Nextflow uses the `AZURE_MANAGED_IDENTITY_SYSTEM` environment variable if the managed identity is not set in the Nextflow configuration file. Set this to `true` to enable a system-assigned managed identity
 :::
 
 **User-assigned managed identity**
