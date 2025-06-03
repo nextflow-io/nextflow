@@ -364,7 +364,7 @@ Clean up the Batch pools or use auto scaling to avoid any extra charges in the B
 
 Nextflow supports two approaches for managing Batch pools:
 
-**Auto pools**
+### Auto pools
 
 Nextflow automatically creates pools of compute nodes appropriate for your pipeline when using the `autoPoolMode` mode.
 
