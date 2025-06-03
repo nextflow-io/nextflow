@@ -591,7 +591,7 @@ azure.batch.pools.<POOL_NAME>.startTask {
 }
 ```
 
-### Operating systems
+### VM images
 
 When Nextflow creates a pool of compute nodes, it selects:
 
