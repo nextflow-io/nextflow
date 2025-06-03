@@ -461,7 +461,7 @@ The target pool must satisfy requirements when Nextflow is configured to use a p
 - The task slots per node must match the number of cores for the selected VM. Otherwise, Nextflow returns an error like "Azure Batch pool 'ID' slots per node does not match the VM num cores (slots: N, cores: Y)".
 - Unless you are using Fusion, all tasks must have AzCopy available in the path. If `azure.batch.copyToolInstallMode = 'node'` this requires every node to have the `azcopy` binary located at `$AZ_BATCH_NODE_SHARED_DIR/bin/`.
 
-**Auto-scaling**
+### Auto-scaling
 
 Azure Batch can automatically scale pools based on the parameters you define. With automatic scaling, Batch dynamically adds nodes to a pool as task demands increase and removes compute nodes as task demands decrease.
 
