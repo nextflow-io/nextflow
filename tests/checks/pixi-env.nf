@@ -9,13 +9,13 @@ workflow {
  */
 
 process sayHello {
-    pixi 'python=3.8'
+    pixi 'cowpy'
 
     output:
     stdout
 
     script:
-    '''
-    python -c "import sys; print(f'Hello from Python {sys.version_info.major}.{sys.version_info.minor}!')"
-    '''
+    """
+    cowpy "hello pixi"
+    """
 }
