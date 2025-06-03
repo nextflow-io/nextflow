@@ -79,7 +79,7 @@ workflow {
 Script declarations and statements cannot be mixed at the same level. All statements must reside within script declarations unless the script is a code snippet:
 
 ```nextflow
-process foo {
+process hello {
     // ...
 }
 
@@ -101,7 +101,7 @@ Mixing statements and script declarations was necessary in DSL1 and optional in 
 In Groovy, variables can be assigned in an expression:
 
 ```groovy
-foo(x = 1, y = 2)
+hello(x = 1, y = 2)
 ```
 
 In the strict syntax, assignments are allowed only as statements:
@@ -109,13 +109,13 @@ In the strict syntax, assignments are allowed only as statements:
 ```nextflow
 x = 1
 y = 2
-foo(x, y)
+hello(x, y)
 ```
 
 In Groovy, variables can be incremented and decremented in an expression:
 
 ```groovy
-foo(x++, y--)
+hello(x++, y--)
 ```
 
 In the strict syntax, use `+=` and `-=` instead:
@@ -123,7 +123,7 @@ In the strict syntax, use `+=` and `-=` instead:
 ```nextflow
 x += 1
 y -= 1
-foo(x, y)
+hello(x, y)
 ```
 
 ### For and while loops
@@ -284,7 +284,7 @@ def a = 1
 final b = 2
 def c = 3, d = 4
 def (e, f) = [5, 6]
-String str = 'foo'
+String str = 'hello'
 def Map meta = [:]
 ```
 
@@ -295,7 +295,7 @@ def a = 1
 def b = 2
 def (c, d) = [3, 4]
 def (e, f) = [5, 6]
-def str = 'foo'
+def str = 'hello'
 def meta = [:]
 ```
 
@@ -506,23 +506,23 @@ While params can be used anywhere in the pipeline code, they are only intended t
 As a best practice, processes and workflows should receive params as explicit inputs:
 
 ```nextflow
-process foo {
+process myproc {
     input:
-    val foo_args
+    val myproc_args
 
     // ...
 }
 
-workflow bar {
+workflow myflow {
     take:
-    bar_args
+    myflow_args
 
     // ...
 }
 
 workflow {
-    foo(params.foo_args)
-    bar(params.bar_args)
+    myproc(params.myproc_args)
+    myflow(params.myflow_args)
 }
 ```
 

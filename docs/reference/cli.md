@@ -582,7 +582,7 @@ $ nextflow inspect nextflow-io/hello
 Specify parameters as with the `run` command:
 
 ```console
-$ nextflow inspect main.nf --alpha 1 --beta foo
+$ nextflow inspect main.nf --alpha 1 --beta hello
 ```
 
 ### `kuberun`
@@ -850,7 +850,7 @@ The `log` command is used to query the execution metadata associated with pipeli
 : Comma-separated list of fields to include in the printed log. Use the `-l` option to see the list of available fields.
 
 `-F, -filter`
-: Filter log entries by a custom expression, e.g. `process =~ /foo.*/ && status == 'COMPLETED'`.
+: Filter log entries by a custom expression, e.g. `process =~ /hello.*/ && status == 'COMPLETED'`.
 
 `-h, -help`
 : Print the command usage.
@@ -1426,15 +1426,12 @@ List the folder structure of the downloaded pipeline:
 $ nextflow view -l nextflow-io/hello
 
 == content of path: .nextflow/assets/nextflow-io/hello
+.git
+.gitignore
 LICENSE
 README.md
-nextflow.config
-.gitignore
-circle.yml
-foo.nf
-.git
-.travis.yml
 main.nf
+nextflow.config
 ```
 
 View the contents of a downloaded pipeline without omitting the header:

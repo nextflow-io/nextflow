@@ -119,7 +119,7 @@ DSL2 scripts cannot exceed 64 KB in size. Split large DSL1 scripts into modules 
 - Unqualified value and file elements in a tuple declaration are no longer allowed. Use an explicit `val` or `path` qualifier. For example:
 
   ```nextflow
-  process foo {
+  process sam2bam {
       input:
       tuple X, 'some-file.sam'
 
@@ -136,7 +136,7 @@ DSL2 scripts cannot exceed 64 KB in size. Split large DSL1 scripts into modules 
   Use:
 
   ```nextflow
-  process foo {
+  process sam2bam {
       input:
       tuple val(X), path('some-file.sam')
 
@@ -181,23 +181,23 @@ An early preview of DSL2 was available in 2020. Note that some of that early DSL
   For example:
 
   ```nextflow
-  include './some/library'
-  include bar from './other/library'
+  include './modules/hello'
+  include bye from './modules/bye'
 
   workflow {
-      foo()
-      bar()
+      hello()
+      bye()
   }
   ```
 
   Should be replaced with:
 
   ```nextflow
-  include { foo } from './some/library'
-  include { bar } from './other/library'
+  include { hello } from './modules/hello'
+  include { bye } from './modules/bye'
 
   workflow {
-      foo()
-      bar()
+      hello()
+      bye()
   }
   ```

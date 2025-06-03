@@ -216,7 +216,7 @@ The following options are available for all process outputs:
 The `accelerator` directive allows you to request hardware accelerators (e.g. GPUs) for the task execution. For example:
 
 ```nextflow
-process foo {
+process hello {
     accelerator 4, type: 'nvidia-tesla-k80'
 
     script:
@@ -361,12 +361,12 @@ The `beforeScript` directive allows you to execute a custom (Bash) snippet *befo
 For example:
 
 ```nextflow
-process foo {
+process hello {
   beforeScript 'source /cluster/bin/setup'
 
   script:
   """
-  echo bar
+  echo 'hello'
   """
 }
 ```
@@ -412,7 +412,7 @@ The `clusterOptions` directive allows the usage of any native configuration opti
 The cluster options can be a string:
 
 ```nextflow
-process foo {
+process hello {
   clusterOptions '-x 1 -y 2'
   // ...
 }
@@ -425,7 +425,7 @@ Prior to this version, grid executors that require each option to be on a separa
 The cluster options can also be a string list:
 
 ```nextflow
-process foo {
+process hello {
   clusterOptions '-x 1', '-y 2', '--flag'
   // ...
 }
@@ -450,7 +450,7 @@ The `conda` directive allows for the definition of the process dependencies usin
 Nextflow automatically sets up an environment for the given package names listed by in the `conda` directive. For example:
 
 ```nextflow
-process foo {
+process hello {
   conda 'bwa=0.7.15'
 
   script:
@@ -732,7 +732,7 @@ The `ext` directive can be set in the process definition:
 
 ```nextflow
 process mapping {
-  ext version: '2.5.3', args: '--foo --bar'
+  ext version: '2.5.3', args: '--alpha --beta'
 
   // ...
 }
@@ -742,7 +742,7 @@ Or in the Nextflow configuration:
 
 ```groovy
 process.ext.version = '2.5.3'
-process.ext.args = '--foo --bar'
+process.ext.args = '--alpha --beta'
 ```
 
 (process-fair)=
@@ -755,11 +755,12 @@ process.ext.args = '--foo --bar'
 The `fair` directive, when enabled, guarantees that process outputs will be emitted in the order in which they were received. For example:
 
 ```nextflow
-process foo {
+process hello {
     fair true
 
     input:
     val x
+
     output:
     tuple val(task.index), val(x)
 
@@ -770,7 +771,7 @@ process foo {
 }
 
 workflow {
-    channel.of('A','B','C','D') | foo | view
+    channel.of('A','B','C','D') | hello | view
 }
 ```
 
@@ -822,7 +823,7 @@ The `machineType` can be used to specify a predefined Google Compute Platform [m
 This directive is optional and if specified overrides the cpus and memory directives:
 
 ```nextflow
-process foo {
+process hello {
   machineType 'n1-highmem-8'
 
   script:
@@ -845,7 +846,7 @@ When used along with `retry` error strategy, it can be useful to re-schedule the
 resource requirement. For example:
 
 ```nextflow
-process foo {
+process hello {
   errorStrategy 'retry'
   maxSubmitAwait '10 mins'
   maxRetries 3
@@ -1028,22 +1029,22 @@ For example:
 
 ```nextflow
 process your_task {
-  pod env: 'FOO', value: 'bar'
+  pod env: 'MESSAGE', value: 'hello world'
 
   script:
   """
-  echo $FOO
+  echo $MESSAGE
   """
 }
 ```
 
-The above snippet defines an environment variable named `FOO` whose value is `bar`.
+The above snippet defines an environment variable named `MESSAGE` whose value is `'hello world'`.
 
 When defined in the Nextflow configuration file, a pod setting can be defined as a map:
 
 ```groovy
 process {
-  pod = [env: 'FOO', value: 'bar']
+  pod = [env: 'MESSAGE', value: 'hello world']
 }
 ```
 
@@ -1052,7 +1053,7 @@ Or as a list of maps:
 ```groovy
 process {
   pod = [
-    [env: 'FOO', value: 'bar'],
+    [env: 'MESSAGE', value: 'hello world'],
     [secret: 'my-secret/key1', mountPath: '/etc/file.txt']
   ]
 }
@@ -1222,7 +1223,7 @@ The following options are available:
 The `publishDir` directive allows you to publish the process output files to a specified folder. For example:
 
 ```nextflow
-process foo {
+process hello {
     publishDir '/data/chunks'
 
     output:
@@ -1248,7 +1249,7 @@ The `publishDir` directive can be specified more than once in order to publish o
 By default files are published to the target folder creating a *symbolic link* for each process output that links the file produced into the process working directory. This behavior can be modified using the `mode` option, for example:
 
 ```nextflow
-process foo {
+process hello {
     publishDir '/data/chunks', mode: 'copy', overwrite: false
 
     output:
@@ -1314,7 +1315,7 @@ Available options:
 : :::{versionadded} 21.12.0-edge
   :::
 : *Experimental: currently only supported for S3.*
-: Allow the association of arbitrary tags with the published file e.g. `tags: [FOO: 'Hello world']`.
+: Allow the association of arbitrary tags with the published file e.g. `tags: [MESSAGE: 'Hello world']`.
 
 (process-queue)=
 
@@ -1529,7 +1530,7 @@ The `spack` directive allows for the definition of the process dependencies usin
 Nextflow automatically sets up an environment for the given package names listed by in the `spack` directive. For example:
 
 ```nextflow
-process foo {
+process hello {
     spack 'bwa@0.7.15'
 
     script:
@@ -1634,7 +1635,7 @@ The `storeDir` directive should not be used to publish workflow outputs. Use the
 The `tag` directive allows you to associate each process execution with a custom label, so that it will be easier to identify them in the log file or in the trace execution report. For example:
 
 ```nextflow
-process foo {
+process hello {
   tag "$code"
 
   input:
@@ -1647,16 +1648,16 @@ process foo {
 }
 
 workflow {
-  channel.of('alpha', 'gamma', 'omega') | foo
+  channel.of('alpha', 'gamma', 'omega') | hello
 }
 ```
 
 The above snippet will print a log similar to the following one, where process names contain the tag value:
 
 ```
-[6e/28919b] Submitted process > foo (alpha)
-[d2/1c6175] Submitted process > foo (gamma)
-[1c/3ef220] Submitted process > foo (omega)
+[6e/28919b] Submitted process > hello (alpha)
+[d2/1c6175] Submitted process > hello (gamma)
+[1c/3ef220] Submitted process > hello (omega)
 ```
 
 See also {ref}`Trace execution report <trace-report>`

@@ -189,7 +189,7 @@ echo "process completed"
 Variables prefixed with the dollar character (`$`) are interpreted as Nextflow variables when the template script is executed by Nextflow and Bash variables when executed directly. For example, the above script can be executed from the command line by providing each input as an environment variable:
 
 ```bash
-STR='foo' bash templates/my_script.sh
+STR='Hello!' bash templates/my_script.sh
 ```
 
 The following caveats should be considered:
@@ -458,18 +458,18 @@ This feature allows you to execute the process command multiple times without wo
 Channel factories like `channel.fromPath` produce file objects, but a `path` input can also accept a string literal path. The string value should be an absolute path, i.e. it must be prefixed with a `/` character or a supported URI protocol (`file://`, `http://`, `s3://`, etc), and it cannot contain special characters (`\n`, etc).
 
 ```nextflow
-process foo {
+process cat {
   input:
   path x
 
   script:
   """
-  your_command --in $x
+  cat $x
   """
 }
 
 workflow {
-  foo('/some/data/file.txt')
+  cat('/some/data/file.txt')
 }
 ```
 
@@ -751,7 +751,7 @@ As a result, channel values are consumed sequentially and any empty channel will
 For example:
 
 ```nextflow
-process foo {
+process echo {
   input:
   val x
   val y
@@ -765,11 +765,11 @@ process foo {
 workflow {
   x = channel.of(1, 2)
   y = channel.of('a', 'b', 'c')
-  foo(x, y)
+  echo(x, y)
 }
 ```
 
-The process `foo` is executed two times because the `x` channel emits only two values, therefore the `c` element is discarded. It outputs:
+The process `echo` is executed two times because the `x` channel emits only two values, therefore the `c` element is discarded. It outputs:
 
 ```
 1 and a
@@ -781,7 +781,7 @@ A different semantic is applied when using a {ref}`value channel <channel-type-v
 To better understand this behavior, compare the previous example with the following one:
 
 ```nextflow
-process bar {
+process echo {
   input:
   val x
   val y
@@ -795,11 +795,11 @@ process bar {
 workflow {
   x = channel.value(1)
   y = channel.of('a', 'b', 'c')
-  foo(x, y)
+  echo(x, y)
 }
 ```
 
-The above example executes the `bar` process three times because `x` is a value channel, therefore its value can be read as many times as needed. The process termination is determined by the contents of `y`. It outputs:
+The above example executes the `echo` process three times because `x` is a value channel, therefore its value can be read as many times as needed. The process termination is determined by the contents of `y`. It outputs:
 
 ```
 1 and a
@@ -846,7 +846,7 @@ Refer to the {ref}`process reference <process-reference-outputs>` for the full l
 The `val` qualifier allows you to output any Nextflow variable defined in the process. A common use case is to output a variable that was defined in the `input` section, as shown in the following example:
 
 ```nextflow
-process foo {
+process echo {
   input:
   each x
 
@@ -862,15 +862,15 @@ process foo {
 workflow {
   methods = ['prot', 'dna', 'rna']
 
-  receiver = foo(methods)
-  receiver.view { method -> "Received: $method" }
+  received = echo(methods)
+  received.view { method -> "Received: $method" }
 }
 ```
 
 The output value can be a value literal, an input variable, any other Nextflow variable in the process scope, or a value expression. For example:
 
 ```nextflow
-process foo {
+process cat {
   input:
   path infile
 
@@ -888,7 +888,7 @@ process foo {
 
 workflow {
   ch_dummy = channel.fromPath('*').first()
-  (ch_var, ch_str, ch_exp) = foo(ch_dummy)
+  (ch_var, ch_str, ch_exp) = cat(ch_dummy)
 
   ch_var.view { var -> "ch_var: $var" }
   ch_str.view { str -> "ch_str: $str" }
@@ -901,7 +901,7 @@ workflow {
 The `path` qualifier allows you to output one or more files produced by the process. For example:
 
 ```nextflow
-process randomNum {
+process randomNumber {
   output:
   path 'result.txt'
 
@@ -912,12 +912,12 @@ process randomNum {
 }
 
 workflow {
-  numbers = randomNum()
+  numbers = randomNumber()
   numbers.view { file -> "Received: ${file.text}" }
 }
 ```
 
-In the above example, the `randomNum` process creates a file named `result.txt` which contains a random number. Since a `path` output with the same name is declared, that file is emitted by the corresponding output channel. A downstream process with a compatible input channel will be able to receive it.
+In the above example, the `randomNumber` process creates a file named `result.txt` which contains a random number. Since a `path` output with the same name is declared, that file is emitted by the corresponding output channel. A downstream process with a compatible input channel will be able to receive it.
 
 Refer to the {ref}`process reference <process-reference-outputs>` for the list of available options for `path` outputs.
 
@@ -1091,7 +1091,7 @@ While parentheses for input and output qualifiers are generally optional, they a
 Here's an example with a single path output (parentheses optional):
 
 ```nextflow
-process foo {
+process hello {
     output:
     path 'result.txt', hidden: true
 
@@ -1105,7 +1105,7 @@ process foo {
 And here's an example with a tuple output (parentheses required):
 
 ```nextflow
-process foo {
+process hello {
     output:
     tuple path('last_result.txt'), path('result.txt', hidden: true)
 
@@ -1125,7 +1125,7 @@ process foo {
 The `emit` option can be used on a process output to define a name for the corresponding output channel, which can be used to access the channel by name from the process output. For example:
 
 ```nextflow
-process FOO {
+process hello_bye {
     output:
     path 'hello.txt', emit: hello
     stdout emit: bye
@@ -1138,8 +1138,8 @@ process FOO {
 }
 
 workflow {
-    FOO()
-    FOO.out.hello.view()
+    hello_bye()
+    hello_bye.out.hello.view()
 }
 ```
 
@@ -1219,7 +1219,7 @@ Software dependencies:
 The `task` object also contains the values of all process directives for the given task, which allows you to access these settings at runtime. For examples:
 
 ```nextflow
-process foo {
+process hello {
   script:
   """
   some_tool --cpus $task.cpus --mem $task.memory
@@ -1238,7 +1238,7 @@ A directive can be assigned *dynamically*, during the process execution, so that
 To be defined dynamically, the directive's value needs to be expressed using a {ref}`closure <script-closure>`. For example:
 
 ```nextflow
-process foo {
+process hello {
   executor 'sge'
   queue { entries > 100 ? 'long' : 'short' }
 
@@ -1279,7 +1279,7 @@ It's a very common scenario that different instances of the same process may hav
 [Dynamic directives](#dynamic-directives) can be used to adjust the requested task resources when a task fails and is re-executed. For example:
 
 ```nextflow
-process foo {
+process hello {
     memory { 2.GB * task.attempt }
     time { 1.hour * task.attempt }
 
@@ -1314,11 +1314,16 @@ disk { [request: 375.GB * task.attempt, type: 'local-ssd'] }
 Task resources can also be defined in terms of task inputs. For example:
 
 ```nextflow
-process foo {
+process hello {
     memory { 8.GB + 1.GB * Math.ceil(input_file.size() / 1024 ** 3) }
 
     input:
     path input_file
+
+    script:
+    """
+    your_command --here
+    """
 }
 ```
 
@@ -1334,7 +1339,7 @@ In this example, each task requests 8 GB of memory, plus the size of the input f
 Task resource requests can be updated relative to the {ref}`trace record <trace-report>` metrics of the previous task attempt. The metrics can be accessed through the `task.previousTrace` variable. For example:
 
 ```nextflow
-process foo {
+process hello {
     memory { task.attempt > 1 ? task.previousTrace.memory * 2 : (1.GB) }
     errorStrategy { task.exitStatus in 137..140 ? 'retry' : 'terminate' }
     maxRetries 3
@@ -1353,7 +1358,7 @@ In the above example, the {ref}`process-memory` is set according to previous tra
 There are cases in which the required execution resources may be temporary unavailable e.g. network congestion. In these cases immediately re-executing the task will likely result in the identical error. A retry with an exponential backoff delay can better recover these error conditions:
 
 ```nextflow
-process foo {
+process hello {
   errorStrategy { sleep(Math.pow(2, task.attempt) * 200 as long); return 'retry' }
   maxRetries 5
 

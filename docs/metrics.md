@@ -99,7 +99,7 @@ $$
 
 The behavior of **Memory Usage** plots can be examined using two programs written in C. The first program allocates a variable of 1 GiB:
 
-```{code-block} c
+```c
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/resource.h>
@@ -158,7 +158,7 @@ int main(int argc, char **argv) {
 
 The second program allocates a variable of 1 GiB and fills it with data:
 
-```{code-block} c
+```c
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/resource.h>
@@ -224,10 +224,10 @@ int main(int argc, char **argv) {
 }
 ```
 
-The first and second programs are executed as `foo` and `bar`, respectively, in the following script:
+The first and second programs are executed as `malloc` and `malloc_fill`, respectively, in the following script:
 
 ```nextflow
-process foo {
+process malloc {
     memory '1.5 GB'
 
     script:
@@ -236,7 +236,7 @@ process foo {
     """
 }
 
-process bar {
+process malloc_fill {
     memory '1.5 GB'
 
     script:
@@ -246,22 +246,22 @@ process bar {
 }
 
 workflow{
-    foo() // Allocates a variable of 1 GiB
-    bar() // Allocates a variable of 1 GiB and fills it with data
+    malloc() // Allocates a variable of 1 GiB
+    malloc_fill() // Allocates a variable of 1 GiB and fills it with data
 }
 ```
 
-The **Virtual (RAM + Disk swap)** tab shows that both `foo` and `bar` use the same amount of virtual memory (~1 GiB):
+The **Virtual (RAM + Disk swap)** tab shows that both `malloc` and `malloc_fill` use the same amount of virtual memory (~1 GiB):
 
 ```{image} _static/report-resource-memory-vmem.png
 ```
 
-However, the **Physical (RAM)** tab shows that `bar` uses ~1 GiB of RAM while `foo` uses ~0 GiB of RAM:
+However, the **Physical (RAM)** tab shows that `malloc_fill` uses ~1 GiB of RAM while `malloc` uses ~0 GiB of RAM:
 
 ```{image} _static/report-resource-memory-ram.png
 ```
 
-The **% RAM Allocated** tab shows that `foo` and `bar` used 0% and 67% of resources set in the `memory` directive, respectively:
+The **% RAM Allocated** tab shows that `malloc` and `malloc_fill` used 0% and 67% of resources set in the `memory` directive, respectively:
 
 ```{image} _static/report-resource-memory-pctram.png
 ```
