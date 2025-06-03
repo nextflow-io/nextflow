@@ -531,7 +531,7 @@ For example, consider a *Standard_D4d_v5* machine with 4 vCPUs, 16 GB of memory,
 - If a process requests `cpus 2`, `memory 8.GB`, or `disk 75.GB`, two task slots are allocated (50% of resources), allowing two tasks to run concurrently on the node.
 - If a process requests `cpus 4`, `memory 16.GB`, or `disk 150.GB`, four task slots are allocated (100% of resources), allowing one task to run on the node.
 
-Resource overprovisioning can occur if tasks consume more than their allocated share of resources. For instance, if a process with `cpus 2` uses more than 8 GB of memory or 75 GB of disk space, the node may become overloaded and result in performance degradation or task failure. It's important to accurately specify resource requirements to ensure optimal performance and prevent task failures.
+Resource overprovisioning can occur if tasks consume more than their allocated share of resources. For instance, the node described above my become overloaded and fail if a process with `cpus 2` uses more than 8 GB of memory or 75 GB of disk space is run. It's important to accurately specify resource requirements to ensure optimal performance and prevent task failures.
 
 :::{warning}
 Tasks may fail if they exceed their allocated resources.
