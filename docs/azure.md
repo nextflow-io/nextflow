@@ -77,9 +77,9 @@ You can list Azure regions with: `az account list-locations -o table`
 
 Nextflow supports three authentication methods for Azure services, listed in order of security and recommended usage:
 
-[**Managed identities**](#managed-identities): The most secure option, available only within Azure. Uses Azure-managed credentials without storing secrets.
-[**Service principals**](#service-principals): A secure and flexible method that works across environments. Uses Microsoft Entra credentials for authentication.
-[**Access keys**](#access-keys): The most basic and least secure method. Relies on direct access keys for authentication.
+- [**Managed identities**](#managed-identities): The most secure option, available only within Azure. Uses Azure-managed credentials without storing secrets.
+- [**Service principals**](#service-principals): A secure and flexible method that works across environments. Uses Microsoft Entra credentials for authentication.
+- [**Access keys**](#access-keys): The most basic and least secure method. Relies on direct access keys for authentication.
 
 ### Required roles
 
