@@ -582,7 +582,7 @@ $ nextflow inspect nextflow-io/hello
 Specify parameters as with the `run` command:
 
 ```console
-$ nextflow inspect main.nf --alpha 1 --beta foo
+$ nextflow inspect main.nf --alpha 1 --beta hello
 ```
 
 ### `kuberun`
@@ -850,7 +850,7 @@ The `log` command is used to query the execution metadata associated with pipeli
 : Comma-separated list of fields to include in the printed log. Use the `-l` option to see the list of available fields.
 
 `-F, -filter`
-: Filter log entries by a custom expression, e.g. `process =~ /foo.*/ && status == 'COMPLETED'`.
+: Filter log entries by a custom expression, e.g. `process =~ /hello.*/ && status == 'COMPLETED'`.
 
 `-h, -help`
 : Print the command usage.
@@ -937,15 +937,15 @@ Filter specific fields from the execution log of a process.
 ```console
 $ nextflow log tiny_leavitt -f 'process,exit,hash,duration'
 
-splitLetters        0       1f/f1ea91       112ms
-convertToUpper      0       bf/334115       144ms
-convertToUpper      0       a3/06521d       139ms
+split_letters       0       1f/f1ea91       112ms
+convert_to_upper    0       bf/334115       144ms
+convert_to_upper    0       a3/06521d       139ms
 ```
 
 Filter fields from the execution log of a process based on a criteria.
 
 ```console
-$ nextflow log tiny_leavitt -F 'process =~ /splitLetters/'
+$ nextflow log tiny_leavitt -F 'process =~ /split_letters/'
 
 work/1f/f1ea9158fb23b53d5083953121d6b6
 ```
@@ -1426,15 +1426,12 @@ List the folder structure of the downloaded pipeline:
 $ nextflow view -l nextflow-io/hello
 
 == content of path: .nextflow/assets/nextflow-io/hello
+.git
+.gitignore
 LICENSE
 README.md
-nextflow.config
-.gitignore
-circle.yml
-foo.nf
-.git
-.travis.yml
 main.nf
+nextflow.config
 ```
 
 View the contents of a downloaded pipeline without omitting the header:

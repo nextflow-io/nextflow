@@ -15,15 +15,15 @@ You can include any definition from a module into a Nextflow script using the `i
 For example:
 
 ```nextflow
-include { foo } from './some/module'
+include { cat } from './some/module'
 
 workflow {
     data = channel.fromPath('/some/data/*.txt')
-    foo(data)
+    cat(data)
 }
 ```
 
-The above snippet imports a process named `foo`, defined in the module, into the main execution context. This way, `foo` can be invoked in the `workflow` scope.
+The above snippet imports a process named `cat`, defined in the module, into the main execution context. This way, `cat` can be invoked in the `workflow` scope.
 
 Nextflow implicitly looks for the script file `./some/module.nf`, resolving the path against the *including* script location.
 
@@ -50,7 +50,7 @@ some
 When defined as a directory, the module must be included by specifying the module directory path:
 
 ```nextflow
-include { foo } from './some/module'
+include { hello } from './some/module'
 ```
 
 Module directories allow the use of module scoped binaries scripts. See [Module binaries] for details.
@@ -60,12 +60,12 @@ Module directories allow the use of module scoped binaries scripts. See [Module 
 A Nextflow script can include any number of modules, and an `include` statement can import any number of definitions from a module. Multiple definitions can be included from the same module by using the syntax shown below:
 
 ```nextflow
-include { foo; bar } from './some/module'
+include { cat; wc } from './some/module'
 
 workflow {
     data = channel.fromPath('/some/data/*.txt')
-    foo(data)
-    bar(data)
+    cat(data)
+    wc(data)
 }
 ```
 
@@ -76,23 +76,23 @@ workflow {
 When including definition from a module, it's possible to specify an *alias* with the `as` keyword. Aliasing allows you to avoid module name clashes, by assigning them different names in the including context. For example:
 
 ```nextflow
-include { foo } from './some/module'
-include { foo as bar } from './other/module'
+include { cat as cat_alpha } from './some/module'
+include { cat as cat_beta } from './other/module'
 
 workflow {
-    foo(some_data)
-    bar(other_data)
+    cat_alpha(some_data)
+    cat_beta(other_data)
 }
 ```
 
 You can also include the same definition multiple times under different names:
 
 ```nextflow
-include { foo; foo as bar } from './some/module'
+include { cat as cat_alpha; cat as cat_beta } from './some/module'
 
 workflow {
-    foo(some_data)
-    bar(other_data)
+    cat_alpha(some_data)
+    cat_beta(other_data)
 }
 ```
 

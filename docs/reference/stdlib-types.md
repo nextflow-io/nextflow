@@ -477,7 +477,7 @@ The following methods are useful for getting attributes of a file:
 : Gets the file parent path, e.g. `/some/path/file.txt` -> `/some/path`.
 
 `getScheme() -> String`
-: Gets the file URI scheme, e.g. `s3://some-bucket/foo.txt` -> `s3`.
+: Gets the file URI scheme, e.g. `s3://some-bucket/hello.txt` -> `s3`.
 
 `isDirectory() -> boolean`
 : Returns `true` if the file is a directory.
@@ -503,11 +503,11 @@ The following methods are useful for getting attributes of a file:
 `toUriString() -> String`
 : Gets the file path along with the protocol scheme:
   ```nextflow
-  def ref = file('s3://some-bucket/foo.txt')
+  def ref = file('s3://some-bucket/hello.txt')
 
-  assert ref.toString() == '/some-bucket/foo.txt'
-  assert "$ref" == '/some-bucket/foo.txt'
-  assert ref.toUriString() == 's3://some-bucket/foo.txt'
+  assert ref.toString() == '/some-bucket/hello.txt'
+  assert "$ref" == '/some-bucket/hello.txt'
+  assert ref.toUriString() == 's3://some-bucket/hello.txt'
   ```
 
 <h3>Reading</h3>
