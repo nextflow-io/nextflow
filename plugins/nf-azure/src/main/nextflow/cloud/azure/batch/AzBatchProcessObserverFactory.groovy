@@ -32,14 +32,6 @@ class AzBatchProcessObserverFactory implements TraceObserverFactory {
 
     @Override
     Collection<TraceObserver> create(Session session) {
-        final result = new ArrayList<TraceObserver>()
-        
-        // Only create the observer if using Azure Batch executor
-        final executorName = session.config.navigate('process.executor')
-        if( executorName == 'azurebatch' ) {
-            result.add(new AzBatchProcessObserver(session))
-        }
-        
-        return result
+        return [new AzBatchProcessObserver(session)]
     }
 } 

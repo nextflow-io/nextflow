@@ -984,6 +984,15 @@ class AzBatchService implements Closeable {
      * @param jobId The Azure Batch job ID to set for auto-termination
      */
     void setJobAutoTermination(String jobId) {
+        setJobTermination(jobId)
+    }
+
+    /**
+     * Set a job to terminate when all tasks complete.
+     * 
+     * @param jobId The Azure Batch job ID to set for auto-termination
+     */
+    protected void setJobTermination(String jobId) {
         try {
             log.trace "Setting Azure job ${jobId} to terminate on completion"
 
@@ -1013,25 +1022,7 @@ class AzBatchService implements Closeable {
      */
     protected void terminateJobs() {
         for( String jobId : allJobIds.values() ) {
-            try {
-                log.trace "Setting Azure job ${jobId} to terminate on completion"
-
-                final job = apply(() -> client.getJob(jobId))
-                final poolInfo = job.poolInfo
-
-                final jobParameter = new BatchJobUpdateContent()
-                        .setOnAllTasksComplete(OnAllBatchTasksComplete.TERMINATE_JOB)
-                        .setPoolInfo(poolInfo)
-
-                apply(() -> client.updateJob(jobId, jobParameter))
-            }
-            catch (HttpResponseException e) {
-                if (e.response.statusCode == 409) {
-                    log.debug "Azure Batch job ${jobId} already terminated, skipping termination"
-                } else {
-                    log.warn "Unable to terminate Azure Batch job ${jobId} - Status: ${e.response.statusCode}, Reason: ${e.message ?: e}"
-                }
-            }
+            setJobTermination(jobId)
         }
     }
 

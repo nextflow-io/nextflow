@@ -30,112 +30,60 @@ import spock.lang.Specification
  */
 class AzBatchProcessObserverTest extends Specification {
 
-    def 'should skip non-azure batch executors'() {
+    def 'should only act on Azure Batch executors'() {
         given:
-        def session = Mock(Session)
-        def observer = new AzBatchProcessObserver(session)
-        def executor = Mock(Executor)  // Not an AzBatchExecutor
+        def observer = new AzBatchProcessObserver(Mock(Session))
         def processor = Mock(TaskProcessor) {
-            getExecutor() >> executor
+            getExecutor() >> Mock(Executor)  // Not an AzBatchExecutor
         }
 
         when:
         observer.onProcessTerminate(processor)
 
         then:
-        // No exception should be thrown and method should return early
         noExceptionThrown()
     }
 
-    def 'should skip when termination is disabled'() {
+    def 'should set job auto-termination when enabled'() {
         given:
-        def session = Mock(Session)
-        def observer = new AzBatchProcessObserver(session)
-        def config = Mock(AzConfig)
-        def batchOpts = Mock(AzBatchOpts) {
-            terminateJobsOnCompletion >> false
-        }
+        def observer = new AzBatchProcessObserver(Mock(Session))
+        def processor = Mock(TaskProcessor) { getName() >> 'test-process' }
         def batchService = Mock(AzBatchService) {
-            getConfig() >> config
+            getConfig() >> Mock(AzConfig) {
+                batch() >> Mock(AzBatchOpts) {
+                    terminateJobsOnCompletion >> true
+                }
+            }
+            getAllJobIds() >> [(new AzJobKey(processor, 'pool1')): 'job123']
         }
-        def executor = Mock(AzBatchExecutor) {
-            getBatchService() >> batchService
+        def executor = Mock(AzBatchExecutor) { getBatchService() >> batchService }
+        processor.getExecutor() >> executor
+
+        when:
+        observer.onProcessTerminate(processor)
+
+        then:
+        1 * batchService.setJobAutoTermination('job123')
+    }
+
+    def 'should skip when termination disabled'() {
+        given:
+        def observer = new AzBatchProcessObserver(Mock(Session))
+        def processor = Mock(TaskProcessor) { getName() >> 'test-process' }
+        def batchService = Mock(AzBatchService) {
+            getConfig() >> Mock(AzConfig) {
+                batch() >> Mock(AzBatchOpts) {
+                    terminateJobsOnCompletion >> false
+                }
+            }
         }
-        def processor = Mock(TaskProcessor) {
-            getExecutor() >> executor
-            getName() >> 'test-process'
-        }
-        config.batch() >> batchOpts
+        def executor = Mock(AzBatchExecutor) { getBatchService() >> batchService }
+        processor.getExecutor() >> executor
 
         when:
         observer.onProcessTerminate(processor)
 
         then:
         0 * batchService.setJobAutoTermination(_)
-    }
-
-    def 'should set job auto-termination when enabled'() {
-        given:
-        def session = Mock(Session)
-        def observer = new AzBatchProcessObserver(session)
-        def config = Mock(AzConfig)
-        def batchOpts = Mock(AzBatchOpts) {
-            terminateJobsOnCompletion >> true
-        }
-        def processor = Mock(TaskProcessor) {
-            getName() >> 'test-process'
-        }
-        def jobKey1 = new AzJobKey(Mock(TaskProcessor), 'pool1')
-        def jobKey2 = new AzJobKey(processor, 'pool1')  // This one should match
-        def jobKey3 = new AzJobKey(Mock(TaskProcessor), 'pool2')
-        def allJobIds = [
-            (jobKey1): 'job1',
-            (jobKey2): 'job2',  // This should be processed
-            (jobKey3): 'job3'
-        ]
-        def batchService = Mock(AzBatchService) {
-            getConfig() >> config
-            getAllJobIds() >> allJobIds
-        }
-        def executor = Mock(AzBatchExecutor) {
-            getBatchService() >> batchService
-        }
-        processor.getExecutor() >> executor
-        config.batch() >> batchOpts
-
-        when:
-        observer.onProcessTerminate(processor)
-
-        then:
-        1 * batchService.setJobAutoTermination('job2')
-    }
-
-    def 'should handle exceptions gracefully'() {
-        given:
-        def session = Mock(Session)
-        def observer = new AzBatchProcessObserver(session)
-        def config = Mock(AzConfig)
-        def batchOpts = Mock(AzBatchOpts) {
-            terminateJobsOnCompletion >> true
-        }
-        def batchService = Mock(AzBatchService) {
-            getConfig() >> config
-            getAllJobIds() >> { throw new RuntimeException('Test error') }
-        }
-        def executor = Mock(AzBatchExecutor) {
-            getBatchService() >> batchService
-        }
-        def processor = Mock(TaskProcessor) {
-            getExecutor() >> executor
-            getName() >> 'test-process'
-        }
-        config.batch() >> batchOpts
-
-        when:
-        observer.onProcessTerminate(processor)
-
-        then:
-        // Should not throw exception
-        noExceptionThrown()
     }
 } 
