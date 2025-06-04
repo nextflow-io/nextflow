@@ -262,7 +262,7 @@ When combined with the {ref}`container directive <process-container>`, the `afte
 The `arch` directive allows you to define the CPU architecture to build the software in use by the process' task. For example:
 
 ```nextflow
-process cpu_task {
+process blast {
     spack 'blast-plus@2.13.0'
     arch 'linux/x86_64', target: 'cascadelake'
 
@@ -305,7 +305,7 @@ A job array is a collection of jobs with the same resource requirements and the 
 The directive should be specified with a given array size, along with an executor that supports job arrays. For example:
 
 ```nextflow
-process cpu_task {
+process hello {
     executor 'slurm'
     array 100
 
@@ -382,7 +382,7 @@ The `cache` directive allows you to store the process results to a local cache. 
 The cache is enabled by default, but you can disable it for a specific process by setting the `cache` directive to `false`. For example:
 
 ```nextflow
-process noCacheThis {
+process hello {
   cache false
   // ...
 }
@@ -475,7 +475,7 @@ It requires the Docker daemon to be running in machine where the pipeline is exe
 For example:
 
 ```nextflow
-process runThisInDocker {
+process hello_docker {
   container 'dockerbox:tag'
 
   script:
@@ -502,7 +502,7 @@ This directive is ignored for processes that are {ref}`executed natively <proces
 The `containerOptions` directive allows you to specify any container execution option supported by the underlying container engine (ie. Docker, Singularity, etc). This can be useful to provide container settings only for a specific process e.g. mount a custom path:
 
 ```nextflow
-process runThisWithDocker {
+process hello_docker {
     container 'busybox:latest'
     containerOptions '--volume /data/db:/db'
 
@@ -527,9 +527,8 @@ This feature is not supported by the {ref}`k8s-executor` executor.
 The `cpus` directive allows you to define the number of (logical) CPU required by the process' task. For example:
 
 ```nextflow
-process big_job {
+process blast {
   cpus 8
-  executor 'sge'
 
   script:
   """
@@ -551,7 +550,7 @@ By default the `stdout` produced by the commands executed in all processes is ig
 For example:
 
 ```nextflow
-process sayHello {
+process hello {
   debug true
 
   script:
@@ -574,9 +573,8 @@ Without specifying `debug true`, you won't see the `Hello` string printed out wh
 The `disk` directive allows you to define how much local disk storage the process is allowed to use. For example:
 
 ```nextflow
-process big_job {
+process hello {
     disk '2 GB'
-    executor 'cirrus'
 
     script:
     """
@@ -637,7 +635,7 @@ When setting the `errorStrategy` directive to `ignore` the process doesn't stop 
 For example:
 
 ```nextflow
-process ignoreAnyError {
+process hello {
   errorStrategy 'ignore'
 
   // ...
@@ -649,7 +647,7 @@ In this case, the workflow will complete successfully and return an exit status 
 The `retry` error strategy allows you to re-submit for execution a process returning an error condition. For example:
 
 ```nextflow
-process retryIfFail {
+process hello {
   errorStrategy 'retry'
 
   // ...
@@ -694,7 +692,7 @@ The following executors are available:
 The following example shows how to set the process's executor:
 
 ```nextflow
-process doSomething {
+process hello {
   executor 'sge'
 
   // ...
@@ -712,7 +710,7 @@ Each executor supports additional directives and `executor` configuration option
 The `ext` is a special directive used as *namespace* for user custom process directives. This can be useful for advanced configuration options. For example:
 
 ```nextflow
-process mapping {
+process star {
   container "biocontainers/star:${task.ext.version}"
 
   input:
@@ -731,7 +729,7 @@ In the above example, the process container version is controlled by `ext.versio
 The `ext` directive can be set in the process definition:
 
 ```nextflow
-process mapping {
+process hello {
   ext version: '2.5.3', args: '--alpha --beta'
 
   // ...
@@ -791,7 +789,7 @@ The above example produces:
 The `label` directive allows the annotation of processes with mnemonic identifier of your choice. For example:
 
 ```nextflow
-process bigTask {
+process hello {
   label 'big_mem'
 
   script:
@@ -870,7 +868,7 @@ queue named `on-demand-compute`.
 The `maxErrors` directive allows you to specify the maximum number of times a process can fail when using the `retry` error strategy. By default this directive is disabled, you can set it as shown in the example below:
 
 ```nextflow
-process retryIfFail {
+process hello {
   errorStrategy 'retry'
   maxErrors 5
 
@@ -896,7 +894,7 @@ The `maxForks` directive allows you to define the maximum number of process inst
 If you want to execute a process in a sequential manner, set this directive to one. For example:
 
 ```nextflow
-process doNotParallelizeIt {
+process hello {
   maxForks 1
 
   script:
@@ -913,7 +911,7 @@ process doNotParallelizeIt {
 The `maxRetries` directive allows you to define the maximum number of times a process instance can be re-submitted in case of failure. This value is applied only when using the `retry` error strategy. By default only one retry is allowed, you can increase this value as shown below:
 
 ```nextflow
-process retryIfFail {
+process hello {
     errorStrategy 'retry'
     maxRetries 3
 
@@ -937,9 +935,8 @@ See also: [errorStrategy](#errorstrategy) and [maxErrors](#maxerrors).
 The `memory` directive allows you to define how much memory the process is allowed to use. For example:
 
 ```nextflow
-process big_job {
+process hello {
     memory '2 GB'
-    executor 'sge'
 
     script:
     """
@@ -973,7 +970,7 @@ If it is available in your system you can use it with Nextflow in order to confi
 In a process definition you can use the `module` directive to load a specific module version to be used in the process execution environment. For example:
 
 ```nextflow
-process basicExample {
+process blast {
   module 'ncbi-blast/2.2.27'
 
   script:
@@ -986,7 +983,7 @@ process basicExample {
 You can repeat the `module` directive for each module you need to load. Alternatively multiple modules can be specified in a single `module` directive by separating all the module names by using a `:` (colon) character as shown below:
 
 ```nextflow
-process manyModules {
+process blast {
   module 'ncbi-blast/2.2.27:t_coffee/10.0:clustalw/2.1'
 
   script:
@@ -1003,7 +1000,7 @@ process manyModules {
 The `penv` directive allows you to define the parallel environment to be used when submitting a parallel task to the {ref}`SGE <sge-executor>` resource manager. For example:
 
 ```nextflow
-process big_job {
+process blast {
   cpus 4
   penv 'smp'
   executor 'sge'
@@ -1028,7 +1025,7 @@ The `pod` directive allows the definition of pod specific settings, such as envi
 For example:
 
 ```nextflow
-process your_task {
+process echo {
   pod env: 'MESSAGE', value: 'hello world'
 
   script:
@@ -1324,7 +1321,7 @@ Available options:
 The `queue` directive allows you to set the `queue` where jobs are scheduled when using a grid based executor in your pipeline. For example:
 
 ```nextflow
-process grid_job {
+process hello {
     queue 'long'
     executor 'sge'
 
@@ -1359,7 +1356,7 @@ This directive is only used by certain executors. Refer to the {ref}`executor-pa
 The `resourceLabels` directive allows you to specify custom name-value pairs that Nextflow applies to the computing resource used to carry out the process execution. Resource labels can be specified using the syntax shown below:
 
 ```nextflow
-process my_task {
+process hello {
     resourceLabels region: 'some-region', user: 'some-username'
 
     script:
@@ -1396,7 +1393,7 @@ See also: [label](#label)
 The `resourceLimits` directive allows you to specify environment-specific limits for task resource requests. Resource limits can be specified in a process as follows:
 
 ```nextflow
-process my_task {
+process hello {
   resourceLimits cpus: 24, memory: 768.GB, time: 72.h
 
   script:
@@ -1432,7 +1429,7 @@ The `secret` directive allows a process to access secrets.
 Secrets can be added to a process as follows:
 
 ```nextflow
-process someJob {
+process hello_secret {
     secret 'MY_ACCESS_KEY'
     secret 'MY_SECRET_KEY'
 
@@ -1462,7 +1459,7 @@ This is useful when your pipeline is launched by using a grid executor, because 
 In its basic form simply specify `true` at the directive value, as shown below:
 
 ```nextflow
-process simpleTask {
+process hello {
   scratch true
 
   output:
@@ -1505,7 +1502,7 @@ The following values are supported:
 The `shell` directive allows you to define a custom shell command for process scripts. By default, script blocks are executed with `/bin/bash -ue`.
 
 ```nextflow
-process doMoreThings {
+process hello {
     shell '/bin/bash', '-euo', 'pipefail'
 
     script:
@@ -1603,7 +1600,7 @@ In more detail, it affects the process execution in two main ways:
 The following example shows how to use the `storeDir` directive to create a directory containing a BLAST database for each species specified by an input parameter:
 
 ```nextflow
-process formatBlastDatabases {
+process make_blast_db {
   storeDir '/db/genomes'
 
   input:
@@ -1669,7 +1666,7 @@ See also {ref}`Trace execution report <trace-report>`
 The `time` directive allows you to define how long a process is allowed to run. For example:
 
 ```nextflow
-process big_job {
+process hello {
     time '1h'
 
     script:

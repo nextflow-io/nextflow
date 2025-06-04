@@ -7,7 +7,7 @@ In Nextflow, a **process** is a specialized function for executing scripts in a 
 Here is an example process definition:
 
 ```nextflow
-process sayHello {
+process hello {
     output:
     path 'hello.txt'
 
@@ -33,7 +33,7 @@ The script string is executed as a [Bash](<http://en.wikipedia.org/wiki/Bash_(Un
 The script section can be a simple string or a multi-line string. The latter approach makes it easier to write scripts with multiple commands spanning multiple lines. For example:
 
 ```nextflow
-process doMoreThings {
+process blast {
   """
   blastp -db $db -query query.fa -outfmt 6 > blast_result
   cat blast_result | head -n 10 | cut -f 2 > top_hits
@@ -57,9 +57,9 @@ When you need to access a system environment variable in your script, you have t
 If you don't need to access any Nextflow variables, you can define your script section with single-quotes:
 
 ```nextflow
-process printPath {
+process echo_path {
   '''
-  echo The path is: $PATH
+  echo "The path is: $PATH"
   '''
 }
 ```
@@ -67,7 +67,7 @@ process printPath {
 Otherwise, you can define your script with double-quotes and escape the system environment variables by prefixing them with a back-slash `\` character, as shown in the following example:
 
 ```nextflow
-process doOtherThings {
+process blast {
   """
   blastp -db \$DB -query query.fa -outfmt 6 > blast_result
   cat blast_result | head -n $MAX | cut -f 2 > top_hits
@@ -89,7 +89,7 @@ A pipeline may be composed of processes that execute very different tasks. With 
 To use a language other than Bash, simply start your process script with the corresponding [shebang](<http://en.wikipedia.org/wiki/Shebang_(Unix)>). For example:
 
 ```nextflow
-process perlTask {
+process perl_task {
     """
     #!/usr/bin/perl
 
@@ -97,7 +97,7 @@ process perlTask {
     """
 }
 
-process pythonTask {
+process python_task {
     """
     #!/usr/bin/python
 
@@ -108,8 +108,8 @@ process pythonTask {
 }
 
 workflow {
-    perlTask()
-    pythonTask()
+    perl_task()
+    python_task()
 }
 ```
 
@@ -162,16 +162,16 @@ Process scripts can be externalized to **template** files, which allows them to 
 A template can be used in place of an embedded script using the `template` function in the script section:
 
 ```nextflow
-process templateExample {
+process hello {
     input:
     val STR
 
     script:
-    template 'my_script.sh'
+    template 'hello.sh'
 }
 
 workflow {
-    channel.of('this', 'that') | templateExample
+    channel.of('this', 'that') | hello
 }
 ```
 
@@ -217,7 +217,7 @@ The `shell` section is a string expression that defines the script that is execu
 This way, it is possible to use both Nextflow and Bash variables in the same script without having to escape the latter, which makes process scripts easier to read and maintain. For example:
 
 ```nextflow
-process myTask {
+process hello {
     input:
     val str
 
@@ -228,7 +228,7 @@ process myTask {
 }
 
 workflow {
-    channel.of('Hello', 'Hola', 'Bonjour') | myTask
+    channel.of('Hello', 'Hola', 'Bonjour') | hello
 }
 ```
 
@@ -249,16 +249,16 @@ The `exec` section executes the given code without launching a job.
 For example:
 
 ```nextflow
-process simpleSum {
+process hello {
     input:
-    val x
+    val name
 
     exec:
-    println "Hello Mr. $x"
+    println "Hello Mr. $name"
 }
 
 workflow {
-    channel.of('a', 'b', 'c') | simpleSum
+    channel.of('a', 'b', 'c') | hello
 }
 ```
 
@@ -282,19 +282,19 @@ A native process is very similar to a {ref}`function <syntax-function>`. However
 You can define a command *stub*, which replaces the actual process command when the `-stub-run` or `-stub` command-line option is enabled:
 
 ```nextflow
-process INDEX {
-  input:
+process salmon_index {
+    input:
     path transcriptome
 
-  output:
+    output:
     path 'index'
 
-  script:
+    script:
     """
     salmon index --threads $task.cpus -t $transcriptome -i index
     """
 
-  stub:
+    stub:
     """
     mkdir index
     touch index/seq.bin
@@ -341,19 +341,19 @@ See {ref}`process reference <process-reference-inputs>` for the full list of inp
 The `val` qualifier accepts any data type. It can be accessed in the process script by using the specified input name, as shown in the following example:
 
 ```nextflow
-process basicExample {
+process echo {
   input:
   val x
 
   script:
   """
-  echo process job $x
+  echo "process job $x"
   """
 }
 
 workflow {
   def num = channel.of(1,2,3)
-  basicExample(num)
+  echo(num)
 }
 ```
 
@@ -373,18 +373,18 @@ While channels do emit items in the order that they are received, *processes* do
 When the process declares exactly one input, the pipe `|` operator can be used to provide inputs to the process, instead of passing it as a parameter. Both methods have identical semantics:
 
 ```nextflow
-process basicExample {
+process echo {
   input:
   val x
 
   script:
   """
-  echo process job $x
+  echo "process job $x"
   """
 }
 
 workflow {
-  channel.of(1,2,3) | basicExample
+  channel.of(1,2,3) | echo
 }
 ```
 :::
@@ -396,7 +396,7 @@ workflow {
 The `path` qualifier allows you to provide input files to the process execution context. Nextflow will stage the files into the process execution directory, and they can be accessed in the script by using the specified input name. For example:
 
 ```nextflow
-process blastThemAll {
+process blast {
   input:
   path query_file
 
@@ -408,7 +408,7 @@ process blastThemAll {
 
 workflow {
   def proteins = channel.fromPath( '/some/path/*.fa' )
-  blastThemAll(proteins)
+  blast(proteins)
 }
 ```
 
@@ -433,7 +433,7 @@ path 'query.fa'
 The previous example can be re-written as shown below:
 
 ```nextflow
-process blastThemAll {
+process blast {
   input:
   path 'query.fa'
 
@@ -445,7 +445,7 @@ process blastThemAll {
 
 workflow {
   def proteins = channel.fromPath( '/some/path/*.fa' )
-  blastThemAll(proteins)
+  blast(proteins)
 }
 ```
 
@@ -490,7 +490,7 @@ A `path` input can also accept a collection of files instead of a single value. 
 When the input has a fixed file name and a collection of files is received by the process, the file name will be appended with a numerical suffix representing its ordinal position in the list. For example:
 
 ```nextflow
-process blastThemAll {
+process blast {
     input:
     path 'seq'
 
@@ -502,7 +502,7 @@ process blastThemAll {
 
 workflow {
     def fasta = channel.fromPath( "/some/path/*.fa" ).buffer(size: 3)
-    blastThemAll(fasta)
+    blast(fasta)
 }
 ```
 
@@ -532,7 +532,7 @@ The target input file name may contain the `*` and `?` wildcards, which can be u
 The following example shows how a wildcard can be used in the input file definition:
 
 ```nextflow
-process blastThemAll {
+process blast {
     input:
     path 'seq?.fa'
 
@@ -544,7 +544,7 @@ process blastThemAll {
 
 workflow {
     def fasta = channel.fromPath( "/some/path/*.fa" ).buffer(size: 3)
-    blastThemAll(fasta)
+    blast(fasta)
 }
 ```
 
@@ -573,7 +573,7 @@ When a task is executed, Nextflow will check whether the received files for each
 When the input file name is specified by using the `name` option or a string literal, you can also use other input values as variables in the file name string. For example:
 
 ```nextflow
-process simpleCount {
+process grep {
   input:
   val x
   path "${x}.fa"
@@ -598,18 +598,18 @@ In most cases, you won't need to use dynamic file names, because each task is ex
 The `env` qualifier allows you to define an environment variable in the process execution context based on the input value. For example:
 
 ```nextflow
-process printEnv {
+process echo_env {
     input:
     env 'HELLO'
 
     script:
     '''
-    echo $HELLO world!
+    echo "$HELLO world!"
     '''
 }
 
 workflow {
-    channel.of('hello', 'hola', 'bonjour', 'ciao') | printEnv
+    channel.of('hello', 'hola', 'bonjour', 'ciao') | echo_env
 }
 ```
 
@@ -625,7 +625,7 @@ hola world!
 The `stdin` qualifier allows you to forward the input value to the [standard input](http://en.wikipedia.org/wiki/Standard_streams#Standard_input_.28stdin.29) of the process script. For example:
 
 ```nextflow
-process printAll {
+process cat {
   input:
   stdin
 
@@ -638,7 +638,7 @@ process printAll {
 workflow {
   channel.of('hello', 'hola', 'bonjour', 'ciao')
     | map { v -> v + '\n' }
-    | printAll
+    | cat
 }
 ```
 
@@ -658,7 +658,7 @@ hello
 The `tuple` qualifier allows you to group multiple values into a single input definition. It can be useful when a channel emits tuples of values that need to be handled separately. Each element in the tuple is associated with a corresponding element in the `tuple` definition. For example:
 
 ```nextflow
-process tupleExample {
+process cat {
     input:
     tuple val(x), path('input.txt')
 
@@ -670,7 +670,7 @@ process tupleExample {
 }
 
 workflow {
-  channel.of( [1, 'alpha.txt'], [2, 'beta.txt'], [3, 'delta.txt'] ) | tupleExample
+  channel.of( [1, 'alpha.txt'], [2, 'beta.txt'], [3, 'delta.txt'] ) | cat
 }
 ```
 
@@ -683,7 +683,7 @@ A `tuple` definition may contain any of the following qualifiers, as previously 
 The `each` qualifier allows you to repeat the execution of a process for each item in a collection, each time a new value is received. For example:
 
 ```nextflow
-process alignSequences {
+process align {
   input:
   path seq
   each mode
@@ -698,7 +698,7 @@ workflow {
   sequences = channel.fromPath('*.fa')
   methods = ['regular', 'espresso', 'psicoffee']
 
-  alignSequences(sequences, methods)
+  align(sequences, methods)
 }
 ```
 
@@ -707,7 +707,7 @@ In the above example, each time a file of sequences is emitted from the `sequenc
 Input repeaters can be applied to files as well. For example:
 
 ```nextflow
-process alignSequences {
+process align {
   input:
   path seq
   each mode
@@ -724,7 +724,7 @@ workflow {
   methods = ['regular', 'espresso']
   libraries = [ file('PQ001.lib'), file('PQ002.lib'), file('PQ003.lib') ]
 
-  alignSequences(sequences, methods, libraries)
+  align(sequences, methods, libraries)
 }
 ```
 
@@ -901,7 +901,7 @@ workflow {
 The `path` qualifier allows you to output one or more files produced by the process. For example:
 
 ```nextflow
-process randomNumber {
+process random_number {
   output:
   path 'result.txt'
 
@@ -912,12 +912,12 @@ process randomNumber {
 }
 
 workflow {
-  numbers = randomNumber()
+  numbers = random_number()
   numbers.view { file -> "Received: ${file.text}" }
 }
 ```
 
-In the above example, the `randomNumber` process creates a file named `result.txt` which contains a random number. Since a `path` output with the same name is declared, that file is emitted by the corresponding output channel. A downstream process with a compatible input channel will be able to receive it.
+In the above example, the `random_number` process creates a file named `result.txt` which contains a random number. Since a `path` output with the same name is declared, that file is emitted by the corresponding output channel. A downstream process with a compatible input channel will be able to receive it.
 
 Refer to the {ref}`process reference <process-reference-outputs>` for the list of available options for `path` outputs.
 
@@ -926,7 +926,7 @@ Refer to the {ref}`process reference <process-reference-outputs>` for the list o
 When an output file name contains a `*` or `?` wildcard character, it is interpreted as a [glob][glob] path matcher. This allows you to capture multiple files into a list and emit the list as a single value. For example:
 
 ```nextflow
-process splitLetters {
+process split_letters {
     output:
     path 'chunk_*'
 
@@ -937,7 +937,7 @@ process splitLetters {
 }
 
 workflow {
-    splitLetters
+    split_letters
         | flatten
         | view { chunk -> "File: ${chunk.name} => ${chunk.text}" }
 }
@@ -1173,7 +1173,7 @@ The `when` section allows you to define a condition that must be satisfied in or
 It can be useful to enable/disable the process execution depending on the state of various inputs and parameters. For example:
 
 ```nextflow
-process find {
+process blast_search {
   input:
   path proteins
   val dbtype

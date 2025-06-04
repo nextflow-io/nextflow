@@ -388,7 +388,7 @@ def x = '42'.toInteger()    // preferred
 In Nextflow DSL2, the name of a process `env` input/output can be specified with or without quotes:
 
 ```nextflow
-process PROC {
+process my_task {
     input:
     env FOO
     env 'BAR'
@@ -400,7 +400,7 @@ process PROC {
 In the strict syntax, the name must be specified with quotes:
 
 ```nextflow
-process PROC {
+process my_task {
     input:
     env 'FOO'
     env 'BAR'
@@ -427,7 +427,7 @@ process greet {
 In the strict syntax, the `script:` label can be omitted only if there are no other sections:
 
 ```nextflow
-process sayHello {
+process hello {
     """
     echo 'Hello world!'
     """

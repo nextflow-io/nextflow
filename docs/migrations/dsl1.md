@@ -13,7 +13,7 @@ nextflow.enable.dsl=1
 
 params.str = 'Hello world!'
 
-process splitLetters {
+process split_letters {
     output:
     file 'chunk_*' into letters
 
@@ -23,7 +23,7 @@ process splitLetters {
     """
 }
 
-process convertToUpper {
+process convert_to_upper {
     input:
     file x from letters.flatten()
 
@@ -48,7 +48,7 @@ You can see the DSL1 Nextflow script from above written in DSL2 here:
 ```nextflow
 params.str = 'Hello world!'
 
-process splitLetters {
+process split_letters {
     output:
     path 'chunk_*'
 
@@ -58,7 +58,7 @@ process splitLetters {
     """
 }
 
-process convertToUpper {
+process convert_to_upper {
     input:
     path x
 
@@ -72,7 +72,7 @@ process convertToUpper {
 }
 
 workflow {
-    splitLetters | flatten | convertToUpper | view { v -> v.trim() }
+    split_letters | flatten | convert_to_upper | view { v -> v.trim() }
 }
 ```
 

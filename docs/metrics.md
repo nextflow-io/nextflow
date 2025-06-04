@@ -16,7 +16,7 @@ CPU Usage plots report how CPU resources are used by each process.
 For example, using the [stress](https://people.seas.harvard.edu/~apw/stress/) program, the following script would report 100% CPU usage in the **Raw Usage** tab and 50% CPU usage in the **% Allocated** tab as the process requested double the number of CPUs that are required:
 
 ```nextflow
-process cpuUsageEx1 {
+process cpu_usage_ex1 {
   cpus 2
 
   script:
@@ -26,7 +26,7 @@ process cpuUsageEx1 {
 }
 
 workflow{
-    cpuUsageEx1() // Stress using 1 CPU
+    cpu_usage_ex1() // Stress using 1 CPU
 }
 ```
 
@@ -37,7 +37,7 @@ See [Linux stress command with examples](https://www.geeksforgeeks.org/linux-str
 CPU usage decreases if processes spend some time performing pure computation and some time waiting for CPUs. For example, using the `stress` and `sleep` commands, the following script would report 75% CPU usage in the **Raw Usage** tab:
 
 ```nextflow
-process cpuUsageEx2 {
+process cpu_usage_ex2 {
   cpus 1
 
   script:
@@ -49,7 +49,7 @@ process cpuUsageEx2 {
 }
 
 workflow{
-    cpuUsageEx2() // Stress using 1 CPU and sleep
+    cpu_usage_ex2() // Stress using 1 CPU and sleep
 }
 ```
 
@@ -62,7 +62,7 @@ $$
 CPU usage increases if a single step is forked on multiple CPUs:
 
 ```nextflow
-process cpuUsageEx3 {
+process cpu_usage_ex3 {
   cpus 2
 
   script:
@@ -73,7 +73,7 @@ process cpuUsageEx3 {
 }
 
 workflow{
-    cpuUsageEx3() // Stress using 2 CPUs and sleep
+    cpu_usage_ex3() // Stress using 2 CPUs and sleep
 }
 ```
 

@@ -937,15 +937,15 @@ Filter specific fields from the execution log of a process.
 ```console
 $ nextflow log tiny_leavitt -f 'process,exit,hash,duration'
 
-splitLetters        0       1f/f1ea91       112ms
-convertToUpper      0       bf/334115       144ms
-convertToUpper      0       a3/06521d       139ms
+split_letters       0       1f/f1ea91       112ms
+convert_to_upper    0       bf/334115       144ms
+convert_to_upper    0       a3/06521d       139ms
 ```
 
 Filter fields from the execution log of a process based on a criteria.
 
 ```console
-$ nextflow log tiny_leavitt -F 'process =~ /splitLetters/'
+$ nextflow log tiny_leavitt -F 'process =~ /split_letters/'
 
 work/1f/f1ea9158fb23b53d5083953121d6b6
 ```

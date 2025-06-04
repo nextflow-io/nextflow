@@ -180,7 +180,7 @@ Entry workflow definitions are ignored when a script is included as a module. Th
 A process consists of a name and a body. The process body consists of one or more [statements](#statements). A minimal process definition must return a string:
 
 ```nextflow
-process sayHello {
+process hello {
     """
     echo 'Hello world!'
     """
@@ -225,7 +225,7 @@ Each section may contain one or more statements. For directives, inputs, and out
 The script section can be substituted with an exec section:
 
 ```nextflow
-process greetExec {
+process greet {
     input: 
     val greeting
     val name

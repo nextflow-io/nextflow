@@ -340,7 +340,7 @@ process greet {
     result = "$data world"
 }
 
-process toUpper {
+process to_upper {
     input:
     val data
 
@@ -354,13 +354,13 @@ process toUpper {
 workflow {
     channel.of('Hello')
         | map { v -> v.reverse() }
-        | (greet & toUpper)
+        | (greet & to_upper)
         | mix
         | view
 }
 ```
 
-In the above snippet, the initial channel is piped to the {ref}`operator-map` operator, which reverses the string value. Then, the result is passed to the processes `greet` and `toUpper`, which are executed in parallel. Each process outputs a channel, and the two channels are combined using the {ref}`operator-mix` operator. Finally, the result is printed using the {ref}`operator-view` operator.
+In the above snippet, the initial channel is piped to the {ref}`operator-map` operator, which reverses the string value. Then, the result is passed to the processes `greet` and `to_upper`, which are executed in parallel. Each process outputs a channel, and the two channels are combined using the {ref}`operator-mix` operator. Finally, the result is printed using the {ref}`operator-view` operator.
 
 The same code can also be written as:
 
@@ -368,7 +368,7 @@ The same code can also be written as:
 workflow {
     ch = channel.of('Hello').map { v -> v.reverse() }
     ch_greet = greet(ch)
-    ch_upper = toUpper(ch)
+    ch_upper = to_upper(ch)
     ch_greet.mix(ch_upper).view()
 }
 ```
