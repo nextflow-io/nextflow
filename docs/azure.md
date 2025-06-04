@@ -21,44 +21,11 @@ Nextflow provides built-in support for Azure Cloud Services, it enables you to:
 To run pipelines with Azure Batch:
 
 1. Create an Azure Batch account in the Azure portal.
-2. Increase the quotas in your Azure Batch account to the pipeline's needs.
-
-    :::{note}
-    Quotas impact the number of pools, CPUs, and jobs you can create.
-    :::
-
+2. Increase the quotas in your Azure Batch account to the pipeline's needs. Quotas impact the number of pools, CPUs, and jobs you can create.
 3. Create a storage account and Azure Blob Storage in the same region as the Batch account.
-4. Configure Nextflow to submit processes to Azure Batch using configuration. For example:
-
-    ```groovy
-    process {
-        executor = 'azurebatch'
-    }
-
-    azure {
-        storage {
-            accountName = '<STORAGE_ACCOUNT_NAME>'
-        }
-        batch {
-            location = '<LOCATION>'
-            accountName = '<BATCH_ACCOUNT_NAME>'
-            autoPoolMode = true
-            allowPoolCreation = true
-        }
-    }
-    ```
-
-    Replace the following:
-
-    - `STORAGE_ACCOUNT_NAME`: your account name
-    - `LOCATION`: your Azure region
-    - `ACCOUNT_NAME`: your batch account name
-
-    :::{note}
-    The above snippet excludes authentication for Azure services. See [Authentication](#authentication) for more information.
-    :::
-
-5. Launch your pipeline with the above configuration and add a working directory on Azure Blob Storage:
+4. Add authentication and account details to your Nextflow configuration file. See [Authentication](#authentication) for examples of configuration.
+5. Configure Nextflow to submit processes to Azure Batch by setting the process.executor directive to `azurebatch`.
+6. Launch your pipeline with the above configuration and add a working directory on Azure Blob Storage:
 
     ```bash
     nextflow run <PIPELINE_NAME> -w az://<BLOB_STORAGE>/
@@ -67,7 +34,7 @@ To run pipelines with Azure Batch:
     Replace the following:
 
     - `PIPELINE_NAME`:  your pipeline, for example, `nextflow-io/rnaseq-nf`
-    - `BLOB_STORAGE`: your Azure Blob Storage from the storage account defined in your configuration
+    - `BLOB_STORAGE`: your Azure Blob Storage container from the storage account defined in your configuration
 
 :::{tip}
 You can list Azure regions with: `az account list-locations -o table`
