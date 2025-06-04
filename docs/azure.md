@@ -213,8 +213,7 @@ azure.storage.sasToken = '<SAS_TOKEN>'
 ```
 
 :::{tip}
-When creating a SAS token, ensure you enable `Read`, `Write`, `Delete`, `List`, `Add`, `Create` permissions for the `Container` and `Object` resource types.
-The value of `sasToken` should be stripped of the leading `?` character.
+When creating a SAS token, ensure you enable `Read`, `Write`, `Delete`, `List`, `Add`, `Create` permissions for the `Container` and `Object` resource types. The value of `sasToken` should be stripped of the leading `?` character.
 :::
 
 :::{tip}
@@ -266,9 +265,7 @@ Nextflow integrates seamlessly with Azure Batch to:
 - Support both regular and low-priority VMs for cost optimization.
 - Manage task dependencies and data transfers between Azure Storage and compute nodes.
 
-This section describes how to configure and use Azure Batch with Nextflow for efficient cloud-based workflow execution.
-
-For comprehensive information about Azure Batch features and capabilities, refer to the [official Azure Batch documentation](https://learn.microsoft.com/en-us/azure/batch/).
+This section describes how to configure and use Azure Batch with Nextflow for efficient cloud-based workflow execution. For comprehensive information about Azure Batch features and capabilities, refer to the [official Azure Batch documentation](https://learn.microsoft.com/en-us/azure/batch/).
 
 ### Overview
 
@@ -309,8 +306,8 @@ nextflow run <PIPELINE_NAME> -w az://<CONTAINER>/
 :::{tip}
 Nextflow uses the following environment variables if the Batch settings are not provided in the Nextflow config file:
 
-- `AZURE_BATCH_ACCOUNT_NAME`: The name of your Azure Batch account.
-- `AZURE_BATCH_ACCOUNT_KEY`: The access key for your Azure Batch account.
+- `AZURE_BATCH_ACCOUNT_NAME`: the name of your Azure Batch account
+- `AZURE_BATCH_ACCOUNT_KEY`: the access key for your Azure Batch account
 :::
 
 ### Quotas
@@ -326,7 +323,7 @@ You can increase your quota on the Azure Portal by opening your Batch account an
 ### Pool management
 
 :::{warning}
-Clean up the Batch pools or use auto scaling to avoid any extra charges in the Batch account.
+Clean up the Batch pools or use auto-scaling to avoid any extra charges in the Batch account.
 :::
 
 Nextflow supports two approaches for managing Batch pools:
@@ -600,7 +597,7 @@ azure.batch.pools.<POOL_NAME> {
 
 Azure file shares provide fully managed file shares that can be mounted to compute nodes. Files become immediately available in the file system and can be accessed as local files within processes.
 
-The Azure File share must exist in the storage account configured for Blob Storage. You must provide the name of the source Azure file share and mount path (the destination path where the files are mounted). Additional mount options (see the [Azure Files documentation](https://learn.microsoft.com/en-us/azure/storage/files/storage-files-introduction)) can also be set for further customization of the mounting process.
+The Azure file share must exist in the storage account configured for Blob Storage. You must provide the name of the source Azure file share and mount path (the destination path where the files are mounted). Additional mount options (see the [Azure Files documentation](https://learn.microsoft.com/en-us/azure/storage/files/storage-files-introduction)) can also be set for further customization of the mounting process.
 
 Configuration:
 
