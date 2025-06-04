@@ -24,7 +24,7 @@ To run pipelines with Azure Batch:
 2. Increase the quotas in your Azure Batch account to the pipeline's needs. Quotas impact the number of pools, CPUs, and jobs you can create.
 3. Create a storage account and Azure Blob Storage in the same region as the Batch account.
 4. Add authentication and account details to your Nextflow configuration file. See [Authentication](#authentication) for examples of configuration.
-5. Configure Nextflow to submit processes to Azure Batch by setting the process.executor directive to `azurebatch`.
+5. Configure Nextflow to submit processes to Azure Batch by setting the `process.executor` directive to `azurebatch`.
 6. Launch your pipeline with the above configuration and add a working directory on Azure Blob Storage:
 
     ```bash
