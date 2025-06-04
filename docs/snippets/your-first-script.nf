@@ -1,6 +1,6 @@
 params.str = 'Hello world!'
 
-process splitLetters {
+process split_letters {
     output:
     path 'chunk_*'
 
@@ -10,7 +10,7 @@ process splitLetters {
     """
 }
 
-process convertToUpper {
+process convert_to_upper {
     input:
     path x
 
@@ -24,5 +24,5 @@ process convertToUpper {
 }
 
 workflow {
-    splitLetters | flatten | convertToUpper | view { v -> v.trim() }
+    split_letters | flatten | convert_to_upper | view { v -> v.trim() }
 }

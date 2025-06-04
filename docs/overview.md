@@ -25,7 +25,7 @@ A Nextflow script looks like this:
 params.query = "/some/data/sample.fa"
 params.db = "/some/path/pdb"
 
-process blastSearch {
+process blast_search {
   input:
   path query
   path db
@@ -40,7 +40,7 @@ process blastSearch {
   """
 }
 
-process extractTopHits {
+process extract_top_hits {
   input:
   path top_hits
   path db
@@ -56,14 +56,14 @@ process extractTopHits {
 
 workflow {
   def query_ch = channel.fromPath(params.query)
-  blastSearch(query_ch, params.db)
-  extractTopHits(blastSearch.out, params.db).view()
+  blast_search(query_ch, params.db)
+  extract_top_hits(blast_search.out, params.db).view()
 }
 ```
 
-The above example defines two processes. Their execution order is not determined by the fact that the `blastSearch` process comes before `extractTopHits` in the script (it could also be written the other way around). Instead, execution order is determined by their _dependencies_ -- `extractTopHits` depends on the output of `blastSearch`, so `blastSearch` will be executed first, and then `extractTopHits`.
+The above example defines two processes. Their execution order is not determined by the fact that the `blast_search` process comes before `extract_top_hits` in the script (it could also be written the other way around). Instead, execution order is determined by their _dependencies_ -- `extract_top_hits` depends on the output of `blast_search`, so `blast_search` will be executed first, and then `extract_top_hits`.
 
-When the workflow is started, it will create two processes and one channel (`query_ch`) and it will link all of them. Both processes will be started at the same time and they will listen to their respective input channels. Whenever `blastSearch` emits a value, `extractTopHits` will receive it (i.e. `extractTopHits` consumes the channel in a *reactive* way).
+When the workflow is started, it will create two processes and one channel (`query_ch`) and it will link all of them. Both processes will be started at the same time and they will listen to their respective input channels. Whenever `blast_search` emits a value, `extract_top_hits` will receive it (i.e. `extract_top_hits` consumes the channel in a *reactive* way).
 
 Read the {ref}`Channel <channel-page>` and {ref}`Process <process-page>` sections to learn more about these features.
 
