@@ -977,6 +977,38 @@ class AzBatchService implements Closeable {
     }
 
     /**
+     * Set a specific Azure Batch job to terminate when all tasks complete.
+     * This is called eagerly when a Nextflow process completes (all tasks submitted)
+     * rather than waiting for the entire pipeline to finish.
+     * 
+     * @param jobId The Azure Batch job ID to set for auto-termination
+     */
+    void setJobAutoTermination(String jobId) {
+        try {
+            log.trace "Setting Azure job ${jobId} to terminate on completion"
+
+            final job = apply(() -> client.getJob(jobId))
+            final poolInfo = job.poolInfo
+
+            final jobParameter = new BatchJobUpdateContent()
+                    .setOnAllTasksComplete(OnAllBatchTasksComplete.TERMINATE_JOB)
+                    .setPoolInfo(poolInfo)
+
+            apply(() -> client.updateJob(jobId, jobParameter))
+        }
+        catch (HttpResponseException e) {
+            if (e.response.statusCode == 409) {
+                log.debug "Azure Batch job ${jobId} already terminated, skipping auto-termination setup"
+            } else {
+                log.warn "Unable to set auto-termination for Azure Batch job ${jobId} - Status: ${e.response.statusCode}, Reason: ${e.message ?: e}"
+            }
+        }
+        catch (Exception e) {
+            log.warn "Unable to set auto-termination for Azure Batch job ${jobId} - Reason: ${e.message ?: e}"
+        }
+    }
+
+    /**
      * Set all jobs to terminate on completion.
      */
     protected void terminateJobs() {
