@@ -82,7 +82,7 @@ There are two types of managed identities:
 A system-assigned identity is tied to a specific Azure resource. To use it:
 
 1. Enable [system-assigned managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities?pivots=qs-configure-portal-windows-vm#system-assigned-managed-identity) on your Azure resource.
-2. Configure the required role assignments. See [Required Roles](#required-roles) for more information.
+2. Configure the required role assignments. See [Required roles](#required-roles) for more information.
 3. Add the following configuration:
 
 ```groovy
