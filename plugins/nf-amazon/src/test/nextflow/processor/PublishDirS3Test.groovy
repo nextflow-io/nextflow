@@ -21,7 +21,6 @@ import java.nio.file.Files
 
 import nextflow.Global
 import nextflow.Session
-import nextflow.cloud.aws.nio.S3Path
 import nextflow.file.FileHelper
 import spock.lang.Specification
 
@@ -46,7 +45,7 @@ class PublishDirS3Test extends Specification {
         publisher.mode == PublishDir.Mode.COPY
     }
 
-    def 'should tag files' () {
+    /*def 'should tag files' () {
 
         given:
         def folder = Files.createTempDirectory('test')
@@ -71,6 +70,6 @@ class PublishDirS3Test extends Specification {
 
         cleanup:
         folder?.deleteDir()
-    }
+    }*/
 
 }

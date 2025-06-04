@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.cloud.aws.util
+package software.amazon.nio.spi.s3
+
+import nextflow.cloud.aws.util.S3BashLib
 
 import java.nio.file.Path
 
@@ -48,7 +50,10 @@ class S3PathFactory extends FileSystemPathFactory {
 
     @Override
     protected String toUriString(Path path) {
-        return isS3Path(path) ? path.toUri().toString() : null
+        if( !isS3Path(path) )
+            return null
+        final s3path = path as S3Path
+        return "s3://${s3path.bucketName()}${s3path.getKey()}".toString()
     }
 
     @Override
@@ -76,13 +81,13 @@ class S3PathFactory extends FileSystemPathFactory {
      */
     static Path create(String path) {
         if( !path ) throw new IllegalArgumentException("Missing S3 path argument")
-        if( !path.startsWith('s3://') ) throw new IllegalArgumentException("S3 path must start with s3:/// prefix -- offending value '$path'")
+        if( !path.startsWith('s3://') ) throw new IllegalArgumentException("S3 path must start with s3:// prefix -- offending value '$path'")
         // note: this URI constructor parse the path parameter and extract the `scheme` and `authority` components
-        final uri = URI.create(path)
+        final uri =  new URI(null,null, path,null,null)
         return FileHelper.getOrCreateFileSystemFor(uri,config()).provider().getPath(uri)
     }
 
     static boolean isS3Path(Path path){
-        return path.fileSystem.provider().scheme == "s3"
+        return path instanceof S3Path
     }
 }

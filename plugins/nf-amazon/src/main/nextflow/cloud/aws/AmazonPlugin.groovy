@@ -19,7 +19,7 @@ import groovy.transform.CompileStatic
 import nextflow.file.FileHelper
 import nextflow.plugin.BasePlugin
 import org.pf4j.PluginWrapper
-import software.amazon.nio.spi.s3.S3FileSystemProvider
+import software.amazon.nio.spi.s3.NextflowS3FileSystemProvider
 
 /**
  * Nextflow plugin for Amazon extensions
@@ -36,7 +36,7 @@ class AmazonPlugin extends BasePlugin {
     @Override
     void start() {
         super.start()
-        FileHelper.getOrInstallProvider(S3FileSystemProvider)
+        FileHelper.getOrInstallProvider(NextflowS3FileSystemProvider)
     }
 
 }

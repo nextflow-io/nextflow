@@ -40,7 +40,7 @@ import nextflow.BuildInfo
 import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.aws.config.AwsConfig
-import nextflow.cloud.aws.util.S3PathFactory
+import software.amazon.nio.spi.s3.S3PathFactory
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.exception.ProcessUnrecoverableException

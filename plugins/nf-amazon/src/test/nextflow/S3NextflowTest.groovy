@@ -31,7 +31,7 @@ class S3NextflowTest extends Specification {
 
     def 'should return s3 uris'() {
         expect:
-        Nextflow.file('s3://foo/data/file.log') == Paths.get(new URI('s3:///foo/data/file.log'))
+        Nextflow.file('s3://foo/data/file.log') == Paths.get(new URI('s3://foo/data/file.log'))
     }
 
 
@@ -40,9 +40,9 @@ class S3NextflowTest extends Specification {
         SysEnv.push(NXF_FILE_ROOT: 's3://some/base/dir')
 
         expect:
-        Nextflow.file( 's3://abs/path/file.txt' ) == Paths.get(new URI('s3:///abs/path/file.txt'))
+        Nextflow.file( 's3://abs/path/file.txt' ) == Paths.get(new URI('s3://abs/path/file.txt'))
         and:
-        Nextflow.file( 'file.txt' ) == Paths.get(new URI('s3:///some/base/dir/file.txt'))
+        Nextflow.file( 'file.txt' ) == Paths.get(new URI('s3://some/base/dir/file.txt'))
 
         cleanup:
         SysEnv.pop()

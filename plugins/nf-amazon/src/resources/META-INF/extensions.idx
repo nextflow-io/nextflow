@@ -15,6 +15,7 @@
 #
 
 nextflow.cloud.aws.batch.AwsBatchExecutor
-nextflow.cloud.aws.util.S3PathFactory
+software.amazon.nio.spi.s3.S3PathFactory
 nextflow.cloud.aws.fusion.AwsFusionEnv
 nextflow.cloud.aws.mail.AwsMailProvider
+software.amazon.nio.spi.s3.S3PathSerializer

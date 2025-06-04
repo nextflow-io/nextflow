@@ -1,6 +1,7 @@
 package nextflow.cloud.aws.util
 
-import nextflow.cloud.aws.nio.S3Path
+import software.amazon.nio.spi.s3.S3Path
+import software.amazon.nio.spi.s3.S3PathFactory
 import spock.lang.Specification
 /**
  *
@@ -13,9 +14,9 @@ class S3PathFactoryTest extends Specification {
         when:
         def path = S3PathFactory.parse(S3_PATH)
         then:
-        path instanceof S3Path
+        S3PathFactory.isS3Path(path)
         with(path as S3Path) {
-            getBucket() == BUCKET
+            bucketName() == BUCKET
             getKey() == KEY
         }
 

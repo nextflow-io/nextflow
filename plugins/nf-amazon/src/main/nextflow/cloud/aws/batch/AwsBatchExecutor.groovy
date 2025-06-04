@@ -16,7 +16,7 @@
 
 package nextflow.cloud.aws.batch
 
-import static nextflow.cloud.aws.util.S3PathFactory.*
+import static software.amazon.nio.spi.s3.S3PathFactory.*
 
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit

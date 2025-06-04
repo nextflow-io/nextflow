@@ -17,29 +17,30 @@
 
 package nextflow.cloud.aws.nio
 
-import software.amazon.awssdk.core.sync.RequestBody
+import software.amazon.awssdk.core.async.AsyncRequestBody
+import software.amazon.awssdk.core.async.AsyncResponseTransformer
+import software.amazon.awssdk.services.s3.S3AsyncClient
 import software.amazon.awssdk.services.s3.model.GetObjectRequest
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest
 
 import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
-import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest
 import software.amazon.awssdk.services.s3.model.DeleteBucketRequest
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest
 import software.amazon.awssdk.services.s3.model.S3Exception
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request
 import software.amazon.awssdk.services.s3.model.ListObjectVersionsRequest
-import software.amazon.awssdk.services.s3.model.S3Object
-import software.amazon.awssdk.services.s3.model.ObjectVersion
 import software.amazon.awssdk.services.s3.model.PutObjectRequest
-import nextflow.cloud.aws.util.S3PathFactory
+import software.amazon.nio.spi.s3.S3PathFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -48,14 +49,14 @@ trait AwsS3BaseSpec {
 
     static final Logger log = LoggerFactory.getLogger(AwsS3BaseSpec)
 
-    abstract S3Client getS3Client()
+    abstract S3AsyncClient getS3Client()
 
-    S3Path s3path(String path) {
-        return (S3Path) S3PathFactory.parse(path)
+    Path s3path(String path) {
+        return S3PathFactory.parse(path)
     }
 
     String createBucket(String bucketName) {
-        s3Client.createBucket(CreateBucketRequest.builder().bucket(bucketName).build() as CreateBucketRequest)
+        s3Client.createBucket(CreateBucketRequest.builder().bucket(bucketName).build() as CreateBucketRequest).join()
         return bucketName
     }
 
@@ -85,21 +86,21 @@ trait AwsS3BaseSpec {
         def (bucketName, blobName) = splitName(path)
         if( !blobName )
             throw new IllegalArgumentException("There should be at least one dir level: $path")
-        return s3Client.putObject(PutObjectRequest.builder().bucket(bucketName).key(blobName).build() as PutObjectRequest, RequestBody.fromBytes(content.bytes))
+        return s3Client.putObject(PutObjectRequest.builder().bucket(bucketName).key(blobName).build() as PutObjectRequest, AsyncRequestBody.fromBytes(content.bytes)).join()
     }
 
     def createDirectory(String path) {
         log.debug "Creating blob directory '$path'"
         def (bucketName, blobName) = splitName(path)
         blobName += '/'
-        s3Client.putObject(PutObjectRequest.builder().bucket(bucketName).key(blobName).build() as PutObjectRequest, RequestBody.empty())
+        s3Client.putObject(PutObjectRequest.builder().bucket(bucketName).key(blobName).build() as PutObjectRequest, AsyncRequestBody.empty()).join()
     }
 
     def deleteObject(String path) {
         log.debug "Deleting blob object '$path'"
         def (bucketName, blobName) = splitName(path)
         blobName += '/'
-        s3Client.deleteObject(DeleteObjectRequest.builder().bucket(bucketName).key(blobName).build() as DeleteObjectRequest)
+        s3Client.deleteObject(DeleteObjectRequest.builder().bucket(bucketName).key(blobName).build() as DeleteObjectRequest).join()
     }
 
     def deleteBucket(Path path) {
@@ -119,27 +120,37 @@ trait AwsS3BaseSpec {
         // delete markers for all objects, but doesn't delete the object versions.
         // To delete objects from versioned buckets, delete all of the object versions before deleting
         // the bucket (see below for an example).
-        def objectListingIterator = s3Client.listObjectsV2Paginator(ListObjectsV2Request.builder().bucket(bucketName).build() as ListObjectsV2Request).iterator();
-        while (objectListingIterator.hasNext()) {
-            Iterator<S3Object> objIter = objectListingIterator.next().contents().iterator();
-            while (objIter.hasNext()) {
-                s3Client.deleteObject(DeleteObjectRequest.builder().bucket(bucketName).key(objIter.next().key()).build() as DeleteObjectRequest);
-            }
-        }
+        def deleteObjects = s3Client.listObjectsV2Paginator(ListObjectsV2Request.builder().bucket(bucketName).build() as ListObjectsV2Request);
+        deleteObjects.subscribe(response -> {
+            response.contents().forEach(s3Object -> {
+                DeleteObjectRequest req = DeleteObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(s3Object.key())
+                    .build()
+                s3Client.deleteObject(req).join()
+            })
+        }).exceptionally(ex -> {
+            throw new RuntimeException("Failed to list objects", ex);
+        }).join()
+
 
         // Delete all object versions (required for versioned buckets).
-        def versionListIterator = s3Client.listObjectVersionsPaginator(ListObjectVersionsRequest.builder().bucket(bucketName).build() as ListObjectVersionsRequest).iterator();
-        while ( versionListIterator.hasNext()){
-            Iterator<ObjectVersion> versionIter = versionListIterator.next().versions().iterator();
-            while ( versionIter.hasNext() ) {
-                ObjectVersion vs = versionIter.next();
-                s3Client.deleteObject(DeleteObjectRequest.builder().bucket(bucketName).key(vs.key()).versionId(vs.versionId()).build() as DeleteObjectRequest);
-            }
-
-        }
+        def versionList = s3Client.listObjectVersionsPaginator(ListObjectVersionsRequest.builder().bucket(bucketName).build() as ListObjectVersionsRequest)
+        versionList.subscribe(response -> {
+            response.versions().forEach( vs -> {
+                DeleteObjectRequest req = DeleteObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(vs.key())
+                    .versionId(vs.versionId())
+                    .build()
+                s3Client.deleteObject(req).join()
+            })
+        }).exceptionally(ex -> {
+            throw new RuntimeException("Failed to list versions", ex)
+        }).join()
 
         // After all objects and object versions are deleted, delete the bucket.
-        s3Client.deleteBucket( DeleteBucketRequest.builder().bucket(bucketName).build() as DeleteBucketRequest);
+        s3Client.deleteBucket( DeleteBucketRequest.builder().bucket(bucketName).build() as DeleteBucketRequest).join()
 
     }
 
@@ -187,9 +198,10 @@ trait AwsS3BaseSpec {
     String readObject(Path path) {
         log.debug "Reading blob object '$path'"
         def (bucketName, blobName) = splitName(path)
-        return s3Client
-                .getObject(GetObjectRequest.builder().bucket(bucketName).key(blobName).build() as GetObjectRequest)
-                .getText()
+        Path temp = Files.createTempFile("temp","file")
+        s3Client
+                .getObject(GetObjectRequest.builder().bucket(bucketName).key(blobName).build() as GetObjectRequest, AsyncResponseTransformer.toFile(temp)).join()
+        return temp.text
     }
 
 
