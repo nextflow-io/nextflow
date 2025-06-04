@@ -33,7 +33,7 @@ To run pipelines with Azure Batch:
 
     Replace the following:
 
-    - `PIPELINE_NAME`:  your pipeline, for example, `nextflow-io/rnaseq-nf`
+    - `PIPELINE_NAME`: your pipeline, for example, *nextflow-io/rnaseq-nf*
     - `BLOB_STORAGE`: your Azure Blob Storage container from the storage account defined in your configuration
 
 :::{tip}
