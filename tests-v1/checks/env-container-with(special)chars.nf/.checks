@@ -25,7 +25,7 @@ process foo {
   input: 
   env BAR
   '''
-  env | sort 
+  env | grep -E "^(FOO|BAR)" | sort
   hello.sh
   '''
 }

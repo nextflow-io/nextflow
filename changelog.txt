@@ -1,5 +1,31 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.05.0-edge - 2 Jun 2025
+- Add Failsafe retry mechanism in K8s (#6083) [9e675c6a]
+- Add Platform info to Fusion license (#6142) [75f1bc52]
+- Add support for Azure Managed identities on Azure worker nodes with Fusion (#6118) [37981a5f]
+- Add support for container build compression (#5964) [daeefa0c]
+- Deprecated condaFile attribute [9e52b2ad]
+- Fix bug in generated Groovy code (#6082) [f0620656]
+- Fix default imports in included configs (#6096) [8f790615]
+- Fix variable checking in v2 config parser (#6097) [c3e9367b]
+- Force overwritting to trace file (#6105) [b9dace93]
+- Improve documentation of splitCsv operator (#6131) [f09ae8d7]
+- Make RepositoryProvider readBytes public (#6138) [9221b112]
+- Remove Az Fusion environment variable (#6143) [6c595eac]
+- Remove deprecated spack options [4e5d32a3]
+- Remove task attempt from hash list and add note (#6123) [9b48df4c]
+- Return streams in Lineage search and subkeys methods (#6067) [e4af2308]
+- Sort linter errors/warnings by source location (#6098) [7c52fafb]
+- Sunset the Google LS executor (#6070) [06e0d426]
+- Bump Groovy to version 4.0.27 (#6125) [258e1790]
+- Bump jgit:7.1.1.202505221757-r [16b88aca]
+- Bump nf-wave@1.13.0 [ab1d2dfe]
+- Bump nf-tower@1.12.0 [d4d97dfc]
+- Bump nf-k8s@1.1.0 [14eb7892]
+- Bump nf-google@1.22.0 [0f6498f1]
+- Bump nf-azure@1.17.0 [0b491840]
+
 25.04.2 - 13 May 2025
 - Add check subcommand in lineage (#6074) [5ba67bca]
 - Fix issues with `lint` console output (#6064) [7405f513]

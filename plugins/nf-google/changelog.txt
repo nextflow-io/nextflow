@@ -1,5 +1,9 @@
 nf-google changelog
 ===================
+1.22.0 - 2 Jun 2025
+- Sunset the Google LS executor (#6070) [06e0d426]
+- Bump Groovy to version 4.0.27 (#6125) [ci fast] [258e1790]
+
 1.21.0 - 8 May 2025
 - Add Support for Google Batch network tags (#5951) [d6e4d6c2]
 - Remove test constructors or mark as TestOnly (#5216) [d4fadd42]

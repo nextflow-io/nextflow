@@ -1,6 +1,6 @@
 Manifest-Version: 1.0
 Plugin-Class: nextflow.k8s.K8sPlugin
 Plugin-Id: nf-k8s
-Plugin-Version: 1.0.0
+Plugin-Version: 1.1.0
 Plugin-Provider: Seqera Labs
-Plugin-Requires: >=25.03.0-edge
+Plugin-Requires: >=25.05.0-edge

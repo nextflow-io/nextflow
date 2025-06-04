@@ -1,5 +1,9 @@
 nf-azure changelog
 ===================
+1.17.0 - 2 Jun 2025
+- Add support for Azure Managed identities on Azure worker nodes with Fusion (#6118) [37981a5f]
+- Bump Groovy to version 4.0.27 (#6125) [ci fast] [258e1790]
+
 1.16.0 - 8 May 2025
 - Add azure.batch.jobMaxWallClockTime config option (#5996) [74963fdc]
 - Remove test constructors or mark as TestOnly (#5216) [d4fadd42]
