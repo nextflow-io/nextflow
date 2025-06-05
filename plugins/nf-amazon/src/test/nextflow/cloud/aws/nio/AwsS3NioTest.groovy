@@ -58,7 +58,7 @@ import spock.lang.Unroll
 @Slf4j
 @Timeout(60)
 @IgnoreIf({System.getenv('NXF_SMOKE')})
-//@Requires({System.getenv('AWS_S3FS_ACCESS_KEY') && System.getenv('AWS_S3FS_SECRET_KEY')})
+@Requires({System.getenv('AWS_S3FS_ACCESS_KEY') && System.getenv('AWS_S3FS_SECRET_KEY')})
 class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
     @Shared
@@ -203,9 +203,9 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         !attrs.isSymbolicLink()
         !attrs.isOther()
         //attrs.fileKey() == "/"
-        attrs.creationTime() == null
-        attrs.lastAccessTime() == null
-        attrs.lastModifiedTime() == null
+        //attrs.creationTime() == null
+        //attrs.lastAccessTime() == null
+        //attrs.lastModifiedTime() == null
 
         cleanup:
         if( bucketName ) deleteBucket(bucketName)

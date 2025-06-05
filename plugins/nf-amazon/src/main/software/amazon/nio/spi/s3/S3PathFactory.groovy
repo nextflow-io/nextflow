@@ -53,7 +53,7 @@ class S3PathFactory extends FileSystemPathFactory {
         if( !isS3Path(path) )
             return null
         final s3path = path as S3Path
-        return "s3://${s3path.bucketName()}${s3path.getKey()}".toString()
+        return "s3://${s3path.bucketName()}/${s3path.getKey()}".toString()
     }
 
     @Override

@@ -3,6 +3,7 @@ package software.amazon.nio.spi.s3
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.aws.util.AwsHelper
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration
 import software.amazon.awssdk.services.s3.model.GetObjectRequest
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 import software.amazon.awssdk.services.s3.model.PutObjectRequest
@@ -18,19 +19,22 @@ class NextflowS3OpenOptions extends S3OpenOption {
     private ObjectCannedACL cannedACL
     private String kmsKeyId
     private ServerSideEncryption storageEncryption
+    private ClientOverrideConfiguration clientOverride
 
     NextflowS3OpenOptions(){}
 
-    protected NextflowS3OpenOptions(Boolean isRequesterPays, ObjectCannedACL cannedACL, String kmsKeyId, ServerSideEncryption storageEncryption) {
+    protected NextflowS3OpenOptions(Boolean isRequesterPays, ObjectCannedACL cannedACL, String kmsKeyId,
+                                    ServerSideEncryption storageEncryption, ClientOverrideConfiguration clientOverride) {
         this.isRequesterPays = isRequesterPays
         this.cannedACL = cannedACL
         this.kmsKeyId = kmsKeyId
         this.storageEncryption = storageEncryption
+        this.clientOverride = clientOverride
     }
 
     @Override
     S3OpenOption copy() {
-        return new NextflowS3OpenOptions(this.isRequesterPays, this.cannedACL, this.kmsKeyId, this.storageEncryption)
+        return new NextflowS3OpenOptions(this.isRequesterPays, this.cannedACL, this.kmsKeyId, this.storageEncryption, this.clientOverride)
     }
 
     @Override
@@ -49,6 +53,7 @@ class NextflowS3OpenOptions extends S3OpenOption {
             putObjectRequest.serverSideEncryption(storageEncryption)
         if( isRequesterPays )
             putObjectRequest.requestPayer(RequestPayer.REQUESTER)
+
     }
 
     void setCannedAcl(String acl) {
@@ -73,5 +78,11 @@ class NextflowS3OpenOptions extends S3OpenOption {
         if( requesterPaysEnabled == null )
             return;
         this.isRequesterPays = Boolean.valueOf(requesterPaysEnabled)
+    }
+
+    void setClientOverride(ClientOverrideConfiguration clientOverride){
+        if( clientOverride == null)
+            return;
+        this.clientOverride = clientOverride
     }
 }

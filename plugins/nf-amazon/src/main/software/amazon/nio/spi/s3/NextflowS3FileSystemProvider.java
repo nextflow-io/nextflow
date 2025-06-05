@@ -3,11 +3,11 @@ package software.amazon.nio.spi.s3;
 import nextflow.SysEnv;
 import nextflow.cloud.aws.config.AwsConfig;
 import nextflow.cloud.aws.config.AwsS3Config;
-import nextflow.exception.AbortOperationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.regions.providers.InstanceProfileRegionProvider;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3CrtAsyncClientBuilder;
@@ -66,41 +66,27 @@ public class NextflowS3FileSystemProvider extends S3FileSystemProvider {
         // add properties for legacy compatibility
         props.putAll(awsConfig.getS3LegacyProperties());
 
-        var s3Config = awsConfig.getS3Config();
+        S3AsyncClientConfiguration clientConfig = S3AsyncClientConfiguration.create(props);
         var region = getRegion(awsConfig);
+        var s3Config = awsConfig.getS3Config();
         if (s3Config != null)
             addS3ConfigurationToSpiConfig(s3Config, region, spiConfig);
-        List<S3OpenOption> options = getOpenOptions(props);
-        spiConfig.withOpenOptions(options);
+        spiConfig.withOpenOptions(clientConfig.getOpenOptions());
         var clientProvider = new S3ClientProvider(spiConfig);
-        clientProvider.asyncClientBuilder(getAsyncClientBuilder(props));
+        clientProvider.asyncClientBuilder(getAsyncClientBuilder(clientConfig));
         return clientProvider;
     }
 
-    private S3CrtAsyncClientBuilder getAsyncClientBuilder(Properties props) {
-        return S3AsyncClient.crtBuilder()
-                    .crossRegionAccessEnabled(true);
+    private S3CrtAsyncClientBuilder getAsyncClientBuilder(S3AsyncClientConfiguration clientConfig) {
+        S3CrtAsyncClientBuilder builder = S3AsyncClient.crtBuilder().crossRegionAccessEnabled(true);
+        if( clientConfig.hasHttpConfiguration() )
+            builder.httpConfiguration(clientConfig.getHttpConfiguration());
+        if( clientConfig.hasRetryConfiguration() )
+            builder.retryConfiguration(clientConfig.getRetryConfiguration());
+        if( clientConfig.hasMaxConcurrency() )
+            builder.maxConcurrency(clientConfig.getMaxConcurrency());
+        return builder;
     }
-
-    private List<S3OpenOption> getOpenOptions(Properties props) {
-        final List<S3OpenOption> list = new ArrayList<S3OpenOption>();
-        final NextflowS3OpenOptions nextflowOptions = new NextflowS3OpenOptions();
-        nextflowOptions.setRequesterPays(props.getProperty("requester_pays_enabled"));
-        nextflowOptions.setCannedAcl(getProp(props, "s_3_acl", "s3_acl", "s3Acl"));
-        nextflowOptions.setStorageEncryption(props.getProperty("storage_encryption"));
-        nextflowOptions.setKmsKeyId(props.getProperty("storage_kms_key_id"));
-        list.add(nextflowOptions);
-        return list;
-    }
-
-    private String getProp(Properties props, String... keys) {
-		for( String k : keys ) {
-			if( props.containsKey(k) ) {
-				return props.getProperty(k);
-			}
-		}
-		return null;
-	}
 
     private String getRegion(AwsConfig awsConfig){
         if( awsConfig.getRegion() != null && !awsConfig.getRegion().isBlank() )
@@ -112,10 +98,11 @@ public class NextflowS3FileSystemProvider extends S3FileSystemProvider {
         try {
             return new InstanceProfileRegionProvider().getRegion().id();
         } catch ( SdkClientException e) {
-            log.debug("Cannot fetch AWS region", e);
-            throw new AbortOperationException("Missing AWS region -- Make sure to define a region either in the configuration or environment variable such as `AWS_REGION`");
+            log.warn("Cannot fetch AWS region either from configuration environment and instance. Setting default US_EAST_1");
+            return Region.US_EAST_1.id();
         }
     }
+
     private void addS3ConfigurationToSpiConfig(AwsS3Config s3config, String region, S3NioSpiConfiguration spiConfig){
         spiConfig.withForcePathStyle(s3config.getPathStyleAccess());
         if (s3config.getAnonymous() != null)
