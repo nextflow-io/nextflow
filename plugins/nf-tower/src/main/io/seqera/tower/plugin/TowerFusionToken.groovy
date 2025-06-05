@@ -310,7 +310,7 @@ class TowerFusionToken implements FusionToken {
             }
 
             if( resp.statusCode() == 401 ) {
-                throw new UnauthorizedException("Unauthorized [401] - Verify you have provided a valid access token")
+                throw new UnauthorizedException("Unauthorized [401] - Verify you have provided a Seqera Platform valid access token")
             }
 
             throw new BadResponseException("Invalid response: ${httpReq.method()} ${httpReq.uri()} [${resp.statusCode()}] ${resp.body()}")
