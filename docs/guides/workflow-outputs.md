@@ -6,43 +6,41 @@ The {ref}`workflow output definition <workflow-output-def>` is a new way to defi
 
 ## Overview
 
-In Nextflow DSL1, a pipeline had to be defined entirely in a single script, and there was no concept of workflows. Each process was responsible for *publishing* task outputs as workflow outputs using the `publishDir` directive, which captured output files with glob patterns and copied them from the work directory to an external location.
+In Nextflow DSL1, pipelines had to be defined in a single script, and there was no concept of workflows. Each process published task outputs using the `publishDir` directive, which captured output files with glob patterns and copied them from the work directory to an external location.
 
-Nextflow DSL2 introduced workflows and the ability to define pipeline components in reusable modules, which made it easier to write large and complex pipelines. However, DSL2 did not change the way that outputs were published, and as a result, the process-based publishing approach became unwieldy for a number of reasons:
+Nextflow DSL2 introduced workflows and modules, which made it easier to develop large and complex pipelines. However, DSL2 retained the same process-based publishing syntax, which became unwieldy for several reasons:
 
-- Because the publishing rules for a process typically depend on the calling pipeline, it is impractical to set `publishDir` in a generic way for a process that is re-used across many pipelines. Publishing rules can instead be defined in the configuration, but this approach requires heavy use of {ref}`process selectors <config-process-selectors>`, which are difficult to use for large pipelines.
+- **Mismatch with reusable modules**: Publishing rules often depend on how a process is used in a pipeline. This makes it impractical to set `publishDir` in a reusable way for processes that are shared across many pipelines. Publishing rules can instead be defined in the configuration, but this approach requires extensive use of {ref}`process selectors <config-process-selectors>`, which are difficult to use for large pipelines.
 
-- It is difficult to get a concise view of a workflow's outputs when the publishing rules are tied to processes that are separated across many different modules.
+- **Fragmented outputs**: It is difficult to get a concise view of a workflow's outputs when publishing rules are separated across many different modules.
 
-- Settings such as the base output directiry and publish mode must be specified for each `publishDir` setting, which leads to a large amount of duplicated code.
+- **Redundant configuration**: Certain settings, such as the base output directory and publish mode, must be repeated for each `publishDir` declaration, leading to duplicated code.
 
-- Data in a Nextflow pipeline is typically structured as a channel of files and associated metadata, where each file and metadata field can be accessed by name. However, `publishDir` uses glob patterns to match files, and cannot publish metadata unless it happens to be in a file. This mismatch makes it difficult to translate channels -- the primary data structure in Nextflow -- into pipeline outputs.
+- **Mismatch with channels**: Channels, the primary data structure in Nextflow, contain files and associated metadata that can be accessed by name. However, `publishDir` uses glob patterns to match files, and cannot publish metadata unless it happens to be in a file. This mismatch makes it difficult to translate channels into pipeline outputs.
 
-The workflow output definition is a new way to publish outputs that addresses the issues described above:
+Workflow outputs were introduced to address these problems by providing a unified, structured, and flexible way to publish outputs:
 
-- Workflow outputs are declared in an `output` block alongside the entry workflow, ensuring that there is a single comprehensive view of what a pipeline produces.
+- **Unified output definition**: Workflow outputs are declared in an `output` block alongside the entry workflow, ensuring that there is a single comprehensive view of what a pipeline produces.
 
-- Workflow outputs are assigned by publishing channels in the `publish:` section of the entry workflow, instead of publishing files in processes, allowing more flexibility in publishing.
+- **Channel-based publishing**: Instead of publishing files from individual processes, workflow outputs are assigned from channels in the entry workflow. The channel itself can be saved as an *index file*, such as a CSV or JSON file, which provides a structured view of the output directory and can be ingested by downstream pipelines.
 
-- When a channel is published, all of the files that it contains are automatically published. Alternatively, the output can select specific files to publish by name, instead of using glob patterns. This design makes it easy to translate channels into pipeline outputs.
+- **Flexible file selection**: By default, all files in a published channel are included. However, the published channel can be configured to publish specific files by name, instead of using glob patterns. This approach to publishing files is a natural extension of workflows and channels.
 
-- The base output directory is defined as a global configuration setting, and all files are published into this directory. Publish settings such as the mode are also defined as configuration settings under the `workflow.output` scope, reducing code duplication.
-
-- A workflow output can save the published channel as an *index file*, such as a CSV or JSON file, which serves as a *manifest* of the published files and associated metadata. Index files provide a structured view of pipeline outputs and can be easily ingested by downstream pipelines.
+- **Simple configuration**: The base output directory is defined as a global configuration setting, and all files are published into this directory. Publish settings such as the mode are also defined as configuration settings under the `workflow.output` scope, reducing code duplication.
 
 ## Timeline
 
 The workflow output definition was introduced in Nextflow {ref}`24.04 <workflow-outputs-first-preview>` as a preview feature. It has since undergone multiple revisions, with the third preview currently available in Nextflow {ref}`25.04 <workflow-outputs-third-preview>`.
 
-Workflow outputs will be finalized and brought out of preview in Nextflow 25.10. The `publishDir` directive will continue to be supported, but will be deprecated. At some point in the future, `publishDir` may be removed.
+Workflow outputs will be finalized and brought out of preview in Nextflow 25.10. The `publishDir` directive will continue to be supported, but will be deprecated. It may be removed in a future release.
 
 ## Example: rnaseq-nf
 
-We will use the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline to demonstrate how to migrate from `publishDir` to workflow outputs. The final version is available on the [`preview-25.04`](https://github.com/nextflow-io/rnaseq-nf/tree/preview-25-04) branch of rnaseq-nf.
+This section demonstrates how to migrate from `publishDir` to workflow outputs using the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline as an example. The completed migration can be viewed on the [`preview-25-04`](https://github.com/nextflow-io/rnaseq-nf/tree/preview-25-04) branch of rnaseq-nf.
 
 ### Initial version
 
-This pipeline takes a transcriptome file and a collection of FASTQ samples, and performs a basic RNAseq analysis:
+The [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline takes a transcriptome file and a collection of FASTQ files as inputs and performs a basic RNAseq analysis:
 
 ```nextflow
 workflow {
@@ -77,7 +75,7 @@ process FASTQC {
     // ...
 
     output:
-    path "fastqc_${sample_id}_logs"
+    path "fastqc_${id}_logs"
 
     // ...
 }
@@ -94,9 +92,9 @@ process MULTIQC {
 }
 ```
 
-### Replace `publishDir` with workflow outputs
+### Replacing `publishDir` with workflow outputs
 
-To migrate to workflow outputs, we need to remove the `publishDir` settings and publish the output channels instead. We'll start by simply publishing each channel as a workflow output.
+We'll start by removing each `publishDir` directive and publishing the corresponding process output channel in the entry workflow.
 
 First, emit the `QUANT` and `FASTQC` outputs separately in the `RNASEQ` workflow:
 
@@ -110,7 +108,7 @@ workflow RNASEQ {
 }
 ```
 
-Declare an output for each channel in the `output` block and publish each channel in the entry workflow:
+Declare an output for each channel in the `output` block and publish the corresponding channel in the `publish:` section of the entry workflow:
 
 ```nextflow
 workflow {
@@ -137,6 +135,10 @@ output {
 }
 ```
 
+:::{note}
+Each output assigned in the `publish:` section must be declared in the `output` block, and vice versa.
+:::
+
 All files in the published channels are copied into the output directory, which is `results` by default. It can be set using the `outputDir` config setting or the `-output-dir` command line option. The publish mode can be set in the config:
 
 ```groovy
@@ -149,9 +151,9 @@ Run the pipeline with the `all-reads` profile to verify the published outputs:
 $ nextflow run . -profile conda,all-reads
 ```
 
-### Configure the publish paths
+### Customizing the publish paths
 
-The pipeline runs `FASTQC` and `QUANT` for each input sample, but currently only the `FASTQC` results are published, while the `QUANT` results are passed to `MULTIQC` but are not published directly.
+The pipeline runs `FASTQC` and `QUANT` for each input sample. However, only the `FASTQC` results are published. The `QUANT` results are passed to `MULTIQC` but are not published directly.
 
 Let's improve the workflow outputs by also publishing the outputs of `QUANT`:
 
@@ -193,7 +195,7 @@ results
 └── quant_spleen
 ```
 
-This directory will quickly become cluttered as we produce more samples. It would be better to group the `FASTQC` and `QUANT` results into separate subdirectories:
+This directory will quickly become cluttered as we process more samples. It would be better to group the `FASTQC` and `QUANT` results into separate subdirectories:
 
 ```console
 results
@@ -210,7 +212,7 @@ results
     └── spleen
 ```
 
-Fortunately, we can achieve this directory structure by customzing the `output` block.
+We can achieve this directory structure by customzing the `output` block.
 
 First, update the `FASTQC` and `QUANT` processes to also emit the sample ID alongside the output files:
 
@@ -234,7 +236,7 @@ process QUANT {
 }
 ```
 
-Update the `output` block to use dynamic publish paths:
+Configure the `fastqc_logs` and `quant` outputs in the `output` block to use dynamic publish paths:
 
 ```nextflow
 output {
@@ -253,7 +255,11 @@ output {
 
 Preserving the sample ID in each output channel allows us to customize the publish path without trying to parse the file name. The dynamic path is applied to each channel value to determine the target name for the given file.
 
-### Generate an index file
+:::{note}
+The closure parameters for the dynamic publish path must match the structure of the published channel.
+:::
+
+### Generating an index file
 
 Nextflow can create an *index file* for each workflow output by saving the channel as a CSV, JSON, or YAML file.
 
@@ -282,9 +288,9 @@ $ cat results/fastqc.csv
 "liver","results/fastqc/liver"
 ```
 
-An index file is like a *manifest* that lists the published files and their metadata. It provides a structured view of the output directory, and it mirrors the structure of the published channel. Index files are also equivalent to samplesheets, making it easy to use the output of one pipeline as an input to another.
+An index file is a *manifest* or *index* of the published files and their metadata for a workflow output. It mirrors the structure of the published channel, and it provides a structured view of the output directory. Index files are equivalent to samplesheets, and can be used an inputs to downstream pipelines.
 
-We could define two index files for `fastqc_logs` and `quant`, but this approach will become unwieldy as we add more tools to the pipeline. Since these two outputs essentially provide different *slices* of data for the same set of samples, it would be nice to join them into a single output with one index file. This would also make it easier for downstream pipelines to use our outputs, as they can consult a single index file rather than cross-referencing multiple files.
+We could define two index files for `fastqc_logs` and `quant`. However, since these outputs essentially provide different *slices* of data for the same set of samples, we can also combine them into a single output with one index file.
 
 Use the `join` operator to combine the `FASTQC` and `QUANT` results into a single channel:
 
@@ -310,7 +316,7 @@ workflow {
 }
 ```
 
-We use maps instead of tuples so that the map keys can be used as column names in the index file.
+We use maps instead of tuples so that we can access fields by name, and so that the index file can use the map keys as column names.
 
 Declare the `samples` output with an index file:
 
@@ -332,7 +338,7 @@ output {
 }
 ```
 
-Since each channel value now has multiple files, we use *publish statements* in the `path` directive to route each file to the appropriate location.
+Since each channel value now contains multiple files that were going to different subdirectories, we must use *publish statements* in the `path` directive to route each file to the appropriate location.
 
 Finally, run the pipeline to verify the index file:
 
@@ -345,3 +351,5 @@ $ cat results/samples.csv
 "liver","results/fastqc/liver","results/quant/liver"
 "spleen","results/fastqc/spleen","results/quant/spleen"
 ```
+
+In the future, if we add a tool with per-sample outputs, we only need to join the tool output into the `samples_ch` channel and update the output `path` directive accordingly. This approach keeps our output definition concise as we add more tools to the pipeline. Additionally, a single unified index file for all per-sample outputs is easier for downstream pipelines to consume, rather than cross-referencing multiple related index files.
