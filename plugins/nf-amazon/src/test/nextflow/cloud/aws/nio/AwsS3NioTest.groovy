@@ -58,7 +58,7 @@ import spock.lang.Unroll
 class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
     @Shared
-    static S3Client s3Client0
+    private S3Client s3Client0
 
     S3Client getS3Client() { s3Client0 }
 
