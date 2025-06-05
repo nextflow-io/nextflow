@@ -293,7 +293,7 @@ class Launcher {
                 normalized << '-'
             }
 
-            else if( current == '-with-tower' && (i==args.size() || args[i].startsWith('-'))) {
+            else if( (current == '-with-tower' || current == '-with-seqera') && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << '-'
             }
 
