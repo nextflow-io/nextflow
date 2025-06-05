@@ -42,6 +42,8 @@ class FusionConfig {
 
     final static public String FUSION_PATH = '/usr/bin/fusion'
 
+    final static private String PRODUCT_NAME = 'fusion'
+
     final static private Pattern VERSION_JSON = ~/https:\/\/.*\/releases\/v(\d+(?:\.\w+)*)-(\w*)\.json$/
 
     final private Boolean enabled
@@ -126,6 +128,15 @@ class FusionConfig {
         if( matcher_json.matches() )
             return matcher_json.group(1)
         return null
+    }
+
+    /**
+     * Return the Fusion SKU string
+     *
+     * @return A string representing the Fusion SKU
+     */
+    String sku() {
+        return enabled ? PRODUCT_NAME : null
     }
 
     String version() {
