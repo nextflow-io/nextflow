@@ -39,4 +39,5 @@ dependencies {
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation "org.apache.groovy:groovy:4.0.21"
     testImplementation "org.apache.groovy:groovy-nio:4.0.21"
+    testImplementation "org.wiremock:wiremock:3.5.4"
 }
