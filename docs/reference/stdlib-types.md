@@ -477,7 +477,7 @@ The following methods are useful for getting attributes of a file:
 : Gets the file parent path, e.g. `/some/path/file.txt` -> `/some/path`.
 
 `getScheme() -> String`
-: Gets the file URI scheme, e.g. `s3://some-bucket/foo.txt` -> `s3`.
+: Gets the file URI scheme, e.g. `s3://some-bucket/hello.txt` -> `s3`.
 
 `isDirectory() -> boolean`
 : Returns `true` if the file is a directory.
@@ -503,11 +503,11 @@ The following methods are useful for getting attributes of a file:
 `toUriString() -> String`
 : Gets the file path along with the protocol scheme:
   ```nextflow
-  def ref = file('s3://some-bucket/foo.txt')
+  def ref = file('s3://some-bucket/hello.txt')
 
-  assert ref.toString() == '/some-bucket/foo.txt'
-  assert "$ref" == '/some-bucket/foo.txt'
-  assert ref.toUriString() == 's3://some-bucket/foo.txt'
+  assert ref.toString() == '/some-bucket/hello.txt'
+  assert "$ref" == '/some-bucket/hello.txt'
+  assert ref.toUriString() == 's3://some-bucket/hello.txt'
   ```
 
 <h3>Reading</h3>
@@ -937,5 +937,7 @@ The following methods are available for a VersionNumber:
       error "This workflow requires Nextflow version 23.10 or greater -- You are running version $nextflow.version"
   }
   ```
+
+: Multiple constraints can be specified as a comma-separated list, e.g. `>=23.10, <=24.10`.
 
 : Alternatively, the version can be postfixed with `+`, which is similar to `==` but also allows the last version part to be greater. For example, `23.10.1+` is satisfied by `23.10.1` and `23.10.2`, but not `23.11.x` or `23.09.x`. Additionally, `23.10.+` is equivalent to `23.10.0+`. This operator is a useful way to enforce a specific version while allowing for newer patch releases.

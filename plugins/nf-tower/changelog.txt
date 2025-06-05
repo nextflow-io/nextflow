@@ -1,5 +1,9 @@
 nf-tower changelog
 ===================
+1.12.0 - 2 Jun 2025
+- Add Platform info to Fusion license (#6142) [75f1bc52]
+- Bump Groovy to version 4.0.27 (#6125) [258e1790]
+
 1.11.2 - 8 Apr 2025
 - Fix container meta deduplication [f4600d2e]
 
@@ -12,7 +16,7 @@ nf-tower changelog
 - Bump groovy 4.0.26 [f740bc56]
 
 1.10.0 - 12 Feb 2025
-- Add Fusion token validation (#5614) [ci fast] [1dcb18d6]
+- Add Fusion token validation (#5614) [1dcb18d6]
 - Bump groovy 4.0.25 [19c40a4a]
 
 1.9.4 - 20 Jan 2025
@@ -53,12 +57,12 @@ nf-tower changelog
 - Add -cloudcache CLI option (#4385) [73fda582]
 
 1.6.2 - 28 Sep 2023
-- Disable Tower container field for multiple images [ci fast] [b53936b0]
+- Disable Tower container field for multiple images [b53936b0]
 - Bump Apache 2.0 license to tower client [e4a878b6]
 
 1.6.1 - 17 Aug 2023
 - Fix checkpoint thread termination (#4166) [2b449daa]
-- Fix typos in source code comments (#4173) [ci fast] [e78bc37e]
+- Fix typos in source code comments (#4173) [e78bc37e]
 
 1.6.0 - 5 Aug 2023
 - Add Tower logs checkpoint (#4132) [71dfecc2]
@@ -83,7 +87,7 @@ nf-tower changelog
 - Fix NoSuchMethodError String.stripIndent with Java 11 [308eafe6]
 
 1.5.10 - 21 Feb 2023
-- Log exception when an unexpected  occurs (#3603) [ci fast] [9aeca99f]
+- Log exception when an unexpected  occurs (#3603) [9aeca99f]
 - Bump groovy 3.0.15 [7a3ebc7d]
 
 1.5.9 - 14 Jan 2023
