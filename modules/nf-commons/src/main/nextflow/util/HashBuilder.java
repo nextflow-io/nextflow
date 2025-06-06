@@ -324,39 +324,45 @@ public class HashBuilder {
 
     static protected Hasher hashDirSha256( Hasher hasher, Path dir, Path base ) {
         try {
+            var entries = new HashMap<String, String>();
+
             Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
+                @Override
                 public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
                     log.trace("Hash sha-256 dir content [FILE] path={} - base={}", path, base);
                     try {
-                        // the file relative base
-                        if( base!=null )
-                            hasher.putUnencodedChars(base.relativize(path).toString());
+                        // the file relative path
+                        var name = relativePath(path, base).toString();
                         // the file content sha-256 checksum
-                        String sha256 = sha256Cache.get(path);
-                        hasher.putUnencodedChars(sha256);
+                        var value = sha256Cache.get(path);
+                        entries.put(name, value);
                         return FileVisitResult.CONTINUE;
                     }
                     catch (ExecutionException t) {
-                        throw new IOException(t);
+                        throw new IOException("Failed to get SHA-256 from cache for " + path, t);
                     }
                 }
 
+                @Override
                 public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes attrs) {
                     log.trace("Hash sha-256 dir content [DIR] path={} - base={}", path, base);
-                    // the file relative base
-                    if( base!=null )
-                        hasher.putUnencodedChars(base.relativize(path).toString());
-                    hasher.putUnencodedChars(base.relativize(path).toString());
+                    entries.put(relativePath(path, base).toString(), null);
                     return FileVisitResult.CONTINUE;
                 }
             });
+
+            return hashUnorderedCollection(hasher, entries.entrySet(), HashMode.SHA256);
         }
         catch (IOException t) {
-            Throwable err = t.getCause()!=null ? t.getCause() : t;
-            String msg = err.getMessage()!=null ? err.getMessage() : err.toString();
+            var err = t.getCause() != null ? t.getCause() : t;
+            var msg = err.getMessage() != null ? err.getMessage() : err.toString();
             log.warn("Unable to compute sha-256 hashing for directory: {} - Cause: {}", FilesEx.toUriString(dir), msg);
         }
         return hasher;
+    }
+
+    static protected Path relativePath(Path path, Path base) {
+        return base != null ? base.relativize(path) : path;
     }
 
     static protected String hashFileSha256Impl0(Path path) throws IOException {
