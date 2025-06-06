@@ -1,5 +1,8 @@
 nf-tower changelog
 ===================
+1.9.4 - 6 Jun 2024
+- Add Fusion license validation [02b4dd74]
+
 1.9.3 - 27 Oct 2024
 - Fix nf-tower plugin to upload logs when early failures  (#5434) [4222442a]
 
