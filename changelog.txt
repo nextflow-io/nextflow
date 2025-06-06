@@ -1,5 +1,15 @@
 NEXTFLOW CHANGE-LOG
 ===================
+24.10.8 - 6 Jun 2025
+- Add Fusion license validation [02b4dd74]
+- Bump nf-wave@1.7.5-patch1 [cf6af9c5]
+- Bump nf-tower@1.9.3-patch1 [bdef2177]
+
+24.04.5 - 6 Jun 2025
+- Add Fusion license validation [cb7210b9]
+- Bump nf-wave@1.4.2-patch2 [69b63342]
+- Bump nf-tower@1.9.1-patch1 [8bfdc673]
+
 25.05.0-edge - 2 Jun 2025
 - Add Failsafe retry mechanism in K8s (#6083) [9e675c6a]
 - Add Platform info to Fusion license (#6142) [75f1bc52]
