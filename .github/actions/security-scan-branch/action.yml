@@ -52,16 +52,6 @@ runs:
         critical_threshold: 1
         high_threshold: 1
 
-    - name: Upload Scan Results
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 #v4.6.2
-      with:
-        name: Inspector Vulnerability Scan Artifacts ${{ inputs.branch }}
-        path: |
-          ${{ steps.inspector.outputs.inspector_scan_results }}
-          ${{ steps.inspector.outputs.inspector_scan_results_csv }}
-          ${{ steps.inspector.outputs.artifact_sbom }}
-          ${{ steps.inspector.outputs.inspector_scan_results_markdown }}
-
     - name: On vulnerability threshold exceeded
       run: exit ${{ steps.inspector.outputs.vulnerability_threshold_exceeded }}
       shell: bash
