@@ -13,15 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.script.types;
+package nextflow.script.namespaces;
 
 import java.util.List;
 import java.util.Map;
 
 import nextflow.script.dsl.Constant;
 import nextflow.script.dsl.Description;
+import nextflow.script.dsl.Namespace;
 
-public interface Manifest {
+public interface ManifestNamespace extends Namespace {
 
     @Constant("author")
     @Description("""

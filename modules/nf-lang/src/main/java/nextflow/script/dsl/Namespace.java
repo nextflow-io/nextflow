@@ -13,29 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.script.types;
+package nextflow.script.dsl;
 
-import nextflow.script.dsl.Constant;
-import nextflow.script.dsl.Description;
-
-public interface NextflowMetadata {
-
-    @Constant("build")
-    @Description("""
-        Nextflow runtime build number.
-    """)
-    int getBuild();
-
-    @Constant("timestamp")
-    @Description("""
-        Nextflow runtime compile timestamp.
-    """)
-    String getTimestamp();
-
-    @Constant("version")
-    @Description("""
-        Nextflow runtime version number.
-    """)
-    VersionNumber getVersion();
-
+/**
+ * Marker interface for namespaces.
+ *
+ * @author Ben Sherman <bentshermann@gmail.com>
+ */
+public interface Namespace {
 }

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.script.types;
+package nextflow.script.namespaces;
 
 import java.nio.file.Path;
 import java.time.OffsetDateTime;
@@ -24,8 +24,10 @@ import java.util.UUID;
 import groovy.lang.Closure;
 import nextflow.script.dsl.Constant;
 import nextflow.script.dsl.Description;
+import nextflow.script.dsl.Namespace;
+import nextflow.script.types.Duration;
 
-public interface WorkflowMetadata {
+public interface WorkflowNamespace extends Namespace {
 
     @Constant("commandLine")
     @Description("""
@@ -98,7 +100,7 @@ public interface WorkflowMetadata {
     @Description("""
         Map of Fusion runtime information.
     """)
-    FusionMetadata getFusion();
+    FusionNamespace getFusion();
 
     @Constant("homeDir")
     @Description("""
@@ -114,9 +116,9 @@ public interface WorkflowMetadata {
 
     @Constant("manifest")
     @Description("""
-        Map of properties corresponding to the {ref}`config-manifest` config scope.
+        Namespace corresponding to the [manifest](https://nextflow.io/docs/latest/reference/config.html#manifest) config scope.
     """)
-    Manifest getManifest();
+    ManifestNamespace getManifest();
 
     @Constant("outputDir")
     @Description("""
@@ -218,7 +220,7 @@ public interface WorkflowMetadata {
     @Description("""
         Map of Wave runtime information.
     """)
-    WaveMetadata getWave();
+    WaveNamespace getWave();
 
     @Constant("workDir")
     @Description("""
@@ -236,7 +238,7 @@ public interface WorkflowMetadata {
     """)
     void onError(Closure action);
 
-    interface FusionMetadata {
+    interface FusionNamespace extends Namespace {
 
         @Constant("enabled")
         @Description("""
@@ -251,7 +253,7 @@ public interface WorkflowMetadata {
         String getVersion();
     }
 
-    interface WaveMetadata {
+    interface WaveNamespace extends Namespace {
 
         @Constant("enabled")
         @Description("""
