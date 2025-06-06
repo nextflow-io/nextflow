@@ -25,9 +25,8 @@ import java.nio.file.ProviderMismatchException;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
-import java.util.Map;
 import java.util.HashMap;
-import java.util.TreeMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -325,56 +324,36 @@ public class HashBuilder {
 
     static protected Hasher hashDirSha256( Hasher hasher, Path dir, Path base ) {
         try {
-            // Use a TreeMap to store path-SHA pairs to make sure that the entries are iterated over in a predictable way
-            Map<String, String> pathShas = new TreeMap<>();
+            var entries = new HashMap<String, Path>();
 
-            // Walk the directory and hash all the files
             Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
                 @Override
                 public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
                     log.trace("Hash sha-256 dir content [FILE] path={} - base={}", path, base);
-                    try {
-                        // The file path relative to the base directory
-                        String entry = base != null ? base.relativize(path).toString() : path.toString();
-                        // The file content's sha-256 checksum
-                        String value = sha256Cache.get(path);
-                        // Store the file path and its sha-256 checksum
-                        pathShas.put(entry, value);
-                        return FileVisitResult.CONTINUE;
-                    }
-                    catch (ExecutionException t) {
-                        throw new IOException("Failed to get SHA-256 from cache for " + path, t);
-                    }
+                    entries.put(relativePath(path, base).toString(), path);
+                    return FileVisitResult.CONTINUE;
                 }
 
                 @Override
                 public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes attrs) {
                     log.trace("Hash sha-256 dir content [DIR] path={} - base={}", path, base);
-
-                    // The file path relative to the base directory
-                    String entry = base != null ? base.relativize(path).toString() : path.toString();
-                    
-                    // Store the directory path
-                    pathShas.put(entry, null);
-
+                    entries.put(relativePath(path, base).toString(), null);
                     return FileVisitResult.CONTINUE;
                 }
             });
 
-            // Hash the directory content. The map should be sorted by the natural ordering of the keys.
-            for (Map.Entry<String, String> pair : pathShas.entrySet()) {
-                hasher.putUnencodedChars(pair.getKey());
-                if (pair.getValue() != null) {
-                    hasher.putUnencodedChars(pair.getValue());
-                }
-            }
+            return hashUnorderedCollection(hasher, entries.entrySet(), HashMode.SHA256);
         }
         catch (IOException t) {
-            Throwable err = t.getCause() != null ? t.getCause() : t;
-            String msg = err.getMessage() != null ? err.getMessage() : err.toString();
+            var err = t.getCause() != null ? t.getCause() : t;
+            var msg = err.getMessage() != null ? err.getMessage() : err.toString();
             log.warn("Unable to compute sha-256 hashing for directory: {} - Cause: {}", FilesEx.toUriString(dir), msg);
         }
         return hasher;
+    }
+
+    static protected Path relativePath(Path path, Path base) {
+        return base != null ? base.relativize(path) : path;
     }
 
     static protected String hashFileSha256Impl0(Path path) throws IOException {
