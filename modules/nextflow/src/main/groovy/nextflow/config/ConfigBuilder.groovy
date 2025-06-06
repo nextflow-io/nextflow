@@ -531,6 +531,12 @@ class ConfigBuilder {
     @PackageScope
     void configRunOptions(ConfigObject config, Map env, CmdRun cmdRun) {
 
+        if( cmdRun.globalCachePath ) {
+            log.warn("Enabling global cache. This will overwrite 'cloudcache' and 'workDir' parameters.")
+            config.globalcache = cmdRun.globalCachePath
+            cmdRun.workDir = "${cmdRun.globalCachePath}/work"
+            cmdRun.cloudCachePath = "${cmdRun.globalCachePath}/.nf-global-cache"
+        }
         // -- set config options
         if( cmdRun.cacheable != null )
             config.cacheable = cmdRun.cacheable
