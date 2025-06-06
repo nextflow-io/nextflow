@@ -353,21 +353,20 @@ public class HashBuilder {
                 @Override
                 public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes attrs) {
                     log.trace("Hash sha-256 dir content [DIR] path={} - base={}", path, base);
-                    // the file relative base
+
+                    // The file path relative to the base directory
                     String entry = base != null ? base.relativize(path).toString() : path.toString();
-                    // ↓ wouldn't this cause a null pointer exception when base is null?
-                    String value = base.relativize(path).toString();
                     
-                    pathShas.put(entry, value);
+                    // Store the directory path
+                    pathShas.put(entry, null);
+
                     return FileVisitResult.CONTINUE;
                 }
             });
 
             // Hash the directory content. The map should be sorted by the natural ordering of the keys.
             for (Map.Entry<String, String> pair : pathShas.entrySet()) {
-                if (pair.getKey() != null) {
-                    hasher.putUnencodedChars(pair.getKey());
-                }
+                hasher.putUnencodedChars(pair.getKey());
                 if (pair.getValue() != null) {
                     hasher.putUnencodedChars(pair.getValue());
                 }
