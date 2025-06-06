@@ -1,5 +1,8 @@
 nf-wave changelog
 ==================
+1.4.2-patch2 - 6 Jun 2024
+- Add Fusion license validation [cb7210b9]
+
 1.4.2-patch1 - 1 Aug 2024
 - Bump wave-api to 0.11.1 [87828afd]
 - Bump pf4j to version 3.12.0 [1a8f086a]
