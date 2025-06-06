@@ -15,6 +15,8 @@
  */
 package nextflow.cloud.azure.batch
 
+import java.math.MathContext
+import java.math.RoundingMode
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -61,18 +63,11 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         if( container )
             throw new IllegalArgumentException("Parameter `container` not supported by ${this.class.simpleName}")
 
-        // Calculate the Azcopy buffer size based on the number of input files and the container memory
-        final num_files = Math.max(1, task.inputFiles?.size() ?: 1)
-        final memory_gb = task.containerMemory?.toGiga() ?: 2
-        final buffer_per_file = memory_gb / num_files
-        final azcopy_buffer_gb = Math.max(0.12d, buffer_per_file * 0.8d)
-
         final result = new StringBuilder()
         final copy = environment ? new LinkedHashMap<String,String>(environment) : new LinkedHashMap<String,String>()
         copy.remove('PATH')
         copy.put('PATH', '$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH')
         copy.put('AZCOPY_LOG_LOCATION', '$PWD/.azcopy_log')
-        copy.put('AZCOPY_BUFFER_GB', String.valueOf(azcopy_buffer_gb))
         copy.put('AZ_SAS', sasToken)
 
         // finally render the environment
@@ -101,7 +96,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
 
         result += 'downloads=(true)\n'
         result += super.getStageInputFilesScript(inputFiles) + '\n'
-        result += 'nxf_parallel "${downloads[@]}"\n'
+        result += 'for cmd in "${downloads[@]}"; do\n    $cmd\ndone\n'
         return result
     }
 
@@ -112,8 +107,8 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
     String stageInputFile( Path path, String targetName ) {
         // third param should not be escaped, because it's used in the grep match rule
         def stage_cmd = maxTransferAttempts > 1
-                ? "downloads+=(\"nxf_cp_retry nxf_az_download '${AzHelper.toHttpUrl(path)}' ${Escape.path(targetName)}\")"
-                : "downloads+=(\"nxf_az_download '${AzHelper.toHttpUrl(path)}' ${Escape.path(targetName)}\")"
+                ? "downloads+=(\"nxf_cp_retry nxf_az_download ${AzHelper.toHttpUrl(path)} ${Escape.path(targetName)}\")"
+                : "downloads+=(\"nxf_az_download ${AzHelper.toHttpUrl(path)} ${Escape.path(targetName)}\")"
         return stage_cmd
     }
 
@@ -137,10 +132,12 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
             uploads=()
             IFS=\$'\\n'
             for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
-                uploads+=("nxf_az_upload '\$name' '${AzHelper.toHttpUrl(targetDir)}'")
+                uploads+=("nxf_az_upload '\$name' ${AzHelper.toHttpUrl(targetDir)}")
             done
             unset IFS
-            nxf_parallel "\${uploads[@]}"
+            for cmd in "\${uploads[@]}"; do
+                \$cmd
+            done
             """.stripIndent(true)
     }
 
