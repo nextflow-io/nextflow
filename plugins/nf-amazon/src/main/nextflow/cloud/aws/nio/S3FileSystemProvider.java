@@ -62,6 +62,7 @@ import java.util.concurrent.TimeUnit;
 
 import nextflow.cloud.aws.nio.util.*;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import com.google.common.base.Preconditions;
@@ -758,8 +759,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 	}
 
 	private String getCallerIdentityAccount(){
-		try{
-            StsClient stsClient = StsClient.create();
+		try ( StsClient stsClient = StsClient.builder().region(Region.AWS_GLOBAL).build() ){
             return stsClient.getCallerIdentity(GetCallerIdentityRequest.builder().build()).account();
         } catch ( StsException e) {
             log.trace( "Unable to fetch Caller Identity -- Cause: {}", e.getMessage());
