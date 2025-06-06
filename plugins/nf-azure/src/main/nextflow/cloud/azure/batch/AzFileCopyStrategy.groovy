@@ -41,11 +41,13 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
     private Duration delayBetweenAttempts
     private String sasToken
     private Path remoteBinDir
+    private TaskBean task
 
     protected AzFileCopyStrategy() {}
 
     AzFileCopyStrategy(TaskBean bean, AzBatchExecutor executor) {
         super(bean)
+        this.task = bean
         this.config = executor.config
         this.remoteBinDir = executor.remoteBinDir
         this.sasToken = config.storage().sasToken
@@ -64,6 +66,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         copy.remove('PATH')
         copy.put('PATH', '$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH')
         copy.put('AZCOPY_LOG_LOCATION', '$PWD/.azcopy_log')
+        copy.put('AZCOPY_BUFFER_GB', String.valueOf((task.containerMemory?.toGiga() ?: 2) * 0.8))
         copy.put('AZ_SAS', sasToken)
 
         // finally render the environment
