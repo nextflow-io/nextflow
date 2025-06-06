@@ -101,17 +101,17 @@ public interface Path {
 
     @Description("""
         Returns the relative path between this path and the given path.
-    """;)
+    """)
     Path relativize(Path other);
 
     @Description("""
         Resolves the given path string against this path.
-    """;)
+    """)
     Path resolve(String other);
 
     @Description("""
         Resolves the given path string against this path's parent path.
-    """;)
+    """)
     Path resolveSibling(String other);
 
     @Description("""
