@@ -269,6 +269,11 @@ class CondaCache {
 
     @PackageScope
     Path createLocalCondaEnv0(String condaEnv, Path prefixPath) {
+        if( prefixPath.isDirectory() ) {
+            log.debug "${binaryName} found local env for environment=$condaEnv; path=$prefixPath"
+            return prefixPath
+        }
+
         log.info "Creating env using ${binaryName}: $condaEnv [cache $prefixPath]"
 
         String opts = createOptions ? "$createOptions " : ''
