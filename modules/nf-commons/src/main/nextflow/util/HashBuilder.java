@@ -27,9 +27,9 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.HashMap;
+import java.util.TreeMap;
 import java.util.Set;
 import java.util.UUID;
 import java.util.Comparator;
@@ -328,54 +328,54 @@ public class HashBuilder {
 
     static protected Hasher hashDirSha256( Hasher hasher, Path dir, Path base ) {
         try {
-            // temporarily store the information for later hashing
-            List<Map.Entry<String, String>> pathShaPairs = new ArrayList<>();
+            // Use a TreeMap to store path-SHA pairs to make sure that the entries are iterated over in a predictable way
+            Map<String, String> pathShas = new TreeMap<>();
 
-            // walk the directory and hash all the files
-            // NOTE: the order of the files not be guaranteed on some file systems
+            // Walk the directory and hash all the files
             Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
+                @Override
                 public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
                     log.trace("Hash sha-256 dir content [FILE] path={} - base={}", path, base);
                     try {
-                        // the file relative base
-                        String entry = base != null ? base.relativize(path).toString() : null;
-                        // the file content sha-256 checksum
+                        // The file path relative to the base directory
+                        String entry = base != null ? base.relativize(path).toString() : path.toString();
+                        // The file content's sha-256 checksum
                         String value = sha256Cache.get(path);
-                        // store the file path and sha-256 checksum
-                        pathShaPairs.add(Map.entry(entry, value));
+                        // Store the file path and its sha-256 checksum
+                        pathShas.put(entry, value);
                         return FileVisitResult.CONTINUE;
                     }
                     catch (ExecutionException t) {
-                        throw new IOException(t);
+                        throw new IOException("Failed to get SHA-256 from cache for " + path, t);
                     }
                 }
 
+                @Override
                 public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes attrs) {
                     log.trace("Hash sha-256 dir content [DIR] path={} - base={}", path, base);
                     // the file relative base
-                    String entry = base != null ? base.relativize(path).toString() : null;
+                    String entry = base != null ? base.relativize(path).toString() : path.toString();
                     // ↓ wouldn't this cause a null pointer exception when base is null?
                     String value = base.relativize(path).toString();
                     
-                    pathShaPairs.add(Map.entry(entry, value));
+                    pathShas.put(entry, value);
                     return FileVisitResult.CONTINUE;
                 }
             });
 
-            // sort the file hashes
-            Collections.sort(pathShaPairs, Comparator.comparing(Map.Entry::getKey));
-
-            // hash the directory content
-            for (Map.Entry<String, String> pair : pathShaPairs) {
+            // Hash the directory content. The map should be sorted by the natural ordering of the keys.
+            for (Map.Entry<String, String> pair : pathShas.entrySet()) {
                 if (pair.getKey() != null) {
                     hasher.putUnencodedChars(pair.getKey());
                 }
-                hasher.putUnencodedChars(pair.getValue());
+                if (pair.getValue() != null) {
+                    hasher.putUnencodedChars(pair.getValue());
+                }
             }
         }
         catch (IOException t) {
-            Throwable err = t.getCause()!=null ? t.getCause() : t;
-            String msg = err.getMessage()!=null ? err.getMessage() : err.toString();
+            Throwable err = t.getCause() != null ? t.getCause() : t;
+            String msg = err.getMessage() != null ? err.getMessage() : err.toString();
             log.warn("Unable to compute sha-256 hashing for directory: {} - Cause: {}", FilesEx.toUriString(dir), msg);
         }
         return hasher;
