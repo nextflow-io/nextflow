@@ -449,7 +449,7 @@ Paths in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javas
 The following operations are supported for paths:
 
 `/ : (Path, String) -> Path`
-: Resolves a relative path string against a directory path. Equivalent to `resulve()`.
+: Resolves a relative path string against a directory path. Equivalent to `resolve()`.
 
 `<< : (Path, String)`
 : Appends text to a file without replacing existing content. Equivalent to `append()`.
