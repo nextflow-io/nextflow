@@ -62,7 +62,7 @@ public interface WorkflowDsl extends DslScope {
     @Operator Channel splitFasta(Map<String,?> opts);
     @Operator Channel splitFastq(Map<String,?> opts);
     @Operator Channel splitText(Map<String,?> opts, Closure closure);
-    // subscribe not supproted by pipe (#4919)
+    @Operator void subscribe(Closure closure);
     @Operator Channel sum(Closure closure);
     @Operator Channel take(int n);
     // tap not supported by pipe (#3970)
