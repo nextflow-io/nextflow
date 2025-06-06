@@ -155,16 +155,16 @@ class K8sConfigTest extends Specification {
         client.serviceAccount == 'that'
         client.httpConnectTimeout == null // testing default null
         client.httpReadTimeout == null // testing default null
-        client.retryConfig.maxAttempts == 4
+        client.retryConfig.maxAttempts == 5
 
     }
 
     def 'should set maxErrorRetry' () {
         given:
-        def CONFIG = [retryPolicy: [ maxAttempts: 10], namespace: 'this', serviceAccount: 'that', client: [server: 'http://foo']]
+        def CONFIG = [namespace: 'this', serviceAccount: 'that', client: [server: 'http://foo']]
 
         when:
-        def config = new K8sConfig(CONFIG)
+        def config = new K8sConfig(CONFIG, [retryPolicy: [maxAttempts: 10]])
         def client = config.getClient()
         then:
         client.retryConfig.maxAttempts == 10

@@ -15,7 +15,7 @@
  *
  */
 
-package nextflow.processor
+package nextflow.util
 
 import nextflow.util.Duration
 import spock.lang.Specification
@@ -24,21 +24,21 @@ import spock.lang.Specification
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-class PublishRetryConfigTest extends Specification {
+class RetryConfigTest extends Specification {
 
     def 'should create retry config' () {
 
         expect:
-        new PublishRetryConfig().delay == Duration.of('350ms')
-        new PublishRetryConfig().maxDelay == Duration.of('90s')
-        new PublishRetryConfig().maxAttempts == 5
-        new PublishRetryConfig().jitter == 0.25d
+        new RetryConfig().delay == Duration.of('350ms')
+        new RetryConfig().maxDelay == Duration.of('90s')
+        new RetryConfig().maxAttempts == 5
+        new RetryConfig().jitter == 0.25d
 
         and:
-        new PublishRetryConfig([maxAttempts: 20]).maxAttempts == 20
-        new PublishRetryConfig([delay: '1s']).delay == Duration.of('1s')
-        new PublishRetryConfig([maxDelay: '1m']).maxDelay == Duration.of('1m')
-        new PublishRetryConfig([jitter: '0.5']).jitter == 0.5d
+        new RetryConfig([maxAttempts: 20]).maxAttempts == 20
+        new RetryConfig([delay: '1s']).delay == Duration.of('1s')
+        new RetryConfig([maxDelay: '1m']).maxDelay == Duration.of('1m')
+        new RetryConfig([jitter: '0.5']).jitter == 0.5d
 
     }
 
