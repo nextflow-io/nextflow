@@ -324,14 +324,23 @@ public class HashBuilder {
 
     static protected Hasher hashDirSha256( Hasher hasher, Path dir, Path base ) {
         try {
-            var entries = new HashMap<String, Path>();
+            var entries = new HashMap<String, String>();
 
             Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
                 @Override
                 public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
                     log.trace("Hash sha-256 dir content [FILE] path={} - base={}", path, base);
-                    entries.put(relativePath(path, base).toString(), path);
-                    return FileVisitResult.CONTINUE;
+                    try {
+                        // the file relative path
+                        var name = relativePath(path, base).toString();
+                        // the file content sha-256 checksum
+                        var value = sha256Cache.get(path);
+                        entries.put(name, value);
+                        return FileVisitResult.CONTINUE;
+                    }
+                    catch (ExecutionException t) {
+                        throw new IOException("Failed to get SHA-256 from cache for " + path, t);
+                    }
                 }
 
                 @Override
