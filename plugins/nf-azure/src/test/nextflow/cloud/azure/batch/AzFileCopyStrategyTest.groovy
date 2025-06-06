@@ -234,6 +234,7 @@ class AzFileCopyStrategyTest extends Specification {
                     export BAR="any"
                     export PATH="$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH"
                     export AZCOPY_LOG_LOCATION="$PWD/.azcopy_log"
+                    export AZCOPY_BUFFER_GB="0.8"
                     export AZ_SAS="12345"
                     '''.stripIndent()
 
@@ -399,6 +400,7 @@ class AzFileCopyStrategyTest extends Specification {
         binding.task_env == '''\
                     export PATH="$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH"
                     export AZCOPY_LOG_LOCATION="$PWD/.azcopy_log"
+                    export AZCOPY_BUFFER_GB="0.8"
                     export AZ_SAS="12345"
                     '''.stripIndent()
 

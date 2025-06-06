@@ -68,6 +68,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         copy.remove('PATH')
         copy.put('PATH', '$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH')
         copy.put('AZCOPY_LOG_LOCATION', '$PWD/.azcopy_log')
+        copy.put('AZCOPY_BUFFER_GB', String.valueOf((task.containerMemory?.toGiga()?: 1) * 0.8))
         copy.put('AZ_SAS', sasToken)
 
         // finally render the environment
