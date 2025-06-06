@@ -589,7 +589,30 @@ The following settings are available:
 : Add the specified flags to the volume mounts e.g. `mountFlags = 'ro,Z'`.
 
 `docker.registry`
-: The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
+: Specify a custom registry from which to pull Docker images. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
+: The custom registry is only applied to container images that don't specify a registry. Use `docker.registryOverrides` to also override fully-qualified container images.
+
+`docker.registryOverrides`
+: :::{versionadded} 25.06.0-edge
+  :::
+: A list of registries to override when specifying a custom registry with `docker.registry`. For example:
+
+  ```groovy
+  docker.registryOverrides = [
+    'community.wave.seqera.io',
+    'quay.io'
+  ]
+  ```
+
+: Nextflow will use this list to modify fully-qualified container images to use the registry specified by `docker.registry`.
+
+: :::{tip}
+  Use `nextflow inspect` to obtain the list of all containers used by a pipeline, from which you can determine the set of registries that need to be overridden.
+  :::
+
+: :::{warning}
+  The pipeline will fail if a container image cannot be overridden when using this setting, in order to prevent Nextflow from pulling containers from outside the custom registry.
+  :::
 
 `docker.remove`
 : Clean-up the container after the execution (default: `true`). See the [Docker documentation](https://docs.docker.com/engine/reference/run/#clean-up---rm) for details.

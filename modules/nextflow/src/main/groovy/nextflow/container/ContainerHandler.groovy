@@ -157,17 +157,36 @@ class ContainerHandler {
         if( !imageName )
             return null
 
-        String reg = this.config?.registry
-        if( !reg )
+        final registry = normalizeRegistry(this.config?.registry as String)
+        final registryOverrides = (this.config?.registryOverrides as List<String>)?.collect((r) -> normalizeRegistry(r))
+        if( !registry )
             return imageName
 
-        if( isAbsoluteDockerName(imageName) )
+        // apply the registry only to relative container images
+        // when registry overrides are not specified
+        if( !isAbsoluteDockerName(imageName) )
+            return registry + imageName
+
+        if( !registryOverrides )
             return imageName
 
-        if( !reg.endsWith('/') )
-            reg += '/'
+        // when registry overrides are specified, apply the custom registry also
+        // to fully-qualified container images
+        final newImageName = overrideRegistry(imageName, registry, registryOverrides)
+        if( newImageName )
+            return newImageName
 
-        return reg + imageName
+        // otherwise, raise an error to prevent Nextflow from pulling container images
+        // from outside of the custom registry
+        throw new IllegalArgumentException("Registry for container image '$imageName' not found in overrides")
+    }
+
+    static String normalizeRegistry(String registry) {
+        if( !registry )
+            return null
+        return registry.endsWith('/')
+            ? registry
+            : registry + '/'
     }
 
     static boolean isAbsoluteDockerName(String image) {
@@ -177,6 +196,14 @@ class ContainerHandler {
 
         image = image.substring(0,p)
         image.contains('.') || image.contains(':')
+    }
+
+    static String overrideRegistry(String imageName, String toRegistry, List<String> registryOverrides) {
+        for( final fromRegistry : registryOverrides ) {
+            if( imageName.startsWith(fromRegistry) )
+                return toRegistry + imageName.substring(fromRegistry.length())
+        }
+        return null
     }
 
     /**

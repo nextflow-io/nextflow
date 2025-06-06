@@ -64,6 +64,26 @@ class ContainerHandlerTest extends Specification {
 
     }
 
+    def 'should override absolute docker image name when enabled' () {
+
+        given:
+        def registry = 'd.reg'
+        def registryOverrides = [ 'registry:5000' ]
+        def handler = new ContainerHandler([registry: registry, registryOverrides: registryOverrides])
+
+        when:
+        def result = handler.normalizeDockerImageName('registry:5000/cbcrg/hello')
+        then:
+        result == 'd.reg/cbcrg/hello'
+
+        when:
+        handler.normalizeDockerImageName('registry:8000/cbcrg/hello')
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == "Registry for container image 'registry:8000/cbcrg/hello' not found in overrides"
+
+    }
+
     def 'test normalize shifter image name' () {
 
         given:
