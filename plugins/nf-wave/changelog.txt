@@ -1,5 +1,8 @@
 nf-wave changelog
 ==================
+1.7.6 - 6 Jun 2025
+- Add Fusion license validation [02b4dd74]
+
 1.7.5 - 23 Apr 2025
 - Add support for Fusion Snapshots (#5954) [76a997a3]
 
