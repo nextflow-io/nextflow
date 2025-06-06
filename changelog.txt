@@ -1,5 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
+24.10.8 - 6 Jun 2025
+- Add Fusion license validation [02b4dd74]
+- Bump nf-wave@1.7.5-patch1 [cf6af9c5]
+- Bump nf-tower@1.9.3-patch1 [bdef2177]
+
+24.10.7 - (INVALID)
+
 24.10.6 - 23 Apr 2025
 - Add support for Fusion Snapshots (#5954) [76a997a3]
 - Bump nf-wave@1.7.5 [3ddf16fb]
