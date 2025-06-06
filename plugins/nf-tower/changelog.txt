@@ -1,6 +1,6 @@
 nf-tower changelog
 ===================
-1.9.4 - 6 Jun 2024
+1.9.3-patch1 - 6 Jun 2024
 - Add Fusion license validation [02b4dd74]
 
 1.9.3 - 27 Oct 2024
