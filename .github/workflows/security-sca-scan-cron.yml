@@ -15,8 +15,8 @@ jobs:
       fail-fast: false
       matrix:
         branch: 
-          - "v25.04.2"
-          - "v24.10.6"
+          - "STABLE-24.10.x"
+          - "STABLE-25.04.x"
 
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 #v4.2.2
