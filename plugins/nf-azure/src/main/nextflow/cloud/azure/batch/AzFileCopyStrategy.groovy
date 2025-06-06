@@ -61,12 +61,18 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         if( container )
             throw new IllegalArgumentException("Parameter `container` not supported by ${this.class.simpleName}")
 
+        // Calculate the Azcopy buffer size based on the number of input files and the container memory
+        final num_files = Math.max(1, task.inputFiles?.size() ?: 1)
+        final memory_gb = task.containerMemory?.toGiga() ?: 2
+        final buffer_per_file = memory_gb / num_files
+        final azcopy_buffer_gb = Math.max(0.12d, buffer_per_file * 0.8d)
+
         final result = new StringBuilder()
         final copy = environment ? new LinkedHashMap<String,String>(environment) : new LinkedHashMap<String,String>()
         copy.remove('PATH')
         copy.put('PATH', '$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH')
         copy.put('AZCOPY_LOG_LOCATION', '$PWD/.azcopy_log')
-        copy.put('AZCOPY_BUFFER_GB', String.valueOf((task.containerMemory?.toGiga() ?: 2) * 0.8))
+        copy.put('AZCOPY_BUFFER_GB', String.valueOf(azcopy_buffer_gb))
         copy.put('AZ_SAS', sasToken)
 
         // finally render the environment
