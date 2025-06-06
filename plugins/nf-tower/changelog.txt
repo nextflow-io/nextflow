@@ -1,5 +1,8 @@
 nf-tower changelog
 ===================
+1.9.1-patch1 - 6 Jun 2025
+Add Fusion license validation [cb7210b9]
+
 1.9.1 - 13 May 2024
 - Fix NPE in LogsCheckpoint class [deb3076d]
 
