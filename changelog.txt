@@ -1,5 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
+24.04.5 - 6 Jun 2025
+- Add Fusion license validation [cb7210b9]
+- Bump nf-wave@1.4.2-patch2 [69b63342]
+- Bump nf-tower@1.9.1-patch1 [8bfdc673]
+
 24.04.4 - 1 Aug 2024
 - Fix parsing of shm-size containerOptions (#5177) [98cf0068]
 - Fix aws logs group name (#5146) [b2ab651c]
