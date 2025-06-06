@@ -30,6 +30,7 @@ import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import org.slf4j.LoggerFactory
 import groovyx.gpars.GParsConfig
 import nextflow.BuildInfo
 import nextflow.NF
@@ -355,7 +356,8 @@ class CmdRun extends CmdBase implements HubOptions {
 
         final isTowerEnabled = config.navigate('tower.enabled') as Boolean
         final isDataEnabled = config.navigate("lineage.enabled") as Boolean
-        if( isTowerEnabled || isDataEnabled || log.isTraceEnabled() )
+
+        if( isTowerEnabled || isDataEnabled || LoggerFactory.getLogger(nextflow.config.ConfigBuilder).isTraceEnabled() )
             runner.session.resolvedConfig = ConfigBuilder.resolveConfig(scriptFile.parent, this)
         // note config files are collected during the build process
         // this line should be after `ConfigBuilder#build`
