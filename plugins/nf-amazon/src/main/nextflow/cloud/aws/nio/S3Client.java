@@ -23,15 +23,14 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 import java.util.function.Consumer;
 
 import nextflow.cloud.aws.AwsClientFactory;
 import nextflow.cloud.aws.nio.util.S3AsyncClientConfiguration;
 import nextflow.cloud.aws.nio.util.S3ClientConfiguration;
 import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.*;
@@ -74,20 +73,40 @@ public class S3Client {
 
 	private String callerAccount;
 
+    private String callerCanonicalId;
+
 	private AwsClientFactory factory;
 
 	private Properties props;
 
 	private boolean global;
 
-	public S3Client(AwsClientFactory factory, Properties props, boolean global, String callerAccount) {
+	public S3Client(AwsClientFactory factory, Properties props, boolean global) {
 		S3ClientConfiguration clientConfig = S3ClientConfiguration.create(props);
 		this.factory = factory;
 		this.props = props;
-		this.callerAccount = callerAccount;
 		this.global = global;
 		this.client = factory.getS3Client(clientConfig, global);
+        this.callerAccount = fetchCallerAccount();
 	}
+
+    /**
+     * AmazonS3Client#getS3AccountOwner() is not available in SDK v2.
+     * The STSClient#getCallerIdentity returns the account, but it does not include the canonical ID required for ACLs.
+     *
+	 * This function and the fetchCallerAccount() emulate the old behavior retrieving the canonicalId can only be
+     * retrieved if the user owns a bucket.
+	 */
+	public String getCallerAccount() {
+		return callerAccount;
+	}
+
+    private String fetchCallerAccount(){
+        List<Bucket> buckets = client.listBuckets(ListBucketsRequest.builder().maxBuckets(1).build()).buckets();
+        if( buckets == null || buckets.isEmpty() )
+            return null;
+        return getBucketAcl(buckets.getFirst().name()).owner().id();
+    }
 
 
 	/**
@@ -184,8 +203,10 @@ public class S3Client {
 	 * @see software.amazon.awssdk.services.s3.S3Client#copyObject(CopyObjectRequest)
 	 */
 	public void copyObject(CopyObjectRequest.Builder reqBuilder, List<Tag> tags, String contentType, String storageClass) {
-		if( tags !=null && tags.size()>0 ) {
-			reqBuilder.tagging(Tagging.builder().tagSet(tags).build());
+		if( tags !=null && !tags.isEmpty()) {
+			log.debug("Setting tags: {}", tags);
+            reqBuilder.taggingDirective(TaggingDirective.REPLACE);
+            reqBuilder.tagging(Tagging.builder().tagSet(tags).build());
 		}
 		if( cannedAcl != null ) {
 			reqBuilder.acl(cannedAcl);
@@ -197,7 +218,8 @@ public class S3Client {
             reqBuilder.ssekmsKeyId(kmsKeyId);
 		}
 		if( contentType!=null ) {
-			reqBuilder.contentType(contentType);
+			reqBuilder.metadataDirective(MetadataDirective.REPLACE);
+            reqBuilder.contentType(contentType);
 		}
 		if( storageClass!=null ) {
 			reqBuilder.storageClass(storageClass);
@@ -216,13 +238,6 @@ public class S3Client {
 	public AccessControlPolicy getBucketAcl(String bucket) {
 		GetBucketAclResponse response = client.getBucketAcl(GetBucketAclRequest.builder().bucket(bucket).build());
         return AccessControlPolicy.builder().grants(response.grants()).owner(response.owner()).build();
-	}
-
-	/**
-	 * Emulates theAmazonS3Client#getS3AccountOwner()
-	 */
-	public String getS3AccountOwner() {
-		return callerAccount;
 	}
 
 	public void setCannedAcl(String acl) {
@@ -304,6 +319,10 @@ public class S3Client {
 	public List<Tag> getObjectTags(String bucketName, String key) {
 		return client.getObjectTagging(GetObjectTaggingRequest.builder().bucket(bucketName).key(key).build()).tagSet();
 	}
+
+    public String getObjectKmsKeyId(String bucketName, String key) {
+        return getObjectMetadata(bucketName, key).ssekmsKeyId();
+    }
 
 	/**
      * @see software.amazon.awssdk.services.s3.S3Client#listObjectsV2Paginator
@@ -472,17 +491,24 @@ public class S3Client {
 		return transferManager;
 	}
 
-	public void downloadFile(S3Path source, File target) {
-			DownloadFileRequest downloadFileRequest = DownloadFileRequest.builder()
-					.getObjectRequest(b -> b.bucket(source.getBucket()).key(source.getKey()))
-					.destination(target)
-					.build();
+    public void downloadFile(S3Path source, File target) throws IOException {
+        DownloadFileRequest downloadFileRequest = DownloadFileRequest.builder()
+            .getObjectRequest(b -> b.bucket(source.getBucket()).key(source.getKey()))
+            .destination(target)
+            .build();
 
-			FileDownload downloadFile = transferManager().downloadFile(downloadFileRequest);
+        FileDownload downloadFile = transferManager().downloadFile(downloadFileRequest);
+        try{
+            downloadFile.completionFuture().get();
+        } catch (InterruptedException e){
+            log.debug("S3 download file: s3://{}/{} cancelled", source.getBucket(), source.getKey());
+			Thread.currentThread().interrupt();
+        } catch (ExecutionException e) {
+            log.debug("S3 deownload file: s3://{}/{} exception thrown", source.getBucket(), source.getKey());
+            throw new IOException(e.getCause());
+        }
 
-			downloadFile.completionFuture().join();
-
-	}
+    }
 
 	public void downloadDirectory(S3Path source, File targetFile) throws IOException {
 		DownloadDirectoryRequest downloadDirRequest = DownloadDirectoryRequest.builder()
@@ -492,28 +518,40 @@ public class S3Client {
 				.build();
 
 		DirectoryDownload downloadDirectory = transferManager().downloadDirectory(downloadDirRequest);
-
-		downloadDirectory.completionFuture().join();
+        try{
+		    downloadDirectory.completionFuture().get();
+        } catch (InterruptedException e){
+            log.debug("S3 download directory: s3://{}/{} cancelled", source.getBucket(), source.getKey());
+			Thread.currentThread().interrupt();
+        } catch (ExecutionException e) {
+            log.debug("S3 deownload directory: s3://{}/{} exception thrown", source.getBucket(), source.getKey());
+            throw new IOException(e.getCause());
+        }
 	}
 
-	public void uploadFile(File source, S3Path target) {
+	public void uploadFile(File source, S3Path target) throws IOException{
 		PutObjectRequest.Builder req = PutObjectRequest.builder().bucket(target.getBucket()).key(target.getKey());
 		preparePutObjectRequest(req, target.getTagsList(), target.getContentType(), target.getStorageClass());
 		// initiate transfer
-		Upload upload = transferManager().upload(UploadRequest.builder().putObjectRequest(req.build()).build());
-
-		upload.completionFuture().join();
-
+		Upload upload = transferManager().upload(UploadRequest.builder().putObjectRequest(req.build()).requestBody(AsyncRequestBody.fromFile(source)).build());
+        try{
+		    upload.completionFuture().get();
+        } catch (InterruptedException e){
+            log.debug("S3 upload file: s3://{}/{} cancelled", target.getBucket(), target.getKey());
+            Thread.currentThread().interrupt();
+        } catch (ExecutionException e) {
+            log.debug("S3 upload file: s3://{}/{} exception thrown", target.getBucket(), target.getKey());
+            throw new IOException(e.getCause());
+        }
 	}
 
-	final private ThreadLocal<List<Tag>> uploadTags = new ThreadLocal<>();
-
 	private Consumer<UploadFileRequest.Builder> transformUploadRequest(List<Tag> tags) {
-    	return builder -> builder.putObjectRequest(porBuilder -> updateBuilder(porBuilder, tags));
+    	return builder -> builder.putObjectRequest(updateBuilder(builder.build().putObjectRequest().toBuilder(), tags).build());
 	}
 
 	private PutObjectRequest.Builder updateBuilder(PutObjectRequest.Builder porBuilder, List<Tag> tags) {
-		if( cannedAcl != null )
+
+        if( cannedAcl != null )
 			porBuilder.acl(cannedAcl);
 		if( storageEncryption != null )
 			porBuilder.serverSideEncryption(storageEncryption);
@@ -524,7 +562,7 @@ public class S3Client {
 		return porBuilder;
 	}
 
-	public void uploadDirectory(File source, S3Path target) {
+	public void uploadDirectory(File source, S3Path target) throws IOException {
 		UploadDirectoryRequest request = UploadDirectoryRequest.builder()
 				.bucket(target.getBucket())
 				.s3Prefix(target.getKey())
@@ -534,6 +572,18 @@ public class S3Client {
 
 		// initiate transfer
 		DirectoryUpload upload = transferManager().uploadDirectory(request);
-		upload.completionFuture().join();
+        try {
+            CompletedDirectoryUpload completed = upload.completionFuture().get();
+            if (!completed.failedTransfers().isEmpty()){
+                log.debug("S3 upload directory: s3://{}/{} failed transfers", target.getBucket(), target.getKey());
+                throw new IOException("Some tranfers in S3 upload directory: s3://"+ target.getBucket() +"/"+ target.getKey() +" has failed - Trasfers: " +  completed.failedTransfers() );
+            }
+        } catch (InterruptedException e){
+            log.debug("S3 upload directory: s3://{}/{} cancelled", target.getBucket(), target.getKey());
+			Thread.currentThread().interrupt();
+        } catch (ExecutionException e) {
+            log.debug("S3 upload directory: s3://{}/{} exception thrown", target.getBucket(), target.getKey());
+            throw new IOException(e.getCause());
+        }
 	}
 }

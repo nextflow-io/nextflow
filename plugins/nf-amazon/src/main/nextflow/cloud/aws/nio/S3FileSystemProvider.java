@@ -79,6 +79,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.sts.StsClient;
 import software.amazon.awssdk.services.sts.model.GetCallerIdentityRequest;
+import software.amazon.awssdk.services.sts.model.GetCallerIdentityResponse;
 import software.amazon.awssdk.services.sts.model.StsException;
 
 import static com.google.common.collect.Sets.difference;
@@ -597,21 +598,28 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
 		// get ACL and check if the file exists as a side-effect
 		AccessControlPolicy acl = getAccessControl(s3Path);
-
+        String caller = client.getCallerAccount();
 		for (AccessMode accessMode : modes) {
 			switch (accessMode) {
 			case EXECUTE:
 				throw new AccessDeniedException(s3Path.toString(), null,
 						"file is not executable");
 			case READ:
-				if (!hasPermissions(acl, client.getS3AccountOwner(),
+				if (caller == null) {
+                    //if we cannot get the user's canonical ID, try read the object;
+                    s3ObjectSummaryLookup.lookup((S3Path) path);
+                }
+                else if (!hasPermissions(acl, caller,
 						EnumSet.of(Permission.FULL_CONTROL, Permission.READ))) {
 					throw new AccessDeniedException(s3Path.toString(), null,
 							"file is not readable");
 				}
 				break;
 			case WRITE:
-				if (!hasPermissions(acl, client.getS3AccountOwner(),
+				if (caller == null) {
+                    log.warn("User's Canonical Id cannot be retrieved. We can not check the access.");
+                }
+                else if (!hasPermissions(acl, caller,
 						EnumSet.of(Permission.FULL_CONTROL, Permission.WRITE))) {
 					throw new AccessDeniedException(s3Path.toString(), null,
 							format("bucket '%s' is not writable",
@@ -742,7 +750,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
         // see https://github.com/nextflow-io/nextflow/pull/5779
 		final boolean global = bucketName!=null && !awsConfig.getS3Config().isCustomEndpoint();
 		final AwsClientFactory factory = new AwsClientFactory(awsConfig, awsConfig.getS3GlobalRegion());
-		final S3Client client = new S3Client(factory, props, global, getCallerIdentityAccount());
+		final S3Client client = new S3Client(factory, props, global);
 
 		// set the client acl
 		client.setCannedAcl(getProp(props, "s_3_acl", "s3_acl", "s3Acl"));
@@ -756,15 +764,6 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 			log.warn("Glacier auto-retrieval is no longer supported, config option `aws.client.glacierAutoRetrieval` will be ignored");
 
 		return new S3FileSystem(this, client, uri, props);
-	}
-
-	private String getCallerIdentityAccount(){
-		try ( StsClient stsClient = StsClient.builder().region(Region.AWS_GLOBAL).build() ){
-            return stsClient.getCallerIdentity(GetCallerIdentityRequest.builder().build()).account();
-        } catch ( StsException e) {
-            log.trace( "Unable to fetch Caller Identity -- Cause: {}", e.getMessage());
-            return null;
-        }
 	}
 
 	protected String getProp(Properties props, String... keys) {
