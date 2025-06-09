@@ -16,15 +16,6 @@
 
 package nextflow.k8s.client
 
-import dev.failsafe.Failsafe
-import dev.failsafe.FailsafeException
-import dev.failsafe.RetryPolicy
-import dev.failsafe.event.EventListener
-import dev.failsafe.event.ExecutionAttemptedEvent
-import dev.failsafe.function.CheckedSupplier
-import nextflow.exception.K8sOutOfCpuException
-import nextflow.exception.K8sOutOfMemoryException
-
 import javax.net.ssl.HostnameVerifier
 import javax.net.ssl.HttpsURLConnection
 import javax.net.ssl.SSLContext
@@ -37,17 +28,24 @@ import java.security.KeyStore
 import java.security.SecureRandom
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
-
-import groovy.json.JsonOutput
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import nextflow.exception.NodeTerminationException
-import nextflow.exception.ProcessFailedException
-import org.yaml.snakeyaml.Yaml
-
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeoutException
 import java.util.function.Predicate
+
+import dev.failsafe.Failsafe
+import dev.failsafe.FailsafeException
+import dev.failsafe.RetryPolicy
+import dev.failsafe.event.EventListener
+import dev.failsafe.event.ExecutionAttemptedEvent
+import dev.failsafe.function.CheckedSupplier
+import groovy.json.JsonOutput
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.exception.K8sOutOfCpuException
+import nextflow.exception.K8sOutOfMemoryException
+import nextflow.exception.NodeTerminationException
+import nextflow.exception.ProcessFailedException
+import org.yaml.snakeyaml.Yaml
 
 /**
  * Kubernetes API client
@@ -731,7 +729,7 @@ class K8sClient {
     }
 
     /**
-     * Creates a retry policy using the configuration specified by {@link nextflow.k8s.client.K8sRetryConfig}
+     * Creates a retry policy using the given configuration
      *
      * @param cond A predicate that determines when a retry should be triggered
      * @return The {@link dev.failsafe.RetryPolicy} instance
