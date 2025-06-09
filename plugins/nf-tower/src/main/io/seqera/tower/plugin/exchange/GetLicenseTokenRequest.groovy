@@ -1,9 +1,9 @@
 package io.seqera.tower.plugin.exchange
 
+
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
-
 /**
  * Models a REST request to obtain a license-scoped JWT token from Platform
  *
@@ -19,4 +19,14 @@ class GetLicenseTokenRequest {
 
     /** The product version */
     String version
+
+    /**
+     * The Platform workflow ID associated with this request
+     */
+    String workflowId
+
+    /**
+     * The Platform workspace ID associated with this request
+     */
+    String workspaceId
 }

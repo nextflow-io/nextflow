@@ -37,7 +37,7 @@ lineage.store.location = '<PATH_TO_STORAGE>'
 ```
 
 :::{tip}
-For global configuration, add these settings to `~/.nextflow/config`.
+For global configuration, add these settings to `$HOME/.nextflow/config`.
 :::
 
 See the {ref}`config-lineage` configuration scope for details.
@@ -71,6 +71,7 @@ Use the `view` subcommand to view the lineage record for the workflow run:
 ```console
 $ nextflow lineage view lid://16b31030474f2e96c55f4940bca3ab64
 {
+  "version": "lineage/v1beta1",
   "type": "WorkflowRun",
   "workflow": {
     "scriptFiles": [
@@ -116,6 +117,7 @@ Now, use the workflow LID and relative path to view the lineage record for an ou
 ```console
 $ nextflow lineage view lid://16b31030474f2e96c55f4940bca3ab64/multiqc_report.html
 {
+  "version": "lineage/v1beta1",
   "type": "FileOutput",
   "path": "/results/multiqc_report.html",
   "checksum": {
@@ -142,6 +144,7 @@ Any LID in a lineage record can be viewed, allowing you to traverse the lineage 
 ```console
 $ nextflow lineage view lid://862df53160e07cd823c0c3960545e747/multiqc_report.html
 {
+  "version": "lineage/v1beta1",
   "type": "FileOutput",
   "path": "/work/86/2df53160e07cd823c0c3960545e747/multiqc_report.html",
   "checksum": {
@@ -166,6 +169,7 @@ View the lineage record for the task that produced this file:
 ```console
 $ nextflow lineage view lid://862df53160e07cd823c0c3960545e747
 {
+  "version": "lineage/v1beta1",
   "type": "TaskRun",
   "sessionId": "065bdc6b-89b4-42ee-92c1-2a5af37f2c50",
   "name": "MULTIQC",

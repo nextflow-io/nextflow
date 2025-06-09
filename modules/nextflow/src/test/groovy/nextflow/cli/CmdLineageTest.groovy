@@ -279,7 +279,7 @@ class CmdLineageTest extends Specification {
         def entry = new FileOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
                 "lid://123987/file.bam", "lid://12345", "lid://123987/", 1234, time, time, ['foo', 'bar'])
         def jsonSer = encoder.encode(entry)
-        def expectedOutput = '[\n  "lid://12345"\n]'
+        def expectedOutput = 'lid://12345'
         lidFile.text = jsonSer
         when:
         def lidCmd = new CmdLineage(launcher: launcher, args: ["find", "type=FileOutput", "label=foo"])

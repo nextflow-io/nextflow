@@ -17,7 +17,6 @@
 
 package io.seqera.wave.plugin
 
-import static io.seqera.wave.util.DockerHelper.*
 
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -59,6 +58,7 @@ import io.seqera.wave.plugin.config.WaveConfig
 import io.seqera.wave.plugin.exception.BadResponseException
 import io.seqera.wave.plugin.exception.UnauthorizedException
 import io.seqera.wave.plugin.packer.Packer
+import io.seqera.wave.util.DockerHelper
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.container.inspect.ContainerInspectMode
@@ -230,7 +230,8 @@ class WaveClient {
                 dryRun: ContainerInspectMode.dryRun(),
                 mirror: config.mirrorMode(),
                 scanMode: config.scanMode(),
-                scanLevels: config.scanAllowedLevels()
+                scanLevels: config.scanAllowedLevels(),
+                buildCompression: config.buildCompression()
         )
     }
 
@@ -257,7 +258,8 @@ class WaveClient {
                 dryRun: ContainerInspectMode.dryRun(),
                 mirror: config.mirrorMode(),
                 scanMode: config.scanMode(),
-                scanLevels: config.scanAllowedLevels()
+                scanLevels: config.scanAllowedLevels(),
+                buildCompression: config.buildCompression()
         )
         return sendRequest(request)
     }
@@ -315,7 +317,7 @@ class WaveClient {
                     return sendRequest0(request, attempt+1)
                 }
                 else
-                    throw new UnauthorizedException("Unauthorized [401] - Verify you have provided a valid access token")
+                    throw new UnauthorizedException("Unauthorized [401] - Verify you have provided a valid Seqera Platform access token")
             }
             else
                 throw new BadResponseException("Wave invalid response: POST ${uri} [${resp.statusCode()}] ${resp.body()}")
@@ -535,7 +537,7 @@ class WaveClient {
                 if( isCondaLocalFile(attrs.conda) ) {
                     // 'conda' attribute is the path to the local conda environment
                     // note: ignore the 'channels' attribute because they are supposed to be provided by the conda file
-                    final condaFile = condaFileFromPath(attrs.conda, null)
+                    final condaFile = DockerHelper.condaFileFromPath(attrs.conda, null)
                     packagesSpec = new PackagesSpec()
                         .withType(PackagesSpec.Type.CONDA)
                         .withCondaOpts(config.condaOpts())
@@ -547,7 +549,7 @@ class WaveClient {
                         .withType(PackagesSpec.Type.CONDA)
                         .withChannels(condaChannels)
                         .withCondaOpts(config.condaOpts())
-                        .withEntries(condaPackagesToList(attrs.conda))
+                        .withEntries(DockerHelper.condaPackagesToList(attrs.conda))
                 }
 
             }
