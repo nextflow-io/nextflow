@@ -26,6 +26,7 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -323,40 +324,40 @@ public class HashBuilder {
     }
 
     static protected Hasher hashDirSha256( Hasher hasher, Path dir, Path base ) {
-        try {
-            Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
-                public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
+        try( var files = Files.walk(dir) ) {
+            var iterator = files
+                .map((path) -> {
+                    if( Files.isDirectory(path) ) {
+                        log.trace("Hash sha-256 dir content [DIR] path={} - base={}", path, base);
+                        return relativePath(path, base).toString();
+                    }
+
                     log.trace("Hash sha-256 dir content [FILE] path={} - base={}", path, base);
                     try {
-                        // the file relative base
-                        if( base!=null )
-                            hasher.putUnencodedChars(base.relativize(path).toString());
+                        // the file relative path
+                        var name = relativePath(path, base).toString();
                         // the file content sha-256 checksum
-                        String sha256 = sha256Cache.get(path);
-                        hasher.putUnencodedChars(sha256);
-                        return FileVisitResult.CONTINUE;
+                        var value = sha256Cache.get(path);
+                        return Map.entry(name, value);
                     }
                     catch (ExecutionException t) {
-                        throw new IOException(t);
+                        throw new RuntimeException("Failed to get SHA-256 from cache for file: " + FilesEx.toUriString(dir), t);
                     }
-                }
+                })
+                .iterator();
 
-                public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes attrs) {
-                    log.trace("Hash sha-256 dir content [DIR] path={} - base={}", path, base);
-                    // the file relative base
-                    if( base!=null )
-                        hasher.putUnencodedChars(base.relativize(path).toString());
-                    hasher.putUnencodedChars(base.relativize(path).toString());
-                    return FileVisitResult.CONTINUE;
-                }
-            });
+            return hashUnorderedCollection(hasher, iterator, HashMode.SHA256);
         }
         catch (IOException t) {
-            Throwable err = t.getCause()!=null ? t.getCause() : t;
-            String msg = err.getMessage()!=null ? err.getMessage() : err.toString();
+            var err = t.getCause() != null ? t.getCause() : t;
+            var msg = err.getMessage() != null ? err.getMessage() : err.toString();
             log.warn("Unable to compute sha-256 hashing for directory: {} - Cause: {}", FilesEx.toUriString(dir), msg);
         }
         return hasher;
+    }
+
+    static protected Path relativePath(Path path, Path base) {
+        return base != null ? base.relativize(path) : path;
     }
 
     static protected String hashFileSha256Impl0(Path path) throws IOException {
@@ -441,17 +442,21 @@ public class HashBuilder {
     }
 
     static private Hasher hashUnorderedCollection(Hasher hasher, Collection collection, HashMode mode)  {
+        return hashUnorderedCollection(hasher, collection.iterator(), mode);
+    }
+
+    static private Hasher hashUnorderedCollection(Hasher hasher, Iterator iterator, HashMode mode)  {
 
         byte[] resultBytes = new byte[HASH_BYTES];
-        for (Object item : collection) {
+        iterator.forEachRemaining((item) -> {
             byte[] nextBytes = HashBuilder.hasher(defaultHasher(), item, mode).hash().asBytes();
             if( nextBytes.length != resultBytes.length )
                 throw new IllegalStateException("All hash codes must have the same bit length");
-
+    
             for (int i = 0; i < nextBytes.length; i++) {
                 resultBytes[i] += nextBytes[i];
             }
-        }
+        });
 
         return hasher.putBytes(resultBytes);
     }
