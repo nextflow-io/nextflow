@@ -7,7 +7,7 @@ Nextflow provides a robust command line interface (CLI) for the management and e
 Simply run `nextflow` with no options or `nextflow -h` to see the list of available top-level options and commands. See {ref}`cli-reference` for the full list of subcommands with examples.
 
 :::{note}
-Nextflow options use a single dash prefix, e.g. `-foo`. Do not confuse with double dash notation, e.g. `--foo`, which is instead used for {ref}`Pipeline parameters <cli-params>`.
+Nextflow options use a single dash prefix, e.g. `-resume`. Do not confuse with double dash notation, e.g. `--resume`, which is instead used for {ref}`Pipeline parameters <cli-params>`.
 :::
 
 ## Basic usage
@@ -166,22 +166,22 @@ The `-v` option prints out information about Nextflow, such as the version and b
 
 ## Running pipelines
 
-The main purpose of the Nextflow CLI is to run Nextflow pipelines with the `run` command. Nextflow can execute a local script (e.g. `./main.nf`) or a remote project (e.g. `github.com/foo/bar`).
+The main purpose of the Nextflow CLI is to run Nextflow pipelines with the `run` command. Nextflow can execute a local script (e.g. `./main.nf`) or a remote project (e.g. `github.com/nextflow-io/hello`).
 
 ### Launching a remote project
 
 To launch the execution of a pipeline project, hosted in a remote code repository, you simply need to specify its qualified name or the repository URL after the `run` command. The qualified name is formed by two parts: the `owner` name and the `repository` name separated by a `/` character.
 
-In other words if a Nextflow project is hosted, for example, in a GitHub repository at the address `http://github.com/foo/bar`, it can be executed by entering the following command in your shell terminal:
+If a Nextflow project is hosted on GitHub, for example `http://github.com/nextflow-io/hello`, it can be executed by entering the following command in your shell terminal:
 
 ```bash
-nextflow run foo/bar
+nextflow run nextflow-io/hello
 ```
 
 or using the project URL:
 
 ```bash
-nextflow run http://github.com/foo/bar
+nextflow run http://github.com/nextflow-io/hello
 ```
 
 If the project is found, it will be automatically downloaded to the Nextflow home directory (`$HOME/.nextflow` by default) and cached for subsequent runs.
@@ -189,14 +189,6 @@ If the project is found, it will be automatically downloaded to the Nextflow hom
 :::{note}
 You must use the `-hub` option to specify the hosting service if your project is hosted on a service other than GitHub, e.g. `-hub bitbucket`. However, the `-hub` option is not required if you use the project URL.
 :::
-
-Try this feature by running the following command:
-
-```bash
-nextflow run nextflow-io/hello
-```
-
-It will download a trivial example from the repository published at [http://github.com/nextflow-io/hello](http://github.com/nextflow-io/hello) and execute it on your computer.
 
 If the `owner` is omitted, Nextflow will search your cached pipelines for a pipeline that matches the name specified. If no pipeline is found, Nextflow will try to download it using the `organization` name defined by the `NXF_ORG` environment variable (`nextflow-io` by default).
 
@@ -255,7 +247,7 @@ Parameters that are specified on the command line without a value are set to `tr
 :::
 
 :::{note}
-Parameters that are specified on the command line in kebab case (e.g., `--foo-bar`) are automatically converted to camel case (e.g., `--fooBar`). Because of this, a parameter defined as `fooBar` in the pipeline script can be specified on the command line as `--fooBar` or `--foo-bar`.
+Parameters that are specified on the command line in kebab case (e.g., `--alpha-beta`) are automatically converted to camel case (e.g., `--alphaBeta`). Because of this, a parameter defined as `alphaBeta` in the pipeline script can be specified on the command line as `--alphaBeta` or `--alpha-beta`.
 :::
 
 :::{warning}
@@ -275,14 +267,14 @@ $ nextflow run main.nf -params-file pipeline_params.yml
 The `-params-file` option loads parameters for your Nextflow pipeline from a JSON or YAML file. Parameters defined in the file are equivalent to specifying them directly on the command line. For example, instead of specifying parameters on the command line:
 
 ```console
-$ nextflow run main.nf --alpha 1 --beta foo
+$ nextflow run main.nf --alpha 1 --beta two
 ```
 
 Parameters can be represented in YAML format:
 
 ```yaml
 alpha: 1
-beta: 'foo'
+beta: 'two'
 ```
 
 Or in JSON format:
@@ -290,7 +282,7 @@ Or in JSON format:
 ```json
 {
   "alpha": 1,
-  "beta": "foo"
+  "beta": "two"
 }
 ```
 
@@ -298,8 +290,8 @@ Parameters are applied in the following order (from lowest to highest priority):
 
 1. Parameters defined in pipeline scripts (e.g. `main.nf`)
 2. Parameters defined in {ref}`config files <config-params>`
-6. Parameters specified in a params file (`-params-file`)
-7. Parameters specified on the command line (`--something value`)
+3. Parameters specified in a params file (`-params-file`)
+4. Parameters specified on the command line (`--something value`)
 
 ## Managing projects
 

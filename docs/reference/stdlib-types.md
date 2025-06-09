@@ -449,53 +449,62 @@ Paths in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javas
 The following operations are supported for paths:
 
 `/ : (Path, String) -> Path`
-: Resolve a relative file name against a directory path.
+: Resolves a relative path string against a directory path. Equivalent to `resolve()`.
 
 `<< : (Path, String)`
 : Appends text to a file without replacing existing content. Equivalent to `append()`.
 
 <h3>Getting attributes</h3>
 
-The following methods are useful for getting attributes of a file:
+The following methods are useful for getting attributes of a path:
 
 `exists() -> boolean`
-: Returns `true` if the file exists.
+: Returns `true` if the path exists.
 
 `getBaseName() -> String`
-: Gets the file name without its extension, e.g. `/some/path/file.tar.gz` -> `file.tar`.
+: Gets the path name without its extension, e.g. `/some/path/file.tar.gz` -> `file.tar`.
 
 `getExtension() -> String`
-: Gets the file extension, e.g. `/some/path/file.txt` -> `txt`.
+: Gets the path extension, e.g. `/some/path/file.txt` -> `txt`.
 
 `getName() -> String`
-: Gets the file name, e.g. `/some/path/file.txt` -> `file.txt`.
+: Gets the path name, e.g. `/some/path/file.txt` -> `file.txt`.
 
 `getSimpleName() -> String`
-: Gets the file name without any extension, e.g. `/some/path/file.tar.gz` -> `file`.
+: Gets the path name without any extension, e.g. `/some/path/file.tar.gz` -> `file`.
 
 `getParent() -> Path`
-: Gets the file parent path, e.g. `/some/path/file.txt` -> `/some/path`.
+: Gets the path parent path, e.g. `/some/path/file.txt` -> `/some/path`.
 
 `getScheme() -> String`
-: Gets the file URI scheme, e.g. `s3://some-bucket/foo.txt` -> `s3`.
+: Gets the path URI scheme, e.g. `s3://some-bucket/hello.txt` -> `s3`.
 
 `isDirectory() -> boolean`
-: Returns `true` if the file is a directory.
+: Returns `true` if the path is a directory.
 
 `isEmpty() -> boolean`
-: Returns `true` if the file is empty or does not exist.
+: Returns `true` if the path is empty or does not exist.
 
 `isFile() -> boolean`
-: Returns `true` if it is a regular file (i.e. not a directory).
+: Returns `true` if the path is a file (i.e. not a directory).
 
 `isHidden() -> boolean`
-: Returns `true` if the file is hidden.
+: Returns `true` if the path is hidden.
 
 `isLink() -> boolean`
-: Returns `true` if the file is a symbolic link.
+: Returns `true` if the path is a symbolic link.
 
 `lastModified() -> long`
-: Returns the file last modified timestamp in Unix time (i.e. milliseconds since January 1, 1970).
+: Returns the path last modified timestamp in Unix time (i.e. milliseconds since January 1, 1970).
+
+`relativize(other: Path) -> Path`
+: Returns the relative path between this path and the given path.
+
+`resolve(other: String) -> Path`
+: Resolves the given path string against this path.
+
+`resolveSibling(other: String) -> Path`
+: Resolves the given path string against this path's parent path.
 
 `size() -> long`
 : Gets the file size in bytes.
@@ -503,11 +512,11 @@ The following methods are useful for getting attributes of a file:
 `toUriString() -> String`
 : Gets the file path along with the protocol scheme:
   ```nextflow
-  def ref = file('s3://some-bucket/foo.txt')
+  def ref = file('s3://some-bucket/hello.txt')
 
-  assert ref.toString() == '/some-bucket/foo.txt'
-  assert "$ref" == '/some-bucket/foo.txt'
-  assert ref.toUriString() == 's3://some-bucket/foo.txt'
+  assert ref.toString() == '/some-bucket/hello.txt'
+  assert "$ref" == '/some-bucket/hello.txt'
+  assert ref.toUriString() == 's3://some-bucket/hello.txt'
   ```
 
 <h3>Reading</h3>
