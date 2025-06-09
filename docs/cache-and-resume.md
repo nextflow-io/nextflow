@@ -31,7 +31,7 @@ The task hash is computed from the following metadata:
 - Any {ref}`bundled scripts <bundling-executables>` used in the task script
 - Whether the task is a {ref}`stub run <process-stub>`
 
-:::note
+:::{note}
 Nextflow also includes an incrementing component in the hash generation process, which allows it to iterate through multiple hash values until it finds one that does not match an existing execution directory. This mechanism typically usually aligns with task retries (i.e., task attempts), however this is not guaranteed.
 :::
 
@@ -144,19 +144,19 @@ Sometimes a process needs to merge inputs from different sources. Consider the f
 
 ```nextflow
 workflow {
-    ch_foo = channel.of( ['1', '1.foo'], ['2', '2.foo'] )
-    ch_bar = channel.of( ['2', '2.bar'], ['1', '1.bar'] )
-    gather(ch_foo, ch_bar)
+    ch_bam = channel.of( ['1', '1.bam'], ['2', '2.bam'] )
+    ch_bai = channel.of( ['2', '2.bai'], ['1', '1.bai'] )
+    check_bam_bai(ch_bam, ch_bai)
 }
 
-process gather {
+process check_bam_bai {
     input:
-    tuple val(id), file(foo)
-    tuple val(id), file(bar)
+    tuple val(id), file(bam)
+    tuple val(id), file(bai)
 
     script:
     """
-    merge_command $foo $bar
+    check_bam_bai $bam $bai
     """
 }
 ```
@@ -167,18 +167,18 @@ The solution is to explicitly join the two channels before the process invocatio
 
 ```nextflow
 workflow {
-    ch_foo = channel.of( ['1', '1.foo'], ['2', '2.foo'] )
-    ch_bar = channel.of( ['2', '2.bar'], ['1', '1.bar'] )
-    gather(ch_foo.join(ch_bar))
+    ch_bam = channel.of( ['1', '1.bam'], ['2', '2.bam'] )
+    ch_bai = channel.of( ['2', '2.bai'], ['1', '1.bai'] )
+    check_bam_bai(ch_bam.join(ch_bai))
 }
 
-process gather {
+process check_bam_bai {
     input:
-    tuple val(id), file(foo), file(bar)
+    tuple val(id), file(bam), file(bai)
 
     script:
     """
-    merge_command $foo $bar
+    check_bam_bai $bam $bai
     """
 }
 ```

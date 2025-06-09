@@ -1,9 +1,9 @@
 channel.of( 1, 2, 3, 4 )
     .multiMap { v ->
-        foo: v + 1
-        bar: v * v
+        inc: v + 1
+        squared: v * v
     }
     .set { result }
 
-result.foo.view { v -> "foo $v" }
-result.bar.view { v -> "bar $v" }
+result.inc.view { v -> "inc $v" }
+result.squared.view { v -> "squared $v" }
