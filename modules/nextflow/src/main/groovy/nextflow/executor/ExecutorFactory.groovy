@@ -22,6 +22,8 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.executor.local.LocalExecutor
+import nextflow.plugin.Plugins
+import nextflow.plugin.Priority
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptType
@@ -74,7 +76,10 @@ class ExecutorFactory {
 
     ExecutorFactory(PluginManager manager) {
         if( manager!=null ) {
-            final executors = manager.getExtensionClasses(Executor)
+            final executors = Plugins.getPriorityExtensions(Executor.class)
+                .collect { it.class }
+            // reverse order as init overwrites previous executors
+                .reverse() as List<Class<Executor>>
             log.debug "Extension executors providers=${executors.simpleName}"
             init0(executors)
         }
