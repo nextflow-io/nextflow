@@ -167,6 +167,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             }
             else if( emit instanceof AssignmentExpression ae ) {
                 var target = (VariableExpression)ae.getLeftExpression();
+                code.addStatement(assignS(target, emit));
                 es.setExpression(callThisX("_emit_", args(constX(target.getName()))));
                 code.addStatement(es);
             }

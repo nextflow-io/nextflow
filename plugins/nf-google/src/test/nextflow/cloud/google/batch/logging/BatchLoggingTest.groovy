@@ -49,28 +49,24 @@ class BatchLoggingTest extends Specification {
         def OUT_ENTRY2 = LogEntry.newBuilder(StringPayload.of('Hello world')).setSeverity(Severity.INFO).build()
         def ERR_ENTRY1 = LogEntry.newBuilder(StringPayload.of('Oops something has failed. We are sorry.\n')).setSeverity(Severity.ERROR).build()
         def ERR_ENTRY2 = LogEntry.newBuilder(StringPayload.of('blah blah')).setSeverity(Severity.ERROR).build()
-        and:
-        def sess = Mock(Session) { getConfig() >> [:] }
-        def config = BatchConfig.create(sess)
-        def client = new BatchLogging(config)
 
         when:
         def stdout = new StringBuilder()
         def stderr = new StringBuilder()
         and:
-        client.parseOutput(OUT_ENTRY1, stdout, stderr)
+        BatchLogging.parseOutput(OUT_ENTRY1, stdout, stderr)
         then:
         stdout.toString() == 'No user sessions are running outdated binaries.\n'
         and:
         stderr.toString() == ''
 
         when:
-        client.parseOutput(ERR_ENTRY1, stdout, stderr)
+        BatchLogging.parseOutput(ERR_ENTRY1, stdout, stderr)
         then:
         stderr.toString() == 'Oops something has failed. We are sorry.\n'
 
         when:
-        client.parseOutput(ERR_ENTRY2, stdout, stderr)
+        BatchLogging.parseOutput(ERR_ENTRY2, stdout, stderr)
         then:
         // the message is appended to the stderr because not prefix is provided
         stderr.toString() == 'Oops something has failed. We are sorry.\nblah blah'
@@ -79,7 +75,7 @@ class BatchLoggingTest extends Specification {
         stdout.toString() == 'No user sessions are running outdated binaries.\n'
 
         when:
-        client.parseOutput(OUT_ENTRY2, stdout, stderr)
+        BatchLogging.parseOutput(OUT_ENTRY2, stdout, stderr)
         then:
         // the message is added to the stdout
         stdout.toString() == 'No user sessions are running outdated binaries.\nHello world'

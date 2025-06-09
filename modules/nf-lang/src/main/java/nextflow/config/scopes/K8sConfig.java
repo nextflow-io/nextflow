@@ -25,6 +25,8 @@ import nextflow.script.types.Duration;
 
 public class K8sConfig implements ConfigScope {
 
+    public K8sRetryConfig retryPolicy;
+
     @ConfigOption
     @Description("""
         When `true`, host paths are automatically mounted into the task pods (default: `false`). Only intended for development purposes when using a single node.
@@ -83,12 +85,6 @@ public class K8sConfig implements ConfigScope {
         The path where the workflow is launched and the user data is stored (default: `<volume-claim-mount-path>/<user-name>`). Must be a path in a shared K8s persistent volume.
     """)
     public String launchDir;
-
-    @ConfigOption
-    @Description("""
-        The maximum number of retries for failed requests by the Kubernetes HTTP client (default: 4).
-    """)
-    public int maxErrorRetry;
 
     @ConfigOption
     @Description("""

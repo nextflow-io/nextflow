@@ -16,6 +16,8 @@
 
 package nextflow.k8s
 
+import nextflow.k8s.client.K8sRetryConfig
+
 import javax.annotation.Nullable
 
 import groovy.transform.CompileStatic
@@ -233,8 +235,11 @@ class K8sConfig implements Map<String,Object> {
         if( target.httpReadTimeout )
             result.httpReadTimeout = target.httpReadTimeout as Duration
 
+        if( target.retryPolicy )
+            result.retryConfig = new K8sRetryConfig(target.retryPolicy as Map)
+
         if( target.maxErrorRetry )
-            result.maxErrorRetry = target.maxErrorRetry as Integer
+            log.warn("Config setting 'k8s.maxErrorRetry' is deprecated. Change it to 'k8s.retryPolicy.maxAttempts'")
 
         return result
     }
