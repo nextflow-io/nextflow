@@ -33,14 +33,11 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-resourcelabels`
 - {ref}`process-time`
 
-See the {ref}`AWS Batch<aws-batch>` page for further configuration details.
+See {ref}`aws-batch` for more information.
 
 (azurebatch-executor)=
 
 ## Azure Batch
-
-:::{versionadded} 21.04.0
-:::
 
 Nextflow supports the [Azure Batch](https://azure.microsoft.com/en-us/services/batch/) service that allows job submission in the cloud without having to spin out and manage a cluster of virtual machines. Azure Batch uses Docker containers to run tasks, which greatly simplifies pipeline deployment.
 
@@ -62,7 +59,7 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-resourcelabels`
 - {ref}`process-time`
 
-See the {ref}`Azure Batch <azure-batch>` page for further configuration details.
+See {ref}`azure-batch` for more information.
 
 (bridge-executor)=
 
@@ -143,33 +140,6 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-time`
 
 See the {ref}`Google Cloud Batch <google-batch>` page for further configuration details.
-
-(google-lifesciences-executor)=
-
-## Google Life Sciences
-
-:::{versionadded} 20.01.0
-:::
-
-[Google Cloud Life Sciences](https://cloud.google.com/life-sciences) is a managed computing service that allows the execution of containerized workloads in the Google Cloud Platform infrastructure.
-
-Nextflow provides built-in support for the Life Sciences API, which allows the seamless deployment of a Nextflow pipeline in the cloud, offloading the process executions as pipelines.
-
-The pipeline processes must specify the Docker image to use by defining the `container` directive, either in the pipeline script or the `nextflow.config` file. Additionally, the pipeline work directory must be located in a Google Storage bucket.
-
-To enable this executor, set `process.executor = 'google-lifesciences'` in the `nextflow.config` file.
-
-Resource requests and other job characteristics can be controlled via the following process directives:
-
-- {ref}`process-accelerator`
-- {ref}`process-cpus`
-- {ref}`process-disk`
-- {ref}`process-machineType`
-- {ref}`process-memory`
-- {ref}`process-resourcelabels`
-- {ref}`process-time`
-
-See the {ref}`Google Life Sciences <google-lifesciences>` page for further configuration details.
 
 (htcondor-executor)=
 

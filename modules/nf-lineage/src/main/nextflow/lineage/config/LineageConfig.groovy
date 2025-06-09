@@ -17,6 +17,8 @@
 package nextflow.lineage.config
 
 import groovy.transform.CompileStatic
+import groovy.transform.ToString
+import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
 
@@ -25,6 +27,8 @@ import nextflow.Session
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
+@ToString
 @CompileStatic
 class LineageConfig {
 
@@ -38,7 +42,8 @@ class LineageConfig {
     }
 
     static Map<String,Object> asMap() {
-        session?.config?.navigate('lineage') as Map ?: new HashMap<String,Object>()
+        final result = session?.config?.navigate('lineage') as Map
+        return result != null ? result : new HashMap<String,Object>()
     }
 
     static LineageConfig create(Session session) {

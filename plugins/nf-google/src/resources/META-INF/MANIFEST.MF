@@ -1,6 +1,6 @@
 Manifest-Version: 1.0
 Plugin-Class: nextflow.cloud.google.GoogleCloudPlugin
 Plugin-Id: nf-google
-Plugin-Version: 1.21.0
+Plugin-Version: 1.22.0
 Plugin-Provider: Seqera Labs
-Plugin-Requires: >=25.03.0-edge
+Plugin-Requires: >=25.05.0-edge

@@ -90,7 +90,8 @@ class StandardErrorListener implements ErrorListener {
 
     @Override
     void onError(SyntaxException error, String filename, SourceUnit source) {
-        term.bold().a(filename).reset()
+        term.reset().fg(Ansi.Color.RED).a("Error").reset()
+        term.bold().a(" ${filename}").reset()
         term.a(":${error.getStartLine()}:${error.getStartColumn()}: ")
         term = highlightString(error.getOriginalMessage(), term)
         if( mode != 'concise' ) {
@@ -103,9 +104,10 @@ class StandardErrorListener implements ErrorListener {
     @Override
     void onWarning(WarningMessage warning, String filename, SourceUnit source) {
         final token = warning.getContext().getRoot()
-        term.bold().a(filename).reset()
+        term.reset().fg(Ansi.Color.YELLOW).a("Warn").reset()
+        term.bold().a("  ${filename}").reset()
         term.a(":${token.getStartLine()}:${token.getStartColumn()}: ")
-        term.fg(Ansi.Color.YELLOW).a(warning.getMessage()).fg(Ansi.Color.DEFAULT)
+        term = highlightString(warning.getMessage(), term)
         if( mode != 'concise' ) {
             term.newline()
             term = printCodeBlock(source, Range.of(warning), term, Ansi.Color.YELLOW)
@@ -172,6 +174,10 @@ class StandardErrorListener implements ErrorListener {
             int adjStart = Math.max(0, start - windowStart)
             int adjEnd = Math.max(adjStart + 1, Math.min(end - windowStart, line.length()))
 
+            // Left border
+            if(i == toLine && i !== startLine) term.fg(color).a("╰").reset().a(" ")
+            else term.fg(color).a("│").reset().a(" ")
+
             // Line number
             term.fg(Ansi.Color.BLUE).a(String.format("%3d | ", i)).reset()
 
@@ -180,6 +186,10 @@ class StandardErrorListener implements ErrorListener {
                 term.a(Ansi.Attribute.INTENSITY_FAINT).a(line.substring(0, adjStart)).reset()
                 term.fg(color).a(line.substring(adjStart, adjEnd)).reset()
                 term.a(Ansi.Attribute.INTENSITY_FAINT).a(line.substring(adjEnd)).reset().newline()
+
+                // Left border
+                if(i == toLine) term.fg(color).a("╰").reset().a(" ")
+                else term.fg(color).a("│").reset().a(" ")
 
                 // Print carets underneath the range
                 String marker = ' ' * adjStart
@@ -221,7 +231,7 @@ class StandardErrorListener implements ErrorListener {
     @Override
     void afterAll(ErrorSummary summary) {
         final term = ansi()
-        term.cursorUp(1).eraseLine().cursorUp(1).eraseLine()
+        term.cursorUp(1).eraseLine()
         // print extra newline if no code is being shown
         if( mode == 'concise' )
             term.newline()

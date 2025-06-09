@@ -38,8 +38,7 @@ import java.nio.file.spi.FileSystemProvider
 
 import groovy.transform.CompileStatic
 import nextflow.lineage.config.LineageConfig
-
-
+import nextflow.util.TestOnly
 /**
  * File System Provider for LID Paths
  *
@@ -216,8 +215,9 @@ class LinFileSystemProvider extends FileSystemProvider {
             return getDirectoryStreamFromSubPath(lid)
         return getDirectoryStreamFromRealPath(real, lid)
     }
+
     private static DirectoryStream<Path> getDirectoryStreamFromSubPath(LinPath lid){
-        List<Path> paths = lid.getSubPaths()
+        final paths = lid.getSubPaths()
         if( !paths )
             throw new FileNotFoundException("Sub paths for '$lid' do not exist")
         return new DirectoryStream<Path>() {
@@ -225,7 +225,9 @@ class LinFileSystemProvider extends FileSystemProvider {
                 return paths.iterator()
             }
 
-            void close() {}
+            void close() {
+                paths.close()
+            }
         }
     }
     private DirectoryStream<Path> getDirectoryStreamFromRealPath(Path real, LinPath lid) {
@@ -391,4 +393,8 @@ class LinFileSystemProvider extends FileSystemProvider {
         throw new UnsupportedOperationException("Set file attributes not supported by ${getScheme().toUpperCase()} file system provider")
     }
 
+    @TestOnly
+    void reset() {
+        fileSystem=null
+    }
 }
