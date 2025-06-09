@@ -6,7 +6,7 @@
 
 When a pipeline script is launched, Nextflow looks for configuration files in multiple locations. Since each configuration file may contain conflicting settings, they are applied in the following order (from lowest to highest priority):
 
-1. The config file `$HOME/.nextflow/config` (or `$NXF_HOME/.nextflow/config` when {ref}`NXF_HOME <nxf-env-vars>` is set).
+1. The config file `$HOME/.nextflow/config` (or `$NXF_HOME/config` when {ref}`NXF_HOME <nxf-env-vars>` is set).
 2. The config file `nextflow.config` in the project directory
 3. The config file `nextflow.config` in the launch directory
 4. Config files specified using the `-c <config-files>` option
@@ -84,7 +84,7 @@ process.executor = 'sge'
 process.queue = 'long'
 process.memory = '10G'
 
-includeConfig 'path/foo.config'
+includeConfig 'path/extra.config'
 ```
 
 Relative paths are resolved against the location of the including file.
@@ -185,7 +185,7 @@ process {
 
 The `withName` selector applies both to processes defined with the same name and processes included under the same alias. For example, `withName: hello` will apply to any process originally defined as `hello`, as well as any process included under the alias `hello`.
 
-Furthermore, selectors for the alias of an included process take priority over selectors for the original name of the process. For example, given a process defined as `foo` and included as `bar`, the selectors `withName: foo` and `withName: bar` will both be applied to the process, with the second selector taking priority over the first.
+Furthermore, selectors for the alias of an included process take priority over selectors for the original name of the process. For example, given a process defined as `hello` and included as `sayHello`, the selectors `withName: hello` and `withName: sayHello` will both be applied to the process, with the second selector taking priority over the first.
 
 :::{tip}
 Label and process names do not need to be enclosed with quotes, provided the name does not include special characters (`-`, `!`, etc) and is not a keyword or a built-in type identifier. When in doubt, you can enclose the label name or process name with single or double quotes.
@@ -199,26 +199,26 @@ Both label and process name selectors allow the use of a regular expression in o
 
 ```groovy
 process {
-    withLabel: 'foo|bar' {
+    withLabel: 'hello|bye' {
         cpus = 2
         memory = 4.GB
     }
 }
 ```
 
-The above configuration snippet requests 2 cpus and 4 GB of memory for processes labeled as `foo` or `bar`.
+The above configuration snippet requests 2 cpus and 4 GB of memory for processes labeled as `hello` or `bye`.
 
 A process selector can be negated prefixing it with the special character `!`. For example:
 
 ```groovy
 process {
-    withLabel: 'foo' { cpus = 2 }
-    withLabel: '!foo' { cpus = 4 }
+    withLabel: 'hello' { cpus = 2 }
+    withLabel: '!hello' { cpus = 4 }
     withName: '!align.*' { queue = 'long' }
 }
 ```
 
-The above configuration snippet sets 2 cpus for the processes annotated with the `foo` label and 4 cpus to all processes *not* annotated with that label. Finally it sets the use of `long` queue to all process whose name does *not* start with `align`.
+The above configuration snippet sets 2 cpus for every process labeled as `hello` and 4 cpus to every process *not* label as `hello`. It also specifies the `long` queue for every process whose name does *not* start with `align`.
 
 (config-selector-priority)=
 
@@ -238,17 +238,17 @@ For example:
 ```groovy
 process {
     cpus = 4
-    withLabel: foo { cpus = 8 }
-    withName: bar { cpus = 16 }
-    withName: 'baz:bar' { cpus = 32 }
+    withLabel: hello { cpus = 8 }
+    withName: bye { cpus = 16 }
+    withName: 'mysub:bye' { cpus = 32 }
 }
 ```
 
 With the above configuration:
 - All processes will use 4 cpus (unless otherwise specified in their process definition).
-- Processes annotated with the `foo` label will use 8 cpus.
-- Any process named `bar` (or imported as `bar`) will use 16 cpus.
-- Any process named `bar` (or imported as `bar`) invoked by a workflow named `baz` with use 32 cpus.
+- Processes annotated with the `hello` label will use 8 cpus.
+- Any process named `bye` (or imported as `bye`) will use 16 cpus.
+- Any process named `bye` (or imported as `bye`) invoked by a workflow named `mysub` will use 32 cpus.
 
 (config-profiles)=
 
@@ -297,7 +297,7 @@ When defining a profile in the config file, avoid using both the dot and block s
 
 ```groovy
 profiles {
-    foo {
+    cluster {
         process.memory = '2 GB'
         process {
             cpus = 2
@@ -309,7 +309,7 @@ profiles {
 Due to a limitation of the legacy config parser, the first setting will be overwritten by the second:
 
 ```console
-$ nextflow config -profile foo
+$ nextflow config -profile cluster
 process {
    cpus = 2
 }
