@@ -1180,7 +1180,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
         cleanup:
         local?.deleteDir()
-        //deleteBucket(bucketName)
+        deleteBucket(bucketName)
     }
 
     void "should upload a stream with multiple flush"(){

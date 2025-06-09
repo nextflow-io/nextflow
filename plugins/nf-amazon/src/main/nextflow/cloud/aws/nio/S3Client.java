@@ -29,6 +29,7 @@ import java.util.function.Consumer;
 import nextflow.cloud.aws.AwsClientFactory;
 import nextflow.cloud.aws.nio.util.S3AsyncClientConfiguration;
 import nextflow.cloud.aws.nio.util.S3ClientConfiguration;
+import software.amazon.awssdk.awscore.AwsRequestOverrideConfiguration;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.exception.SdkException;
@@ -102,10 +103,15 @@ public class S3Client {
 	}
 
     private String fetchCallerAccount(){
-        List<Bucket> buckets = client.listBuckets(ListBucketsRequest.builder().maxBuckets(1).build()).buckets();
-        if( buckets == null || buckets.isEmpty() )
+        try {
+            List<Bucket> buckets = client.listBuckets(ListBucketsRequest.builder().maxBuckets(1).build()).buckets();
+            if (buckets == null || buckets.isEmpty())
+                return null;
+            return getBucketAcl(buckets.getFirst().name()).owner().id();
+        }catch (Throwable e){
+            log.debug("Exception fetching caller account", e);
             return null;
-        return getBucketAcl(buckets.getFirst().name()).owner().id();
+        }
     }
 
 
@@ -236,7 +242,7 @@ public class S3Client {
 	 * @see software.amazon.awssdk.services.s3.S3Client#getBucketAcl
 	 */
 	public AccessControlPolicy getBucketAcl(String bucket) {
-		GetBucketAclResponse response = client.getBucketAcl(GetBucketAclRequest.builder().bucket(bucket).build());
+		GetBucketAclResponse response = client.getBucketAcl(GetBucketAclRequest.builder().bucket(bucket).;
         return AccessControlPolicy.builder().grants(response.grants()).owner(response.owner()).build();
 	}
 
