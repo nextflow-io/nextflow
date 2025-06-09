@@ -38,6 +38,7 @@ import java.nio.file.spi.FileSystemProvider
 
 import groovy.transform.CompileStatic
 import nextflow.lineage.config.LineageConfig
+import nextflow.util.TestOnly
 /**
  * File System Provider for LID Paths
  *
@@ -209,7 +210,27 @@ class LinFileSystemProvider extends FileSystemProvider {
     @Override
     DirectoryStream<Path> newDirectoryStream(Path path, DirectoryStream.Filter<? super Path> filter) throws IOException {
         final lid = toLinPath(path)
-        final real = lid.getTargetPath()
+        final real = lid.getTargetOrIntermediatePath()
+        if (real instanceof LinIntermediatePath)
+            return getDirectoryStreamFromSubPath(lid)
+        return getDirectoryStreamFromRealPath(real, lid)
+    }
+
+    private static DirectoryStream<Path> getDirectoryStreamFromSubPath(LinPath lid){
+        final paths = lid.getSubPaths()
+        if( !paths )
+            throw new FileNotFoundException("Sub paths for '$lid' do not exist")
+        return new DirectoryStream<Path>() {
+            Iterator<Path> iterator() {
+                return paths.iterator()
+            }
+
+            void close() {
+                paths.close()
+            }
+        }
+    }
+    private DirectoryStream<Path> getDirectoryStreamFromRealPath(Path real, LinPath lid) {
         final stream = real
             .getFileSystem()
             .provider()
@@ -356,10 +377,10 @@ class LinFileSystemProvider extends FileSystemProvider {
     }
 
     private <A extends BasicFileAttributes> A readAttributes0(LinPath lid, Class<A> type, LinkOption... options) throws IOException {
-        final real = lid.getTargetOrMetadataPath()
-        if (real instanceof LinMetadataPath)
-            return (real as LinMetadataPath).readAttributes(type)
-        return real.fileSystem.provider().readAttributes(real, type, options)
+        final target = lid.getTargetOrIntermediatePath()
+        if (target instanceof LinIntermediatePath)
+            return (target as LinIntermediatePath).readAttributes(type)
+        return target.fileSystem.provider().readAttributes(target, type, options)
     }
 
     @Override
@@ -372,4 +393,8 @@ class LinFileSystemProvider extends FileSystemProvider {
         throw new UnsupportedOperationException("Set file attributes not supported by ${getScheme().toUpperCase()} file system provider")
     }
 
+    @TestOnly
+    void reset() {
+        fileSystem=null
+    }
 }

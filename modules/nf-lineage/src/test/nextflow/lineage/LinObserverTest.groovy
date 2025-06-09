@@ -17,11 +17,34 @@
 
 package nextflow.lineage
 
-import nextflow.lineage.model.Parameter
-import nextflow.lineage.model.TaskOutput
+import nextflow.lineage.exception.OutputRelativePathException
+
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.attribute.BasicFileAttributes
+
+import com.google.common.hash.HashCode
+import nextflow.Session
 import nextflow.file.FileHolder
+import nextflow.lineage.model.v1beta1.Checksum
+import nextflow.lineage.model.v1beta1.FileOutput
+import nextflow.lineage.model.v1beta1.DataPath
+import nextflow.lineage.model.v1beta1.Parameter
+import nextflow.lineage.model.v1beta1.TaskOutput
+import nextflow.lineage.model.v1beta1.Workflow
+import nextflow.lineage.model.v1beta1.WorkflowOutput
+import nextflow.lineage.model.v1beta1.WorkflowRun
+import nextflow.lineage.serde.LinEncoder
+import nextflow.lineage.config.LineageConfig
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
+import nextflow.processor.TaskId
+import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskRun
+import nextflow.script.ScriptBinding
+import nextflow.script.ScriptMeta
 import nextflow.script.TokenVar
+import nextflow.script.WorkflowMetadata
 import nextflow.script.params.EnvOutParam
 import nextflow.script.params.FileInParam
 import nextflow.script.params.FileOutParam
@@ -31,35 +54,16 @@ import nextflow.script.params.StdInParam
 import nextflow.script.params.StdOutParam
 import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
-import spock.lang.Shared
-
-import static nextflow.lineage.fs.LinPath.*
-
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.attribute.BasicFileAttributes
-
-import com.google.common.hash.HashCode
-import nextflow.Session
-import nextflow.lineage.model.Checksum
-import nextflow.lineage.model.FileOutput
-import nextflow.lineage.model.DataPath
-import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowOutput
-import nextflow.lineage.model.WorkflowRun
-import nextflow.lineage.serde.LinEncoder
-import nextflow.lineage.config.LineageConfig
-import nextflow.processor.TaskConfig
-import nextflow.processor.TaskId
-import nextflow.processor.TaskProcessor
-import nextflow.processor.TaskRun
-import nextflow.script.ScriptBinding
-import nextflow.script.ScriptMeta
-import nextflow.script.WorkflowMetadata
+import nextflow.trace.event.FilePublishEvent
+import nextflow.trace.event.TaskEvent
+import nextflow.trace.event.WorkflowOutputEvent
 import nextflow.util.CacheHelper
 import nextflow.util.PathNormalizer
+import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
+
+import static nextflow.lineage.fs.LinPath.*
 
 /**
  *
@@ -292,21 +296,21 @@ class LinObserverTest extends Specification {
         and: 'Expected LID objects'
         def sourceHash = CacheHelper.hasher('echo task source').hash().toString()
         def script = 'this is the script'
-        def taskDescription = new nextflow.lineage.model.TaskRun(uniqueId.toString(), "foo",
+        def taskDescription = new nextflow.lineage.model.v1beta1.TaskRun(uniqueId.toString(), "foo",
             new Checksum(sourceHash, "nextflow", "standard"),
             script,
             [
                 new Parameter("path", "file1", ['lid://78567890/file1.txt']),
                 new Parameter("path", "file2", [[path: normalizer.normalizePath(file), checksum: [value:fileHash, algorithm: "nextflow", mode:  "standard"]]]),
                 new Parameter("val", "id", "value")
-            ], null, null, null, null, [:], [], "lid://hash", null)
+            ], null, null, null, null, [:], [], "lid://hash")
         def dataOutput1 = new FileOutput(outFile1.toString(), new Checksum(fileHash1, "nextflow", "standard"),
             "lid://1234567890", "lid://hash", "lid://1234567890", attrs1.size(), LinUtils.toDate(attrs1.creationTime()), LinUtils.toDate(attrs1.lastModifiedTime()) )
         def dataOutput2 = new FileOutput(outFile2.toString(), new Checksum(fileHash2, "nextflow", "standard"),
             "lid://1234567890", "lid://hash", "lid://1234567890", attrs2.size(), LinUtils.toDate(attrs2.creationTime()), LinUtils.toDate(attrs2.lastModifiedTime()) )
 
         when:
-        observer.onProcessComplete(handler, null )
+        observer.onTaskComplete(new TaskEvent(handler, null))
         def taskRunResult = store.load("${hash.toString()}")
         def dataOutputResult1 = store.load("${hash}/fileOut1.txt") as FileOutput
         def dataOutputResult2 = store.load("${hash}/fileOut2.txt") as FileOutput
@@ -472,8 +476,7 @@ class LinObserverTest extends Specification {
             def observer = new LinObserver(session, store)
             observer.getWorkflowRelative(PATH)
         then:
-            def e = thrown(IllegalArgumentException)
-            e.message == "Cannot access relative path for workflow output '$PATH'"
+            thrown(OutputRelativePathException)
         where:
         OUTPUT_DIR                      | PATH                                  | EXPECTED
         Path.of('/path/to/outDir')      | Path.of('/another/path/')             | "relative"
@@ -514,8 +517,10 @@ class LinObserverTest extends Specification {
             observer.onFlowCreate(session)
             observer.onFlowBegin()
         then: 'History file should contain execution hash'
-            def lid = store.getHistoryLog().getRecord(uniqueId).runLid.substring(LID_PROT.size())
-            lid == observer.executionHash
+            def lid = LinHistoryRecord.parse(folder.resolve(".history/${observer.executionHash}").text)
+            lid.runLid == asUriString(observer.executionHash)
+            lid.sessionId == uniqueId
+            lid.runName == "test_run"
 
         when: ' publish output with source file'
             def outFile1 = outputDir.resolve('foo/file.bam')
@@ -524,8 +529,8 @@ class LinObserverTest extends Specification {
             def sourceFile1 = workDir.resolve('12/3987/file.bam')
             Files.createDirectories(sourceFile1.parent)
             sourceFile1.text = 'some data1'
-            observer.onFilePublish(outFile1, sourceFile1)
-            observer.onWorkflowPublish("a", outFile1)
+            observer.onFilePublish(new FilePublishEvent(sourceFile1, outFile1))
+            observer.onWorkflowOutput(new WorkflowOutputEvent("a", outFile1))
 
         then: 'check file 1 output metadata in lid store'
             def attrs1 = Files.readAttributes(outFile1, BasicFileAttributes)
@@ -541,8 +546,8 @@ class LinObserverTest extends Specification {
             outFile2.text = 'some data2'
             def attrs2 = Files.readAttributes(outFile2, BasicFileAttributes)
             def fileHash2 = CacheHelper.hasher(outFile2).hash().toString()
-            observer.onFilePublish(outFile2)
-            observer.onWorkflowPublish("b", outFile2)
+            observer.onFilePublish(new FilePublishEvent(null, outFile2))
+            observer.onWorkflowOutput(new WorkflowOutputEvent("b", outFile2))
         then: 'Check outFile2 metadata in lid store'
             def output2 = new FileOutput(outFile2.toString(), new Checksum(fileHash2, "nextflow", "standard"),
                 "lid://${observer.executionHash}" , "lid://${observer.executionHash}", null,
@@ -551,13 +556,49 @@ class LinObserverTest extends Specification {
 
         when: 'Workflow complete'
             observer.onFlowComplete()
-        then: 'Check history file is updated and Workflow Result is written in the lid store'
-            def finalLid = store.getHistoryLog().getRecord(uniqueId).runLid.substring(LID_PROT.size())
-            def resultsRetrieved = store.load("${finalLid}#output") as WorkflowOutput
+        then: 'Check WorkflowOutput is written in the lid store'
+            def resultsRetrieved = store.load("${observer.executionHash}#output") as WorkflowOutput
             resultsRetrieved.output == [new Parameter(Path.simpleName, "a", "lid://${observer.executionHash}/foo/file.bam"), new Parameter(Path.simpleName, "b", "lid://${observer.executionHash}/foo/file2.bam")]
 
         cleanup:
             folder?.deleteDir()
     }
 
+    def 'should not save workflow output entry when no outputs'() {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def config = [lineage: [enabled: true, store: [location: folder.toString()]]]
+        def store = new DefaultLinStore();
+        def outputDir = folder.resolve('results')
+        def uniqueId = UUID.randomUUID()
+        def scriptFile = folder.resolve("main.nf")
+        def workDir = folder.resolve("work")
+        def metadata = Mock(WorkflowMetadata) {
+            getRepository() >> "https://nextflow.io/nf-test/"
+            getCommitId() >> "123456"
+            getScriptId() >> "78910"
+            getScriptFile() >> scriptFile
+            getProjectDir() >> folder.resolve("projectDir")
+            getWorkDir() >> workDir
+        }
+        def session = Mock(Session) {
+            getConfig() >> config
+            getOutputDir() >> outputDir
+            getWorkDir() >> workDir
+            getWorkflowMetadata() >> metadata
+            getUniqueId() >> uniqueId
+            getRunName() >> "test_run"
+            getParams() >> new ScriptBinding.ParamsMap()
+        }
+        store.open(LineageConfig.create(session))
+        def observer = new LinObserver(session, store)
+
+        when:
+        observer.onFlowCreate(session)
+        observer.onFlowBegin()
+        observer.onFlowComplete()
+        def resultFile = folder.resolve("${observer.executionHash}#output")
+        then:
+        !resultFile.exists()
+    }
 }

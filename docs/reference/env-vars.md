@@ -106,7 +106,7 @@ The following environment variables control the configuration of the Nextflow ru
 : :::{versionadded} 23.05.0-edge
   :::
 : The file storage path against which relative file paths are resolved.
-: For example, with `NXF_FILE_ROOT=/some/root/path`, the use of `file('foo')` will be resolved to the absolute path `/some/root/path/foo`. A remote root path can be specified using the usual protocol prefix, e.g. `NXF_FILE_ROOT=s3://my-bucket/data`. Files defined using an absolute path are not affected by this setting.
+: For example, with `NXF_FILE_ROOT=/some/root/path`, the use of `file('hello')` will be resolved to the absolute path `/some/root/path/hello`. A remote root path can be specified using the usual protocol prefix, e.g. `NXF_FILE_ROOT=s3://my-bucket/data`. Files defined using an absolute path are not affected by this setting.
 
 `NXF_HOME`
 : Nextflow home directory (default: `$HOME/.nextflow`).
@@ -144,6 +144,11 @@ The following environment variables control the configuration of the Nextflow ru
 
 `NXF_PID_FILE`
 : Name of the file where the process PID is saved when Nextflow is launched in background.
+
+`NXF_PLUGINS_ALLOWED`
+: :::{versionadded} 25.04.0
+  :::
+: Comma separated list of plugin IDs that can be used in a workflow executions e.g. `NXF_PLUGINS_ALLOWED=nf-amazon,nf-tower,nf-wave`. Use empty string to disallow all plugins.
 
 `NXF_PLUGINS_DEFAULT`
 : Whether to use the default plugins when no plugins are specified in the Nextflow configuration (default: `true`).

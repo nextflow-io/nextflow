@@ -121,7 +121,9 @@ Depending on the pipeline configuration, the above actions can be done all in a 
                 "Action": [
                     "s3:GetObject",
                     "s3:PutObject",
-                    "s3:DeleteObject"
+                    "s3:DeleteObject",
+                    "s3:PutObjectTagging",
+                    "s3:AbortMultipartUpload"
                 ],
                 "Resource": "arn:aws:s3:::<bucket name>/*"
             },

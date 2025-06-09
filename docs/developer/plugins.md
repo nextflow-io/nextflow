@@ -79,7 +79,7 @@ class MyPlugin extends BasePlugin implements PluginAbstractExec {
 You can then execute this command using the `nextflow plugin` command:
 
 ```bash
-nextflow plugin my-plugin:hello --foo --bar
+nextflow plugin my-plugin:hello --alpha --beta
 ```
 
 See the {ref}`cli-plugin` CLI command for usage information.
@@ -167,7 +167,7 @@ class MyExecutor extends Executor implements ExtensionPoint {
 You can then use this executor in your pipeline:
 
 ```nextflow
-process foo {
+process hello {
     executor 'my-executor'
 
     // ...
@@ -328,6 +328,10 @@ class MyExecutor extends Executor {
 ```
 
 ### Trace observers
+
+:::{versionchanged} 25.04
+The `TraceObserver` interface is now deprecated. Use [TraceObserverV2](https://github.com/nextflow-io/nextflow/blob/master/modules/nextflow/src/main/groovy/nextflow/trace/TraceObserverV2.groovy) and [TraceObserverFactoryV2](https://github.com/nextflow-io/nextflow/blob/master/modules/nextflow/src/main/groovy/nextflow/trace/TraceObserverFactoryV2.groovy) instead.
+:::
 
 A *trace observer* in Nextflow is an entity that can listen and react to workflow events, such as when a workflow starts, a task completes, a file is published, etc. Several components in Nextflow, such as the execution report and DAG visualization, are implemented as trace observers.
 

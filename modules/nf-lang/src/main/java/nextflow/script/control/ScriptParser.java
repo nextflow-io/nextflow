@@ -16,6 +16,7 @@
 package nextflow.script.control;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 
 import groovy.lang.GroovyClassLoader;
@@ -65,7 +66,8 @@ public class ScriptParser {
     }
 
     public void analyze() {
-        for( var source : compiler.getSources().values() ) {
+        var sources = new ArrayList<>(compiler.getSources().values());
+        for( var source : sources ) {
             new ModuleResolver(compiler()).resolve(source, (uri) -> compiler.createSourceUnit(new File(uri)));
         }
 
@@ -74,7 +76,7 @@ public class ScriptParser {
             includeResolver.visit();
             for( var error : includeResolver.getErrors() )
                 source.getErrorCollector().addErrorAndContinue(error);
-            new ScriptResolveVisitor(source, compiler.compilationUnit(), Types.DEFAULT_IMPORTS, Collections.emptyList()).visit();
+            new ScriptResolveVisitor(source, compiler.compilationUnit(), Types.DEFAULT_SCRIPT_IMPORTS, Collections.emptyList()).visit();
             if( source.getErrorCollector().hasErrors() )
                 continue;
             new TypeCheckingVisitor(source, false).visit();

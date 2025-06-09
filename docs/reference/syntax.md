@@ -21,7 +21,7 @@ A block comment starts with `/*` and includes all subsequent characters up to th
 println 'Hello again!'
 ```
 
-## Top-level declarations
+## Script declarations
 
 A Nextflow script may contain the following top-level declarations:
 
@@ -37,7 +37,7 @@ A Nextflow script may contain the following top-level declarations:
 
 Script declarations are in turn composed of statements and expressions.
 
-If there are no top-level declarations, a script may contain one or more [statements](#statements), in which case the entire script is treated as an entry workflow. For example:
+If there are no script declarations, a script may contain one or more [statements](#statements), in which case the entire script is treated as an entry workflow. For example:
 
 ```nextflow
 println 'Hello world!'
@@ -52,7 +52,7 @@ workflow {
 ```
 
 :::{warning}
-Statements and top-level declarations can not be mixed at the same level. If your script has top-level declarations, all statements must be contained within top-level declarations such as the entry workflow.
+Statements and script declarations can not be mixed at the same level.
 :::
 
 ### Shebang
@@ -68,7 +68,7 @@ The first line of a script can be a [shebang](https://en.wikipedia.org/wiki/Sheb
 A feature flag declaration is an assignment. The target should be a valid {ref}`feature flag <config-feature-flags>` and the source should be a literal (i.e. number, string, boolean):
 
 ```nextflow
-nextflow.preview.topic = true
+nextflow.preview.recursion = true
 ```
 
 ### Include
@@ -76,29 +76,29 @@ nextflow.preview.topic = true
 An include declaration consists of an *include source* and one or more *include clauses*:
 
 ```nextflow
-include { foo as bar } from './some/module'
+include { hallo as sayHello } from './some/module'
 ```
 
-The include source should be a string literal and should refer to either a local path (e.g. `./module.nf`) or a plugin (e.g. `plugin/nf-hello`). Each include clause should specify a name, and may also specify an *alias*. In the above example, `foo` is included under the alias `bar`.
+The include source should be a string literal and should refer to either a local path (e.g. `./module.nf`) or a plugin (e.g. `plugin/nf-hello`). Each include clause should specify a name, and may also specify an *alias*. In the above example, `hallo` is included under the alias `sayHello`.
 
 Include clauses can be separated by semi-colons or newlines:
 
 ```nextflow
 // semi-colons
-include { foo ; bar as baz } from './some/module'
+include { hallo ; bye as goodbye } from './some/module'
 
 // newlines
 include {
-    foo
-    bar as baz
+    hallo
+    bye as goodbye
 } from './some/module'
 ```
 
 Include clauses can also be specified as separate includes:
 
 ```nextflow
-include { foo } from './some/module'
-include { bar as baz } from './some/module'
+include { hallo } from './some/module'
+include { bye as goodbye } from './some/module'
 ```
 
 The following definitions can be included:
@@ -154,7 +154,7 @@ An *entry workflow* has no name and may consist of a *main* and *publish* sectio
 ```nextflow
 workflow {
     main:
-    greetings = Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola')
+    greetings = channel.of('Bonjour', 'Ciao', 'Hello', 'Hola')
     messages = greetings.map { v -> "$v world!" }
     greetings.view { it -> '$it world!' }
 
@@ -169,7 +169,7 @@ workflow {
 
 - The publish section consists of one or more *publish statements*. A publish statement is a [right-shift expression](#binary-expressions), where the left-hand side is an expression that refers to a value in the workflow body, and the right-hand side is an expression that returns a string.
 
-In order for a script to be executable, it must either define an entry workflow or use the implicit workflow syntax described [above](#top-level-declarations).
+In order for a script to be executable, it must either define an entry workflow or be a code snippet as described [above](#script-declarations).
 
 Entry workflow definitions are ignored when a script is included as a module. This way, the same script can be included as a module or executed as a pipeline.
 
@@ -180,7 +180,7 @@ Entry workflow definitions are ignored when a script is included as a module. Th
 A process consists of a name and a body. The process body consists of one or more [statements](#statements). A minimal process definition must return a string:
 
 ```nextflow
-process sayHello {
+process hello {
     """
     echo 'Hello world!'
     """
@@ -225,7 +225,7 @@ Each section may contain one or more statements. For directives, inputs, and out
 The script section can be substituted with an exec section:
 
 ```nextflow
-process greetExec {
+process greet {
     input: 
     val greeting
     val name
@@ -352,13 +352,13 @@ Variables declared in an if or else branch exist only within that branch:
 
 ```nextflow
 if( true )
-    def x = 'foo'
+    def x = 'hello'
 println x           // error: `x` is undefined
 
 // solution: declare `x` outside of if branch
 def x
 if( true )
-    x = 'foo'
+    x = 'hello'
 println x
 ```
 
@@ -512,7 +512,7 @@ throw new Exception('something failed!')
 ```
 
 :::{note}
-In general, the appropriate way to raise an error is to use the {ref}`error <stdlib-functions>` function:
+In general, the appropriate way to raise an error is to use the {ref}`error <stdlib-namespaces-global>` function:
 ```nextflow
 error 'something failed!'
 ```
@@ -525,10 +525,10 @@ A try/catch statement consists of a *try block* followed by any number of *catch
 ```nextflow
 def text = null
 try {
-    text = file('foo.txt').text
+    text = file('hello.txt').text
 }
 catch( IOException e ) {
-    log.warn "Could not load foo.txt"
+    log.warn "Could not load hello.txt"
 }
 ```
 
@@ -676,7 +676,7 @@ A list literal consists of a comma-separated list of zero or more expressions, e
 A map literal consists of a comma-separated list of one or more *map entries*, enclosed in square brackets. Each map entry consists of a *key expression* and *value expression* separated by a colon:
 
 ```nextflow
-[foo: 1, bar: 2, baz: 3]
+[alpha: 1, beta: 2, gamma: 3]
 ```
 
 An empty map is specified with a single colon to distinguish it from an empty list:
@@ -688,9 +688,9 @@ An empty map is specified with a single colon to distinguish it from an empty li
 Both the key and value can be any expression. Identifier keys are treated as string literals (i.e. the quotes can be omitted). A variable can be used as a key by enclosing it in parentheses:
 
 ```nextflow
-def x = 'foo'
+def x = 'alpha'
 [(x): 1]
-// -> ['foo': 1]
+// -> ['alpha': 1]
 ```
 
 ### Closure
