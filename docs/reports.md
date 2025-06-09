@@ -88,7 +88,7 @@ nextflow log goofy_kilby -t my-template.md > execution-report.md
 The `filter` option makes it possible to select which entries to include in the log report. Any valid groovy boolean expression on the log fields can be used to define the filter condition. For example:
 
 ```bash
-nextflow log goofy_kilby -filter 'name =~ /foo.*/ && status == "FAILED"'
+nextflow log goofy_kilby -filter 'name =~ /hello.*/ && status == "FAILED"'
 ```
 
 (execution-report)=

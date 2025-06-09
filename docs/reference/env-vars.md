@@ -106,7 +106,7 @@ The following environment variables control the configuration of the Nextflow ru
 : :::{versionadded} 23.05.0-edge
   :::
 : The file storage path against which relative file paths are resolved.
-: For example, with `NXF_FILE_ROOT=/some/root/path`, the use of `file('foo')` will be resolved to the absolute path `/some/root/path/foo`. A remote root path can be specified using the usual protocol prefix, e.g. `NXF_FILE_ROOT=s3://my-bucket/data`. Files defined using an absolute path are not affected by this setting.
+: For example, with `NXF_FILE_ROOT=/some/root/path`, the use of `file('hello')` will be resolved to the absolute path `/some/root/path/hello`. A remote root path can be specified using the usual protocol prefix, e.g. `NXF_FILE_ROOT=s3://my-bucket/data`. Files defined using an absolute path are not affected by this setting.
 
 `NXF_HOME`
 : Nextflow home directory (default: `$HOME/.nextflow`).

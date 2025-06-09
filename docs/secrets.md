@@ -52,7 +52,7 @@ Secrets **cannot** be assigned to pipeline parameters.
 Secrets can be access by pipeline processes by using the `secret` directive. For example:
 
 ```nextflow
-process someJob {
+process my_task {
     secret 'MY_ACCESS_KEY'
     secret 'MY_SECRET_KEY'
 

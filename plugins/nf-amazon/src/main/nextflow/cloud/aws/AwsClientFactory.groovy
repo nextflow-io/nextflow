@@ -159,7 +159,7 @@ class AwsClientFactory {
             return new InstanceMetadataRegionProvider().getRegion()
         }
         catch (AmazonClientException e) {
-            log.debug "Cannot fetch AWS region", e
+            log.debug("Cannot fetch AWS region", e as Throwable)
             return null
         }
     }

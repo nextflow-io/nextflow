@@ -26,6 +26,19 @@ The language server parses scripts and config files according to the {ref}`Nextf
 
 When you hover over certain source code elements, such as variable names and function calls, the extension provides a tooltip with related information, such as the definition and/or documentation for the element.
 
+If a [Javadoc](https://en.wikipedia.org/wiki/Javadoc) comment is defined above a workflow, process, or function, the extension will include the contents of the comment in hover hints. The following is an example Javadoc comment:
+
+```nextflow
+/**
+ * Say hello to someone.
+ *
+ * @param name
+ */
+def sayHello(name) {
+    println "Hello, ${name}!"
+}
+```
+
 ### Code navigation
 
 The **Outline** section in the Explorer panel lists top-level definitions when you view a script. Include declarations in scripts and config files act as links, and ctrl-clicking them opens the corresponding script or config file.

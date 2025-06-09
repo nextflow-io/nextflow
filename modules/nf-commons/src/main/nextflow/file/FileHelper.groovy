@@ -49,6 +49,7 @@ import nextflow.extension.FilesEx
 import nextflow.plugin.Plugins
 import nextflow.util.CacheHelper
 import nextflow.util.Escape
+import nextflow.util.StringUtils
 /**
  * Provides some helper method handling files
  *
@@ -618,7 +619,7 @@ class FileHelper {
     }
 
     /**
-     *  Caches File system providers
+     * Caches File system providers
      */
     @PackageScope
     static final Map<String, FileSystemProvider> providersMap = [:]
@@ -722,7 +723,7 @@ class FileHelper {
             try { fs = provider.getFileSystem(uri) }
             catch( FileSystemNotFoundException e ) { fs=null }
             if( !fs ) {
-                log.debug "Creating a file system instance for provider: ${provider.class.simpleName}"
+                log.debug "Creating a file system instance for provider: ${provider.class.simpleName}; config=${StringUtils.stripSecrets(config)}"
                 fs = provider.newFileSystem(uri, config!=null ? config : envFor(uri.scheme))
             }
             return fs

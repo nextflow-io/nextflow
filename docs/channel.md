@@ -38,7 +38,7 @@ channels if it is invoked with all value channels, including simple values which
 For example:
 
 ```nextflow
-process foo {
+process echo {
   input:
   val x
 
@@ -52,12 +52,12 @@ process foo {
 }
 
 workflow {
-  result = foo(1)
+  result = echo(1)
   result.view { file -> "Result: ${file}" }
 }
 ```
 
-In the above example, since the `foo` process is invoked with a simple value instead of a channel, the input is implicitly
+In the above example, since the `echo` process is invoked with a simple value instead of a channel, the input is implicitly
 wrapped in a value channel, and the output is also emitted as a value channel.
 
 See also: {ref}`process-multiple-input-channels`.

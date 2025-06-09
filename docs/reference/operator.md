@@ -512,7 +512,7 @@ The `tag` option can be used to select which channels to dump:
 :language: nextflow
 ```
 
-Then, you can run your pipeline with `-dump-channels foo` or `-dump-channels bar` to dump the content of either channel. Multiple tag names can be specified as a comma-separated list.
+Then, you can run your pipeline with `-dump-channels plus1` or `-dump-channels exp2` to dump the content of either channel. Multiple tag names can be specified as a comma-separated list.
 
 Available options:
 

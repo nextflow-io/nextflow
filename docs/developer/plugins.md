@@ -79,7 +79,7 @@ class MyPlugin extends BasePlugin implements PluginAbstractExec {
 You can then execute this command using the `nextflow plugin` command:
 
 ```bash
-nextflow plugin my-plugin:hello --foo --bar
+nextflow plugin my-plugin:hello --alpha --beta
 ```
 
 See the {ref}`cli-plugin` CLI command for usage information.
@@ -167,7 +167,7 @@ class MyExecutor extends Executor implements ExtensionPoint {
 You can then use this executor in your pipeline:
 
 ```nextflow
-process foo {
+process hello {
     executor 'my-executor'
 
     // ...

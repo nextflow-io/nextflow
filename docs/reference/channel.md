@@ -456,16 +456,16 @@ You can think of it as a channel that is shared across many different processes 
 A process output can be assigned to a topic using the `topic` option on an output, for example:
 
 ```nextflow
-process foo {
+process hello {
   output:
-  val('foo'), topic: my_topic
+  val('hello'), topic: my_topic
 
   // ...
 }
 
-process bar {
+process bye {
   output:
-  val('bar'), topic: my_topic
+  val('bye'), topic: my_topic
 
   // ...
 }

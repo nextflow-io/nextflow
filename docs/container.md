@@ -47,7 +47,7 @@ Every time your script launches a process execution, Nextflow will run it into a
 A Apptainer image can contain any tool or piece of software you may need to carry out a process execution. Moreover, the container is run in such a way that the process result files are created in the host file system, thus it behaves in a completely transparent manner without requiring extra steps or affecting the flow in your pipeline.
 :::
 
-If you want to avoid entering the Apptainer image as a command line parameter, you can define it in the Nextflow configuration file. For example you can add the following lines in the `nextflow.config` file:
+If you want to avoid entering the Apptainer image as a command line parameter, you can define it in the Nextflow configuration file. For example you can add the following lines in the configuration file:
 
 ```groovy
 process.container = '/path/to/apptainer.img'
@@ -56,7 +56,7 @@ apptainer.enabled = true
 
 In the above example replace `/path/to/apptainer.img` with any Apptainer image of your choice.
 
-Read the {ref}`config-page` page to learn more about the `nextflow.config` file and how to use it to configure your pipeline execution.
+Read the {ref}`config-page` page to learn more about the configuration file and how to use it to configure your pipeline execution.
 
 :::{note}
 Unlike Docker, Nextflow does not automatically mount host paths in the container when using Apptainer. It expects that the paths are configured and mounted system wide by the Apptainer runtime. If your Apptainer installation allows user defined bind points, read the {ref}`Apptainer configuration <config-apptainer>` section to learn how to enable Nextflow auto mounts.
@@ -72,14 +72,14 @@ Nextflow no longer mounts the home directory when launching an Apptainer contain
 
 ### Multiple containers
 
-It is possible to specify a different Apptainer image for each process definition in your pipeline script. For example, let's suppose you have two processes named `foo` and `bar`. You can specify two different Apptainer images specifying them in the `nextflow.config` file as shown below:
+It is possible to specify a different Apptainer image for each process definition in your pipeline script. For example, suppose you have two processes named `hello` and `bye`. You can specify two different Apptainer images in the configuration file as shown below:
 
 ```groovy
 process {
-    withName:foo {
+    withName:hello {
         container = 'image_name_1'
     }
-    withName:bar {
+    withName:bye {
         container = 'image_name_2'
     }
 }
@@ -176,7 +176,7 @@ Every time your script launches a process execution, Nextflow will run it into a
 A container image can contain any tool or piece of software you may need to carry out a process execution. Moreover, the container is run in such a way that the process result files are created in the host file system, thus it behaves in a completely transparent manner without requiring extra steps or affecting the flow in your pipeline.
 :::
 
-If you want to avoid entering the Container image as a command line parameter, you can define it in the Nextflow configuration file. For example you can add the following lines in the `nextflow.config` file:
+If you want to avoid entering the Container image as a command line parameter, you can define it in the Nextflow configuration file. For example you can add the following lines in the configuration file:
 
 ```groovy
 process.container = '/path/to/container'
@@ -187,7 +187,7 @@ charliecloud.enabled = true
 If an absolute path is provided, the container needs to be in the Charliecloud flat directory format. See the section below on compatibility with Docker registries.
 :::
 
-Read the {ref}`config-page` page to learn more about the `nextflow.config` file and how to use it to configure your pipeline execution.
+Read the {ref}`config-page` page to learn more about the configuration file and how to use it to configure your pipeline execution.
 
 :::{warning}
 Nextflow automatically manages the file system mounts whenever a container is launched depending on the process input files. However, when a process input is a *symbolic link*, the linked file **must** be stored in the same folder where the symlink is located, or a sub-folder of it. Otherwise the process execution will fail because the launched container won't be able to access the linked file.
@@ -215,14 +215,14 @@ charliecloud.enabled = true
 
 ### Multiple containers
 
-It is possible to specify a different Docker image for each process definition in your pipeline script. However, this can't be done with `-with-docker` command line option, since it doesn't support process selectors in the `nextflow.config` file, and doesn't check for the `container` process directive in the pipeline script file. Let's suppose you have two processes named `foo` and `bar`. You can specify two different Docker images for them in the Nextflow script as shown below:
+It is possible to specify a different Docker image for each process definition in your pipeline script. For example, suppose you have two processes named `hello` and `bye`. You can specify two different Docker images for them in the config file as shown below:
 
 ```groovy
 process {
-    withName:foo {
+    withName:hello {
         container = 'image_name_1'
     }
-    withName:bar {
+    withName:bye {
         container = 'image_name_2'
     }
 }
@@ -270,7 +270,7 @@ Every time your script launches a process execution, Nextflow will run it into a
 A Docker image can contain any tool or piece of software you may need to carry out a process execution. Moreover, the container is run in such a way that the process result files are created in the host file system, thus it behaves in a completely transparent manner without requiring extra steps or affecting the flow in your pipeline.
 :::
 
-If you want to avoid entering the Docker image as a command line parameter, you can define it in the Nextflow configuration file. For example you can add the following lines in the `nextflow.config` file:
+If you want to avoid entering the Docker image as a command line parameter, you can define it in the Nextflow configuration file. For example you can add the following lines in the configuration file:
 
 ```groovy
 process.container = 'nextflow/examples:latest'
@@ -279,7 +279,7 @@ docker.enabled = true
 
 In the above example replace `nextflow/examples:latest` with any Docker image of your choice.
 
-Read the {ref}`config-page` page to learn more about the `nextflow.config` file and how to use it to configure your pipeline execution.
+Read the {ref}`config-page` page to learn more about the configuration file and how to use it to configure your pipeline execution.
 
 :::{warning}
 Nextflow automatically manages the file system mounts whenever a container is launched depending on the process input files. However, when a process input is a *symbolic link*, the linked file **must** be stored in the same folder where the symlink is located, or a sub-folder of it. Otherwise the process execution will fail because the launched container won't be able to access the linked file.
@@ -287,10 +287,10 @@ Nextflow automatically manages the file system mounts whenever a container is la
 
 ### Multiple containers
 
-It is possible to specify a different Docker image for each process definition in your pipeline script. Let's suppose you have two processes named `foo` and `bar`. You can specify two different Docker images for them in the Nextflow script as shown below:
+It is possible to specify a different Docker image for each process definition in your pipeline script. Suppose you have two processes named `hello` and `bye`. You can specify two different Docker images for them in the Nextflow script as shown below:
 
-```groovy
-process foo {
+```nextflow
+process hello {
   container 'image_name_1'
 
   script:
@@ -299,7 +299,7 @@ process foo {
   """
 }
 
-process bar {
+process bye {
   container 'image_name_2'
 
   script:
@@ -309,14 +309,14 @@ process bar {
 }
 ```
 
-Alternatively, the same containers definitions can be provided by using the `nextflow.config` file as shown below:
+Alternatively, the same containers definitions can be provided by using the configuration file as shown below:
 
 ```groovy
 process {
-    withName:foo {
+    withName:hello {
         container = 'image_name_1'
     }
-    withName:bar {
+    withName:bye {
         container = 'image_name_2'
     }
 }
@@ -359,7 +359,7 @@ Every time your script launches a process execution, Nextflow will run it into a
 An OCI container image can contain any tool or piece of software you may need to carry out a process execution. Moreover, the container is run in such a way that the process result files are created in the host file system, thus it behaves in a completely transparent manner without requiring extra steps or affecting the flow in your pipeline.
 :::
 
-If you want to avoid entering the Podman image as a command line parameter, you can define it in the Nextflow configuration file. For example you can add the following lines in the `nextflow.config` file:
+If you want to avoid entering the Podman image as a command line parameter, you can define it in the Nextflow configuration file. For example you can add the following lines in the configuration file:
 
 ```groovy
 process.container = 'nextflow/examples:latest'
@@ -368,7 +368,7 @@ podman.enabled = true
 
 In the above example replace `nextflow/examples:latest` with any Podman image of your choice.
 
-Read the {ref}`config-page` page to learn more about the `nextflow.config` file and how to use it to configure your pipeline execution.
+Read the {ref}`config-page` page to learn more about the configuration file and how to use it to configure your pipeline execution.
 
 :::{warning}
 Nextflow automatically manages the file system mounts whenever a container is launched depending on the process input files. However, when a process input is a *symbolic link*, the linked file **must** be stored in the same folder where the symlink is located, or a sub-folder of it. Otherwise the process execution will fail because the launched container won't be able to access the linked file.
@@ -376,10 +376,10 @@ Nextflow automatically manages the file system mounts whenever a container is la
 
 ### Multiple containers
 
-It is possible to specify a different container image for each process definition in your pipeline script. Let's suppose you have two processes named `foo` and `bar`. You can specify two different container images for them in the Nextflow script as shown below:
+It is possible to specify a different container image for each process definition in your pipeline script. Let's suppose you have two processes named `hello` and `bye`. You can specify two different container images for them in the Nextflow script as shown below:
 
-```groovy
-process foo {
+```nextflow
+process hello {
   container 'image_name_1'
 
   script:
@@ -388,7 +388,7 @@ process foo {
   """
 }
 
-process bar {
+process bye {
   container 'image_name_2'
 
   script:
@@ -398,14 +398,14 @@ process bar {
 }
 ```
 
-Alternatively, the same containers definitions can be provided by using the `nextflow.config` file as shown below:
+Alternatively, the same containers definitions can be provided by using the configuration file as shown below:
 
 ```groovy
 process {
-    withName:foo {
+    withName:hello {
         container = 'image_name_1'
     }
-    withName:bar {
+    withName:bye {
         container = 'image_name_2'
     }
 }
@@ -456,14 +456,14 @@ if you do not specify an image tag, the `latest` tag will be fetched by default.
 
 ### Multiple containers
 
-It is possible to specify a different Sarus image for each process definition in your pipeline script. For example, let's suppose you have two processes named `foo` and `bar`. You can specify two different Sarus images specifying them in the `nextflow.config` file as shown below:
+It is possible to specify a different Sarus image for each process definition in your pipeline script. For example, suppose you have two processes named `hello` and `bye`. You can specify two different Sarus images specifying them in the configuration file as shown below:
 
 ```groovy
 process {
-    withName:foo {
+    withName:hello {
         container = 'image_name_1'
     }
-    withName:bar {
+    withName:bye {
         container = 'image_name_2'
     }
 }
@@ -506,14 +506,14 @@ Shifter will search the Docker Hub registry for the images. If you do not specif
 
 ### Multiple containers
 
-It is possible to specify a different Shifter image for each process definition in your pipeline script. For example, let's suppose you have two processes named `foo` and `bar`. You can specify two different Shifter images specifying them in the `nextflow.config` file as shown below:
+It is possible to specify a different Shifter image for each process definition in your pipeline script. For example, suppose you have two processes named `hello` and `bye`. You can specify two different Shifter images specifying them in the configuration file as shown below:
 
 ```groovy
 process {
-    withName:foo {
+    withName:hello {
         container = 'image_name_1'
     }
-    withName:bar {
+    withName:bye {
         container = 'image_name_2'
     }
 }
@@ -561,7 +561,7 @@ Every time your script launches a process execution, Nextflow will run it into a
 A Singularity image can contain any tool or piece of software you may need to carry out a process execution. Moreover, the container is run in such a way that the process result files are created in the host file system, thus it behaves in a completely transparent manner without requiring extra steps or affecting the flow in your pipeline.
 :::
 
-If you want to avoid entering the Singularity image as a command line parameter, you can define it in the Nextflow configuration file. For example you can add the following lines in the `nextflow.config` file:
+If you want to avoid entering the Singularity image as a command line parameter, you can define it in the Nextflow configuration file. For example you can add the following lines in the configuration file:
 
 ```groovy
 process.container = '/path/to/singularity.img'
@@ -570,7 +570,7 @@ singularity.enabled = true
 
 In the above example replace `/path/to/singularity.img` with any Singularity image of your choice.
 
-Read the {ref}`config-page` page to learn more about the `nextflow.config` file and how to use it to configure your pipeline execution.
+Read the {ref}`config-page` page to learn more about the configuration file and how to use it to configure your pipeline execution.
 
 :::{note}
 Unlike Docker, Nextflow does not automatically mount host paths in the container when using Singularity. It expects that the paths are configure and mounted system wide by the Singularity runtime. If your Singularity installation allows user defined bind points, read the {ref}`Singularity configuration <config-singularity>` section to learn how to enable Nextflow auto mounts.
@@ -594,14 +594,14 @@ The execution command for Singularity/Apptainer containers can be set to `run` b
 
 ### Multiple containers
 
-It is possible to specify a different Singularity image for each process definition in your pipeline script. For example, let's suppose you have two processes named `foo` and `bar`. You can specify two different Singularity images specifying them in the `nextflow.config` file as shown below:
+It is possible to specify a different Singularity image for each process definition in your pipeline script. For example, suppose you have two processes named `hello` and `bye`. You can specify two different Singularity images specifying them in the configuration file as shown below:
 
 ```groovy
 process {
-    withName:foo {
+    withName:hello {
         container = 'image_name_1'
     }
-    withName:bar {
+    withName:bye {
         container = 'image_name_2'
     }
 }

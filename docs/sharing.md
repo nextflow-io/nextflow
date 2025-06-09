@@ -16,10 +16,10 @@ You can configure your credentials for various Git providers in the Git configur
 
 Nextflow can work with repositories stored in a local or shared file system. The repository must be created as a [bare repository](https://craftquest.io/articles/what-is-a-bare-git-repository).
 
-For example, given a bare repository at `/shared/projects/foo.git`, Nextflow is able to run it using the following syntax:
+For example, given a bare repository at `/shared/projects/hello.git`, Nextflow is able to run it using the following syntax:
 
 ```bash
-nextflow run file:/shared/projects/foo.git
+nextflow run file:/shared/projects/hello.git
 ```
 
 See [Git documentation](https://git-scm.com/book/en/v2/Git-on-the-Server-Getting-Git-on-a-Server) for more details about how create and manage bare repositories.
@@ -38,16 +38,16 @@ To learn more about this and other project metadata information, that can be def
 
 Once you have uploaded your pipeline project to GitHub other people can execute it simply using the project name or the repository URL.
 
-For if your GitHub account name is `foo` and you have uploaded a project into a repository named `bar` the repository URL will be `http://github.com/foo/bar` and people will able to download and run it by using either the command:
+For if your GitHub account name is `acme` and you have uploaded a project into a repository named `hello` the repository URL will be `http://github.com/acme/hello` and people will able to download and run it by using either the command:
 
 ```bash
-nextflow run foo/bar
+nextflow run acme/hello
 ```
 
 or
 
 ```bash
-nextflow run http://github.com/foo/bar
+nextflow run http://github.com/acme/hello
 ```
 
 See the {ref}`CLI <cli-page>` page to learn how to use the Nextflow command line to run pipelines and manage pipeline projects.
@@ -215,8 +215,8 @@ Any environment variable that may be required by the tools in your pipeline can 
 
 ```groovy
 env {
-  DELTA = 'foo'
-  GAMMA = 'bar'
+  DELTA = 'hello'
+  GAMMA = 'world'
 }
 ```
 
