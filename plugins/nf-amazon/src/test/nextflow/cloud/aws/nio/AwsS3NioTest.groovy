@@ -74,10 +74,12 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
     static private Map config0() {
         def accessKey = System.getenv('AWS_S3FS_ACCESS_KEY')
         def secretKey = System.getenv('AWS_S3FS_SECRET_KEY')
-        return [aws: [access_key: accessKey, secret_key: secretKey]]
+        return [aws:[accessKey: accessKey, secretKey: secretKey]]
     }
 
     def setup() {
+        def fs = (S3FileSystem)FileHelper.getOrCreateFileSystemFor(URI.create("s3:///"), config0().aws)
+        and:
         def cfg = config0()
         Global.config = cfg
         Global.session = Mock(Session) { getConfig()>>cfg }
@@ -211,7 +213,6 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         if( bucketName ) deleteBucket(bucketName)
     }
 
-
     def 'should copy a stream to bucket' () {
         given:
         def TEXT = "Hello world!"
@@ -243,7 +244,6 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         cleanup:
         if( bucketName ) deleteBucket(bucketName)
     }
-
 
     def 'copy local file to a bucket' () {
         given:
@@ -1113,8 +1113,8 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         client.getObjectKmsKeyId(target.bucket,  "$target.key/file-1.txt") == KEY
         client.getObjectKmsKeyId(target.bucket,  "$target.key/alpha/beta/file-5.txt") == KEY
         and:
-        client.getObjectTags(target.bucket,  "$target.key/file-1.txt") == [ new Tag('ONE','HELLO') ]
-        client.getObjectTags(target.bucket,  "$target.key/alpha/beta/file-5.txt") == [ new Tag('ONE','HELLO') ]
+        client.getObjectTags(target.bucket,  "$target.key/file-1.txt") == [ Tag.builder().key('ONE').value('HELLO').build() ]
+        client.getObjectTags(target.bucket,  "$target.key/alpha/beta/file-5.txt") == [ Tag.builder().key('ONE').value('HELLO').build() ]
 
         cleanup:
         target?.deleteDir()

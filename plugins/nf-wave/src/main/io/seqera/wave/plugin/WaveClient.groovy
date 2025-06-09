@@ -230,7 +230,8 @@ class WaveClient {
                 dryRun: ContainerInspectMode.dryRun(),
                 mirror: config.mirrorMode(),
                 scanMode: config.scanMode(),
-                scanLevels: config.scanAllowedLevels()
+                scanLevels: config.scanAllowedLevels(),
+                buildCompression: config.buildCompression()
         )
     }
 
@@ -257,7 +258,8 @@ class WaveClient {
                 dryRun: ContainerInspectMode.dryRun(),
                 mirror: config.mirrorMode(),
                 scanMode: config.scanMode(),
-                scanLevels: config.scanAllowedLevels()
+                scanLevels: config.scanAllowedLevels(),
+                buildCompression: config.buildCompression()
         )
         return sendRequest(request)
     }
@@ -315,7 +317,7 @@ class WaveClient {
                     return sendRequest0(request, attempt+1)
                 }
                 else
-                    throw new UnauthorizedException("Unauthorized [401] - Verify you have provided a valid access token")
+                    throw new UnauthorizedException("Unauthorized [401] - Verify you have provided a valid Seqera Platform access token")
             }
             else
                 throw new BadResponseException("Wave invalid response: POST ${uri} [${resp.statusCode()}] ${resp.body()}")
