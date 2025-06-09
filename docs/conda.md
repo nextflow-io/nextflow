@@ -46,7 +46,7 @@ Alternatively, it can be specified by setting the variable `NXF_CONDA_ENABLED=tr
 Conda package names can specified using the `conda` directive. Multiple package names can be specified by separating them with a blank space. For example:
 
 ```nextflow
-process foo {
+process hello {
   conda 'bwa samtools multiqc'
 
   script:
@@ -82,7 +82,7 @@ Read the Conda documentation for more details about how to create [environment f
 The path of an environment file can be specified using the `conda` directive:
 
 ```nextflow
-process foo {
+process hello {
   conda '/some/path/my-env.yaml'
 
   script:
@@ -174,7 +174,7 @@ Conda lock files must be a text file with the `.txt` extension.
 If you already have a local Conda environment, you can use it in your workflow specifying the installation directory of such environment by using the `conda` directive:
 
 ```nextflow
-process foo {
+process hello {
   conda '/path/to/an/existing/env/directory'
 
   script:

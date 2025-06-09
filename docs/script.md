@@ -136,9 +136,9 @@ The `assert` keyword simply tests a condition and raises an error if the conditi
 Comparison operators can be used to compare two values:
 
 ```nextflow
-assert 3 < 3.14         // numbers are compared as, well, numbers
+assert 3 < 3.14             // numbers are compared as numbers
 assert 3 <= 3
-assert 'foo' > 'bar'    // strings are compared alphabetically
+assert 'hello' < 'world'    // strings are compared alphabetically
 ```
 
 Logical operators can be used to perform Boolean logic:
@@ -297,15 +297,15 @@ Regular expressions are the Swiss Army knife of text processing. They provide th
 Use `=~` to check whether a given pattern occurs anywhere in a string:
 
 ```nextflow
-assert 'foo' =~ /foo/
-assert 'foobar' =~ /foo/
+assert 'hello' =~ /hello/
+assert 'hello world' =~ /hello/
 ```
 
 Use `==~` to check whether a string matches a given regular expression pattern exactly.
 
 ```nextflow
-assert 'foo' ==~ /foo/
-assert !('foobar' ==~ /foo/)
+assert 'hello' ==~ /hello/
+assert !('hello world' ==~ /hello/)
 ```
 
 ### String replacement

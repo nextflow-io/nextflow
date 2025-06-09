@@ -100,7 +100,7 @@ The `machineType` directive can be used to request a specific VM instance type. 
 Platform [machine type](https://cloud.google.com/compute/docs/machine-types) or [custom machine type](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type).
 
 ```nextflow
-process myTask {
+process my_task {
     cpus 8
     memory '40 GB'
 
@@ -110,7 +110,7 @@ process myTask {
     """
 }
 
-process anotherTask {
+process other_task {
     machineType 'n1-highmem-8'
 
     script:
@@ -127,7 +127,7 @@ The `machineType` directive can also be a comma-separated list of patterns. The 
 number of characters and `?` to match any single character. Examples of valid patterns: `c2-*`, `m?-standard*`, `n*`.
 
 ```nextflow
-process myTask {
+process my_task {
     cpus 8
     memory '20 GB'
     machineType 'n2-*,c2-*,m3-*'
@@ -146,7 +146,7 @@ The `machineType` directive can also be an [Instance Template](https://cloud.goo
 specified as `template://<instance-template>`. For example:
 
 ```nextflow
-process myTask {
+process my_task {
     cpus 8
     memory '20 GB'
     machineType 'template://my-template'

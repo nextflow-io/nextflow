@@ -26,7 +26,7 @@ import org.codehaus.groovy.runtime.InvokerHelper
  * Helper class used to wrap a generic key object and to attach it
  * a size attribute to implement a dynamic `groupTuple` size rule
  *
- * See {@link nextflow.Nextflow#groupKey(java.lang.Object)}
+ * See {@link nextflow.Nextflow#groupKey(java.lang.Object, int i)}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
