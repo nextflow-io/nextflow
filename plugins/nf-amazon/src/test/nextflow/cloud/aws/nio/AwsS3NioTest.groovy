@@ -1106,8 +1106,8 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         client.getObjectKmsKeyId(target.bucket,  "$target.key/file-1.txt") == KEY
         client.getObjectKmsKeyId(target.bucket,  "$target.key/alpha/beta/file-5.txt") == KEY
         and:
-        client.getObjectTags(target.bucket,  "$target.key/file-1.txt") == [ new Tag('ONE','HELLO') ]
-        client.getObjectTags(target.bucket,  "$target.key/alpha/beta/file-5.txt") == [ new Tag('ONE','HELLO') ]
+        client.getObjectTags(target.bucket,  "$target.key/file-1.txt") == [ Tag.builder().key('ONE').value('HELLO').build() ]
+        client.getObjectTags(target.bucket,  "$target.key/alpha/beta/file-5.txt") == [ Tag.builder().key('ONE').value('HELLO').build() ]
 
         cleanup:
         target?.deleteDir()
