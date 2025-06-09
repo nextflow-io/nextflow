@@ -1,0 +1,26 @@
+name: Security SCA Scan Cron weekly
+# This workflow runs a security scan on the specified branches of the Nextflow repository once a week
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: 
+          - "STABLE-24.10.x"
+          - "STABLE-25.04.x"
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 #v4.2.2
+      - name: Run Security SCA Scan
+        uses: ./.github/actions/security-scan-branch
+        with:
+          branch: ${{ matrix.branch }}
