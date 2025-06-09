@@ -81,6 +81,7 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
+import nextflow.cloud.azure.config.AzBatchOpts
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzFileShareOpts
 import nextflow.cloud.azure.config.AzPoolOpts
@@ -508,12 +509,26 @@ class AzBatchService implements Closeable {
 
         // Handle Fusion settings
         final fusionEnabled = FusionHelper.isFusionEnabled((Session)Global.session)
-        final launcher = fusionEnabled ? FusionScriptLauncher.create(task.toTaskBean(), 'az') : null
+        String fusionCmd = null
         if( fusionEnabled ) {
+            // Create the FusionScriptLauncher from the TaskBean
+            final taskBean = task.toTaskBean()
+            final launcher = FusionScriptLauncher.create(taskBean, 'az')
+            
+            // Add container options
             opts += "--privileged "
-            for( Map.Entry<String,String> it : launcher.fusionEnv() ) {
-                opts += "-e $it.key=$it.value "
+
+            // Add all environment variables from the launcher
+            final fusionEnv = launcher.fusionEnv()
+            if( fusionEnv ) {
+                for( Map.Entry<String,String> it : fusionEnv ) {
+                    opts += "-e $it.key=$it.value "
+                }
             }
+            
+            // Get the fusion submit command
+            final List<String> cmdList = launcher.fusionSubmitCli(task)
+            fusionCmd = cmdList ? String.join(' ', cmdList) : null
         }
 
         // Create container settings
@@ -521,15 +536,13 @@ class AzBatchService implements Closeable {
                 .setContainerRunOptions(opts)
 
         // submit command line
-        final String cmd = fusionEnabled
-                ? launcher.fusionSubmitCli(task).join(' ')
-                : "bash -o pipefail -c 'bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}'"
+        final String cmd = fusionEnabled && fusionCmd
+                    ? fusionCmd
+                    : "bash -o pipefail -c 'bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}'"
         // cpus and memory
         final slots = computeSlots(task, pool)
         // max wall time
-        final constraints = new BatchTaskConstraints()
-        if( task.config.getTime() )
-            constraints.setMaxWallClockTime( Duration.of(task.config.getTime().toMillis(), ChronoUnit.MILLIS) )
+        final constraints = taskConstraints(task)
 
         log.trace "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
         return new BatchTaskCreateContent(taskId, cmd)
@@ -539,6 +552,19 @@ class AzBatchService implements Closeable {
                 .setOutputFiles(outputFileUrls(task, sas))
                 .setRequiredSlots(slots)
                 .setConstraints(constraints)
+    }
+
+    /**
+     * Create task constraints based on the task configuration
+     * 
+     * @param task The task run to create constraints for
+     * @return The BatchTaskConstraints object
+     */
+    protected BatchTaskConstraints taskConstraints(TaskRun task) {
+        final constraints = new BatchTaskConstraints()
+        if( task.config.getTime() )
+            constraints.setMaxWallClockTime( Duration.of(task.config.getTime().toMillis(), ChronoUnit.MILLIS) )
+        return constraints
     }
 
     AzTaskKey runTask(String poolId, String jobId, TaskRun task) {
@@ -599,6 +625,13 @@ class AzBatchService implements Closeable {
         List<OutputFile> result = new ArrayList<>(20)
         result << destFile(TaskRun.CMD_EXIT, task.workDir, sas)
         result << destFile(TaskRun.CMD_LOG, task.workDir, sas)
+        result << destFile(TaskRun.CMD_OUTFILE, task.workDir, sas)
+        result << destFile(TaskRun.CMD_ERRFILE, task.workDir, sas)
+        result << destFile(TaskRun.CMD_SCRIPT, task.workDir, sas)
+        result << destFile(TaskRun.CMD_RUN, task.workDir, sas)
+        result << destFile(TaskRun.CMD_STAGE, task.workDir, sas)
+        result << destFile(TaskRun.CMD_TRACE, task.workDir, sas)
+        result << destFile(TaskRun.CMD_ENV, task.workDir, sas)
         return result
     }
 

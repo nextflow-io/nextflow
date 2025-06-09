@@ -31,7 +31,6 @@ import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributes
 
 import com.amazonaws.services.s3.AmazonS3
-import com.amazonaws.services.s3.model.AmazonS3Exception
 import com.amazonaws.services.s3.model.Tag
 import groovy.util.logging.Slf4j
 import nextflow.Global
@@ -58,22 +57,20 @@ import spock.lang.Unroll
 class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
     @Shared
-    static AmazonS3 s3Client0
+    private AmazonS3 s3Client0
 
     AmazonS3 getS3Client() { s3Client0 }
-
-    static {
-        def fs = (S3FileSystem)FileHelper.getOrCreateFileSystemFor(URI.create("s3:///"), config0())
-        s3Client0 = fs.client.getClient()
-    }
 
     static private Map config0() {
         def accessKey = System.getenv('AWS_S3FS_ACCESS_KEY')
         def secretKey = System.getenv('AWS_S3FS_SECRET_KEY')
-        return [aws: [access_key: accessKey, secret_key: secretKey]]
+        return [aws:[accessKey: accessKey, secretKey: secretKey]]
     }
 
     def setup() {
+        def fs = (S3FileSystem)FileHelper.getOrCreateFileSystemFor(URI.create("s3:///"), config0().aws)
+        s3Client0 = fs.client.getClient()
+        and:
         def cfg = config0()
         Global.config = cfg
         Global.session = Mock(Session) { getConfig()>>cfg }
@@ -207,7 +204,6 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         if( bucketName ) deleteBucket(bucketName)
     }
 
-
     def 'should copy a stream to bucket' () {
         given:
         def TEXT = "Hello world!"
@@ -239,7 +235,6 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         cleanup:
         if( bucketName ) deleteBucket(bucketName)
     }
-
 
     def 'copy local file to a bucket' () {
         given:
