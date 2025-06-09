@@ -39,4 +39,4 @@
 #
 
 # if not present, FileSystems.newFileSystem throw NotProviderFoundException
-nextflow.cloud.aws.nio.S3FileSystemProvider
+software.amazon.nio.spi.s3.NextflowS3FileSystemProvider

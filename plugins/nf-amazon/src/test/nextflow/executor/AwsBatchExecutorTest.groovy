@@ -13,7 +13,7 @@ import nextflow.Session
 import nextflow.SysEnv
 import nextflow.cloud.aws.batch.AwsBatchExecutor
 import nextflow.cloud.aws.batch.AwsOptions
-import nextflow.cloud.aws.util.S3PathFactory
+import software.amazon.nio.spi.s3.S3PathFactory
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import spock.lang.Specification

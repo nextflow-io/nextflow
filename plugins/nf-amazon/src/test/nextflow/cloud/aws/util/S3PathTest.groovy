@@ -1,6 +1,5 @@
 package nextflow.cloud.aws.util
 
-import nextflow.cloud.aws.nio.S3Path
 import nextflow.file.FileHelper
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -58,19 +57,6 @@ class S3PathTest extends Specification {
         path1.hashCode() == path2.hashCode()
         path1.hashCode() != path3.hashCode()
         path3.hashCode() != path4.hashCode()
-    }
-
-    @Unroll
-    def 'should determine bucket name' () {
-        expect:
-        S3Path.bucketName(new URI(URI_PATH)) == BUCKET
-
-        where:
-        URI_PATH            | BUCKET
-        's3:///'            | null
-        's3:///foo'         | 'foo'
-        's3:///foo/'        | 'foo'
-        's3:///foo/bar'     | 'foo'
     }
 
     @Unroll

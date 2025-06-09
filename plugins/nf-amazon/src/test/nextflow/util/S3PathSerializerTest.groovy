@@ -16,7 +16,7 @@
 
 package nextflow.util
 
-import nextflow.cloud.aws.util.S3PathFactory
+import software.amazon.nio.spi.s3.S3PathFactory
 import spock.lang.Specification
 /**
  *
@@ -29,7 +29,7 @@ class S3PathSerializerTest extends Specification {
         def path = S3PathFactory.parse('s3://mybucket/file.txt')
         def buffer = KryoHelper.serialize(path)
         then:
-        KryoHelper.deserialize(buffer).getClass().getName() == 'nextflow.cloud.aws.nio.S3Path'
+        KryoHelper.deserialize(buffer).getClass().getName() == 'software.amazon.nio.spi.s3.S3Path'
         KryoHelper.deserialize(buffer) == S3PathFactory.parse('s3://mybucket/file.txt')
     }
 
@@ -38,7 +38,7 @@ class S3PathSerializerTest extends Specification {
         def path = S3PathFactory.parse('s3://mybucket/file with spaces.txt')
         def buffer = KryoHelper.serialize(path)
         then:
-        KryoHelper.deserialize(buffer).getClass().getName() == 'nextflow.cloud.aws.nio.S3Path'
+        KryoHelper.deserialize(buffer).getClass().getName() == 'software.amazon.nio.spi.s3.S3Path'
         KryoHelper.deserialize(buffer) == S3PathFactory.parse('s3://mybucket/file with spaces.txt')
     }
 

@@ -13,11 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.cloud.aws.util
+package software.amazon.nio.spi.s3
+
+import nextflow.cloud.aws.util.S3BashLib
 
 import java.nio.file.Path
 
-import nextflow.cloud.aws.nio.S3Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Global
@@ -37,8 +38,7 @@ class S3PathFactory extends FileSystemPathFactory {
     protected Path parseUri(String str) {
         // normalise 's3' path
         if( str.startsWith('s3://') && str[5]!='/' ) {
-            final path = "s3:///${str.substring(5)}"
-            return create(path)
+            return create(str)
         }
         return null
     }
@@ -50,7 +50,10 @@ class S3PathFactory extends FileSystemPathFactory {
 
     @Override
     protected String toUriString(Path path) {
-        return path instanceof S3Path ? "s3:/$path".toString() : null
+        if( !isS3Path(path) )
+            return null
+        final s3path = path as S3Path
+        return "s3://${s3path.bucketName()}/${s3path.getKey()}".toString()
     }
 
     @Override
@@ -60,7 +63,7 @@ class S3PathFactory extends FileSystemPathFactory {
 
     @Override
     protected String getUploadCmd(String source, Path target) {
-        return target instanceof S3Path
+        return isS3Path(target)
                 ? AwsBatchFileCopyStrategy.uploadCmd(source,target)
                 : null
     }
@@ -76,11 +79,15 @@ class S3PathFactory extends FileSystemPathFactory {
      * @return
      *      The corresponding {@link S3Path}
      */
-    static S3Path create(String path) {
+    static Path create(String path) {
         if( !path ) throw new IllegalArgumentException("Missing S3 path argument")
-        if( !path.startsWith('s3:///') ) throw new IllegalArgumentException("S3 path must start with s3:/// prefix -- offending value '$path'")
+        if( !path.startsWith('s3://') ) throw new IllegalArgumentException("S3 path must start with s3:// prefix -- offending value '$path'")
         // note: this URI constructor parse the path parameter and extract the `scheme` and `authority` components
-        final uri = new URI(null,null, path,null,null)
-        return (S3Path)FileHelper.getOrCreateFileSystemFor(uri,config()).provider().getPath(uri)
+        final uri =  new URI(null,null, path,null,null)
+        return FileHelper.getOrCreateFileSystemFor(uri,config()).provider().getPath(uri)
+    }
+
+    static boolean isS3Path(Path path){
+        return path instanceof S3Path
     }
 }

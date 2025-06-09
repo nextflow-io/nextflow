@@ -11,7 +11,7 @@ import java.nio.file.Path
 
 import nextflow.Global
 import nextflow.SysEnv
-import nextflow.cloud.aws.util.S3PathFactory
+import software.amazon.nio.spi.s3.S3PathFactory
 import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.TaskBean
 import spock.lang.Specification

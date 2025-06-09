@@ -16,14 +16,14 @@
 
 package nextflow.cloud.aws.batch
 
-import java.nio.file.FileSystems
+
 import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.cloud.aws.config.AwsConfig
-import nextflow.cloud.aws.util.S3PathFactory
+import software.amazon.nio.spi.s3.S3PathFactory
 import nextflow.processor.TaskBean
 import nextflow.util.Duration
 import spock.lang.Specification
