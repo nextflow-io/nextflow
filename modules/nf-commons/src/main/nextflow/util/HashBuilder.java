@@ -26,6 +26,7 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -323,35 +324,29 @@ public class HashBuilder {
     }
 
     static protected Hasher hashDirSha256( Hasher hasher, Path dir, Path base ) {
-        try {
-            var entries = new HashMap<String, String>();
+        try( var files = Files.walk(dir) ) {
+            var iterator = files
+                .map((path) -> {
+                    if( Files.isDirectory(path) ) {
+                        log.trace("Hash sha-256 dir content [DIR] path={} - base={}", path, base);
+                        return relativePath(path, base).toString();
+                    }
 
-            Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
-                @Override
-                public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
                     log.trace("Hash sha-256 dir content [FILE] path={} - base={}", path, base);
                     try {
                         // the file relative path
                         var name = relativePath(path, base).toString();
                         // the file content sha-256 checksum
                         var value = sha256Cache.get(path);
-                        entries.put(name, value);
-                        return FileVisitResult.CONTINUE;
+                        return Map.entry(name, value);
                     }
                     catch (ExecutionException t) {
-                        throw new IOException("Failed to get SHA-256 from cache for " + path, t);
+                        throw new RuntimeException("Failed to get SHA-256 from cache for file: " + FilesEx.toUriString(dir), t);
                     }
-                }
+                })
+                .iterator();
 
-                @Override
-                public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes attrs) {
-                    log.trace("Hash sha-256 dir content [DIR] path={} - base={}", path, base);
-                    entries.put(relativePath(path, base).toString(), null);
-                    return FileVisitResult.CONTINUE;
-                }
-            });
-
-            return hashUnorderedCollection(hasher, entries.entrySet(), HashMode.SHA256);
+            return hashUnorderedCollection(hasher, iterator, HashMode.SHA256);
         }
         catch (IOException t) {
             var err = t.getCause() != null ? t.getCause() : t;
@@ -447,17 +442,21 @@ public class HashBuilder {
     }
 
     static private Hasher hashUnorderedCollection(Hasher hasher, Collection collection, HashMode mode)  {
+        return hashUnorderedCollection(hasher, collection.iterator(), mode);
+    }
+
+    static private Hasher hashUnorderedCollection(Hasher hasher, Iterator iterator, HashMode mode)  {
 
         byte[] resultBytes = new byte[HASH_BYTES];
-        for (Object item : collection) {
+        iterator.forEachRemaining((item) -> {
             byte[] nextBytes = HashBuilder.hasher(defaultHasher(), item, mode).hash().asBytes();
             if( nextBytes.length != resultBytes.length )
                 throw new IllegalStateException("All hash codes must have the same bit length");
-
+    
             for (int i = 0; i < nextBytes.length; i++) {
                 resultBytes[i] += nextBytes[i];
             }
-        }
+        });
 
         return hasher.putBytes(resultBytes);
     }
