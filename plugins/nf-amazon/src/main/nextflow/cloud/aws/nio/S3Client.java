@@ -242,7 +242,7 @@ public class S3Client {
 	 * @see software.amazon.awssdk.services.s3.S3Client#getBucketAcl
 	 */
 	public AccessControlPolicy getBucketAcl(String bucket) {
-		GetBucketAclResponse response = client.getBucketAcl(GetBucketAclRequest.builder().bucket(bucket).;
+		GetBucketAclResponse response = client.getBucketAcl(GetBucketAclRequest.builder().bucket(bucket).build());
         return AccessControlPolicy.builder().grants(response.grants()).owner(response.owner()).build();
 	}
 
