@@ -33,14 +33,11 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-resourcelabels`
 - {ref}`process-time`
 
-See the {ref}`AWS Batch<aws-batch>` page for further configuration details.
+See {ref}`aws-batch` for more information.
 
 (azurebatch-executor)=
 
 ## Azure Batch
-
-:::{versionadded} 21.04.0
-:::
 
 Nextflow supports the [Azure Batch](https://azure.microsoft.com/en-us/services/batch/) service that allows job submission in the cloud without having to spin out and manage a cluster of virtual machines. Azure Batch uses Docker containers to run tasks, which greatly simplifies pipeline deployment.
 
@@ -62,7 +59,7 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-resourcelabels`
 - {ref}`process-time`
 
-See the {ref}`Azure Batch <azure-batch>` page for further configuration details.
+See {ref}`azure-batch` for more information.
 
 (bridge-executor)=
 
