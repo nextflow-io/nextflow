@@ -21,6 +21,7 @@ The default Spot reclamation retry setting changed to `0` on AWS and Google. By 
 If you rely on silent Spot retries (the previous default behavior), you may now see more tasks fail with the following characteristics:
 
 - **AWS**: Generic failure with `exit code 1`. You may see messages indicating the host machine was terminated.
+
 - **Google**: Spot reclamation typically produces a specific code, but is now surfaced as a recognizable task failure in Nextflow logs.
 
 Since the default for Spot retries is now `0`, you must actively enable a retry strategy if you want Nextflow to handle reclaimed Spot Instances automatically.
@@ -39,21 +40,11 @@ If you resume the pipeline using the resume option, it will pick up at the point
 
 ### Re-enable Spot retries
 
-You can re-enable Spot retries at the provider level in your Nextflow configuration:
+You can re-enable Spot retries for each provider in your Nextflow config:
 
-```
-// nextflow.config
-aws {
-    batch {
-        maxSpotAttempts = 5
-    }
-}
-
-google {
-    batch {
-        maxSpotAttempts = 5
-    }
-}
+```groovy
+aws.batch.maxSpotAttempts = 5
+google.batch.maxSpotAttempts = 5
 ```
 
 The above example sets the maximum number of Spot retries to `5` for both AWS and Google.
@@ -62,16 +53,15 @@ The above example sets the maximum number of Spot retries to `5` for both AWS an
 
 You can set `maxRetries` to enable Nextflow-level retries for any failure:
 
-```
-// nextflow.config
-process {
-    maxRetries = 5
-}
+```groovy
+process.maxRetries = 5
 ```
 
-The above example sets retries to `5` for any failures, not just failures at the provider level.
+The above example sets retries to `5` for any failures across all providers.
 
-### Use Fusion Snapshots (AWS Batch only)
+### Use Fusion Snapshots
+
+*This option is only available for AWS Batch.*
 
 If you have long-running tasks where progress lost due to Spot reclamation is costly, consider [Fusion Snapshots](https://docs.seqera.io/fusion/guide/snapshots) (if supported by your environment). Fusion Snapshots allow you to resume a partially completed task on a new machine if a Spot Instance is reclaimed, thereby reducing wasted compute time.
 
@@ -87,7 +77,10 @@ See [Fusion Snapshots for AWS Batch](https://docs.seqera.io/fusion/guide/snapsho
 
 Best practices for Spot Instance failures and retries:
 
-- **Evaluate job duration**: If your tasks are very long (multi-hour or multi-day), Spot Instances can cause repeated interruptions. Consider using on-demand instances or Fusion Snapshots.
+- **Evaluate job duration**: If your tasks are very long (multiple hours or more), Spot Instances can cause repeated interruptions. Consider using on-demand instances or Fusion Snapshots.
+
 - **Set sensible retry limits**: If you enable Spot retries, choose a retry count that balances the cost savings of Spot usage against the overhead of restarting tasks.
+
 - **Monitor logs and exit codes**: Failures due to Spot reclamation will now appear in Nextflow logs. Monitor failures and fine-tune your strategy.
+
 - **Consider partial usage of Spot**: Some workflows may mix on-demand instances for critical or long tasks and Spot Instances for shorter, less critical tasks. This can optimize cost while minimizing wasted compute time.

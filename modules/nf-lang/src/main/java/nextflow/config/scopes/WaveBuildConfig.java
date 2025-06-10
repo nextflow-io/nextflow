@@ -37,6 +37,8 @@ public class WaveBuildConfig implements ConfigScope {
 
     public WaveBuildSpackConfig spack;
 
+    public WaveBuildCompression compression;
+
 }
 
 class WaveBuildCondaConfig implements ConfigScope {
@@ -75,4 +77,24 @@ class WaveBuildSpackConfig implements ConfigScope {
     """)
     public String commands;
 
+}
+
+class WaveBuildCompression implements ConfigScope {
+    @ConfigOption
+    @Description("""
+        Defines the compression algorithm that should be used when building the container. Allowed values are: `gzip`, `estargz` and `zstd` (default: `gzip`).
+    """)
+    public String mode;
+
+    @ConfigOption
+    @Description("""
+        Level of compression used when building a container depending the chosen algorithm: gzip, estargz (0-9) and zstd (0-22).
+    """)
+    public Integer level;
+
+    @ConfigOption
+    @Description("""
+        Forcefully apply compression option to all layers, including already existing layers (default: `false`).
+    """)
+    public boolean force;
 }

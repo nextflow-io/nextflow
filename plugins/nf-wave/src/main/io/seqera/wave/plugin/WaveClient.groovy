@@ -17,7 +17,6 @@
 
 package io.seqera.wave.plugin
 
-import static io.seqera.wave.util.DockerHelper.*
 
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -26,6 +25,7 @@ import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
+import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
@@ -58,6 +58,7 @@ import io.seqera.wave.plugin.config.WaveConfig
 import io.seqera.wave.plugin.exception.BadResponseException
 import io.seqera.wave.plugin.exception.UnauthorizedException
 import io.seqera.wave.plugin.packer.Packer
+import io.seqera.wave.util.DockerHelper
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.container.inspect.ContainerInspectMode
@@ -229,7 +230,8 @@ class WaveClient {
                 dryRun: ContainerInspectMode.dryRun(),
                 mirror: config.mirrorMode(),
                 scanMode: config.scanMode(),
-                scanLevels: config.scanAllowedLevels()
+                scanLevels: config.scanAllowedLevels(),
+                buildCompression: config.buildCompression()
         )
     }
 
@@ -256,7 +258,8 @@ class WaveClient {
                 dryRun: ContainerInspectMode.dryRun(),
                 mirror: config.mirrorMode(),
                 scanMode: config.scanMode(),
-                scanLevels: config.scanAllowedLevels()
+                scanLevels: config.scanAllowedLevels(),
+                buildCompression: config.buildCompression()
         )
         return sendRequest(request)
     }
@@ -314,7 +317,7 @@ class WaveClient {
                     return sendRequest0(request, attempt+1)
                 }
                 else
-                    throw new UnauthorizedException("Unauthorized [401] - Verify you have provided a valid access token")
+                    throw new UnauthorizedException("Unauthorized [401] - Verify you have provided a valid Seqera Platform access token")
             }
             else
                 throw new BadResponseException("Wave invalid response: POST ${uri} [${resp.statusCode()}] ${resp.body()}")
@@ -365,8 +368,20 @@ class WaveClient {
     protected URL defaultFusionUrl(String platform) {
         final isArm = platform.tokenize('/')?.contains('arm64')
         return isArm
-                ? new URL(FusionConfig.DEFAULT_FUSION_ARM64_URL)
-                : new URL(FusionConfig.DEFAULT_FUSION_AMD64_URL)
+                ? fusionArm64(fusion.snapshotsEnabled())
+                : fusionAmd64(fusion.snapshotsEnabled())
+    }
+
+    protected URL fusionAmd64(boolean snapshots) {
+        return snapshots
+                ? URI.create(FusionConfig.DEFAULT_SNAPSHOT_AMD64_URL).toURL()
+                : URI.create(FusionConfig.DEFAULT_FUSION_AMD64_URL).toURL()
+    }
+
+    protected URL fusionArm64(boolean snapshots) {
+        return snapshots
+            ? URI.create(FusionConfig.DEFAULT_SNAPSHOT_ARM64_URL).toURL()
+            : URI.create(FusionConfig.DEFAULT_FUSION_ARM64_URL).toURL()
     }
 
     protected URL defaultS5cmdUrl(String platform) {
@@ -522,7 +537,7 @@ class WaveClient {
                 if( isCondaLocalFile(attrs.conda) ) {
                     // 'conda' attribute is the path to the local conda environment
                     // note: ignore the 'channels' attribute because they are supposed to be provided by the conda file
-                    final condaFile = condaFileFromPath(attrs.conda, null)
+                    final condaFile = DockerHelper.condaFileFromPath(attrs.conda, null)
                     packagesSpec = new PackagesSpec()
                         .withType(PackagesSpec.Type.CONDA)
                         .withCondaOpts(config.condaOpts())
@@ -534,7 +549,7 @@ class WaveClient {
                         .withType(PackagesSpec.Type.CONDA)
                         .withChannels(condaChannels)
                         .withCondaOpts(config.condaOpts())
-                        .withEntries(condaPackagesToList(attrs.conda))
+                        .withEntries(DockerHelper.condaPackagesToList(attrs.conda))
                 }
 
             }
@@ -678,7 +693,7 @@ class WaveClient {
             return null
         final resp = handle.response
         final result = new ContainerMeta()
-        result.requestTime = handle.createdAt
+        result.requestTime = handle.createdAt?.atZone(ZoneId.systemDefault())?.toOffsetDateTime()
         result.requestId = resp.requestId
         result.sourceImage = resp.containerImage
         result.targetImage = resp.targetImage

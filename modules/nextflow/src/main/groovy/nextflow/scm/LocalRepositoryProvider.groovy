@@ -69,7 +69,7 @@ class LocalRepositoryProvider extends RepositoryProvider {
 
 
     @Override
-    protected byte[] readBytes(String path) {
+    byte[] readBytes(String path) {
 
         final git = Git.open(new File(this.path, project))
         try {

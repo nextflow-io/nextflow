@@ -1,3 +1,3 @@
-Channel.of( 3, 2, 1, 4 )
+channel.of( 3, 2, 1, 4 )
     .toSortedList()
     .view()

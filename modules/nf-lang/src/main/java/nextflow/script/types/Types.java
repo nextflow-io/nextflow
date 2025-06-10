@@ -40,11 +40,16 @@ import org.codehaus.groovy.ast.tools.GenericsUtils;
  */
 public class Types {
 
-    public static final List<ClassNode> DEFAULT_IMPORTS = List.of(
+    public static final List<ClassNode> DEFAULT_SCRIPT_IMPORTS = List.of(
         new ClassNode(Channel.class),
         new ClassNode(Duration.class),
         new ClassNode(MemoryUnit.class),
         new ClassNode(Path.class)
+    );
+
+    public static final List<ClassNode> DEFAULT_CONFIG_IMPORTS = List.of(
+        new ClassNode(Duration.class),
+        new ClassNode(MemoryUnit.class)
     );
 
     /**

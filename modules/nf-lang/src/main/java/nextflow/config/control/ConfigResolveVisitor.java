@@ -16,12 +16,14 @@
 package nextflow.config.control;
 
 import java.util.Collections;
+import java.util.List;
 
 import nextflow.config.ast.ConfigAssignNode;
 import nextflow.config.ast.ConfigIncludeNode;
 import nextflow.config.ast.ConfigNode;
 import nextflow.config.ast.ConfigVisitorSupport;
 import nextflow.script.control.ResolveVisitor;
+import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.DynamicVariable;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
@@ -40,9 +42,9 @@ public class ConfigResolveVisitor extends ConfigVisitorSupport {
 
     private ResolveVisitor resolver;
 
-    public ConfigResolveVisitor(SourceUnit sourceUnit, CompilationUnit compilationUnit) {
+    public ConfigResolveVisitor(SourceUnit sourceUnit, CompilationUnit compilationUnit, List<ClassNode> defaultImports) {
         this.sourceUnit = sourceUnit;
-        this.resolver = new ResolveVisitor(sourceUnit, compilationUnit, Collections.emptyList(), Collections.emptyList());
+        this.resolver = new ResolveVisitor(sourceUnit, compilationUnit, defaultImports, Collections.emptyList());
     }
 
     @Override

@@ -36,6 +36,8 @@ public interface ScriptVisitor extends GroovyCodeVisitor {
 
     void visitEnum(ClassNode node);
 
+    void visitOutputs(OutputBlockNode node);
+
     void visitOutput(OutputNode node);
 
 }

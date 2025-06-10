@@ -121,7 +121,9 @@ Depending on the pipeline configuration, the above actions can be done all in a 
                 "Action": [
                     "s3:GetObject",
                     "s3:PutObject",
-                    "s3:DeleteObject"
+                    "s3:DeleteObject",
+                    "s3:PutObjectTagging",
+                    "s3:AbortMultipartUpload"
                 ],
                 "Resource": "arn:aws:s3:::<bucket name>/*"
             },
@@ -512,6 +514,8 @@ It may happen that the pipeline execution hangs indefinitely because one of the 
 There are multiple reasons why this can happen. They are mainly related to the Compute Environment workload/configuration, the docker service or container configuration, network status, etc.
 
 This [AWS page](https://aws.amazon.com/premiumsupport/knowledge-center/batch-job-stuck-runnable-status/) provides several resolutions and tips to investigate and work around the issue.
+
+(aws-fargate)=
 
 ## AWS Fargate
 

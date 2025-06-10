@@ -30,5 +30,5 @@ process foo {
 
 
 workflow {
-    Channel.fromPath("$baseDir/data/p{1,2,3}.fa") | foo
+    channel.fromPath("$baseDir/data/p{1,2,3}.fa") | foo
 }

@@ -55,7 +55,7 @@ process align {
  * main flow
  */
 workflow {
-    ch_fasta = Channel.fromPath(params.query)
+    ch_fasta = channel.fromPath(params.query)
         | splitFasta(by: params.chunk, file:true)
 
     ch_sequences = blast(ch_fasta, params.db)

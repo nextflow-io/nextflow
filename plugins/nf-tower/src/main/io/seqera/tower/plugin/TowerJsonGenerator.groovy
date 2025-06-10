@@ -18,6 +18,7 @@
 package io.seqera.tower.plugin
 
 import java.nio.file.Path
+import java.time.Instant
 import java.time.OffsetDateTime
 
 import groovy.json.DefaultJsonGenerator
@@ -48,6 +49,7 @@ class TowerJsonGenerator extends DefaultJsonGenerator {
                 .addConverter(Duration) { Duration d, String key -> d.durationInMillis }
                 .addConverter(NextflowMeta) { NextflowMeta m, String key -> m.toJsonMap() }
                 .addConverter(OffsetDateTime) { it.toString() }
+                .addConverter(Instant) { it.toString() }
                 .dateFormat(Const.ISO_8601_DATETIME_FORMAT).timezone("UTC")
 
         return new TowerJsonGenerator(opts, scheme)

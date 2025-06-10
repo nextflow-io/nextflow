@@ -52,7 +52,7 @@ Secrets **cannot** be assigned to pipeline parameters.
 Secrets can be access by pipeline processes by using the `secret` directive. For example:
 
 ```nextflow
-process someJob {
+process my_task {
     secret 'MY_ACCESS_KEY'
     secret 'MY_SECRET_KEY'
 
@@ -72,6 +72,8 @@ The secrets are made available in the process context running the command script
 :::{note}
 This feature is only available when using the local or grid executors (Slurm, Grid Engine, etc). The AWS Batch executor allows the use of secrets when deploying the pipeline execution via [Seqera Platform](https://seqera.io/blog/pipeline-secrets-secure-handling-of-sensitive-information-in-tower/).
 :::
+
+(secrets-pipeline-script)=
 
 ## Pipeline script
 

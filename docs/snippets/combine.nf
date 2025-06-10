@@ -1,5 +1,5 @@
-numbers = Channel.of(1, 2, 3)
-words = Channel.of('hello', 'ciao')
+numbers = channel.of(1, 2, 3)
+words = channel.of('hello', 'ciao')
 
 numbers
     .combine(words)

@@ -1,13 +1,13 @@
-process myTask {
+process seq {
     output:
-    env 'FOO'
+    env 'RESULT'
 
     script:
     '''
-    FOO=$(seq 5)
+    RESULT=$(seq 5)
     '''
 }
 
 workflow {
-    myTask | view
+    seq | view
 }

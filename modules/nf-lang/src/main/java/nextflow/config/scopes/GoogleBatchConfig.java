@@ -48,6 +48,12 @@ public class GoogleBatchConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        List of custom mount options for `gcsfuse` (default: `['-o rw', '-implicit-dirs']`).
+    """)
+    public List<String> gcsfuseOptions;
+
+    @ConfigOption
+    @Description("""
         Max number of execution attempts of a job interrupted by a Compute Engine spot reclaim event (default: `5`).
     """)
     public int maxSpotAttempts;
@@ -57,6 +63,14 @@ public class GoogleBatchConfig implements ConfigScope {
         The URL of an existing network resource to which the VM will be attached.
     """)
     public String network;
+
+    @ConfigOption
+    @Description("""
+        The network tags to be applied to the instances created by Google Batch jobs (e.g., `['allow-ssh', 'allow-http']`).
+
+        [Read more](https://cloud.google.com/vpc/docs/add-remove-network-tags)
+    """)
+    public List<String> networkTags;
 
     @ConfigOption
     @Description("""

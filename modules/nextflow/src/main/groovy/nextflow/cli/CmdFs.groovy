@@ -25,6 +25,7 @@ import java.nio.file.Paths
 import java.nio.file.attribute.BasicFileAttributes
 
 import com.beust.jcommander.Parameter
+import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Global
@@ -42,6 +43,7 @@ import nextflow.plugin.Plugins
  */
 @CompileStatic
 @Slf4j
+@Parameters(commandDescription = "Perform filesystem operations")
 class CmdFs extends CmdBase implements UsageAware {
 
     static final public NAME = 'fs'
@@ -284,6 +286,7 @@ class CmdFs extends CmdBase implements UsageAware {
     /**
      * Print the command usage help
      */
+    @Override
     void usage() {
         usage(args)
     }
@@ -293,6 +296,7 @@ class CmdFs extends CmdBase implements UsageAware {
      *
      * @param args The arguments as entered by the user
      */
+    @Override
     void usage(List<String> args) {
 
         def result = []

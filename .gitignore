@@ -8,6 +8,7 @@
 .node-nextflow*
 .devcontainer
 .vscode/*
+.lineage/
 */*/bin/*
 **/build/**
 build/**

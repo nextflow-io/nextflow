@@ -17,7 +17,6 @@ package nextflow.script.dsl;
 
 public class FeatureFlagDsl {
 
-    @Deprecated
     @FeatureFlag("nextflow.enable.configProcessNamesValidation")
     @Description("""
         When `true`, prints a warning for every `withName:` process selector that doesn't match a process in the pipeline (default: `true`).
@@ -54,11 +53,5 @@ public class FeatureFlagDsl {
         When `true`, enables the use of [process and workflow recursion](https://github.com/nextflow-io/nextflow/discussions/2521).
     """)
     public boolean previewRecursion;
-
-    @FeatureFlag("nextflow.preview.topic")
-    @Description("""
-        When `true`, enables the use of [topic channels](https://nextflow.io/docs/latest/reference/channel.html#topic).
-    """)
-    public boolean previewTopic;
 
 }

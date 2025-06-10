@@ -2,7 +2,9 @@
 
 # VS Code integration
 
-The [Nextflow VS Code extension](https://marketplace.visualstudio.com/items?itemName=nextflow.nextflow) provides IDE support for Nextflow pipelines.
+The [Nextflow VS Code extension](https://marketplace.visualstudio.com/items?itemName=nextflow.nextflow) provides language support for Nextflow pipelines in [VS Code](https://code.visualstudio.com/).
+
+This page describes the [Nextflow language server](https://github.com/nextflow-io/language-server) used by the extension. See the extension README in [GitHub](https://github.com/nextflow-io/vscode-language-nextflow) or the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=nextflow.nextflow) for details on additional extension features.
 
 ## Features
 
@@ -17,12 +19,25 @@ The extension highlights source code in red for errors and yellow for warnings.
 To view all diagnostics for the workspace, open the **Problems** tab. Here, you can search for diagnostics by diagnostic message, filename, and so on.
 
 :::{note}
-The language server parses scripts and config files according to the {ref}`Nextflow language specification <syntax-page>`, which is more strict than the Nextflow CLI. See {ref}`updating-syntax-page` for more information.
+The language server parses scripts and config files according to the {ref}`Nextflow language specification <syntax-page>`, which is more strict than the Nextflow CLI. See {ref}`strict-syntax-page` for more information.
 :::
 
 ### Hover hints
 
 When you hover over certain source code elements, such as variable names and function calls, the extension provides a tooltip with related information, such as the definition and/or documentation for the element.
+
+If a [Javadoc](https://en.wikipedia.org/wiki/Javadoc) comment is defined above a workflow, process, or function, the extension will include the contents of the comment in hover hints. The following is an example Javadoc comment:
+
+```nextflow
+/**
+ * Say hello to someone.
+ *
+ * @param name
+ */
+def sayHello(name) {
+    println "Hello, ${name}!"
+}
+```
 
 ### Code navigation
 
@@ -36,7 +51,7 @@ The extension suggests auto-completions for variable names, function names, conf
 
 ### Formatting
 
-The extension can format your scripts and config files based on a standard set of formatting rules. Rules can be customized using the **Nextflow > Formatting** [extension settings](#settings).
+The extension can format your scripts and config files based on a standard set of formatting rules. Rules can be customized using the **Nextflow > Formatting** extension settings.
 
 Use the **Format Document** command in the command palette to format the current file.
 
@@ -56,15 +71,11 @@ The extension can generate a workflow DAG that includes the workflow inputs, out
 
 To preview the DAG of a workflow, select the **Preview DAG** CodeLens above the workflow definition.
 
-:::{note}
-The **Preview DAG** CodeLens is only available when the script does not contain any errors.
-:::
-
 ## Troubleshooting
 
-In the event of an error, you can stop or restart the language server from the command palette. See [Commands](#commands) for the set of available commands.
+In the event of a language server error, you can use the **Nextflow: Restart language server** command in the command palette to restart the language server.
 
-Report issues at [nextflow-io/vscode-language-nextflow](https://github.com/nextflow-io/vscode-language-nextflow) or [nextflow-io/language-server](https://github.com/nextflow-io/language-server). When reporting, include a minimal code snippet that reproduces the issue and any error logs from the server. To view logs, open the **Output** tab and select **Nextflow Language Server** from the dropdown. Enable **Nextflow > Debug** in the [extension settings](#settings) to show additional log messages while debugging.
+Report issues at [nextflow-io/vscode-language-nextflow](https://github.com/nextflow-io/vscode-language-nextflow) or [nextflow-io/language-server](https://github.com/nextflow-io/language-server). When reporting, include a minimal code snippet that reproduces the issue and any error logs from the server. To view logs, open the **Output** tab and select **Nextflow Language Server** from the dropdown. Enable **Nextflow > Debug** in the extension settings to show additional log messages while debugging.
 
 ## Limitations
 
@@ -74,38 +85,10 @@ Report issues at [nextflow-io/vscode-language-nextflow](https://github.com/nextf
 
 - The language server provides limited support for Groovy scripts in the `lib` directory. Errors in Groovy scripts are not reported as diagnostics, and changing a Groovy script does not automatically re-compile the Nextflow scripts that reference it. Edit the Nextflow script or close and re-open it to refresh the diagnostics.
 
-## Commands
-
-The following commands are available from the command palette:
-
-- Restart language server
-- Stop language server
-
-(vscode-settings)=
-
-## Settings
-
-The following settings are available:
-
-`nextflow.debug`
-: Enable debug logging and debug information in hover hints.
-
-`nextflow.files.exclude`
-: Configure glob patterns for excluding folders from being searched for Nextflow scripts and configuration files.
-
-`nextflow.formatting.harshilAlignment`
-: Use the [Harshil Alignment™️](https://nf-co.re/docs/contributing/code_editors_and_styling/harshil_alignment) when formatting Nextflow scripts and config files.
-
-`nextflow.java.home`
-: Specifies the folder path to the JDK. Use this setting if the extension cannot find Java automatically.
-
-`nextflow.paranoidWarnings`
-: Enable additional warnings for future deprecations, potential problems, and other discouraged patterns.
-
 (vscode-language-server)=
 
 ## Language server
 
-Most of the functionality of the VS Code extension is provided by the [Nextflow language server](https://github.com/nextflow-io/language-server), which implements the [Language Server Protocol (LSP)](https://microsoft.github.io/language-server-protocol/) for Nextflow scripts and config files.
+The Nextflow language server implements the [Language Server Protocol (LSP)](https://microsoft.github.io/language-server-protocol/) for Nextflow scripts and config files. It is distributed as a standalone Java application and can be integrated with any editor that functions as an LSP client.
 
-The language server is distributed as a standalone Java application. It can be integrated with any editor that functions as an LSP client. Currently, only the VS Code integration is officially supported, but community contributions for other editors are welcome.
+Currently, only the VS Code integration is officially supported, but community contributions for other editors are welcome. Visit the [GitHub issues](https://github.com/nextflow-io/language-server/issues) page for the latest updates on community-led integrations.

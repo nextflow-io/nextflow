@@ -246,7 +246,7 @@ class SessionTest extends Specification {
 
         when:
         session = [:] as Session
-        result = session.createObservers()
+        result = session.createObserversV1()
         then:
         result.size()==1
         result.any { it instanceof WorkflowStatsObserver }
@@ -254,7 +254,7 @@ class SessionTest extends Specification {
         when:
         session = [:] as Session
         session.config = [trace: [enabled: true, file:'name.txt']]
-        result = session.createObservers()
+        result = session.createObserversV1()
         observer = result[1] as TraceFileObserver
         then:
         result.size() == 2
@@ -264,7 +264,7 @@ class SessionTest extends Specification {
         when:
         session = [:] as Session
         session.config = [trace: [enabled: true, sep: 'x', fields: 'task_id,name,exit', file: 'alpha.txt']]
-        result = session.createObservers()
+        result = session.createObserversV1()
         observer = result[1] as TraceFileObserver
         then:
         result.size() == 2
@@ -275,14 +275,14 @@ class SessionTest extends Specification {
         when:
         session = [:] as Session
         session.config = [trace: [sep: 'x', fields: 'task_id,name,exit']]
-        result = session.createObservers()
+        result = session.createObserversV1()
         then:
         !result.any { it instanceof TraceFileObserver }
 
         when:
         session = [:] as Session
         session.config = [trace: [enabled: true, fields: 'task_id,name,exit,vmem']]
-        result = session.createObservers()
+        result = session.createObserversV1()
         observer = result[1] as TraceFileObserver
         then:
         result.size() == 2
@@ -310,7 +310,8 @@ class SessionTest extends Specification {
         !session.workDir.toString().contains('..')
         session.scriptName == 'pipeline.nf'
         session.classesDir.exists()
-        session.observers != null
+        session.observersV1 != null
+        session.observersV2 != null
         session.workflowMetadata != null
         
         cleanup:

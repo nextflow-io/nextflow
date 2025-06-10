@@ -165,13 +165,13 @@ tower.accessToken = '<YOUR ACCESS TOKEN>'
 
 In the above snippet, replace `<YOUR REGISTRY>` with a container registry of your choice. For example, `quay.io` (no prefix or suffix is needed).
 The container will be copied with the same name, tag, and checksum in the specified registry. For example, if the source
-container is `quay.io/biocontainers/bwa:0.7.13--1` and the build repository setting is `foo.com`, the resulting container
-name is `foo.com/biocontainers/bwa:0.7.13--1`.
+container is `quay.io/biocontainers/bwa:0.7.13--1` and the build repository setting is `example.com`, the resulting container
+name is `example.com/biocontainers/bwa:0.7.13--1`.
 
 :::{tip}
 When using a path prefix in the target registry name, it will be prepended to the resulting container name. For example,
-having `quay.io/biocontainers/bwa:0.7.13--1` as source container and `foo.com/bar` as build repository, the resulting
-container will be named `foo.com/bar/biocontainers/bwa:0.7.13--1`.
+having `quay.io/biocontainers/bwa:0.7.13--1` as source container and `example.com/library` as build repository, the resulting
+container will be named `example.com/library/biocontainers/bwa:0.7.13--1`.
 :::
 
 The credentials to allow the push of  containers in the target repository need to be provided via the Seqera Platform
@@ -193,7 +193,7 @@ tower.accessToken = '<YOUR ACCESS TOKEN>'
 Nextflow will only allow the use of containers with no security
 vulnerabilities when using these settings. You can define the level of accepted vulnerabilities using `wave.scan.allowedLevels`. For example:
 
-```
+```groovy
 wave.scan.allowedLevels = 'low,medium'
 ```
 

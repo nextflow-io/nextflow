@@ -30,6 +30,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
+import nextflow.NF
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.exception.ConfigParseException
@@ -106,7 +107,9 @@ class Launcher {
                 new CmdHelp(),
                 new CmdSelfUpdate(),
                 new CmdPlugin(),
-                new CmdInspect()
+                new CmdInspect(),
+                new CmdLint(),
+                new CmdLineage()
         ]
 
         if(SecretsLoader.isEnabled())
@@ -119,11 +122,18 @@ class Launcher {
 
         options = new CliOptions()
         jcommander = new JCommander(options)
-        allCommands.each { cmd ->
+        for( CmdBase cmd : allCommands ) {
             cmd.launcher = this;
-            jcommander.addCommand(cmd.name, cmd)
+            jcommander.addCommand(cmd.name, cmd, aliases(cmd))
         }
         jcommander.setProgramName( APP_NAME )
+    }
+
+    private static final String[] EMPTY = new String[0]
+
+    private static String[] aliases(CmdBase cmd) {
+        final aliases = cmd.getClass().getAnnotation(Parameters)?.commandNames()
+        return aliases ?: EMPTY
     }
 
     /**
@@ -526,11 +536,16 @@ class Launcher {
         }
 
         catch( ConfigParseException e )  {
-            def message = e.message
-            if( e.cause?.message ) {
-                message += "\n\n${e.cause.message.toString().indent('  ')}"
+            if( NF.isSyntaxParserV2() ) {
+                log.error(e.message, e)
             }
-            log.error(message, e.cause ?: e)
+            else {
+                def message = e.message
+                if( e.cause?.message ) {
+                    message += "\n\n${e.cause.message.toString().indent('  ')}"
+                }
+                log.error(message, e.cause ?: e)
+            }
             return(1)
         }
 

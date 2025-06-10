@@ -42,12 +42,13 @@ import test.TestHelper
 class HttpFilesTests extends Specification {
 
     @Rule
-    WireMockRule wireMockRule = new WireMockRule(18080)
+    WireMockRule wireMockRule = new WireMockRule(0)
 
     def 'should read http file from WireMock' () {
 
         given:
-        def wireMock = new WireMockGroovy(18080)
+        def wireMock = new WireMockGroovy(wireMockRule.port())
+        def localhost = "http://localhost:${wireMockRule.port()}"
         wireMock.stub {
             request {
                 method "GET"
@@ -69,13 +70,13 @@ class HttpFilesTests extends Specification {
         }
 
         when:
-        def path = Paths.get(new URI('http://localhost:18080/index.html'))
+        def path = Paths.get(new URI("${localhost}/index.html"))
         then:
         Files.size(path) == 10
         Files.getLastModifiedTime(path).toString() == "2016-11-04T21:50:34Z"
 
         when:
-        def path2 = Paths.get(new URI('http://localhost:18080/missing.html'))
+        def path2 = Paths.get(new URI("${localhost}missing.html"))
         then:
         !Files.exists(path2)
     }
@@ -207,7 +208,8 @@ class HttpFilesTests extends Specification {
 
     def 'should read with a newByteChannel' () {
         given:
-        def wireMock = new WireMockGroovy(18080)
+        def wireMock = new WireMockGroovy(wireMockRule.port())
+        def localhost = "http://localhost:${wireMockRule.port()}"
         wireMock.stub {
             request {
                 method "GET"
@@ -225,7 +227,7 @@ class HttpFilesTests extends Specification {
         }
 
         when:
-        def path = Paths.get(new URI('http://localhost:18080/index.txt'))
+        def path = Paths.get(new URI("${localhost}/index.txt"))
         def sbc = Files.newByteChannel(path)
         def buffer = new ByteArrayOutputStream()
         ByteBuffer bf = ByteBuffer.allocate(15)

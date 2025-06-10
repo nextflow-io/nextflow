@@ -20,6 +20,7 @@ package io.seqera.wave.plugin.config
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
+import io.seqera.wave.api.BuildCompression
 import io.seqera.wave.api.ScanLevel
 import io.seqera.wave.api.ScanMode
 import io.seqera.wave.config.CondaOpts
@@ -53,6 +54,7 @@ class WaveConfig {
     final private Boolean mirrorMode
     final private ScanMode scanMode
     final private List<ScanLevel> scanAllowedLevels
+    final private BuildCompression buildCompression
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
@@ -72,6 +74,7 @@ class WaveConfig {
         this.buildMaxDuration = opts.navigate('build.maxDuration', '40m') as Duration
         this.scanMode = opts.navigate('scan.mode') as ScanMode
         this.scanAllowedLevels = parseScanLevels(opts.navigate('scan.allowedLevels'))
+        this.buildCompression = parseCompression(opts.navigate('build.compression') as Map)
         // some validation
         validateConfig()
     }
@@ -101,6 +104,8 @@ class WaveConfig {
     String cacheRepository() { cacheRepository }
 
     Duration buildMaxDuration() { buildMaxDuration }
+
+    BuildCompression buildCompression() { buildCompression }
 
     private void validateConfig() {
         def scheme= FileHelper.getUrlProtocol(endpoint)
@@ -190,5 +195,18 @@ class WaveConfig {
             return (value as List).collect(it-> ScanLevel.valueOf(it.toString().toUpperCase()))
         }
         throw new IllegalArgumentException("Invalid value for 'wave.scan.levels' setting - offending value: $value; type: ${value.getClass().getName()}")
+    }
+
+    protected BuildCompression parseCompression(Map opts) {
+        if( !opts )
+            return null
+        final result = new BuildCompression()
+        if( opts.mode )
+            result.mode = BuildCompression.Mode.valueOf(opts.mode.toString().toLowerCase())
+        if( opts.level )
+            result.level = opts.level as Integer
+        if( opts.force )
+            result.force = opts.force as Boolean
+        return result
     }
 }

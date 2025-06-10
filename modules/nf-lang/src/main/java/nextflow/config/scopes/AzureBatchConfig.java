@@ -88,6 +88,12 @@ public class AzureBatchConfig implements ConfigScope {
     """)
     public String location;
 
+    @ConfigOption
+    @Description("""
+        The client ID for an Azure managed identity that is available on all Azure Batch node pools. This identity will be used for task-level authentication to Azure services.
+    """)
+    public String poolIdentityClientId;
+
     @PlaceholderName("<name>")
     public Map<String, AzureBatchPoolConfig> pools;
 

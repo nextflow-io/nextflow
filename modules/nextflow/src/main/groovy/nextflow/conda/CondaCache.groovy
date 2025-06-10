@@ -33,6 +33,7 @@ import nextflow.file.FileMutex
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import nextflow.util.Escape
+import nextflow.util.TestOnly
 /**
  * Handle Conda environment creation and caching
  *
@@ -86,9 +87,8 @@ class CondaCache {
         return "conda"
     }
 
-    /** Only for testing purpose - do not use */
-    @PackageScope
-    CondaCache() {}
+    @TestOnly
+    protected CondaCache() {}
 
     /**
      * Create a Conda env cache object
@@ -287,9 +287,6 @@ class CondaCache {
         log.info "Creating env using ${binaryName}: $condaEnv [cache $prefixPath]"
 
         String opts = createOptions ? "$createOptions " : ''
-        // micromamba does not and might never support the mkdir flag, since the mkdir behaviour is the default
-        if( binaryName != 'micromamba' )
-            opts += '--mkdir '
 
         def cmd
         if( isYamlFilePath(condaEnv) ) {

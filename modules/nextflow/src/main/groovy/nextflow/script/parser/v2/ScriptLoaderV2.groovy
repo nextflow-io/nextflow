@@ -26,6 +26,7 @@ import nextflow.script.ScriptBinding
 import nextflow.script.ScriptLoader
 import nextflow.script.ScriptMeta
 import org.codehaus.groovy.control.CompilationFailedException
+import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Script parser/loader that uses the strict syntax.
@@ -114,24 +115,36 @@ class ScriptLoaderV2 implements ScriptLoader {
             })
         }
         catch( CompilationFailedException e ) {
-            final builder = new StringBuilder()
-            for( final message : compiler.getErrors() ) {
-                final cause = message.getCause()
-                final filename = getRelativePath(cause.getSourceLocator(), scriptPath, compiler)
-                builder.append("${filename} at ${cause.getStartLine()}, ${cause.getStartColumn()}: ${cause.getOriginalMessage()}\n")
-            }
-            throw new ScriptCompilationException(builder.toString(), e)
+            if( scriptPath )
+                printErrors(scriptPath)
+            throw new ScriptCompilationException("Script compilation failed", e)
         }
     }
 
-    private String getRelativePath(String sourceLocator, Path scriptPath, ScriptCompiler compiler) {
+    private void printErrors(Path path) {
+        final errorListener = new StandardErrorListener('full', false)
+        println()
+        errorListener.beforeErrors()
+        for( final message : compiler.getErrors() ) {
+            final cause = message.getCause()
+            final source = getSource(cause.getSourceLocator(), compiler)
+            final filename = getRelativePath(source, path)
+            errorListener.onError(cause, filename, source)
+        }
+        errorListener.afterErrors()
+    }
+
+    private SourceUnit getSource(String sourceLocator, ScriptCompiler compiler) {
         for( final su : compiler.getSources() ) {
-            if( sourceLocator == su.getName() ) {
-                final uri = su.getSource().getURI()
-                return scriptPath.getParent().relativize(Path.of(uri)).toString()
-            }
+            if( sourceLocator == su.getName() )
+                return su
         }
         return null
+    }
+
+    private String getRelativePath(SourceUnit source, Path scriptPath) {
+        final uri = source.getSource().getURI()
+        return scriptPath.getParent().relativize(Path.of(uri)).toString()
     }
 
     private BaseScript createScript(Class clazz, ScriptBinding binding, Path path, boolean module) {

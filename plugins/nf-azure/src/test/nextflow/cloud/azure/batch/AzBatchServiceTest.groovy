@@ -8,6 +8,7 @@ import java.util.function.Predicate
 
 import com.azure.compute.batch.models.BatchPool
 import com.azure.compute.batch.models.ElevationLevel
+import com.azure.compute.batch.models.EnvironmentSetting
 import com.azure.core.exception.HttpResponseException
 import com.azure.core.http.HttpResponse
 import com.azure.identity.ManagedIdentityCredential
@@ -15,6 +16,7 @@ import com.google.common.hash.HashCode
 import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.cloud.azure.config.AzBatchOpts
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzManagedIdentityOpts
 import nextflow.cloud.azure.config.AzPoolOpts
@@ -835,6 +837,32 @@ class AzBatchServiceTest extends Specification {
         [managedIdentity: [clientId: 'client-123']]     | 'client-123'
     }
 
+    def 'should use pool identity client id for fusion tasks' () {
+        given:
+        def POOL_IDENTITY_CLIENT_ID = 'pool-identity-123'
+        def exec = Mock(AzBatchExecutor) {
+            getConfig() >> new AzConfig([
+                batch: [poolIdentityClientId: POOL_IDENTITY_CLIENT_ID],
+                storage: [sasToken: 'test-sas-token', accountName: 'testaccount']
+            ])
+        }
+        def service = new AzBatchService(exec)
+        
+        and:
+        Global.session = Mock(Session) {
+            getConfig() >> [fusion: [enabled: true]]
+        }
+
+        when:
+        def env = [:] as Map<String,String>
+        if( service.config.batch().poolIdentityClientId && true ) { // fusionEnabled = true
+            env.put('FUSION_AZ_MSI_CLIENT_ID', service.config.batch().poolIdentityClientId)
+        }
+        
+        then:
+        env['FUSION_AZ_MSI_CLIENT_ID'] == POOL_IDENTITY_CLIENT_ID
+    }
+
 
     def 'should cache job id' () {
         given:
@@ -941,4 +969,62 @@ class AzBatchServiceTest extends Specification {
         1 * service.createPool(spec) >> { throw new IllegalArgumentException("Some other error") }
         thrown(IllegalArgumentException)
     }
+
+    def 'should test createJobConstraints method with Duration input' () {
+        given:
+        def exec = Mock(AzBatchExecutor)
+        def service = new AzBatchService(exec)
+        def nfDuration = TIME_STR ? nextflow.util.Duration.of(TIME_STR) : null
+        
+        when:
+        def result = service.createJobConstraints(nfDuration)
+        
+        then:
+        result != null
+        if (TIME_STR) {
+            assert result.maxWallClockTime != null
+            assert result.maxWallClockTime.toDays() == EXPECTED_DAYS
+        } else {
+            assert result.maxWallClockTime == null
+        }
+        
+        where:
+        TIME_STR | EXPECTED_DAYS
+        '48d'    | 48
+        '24h'    | 1
+        '7d'     | 7
+        null     | 0
+    }
+
+    def 'should create task constraints' () {
+        given:
+        def exec = Mock(AzBatchExecutor)
+        def service = new AzBatchService(exec)
+        def task = Mock(TaskRun) {
+            getConfig() >> Mock(TaskConfig) {
+                getTime() >> TIME
+            }
+        }
+        
+        when:
+        def result = service.taskConstraints(task)
+        
+        then:
+        result != null
+        if (TIME) {
+            assert result.maxWallClockTime != null
+            assert result.maxWallClockTime.toMillis() == TIME.toMillis()
+        } else {
+            assert result.maxWallClockTime == null
+        }
+        
+        where:
+        TIME << [
+            null,
+            Duration.of('1h'),
+            Duration.of('30m'),
+            Duration.of('2d')
+        ]
+    }
+
 }

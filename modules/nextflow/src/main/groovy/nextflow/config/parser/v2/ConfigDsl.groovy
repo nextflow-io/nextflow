@@ -18,7 +18,6 @@ package nextflow.config.parser.v2
 
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
-import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized

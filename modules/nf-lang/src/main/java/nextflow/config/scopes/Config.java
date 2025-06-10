@@ -143,6 +143,13 @@ public class Config implements ConfigScope {
     public K8sConfig k8s;
 
     @Description("""
+        The `lineage` scope controls the generation of lineage metadata.
+    
+        [Read more](https://nextflow.io/docs/latest/reference/config.html#lineage)
+    """)
+    public LineageConfig lineage;
+
+    @Description("""
         The `mail` scope controls the mail server used to send email notifications.
     
         [Read more](https://nextflow.io/docs/latest/reference/config.html#mail)

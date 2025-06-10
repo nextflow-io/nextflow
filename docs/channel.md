@@ -38,7 +38,7 @@ channels if it is invoked with all value channels, including simple values which
 For example:
 
 ```nextflow
-process foo {
+process echo {
   input:
   val x
 
@@ -52,12 +52,12 @@ process foo {
 }
 
 workflow {
-  result = foo(1)
+  result = echo(1)
   result.view { file -> "Result: ${file}" }
 }
 ```
 
-In the above example, since the `foo` process is invoked with a simple value instead of a channel, the input is implicitly
+In the above example, since the `echo` process is invoked with a simple value instead of a channel, the input is implicitly
 wrapped in a value channel, and the output is also emitted as a value channel.
 
 See also: {ref}`process-multiple-input-channels`.
@@ -66,15 +66,11 @@ See also: {ref}`process-multiple-input-channels`.
 
 Channel factories are functions that can create channels.
 
-For example, the `Channel.of()` factory can be used to create a channel from an arbitrary list of arguments:
+For example, the `channel.of()` factory can be used to create a channel from an arbitrary list of arguments:
 
 ```nextflow
-Channel.of(1, 2, 3).view()
+channel.of(1, 2, 3).view()
 ```
-
-:::{versionadded} 20.07.0
-`channel` was introduced as an alias of `Channel`, allowing factory methods to be specified as `channel.of()` or `Channel.of()`, and so on.
-:::
 
 See {ref}`channel-factory` for the full list of channel factories.
 

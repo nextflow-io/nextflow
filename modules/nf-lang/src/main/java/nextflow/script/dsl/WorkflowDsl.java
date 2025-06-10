@@ -204,7 +204,6 @@ public interface WorkflowDsl extends DslScope {
     """)
     Channel max(Channel source, Closure comparator);
 
-    @Deprecated
     @Operator
     @Description("""
         The `merge` operator joins the values from two or more channels into a new channel.
