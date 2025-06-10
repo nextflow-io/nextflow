@@ -86,6 +86,8 @@ Minimal permissions policies to be attached to the AWS account used by Nextflow 
   "ecr:ListTagsForResource"
   ```
 
+  Or use `AmazonEC2ContainerRegistryReadOnly` managed policy.
+
 :::{note}
 If you are running Fargate or Fargate Spot, you may need the following policies in addition to the listed above:
   ```json
