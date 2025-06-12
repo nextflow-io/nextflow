@@ -78,14 +78,14 @@ class BashWrapperBuilderWithAzTest extends Specification {
                 local source=$1
                 local target=$2
                 local basedir=$(dirname $2)
-                local ret
+                # local ret removed
                 mkdir -p "$basedir"
             
-                ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
-                    ## if fails check if it was trying to download a directory
-                    mkdir -p $target
-                    azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
-                        rm -rf $target
+                if ! azcopy cp "$source?$AZ_SAS" "$target"; then
+                    # If failed, remove any partial target and try as directory
+                    rm -rf "$target"; mkdir -p "$target"
+                    if ! azcopy cp "$source/*?$AZ_SAS" "$target" --recursive; then
+                        rm -rf "$target"
                         >&2 echo "Unable to download path: $source"
                         exit 1
                     }
@@ -217,14 +217,14 @@ class BashWrapperBuilderWithAzTest extends Specification {
                 local source=$1
                 local target=$2
                 local basedir=$(dirname $2)
-                local ret
+                # local ret removed
                 mkdir -p "$basedir"
             
-                ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
-                    ## if fails check if it was trying to download a directory
-                    mkdir -p $target
-                    azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
-                        rm -rf $target
+                if ! azcopy cp "$source?$AZ_SAS" "$target"; then
+                    # If failed, remove any partial target and try as directory
+                    rm -rf "$target"; mkdir -p "$target"
+                    if ! azcopy cp "$source/*?$AZ_SAS" "$target" --recursive; then
+                        rm -rf "$target"
                         >&2 echo "Unable to download path: $source"
                         exit 1
                     }
