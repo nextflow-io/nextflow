@@ -52,6 +52,13 @@ class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
         result << '-N' << modName(getJobNameFor(task))
 
+        result << '-j' << ''
+        result << '-S' << ''
+		if( !task.workDir ) {
+			result << '-o' << (task.isArray() ? '/dev/null' : quote(task.workDir.resolve(TaskRun.CMD_LOG)))
+		}
+		//result << '-o' << (task.isArray() ? '/dev/null' : quote(task.workDir.resolve(TaskRun.CMD_LOG)))
+
         // max task duration
         if( task.config.getTime() ) {
             final duration = task.config.getTime()
@@ -85,16 +92,9 @@ class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
      * @return A list representing the submit command line
      */
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
-		if( task instanceof TaskArrayRun ){
-			final arraySize = task.getArraySize()
-			return pipeLauncherScript()
-			? List.of('pjsub', '--bulk --sparam ', "0-${arraySize - 1}".toString())
-			: List.of('pjsub', scriptFile.getName())
-		}else{
-			return pipeLauncherScript()
-			? List.of('pjsub')
-			: List.of('pjsub', scriptFile.getName())
-		}
+        return pipeLauncherScript()
+                ? List.of('pjsub')
+                : List.of('pjsub', scriptFile.getName())
 /*        [ 'pjsub', '-N', modName(getJobNameFor(task)), scriptFile.getName() ] */
     }
 
@@ -123,7 +123,10 @@ class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {
-		final result = ['pjstat', '-E']
+        //String cmd = 'pjstat | grep -v JOB_ID'
+        //if( queue ) cmd += ' ' + queue
+        //return ['bash','-c', "set -o pipefail; $cmd | { grep -E '(Job Id:|job_state =)' || true; }".toString()]
+		final result = ['pjstat2', '-E']
 		return result
     }
 
@@ -138,7 +141,28 @@ class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
             'HLD': QueueStatus.HOLD,    // holding
             'ERR': QueueStatus.ERROR,   // error
     ]
+/*
+    protected QueueStatus decode(String status) {
+        DECODE_STATUS.get(status)
+    }
+	*/
+/*
+    @Override
+    protected Map<String, QueueStatus> parseQueueStatus(String text) {
+        final result = new LinkedHashMap<String, QueueStatus>()
+        text.eachLine { String line ->
+            def cols = line.split(/\s+/)
+            if( cols.size() > 1 ) {
+                result.put( cols[0], STATUS_MAP.get(cols[3]) )
+            }
+            else {
+                log.debug "[TCS] invalid status line: `$line`"
+            }
+        }
 
+        return result
+    }
+*/
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
         final result = new LinkedHashMap<String, QueueStatus>()
