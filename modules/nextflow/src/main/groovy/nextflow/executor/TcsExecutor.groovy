@@ -44,22 +44,32 @@ class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
     protected List<String> getDirectives( TaskRun task, List<String> result ) {
         assert result !=null
 
-        if( task instanceof TaskArrayRun ) {
-            final arraySize = task.getArraySize()
-            result << '--bulk --sparam' << "0-${arraySize - 1}".toString()
-        }
+		// array is indicated by pjsub command instead of PJM directive
+        //if( task instanceof TaskArrayRun ) {
+        //    final arraySize = task.getArraySize()
+        //    result << '--bulk --sparam' << "0-${arraySize - 1}".toString()
+        //}
 
         result << '-N' << modName(getJobNameFor(task))
-
-		result << '-o' << (task.isArray() ? '/dev/null' : quote(task.workDir.resolve(TaskRun.CMD_LOG)))
-        result << '-j' << ''
-        result << '-S' << ''
 
         // max task duration
         if( task.config.getTime() ) {
             final duration = task.config.getTime()
             result << "-L" << "elapse=${duration.format('HH:mm:ss')}".toString()
-        }
+		}
+
+		// output file
+		if( task.isArray() ) {
+			// If task is array job (bulk job), don't indicate output file (use default setting).
+			// * TCS doesn't support /dev/null for output. (depend on system?)
+		}else{
+			result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
+			//result << '-o' << (task.isArray() ? '/dev/null' : quote(task.workDir.resolve(TaskRun.CMD_LOG)))
+		}
+
+		// output options
+        result << '-j' << '' // marge stderr to stdout
+        result << '-S' << '' // output information
 
         // -- at the end append the command script wrapped file name
         addClusterOptionsDirective(task.config, result)
@@ -75,7 +85,17 @@ class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
      * @return A list representing the submit command line
      */
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
-        [ 'pjsub', '-N', modName(getJobNameFor(task)), scriptFile.getName() ]
+		if( task instanceof TaskArrayRun ){
+			final arraySize = task.getArraySize()
+			return pipeLauncherScript()
+			? List.of('pjsub', '--bulk --sparam ', "0-${arraySize - 1}".toString())
+			: List.of('pjsub', scriptFile.getName())
+		}else{
+			return pipeLauncherScript()
+			? List.of('pjsub')
+			: List.of('pjsub', scriptFile.getName())
+		}
+/*        [ 'pjsub', '-N', modName(getJobNameFor(task)), scriptFile.getName() ] */
     }
 
     protected String getHeaderToken() { '#PJM' }
@@ -103,51 +123,37 @@ class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {
-        //String cmd = 'pjstat | grep -v JOB_ID'
-        //if( queue ) cmd += ' ' + queue
-        //return ['bash','-c', "set -o pipefail; $cmd | { grep -E '(Job Id:|job_state =)' || true; }".toString()]
-		final result = ['pjstat']
+		final result = ['pjstat', '-E']
 		return result
     }
 
-    static private Map<String,QueueStatus> DECODE_STATUS = [
-            'ACC': QueueStatus.PENDING,
-            'QUE': QueueStatus.PENDING,
-            'RNA': QueueStatus.PENDING,
-            'RUN': QueueStatus.RUNNING,
-            'RNO': QueueStatus.RUNNING,
-            'EXT': QueueStatus.RUNNING,
-            'CCL': QueueStatus.DONE,
-            'HLD': QueueStatus.HOLD,
-            'ERR': QueueStatus.ERROR
+    static private Map<String,QueueStatus> STATUS_MAP = [
+            'ACC': QueueStatus.PENDING, // accepted
+            'QUE': QueueStatus.PENDING, // wait for running
+            'RNA': QueueStatus.RUNNING, // preparing
+            'RUN': QueueStatus.RUNNING, // running
+            'RNO': QueueStatus.RUNNING, // cleanup
+            'EXT': QueueStatus.DONE,    // finished
+            'CCL': QueueStatus.DONE,    // canceled
+            'HLD': QueueStatus.HOLD,    // holding
+            'ERR': QueueStatus.ERROR,   // error
     ]
-
-    protected QueueStatus decode(String status) {
-        DECODE_STATUS.get(status)
-    }
 
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
-
-        final JOB_ID = 'Job Id:'
-        final JOB_STATUS = 'job_state ='
         final result = new LinkedHashMap<String, QueueStatus>()
-
-        String id = null
-        String status = null
-        text.eachLine { line ->
-            if( line.startsWith(JOB_ID) ) {
-                id = fetchValue(JOB_ID, line)
+        text.eachLine { String line ->
+            def cols = line.split(/\s+/)
+            if( cols.size() > 1 ) {
+                result.put( cols[0], STATUS_MAP.get(cols[3]) )
             }
-            else if( id ) {
-                status = fetchValue(JOB_STATUS, line)
+            else {
+                log.debug "[TCS] invalid status line: `$line`"
             }
-            result.put( id, decode(status) ?: QueueStatus.UNKNOWN )
         }
 
         return result
     }
-
     static String fetchValue( String prefix, String line ) {
         final p = line.indexOf(prefix)
         return p!=-1 ? line.substring(p+prefix.size()).trim() : null
@@ -159,7 +165,7 @@ class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
     @Override
     String getArrayIndexName() {
-        return 'TCS_SUBJOBID'
+        return 'PJM_BULKNUM'
     }
 
     @Override
@@ -170,7 +176,7 @@ class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
     @Override
     String getArrayTaskId(String jobId, int index) {
         assert jobId, "Missing 'jobId' argument"
-        return jobId.replace('[]', "[$index]")
+        return "${jobId}[${index}]"
     }
 
 }
