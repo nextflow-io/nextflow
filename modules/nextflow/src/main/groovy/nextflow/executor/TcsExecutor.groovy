@@ -51,9 +51,12 @@ class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
         result << '-N' << modName(getJobNameFor(task))
 
-		result << '-o' << (task.isArray() ? '/dev/null' : quote(task.workDir.resolve(TaskRun.CMD_LOG)))
         result << '-j' << ''
         result << '-S' << ''
+		if( !task.workDir ) {
+			result << '-o' << (task.isArray() ? '/dev/null' : quote(task.workDir.resolve(TaskRun.CMD_LOG)))
+		}
+		//result << '-o' << (task.isArray() ? '/dev/null' : quote(task.workDir.resolve(TaskRun.CMD_LOG)))
 
         // max task duration
         if( task.config.getTime() ) {
@@ -75,7 +78,10 @@ class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
      * @return A list representing the submit command line
      */
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
-        [ 'pjsub', '-N', modName(getJobNameFor(task)), scriptFile.getName() ]
+        return pipeLauncherScript()
+                ? List.of('pjsub')
+                : List.of('pjsub', scriptFile.getName())
+/*        [ 'pjsub', '-N', modName(getJobNameFor(task)), scriptFile.getName() ] */
     }
 
     protected String getHeaderToken() { '#PJM' }
@@ -106,26 +112,27 @@ class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
         //String cmd = 'pjstat | grep -v JOB_ID'
         //if( queue ) cmd += ' ' + queue
         //return ['bash','-c', "set -o pipefail; $cmd | { grep -E '(Job Id:|job_state =)' || true; }".toString()]
-		final result = ['pjstat']
+		final result = ['pjstat2', '-E']
 		return result
     }
 
-    static private Map<String,QueueStatus> DECODE_STATUS = [
-            'ACC': QueueStatus.PENDING,
-            'QUE': QueueStatus.PENDING,
-            'RNA': QueueStatus.PENDING,
-            'RUN': QueueStatus.RUNNING,
-            'RNO': QueueStatus.RUNNING,
-            'EXT': QueueStatus.RUNNING,
-            'CCL': QueueStatus.DONE,
-            'HLD': QueueStatus.HOLD,
-            'ERR': QueueStatus.ERROR
+    static private Map<String,QueueStatus> STATUS_MAP = [
+            'ACC': QueueStatus.PENDING, // accepted
+            'QUE': QueueStatus.PENDING, // wait for running
+            'RNA': QueueStatus.RUNNING, // preparing
+            'RUN': QueueStatus.RUNNING, // running
+            'RNO': QueueStatus.RUNNING, // cleanup
+            'EXT': QueueStatus.DONE,    // finished
+            'CCL': QueueStatus.DONE,    // canceled
+            'HLD': QueueStatus.HOLD,    // holding
+            'ERR': QueueStatus.ERROR,   // error
     ]
-
+/*
     protected QueueStatus decode(String status) {
         DECODE_STATUS.get(status)
     }
-
+	*/
+/*
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
 
@@ -147,7 +154,22 @@ class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
         return result
     }
+*/
+    @Override
+    protected Map<String, QueueStatus> parseQueueStatus(String text) {
+        final result = new LinkedHashMap<String, QueueStatus>()
+        text.eachLine { String line ->
+            def cols = line.split(/\s+/)
+            if( cols.size() > 1 ) {
+                result.put( cols[0], STATUS_MAP.get(cols[3]) )
+            }
+            else {
+                log.debug "[TCS] invalid status line: `$line`"
+            }
+        }
 
+        return result
+    }
     static String fetchValue( String prefix, String line ) {
         final p = line.indexOf(prefix)
         return p!=-1 ? line.substring(p+prefix.size()).trim() : null
@@ -159,7 +181,7 @@ class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
     @Override
     String getArrayIndexName() {
-        return 'TCS_SUBJOBID'
+        return 'PJM_BULKNUM'
     }
 
     @Override
@@ -170,7 +192,7 @@ class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
     @Override
     String getArrayTaskId(String jobId, int index) {
         assert jobId, "Missing 'jobId' argument"
-        return jobId.replace('[]', "[$index]")
+        return "${jobId}[${index}]"
     }
 
 }
