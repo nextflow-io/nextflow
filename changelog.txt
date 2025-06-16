@@ -1,5 +1,11 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.04.4 - 16 Jun 2024
+- Fix bug in generated Groovy code (#6082) [ead2f320]
+- Fix default imports in included configs (#6096) [831a577b]
+- Fix variable checking in v2 config parser (#6097) [686ff608]
+- Sort linter errors/warnings by source location (#6098) [f51f339c]
+
 25.04.3 - 2 Jun 2025
 - Add Platform info to Fusion license (#6142) [375db65a]
 - Force overwritting to trace file (#6105) [59e9d88d]
