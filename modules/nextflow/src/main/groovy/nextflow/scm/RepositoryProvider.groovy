@@ -18,6 +18,12 @@ package nextflow.scm
 
 import static nextflow.util.StringUtils.*
 
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
+import java.util.concurrent.Executors
+
 import groovy.json.JsonSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
@@ -26,6 +32,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.exception.RateLimitExceededException
+import nextflow.util.Threads
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.transport.CredentialsProvider
@@ -40,6 +47,8 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 @CompileStatic
 abstract class RepositoryProvider {
 
+    static final public String[] EMPTY_ARRAY = new String[0]
+
     @Canonical
     static class TagInfo {
         String name
@@ -51,6 +60,11 @@ abstract class RepositoryProvider {
         String name
         String commitId
     }
+
+    /**
+     * The client used to carry out http requests
+     */
+    private HttpClient httpClient = { newHttpClient() }()
 
     /**
      * The pipeline qualified name following the syntax {@code owner/repository}
@@ -184,24 +198,17 @@ abstract class RepositoryProvider {
         assert api
 
         log.debug "Request [credentials ${getAuthObfuscated() ?: '-'}] -> $api"
-        def connection = new URL(api).openConnection() as URLConnection
-        connection.setConnectTimeout(60_000)
-
-        auth(connection)
-
-        if( connection instanceof HttpURLConnection ) {
-            checkResponse(connection)
-        }
-
-        InputStream content = connection.getInputStream()
-        try {
-            final result = content.text
-            log.trace "Git provider HTTP request: '$api' -- Response:\n${result}"
-            return result
-        }
-        finally{
-            content?.close()
-        }
+        final request = HttpRequest
+            .newBuilder()
+            .uri(new URI(api))
+            .headers(auth())
+            .GET()
+        // submit the request
+        final resp = httpClient.send(request.build(), HttpResponse.BodyHandlers.ofString())
+        // check the response code
+        checkResponse(resp)
+        // return the body as string
+        return resp.body()
     }
 
     protected String getAuthObfuscated() {
@@ -211,15 +218,20 @@ abstract class RepositoryProvider {
     }
 
     /**
-     * Sets the authentication credential on the connection object
+     * Define the credentials to be used to authenticate the http request
      *
-     * @param connection The URL connection object to be authenticated
+     * @return
+     *      A string array holding the authentication HTTP headers e.g.
+     *      {@code [ "Authorization", "Bearer 1234567890"] } or an empty
+     *      array when the credentials are not available or provided.
+     *      Note: {@code null} is not a valid return value for this method.
      */
-    protected void auth( URLConnection connection ) {
+    protected String[] auth() {
         if( hasCredentials() ) {
             String authString = "${getUser()}:${getPassword()}".bytes.encodeBase64().toString()
-            connection.setRequestProperty("Authorization","Basic " + authString)
+            return new String[] { "Authorization", "Basic " + authString }
         }
+        return EMPTY_ARRAY
     }
 
     /**
@@ -228,17 +240,17 @@ abstract class RepositoryProvider {
      *
      * @param connection A {@link HttpURLConnection} connection instance
      */
-    protected checkResponse( HttpURLConnection connection ) {
-        def code = connection.getResponseCode()
+    protected checkResponse( HttpResponse<String> connection ) {
+        final code = connection.statusCode()
 
         switch( code ) {
             case 401:
-                log.debug "Response status: $code -- ${connection.getErrorStream()?.text}"
+                log.debug "Response status: $code -- ${connection.body()}"
                 throw new AbortOperationException("Not authorized -- Check that the ${name.capitalize()} user name and password provided are correct")
 
             case 403:
-                log.debug "Response status: $code -- ${connection.getErrorStream()?.text}"
-                def limit = connection.getHeaderField('X-RateLimit-Remaining')
+                log.debug "Response status: $code -- ${connection.body()}"
+                def limit = connection.headers().firstValue('X-RateLimit-Remaining').orElse(null)
                 if( limit == '0' ) {
                     def message = config.auth ? "Check ${name.capitalize()}'s API rate limits for more details" : "Provide your ${name.capitalize()} user name and password to get a higher rate limit"
                     throw new RateLimitExceededException("API rate limit exceeded -- $message")
@@ -248,8 +260,8 @@ abstract class RepositoryProvider {
                     throw new AbortOperationException("Forbidden -- $message")
                 }
             case 404:
-                log.debug "Response status: $code -- ${connection.getErrorStream()?.text}"
-                throw new AbortOperationException("Remote resource not found: ${connection.getURL()}")
+                log.debug "Response status: $code -- ${connection.body()}"
+                throw new AbortOperationException("Remote resource not found: ${connection.uri()}")
         }
     }
 
@@ -340,6 +352,17 @@ abstract class RepositoryProvider {
         catch( IOException e ) {
             throw new AbortOperationException("Cannot find `$project` -- Make sure exists a ${name.capitalize()} repository at this address `${getRepositoryUrl()}`", e)
         }
+    }
+
+    private HttpClient newHttpClient() {
+        final builder = HttpClient.newBuilder()
+            .version(HttpClient.Version.HTTP_1_1)
+            .connectTimeout(Duration.ofSeconds(60))
+        // use virtual threads executor if enabled
+        if( Threads.useVirtual() )
+            builder.executor(Executors.newVirtualThreadPerTaskExecutor())
+        // build and return the new client
+        return builder.build()
     }
 
 }

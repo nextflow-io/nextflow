@@ -93,19 +93,21 @@ class RepositoryProviderTest extends Specification {
         def conn = Mock(HttpURLConnection)
 
         when:
-        provider.auth(conn)
+        def headers = provider.auth()
         then:
         1 * provider.getUser() >> null
         1 * provider.hasCredentials()
         0 * conn.setRequestProperty('Authorization', _)
+        and:
+        headers == [] as String[]
 
         when:
-        provider.auth(conn)
+        headers = provider.auth()
         then:
         _ * provider.getUser() >> 'foo'
         _ * provider.getPassword() >> 'bar'
         1 * provider.hasCredentials()
         and:
-        1 * conn.setRequestProperty('Authorization', "Basic ${'foo:bar'.bytes.encodeBase64()}")
+        headers == new String[] { 'Authorization', "Basic ${'foo:bar'.bytes.encodeBase64()}" }
     }
 }
