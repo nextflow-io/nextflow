@@ -355,8 +355,6 @@ The following snippet shows how to install Docker on an Amazon EC2 instance:
 ```bash
 # install Docker
 sudo yum update -y
-# For Amazon Linux 2, run the following: 
-# sudo amazon-linux-extras install docker
 sudo yum install docker
 
 # start the Docker service
@@ -379,9 +377,6 @@ The ECS agent is included in the **Amazon ECS-optimized Amazon Linux 2023 AMI** 
 To install the agent, follow these steps:
 
 ```bash
-# For Amazon Linux 2, run the following: 
-# sudo amazon-linux-extras disable docker
-# sudo amazon-linux-extras install -y ecs
 sudo yum install ecs-init
 sudo systemctl enable --now ecs
 ```
