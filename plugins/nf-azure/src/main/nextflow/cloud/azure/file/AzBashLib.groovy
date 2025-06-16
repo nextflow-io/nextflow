@@ -77,20 +77,10 @@ class AzBashLib extends BashFunLib<AzBashLib> {
         nxf_az_download() {
             local source=$1
             local target=$2
-            local basedir=$(dirname $2)
+            local basedir=$(dirname "$target")
             mkdir -p "$basedir"
 
-            # Try to download as file first, let azcopy handle the detection
-            if ! azcopy cp "$source?$AZ_SAS" "$target"; then
-                # If failed, remove any partial target and try as directory
-                rm -rf "$target"
-                mkdir -p "$target"
-                if ! azcopy cp "$source/*?$AZ_SAS" "$target" --recursive; then
-                    rm -rf "$target"
-                    >&2 echo "Unable to download path: $source"
-                    exit 1
-                fi
-            fi
+            azcopy sync "$source?$AZ_SAS" "$target" --recursive
         }
         '''.stripIndent()
     }

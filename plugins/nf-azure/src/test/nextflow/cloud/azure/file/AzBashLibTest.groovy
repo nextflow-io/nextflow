@@ -37,20 +37,10 @@ class AzBashLibTest extends Specification {
             nxf_az_download() {
                 local source=$1
                 local target=$2
-                local basedir=$(dirname $2)
+                local basedir=$(dirname "$target")
                 mkdir -p "$basedir"
 
-                # Try to download as file first, let azcopy handle the detection
-                if ! azcopy cp "$source?$AZ_SAS" "$target"; then
-                    # If failed, remove any partial target and try as directory
-                    rm -rf "$target"
-                    mkdir -p "$target"
-                    if ! azcopy cp "$source/*?$AZ_SAS" "$target" --recursive; then
-                        rm -rf "$target"
-                        >&2 echo "Unable to download path: $source"
-                        exit 1
-                    fi
-                fi
+                azcopy sync "$source?$AZ_SAS" "$target" --recursive
             }
             '''.stripIndent()
     }
@@ -58,7 +48,8 @@ class AzBashLibTest extends Specification {
     def 'should return script with config, with default azcopy opts'() {
 
         expect:
-        AzBashLib.script(new AzCopyOpts(), 10, 20, Duration.of('30s')) == '''\
+        def actual = AzBashLib.script(new AzCopyOpts(), 10, 20, Duration.of('30s'))
+        def expected = '''\
             # bash helper functions
             nxf_cp_retry() {
                 local max_attempts=20
@@ -140,22 +131,19 @@ class AzBashLibTest extends Specification {
             nxf_az_download() {
                 local source=$1
                 local target=$2
-                local basedir=$(dirname $2)
+                local basedir=$(dirname "$target")
                 mkdir -p "$basedir"
 
-                # Try to download as file first, let azcopy handle the detection
-                if ! azcopy cp "$source?$AZ_SAS" "$target"; then
-                    # If failed, remove any partial target and try as directory
-                    rm -rf "$target"
-                    mkdir -p "$target"
-                    if ! azcopy cp "$source/*?$AZ_SAS" "$target" --recursive; then
-                        rm -rf "$target"
-                        >&2 echo "Unable to download path: $source"
-                        exit 1
-                    fi
-                fi
+                azcopy sync "$source?$AZ_SAS" "$target" --recursive
             }
             '''.stripIndent()
+        
+        println "ACTUAL LENGTH: ${actual.length()}"
+        println "EXPECTED LENGTH: ${expected.length()}"
+        println "ACTUAL HEX: ${actual.getBytes().encodeHex().toString()}"
+        println "EXPECTED HEX: ${expected.getBytes().encodeHex().toString()}"
+        
+        actual == expected
     }
 
     def 'should return script with config, with custom azcopy opts'() {
@@ -243,20 +231,10 @@ class AzBashLibTest extends Specification {
             nxf_az_download() {
                 local source=$1
                 local target=$2
-                local basedir=$(dirname $2)
+                local basedir=$(dirname "$target")
                 mkdir -p "$basedir"
-            
-                # Try to download as file first, let azcopy handle the detection
-                if ! azcopy cp "$source?$AZ_SAS" "$target"; then
-                    # If failed, remove any partial target and try as directory
-                    rm -rf "$target"
-                    mkdir -p "$target"
-                    if ! azcopy cp "$source/*?$AZ_SAS" "$target" --recursive; then
-                        rm -rf "$target"
-                        >&2 echo "Unable to download path: $source"
-                        exit 1
-                    fi
-                fi
+
+                azcopy sync "$source?$AZ_SAS" "$target" --recursive
             }
             '''.stripIndent()
     }
