@@ -49,8 +49,8 @@ class FileHelperS3Test extends Specification {
         Path.of('file.txt')         | FileSystemPathFactory.parse('s3://host.com/work/file.txt')
         and:
         './file.txt'                | FileSystemPathFactory.parse('s3://host.com/work/file.txt')
-        '.'                         | FileSystemPathFactory.parse('s3://host.com/work')
-        './'                        | FileSystemPathFactory.parse('s3://host.com/work')
+        '.'                         | FileSystemPathFactory.parse('s3://host.com/work/')
+        './'                        | FileSystemPathFactory.parse('s3://host.com/work/')
         '../file.txt'               | FileSystemPathFactory.parse('s3://host.com/file.txt')
         and:
         '/file.txt'                 | Path.of('/file.txt')
@@ -67,8 +67,8 @@ class FileHelperS3Test extends Specification {
 
         where:
         VALUE                       | EXPECTED
-        's3://foo/some/file.txt'    | new URI('s3:///foo/some/file.txt')
-        's3://foo/some///file.txt'  | new URI('s3:///foo/some/file.txt')
+        's3://foo/some/file.txt'    | new URI('s3://foo/some/file.txt')
+        's3://foo/some///file.txt'  | new URI('s3://foo/some/file.txt')
     }
 
     @Unroll
@@ -80,7 +80,7 @@ class FileHelperS3Test extends Specification {
         FileHelper.asPath(STR).toUri() == EXPECTED
         where:
         STR                         | EXPECTED
-        's3://foo//this/that'       | new URI('s3:///foo/this/that')
-        's3://foo//this///that'     | new URI('s3:///foo/this/that')
+        's3://foo//this/that'       | new URI('s3://foo/this/that')
+        's3://foo//this///that'     | new URI('s3://foo/this/that')
     }
 }

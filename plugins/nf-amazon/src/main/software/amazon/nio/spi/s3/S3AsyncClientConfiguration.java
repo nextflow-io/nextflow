@@ -44,7 +44,7 @@ public class S3AsyncClientConfiguration {
     private S3CrtRetryConfiguration.Builder retryConfiguration;
     private S3CrtHttpConfiguration.Builder httpConfiguration;
     private ClientOverrideConfiguration.Builder cocBuilder;
-    private NextflowS3OpenOptions openOptions;
+    private NextflowS3ClientOpenOptions openOptions;
     private Integer maxConcurrency;
 
     private S3CrtRetryConfiguration.Builder retryConfiguration(){
@@ -69,9 +69,9 @@ public class S3AsyncClientConfiguration {
         return this.cocBuilder;
     }
     
-    private NextflowS3OpenOptions openOptions(){
+    private NextflowS3ClientOpenOptions openOptions(){
         if( this.openOptions == null )
-            this.openOptions = new NextflowS3OpenOptions();
+            this.openOptions = new NextflowS3ClientOpenOptions();
         return this.openOptions;
     }
     

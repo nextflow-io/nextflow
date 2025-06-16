@@ -23,6 +23,7 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.file.FileSystemPathFactory
 import nextflow.util.SerializerRegistrant
 import org.pf4j.Extension
 
@@ -34,26 +35,26 @@ import org.pf4j.Extension
 @Slf4j
 @Extension
 @CompileStatic
-class S3PathSerializer extends Serializer<S3Path> implements SerializerRegistrant  {
+class S3PathSerializer extends Serializer<NextflowS3Path> implements SerializerRegistrant  {
 
     @Override
     void register(Map<Class, Object> serializers) {
-        serializers.put(S3Path, S3PathSerializer)
+        serializers.put(NextflowS3Path, S3PathSerializer)
     }
 
     @Override
-    void write(Kryo kryo, Output output, S3Path target) {
+    void write(Kryo kryo, Output output, NextflowS3Path target) {
         final uri = target.toUriString()
         log.trace "S3Path serialization > uri:$uri"
         output.writeString(uri)
     }
 
     @Override
-    S3Path read(Kryo kryo, Input input, Class<S3Path> type) {
+    NextflowS3Path read(Kryo kryo, Input input, Class<NextflowS3Path> type) {
         final uri = input.readString()
         if( !uri.startsWith('s3') ) throw new IllegalStateException("Unexpected scheme for S3 path -- offending value '$uri'")
         log.trace "S3Path de-serialization > uri: $uri"
-        return (S3Path) S3PathFactory.create(uri)
+        return (NextflowS3Path) FileSystemPathFactory.parse(uri)
     }
     
 }

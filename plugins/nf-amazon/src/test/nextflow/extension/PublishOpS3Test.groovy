@@ -34,8 +34,8 @@ class PublishOpS3Test extends BaseSpec {
         given:
         Global.config = Collections.emptyMap()
         and:
-        def BASE = '/some/work/dir' as Path
-        def BUCKET_DIR = 's3://other/bucket/dir' as Path
+        def BASE = '/some/work/dir/' as Path
+        def BUCKET_DIR = 's3://other/bucket/dir/' as Path
         def sess = Mock(Session) {
             getWorkDir() >> BASE
             getBucketDir() >> BUCKET_DIR
@@ -52,7 +52,7 @@ class PublishOpS3Test extends BaseSpec {
         when:
         result = op.getTaskDir( BUCKET_DIR.resolve('pp/qqqq/other/file.fasta') )
         then:
-        result == 's3://other/bucket/dir/pp/qqqq' as Path
+        result == 's3://other/bucket/dir/pp/qqqq/' as Path
 
 
         when:

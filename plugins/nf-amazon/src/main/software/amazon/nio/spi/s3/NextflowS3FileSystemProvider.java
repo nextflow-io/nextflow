@@ -1,5 +1,6 @@
 package software.amazon.nio.spi.s3;
 
+import static software.amazon.nio.spi.s3.NextflowS3Path.*;
 import nextflow.SysEnv;
 import nextflow.cloud.aws.config.AwsConfig;
 import nextflow.cloud.aws.config.AwsS3Config;
@@ -15,11 +16,13 @@ import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URI;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystemAlreadyExistsException;
-import java.nio.file.FileSystemNotFoundException;
-import java.nio.file.Path;
+import java.nio.channels.SeekableByteChannel;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.FileAttributeView;
 import java.util.*;
 
 public class NextflowS3FileSystemProvider extends S3FileSystemProvider {
@@ -40,7 +43,6 @@ public class NextflowS3FileSystemProvider extends S3FileSystemProvider {
 				throw new FileSystemAlreadyExistsException("S3 filesystem already exists. Use getFileSystem() instead");
 
 			final AwsConfig awsConfig = new AwsConfig(env);
-			//
 			final S3FileSystem result = createFileSystem(uri, awsConfig);
 			fileSystems.put(bucketName, result);
 			return result;
@@ -57,7 +59,7 @@ public class NextflowS3FileSystemProvider extends S3FileSystemProvider {
         S3ClientProvider clientProvider = createS3clientProvider( awsConfig, config);
         S3FileSystem fs = new S3FileSystem(this, config);
         fs.clientProvider(clientProvider);
-        return new S3FileSystem(this, config);
+        return fs;
     }
 
     private S3ClientProvider createS3clientProvider(AwsConfig awsConfig, S3NioSpiConfiguration spiConfig) {
@@ -137,13 +139,15 @@ public class NextflowS3FileSystemProvider extends S3FileSystemProvider {
     @Override
 	public FileSystem getFileSystem(URI uri) {
         final String bucketName = fileSystemInfo(uri).bucket();
-		final FileSystem fileSystem = this.fileSystems.get(bucketName);
+        log.debug("Getting filesystem for S3 bucket {}", bucketName);
+        synchronized (fileSystems) {
+            final FileSystem fileSystem = this.fileSystems.get(bucketName);
 
-		if (fileSystem == null) {
-			throw new FileSystemNotFoundException("S3 filesystem not yet created. Use newFileSystem() instead");
-		}
-
-		return fileSystem;
+            if (fileSystem == null) {
+                throw new FileSystemNotFoundException("S3 filesystem not yet created. Use newFileSystem() instead");
+            }
+            return fileSystem;
+        }
 	}
 
 	/**
@@ -156,8 +160,93 @@ public class NextflowS3FileSystemProvider extends S3FileSystemProvider {
 		if (!uri.getScheme().equals(getScheme())) {
             throw new IllegalArgumentException("URI scheme must be " + getScheme());
         }
-		return getFileSystem(uri).getPath(uri.getPath());
+		return new NextflowS3Path((S3Path) getFileSystem(uri).getPath(uri.getPath()));
 	}
 
+    @Override
+    public InputStream newInputStream(Path path, OpenOption... options) throws IOException {
+        return super.newInputStream(unwrapS3Path(path), options);
+    }
 
+    @Override
+    public SeekableByteChannel newByteChannel(
+        Path path,
+        Set<? extends OpenOption> options,
+        FileAttribute<?>... attrs
+    ) throws IOException {
+        return super.newByteChannel(unwrapS3Path(path), options, attrs);
+    }
+
+    @Override
+    public OutputStream newOutputStream(Path path, OpenOption... options) throws IOException {
+        if( path instanceof NextflowS3Path ){
+            final NextflowS3Path nxfS3Path = (NextflowS3Path) path;
+            if( options != null && options.length > 0)
+                return super.newOutputStream(nxfS3Path.toS3Path(), updateOptions(options, nxfS3Path.getOpenOptions()));
+            else
+                return super.newOutputStream(nxfS3Path.toS3Path(), nxfS3Path.getOpenOptions());
+        }
+        return super.newOutputStream(path, options);
+    }
+
+    private OpenOption[] updateOptions(OpenOption[] options, NextflowS3PathOpenOptions newOption) {
+        final OpenOption[] newOptions = Arrays.copyOf(options, options.length + 1 );
+        newOptions[options.length] = newOption;
+        return newOptions;
+    }
+
+    @Override
+    public void createSymbolicLink(Path link, Path target, FileAttribute<?>... attrs) throws IOException {
+        super.createSymbolicLink(unwrapS3Path(link), unwrapS3Path(target), attrs);
+    }
+
+    @Override
+    public void createLink(Path link, Path existing) throws IOException {
+        super.createLink(unwrapS3Path(link), unwrapS3Path(existing));
+    }
+
+    @Override
+    public boolean deleteIfExists(Path path) throws IOException {
+        return super.deleteIfExists(unwrapS3Path(path));
+    }
+
+    @Override
+    public Path readSymbolicLink(Path link) throws IOException {
+        return super.readSymbolicLink(unwrapS3Path(link));
+    }
+
+    @Override
+    public <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) throws IOException {
+        return super.readAttributes(unwrapS3Path(path), type, options);
+    }
+
+    @Override
+    public void copy(Path source, Path target, CopyOption... options) throws IOException {
+        super.copy(unwrapS3Path(source), unwrapS3Path(target), options);
+    }
+
+    @Override
+    public void move(Path source, Path target, CopyOption... options) throws IOException {
+        super.move(unwrapS3Path(source), unwrapS3Path(target), options);
+    }
+
+    @Override
+    public <V extends FileAttributeView> V getFileAttributeView(Path path, Class<V> type, LinkOption... options) {
+        return super.getFileAttributeView(unwrapS3Path(path), type, options);
+    }
+
+    @Override
+    public void createDirectory(Path dir, FileAttribute<?>... attrs) throws IOException {
+        super.createDirectory(unwrapS3Path(dir), attrs);
+    }
+
+    @Override
+    public void delete(Path path) throws IOException {
+        super.delete(unwrapS3Path(path));
+    }
+
+    @Override
+    public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
+        return super.newDirectoryStream(unwrapS3Path(dir), filter);
+    }
 }

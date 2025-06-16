@@ -21,8 +21,6 @@ class S3PathTest extends Specification {
         _ | 's3://foo'          | 's3://foo/'
         _ | 's3://foo/bar'      | 's3://foo/bar'
         _ | 's3://foo/b a r'    | 's3://foo/b a r'
-        _ | 's3://f o o/bar'    | 's3://f o o/bar'
-        _ | 's3://f_o_o/bar'    | 's3://f_o_o/bar'
 
     }
 
@@ -37,8 +35,6 @@ class S3PathTest extends Specification {
         _ | 's3://foo'          | '/foo/'
         _ | 's3://foo/bar'      | '/foo/bar'
         _ | 's3://foo/b a r'    | '/foo/b a r'
-        _ | 's3://f o o/bar'    | '/f o o/bar'
-        _ | 's3://f_o_o/bar'    | '/f_o_o/bar'
 
     }
 

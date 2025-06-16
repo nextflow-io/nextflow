@@ -52,7 +52,7 @@ class S3PathFactory extends FileSystemPathFactory {
     protected String toUriString(Path path) {
         if( !isS3Path(path) )
             return null
-        final s3path = path as S3Path
+        var s3path = toS3Path(path)
         return "s3://${s3path.bucketName()}/${s3path.getKey()}".toString()
     }
 
@@ -83,11 +83,17 @@ class S3PathFactory extends FileSystemPathFactory {
         if( !path ) throw new IllegalArgumentException("Missing S3 path argument")
         if( !path.startsWith('s3://') ) throw new IllegalArgumentException("S3 path must start with s3:// prefix -- offending value '$path'")
         // note: this URI constructor parse the path parameter and extract the `scheme` and `authority` components
-        final uri =  new URI(null,null, path,null,null)
+        final uri =  new URI('s3',null, path.substring(3),null,null)
         return FileHelper.getOrCreateFileSystemFor(uri,config()).provider().getPath(uri)
     }
 
     static boolean isS3Path(Path path){
-        return path instanceof S3Path
+        return path instanceof S3Path || path instanceof NextflowS3Path
+    }
+
+    static S3Path toS3Path(Path path){
+        if( path instanceof NextflowS3Path )
+            return (path as NextflowS3Path).toS3Path()
+        return path as S3Path
     }
 }

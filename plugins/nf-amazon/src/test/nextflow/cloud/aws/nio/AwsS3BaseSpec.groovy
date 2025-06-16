@@ -23,6 +23,7 @@ import software.amazon.awssdk.services.s3.S3AsyncClient
 import software.amazon.awssdk.services.s3.model.GetObjectRequest
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse
 
 import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel
@@ -198,7 +199,9 @@ trait AwsS3BaseSpec {
     String readObject(Path path) {
         log.debug "Reading blob object '$path'"
         def (bucketName, blobName) = splitName(path)
+        log.debug "Reading blob object '$bucketName' '$blobName"
         Path temp = Files.createTempFile("temp","file")
+        temp.delete()
         s3Client
                 .getObject(GetObjectRequest.builder().bucket(bucketName).key(blobName).build() as GetObjectRequest, AsyncResponseTransformer.toFile(temp)).join()
         return temp.text
@@ -241,6 +244,10 @@ trait AwsS3BaseSpec {
             i += len
         }
 
+    }
+
+    HeadObjectResponse getObjectMetadata(String bucket, String key){
+        return s3Client.headObject(HeadObjectRequest.builder().bucket(bucket).key(key).build() as HeadObjectRequest).get()
     }
 
 }

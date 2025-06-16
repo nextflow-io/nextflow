@@ -19,7 +19,7 @@ package nextflow.cloud.aws.nio
 
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3AsyncClient
-import software.amazon.nio.spi.s3.S3FileSystem
+import software.amazon.nio.spi.s3.NextflowS3Path
 
 import java.nio.charset.Charset
 import java.nio.file.DirectoryNotEmptyException
@@ -34,8 +34,6 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributes
 
-import software.amazon.awssdk.services.s3.S3Client
-import software.amazon.awssdk.services.s3.model.S3Exception
 import software.amazon.awssdk.services.s3.model.Tag
 import groovy.util.logging.Slf4j
 import nextflow.Global
@@ -78,8 +76,6 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
     }
 
     def setup() {
-        def fs = (S3FileSystem)FileHelper.getOrCreateFileSystemFor(URI.create("s3:///"), config0().aws)
-        and:
         def cfg = config0()
         Global.config = cfg
         Global.session = Mock(Session) { getConfig()>>cfg }
@@ -107,7 +103,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         def path = s3path("s3://$bucket/file-name.txt")
 
         when:
-        Files.write(path, TEXT.bytes)
+        Files.write(path, TEXT.bytes, StandardOpenOption.CREATE)
         then:
         existsPath("$bucket/file-name.txt")
         readObject(path) == TEXT
@@ -599,7 +595,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         final path = s3path("s3://$bucketName/file.txt")
 
         when:
-        def writer = Files.newBufferedWriter(path, Charset.forName('UTF-8'))
+        def writer = Files.newBufferedWriter(path, Charset.forName('UTF-8'), StandardOpenOption.CREATE)
         TEXT.readLines().each { it -> writer.println(it) }
         writer.close()
         then:
@@ -656,7 +652,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         final path = s3path("s3://$bucketName/file.txt")
 
         when:
-        def writer = Files.newOutputStream(path)
+        def writer = Files.newOutputStream(path, StandardOpenOption.CREATE)
         TEXT.readLines().each { it ->
             writer.write(it.bytes);
             writer.write((int)('\n' as char))
@@ -1197,7 +1193,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         def path = s3path("s3://$bucketName/alpha.txt")
 
         when:
-        PrintWriter writer = new PrintWriter(Files.newBufferedWriter(path, Charset.defaultCharset()))
+        PrintWriter writer = new PrintWriter(Files.newBufferedWriter(path, Charset.defaultCharset(),StandardOpenOption.CREATE))
         writer.println '*'*20
         writer.flush()
         writer.println '*'*20
@@ -1218,7 +1214,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         def path = s3path("s3://$bucketName/alpha.txt")
 
         when:
-        PrintWriter writer = new PrintWriter(Files.newBufferedWriter(path, Charset.defaultCharset()))
+        PrintWriter writer = new PrintWriter(Files.newBufferedWriter(path, Charset.defaultCharset(), StandardOpenOption.CREATE))
         writer.println '*'*20
         writer.println '*'*20
         writer.close()
@@ -1292,23 +1288,21 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
         // upload a file to a remote bucket
         when:
-        def target1 = s3path("s3://$bucket1/foo.data")
+        def target1 = s3path("s3://$bucket1/foo.data") as NextflowS3Path
         and:
         target1.setContentType('text/foo')
-        def client = target1.getFileSystem().getClient()
         and:
         FileHelper.copyPath(file, target1)
         // the file exist
         then:
         Files.exists(target1)
         and:
-        client
-                .getObjectMetadata(target1.getBucket(), target1.getKey())
-                .getContentType() == 'text/foo'
+        getObjectMetadata(target1.toS3Path().bucketName(), target1.toS3Path().getKey())
+                .contentType() == 'text/foo'
 
         // copy a file across buckets
         when:
-        def target2 = s3path("s3://$bucket2/foo.data")
+        def target2 = s3path("s3://$bucket2/foo.data") as NextflowS3Path
         and:
         target2.setContentType('text/bar')
         and:
@@ -1316,9 +1310,8 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         // the file exist
         then:
         Files.exists(target2)
-        client
-                .getObjectMetadata(target2.getBucket(), target2.getKey())
-                .getContentType() == 'text/bar'
+        getObjectMetadata(target2.toS3Path().bucketName(), target2.toS3Path().getKey())
+            .contentType() == 'text/bar'
 
         cleanup:
         deleteBucket(bucket1)
@@ -1345,23 +1338,21 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
         // upload a file to a remote bucket
         when:
-        def target1 = s3path("s3://$bucket1/foo.data")
+        def target1 = s3path("s3://$bucket1/foo.data") as NextflowS3Path
         and:
         target1.setStorageClass('REDUCED_REDUNDANCY')
-        def client = target1.getFileSystem().getClient()
         and:
         FileHelper.copyPath(file, target1)
         // the file exist
         then:
         Files.exists(target1)
         and:
-        client
-                .getObjectMetadata(target1.getBucket(), target1.getKey())
-                .getStorageClass() == 'REDUCED_REDUNDANCY'
+        getObjectMetadata(target1.toS3Path().bucketName(), target1.toS3Path().getKey())
+                .storageClass().toString() == 'REDUCED_REDUNDANCY'
 
         // copy a file across buckets
         when:
-        def target2 = s3path("s3://$bucket2/foo.data")
+        def target2 = s3path("s3://$bucket2/foo.data") as NextflowS3Path
         and:
         target2.setStorageClass('STANDARD_IA')
         and:
@@ -1369,9 +1360,8 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         // the file exist
         then:
         Files.exists(target2)
-        client
-                .getObjectMetadata(target2.getBucket(), target2.getKey())
-                .getStorageClass() == 'STANDARD_IA'
+        getObjectMetadata(target2.toS3Path().bucketName(), target2.toS3Path().getKey())
+                .storageClass().toString() == 'STANDARD_IA'
 
         cleanup:
         deleteBucket(bucket1)

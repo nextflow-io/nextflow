@@ -14,17 +14,17 @@ import java.nio.file.Path
 
 @Slf4j
 @CompileStatic
-class NextflowS3OpenOptions extends S3OpenOption {
+class NextflowS3ClientOpenOptions extends S3OpenOption {
     private Boolean isRequesterPays
     private ObjectCannedACL cannedACL
     private String kmsKeyId
     private ServerSideEncryption storageEncryption
     private ClientOverrideConfiguration clientOverride
 
-    NextflowS3OpenOptions(){}
+    NextflowS3ClientOpenOptions(){}
 
-    protected NextflowS3OpenOptions(Boolean isRequesterPays, ObjectCannedACL cannedACL, String kmsKeyId,
-                                    ServerSideEncryption storageEncryption, ClientOverrideConfiguration clientOverride) {
+    protected NextflowS3ClientOpenOptions(Boolean isRequesterPays, ObjectCannedACL cannedACL, String kmsKeyId,
+                                          ServerSideEncryption storageEncryption, ClientOverrideConfiguration clientOverride) {
         this.isRequesterPays = isRequesterPays
         this.cannedACL = cannedACL
         this.kmsKeyId = kmsKeyId
@@ -34,7 +34,7 @@ class NextflowS3OpenOptions extends S3OpenOption {
 
     @Override
     S3OpenOption copy() {
-        return new NextflowS3OpenOptions(this.isRequesterPays, this.cannedACL, this.kmsKeyId, this.storageEncryption, this.clientOverride)
+        return new NextflowS3ClientOpenOptions(this.isRequesterPays, this.cannedACL, this.kmsKeyId, this.storageEncryption, this.clientOverride)
     }
 
     @Override
