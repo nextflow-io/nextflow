@@ -137,7 +137,7 @@ class AzBashLibTest extends Specification {
                 fi
             }
             
-                        nxf_az_download() {
+            nxf_az_download() {
                 local source=$1
                 local target=$2
                 local basedir=$(dirname $2)
