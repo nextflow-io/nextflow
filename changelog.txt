@@ -1,5 +1,11 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.04.4 - 16 Jun 2024
+- Fix bug in generated Groovy code (#6082) [ead2f320]
+- Fix default imports in included configs (#6096) [831a577b]
+- Fix variable checking in v2 config parser (#6097) [686ff608]
+- Sort linter errors/warnings by source location (#6098) [f51f339c]
+
 24.10.8 - 6 Jun 2025
 - Add Fusion license validation [02b4dd74]
 - Bump nf-wave@1.7.5-patch1 [cf6af9c5]
@@ -35,6 +41,11 @@ NEXTFLOW CHANGE-LOG
 - Bump nf-k8s@1.1.0 [14eb7892]
 - Bump nf-google@1.22.0 [0f6498f1]
 - Bump nf-azure@1.17.0 [0b491840]
+
+25.04.3 - 2 Jun 2025
+- Add Platform info to Fusion license (#6142) [375db65a]
+- Force overwritting to trace file (#6105) [59e9d88d]
+- Bump nf-tower@1.11.3 [f7509bce] 
 
 25.04.2 - 13 May 2025
 - Add check subcommand in lineage (#6074) [5ba67bca]
