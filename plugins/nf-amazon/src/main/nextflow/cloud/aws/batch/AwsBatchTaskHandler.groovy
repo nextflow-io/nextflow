@@ -16,9 +16,6 @@
 
 package nextflow.cloud.aws.batch
 
-import software.amazon.awssdk.services.batch.model.JobStatus
-import software.amazon.awssdk.services.batch.model.PlatformCapability
-
 import static AwsContainerOptionsMapper.*
 
 import java.nio.file.Path
@@ -43,11 +40,13 @@ import software.amazon.awssdk.services.batch.model.Host
 import software.amazon.awssdk.services.batch.model.JobDefinition
 import software.amazon.awssdk.services.batch.model.JobDefinitionType
 import software.amazon.awssdk.services.batch.model.JobDetail
+import software.amazon.awssdk.services.batch.model.JobStatus
 import software.amazon.awssdk.services.batch.model.JobTimeout
 import software.amazon.awssdk.services.batch.model.KeyValuePair
 import software.amazon.awssdk.services.batch.model.LogConfiguration
 import software.amazon.awssdk.services.batch.model.MountPoint
 import software.amazon.awssdk.services.batch.model.NetworkConfiguration
+import software.amazon.awssdk.services.batch.model.PlatformCapability
 import software.amazon.awssdk.services.batch.model.RegisterJobDefinitionRequest
 import software.amazon.awssdk.services.batch.model.RegisterJobDefinitionResponse
 import software.amazon.awssdk.services.batch.model.ResourceRequirement

@@ -26,10 +26,6 @@ import java.util.Properties;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 
-import nextflow.cloud.aws.AwsClientFactory;
-import nextflow.cloud.aws.nio.util.S3AsyncClientConfiguration;
-import nextflow.cloud.aws.nio.util.S3ClientConfiguration;
-import software.amazon.awssdk.awscore.AwsRequestOverrideConfiguration;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.exception.SdkException;
@@ -37,12 +33,15 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Iterable;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
+import software.amazon.awssdk.transfer.s3.model.*;
+import nextflow.cloud.aws.AwsClientFactory;
+import nextflow.cloud.aws.nio.util.S3AsyncClientConfiguration;
+import nextflow.cloud.aws.nio.util.S3ClientConfiguration;
 import nextflow.cloud.aws.nio.util.S3MultipartOptions;
 import nextflow.cloud.aws.util.AwsHelper;
 import nextflow.util.ThreadPoolManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.transfer.s3.model.*;
 
 import static nextflow.cloud.aws.nio.util.S3UploadHelper.*;
 
@@ -73,8 +72,6 @@ public class S3Client {
     private Boolean isRequesterPaysEnabled = false;
 
 	private String callerAccount;
-
-    private String callerCanonicalId;
 
 	private AwsClientFactory factory;
 

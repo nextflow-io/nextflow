@@ -39,15 +39,14 @@ import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.S3Configuration
 import software.amazon.awssdk.services.sts.StsClient
 import software.amazon.awssdk.services.sts.model.GetCallerIdentityRequest
+import software.amazon.awssdk.services.sts.model.StsException
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.aws.util.S3CredentialsProvider
-
 import nextflow.exception.AbortOperationException
-import software.amazon.awssdk.services.sts.model.StsException
 
 /**
  * Implement a factory class for AWS client objects
