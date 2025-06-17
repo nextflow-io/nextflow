@@ -16,10 +16,10 @@
 
 package nextflow.scm
 
-import dev.failsafe.FailsafeException
+import java.net.http.HttpClient
+
 import nextflow.util.RetryConfig
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -95,32 +95,37 @@ class RepositoryProviderTest extends Specification {
         def conn = Mock(HttpURLConnection)
 
         when:
-        provider.auth(conn)
+        def headers = provider.getAuth()
         then:
         1 * provider.getUser() >> null
         1 * provider.hasCredentials()
         0 * conn.setRequestProperty('Authorization', _)
+        and:
+        headers == [] as String[]
 
         when:
-        provider.auth(conn)
+        headers = provider.getAuth()
         then:
         _ * provider.getUser() >> 'foo'
         _ * provider.getPassword() >> 'bar'
         1 * provider.hasCredentials()
         and:
-        1 * conn.setRequestProperty('Authorization', "Basic ${'foo:bar'.bytes.encodeBase64()}")
+        headers == new String[] { 'Authorization', "Basic ${'foo:bar'.bytes.encodeBase64()}" }
     }
 
     def 'should test retries' () {
         given:
-        def provider = Spy(RepositoryProvider)
+        def client = Mock(HttpClient)
+        and:
+        def provider = Spy(RepositoryProvider) { getAuth()>>[] }
+        provider.@httpClient = client
         provider.@config = new ProviderConfig('github', [server: 'https://github.com'] as ConfigObject)
         provider.@retryConfig = new RetryConfig()
 
         when:
         provider.invoke('https://api.github.com/repos/project/x')
         then:
-        5 * provider.invoke0(_) >> { throw new IOException("exception") }
+        5 * client.send(_,_) >> { throw new IOException("exception") }
         def e = thrown(IOException)
         e.message == "exception"
     }
