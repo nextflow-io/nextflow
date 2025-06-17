@@ -17,7 +17,6 @@
 package nextflow.cloud.aws
 
 import nextflow.cloud.aws.nio.util.S3AsyncClientConfiguration
-import nextflow.cloud.aws.nio.util.S3ClientConfiguration
 import nextflow.cloud.aws.nio.util.S3SyncClientConfiguration
 import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
@@ -209,11 +208,14 @@ class AwsClientFactory {
                 .pathStyleAccessEnabled(config.s3Config.pathStyleAccess)
                 .multiRegionEnabled(global)
                 .build())
+
         if (config.s3Config.endpoint) {
             builder.endpointOverride(URI.create(config.s3Config.endpoint))
-        } else {
-            builder.region(getRegionObj(region))
         }
+
+        // AWS SDK v2 region must be always set, even when endpoint is override
+        builder.region(getRegionObj(region))
+
         if (httpClientBuilder != null) {
             builder.httpClientBuilder(httpClientBuilder)
         }

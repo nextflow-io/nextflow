@@ -29,13 +29,13 @@ class S3FileSystemProviderTest extends Specification {
 
     def 'should create filesystem from config'(){
         given:
-        def config = [client: [ anonymous: true, s3acl: 'Private', connectionTimeout: 20000, endpoint: 'https://endpoint.com',
+        def config = [client: [ anonymous: true, s3acl: 'Private', connectionTimeout: 20000, endpoint: 'https://s3.eu-west-1.amazonaws.com',
                                 maxConnections: 100, maxErrorRetry: 3, socketTimeout: 20000, requesterPays: true, s3PathStyleAccess: true,
                                 proxyHost: 'host.com', proxyPort: 80, proxyScheme: 'https', proxyUsername: 'user', proxyPassword: 'pass',
                                 signerOverride: 'S3SignerType', userAgent: 'Agent1', storageEncryption: 'AES256', storageKmsKeyId: 'arn:key:id',
                                 uploadMaxThreads: 20, uploadChunkSize: '7MB', uploadMaxAttempts: 4, uploadRetrySleep: '200ms'
                               ],
-                      accessKey: '123456abc', secretKey: '78910def', region: 'eu-west-1', profile: 'test']
+                      accessKey: '123456abc', secretKey: '78910def', profile: 'test']
         def provider = new S3FileSystemProvider();
         when:
         def fs = provider.newFileSystem(new URI("s3:///bucket/key"), config) as S3FileSystem
@@ -49,12 +49,11 @@ class S3FileSystemProviderTest extends Specification {
         client.storageEncryption == ServerSideEncryption.AES256
         client.isRequesterPaysEnabled == true
         client.kmsKeyId == 'arn:key:id'
-        client.factory.region() == 'eu-west-1'
         client.factory.accessKey() == '123456abc'
         client.factory.secretKey() == '78910def'
         client.factory.profile() == 'test'
         client.factory.config.s3Config.anonymous == true
-        client.factory.config.s3Config.endpoint == 'https://endpoint.com'
+        client.factory.config.s3Config.endpoint == 'https://s3.eu-west-1.amazonaws.com'
         client.factory.config.s3Config.pathStyleAccess == true
         fs.properties().getProperty('proxy_host') == 'host.com'
         fs.properties().getProperty('proxy_port') == '80'
