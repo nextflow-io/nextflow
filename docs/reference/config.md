@@ -8,6 +8,9 @@ This page lists all of the available settings in the {ref}`Nextflow configuratio
 
 ## Unscoped options
 
+`bucketDir`
+: The remote work directory used by hybrid workflows. Equivalent to the `-bucket-dir` option of the `run` command.
+
 `cleanup`
 : If `true`, on a successful completion of a run all files in *work* directory are automatically deleted.
 
