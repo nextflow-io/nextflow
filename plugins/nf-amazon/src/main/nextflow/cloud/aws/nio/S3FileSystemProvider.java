@@ -751,12 +751,12 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		final S3Client client = new S3Client(factory, props, global);
 
 		// set the client acl
-		client.setCannedAcl(getProp(props, "s_3_acl", "s3_acl", "s3Acl"));
+		client.setCannedAcl(getProp(props, "s_3_acl", "s3_acl", "s3acl", "s3Acl"));
 		client.setStorageEncryption(props.getProperty("storage_encryption"));
 		client.setKmsKeyId(props.getProperty("storage_kms_key_id"));
 		client.setUploadChunkSize(props.getProperty("upload_chunk_size"));
 		client.setUploadMaxThreads(props.getProperty("upload_max_threads"));
-        client.setRequesterPaysEnabled(props.getProperty("requester_pays_enabled"));
+        client.setRequesterPaysEnabled(props.getProperty("requester_pays"));
 
 		if( props.getProperty("glacier_auto_retrieval") != null )
 			log.warn("Glacier auto-retrieval is no longer supported, config option `aws.client.glacierAutoRetrieval` will be ignored");

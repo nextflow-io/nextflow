@@ -18,6 +18,7 @@ package nextflow.cloud.aws
 
 import nextflow.cloud.aws.nio.util.S3AsyncClientConfiguration
 import nextflow.cloud.aws.nio.util.S3ClientConfiguration
+import nextflow.cloud.aws.nio.util.S3SyncClientConfiguration
 import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
@@ -47,7 +48,6 @@ import nextflow.SysEnv
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.aws.util.S3CredentialsProvider
 import nextflow.exception.AbortOperationException
-
 /**
  * Implement a factory class for AWS client objects
  *
@@ -199,8 +199,8 @@ class AwsClientFactory {
         return CloudWatchLogsClient.builder().region(getRegionObj(region)).credentialsProvider(getCredentialsProvider0()).build()
     }
 
-    S3Client getS3Client(S3ClientConfiguration s3ClientConfig, boolean global = false) {
-        final SdkHttpClient httpClient = s3ClientConfig.getHttpClient()
+    S3Client getS3Client(S3SyncClientConfiguration s3ClientConfig, boolean global = false) {
+        final SdkHttpClient.Builder httpClientBuilder = s3ClientConfig.getHttpClientBuilder()
         final ClientOverrideConfiguration overrideConfiguration = s3ClientConfig.getClientOverrideConfiguration()
         def builder = S3Client.builder()
             .crossRegionAccessEnabled(global)
@@ -214,8 +214,8 @@ class AwsClientFactory {
         } else {
             builder.region(getRegionObj(region))
         }
-        if (httpClient != null) {
-            builder.httpClient(httpClient)
+        if (httpClientBuilder != null) {
+            builder.httpClientBuilder(httpClientBuilder)
         }
         if (overrideConfiguration != null) {
             builder.overrideConfiguration(overrideConfiguration)
@@ -224,12 +224,11 @@ class AwsClientFactory {
     }
 
     S3AsyncClient getS3AsyncClient(S3AsyncClientConfiguration s3ClientConfig, Long uploadChunkSize, boolean global = false) {
-        final SdkAsyncHttpClient httpClient = s3ClientConfig.getHttpClient()
+        final SdkAsyncHttpClient.Builder httpClientBuilder = s3ClientConfig.getHttpClientBuilder()
         final ClientOverrideConfiguration overrideConfiguration = s3ClientConfig.getClientOverrideConfiguration()
         def builder = S3AsyncClient.builder()
             .crossRegionAccessEnabled(global)
             .credentialsProvider(config.s3Config.anonymous ? AnonymousCredentialsProvider.create() : new S3CredentialsProvider(getCredentialsProvider0()))
-            .multipartConfiguration {cfg -> }
             .serviceConfiguration(S3Configuration.builder()
                 .pathStyleAccessEnabled(config.s3Config.pathStyleAccess)
                 .build())
@@ -241,8 +240,8 @@ class AwsClientFactory {
         } else {
             builder.region(getRegionObj(region))
         }
-        if (httpClient != null) {
-            builder.httpClient(httpClient)
+        if (httpClientBuilder != null) {
+            builder.httpClientBuilder(httpClientBuilder)
         }
         if (overrideConfiguration != null) {
             builder.overrideConfiguration(overrideConfiguration)

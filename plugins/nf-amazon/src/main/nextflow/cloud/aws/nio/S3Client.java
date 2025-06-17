@@ -26,6 +26,7 @@ import java.util.Properties;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 
+import nextflow.cloud.aws.nio.util.S3SyncClientConfiguration;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.exception.SdkException;
@@ -36,7 +37,6 @@ import software.amazon.awssdk.transfer.s3.S3TransferManager;
 import software.amazon.awssdk.transfer.s3.model.*;
 import nextflow.cloud.aws.AwsClientFactory;
 import nextflow.cloud.aws.nio.util.S3AsyncClientConfiguration;
-import nextflow.cloud.aws.nio.util.S3ClientConfiguration;
 import nextflow.cloud.aws.nio.util.S3MultipartOptions;
 import nextflow.cloud.aws.util.AwsHelper;
 import nextflow.util.ThreadPoolManager;
@@ -80,7 +80,7 @@ public class S3Client {
 	private boolean global;
 
 	public S3Client(AwsClientFactory factory, Properties props, boolean global) {
-		S3ClientConfiguration clientConfig = S3ClientConfiguration.create(props);
+		S3SyncClientConfiguration clientConfig = S3SyncClientConfiguration.create(props);
 		this.factory = factory;
 		this.props = props;
 		this.global = global;
@@ -507,7 +507,7 @@ public class S3Client {
             log.debug("S3 download file: s3://{}/{} cancelled", source.getBucket(), source.getKey());
 			Thread.currentThread().interrupt();
         } catch (ExecutionException e) {
-            log.debug("S3 deownload file: s3://{}/{} exception thrown", source.getBucket(), source.getKey());
+            log.debug("S3 download file: s3://{}/{} exception thrown", source.getBucket(), source.getKey());
             throw new IOException(e.getCause());
         }
 
@@ -579,7 +579,7 @@ public class S3Client {
             CompletedDirectoryUpload completed = upload.completionFuture().get();
             if (!completed.failedTransfers().isEmpty()){
                 log.debug("S3 upload directory: s3://{}/{} failed transfers", target.getBucket(), target.getKey());
-                throw new IOException("Some tranfers in S3 upload directory: s3://"+ target.getBucket() +"/"+ target.getKey() +" has failed - Trasfers: " +  completed.failedTransfers() );
+                throw new IOException("Some transfers in S3 upload directory: s3://"+ target.getBucket() +"/"+ target.getKey() +" has failed - Transfers: " +  completed.failedTransfers() );
             }
         } catch (InterruptedException e){
             log.debug("S3 upload directory: s3://{}/{} cancelled", target.getBucket(), target.getKey());

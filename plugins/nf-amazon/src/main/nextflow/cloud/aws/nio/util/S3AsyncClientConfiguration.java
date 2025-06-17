@@ -16,14 +16,6 @@
  */
 package nextflow.cloud.aws.nio.util;
 
-import nextflow.cloud.aws.nio.S3Client;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.auth.signer.Aws4Signer;
-import software.amazon.awssdk.auth.signer.AwsS3V4Signer;
-import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
-import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
-import software.amazon.awssdk.core.signer.Signer;
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
 import software.amazon.awssdk.http.crt.AwsCrtAsyncHttpClient;
 import software.amazon.awssdk.http.crt.ProxyConfiguration;
@@ -36,18 +28,9 @@ import java.util.Properties;
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
-public class S3AsyncClientConfiguration {
+public class S3AsyncClientConfiguration extends S3ClientConfiguration{
 
-    private static final Logger log = LoggerFactory.getLogger(S3Client.class);
-
-    private ClientOverrideConfiguration.Builder cocBuilder;
     private AwsCrtAsyncHttpClient.Builder httpClientBuilder;
-
-    private ClientOverrideConfiguration.Builder cocBuilder(){
-        if( this.cocBuilder == null )
-            this.cocBuilder = ClientOverrideConfiguration.builder();
-        return this.cocBuilder;
-    }
 
     private AwsCrtAsyncHttpClient.Builder httpClientBuilder(){
         if( this.httpClientBuilder == null)
@@ -55,44 +38,32 @@ public class S3AsyncClientConfiguration {
         return this.httpClientBuilder;
     }
 
-    public ClientOverrideConfiguration getClientOverrideConfiguration(){
-        if( cocBuilder == null )
-            return null;
-        return cocBuilder.build();
-    }
-     public SdkAsyncHttpClient getHttpClient(){
+     public SdkAsyncHttpClient.Builder getHttpClientBuilder(){
         if ( this.httpClientBuilder == null )
             return null;
-        return this.httpClientBuilder.build();
+        return this.httpClientBuilder;
      }
 
-    private S3AsyncClientConfiguration(){}
+    private S3AsyncClientConfiguration(){
+        super();
+    }
 
 
-    public static S3AsyncClientConfiguration create(Properties props) {
-		S3AsyncClientConfiguration config = new S3AsyncClientConfiguration();
+    private void setHttpClientBuilder(Properties props){
+        if( props.containsKey("connection_timeout") ) {
+            log.trace("AWS client config - connection_timeout: {}", props.getProperty("connection_timeout"));
+            httpClientBuilder().connectionTimeout(Duration.ofMillis(Long.parseLong(props.getProperty("connection_timeout"))));
+        }
 
-		if( props == null )
-			return config;
+        if( props.containsKey("max_connections")) {
+            log.trace("AWS client config - max_connections: {}", props.getProperty("max_connections"));
+            httpClientBuilder().maxConcurrency(Integer.parseInt(props.getProperty("max_connections")));
+        }
 
-		if( props.containsKey("connection_timeout") ) {
-			log.trace("AWS client config - connection_timeout: {}", props.getProperty("connection_timeout"));
-			config.httpClientBuilder().connectionTimeout(Duration.ofMillis(Long.parseLong(props.getProperty("connection_timeout"))));
-		}
+        if( props.containsKey("socket_timeout")) {
+            log.warn("AWS client config - 'socket_timeout' doesn't exist in AWS SDK V2 Async Client");
+        }
 
-		if( props.containsKey("max_connections")) {
-			log.trace("AWS client config - max_connections: {}", props.getProperty("max_connections"));
-			config.httpClientBuilder().maxConcurrency(Integer.parseInt(props.getProperty("max_connections")));
-		}
-
-		if( props.containsKey("max_error_retry")) {
-			log.trace("AWS client config - max_error_retry: {}", props.getProperty("max_error_retry"));
-			config.cocBuilder().retryStrategy(b -> b.maxAttempts(Integer.parseInt(props.getProperty("max_error_retry"))));
-		}
-
-		if( props.containsKey("protocol")) {
-			log.warn("AWS client config 'protocol' doesn't exist in AWS SDK V2");
-		}
         if( props.containsKey("proxy_host")) {
             final String host = props.getProperty("proxy_host");
             final ProxyConfiguration.Builder proxyConfig = ProxyConfiguration.builder();
@@ -107,48 +78,28 @@ public class S3AsyncClientConfiguration {
             if (props.containsKey("proxy_password")) {
                 proxyConfig.password(props.getProperty("proxy_password"));
             }
-
+            if (props.containsKey("proxy_scheme")) {
+                proxyConfig.scheme(props.getProperty("proxy_scheme"));
+            }
             if (props.containsKey("proxy_domain")) {
                 log.warn("AWS client config 'proxy_domain' doesn't exist in AWS SDK V2 Async Client");
             }
             if (props.containsKey("proxy_workstation")) {
                 log.warn("AWS client config 'proxy_workstation' doesn't exist in AWS SDK V2 Async Client");
             }
-
-            config.httpClientBuilder().proxyConfiguration(proxyConfig.build());
+            httpClientBuilder().proxyConfiguration(proxyConfig.build());
         }
 
-		if ( props.containsKey("signer_override")) {
-			log.warn("AWS client config - 'signerOverride' is deprecated");
-			config.cocBuilder().putAdvancedOption(SdkAdvancedClientOption.SIGNER, resolveSigner(props.getProperty("signer_override")));
-		}
+    }
 
-		if( props.containsKey("socket_send_buffer_size_hints") || props.containsKey("socket_recv_buffer_size_hints") ) {
-			log.warn("AWS client config - 'socket_send_buffer_size_hints' and 'socket_recv_buffer_size_hints' do not exist in AWS SDK V2" );
-		}
+    public static S3AsyncClientConfiguration create(Properties props) {
+		S3AsyncClientConfiguration config = new S3AsyncClientConfiguration();
 
-		if( props.containsKey("socket_timeout")) {
-			log.warn("AWS client config - 'socket_timeout' doesn't exist in AWS SDK V2 Async Client");
-
-		}
-
-		if( props.containsKey("user_agent")) {
-			log.trace("AWS client config - user_agent: {}", props.getProperty("user_agent"));
-			config.cocBuilder().putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_PREFIX, props.getProperty("user_agent"));
-		}
+		if( props != null ){
+            config.setClientOverrideConfiguration(props);
+            config.setHttpClientBuilder(props);
+        }
 		return config;
 	}
-
-    private static Signer resolveSigner(String signerOverride) {
-        switch (signerOverride) {
-            case "AWSS3V4SignerType":
-            case "S3SignerType":
-                return AwsS3V4Signer.create();
-        case "AWS4SignerType":
-            return Aws4Signer.create();
-        default:
-            throw new IllegalArgumentException("Unsupported signer: " + signerOverride);
-    }
-}
 }
 

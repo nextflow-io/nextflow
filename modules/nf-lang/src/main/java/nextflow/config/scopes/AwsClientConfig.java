@@ -81,6 +81,12 @@ public class AwsClientConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        The schema to use when connecting through a proxy (http/https).
+    """)
+    public String proxySchema;
+
+    @ConfigOption
+    @Description("""
         The user name to use when connecting through a proxy.
     """)
     public String proxyUsername;
