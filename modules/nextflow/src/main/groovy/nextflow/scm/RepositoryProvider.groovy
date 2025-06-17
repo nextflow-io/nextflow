@@ -30,7 +30,9 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Const
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
+import nextflow.exception.HttpResponseLengthExceedException
 import nextflow.exception.RateLimitExceededException
 import nextflow.util.Threads
 import org.eclipse.jgit.api.Git
@@ -207,6 +209,7 @@ abstract class RepositoryProvider {
         final resp = httpClient.send(request.build(), HttpResponse.BodyHandlers.ofString())
         // check the response code
         checkResponse(resp)
+        checkMaxLength(resp)
         // return the body as string
         return resp.body()
     }
@@ -238,19 +241,19 @@ abstract class RepositoryProvider {
      * Check for response error status. Throws a {@link AbortOperationException} exception
      * when a 401 or 403 error status is returned.
      *
-     * @param connection A {@link HttpURLConnection} connection instance
+     * @param response A {@link HttpURLConnection} connection instance
      */
-    protected checkResponse( HttpResponse<String> connection ) {
-        final code = connection.statusCode()
+    protected checkResponse( HttpResponse<String> response ) {
+        final code = response.statusCode()
 
         switch( code ) {
             case 401:
-                log.debug "Response status: $code -- ${connection.body()}"
+                log.debug "Response status: $code -- ${response.body()}"
                 throw new AbortOperationException("Not authorized -- Check that the ${name.capitalize()} user name and password provided are correct")
 
             case 403:
-                log.debug "Response status: $code -- ${connection.body()}"
-                def limit = connection.headers().firstValue('X-RateLimit-Remaining').orElse(null)
+                log.debug "Response status: $code -- ${response.body()}"
+                def limit = response.headers().firstValue('X-RateLimit-Remaining').orElse(null)
                 if( limit == '0' ) {
                     def message = config.auth ? "Check ${name.capitalize()}'s API rate limits for more details" : "Provide your ${name.capitalize()} user name and password to get a higher rate limit"
                     throw new RateLimitExceededException("API rate limit exceeded -- $message")
@@ -260,9 +263,20 @@ abstract class RepositoryProvider {
                     throw new AbortOperationException("Forbidden -- $message")
                 }
             case 404:
-                log.debug "Response status: $code -- ${connection.body()}"
-                throw new AbortOperationException("Remote resource not found: ${connection.uri()}")
+                log.debug "Response status: $code -- ${response.body()}"
+                throw new AbortOperationException("Remote resource not found: ${response.uri()}")
         }
+    }
+
+    protected void checkMaxLength(HttpResponse<String> response) {
+        final max = SysEnv.get("NXF_GIT_RESPONSE_MAX_LENGTH")
+        if( !max )
+            return
+        final length = response.headers().firstValueAsLong('Content-Length')
+        if( !length )
+            return
+        if( length>max )
+            throw new HttpResponseLengthExceedException("HTTP response '${response.uri()}' is too big - response length: ${length}; max allowed length: ${max}")
     }
 
     protected <T> List<T> invokeAndResponseWithPaging(String request, Closure<T> parse) {
