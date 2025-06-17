@@ -16,9 +16,9 @@
 
 package nextflow.scm
 
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-
 /**
  * Implements a repository provider for Gitea service
  *
@@ -43,14 +43,14 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
     }
 
     @Override
-    protected void auth( URLConnection connection ) {
+    protected String[] getAuth() {
         if( config.token ) {
             // set the token in the request header
             // https://docs.gitea.io/en-us/api-usage/#authentication
-            connection.setRequestProperty("Authorization", "token $config.token")
+            return new String[] { "Authorization", "token $config.token" as String }
         }
         else {
-            super.auth(connection)
+            return EMPTY_ARRAY
         }
     }
 
