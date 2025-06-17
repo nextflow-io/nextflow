@@ -93,7 +93,7 @@ class RepositoryProviderTest extends Specification {
         def conn = Mock(HttpURLConnection)
 
         when:
-        def headers = provider.auth()
+        def headers = provider.getAuth()
         then:
         1 * provider.getUser() >> null
         1 * provider.hasCredentials()
@@ -102,7 +102,7 @@ class RepositoryProviderTest extends Specification {
         headers == [] as String[]
 
         when:
-        headers = provider.auth()
+        headers = provider.getAuth()
         then:
         _ * provider.getUser() >> 'foo'
         _ * provider.getPassword() >> 'bar'

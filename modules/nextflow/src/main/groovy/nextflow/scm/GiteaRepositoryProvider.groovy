@@ -43,7 +43,7 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
     }
 
     @Override
-    protected String[] auth() {
+    protected String[] getAuth() {
         if( config.token ) {
             // set the token in the request header
             // https://docs.gitea.io/en-us/api-usage/#authentication

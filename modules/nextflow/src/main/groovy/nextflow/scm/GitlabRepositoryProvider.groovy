@@ -39,7 +39,7 @@ class GitlabRepositoryProvider extends RepositoryProvider {
     }
 
     @Override
-    protected String[] auth() {
+    protected String[] getAuth() {
         if( config.token ) {
             // set the token in the request header
             return new String[] { "PRIVATE-TOKEN", config.token }

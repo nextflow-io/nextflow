@@ -128,7 +128,7 @@ class GithubRepositoryProviderTest extends Specification {
         def provider = Spy(new GithubRepositoryProvider('foo',Mock(ProviderConfig)))
 
         when:
-        final result = provider.auth()
+        final result = provider.getAuth()
         then:
         _ * provider.getUser() 
         _ * provider.getPassword()

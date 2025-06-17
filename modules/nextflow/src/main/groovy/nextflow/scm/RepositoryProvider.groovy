@@ -201,7 +201,7 @@ abstract class RepositoryProvider {
         final request = HttpRequest
             .newBuilder()
             .uri(new URI(api))
-            .headers(auth())
+            .headers(getAuth())
             .GET()
         // submit the request
         final resp = httpClient.send(request.build(), HttpResponse.BodyHandlers.ofString())
@@ -226,7 +226,7 @@ abstract class RepositoryProvider {
      *      array when the credentials are not available or provided.
      *      Note: {@code null} is not a valid return value for this method.
      */
-    protected String[] auth() {
+    protected String[] getAuth() {
         if( hasCredentials() ) {
             String authString = "${getUser()}:${getPassword()}".bytes.encodeBase64().toString()
             return new String[] { "Authorization", "Basic " + authString }
