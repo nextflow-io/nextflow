@@ -225,10 +225,13 @@ class LocalPollingMonitor extends TaskPollingMonitor {
      */
     @Override
     protected void submit(TaskHandler handler) {
+        final taskGpus = gpus(handler)
+        if ( taskGpus > 0 ) {
+            ((LocalTaskHandler) handler).gpuSlots = availGpus.acquire(taskGpus)
+        }
         super.submit(handler)
         availCpus -= cpus(handler)
         availMemory -= mem(handler)
-        ((LocalTaskHandler) handler).gpuSlots = availGpus.acquire(gpus(handler))
     }
 
     /**
