@@ -36,6 +36,7 @@ class AnsiLogObserverTest extends Specification {
         stats.cached    = CACHE
         stats.stored    = STORE
         stats.terminated = DONE
+        stats.closed = CLOSED
         stats.errored = ERR
         stats.hash = HASH
 
@@ -47,20 +48,23 @@ class AnsiLogObserverTest extends Specification {
         observer.line(stats).toString().replaceAll('\u001B\\[[\\d;]*[^\\d;]','') == EXPECTED
 
         where:
-        HASH        | SUBMIT  | SUCCEEDED | CACHE | STORE | DONE  | ERR   | WIDTH | EXPECTED
-        null        | 0       | 0         | 0     | 0     | false | false | 190   | '[-        ] process > foo -'
-        '4e/486876' | 1       | 0         | 0     | 0     | false | false | 190   | '[4e/486876] process > foo [  0%] 0 of 1'
-        '4e/486876' | 0       | 1         | 0     | 0     | false | false | 190   | '[4e/486876] process > foo [100%] 1 of 1'
-        '4e/486876' | 1       | 1         | 0     | 0     | false | false | 190   | '[4e/486876] process > foo [ 50%] 1 of 2'
-        '4e/486876' | 5       | 5         | 0     | 0     | false | false | 190   | '[4e/486876] process > foo [ 50%] 5 of 10'
-        '4e/486876' | 6       | 6         | 0     | 0     | false | false | 180   | '[4e/486876] foo [ 50%] 6 of 12'
-        '4e/486876' | 7       | 7         | 0     | 0     | false | false | 70    | '[4e/486876] foo | 7 of 14'
-        '4e/486876' | 0       | 0         | 5     | 0     | false | false | 190   | '[4e/486876] process > foo [100%] 5 of 5, cached: 5'
-        '4e/486876' | 1       | 1         | 3     | 0     | false | false | 190   | '[4e/486876] process > foo [ 80%] 4 of 5, cached: 3'
-        'skipped'   | 0       | 0         | 0     | 5     | false | false | 190   | '[skipped  ] process > foo [100%] 5 of 5, stored: 5'
-        'skipped'   | 1       | 1         | 0     | 3     | false | false | 190   | '[skipped  ] process > foo [ 80%] 4 of 5, stored: 3'
-        'ab/123456' | 0       | 2         | 0     | 0     | true  | false | 190   | '[ab/123456] process > foo [100%] 2 of 2 ✔'
-        'ef/987654' | 0       | 2         | 0     | 0     | true  | true  | 190   | '[ef/987654] process > foo [100%] 2 of 2 ✘'
+        HASH        | SUBMIT  | SUCCEEDED | CACHE | STORE | CLOSED | DONE  | ERR   | WIDTH | EXPECTED
+        null        | 0       | 0         | 0     | 0     | false  | false | false | 190   | '[-        ] process > foo -'
+        '4e/486876' | 1       | 0         | 0     | 0     | false  | false | false | 190   | '[4e/486876] process > foo [  ?%] 0 of 1'
+        '4e/486876' | 1       | 0         | 0     | 0     | true   | false | false | 190   | '[4e/486876] process > foo [  0%] 0 of 1'
+        '4e/486876' | 0       | 1         | 0     | 0     | false  | false | false | 190   | '[4e/486876] process > foo [  ?%] 1 of 1'
+        '4e/486876' | 0       | 1         | 0     | 0     | true   | false | false | 190   | '[4e/486876] process > foo [100%] 1 of 1'
+        '4e/486876' | 1       | 1         | 0     | 0     | false  | false | false | 190   | '[4e/486876] process > foo [  ?%] 1 of 2'
+        '4e/486876' | 1       | 1         | 0     | 0     | true   | false | false | 190   | '[4e/486876] process > foo [ 50%] 1 of 2'
+        '4e/486876' | 5       | 5         | 0     | 0     | true   | false | false | 190   | '[4e/486876] process > foo [ 50%] 5 of 10'
+        '4e/486876' | 6       | 6         | 0     | 0     | true   | false | false | 180   | '[4e/486876] foo [ 50%] 6 of 12'
+        '4e/486876' | 7       | 7         | 0     | 0     | true   | false | false | 70    | '[4e/486876] foo | 7 of 14'
+        '4e/486876' | 0       | 0         | 5     | 0     | true   | false | false | 190   | '[4e/486876] process > foo [100%] 5 of 5, cached: 5'
+        '4e/486876' | 1       | 1         | 3     | 0     | true   | false | false | 190   | '[4e/486876] process > foo [ 80%] 4 of 5, cached: 3'
+        'skipped'   | 0       | 0         | 0     | 5     | true   | false | false | 190   | '[skipped  ] process > foo [100%] 5 of 5, stored: 5'
+        'skipped'   | 1       | 1         | 0     | 3     | true   | false | false | 190   | '[skipped  ] process > foo [ 80%] 4 of 5, stored: 3'
+        'ab/123456' | 0       | 2         | 0     | 0     | true   | true  | false | 190   | '[ab/123456] process > foo [100%] 2 of 2 ✔'
+        'ef/987654' | 0       | 2         | 0     | 0     | true   | true  | true  | 190   | '[ef/987654] process > foo [100%] 2 of 2 ✘'
 
     }
 
