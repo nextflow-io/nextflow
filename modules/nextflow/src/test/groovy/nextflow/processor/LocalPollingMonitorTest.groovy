@@ -21,6 +21,7 @@ import java.lang.management.ManagementFactory
 import com.sun.management.OperatingSystemMXBean
 import nextflow.Session
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.executor.local.LocalTaskHandler
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
 /**
@@ -38,6 +39,7 @@ class LocalPollingMonitorTest extends Specification {
                 cpus: 10,
                 capacity: 20,
                 memory: _20_GB,
+                gpus: 0,
                 session: session,
                 name: 'local',
                 pollInterval: 100
@@ -45,7 +47,7 @@ class LocalPollingMonitorTest extends Specification {
 
         def task = new TaskRun()
         task.config = new TaskConfig(cpus: 3, memory: MemoryUnit.of('2GB'))
-        def handler = Mock(TaskHandler)
+        def handler = Mock(LocalTaskHandler)
         handler.getTask() >> { task }
 
         expect:
@@ -86,6 +88,7 @@ class LocalPollingMonitorTest extends Specification {
                 cpus: 10,
                 capacity: 10,
                 memory: _20_GB,
+                gpus: 0,
                 session: session,
                 name: 'local',
                 pollInterval: 100
@@ -93,7 +96,7 @@ class LocalPollingMonitorTest extends Specification {
 
         def task = new TaskRun()
         task.config = new TaskConfig(cpus: 4, memory: MemoryUnit.of('8GB'))
-        def handler = Mock(TaskHandler)
+        def handler = Mock(LocalTaskHandler)
         handler.getTask() >> { task }
         handler.canForkProcess() >> true
         handler.isReady() >> true
@@ -132,6 +135,7 @@ class LocalPollingMonitorTest extends Specification {
                 cpus: 1,
                 capacity: 1,
                 memory: _20_GB,
+                gpus: 0,
                 session: session,
                 name: 'local',
                 pollInterval: 100
@@ -139,7 +143,7 @@ class LocalPollingMonitorTest extends Specification {
 
         def task = new TaskRun()
         task.config = new TaskConfig(cpus: 1, memory: MemoryUnit.of('8GB'))
-        def handler = Mock(TaskHandler)
+        def handler = Mock(LocalTaskHandler)
         handler.getTask() >> { task }
         handler.canForkProcess() >> true
         handler.isReady() >> true
@@ -167,6 +171,7 @@ class LocalPollingMonitorTest extends Specification {
                 cpus: 10,
                 capacity: 20,
                 memory: _20_GB,
+                gpus: 0,
                 session: session,
                 name: 'local',
                 pollInterval: 100
@@ -195,6 +200,7 @@ class LocalPollingMonitorTest extends Specification {
                 cpus: 10,
                 capacity: 20,
                 memory: _20_GB,
+                gpus: 0,
                 session: session,
                 name: 'local',
                 pollInterval: 100
