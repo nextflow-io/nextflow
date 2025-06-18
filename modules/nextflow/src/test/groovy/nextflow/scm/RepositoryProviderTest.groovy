@@ -18,6 +18,7 @@ package nextflow.scm
 
 import java.net.http.HttpClient
 import java.net.http.HttpResponse
+import java.nio.channels.UnresolvedAddressException
 
 import nextflow.util.RetryConfig
 import spock.lang.Specification
@@ -152,4 +153,20 @@ class RepositoryProviderTest extends Specification {
         and:
         result == 'OK'
     }
+
+    def 'should validate is retryable' () {
+        given:
+        def provider = Spy(RepositoryProvider)
+        expect:
+        provider.isRetryable(ERR) == EXPECTED
+
+        where:
+        EXPECTED    | ERR
+        false       | new RuntimeException()
+        false       | new IOException()
+        true        | new SocketException()
+        false       | new SocketException(new UnresolvedAddressException())
+        false       | new SocketTimeoutException()
+    }
+
 }

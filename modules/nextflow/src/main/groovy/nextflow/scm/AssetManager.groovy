@@ -34,6 +34,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.exception.AmbiguousPipelineNameException
 import nextflow.script.ScriptFile
 import nextflow.util.IniFile
+import nextflow.util.RetryConfig
 import org.eclipse.jgit.api.CreateBranchCommand
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.ListBranchCommand
@@ -86,6 +87,8 @@ class AssetManager {
 
     private List<ProviderConfig> providerConfigs
 
+    private RetryConfig retryConfig
+
     /**
      * Create a new asset manager object with default parameters
      */
@@ -124,7 +127,7 @@ class AssetManager {
     AssetManager build( String pipelineName, Map config = null, HubOptions cliOpts = null ) {
 
         this.providerConfigs = ProviderConfig.createFromMap(config)
-
+        this.retryConfig = new RetryConfig(config.retryPolicy as Map ?: Collections.emptyMap())
         this.project = resolveName(pipelineName)
         this.localPath = checkProjectDir(project)
         this.hub = checkHubProvider(cliOpts)
@@ -357,7 +360,9 @@ class AssetManager {
         if( !config )
             throw new AbortOperationException("Unknown repository configuration provider: $providerName")
 
-        return RepositoryFactory.newRepositoryProvider(config, project)
+        return RepositoryFactory
+                    .newRepositoryProvider(config, project)
+                    .setRetryConfig(retryConfig)
     }
 
     AssetManager setLocalPath(File path) {

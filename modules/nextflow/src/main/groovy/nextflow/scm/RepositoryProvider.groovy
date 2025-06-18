@@ -16,6 +16,7 @@
 
 package nextflow.scm
 
+import java.nio.channels.UnresolvedAddressException
 import java.time.temporal.ChronoUnit
 import java.util.function.Predicate
 
@@ -435,19 +436,25 @@ abstract class RepositoryProvider {
         return Failsafe.with(policy).get(action)
     }
 
-    private boolean isRetryable(Throwable t) {
-        if( t instanceof SocketException )
+    protected boolean isRetryable(Throwable t) {
+        // only retry SocketException and ignore generic IOException
+        return t instanceof SocketException && !isCausedByUnresolvedAddressException(t)
+    }
+
+    private boolean isCausedByUnresolvedAddressException(Throwable t) {
+        if( t instanceof UnresolvedAddressException )
             return true
-        if( t instanceof SocketTimeoutException || t !instanceof InterruptedIOException )
-            return true
-        return false
+        if( t.cause==null )
+            return false
+        else
+            return isCausedByUnresolvedAddressException(t.cause)
     }
 
     protected HttpResponse<String> httpSend(HttpRequest request) {
         if( httpClient==null )
             httpClient = newHttpClient()
         if( retryConfig==null )
-            retryConfig = RetryConfig.config()
+            retryConfig = new RetryConfig()
         try {
             safeApply(()-> httpClient.send(request, HttpResponse.BodyHandlers.ofString()))
         }
