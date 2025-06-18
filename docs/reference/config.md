@@ -224,8 +224,9 @@ The following settings are available:
 
 `aws.client.protocol`
 : :::{deprecated} 25.06.0-edge
+  This option is no longer supported.
   :::
-: The protocol to use when connecting to AWS. Can be `http` or `https` (default: `'https'`). This option is not supported on AWS SDK v2.
+: The protocol to use when connecting to AWS. Can be `http` or `https` (default: `'https'`).
 
 `aws.client.proxyHost`
 : The proxy host to connect through.
@@ -236,7 +237,7 @@ The following settings are available:
 `aws.client.proxyScheme`
 : :::{versionadded} 25.06.0-edge
   :::
-: The scheme to use when connecting through a proxy (Can be `http` or `https` (default: `'http'`).
+: The scheme to use when connecting through a proxy. Can be `http` or `https` (default: `'http'`).
 
 `aws.client.proxyUsername`
 : The user name to use when connecting through a proxy.
@@ -257,13 +258,15 @@ The following settings are available:
 
 `aws.client.socketSendBufferSizeHint`
 : :::{deprecated} 25.06.0-edge
+  This option is no longer supported.
   :::
-: The Size hint (in bytes) for the low level TCP send buffer (default: `0`). This option is not supported in AWS SDK v2.
+: The Size hint (in bytes) for the low level TCP send buffer (default: `0`).
 
 `aws.client.socketRecvBufferSizeHint`
 : :::{deprecated} 25.06.0-edge
+  This option is no longer supported.
   :::
-: The Size hint (in bytes) for the low level TCP receive buffer (default: `0`). This option is not supported in AWS SDK v2.
+: The Size hint (in bytes) for the low level TCP receive buffer (default: `0`).
 
 `aws.client.socketTimeout`
 : The amount of time to wait (in milliseconds) for data to be transferred over an established, open connection before the connection is timed out (default: `50000`).
