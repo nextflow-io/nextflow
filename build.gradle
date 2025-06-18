@@ -237,7 +237,7 @@ task compile {
 
 def getRuntimeConfigs() {
     def names = subprojects
-            .findAll { prj -> prj.name in ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'] }
+            .findAll { prj -> prj.name in ['nextflow','nf-cli-v1','nf-commons','nf-httpfs','nf-lang','nf-lineage'] }
             .collect { it.name }
 
     FileCollection result = null
@@ -262,8 +262,10 @@ task exportClasspath {
     doLast {
         def home = System.getProperty('user.home')
         def all = getRuntimeConfigs()
-        def libs = all.collect { File file ->  /*println file.canonicalPath.replace(home, '$HOME');*/ file.canonicalPath;  }
-        ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'].each {libs << file("modules/$it/build/libs/${it}-${version}.jar").canonicalPath }
+        def libs = all.collect { File file -> file.canonicalPath }
+        ['nextflow','nf-cli-v1','nf-commons','nf-httpfs','nf-lang','nf-lineage'].each {
+            libs << file("modules/$it/build/libs/${it}-${version}.jar").canonicalPath
+        }
         file('.launch.classpath').text = libs.unique().join(':')
     }
 }
@@ -276,7 +278,7 @@ ext.nexusEmail = project.findProperty('nexusEmail')
 // `signing.keyId` property needs to be defined in the `gradle.properties` file
 ext.enableSignArchives = project.findProperty('signing.keyId')
 
-ext.coreProjects = projects( ':nextflow', ':nf-commons', ':nf-httpfs', ':nf-lang', ':nf-lineage' )
+ext.coreProjects = projects( ':nextflow', ':nf-cli-v1', ':nf-commons', ':nf-httpfs', ':nf-lang', ':nf-lineage' )
 
 configure(coreProjects) {
     group = 'io.nextflow'
