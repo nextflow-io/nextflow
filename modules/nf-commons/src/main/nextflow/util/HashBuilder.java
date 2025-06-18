@@ -350,7 +350,7 @@ public class HashBuilder {
                         final String sha256 = sha256Cache.get(path);
                         // compute the file path hash and sum to the result hash
                         // since the sum is commutative, the traverse order does not matter
-                        sumBytes(resultBytes, hashBytes(relPath + ": " + sha256, HashMode.STANDARD));
+                        sumBytes(resultBytes, hashBytes(relPath + sha256, HashMode.STANDARD));
                         return FileVisitResult.CONTINUE;
                     }
                     catch (ExecutionException t) {
