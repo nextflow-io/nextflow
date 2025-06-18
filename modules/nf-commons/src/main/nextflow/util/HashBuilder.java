@@ -346,12 +346,11 @@ public class HashBuilder {
                     try {
                         // the file relative base
                         final String relPath = base.relativize(path).toString();
-                        // compute the file path hash and sum to the result hash
-                        // since the sum is commutative, the traverse order does not matter
-                        sumBytes(resultBytes, hashBytes(relPath, HashMode.STANDARD));
                         // the file content sha-256 checksum
                         final String sha256 = sha256Cache.get(path);
-                        sumBytes(resultBytes, hashBytes(sha256, HashMode.STANDARD));
+                        // compute the file path hash and sum to the result hash
+                        // since the sum is commutative, the traverse order does not matter
+                        sumBytes(resultBytes, hashBytes(relPath + ": " + sha256, HashMode.STANDARD));
                         return FileVisitResult.CONTINUE;
                     }
                     catch (ExecutionException t) {
