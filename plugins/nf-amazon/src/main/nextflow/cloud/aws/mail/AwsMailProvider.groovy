@@ -56,7 +56,7 @@ class AwsMailProvider implements MailProvider {
         message.writeTo(outputStream)
         // send the email
         final rawMessage = RawMessage.builder().data(SdkBytes.fromByteArray(outputStream.toByteArray())).build()
-        final result = client.sendRawEmail(SendRawEmailRequest.builder().rawMessage(rawMessage).build() as SendRawEmailRequest);
+        final result = client.sendRawEmail(SendRawEmailRequest.builder().rawMessage(rawMessage).build())
         log.debug "Mail message sent: ${result}"
     }
 

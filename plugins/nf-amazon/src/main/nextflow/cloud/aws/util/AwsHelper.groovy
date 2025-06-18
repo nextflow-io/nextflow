@@ -31,7 +31,8 @@ class AwsHelper {
             return null
 
         return value.contains('-')
-                ? ObjectCannedACL.valueOf(CaseFormat.LOWER_HYPHEN.to(CaseFormat.UPPER_UNDERSCORE, value)) : ObjectCannedACL.valueOf(CaseFormat.UPPER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE,value))
+                ? ObjectCannedACL.valueOf(CaseFormat.LOWER_HYPHEN.to(CaseFormat.UPPER_UNDERSCORE, value))
+                : ObjectCannedACL.valueOf(CaseFormat.UPPER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE,value))
     }
 
 }

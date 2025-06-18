@@ -237,7 +237,7 @@ The following settings are available:
 `aws.client.proxyScheme`
 : :::{versionadded} 25.06.0-edge
   :::
-: The scheme to use when connecting through a proxy. Can be `http` or `https` (default: `'http'`).
+: The protocol scheme to use when connecting through a proxy. Can be `http` or `https` (default: `'http'`).
 
 `aws.client.proxyUsername`
 : The user name to use when connecting through a proxy.

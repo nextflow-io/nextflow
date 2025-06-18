@@ -17,7 +17,6 @@
 
 package nextflow.cloud.aws.util
 
-
 import software.amazon.awssdk.auth.credentials.AwsCredentials
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
 import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider

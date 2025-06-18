@@ -126,10 +126,11 @@ class AwsClientFactory {
      *      it's not a EC2 instance
      */
     protected String fetchIamRole() {
-        try{
-            StsClient stsClient = StsClient.create()
+        try {
+            final stsClient = StsClient.create()
             return stsClient.getCallerIdentity(GetCallerIdentityRequest.builder().build() as GetCallerIdentityRequest).arn();
-        } catch ( StsException e) {
+        }
+        catch (StsException e) {
             log.trace "Unable to fetch IAM credentials -- Cause: ${e.message}"
             return null
         }
@@ -146,7 +147,8 @@ class AwsClientFactory {
     private String fetchRegion() {
         try {
             return new InstanceProfileRegionProvider().getRegion().id();
-        } catch ( SdkClientException e) {
+        }
+        catch (SdkClientException e) {
             log.debug("Cannot fetch AWS region", e);
             return null;
         }
@@ -173,7 +175,10 @@ class AwsClientFactory {
      *      An {@link Ec2Client} instance
      */
     synchronized Ec2Client getEc2Client() {
-        return Ec2Client.builder().region(getRegionObj(region)).credentialsProvider(getCredentialsProvider0()).build()
+        return Ec2Client.builder()
+            .region(getRegionObj(region))
+            .credentialsProvider(getCredentialsProvider0())
+            .build()
     }
 
     /**
@@ -185,12 +190,18 @@ class AwsClientFactory {
      */
     @Memoized
     BatchClient getBatchClient() {
-        return BatchClient.builder().region(getRegionObj(region)).credentialsProvider(getCredentialsProvider0()).build()
+        return BatchClient.builder()
+            .region(getRegionObj(region))
+            .credentialsProvider(getCredentialsProvider0())
+            .build()
     }
 
     @Memoized
     EcsClient getEcsClient() {
-        return EcsClient.builder().region(getRegionObj(region)).credentialsProvider(getCredentialsProvider0()).build()
+        return EcsClient.builder()
+            .region(getRegionObj(region))
+            .credentialsProvider(getCredentialsProvider0())
+            .build()
     }
 
     @Memoized
@@ -201,7 +212,7 @@ class AwsClientFactory {
     S3Client getS3Client(S3SyncClientConfiguration s3ClientConfig, boolean global = false) {
         final SdkHttpClient.Builder httpClientBuilder = s3ClientConfig.getHttpClientBuilder()
         final ClientOverrideConfiguration overrideConfiguration = s3ClientConfig.getClientOverrideConfiguration()
-        def builder = S3Client.builder()
+        final builder = S3Client.builder()
             .crossRegionAccessEnabled(global)
             .credentialsProvider(config.s3Config.anonymous ? AnonymousCredentialsProvider.create() : new S3CredentialsProvider(getCredentialsProvider0()))
             .serviceConfiguration(S3Configuration.builder()
@@ -209,54 +220,60 @@ class AwsClientFactory {
                 .multiRegionEnabled(global)
                 .build())
 
-        if (config.s3Config.endpoint) {
+        if( config.s3Config.endpoint )
             builder.endpointOverride(URI.create(config.s3Config.endpoint))
-        }
 
-        // AWS SDK v2 region must be always set, even when endpoint is override
+        // AWS SDK v2 region must be always set, even when endpoint is overridden
         builder.region(getRegionObj(region))
 
-        if (httpClientBuilder != null) {
+        if( httpClientBuilder != null )
             builder.httpClientBuilder(httpClientBuilder)
-        }
-        if (overrideConfiguration != null) {
+
+        if( overrideConfiguration != null )
             builder.overrideConfiguration(overrideConfiguration)
-        }
+
         return builder.build()
     }
 
     S3AsyncClient getS3AsyncClient(S3AsyncClientConfiguration s3ClientConfig, Long uploadChunkSize, boolean global = false) {
-        final SdkAsyncHttpClient.Builder httpClientBuilder = s3ClientConfig.getHttpClientBuilder()
-        final ClientOverrideConfiguration overrideConfiguration = s3ClientConfig.getClientOverrideConfiguration()
-        def builder = S3AsyncClient.builder()
+        final httpClientBuilder = s3ClientConfig.getHttpClientBuilder()
+        final overrideConfiguration = s3ClientConfig.getClientOverrideConfiguration()
+        final builder = S3AsyncClient.builder()
             .crossRegionAccessEnabled(global)
-            .credentialsProvider(config.s3Config.anonymous ? AnonymousCredentialsProvider.create() : new S3CredentialsProvider(getCredentialsProvider0()))
-            .serviceConfiguration(S3Configuration.builder()
-                .pathStyleAccessEnabled(config.s3Config.pathStyleAccess)
-                .build())
-        if (uploadChunkSize > 0){
+            .credentialsProvider(
+                config.s3Config.anonymous
+                    ? AnonymousCredentialsProvider.create()
+                    : new S3CredentialsProvider(getCredentialsProvider0())
+            )
+            .serviceConfiguration(
+                S3Configuration.builder()
+                    .pathStyleAccessEnabled(config.s3Config.pathStyleAccess)
+                    .build()
+            )
+
+        if( uploadChunkSize > 0 )
             builder.multipartConfiguration(cfg -> cfg.minimumPartSizeInBytes(uploadChunkSize))
-        }
-        if (config.s3Config.endpoint) {
+
+        if( config.s3Config.endpoint )
             builder.endpointOverride(URI.create(config.s3Config.endpoint))
-        } else {
+        else
             builder.region(getRegionObj(region))
-        }
-        if (httpClientBuilder != null) {
+
+        if( httpClientBuilder != null )
             builder.httpClientBuilder(httpClientBuilder)
-        }
-        if (overrideConfiguration != null) {
+
+        if( overrideConfiguration != null )
             builder.overrideConfiguration(overrideConfiguration)
-        }
+
         return builder.build()
     }
 
     protected AwsCredentialsProvider getCredentialsProvider0() {
-        if (accessKey && secretKey) {
+        if( accessKey && secretKey ) {
             return StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey))
         }
 
-        if (profile) {
+        if( profile ) {
             return ProfileCredentialsProvider.builder()
                     .profileName(profile)
                     .build()

@@ -81,7 +81,7 @@ class BatchHelper {
         final describeTaskReq = DescribeTasksRequest.builder()
                 .cluster(clusterArn)
                 .tasks(taskArn)
-                .build() as DescribeTasksRequest
+                .build()
         final containers = ecsClient
                 .describeTasks(describeTaskReq)
                 .tasks()
@@ -98,7 +98,7 @@ class BatchHelper {
         final describeContainerReq = DescribeContainerInstancesRequest.builder()
                 .cluster(clusterArn)
                 .containerInstances(containerId)
-                .build() as DescribeContainerInstancesRequest
+                .build()
         final instanceIds = ecsClient
                 .describeContainerInstances(describeContainerReq)
                 .containerInstances()
@@ -117,7 +117,7 @@ class BatchHelper {
         final instanceAttributeReq = DescribeInstanceAttributeRequest.builder()
                 .instanceId(instanceId)
                 .attribute(InstanceAttributeName.INSTANCE_TYPE)
-                .build() as DescribeInstanceAttributeRequest
+                .build()
         ec2Client
                 .describeInstanceAttribute(instanceAttributeReq)
                 .instanceType()
@@ -134,8 +134,8 @@ class BatchHelper {
         return null
     }
 
-    def describeJob(String jobId) {
-        def req = DescribeJobsRequest.builder().jobs(jobId).build() as DescribeJobsRequest
+    String describeJob(String jobId) {
+        final req = DescribeJobsRequest.builder().jobs(jobId).build()
         batchClient
                 .describeJobs(req)
                 .jobs()

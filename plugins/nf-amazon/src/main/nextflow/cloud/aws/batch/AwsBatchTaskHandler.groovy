@@ -205,8 +205,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
         // retrieve the status for the specified job and along with the next batch
         log.trace "[AWS BATCH] requesting describe jobs=${jobIdsToString(batchIds)}"
-        final request = DescribeJobsRequest.builder().jobs(batchIds).build() as DescribeJobsRequest
-        DescribeJobsResponse resp = client.describeJobs(request)
+        final request = DescribeJobsRequest.builder().jobs(batchIds).build()
+        final resp = client.describeJobs(request)
         if( !resp || !resp.jobs() ) {
             log.debug "[AWS BATCH] cannot retrieve running status for job=$jobId"
             return null
@@ -360,7 +360,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final req = TerminateJobRequest.builder()
             .jobId(jobId)
             .reason('Job killed by NF')
-            .build() as TerminateJobRequest
+            .build()
         final batch = bypassProxy(client)
         executor.reaper.submit({
             final resp = batch.terminateJob(req)
@@ -488,9 +488,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     @CompileStatic
     protected String resolveJobDefinition0(TaskRun task) {
-
         final builder = makeJobDefRequest(task)
-        final req = builder.build() as RegisterJobDefinitionRequest
+        final req = builder.build()
         final container = task.getContainer()
         final token = req.parameters().get('nf-token')
         final jobKey = "$container:$token".toString()
@@ -683,7 +682,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         log.trace "[AWS BATCH] checking job definition with name=$name; jobid=$jobId"
         final req = DescribeJobDefinitionsRequest.builder()
             .jobDefinitionName(name)
-            .build() as DescribeJobDefinitionsRequest
+            .build()
         // bypass the proxy because this method is invoked during a
         // job submit request that's already in a separate thread pool request
         // therefore it's protected by a TooManyRequestsException
@@ -859,7 +858,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             builder.arrayProperties(ArrayProperties.builder().size(arraySize).build())
         }
 
-        return builder.build() as SubmitJobRequest
+        return builder.build()
     }
 
     /**
