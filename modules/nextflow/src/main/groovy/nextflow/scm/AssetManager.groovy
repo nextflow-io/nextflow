@@ -127,7 +127,7 @@ class AssetManager {
     AssetManager build( String pipelineName, Map config = null, HubOptions cliOpts = null ) {
 
         this.providerConfigs = ProviderConfig.createFromMap(config)
-        this.retryConfig = new RetryConfig(config.retryPolicy as Map ?: Collections.emptyMap())
+        this.retryConfig = new RetryConfig(config?.retryPolicy as Map ?: Collections.emptyMap())
         this.project = resolveName(pipelineName)
         this.localPath = checkProjectDir(project)
         this.hub = checkHubProvider(cliOpts)
