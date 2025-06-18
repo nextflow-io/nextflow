@@ -27,7 +27,6 @@ import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration
 import software.amazon.awssdk.core.exception.SdkClientException
 import software.amazon.awssdk.http.SdkHttpClient
-import software.amazon.awssdk.http.async.SdkAsyncHttpClient
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.regions.providers.InstanceProfileRegionProvider
 import software.amazon.awssdk.services.batch.BatchClient
@@ -37,6 +36,8 @@ import software.amazon.awssdk.services.ecs.EcsClient
 import software.amazon.awssdk.services.s3.S3AsyncClient
 import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.S3Configuration
+import software.amazon.awssdk.services.s3.internal.crt.S3CrtAsyncHttpClient
+import software.amazon.awssdk.services.s3.multipart.MultipartConfiguration
 import software.amazon.awssdk.services.sts.StsClient
 import software.amazon.awssdk.services.sts.model.GetCallerIdentityRequest
 import software.amazon.awssdk.services.sts.model.StsException
@@ -264,7 +265,6 @@ class AwsClientFactory {
 
         if( overrideConfiguration != null )
             builder.overrideConfiguration(overrideConfiguration)
-
         return builder.build()
     }
 
