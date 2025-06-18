@@ -54,7 +54,7 @@ class K8sExecutor extends Executor implements ExtensionPoint {
      */
     @Memoized
     protected K8sConfig getK8sConfig() {
-        new K8sConfig( session.config.k8s as Map, session.config.nextflow as Map )
+        new K8sConfig( (Map<String,Object>)session.config.k8s )
     }
 
     /**

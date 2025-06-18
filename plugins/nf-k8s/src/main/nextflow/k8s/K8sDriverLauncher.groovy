@@ -279,7 +279,7 @@ class K8sDriverLauncher {
     }
 
     protected K8sConfig makeK8sConfig(Map config) {
-        new K8sConfig(config.k8s as Map, config.nextflow as Map)
+        config.k8s instanceof Map ? new K8sConfig(config.k8s as Map) : new K8sConfig()
     }
 
     protected makeK8sClient( K8sConfig k8sConfig ) {

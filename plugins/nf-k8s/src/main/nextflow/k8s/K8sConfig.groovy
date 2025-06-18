@@ -50,9 +50,8 @@ class K8sConfig implements Map<String,Object> {
 
     private PodOptions podOptions
 
-    K8sConfig(Map config = null, Map nextflowOpts = null) {
-        target = new HashMap<>(config ?: Collections.emptyMap())
-        target.retryPolicy = nextflowOpts?.retryPolicy as Map ?: Collections.emptyMap()
+    K8sConfig(Map<String,Object> config) {
+        target = config ?: Collections.<String,Object>emptyMap()
 
         this.podOptions = createPodOptions(target.pod)
         if( getStorageClaimName() ) {
@@ -239,7 +238,7 @@ class K8sConfig implements Map<String,Object> {
             result.retryConfig = new RetryConfig(target.retryPolicy as Map)
 
         if( target.maxErrorRetry )
-            log.warn("Config setting 'k8s.maxErrorRetry' is deprecated -- use 'nextflow.retryPolicy.maxAttempts' instead")
+            log.warn("Config setting 'k8s.maxErrorRetry' is deprecated -- use 'k8s.retryPolicy.maxAttempts' instead")
 
         return result
     }

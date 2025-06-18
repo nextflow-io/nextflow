@@ -994,6 +994,18 @@ The following settings are available:
 `k8s.pullPolicy`
 : Defines the strategy to be used to pull the container image e.g. `'Always'`.
 
+`k8s.retryPolicy.delay`
+: Delay when retrying failed API requests (default: `500ms`).
+
+`k8s.retryPolicy.jitter`
+: Jitter value when retrying failed API requests (default: `0.25`).
+
+`k8s.retryPolicy.maxAttempts`
+: Max attempts when retrying failed API requests (default: `4`).
+
+`k8s.retryPolicy.maxDelay`
+: Max delay when retrying failed API requests (default: `90s`).
+
 `k8s.runAsUser`
 : Defines the user ID to be used to run the containers. Shortcut for the `securityContext` option.
 
@@ -1175,11 +1187,12 @@ The `nextflow.publish.retryPolicy` settings were moved to `workflow.output.retry
 :::
 
 :::{versionchanged} 25.05.0-edge
-The `k8s.retryPolicy` and `workflow.output.retryPolicy` settings were moved to `nextflow.retryPolicy`.
+The `workflow.output.retryPolicy` settings were moved to `nextflow.retryPolicy`.
 :::
 
 `retryPolicy.delay`
 : Delay used for retryable operations (default: `350ms`).
+: These settings are applied to (1) Git provider requests and (2) publishing output files.
 
 `retryPolicy.jitter`
 : Jitter value used for retryable operations (default: `0.25`).
