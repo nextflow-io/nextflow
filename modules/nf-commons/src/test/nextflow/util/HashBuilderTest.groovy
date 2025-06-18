@@ -110,13 +110,18 @@ class HashBuilderTest extends Specification {
         folder.resolve('dir1/bar').text = "I'm bar"
         folder.resolve('dir1/xxx/yyy').mkdirs()
         folder.resolve('dir1/xxx/foo1').text = "I'm foo within xxx"
-        folder.resolve('dir1/xxx/yyy/bar1').text = "I'm bar within yyy"
+        folder.resolve('dir1/xxx/yyy/bar1').text = "I'm bar 1 within yyy"
+        folder.resolve('dir1/xxx/yyy/bar2').text = "I'm bar 2 within yyy"
         and:
-        folder.resolve('dir2/foo').text = "I'm foo"
+        // create the same directory structure using a different
+        // creation order, the resulting hash should be the same 
         folder.resolve('dir2/bar').text = "I'm bar"
-        folder.resolve('dir2/xxx/yyy').mkdirs()
+        folder.resolve('dir2/foo').text = "I'm foo"
+        folder.resolve('dir2/xxx').mkdirs()
         folder.resolve('dir2/xxx/foo1').text = "I'm foo within xxx"
-        folder.resolve('dir2/xxx/yyy/bar1').text = "I'm bar within yyy"
+        folder.resolve('dir2/xxx/yyy').mkdirs()
+        folder.resolve('dir2/xxx/yyy/bar2').text = "I'm bar 2 within yyy"
+        folder.resolve('dir2/xxx/yyy/bar1').text = "I'm bar 1 within yyy"
 
         when:
         def hash1 = HashBuilder.hashDirSha256(HashBuilder.defaultHasher(), folder.resolve('dir1'), folder.resolve('dir1'))
@@ -125,6 +130,5 @@ class HashBuilderTest extends Specification {
 
         then:
         hash1.hash() == hash2.hash()
-
     }
 }
