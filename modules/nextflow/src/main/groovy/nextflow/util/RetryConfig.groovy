@@ -15,32 +15,36 @@
  *
  */
 
-package nextflow.processor
+package nextflow.util
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
-import nextflow.util.Duration
+import groovy.util.logging.Slf4j
+import nextflow.Global
+import nextflow.Session
 
 /**
- * Models retry policy configuration for publishing outputs
+ * Models retry policy configuration
  *
- * @author Ben Sherman <bentshermann@gmail.com>
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @ToString(includePackage = false, includeNames = true)
 @EqualsAndHashCode
 @CompileStatic
-class PublishRetryConfig {
-    Duration delay = Duration.of('350ms')
-    Duration maxDelay = Duration.of('90s')
-    int maxAttempts = 5
-    double jitter = 0.25
+class RetryConfig {
 
-    PublishRetryConfig() {
+    private Duration delay = Duration.of('350ms')
+    private Duration maxDelay = Duration.of('90s')
+    private int maxAttempts = 5
+    private double jitter = 0.25
+
+    RetryConfig() {
         this(Collections.emptyMap())
     }
 
-    PublishRetryConfig(Map config) {
+    RetryConfig(Map config) {
         if( config.delay )
             delay = config.delay as Duration
         if( config.maxDelay )
@@ -49,5 +53,25 @@ class PublishRetryConfig {
             maxAttempts = config.maxAttempts as int
         if( config.jitter )
             jitter = config.jitter as double
+    }
+
+    Duration getDelay() { delay }
+
+    Duration getMaxDelay() { maxDelay }
+
+    int getMaxAttempts() { maxAttempts }
+
+    double getJitter() { jitter }
+
+    static RetryConfig config() {
+        config(Global.session as Session)
+    }
+
+    static RetryConfig config(Session session) {
+        if( session ) {
+            return new RetryConfig(session.config.navigate('nextflow.retryPolicy') as Map ?: Collections.emptyMap())
+        }
+        log.warn "Missing nextflow session - using default retry config"
+        return new RetryConfig()
     }
 }
