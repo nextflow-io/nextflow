@@ -226,6 +226,9 @@ The following settings are available:
 : The maximum number of retry attempts for failed retryable requests (default: `-1`).
 
 `aws.client.protocol`
+: :::{deprecated} 25.06.0-edge
+  This option is no longer supported.
+  :::
 : The protocol to use when connecting to AWS. Can be `http` or `https` (default: `'https'`).
 
 `aws.client.proxyHost`
@@ -233,6 +236,11 @@ The following settings are available:
 
 `aws.client.proxyPort`
 : The port to use when connecting through a proxy.
+
+`aws.client.proxyScheme`
+: :::{versionadded} 25.06.0-edge
+  :::
+: The protocol scheme to use when connecting through a proxy. Can be `http` or `https` (default: `'http'`).
 
 `aws.client.proxyUsername`
 : The user name to use when connecting through a proxy.
@@ -252,9 +260,15 @@ The following settings are available:
 : The name of the signature algorithm to use for signing requests made by the client.
 
 `aws.client.socketSendBufferSizeHint`
+: :::{deprecated} 25.06.0-edge
+  This option is no longer supported.
+  :::
 : The Size hint (in bytes) for the low level TCP send buffer (default: `0`).
 
 `aws.client.socketRecvBufferSizeHint`
+: :::{deprecated} 25.06.0-edge
+  This option is no longer supported.
+  :::
 : The Size hint (in bytes) for the low level TCP receive buffer (default: `0`).
 
 `aws.client.socketTimeout`

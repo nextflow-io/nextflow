@@ -17,6 +17,8 @@
 
 package nextflow.cloud.aws.nio
 
+import software.amazon.awssdk.services.s3.model.StorageClass
+
 import java.nio.charset.Charset
 import java.nio.file.DirectoryNotEmptyException
 import java.nio.file.FileAlreadyExistsException
@@ -30,8 +32,8 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributes
 
-import com.amazonaws.services.s3.AmazonS3
-import com.amazonaws.services.s3.model.Tag
+import software.amazon.awssdk.services.s3.S3Client
+import software.amazon.awssdk.services.s3.model.Tag
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
@@ -57,9 +59,9 @@ import spock.lang.Unroll
 class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
     @Shared
-    private AmazonS3 s3Client0
+    private S3Client s3Client0
 
-    AmazonS3 getS3Client() { s3Client0 }
+    S3Client getS3Client() { s3Client0 }
 
     static private Map config0() {
         def accessKey = System.getenv('AWS_S3FS_ACCESS_KEY')
@@ -1009,8 +1011,8 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         Files.exists(path)
         and:
         def tags = client .getObjectTags(path.getBucket(), path.getKey())
-        tags.find { it.key=='FOO' }.value == 'Hello world'
-        tags.find { it.key=='BAR' }.value == 'xyz'
+        tags.find { it.key() =='FOO' }.value() == 'Hello world'
+        tags.find { it.key() =='BAR' }.value() == 'xyz'
 
         when:
         copy.setTags(FOO: 'Hola mundo', BAZ: '123')
@@ -1019,9 +1021,9 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         Files.exists(copy)
         and:
         def copyTags = client .getObjectTags(copy.getBucket(), copy.getKey())
-        copyTags.find { it.key=='FOO' }.value == 'Hola mundo'
-        copyTags.find { it.key=='BAZ' }.value == '123'
-        copyTags.find { it.key=='BAR' } == null
+        copyTags.find { it.key() =='FOO' }.value() == 'Hola mundo'
+        copyTags.find { it.key() =='BAZ' }.value() == '123'
+        copyTags.find { it.key() =='BAR' } == null
 
         cleanup:
         deleteBucket(bucketName)
@@ -1104,8 +1106,8 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         client.getObjectKmsKeyId(target.bucket,  "$target.key/file-1.txt") == KEY
         client.getObjectKmsKeyId(target.bucket,  "$target.key/alpha/beta/file-5.txt") == KEY
         and:
-        client.getObjectTags(target.bucket,  "$target.key/file-1.txt") == [ new Tag('ONE','HELLO') ]
-        client.getObjectTags(target.bucket,  "$target.key/alpha/beta/file-5.txt") == [ new Tag('ONE','HELLO') ]
+        client.getObjectTags(target.bucket,  "$target.key/file-1.txt") == [ Tag.builder().key('ONE').value('HELLO').build() ]
+        client.getObjectTags(target.bucket,  "$target.key/alpha/beta/file-5.txt") == [ Tag.builder().key('ONE').value('HELLO').build() ]
 
         cleanup:
         target?.deleteDir()
@@ -1295,7 +1297,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         and:
         client
                 .getObjectMetadata(target1.getBucket(), target1.getKey())
-                .getContentType() == 'text/foo'
+                .contentType() == 'text/foo'
 
         // copy a file across buckets
         when:
@@ -1309,7 +1311,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         Files.exists(target2)
         client
                 .getObjectMetadata(target2.getBucket(), target2.getKey())
-                .getContentType() == 'text/bar'
+                .contentType() == 'text/bar'
 
         cleanup:
         deleteBucket(bucket1)
@@ -1348,7 +1350,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         and:
         client
                 .getObjectMetadata(target1.getBucket(), target1.getKey())
-                .getStorageClass() == 'REDUCED_REDUNDANCY'
+                .storageClass() == StorageClass.REDUCED_REDUNDANCY
 
         // copy a file across buckets
         when:
@@ -1362,7 +1364,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         Files.exists(target2)
         client
                 .getObjectMetadata(target2.getBucket(), target2.getKey())
-                .getStorageClass() == 'STANDARD_IA'
+                .storageClass() == StorageClass.STANDARD_IA
 
         cleanup:
         deleteBucket(bucket1)
