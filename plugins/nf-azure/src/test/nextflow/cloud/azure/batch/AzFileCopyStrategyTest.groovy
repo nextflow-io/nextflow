@@ -85,7 +85,9 @@ class AzFileCopyStrategyTest extends Specification {
                 # stage input files
                 downloads=(true)
                 
-                nxf_parallel "${downloads[@]}"
+                for cmd in "${downloads[@]}"; do
+                    $cmd
+                done
                 '''.stripIndent()
 
         binding.unstage_controls == '''\
@@ -222,7 +224,9 @@ class AzFileCopyStrategyTest extends Specification {
                 chmod +x $PWD/.nextflow-bin/* || true
                 downloads=(true)
                 
-                nxf_parallel "${downloads[@]}"
+                for cmd in "${downloads[@]}"; do
+                    $cmd
+                done
                 '''.stripIndent()
 
         binding.task_env == '''\
@@ -230,6 +234,7 @@ class AzFileCopyStrategyTest extends Specification {
                     export BAR="any"
                     export PATH="$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH"
                     export AZCOPY_LOG_LOCATION="$PWD/.azcopy_log"
+                    export AZCOPY_BUFFER_GB="0.8"
                     export AZ_SAS="12345"
                     '''.stripIndent()
 
@@ -371,19 +376,23 @@ class AzFileCopyStrategyTest extends Specification {
                 downloads=(true)
                 rm -f file1.txt
                 rm -f file2.txt
-                downloads+=("nxf_az_download 'http://account.blob.core.windows.net/my-data/work/dir/file1.txt' file1.txt")
-                downloads+=("nxf_az_download 'http://account.blob.core.windows.net/my-data/work/dir/file2.txt' file2.txt")
-                nxf_parallel "${downloads[@]}"
+                downloads+=("nxf_az_download http://account.blob.core.windows.net/my-data/work/dir/file1.txt file1.txt")
+                downloads+=("nxf_az_download http://account.blob.core.windows.net/my-data/work/dir/file2.txt file2.txt")
+                for cmd in "${downloads[@]}"; do
+                    $cmd
+                done
                 '''.stripIndent()
 
         binding.unstage_outputs == '''
                     uploads=()
                     IFS=$'\\n'
                     for name in $(eval "ls -1d foo.txt bar.fastq" | sort | uniq); do
-                        uploads+=("nxf_az_upload '$name' 'http://account.blob.core.windows.net/my-data/work/dir'")
+                        uploads+=("nxf_az_upload '$name' http://account.blob.core.windows.net/my-data/work/dir")
                     done
                     unset IFS
-                    nxf_parallel "${uploads[@]}"
+                    for cmd in "${uploads[@]}"; do
+                        $cmd
+                    done
                     '''.stripIndent().leftTrim()
 
         binding.launch_cmd == '/bin/bash .command.run nxf_trace'
@@ -391,6 +400,7 @@ class AzFileCopyStrategyTest extends Specification {
         binding.task_env == '''\
                     export PATH="$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH"
                     export AZCOPY_LOG_LOCATION="$PWD/.azcopy_log"
+                    export AZCOPY_BUFFER_GB="0.8"
                     export AZ_SAS="12345"
                     '''.stripIndent()
 
