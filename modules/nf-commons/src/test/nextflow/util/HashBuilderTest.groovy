@@ -131,4 +131,26 @@ class HashBuilderTest extends Specification {
         then:
         hash1.hash() == hash2.hash()
     }
+
+    def 'directories with same content but different structure should yield different hashes'() {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        folder.resolve('dir1').mkdir()
+        folder.resolve('dir2').mkdir()
+        and:
+        folder.resolve('dir1/foo').text = "I'm foo"
+        folder.resolve('dir1/bar').text = "I'm bar"
+        and:
+        // the content of these files is intentionally swapped
+        folder.resolve('dir2/foo').text = "I'm bar"
+        folder.resolve('dir2/bar').text = "I'm foo"
+
+        when:
+        def hash1 = HashBuilder.hashDirSha256(HashBuilder.defaultHasher(), folder.resolve('dir1'), folder.resolve('dir1'))
+        and:
+        def hash2 = HashBuilder.hashDirSha256(HashBuilder.defaultHasher(), folder.resolve('dir2'), folder.resolve('dir2'))
+
+        then:
+        hash1.hash() != hash2.hash()
+    }
 }

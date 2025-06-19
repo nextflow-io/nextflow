@@ -346,12 +346,15 @@ public class HashBuilder {
                     try {
                         // the file relative base
                         final String relPath = base.relativize(path).toString();
-                        // compute the file path hash and sum to the result hash
-                        // since the sum is commutative, the traverse order does not matter
-                        sumBytes(resultBytes, hashBytes(relPath, HashMode.STANDARD));
                         // the file content sha-256 checksum
                         final String sha256 = sha256Cache.get(path);
-                        sumBytes(resultBytes, hashBytes(sha256, HashMode.STANDARD));
+                        // compute the file path hash and sum to the result hash
+                        // since the sum is commutative, the traverse order does not matter
+                        // compute a hash of the (file path, file hash) pair.
+                        // since the sum is commutative, the resulting hash in `resultBytes` is invariant to the file traversal order.
+                        // however, the file path and file hash do need to be processed together,
+                        // otherwise this introduces an edge case with directories with similar contents with have the same sha (see nextflow-io/nextflow#6198)
+                        sumBytes(resultBytes, hashBytes(Map.entry(relPath, sha256), HashMode.STANDARD));
                         return FileVisitResult.CONTINUE;
                     }
                     catch (ExecutionException t) {
