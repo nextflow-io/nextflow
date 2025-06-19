@@ -161,14 +161,14 @@ final class AzureRepositoryProvider extends RepositoryProvider {
      * Check for response error status. Throws a {@link nextflow.exception.AbortOperationException} exception
      * when a 401 or 403 error status is returned.
      *
-     * @param connection A {@link HttpURLConnection} connection instance
+     * @param response A {@link HttpURLConnection} connection instance
      */
-    protected checkResponse( HttpResponse<String> connection ) {
-        this.continuationToken = connection
+    protected checkResponse( HttpResponse<String> response) {
+        this.continuationToken = response
                 .headers()
                 .firstValue("x-ms-continuationtoken")
                 .orElse(null)
-        super.checkResponse(connection)
+        super.checkResponse(response)
     }
 
     /** {@inheritDoc} */

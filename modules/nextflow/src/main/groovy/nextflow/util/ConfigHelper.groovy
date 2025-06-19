@@ -18,10 +18,13 @@ package nextflow.util
 
 import java.nio.file.Path
 
+import com.google.common.base.CaseFormat
 import groovy.json.JsonOutput
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 import nextflow.config.ConfigClosurePlaceholder
 import org.codehaus.groovy.runtime.InvokerHelper
 import org.yaml.snakeyaml.DumperOptions
@@ -382,6 +385,39 @@ class ConfigHelper {
         }
         else
             return value
+    }
+
+    static <T> T valueOf(Map config, String name, String prefix, T defValue, Class<T> type)  {
+        assert name, "Argument 'name' cannot be null or empty"
+        assert type, "Argument 'type' cannot be null"
+
+        // try to get the value from the config map
+        final cfg = config?.get(name)
+        if( cfg != null ) {
+            return toType(cfg, type)
+        }
+        // try to fallback to the sys environment
+        if( !prefix.endsWith('_') )
+            prefix += '_'
+        final key = prefix.toUpperCase() + CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, name)
+        final env = SysEnv.get(key)
+        if( env != null ) {
+            return toType(env, type)
+        }
+        // return the default value
+        return defValue
+    }
+
+    @CompileDynamic
+    static protected <T> T toType(Object value, Class<T> type)  {
+        if( value == null )
+            return null
+        if( type==Boolean.class ) {
+            return type.cast(Boolean.valueOf(value.toString()))
+        }
+        else {
+            return value.asType(type)
+        }
     }
 }
 
