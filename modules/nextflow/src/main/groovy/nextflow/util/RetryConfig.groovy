@@ -17,13 +17,14 @@
 
 package nextflow.util
 
+import static nextflow.util.ConfigHelper.*
+
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
-
 /**
  * Models retry policy configuration
  *
@@ -35,24 +36,31 @@ import nextflow.Session
 @CompileStatic
 class RetryConfig {
 
-    private Duration delay = Duration.of('350ms')
-    private Duration maxDelay = Duration.of('90s')
-    private int maxAttempts = 5
-    private double jitter = 0.25
+    private final static Duration DEFAULT_DELAY = Duration.of('350ms')
+    private final static Duration DEFAULT_MAX_DELAY = Duration.of('90s')
+    private final static Integer DEFAULT_MAX_ATTEMPTS = 5
+    private final static Double DEFAULT_JITTER = 0.25
+
+    private final static String ENV_PREFIX = 'NXF_RETRY_POLICY_'
+
+    final private Duration delay
+    final private Duration maxDelay
+    final private int maxAttempts
+    final private double jitter
 
     RetryConfig() {
         this(Collections.emptyMap())
     }
 
     RetryConfig(Map config) {
-        if( config.delay )
-            delay = config.delay as Duration
-        if( config.maxDelay )
-            maxDelay = config.maxDelay as Duration
-        if( config.maxAttempts )
-            maxAttempts = config.maxAttempts as int
-        if( config.jitter )
-            jitter = config.jitter as double
+        delay =
+            valueOf(config, 'delay', ENV_PREFIX, DEFAULT_DELAY, Duration)
+        maxDelay =
+            valueOf(config, 'maxDelay', ENV_PREFIX, DEFAULT_MAX_DELAY, Duration)
+        maxAttempts =
+            valueOf(config, 'maxAttempts', ENV_PREFIX, DEFAULT_MAX_ATTEMPTS, Integer)
+        jitter =
+            valueOf(config, 'jitter', ENV_PREFIX, DEFAULT_JITTER, Double)
     }
 
     Duration getDelay() { delay }
@@ -74,4 +82,6 @@ class RetryConfig {
         log.warn "Missing nextflow session - using default retry config"
         return new RetryConfig()
     }
+
+
 }

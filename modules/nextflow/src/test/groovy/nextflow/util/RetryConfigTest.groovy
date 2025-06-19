@@ -17,9 +17,8 @@
 
 package nextflow.util
 
-import nextflow.util.Duration
+import nextflow.SysEnv
 import spock.lang.Specification
-
 /**
  *
  * @author Ben Sherman <bentshermann@gmail.com>
@@ -40,6 +39,25 @@ class RetryConfigTest extends Specification {
         new RetryConfig([maxDelay: '1m']).maxDelay == Duration.of('1m')
         new RetryConfig([jitter: '0.5']).jitter == 0.5d
 
+    }
+
+    def 'should get the setting from the system env' () {
+        given:
+        SysEnv.push([
+            NXF_RETRY_POLICY_DELAY: '10s',
+            NXF_RETRY_POLICY_MAX_DELAY: '100s',
+            NXF_RETRY_POLICY_MAX_ATTEMPTS: '1000',
+            NXF_RETRY_POLICY_JITTER: '10000'
+        ])
+
+        expect:
+        new RetryConfig().getDelay() == Duration.of('10s')
+        new RetryConfig().getMaxDelay() == Duration.of('100s')
+        new RetryConfig().getMaxAttempts() == 1000
+        new RetryConfig().getJitter() == 10_000
+
+        cleanup:
+        SysEnv.pop()
     }
 
 }
