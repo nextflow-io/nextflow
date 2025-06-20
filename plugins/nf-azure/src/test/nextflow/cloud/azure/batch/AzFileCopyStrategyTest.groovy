@@ -178,10 +178,20 @@ class AzFileCopyStrategyTest extends Specification {
                 nxf_az_download() {
                     local source=$1
                     local target=$2
-                    local basedir=$(dirname "$target")
+                    local basedir=$(dirname $2)
                     mkdir -p "$basedir"
-
-                    azcopy sync "$source?$AZ_SAS" "$target" --recursive
+                
+                    # Try to download as file first, let azcopy handle the detection
+                    if ! azcopy cp "$source?$AZ_SAS" "$target"; then
+                        # If failed, remove any partial target and try as directory
+                        rm -rf "$target"
+                        mkdir -p "$target"
+                        if ! azcopy cp "$source/*?$AZ_SAS" "$target" --recursive; then
+                            rm -rf "$target"
+                            >&2 echo "Unable to download path: $source"
+                            exit 1
+                        fi
+                    fi
                 }
                 
                 '''.stripIndent(true)
@@ -306,10 +316,20 @@ class AzFileCopyStrategyTest extends Specification {
                 nxf_az_download() {
                     local source=$1
                     local target=$2
-                    local basedir=$(dirname "$target")
+                    local basedir=$(dirname $2)
                     mkdir -p "$basedir"
-
-                    azcopy sync "$source?$AZ_SAS" "$target" --recursive
+                
+                    # Try to download as file first, let azcopy handle the detection
+                    if ! azcopy cp "$source?$AZ_SAS" "$target"; then
+                        # If failed, remove any partial target and try as directory
+                        rm -rf "$target"
+                        mkdir -p "$target"
+                        if ! azcopy cp "$source/*?$AZ_SAS" "$target" --recursive; then
+                            rm -rf "$target"
+                            >&2 echo "Unable to download path: $source"
+                            exit 1
+                        fi
+                    fi
                 }
 
                 '''.stripIndent(true)
@@ -458,10 +478,20 @@ class AzFileCopyStrategyTest extends Specification {
                     nxf_az_download() {
                         local source=$1
                         local target=$2
-                        local basedir=$(dirname "$target")
+                        local basedir=$(dirname $2)
                         mkdir -p "$basedir"
-
-                        azcopy sync "$source?$AZ_SAS" "$target" --recursive
+                    
+                        # Try to download as file first, let azcopy handle the detection
+                        if ! azcopy cp "$source?$AZ_SAS" "$target"; then
+                            # If failed, remove any partial target and try as directory
+                            rm -rf "$target"
+                            mkdir -p "$target"
+                            if ! azcopy cp "$source/*?$AZ_SAS" "$target" --recursive; then
+                                rm -rf "$target"
+                                >&2 echo "Unable to download path: $source"
+                                exit 1
+                            fi
+                        fi
                     }
 
                     '''.stripIndent(true)

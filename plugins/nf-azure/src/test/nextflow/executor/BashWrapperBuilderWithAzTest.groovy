@@ -79,8 +79,16 @@ class BashWrapperBuilderWithAzTest extends Specification {
                 local target=$2
                 local basedir=$(dirname "$target")
                 mkdir -p "$basedir"
-
-                azcopy sync "$source?$AZ_SAS" "$target" --recursive
+            
+                if ! azcopy cp "$source?$AZ_SAS" "$target"; then
+                    # If failed, remove any partial target and try as directory
+                    rm -rf "$target"; mkdir -p "$target"
+                    if ! azcopy cp "$source/*?$AZ_SAS" "$target" --recursive; then
+                        rm -rf "$target"
+                        >&2 echo "Unable to download path: $source"
+                        exit 1
+                    }
+                }
             }
             
             '''.stripIndent(true)
@@ -209,8 +217,16 @@ class BashWrapperBuilderWithAzTest extends Specification {
                 local target=$2
                 local basedir=$(dirname "$target")
                 mkdir -p "$basedir"
-
-                azcopy sync "$source?$AZ_SAS" "$target" --recursive
+            
+                if ! azcopy cp "$source?$AZ_SAS" "$target"; then
+                    # If failed, remove any partial target and try as directory
+                    rm -rf "$target"; mkdir -p "$target"
+                    if ! azcopy cp "$source/*?$AZ_SAS" "$target" --recursive; then
+                        rm -rf "$target"
+                        >&2 echo "Unable to download path: $source"
+                        exit 1
+                    }
+                }
             }
             
             '''.stripIndent(true)
