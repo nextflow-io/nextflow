@@ -272,4 +272,17 @@ class WorkflowMetadataTest extends Specification {
         result.profile == 'standard'
     }
 
+    def 'should not cause a stack overflow error on missing property' () {
+
+        given:
+        def script = Mock(ScriptFile)
+        def session = Spy(Session)
+        def metadata = new WorkflowMetadata(session, script)
+
+        when:
+        println metadata.executor
+        then:
+        thrown(MissingPropertyException)
+    }
+
 }
