@@ -201,7 +201,8 @@ class CmdLint extends CmdBase {
     private void printErrors(SourceUnit source) {
         errorListener.beforeErrors()
 
-        source.getErrorCollector().getErrors().stream()
+        final errors = source.getErrorCollector().getErrors() ?: []
+        errors.stream()
             .filter(message -> message instanceof SyntaxErrorMessage)
             .map(message -> ((SyntaxErrorMessage) message).getCause())
             .sorted(ERROR_COMPARATOR)
@@ -210,7 +211,8 @@ class CmdLint extends CmdBase {
                 summary.errors += 1
             })
 
-        source.getErrorCollector().getWarnings().stream()
+        final warnings = source.getErrorCollector().getWarnings() ?: []
+        warnings.stream()
             .filter(warning -> warning !instanceof ParanoidWarning)
             .sorted(WARNING_COMPARATOR)
             .forEach((warning) -> {
