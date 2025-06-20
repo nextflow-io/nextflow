@@ -41,6 +41,7 @@ import org.codehaus.groovy.ast.expr.ClosureExpression;
 import org.codehaus.groovy.ast.expr.ConstantExpression;
 import org.codehaus.groovy.ast.expr.DeclarationExpression;
 import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.expr.MapEntryExpression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.TupleExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
@@ -144,6 +145,17 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
         return scopes.size() == 1
             && "workflow".equals(scopes.get(0))
             && List.of("onComplete", "onError").contains(option);
+    }
+
+    @Override
+    public void visitMapEntryExpression(MapEntryExpression node) {
+        node.getKeyExpression().visit(this);
+
+        var ic = inClosure;
+        if( inProcess && node.getValueExpression() instanceof ClosureExpression )
+            inClosure = true;
+        node.getValueExpression().visit(this);
+        inClosure = ic;
     }
 
     @Override

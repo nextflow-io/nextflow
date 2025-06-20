@@ -163,6 +163,16 @@ class ConfigResolveTest extends Specification {
             '''\
             process {
                 ext.prefix = { "${meta.id}.filter1" }
+
+                publishDir = [
+                    path: { "${params.outdir}/${task.process.tokenize(':')[-1].tokenize('_')[0].toLowerCase()}" },
+                    mode: params.publish_dir_mode,
+                ]
+
+                publishDir = [
+                    path: { "${params.outdir}/imputation/${meta.tools}/samples/" },
+                    mode: params.publish_dir_mode,
+                ]
             }
             '''
         )
