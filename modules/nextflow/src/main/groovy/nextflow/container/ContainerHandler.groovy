@@ -24,6 +24,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.container.inspect.ContainerInspectMode
+import nextflow.file.FileHelper
 import nextflow.util.Escape
 /**
  * Helper class to normalise a container image name depending
@@ -157,12 +158,15 @@ class ContainerHandler {
         if( !imageName )
             return null
 
-        String reg = this.config?.registry
+        String reg = this.config?.getRegistry()
         if( !reg )
             return imageName
 
-        if( isAbsoluteDockerName(imageName) )
-            return imageName
+        if( isAbsoluteDockerName(imageName) ) {
+             return config.getRegistryOverride()
+                 ? overrideRegistryName(imageName, reg)
+                 : imageName
+        }
 
         if( !reg.endsWith('/') )
             reg += '/'
@@ -307,5 +311,24 @@ class ContainerHandler {
 
         // in all other case it's supposed to be the name of an image
         return "${normalizeDockerImageName(img)}"
+    }
+
+    static String overrideRegistryName(String repository, String target) {
+        // remove scheme prefix, if any
+        final scheme = FileHelper.getUrlProtocol(repository)
+        final source = scheme ? repository.substring(scheme.length()+3) : repository
+        final p = source.indexOf("/")
+        final first = p!=-1 ? source.substring(0,p) : source
+        final isHost = first.contains('.') || first.contains(":")
+        final path = isHost
+            ? source.substring(p+1)
+            : source
+
+        if( !target.endsWith("/") )
+            target += "/"
+        final result = target + path
+        return scheme
+            ? scheme + "://" + result
+            : result
     }
 }
