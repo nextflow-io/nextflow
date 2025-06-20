@@ -56,6 +56,15 @@ class ContainerConfig extends LinkedHashMap {
         get('engine')
     }
 
+    String getRegistry() {
+        get('registry')
+    }
+
+    boolean getRegistryOverride() {
+        final val = get('registryOverride')
+        return val!=null ? Boolean.parseBoolean(val.toString()) : false
+    }
+
     /**
      * Whenever Singularity or Apptainer container engine can a OCI (Docker)
      * image without requiring a separate OCI to SIF conversion execution (managed by Nextflow via {@link SingularityCache).

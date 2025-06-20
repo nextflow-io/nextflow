@@ -369,5 +369,4 @@ class ConfigHelperTest extends Specification {
     }
 
 
-
 }
