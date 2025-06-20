@@ -848,7 +848,7 @@ process hello {
   errorStrategy 'retry'
   maxSubmitAwait '10 mins'
   maxRetries 3
-  queue "${task.submitAttempt==1 : 'spot-compute' : 'on-demand-compute'}"
+  queue "${task.submitAttempt==1 ? 'spot-compute' : 'on-demand-compute'}"
 
   script:
   """

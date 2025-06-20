@@ -16,6 +16,7 @@
 
 package nextflow.scm
 
+import java.net.http.HttpResponse
 import java.util.regex.Pattern
 
 import groovy.transform.CompileDynamic
@@ -162,14 +163,11 @@ final class AzureRepositoryProvider extends RepositoryProvider {
      *
      * @param connection A {@link HttpURLConnection} connection instance
      */
-    protected checkResponse( HttpURLConnection connection ) {
-
-        if (connection.getHeaderFields().containsKey("x-ms-continuationtoken")) {
-            this.continuationToken = connection.getHeaderField("x-ms-continuationtoken");
-        } else {
-            this.continuationToken = null
-        }
-
+    protected checkResponse( HttpResponse<String> connection ) {
+        this.continuationToken = connection
+                .headers()
+                .firstValue("x-ms-continuationtoken")
+                .orElse(null)
         super.checkResponse(connection)
     }
 
