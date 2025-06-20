@@ -78,7 +78,6 @@ class BashWrapperBuilderWithAzTest extends Specification {
                 local source=$1
                 local target=$2
                 local basedir=$(dirname "$target")
-                # local ret removed
                 mkdir -p "$basedir"
 
                 azcopy sync "$source?$AZ_SAS" "$target" --recursive
@@ -209,7 +208,6 @@ class BashWrapperBuilderWithAzTest extends Specification {
                 local source=$1
                 local target=$2
                 local basedir=$(dirname "$target")
-                # local ret removed
                 mkdir -p "$basedir"
 
                 azcopy sync "$source?$AZ_SAS" "$target" --recursive
