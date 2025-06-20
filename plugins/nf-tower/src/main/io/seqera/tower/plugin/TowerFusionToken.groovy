@@ -265,16 +265,6 @@ class TowerFusionToken implements FusionToken {
     }
 
     /**
-     * Serialize a {@link GetLicenseTokenRequest} object into a JSON string
-     *
-     * @param req The LicenseTokenRequest object
-     * @return The resulting JSON string
-     */
-    private static String serializeToJson(GetLicenseTokenRequest req) {
-        return new Gson().toJson(req)
-    }
-
-    /**
      * Parse a JSON string into a {@link GetLicenseTokenResponse} object
      *
      * @param json The String containing the JSON representation of the LicenseTokenResponse object
