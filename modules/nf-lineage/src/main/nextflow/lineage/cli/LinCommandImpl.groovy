@@ -23,7 +23,6 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import nextflow.Session
-import nextflow.cli.CmdLineage
 import nextflow.config.ConfigMap
 import nextflow.exception.AbortOperationException
 import nextflow.lineage.LinHistoryRecord
@@ -44,13 +43,12 @@ import org.eclipse.jgit.diff.RawTextComparator
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class LinCommandImpl implements CmdLineage.LinCommand {
+class LinCommandImpl {
 
     private static final Path DEFAULT_HTML_FILE = Path.of("lineage.html")
 
     private static final String ERR_NOT_LOADED = 'Error lineage store not loaded - Check Nextflow configuration'
     
-    @Override
     void list(ConfigMap config) {
         final session = new Session(config)
         final store = LinStoreFactory.getOrCreate(session)
@@ -78,7 +76,6 @@ class LinCommandImpl implements CmdLineage.LinCommand {
         println table.toString()
     }
 
-    @Override
     void view(ConfigMap config, List<String> args) {
         if( !isLidUri(args[0]) )
             throw new Exception("Identifier is not a lineage URL")
@@ -99,7 +96,6 @@ class LinCommandImpl implements CmdLineage.LinCommand {
         }
     }
 
-    @Override
     void render(ConfigMap config, List<String> args) {
         final store = LinStoreFactory.getOrCreate(new Session(config))
         if( !store ) {
@@ -115,7 +111,6 @@ class LinCommandImpl implements CmdLineage.LinCommand {
         }
     }
 
-    @Override
     void diff(ConfigMap config, List<String> args) {
         if (!isLidUri(args[0]) || !isLidUri(args[1]))
             throw new Exception("Identifier is not a lineage URL")
@@ -174,7 +169,6 @@ class LinCommandImpl implements CmdLineage.LinCommand {
         println output.toString()
     }
 
-    @Override
     void find(ConfigMap config, List<String> args) {
         final store = LinStoreFactory.getOrCreate(new Session(config))
         if (!store) {
@@ -192,7 +186,6 @@ class LinCommandImpl implements CmdLineage.LinCommand {
         }
     }
 
-    @Override
     void check(ConfigMap config, List<String> args) {
         final store = LinStoreFactory.getOrCreate(new Session(config))
         if (!store) {

@@ -17,4 +17,3 @@
 nextflow.lineage.DefaultLinStoreFactory
 nextflow.lineage.LinExtensionImpl
 nextflow.lineage.LinObserverFactory
-nextflow.lineage.cli.LinCommandImpl

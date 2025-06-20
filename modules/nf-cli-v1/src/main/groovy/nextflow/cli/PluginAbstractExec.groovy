@@ -21,7 +21,7 @@ import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
 import nextflow.Session
-import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigCmdAdapter
 import nextflow.exception.AbortOperationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -50,7 +50,7 @@ trait PluginAbstractExec implements PluginExecAware {
     final int exec(Launcher launcher1, String pluginId, String cmd, List<String> args) {
         this.launcher = launcher1
         // create the config
-        final config = new ConfigBuilder()
+        final config = new ConfigCmdAdapter()
                 .setOptions(launcher1.options)
                 .setBaseDir(Paths.get('.'))
                 .build()

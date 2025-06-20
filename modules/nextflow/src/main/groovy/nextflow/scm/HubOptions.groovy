@@ -14,31 +14,41 @@
  * limitations under the License.
  */
 
-package nextflow.util
-
+package nextflow.scm
 
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import nextflow.cli.CmdBase
 /**
- * This class is used to resolve at runtime some spurious dependencies
- * with optional modules
+ * Options for interacting with a git repository provider i.e. GitHub or BitBucket
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-@Deprecated
 @CompileStatic
-class SpuriousDeps {
+record HubOptions(
+    String provider,
+    String user
+) {
 
-    static CmdBase cmdCloud() {
-        try {
-            final clazz = Class.forName('nextflow.cli.CmdCloud')
-            return (CmdBase)clazz.newInstance()
-        }
-        catch (ClassNotFoundException e) {
+    String getPassword() {
+        if( !user )
             return null
-        }
+
+        final p = user.indexOf(':')
+        if( p != -1 )
+            return user.substring(p + 1)
+
+        final console = System.console()
+        if( !console )
+            return null
+
+        print "Enter your $provider password: "
+        return new String(console.readPassword())
     }
 
+    String getUser() {
+        if( !user )
+            return user
+
+        final p = user.indexOf(':')
+        return p != -1 ? user.substring(0, p) : user
+    }
 }
