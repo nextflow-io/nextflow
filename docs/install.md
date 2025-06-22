@@ -1,25 +1,20 @@
-(install-page)=
-
 # Installation
 
 Nextflow can be used on any POSIX-compatible system (Linux, macOS, etc), and on Windows through [WSL](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux). This page describes how to install Nextflow.
 
-:::{note}
-New versions of Nextflow are released regularly. See {ref}`updating-nextflow-page` for more information about Nextflow release cadence, how to update Nextflow, and how select your version of Nextflow.
+:::note
+New versions of Nextflow are released regularly. See [Updating Nextflow][updating-nextflow] for more information about Nextflow release cadence, how to update Nextflow, and how select your version of Nextflow.
 :::
-
-(install-requirements)=
 
 ## Requirements
 
 Nextflow requires Bash 3.2 (or later) and [Java 17 (or later, up to 24)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) to be installed. To see which version of Java you have, run the following command:
 
-```{code-block} bash
-:class: copyable
+```bash
 java -version
 ```
 
-:::{versionchanged} 24.11.0-edge
+:::warning{title="24.11.0-edge"}
 Support for Java versions prior to 17 was dropped.
 :::
 
@@ -29,8 +24,7 @@ To install Java with SDKMAN:
 
 1. [Install SDKMAN](https://sdkman.io/install):
 
-    ```{code-block} bash
-    :class: copyable
+    ```
     curl -s https://get.sdkman.io | bash
     ```
 
@@ -38,19 +32,15 @@ To install Java with SDKMAN:
 
 3. Install Java:
 
-    ```{code-block} bash
-    :class: copyable
+    ```
     sdk install java 17.0.10-tem
     ```
 
 4. Confirm that Java is installed correctly:
 
-    ```{code-block} bash
-    :class: copyable
+    ```
     java -version
     ```
-
-(install-nextflow)=
 
 ## Install Nextflow
 
@@ -64,42 +54,38 @@ To install Nextflow with the self-installing package:
 
 1. Download Nextflow:
 
-    ```{code-block} bash
-    :class: copyable
+    ```bash
     curl -s https://get.nextflow.io | bash
     ```
 
-    :::{tip}
+    :::tip
     Set `export CAPSULE_LOG=none` to make the installation logs less verbose.
     :::
 
 2. Make Nextflow executable:
 
-    ```{code-block} bash
-    :class: copyable
+    ```bash
     chmod +x nextflow
     ```
 
 3. Move Nextflow into an executable path. For example:
 
-    ```{code-block} bash
-    :class: copyable
+    ```bash
     mkdir -p $HOME/.local/bin/
     mv nextflow $HOME/.local/bin/
     ```
 
-    :::{tip}
+    :::tip
     Ensure the directory `$HOME/.local/bin/` is included in your `PATH` variable. Temporarily add this directory to `PATH` by setting `export PATH="$PATH:$HOME/.local/bin"`. Add the directory to `PATH` permanently by adding the export command to your shell configuration file, such as `~/.bashrc` or `~/.zshrc`. Alternatively, move the `nextflow` executable to a directory already in your `PATH`.
     :::
 
-    :::{warning}
+    :::warning
     Nextflow updates its executable during the self-install process, therefore the update can fail if the executable is placed in a directory with restricted permissions.
     :::
 
 4. Confirm Nextflow is installed correctly:
 
-    ```{code-block} bash
-    :class: copyable
+    ```bash
     nextflow info
     ```
 
@@ -109,30 +95,25 @@ To install Nextflow with Conda:
 
 1. Create an environment with Nextflow:
 
-    ```{code-block} bash
-    :class: copyable
+    ```bash
     conda create --name nf-env bioconda::nextflow
     ```
 
 2. Activate the environment:
 
-    ```{code-block} bash
-    :class: copyable
+    ```bash
     source activate nf_env
     ```
 
 3. Confirm Nextflow is installed correctly:
 
-    ```{code-block} bash
-    :class: copyable
+    ```bash
     nextflow info
     ```
 
-:::{warning}
+:::warning
 Installing Nextflow via Conda may lead to outdated versions, dependency conflicts, and Java compatibility issues. Using the self-installing package is recommended for a more reliable and up-to-date installation.
 :::
-
-(install-standalone)=
 
 ### Standalone distribution
 
@@ -144,19 +125,17 @@ To use the standalone distribution:
 
 2. Grant execution permissions to the downloaded file. For example:
 
-    ```{code-block} bash
-    :class: copyable
+    ```bash
     chmod +x nextflow-24.10.1-dist
     ```
 
 3. Use it as a drop-in replacement for `nextflow` command. For example:
 
-    ```{code-block} bash
-    :class: copyable
+    ```bash
     ./nextflow-24.10.1-dist run info
     ```
 
-:::{note}
+:::note
 The standalone distribution will still download core and third-party plugins as needed at runtime.
 :::
 
@@ -173,3 +152,5 @@ Launching from Seqera Platform provides you with:
 
 Seqera Cloud Basic is free for small teams. Researchers at qualifying academic institutions can apply for free access to Seqera Cloud Pro.
 See the [Seqera Platform documentation](https://docs.seqera.io/platform) for tutorials to get started.
+
+[updating-nextflow]: /nextflow_docs/nextflow_repo/docs/upating-nextflow.md
