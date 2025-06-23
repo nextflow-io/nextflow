@@ -1,31 +1,15 @@
 package io.seqera.tower.plugin
 
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
-import java.time.Duration
-import java.time.Instant
-import java.time.temporal.ChronoUnit
-import java.util.concurrent.Executors
-import java.util.function.Predicate
-
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import com.google.common.util.concurrent.UncheckedExecutionException
-import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
-import dev.failsafe.Failsafe
-import dev.failsafe.RetryPolicy
-import dev.failsafe.event.EventListener
-import dev.failsafe.event.ExecutionAttemptedEvent
-import dev.failsafe.function.CheckedSupplier
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.tower.plugin.exception.BadResponseException
 import io.seqera.tower.plugin.exception.UnauthorizedException
 import io.seqera.tower.plugin.exchange.GetLicenseTokenRequest
 import io.seqera.tower.plugin.exchange.GetLicenseTokenResponse
-import io.seqera.util.trace.TraceUtils
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ReportWarningException
@@ -34,8 +18,12 @@ import nextflow.fusion.FusionToken
 import nextflow.platform.PlatformHelper
 import nextflow.plugin.Priority
 import nextflow.util.GsonHelper
-import nextflow.util.Threads
 import org.pf4j.Extension
+
+import java.time.Duration
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+
 /**
  * Environment provider for Platform-specific environment variables.
  *
