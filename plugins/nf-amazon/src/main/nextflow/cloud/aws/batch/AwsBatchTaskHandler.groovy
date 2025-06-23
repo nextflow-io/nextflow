@@ -632,7 +632,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return result
     }
 
-    @Memoized 
+    @Memoized
     LogConfiguration getLogConfiguration(String name, String region) {
         LogConfiguration.builder()
             .logDriver('awslogs')
@@ -779,7 +779,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         builder.jobQueue(getJobQueue(task))
         builder.jobDefinition(getJobDefinition(task))
         if( labels ) {
-            builder.tags(labels)
+            builder.tags(sanitizeAwsBatchLabels(labels))
             builder.propagateTags(true)
         }
         // set the share identifier
@@ -862,6 +862,70 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         }
 
         return builder.build()
+    }
+
+    /**
+     * Sanitize resource labels to comply with AWS Batch tag requirements.
+     * AWS Batch tags have specific constraints:
+     * - Keys and values can contain: letters, numbers, spaces, and characters: _ . : / = + - @
+     * - Maximum key length: 128 characters
+     * - Maximum value length: 256 characters
+     *
+     * @param labels The original resource labels map
+     * @return A new map with sanitized labels suitable for AWS Batch tags
+     */
+    protected Map<String, String> sanitizeAwsBatchLabels(Map<String, String> labels) {
+        if (!labels) return labels
+
+        final result = new LinkedHashMap<String, String>()
+
+        for (Map.Entry<String, String> entry : labels.entrySet()) {
+            final key = entry.getKey()
+            final value = entry.getValue()
+
+            if (key != null && value != null) {
+                final sanitizedKey = sanitizeAwsBatchLabel(key.toString(), 128)
+                final sanitizedValue = sanitizeAwsBatchLabel(value.toString(), 256)
+
+                // Only add non-empty keys and values
+                if (sanitizedKey && sanitizedValue) {
+                    result.put(sanitizedKey, sanitizedValue)
+                }
+            }
+        }
+
+        return result
+    }
+
+    /**
+     * Sanitize a single label key or value for AWS Batch tags.
+     * Replaces invalid characters with underscores and truncates if necessary.
+     *
+     * @param input The input string to sanitize
+     * @param maxLength The maximum allowed length
+     * @return The sanitized string
+     */
+    protected String sanitizeAwsBatchLabel(String input, int maxLength) {
+        if (!input) return input
+
+        // Replace invalid characters with underscores
+        // AWS Batch allows: letters, numbers, spaces, and: _ . : / = + - @
+        String sanitized = input.replaceAll(/[^a-zA-Z0-9\s_.\:\/=+\-@]/, '_')
+
+        // Replace multiple consecutive underscores/spaces with single underscore
+        sanitized = sanitized.replaceAll(/[_\s]{2,}/, '_')
+
+        // Remove leading/trailing underscores and spaces
+        sanitized = sanitized.replaceAll(/^[_\s]+|[_\s]+$/, '')
+
+        // Truncate if too long
+        if (sanitized.length() > maxLength) {
+            sanitized = sanitized.substring(0, maxLength)
+            // Remove trailing underscore/space after truncation
+            sanitized = sanitized.replaceAll(/[_\s]+$/, '')
+        }
+
+        return sanitized ?: null
     }
 
     /**
