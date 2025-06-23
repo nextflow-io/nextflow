@@ -1,17 +1,15 @@
-(config-page)=
-
 # Configuration
 
 ## Configuration file
 
 When a pipeline script is launched, Nextflow looks for configuration files in multiple locations. Since each configuration file may contain conflicting settings, they are applied in the following order (from lowest to highest priority):
 
-1. The config file `$HOME/.nextflow/config` (or `$NXF_HOME/config` when {ref}`NXF_HOME <nxf-env-vars>` is set).
+1. The config file `$HOME/.nextflow/config` (or `$NXF_HOME/config` when [NXF_HOME][nxf-env-vars]{ref}`NXF_HOME <nxf-env-vars>` is set).
 2. The config file `nextflow.config` in the project directory
 3. The config file `nextflow.config` in the launch directory
 4. Config files specified using the `-c <config-files>` option
 
-:::{tip}
+:::tip
 You can alternatively use the `-C <config-file>` option to specify a fixed set of configuration files and ignore all other files.
 :::
 
@@ -89,7 +87,7 @@ includeConfig 'path/extra.config'
 
 Relative paths are resolved against the location of the including file.
 
-:::{note}
+:::note
 Config includes can also be specified within config blocks. However, config files should only be included at the top level or in a [profile](#config-profiles) so that the included config file is valid on its own and in the context in which it is included.
 :::
 
@@ -134,8 +132,6 @@ params {
 ```
 
 See {ref}`cli-params` for information about how to specify pipeline parameters.
-
-(config-process)=
 
 ## Process configuration
 
@@ -245,12 +241,11 @@ process {
 ```
 
 With the above configuration:
+
 - All processes will use 4 cpus (unless otherwise specified in their process definition).
 - Processes annotated with the `hello` label will use 8 cpus.
 - Any process named `bye` (or imported as `bye`) will use 16 cpus.
 - Any process named `bye` (or imported as `bye`) invoked by a workflow named `mysub` will use 32 cpus.
-
-(config-profiles)=
 
 ## Config profiles
 
@@ -283,7 +278,7 @@ The above configuration defines three profiles: `standard`, `cluster`, and `clou
 Configuration profiles can be specified at runtime as a comma-separated list:
 
 ```bash
-nextflow run <your script> -profile standard,cloud
+nextflow run main.nf -profile standard,cloud
 ```
 
 Config profiles are applied in the order in which they were defined in the config file, regardless of the order they are specified on the command line.
@@ -335,3 +330,5 @@ workflow.onError = {
 ```
 
 See {ref}`workflow-handlers` for more information.
+
+[nxf-env-vars]: /nextflow_docs/nextflow_repo/docs/reference/env-vars#nextflow-settings
