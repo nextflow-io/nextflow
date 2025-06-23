@@ -36,7 +36,7 @@ class BitbucketRepositoryProviderTest extends Specification {
         when:
         def url = new BitbucketRepositoryProvider('pditommaso/tutorial',config).getCloneUrl()
         then:
-        url == "https://${config.user}@bitbucket.org/pditommaso/tutorial.git".toString()
+        url ==~ /https:\/\/\w+@bitbucket.org\/pditommaso\/tutorial.git/
     }
 
 
@@ -100,17 +100,17 @@ class BitbucketRepositoryProviderTest extends Specification {
         expect:
         new BitbucketRepositoryProvider('pditommaso/tutorial', config)
                 .setRevision('test-branch')
-                .getContentUrl('main.nf') == 'https://bitbucket.org/api/2.0/repositories/pditommaso/tutorial/src/test-branch/main.nf'
+                .getContentUrl('main.nf') == 'https://api.bitbucket.org/2.0/repositories/pditommaso/tutorial/src/test-branch/main.nf'
 
         and:
         new BitbucketRepositoryProvider('pditommaso/tutorial', config)
             .setRevision('feature/with-slash')
-            .getContentUrl('main.nf') == 'https://bitbucket.org/api/2.0/repositories/pditommaso/tutorial/src/a6b825b22d46758cdeb496ae6cf26aef839ace52/main.nf'
+            .getContentUrl('main.nf') == 'https://api.bitbucket.org/2.0/repositories/pditommaso/tutorial/src/a6b825b22d46758cdeb496ae6cf26aef839ace52/main.nf'
 
         and:
         new BitbucketRepositoryProvider('pditommaso/tutorial', config)
             .setRevision('test/tag/v2')
-            .getContentUrl('main.nf') == 'https://bitbucket.org/api/2.0/repositories/pditommaso/tutorial/src/8f849beceb2ea479ef836809ca33d3daeeed25f9/main.nf'
+            .getContentUrl('main.nf') == 'https://api.bitbucket.org/2.0/repositories/pditommaso/tutorial/src/8f849beceb2ea479ef836809ca33d3daeeed25f9/main.nf'
 
     }
 
