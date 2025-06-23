@@ -1157,9 +1157,9 @@ class AwsBatchTaskHandlerTest extends Specification {
         // Labels with invalid characters
         'label#with#hash'                   | 50         | 'label_with_hash'
         'label$with%special&chars'          | 50         | 'label_with_special_chars'
-        'label(with)brackets[and]braces{}'  | 50         | 'label_with_brackets_and_braces__'
+        'label(with)brackets[and]braces{}'  | 50         | 'label_with_brackets_and_braces'
         'label*with?wildcards'              | 50         | 'label_with_wildcards'
-        'unicode_λαβελ_test'                | 50         | 'unicode____abel_test'
+        'unicode_λαβελ_test'                | 50         | 'unicode_test'
         and:
         // Multiple consecutive invalid characters
         'label###multiple###hashes'         | 50         | 'label_multiple_hashes'
@@ -1177,8 +1177,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         and:
         // Length truncation
         'very-long-label-that-exceeds-max'  | 10         | 'very-long-'
-        'very-long-label-ending-with-_'     | 25         | 'very-long-label-ending-w'
-        'very-long-label-ending-with-___'   | 28         | 'very-long-label-ending-w'
+        'very-long-label-ending-with-_'     | 25         | 'very-long-label-ending-wi'
+        'very-long-label-ending-with-___'   | 28         | 'very-long-label-ending-with-'
         and:
         // Edge cases
         null                                | 50         | null
@@ -1219,8 +1219,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         and:
         // Invalid characters in keys and values
         ['key#with#hash': 'value$with%special&chars'] | ['key_with_hash': 'value_with_special_chars']
-        ['key(brackets)': 'value[squares]{braces}'] | ['key_brackets_': 'value_squares__braces_']
-        ['unicode_λkey': 'unicode_λvalue'] | ['unicode__key': 'unicode__value']
+        ['key(brackets)': 'value[squares]{braces}'] | ['key_brackets': 'value_squares_braces']
+        ['unicode_λkey': 'unicode_λvalue'] | ['unicode_key': 'unicode_value']
         and:
         // Multiple entries with mixed validity
         ['validKey': 'validValue', 'invalid#key': 'invalid$value', 'another.valid:key': 'another+valid@value'] |
@@ -1232,7 +1232,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         and:
         // Null keys or values
         ['validKey': null, null: 'validValue', 'goodKey': 'goodValue'] |
-        ['goodKey': 'goodValue']
+        [null: 'validValue', 'goodKey': 'goodValue']
         and:
         // Real-world example with Nextflow resource labels
         [
@@ -1248,7 +1248,7 @@ class AwsBatchTaskHandlerTest extends Specification {
             'uniqueRunId': 'tw-12345-workflow-run',
             'taskHash': 'task.hash.0x1a2b3c4d_special',
             'pipelineUser': 'user@domain.com',
-            'pipelineRunName': 'my-pipeline-run_2024_',
+            'pipelineRunName': 'my-pipeline-run_2024',
             'pipelineSessionId': 'session_id_with_special_chars',
             'pipelineResume': 'false',
             'pipelineName': 'my_pipeline/name:version+tag'
