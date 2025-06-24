@@ -4,8 +4,8 @@ Nextflow provides a robust command line interface (CLI) for the management and e
 
 Simply run `nextflow` with no options or `nextflow -h` to see the list of available top-level options and commands. See [CLI reference][cli-reference] for the full list of subcommands with examples.
 
-:::{note}
-Nextflow options use a single dash prefix, e.g. `-resume`. Do not confuse with double dash notation, e.g. `--resume`, which is instead used for [Pipeline parameters][cli-params].
+:::note
+Nextflow options use a single dash prefix, for example, `-resume`. Do not confuse with double dash notation, for example, `--resume`, which is instead used for [Pipeline parameters][cli-params].
 :::
 
 ## Basic usage
@@ -144,24 +144,27 @@ nextflow -v
 
 The `-v` option prints out information about Nextflow, such as the version and build. The `-version` option in addition prints out the citation reference and official website.
 
-- The short version:
+- The `-v` option prints out information about Nextflow, such as the version and build.:
 
   ```bash
   nextflow -v
   ```
 
+  This prints an output similar to the following:
+
   ```console
   nextflow version 20.07.1.5412
   ```
 
-- The full version info with citation and website link:
+- The `-version` option in addition prints out the citation reference and official website.:
 
   ```bash
   nextflow -version
   ```
 
+  This prints an output similar to the following:
+
   ```console
-  nextflow -version
   N E X T F L O W
   version 20.07.1 build 5412
   created 24-07-2020 15:18 UTC (20:48 IDT)
@@ -171,7 +174,7 @@ The `-v` option prints out information about Nextflow, such as the version and b
 
 ## Running pipelines
 
-The main purpose of the Nextflow CLI is to run Nextflow pipelines with the `run` command. Nextflow can execute a local script (e.g. `./main.nf`) or a remote project (e.g. `github.com/nextflow-io/hello`).
+The main purpose of the Nextflow CLI is to run Nextflow pipelines with the `run` command. Nextflow can execute a local script (e.g., `./main.nf`) or a remote project (e.g., `github.com/nextflow-io/hello`).
 
 ### Launching a remote project
 
@@ -192,7 +195,7 @@ nextflow run http://github.com/nextflow-io/hello
 If the project is found, it will be automatically downloaded to the Nextflow home directory (`$HOME/.nextflow` by default) and cached for subsequent runs.
 
 :::note
-You must use the `-hub` option to specify the hosting service if your project is hosted on a service other than GitHub, e.g. `-hub bitbucket`. However, the `-hub` option is not required if you use the project URL.
+You must use the `-hub` option to specify the hosting service if your project is hosted on a service other than GitHub, e.g., `-hub bitbucket`. However, the `-hub` option is not required if you use the project URL.
 :::
 
 Try this feature by running the following command:
@@ -299,8 +302,8 @@ Or in JSON format:
 
 Parameters are applied in the following order (from lowest to highest priority):
 
-1. Parameters defined in pipeline scripts (e.g. `main.nf`)
-2. Parameters defined in {ref}`config files <config-params>`
+1. Parameters defined in pipeline scripts (e.g., `main.nf`)
+2. Parameters defined in [config files][config-params]
 3. Parameters specified in a params file (`-params-file`)
 4. Parameters specified on the command line (`--something value`)
 
@@ -334,6 +337,8 @@ By using the `info` command you can show information from a downloaded project. 
 ```bash
 nextflow info hello
 ```
+
+This prints an output similar to the following:
 
 ```console
 project name: nextflow-io/hello
@@ -383,7 +388,7 @@ The `clone` command allows you to copy a Nextflow pipeline project to a director
 nextflow clone nextflow-io/hello target-dir
 ```
 
-If the destination directory is omitted the specified project is cloned to a directory with the same name as the pipeline base name (e.g. `hello`) in the current directory.
+If the destination directory is omitted the specified project is cloned to a directory with the same name as the pipeline base name (e.g., `hello`) in the current directory.
 
 The `clone` command can be used to inspect or modify the source code of a pipeline project. You can eventually commit and push back your changes by using the usual Git/GitHub workflow.
 

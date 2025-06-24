@@ -1,5 +1,3 @@
-(executor-page)=
-
 # Executors
 
 In the Nextflow framework architecture, the *executor* is the component that determines the system where a pipeline process is run and supervises its execution.
@@ -7,8 +5,6 @@ In the Nextflow framework architecture, the *executor* is the component that det
 The executor provides an abstraction between the pipeline processes and the underlying execution system. This allows you to write the pipeline functional logic independently from the actual processing platform.
 
 In other words, you can write your pipeline script once and have it running on your computer, a cluster resource manager, or the cloud — simply change the executor definition in the Nextflow configuration file.
-
-(awsbatch-executor)=
 
 ## AWS Batch
 
@@ -22,20 +18,18 @@ The pipeline can be launched either in a local computer, or an EC2 instance. EC2
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
-- {ref}`process-accelerator`
-- {ref}`process-arch` (only when using Fargate platform type for AWS Batch)
-- {ref}`process-container`
-- {ref}`process-containerOptions`
-- {ref}`process-cpus`
-- {ref}`process-disk` (only when using Fargate platform type for AWS Batch)
-- {ref}`process-memory`
-- {ref}`process-queue`
-- {ref}`process-resourcelabels`
-- {ref}`process-time`
+- [accelerator][process-accelerator]
+- [arch][process-arch] (only when using Fargate platform type for AWS Batch)
+- [container][process-container]
+- [containerOptions][process-containeroptions]
+- [cpus][process-cpus]
+- [disk][process-disk] (only when using Fargate platform type for AWS Batch)
+- [memory][process-memory]
+- [queue][process-queue]
+- [resourcelabels][process-resourcelabels]
+- [time][process-time]
 
-See {ref}`aws-batch` for more information.
-
-(azurebatch-executor)=
+See [AWS Batch][aws-batch] for more information.
 
 ## Azure Batch
 
@@ -49,23 +43,21 @@ The pipeline can be launched either in a local computer, or a cloud virtual mach
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
-- {ref}`process-container`
-- {ref}`process-containerOptions`
-- {ref}`process-cpus`
-- {ref}`process-disk`
-- {ref}`process-machineType`
-- {ref}`process-memory`
-- {ref}`process-queue`
-- {ref}`process-resourcelabels`
-- {ref}`process-time`
+- [container][process-container]
+- [containerOptions][process-containeroptions]
+- [cpus][process-cpus]
+- [disk][process-disk]
+- [machineType][process-machinetype]
+- [memory][process-memory]
+- [queue][process-queue]
+- [resourcelabels][process-resourcelabels]
+- [time][process-time]
 
-See {ref}`azure-batch` for more information.
-
-(bridge-executor)=
+See [Azure Batch][azure-batch] for more information.
 
 ## Bridge
 
-:::{versionadded} 22.09.1-edge
+:::note{title="Version added 22.09.1-edge"}  
 :::
 
 [Bridge](https://github.com/cea-hpc/bridge) is an abstraction layer to ease batch system and resource manager usage in heterogeneous HPC environments.
@@ -78,17 +70,15 @@ To enable the Bridge executor, set `process.executor = 'bridge'` in the `nextflo
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
-- {ref}`process-clusterOptions`
-- {ref}`process-cpus`
-- {ref}`process-memory`
-- {ref}`process-queue`
-- {ref}`process-time`
-
-(flux-executor)=
+- [clusterOptions][process-clusteroptions]
+- [cpus][process-cpus]
+- [memory][process-memory]
+- [queue][process-queue]
+- [time][process-time]
 
 ## Flux Executor
 
-:::{versionadded} 22.11.0-edge
+:::note{title="Version added 22.11.0-edge"}  
 :::
 
 The `flux` executor allows you to run your pipeline script using the [Flux Framework](https://flux-framework.org).
@@ -99,24 +89,22 @@ To enable the Flux executor, set `process.executor = 'flux'` in the `nextflow.co
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
-- {ref}`process-clusterOptions`
-- {ref}`process-cpus`
-- {ref}`process-queue`
-- {ref}`process-time`
+- [clusterOptions][process-clusteroptions]
+- [cpus][process-cpus]
+- [queue][process-queue]
+- [time][process-time]
 
-:::{note}
+:::note
 Flux does not support the `memory` directive.
 :::
 
-:::{note}
+:::note
 By default, Flux will send all output to the `.command.log` file. To send this output to stdout and stderr instead, set `flux.terminalOutput = true` in your config file.
 :::
 
-(google-batch-executor)=
-
 ## Google Cloud Batch
 
-:::{versionadded} 22.07.1-edge
+:::note{title="Version added 22.07.1-edge"}  
 :::
 
 [Google Cloud Batch](https://cloud.google.com/batch) is a managed computing service that allows the execution of containerized workloads in the Google Cloud Platform infrastructure.
@@ -129,24 +117,23 @@ To enable this executor, set `process.executor = 'google-batch'` in the `nextflo
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
-- {ref}`process-accelerator`
-- {ref}`process-container`
-- {ref}`process-containerOptions`
-- {ref}`process-cpus`
-- {ref}`process-disk`
-- {ref}`process-machineType`
-- {ref}`process-memory`
-- {ref}`process-resourcelabels`
-- {ref}`process-time`
+- [accelerator][process-accelerator]
+- [container][process-container]
+- [containerOptions][process-containeroptions]
+- [cpus][process-cpus]
+- [disk][process-disk]
+- [machineType][process-machinetype]
+- [memory][process-memory]
+- [resourcelabels][process-resourcelabels]
+- [time][process-time]
 
-See the {ref}`Google Cloud Batch <google-batch>` page for further configuration details.
-
-(htcondor-executor)=
+See [Cloud Batch][google-batch]for further configuration details.
 
 ## HTCondor
 
-:::{warning} *Experimental: may change in a future release.*
+:::warning{title="Experimental: may change in a future release"}  
 :::
+
 
 The `condor` executor allows you to run your pipeline script by using the [HTCondor](https://research.cs.wisc.edu/htcondor/) resource manager.
 
@@ -154,7 +141,7 @@ Nextflow manages each process as a separate job that is submitted to the cluster
 
 The pipeline must be launched from a node where the `condor_submit` command is available, which is typically the cluster login node.
 
-:::{note}
+:::note
 The HTCondor executor for Nextflow does not currently support HTCondor's ability to transfer input/output data to the corresponding job's compute node. Therefore, the data must be made accessible to the compute nodes through a shared file system directory from where the Nextflow workflow is executed (or specified via the `-w` option).
 :::
 
@@ -162,24 +149,19 @@ To enable the HTCondor executor, set `process.executor = 'condor'` in the `nextf
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
-- {ref}`process-clusterOptions`
-- {ref}`process-cpus`
-- {ref}`process-disk`
-- {ref}`process-memory`
-- {ref}`process-time`
-
-(hyperqueue-executor)=
+- [clusterOptions][process-clusteroptions]
+- [cpus][process-cpus]
+- [disk][process-disk]
+- [memory][process-memory]
+- [time][process-time]
 
 ## HyperQueue
 
-:::{versionadded} 22.05.0-edge
-:::
-
-:::{versionchanged} 24.06.0-edge
+:::note{title="Version changed 24.06.0-edge"}  
 HyperQueue 0.17.0 or later is required.
 :::
 
-:::{versionchanged} 25.01.0-edge
+:::note{title="Version changed 25.01.0-edge"}  
 HyperQueue 0.20.0 or later is required.
 :::
 
@@ -193,13 +175,11 @@ To enable the HyperQueue executor, set `process.executor = 'hq'` in the `nextflo
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
-- {ref}`process-accelerator`
-- {ref}`process-clusterOptions`
-- {ref}`process-cpus`
-- {ref}`process-memory`
-- {ref}`process-time`
-
-(k8s-executor)=
+- [accelerator][process-accelerator]
+- [clusterOptions][process-clusteroptions]
+- [cpus][process-cpus]
+- [memory][process-memory]
+- [time][process-time]
 
 ## Kubernetes
 
@@ -207,41 +187,37 @@ The `k8s` executor allows you to run a pipeline on a [Kubernetes](http://kuberne
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
-- {ref}`process-accelerator`
-- {ref}`process-cpus`
-- {ref}`process-disk`
-- {ref}`process-memory`
-- {ref}`process-pod`
-- {ref}`process-resourcelabels`
-- {ref}`process-time`
+- [accelerator][process-accelerator]
+- [cpus][process-cpus]
+- [disk][process-disk]
+- [memory][process-memory]
+- [pod][process-pod]
+- [resourcelabels][process-resourcelabels]
+- [time][process-time]
 
-See the {ref}`Kubernetes <k8s-page>` page to learn how to set up a Kubernetes cluster to run Nextflow pipelines.
-
-(local-executor)=
+See the [Kubernetes][k8s-page] page to learn how to set up a Kubernetes cluster to run Nextflow pipelines.
 
 ## Local
 
-The `local` executor is used by default. It runs the pipeline processes on the computer where Nextflow is launched. The processes are parallelised by spawning multiple threads, taking advantage of the multi-core architecture of the CPU.
+The `local` executor is used by default. It runs the pipeline processes on the computer where Nextflow is launched. The processes are parallelized by spawning multiple threads, taking advantage of the multi-core architecture of the CPU.
 
 The `local` executor is useful for developing and testing a pipeline script on your computer, before switching to a cluster or cloud environment with production data.
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
-- {ref}`process-cpus`
-- {ref}`process-memory`
-- {ref}`process-time`
-- {ref}`process-container`
-- {ref}`process-containerOptions`
+- [cpus][process-cpus]
+- [memory][process-memory]
+- [time][process-time]
+- [container][process-container]
+- [containerOptions][process-containeroptions]
 
-:::{note}
-While the `local` executor limits the number of concurrent tasks based on requested vs available resources, it does not enforce task resource requests. In other words, it is possible for a local task to use more CPUs and memory than it requested, in which case it may starve other tasks. An exception to this behavior is when using {ref}`container-docker` or {ref}`container-podman` containers, in which case the resource requests are enforced by the container runtime.
+:::note
+While the `local` executor limits the number of concurrent tasks based on requested vs available resources, it does not enforce task resource requests. In other words, it is possible for a local task to use more CPUs and memory than it requested, in which case it may starve other tasks. An exception to this behavior is when using [Docker][container-docker] or [Podman][container-podman] containers, in which case the resource requests are enforced by the container runtime.
 :::
 
 The local executor supports two types of tasks:
 - Script tasks (processes with a `script` or `shell` block) - executed via a Bash wrapper
 - Native tasks (processes with an `exec` block) - executed directly in the JVM.
-
-(lsf-executor)=
 
 ## LSF
 
@@ -255,28 +231,23 @@ To enable the LSF executor, set `process.executor = 'lsf'` in the `nextflow.conf
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
-- {ref}`process-clusterOptions`
-- {ref}`process-cpus`
-- {ref}`process-memory`
-- {ref}`process-queue`
-- {ref}`process-time`
+- [clusterOptions][process-clusteroptions]
+- [cpus][process-cpus]
+- [memory][process-memory]
+- [queue][process-queue]
+- [time][process-time]
 
-:::{note}
-LSF supports both *per-core* and *per-job* memory limits. Nextflow assumes that LSF works in the *per-core* mode, thus it divides the requested {ref}`process-memory` by the number of requested {ref}`process-cpus`.
+:::note
+LSF supports both *per-core* and *per-job* memory limits. Nextflow assumes that LSF works in the *per-core* mode, thus it divides the requested [memory][process-memory] by the number of requested [cpus][process-cpus].
 
-When LSF is configured to work in the *per-job* memory limit mode, you must specify this limit with the `perJobMemLimit` option in the {ref}`config-executor` scope of your Nextflow config file.
+When LSF is configured to work in the *per-job* memory limit mode, you must specify this limit with the `perJobMemLimit` option in the [`executor`][config-executor] scope of your Nextflow config file.
 
 See also the [Platform LSF documentation](https://www.ibm.com/support/knowledgecenter/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsb_job_memlimit.5.dita).
 :::
 
-(moab-executor)=
-
 ## Moab
 
-:::{versionadded} 19.07.0
-:::
-
-:::{warning} *Experimental: may change in a future release.*
+:::warning{title="Experimental: may change in a future release"}
 :::
 
 The `moab` executor allows you to run your pipeline script using the [Moab](https://en.wikipedia.org/wiki/Moab_Cluster_Suite) resource manager by [Adaptive Computing](http://www.adaptivecomputing.com/).
@@ -289,13 +260,11 @@ To enable the `Moab` executor, set `process.executor = 'moab'` in the `nextflow.
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
-- {ref}`process-clusterOptions`
-- {ref}`process-cpus`
-- {ref}`process-memory`
-- {ref}`process-queue`
-- {ref}`process-time`
-
-(nqsii-executor)=
+- [clusterOptions][process-clusteroptions]
+- [cpus][process-cpus]
+- [memory][process-memory]
+- [queue][process-queue]
+- [time][process-time]
 
 ## NQSII
 
@@ -309,18 +278,13 @@ To enable the NQSII executor, set `process.executor = 'nqsii'` in the `nextflow.
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
-- {ref}`process-clusterOptions`
-- {ref}`process-cpus`
-- {ref}`process-memory`
-- {ref}`process-queue`
-- {ref}`process-time`
-
-(oar-executor)=
+- [clusterOptions][process-clusteroptions]
+- [cpus][process-cpus]
+- [memory][process-memory]
+- [queue][process-queue]
+- [time][process-time]
 
 ## OAR
-
-:::{versionadded} 19.11.0-edge
-:::
 
 The `oar` executor allows you to run your pipeline script using the [OAR](https://oar.imag.fr) resource manager.
 
@@ -332,18 +296,18 @@ To enable the OAR executor set `process.executor = 'oar'` in the `nextflow.confi
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
-- {ref}`process-clusterOptions`
-- {ref}`process-cpus`
-- {ref}`process-memory`
-- {ref}`process-queue`
-- {ref}`process-time`
+- [clusterOptions][process-clusteroptions]
+- [cpus][process-cpus]
+- [memory][process-memory]
+- [queue][process-queue]
+- [time][process-time]
 
 When specifying `clusterOptions` as a string, multiple options must be separated by semicolons to ensure that the job script is formatted correctly:
 ```groovy
 clusterOptions = '-t besteffort;--project myproject'
 ```
 
-:::{versionadded} 24.04.0
+:::note{title="Version added 24.04.0"}  
 :::
 
 The same behavior can now be achieved using a string list:
@@ -351,9 +315,7 @@ The same behavior can now be achieved using a string list:
 clusterOptions = [ '-t besteffort', '--project myproject' ]
 ```
 
-See {ref}`process-clusteroptions` for details.
-
-(pbs-executor)=
+See [clusterOptions][process-clusteroptions] for details.
 
 ## PBS/Torque
 
@@ -367,13 +329,11 @@ To enable the PBS executor, set `process.executor = 'pbs'` in the `nextflow.conf
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
-- {ref}`process-clusterOptions`
-- {ref}`process-cpus`
-- {ref}`process-memory`
-- {ref}`process-queue`
-- {ref}`process-time`
-
-(pbspro-executor)=
+- [clusterOptions][process-clusteroptions]
+- [cpus][process-cpus]
+- [memory][process-memory]
+- [queue][process-queue]
+- [time][process-time]
 
 ## PBS Pro
 
@@ -387,13 +347,11 @@ To enable the PBS Pro executor, set `process.executor = 'pbspro'` in the `nextfl
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
-- {ref}`process-clusterOptions`
-- {ref}`process-cpus`
-- {ref}`process-memory`
-- {ref}`process-queue`
-- {ref}`process-time`
-
-(sge-executor)=
+- [clusterOptions][process-clusteroptions]
+- [cpus][process-cpus]
+- [memory][process-memory]
+- [queue][process-queue]
+- [time][process-time]
 
 ## SGE
 
@@ -407,14 +365,12 @@ To enable the SGE executor, set `process.executor = 'sge'` in the `nextflow.conf
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
-- {ref}`process-clusterOptions`
-- {ref}`process-cpus`
-- {ref}`process-memory`
-- {ref}`process-penv`
-- {ref}`process-queue`
-- {ref}`process-time`
-
-(slurm-executor)=
+- [clusterOptions][process-clusteroptions]
+- [cpus][process-cpus]
+- [memory][process-memory]
+- [penv][process-penv]
+- [queue][process-queue]
+- [time][process-time]
 
 ## SLURM
 
@@ -428,20 +384,42 @@ To enable the SLURM executor, set `process.executor = 'slurm'` in the `nextflow.
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
-- {ref}`process-clusterOptions`
-- {ref}`process-cpus`
-- {ref}`process-memory`
-- {ref}`process-queue`
-- {ref}`process-time`
+- [clusterOptions][process-clusteroptions]
+- [cpus][process-cpus]
+- [memory][process-memory]
+- [queue][process-queue]
+- [time][process-time]
 
-:::{note}
+:::note
 SLURM partitions can be specified with the `queue` directive.
 :::
 
-:::{note}
+:::note
 Nextflow does not provide direct support for SLURM multi-clusters. If you need to submit workflow executions to a cluster other than the current one, specify it with the `SLURM_CLUSTERS` variable in the launch environment.
 :::
 
-:::{versionadded} 23.07.0-edge
+:::note{title="Version added 23.07.0-edge"}
 Some SLURM clusters require memory allocations to be specified with `--mem-per-cpu` instead of `--mem`. You can specify `executor.perCpuMemAllocation = true` in the Nextflow configuration to enable this behavior. Nextflow will automatically compute the memory per CPU for each task (by default 1 CPU is used).
 :::
+
+[aws-batch]: /nextflow_docs/nextflow_repo/docs/aws#aws-batch
+[azure-batch]: /nextflow_docs/nextflow_repo/docs/azure#azure-batch
+[config-executor]: /nextflow_docs/nextflow_repo/docs/reference/config#executor
+[container-docker]: /nextflow_docs/nextflow_repo/docs/container#docker
+[container-podman]: /nextflow_docs/nextflow_repo/docs/container#podman
+[google-batch]: /nextflow_docs/nextflow_repo/docs/google#cloud-batch
+[k8s-page]: /nextflow_docs/nextflow_repo/docs/kubernetes
+[process-accelerator]: /nextflow_docs/nextflow_repo/docs/reference/process#accelerator
+[process-arch]: /nextflow_docs/nextflow_repo/docs/reference/process#arch
+[process-clusteroptions]: /nextflow_docs/nextflow_repo/docs/reference/process#clusteroptions
+[process-container]: /nextflow_docs/nextflow_repo/docs/reference/process#container
+[process-containeroptions]: /nextflow_docs/nextflow_repo/docs/reference/process#containeroptions
+[process-cpus]: /nextflow_docs/nextflow_repo/docs/reference/process#cpus
+[process-disk]: /nextflow_docs/nextflow_repo/docs/reference/process#disk
+[process-machinetype]: /nextflow_docs/nextflow_repo/docs/reference/process#machinetype
+[process-memory]: /nextflow_docs/nextflow_repo/docs/reference/process#memory
+[process-penv]: /nextflow_docs/nextflow_repo/docs/reference/process#penv
+[process-pod]: /nextflow_docs/nextflow_repo/docs/reference/process#pod
+[process-queue]: /nextflow_docs/nextflow_repo/docs/reference/process#queue
+[process-resourcelabels]: /nextflow_docs/nextflow_repo/docs/reference/process#resourcelabels
+[process-time]: /nextflow_docs/nextflow_repo/docs/reference/process#time

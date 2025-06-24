@@ -1,15 +1,11 @@
-(tracing-page)=
-
 # Reports
-
-(execution-log)=
 
 ## Execution log
 
 The `nextflow log` command shows information about executed pipelines in the current folder:
 
 ```bash
-nextflow log <run name> [options]
+nextflow log <RUN_NAME> [options]
 ```
 
 :::{note}
@@ -39,7 +35,7 @@ $ nextflow log goofy_kilby
 
 ### Customizing fields
 
-By default, only the task execution paths are printed. A custom list of fields to print can be provided via the `-f` (`-fields`) option. For example:
+By default, only the task execution paths are printed. A custom list of fields to print can be provided via the `-f` (`-fields`) option:
 
 ```console
 $ nextflow log goofy_kilby -f hash,name,exit,status
@@ -50,7 +46,7 @@ ec/3100e7  mapping (ggal_gut)                                       0  COMPLETED
 94/dfdfb6  makeTranscript (ggal_gut)                                0  COMPLETED
 ```
 
-The fields accepted by the `-f` options are the ones in the {ref}`trace report<trace-fields>`, as well as: script, stdout, stderr, env. List available fields using the `-l` (`-list-fields`) option.
+The fields accepted by the `-f` options are the ones in the [trace file report][trace-file], as well as: script, stdout, stderr, env. List available fields using the `-l` (`-list-fields`) option.
 
 The `script` field is useful for examining script commands run in each task:
 
@@ -91,8 +87,6 @@ The `filter` option makes it possible to select which entries to include in the 
 nextflow log goofy_kilby -filter 'name =~ /hello.*/ && status == "FAILED"'
 ```
 
-(execution-report)=
-
 ## Execution report
 
 Nextflow can create an HTML execution report: a single document which includes many useful metrics about a workflow execution. The report is organised in the three main sections: `Summary`, `Resources` and `Tasks` (see below for details).
@@ -100,7 +94,7 @@ Nextflow can create an HTML execution report: a single document which includes m
 To enable the creation of this report add the `-with-report` command line option when launching the pipeline execution. For example:
 
 ```bash
-nextflow run <pipeline> -with-report [file name]
+nextflow run main.nf -with-report [file name]
 ```
 
 The report file name can be specified as an optional parameter following the report option.
@@ -109,8 +103,7 @@ The report file name can be specified as an optional parameter following the rep
 
 The `Summary` section reports the execution status, the launch command, overall execution time and some other workflow metadata. You can see an example below:
 
-```{image} _static/report-summary-min.png
-```
+![Report summary](_static/report-summary-min.png)
 
 ### Resource Usage
 
@@ -118,31 +111,25 @@ The `Resources` section plots the distribution of resource usage for each workfl
 
 Plots are shown for CPU, memory, job duration and disk I/O. They have two (or three) tabs with the raw values and a percentage representation showing what proportion of the requested resources were used. These plots are very helpful to check that task resources are used efficiently.
 
-```{image} _static/report-resource-cpu.png
-```
+![Usage CPUs](_static/report-resource-cpu.png)
 
-Learn more about how resource usage is computed in {ref}`this tutorial <metrics-page>`.
-
-(execution-report-tasks)=
+See the [Understanding task resource metrics][metrics-page] guide to learn more about how resource usage is computed in Nextflow.
 
 ### Tasks
 
 The `Tasks` section lists all executed tasks, reporting for each of them the status, the actual command script, and many other metrics. You can see an example below:
 
-```{image} _static/report-tasks-min.png
-```
+![Tasks](_static/report-tasks-min.png)
 
-:::{note}
+:::note
 Nextflow collects these metrics through a background process for each job in the target environment. Make sure the following tools are available in the environment where tasks are executed: `awk`, `date`, `grep`, `ps`, `sed`, `tail`, `tee`. Moreover, some of these metrics are not reported when running on Mac OS X. See the corresponding note in the [trace file](#trace-file) section.
 :::
 
-:::{warning}
+:::warning
 A common problem when using a third party container image is that it does not include one or more of the above utilities, resulting in an empty execution report.
 :::
 
-Please read {ref}`Report scope <config-report>` section to learn more about the execution report configuration details.
-
-(trace-report)=
+See [Report scope][config-report] to learn more about the execution report configuration details.
 
 ## Trace file
 
@@ -151,10 +138,10 @@ Nextflow creates an execution tracing file that contains some useful information
 In order to create the execution trace file add the `-with-trace` command line option when launching the pipeline execution. For example:
 
 ```bash
-nextflow run <pipeline> -with-trace
+nextflow run main.nf -with-trace
 ```
 
-It will create a file named `trace.txt` in the current directory. The content looks like the above example:
+It will create a file named `trace.txt` in the current directory. The content looks similar the above example:
 
 | task_id | hash      | native_id | name           | status    | exit | submit                  | duration | walltime | %cpu   | rss      | vmem     | rchar    | wchar    |
 | ------- | --------- | --------- | -------------- | --------- | ---- | ----------------------- | -------- | -------- | ------ | -------- | -------- | -------- | -------- |
@@ -178,141 +165,268 @@ It will create a file named `trace.txt` in the current directory. The content lo
 | 56      | c3/ec5f4a | 2066      | similarity (5) | COMPLETED | 0    | 2014-10-23 17:13:23.948 | 30s      | 616ms    | 0.0%   | 10.4 MB  | 34.6 MB  | 238 MB   | 8.4 MB   |
 | 98      | de/d6c0a6 | 2099      | matrix (1)     | COMPLETED | 0    | 2014-10-23 17:14:27.139 | 30s      | 1s       | 0.0%   | 4.8 MB   | 42 MB    | 240.6 MB | 79 KB    |
 
-(trace-fields)=
-
 ### Trace fields
 
 The following table shows the fields that can be included in the execution report:
 
-`task_id`
-: Task ID.
-
-`hash`
-: Task hash code.
-
-`native_id`
-: Task ID given by the underlying execution system e.g. POSIX process PID when executed locally, job ID when executed by a grid engine, etc.
-
-`process`
-: Nextflow process name.
-
-`tag`
-: User provided identifier associated this task.
-
-`name`
-: Task name.
-
-`status`
-: Task status. Possible values are: `NEW`, `SUBMITTED`, `RUNNING`, `COMPLETED`, `FAILED`, and `ABORTED`.
-
-`exit`
-: POSIX process exit status.
-
-`module`
-: Environment module used to run the task.
-
-`container`
-: Docker image name used to execute the task.
-
-`cpus`
-: The cpus number request for the task execution.
-
-`time`
-: The time request for the task execution
-
-`disk`
-: The disk space request for the task execution.
-
-`memory`
-: The memory request for the task execution.
-
-`attempt`
-: Attempt at which the task completed.
-
-`submit`
-: Timestamp when the task has been submitted.
-
-`start`
-: Timestamp when the task execution has started.
-
-`complete`
-: Timestamp when task execution has completed.
-
-`duration`
-: Time elapsed to complete since the submission.
-
-`realtime`
-: Task execution time i.e. delta between completion and start timestamp.
-
-`queue`
-: The queue that the executor attempted to run the process on.
-
-`%cpu`
-: Percentage of CPU used by the process.
-
-`%mem`
-: Percentage of memory used by the process.
-
-`rss`
-: Real memory (resident set) size of the process. Equivalent to `ps -o rss` .
-
-`vmem`
-: Virtual memory size of the process. Equivalent to `ps -o vsize` .
-
-`peak_rss`
-: Peak of real memory. This data is read from field `VmHWM` in `/proc/$pid/status` file.
-
-`peak_vmem`
-: Peak of virtual memory. This data is read from field `VmPeak` in `/proc/$pid/status` file.
-
-`rchar`
-: Number of bytes the process read, using any read-like system call from files, pipes, tty, etc. This data is read from file `/proc/$pid/io`.
-
-`wchar`
-: Number of bytes the process wrote, using any write-like system call. This data is read from file `/proc/$pid/io`.
-
-`syscr`
-: Number of read-like system call invocations that the process performed. This data is read from file `/proc/$pid/io`.
-
-`syscw`
-: Number of write-like system call invocations that the process performed. This data is read from file `/proc/$pid/io`.
-
-`read_bytes`
-: Number of bytes the process directly read from disk. This data is read from file `/proc/$pid/io`.
-
-`write_bytes`
-: Number of bytes the process originally dirtied in the page-cache (assuming they will go to disk later). This data is read from file `/proc/$pid/io`.
-
-`vol_ctxt`
-: Number of voluntary context switches. This data is read from field `voluntary_ctxt_switches` in `/proc/$pid/status` file.
-
-`inv_ctxt`
-: Number of involuntary context switches. This data is read from field `nonvoluntary_ctxt_switches` in `/proc/$pid/status` file.
-
-`env`
-: The variables defined in task execution environment.
-
-`workdir`
-: The directory path where the task was executed.
-
-`script`
-: The task command script.
-
-`scratch`
-: The value of the process `scratch` directive.
-
-`error_action`
-: The action applied on errof task failure.
-
-`hostname`
-: :::{versionadded} 22.05.0-edge
-  :::
-: The host on which the task was executed. Supported only for the Kubernetes executor yet. Activate with `k8s.fetchNodeName = true` in the Nextflow config file.
-
-`cpu_model`
-: :::{versionadded} 22.07.0-edge
-  :::
-: The name of the CPU model used to execute the task. This data is read from file `/proc/cpuinfo`.
+<DefinitionList>
+    <DefinitionTerm>
+        `task_id`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Task ID.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `hash`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Task hash code.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `native_id`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Task ID given by the underlying execution system e.g. POSIX process PID when executed locally, job ID when executed by a grid engine, etc.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `process`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Nextflow process name.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `tag`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        User provided identifier associated this task.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `name`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Task name.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `status`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Task status. Possible values are: `NEW`, `SUBMITTED`, `RUNNING`, `COMPLETED`, `FAILED`, and `ABORTED`.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `exit`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        POSIX process exit status.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `module`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Environment module used to run the task.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `container`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Docker image name used to execute the task.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `cpus`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        The cpus number request for the task execution.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `time`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        The time request for the task execution
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `disk`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        The disk space request for the task execution.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `memory`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        The memory request for the task execution.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `attempt`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Attempt at which the task completed.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `submit`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Timestamp when the task has been submitted.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `start`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Timestamp when the task execution has started.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `complete`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Timestamp when task execution has completed.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `duration`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Time elapsed to complete since the submission.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `realtime`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Task execution time i.e. delta between completion and start timestamp.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `queue`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        The queue that the executor attempted to run the process on.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `%cpu`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Percentage of CPU used by the process.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `%mem`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Percentage of memory used by the process.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `rss`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Real memory (resident set) size of the process. Equivalent to `ps -o rss` .
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `vmem`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Virtual memory size of the process. Equivalent to `ps -o vsize` .
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `peak_rss`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Peak of real memory. This data is read from field `VmHWM` in `/proc/$pid/status` file.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `peak_vmem`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Peak of virtual memory. This data is read from field `VmPeak` in `/proc/$pid/status` file.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `rchar`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Number of bytes the process read, using any read-like system call from files, pipes, tty, etc. This data is read from file `/proc/$pid/io`.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `wchar`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Number of bytes the process wrote, using any write-like system call. This data is read from file `/proc/$pid/io`.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `syscr`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Number of read-like system call invocations that the process performed. This data is read from file `/proc/$pid/io`.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `syscw`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Number of write-like system call invocations that the process performed. This data is read from file `/proc/$pid/io`.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `read_bytes`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Number of bytes the process directly read from disk. This data is read from file `/proc/$pid/io`.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `write_bytes`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Number of bytes the process originally dirtied in the page-cache (assuming they will go to disk later). This data is read from file `/proc/$pid/io`.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `vol_ctxt`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Number of voluntary context switches. This data is read from field `voluntary_ctxt_switches` in `/proc/$pid/status` file.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `inv_ctxt`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Number of involuntary context switches. This data is read from field `nonvoluntary_ctxt_switches` in `/proc/$pid/status` file.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `env`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        The variables defined in task execution environment.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `workdir`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        The directory path where the task was executed.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `script`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        The task command script.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `scratch`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        The value of the process `scratch` directive.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `error_action`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        The action applied on errof task failure.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `hostname`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        :::versionadded 22.05.0-edge
+        :::
+        The host on which the task was executed. Supported only for the Kubernetes executor yet. Activate with `k8s.fetchNodeName = true` in the Nextflow config file.
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `cpu_model`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        :::versionadded 22.07.0-edge
+        :::
+        The name of the CPU model used to execute the task. This data is read from file `/proc/cpuinfo`.
+    </DefinitionDescription>
+</DefinitionList>
 
 :::{note}
 These metrics provide an estimation of the resources used by running tasks. They are not an alternative to low-level performance analysis tools, and they may not be completely accurate, especially for very short-lived tasks (running for less than a few seconds).
@@ -320,16 +434,13 @@ These metrics provide an estimation of the resources used by running tasks. They
 
 Trace report layout and other configuration settings can be specified by using the `nextflow.config` configuration file.
 
-Please read {ref}`Trace scope <config-trace>` section to learn more about it.
-
-(timeline-report)=
+See [Trace scope][config-trace] to learn more.
 
 ## Execution timeline
 
 Nextflow can render an HTML timeline for all processes executed in your pipeline. An example of the execution timeline is shown below:
 
-```{image} _static/timeline-min.png
-```
+![Execution timeline](_static/timeline-min.png)
 
 Each bar represents a process run in the pipeline execution. The bar length represents the task duration time (wall-time). The colored area in each bar represents the real execution time. The grey area to the *left* of the colored area represents the task scheduling wait time. The grey area to the *right* of the colored area represents the task termination time (clean-up and file un-staging). The numbers on the x-axis represent the time in absolute units e.g. minutes, hours, etc.
 
@@ -340,12 +451,10 @@ As each process can spawn many tasks, colors are used to identify those tasks be
 To enable the creation of the execution timeline add the `-with-timeline` command line option when launching the pipeline execution. For example:
 
 ```bash
-nextflow run <pipeline> -with-timeline [file name]
+nextflow run main.nf -with-timeline [file name]
 ```
 
 The report file name can be specified as an optional parameter following the timeline option.
-
-(workflow-diagram)=
 
 ## Workflow diagram
 
@@ -356,7 +465,7 @@ To render the workflow DAG, run your pipeline with the `-with-dag` option. By de
 The workflow DAG can be rendered in a different format by specifying an output file name with a different extension based on the desired format. For example:
 
 ```bash
-nextflow run <pipeline> -with-dag flowchart.png
+nextflow run main.nf -with-dag flowchart.png
 ```
 
 :::{versionadded} 22.06.0-edge
@@ -369,34 +478,60 @@ The default output format was changed from DOT to HTML.
 
 The following file formats are supported:
 
-`dot`
-: Graphviz [DOT](http://www.graphviz.org/content/dot-language) file
-
-`gexf`
-: Graph Exchange XML file (Gephi)
-
-`html`
-: HTML file with Mermaid diagram
-: :::{versionchanged} 23.10.0
-  The HTML format was changed to render a Mermaid diagram instead of a Cytoscape diagram.
-  :::
-
-`mmd`
-: :::{versionadded} 22.04.0
-  :::
-: Mermaid diagram
-
-`pdf`
-: *Requires [Graphviz](http://www.graphviz.org) to be installed*
-: Graphviz PDF file
-
-`png`
-: *Requires [Graphviz](http://www.graphviz.org) to be installed*
-: Graphviz PNG file
-
-`svg`
-: *Requires [Graphviz](http://www.graphviz.org) to be installed*
-: Graphviz SVG file
+<DefinitionList>
+    <DefinitionTerm>
+        `dot`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Graphviz [DOT](http://www.graphviz.org/content/dot-language) file
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `gexf`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Graph Exchange XML file (Gephi)
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `html`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        HTML file with Mermaid diagram
+        <br/>
+        :::versionchanged 23.10.0
+        The HTML format was changed to render a Mermaid diagram instead of a Cytoscape diagram.
+        :::
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `mmd`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        :::versionadded 22.04.0
+        :::
+        Mermaid diagram
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `pdf`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        *Requires [Graphviz](http://www.graphviz.org) to be installed*
+        <br/>
+        Graphviz PDF file
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `png`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        *Requires [Graphviz](http://www.graphviz.org) to be installed*
+        Graphviz PNG file
+    </DefinitionDescription>
+    <DefinitionTerm>
+        `svg`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        *Requires [Graphviz](http://www.graphviz.org) to be installed*
+        Graphviz SVG file
+    </DefinitionDescription>
+</DefinitionList>
 
 Here is the Mermaid diagram produced by Nextflow for the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline (using the [Mermaid Live Editor](https://mermaid-js.github.io/mermaid-live-editor/edit) with the `default` theme):
 
@@ -406,3 +541,8 @@ nextflow run rnaseq-nf -preview -with-dag
 
 ```{mermaid} _static/dag.mmd
 ```
+
+[metrics-page]: /nextflow_docs/nextflow_repo/docs/metrics
+[config-report]: /nextflow_docs/nextflow_repo/docs/reference/config#report
+[config-trace]: /nextflow_docs/nextflow_repo/docs/reference/config#trace
+[trace-file]: /nextflow_docs/nextflow_repo/docs/reports#trace-file

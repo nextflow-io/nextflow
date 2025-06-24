@@ -10,7 +10,7 @@ This guide details fundamental skills to run a basic Nextflow pipeline. It inclu
 
 You will need the following to get started:
 
-- Nextflow: See [Installation][install-page] for installation instructions.
+- Nextflow: See [Installation][install-page] for more information.
 
 ## Run a pipeline
 

@@ -1,10 +1,12 @@
+import DefinitionList, { DefinitionTerm, DefinitionDescription } from '@site/src/components/DefinitionList';
+
 # Configuration
 
 ## Configuration file
 
 When a pipeline script is launched, Nextflow looks for configuration files in multiple locations. Since each configuration file may contain conflicting settings, they are applied in the following order (from lowest to highest priority):
 
-1. The config file `$HOME/.nextflow/config` (or `$NXF_HOME/config` when [NXF_HOME][nxf-env-vars]{ref}`NXF_HOME <nxf-env-vars>` is set).
+1. The config file `$HOME/.nextflow/config` (or `$NXF_HOME/config` when [NXF_HOME][nxf-env-vars] is set).
 2. The config file `nextflow.config` in the project directory
 3. The config file `nextflow.config` in the launch directory
 4. Config files specified using the `-c <config-files>` option
@@ -13,15 +15,13 @@ When a pipeline script is launched, Nextflow looks for configuration files in mu
 You can alternatively use the `-C <config-file>` option to specify a fixed set of configuration files and ignore all other files.
 :::
 
-(config-syntax)=
-
 ## Syntax
 
 The Nextflow configuration syntax is based on the Nextflow script syntax. It is designed for setting configuration options in a declarative manner while also allowing for dynamic expressions where appropriate.
 
 A Nextflow config file may consist of any number of *assignments*, *blocks*, and *includes*. Config files may also contain comments in the same manner as scripts.
 
-See {ref}`syntax-page` for more information about the Nextflow script syntax.
+See [syntax-page] for more information about the Nextflow script syntax.
 
 ### Assignments
 
@@ -33,7 +33,7 @@ docker.enabled = true
 process.maxErrors = 10
 ```
 
-A config option consists of an *option name* prefixed by any number of *scopes* separated by dots. Config scopes are used to group related config options. See {ref}`config-options` for the full set of config options.
+A config option consists of an *option name* prefixed by any number of *scopes* separated by dots. Config scopes are used to group related config options. See [Configuration options][config-options] for the full set of config options.
 
 The expression is typically a literal value such as a number, boolean, or string. However, any expression can be used:
 
@@ -95,27 +95,44 @@ Config includes can also be specified within config blocks. However, config file
 
 The following constants are globally available in a Nextflow configuration file:
 
-`baseDir: Path`
-: :::{deprecated} 20.04.0
-  :::
-: Alias for `projectDir`.
+<DefinitionList>
 
-`launchDir: Path`
-: The directory where the workflow was launched.
+    <DefinitionTerm>`baseDir: Path`</DefinitionTerm>
+    <DefinitionDescription>
+        :::warning{title="Depreciated since version 20.04.0"} 
+        :::
+        Alias for `projectDir`.
+    </DefinitionDescription>
 
-`projectDir: Path`
-: The directory where the main script is located.
+    <DefinitionTerm>`launchDir: Path`</DefinitionTerm>
+    <DefinitionDescription>
+        The directory where the workflow was launched.
+    </DefinitionDescription>
+
+    <DefinitionTerm>`projectDir: Path`</DefinitionTerm>
+    <DefinitionDescription>
+        The directory where the main script is located.
+    </DefinitionDescription>
+
+    <DefinitionTerm>`workDir: Path`</DefinitionTerm>
+    <DefinitionDescription>
+        The directory where the workflow work directory is located.
+    </DefinitionDescription>
+
+</DefinitionList>
 
 ## Functions
 
 The following functions are globally available in a Nextflow configuration file:
 
-`env( name: String ) -> String`
-: :::{versionadded} 24.11.0-edge
-  :::
-: Get the value of the environment variable with the specified name in the Nextflow launch environment.
+<DefinitionList>
 
-(config-params)=
+    <DefinitionTerm>`env( name: String ) -> String`</DefinitionTerm>
+    <DefinitionDescription>
+        Get the value of the environment variable with the specified name in the Nextflow launch environment.
+    </DefinitionDescription>
+
+</DefinitionList>
 
 ## Parameters
 
@@ -131,11 +148,11 @@ params {
 }
 ```
 
-See {ref}`cli-params` for information about how to specify pipeline parameters.
+See [Pipeline parameters][cli-params] for information about how to specify pipeline parameters.
 
 ## Process configuration
 
-The `process` scope allows you to specify {ref}`process directives <process-reference>` separately from the pipeline code.
+The `process` scope allows you to specify [process directives][process-reference] separately from the pipeline code.
 
 For example:
 
@@ -149,11 +166,9 @@ process {
 
 By using this configuration, all processes in your pipeline will be executed through the SGE cluster, with the specified settings.
 
-(config-process-selectors)=
-
 ### Process selectors
 
-The `withLabel` selectors allow the configuration of all processes annotated with a {ref}`process-label` directive as shown below:
+The `withLabel` selectors allow the configuration of all processes annotated with a [label][process-label] directive as shown below:
 
 ```groovy
 process {
@@ -183,11 +198,9 @@ The `withName` selector applies both to processes defined with the same name and
 
 Furthermore, selectors for the alias of an included process take priority over selectors for the original name of the process. For example, given a process defined as `hello` and included as `sayHello`, the selectors `withName: hello` and `withName: sayHello` will both be applied to the process, with the second selector taking priority over the first.
 
-:::{tip}
+:::tip
 Label and process names do not need to be enclosed with quotes, provided the name does not include special characters (`-`, `!`, etc) and is not a keyword or a built-in type identifier. When in doubt, you can enclose the label name or process name with single or double quotes.
 :::
-
-(config-selector-expressions)=
 
 ### Selector expressions
 
@@ -215,8 +228,6 @@ process {
 ```
 
 The above configuration snippet sets 2 cpus for every process labeled as `hello` and 4 cpus to every process *not* label as `hello`. It also specifies the `long` queue for every process whose name does *not* start with `align`.
-
-(config-selector-priority)=
 
 ### Selector priority
 
@@ -283,11 +294,12 @@ nextflow run main.nf -profile standard,cloud
 
 Config profiles are applied in the order in which they were defined in the config file, regardless of the order they are specified on the command line.
 
-:::{versionadded} 25.02.0-edge
-When using the {ref}`strict config syntax <updating-config-syntax>`, profiles are applied in the order in which they are specified on the command line.
+
+:::note{title="Version added 25.02.0-edge"}  
+When using the [strict config syntax][updating-config-syntax], profiles are applied in the order in which they are specified on the command line.
 :::
 
-:::{danger}
+:::warning
 When defining a profile in the config file, avoid using both the dot and block syntax for the same scope. For example:
 
 ```groovy
@@ -310,7 +322,7 @@ process {
 }
 ```
 
-This limitation can be avoided by using the {ref}`strict config syntax <updating-config-syntax>`.
+This limitation can be avoided by using the [strict config syntax][updating-config-syntax].
 :::
 
 ## Workflow handlers
@@ -329,6 +341,13 @@ workflow.onError = {
 }
 ```
 
-See {ref}`workflow-handlers` for more information.
+See [Workflow handlers][workflow-handlers] for more information.
 
+[cli-params]: /nextflow_docs/nextflow_repo/docs/cli#pipeline-parameters
+[config-options]: /nextflow_docs/nextflow_repo/docs/reference/config
 [nxf-env-vars]: /nextflow_docs/nextflow_repo/docs/reference/env-vars#nextflow-settings
+[process-reference]: /nextflow_docs/nextflow_repo/docs/reference/process
+[process-label]: /nextflow_docs/nextflow_repo/docs/reference/process#label
+[syntax-page]: /nextflow_docs/nextflow_repo/docs/reference/syntax
+[updating-config-syntax]: /nextflow_docs/nextflow_repo/docs/strict-syntax#configuration-syntax
+[workflow-handlers]: /nextflow_docs/nextflow_repo/docs/notifications#workflow-handlers

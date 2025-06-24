@@ -17,10 +17,10 @@ Nextflow is a workflow system for creating scalable, portable, and reproducible 
 
 To get started with Nextflow:
 
-1. See the Nextflow {ref}`overview <overview-page>` to learn key concepts.
-2. Download and {ref}`install <install-page>` Nextflow.
-3. Set up an {ref}`environment <devenv-page>` with the {ref}`Nextflow VS Code extension <devenv-nextflow>`.
-4. Run {ref}`your first script <your-first-script>`.
+1. See the Nextflow [overview][overview-page] to learn key concepts.
+2. Download and [install][install-page] Nextflow.
+3. Set up an [environment][devenv-page] with the [Nextflow VS Code extension][devenv-nextflow].
+4. Run [your first script][your-first-script].
 
 To continue learning about Nextflow, visit the [Nextflow community training portal](https://training.nextflow.io/latest/) and find a training course that is right for you. Seqera, the company that develops Nextflow, also runs a variety of training events. See [Seqera Events](https://seqera.io/events/) for more information.
 
@@ -34,7 +34,7 @@ The [nf-core](https://nf-co.re/) project is a community effort aggregating high-
 
 ## Contributing
 
-Contributions to Nextflow are welcome. See {ref}`Contributing <contributing-page>` for more details.
+Contributions to Nextflow are welcome. See [Contributing][contributing-page] for more details.
 
 ## License
 
@@ -46,123 +46,9 @@ If you use Nextflow in your work, please cite:
 
 P. Di Tommaso, et al. Nextflow enables reproducible computational workflows. Nature Biotechnology 35, 316–319 (2017) doi:[10.1038/nbt.3820](http://www.nature.com/nbt/journal/v35/n4/full/nbt.3820.html)
 
-```{toctree}
-:hidden:
-:caption: Get started
-:maxdepth: 1
-
-overview
-install
-developer-env
-your-first-script
-```
-
-```{toctree}
-:hidden:
-:caption: Running pipelines
-:maxdepth: 1
-
-cli
-config
-executor
-cache-and-resume
-reports
-plugins
-```
-
-```{toctree}
-:hidden:
-:caption: Developing pipelines
-:maxdepth: 1
-
-script
-working-with-files
-process
-channel
-workflow
-module
-notifications
-secrets
-sharing
-vscode
-```
-
-```{toctree}
-:hidden:
-:caption: Software dependencies
-:maxdepth: 1
-
-git
-container
-conda
-spack
-wave
-```
-
-```{toctree}
-:hidden:
-:caption: Compute & storage
-:maxdepth: 1
-
-aws
-amazons3
-azure
-google
-kubernetes
-fusion
-```
-
-```{toctree}
-:hidden:
-:caption: Language Reference
-:maxdepth: 1
-
-reference/feature-flags
-reference/syntax
-reference/stdlib
-reference/process
-reference/channel
-reference/operator
-```
-
-```{toctree}
-:hidden:
-:caption: Runtime Reference
-:maxdepth: 1
-
-reference/cli
-reference/config
-reference/env-vars
-```
-
-```{toctree}
-:hidden:
-:caption: Updates
-:maxdepth: 1
-
-updating-nextflow
-strict-syntax
-migrations/index
-```
-
-```{toctree}
-:hidden:
-:caption: Contributing
-:maxdepth: 1
-
-developer/index
-developer/diagram
-developer/packages
-developer/plugins
-```
-
-```{toctree}
-:hidden:
-:caption: Guides
-:maxdepth: 1
-
-data-lineage
-updating-spot-retries
-metrics
-flux
-```
+[contributing-page]: /nextflow_docs/nextflow_repo/docs/developer/index
+[overview-page]: /nextflow_docs/nextflow_repo/docs/overview
+[install-page]: /nextflow_docs/nextflow_repo/docs/install.md
+[devenv-page]: /nextflow_docs/nextflow_repo/docs/developer-env.mdx
+[devenv-nextflow]: /nextflow_docs/nextflow_repo/docs/developer-env#nextflow
+[your-first-script]: /nextflow_docs/nextflow_repo/docs/your-first-script

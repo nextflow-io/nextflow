@@ -1,5 +1,3 @@
-(cache-resume-page)=
-
 # Caching and resuming
 
 One of the core features of Nextflow is the ability to cache task executions and re-use them in subsequent runs to minimize duplicate work. Resumability is useful both for recovering from errors and for iteratively developing a pipeline. It is similar to [checkpointing](https://en.wikipedia.org/wiki/Application_checkpointing), a common practice used by HPC applications.
@@ -10,42 +8,40 @@ You can enable resumability in Nextflow with the `-resume` flag when launching a
 
 All task executions are automatically saved to the task cache, regardless of the `-resume` option (so that you always have the option to resume later). The task cache is a key-value store, where each key-value pair corresponds to a previously-executed task.
 
-The task cache is used in conjunction with the [work directory](#work-directory) to recover cached tasks in a resumed run. It is also used by the {ref}`cli-log` sub-command to query task metadata.
-
-(cache-resume-task-hash)=
+The task cache is used in conjunction with the [work directory](#work-directory) to recover cached tasks in a resumed run. It is also used by the [`log`][cli-log] sub-command to query task metadata.
 
 ### Task hash
 
 The task hash is computed from the following metadata:
 
-- Session ID (see `workflow.sessionId` in the {ref}`stdlib-namespaces-workflow` namespace)
-- Task name (see `name` in {ref}`trace-report`)
+- Session ID (see `workflow.sessionId` in the [`workflow`][stdlib-namespaces-workflow] namespace)
+- Task name (see `name` in [Trace file][trace-report])
 - Task container image (if applicable)
-- Task {ref}`environment modules <process-module>` (if applicable)
-- Task {ref}`Conda environment <process-conda>` (if applicable)
-- Task {ref}`Spack environment <process-spack>` and {ref}`CPU architecture <process-arch>` (if applicable)
-- Task {ref}`inputs <process-input>`
-- Task {ref}`script <process-script>`
+- Task [environment modules][process-module] (if applicable)
+- Task [Conda environment][process-conda] (if applicable)
+- Task [Spack environment][process-spack] and [CPU architecture][process-arch>] (if applicable)
+- Task [inputs][process-input]
+- Task [script][process-script]
 - Any global variables referenced in the task script
-- Any task {ref}`process-ext` properties referenced in the task script
-- Any {ref}`bundled scripts <bundling-executables>` used in the task script
-- Whether the task is a {ref}`stub run <process-stub>`
+- Any task [`ext`][process-ext] properties referenced in the task script
+- Any [bundled scripts][bundling-executables] used in the task script
+- Whether the task is a [stub run][process-stub]
 
-:::{note}
+:::note
 Nextflow also includes an incrementing component in the hash generation process, which allows it to iterate through multiple hash values until it finds one that does not match an existing execution directory. This mechanism typically usually aligns with task retries (i.e., task attempts), however this is not guaranteed.
 :::
 
-:::{versionchanged} 23.09.2-edge
-The {ref}`process-ext` directive was added to the task hash.
+:::note{title="Version changed 23.09.2-edge"}  
+The [`ext`][process-ext] directive was added to the task hash.
 :::
 
 Nextflow computes this hash for every task when it is created but before it is executed. If resumability is enabled and there is an entry in the task cache with the same hash, Nextflow tries to recover the previous task execution. A cache hit does not guarantee that the task will be resumed, because it must also recover the task outputs from the [work directory](#work-directory).
 
-Files are hashed differently depending on the caching mode. See the {ref}`process-cache` directive for more details.
+Files are hashed differently depending on the caching mode. See the [`cache`][process-cache] directive for more details.
 
 ### Task entry
 
-The task entry is a serialized blob of the task metadata required to resume a task, including the fields used by the {ref}`trace-report` and the task input variables.
+The task entry is a serialized blob of the task metadata required to resume a task, including the fields used by the [Trace file][trace-report] and the task input variables.
 
 ### Cache stores
 
@@ -53,7 +49,7 @@ The default cache store uses the `.nextflow/cache` directory, relative to the la
 
 Due to the limitations of LevelDB, the database for a given session ID can only be accessed by one reader/writer at a time. This means, for example, that you cannot use `nextflow log` to query the task metadata for a pipeline run while it is still running.
 
-:::{versionadded} 23.07.0-edge
+:::note{title="Version added 23.07.0-edge"}  
 :::
 
 The cloud cache is an alternative cache store that uses cloud storage instead of the local cache directory. You can use it by setting the `NXF_CLOUDCACHE_PATH` environment variable to the desired cache path (e.g. `s3://my-bucket/cache`) and providing the necessary credentials.
@@ -68,7 +64,7 @@ Each task uses a unique directory based on its hash. When a task is created, Nex
 
 When a previous task is retrieved from the task cache on a resumed run, Nextflow then checks the corresponding task directory in the work directory. If all the required outputs are present and the exit code is valid, then the task is successfully cached; otherwise, the task is re-executed.
 
-For this reason, it is important to preserve both the task cache (`.nextflow/cache`) and work directories in order to resume runs successfully. You can use the {ref}`cli-clean` command to delete specific runs from the cache.
+For this reason, it is important to preserve both the task cache (`.nextflow/cache`) and work directories in order to resume runs successfully. You can use the [`clean`][cli-clean] command to delete specific runs from the cache.
 
 ## Troubleshooting
 
@@ -77,7 +73,7 @@ Cache failures happen when either (1) a task that was supposed to be cached was 
 When this happens, consider the following questions:
 
 - Is resume enabled via `-resume`?
-- Is the {ref}`process-cache` directive set to a non-default value?
+- Is the [`cache`][process-cache] directive set to a non-default value?
 - Is the task still present in the task cache and work directory?
 - Were any of the task inputs changed?
 
@@ -91,7 +87,7 @@ Changing any of the inputs included in the [task hash](#task-hash) will invalida
 
 While the following examples would not invalidate the cache:
 
-- Changing the value of a directive (other than {ref}`process-ext`), even if that directive is used in the task script
+- Changing the value of a directive (other than [`ext`][process-ext], even if that directive is used in the task script
 
 In many cases, cache failures happen because of a change to the pipeline script or configuration, or because the pipeline itself has some non-deterministic behavior.
 
@@ -107,9 +103,7 @@ If a process modifies its own input files, it cannot be resumed for the reasons 
 
 ### Inconsistent file attributes
 
-Some shared file systems, such as NFS, may report inconsistent file timestamps, which can invalidate the cache. If you encounter this problem, you can avoid it by using the `'lenient'` {ref}`caching mode <process-cache>`, which ignores the last modified timestamp and uses only the file path and size.
-
-(cache-global-var-race-condition)=
+Some shared file systems, such as NFS, may report inconsistent file timestamps, which can invalidate the cache. If you encounter this problem, you can avoid it by using the `'lenient'` [caching mode][process-cache], which ignores the last modified timestamp and uses only the file path and size.
 
 ### Race condition on a global variable
 
@@ -136,8 +130,6 @@ channel.of(1,2,3) | map { v -> def X=v; X+=2 } | view { v -> "ch1 = $v" }
 channel.of(1,2,3) | map { v -> v * 2 } | view { v -> "ch2 = $v" }
 ```
 
-(cache-nondeterministic-inputs)=
-
 ### Non-deterministic process inputs
 
 Sometimes a process needs to merge inputs from different sources. Consider the following example:
@@ -161,7 +153,7 @@ process check_bam_bai {
 }
 ```
 
-It is tempting to assume that the process inputs will be matched by `id` like the {ref}`operator-join` operator. But in reality, they are simply merged like the {ref}`operator-merge` operator. As a result, not only will the process inputs be incorrect, they will also be non-deterministic, thus invalidating the cache.
+It is tempting to assume that the process inputs will be matched by `id` like the [`join`][operator-join] operator. But in reality, they are simply merged like the [`merge`][operator-merge] operator. As a result, not only will the process inputs be incorrect, they will also be non-deterministic, thus invalidating the cache.
 
 The solution is to explicitly join the two channels before the process invocation:
 
@@ -193,9 +185,7 @@ Nextflow resumes from the previous run by default. If you want to resume from an
 nextflow run rnaseq-nf -resume 4dc656d2-c410-44c8-bc32-7dd0ea87bebf
 ```
 
-You can use the {ref}`cli-log` command to view all previous runs as well as the task executions for each run.
-
-(cache-compare-hashes)=
+You can use the [`log`][cli-log] command to view all previous runs as well as the task executions for each run.
 
 ### Comparing the hashes of two runs
 
@@ -208,7 +198,7 @@ One way to debug a resumed run is to compare the task hashes of each run using t
 
 While some manual effort is required, the final diff can often reveal the exact change that caused a task to be re-executed.
 
-:::{versionadded} 23.10.0
+:::note{title="Version added 23.10.0"}
 :::
 
 When using `-dump-hashes json`, the task hashes can be more easily extracted into a diff. Here is an example Bash script to perform two runs and produce a diff:
@@ -233,6 +223,24 @@ diff run_1.tasks.log run_2.tasks.log
 
 You can then view the `diff` output or use a graphical diff viewer to compare `run_1.tasks.log` and `run_2.tasks.log`.
 
-:::{versionadded} 25.04.0
-Nextflow now has a built-in way to compare two task runs. See the {ref}`data-lineage-page` guide for details.
+:::note{title="Version added 25.04.0"}
+Nextflow now has a built-in way to compare two task runs. See the [Data lineage][data-lineage-page] guide for details.
 :::
+
+[bundling-executables]: /nextflow_docs/nextflow_repo/docs/sharing#the-bin-directory
+[data-lineage-page]: /nextflow_docs/nextflow_repo/docs/data-lineage
+[cli-clean]: /nextflow_docs/nextflow_repo/docs/reference/cli#clean
+[cli-log]: /nextflow_docs/nextflow_repo/docs/reference/cli#log
+[operator-join]: /nextflow_docs/nextflow_repo/docs/reference/operator#join
+[process-arch]: /nextflow_docs/nextflow_repo/docs/reference/process#arch
+[process-cache]: /nextflow_docs/nextflow_repo/docs/reference/process#cache
+[process-conda]: /nextflow_docs/nextflow_repo/docs/reference/process#conda
+[process-ext]: /nextflow_docs/nextflow_repo/docs/reference/process#ext
+[process-input]: /nextflow_docs/nextflow_repo/docs/process#inputs
+[operator-merge]: /nextflow_docs/nextflow_repo/docs/reference/operator#merge
+[process-module]: /nextflow_docs/nextflow_repo/docs/reference/process#module
+[process-script]: /nextflow_docs/nextflow_repo/docs/process#script
+[process-spack]: /nextflow_docs/nextflow_repo/docs/reference/process#spack
+[process-stub]: /nextflow_docs/nextflow_repo/docs/process#stub
+[stdlib-namespaces-workflow]: /nextflow_docs/nextflow_repo/docs/reference/stdlib-namespaces#namespaces
+[trace-report]: /nextflow_docs/nextflow_repo/docs/reports#trace-file
