@@ -126,12 +126,14 @@ abstract class RepositoryProvider {
     }
 
     boolean hasCredentials() {
-        getUser() && getPassword()
+        return (getUser() && getPassword()) || getToken()
     }
 
     String getUser() { config?.user }
 
     String getPassword() { config?.password }
+
+    String getToken() { config?.token }
 
     /**
      * @return The name of the source hub service e.g. github or bitbucket
