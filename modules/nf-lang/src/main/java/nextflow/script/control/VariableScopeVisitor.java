@@ -107,14 +107,14 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
     }
 
     private void declareInclude(IncludeNode node) {
-        for( var module : node.modules ) {
-            if( module.getTarget() == null )
+        for( var entry : node.entries ) {
+            if( entry.getTarget() == null )
                 continue;
-            var name = module.getNameOrAlias();
+            var name = entry.getNameOrAlias();
             var otherInclude = vsc.getInclude(name);
             if( otherInclude != null )
                 vsc.addError("`" + name + "` is already included", node, "First included here", otherInclude);
-            vsc.include(name, module.getTarget());
+            vsc.include(name, entry.getTarget());
         }
     }
 
