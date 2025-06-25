@@ -76,11 +76,12 @@ class DumpOp {
     DataflowWriteChannel apply() {
 
         if( !isEnabled() ) {
-            if( source instanceof DataflowWriteChannel )
-                return (DataflowWriteChannel)source
+            if( source instanceof DataflowWriteChannel dwc )
+                return dwc
             throw new IllegalArgumentException("Illegal dump operator source channel")
         }
 
+        // ERROR: Cannot find matching static method nextflow.extension.CH#createBy(groovyx.gpars.dataflow.DataflowWriteChannel)
         final target = CH.createBy(source)
         final events = new HashMap(2)
         events.onNext = {
@@ -92,6 +93,7 @@ class DumpOp {
 
         events.onComplete = { CH.close0(target) }
 
+        // ERROR: Cannot find matching static method nextflow.extension.DataflowHelper#subscribeImpl(groovyx.gpars.dataflow.DataflowWriteChannel, java.util.HashMap)
         DataflowHelper.subscribeImpl(source, events)
         return target
     }
