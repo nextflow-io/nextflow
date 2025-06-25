@@ -34,8 +34,21 @@ class TrackingSemaphore {
     TrackingSemaphore(int permits) {
         semaphore = new Semaphore(permits)
         availIds = new HashMap<>(permits)
+        if ( SysEnv.containsKey('CUDA_VISIBLE_DEVICES') ) {
+            final cudaDevices = SysEnv.get('CUDA_VISIBLE_DEVICES').split(',').collect { it.trim() as int }
+            if ( cudaDevices.size() < permits) {
+                throw new IllegalConfigException("The environment variable CUDA_VISIBLE_DEVICES contains ${cudaDevices.size()} device(s), but ${permits} gpus were requested. Please update either `CUDA_VISIBLE_DEVICES` or `excutor.gpus`.")
+                }
+            else {
+                for ( int i=0; i< cudaDevices.size(); i++ ) {
+                availIds.put(cudaDevices[i], true)
+                }
+            }
+        }
+        else {
         for( int i=0; i<permits; i++ )
             availIds.put(i, true)
+        }
     }
 
     int availablePermits() {
