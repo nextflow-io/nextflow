@@ -86,13 +86,13 @@ class LinUtilsTest extends Specification{
         when:
         def params = LinUtils.getMetadataObject(lidStore, new URI('lid://testKey#params'))
         then:
-        params instanceof List<Parameter>
+        params instanceof List
         (params as List<Parameter>).size() == 2
 
         when:
         def outputs = LinUtils.getMetadataObject(lidStore, new URI('lid://testKey#output'))
         then:
-        outputs instanceof List<Parameter>
+        outputs instanceof List
         def param = (outputs as List)[0] as Parameter
         param.name == "output"
 
