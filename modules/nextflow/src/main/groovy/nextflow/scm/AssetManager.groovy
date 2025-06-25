@@ -991,8 +991,8 @@ class AssetManager implements Closeable {
             return
 
         List<String> filter = []
-        if( modules instanceof List<String> ) {
-            filter.addAll(modules)
+        if( modules instanceof List ) {
+            filter.addAll(modules as List<String>)
         }
         else if( modules instanceof String ) {
             filter.addAll( modules.tokenize(', ') )

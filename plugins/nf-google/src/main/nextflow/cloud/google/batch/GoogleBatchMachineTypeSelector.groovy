@@ -157,7 +157,7 @@ class GoogleBatchMachineTypeSelector {
 
         products.collect {
             new MachineType(
-                    type: it.type,
+                    type: it.type as String,
                     family: it.type.toString().split('-')[0],
                     spotPrice: averageSpotPrice(it.spotPrice as List<Map>),
                     onDemandPrice: it.onDemandPrice as float,

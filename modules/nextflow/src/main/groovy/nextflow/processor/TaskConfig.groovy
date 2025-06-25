@@ -80,8 +80,8 @@ class TaskConfig extends LazyMap implements Cloneable {
         this.cache.clear()
 
         // set the binding context for 'ext' map
-        if( target.ext instanceof LazyMap )
-            (target.ext as LazyMap).binding = context
+        if( getTarget().ext instanceof LazyMap ext )
+            ext.binding = context
 
         // set the this object in the task context in order to allow task properties to be resolved in process script
         context.put(TASK_CONTEXT_PROPERTY_NAME, this)
@@ -133,7 +133,7 @@ class TaskConfig extends LazyMap implements Cloneable {
     }
 
     final getRawValue(String key) {
-        return target.get(key)
+        return getTarget().get(key)
     }
 
     def get( String key ) {
@@ -142,11 +142,11 @@ class TaskConfig extends LazyMap implements Cloneable {
 
         def result
         if( key == 'ext' ) {
-            if( target.containsKey(key) )
-                result = target.get(key)
+            if( getTarget().containsKey(key) )
+                result = getTarget().get(key)
             else {
                 result = new LazyMap()
-                target.put(key, result)
+                getTarget().put(key, result)
             }
         }
         else
@@ -167,7 +167,7 @@ class TaskConfig extends LazyMap implements Cloneable {
                     super.setDynamic(flag)
                 }
             }
-            target.put(key, value)
+            getTarget().put(key, value)
         }
         else if( key == 'ext' && value instanceof Map ) {
             super.put( key, new LazyMap(value) )
@@ -181,8 +181,8 @@ class TaskConfig extends LazyMap implements Cloneable {
         if( super.isDynamic() )
             return true
 
-        if( target.ext instanceof LazyMap )
-            return (target.ext as LazyMap).isDynamic()
+        if( getTarget().ext instanceof LazyMap ext )
+            return ext.isDynamic()
 
         return false
     }
@@ -551,7 +551,7 @@ class TaskConfig extends LazyMap implements Cloneable {
      */
     protected boolean getWhenGuard(boolean defValue=true) throws FailedGuardException {
 
-        final code = target.get(NextflowDSLImpl.PROCESS_WHEN)
+        final code = getTarget().get(NextflowDSLImpl.PROCESS_WHEN)
         if( code == null )
             return defValue
 
@@ -571,7 +571,7 @@ class TaskConfig extends LazyMap implements Cloneable {
 
 
     protected TaskClosure getStubBlock() {
-        final code = target.get(NextflowDSLImpl.PROCESS_STUB)
+        final code = getTarget().get(NextflowDSLImpl.PROCESS_STUB)
         if( !code )
             return null
         if( code instanceof TaskClosure )

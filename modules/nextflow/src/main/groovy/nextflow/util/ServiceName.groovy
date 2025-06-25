@@ -50,6 +50,6 @@ import java.lang.annotation.Target
      * @return {@code true} when the executor should have priority over non-important ones
      */
     @Deprecated
-    boolean important() default Boolean.FALSE
+    boolean important() default false
 
 }

@@ -220,6 +220,7 @@ class CmdLog extends CmdBase implements CacheBase {
     /**
      * Wrap a {@link TraceRecord} instance as a {@link Map} or a {@link Binding} object
      */
+    @Slf4j
     private static class TraceAdaptor extends Binding {
 
         static private int MAX_LINES = 100
@@ -299,13 +300,14 @@ class CmdLog extends CmdBase implements CacheBase {
                 def result = new StringBuilder()
                 path.withReader { reader ->
                     String line
-                    while( (line=reader.readLine()) && c++<MAX_LINES ) {
+                    // MAX_LINES must be cast to `int` in order to satisfy type checker
+                    // seems to be caused by the delegate
+                    while( (line=reader.readLine()) && c++ < (int)MAX_LINES ) {
                         result << line << '\n'
                     }
                 }
 
                 result.toString() ?: TraceRecord.NA
-
             }
             catch( IOError e ) {
                 log.debug "Failed to fetch content for file: $path -- Cause: ${e.message ?: e}"

@@ -49,7 +49,7 @@ interface DirListener {
      * @param events the list of events to watch
      * @return
      */
-    default WatchEvent.Kind<Path>[] stringToWatchEvents(String events = null){
+    default WatchEvent.Kind<Path>[] stringToWatchEvents(String events) {
         def result = []
         if( !events )
             result << ENTRY_CREATE

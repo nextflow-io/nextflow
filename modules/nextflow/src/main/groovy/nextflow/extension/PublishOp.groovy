@@ -62,8 +62,8 @@ class PublishOp {
         this.source = source
         this.publishOpts = opts
         this.path = opts.path as String
-        if( opts.pathResolver instanceof Closure )
-            this.pathResolver = opts.pathResolver as Closure
+        if( opts.pathResolver instanceof Closure cl )
+            this.pathResolver = cl
         if( opts.index )
             this.indexOpts = new IndexOpts(opts.index as Map)
     }
@@ -161,7 +161,7 @@ class PublishOp {
         // if the closure contained publish statements, use
         // the resulting mapping to create a saveAs closure
         final mapping = dsl.build()
-        if( mapping instanceof Map<String,String> )
+        if( mapping instanceof Map )
             return { filename -> filename in mapping ? outputDir.resolve(mapping[filename]) : null }
 
         // if the resolved publish path is a string, resolve it
@@ -182,11 +182,11 @@ class PublishOp {
             if( source instanceof Path ) {
                 publish0(source, target)
             }
-            else if( source instanceof Collection<Path> ) {
+            else if( source instanceof Collection ) {
                 if( !target.endsWith('/') )
                     throw new ScriptRuntimeException("Invalid publish target '${target}' for workflow output '${name}' -- should be a directory (end with a `/`) when publishing a collection of files")
                 for( final path : source )
-                    publish0(path, target)
+                    publish0((Path) path, target)
             }
             else {
                 throw new ScriptRuntimeException("Invalid publish source for workflow output '${name}' -- expected a file or collection of files, but received: ${source} [${source.class.simpleName}]")
@@ -293,7 +293,7 @@ class PublishOp {
             return value.collect { el ->
                 if( el instanceof Path )
                     return normalizePath(el, targetResolver)
-                if( el instanceof Collection<Path> )
+                if( el instanceof Collection )
                     return normalizeValue(el, targetResolver)
                 if( el instanceof Map )
                     return normalizeValue(el, targetResolver)
@@ -305,7 +305,7 @@ class PublishOp {
             return value.collectEntries { k, v ->
                 if( v instanceof Path )
                     return [k, normalizePath(v, targetResolver)]
-                if( v instanceof Collection<Path> )
+                if( v instanceof Collection )
                     return [k, normalizeValue(v, targetResolver)]
                 if( v instanceof Map )
                     return [k, normalizeValue(v, targetResolver)]
@@ -332,7 +332,7 @@ class PublishOp {
 
         // if the target resolver is a closure, use it to transform
         // the source filename to the target path
-        if( targetResolver instanceof Closure<Path> ) {
+        if( targetResolver instanceof Closure ) {
             // note: the closure can return null to e.g. not
             // publish specific files
             final relPath = sourceDir.relativize(path).toString()

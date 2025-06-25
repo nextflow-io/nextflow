@@ -55,7 +55,7 @@ class ResourcesAggregator {
             final summary = summaries[process]
             summary.names.each { String series ->
                 // the task execution turn a triple
-                tasks << { return [ process, series, summary.compute(series)] } as Callable<List>
+                tasks.add({ -> [process, series, summary.compute(series)] } as Callable<List>)
             }
             // initialise the result entry
             result.put(process, new HashMap(10))

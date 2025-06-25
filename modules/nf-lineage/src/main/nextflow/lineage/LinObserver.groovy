@@ -235,9 +235,9 @@ class LinObserver implements TraceObserverV2 {
         if (value instanceof Path) {
             return asUriString(storeTaskOutput(task, (Path) value))
         }
-        if (value instanceof Collection<Path>) {
+        if (value instanceof Collection) {
             final files = new LinkedList<String>()
-            for (Path it : value) {
+            for (final it : value) {
                 files.add( asUriString(storeTaskOutput(task, (Path)it)) )
             }
             return files
