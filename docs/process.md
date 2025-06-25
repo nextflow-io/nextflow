@@ -1,5 +1,3 @@
-(process-page)=
-
 # Processes
 
 In Nextflow, a **process** is a specialized function for executing scripts in a scalable and portable manner.
@@ -18,9 +16,7 @@ process hello {
 }
 ```
 
-See {ref}`syntax-process` for a full description of the process syntax.
-
-(process-script)=
+See [Process][syntax-process] for a full description of the process syntax.
 
 ## Script
 
@@ -48,7 +44,7 @@ There is a subtle but important difference between them. Like in Bash, strings d
 
 In the above code fragment, the `$db` variable is replaced by the actual value defined elsewhere in the pipeline script.
 
-:::{warning}
+:::warning
 Since Nextflow uses the same Bash syntax for variable substitutions in strings, you must manage them carefully depending on whether you want to evaluate a *Nextflow* variable or a *Bash* variable.
 :::
 
@@ -113,7 +109,7 @@ workflow {
 }
 ```
 
-:::{tip}
+:::tip
 Since the actual location of the interpreter binary file can differ across platforms, it is wise to use the `env` command followed by the interpreter name, e.g. `#!/usr/bin/env perl`, instead of the absolute path, in order to make your script more portable.
 :::
 
@@ -152,8 +148,6 @@ process align {
 ```
 
 In the above example, the process will execute one of several scripts depending on the value of the `mode` parameter. By default it will execute the `tcoffee` command.
-
-(process-template)=
 
 ### Template
 
@@ -200,19 +194,17 @@ The following caveats should be considered:
 
 - Template variables are evaluated even if they are commented out in the template script. If a template variable is missing, it will cause the pipeline to fail regardless of where it occurs in the template.
 
-:::{tip}
+:::tip
 Template scripts are generally discouraged due to the caveats described above. The best practice for using a custom script is to embed it in the process definition at first and move it to a separate file with its own command line interface once the code matures.
 :::
 
-(process-shell)=
-
 ### Shell
 
-:::{deprecated} 24.11.0-edge
-Use the `script` section instead. Consider using the {ref}`strict syntax <strict-syntax-page>`, which provides error checking to help distinguish between Nextflow variables and Bash variables in the process script.
+:::note{title="Version depreciated 24.11.0-edge"}
+Use the `script` section instead. Consider using the [strict syntax][strict-syntax-page], which provides error checking to help distinguish between Nextflow variables and Bash variables in the process script.
 :::
 
-The `shell` section is a string expression that defines the script that is executed by the process. It is an alternative to the {ref}`process-script` definition with one important difference: it uses the exclamation mark `!` character, instead of the usual dollar `$` character, to denote Nextflow variables.
+The `shell` section is a string expression that defines the script that is executed by the process. It is an alternative to the [Script][process-script] definition with one important difference: it uses the exclamation mark `!` character, instead of the usual dollar `$` character, to denote Nextflow variables.
 
 This way, it is possible to use both Nextflow and Bash variables in the same script without having to escape the latter, which makes process scripts easier to read and maintain. For example:
 
@@ -234,13 +226,11 @@ workflow {
 
 In the above example, `$USER` is treated as a Bash variable, while `!{str}` is treated as a Nextflow variable.
 
-:::{note}
-- Shell script definitions require the use of single-quote `'` delimited strings. When using double-quote `"` delimited strings, dollar variables are interpreted as Nextflow variables as usual. See {ref}`string-interpolation`.
+:::note
+- Shell script definitions require the use of single-quote `'` delimited strings. When using double-quote `"` delimited strings, dollar variables are interpreted as Nextflow variables as usual. See [String interpolation][string-interpolation] for more information.
 - Variables prefixed with `!` must always be enclosed in curly brackets, i.e. `!{str}` is a valid variable whereas `!str` is ignored.
-- Shell scripts support the use of the {ref}`process-template` mechanism. The same rules are applied to the variables defined in the template script.
+- Shell scripts support the use of the [Template][process-template] mechanism. The same rules are applied to the variables defined in the template script.
 :::
-
-(process-native)=
 
 ### Native execution
 
@@ -270,13 +260,11 @@ Hello Mr. a
 Hello Mr. c
 ```
 
-A native process is very similar to a {ref}`function <syntax-function>`. However, it provides additional capabilities such as parallelism, caching, and progress logging.
-
-(process-stub)=
+A native process is very similar to a [function][syntax-function]. However, it provides additional capabilities such as parallelism, caching, and progress logging.
 
 ## Stub
 
-:::{versionadded} 20.11.0-edge
+:::note{title="Version added 20.11.0-edge"}
 :::
 
 You can define a command *stub*, which replaces the actual process command when the `-stub-run` or `-stub` command-line option is enabled:
@@ -308,8 +296,6 @@ The `stub` section can be defined before or after the `script` section. When the
 
 This feature makes it easier to quickly prototype the workflow logic without using the real commands. The developer can use it to provide a dummy script that mimics the execution of the real one in a quicker manner. In other words, it is a way to perform a dry-run.
 
-(process-input)=
-
 ## Inputs
 
 The `input` section allows you to define the input channels of a process, similar to function arguments. A process may have at most one input section, which must contain at least one input declaration.
@@ -334,7 +320,7 @@ The following input qualifiers are available:
 - `tuple`: Handle a group of input values having any of the above qualifiers.
 - `each`: Execute the process for each element in the input collection.
 
-See {ref}`process reference <process-reference-inputs>` for the full list of input methods and options.
+See [process reference][process-reference-inputs] for the full list of input methods and options.
 
 ### Input variables (`val`)
 
@@ -365,11 +351,11 @@ process job 1
 process job 2
 ```
 
-:::{note}
+:::note
 While channels do emit items in the order that they are received, *processes* do not necessarily *process* items in the order that they are received. In the above example, the value `3` was processed before the others.
 :::
 
-:::{note}
+:::note
 When the process declares exactly one input, the pipe `|` operator can be used to provide inputs to the process, instead of passing it as a parameter. Both methods have identical semantics:
 
 ```nextflow
@@ -388,8 +374,6 @@ workflow {
 }
 ```
 :::
-
-(process-input-path)=
 
 ### Input files (`path`)
 
@@ -451,7 +435,7 @@ workflow {
 
 In this example, each file received by the process is staged with the name `query.fa` in a different execution context (i.e. the folder where a task is executed).
 
-:::{tip}
+:::tip
 This feature allows you to execute the process command multiple times without worrying about the file names changing. In other words, Nextflow helps you write pipeline tasks that are self-contained and decoupled from the execution environment. As a best practice, you should avoid referencing files in your process script other than those defined in your input section.
 :::
 
@@ -473,8 +457,8 @@ workflow {
 }
 ```
 
-:::{note}
-Process `path` inputs have nearly the same interface as described in {ref}`stdlib-types-path`, with one difference which is relevant when files are staged into a subdirectory. Given the following input:
+:::note
+Process `path` inputs have nearly the same interface as described in [Path][stdlib-types-path], with one difference which is relevant when files are staged into a subdirectory. Given the following input:
 
 ```nextflow
 path x, name: 'my-dir/file.txt'
@@ -548,11 +532,11 @@ workflow {
 }
 ```
 
-:::{note}
-Rewriting input file names according to a named pattern is an extra feature and not at all required. The normal file input syntax introduced in the {ref}`process-input-path` section is valid for collections of multiple files as well. To handle multiple input files while preserving the original file names, use a variable identifier or the `*` wildcard.
+:::note
+Rewriting input file names according to a named pattern is an extra feature and not at all required. The normal file input syntax introduced in the [Input files (`path`)][process-input-path] section is valid for collections of multiple files as well. To handle multiple input files while preserving the original file names, use a variable identifier or the `*` wildcard.
 :::
 
-:::{versionadded} 23.09.0-edge
+:::note{title="Version added 23.09.0-edge"}
 :::
 
 The `arity` option can be used to enforce the expected number of files, either as a number or a range.
@@ -589,7 +573,7 @@ In the above example, the input file name is determined by the current value of 
 
 This approach allows input files to be staged in the task directory with a name that is coherent with the current execution context.
 
-:::{tip}
+:::tip
 In most cases, you won't need to use dynamic file names, because each task is executed in its own directory, and input files are automatically staged into this directory by Nextflow. This behavior guarantees that input files with the same name won't overwrite each other. The above example is useful specifically when there are potential file name conflicts within a single task.
 :::
 
@@ -650,8 +634,6 @@ bonjour
 ciao
 hello
 ```
-
-(process-input-tuple)=
 
 ### Input tuples (`tuple`)
 
@@ -730,15 +712,13 @@ workflow {
 
 In the above example, each sequence input file emitted by the `sequences` channel triggers six alignment tasks, three with the `regular` method against each library file, and three with the `espresso` method.
 
-:::{note}
+:::note
 When multiple repeaters are defined, the process is executed for each *combination* of them.
 :::
 
-:::{note}
-Input repeaters currently do not support tuples. However, you can emulate an input repeater on a channel of tuples by using the {ref}`operator-combine` or {ref}`operator-cross` operator with other input channels to produce all of the desired input combinations.
+:::note
+Input repeaters currently do not support tuples. However, you can emulate an input repeater on a channel of tuples by using the [`combine`][operator-combine] or [`cross`][operator-cross] operator with other input channels to produce all of the desired input combinations.
 :::
-
-(process-multiple-input-channels)=
 
 ### Multiple input channels
 
@@ -776,7 +756,7 @@ The process `echo` is executed two times because the `x` channel emits only two 
 2 and b
 ```
 
-A different semantic is applied when using a {ref}`value channel <channel-type-value>`. This kind of channel is created by the {ref}`channel.value <channel-value>` factory method or implicitly when a process is invoked with an argument that is not a channel. By definition, a value channel is bound to a single value and it can be read an unlimited number of times without consuming its content. Therefore, when mixing a value channel with one or more (queue) channels, it does not affect the process termination because the underlying value is applied repeatedly.
+A different semantic is applied when using a [value channel][channel-type-value]. This kind of channel is created by the [channel.value][channel-value] factory method or implicitly when a process is invoked with an argument that is not a channel. By definition, a value channel is bound to a single value and it can be read an unlimited number of times without consuming its content. Therefore, when mixing a value channel with one or more (queue) channels, it does not affect the process termination because the underlying value is applied repeatedly.
 
 To better understand this behavior, compare the previous example with the following one:
 
@@ -807,13 +787,11 @@ The above example executes the `echo` process three times because `x` is a value
 1 and c
 ```
 
-:::{note}
-In general, multiple input channels should be used to process *combinations* of different inputs, using the `each` qualifier or value channels. Having multiple queue channels as inputs is equivalent to using the {ref}`operator-merge` operator, which is not recommended as it may lead to {ref}`non-deterministic process inputs <cache-nondeterministic-inputs>`.
+:::note
+In general, multiple input channels should be used to process *combinations* of different inputs, using the `each` qualifier or value channels. Having multiple queue channels as inputs is equivalent to using the [`merge`][operator-merge] operator, which is not recommended as it may lead to [non-deterministic process inputs][cache-nondeterministic-inputs].
 :::
 
-See also: {ref}`channel-types`.
-
-(process-output)=
+See also: [Channel types][channel-types].
 
 ## Outputs
 
@@ -839,7 +817,7 @@ The following output qualifiers are available:
 - `tuple`: Emit multiple values.
 - `eval`: Emit the result of a script or command evaluated in the task execution context.
 
-Refer to the {ref}`process reference <process-reference-outputs>` for the full list of available output methods and options.
+Refer to the [process reference][process-reference-outputs] for the full list of available output methods and options.
 
 ### Output variables (`val`)
 
@@ -919,7 +897,7 @@ workflow {
 
 In the above example, the `random_number` process creates a file named `result.txt` which contains a random number. Since a `path` output with the same name is declared, that file is emitted by the corresponding output channel. A downstream process with a compatible input channel will be able to receive it.
 
-Refer to the {ref}`process reference <process-reference-outputs>` for the list of available options for `path` outputs.
+Refer to the [process reference][process-reference-outputs] for the list of available options for `path` outputs.
 
 ### Multiple output files
 
@@ -952,20 +930,20 @@ File: chunk_ac => l
 File: chunk_ad => a
 ```
 
-By default, all the files matching the specified glob pattern are emitted as a single list. However, as the above example demonstrates, the {ref}`operator-flatten` operator can be used to transform the list of files into a channel that emits each file individually.
+By default, all the files matching the specified glob pattern are emitted as a single list. However, as the above example demonstrates, the [`flatten`][operator-flatten] operator can be used to transform the list of files into a channel that emits each file individually.
 
 Some caveats on glob pattern behavior:
 
 - Input files are not included (unless `includeInputs` is `true`)
 - Directories are included, unless the `**` pattern is used to recurse through directories
 
-:::{warning}
+:::warning
 Although the input files matching a glob output declaration are not included in the resulting output channel, these files may still be transferred from the task scratch directory to the original task work directory. Therefore, to avoid unnecessary file copies, avoid using loose wildcards when defining output files, e.g. `path '*'`. Instead, use a prefix or a suffix to restrict the set of matching files to only the expected ones, e.g. `path 'prefix_*.sorted.bam'`.
 :::
 
 Read more about glob syntax at the following link [What is a glob?][glob]
 
-:::{versionadded} 23.09.0-edge
+:::note{title="Version added 23.09.0-edge"}
 :::
 
 The `arity` option can be used to enforce the expected number of files, either as a number or a range.
@@ -1003,56 +981,45 @@ process align {
 
 In the above example, each process execution produces an alignment file whose name depends on the actual value of the `species` input.
 
-:::{tip}
+:::tip
 The management of output files in Nextflow is often misunderstood.
 
 With other tools it is generally necessary to organize the output files into some kind of directory structure or to guarantee a unique file name scheme, so that result files don't overwrite each other and so they can be referenced unequivocally by downstream tasks.
 
-With Nextflow, in most cases, you don't need to manage the naming of output files, because each task is executed in its own unique directory, so files produced by different tasks can't overwrite each other. Also, metadata can be associated with outputs by using the {ref}`tuple output <process-out-tuple>` qualifier, instead of including them in the output file name.
+With Nextflow, in most cases, you don't need to manage the naming of output files, because each task is executed in its own unique directory, so files produced by different tasks can't overwrite each other. Also, metadata can be associated with outputs by using the [tuple output][process-out-tuple] qualifier, instead of including them in the output file name.
 
 One example in which you'd need to manage the naming of output files is when you use the `publishDir` directive to have output files also in a specific path of your choice. If two tasks have the same filename for their output and you want them to be in the same path specified by `publishDir`, the last task to finish will overwrite the output of the task that finished before. You can dynamically change that by adding the `saveAs` option to your `publishDir` directive.
 
 To sum up, the use of output files with static names over dynamic ones is preferable whenever possible, because it will result in simpler and more portable code.
 :::
 
-(process-env)=
-
 ### Output environment variables (`env`)
 
 The `env` qualifier allows you to output a variable defined in the process execution environment:
 
-```{literalinclude} snippets/process-out-env.nf
-:language: nextflow
+```nextflow file=./snippets/process-out-env.nf
 ```
-
-(process-stdout)=
 
 ### Standard output (`stdout`)
 
 The `stdout` qualifier allows you to output the `stdout` of the executed process:
 
-```{literalinclude} snippets/process-stdout.nf
-:language: nextflow
+```nextflow file=./snippets/process-stdout.nf
 ```
-
-(process-out-eval)=
 
 ### Eval output (`eval`)
 
-:::{versionadded} 24.02.0-edge
+:::note{title="Version added 24.02.0-edge"}
 :::
 
 The `eval` qualifier allows you to capture the standard output of an arbitrary command evaluated the task shell interpreter context:
 
-```{literalinclude} snippets/process-out-eval.nf
-:language: nextflow
+```nextflow file=./snippets/process-out-eval.nf
 ```
 
 Only one-line Bash commands are supported. You can use a semi-colon `;` to specify multiple Bash commands on a single line, and many interpreters can execute arbitrary code on the command line, e.g. `python -c 'print("Hello world!")'`.
 
 If the command fails, the task will also fail. In Bash, you can append `|| true` to a command to suppress any command failure.
-
-(process-out-tuple)=
 
 ### Output tuples (`tuple`)
 
@@ -1085,7 +1052,7 @@ In the above example, a `blast` task is executed for each pair of `species` and 
 
 A `tuple` definition may contain any of the following qualifiers, as previously described: `val`, `path`, `env` and `stdout`. Files specified with the `path` qualifier are treated exactly the same as standalone `path` inputs.
 
-:::{note}
+:::note
 While parentheses for input and output qualifiers are generally optional, they are required when specifying elements in an input/output tuple.
 
 Here's an example with a single path output (parentheses optional):
@@ -1118,8 +1085,6 @@ process hello {
 ```
 :::
 
-(process-naming-outputs)=
-
 ### Naming outputs
 
 The `emit` option can be used on a process output to define a name for the corresponding output channel, which can be used to access the channel by name from the process output. For example:
@@ -1143,7 +1108,7 @@ workflow {
 }
 ```
 
-See {ref}`workflow-process-invocation` for more details.
+See [Calling processes and workflows][workflow-process-invocation] for more details.
 
 ### Optional outputs
 
@@ -1156,16 +1121,14 @@ path("output.txt"), optional: true
 
 In this example, the process is normally expected to produce an `output.txt` file, but in this case, if the file is missing, the task will not fail. The output channel will only contain values for those tasks that produced `output.txt`.
 
-:::{note}
+:::note
 While this option can be used with any process output, it cannot be applied to individual elements of a [tuple](#output-tuples-tuple) output. The entire tuple must be optional or not optional.
 :::
 
-(process-when)=
-
 ## When
 
-:::{note}
-As a best practice, conditional logic should be implemented in the calling workflow (e.g. using an `if` statement or {ref}`operator-filter` operator) instead of the process definition.
+:::note
+As a best practice, conditional logic should be implemented in the calling workflow (e.g. using an `if` statement or [`filter`][operator-filter] operator) instead of the process definition.
 :::
 
 The `when` section allows you to define a condition that must be satisfied in order to execute the process. The condition can be any expression that returns a boolean value.
@@ -1188,31 +1151,29 @@ process blast_search {
 }
 ```
 
-(process-directives)=
-
 ## Directives
 
 Directives are optional settings that affect the execution of the current process.
 
 By default, directives are evaluated when the process is defined. However, if the value is a dynamic string or closure, it will be evaluated separately for each task, which allows task-specific variables like `task` and `val` inputs to be used.
 
-Some directives are only supported by specific executors. Refer to the {ref}`executor-page` page for more information about each executor.
+Some directives are only supported by specific executors. See [Executors][executor-page] for more information about each executor.
 
-Refer to the {ref}`process reference <process-reference-directives>` for the full list of process directives. If you are new to Nextflow, here are some commonly-used operators to learn first:
+Refer to the [process reference][process-reference-directives] for the full list of process directives. If you are new to Nextflow, here are some commonly-used operators to learn first:
 
 General:
-- {ref}`process-error-strategy`: strategy for handling task failures
-- {ref}`process-executor`: the {ref}`executor <executor-page>` with which to execute tasks
-- {ref}`process-tag`: a semantic name used to differentiate between task executions of the same process
+- [errorStrategy][process-error-strategy]]: strategy for handling task failures
+- [tag][process-executor]: the [executor][executor-page] to execute tasks
+- [executor][process-tag]: a semantic name used to differentiate between task executions of the same process
 
 Resource requirements:
-- {ref}`process-cpus`: the number of CPUs to request for each task
-- {ref}`process-memory`: the amount of memory to request for each task
-- {ref}`process-time`: the amount of walltime to request for each task
+- [cpus][process-cpus]: the number of CPUs to request for each task
+- [memory][process-memory]: the amount of memory to request for each task
+- [time][process-time]: the amount of walltime to request for each task
 
 Software dependencies:
-- {ref}`process-conda`: list of conda packages to provision for tasks
-- {ref}`process-container`: container image to use for tasks
+- [conda][process-conda]: list of conda packages to provision for tasks
+- [container][process-container]: container image to use for tasks
 
 ### Using task directive values
 
@@ -1227,15 +1188,13 @@ process hello {
 }
 ```
 
-In the above snippet, `task.cpus` and `task.memory` hold the values for the {ref}`cpus directive<process-cpus>` and {ref}`memory directive<process-memory>` directives, respectively, which were resolved for this task based on the process configuration.
-
-(dynamic-directives)=
+In the above snippet, `task.cpus` and `task.memory` hold the values for the [cpus directive][process-cpus] and [memory directive][process-memory] directives, respectively, which were resolved for this task based on the process configuration.
 
 ### Dynamic directives
 
 A directive can be assigned *dynamically*, during the process execution, so that its actual value can be evaluated based on the process inputs.
 
-To be defined dynamically, the directive's value needs to be expressed using a {ref}`closure <script-closure>`. For example:
+To be defined dynamically, the directive's value needs to be expressed using a [closure][script-closure]. For example:
 
 ```nextflow
 process hello {
@@ -1252,15 +1211,15 @@ process hello {
 }
 ```
 
-In the above example, the {ref}`process-queue` directive is evaluated dynamically, depending on the input value `entries`. When it is larger than 100, jobs will be submitted to the `long` queue, otherwise the `short` queue will be used.
+In the above example, the [queue][process-queue] directive is evaluated dynamically, depending on the input value `entries`. When it is larger than 100, jobs will be submitted to the `long` queue, otherwise the `short` queue will be used.
 
 All directives can be assigned a dynamic value except the following:
 
-- {ref}`process-executor`
-- {ref}`process-label`
-- {ref}`process-maxforks`
+- [executor][process-executor]
+- [label][process-label]
+- [maxForks][process-maxforks]
 
-:::{tip}
+:::tip
 Assigning a string value with one or more variables is always resolved in a dynamic manner, and therefore is equivalent to the above syntax. For example, the above directive can also be written as:
 
 ```nextflow
@@ -1269,8 +1228,6 @@ queue "${ entries > 100 ? 'long' : 'short' }"
 
 Note, however, that the latter syntax can be used both for a directive's main argument (as in the above example) and for a directive's optional named attributes, whereas the closure syntax is only resolved dynamically for a directive's main argument.
 :::
-
-(dynamic-task-resources)=
 
 ### Dynamic task resources
 
@@ -1293,13 +1250,13 @@ process hello {
 }
 ```
 
-In the above example the {ref}`process-memory` and execution {ref}`process-time` limits are defined dynamically. The first time the process is executed the `task.attempt` is set to `1`, thus it will request 2 GB of memory and 1 hour of walltime.
+In the above example the [memory][process-memory] and execution [time][process-time] limits are defined dynamically. The first time the process is executed the `task.attempt` is set to `1`, thus it will request 2 GB of memory and 1 hour of wall time.
 
-If the task execution fails with an exit status between 137 and 140, the task is re-executed; otherwise, the run is terminated immediately. The re-executed task will have `task.attempt` set to `2`, and will request 4 GB of memory and 2 hours of walltime.
+If the task execution fails with an exit status between 137 and 140, the task is re-executed; otherwise, the run is terminated immediately. The re-executed task will have `task.attempt` set to `2`, and will request 4 GB of memory and 2 hours of wall time.
 
-The {ref}`process-maxretries` directive sets the maximum number of times the same task can be re-executed.
+The [ maxRetries][process-maxretries] directive sets the maximum number of times the same task can be re-executed.
 
-:::{tip}
+:::tip
 Directives with named arguments, such as `accelerator` and `disk`, must use a more verbose syntax when they are dynamic. For example:
 
 ```nextflow
@@ -1329,14 +1286,12 @@ process hello {
 
 In this example, each task requests 8 GB of memory, plus the size of the input file rounded up to the next GB. This way, each task requests only as much memory as it needs based on the size of the inputs. The specific function that you use should be tuned for each process.
 
-(task-previous-execution-trace)=
-
 ### Dynamic task resources with previous execution trace
 
-:::{versionadded} 24.10.0
+:::note{title="Version added 24.10.0"}
 :::
 
-Task resource requests can be updated relative to the {ref}`trace record <trace-report>` metrics of the previous task attempt. The metrics can be accessed through the `task.previousTrace` variable. For example:
+Task resource requests can be updated relative to the [trace file][trace-report] metrics of the previous task attempt. The metrics can be accessed through the `task.previousTrace` variable. For example:
 
 ```nextflow
 process hello {
@@ -1351,7 +1306,7 @@ process hello {
 }
 ```
 
-In the above example, the {ref}`process-memory` is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to 1 GB. In each subsequent attempt, the requested memory is doubled. See {ref}`trace-report` for more information about trace records.
+In the above example, the [memory][process-memory] is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to 1 GB. In each subsequent attempt, the requested memory is doubled. See [Trace file][trace-report] for more information about trace records.
 
 ### Dynamic retry with backoff
 
@@ -1369,4 +1324,41 @@ process hello {
 }
 ```
 
+[cache-nondeterministic-inputs]: /nextflow_docs/nextflow_repo/docs/cache-and-resume#non-deterministic-process-inputs
+[channel-types]: /nextflow_docs/nextflow_repo/docs/channel#channel-types
+[channel-type-value]: /nextflow_docs/nextflow_repo/docs/channel#value-channel
+[channel-value]: /nextflow_docs/nextflow_repo/docs/reference/channel#value
+[executor-page]: /nextflow_docs/nextflow_repo/docs/executor
 [glob]: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
+[operator-combine]: /nextflow_docs/nextflow_repo/docs/reference/operator#combine
+[operator-filter]: /nextflow_docs/nextflow_repo/docs/reference/operator#filter
+[operator-flatten]: /nextflow_docs/nextflow_repo/docs/reference/operator#flatten
+[operator-cross]: /nextflow_docs/nextflow_repo/docs/reference/operator#cross
+[operator-merge]: /nextflow_docs/nextflow_repo/docs/reference/operator#merge
+[process-conda]: /nextflow_docs/nextflow_repo/docs/reference/process#conda
+[process-container]: /nextflow_docs/nextflow_repo/docs/reference/process#container
+[process-cpus]: /nextflow_docs/nextflow_repo/docs/reference/process#cpus
+[process-error-strategy]: /nextflow_docs/nextflow_repo/docs/reference/process#errorStrategy
+[process-executor]: /nextflow_docs/nextflow_repo/docs/reference/process#executor
+[process-input-path]: /nextflow_docs/nextflow_repo/docs/process#input-files-path
+[process-label]: /nextflow_docs/nextflow_repo/docs/reference/process#label
+[process-maxforks]: /nextflow_docs/nextflow_repo/docs/reference/process#maxforks
+[process-maxretries]: /nextflow_docs/nextflow_repo/docs/reference/process#maxretries
+[process-memory]: /nextflow_docs/nextflow_repo/docs/reference/process#memory
+[process-out-tuple]: /nextflow_docs/nextflow_repo/docs/process#output-tuples-tuple
+[process-queue]: nextflow_docs/nextflow_repo/docs/reference/process#queue
+[process-tag]: /nextflow_docs/nextflow_repo/docs/reference/process#tag
+[process-time]: /nextflow_docs/nextflow_repo/docs/reference/process#time
+[process-script]: /nextflow_docs/nextflow_repo/docs/process#script
+[process-reference-directives]: /nextflow_docs/nextflow_repo/docs/reference/process#directives
+[process-reference-inputs]: /nextflow_docs/nextflow_repo/docs/reference/process#inputs
+[process-reference-outputs]: /nextflow_docs/nextflow_repo/docs/reference/process#outputs
+[process-template]: /nextflow_docs/nextflow_repo/docs/process#template
+[script-closure]: /nextflow_docs/nextflow_repo/docs/script#closures
+[stdlib-types-path]: /nextflow_docs/nextflow_repo/docs/reference/stdlib-types#path
+[strict-syntax-page]: /nextflow_docs/nextflow_repo/docs/strict-syntax.md
+[string-interpolation]: /nextflow_docs/nextflow_repo/docs/script#string-interpolation
+[syntax-function]: /nextflow_docs/nextflow_repo/docs/reference/syntax#function
+[syntax-process]: /nextflow_docs/nextflow_repo/docs/reference/syntax#process
+[trace-report]: /nextflow_docs/nextflow_repo/docs/reports#trace-file
+[workflow-process-invocation]: /nextflow_docs/nextflow_repo/docs/workflow#calling-processes-and-workflows

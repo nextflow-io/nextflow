@@ -1,5 +1,3 @@
-(working-with-files)=
-
 # Working with files
 
 ## Opening files
@@ -18,11 +16,11 @@ When using the wildcard characters `*`, `?`, `[]` and `{}`, the argument is inte
 listOfFiles = file('some/path/*.fa')
 ```
 
-:::{note}
+:::note
 The `file()` method does not return a list if only one file is matched. Use the `files()` method to always return a list.
 :::
 
-:::{note}
+:::note
 A double asterisk (`**`) in a glob pattern works like `*` but also searches through subdirectories.
 :::
 
@@ -32,7 +30,7 @@ By default, wildcard characters do not match directories or hidden files. For ex
 listWithHidden = file('some/path/*.fa', hidden: true)
 ```
 
-:::{note}
+:::note
 To compose paths, instead of string interpolation, use the `resolve()` method or the `/` operator:
 
 ```nextflow
@@ -57,11 +55,11 @@ assert path.name == 'file.txt'
 assert path.parent == '/some/path'
 ```
 
-:::{tip}
+:::tip
 When calling an object method, any method that looks like `get*()` can also be accessed as a field. For example, `path.getName()` is equivalent to `path.name`, `path.getBaseName()` is equivalent to `path.baseName`, and so on.
 :::
 
-See the {ref}`stdlib-types-path` reference for the list of available methods.
+See the [Path][stdlib-types-path] reference for the list of available methods.
 
 ## Reading and writing
 
@@ -91,11 +89,11 @@ Or you can save a byte array to a file:
 myFile.bytes = binaryContent
 ```
 
-:::{note}
+:::note
 The above assignment overwrites any existing file contents, and implicitly creates the file if it doesn't exist.
 :::
 
-:::{warning}
+:::warning
 The above methods read and write the **entire** file contents at once, in a single variable or buffer. For this reason, when dealing with large files it is recommended that you use a more memory efficient approach, such as reading/writing a file line by line or using a fixed size buffer.
 :::
 
@@ -133,7 +131,7 @@ file('some/my_file.txt')
     .each { println it }
 ```
 
-:::{warning}
+:::warning
 The method `readLines()` reads the **entire** file at once and returns a list containing all the lines. For this reason, do not use it to read big files.
 :::
 
@@ -174,7 +172,7 @@ myFile.withReader {
 
 The methods `newInputStream()` and `withInputStream()` work similarly. The main difference is that they create an [InputStream](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/io/InputStream.html) object useful for writing binary data.
 
-See the {ref}`stdlib-types-path` reference for the list of available methods.
+See the [Path][stdlib-types-path] reference for the list of available methods.
 
 ### Advanced file writing
 
@@ -193,11 +191,11 @@ sourceFile.withReader { source ->
 }
 ```
 
-See the {ref}`stdlib-types-path` reference for the list of available methods.
+See the [Path][stdlib-types-path] reference for the list of available methods.
 
 ## Filesystem operations
 
-Methods for performing filesystem operations such as copying, deleting, and directory listing are documented in the {ref}`stdlib-types-path` reference.
+Methods for performing filesystem operations such as copying, deleting, and directory listing are documented in the [Path][stdlib-types-path] reference.
 
 ### Listing directories
 
@@ -226,8 +224,6 @@ myDir.eachFile { item ->
 
 In general, you should not need to manually copy files, because Nextflow will automatically stage files in and out of the task environment based on the definition of process inputs and outputs. Ideally, any operation which transforms files should be encapsulated in a process, in order to leverage Nextflow's staging capabilities as much as possible.
 
-(remote-files)=
-
 ## Remote files
 
 Nextflow works with many types of remote files and objects using the same interface as for local files. The following protocols are supported:
@@ -249,11 +245,11 @@ It can then be used in the same way as a local file:
 println pdb.text
 ```
 
-:::{note}
+:::note
 Not all operations are supported for all protocols. For example, writing and directory listing is not supported for HTTP(S) and FTP paths.
 :::
 
-:::{note}
+:::note
 Additional configuration may be necessary for cloud object storage, such as authenticating with a private bucket. See the documentation for each cloud storage provider for further details.
 :::
 
@@ -263,10 +259,13 @@ When a process input file resides on a different file system than the work direc
 
 Remote files are staged in a subdirectory of the work directory with the form `stage-<session-id>/<hash>/<filename>`, where `<hash>` is determined by the remote file path. If multiple tasks request the same remote file, the file will be downloaded once and reused by each task. These files can be reused by resumed runs with the same session ID.
 
-:::{note}
+:::note
 Remote file staging can be a bottleneck during large-scale runs, particularly when input files are stored in object storage but need to be staged in a shared filesystem work directory. This bottleneck occurs because Nextflow handles all of these file transfers.
 
 To mitigate this, you can implement a custom process to download the required files, allowing you to stage multiple files efficiently through parallel jobs. Files should be given as a `val` input instead of a `path` input to bypass Nextflow's built-in remote file staging.
 
-Alternatively, use {ref}`fusion-page` with the work directory set to object storage. In this case, tasks can access remote files directly without any prior staging, eliminating the bottleneck.
+Alternatively, use [Fusion][fusion-page] with the work directory set to object storage. In this case, tasks can access remote files directly without any prior staging, eliminating the bottleneck.
 :::
+
+[fusion-page]: /nextflow_docs/nextflow_repo/docs/fusion
+[stdlib-types-path]: /nextflow_docs/nextflow_repo/docs/reference/stdlib-types#path

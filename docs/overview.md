@@ -117,7 +117,7 @@ process {
 See [Configuration][configuration-page] to learn more about the Nextflow configuration file and settings.
 
 [channels-page]: /nextflow_docs/nextflow_repo/docs/channel.md
-[process-page]: /nextflow_docs/nextflow_repo/docs/process.md
-[executors-page]: /nextflow_docs/nextflow_repo/docs/executor.md
-[scripts-page]: /nextflow_docs/nextflow_repo/docs/script.md
 [configuration-page]: /nextflow_docs/nextflow_repo/docs/config.md
+[executors-page]: /nextflow_docs/nextflow_repo/docs/executor.md
+[process-page]: /nextflow_docs/nextflow_repo/docs/process.md
+[scripts-page]: /nextflow_docs/nextflow_repo/docs/script.md

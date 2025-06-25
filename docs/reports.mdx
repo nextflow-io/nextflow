@@ -1,3 +1,5 @@
+import DefinitionList, { DefinitionTerm, DefinitionDescription } from '@site/src/components/DefinitionList';
+
 # Reports
 
 ## Execution log
@@ -8,7 +10,7 @@ The `nextflow log` command shows information about executed pipelines in the cur
 nextflow log <RUN_NAME> [options]
 ```
 
-:::{note}
+:::note
 Both the [execution report](#execution-report) and the [trace file](#trace-file) must be specified when the pipeline is first called. By contrast, the `log` option is useful after a pipeline has already run and is available for every executed pipeline.
 :::
 
@@ -414,27 +416,26 @@ The following table shows the fields that can be included in the execution repor
         `hostname`
     </DefinitionTerm>
     <DefinitionDescription>
-        :::versionadded 22.05.0-edge
+        :::note{title="Version added 25.05.0-edge"} 
         :::
+
         The host on which the task was executed. Supported only for the Kubernetes executor yet. Activate with `k8s.fetchNodeName = true` in the Nextflow config file.
     </DefinitionDescription>
     <DefinitionTerm>
         `cpu_model`
     </DefinitionTerm>
     <DefinitionDescription>
-        :::versionadded 22.07.0-edge
+        :::note{title="Version added 22.07.0-edge"} 
         :::
         The name of the CPU model used to execute the task. This data is read from file `/proc/cpuinfo`.
     </DefinitionDescription>
 </DefinitionList>
 
-:::{note}
+:::note
 These metrics provide an estimation of the resources used by running tasks. They are not an alternative to low-level performance analysis tools, and they may not be completely accurate, especially for very short-lived tasks (running for less than a few seconds).
 :::
 
-Trace report layout and other configuration settings can be specified by using the `nextflow.config` configuration file.
-
-See [Trace scope][config-trace] to learn more.
+Trace report layout and other configuration settings can be specified by using the `nextflow.config` configuration file. See [Trace scope][config-trace] to learn more.
 
 ## Execution timeline
 
@@ -468,11 +469,7 @@ The workflow DAG can be rendered in a different format by specifying an output f
 nextflow run main.nf -with-dag flowchart.png
 ```
 
-:::{versionadded} 22.06.0-edge
-You can use the `-preview` option with `-with-dag` to render the workflow DAG without executing any tasks.
-:::
-
-:::{versionchanged} 23.10.0
+:::note{title="Version changed 23.10.0"} 
 The default output format was changed from DOT to HTML.
 :::
 
@@ -496,8 +493,8 @@ The following file formats are supported:
     </DefinitionTerm>
     <DefinitionDescription>
         HTML file with Mermaid diagram
-        <br/>
-        :::versionchanged 23.10.0
+
+        :::note{title="Version changed 23.10.0"} 
         The HTML format was changed to render a Mermaid diagram instead of a Cytoscape diagram.
         :::
     </DefinitionDescription>
@@ -505,8 +502,6 @@ The following file formats are supported:
         `mmd`
     </DefinitionTerm>
     <DefinitionDescription>
-        :::versionadded 22.04.0
-        :::
         Mermaid diagram
     </DefinitionDescription>
     <DefinitionTerm>
@@ -539,7 +534,46 @@ Here is the Mermaid diagram produced by Nextflow for the [rnaseq-nf](https://git
 nextflow run rnaseq-nf -preview -with-dag
 ```
 
-```{mermaid} _static/dag.mmd
+```mermaid
+%%{
+    init: {
+        'theme': 'base',
+        'themeVariables': {
+            'primaryColor': '#B6ECE2',
+            'primaryTextColor': '#160F26',
+            'primaryBorderColor': '#065647',
+            'lineColor': '#545555',
+            'clusterBkg': '#BABCBD22',
+            'clusterBorder': '#DDDEDE',
+            'fontFamily': 'degular'
+        }
+    }
+}%%
+flowchart TB
+    subgraph " "
+    v0["Channel.fromFilePairs"]
+    v1["transcriptome"]
+    v7["config"]
+    end
+    subgraph RNASEQ
+    v2([INDEX])
+    v3([FASTQC])
+    v4([QUANT])
+    end
+    v8([MULTIQC])
+    subgraph " "
+    v9[" "]
+    end
+    v5(( ))
+    v0 --> v3
+    v0 --> v4
+    v1 --> v2
+    v2 --> v4
+    v3 --> v5
+    v4 --> v5
+    v7 --> v8
+    v5 --> v8
+    v8 --> v9
 ```
 
 [metrics-page]: /nextflow_docs/nextflow_repo/docs/metrics

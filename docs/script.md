@@ -1,16 +1,14 @@
-(script-page)=
-
 # Scripts
 
-Nextflow is a workflow language that runs on the Java virtual machine (JVM). Nextflow's syntax is very similar to [Groovy](https://groovy-lang.org/), a scripting language for the JVM. However, Nextflow is specialized for writing computational pipelines in a declarative manner. See {ref}`syntax-page` for a full description of the Nextflow language.
+Nextflow is a workflow language that runs on the Java virtual machine (JVM). Nextflow's syntax is very similar to [Groovy](https://groovy-lang.org/), a scripting language for the JVM. However, Nextflow is specialized for writing computational pipelines in a declarative manner. See [Syntax][syntax-page] for a full description of the Nextflow language.
 
-Nextflow scripts can also make full use of the Java and Groovy standard libraries. See {ref}`stdlib-page` for more information.
+Nextflow scripts can also make full use of the Java and Groovy standard libraries. See [Standard library][stdlib-page] for more information.
 
-:::{warning}
+:::warning
 Nextflow uses UTF-8 as the default character encoding for source files. Make sure to use UTF-8 encoding when editing Nextflow scripts with your preferred text editor.
 :::
 
-:::{warning}
+:::warning
 Nextflow scripts have a maximum size of 64 KiB. To avoid this limit for large pipelines, consider moving pipeline components into separate files and including them as modules.
 :::
 
@@ -43,11 +41,9 @@ def str = "Hi"
 println str
 ```
 
-:::{warning}
-Variables can also be declared without `def` in some cases. However, this practice is discouraged outside of simple code snippets because it can lead to a {ref}`race condition <cache-global-var-race-condition>`.
+:::warning
+Variables can also be declared without `def` in some cases. However, this practice is discouraged outside of simple code snippets because it can lead to a [race condition][cache-global-var-race-condition].
 :::
-
-(script-list)=
 
 ## Lists
 
@@ -69,9 +65,7 @@ In order to get the length of the list use the `size` method:
 println myList.size()
 ```
 
-See {ref}`stdlib-types-list` for the set of available list operations.
-
-(script-map)=
+See [List\<E\>][stdlib-types-list] for the set of available list operations.
 
 ## Maps
 
@@ -105,20 +99,18 @@ def new_scores = scores + ["Pete": 3, "Cedric": 120]
 
 When adding two maps, the first map is copied and then appended with the keys from the second map. Any conflicting keys are overwritten by the second map.
 
-:::{tip}
+:::tip
 Copying a map with the `+` operator is a safer way to modify maps in Nextflow, specifically when passing maps through channels. This way, a new instance of the map will be created, and any references to the original map won't be affected.
 :::
 
-See {ref}`stdlib-types-map` for the set of available map operations.
-
-(script-operators)=
+See [Map\<K,V\>][stdlib-types-map] for the set of available map operations.
 
 ## Operators
 
 Operators are symbols that perform specific functions on one or more values, and generally make code easier to read. This section highlights some of the most commonly used operators.
 
-:::{note}
-Operators in this context are different from *channel operators*, which are specialized functions for working with channels. See {ref}`channel-page` for more information.
+:::note
+Operators in this context are different from *channel operators*, which are specialized functions for working with channels. See [Channels][channel-page] for more information.
 :::
 
 The `==` and `!=` operators can be used to test whether any two values are equal (or not equal):
@@ -129,7 +121,7 @@ assert [2, 2] != [4]
 assert 'two plus two' != 'four'
 ```
 
-:::{tip}
+:::tip
 The `assert` keyword simply tests a condition and raises an error if the condition is false. Every assert that you see on this page will succeed if executed.
 :::
 
@@ -203,11 +195,9 @@ def counts = ['A': 1, 'B', 2]
 assert counts['C'] ?: 0 == 0    // x is "truthy" if !!x == true
 ```
 
-:::{tip}
+:::tip
 The `?:` operator is also known as the [elvis operator](https://en.wikipedia.org/wiki/Elvis_operator).
 :::
-
-(script-string)=
 
 ## Strings
 
@@ -224,8 +214,6 @@ Strings can be concatenated with `+`:
 def a = "world"
 print "hello " + a + "\n"
 ```
-
-(string-interpolation)=
 
 ### String interpolation
 
@@ -260,7 +248,7 @@ def text = """
     """
 ```
 
-:::{note}
+:::note
 Like before, multi-line strings inside double quotes support variable interpolation, while single-quoted multi-line strings do not.
 :::
 
@@ -280,15 +268,13 @@ def result = myLongCmdline.execute().text
 
 In the preceding example, `blastp` and its `-in`, `-out`, `-db` and `-html` switches and their arguments are effectively a single line.
 
-:::{warning}
+:::warning
 Do not put any spaces after the backslash when using backslashes to continue a multi-line command. Spaces after the backslash will be interpreted as an escaped space and will make your script incorrect. It will also print this warning:
 
 ```
 unknown recognition error type: groovyjarjarantlr4.v4.runtime.LexerNoViableAltException
 ```
 :::
-
-(script-regexp)=
 
 ## Regular expressions
 
@@ -359,8 +345,6 @@ println minor   // 7
 println patch   // 3
 println flavor  // beta
 ```
-
-(script-closure)=
 
 ## Closures
 
@@ -447,7 +431,7 @@ def result = counts.values().inject { sum, v -> sum + v }
 
 This way, the closure is fully "self-contained" because it doesn't access or mutate any variables outside of its scope.
 
-:::{note}
+:::note
 When a closure takes a single parameter, the parameter can be omitted, in which case the implicit `it` parameter will be used:
 
 ```nextflow
@@ -488,4 +472,14 @@ workflow {
 }
 ```
 
-See {ref}`workflow-page`, {ref}`process-page`, and {ref}`module-page`  for more information about how to use these features in your Nextflow scripts.
+See [Workflows][workflow-page], [Processes][process-page], and [Modules][module-page] for more information about how to use these features in your Nextflow scripts.
+
+[cache-global-var-race-condition]: /nextflow_docs/nextflow_repo/docs/cache-and-resume#race-condition-on-a-global-variable
+[channel-page]: /nextflow_docs/nextflow_repo/docs/channel.md
+[module-page]: /nextflow_docs/nextflow_repo/docs/module
+[process-page]: /nextflow_docs/nextflow_repo/docs/process
+[stdlib-page]: /nextflow_docs/nextflow_repo/docs/reference/stdlib
+[stdlib-types-list]: /nextflow_docs/nextflow_repo/docs/reference/stdlib-types#list-e
+[stdlib-types-map]: /nextflow_docs/nextflow_repo/docs/reference/stdlib-types#map-k-v
+[syntax-page]: /nextflow_docs/nextflow_repo/docs/reference/syntax
+[workflow-page]: /nextflow_docs/nextflow_repo/docs/workflow
