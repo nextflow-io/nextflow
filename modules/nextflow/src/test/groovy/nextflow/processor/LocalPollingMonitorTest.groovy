@@ -20,8 +20,10 @@ import java.lang.management.ManagementFactory
 
 import com.sun.management.OperatingSystemMXBean
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.ExecutorConfig
+import nextflow.executor.local.LocalTaskHandler
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
 /**
@@ -46,7 +48,7 @@ class LocalPollingMonitorTest extends Specification {
 
         def task = new TaskRun()
         task.config = new TaskConfig(cpus: 3, memory: MemoryUnit.of('2GB'))
-        def handler = Mock(TaskHandler)
+        def handler = Mock(LocalTaskHandler)
         handler.getTask() >> { task }
 
         expect:
@@ -94,7 +96,7 @@ class LocalPollingMonitorTest extends Specification {
 
         def task = new TaskRun()
         task.config = new TaskConfig(cpus: 4, memory: MemoryUnit.of('8GB'))
-        def handler = Mock(TaskHandler)
+        def handler = Mock(LocalTaskHandler)
         handler.getTask() >> { task }
         handler.canForkProcess() >> true
         handler.isReady() >> true
@@ -140,7 +142,7 @@ class LocalPollingMonitorTest extends Specification {
 
         def task = new TaskRun()
         task.config = new TaskConfig(cpus: 1, memory: MemoryUnit.of('8GB'))
-        def handler = Mock(TaskHandler)
+        def handler = Mock(LocalTaskHandler)
         handler.getTask() >> { task }
         handler.canForkProcess() >> true
         handler.isReady() >> true
@@ -211,6 +213,38 @@ class LocalPollingMonitorTest extends Specification {
         then:
         def e2 = thrown(ProcessUnrecoverableException)
         e2.message == 'Process requirement exceeds available memory -- req: 22 GB; avail: 20 GB'
+
+    }
+
+    def 'should throw an exception for missing accelerators' () {
+
+        given:
+        SysEnv.push(CUDA_VISIBLE_DEVICES: '0,1,2,3')
+        and:
+        def _20_GB = MemoryUnit.of('20GB').toBytes()
+        def session = new Session()
+        def monitor = new LocalPollingMonitor(
+                cpus: 10,
+                capacity: 20,
+                memory: _20_GB,
+                session: session,
+                name: 'local',
+                pollInterval: 100
+        )
+        and:
+        def task = new TaskRun()
+        task.config = new TaskConfig(accelerator: 8)
+        def handler = Mock(TaskHandler)
+        handler.getTask() >> { task }
+
+        when:
+        monitor.canSubmit(handler)
+        then:
+        def e2 = thrown(ProcessUnrecoverableException)
+        e2.message == 'Process requirement exceeds available accelerators -- req: 8; avail: 4'
+
+        cleanup:
+        SysEnv.pop()
 
     }
 
