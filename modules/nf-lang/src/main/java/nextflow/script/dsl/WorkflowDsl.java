@@ -40,7 +40,7 @@ public interface WorkflowDsl extends DslScope {
     @Operator Channel count();
     @Operator Channel cross(Channel right);
     @Operator Channel distinct();
-    // dump not supproted by pipe (#4176)
+    // dump not supported by pipe (#4176)
     @Operator Channel filter(Closure<Boolean> condition);
     @Operator Channel first(Object criteria);
     @Operator Channel flatMap(Closure transform);

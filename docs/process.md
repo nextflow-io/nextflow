@@ -776,9 +776,9 @@ The process `echo` is executed two times because the `x` channel emits only two 
 2 and b
 ```
 
-When a {ref}`alue channel <channel-type-value>` is supplied as a process input alongside a queue channel, the process is executed for each value in the queue channel, and the value channel is re-used for each execution.
+When a {ref}`value channel <channel-type-value>` is supplied as a process input alongside a queue channel, the process is executed for each value in the queue channel, and the value channel is re-used for each execution.
 
-For example, compare the previous example with the following one:
+For example, compare the previous example with the following:
 
 ```nextflow
 process echo {
@@ -1164,15 +1164,15 @@ While this option can be used with any process output, it cannot be applied to i
 
 ### Singleton outputs
 
-When a process is supplied with only value channels or regular values as inputs, or no inputs, it returns any outputs as value channels. For example:
+When a process is only supplied with value channels, regular values, or no inputs, it returns outputs as value channels. For example:
 
 ```{literalinclude} snippets/process-out-singleton.nf
 :language: nextflow
 ```
 
-In the above example, the `echo` process is invoked with a regular value, which is wrapped in a value channel. As a result, `echo` returns a value channel and `greet` is executed three times.
+In the above example, the `echo` process is invoked with a regular value that is wrapped in a value channel. As a result, `echo` returns a value channel and `greet` is executed three times.
 
-If the call to `echo` were changed to `echo( channel.of('hello') )`, the process would instaed return a queue channel and `greet` would be executed only once.
+If the call to `echo` was changed to `echo( channel.of('hello') )`, the process would instead return a queue channel, and `greet` would be executed only once.
 
 See also: {ref}`process-multiple-input-channels`.
 

@@ -2,7 +2,7 @@
 
 # Channels
 
-In Nextflow, **channels** are the key data structure used to facilitate the dataflow dependencies between each step (i.e. {ref}`process <process-page>`) in a pipeline.
+In Nextflow, **channels** are the key data structures that facilitate the dataflow dependencies between each step (i.e. {ref}`process <process-page>`) in a pipeline.
 
 There are two kinds of channels, *queue channels* and *value channels*. Channels are created using *channel factories* and transformed using *channel operators*.
 
@@ -12,7 +12,7 @@ There are two kinds of channels, *queue channels* and *value channels*. Channels
 
 A *queue channel* is a channel that *emits* an asynchronous sequence of values.
 
-A queue channel can be created by channel factories ({ref}`channel.of <channel-of>`, {ref}`channel.fromPath <channel-path>`, etc), operators ({ref}`operator-map`, {ref}`operator-filter`, etc), and processes (see {ref}`Process outputs <process-output>`).
+A queue channel can be created by channel factories (e.g., {ref}`channel.of <channel-of>` and {ref}`channel.fromPath <channel-path>`), operators (e.g., {ref}`operator-map` and  {ref}`operator-filter`), and processes (see {ref}`Process outputs <process-output>`).
 
 The values in a queue channel cannot be accessed directly -- they can only be accessed by passing the channel as input to an operator or process. For example:
 
@@ -32,8 +32,7 @@ queue channel emits 3
 
 A *value channel* is a channel that is *bound* to an asynchronous value.
 
-A value channel can be created with the {ref}`channel.value <channel-value>` factory, certain operators
-({ref}`operator-collect`, {ref}`operator-reduce`, etc), and processes (under {ref}`certain conditions <process-out-singleton>`).
+A value channel can be created with the {ref}`channel.value <channel-value>` factory, certain operators (e.g., {ref}`operator-collect` and {ref}`operator-reduce`), and processes (under {ref}`certain conditions <process-out-singleton>`).
 
 The value in a value channel cannot be accessed directly -- it can only be accessed by passing the channel as input to an operator or process. For example:
 
