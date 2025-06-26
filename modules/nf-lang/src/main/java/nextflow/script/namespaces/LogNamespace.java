@@ -13,13 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.script.dsl;
+package nextflow.script.namespaces;
 
-/**
- * Marker interface for DSL scopes, which define the built-in
- * constants and functions for a particular context.
- *
- * @author Ben Sherman <bentshermann@gmail.com>
- */
-public interface DslScope {
+import groovy.lang.Closure;
+import nextflow.script.dsl.Description;
+import nextflow.script.dsl.Namespace;
+
+public interface LogNamespace extends Namespace {
+
+    @Description("""
+        Log an error message to the console.
+    """)
+    void error(String message);
+
+    @Description("""
+        Log an info message to the console.
+    """)
+    void info(String message);
+
+    @Description("""
+        Log a warning message to the console.
+    """)
+    void warn(String message);
+
 }

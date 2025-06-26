@@ -443,7 +443,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         var variable = vsc.findVariableDeclaration(ve.getName(), ve);
         if( variable != null ) {
             if( isDslVariable(variable) )
-                vsc.addError("Built-in variable cannot be re-assigned", ve);
+                vsc.addError("Built-in constant or namespace cannot be re-assigned", ve);
             ve.setAccessedVariable(variable);
             return false;
         }
@@ -492,7 +492,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
                 vsc.addWarning("Params should be declared at the top-level (i.e. outside the workflow)", target.getName(), target);
             // TODO: re-enable after workflow.onComplete bug is fixed
             // else
-            //     vsc.addError("Built-in variable cannot be mutated", target);
+            //     vsc.addError("Built-in constant or namespace cannot be mutated", target);
         }
         else if( variable != null ) {
             checkExternalWriteInAsyncClosure(target, variable);
@@ -529,11 +529,18 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             declareAssignedVariable(target);
             return;
         }
+        if( node.getObjectExpression() instanceof VariableExpression ve )
+            checkClassNamespaces(ve);
         checkMethodCall(node);
         var ioc = inOperatorCall;
         inOperatorCall = isOperatorCall(node);
         super.visitMethodCallExpression(node);
         inOperatorCall = ioc;
+    }
+
+    private void checkClassNamespaces(VariableExpression node) {
+        if( "Channel".equals(node.getName()) )
+            vsc.addWarning("The use of `Channel` to access channel factories is deprecated -- use `channel` instead", "CHannel", node);
     }
 
     private static boolean isOperatorCall(MethodCallExpression node) {
