@@ -20,8 +20,6 @@ import nextflow.cloud.aws.config.AwsConfig
 import software.amazon.awssdk.auth.signer.AwsS3V4Signer
 import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption
 import software.amazon.awssdk.http.SdkHttpConfigurationOption
-import software.amazon.awssdk.http.crt.AwsCrtAsyncHttpClient
-import software.amazon.awssdk.http.crt.internal.AwsCrtClientBuilderBase
 import spock.lang.Specification
 
 class S3ClientConfigurationTest extends Specification{
@@ -64,15 +62,28 @@ class S3ClientConfigurationTest extends Specification{
         overrideConfig.advancedOption(SdkAdvancedClientOption.USER_AGENT_PREFIX).get() == 'Agent1'
         overrideConfig.advancedOption(SdkAdvancedClientOption.SIGNER).get() instanceof AwsS3V4Signer
         overrideConfig.retryStrategy().get().maxAttempts() == 4
-        def httpClientbuilder = clientConfig.getHttpClientBuilder() as AwsCrtClientBuilderBase<AwsCrtAsyncHttpClient.Builder>
+        // Check max Concurrency
+        clientConfig.getMaxConcurrency() == 100
+        // Check Crt http configuration
+        def httpConfiguration = clientConfig.getCrtHttpConfiguration()
+        httpConfiguration.proxyConfiguration().host() == 'host.com'
+        httpConfiguration.proxyConfiguration().port() == 80
+        httpConfiguration.proxyConfiguration().scheme() == 'https'
+        httpConfiguration.proxyConfiguration().username() == 'user'
+        httpConfiguration.proxyConfiguration().password() == 'pass'
+        //Check Crt Retry Configuration
+        def retryConfig = clientConfig.getCrtRetryConfiguration()
+        retryConfig.numRetries() == 3
+        // Check Netty async builder
+        def httpClientbuilder = clientConfig.getNettyHttpClientBuilder()
         httpClientbuilder.proxyConfiguration.host() == 'host.com'
         httpClientbuilder.proxyConfiguration.port() == 80
         httpClientbuilder.proxyConfiguration.scheme() == 'https'
         httpClientbuilder.proxyConfiguration.username() == 'user'
         httpClientbuilder.proxyConfiguration.password() == 'pass'
-        httpClientbuilder.getAttributeMap().get(SdkHttpConfigurationOption.CONNECTION_TIMEOUT).toMillis()== 20000
-        httpClientbuilder.getAttributeMap().get(SdkHttpConfigurationOption.READ_TIMEOUT) == null //socket timeout not supported in async client
-        httpClientbuilder.getAttributeMap().get(SdkHttpConfigurationOption.MAX_CONNECTIONS) == 100
+        httpClientbuilder.standardOptions.get(SdkHttpConfigurationOption.CONNECTION_TIMEOUT).toMillis()== 20000
+        httpClientbuilder.standardOptions.get(SdkHttpConfigurationOption.READ_TIMEOUT) == null //socket timeout not supported in async client
+        httpClientbuilder.standardOptions.get(SdkHttpConfigurationOption.MAX_CONNECTIONS) == 100
     }
 
 

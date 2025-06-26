@@ -24,7 +24,9 @@ import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider
+import software.amazon.awssdk.awscore.defaultsmode.DefaultsMode
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration
+import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption
 import software.amazon.awssdk.core.exception.SdkClientException
 import software.amazon.awssdk.http.SdkHttpClient
 import software.amazon.awssdk.regions.Region
@@ -36,7 +38,6 @@ import software.amazon.awssdk.services.ecs.EcsClient
 import software.amazon.awssdk.services.s3.S3AsyncClient
 import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.S3Configuration
-import software.amazon.awssdk.services.s3.internal.crt.S3CrtAsyncHttpClient
 import software.amazon.awssdk.services.s3.multipart.MultipartConfiguration
 import software.amazon.awssdk.services.sts.StsClient
 import software.amazon.awssdk.services.sts.model.GetCallerIdentityRequest
@@ -237,34 +238,74 @@ class AwsClientFactory {
     }
 
     S3AsyncClient getS3AsyncClient(S3AsyncClientConfiguration s3ClientConfig, Long uploadChunkSize, boolean global = false) {
-        final httpClientBuilder = s3ClientConfig.getHttpClientBuilder()
-        final overrideConfiguration = s3ClientConfig.getClientOverrideConfiguration()
-        final builder = S3AsyncClient.builder()
+        final clientOverride = s3ClientConfig.getClientOverrideConfiguration()
+        if( requiresNettyClient(clientOverride) ) {
+            log.debug("Generating a Netty S3 Async Client")
+            return generateNettyS3Client(s3ClientConfig, uploadChunkSize, global)
+        } else {
+            log.debug("Generating a CRT S3 Async Client")
+            return generateCrtS3Client(s3ClientConfig, uploadChunkSize, global)
+        }
+    }
+
+    /** Checks if Netty S3 Async Client is required.
+     *  The Netty client is required if the clientOverride contains the SIGNER or USER_AGENT_PREFIX.
+     *
+      * @param clientOverride
+     * @return
+     */
+    static boolean requiresNettyClient(ClientOverrideConfiguration clientOverride){
+        !clientOverride.advancedOption(SdkAdvancedClientOption.SIGNER).isEmpty() ||
+            !clientOverride.advancedOption(SdkAdvancedClientOption.USER_AGENT_PREFIX).isEmpty()
+    }
+
+    private S3AsyncClient generateCrtS3Client(S3AsyncClientConfiguration s3ClientConfig, long uploadChunkSize, boolean global) {
+        final httpConfiguration = s3ClientConfig.getCrtHttpConfiguration()
+        final retryConfiguration = s3ClientConfig.getCrtRetryConfiguration()
+        def builder = S3AsyncClient.crtBuilder()
             .crossRegionAccessEnabled(global)
-            .credentialsProvider(
-                config.s3Config.anonymous
-                    ? AnonymousCredentialsProvider.create()
-                    : new S3CredentialsProvider(getCredentialsProvider0())
-            )
-            .serviceConfiguration(
-                S3Configuration.builder()
-                    .pathStyleAccessEnabled(config.s3Config.pathStyleAccess)
-                    .build()
-            )
-
-        if( uploadChunkSize > 0 )
-            builder.multipartConfiguration(cfg -> cfg.minimumPartSizeInBytes(uploadChunkSize))
-
-        if( config.s3Config.endpoint )
+            .credentialsProvider(config.s3Config.anonymous ? AnonymousCredentialsProvider.create() : new S3CredentialsProvider(getCredentialsProvider0()))
+            .forcePathStyle(config.s3Config.pathStyleAccess)
+            .region(getRegionObj(region))
+        if( config.s3Config.endpoint ) {
             builder.endpointOverride(URI.create(config.s3Config.endpoint))
-        else
-            builder.region(getRegionObj(region))
+        }
+        if( retryConfiguration != null ) {
+            builder.retryConfiguration(retryConfiguration)
+        }
+        if( httpConfiguration != null ) {
+            builder.httpConfiguration(httpConfiguration)
+        }
+        if( uploadChunkSize > 0 ) {
+            log.debug("Setting upload ChunkSize $uploadChunkSize")
+            builder.minimumPartSizeInBytes(uploadChunkSize)
+            builder.thresholdInBytes(uploadChunkSize)
+        }
+        final maxConcurrency = s3ClientConfig.getMaxConcurrency()
+        if( maxConcurrency != null) {
+            log.debug("Setting max concurrency $maxConcurrency")
+            builder.maxConcurrency(maxConcurrency)
+        }
+        return builder.build()
+    }
 
-        if( httpClientBuilder != null )
-            builder.httpClientBuilder(httpClientBuilder)
-
-        if( overrideConfiguration != null )
-            builder.overrideConfiguration(overrideConfiguration)
+    private S3AsyncClient generateNettyS3Client(S3AsyncClientConfiguration s3ClientConfig, Long uploadChunkSize, boolean global = false) {
+        def builder = S3AsyncClient.builder()
+            .crossRegionAccessEnabled(global)
+            .credentialsProvider(config.s3Config.anonymous ? AnonymousCredentialsProvider.create() : new S3CredentialsProvider(getCredentialsProvider0()))
+            .forcePathStyle(config.s3Config.pathStyleAccess)
+            .multipartEnabled(true)
+            .defaultsMode(DefaultsMode.AUTO)
+            .httpClientBuilder(s3ClientConfig.getNettyHttpClientBuilder())
+            .region(getRegionObj(region))
+            .overrideConfiguration(s3ClientConfig.getClientOverrideConfiguration())
+        if( config.s3Config.endpoint ) {
+            builder.endpointOverride(URI.create(config.s3Config.endpoint))
+        }
+        if( uploadChunkSize > 0 ) {
+            log.debug("Setting upload ChunkSize $uploadChunkSize")
+            builder.multipartConfiguration(MultipartConfiguration.builder().thresholdInBytes(uploadChunkSize).minimumPartSizeInBytes(uploadChunkSize).build())
+        }
         return builder.build()
     }
 

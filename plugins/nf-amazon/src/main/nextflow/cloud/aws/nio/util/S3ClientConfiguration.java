@@ -24,7 +24,10 @@ import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.core.signer.Signer;
 import software.amazon.awssdk.retries.StandardRetryStrategy;
+import software.amazon.awssdk.utils.ClassLoaderHelper;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Properties;
 
 /**
@@ -89,7 +92,16 @@ public class S3ClientConfiguration {
         case "AWS4SignerType":
             return Aws4Signer.create();
         default:
-            throw new IllegalArgumentException("Unsupported signer: " + signerOverride);
+            try {
+                Class<?> signerClass = ClassLoaderHelper.loadClass(signerOverride, false, (Class) null);
+                Method m = signerClass.getDeclaredMethod("create");
+                Object o = m.invoke(null);
+                return (Signer) o;
+            } catch (ClassNotFoundException e) {
+                throw new IllegalStateException("Cannot find the " + signerOverride + " class.", e);
+            } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+                throw new IllegalStateException("Failed to create " + signerOverride, e);
+            }
     }
 }
 }

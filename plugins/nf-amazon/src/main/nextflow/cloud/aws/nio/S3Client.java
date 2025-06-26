@@ -28,7 +28,6 @@ import java.util.function.Consumer;
 
 import nextflow.cloud.aws.nio.util.S3SyncClientConfiguration;
 import software.amazon.awssdk.core.ResponseInputStream;
-import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.*;
@@ -65,7 +64,7 @@ public class S3Client {
 
 	private ExecutorService transferPool;
 
-	private Long uploadChunkSize = Long.valueOf(S3MultipartOptions.DEFAULT_CHUNK_SIZE);
+	private Long uploadChunkSize = 0L;
 
 	private Integer uploadMaxThreads = 10;
 
@@ -536,16 +535,16 @@ public class S3Client {
 		PutObjectRequest.Builder req = PutObjectRequest.builder().bucket(target.getBucket()).key(target.getKey());
 		preparePutObjectRequest(req, target.getTagsList(), target.getContentType(), target.getStorageClass());
 		// initiate transfer
-		Upload upload = transferManager().upload(UploadRequest.builder().putObjectRequest(req.build()).requestBody(AsyncRequestBody.fromFile(source)).build());
-		try{
-			upload.completionFuture().get();
-		} catch (InterruptedException e){
-			log.debug("S3 upload file: s3://{}/{} cancelled", target.getBucket(), target.getKey());
-			Thread.currentThread().interrupt();
-		} catch (ExecutionException e) {
-			log.debug("S3 upload file: s3://{}/{} exception thrown", target.getBucket(), target.getKey());
-			throw new IOException(e.getCause());
-		}
+		FileUpload upload = transferManager().uploadFile(UploadFileRequest.builder().putObjectRequest(req.build()).source(source).build());
+        try{
+		    upload.completionFuture().get();
+        } catch (InterruptedException e){
+            log.debug("S3 upload file: s3://{}/{} cancelled", target.getBucket(), target.getKey());
+            Thread.currentThread().interrupt();
+        } catch (ExecutionException e) {
+            log.debug("S3 upload file: s3://{}/{} exception thrown", target.getBucket(), target.getKey());
+            throw new IOException(e.getCause());
+        }
 	}
 
 	private Consumer<UploadFileRequest.Builder> transformUploadRequest(List<Tag> tags) {
@@ -588,5 +587,44 @@ public class S3Client {
 			log.debug("S3 upload directory: s3://{}/{} exception thrown", target.getBucket(), target.getKey());
 			throw new IOException(e.getCause());
 		}
+	}
+
+    public void copyFile(CopyObjectRequest.Builder reqBuilder, List<Tag> tags, String contentType, String storageClass) throws IOException {
+		if( tags !=null && !tags.isEmpty()) {
+			log.debug("Setting tags: {}", tags);
+            reqBuilder.taggingDirective(TaggingDirective.REPLACE);
+            reqBuilder.tagging(Tagging.builder().tagSet(tags).build());
+		}
+		if( cannedAcl != null ) {
+			reqBuilder.acl(cannedAcl);
+		}
+		if( storageEncryption != null ) {
+			reqBuilder.serverSideEncryption(storageEncryption);
+		}
+		if( kmsKeyId !=null ) {
+            reqBuilder.ssekmsKeyId(kmsKeyId);
+		}
+		if( contentType!=null ) {
+			reqBuilder.metadataDirective(MetadataDirective.REPLACE);
+            reqBuilder.contentType(contentType);
+		}
+		if( storageClass!=null ) {
+			reqBuilder.storageClass(storageClass);
+		}
+        CopyObjectRequest req = reqBuilder.build();
+		if( log.isTraceEnabled() ) {
+			log.trace("S3 CopyObject request {}", req);
+		}
+		Copy copy = transferManager().copy(CopyRequest.builder().copyObjectRequest(req).build());
+        try {
+            copy.completionFuture().get();
+        } catch (InterruptedException e){
+            log.debug("S3 copy : s3://{}/{} to s3://{}/{} cancelled", req.sourceBucket(), req.sourceKey(), req.destinationBucket(), req.destinationKey());
+			Thread.currentThread().interrupt();
+        } catch (ExecutionException e) {
+            log.debug("S3 copy: s3://{}/{} to s3://{}/{} exception thrown", req.sourceBucket(), req.sourceKey(), req.destinationBucket(), req.destinationKey());
+            throw new IOException(e.getCause());
+        }
+
 	}
 }
