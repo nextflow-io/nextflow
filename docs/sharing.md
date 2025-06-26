@@ -1,16 +1,14 @@
-(sharing-page)=
-
 # Sharing pipelines
 
 Nextflow seamlessly integrates with popular Git providers, including [BitBucket](http://bitbucket.org/), [GitHub](http://github.com), and [GitLab](http://gitlab.com) for managing Nextflow pipelines as version-controlled Git repositories. This feature allows you to easily use other people's Nextflow pipelines and publish your own pipelines.
 
-:::{note}
+:::note
 Nextflow is not meant to completely replace the [Git](https://git-scm.com/) tool. You may still need `git` to create new repositories or commit changes, etc.
 :::
 
 ## Git configuration
 
-You can configure your credentials for various Git providers in the Git configuration file, located at `$HOME/.nextflow/scm`. See {ref}`git-page` for more information.
+You can configure your credentials for various Git providers in the Git configuration file, located at `$HOME/.nextflow/scm`. See [Git][git-page] for more information.
 
 ## Using a local repository
 
@@ -34,7 +32,7 @@ Nextflow only requires that the main script in your pipeline project is called `
 manifest.mainScript = 'my_very_long_script_name.nf'
 ```
 
-To learn more about this and other project metadata information, that can be defined in the Nextflow configuration file, read the {ref}`Manifest <config-manifest>` section on the Nextflow configuration page.
+To learn more about this and other project metadata information, that can be defined in the Nextflow configuration file, read the [Manifest][config-manifest] section on the Nextflow configuration page.
 
 Once you have uploaded your pipeline project to GitHub other people can execute it simply using the project name or the repository URL.
 
@@ -50,7 +48,7 @@ or
 nextflow run http://github.com/acme/hello
 ```
 
-See the {ref}`CLI <cli-page>` page to learn how to use the Nextflow command line to run pipelines and manage pipeline projects.
+See [Command line][cli-page] to learn how to use the Nextflow command line to run pipelines and manage pipeline projects.
 
 ## Managing dependencies
 
@@ -87,9 +85,9 @@ conda.enabled = true
 
 This way, when you launch your pipeline, Nextflow will automatically download the necessary dependencies to run your tasks based on this configuration.
 
-Read the {ref}`container-page` page to learn more about how to use containers with Nextflow, and the {ref}`conda-page` page for Conda packages.
+Read the [Containers][container-page] page to learn more about how to use containers with Nextflow, and the [Conda environments][conda-page] page for Conda packages.
 
-:::{tip}
+:::tip
 For maximal reproducibility, make sure to define a specific version for each tool. Otherwise, your pipeline might use different versions across subsequent runs, which can introduce subtle differences to your results.
 :::
 
@@ -105,7 +103,7 @@ To configure a custom script:
 2. Specify a portable shebang (see note below for details).
 3. Make the script executable. For example: `chmod a+x bin/my_script.py`
 
-:::{tip}
+:::tip
 To maximize the portability of your bundled script, use `env` to dynamically resolve the location of the interpreter instead of hard-coding it in the shebang line.
 
 For example, shebang definitions `#!/usr/bin/python` and `#!/usr/local/bin/python` both hard-code specific paths to the Python interpreter. Instead, the following approach is more portable:
@@ -171,7 +169,7 @@ Found sequence 'DNA[ACGTTGCAATGCCGTA]' with melting temperaure 48.0°C
 Found sequence 'DNA[GCGTACGGTACGTTAC]' with melting temperaure 50.0°C
 ```
 
-:::{note}
+:::note
 Package declarations in the `lib` directory are ignored. The package of a class is determined by the directory structure within the `lib` directory.
 
 For example, if the above example were defined in `lib/utils/DNASequence.groovy`, the class would need to be referenced in pipeline scripts as `utils.DNASequence`.
@@ -222,4 +220,12 @@ env {
 
 Similarly, if you use an HPC scheduler like SLURM or a cloud batch service like AWS Batch to execute tasks in a distributed manner, you can use a configuration profile to define the settings for a given environment.
 
-See {ref}`config-page` for more information about Nextflow configuration and {ref}`executor-page` for more information about executors.
+See [Configuration][config-page] for more information about Nextflow configuration and [Executors][executor-page] for more information about executors.
+
+[git-page]: /nextflow_docs/nextflow_repo/docs/git
+[config-manifest]: /nextflow_docs/nextflow_repo/docs/reference/config#manifest
+[cli-page]: /nextflow_docs/nextflow_repo/docs/cli
+[container-page]: /nextflow_docs/nextflow_repo/docs/container
+[conda-page]: /nextflow_docs/nextflow_repo/docs/conda
+[config-page]: /nextflow_docs/nextflow_repo/docs/config
+[executor-page]: /nextflow_docs/nextflow_repo/docs/executor

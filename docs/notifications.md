@@ -1,14 +1,10 @@
-(mail-page)=
+import DefinitionList, { DefinitionTerm, DefinitionDescription } from '@site/src/components/DefinitionList';
 
 # Notifications
 
 This page documents how to handle workflow events and send notifications.
 
-(workflow-handlers)=
-
 ## Workflow handlers
-
-(metadata-completion-handler)=
 
 ### Completion handler
 
@@ -23,8 +19,6 @@ workflow.onComplete {
 }
 ```
 
-(metadata-error-handler)=
-
 ### Error handler
 
 The `onError` event handler is invoked by Nextflow when a runtime or process error caused the pipeline execution to stop. For example:
@@ -35,15 +29,13 @@ workflow.onError {
 }
 ```
 
-:::{note}
-Both the `onError` and `onComplete` handlers are invoked when an error condition is encountered. The first is called as soon as the error is raised, while the second is called just before the pipeline execution is about to terminate. When using the `finish` {ref}`process-error-strategy`, there may be a significant gap between the two, depending on the time required to complete any pending job.
+:::note
+Both the `onError` and `onComplete` handlers are invoked when an error condition is encountered. The first is called as soon as the error is raised, while the second is called just before the pipeline execution is about to terminate. When using the `finish` [errorStrategy][process-error-strategy], there may be a significant gap between the two, depending on the time required to complete any pending job.
 :::
 
 ## Mail
 
 The built-in function `sendMail` allows you to send a mail message from a workflow script.
-
-(mail-basic)=
 
 ### Basic mail
 
@@ -73,41 +65,85 @@ sendMail(mail)
 
 The following parameters can be specified:
 
-`to`
-: *Multiple email addresses can be specified separating them with a comma.*
-: The mail target recipients.
+<DefinitionList>
+    <DefinitionTerm>
+        `to`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        *Multiple email addresses can be specified separating them with a comma.*
+        
+        The mail target recipients.
+    </DefinitionDescription>
 
-`cc`
-: *Multiple email addresses can be specified separating them with a comma.*
-: The mail CC recipients.
+    <DefinitionTerm>
+        `cc`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        *Multiple email addresses can be specified separating them with a comma.*
+        
+        The mail CC recipients.
+    </DefinitionDescription>
 
-`bcc`
-: *Multiple email addresses can be specified separating them with a comma.*
-: The mail BCC recipients.
+    <DefinitionTerm>
+        `bcc`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        *Multiple email addresses can be specified separating them with a comma.*
+        
+        The mail BCC recipients.
+    </DefinitionDescription>
 
-`from`
-: *Multiple email addresses can be specified separating them with a comma.*
-: The mail sender address.
+    <DefinitionTerm>
+        `from`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        *Multiple email addresses can be specified separating them with a comma.*
+        
+        The mail sender address.
+    </DefinitionDescription>
 
-`subject`
-: The mail subject.
+    <DefinitionTerm>
+        `subject`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        The mail subject.
+    </DefinitionDescription>
 
-`charset`
-: The mail content charset (default: `UTF-8`).
+    <DefinitionTerm>
+        `charset`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        The mail content charset (default: `UTF-8`).
+    </DefinitionDescription>
 
-`text`
-: The mail plain text content.
+    <DefinitionTerm>
+        `text`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        The mail plain text content.
+    </DefinitionDescription>
 
-`body`
-: The mail body content. It can be either plain text or HTML content.
+    <DefinitionTerm>
+        `body`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        The mail body content. It can be either plain text or HTML content.
+    </DefinitionDescription>
 
-`type`
-: The mail body mime type. If not specified it's automatically detected.
+    <DefinitionTerm>
+        `type`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        The mail body mime type. If not specified it's automatically detected.
+    </DefinitionDescription>
 
-`attach`
-: Single file or a list of files to be included as mail attachments.
-
-(mail-advanced)=
+    <DefinitionTerm>
+        `attach`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Single file or a list of files to be included as mail attachments.
+    </DefinitionDescription>
+</DefinitionList>
 
 ### Advanced mail
 
@@ -131,15 +167,13 @@ sendMail {
 
 The same attributes listed in the table in the previous section are allowed.
 
-:::{tip}
+:::tip
 A string expression at the end is implicitly interpreted as the mail body content, therefore the `body` parameter can be omitted as shown above.
 :::
 
-:::{tip}
+:::tip
 To send an email that includes text and HTML content, use both the `text` and `body` attributes. The first is used for the plain text content, while the second is used for the rich HTML content.
 :::
-
-(mail-attachments)=
 
 ### Mail attachments
 
@@ -147,17 +181,35 @@ When using the curly brackets syntax, the `attach` parameter can be repeated two
 
 Moreover for each attachment it's possible to specify any of the following options:
 
-`contentId`
-: Defines the `Content-ID` header field for the attachment.
+<DefinitionList>
+    <DefinitionTerm>
+        `contentId`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Defines the `Content-ID` header field for the attachment.
+    </DefinitionDescription>
 
-`disposition`
-: Defines the `Content-Disposition` header field for the attachment.
+    <DefinitionTerm>
+        `disposition`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Defines the `Content-Disposition` header field for the attachment.
+    </DefinitionDescription>
 
-`fileName`
-: Defines the `filename` parameter of the `Content-Disposition` header field.
+    <DefinitionTerm>
+        `fileName`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Defines the `filename` parameter of the `Content-Disposition` header field.
+    </DefinitionDescription>
 
-`description`
-: Defines the `Content-Description` header field for the attachment.
+    <DefinitionTerm>
+        `description`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        Defines the `Content-Description` header field for the attachment.
+    </DefinitionDescription>
+</DefinitionList>
 
 For example:
 
@@ -173,8 +225,6 @@ sendMail {
 }
 ```
 
-(mail-config)=
-
 ### Mail configuration
 
 If no mail server configuration is provided, Nextflow tries to send the email by using the external mail command eventually provided by the underlying system (e.g. `sendmail` or `mail`).
@@ -189,11 +239,11 @@ mail {
 }
 ```
 
-See the {ref}`mail scope <config-mail>` section to learn more the mail server configuration options.
+See the [mail scope][config-mail] section to learn more the mail server configuration options.
 
 ### AWS SES configuration
 
-:::{versionadded} 23.06.0-edge
+:::note{title="Version added 23.06.0-edge"}
 :::
 
 Nextflow supports [AWS SES](https://aws.amazon.com/ses/) native API as an alternative
@@ -213,7 +263,7 @@ ses:SendRawEmail
 
 ## Mail notification
 
-You can use the `sendMail` function with a {ref}`workflow completion handler <metadata-completion-handler>` to notify the completion of a workflow completion. For example:
+You can use the `sendMail` function with a [workflow completion handler][metadata-completion-handler] to notify the completion of a workflow completion. For example:
 
 ```nextflow
 workflow.onComplete {
@@ -245,15 +295,16 @@ To enable simply specify the `-N` option when launching the pipeline execution. 
 nextflow run <pipeline name> -N <recipient address>
 ```
 
-It will send a notification mail when the execution completes similar to the one shown below:
+It will send a notification mail when the execution completes.
 
-```{image} _static/workflow-notification-min.png
-```
-
-:::{warning}
+:::warning
 By default the notification message is sent with the `sendmail` system tool, which is assumed to be available in the environment where Nextflow is running. Make sure it's properly installed and configured. Alternatively, you can provide the SMTP server configuration settings to use the Nextflow built-in mail support, which doesn't require any external system tool.
 :::
 
 See the [Mail configuration](#mail-configuration) section to learn about the available mail delivery options and configuration settings.
 
-Read {ref}`Notification scope <config-notification>` section to learn more about the workflow notification configuration details.
+See [Completion handler](#completion-handler) to learn more about the workflow notification configuration details.
+
+[config-mail]: /nextflow_docs/nextflow_repo/docs/reference/config#mail
+[config-notification]: /nextflow_docs/nextflow_repo/docs/reference/config#notification
+[process-error-strategy]: /nextflow_docs/nextflow_repo/docs/reference/process#errorstrategy

@@ -1,11 +1,9 @@
-(module-page)=
-
 # Modules
 
 Nextflow scripts can include **definitions** (workflows, processes, and functions) from other scripts. When a script is included in this way, it is referred to as a **module**. Modules can be included by other modules or pipeline scripts and can even be shared across workflows.
 
-:::{note}
-Modules were introduced in DSL2. If you are still using DSL1, see the {ref}`dsl1-page` page to learn how to migrate your Nextflow pipelines to DSL2.
+:::note
+Modules were introduced in DSL2. If you are still using DSL1, see [Migrating from DSL1][dsl1-page] to learn how to migrate your Nextflow pipelines to DSL2.
 :::
 
 ## Module inclusion
@@ -32,11 +30,9 @@ Module includes are subject to the following rules:
 - Relative paths must begin with the `./` prefix.
 - Include statements are not allowed from within a workflow. They must occur at the script level.
 
-(module-directory)=
-
 ## Module directory
 
-:::{versionadded} 22.10.0
+:::note{title="Version added 22.10.0"}
 :::
 
 A module can be defined as a directory with the same name as the module and with a script named `main.nf`. For example:
@@ -69,8 +65,6 @@ workflow {
 }
 ```
 
-(module-aliases)=
-
 ## Module aliases
 
 When including definition from a module, it's possible to specify an *alias* with the `as` keyword. Aliasing allows you to avoid module name clashes, by assigning them different names in the including context. For example:
@@ -96,11 +90,10 @@ workflow {
 }
 ```
 
-(module-params)=
-
 ## Module parameters
 
-:::{deprecated} 24.07.0-edge
+
+:::note{title="Version depreciated 24.07.0-edge"}
 As a best practice, parameters should be used in the entry workflow and passed to workflows, processes, and functions as explicit inputs.
 :::
 
@@ -134,11 +127,11 @@ The above snippet prints:
 Hola Mundo
 ```
 
-:::{note}
+:::note
 The module inherits the parameters defined *before* the `include` statement, therefore any parameters set afterwards will not be used by the module.
 :::
 
-:::{tip}
+:::tip
 It is best to define all pipeline parameters *before* any `include` statements.
 :::
 
@@ -180,11 +173,9 @@ The above snippet prints:
 Ciao world!
 ```
 
-(module-templates)=
-
 ## Module templates
 
-Process script {ref}`templates <process-template>` can be included alongside a module in the `templates` directory.
+Process script [templates][process-template] can be included alongside a module in the `templates` directory.
 
 For example, suppose we have a project L with a module that defines two processes, P1 and P2, both of which use templates. The template files can be made available in the local `templates` directory:
 
@@ -244,11 +235,9 @@ baseDir
         └── P7-template.sh
 ```
 
-(module-binaries)=
-
 ## Module binaries
 
-:::{versionadded} 22.10.0
+:::note{title="Version added 22.10.0"}
 :::
 
 Modules can define binary scripts that are locally scoped to the processes defined by the tasks.
@@ -273,8 +262,8 @@ The binary scripts must be placed in the module directory names `<module-dir>/re
 
 Those scripts will be made accessible like any other command in the task environment, provided they have been granted the Linux execute permissions.
 
-:::{note}
-This feature requires the use of a local or shared file system for the pipeline work directory, or {ref}`wave-page` when using cloud-based executors.
+:::note
+This feature requires the use of a local or shared file system for the pipeline work directory, or [Wave containers][wave-page] when using cloud-based executors.
 :::
 
 ## Sharing modules
@@ -284,3 +273,7 @@ Modules are designed to be easy to share and re-use across different pipelines, 
 - Simply copy the module files into your pipeline repository
 - Use [Git submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules) to fetch modules from other Git repositories without maintaining a separate copy
 - Use the [nf-core](https://nf-co.re/tools#modules) CLI to install and update modules with a standard approach used by the nf-core community
+
+[dsl1-page]: /nextflow_docs/nextflow_repo/docs/migrations/dsl1.md
+[process-template]: /nextflow_docs/nextflow_repo/docs/process#template
+[wave-page]: /nextflow_docs/nextflow_repo/docs/wave

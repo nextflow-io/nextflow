@@ -1,13 +1,11 @@
-(workflow-page)=
-
 # Workflows
 
 In Nextflow, a **workflow** is a function that is specialized for composing processes and dataflow logic (i.e. channels and operators).
 
-See {ref}`syntax-workflow` for a full description of the workflow syntax.
+See [Workflow][syntax-workflow] for a full description of the workflow syntax.
 
-:::{note}
-Workflows were introduced in DSL2. If you are still using DSL1, see {ref}`dsl1-page` for more information about how to migrate your Nextflow pipelines to DSL2.
+:::note
+Workflows were introduced in DSL2. If you are still using DSL1, see [Migrating from DSL1][dsl1-page] for more information about how to migrate your Nextflow pipelines to DSL2.
 :::
 
 ## Entry workflow
@@ -38,11 +36,11 @@ workflow {
 }
 ```
 
-:::{note}
+:::note
 As a best practice, params should be used only in the entry workflow and passed to workflows and processes as explicit inputs.
 :::
 
-The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in {ref}`cli-params`.
+The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in [Pipeline parameters][cli-params].
 
 ## Named workflows
 
@@ -115,11 +113,9 @@ workflow my_workflow {
 
 The result of the above workflow can be accessed using `my_workflow.out.my_data`.
 
-:::{note}
+:::note
 Every output must be assigned to a name when multiple outputs are declared.
 :::
-
-(workflow-process-invocation)=
 
 ## Calling processes and workflows
 
@@ -168,7 +164,7 @@ Processes and workflows have a few extra rules for how they can be called:
 
 - Processes and workflows can only be called by workflows
 
-- A given process or workflow can only be called once in a given workflow. To use a process or workflow multiple times in the same workflow, use {ref}`module-aliases`.
+- A given process or workflow can only be called once in a given workflow. To use a process or workflow multiple times in the same workflow, use [Module aliases][module-aliases].
 
 The "return value" of a process or workflow call is the process outputs or workflow emits, respectively. The return value can be assigned to a variable or passed into another call:
 
@@ -234,11 +230,11 @@ workflow {
 }
 ```
 
-:::{note}
-Process named outputs are defined using the `emit` option on a process output. See {ref}`naming process outputs <process-naming-outputs>` for more information.
+:::note
+Process named outputs are defined using the `emit` option on a process output. See [naming process outputs][process-naming-outputs] for more information.
 :::
 
-:::{note}
+:::note
 Process and workflow outputs can also be accessed by index (e.g., `hello.out[0]`, `hello.out[1]`, etc.). As a best practice, multiple outputs should be accessed by name.
 :::
 
@@ -276,12 +272,12 @@ workflow {
 }
 ```
 
-:::{note}
+:::note
 The same process can be called in different workflows without using an alias, like `tick` in the above example, which is used in both `flow1` and `flow2`. The workflow call stack determines the *fully qualified process name*, which is used to distinguish the different process calls, i.e. `flow1:tick` and `flow2:tick` in the above example.
 :::
 
-:::{tip}
-The fully qualified process name can be used as a {ref}`process selector <config-process-selectors>` in a Nextflow configuration file, and it takes priority over the simple process name.
+:::tip
+The fully qualified process name can be used as a [process selector][config-process-selectors] in a Nextflow configuration file, and it takes priority over the simple process name.
 :::
 
 ## Special operators
@@ -312,7 +308,7 @@ workflow {
 }
 ```
 
-The above snippet defines a process named `greet` and invokes it with the input channel. The result is then piped to the {ref}`operator-map` operator, which converts each string to uppercase, and finally to the {ref}`operator-view` operator which prints it.
+The above snippet defines a process named `greet` and invokes it with the input channel. The result is then piped to the [map][operator-map] operator, which converts each string to uppercase, and finally to the [view operator][operator-view] operator which prints it.
 
 The same code can also be written as:
 
@@ -360,7 +356,7 @@ workflow {
 }
 ```
 
-In the above snippet, the initial channel is piped to the {ref}`operator-map` operator, which reverses the string value. Then, the result is passed to the processes `greet` and `to_upper`, which are executed in parallel. Each process outputs a channel, and the two channels are combined using the {ref}`operator-mix` operator. Finally, the result is printed using the {ref}`operator-view` operator.
+In the above snippet, the initial channel is piped to the [map][operator-map] operator, which reverses the string value. Then, the result is passed to the processes `greet` and `to_upper`, which are executed in parallel. Each process outputs a channel, and the two channels are combined using the [mix][operator-mix] operator. Finally, the result is printed using the [view][operator-view] operator.
 
 The same code can also be written as:
 
@@ -373,14 +369,12 @@ workflow {
 }
 ```
 
-(workflow-recursion)=
-
 ## Process and workflow recursion
 
-:::{versionadded} 21.11.0-edge
+:::note{title="Version added 21.11.0-edge"}
 :::
 
-:::{note}
+:::note
 This feature requires the `nextflow.preview.recursion` feature flag to be enabled.
 :::
 
@@ -407,11 +401,11 @@ count_down
 
 Workflows can also be invoked recursively:
 
-```{literalinclude} snippets/recurse-workflow.nf
+```nextflow file=./snippets/recurse-workflow.nf
 :language: nextflow
 ```
 
-```{literalinclude} snippets/recurse-workflow.out
+```console file=./snippets/recurse-workflow.out
 :language: console
 ```
 
@@ -421,26 +415,24 @@ Workflows can also be invoked recursively:
 
 - Recursive workflows cannot use *reduction* operators such as `collect`, `reduce`, and `toList`, because these operators cause the recursion to hang indefinitely after the initial iteration.
 
-(workflow-output-def)=
-
 ## Workflow outputs
 
-:::{versionadded} 24.04.0
+:::note{title="Version added 24.04.0"}
 :::
 
-:::{versionchanged} 24.10.0
-A second preview version was introduced. See the {ref}`migration notes <workflow-outputs-second-preview>` for details.
+:::note{title="Version changed 24.10.0"}
+A second preview version was introduced. See the [migration notes][workflow-outputs-second-preview] for details.
 :::
 
-:::{versionchanged} 25.04.0
-A third preview version was introduced. See the {ref}`migration notes <workflow-outputs-third-preview>` for details.
+:::note{title="Version changed 25.04.0-edge"}
+A third preview version was introduced. See the [migration notes][workflow-outputs-third-preview] for details.
 :::
 
-:::{note}
+:::note
 This feature requires the `nextflow.preview.output` feature flag to be enabled.
 :::
 
-A script can define an *output block* which declares the top-level outputs of the workflow. Each output should be assigned in the `publish` section of the entry workflow. Any channel in the workflow can be assigned to an output, including process and subworkflow outputs. This approach is intended to replace the {ref}`publishDir <process-publishdir>` directive.
+A script can define an *output block* which declares the top-level outputs of the workflow. Each output should be assigned in the `publish` section of the entry workflow. Any channel in the workflow can be assigned to an output, including process and subworkflow outputs. This approach is intended to replace the [publishDir][process-publishdir] directive.
 
 Here is a basic example:
 
@@ -470,8 +462,6 @@ output {
 ```
 
 In the above example, the output of process `fetch` is assigned to the `samples` workflow output. How this output is published to a directory structure is described in the next section.
-
-(workflow-publishing-files)=
 
 ### Publishing files
 
@@ -654,7 +644,8 @@ The following directives are available for each output in the output block:
 `path`
 : Specify the publish path relative to the output directory (default: `'.'`). Can be a path, a closure that defines a custom directory for each published value, or a closure that publishes individual files using the `>>` operator.
 
-Additionally, the following options from the {ref}`workflow <config-workflow>` config scope can be specified as directives:
+Additionally, the following options from the [workflow][config-workflow] config scope can be specified as directives:
+
 - `contentType`
 - `enabled`
 - `ignoreErrors`
@@ -672,3 +663,17 @@ output {
     }
 }
 ```
+
+[cli-params]: /nextflow_docs/nextflow_repo/docs/cli#pipeline-parameters
+[config-process-selectors]: /nextflow_docs/nextflow_repo/docs/config#process-selectors
+[config-workflow]: /nextflow_docs/nextflow_repo/docs/reference/config#workflow
+[dsl1-page]: /nextflow_docs/nextflow_repo/docs/migrations/dsl1
+[workflow-outputs-second-preview]: /nextflow_docs/nextflow_repo/docs/migrations/24-10
+[workflow-outputs-third-preview]: /nextflow_docs/nextflow_repo/docs/migrations/25-04
+[module-aliases]: /nextflow_docs/nextflow_repo/docs/module#module-aliases
+[process-naming-outputs]: /nextflow_docs/nextflow_repo/docs/process#naming-outputs
+[operator-map]: /nextflow_docs/nextflow_repo/docs/reference/operator#map
+[operator-mix]: /nextflow_docs/nextflow_repo/docs/reference/operator#mix
+[operator-view]: /nextflow_docs/nextflow_repo/docsreference/operator#view
+[process-publishdir]: /nextflow_docs/nextflow_repo/docs/reference/process#publishdir
+[syntax-workflow]: /nextflow_docs/nextflow_repo/docs/reference/syntax#workflow
