@@ -1,5 +1,3 @@
-(vscode-page)=
-
 # VS Code integration
 
 The [Nextflow VS Code extension](https://marketplace.visualstudio.com/items?itemName=nextflow.nextflow) provides language support for Nextflow pipelines in [VS Code](https://code.visualstudio.com/).
@@ -18,8 +16,8 @@ The extension highlights source code in red for errors and yellow for warnings.
 
 To view all diagnostics for the workspace, open the **Problems** tab. Here, you can search for diagnostics by diagnostic message, filename, and so on.
 
-:::{note}
-The language server parses scripts and config files according to the {ref}`Nextflow language specification <syntax-page>`, which is more strict than the Nextflow CLI. See {ref}`strict-syntax-page` for more information.
+:::note
+The language server parses scripts and config files according to the [Nextflow language specification][syntax-page], which is more strict than the Nextflow CLI. See [Preparing for strict syntax][strict-syntax-page] for more information.
 :::
 
 ### Hover hints
@@ -85,10 +83,11 @@ Report issues at [nextflow-io/vscode-language-nextflow](https://github.com/nextf
 
 - The language server provides limited support for Groovy scripts in the `lib` directory. Errors in Groovy scripts are not reported as diagnostics, and changing a Groovy script does not automatically re-compile the Nextflow scripts that reference it. Edit the Nextflow script or close and re-open it to refresh the diagnostics.
 
-(vscode-language-server)=
-
 ## Language server
 
 The Nextflow language server implements the [Language Server Protocol (LSP)](https://microsoft.github.io/language-server-protocol/) for Nextflow scripts and config files. It is distributed as a standalone Java application and can be integrated with any editor that functions as an LSP client.
 
 Currently, only the VS Code integration is officially supported, but community contributions for other editors are welcome. Visit the [GitHub issues](https://github.com/nextflow-io/language-server/issues) page for the latest updates on community-led integrations.
+
+[syntax-page]: /nextflow_docs/nextflow_repo/docs/reference/syntax.md
+[strict-syntax-page]: /nextflow_docs/nextflow_repo/docs/strict-syntax.md
