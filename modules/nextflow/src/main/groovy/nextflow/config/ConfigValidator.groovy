@@ -36,7 +36,6 @@ class ConfigValidator {
      * Hidden options added by ConfigBuilder
      */
     private static final List<String> hiddenOptions = List.of(
-        'bucketDir',
         'cacheable',
         'dumpChannels',
         'libDir',
