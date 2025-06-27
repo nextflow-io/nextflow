@@ -1,18 +1,14 @@
-(container-page)=
-
 # Containers
 
 Nextflow supports a variety of container runtimes. Containerization allows you to write self-contained and truly reproducible computational pipelines, by packaging the binary dependencies of a script into a standard and portable format that can be executed on any platform that supports a container runtime. Furthermore, the same pipeline can be transparently executed with any of the supported container runtimes, depending on which runtimes are available in the target compute environment.
 
-:::{note}
-When creating a container image to use with Nextflow, make sure that Bash (3.x or later) and `ps` are installed in the image, along with other tools required for collecting metrics (See {ref}`this section <execution-report-tasks>`). Bash should be available on the path `/bin/bash` and it should be the container entrypoint.
+:::note
+When creating a container image to use with Nextflow, make sure that Bash (3.x or later) and `ps` are installed in the image, along with other tools required for collecting metrics (see [Tasks][execution-report-tasks] for more information). Bash should be available on the path `/bin/bash` and it should be the container entrypoint.
 :::
-
-(container-apptainer)=
 
 ## Apptainer
 
-:::{versionadded} 22.11.0-edge
+:::note{title="Added in version 22.11.0-edge"}
 :::
 
 [Apptainer](https://apptainer.org) is an alternative container runtime to Docker and an open source fork of Singularity. The main advantages of Apptainer are that it can be used without root privileges and it doesn't require a separate daemon process. These, along with other features such as support for autofs mounts, makes Apptainer better suited to the requirements of HPC workloads. Apptainer is able to use existing Docker images and can pull from Docker registries.
@@ -27,7 +23,7 @@ Apptainer makes use of a container image file, which physically contains the con
 
 Apptainer allows paths that do not currently exist within the container to be created and mounted dynamically by specifying them on the command line. However this feature is only supported on hosts that support the [Overlay file system](https://en.wikipedia.org/wiki/OverlayFS) and is not enabled by default.
 
-:::{note}
+:::note
 Nextflow expects that data paths are defined system wide, and your Apptainer images need to be created having the mount paths defined in the container file system.
 :::
 
@@ -38,12 +34,12 @@ If your Apptainer installation support the "user bind control" feature, enable t
 The integration for Apptainer follows the same execution model implemented for Docker. You won't need to modify your Nextflow script in order to run it with Apptainer. Simply specify the Apptainer image file from where the containers are started by using the `-with-apptainer` command line option. For example:
 
 ```bash
-nextflow run <your script> -with-apptainer [apptainer image file]
+nextflow run main.nf -with-apptainer [apptainer image file]
 ```
 
 Every time your script launches a process execution, Nextflow will run it into a Apptainer container created by using the specified image. In practice Nextflow will automatically wrap your processes and launch them by running the `apptainer exec` command with the image you have provided.
 
-:::{note}
+:::note
 A Apptainer image can contain any tool or piece of software you may need to carry out a process execution. Moreover, the container is run in such a way that the process result files are created in the host file system, thus it behaves in a completely transparent manner without requiring extra steps or affecting the flow in your pipeline.
 :::
 
@@ -56,17 +52,17 @@ apptainer.enabled = true
 
 In the above example replace `/path/to/apptainer.img` with any Apptainer image of your choice.
 
-Read the {ref}`config-page` page to learn more about the configuration file and how to use it to configure your pipeline execution.
+See [Configuration][config-page] to learn more about the configuration file and how to use it to configure your pipeline execution.
 
-:::{note}
-Unlike Docker, Nextflow does not automatically mount host paths in the container when using Apptainer. It expects that the paths are configured and mounted system wide by the Apptainer runtime. If your Apptainer installation allows user defined bind points, read the {ref}`Apptainer configuration <config-apptainer>` section to learn how to enable Nextflow auto mounts.
+:::note
+Unlike Docker, Nextflow does not automatically mount host paths in the container when using Apptainer. It expects that the paths are configured and mounted system wide by the Apptainer runtime. If your Apptainer installation allows user defined bind points. See [Apptainer][config-apptainer] to learn how to enable Nextflow auto mounts.
 :::
 
-:::{warning}
+:::warning
 When a process input is a *symbolic link* file, make sure the linked file is stored in a host folder that is accessible from a bind path defined in your Apptainer installation. Otherwise the process execution will fail because the launched container won't be able to access the linked file.
 :::
 
-:::{versionchanged} 23.07.0-edge
+:::warning{title="Changed in version 23.07.0-edge"}
 Nextflow no longer mounts the home directory when launching an Apptainer container. To re-enable the old behavior, set the environment variable `NXF_APPTAINER_HOME_MOUNT` to `true`.
 :::
 
@@ -88,7 +84,7 @@ apptainer {
 }
 ```
 
-Read the {ref}`Process scope <config-process>` section to learn more about processes configuration.
+See [Process configuration][config-process] to learn more about processes configuration.
 
 ### Apptainer & Docker Hub
 
@@ -103,7 +99,7 @@ process.container = 'file:///path/to/apptainer.img'
 apptainer.enabled = true
 ```
 
-:::{warning}
+:::warning
 Use three `/` slashes to specify an **absolute** file path, otherwise the path will be interpreted as relative to the workflow launch directory.
 :::
 
@@ -116,7 +112,7 @@ apptainer.enabled = true
 
 You do not need to specify `docker://` to pull from a Docker repository. Nextflow will automatically prepend it to your image name when Apptainer is enabled. Additionally, the Docker engine will not work with containers specified as `docker://`.
 
-:::{note}
+:::note
 This feature requires the `apptainer` tool to be installed where the workflow execution is launched (as opposed to the compute nodes).
 :::
 
@@ -126,34 +122,32 @@ Nextflow uses the library directory to determine the location of Apptainer conta
 
 Nextflow first checks the library directory when searching for the image. If the image is not found it then checks the cache directory. The main difference between the library directory and the cache directory is that the first is assumed to be a read-only container repository, while the latter is expected to be writable path where container images can added for caching purposes.
 
-:::{warning}
+:::warning
 When using a compute cluster, the Apptainer cache directory must reside in a shared filesystem accessible to all compute nodes.
 :::
 
-:::{danger}
-When pulling Docker images, Apptainer may be unable to determine the container size if the image was stored using an old Docker format, resulting in a pipeline execution error. See the Apptainer documentation for details.
+:::danger
+When pulling Docker images, Apptainer may be unable to determine the container size if the image was stored using an old Docker format, resulting in a pipeline execution error. See Apptainer documentation for details.
 :::
 
 ### Advanced settings
 
-Apptainer advanced configuration settings are described in {ref}`config-apptainer` section in the Nextflow configuration page.
-
-(container-charliecloud)=
+Apptainer advanced configuration settings are described in[Apptainer][config-apptainer] section in the Nextflow configuration page.
 
 ## Charliecloud
 
-:::{versionadded} 20.12.0-edge
+:::note{title="Added in version 20.12.0-edge"}
 :::
 
-:::{versionchanged} 21.03.0-edge
+:::warning{title="Changed in version 21.03.0-edge"}
 Requires Charliecloud 0.22 to 0.27.
 :::
 
-:::{versionchanged} 22.09.0-edge
+:::warning{title="Changed in version 22.09.0-edge"}
 Requires Charliecloud 0.28 or later.
 :::
 
-:::{warning} *Experimental: not recommended for production environments.*
+:::warning{title="Experimental: not recommended for production environments."}
 :::
 
 [Charliecloud](https://hpc.github.io/charliecloud) is an alternative container runtime to Docker, that is better suited for use in HPC environments. Its main advantage is that it can be used without root privileges, making use of user namespaces in the Linux kernel. Charliecloud is able to pull from Docker registries.
@@ -167,12 +161,12 @@ You will need Charliecloud installed in your execution environment e.g. on your 
 You won't need to modify your Nextflow script in order to run it with Charliecloud. Simply specify the docker image from where the containers are started by using the `-with-charliecloud` command line option. For example:
 
 ```bash
-nextflow run <your script> -with-charliecloud [container]
+nextflow run main.nf -with-charliecloud [container]
 ```
 
 Every time your script launches a process execution, Nextflow will run it into a charliecloud container created by using the specified container image. In practice Nextflow will automatically wrap your processes and run them by executing the `ch-run` command with the container you have provided.
 
-:::{note}
+:::note
 A container image can contain any tool or piece of software you may need to carry out a process execution. Moreover, the container is run in such a way that the process result files are created in the host file system, thus it behaves in a completely transparent manner without requiring extra steps or affecting the flow in your pipeline.
 :::
 
@@ -183,13 +177,13 @@ process.container = '/path/to/container'
 charliecloud.enabled = true
 ```
 
-:::{warning}
-If an absolute path is provided, the container needs to be in the Charliecloud flat directory format. See the section below on compatibility with Docker registries.
+:::warning
+If an absolute path is provided, the container needs to be in the Charliecloud flat directory format. See below on compatibility with Docker registries.
 :::
 
-Read the {ref}`config-page` page to learn more about the configuration file and how to use it to configure your pipeline execution.
+See [Configuration][config-page] to learn more about the configuration file and how to use it to configure your pipeline execution.
 
-:::{warning}
+:::warning
 Nextflow automatically manages the file system mounts whenever a container is launched depending on the process input files. However, when a process input is a *symbolic link*, the linked file **must** be stored in the same folder where the symlink is located, or a sub-folder of it. Otherwise the process execution will fail because the launched container won't be able to access the linked file.
 :::
 
@@ -232,7 +226,7 @@ charliecloud {
 }
 ```
 
-Read the {ref}`Process scope <config-process>` section to learn more about processes configuration.
+See [Process configuration][config-process] to learn more about processes configuration.
 
 After running your pipeline, you can easily query the container image that each process used with the following command:
 
@@ -242,9 +236,7 @@ nextflow log last -f name,container
 
 ### Advanced settings
 
-Charliecloud advanced configuration settings are described in {ref}`config-charliecloud` section in the Nextflow configuration page.
-
-(container-docker)=
+Charliecloud advanced configuration settings are described in the [Charliecloud][config-charliecloud] section in the Nextflow configuration page.
 
 ## Docker
 
@@ -261,12 +253,12 @@ If you are running Docker on Mac OSX make sure you are mounting your local `/Use
 You won't need to modify your Nextflow script in order to run it with Docker. Simply specify the Docker image from where the containers are started by using the `-with-docker` command line option. For example:
 
 ```bash
-nextflow run <your script> -with-docker [docker image]
+nextflow run main.nf -with-docker [docker image]
 ```
 
 Every time your script launches a process execution, Nextflow will run it into a Docker container created by using the specified image. In practice Nextflow will automatically wrap your processes and run them by executing the `docker run` command with the image you have provided.
 
-:::{note}
+:::note
 A Docker image can contain any tool or piece of software you may need to carry out a process execution. Moreover, the container is run in such a way that the process result files are created in the host file system, thus it behaves in a completely transparent manner without requiring extra steps or affecting the flow in your pipeline.
 :::
 
@@ -279,9 +271,9 @@ docker.enabled = true
 
 In the above example replace `nextflow/examples:latest` with any Docker image of your choice.
 
-Read the {ref}`config-page` page to learn more about the configuration file and how to use it to configure your pipeline execution.
+See [Configuration][config-page] to learn more about the configuration file and how to use it to configure your pipeline execution.
 
-:::{warning}
+:::warning
 Nextflow automatically manages the file system mounts whenever a container is launched depending on the process input files. However, when a process input is a *symbolic link*, the linked file **must** be stored in the same folder where the symlink is located, or a sub-folder of it. Otherwise the process execution will fail because the launched container won't be able to access the linked file.
 :::
 
@@ -326,17 +318,15 @@ docker {
 }
 ```
 
-Read the {ref}`Process scope <config-process>` section to learn more about processes configuration.
+See [Process configuration][config-process] to learn more.
 
 ### Advanced settings
 
-Docker advanced configuration settings are described in {ref}`config-docker` section in the Nextflow configuration page.
-
-(container-podman)=
+Docker advanced configuration settings are described in the [docker][config-docker] section in the Nextflow configuration page.
 
 ## Podman
 
-:::{versionadded} 20.01.0
+:::note{title="Added in version 20.01.0"}
 :::
 
 [Podman](http://www.podman.io) is a drop-in replacement for Docker that can run containers with or without root privileges.
@@ -350,12 +340,12 @@ You will need Podman installed on your execution environment e.g. your computer 
 You won't need to modify your Nextflow script in order to run it with Podman. Simply specify the Podman image from where the containers are started by using the `-with-podman` command line option. For example:
 
 ```bash
-nextflow run <your script> -with-podman [OCI container image]
+nextflow run main.nf -with-podman [OCI container image]
 ```
 
 Every time your script launches a process execution, Nextflow will run it into a Podman container created by using the specified image. In practice Nextflow will automatically wrap your processes and run them by executing the `podman run` command with the image you have provided.
 
-:::{note}
+:::note
 An OCI container image can contain any tool or piece of software you may need to carry out a process execution. Moreover, the container is run in such a way that the process result files are created in the host file system, thus it behaves in a completely transparent manner without requiring extra steps or affecting the flow in your pipeline.
 :::
 
@@ -368,9 +358,9 @@ podman.enabled = true
 
 In the above example replace `nextflow/examples:latest` with any Podman image of your choice.
 
-Read the {ref}`config-page` page to learn more about the configuration file and how to use it to configure your pipeline execution.
+See [Configuration][config-page] to learn more about the configuration file and how to use it to configure your pipeline execution.
 
-:::{warning}
+:::warning
 Nextflow automatically manages the file system mounts whenever a container is launched depending on the process input files. However, when a process input is a *symbolic link*, the linked file **must** be stored in the same folder where the symlink is located, or a sub-folder of it. Otherwise the process execution will fail because the launched container won't be able to access the linked file.
 :::
 
@@ -415,17 +405,15 @@ podman {
 }
 ```
 
-Read the {ref}`Process scope <config-process>` section to learn more about processes configuration.
+See[Process configuration][config-process] to learn more about processes configuration.
 
 ### Advanced settings
 
-Podman advanced configuration settings are described in {ref}`config-podman` section in the Nextflow configuration page.
-
-(container-sarus)=
+Podman advanced configuration settings are described in the [podman][config-podman] section in the Nextflow configuration page.
 
 ## Sarus
 
-:::{versionadded} 22.12.0-edge
+:::note{title="Added in verison  22.12.0-edge"}
 Requires Sarus 1.5.1 or later.
 :::
 
@@ -450,7 +438,7 @@ sarus.enabled = true
 
 and it will always try to search the Docker Hub registry for the images.
 
-:::{note}
+:::note
 if you do not specify an image tag, the `latest` tag will be fetched by default.
 :::
 
@@ -473,15 +461,9 @@ sarus {
 }
 ```
 
-Read the {ref}`Process scope <config-process>` section to learn more about processes configuration.
-
-(container-shifter)=
+See [Process configuration][config-process] to learn more about processes configuration.
 
 ## Shifter
-
-:::{versionadded} 19.10.0
-Requires Shifter 18.03 or later.
-:::
 
 [Shifter](https://docs.nersc.gov/programming/shifter/overview/) is an alternative container runtime to Docker. Shifter works by converting Docker images to a common format that can then be distributed and launched on HPC systems. The user interface to Shifter enables a user to select an image from [Docker Hub](https://hub.docker.com/) and then submit jobs which run entirely within the container.
 
@@ -523,9 +505,7 @@ shifter {
 }
 ```
 
-Read the {ref}`Process scope <config-process>` section to learn more about processes configuration.
-
-(container-singularity)=
+See [Process configuration][config-process] to learn more about processes configuration.
 
 ## Singularity
 
@@ -541,7 +521,7 @@ Singularity makes use of a container image file, which physically contains the c
 
 Singularity allows paths that do not currently exist within the container to be created and mounted dynamically by specifying them on the command line. However this feature is only supported on hosts that support the [Overlay file system](https://en.wikipedia.org/wiki/OverlayFS) and is not enabled by default.
 
-:::{note}
+:::note
 Nextflow expects that data paths are defined system wide, and your Singularity images need to be created having the mount paths defined in the container file system.
 :::
 
@@ -552,12 +532,12 @@ If your Singularity installation support the "user bind control" feature, enable
 The integration for Singularity follows the same execution model implemented for Docker. You won't need to modify your Nextflow script in order to run it with Singularity. Simply specify the Singularity image file from where the containers are started by using the `-with-singularity` command line option. For example:
 
 ```bash
-nextflow run <your script> -with-singularity [singularity image file]
+nextflow run main.nf -with-singularity [singularity image file]
 ```
 
 Every time your script launches a process execution, Nextflow will run it into a Singularity container created by using the specified image. In practice Nextflow will automatically wrap your processes and launch them by running the `singularity exec` command with the image you have provided.
 
-:::{note}
+:::note
 A Singularity image can contain any tool or piece of software you may need to carry out a process execution. Moreover, the container is run in such a way that the process result files are created in the host file system, thus it behaves in a completely transparent manner without requiring extra steps or affecting the flow in your pipeline.
 :::
 
@@ -570,25 +550,25 @@ singularity.enabled = true
 
 In the above example replace `/path/to/singularity.img` with any Singularity image of your choice.
 
-Read the {ref}`config-page` page to learn more about the configuration file and how to use it to configure your pipeline execution.
+See [Configuration][config-page] to learn more about the configuration file and how to use it to configure your pipeline execution.
 
-:::{note}
-Unlike Docker, Nextflow does not automatically mount host paths in the container when using Singularity. It expects that the paths are configure and mounted system wide by the Singularity runtime. If your Singularity installation allows user defined bind points, read the {ref}`Singularity configuration <config-singularity>` section to learn how to enable Nextflow auto mounts.
+:::note
+Unlike Docker, Nextflow does not automatically mount host paths in the container when using Singularity. It expects that the paths are configure and mounted system wide by the Singularity runtime. If your Singularity installation allows user defined bind points, see [singularity][config-singularity] to learn how to enable Nextflow auto mounts.
 :::
 
-:::{warning}
+:::warning
 When a process input is a *symbolic link* file, make sure the linked file is stored in a host folder that is accessible from a bind path defined in your Singularity installation. Otherwise the process execution will fail because the launched container won't be able to access the linked file.
 :::
 
-:::{versionchanged} 23.07.0-edge
+:::warning{title="Changed in version 23.07.0-edge"}
 Nextflow no longer mounts the home directory when launching a Singularity container. To re-enable the old behavior, set the environment variable `NXF_SINGULARITY_HOME_MOUNT` to `true`.
 :::
 
-:::{versionchanged} 23.09.0-edge
+:::warning{title="Changed in version 23.09.0-edge"}
 Nextflow automatically mounts the required host paths in the container. To re-enable the old behavior, set the environment variable `NXF_SINGULARITY_AUTO_MOUNTS` to `false` or set `singularity.autoMounts=false` in the Nextflow configuration file.
 :::
 
-:::{versionchanged} 23.09.0-edge
+:::warning{title="Changed in version 23.09.0-edge"}
 The execution command for Singularity/Apptainer containers can be set to `run` by means of the environment variable `NXF_SINGULARITY_RUN_COMMAND` (default command is `exec`).
 :::
 
@@ -611,7 +591,7 @@ singularity {
 }
 ```
 
-Read the {ref}`Process scope <config-process>` section to learn more about processes configuration.
+See [Process configuration][config-process] to learn more about processes configuration.
 
 ### Singularity & Docker Hub
 
@@ -628,7 +608,7 @@ process.container = 'file:///path/to/singularity.img'
 singularity.enabled = true
 ```
 
-:::{warning}
+:::warning
 Use three `/` slashes to specify an **absolute** file path, otherwise the path will be interpreted as relative to the workflow launch directory.
 :::
 
@@ -641,7 +621,7 @@ singularity.enabled = true
 
 You do not need to specify `docker://` to pull from a Docker repository. Nextflow will automatically prepend it to your image name when Singularity is enabled. Additionally, the Docker engine will not work with containers specified as `docker://`.
 
-:::{versionadded} 19.04.0
+:::note{title="Added in verison 19.04.0"}
 Requires Singularity 3.0.3 or later.
 :::
 
@@ -659,14 +639,23 @@ Nextflow uses the library directory to determine the location of Singularity ima
 
 Nextflow first checks the library directory when searching for the image. If the image is not found it then checks the cache directory. The main difference between the library directory and the cache directory is that the first is assumed to be a read-only container repository, while the latter is expected to be writable path where container images can added for caching purposes.
 
-:::{warning}
+:::warning
 When using a compute cluster, the Singularity cache directory must reside in a shared filesystem accessible to all compute nodes.
 :::
 
-:::{danger}
-When pulling Docker images, Singularity may be unable to determine the container size if the image was stored using an old Docker format, resulting in a pipeline execution error. See the Singularity documentation for details.
+:::danger
+When pulling Docker images, Singularity may be unable to determine the container size if the image was stored using an old Docker format, resulting in a pipeline execution error. See Singularity documentation for details.
 :::
 
 ### Advanced settings
 
-Singularity advanced configuration settings are described in {ref}`config-singularity` section in the Nextflow configuration page.
+Singularity advanced configuration settings are described in the [singularity][config-singularity] section in the Nextflow configuration page.
+
+[execution-report-tasks]: /nextflow_docs/nextflow_repo/docs/reports#tasks
+[config-page]: /nextflow_docs/nextflow_repo/docs/config
+[config-apptainer]: /nextflow_docs/nextflow_repo/docs/reference/config#apptainer
+[config-process]: /nextflow_docs/nextflow_repo/docs/config#process-configuration
+[config-charliecloud]: /nextflow_docs/nextflow_repo/docs/reference/config#charliecloud
+[config-docker]: /nextflow_docs/nextflow_repo/docs/reference/config#docker
+[config-podman]: /nextflow_docs/nextflow_repo/docs/reference/config#podman
+[config-singularity]: /nextflow_docs/nextflow_repo/docs/reference/config#singularity

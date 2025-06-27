@@ -24,7 +24,7 @@ To install Java with SDKMAN:
 
 1. [Install SDKMAN](https://sdkman.io/install):
 
-    ```
+    ```bash
     curl -s https://get.sdkman.io | bash
     ```
 
@@ -32,13 +32,13 @@ To install Java with SDKMAN:
 
 3. Install Java:
 
-    ```
+    ```bash
     sdk install java 17.0.10-tem
     ```
 
 4. Confirm that Java is installed correctly:
 
-    ```
+    ```bash
     java -version
     ```
 

@@ -1,39 +1,37 @@
-(conda-page)=
-
 # Conda environments
 
 [Conda](https://conda.io/) is an open source package and environment management system that simplifies the installation and the configuration of complex software packages in a platform agnostic manner.
 
-Nextflow has built-in support for Conda that allows the configuration of workflow dependencies using Conda recipes and environment files.
+Nextflow has built-in support for conda that allows the configuration of workflow dependencies using conda recipes and environment files.
 
 This allows Nextflow applications to use popular tool collections such as [Bioconda](https://bioconda.github.io) and the [Python Package index](https://pypi.org/), whilst taking advantage of the configuration flexibility provided by Nextflow.
 
 ## Prerequisites
 
-This feature requires the Conda or [Miniconda](https://conda.io/miniconda.html) package manager to be installed on your system.
+This feature requires the conda or [Miniconda](https://conda.io/miniconda.html) package manager to be installed on your system.
 
 ## How it works
 
-Nextflow automatically creates and activates the Conda environment(s) given the dependencies specified by each process.
+Nextflow automatically creates and activates the conda environment(s) given the dependencies specified by each process.
 
-Dependencies are specified by using the {ref}`process-conda` directive, providing either the names of the required Conda packages, the path of a Conda environment yaml file, or the path of an existing Conda environment directory.
+Dependencies are specified by using the [conda][process-conda] directive, providing either the names of the required conda packages, the path of a conda environment yaml file, or the path of an existing conda environment directory.
 
-:::{note}
-Conda environments are stored on the file system. By default, Nextflow instructs Conda to save the required environments in the pipeline work directory. The same environment may be created/saved multiple times across multiple executions when using different work directories.
+:::note
+Conda environments are stored on the file system. By default, Nextflow instructs conda to save the required environments in the pipeline work directory. The same environment may be created/saved multiple times across multiple executions when using different work directories.
 :::
 
-You can specify the directory where the Conda environments are stored using the `conda.cacheDir` configuration property. When using a computing cluster, make sure to use a shared file system path accessible from all compute nodes. See the {ref}`configuration page <config-conda>` for details about Conda configuration.
+You can specify the directory where the conda environments are stored using the `conda.cacheDir` configuration property. When using a computing cluster, make sure to use a shared file system path accessible from all compute nodes. See [Configuration][config-conda] for details about conda configuration.
 
-:::{warning}
-The Conda environment feature is not supported by executors that use remote object storage as a work directory. For example, AWS Batch.
+:::warning
+The conda environment feature is not supported by executors that use remote object storage as a work directory. For example, AWS Batch.
 :::
 
-### Enabling Conda environment
+### Enabling conda environment
 
-:::{versionadded} 22.08.0-edge
+:::note{title="Added in version 22.08.0-edge"}
 :::
 
-The use of Conda recipes specified using the {ref}`process-conda` directive needs to be enabled explicitly in the pipeline configuration file (i.e. `nextflow.config`):
+The use of conda recipes specified using the [conda][process-conda] directive needs to be enabled explicitly in the pipeline configuration file (i.e., `nextflow.config`):
 
 ```groovy
 conda.enabled = true
@@ -41,7 +39,7 @@ conda.enabled = true
 
 Alternatively, it can be specified by setting the variable `NXF_CONDA_ENABLED=true` in your environment or by using the `-with-conda` command line option.
 
-### Use Conda package names
+### Use conda package names
 
 Conda package names can specified using the `conda` directive. Multiple package names can be specified by separating them with a blank space. For example:
 
@@ -56,16 +54,15 @@ process hello {
 }
 ```
 
-Using the above definition, a Conda environment that includes BWA, Samtools and MultiQC tools is created and activated when the process is executed.
+Using the above definition, a conda environment that includes BWA, Samtools and MultiQC tools is created and activated when the process is executed.
 
-The usual Conda package syntax and naming conventions can be used. The version of a package can be specified after the package name as shown here `bwa=0.7.15`.
+The usual conda package syntax and naming conventions can be used. The version of a package can be specified after the package name as shown here `bwa=0.7.15`.
 
 The name of the channel where a package is located can be specified prefixing the package with the channel name as shown here `bioconda::bwa=0.7.15`.
 
-(conda-env-files)=
-### Use Conda environment files
+### Use conda environment files
 
-Conda environments can also be defined using one or more Conda environment files. This is a file that lists the required packages and channels structured using the YAML format. For example:
+Conda environments can also be defined using one or more conda environment files. This is a file that lists the required packages and channels structured using the YAML format. For example:
 
 ```yaml
 name: my-env
@@ -77,7 +74,7 @@ dependencies:
   - bwa=0.7.15
 ```
 
-Read the Conda documentation for more details about how to create [environment files](https://conda.io/docs/user-guide/tasks/manage-environments.html#creating-an-environment-file-manually).
+Read the conda documentation for more details about how to create [environment files](https://conda.io/docs/user-guide/tasks/manage-environments.html#creating-an-environment-file-manually).
 
 The path of an environment file can be specified using the `conda` directive:
 
@@ -92,11 +89,10 @@ process hello {
 }
 ```
 
-:::{warning}
+:::warning
 The environment file name **must** have a `.yml` or `.yaml` extension or else it won't be properly recognised.
 :::
 
-(conda-pypi)=
 ### Python Packages from PyPI
 
 Conda environment files can also be used to install Python packages from the [PyPI repository](https://pypi.org/), through the `pip` package manager (which must also be explicitly listed as a required package):
@@ -124,15 +120,15 @@ bioconda::bwa=0.7.15
 bioconda::multiqc=1.4
 ```
 
-:::{note}
+:::note
 Dependency files must be a text file with the `.txt` extension.
 :::
 
 ### Conda lock files
 
-The final method for providing packages to Conda is by using [Conda lock files](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#identical-conda-envs).
+The final method for providing packages to conda is by using [conda lock files](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#identical-conda-envs).
 
-To generate a lock file from an existing Conda environment, run the following command:
+To generate a lock file from an existing conda environment, run the following command:
 
 ```bash
 conda list --explicit > spec-file.txt
@@ -144,9 +140,9 @@ If you're using Mamba or Micromamba, use this command instead:
 micromamba env export --explicit > spec-file.txt
 ```
 
-You can also download Conda lock files from  [Wave](https://seqera.io/wave/) build pages.
+You can also download conda lock files from [Wave](https://seqera.io/wave/) build pages.
 
-These files list every package and its dependencies, so Conda doesn't need to resolve the environment. This makes environment setup faster and more reproducible.
+These files list every package and its dependencies, so conda doesn't need to resolve the environment. This makes environment setup faster and more reproducible.
 
 Each file includes package URLs and, optionally, an MD5 hash for verifying file integrity:
 
@@ -163,15 +159,15 @@ https://conda.anaconda.org/conda-forge/linux-64/libgcc-ng-13.2.0-h77fa898_7.cond
 # .. and so on
 ```
 
-To use a Conda lock file with Nextflow, set the `conda` directive to the path of the lock file.
+To use a conda lock file with Nextflow, set the `conda` directive to the path of the lock file.
 
-:::{note}
+:::note
 Conda lock files must be a text file with the `.txt` extension.
 :::
 
-### Use existing Conda environments
+### Use existing conda environments
 
-If you already have a local Conda environment, you can use it in your workflow specifying the installation directory of such environment by using the `conda` directive:
+If you already have a local conda environment, you can use it in your workflow specifying the installation directory of such environment by using the `conda` directive:
 
 ```nextflow
 process hello {
@@ -186,16 +182,16 @@ process hello {
 
 ### Use Mamba to resolve packages
 
-:::{warning} *Experimental: may change in a future release.*
+:::warning{title="Experimental: may change in a future release."}
 :::
 
-It is also possible to use [mamba](https://github.com/mamba-org/mamba) to speed up the creation of conda environments. For more information on how to enable this feature please refer to {ref}`Conda <config-conda>`.
+It is also possible to use [mamba](https://github.com/mamba-org/mamba) to speed up the creation of conda environments. For more information on how to enable this feature please refer to [conda][config-conda].
 
 ## Best practices
 
-When a `conda` directive is used in any `process` definition within the workflow script, Conda tool is required for the workflow execution.
+When a `conda` directive is used in any `process` definition within the workflow script, conda tool is required for the workflow execution.
 
-Specifying the Conda environments in a separate configuration {ref}`profile <config-profiles>` is therefore recommended to allow the execution via a command line option and to enhance the workflow portability. For example:
+Specifying the conda environments in a separate configuration [profile][config-profiles] is therefore recommended to allow the execution via a command line option and to enhance the workflow portability. For example:
 
 ```groovy
 profiles {
@@ -210,8 +206,12 @@ profiles {
 }
 ```
 
-The above configuration snippet allows the execution either with Conda or Docker specifying `-profile conda` or `-profile docker` when running the workflow script.
+The above configuration snippet allows the execution either with conda or Docker specifying `-profile conda` or `-profile docker` when running the workflow script.
 
 ## Advanced settings
 
-Conda advanced configuration settings are described in the {ref}`Conda <config-conda>` section on the Nextflow configuration page.
+Conda advanced configuration settings are described in the [conda][config-conda] section on the Nextflow configuration page.
+
+[config-conda]: /nextflow_docs/nextflow_repo/docs/reference/config#conda
+[config-profiles]: /nextflow_docs/nextflow_repo/docs/config#config-profiles
+[process-conda]: /nextflow_docs/nextflow_repo/docs/reference/process#conda
