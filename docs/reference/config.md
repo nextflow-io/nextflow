@@ -1544,7 +1544,7 @@ The following settings are available:
 `wave.retryPolicy.delay`
 : :::{versionadded} 22.06.0-edge
   :::
-: The initial delay when a failing HTTP request is retried (default: `150ms`).
+: The initial delay when a failing HTTP request is retried (default: `450ms`).
 
 `wave.retryPolicy.jitter`
 : :::{versionadded} 22.06.0-edge
@@ -1559,7 +1559,7 @@ The following settings are available:
 `wave.retryPolicy.maxDelay`
 : :::{versionadded} 22.06.0-edge
   :::
-: The max delay when a failing HTTP request is retried (default: `90 seconds`).
+: The max delay when a failing HTTP request is retried (default: `90s`).
 
 `wave.scan.mode`
 : :::{versionadded} 24.09.1-edge
