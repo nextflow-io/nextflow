@@ -51,7 +51,9 @@ class S3ClientConfigurationTest extends Specification{
     def 'create S3 asynchronous client configuration' (){
         given:
         def props = new Properties()
-        def config = new AwsConfig([client: [connectionTimeout: 20000, maxConnections: 100, maxErrorRetry: 3, socketTimeout: 20000,
+        def config = new AwsConfig([client: [
+                                             maxConcurrency: 10, maxNativeMemory: '500MB', minimumPartSize: '7MB', multipartThreshold: '32MB',
+                                             targetThroughputInGbps: 15, connectionTimeout: 20000, maxConnections: 100, maxErrorRetry: 3, socketTimeout: 20000,
                                              proxyHost: 'host.com', proxyPort: 80, proxyScheme: 'https', proxyUsername: 'user', proxyPassword: 'pass',
                                              signerOverride: 'S3SignerType', userAgent: 'Agent1' ]])
         props.putAll(config.getS3LegacyProperties())
@@ -62,8 +64,14 @@ class S3ClientConfigurationTest extends Specification{
         overrideConfig.advancedOption(SdkAdvancedClientOption.USER_AGENT_PREFIX).get() == 'Agent1'
         overrideConfig.advancedOption(SdkAdvancedClientOption.SIGNER).get() instanceof AwsS3V4Signer
         overrideConfig.retryStrategy().get().maxAttempts() == 4
-        // Check max Concurrency
-        clientConfig.getMaxConcurrency() == 100
+        // Check Crt performance settings
+        clientConfig.getMaxConcurrency() == 10
+        clientConfig.getMaxNativeMemoryInBytes() == 524288000L
+        clientConfig.getTargetThroughputInGbps() == 15
+        // Check multipartConfig
+        def multipartConfig = clientConfig.getMultipartConfiguration()
+        multipartConfig.thresholdInBytes() == 33554432
+        multipartConfig.minimumPartSizeInBytes() == 7340032
         // Check Crt http configuration
         def httpConfiguration = clientConfig.getCrtHttpConfiguration()
         httpConfiguration.proxyConfiguration().host() == 'host.com'
@@ -83,7 +91,7 @@ class S3ClientConfigurationTest extends Specification{
         httpClientbuilder.proxyConfiguration.password() == 'pass'
         httpClientbuilder.standardOptions.get(SdkHttpConfigurationOption.CONNECTION_TIMEOUT).toMillis()== 20000
         httpClientbuilder.standardOptions.get(SdkHttpConfigurationOption.READ_TIMEOUT) == null //socket timeout not supported in async client
-        httpClientbuilder.standardOptions.get(SdkHttpConfigurationOption.MAX_CONNECTIONS) == 100
+        httpClientbuilder.standardOptions.get(SdkHttpConfigurationOption.MAX_CONNECTIONS) == 10
     }
 
 

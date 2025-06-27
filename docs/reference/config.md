@@ -216,11 +216,26 @@ The following settings are available:
   :::
 : The retrieval tier to use when restoring objects from Glacier, one of [`Expedited`, `Standard`, `Bulk`].
 
+`aws.client.maxConcurrency`
+: :::{versionadded} 25.06.0-edge
+  :::
+: Overrides the maximum number of concurrent connections in S3 Async client used in the S3 Transfer Manager. This is automatically set according to `targetThroughputInGbps`. Modifying this value can affect the memory used by the S3 transfers. [More details](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html#maxConcurrency(java.lang.Integer)).
+
 `aws.client.maxConnections`
-: The maximum number of allowed open HTTP connections (default: `50`).
+: The maximum number of allowed open HTTP connections (default: `50`). In AWS SDK v2, different AWS clients are used. This will only affect the synchronous clients. For asynchronous clients used in the S3 Transfer Manager use `aws.client.maxConcurrency`.
 
 `aws.client.maxErrorRetry`
 : The maximum number of retry attempts for failed retryable requests (default: `-1`).
+
+`aws.client.maxNativeMemory`
+: :::{versionadded} 25.06.0-edge
+  :::
+: The maximum native memory used by the S3 asynchronous client for S3 transfers. This is automatically set according to `targetThroughputInGbps`. Modifying this value can affect the memory used by the S3 transfers. [More details](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html#maxNativeMemoryLimitInBytes(java.lang.Long)).
+
+`aws.client.minimumPartSize`
+: :::{versionadded} 25.06.0-edge
+:::
+: The minimum part size used by the S3 async client in multipart upload mode. (default: `8 MB`). [More details](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html#minimumPartSizeInBytes(java.lang.Long)).
 
 `aws.client.protocol`
 : :::{deprecated} 25.06.0-edge
@@ -248,13 +263,14 @@ The following settings are available:
 `aws.client.requesterPays`
 : :::{versionadded} 24.05.0-edge
   :::
-: Use [Rrequester Pays](https://docs.aws.amazon.com/AmazonS3/latest/userguide/RequesterPaysBuckets.html) for S3 buckets (default: `false`).
+: Use [Requester Pays](https://docs.aws.amazon.com/AmazonS3/latest/userguide/RequesterPaysBuckets.html) for S3 buckets (default: `false`).
 
 `aws.client.s3PathStyleAccess`
 : Use the path-based access model to access objects in S3-compatible storage systems (default: `false`).
 
 `aws.client.signerOverride`
-: The name of the signature algorithm to use for signing requests made by the client.
+: The name of the signature algorithm to use for signing requests made by the client. 
+: Since 25.06.0-edge, the nf-amazon plugin is using the SDK V2, this option is deprecated and only AWS V4 Signer is supported. In case a custom signer is required, this option is still usable by providing the custom implementation in the classpath and specifying the custom signer fully qualified class name. The default S3 CRT-based Async client is not supporting custom signers, therefore Nextflow will use the S3 Netty Async client when this option is activated. This could cause performance degradation when transferring large files.
 
 `aws.client.socketSendBufferSizeHint`
 : :::{deprecated} 25.06.0-edge
@@ -279,20 +295,36 @@ The following settings are available:
   :::
 : The AWS KMS key Id to be used to encrypt files stored in the target S3 bucket.
 
+`aws.client.targetThroughputInGbps`
+: :::{versionadded} 25.06.0-edge
+  :::
+: The S3 Async client target network throughput in Gbps. This value is used to automatically set `maxConcurrency` and `maxNativeMemory`. (Default: `10`). [More details](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html#targetThroughputInGbps(java.lang.Double)).
+
+`aws.client.multipartThreshold`
+: :::{versionadded} 25.06.0-edge
+  :::
+: The S3 Async client threshold to create multipart S3 transfers. Default is the same as `minimumPartSize` https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html#thresholdInBytes(java.lang.Long)
+
+`aws.client.tmThreads`
+: :::{versionadded} 25.06.0-edge
+  :::
+: Number of threads used by the S3 transfer manager. (default `10`).
+
 `aws.client.userAgent`
 : The HTTP user agent header passed with all HTTP requests.
+: : Since 25.06.0-edge, the nf-amazon plugin is using the SDK V2. The default S3 CRT-based Async client is not supporting advanced http options like this option. Nextflow will use the S3 Netty Async client when this option is activated. This could cause performance degradation when transferring large files.
 
 `aws.client.uploadChunkSize`
-: The size of a single part in a multipart upload (default: `100 MB`).
+: The size of a single part in a multipart upload (default: `100 MB`). Since version 25.06.0-edge, this option only applies to uploads generated from OutputStream. Other uploads are managed by the S3 transfer manager.
 
 `aws.client.uploadMaxAttempts`
-: The maximum number of upload attempts after which a multipart upload returns an error (default: `5`).
+: The maximum number of upload attempts after which a multipart upload returns an error (default: `5`). Since version 25.06.0-edge, this option only applies to uploads generated from OutputStream. Other uploads are managed by the S3 transfer manager.
 
 `aws.client.uploadMaxThreads`
-: The maximum number of threads used for multipart upload (default: `10`).
+: The maximum number of threads used for multipart upload (default: `10`). Since version 25.06.0-edge, this option only applies to uploads generated from OutputStream. Other uploads are managed by the S3 transfer manager.
 
 `aws.client.uploadRetrySleep`
-: The time to wait after a failed upload attempt to retry the part upload (default: `500ms`).
+: The time to wait after a failed upload attempt to retry the part upload (default: `500ms`). Since version 25.06.0-edge, this option only applies to uploads generated from OutputStream. Other uploads are managed by the S3 transfer manager.
 
 `aws.client.uploadStorageClass`
 : The S3 storage class applied to stored objects. Can be `STANDARD`, `STANDARD_IA`, `ONEZONE_IA`, or `INTELLIGENT_TIERING` (default: `STANDARD`).

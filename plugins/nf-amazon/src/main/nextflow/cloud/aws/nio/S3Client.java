@@ -64,9 +64,7 @@ public class S3Client {
 
 	private ExecutorService transferPool;
 
-	private Long uploadChunkSize = 0L;
-
-	private Integer uploadMaxThreads = 10;
+	private Integer transferManagerThreads = 10;
 
 	private Boolean isRequesterPaysEnabled = false;
 
@@ -270,26 +268,13 @@ public class S3Client {
 		log.debug("Setting S3 requester pays enabled={}", isRequesterPaysEnabled);
 	}
 
-	public void setUploadChunkSize(String value) {
+	public void setTransferManagerThreads(String value) {
 		if( value==null )
 			return;
 
 		try {
-			this.uploadChunkSize = Long.valueOf(value);
-			log.debug("Setting S3 upload chunk size={}", uploadChunkSize);
-		}
-		catch( NumberFormatException e ) {
-			log.warn("Not a valid AWS S3 upload chunk size: `{}` -- Using default", value);
-		}
-	}
-
-	public void setUploadMaxThreads(String value) {
-		if( value==null )
-			return;
-
-		try {
-			this.uploadMaxThreads = Integer.valueOf(value);
-			log.debug("Setting S3 upload max threads={}", uploadMaxThreads);
+			this.transferManagerThreads = Integer.valueOf(value);
+			log.debug("Setting S3 upload max threads={}", transferManagerThreads);
 		}
 		catch( NumberFormatException e ) {
 			log.warn("Not a valid AWS S3 upload max threads: `{}` -- Using default", value);
@@ -483,10 +468,10 @@ public class S3Client {
 
 	synchronized S3TransferManager transferManager() {
 		if( transferManager==null ) {
-			log.debug("Creating S3 transfer manager pool - chunk-size={}; max-treads={};", uploadChunkSize, uploadMaxThreads);
-			transferPool = ThreadPoolManager.create("S3TransferManager", uploadMaxThreads);
+			log.debug("Creating S3 transfer manager pool - max-treads={};", transferManagerThreads);
+			transferPool = ThreadPoolManager.create("S3TransferManager", transferManagerThreads);
 			transferManager = S3TransferManager.builder()
-					.s3Client(factory.getS3AsyncClient(S3AsyncClientConfiguration.create(props), uploadChunkSize, global))
+					.s3Client(factory.getS3AsyncClient(S3AsyncClientConfiguration.create(props), global))
 					.executor(transferPool)
 					.build();
 		}
@@ -523,7 +508,7 @@ public class S3Client {
 		try{
 			downloadDirectory.completionFuture().get();
 		} catch (InterruptedException e){
-			log.debug("S3 download directory: s3://{}/{} cancelled", source.getBucket(), source.getKey());
+			log.debug("S3 download directory: s3://{}/{} interrupted", source.getBucket(), source.getKey());
 			Thread.currentThread().interrupt();
 		} catch (ExecutionException e) {
 			log.debug("S3 deownload directory: s3://{}/{} exception thrown", source.getBucket(), source.getKey());
@@ -539,7 +524,7 @@ public class S3Client {
         try{
 		    upload.completionFuture().get();
         } catch (InterruptedException e){
-            log.debug("S3 upload file: s3://{}/{} cancelled", target.getBucket(), target.getKey());
+            log.debug("S3 upload file: s3://{}/{} interrupted", target.getBucket(), target.getKey());
             Thread.currentThread().interrupt();
         } catch (ExecutionException e) {
             log.debug("S3 upload file: s3://{}/{} exception thrown", target.getBucket(), target.getKey());
@@ -581,7 +566,7 @@ public class S3Client {
 				throw new IOException("Some transfers in S3 upload directory: s3://"+ target.getBucket() +"/"+ target.getKey() +" has failed - Transfers: " +  completed.failedTransfers() );
 			}
 		} catch (InterruptedException e){
-			log.debug("S3 upload directory: s3://{}/{} cancelled", target.getBucket(), target.getKey());
+			log.debug("S3 upload directory: s3://{}/{} interrupted", target.getBucket(), target.getKey());
 			Thread.currentThread().interrupt();
 		} catch (ExecutionException e) {
 			log.debug("S3 upload directory: s3://{}/{} exception thrown", target.getBucket(), target.getKey());
@@ -619,10 +604,10 @@ public class S3Client {
         try {
             copy.completionFuture().get();
         } catch (InterruptedException e){
-            log.debug("S3 copy : s3://{}/{} to s3://{}/{} cancelled", req.sourceBucket(), req.sourceKey(), req.destinationBucket(), req.destinationKey());
+            log.debug("S3 copy s3://{}/{} to s3://{}/{} interrupted", req.sourceBucket(), req.sourceKey(), req.destinationBucket(), req.destinationKey());
 			Thread.currentThread().interrupt();
         } catch (ExecutionException e) {
-            log.debug("S3 copy: s3://{}/{} to s3://{}/{} exception thrown", req.sourceBucket(), req.sourceKey(), req.destinationBucket(), req.destinationKey());
+            log.debug("S3 copy s3://{}/{} to s3://{}/{} exception thrown", req.sourceBucket(), req.sourceKey(), req.destinationBucket(), req.destinationKey());
             throw new IOException(e.getCause());
         }
 

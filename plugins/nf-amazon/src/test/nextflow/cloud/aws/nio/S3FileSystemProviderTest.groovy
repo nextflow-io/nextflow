@@ -30,10 +30,11 @@ class S3FileSystemProviderTest extends Specification {
     def 'should create filesystem from config'(){
         given:
         def config = [client: [ anonymous: true, s3acl: 'Private', connectionTimeout: 20000, endpoint: 'https://s3.eu-west-1.amazonaws.com',
+                                maxConcurrency: 10, maxNativeMemory: '500MB', minimumPartSize: '7MB', multipartThreshold: '32MB',
                                 maxConnections: 100, maxErrorRetry: 3, socketTimeout: 20000, requesterPays: true, s3PathStyleAccess: true,
                                 proxyHost: 'host.com', proxyPort: 80, proxyScheme: 'https', proxyUsername: 'user', proxyPassword: 'pass',
                                 signerOverride: 'S3SignerType', userAgent: 'Agent1', storageEncryption: 'AES256', storageKmsKeyId: 'arn:key:id',
-                                uploadMaxThreads: 20, uploadChunkSize: '7MB', uploadMaxAttempts: 4, uploadRetrySleep: '200ms'
+                                tmThreads: 20, uploadMaxThreads: 15, uploadChunkSize: '7MB', uploadMaxAttempts: 4, uploadRetrySleep: '200ms'
                               ],
                       accessKey: '123456abc', secretKey: '78910def', profile: 'test']
         def provider = new S3FileSystemProvider();
@@ -43,8 +44,7 @@ class S3FileSystemProviderTest extends Specification {
         fs.getBucketName() == 'bucket'
         def client = fs.getClient()
         client.client != null
-        client.uploadMaxThreads == 20
-        client.uploadChunkSize == 7340032
+        client.transferManagerThreads == 20
         client.cannedAcl == ObjectCannedACL.PRIVATE
         client.storageEncryption == ServerSideEncryption.AES256
         client.isRequesterPaysEnabled == true
@@ -68,6 +68,12 @@ class S3FileSystemProviderTest extends Specification {
         fs.properties().getProperty('max_error_retry') == '3'
         fs.properties().getProperty('upload_max_attempts') == '4'
         fs.properties().getProperty('upload_retry_sleep') == '200'
+        fs.properties().getProperty('upload_chunk_size') == '7340032' //7MB
+        fs.properties().getProperty('upload_max_threads') == '15'
+        fs.properties().getProperty('max_concurrency') == '10'
+        fs.properties().getProperty('max_native_memory') == '524288000' //500MB
+        fs.properties().getProperty('minimum_part_size') == '7340032' //7MB
+        fs.properties().getProperty('multipart_threshold') == '33554432' //32MB
     }
 
 

@@ -22,6 +22,7 @@ import software.amazon.awssdk.http.nio.netty.ProxyConfiguration;
 import software.amazon.awssdk.services.s3.crt.S3CrtProxyConfiguration;
 import software.amazon.awssdk.services.s3.crt.S3CrtHttpConfiguration;
 import software.amazon.awssdk.services.s3.crt.S3CrtRetryConfiguration;
+import software.amazon.awssdk.services.s3.multipart.MultipartConfiguration;
 
 
 import java.time.Duration;
@@ -37,8 +38,11 @@ public class S3AsyncClientConfiguration extends S3ClientConfiguration{
 
     private S3CrtHttpConfiguration.Builder crtHttpConfiguration;
     private NettyNioAsyncHttpClient.Builder nettyHttpClientBuilder = NettyNioAsyncHttpClient.builder().connectionAcquisitionTimeout(DEFAULT_NETTY_ACQUISITION_TIMEOUT);
+    private MultipartConfiguration.Builder multiPartBuilder;
     private S3CrtRetryConfiguration crtRetryConfiguration;
     private Integer maxConcurrency ;
+    private Double targetThroughputInGbps;
+    private Long maxNativeMemoryInBytes;
 
     private S3CrtHttpConfiguration.Builder crtHttpConfiguration(){
         if( this.crtHttpConfiguration == null)
@@ -46,10 +50,22 @@ public class S3AsyncClientConfiguration extends S3ClientConfiguration{
         return this.crtHttpConfiguration;
     }
 
+    private MultipartConfiguration.Builder multipartBuilder(){
+        if( this.multiPartBuilder == null)
+            this.multiPartBuilder = MultipartConfiguration.builder();
+        return this.multiPartBuilder;
+    }
+
     public S3CrtHttpConfiguration getCrtHttpConfiguration(){
         if ( this.crtHttpConfiguration == null )
             return null;
         return this.crtHttpConfiguration.build();
+    }
+
+    public MultipartConfiguration getMultipartConfiguration(){
+        if( this.multiPartBuilder == null )
+            return null;
+        return this.multiPartBuilder.build();
     }
 
     public SdkAsyncHttpClient.Builder getNettyHttpClientBuilder(){
@@ -68,6 +84,14 @@ public class S3AsyncClientConfiguration extends S3ClientConfiguration{
         return this.maxConcurrency;
     }
 
+    public Double getTargetThroughputInGbps(){
+        return this.targetThroughputInGbps;
+    }
+
+    public Long getMaxNativeMemoryInBytes(){
+        return this.maxNativeMemoryInBytes;
+    }
+
     private void setAsyncConfiguration(Properties props){
 
         if( props.containsKey("max_error_retry")) {
@@ -75,15 +99,36 @@ public class S3AsyncClientConfiguration extends S3ClientConfiguration{
             this.crtRetryConfiguration = S3CrtRetryConfiguration.builder().numRetries(Integer.parseInt(props.getProperty("max_error_retry"))).build();
         }
 
-        if( props.containsKey("max_connections")) {
-            log.trace("AWS client config - max_connections: {}", props.getProperty("max_connections"));
-            this.maxConcurrency = Integer.parseInt(props.getProperty("max_connections"));
+        if( props.containsKey("max_concurrency")) {
+            log.trace("AWS client config - max_concurrency: {}", props.getProperty("max_concurrency"));
+            this.maxConcurrency = Integer.parseInt(props.getProperty("max_concurrency"));
+            this.nettyHttpClientBuilder.maxConcurrency(Integer.parseInt(props.getProperty("max_concurrency")));
+        }
+
+        if( props.containsKey("target_throughput_in_gbps")) {
+            log.trace("AWS client config - target_throughput_in_gbps: {}", props.getProperty("target_throughput_in_gbps"));
+            this.targetThroughputInGbps = Double.parseDouble(props.getProperty("target_throughput_in_gbps"));
+        }
+
+        if( props.containsKey("max_native_memory")) {
+            log.trace("AWS client config - max_native_memory: {}", props.getProperty("max_native_memory"));
+            this.maxNativeMemoryInBytes = Long.parseLong(props.getProperty("max_native_memory"));
+        }
+
+        if( props.containsKey("minimum_part_size")) {
+            log.trace("AWS client config - minimum_part_size: {}", props.getProperty("minimum_part_size"));
+            multipartBuilder().minimumPartSizeInBytes(Long.parseLong(props.getProperty("minimum_part_size")));
+        }
+
+        if( props.containsKey("multipart_threshold")) {
+            log.trace("AWS client config - multipart_threshold: {}", props.getProperty("multipart_threshold"));
+            multipartBuilder().thresholdInBytes(Long.parseLong(props.getProperty("multipart_threshold")));
         }
 
         if( props.containsKey("connection_timeout") ) {
             log.trace("AWS client config - connection_timeout: {}", props.getProperty("connection_timeout"));
             crtHttpConfiguration().connectionTimeout(Duration.ofMillis(Long.parseLong(props.getProperty("connection_timeout"))));
-            nettyHttpClientBuilder.connectionTimeout(Duration.ofMillis(Long.parseLong(props.getProperty("connection_timeout"))));
+            this.nettyHttpClientBuilder.connectionTimeout(Duration.ofMillis(Long.parseLong(props.getProperty("connection_timeout"))));
         }
 
         if( props.containsKey("socket_timeout")) {

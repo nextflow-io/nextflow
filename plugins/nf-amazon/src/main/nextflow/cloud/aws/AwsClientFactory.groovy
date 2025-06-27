@@ -38,6 +38,7 @@ import software.amazon.awssdk.services.ecs.EcsClient
 import software.amazon.awssdk.services.s3.S3AsyncClient
 import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.S3Configuration
+import software.amazon.awssdk.services.s3.S3CrtAsyncClientBuilder
 import software.amazon.awssdk.services.s3.multipart.MultipartConfiguration
 import software.amazon.awssdk.services.sts.StsClient
 import software.amazon.awssdk.services.sts.model.GetCallerIdentityRequest
@@ -237,14 +238,14 @@ class AwsClientFactory {
         return builder.build()
     }
 
-    S3AsyncClient getS3AsyncClient(S3AsyncClientConfiguration s3ClientConfig, Long uploadChunkSize, boolean global = false) {
+    S3AsyncClient getS3AsyncClient(S3AsyncClientConfiguration s3ClientConfig, boolean global = false) {
         final clientOverride = s3ClientConfig.getClientOverrideConfiguration()
         if( requiresNettyClient(clientOverride) ) {
             log.debug("Generating a Netty S3 Async Client")
-            return generateNettyS3Client(s3ClientConfig, uploadChunkSize, global)
+            return generateNettyS3Client(s3ClientConfig, global)
         } else {
             log.debug("Generating a CRT S3 Async Client")
-            return generateCrtS3Client(s3ClientConfig, uploadChunkSize, global)
+            return generateCrtS3Client(s3ClientConfig, global)
         }
     }
 
@@ -259,37 +260,50 @@ class AwsClientFactory {
             !clientOverride.advancedOption(SdkAdvancedClientOption.USER_AGENT_PREFIX).isEmpty()
     }
 
-    private S3AsyncClient generateCrtS3Client(S3AsyncClientConfiguration s3ClientConfig, long uploadChunkSize, boolean global) {
-        final httpConfiguration = s3ClientConfig.getCrtHttpConfiguration()
-        final retryConfiguration = s3ClientConfig.getCrtRetryConfiguration()
+    private S3AsyncClient generateCrtS3Client(S3AsyncClientConfiguration s3ClientConfig, boolean global) {
         def builder = S3AsyncClient.crtBuilder()
             .crossRegionAccessEnabled(global)
             .credentialsProvider(config.s3Config.anonymous ? AnonymousCredentialsProvider.create() : new S3CredentialsProvider(getCredentialsProvider0()))
             .forcePathStyle(config.s3Config.pathStyleAccess)
             .region(getRegionObj(region))
-        if( config.s3Config.endpoint ) {
+        if( config.s3Config.endpoint )
             builder.endpointOverride(URI.create(config.s3Config.endpoint))
-        }
-        if( retryConfiguration != null ) {
+
+        final retryConfiguration = s3ClientConfig.getCrtRetryConfiguration()
+        if( retryConfiguration != null )
             builder.retryConfiguration(retryConfiguration)
-        }
-        if( httpConfiguration != null ) {
+
+        final httpConfiguration = s3ClientConfig.getCrtHttpConfiguration()
+        if( httpConfiguration != null )
             builder.httpConfiguration(httpConfiguration)
-        }
-        if( uploadChunkSize > 0 ) {
-            log.debug("Setting upload ChunkSize $uploadChunkSize")
-            builder.minimumPartSizeInBytes(uploadChunkSize)
-            builder.thresholdInBytes(uploadChunkSize)
-        }
+
+        final multipartConfig = s3ClientConfig.getMultipartConfiguration()
+        if( multipartConfig != null )
+            setMultipartConfiguration(multipartConfig, builder)
+
+        final throughput = s3ClientConfig.getTargetThroughputInGbps()
+        if( throughput != null )
+            builder.targetThroughputInGbps(throughput)
+
+        final nativeMemory = s3ClientConfig.getMaxNativeMemoryInBytes()
+        if (nativeMemory != null )
+            builder.maxNativeMemoryLimitInBytes(nativeMemory)
+
         final maxConcurrency = s3ClientConfig.getMaxConcurrency()
-        if( maxConcurrency != null) {
-            log.debug("Setting max concurrency $maxConcurrency")
+        if( maxConcurrency != null )
             builder.maxConcurrency(maxConcurrency)
-        }
+
         return builder.build()
     }
 
-    private S3AsyncClient generateNettyS3Client(S3AsyncClientConfiguration s3ClientConfig, Long uploadChunkSize, boolean global = false) {
+    private void setMultipartConfiguration(MultipartConfiguration multipartConfig, S3CrtAsyncClientBuilder builder) {
+        if( multipartConfig.minimumPartSizeInBytes() != null )
+            builder.minimumPartSizeInBytes(multipartConfig.minimumPartSizeInBytes())
+        if( multipartConfig.thresholdInBytes() != null )
+            builder.thresholdInBytes(multipartConfig.thresholdInBytes())
+    }
+
+    private S3AsyncClient generateNettyS3Client(S3AsyncClientConfiguration s3ClientConfig, boolean global = false) {
         def builder = S3AsyncClient.builder()
             .crossRegionAccessEnabled(global)
             .credentialsProvider(config.s3Config.anonymous ? AnonymousCredentialsProvider.create() : new S3CredentialsProvider(getCredentialsProvider0()))
@@ -302,9 +316,9 @@ class AwsClientFactory {
         if( config.s3Config.endpoint ) {
             builder.endpointOverride(URI.create(config.s3Config.endpoint))
         }
-        if( uploadChunkSize > 0 ) {
-            log.debug("Setting upload ChunkSize $uploadChunkSize")
-            builder.multipartConfiguration(MultipartConfiguration.builder().thresholdInBytes(uploadChunkSize).minimumPartSizeInBytes(uploadChunkSize).build())
+        final multipartConfig = s3ClientConfig.getMultipartConfiguration()
+        if( multipartConfig != null ) {
+            builder.multipartConfiguration(multipartConfig)
         }
         return builder.build()
     }
