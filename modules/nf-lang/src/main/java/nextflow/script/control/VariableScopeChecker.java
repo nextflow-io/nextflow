@@ -187,7 +187,7 @@ public class VariableScopeChecker {
                 if( isDataflowMethod(mn) && name.equals(mn.getName()) ) {
                     return wrapMethodAsVariable(mn, name);
                 }
-                // built-in variables are methods annotated as @Constant
+                // built-in constants and namespaces are methods annotated as @Constant
                 var an = findAnnotation(mn, Constant.class);
                 if( !an.isPresent() )
                     continue;
