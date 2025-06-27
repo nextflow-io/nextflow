@@ -2,13 +2,13 @@
 
 # Migrating to workflow outputs
 
-The {ref}`workflow output definition <workflow-output-def>` is a new way to define the top-level outputs of a workflow. It is a replacement for the {ref}`publishDir <process-publishdir>` directive. This guide describes how to migrate from `publishDir` to workflow outputs.
+The {ref}`workflow output definition <workflow-output-def>` is a new way to define the top-level outputs of a workflow. It is a replacement for the {ref}`publishDir <process-publishdir>` directive. This tutorial describes how to migrate from `publishDir` to workflow outputs.
 
 ## Overview
 
 In Nextflow DSL1, pipelines had to be defined in a single script, and there was no concept of workflows. Each process published task outputs using the `publishDir` directive, which captured output files with glob patterns and copied them from the work directory to an external location.
 
-Nextflow DSL2 introduced workflows and modules, which made it easier to develop large and complex pipelines. However, DSL2 retained the same process-based publishing syntax, which became unwieldy for several reasons:
+Nextflow DSL2 introduced workflows and modules, which made it easier to develop large and complex pipelines. However, DSL2 retained the same process-based publishing syntax. It became unwieldy for several reasons:
 
 - **Mismatch with reusable modules**: Publishing rules often depend on how a process is used in a pipeline. This makes it impractical to set `publishDir` in a reusable way for processes that are shared across many pipelines. Publishing rules can instead be defined in the configuration, but this approach requires extensive use of {ref}`process selectors <config-process-selectors>`, which are difficult to use for large pipelines.
 
@@ -36,11 +36,11 @@ Workflow outputs will be finalized and brought out of preview in Nextflow 25.10.
 
 ## Example: rnaseq-nf
 
-This section demonstrates how to migrate from `publishDir` to workflow outputs using the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline as an example. The completed migration can be viewed on the [`preview-25-04`](https://github.com/nextflow-io/rnaseq-nf/tree/preview-25-04) branch of rnaseq-nf.
+This section demonstrates how to migrate from `publishDir` to workflow outputs using the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline as an example. To view the completed migration, see the [`preview-25-04`](https://github.com/nextflow-io/rnaseq-nf/tree/preview-25-04) branch of the rnaseq-nf repository.
 
 ### Initial version
 
-The [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline takes a transcriptome file and a collection of FASTQ files as inputs and performs a basic RNAseq analysis:
+The [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline performs a basic RNAseq analysis on a collection of FASTQ paired-end reads:
 
 ```nextflow
 workflow {
@@ -139,7 +139,9 @@ output {
 Each output assigned in the `publish:` section must be declared in the `output` block, and vice versa.
 :::
 
-All files in the published channels are copied into the output directory, which is `results` by default. It can be set using the `outputDir` config setting or the `-output-dir` command line option. The publish mode can be set in the config:
+All files in the published channels are copied into the output directory, which is `results` by default. The output directory can be set using the `outputDir` config setting or the `-output-dir` command-line option.
+
+The publish mode can be set in the config. For example:
 
 ```groovy
 workflow.output.mode = 'copy'
@@ -261,7 +263,7 @@ The closure parameters for the dynamic publish path must match the structure of 
 
 ### Generating an index file
 
-Nextflow can create an *index file* for each workflow output by saving the channel as a CSV, JSON, or YAML file.
+An *index file* is a manifest or *index* of the published files and their metadata for a workflow output. Nextflow can create an index file for each workflow output by saving the channel as a CSV, JSON, or YAML file.
 
 For example, if we enable the index file for `fastqc_logs`:
 
@@ -288,7 +290,7 @@ $ cat results/fastqc.csv
 "liver","results/fastqc/liver"
 ```
 
-An index file is a *manifest* or *index* of the published files and their metadata for a workflow output. It mirrors the structure of the published channel, and it provides a structured view of the output directory. Index files are equivalent to samplesheets, and can be used an inputs to downstream pipelines.
+The index file mirrors the structure of the published channel, and it provides a structured view of the output directory. Index files are equivalent to samplesheets, and can be used an inputs to downstream pipelines.
 
 We could define two index files for `fastqc_logs` and `quant`. However, since these outputs essentially provide different *slices* of data for the same set of samples, we can also combine them into a single output with one index file.
 
