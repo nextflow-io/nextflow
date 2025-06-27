@@ -49,7 +49,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
             return new String[] { "Authorization", "Bearer ${config.token}" }
         }
 
-        return EMPTY_ARRAY
+        return null
     }
 
    /** {@inheritDoc} */
