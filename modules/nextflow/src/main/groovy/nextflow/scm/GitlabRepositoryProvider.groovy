@@ -47,7 +47,7 @@ class GitlabRepositoryProvider extends RepositoryProvider {
         if( config.password ) {
             return new String[] { "PRIVATE-TOKEN", config.password }
         }
-        return EMPTY_ARRAY
+        return null
     }
 
     @Override

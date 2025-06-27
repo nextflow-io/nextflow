@@ -58,8 +58,6 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 @CompileStatic
 abstract class RepositoryProvider {
 
-    static final public String[] EMPTY_ARRAY = new String[0]
-
     @Canonical
     static class TagInfo {
         String name
@@ -248,16 +246,15 @@ abstract class RepositoryProvider {
      *
      * @return
      *      A string array holding the authentication HTTP headers e.g.
-     *      {@code [ "Authorization", "Bearer 1234567890"] } or an empty
-     *      array when the credentials are not available or provided.
-     *      Note: {@code null} is not a valid return value for this method.
+     *      {@code [ "Authorization", "Bearer 1234567890"] } or null when
+     *      the credentials are not available or provided.
      */
     protected String[] getAuth() {
         if( hasCredentials() ) {
             String authString = "${getUser()}:${getPassword()}".bytes.encodeBase64().toString()
             return new String[] { "Authorization", "Basic " + authString }
         }
-        return EMPTY_ARRAY
+        return null
     }
 
     /**
