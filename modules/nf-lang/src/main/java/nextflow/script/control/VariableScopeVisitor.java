@@ -645,6 +645,9 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             else if( "params".equals(name) ) {
                 vsc.addParanoidWarning("The use of `params` outside the entry workflow will not be supported in a future version", node);
             }
+            else if( isStdinStdout(name) ) {
+                // stdin, stdout can be declared without parentheses
+            }
             else {
                 variable = new DynamicVariable(name, false);
             }
@@ -653,6 +656,17 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             checkGlobalVariableInProcess(variable, node);
             node.setAccessedVariable(variable);
         }
+    }
+
+    private boolean isStdinStdout(String name) {
+        var classScope = currentScope().getClassScope();
+        if( classScope != null ) {
+            if( "stdin".equals(name) && classScope.getTypeClass() == ProcessDsl.InputDsl.class )
+                return true;
+            if( "stdout".equals(name) && classScope.getTypeClass() == ProcessDsl.OutputDsl.class )
+                return true;
+        }
+        return false;
     }
 
     private static final List<String> WARN_GLOBALS = List.of(
