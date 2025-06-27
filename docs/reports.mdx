@@ -416,7 +416,7 @@ The following table shows the fields that can be included in the execution repor
         `hostname`
     </DefinitionTerm>
     <DefinitionDescription>
-        :::note{title="Version added 25.05.0-edge"} 
+        :::note{title="New in version 25.05.0-edge"} 
         :::
 
         The host on which the task was executed. Supported only for the Kubernetes executor yet. Activate with `k8s.fetchNodeName = true` in the Nextflow config file.
@@ -425,7 +425,7 @@ The following table shows the fields that can be included in the execution repor
         `cpu_model`
     </DefinitionTerm>
     <DefinitionDescription>
-        :::note{title="Version added 22.07.0-edge"} 
+        :::note{title="New in version 22.07.0-edge"} 
         :::
         The name of the CPU model used to execute the task. This data is read from file `/proc/cpuinfo`.
     </DefinitionDescription>
@@ -469,7 +469,7 @@ The workflow DAG can be rendered in a different format by specifying an output f
 nextflow run main.nf -with-dag flowchart.png
 ```
 
-:::note{title="Version changed 23.10.0"} 
+:::warning{title="Changed in version 23.10.0"} 
 The default output format was changed from DOT to HTML.
 :::
 
@@ -494,7 +494,7 @@ The following file formats are supported:
     <DefinitionDescription>
         HTML file with Mermaid diagram
 
-        :::note{title="Version changed 23.10.0"} 
+        :::warning{title="Changed in version 23.10.0"} 
         The HTML format was changed to render a Mermaid diagram instead of a Cytoscape diagram.
         :::
     </DefinitionDescription>

@@ -243,7 +243,7 @@ See the [mail scope][config-mail] section to learn more the mail server configur
 
 ### AWS SES configuration
 
-:::note{title="Version added 23.06.0-edge"}
+:::note{title="New in version 23.06.0-edge"}
 :::
 
 Nextflow supports [AWS SES](https://aws.amazon.com/ses/) native API as an alternative

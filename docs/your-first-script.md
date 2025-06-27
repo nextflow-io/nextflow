@@ -195,6 +195,6 @@ See [Pipeline parameters][cli-params] for more information about modifying pipel
 
 Your first script is a brief introduction to running pipelines, modifying and resuming pipelines, and pipeline parameters. See [training.nextflow.io](https://training.nextflow.io/) for further Nextflow training modules.
 
-[cache-resume-page]: /nextflow_docs/nextflow_repo/docs/cache-and-resume.md
-[cli-params]: /nextflow_docs/nextflow_repo/docs/cli.md#pipeline-parameters
+[cache-resume-page]: /nextflow_docs/nextflow_repo/docs/cache-and-resume
+[cli-params]: /nextflow_docs/nextflow_repo/docs/cli#pipeline-parameters
 [install-page]: /nextflow_docs/nextflow_repo/docs/install

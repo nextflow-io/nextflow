@@ -14,7 +14,7 @@ Nextflow requires Bash 3.2 (or later) and [Java 17 (or later, up to 24)](http://
 java -version
 ```
 
-:::warning{title="24.11.0-edge"}
+:::warning{title="Depreciated in version 24.11.0-edge"}
 Support for Java versions prior to 17 was dropped.
 :::
 
@@ -153,4 +153,4 @@ Launching from Seqera Platform provides you with:
 Seqera Cloud Basic is free for small teams. Researchers at qualifying academic institutions can apply for free access to Seqera Cloud Pro.
 See the [Seqera Platform documentation](https://docs.seqera.io/platform) for tutorials to get started.
 
-[updating-nextflow]: /nextflow_docs/nextflow_repo/docs/upating-nextflow.md
+[updating-nextflow]: /nextflow_docs/nextflow_repo/docs/upating-nextflow

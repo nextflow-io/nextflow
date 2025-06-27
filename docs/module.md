@@ -32,7 +32,7 @@ Module includes are subject to the following rules:
 
 ## Module directory
 
-:::note{title="Version added 22.10.0"}
+:::note{title="New in version 22.10.0"}
 :::
 
 A module can be defined as a directory with the same name as the module and with a script named `main.nf`. For example:
@@ -93,7 +93,7 @@ workflow {
 ## Module parameters
 
 
-:::note{title="Version depreciated 24.07.0-edge"}
+:::danger{title="Depreciated in version 24.07.0-edge"}
 As a best practice, parameters should be used in the entry workflow and passed to workflows, processes, and functions as explicit inputs.
 :::
 
@@ -237,7 +237,7 @@ baseDir
 
 ## Module binaries
 
-:::note{title="Version added 22.10.0"}
+:::note{title="New in version 22.10.0"}
 :::
 
 Modules can define binary scripts that are locally scoped to the processes defined by the tasks.

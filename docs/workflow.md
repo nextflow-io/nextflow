@@ -371,7 +371,7 @@ workflow {
 
 ## Process and workflow recursion
 
-:::note{title="Version added 21.11.0-edge"}
+:::note{title="New in version 21.11.0-edge"}
 :::
 
 :::note
@@ -417,14 +417,14 @@ Workflows can also be invoked recursively:
 
 ## Workflow outputs
 
-:::note{title="Version added 24.04.0"}
+:::note{title="New in version 24.04.0"}
 :::
 
-:::note{title="Version changed 24.10.0"}
+:::warning{title="Changed in version 24.10.0"}
 A second preview version was introduced. See the [migration notes][workflow-outputs-second-preview] for details.
 :::
 
-:::note{title="Version changed 25.04.0-edge"}
+:::warning{title="Changed in version 25.04.0-edge"}
 A third preview version was introduced. See the [migration notes][workflow-outputs-third-preview] for details.
 :::
 

@@ -200,7 +200,7 @@ Template scripts are generally discouraged due to the caveats described above. T
 
 ### Shell
 
-:::note{title="Version depreciated 24.11.0-edge"}
+:::danger{title="Depreciated in version 24.11.0-edge"}
 Use the `script` section instead. Consider using the [strict syntax][strict-syntax-page], which provides error checking to help distinguish between Nextflow variables and Bash variables in the process script.
 :::
 
@@ -264,7 +264,7 @@ A native process is very similar to a [function][syntax-function]. However, it p
 
 ## Stub
 
-:::note{title="Version added 20.11.0-edge"}
+:::note{title="New in version 20.11.0-edge"}
 :::
 
 You can define a command *stub*, which replaces the actual process command when the `-stub-run` or `-stub` command-line option is enabled:
@@ -536,7 +536,7 @@ workflow {
 Rewriting input file names according to a named pattern is an extra feature and not at all required. The normal file input syntax introduced in the [Input files (`path`)][process-input-path] section is valid for collections of multiple files as well. To handle multiple input files while preserving the original file names, use a variable identifier or the `*` wildcard.
 :::
 
-:::note{title="Version added 23.09.0-edge"}
+:::note{title="New in version 23.09.0-edge"}
 :::
 
 The `arity` option can be used to enforce the expected number of files, either as a number or a range.
@@ -943,7 +943,7 @@ Although the input files matching a glob output declaration are not included in 
 
 Read more about glob syntax at the following link [What is a glob?][glob]
 
-:::note{title="Version added 23.09.0-edge"}
+:::note{title="New in version 23.09.0-edge"}
 :::
 
 The `arity` option can be used to enforce the expected number of files, either as a number or a range.
@@ -1009,7 +1009,7 @@ The `stdout` qualifier allows you to output the `stdout` of the executed process
 
 ### Eval output (`eval`)
 
-:::note{title="Version added 24.02.0-edge"}
+:::note{title="New in version 24.02.0-edge"}
 :::
 
 The `eval` qualifier allows you to capture the standard output of an arbitrary command evaluated the task shell interpreter context:
@@ -1288,7 +1288,7 @@ In this example, each task requests 8 GB of memory, plus the size of the input f
 
 ### Dynamic task resources with previous execution trace
 
-:::note{title="Version added 24.10.0"}
+:::note{title="New in version 24.10.0"}
 :::
 
 Task resource requests can be updated relative to the [trace file][trace-report] metrics of the previous task attempt. The metrics can be accessed through the `task.previousTrace` variable. For example:

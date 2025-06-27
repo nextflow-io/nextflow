@@ -1,4 +1,4 @@
-(git-page)=
+import DefinitionList, { DefinitionTerm, DefinitionDescription } from '@site/src/components/DefinitionList';
 
 # Git
 
@@ -19,33 +19,59 @@ providers {
 
 In the above template replace `<provider-name>` with one of the "default" servers (i.e. `bitbucket`, `github` or `gitlab`) or a custom identifier representing a private SCM server installation.
 
-:::{versionadded} 20.10.0
-A custom location for the SCM file can be specified using the `NXF_SCM_FILE` environment variable.
-:::
-
 The following configuration properties are supported for each provider configuration:
 
-`providers.<provider>.user`
-: User name required to access private repositories on the SCM server.
+<DefinitionList>
+    <DefinitionTerm>
+        `providers.<provider>.user`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        User name required to access private repositories on the SCM server.
+    </DefinitionDescription>
 
-`providers.<provider>.password`
-: User password required to access private repositories on the SCM server.
+    <DefinitionTerm>
+        `providers.<provider>.password`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        User password required to access private repositories on the SCM server.
+    </DefinitionDescription>
 
-`providers.<provider>.token`
-: *Required only for private Gitlab servers*
-: Private API access token.
+    <DefinitionTerm>
+        `providers.<provider>.token`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        *Required only for private Gitlab servers.*
+        
+        Private API access token.
+    </DefinitionDescription>
 
-`providers.<provider>.platform`
-: *Required only for private SCM servers*
-: Git provider name, either: `github`, `gitlab` or `bitbucket`.
+    <DefinitionTerm>
+        `providers.<provider>.platform`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        *Required only for private SCM servers.*
+        
+        Git provider name, either: `github`, `gitlab`, or `bitbucket`.
+    </DefinitionDescription>
 
-`providers.<provider>.server`
-: *Required only for private SCM servers*
-: SCM server name including the protocol prefix e.g. `https://github.com`.
+    <DefinitionTerm>
+        `providers.<provider>.server`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        *Required only for private SCM servers.*
 
-`providers.<provider>.endpoint`
-: *Required only for private SCM servers*
-: SCM API `endpoint` URL e.g. `https://api.github.com` (default: the same as `providers.<provider>.server`).
+        SCM server name including the protocol prefix, e.g., `https://github.com`.
+    </DefinitionDescription>
+
+    <DefinitionTerm>
+        `providers.<provider>.endpoint`
+    </DefinitionTerm>
+    <DefinitionDescription>
+        *Required only for private SCM servers.*
+
+        SCM API `endpoint` URL, e.g., `https://api.github.com` (default: the same as `providers.<provider>.server`).
+    </DefinitionDescription>
+</DefinitionList>
 
 ## Git providers
 
@@ -62,7 +88,7 @@ providers {
 }
 ```
 
-:::{note}
+:::note
 App passwords are substitute passwords for a user account which you can use for scripts and integrating tools in order to avoid putting your real password into configuration files. Learn more at [this link](https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/).
 :::
 
@@ -70,7 +96,7 @@ App passwords are substitute passwords for a user account which you can use for 
 
 [BitBucket Server](https://confluence.atlassian.com/bitbucketserver) is a self-hosted Git repository and management platform.
 
-:::{note}
+:::note
 BitBucket Server uses a different API from the [BitBucket](https://bitbucket.org/) Cloud service. Make sure to use the right configuration whether you are using the cloud service or a self-hosted installation.
 :::
 
@@ -103,7 +129,7 @@ providers {
 
 GitHub requires the use of a personal access token (PAT) in place of a password when accessing APIs. Learn more about PAT and how to create it at [this link](https://docs.github.com/en/github/authenticating-to-github/keeping-your-account-and-data-secure/creating-a-personal-access-token).
 
-:::{versionadded} 23.01.0-edge
+:::note{title="New in version 23.01.0-edge"}
 Nextflow automatically uses the `GITHUB_TOKEN` environment variable to authenticate access to the GitHub repository if no credentials are provided via the `scm` file. This is useful especially when accessing pipeline code from a GitHub Action. Read more about the token authentication in the [GitHub documentation](https://docs.github.com/en/actions/security-guides/automatic-token-authentication).
 :::
 
@@ -121,7 +147,7 @@ providers {
 }
 ```
 
-:::{tip}
+:::tip
 The GitLab *token* string can be used as the `password` value in the above setting. When doing that the `token` field can be omitted.
 :::
 
@@ -157,16 +183,11 @@ providers {
 }
 ```
 
-:::{tip}
+:::tip
 The Personal access token can be generated in the repository `Clone Repository` dialog.
 :::
 
-(aws-codecommit)=
-
 ### AWS CodeCommit
-
-:::{versionadded} 22.06.0-edge
-:::
 
 Nextflow supports [AWS CodeCommit](https://aws.amazon.com/codecommit/) as a Git provider to access and to share pipelines code.
 
@@ -184,7 +205,7 @@ providers {
 
 In the above snippet replace `<AWS ACCESS KEY>` and `<AWS SECRET KEY>` with your AWS credentials, and `my_aws_repo` with a name of your choice.
 
-:::{tip}
+:::tip
 The `user` and `password` settings are optional. If omitted, the [AWS default credentials provider chain](https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html) is used.
 :::
 
@@ -196,7 +217,7 @@ nextflow run https://git-codecommit.eu-west-1.amazonaws.com/v1/repos/my-repo
 
 In the above example replace `my-repo` with your own repository. Note also that AWS CodeCommit has different URLs depending the region in which you are working.
 
-:::{note}
+:::note
 The support for protocols other than HTTPS is not available at this time.
 :::
 
@@ -232,10 +253,10 @@ Or, alternatively, using the Git clone URL:
 nextflow run http://gitlab.acme.org/acme/hello.git
 ```
 
-:::{note}
+:::note
 You must also specify the server API endpoint URL if it differs from the server base URL. For example, for GitHub Enterprise V3, add `endpoint = 'https://git.your-domain.com/api/v3'`.
 :::
 
-:::{warning}
+:::warning
 When accessing a private SCM installation over `https` from a server that uses a custom SSL certificate, you may need to import the certificate into your local Java keystore. See [Import the Certificate as a Trusted Certificate](https://docs.oracle.com/javase/tutorial/security/toolsign/rstep2.html) for more information.
 :::

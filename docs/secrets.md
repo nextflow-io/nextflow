@@ -1,6 +1,6 @@
 # Secrets
 
-:::note{title="Version added 22.10.0"}
+:::note{title="New in version 22.10.0"}
 Previewed in `21.09.0-edge`.
 :::
 
@@ -91,7 +91,7 @@ This feature is only available when using the local or grid executors (Slurm, Gr
 
 ## Pipeline script
 
-:::note{title="Version added 24.03.0-edge"}
+:::note{title="New in version 24.03.0-edge"}
 :::
 
 Secrets can be accessed in the pipeline script using the `secrets` variable. For example:

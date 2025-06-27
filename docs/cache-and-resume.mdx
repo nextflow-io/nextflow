@@ -33,7 +33,7 @@ The task hash is computed from the following metadata:
 Nextflow also includes an incrementing component in the hash generation process, which allows it to iterate through multiple hash values until it finds one that does not match an existing execution directory. This mechanism typically usually aligns with task retries (i.e., task attempts), however this is not guaranteed.
 :::
 
-:::note{title="Version changed 23.09.2-edge"}  
+:::warning{title="Changed in version 23.09.2-edge"}  
 The [`ext`][process-ext] directive was added to the task hash.
 :::
 
@@ -51,7 +51,7 @@ The default cache store uses the `.nextflow/cache` directory, relative to the la
 
 Due to the limitations of LevelDB, the database for a given session ID can only be accessed by one reader/writer at a time. This means, for example, that you cannot use `nextflow log` to query the task metadata for a pipeline run while it is still running.
 
-:::note{title="Version added 23.07.0-edge"}  
+:::note{title="New in version 23.07.0-edge"}  
 :::
 
 The cloud cache is an alternative cache store that uses cloud storage instead of the local cache directory. You can use it by setting the `NXF_CLOUDCACHE_PATH` environment variable to the desired cache path (e.g. `s3://my-bucket/cache`) and providing the necessary credentials.
@@ -200,7 +200,7 @@ One way to debug a resumed run is to compare the task hashes of each run using t
 
 While some manual effort is required, the final diff can often reveal the exact change that caused a task to be re-executed.
 
-:::note{title="Version added 23.10.0"}
+:::note{title="New in version 23.10.0"}
 :::
 
 When using `-dump-hashes json`, the task hashes can be more easily extracted into a diff. Here is an example Bash script to perform two runs and produce a diff:
@@ -225,7 +225,7 @@ diff run_1.tasks.log run_2.tasks.log
 
 You can then view the `diff` output or use a graphical diff viewer to compare `run_1.tasks.log` and `run_2.tasks.log`.
 
-:::note{title="Version added 25.04.0"}
+:::note{title="New in version 25.04.0"}
 Nextflow now has a built-in way to compare two task runs. See the [Data lineage][data-lineage-page] guide for details.
 :::
 
