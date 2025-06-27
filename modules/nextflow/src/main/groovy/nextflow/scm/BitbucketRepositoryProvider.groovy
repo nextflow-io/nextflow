@@ -41,15 +41,20 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
 
     @Override
     protected String[] getAuth() {
-        if (config.user && config.password) {
-            return super.getAuth()
-        }
-
         if (config.token) {
             return new String[] { "Authorization", "Bearer ${config.token}" }
         }
 
-        return null
+        return super.getAuth()
+    }
+
+    @Override
+    boolean hasCredentials() {
+        if (config.token) {
+            return true
+        }
+
+        return super.hasCredentials()
     }
 
    /** {@inheritDoc} */
