@@ -151,7 +151,7 @@ class PublishDir {
 
     void setPath( def value ) {
         final resolved = value instanceof Closure ? value.call() : value
-        if( resolved instanceof String || resolved instanceof GString )
+        if( resolved instanceof CharSequence )
             nullPathWarn = checkNull(resolved.toString())
         this.path = FileHelper.toCanonicalPath(resolved)
     }
@@ -169,7 +169,7 @@ class PublishDir {
                 ? tags.call()
                 : tags
 
-        if( result instanceof Map<String,String> )
+        if( result instanceof Map )
             return result
 
         throw new IllegalArgumentException("Invalid publishDir tags attribute: $tags")

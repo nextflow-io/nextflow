@@ -1301,7 +1301,7 @@ class Session implements ISession {
     def fetchContainers() {
 
         def result = [:]
-        if( config.process instanceof Map<String,?> ) {
+        if( config.process instanceof Map ) {
 
             /*
              * look for `container` definition at process level

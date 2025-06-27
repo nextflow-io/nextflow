@@ -25,12 +25,12 @@ dependencies {
     api(project(':nf-commons'))
     api(project(':nf-httpfs'))
     api(project(':nf-lang'))
-    api "org.apache.groovy:groovy:4.0.27"
-    api "org.apache.groovy:groovy-nio:4.0.27"
-    api "org.apache.groovy:groovy-xml:4.0.27"
-    api "org.apache.groovy:groovy-json:4.0.27"
-    api "org.apache.groovy:groovy-templates:4.0.27"
-    api "org.apache.groovy:groovy-yaml:4.0.27"
+    api "org.apache.groovy:groovy:5.0.0-beta-1"
+    api "org.apache.groovy:groovy-nio:5.0.0-beta-1"
+    api "org.apache.groovy:groovy-xml:5.0.0-beta-1"
+    api "org.apache.groovy:groovy-json:5.0.0-beta-1"
+    api "org.apache.groovy:groovy-templates:5.0.0-beta-1"
+    api "org.apache.groovy:groovy-yaml:5.0.0-beta-1"
     api "org.slf4j:jcl-over-slf4j:2.0.16"
     api "org.slf4j:jul-to-slf4j:2.0.16"
     api "org.slf4j:log4j-over-slf4j:2.0.16"
@@ -57,7 +57,7 @@ dependencies {
     testImplementation 'org.subethamail:subethasmtp:3.1.7'
     testImplementation (project(':nf-lineage'))
     // test configuration
-    testFixturesApi ("org.apache.groovy:groovy-test:4.0.27") { exclude group: 'org.apache.groovy' }
+    testFixturesApi ("org.apache.groovy:groovy-test:5.0.0-beta-1") { exclude group: 'org.apache.groovy' }
     testFixturesApi ("org.objenesis:objenesis:3.4")
     testFixturesApi ("net.bytebuddy:byte-buddy:1.14.17")
     testFixturesApi ("org.spockframework:spock-core:2.3-groovy-4.0") { exclude group: 'org.apache.groovy' }

@@ -220,6 +220,7 @@ class CmdLog extends CmdBase implements CacheBase {
     /**
      * Wrap a {@link TraceRecord} instance as a {@link Map} or a {@link Binding} object
      */
+    @Slf4j
     private static class TraceAdaptor extends Binding {
 
         static private int MAX_LINES = 100
@@ -299,7 +300,7 @@ class CmdLog extends CmdBase implements CacheBase {
                 def result = new StringBuilder()
                 path.withReader { reader ->
                     String line
-                    while( (line=reader.readLine()) && c++<MAX_LINES ) {
+                    while( (line=reader.readLine()) && c++ < MAX_LINES ) {
                         result << line << '\n'
                     }
                 }

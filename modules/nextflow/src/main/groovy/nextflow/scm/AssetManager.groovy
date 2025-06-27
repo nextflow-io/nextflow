@@ -1006,7 +1006,7 @@ class AssetManager {
             return
 
         List<String> filter = []
-        if( modules instanceof List<String> ) {
+        if( modules instanceof List ) {
             filter.addAll(modules)
         }
         else if( modules instanceof String ) {

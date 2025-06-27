@@ -76,8 +76,8 @@ class DumpOp {
     DataflowWriteChannel apply() {
 
         if( !isEnabled() ) {
-            if( source instanceof DataflowWriteChannel )
-                return (DataflowWriteChannel)source
+            if( source instanceof DataflowWriteChannel dwc )
+                return dwc
             throw new IllegalArgumentException("Illegal dump operator source channel")
         }
 
