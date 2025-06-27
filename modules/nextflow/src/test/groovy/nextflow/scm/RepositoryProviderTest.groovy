@@ -103,7 +103,7 @@ class RepositoryProviderTest extends Specification {
         1 * provider.hasCredentials()
         0 * conn.setRequestProperty('Authorization', _)
         and:
-        headers == [] as String[]
+        !headers
 
         when:
         headers = provider.getAuth()
