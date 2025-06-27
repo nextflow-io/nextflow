@@ -133,18 +133,6 @@ class FilePorterTest extends Specification {
 
 
 
-    static class ErrorStage extends FilePorter.FileTransfer {
-
-        ErrorStage(Path path, Path stagePath, int maxRetries) {
-            super(path, stagePath, maxRetries, new Semaphore(100))
-        }
-
-        @Override
-        void run() throws Exception {
-            throw new ProcessStageException('Cannot stage file')
-        }
-    }
-
     def 'should submit actions' () {
 
         given:
@@ -283,11 +271,14 @@ class FilePorterTest extends Specification {
     }
     def 'should stage a file' () {
         given:
+        def sess = Mock(Session) {
+            getConfig() >> [:]
+        }
         def folder = Files.createTempDirectory('test')
         def local1 = folder.resolve('hola.text')
         def foreign1 = TestHelper.createInMemTempFile('hola.txt', 'hola mundo!')
         and:
-        def porter = new FilePorter.FileTransfer(foreign1, local1, 0, Mock(Semaphore))
+        def porter = new FilePorter.FileTransfer(foreign1, local1, 0, Mock(Semaphore), sess)
 
         when:
         porter.stageForeignFile(foreign1, local1)
@@ -309,13 +300,16 @@ class FilePorterTest extends Specification {
 
     def 'should check valid files' () {
         given:
+        def sess = Mock(Session) {
+            getConfig() >> [:]
+        }
         def CONTENT = 'hola mundo!'
         def foreign1 = TestHelper.createInMemTempFile('hola.txt', CONTENT)
         and:
         def folder = Files.createTempDirectory('test')
         def local1 = folder.resolve('hola.text'); local1.text = CONTENT
         and:
-        def porter = new FilePorter.FileTransfer(foreign1, local1, 0, Mock(Semaphore))
+        def porter = new FilePorter.FileTransfer(foreign1, local1, 0, Mock(Semaphore), sess)
 
         when:
         def equals = porter.checkPathIntegrity(foreign1, local1)
