@@ -41,7 +41,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
 
     @Override
     protected String[] getAuth() {
-        if (config.password) {
+        if (config.user && config.password) {
             return super.getAuth()
         }
 
