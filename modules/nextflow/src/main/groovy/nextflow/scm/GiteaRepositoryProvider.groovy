@@ -49,9 +49,8 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
             // https://docs.gitea.io/en-us/api-usage/#authentication
             return new String[] { "Authorization", "token $config.token" as String }
         }
-        else {
-            return EMPTY_ARRAY
-        }
+        else
+            return null
     }
 
     @Override
