@@ -2,7 +2,7 @@
 
 # Migrating to workflow outputs
 
-The {ref}`workflow output definition <workflow-output-def>` is a new way to define the top-level outputs of a workflow. It is a replacement for the {ref}`publishDir <process-publishdir>` directive. This tutorial describes how to migrate from `publishDir` to workflow outputs.
+The {ref}`workflow output definition <workflow-output-def>` is a new way to define the top-level outputs of a workflow. It is a replacement for the {ref}`publishDir <process-publishdir>` directive. This tutorial demonstrates how to migrate from `publishDir` to workflow outputs using the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline as an example.
 
 ## Overview
 
