@@ -1554,7 +1554,7 @@ The following settings are available:
 `wave.retryPolicy.maxAttempts`
 : :::{versionadded} 22.06.0-edge
   :::
-: The max number of attempts a failing HTTP request is retried (default: `10`).
+: The max number of attempts a failing HTTP request is retried (default: `5`).
 
 `wave.retryPolicy.maxDelay`
 : :::{versionadded} 22.06.0-edge
