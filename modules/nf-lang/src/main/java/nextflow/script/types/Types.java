@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 import groovy.lang.GString;
 import groovy.lang.Tuple2;
 import nextflow.script.ast.ASTNodeMarker;
+import nextflow.script.dsl.Namespace;
 import nextflow.script.types.shim.ShimType;
 import org.codehaus.groovy.GroovyBugError;
 import org.codehaus.groovy.ast.ClassHelper;
@@ -88,6 +89,17 @@ public class Types {
         if( target == Number.class && source == Integer.class )
             return true;
         return target.equals(source);
+    }
+
+    /**
+     * Given a method node corresponding to a built-in constant, determine
+     * whether the constant is a namespace.
+     *
+     * @param mn
+     */
+    public static boolean isNamespace(MethodNode mn) {
+        var cn = mn.getReturnType();
+        return hasTypeClass(cn) && Namespace.class.isAssignableFrom(cn.getTypeClass());
     }
 
     /**

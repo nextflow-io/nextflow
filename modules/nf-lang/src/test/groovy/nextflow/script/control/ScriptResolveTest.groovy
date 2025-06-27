@@ -96,16 +96,48 @@ class ScriptResolveTest extends Specification {
             process hello {
                 cpu 8
 
+                input:
+                stdout
+
+                output:
+                stdin
+
                 script:
                 ""
             }
             '''
         )
         then:
-        errors.size() == 1
+        errors.size() == 3
         errors[0].getStartLine() == 2
         errors[0].getStartColumn() == 5
         errors[0].getOriginalMessage() == 'Unrecognized process directive `cpu`'
+        errors[1].getStartLine() == 5
+        errors[1].getStartColumn() == 5
+        errors[1].getOriginalMessage() == 'Unrecognized process input qualifier `stdout`'
+        errors[2].getStartLine() == 8
+        errors[2].getStartColumn() == 5
+        errors[2].getOriginalMessage() == 'Unrecognized process output qualifier `stdin`'
+    }
+
+    def 'should allow stdin and stdout to be used without parens' () {
+        when:
+        def errors = check(
+            '''\
+            process hello {
+                input:
+                tuple val(id), stdin
+
+                output:
+                tuple val(id), stdout
+
+                script:
+                ""
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
     }
 
     def 'should report an error for an undefined variable' () {
