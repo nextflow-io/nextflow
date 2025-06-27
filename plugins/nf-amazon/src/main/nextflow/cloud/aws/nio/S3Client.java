@@ -491,8 +491,8 @@ public class S3Client {
 			log.debug("S3 download file: s3://{}/{} cancelled", source.getBucket(), source.getKey());
 			Thread.currentThread().interrupt();
 		} catch (ExecutionException e) {
-			log.debug("S3 download file: s3://{}/{} exception thrown", source.getBucket(), source.getKey());
-			throw new IOException(e.getCause());
+			String msg = String.format("Exception thrown downloading S3 object s3://{}/{}", source.getBucket(), source.getKey());
+			throw new IOException(msg, e.getCause());
 		}
 
 	}
@@ -511,8 +511,8 @@ public class S3Client {
 			log.debug("S3 download directory: s3://{}/{} interrupted", source.getBucket(), source.getKey());
 			Thread.currentThread().interrupt();
 		} catch (ExecutionException e) {
-			log.debug("S3 deownload directory: s3://{}/{} exception thrown", source.getBucket(), source.getKey());
-			throw new IOException(e.getCause());
+			String msg = String.format("Exception thrown downloading S3 object s3://{}/{}", source.getBucket(), source.getKey());
+			throw new IOException(msg, e.getCause());
 		}
 	}
 
@@ -527,8 +527,8 @@ public class S3Client {
             log.debug("S3 upload file: s3://{}/{} interrupted", target.getBucket(), target.getKey());
             Thread.currentThread().interrupt();
         } catch (ExecutionException e) {
-            log.debug("S3 upload file: s3://{}/{} exception thrown", target.getBucket(), target.getKey());
-            throw new IOException(e.getCause());
+            String msg = String.format("Exception thrown uploading S3 object s3://{}/{}", target.getBucket(), target.getKey());
+            throw new IOException(msg, e.getCause());
         }
 	}
 
@@ -569,8 +569,8 @@ public class S3Client {
 			log.debug("S3 upload directory: s3://{}/{} interrupted", target.getBucket(), target.getKey());
 			Thread.currentThread().interrupt();
 		} catch (ExecutionException e) {
-			log.debug("S3 upload directory: s3://{}/{} exception thrown", target.getBucket(), target.getKey());
-			throw new IOException(e.getCause());
+			String msg = String.format("Exception thrown uploading S3 object s3://{}/{}", target.getBucket(), target.getKey());
+			throw new IOException(msg, e.getCause());
 		}
 	}
 
@@ -607,8 +607,8 @@ public class S3Client {
             log.debug("S3 copy s3://{}/{} to s3://{}/{} interrupted", req.sourceBucket(), req.sourceKey(), req.destinationBucket(), req.destinationKey());
 			Thread.currentThread().interrupt();
         } catch (ExecutionException e) {
-            log.debug("S3 copy s3://{}/{} to s3://{}/{} exception thrown", req.sourceBucket(), req.sourceKey(), req.destinationBucket(), req.destinationKey());
-            throw new IOException(e.getCause());
+            String msg = String.format("Exception thrown copying S3 object form s3://{}/{} to s3://{}/{}", req.sourceBucket(), req.sourceKey(), req.destinationBucket(), req.destinationKey());
+            throw new IOException(msg, e.getCause());
         }
 
 	}

@@ -51,6 +51,12 @@ public class AwsClientConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        The maximum number of concurrency in S3 async clients.
+    """)
+    public int maxConcurrency;
+
+    @ConfigOption
+    @Description("""
         The maximum number of allowed open HTTP connections.
     """)
     public int maxConnections;
@@ -60,6 +66,18 @@ public class AwsClientConfig implements ConfigScope {
         The maximum number of retry attempts for failed retryable requests.
     """)
     public int maxErrorRetry;
+
+    @ConfigOption
+    @Description("""
+        The maximum native memory used by the S3 asynchronous client for S3 transfers.
+    """)
+    public MemoryUnit maxNativeMemory;
+
+    @ConfigOption
+    @Description("""
+        The minimum size of a single part in a multipart upload (default: `8 MB`).
+    """)
+    public MemoryUnit minimumPartSize;
 
     @ConfigOption
     @Description("""
@@ -144,6 +162,24 @@ public class AwsClientConfig implements ConfigScope {
         The AWS KMS key Id to be used to encrypt files stored in the target S3 bucket.
     """)
     public String storageKmsKeyId;
+
+    @ConfigOption
+    @Description("""
+        The S3 Async client target network throughput in Gbps. This value is used to automatically set `maxConcurrency` and `maxNativeMemory` (default: `10`).
+    """)
+    public Double targetThroughputInGbps;
+
+    @ConfigOption
+    @Description("""
+        The S3 Async client threshold to create multipart S3 transfers. Default is the same as `minimumPartSize`.
+    """)
+    public MemoryUnit multipartThreshold;
+
+    @ConfigOption
+    @Description("""
+        The number of threads used by the S3 transfer manager (default: `10`).
+    """)
+    public int tmThreads;
 
     @ConfigOption
     @Description("""
