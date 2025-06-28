@@ -17,25 +17,32 @@ A script can define up to one *entry workflow*, which does not have a name and s
 ```nextflow
 workflow {
     channel.of('Bonjour', 'Ciao', 'Hello', 'Hola')
-        | map { v -> "$v world!" }
-        | view
+        .map { v -> "$v world!" }
+        .view()
 }
 ```
 
 ### Parameters
 
-Parameters can be defined in the script with a default value that can be overridden from the CLI, params file, or config file. Parameters should only be used by the entry workflow:
+Parameters can be declared by assigning a `params` property to a default value:
 
 ```nextflow
-params.data = '/some/data/file'
+params.input = '/some/data/file'
+params.save_intermeds = false
 
 workflow {
-    if( params.data )
-        bar(params.data)
+    if( params.input )
+        analyze(params.input, params.save_intermeds)
     else
-        bar(foo())
+        analyze(fake_input(), params.save_intermeds)
 }
 ```
+
+:::{note}
+As a best practice, params should be used only in the entry workflow and passed to workflows and processes as explicit inputs.
+:::
+
+The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in {ref}`cli-params`.
 
 ## Named workflows
 
@@ -43,8 +50,8 @@ A *named workflow* is a workflow that can be called by other workflows:
 
 ```nextflow
 workflow my_workflow {
-    foo()
-    bar( foo.out.collect() )
+    hello()
+    bye( hello.out.collect() )
 }
 
 workflow {
@@ -52,7 +59,7 @@ workflow {
 }
 ```
 
-The above example defines a workflow named `my_workflow` which is called from another workflow as `my_workflow()`. Both `foo` and `bar` could be any other process or workflow.
+The above example defines a workflow named `my_workflow` which is called by the entry workflow. Both `hello` and `bye` could be any other process or workflow.
 
 ### Takes and emits
 
@@ -65,8 +72,8 @@ workflow my_workflow {
     data2
 
     main:
-    foo(data1, data2)
-    bar(foo.out)
+    hello(data1, data2)
+    bye(hello.out)
 }
 ```
 
@@ -83,11 +90,11 @@ The `emit:` section is used to declare the outputs of a named workflow:
 ```nextflow
 workflow my_workflow {
     main:
-    foo(data)
-    bar(foo.out)
+    hello(data)
+    bye(hello.out)
 
     emit:
-    bar.out
+    bye.out
 }
 ```
 
@@ -98,11 +105,11 @@ If an output is assigned to a name, the name can be used to reference the output
 ```nextflow
 workflow my_workflow {
     main:
-    foo(data)
-    bar(foo.out)
+    hello(data)
+    bye(hello.out)
 
     emit:
-    my_data = bar.out
+    my_data = bye.out
 }
 ```
 
@@ -119,41 +126,41 @@ Every output must be assigned to a name when multiple outputs are declared.
 Processes and workflows are called like functions, passing their inputs as arguments:
 
 ```nextflow
-process foo {
+process hello {
     output:
-    path 'foo.txt', emit: txt
+    path 'hello.txt', emit: txt
 
     script:
     """
-    your_command > foo.txt
+    your_command > hello.txt
     """
 }
 
-process bar {
+process bye {
     input:
-    path x
+    path 'hello.txt'
 
     output:
-    path 'bar.txt', emit: txt
+    path 'bye.txt', emit: txt
 
     script:
     """
-    another_command $x > bar.txt
+    another_command hello.txt > bye.txt
     """
 }
 
-workflow flow {
+workflow hello_bye {
     take:
     data
 
     main:
-    foo()
-    bar(data)
+    hello()
+    bye(data)
 }
 
 workflow {
     data = channel.fromPath('/some/path/*.txt')
-    flow(data)
+    hello_bye(data)
 }
 ```
 
@@ -166,64 +173,64 @@ Processes and workflows have a few extra rules for how they can be called:
 The "return value" of a process or workflow call is the process outputs or workflow emits, respectively. The return value can be assigned to a variable or passed into another call:
 
 ```nextflow
-workflow flow {
+workflow hello_bye {
     take:
     data
 
     main:
-    bar_out = bar(foo(data))
+    bye_out = bye(hello(data))
 
     emit:
-    bar_out
+    bye_out
 }
 
 workflow {
     data = channel.fromPath('/some/path/*.txt')
-    flow_out = flow(data)
+    bye_out = hello_bye(data)
 }
 ```
 
 Named outputs can be accessed as properties of the return value:
 
 ```nextflow
-workflow flow {
+workflow hello_bye {
     take:
     data
 
     main:
-    foo_out = foo(data)
-    bar_out = bar(foo_out.txt)
+    hello_out = hello(data)
+    bye_out = bye(hello_out.txt)
 
     emit:
-    bar = bar_out.txt
+    bye = bye_out.txt
 }
 
 workflow {
     data = channel.fromPath('/some/path/*.txt')
-    flow_out = flow(data)
-    bar_out = flow_out.bar
+    flow_out = hello_bye(data)
+    bye_out = flow_out.bye
 }
 ```
 
 As a convenience, process and workflow outputs can also be accessed without first assigning to a variable, by using the `.out` property of the process or workflow name:
 
 ```nextflow
-workflow flow {
+workflow hello_bye {
     take:
     data
 
     main:
-    foo(data)
-    bar(foo.out)
+    hello(data)
+    bye(hello.out)
 
     emit:
-    bar = bar.out
+    bye = bye.out
 }
 
 workflow {
     data = channel.fromPath('/some/path/*.txt')
-    flow(data)
-    flow.out.bar.view()
+    hello_bye(data)
+    hello_bye.out.bye.view()
 }
 ```
 
@@ -232,7 +239,7 @@ Process named outputs are defined using the `emit` option on a process output. S
 :::
 
 :::{note}
-Process and workflow outputs can also be accessed by index (e.g., `foo.out[0]`, `foo.out[1]`, etc.). Multiple outputs should instead be accessed by name.
+Process and workflow outputs can also be accessed by index (e.g., `hello.out[0]`, `hello.out[1]`, etc.). As a best practice, multiple outputs should be accessed by name.
 :::
 
 Workflows can be composed in the same way:
@@ -243,11 +250,11 @@ workflow flow1 {
     data
 
     main:
-    foo(data)
-    bar(foo.out)
+    tick(data)
+    tack(tick.out)
 
     emit:
-    bar.out
+    tack.out
 }
 
 workflow flow2 {
@@ -255,11 +262,11 @@ workflow flow2 {
     data
 
     main:
-    foo(data)
-    baz(foo.out)
+    tick(data)
+    tock(tick.out)
 
     emit:
-    baz.out
+    tock.out
 }
 
 workflow {
@@ -270,7 +277,7 @@ workflow {
 ```
 
 :::{note}
-The same process can be called in different workflows without using an alias, like `foo` in the above example, which is used in both `flow1` and `flow2`. The workflow call stack determines the *fully qualified process name*, which is used to distinguish the different process calls, i.e. `flow1:foo` and `flow2:foo` in the above example.
+The same process can be called in different workflows without using an alias, like `tick` in the above example, which is used in both `flow1` and `flow2`. The workflow call stack determines the *fully qualified process name*, which is used to distinguish the different process calls, i.e. `flow1:tick` and `flow2:tick` in the above example.
 :::
 
 :::{tip}
@@ -286,7 +293,7 @@ The following operators have a special meaning when used in a workflow with proc
 The `|` *pipe* operator can be used to chain processes, operators, and workflows:
 
 ```nextflow
-process foo {
+process greet {
     input:
     val data
 
@@ -299,20 +306,20 @@ process foo {
 
 workflow {
     channel.of('Hello','Hola','Ciao')
-        | foo
+        | greet
         | map { v -> v.toUpperCase() }
         | view
 }
 ```
 
-The above snippet defines a process named `foo` and invokes it with the input channel. The result is then piped to the {ref}`operator-map` operator, which converts each string to uppercase, and finally to the {ref}`operator-view` operator which prints it.
+The above snippet defines a process named `greet` and invokes it with the input channel. The result is then piped to the {ref}`operator-map` operator, which converts each string to uppercase, and finally to the {ref}`operator-view` operator which prints it.
 
 The same code can also be written as:
 
 ```nextflow
 workflow {
     ch1 = channel.of('Hello','Hola','Ciao')
-    ch2 = foo( ch1 )
+    ch2 = greet( ch1 )
     ch2.map { v -> v.toUpperCase() }.view()
 }
 ```
@@ -322,7 +329,7 @@ workflow {
 The `&` *and* operator can be used to call multiple processes in parallel with the same channel(s):
 
 ```nextflow
-process foo {
+process greet {
     input:
     val data
 
@@ -333,7 +340,7 @@ process foo {
     result = "$data world"
 }
 
-process bar {
+process to_upper {
     input:
     val data
 
@@ -347,22 +354,22 @@ process bar {
 workflow {
     channel.of('Hello')
         | map { v -> v.reverse() }
-        | (foo & bar)
+        | (greet & to_upper)
         | mix
         | view
 }
 ```
 
-In the above snippet, the initial channel is piped to the {ref}`operator-map` operator, which reverses the string value. Then, the result is passed to the processes `foo` and `bar`, which are executed in parallel. Each process outputs a channel, and the two channels are combined using the {ref}`operator-mix` operator. Finally, the result is printed using the {ref}`operator-view` operator.
+In the above snippet, the initial channel is piped to the {ref}`operator-map` operator, which reverses the string value. Then, the result is passed to the processes `greet` and `to_upper`, which are executed in parallel. Each process outputs a channel, and the two channels are combined using the {ref}`operator-mix` operator. Finally, the result is printed using the {ref}`operator-view` operator.
 
 The same code can also be written as:
 
 ```nextflow
 workflow {
     ch = channel.of('Hello').map { v -> v.reverse() }
-    ch_foo = foo(ch)
-    ch_bar = bar(ch)
-    ch_foo.mix(ch_bar).view()
+    ch_greet = greet(ch)
+    ch_upper = to_upper(ch)
+    ch_greet.mix(ch_upper).view()
 }
 ```
 
@@ -486,20 +493,20 @@ By default, all output files are published to the output directory. Each output 
 ```nextflow
 workflow {
     main:
-    ch_foo = foo()
-    ch_bar = bar(ch_foo)
+    ch_step1 = step1()
+    ch_step2 = step2(ch_step1)
 
     publish:
-    foo = ch_foo
-    bar = ch_bar
+    step1 = ch_step1
+    step2 = ch_step2
 }
 
 output {
-    foo {
-        path 'foo'
+    step1 {
+        path 'step1'
     }
-    bar {
-        path 'bar'
+    step2 {
+        path 'step2'
     }
 }
 ```
@@ -508,9 +515,9 @@ The following directory structure will be created:
 
 ```
 results/
-└── foo/
+└── step1/
     └── ...
-└── bar/
+└── step2/
     └── ...
 ```
 

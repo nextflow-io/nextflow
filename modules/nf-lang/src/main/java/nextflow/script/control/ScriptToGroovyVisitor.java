@@ -101,16 +101,16 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitInclude(IncludeNode node) {
-        var moduleArgs = (List<Expression>) node.modules.stream()
-            .map((module) -> {
-                var name = constX(module.name);
-                return module.alias != null
-                    ? createX("nextflow.script.IncludeDef.Module", args(name, constX(module.alias)))
+        var entries = (List<Expression>) node.entries.stream()
+            .map((entry) -> {
+                var name = constX(entry.name);
+                return entry.alias != null
+                    ? createX("nextflow.script.IncludeDef.Module", args(name, constX(entry.alias)))
                     : createX("nextflow.script.IncludeDef.Module", args(name));
             })
             .collect(Collectors.toList());
 
-        var include = callThisX("include", args(createX("nextflow.script.IncludeDef", args(listX(moduleArgs)))));
+        var include = callThisX("include", args(createX("nextflow.script.IncludeDef", args(listX(entries)))));
         var from = callX(include, "from", args(node.source));
         var result = stmt(callX(from, "load0", args(varX("params"))));
         moduleNode.addStatement(result);
@@ -167,6 +167,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             }
             else if( emit instanceof AssignmentExpression ae ) {
                 var target = (VariableExpression)ae.getLeftExpression();
+                code.addStatement(assignS(target, emit));
                 es.setExpression(callThisX("_emit_", args(constX(target.getName()))));
                 code.addStatement(es);
             }

@@ -15,7 +15,7 @@
  *
  */
 
-package nextflow.processor
+package nextflow.k8s.client
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
@@ -23,24 +23,24 @@ import groovy.transform.ToString
 import nextflow.util.Duration
 
 /**
- * Models retry policy configuration for publishing outputs
- *
- * @author Ben Sherman <bentshermann@gmail.com>
+ * Model retry policy configuration
+ * 
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @ToString(includePackage = false, includeNames = true)
 @EqualsAndHashCode
 @CompileStatic
-class PublishRetryConfig {
-    Duration delay = Duration.of('350ms')
+class K8sRetryConfig {
+    Duration delay = Duration.of('250ms')
     Duration maxDelay = Duration.of('90s')
-    int maxAttempts = 5
+    int maxAttempts = 4
     double jitter = 0.25
 
-    PublishRetryConfig() {
+    K8sRetryConfig() {
         this(Collections.emptyMap())
     }
 
-    PublishRetryConfig(Map config) {
+    K8sRetryConfig(Map config) {
         if( config.delay )
             delay = config.delay as Duration
         if( config.maxDelay )

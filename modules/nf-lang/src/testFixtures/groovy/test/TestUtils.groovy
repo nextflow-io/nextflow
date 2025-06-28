@@ -90,7 +90,14 @@ class TestUtils {
         return errorCollector.getErrors().stream()
             .filter(e -> e instanceof SyntaxErrorMessage)
             .map(e -> e.cause)
+            .sorted(ERROR_COMPARATOR)
             .toList()
+    }
+
+    static final Comparator<SyntaxException> ERROR_COMPARATOR = (SyntaxException a, SyntaxException b) -> {
+        return a.getStartLine() != b.getStartLine()
+            ? a.getStartLine() - b.getStartLine()
+            : a.getStartColumn() - b.getStartColumn()
     }
 
     static List<SyntaxException> getErrors(List<Path> files, Compiler compiler) {
