@@ -29,7 +29,6 @@ class BitbucketRepositoryProviderTest extends Specification {
 
     @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )
     def testBitbucketCloneURL() {
-
         given:
         def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')
         def config = new ProviderConfig('bitbucket').setAuth(token)
@@ -53,11 +52,11 @@ class BitbucketRepositoryProviderTest extends Specification {
         def config = new ProviderConfig('bitbucket').setAuth(token)
 
         when:
-        def repo = new BitbucketRepositoryProvider('pditommaso/tutorial', config)
+        def repo = new BitbucketRepositoryProvider('pditommaso/secret', config)
         def result = repo.readText('main.nf')
 
         then:
-        result.trim().startsWith('#!/usr/bin/env nextflow')
+        result.trim() == "println 'Hello from Bitbucket'"
     }
 
     @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )
