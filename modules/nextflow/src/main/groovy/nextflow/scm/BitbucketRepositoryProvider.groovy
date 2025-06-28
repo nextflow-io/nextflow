@@ -41,20 +41,16 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
 
     @Override
     protected String[] getAuth() {
-        if (config.token) {
-            return new String[] { "Authorization", "Bearer ${config.token}" }
-        }
-
-        return super.getAuth()
+        return config.token
+            ? new String[] { "Authorization", "Bearer ${config.token}" }
+            : super.getAuth()
     }
 
     @Override
     boolean hasCredentials() {
-        if (config.token) {
-            return true
-        }
-
-        return super.hasCredentials()
+        return config.token
+            ? true
+            : super.hasCredentials()
     }
 
    /** {@inheritDoc} */
@@ -177,7 +173,6 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
 
     @Override
     byte[] readBytes(String path) {
-
         def url = getContentUrl(path)
         invoke(url)?.getBytes()
     }

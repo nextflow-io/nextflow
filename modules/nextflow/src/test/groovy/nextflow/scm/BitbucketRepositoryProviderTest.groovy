@@ -21,6 +21,7 @@ import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
 import spock.lang.Timeout
+import spock.lang.Unroll
 
 @Timeout(30)
 @IgnoreIf({System.getenv('NXF_SMOKE')})
@@ -45,10 +46,8 @@ class BitbucketRepositoryProviderTest extends Specification {
         new BitbucketRepositoryProvider('pditommaso/tutorial').getRepositoryUrl() == "https://bitbucket.org/pditommaso/tutorial"
     }
 
-
     @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )
     def testReadContent() {
-
         given:
         def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')
         def config = new ProviderConfig('bitbucket').setAuth(token)
@@ -59,7 +58,6 @@ class BitbucketRepositoryProviderTest extends Specification {
 
         then:
         result.trim().startsWith('#!/usr/bin/env nextflow')
-
     }
 
     @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )
@@ -160,6 +158,36 @@ class BitbucketRepositoryProviderTest extends Specification {
         then:
         !data.contains('world')
         data.contains('mundo')
+    }
 
+    @Unroll
+    def 'should validate hasCredentials' () {
+        given:
+        def provider = new BitbucketRepositoryProvider('pditommaso/tutorial', CONFIG)
+
+        expect:
+        provider.hasCredentials() == EXPECTED
+
+        where:
+        EXPECTED    | CONFIG
+        false       | new ProviderConfig('bitbucket')
+        false       | new ProviderConfig('bitbucket').setUser('foo')
+        true        | new ProviderConfig('bitbucket').setUser('foo').setPassword('bar')
+        true        | new ProviderConfig('bitbucket').setToken('xyz')
+    }
+
+    @Unroll
+    def 'should validate getAuth' () {
+        given:
+        def provider = new BitbucketRepositoryProvider('pditommaso/tutorial', CONFIG)
+
+        expect:
+        provider.getAuth() == EXPECTED as String[]
+
+        where:
+        EXPECTED                                                        | CONFIG
+        null                                                            | new ProviderConfig('bitbucket')
+        ["Authorization", "Bearer xyz"]                                 | new ProviderConfig('bitbucket').setToken('xyz')
+        ["Authorization", "Basic ${"foo:bar".bytes.encodeBase64()}"]    | new ProviderConfig('bitbucket').setUser('foo').setPassword('bar')
     }
 }
