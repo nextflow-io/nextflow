@@ -242,7 +242,7 @@ class TowerFusionToken implements FusionToken {
      * @param req The HttpRequest to send
      * @return The HttpResponse received
      */
-    private <T> HttpResponse<String> httpSend(HttpRequest req) {
+    private <T> HttpResponse<String> safeHttpSend(HttpRequest req) {
         try {
             safeApply(req)
         }
@@ -316,7 +316,7 @@ class TowerFusionToken implements FusionToken {
         final httpReq = makeHttpRequest(request)
 
         try {
-            final resp = httpSend(httpReq)
+            final resp = safeHttpSend(httpReq)
 
             if( resp.statusCode() == 200 ) {
                 final ret = parseLicenseTokenResponse(resp.body())
@@ -351,7 +351,7 @@ class TowerFusionToken implements FusionToken {
             .POST(HttpRequest.BodyPublishers.ofString("grant_type=refresh_token&refresh_token=${URLEncoder.encode(refresh, 'UTF-8')}"))
             .build()
 
-        final resp = httpSend(req)
+        final resp = safeHttpSend(req)
         final code = resp.statusCode()
         final body = resp.body()
         log.debug "Refresh cookie response: [${code}] ${body}"
