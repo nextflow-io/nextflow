@@ -5,9 +5,9 @@
 :::{versionadded} 22.11.0-edge
 :::
 
-The [Flux Framework](https://flux-framework.org/) is a modern resource manager that can span the space between cloud and HPC. If your center does not provide Flux for you, you can [build Flux on your own](https://flux-framework.readthedocs.io/en/latest/quickstart.html#building-the-code) and launch it as a job with your resource manager of choice (e.g. SLURM or a cloud provider).
+## Overview
 
-## Tutorial
+The [Flux Framework](https://flux-framework.org/) is a modern resource manager that can span the space between cloud and HPC. If your center does not provide Flux for you, you can [build Flux on your own](https://flux-framework.readthedocs.io/en/latest/quickstart.html#building-the-code) and launch it as a job with your resource manager of choice (e.g. SLURM or a cloud provider).
 
 In the [`docker/flux`](https://github.com/nextflow-io/nextflow/tree/master/docker/flux) directory we provide a [Dockerfile for interacting with Flux](https://github.com/nextflow-io/nextflow/tree/master/docker/flux/.devcontainer/Dockerfile) along with a [VSCode Developer Container](https://code.visualstudio.com/docs/devcontainers/containers) environment that you can put at the root of the project to be provided with a Flux agent and the dependencies needed to build Nextflow. There are two ways to use this:
 
@@ -16,7 +16,7 @@ In the [`docker/flux`](https://github.com/nextflow-io/nextflow/tree/master/docke
 
 Both strategies are described below. For this tutorial, you will generally want to prepare a pipeline to use the `flux` executor, create an environment with Flux, start a Flux instance, and interact with it.
 
-### Prepare your pipeline
+## Prepare your pipeline
 
 To run your pipeline with Flux, you'll want to specify it in your config. Here is an example `nextflow.config`:
 
@@ -53,7 +53,7 @@ process haveMeal {
 }
 ```
 
-### Container Environment
+## Prepare your environment
 
 You can either build the Docker image from the root of the Nextflow repository:
 
@@ -81,7 +81,7 @@ $ code .
 
 Then you should be able to open a terminal (**Terminal** -> **New Terminal**) to interact with the command line. Try running `make` again! Whichever of these two approaches you take, you should be in a container environment with the `flux` command available.
 
-### Start a Flux Instance
+## Start a Flux instance
 
 Once in your container, you can start an interactive Flux instance (from which you can submit jobs on the command line to test with Nextflow) as follows:
 
@@ -89,11 +89,7 @@ Once in your container, you can start an interactive Flux instance (from which y
 $ flux start --test-size=4
 ```
 
-#### Getting Familiar with Flux
-
-:::{note}
-This step is optional!
-:::
+### Getting familiar with Flux
 
 Here is an example of submitting a job and getting the log for it.
 
@@ -125,7 +121,7 @@ $ flux jobs
    ƒ4tkMUAAT root     sleep       R      1      1   2.546s ab6634a491bb
 ```
 
-### Submitting with Nextflow
+## Submitting with Nextflow
 
 Prepare your `nextflow.config` and `demo.nf` in the same directory.
 
@@ -134,27 +130,7 @@ $ ls .
 demo.nf    nextflow.config
 ```
 
-If you've installed Nextflow already, you are good to go! If you are working with development code and need to build Nextflow:
-
-```console
-$ make assemble
-```
-
-Make sure `nextflow` is on your PATH (here we are in the root of the Nextflow repository):
-
-```console
-$ export PATH=$PWD:$PATH
-$ which nextflow
-/workspaces/nextflow/nextflow
-```
-
-Then change to the directory with your config and demo file:
-
-```console
-$ cd docker/flux
-```
-
-And then run the pipeline with Flux!
+Finally, run the pipeline with Flux:
 
 ```console
 $ nextflow -c nextflow.config run demo.nf
@@ -169,5 +145,3 @@ executor >  flux (5)
 🥑️ for breakfast!
 🥧️ for breakfast!
 ```
-
-And that's it! You've just run a pipeline using nextflow and Flux.
