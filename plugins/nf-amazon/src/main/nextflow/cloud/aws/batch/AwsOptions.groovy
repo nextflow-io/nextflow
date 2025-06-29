@@ -18,7 +18,7 @@ package nextflow.cloud.aws.batch
 
 import java.nio.file.Path
 
-import com.amazonaws.services.s3.model.CannedAccessControlList
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
@@ -124,7 +124,7 @@ class AwsOptions implements CloudTransferOptions {
         return awsConfig.s3Config.getStorageKmsKeyId()
     }
 
-    CannedAccessControlList getS3Acl() {
+    ObjectCannedACL getS3Acl() {
         return awsConfig.s3Config.getS3Acl()
     }
 

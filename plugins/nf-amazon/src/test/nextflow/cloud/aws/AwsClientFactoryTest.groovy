@@ -19,6 +19,9 @@ package nextflow.cloud.aws
 
 import nextflow.SysEnv
 import nextflow.cloud.aws.config.AwsConfig
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration
+import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption
+import software.amazon.awssdk.auth.signer.AwsS3V4Signer;
 import spock.lang.Specification
 /**
  *
@@ -54,5 +57,17 @@ class AwsClientFactoryTest extends Specification {
 
         cleanup:
         SysEnv.pop()
+    }
+
+    def 'should detect if netty provider is needed' () {
+        given:
+            def coc = ClientOverrideConfiguration.builder().advancedOptions(MAP).build()
+        expect:
+            AwsClientFactory.requiresNettyClient(coc) == BOOL
+        where:
+        MAP                                                             | BOOL
+        [(SdkAdvancedClientOption.SIGNER): AwsS3V4Signer.create() ]     | true
+        [(SdkAdvancedClientOption.USER_AGENT_PREFIX): "Agent" ]         | true
+        [:]                                                             | false
     }
 }
