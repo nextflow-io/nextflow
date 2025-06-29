@@ -1282,9 +1282,11 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 
   See {ref}`cli-params` for more information about writing custom parameters files.
 
+(cli-secrets)=
+
 ### `secrets`
 
-Manage pipeline secrets.
+Manage {ref}`pipeline secrets <secrets-page>`.
 
 **Usage**
 
