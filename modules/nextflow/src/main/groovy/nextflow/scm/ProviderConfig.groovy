@@ -84,6 +84,7 @@ class ProviderConfig {
             case 'bitbucket':
                 attr.platform = name
                 if( !attr.server ) attr.server = 'https://bitbucket.org'
+                if( !attr.endpoint ) attr.endpoint = 'https://api.bitbucket.org'
                 break
 
             case 'azurerepos':
