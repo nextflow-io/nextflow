@@ -15,6 +15,7 @@ import com.google.common.util.concurrent.UncheckedExecutionException
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import dev.failsafe.Failsafe
+import dev.failsafe.FailsafeException
 import dev.failsafe.RetryPolicy
 import dev.failsafe.event.EventListener
 import dev.failsafe.event.ExecutionAttemptedEvent
@@ -61,6 +62,8 @@ class TowerFusionToken implements FusionToken {
     private static final int DEFAULT_RETRY_POLICY_MAX_ATTEMPTS = 10
     private static final double DEFAULT_RETRY_POLICY_JITTER = 0.5
 
+    private CookieManager cookieManager = new CookieManager()
+
     // The HttpClient instance used to send requests
     private final HttpClient httpClient = newDefaultHttpClient()
 
@@ -79,7 +82,9 @@ class TowerFusionToken implements FusionToken {
     private String endpoint
 
     // Platform access token to use for requests
-    private String accessToken
+    private volatile String accessToken
+
+    private volatile String refreshToken
 
     // Platform workflowId
     private String workspaceId
@@ -92,6 +97,7 @@ class TowerFusionToken implements FusionToken {
         final env = SysEnv.get()
         this.endpoint = PlatformHelper.getEndpoint(config, env)
         this.accessToken = PlatformHelper.getAccessToken(config, env)
+        this.refreshToken = PlatformHelper.getRefreshToken(config, env)
         this.workflowId = env.get('TOWER_WORKFLOW_ID')
         this.workspaceId = PlatformHelper.getWorkspaceId(config, env)
     }
@@ -181,11 +187,11 @@ class TowerFusionToken implements FusionToken {
      * Create a new HttpClient instance with default settings
      * @return The new HttpClient instance
      */
-    private static HttpClient newDefaultHttpClient() {
+    private HttpClient newDefaultHttpClient() {
         final builder = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)
             .followRedirects(HttpClient.Redirect.NEVER)
-            .cookieHandler(new CookieManager())
+            .cookieHandler(cookieManager)
             .connectTimeout(DEFAULT_CONNECTION_TIMEOUT)
         // use virtual threads executor if enabled
         if ( Threads.useVirtual() ) {
@@ -235,8 +241,17 @@ class TowerFusionToken implements FusionToken {
      * @param req The HttpRequest to send
      * @return The HttpResponse received
      */
-    private <T> HttpResponse<String> safeHttpSend(HttpRequest req, RetryPolicy<T> policy) {
-        return Failsafe.with(policy).get(
+    private <T> HttpResponse<String> safeHttpSend(HttpRequest req) {
+        try {
+            safeApply(req)
+        }
+        catch (FailsafeException e) {
+            throw e.cause
+        }
+    }
+
+    private <T> HttpResponse<String> safeApply(HttpRequest req) {
+        return Failsafe.with(retryPolicy).get(
             () -> {
                 log.debug "Http request: method=${req.method()}; uri=${req.uri()}; request=${req}"
                 final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
@@ -287,20 +302,19 @@ class TowerFusionToken implements FusionToken {
     /**
      * Request a license token from Platform.
      *
-     * @param req The LicenseTokenRequest object
+     * @param request The LicenseTokenRequest object
      * @return The LicenseTokenResponse object
-     *
-     * @throws AbortOperationException if a Platform access token cannot be found
-     * @throws UnauthorizedException if the access token is invalid
-     * @throws BadResponseException if the response is not as expected
-     * @throws IllegalStateException if the request cannot be sent
      */
-    private GetLicenseTokenResponse sendRequest(GetLicenseTokenRequest req) throws AbortOperationException, UnauthorizedException, BadResponseException, IllegalStateException {
+    private GetLicenseTokenResponse sendRequest(GetLicenseTokenRequest request) {
+        return sendRequest0(request, 1)
+    }
 
-        final httpReq = makeHttpRequest(req)
+    private GetLicenseTokenResponse sendRequest0(GetLicenseTokenRequest request, int attempt) {
+
+        final httpReq = makeHttpRequest(request)
 
         try {
-            final resp = safeHttpSend(httpReq, retryPolicy)
+            final resp = safeHttpSend(httpReq)
 
             if( resp.statusCode() == 200 ) {
                 final ret = parseLicenseTokenResponse(resp.body())
@@ -308,7 +322,15 @@ class TowerFusionToken implements FusionToken {
             }
 
             if( resp.statusCode() == 401 ) {
-                throw new UnauthorizedException("Unauthorized [401] - Verify you have provided a valid access token")
+                final shouldRetry = accessToken
+                    && refreshToken
+                    && attempt==1
+                    && refreshJwtToken0(refreshToken)
+                if( shouldRetry ) {
+                    return sendRequest0(request, attempt+1)
+                }
+                else
+                    throw new UnauthorizedException("Unauthorized [401] - Verify you have provided a valid Seqera Platform access token")
             }
 
             throw new BadResponseException("Invalid response: ${httpReq.method()} ${httpReq.uri()} [${resp.statusCode()}] ${resp.body()}")
@@ -316,5 +338,53 @@ class TowerFusionToken implements FusionToken {
         catch (IOException e) {
             throw new IllegalStateException("Unable to send request to '${httpReq.uri()}' : ${e.message}")
         }
+    }
+
+    protected boolean refreshJwtToken0(String refresh) {
+        log.debug "Token refresh request >> $refresh"
+
+        final req = HttpRequest.newBuilder()
+            .uri(new URI("${endpoint}/oauth/access_token"))
+            .headers('Content-Type',"application/x-www-form-urlencoded")
+            .POST(HttpRequest.BodyPublishers.ofString("grant_type=refresh_token&refresh_token=${URLEncoder.encode(refresh, 'UTF-8')}"))
+            .build()
+
+        final resp = safeHttpSend(req)
+        final code = resp.statusCode()
+        final body = resp.body()
+        log.debug "Refresh cookie response: [${code}] ${body}"
+        if( resp.statusCode() != 200 )
+            return false
+
+        final authCookie = getCookie('JWT')
+        final refreshCookie = getCookie('JWT_REFRESH_TOKEN')
+
+        // set the new bearer token in the current client session
+        if( authCookie?.value ) {
+            log.trace "Updating http client bearer token=$authCookie.value"
+            accessToken = authCookie.value
+        }
+        else {
+            log.warn "Missing JWT cookie from refresh token response ~ $authCookie"
+        }
+
+        // set the new refresh token
+        if( refreshCookie?.value ) {
+            log.trace "Updating http client refresh token=$refreshCookie.value"
+            refreshToken = refreshCookie.value
+        }
+        else {
+            log.warn "Missing JWT_REFRESH_TOKEN cookie from refresh token response ~ $refreshCookie"
+        }
+
+        return true
+    }
+
+    private HttpCookie getCookie(final String cookieName) {
+        for( HttpCookie it : cookieManager.cookieStore.cookies ) {
+            if( it.name == cookieName )
+                return it
+        }
+        return null
     }
 }
