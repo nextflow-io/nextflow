@@ -5,5 +5,5 @@ nf-codecommit@0.2.1
 nf-console@1.1.3
 nf-ga4gh@1.3.0
 nf-google@1.13.2-patch1
-nf-tower@1.9.1-patch1
+nf-tower@1.9.1-patch2
 nf-wave@1.4.2-patch2
