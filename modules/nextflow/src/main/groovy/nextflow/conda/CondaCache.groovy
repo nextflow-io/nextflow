@@ -166,19 +166,6 @@ class CondaCache {
         str.endsWith('.txt') && !str.contains('\n')
     }
 
-    static protected String sipHash(CharSequence data) {
-        Hashing
-            .sipHash24()
-            .newHasher()
-            .putUnencodedChars(data)
-            .hash()
-            .toString()
-    }
-
-    static protected String sipHash(Path path) {
-        sipHash(path.toAbsolutePath().normalize().toString())
-    }
-
     /**
      * Get the path on the file system where store a Conda environment
      *
@@ -200,7 +187,6 @@ class CondaCache {
             try {
                 final path = condaEnv as Path
                 content = path.text
-                name = 'env-' + sipHash(path)
 
             }
             catch( NoSuchFileException e ) {
@@ -214,7 +200,6 @@ class CondaCache {
             try {
                 final path = condaEnv as Path
                 content = path.text
-                name = 'env-' + sipHash(path)
             }
             catch( NoSuchFileException e ) {
                 throw new IllegalArgumentException("Conda environment file does not exist: $condaEnv")
@@ -284,6 +269,11 @@ class CondaCache {
 
     @PackageScope
     Path createLocalCondaEnv0(String condaEnv, Path prefixPath) {
+        if( prefixPath.isDirectory() ) {
+            log.debug "${binaryName} found local env for environment=$condaEnv; path=$prefixPath"
+            return prefixPath
+        }
+
         log.info "Creating env using ${binaryName}: $condaEnv [cache $prefixPath]"
 
         String opts = createOptions ? "$createOptions " : ''

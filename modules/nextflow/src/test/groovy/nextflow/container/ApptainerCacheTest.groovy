@@ -127,7 +127,7 @@ class ApptainerCacheTest extends Specification {
         1 * cache.localCachePath(IMAGE) >> TARGET_FILE
         1 * cache.getTempImagePath(TARGET_FILE) >> TEMP_FILE
         and:
-        1 * cache.runCommand("apptainer pull --nohttps --name ${TEMP_FILE.name} $IMAGE > /dev/null", dir) >> 0
+        1 * cache.runCommand("apptainer pull --no-https --name ${TEMP_FILE.name} $IMAGE > /dev/null", dir) >> 0
         and:
         TARGET_FILE.exists()
         !TEMP_FILE.exists()

@@ -25,7 +25,7 @@ sourceSets {
 }
 
 dependencies {
-    api "ch.qos.logback:logback-classic:1.5.16"
+    api "ch.qos.logback:logback-classic:1.5.18"
     api "org.apache.groovy:groovy:4.0.27"
     api "org.apache.groovy:groovy-nio:4.0.27"
     api "commons-lang:commons-lang:2.6"
@@ -34,7 +34,7 @@ dependencies {
     api 'org.pf4j:pf4j-update:2.3.0'
     api 'dev.failsafe:failsafe:3.1.0'
     // patch gson dependency required by pf4j
-    api 'com.google.code.gson:gson:2.10.1'
+    api 'com.google.code.gson:gson:2.13.1'
 
     /* testImplementation inherited from top gradle build file */
     testImplementation(testFixtures(project(":nextflow")))

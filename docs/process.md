@@ -776,9 +776,9 @@ The process `echo` is executed two times because the `x` channel emits only two 
 2 and b
 ```
 
-A different semantic is applied when using a {ref}`value channel <channel-type-value>`. This kind of channel is created by the {ref}`channel.value <channel-value>` factory method or implicitly when a process is invoked with an argument that is not a channel. By definition, a value channel is bound to a single value and it can be read an unlimited number of times without consuming its content. Therefore, when mixing a value channel with one or more (queue) channels, it does not affect the process termination because the underlying value is applied repeatedly.
+When a {ref}`value channel <channel-type-value>` is supplied as a process input alongside a queue channel, the process is executed for each value in the queue channel, and the value channel is re-used for each execution.
 
-To better understand this behavior, compare the previous example with the following one:
+For example, compare the previous example with the following:
 
 ```nextflow
 process echo {
@@ -811,7 +811,7 @@ The above example executes the `echo` process three times because `x` is a value
 In general, multiple input channels should be used to process *combinations* of different inputs, using the `each` qualifier or value channels. Having multiple queue channels as inputs is equivalent to using the {ref}`operator-merge` operator, which is not recommended as it may lead to {ref}`non-deterministic process inputs <cache-nondeterministic-inputs>`.
 :::
 
-See also: {ref}`channel-types`.
+See also: {ref}`process-out-singleton`.
 
 (process-output)=
 
@@ -1159,6 +1159,22 @@ In this example, the process is normally expected to produce an `output.txt` fil
 :::{note}
 While this option can be used with any process output, it cannot be applied to individual elements of a [tuple](#output-tuples-tuple) output. The entire tuple must be optional or not optional.
 :::
+
+(process-out-singleton)=
+
+### Singleton outputs
+
+When a process is only supplied with value channels, regular values, or no inputs, it returns outputs as value channels. For example:
+
+```{literalinclude} snippets/process-out-singleton.nf
+:language: nextflow
+```
+
+In the above example, the `echo` process is invoked with a regular value that is wrapped in a value channel. As a result, `echo` returns a value channel and `greet` is executed three times.
+
+If the call to `echo` was changed to `echo( channel.of('hello') )`, the process would instead return a queue channel, and `greet` would be executed only once.
+
+See also: {ref}`process-multiple-input-channels`.
 
 (process-when)=
 
