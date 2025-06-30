@@ -107,6 +107,6 @@ class TowerFactory implements TraceObserverFactory {
     }
 
     static TowerClient client() {
-        client(Global.session as Session, SysEnv.get())
+        return client(Global.session as Session, SysEnv.get())
     }
 }
