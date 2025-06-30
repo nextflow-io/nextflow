@@ -1,12 +1,10 @@
-(k8s-page)=
-
 # Kubernetes
 
 [Kubernetes](https://kubernetes.io/) is a cloud-native open-source system for deployment, scaling, and management of containerized applications.
 
-It provides clustering and file system abstractions that allows the execution of containerised workloads across different cloud platforms and on-premises installations.
+It provides clustering and file system abstractions that allows the execution of containerized workloads across different cloud platforms and on-premises installations.
 
-The built-in support for Kubernetes provided by Nextflow streamlines the execution of containerised workflows in Kubernetes clusters.
+The built-in support for Kubernetes provided by Nextflow streamlines the execution of containerized workflows in Kubernetes clusters.
 
 ## Concepts
 
@@ -16,8 +14,8 @@ Kubernetes abstracts also the storage provisioning through the definition of one
 
 When using the `k8s` executor Nextflow deploys the workflow execution as a Kubernetes pod. This pod orchestrates the workflow execution and submits a separate pod execution for each job that need to be carried out by the workflow application.
 
-```{image} _static/nextflow-k8s-min.png
-```
+
+![Nextflow k8s](_static/nextflow-k8s-min.png)
 
 ## Requirements
 
@@ -25,10 +23,10 @@ At least a [Persistent Volume](https://kubernetes.io/docs/concepts/storage/persi
 
 Such volume needs to be accessible through a [Persistent Volume Claim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims), which will be used by Nextflow to run the application and store the scratch data and the pipeline final result.
 
-The workflow application has to be containerised using the usual Nextflow {ref}`container<process-container>` directive.
+The workflow application has to be containerized using the usual Nextflow [container][process-container] directive.
 
-:::{tip}
-When using {ref}`wave-page` and {ref}`fusion-page` there is no need to use a shared file system and configure a persistent volume claim for the deployment of Nextflow pipeline with Kubernetes. You can ignore this requirement when using the Fusion file system. See the {ref}`fusion-page` for further information.
+:::tip
+When using [Wave][wave-page] and [Fusion][fusion-page] there is no need to use a shared file system and configure a persistent volume claim for the deployment of Nextflow pipeline with Kubernetes. You can ignore this requirement when using the Fusion file system. See the [Fusion][fusion-page] for further information.
 :::
 
 ## Execution
@@ -37,7 +35,7 @@ The workflow execution needs to be submitted from a computer able to connect to 
 
 Nextflow uses the Kubernetes configuration file available at the path `$HOME/.kube/config` or the file specified by the environment variable `KUBECONFIG`.
 
-You can verify such configuration with the command below:
+You can verify such configuration with the following command:
 
 ```console
 $ kubectl cluster-info
@@ -47,7 +45,7 @@ KubeDNS is running at https://your-host:6443/api/v1/namespaces/kube-system/servi
 
 ### Launch with `kuberun`
 
-:::{warning}
+:::warning
 The `kuberun` is considered an obsolete approach for the deployment of Nextflow pipeline with Kubernetes and is no longer maintained. For a better alternative, consider using [Launch with Fusion](#launch-with-fusion).
 :::
 
@@ -59,7 +57,7 @@ nextflow kuberun <pipeline-name> -v vol-claim:/mount/path
 
 This command will create and execute a pod running the nextflow orchestrator for the specified workflow. In the above example replace `<pipeline-name>` with an existing nextflow project or the absolute path of a workflow already deployed in the Kubernetes cluster.
 
-The `-v` command line option is required to specify the volume claim name and mount path to use for the workflow execution. In the above example replace `vol-claim` with the name of an existing persistent volume claim and `/mount/path` with the path where the volume is required to be mount in the container. Volume claims can also be specified in the Nextflow configuration file, see the {ref}`Kubernetes configuration section<config-k8s>` for details.
+The `-v` command line option is required to specify the volume claim name and mount path to use for the workflow execution. In the above example replace `vol-claim` with the name of an existing persistent volume claim and `/mount/path` with the path where the volume is required to be mount in the container. Volume claims can also be specified in the Nextflow configuration file. See [k8s][config-k8s>] for details.
 
 Once the pod execution starts, the application in the foreground prints the console output produced by the running workflow pod.
 
@@ -73,16 +71,16 @@ nextflow kuberun login -v vol-claim:/mount/path
 
 This command creates a pod, sets up the volume claim(s), configures the Nextflow environment and finally launches a Bash login session.
 
-:::{warning}
+:::warning
 The pod is automatically destroyed once the shell session terminates. Do not use it to launch long-running workflows in the background.
 :::
 
 ### Launch with Fusion
 
-:::{versionadded} 22.10.0
+:::note{title="Added in version 22.10.0"}
 :::
 
-The use of {ref}`fusion-page` allows deploying a Nextflow pipeline to a remote (or local) cluster without the need to use a shared file system and configure a persistent volume claim for the deployment of Nextflow pipeline with Kubernetes.
+The use of [Fusion][fusion-page] allows deploying a Nextflow pipeline to a remote (or local) cluster without the need to use a shared file system and configure a persistent volume claim for the deployment of Nextflow pipeline with Kubernetes.
 
 This also makes unnecessary the use of the special `kuberun` command for the pipeline execution.
 
@@ -106,11 +104,11 @@ k8s {
 
 In the above snippet replace `vol-claim` with the name of an existing persistent volume claim and replace `/mount/path` with the actual desired mount path (default: `/workspace`) and `storageSubPath` with the directory in the volume to be mounted (default: `/`).
 
-:::{warning}
+:::warning
 The running pod must have been created with the same persistent volume claim name and mount as the one specified in your Nextflow configuration file. Note also that the `run` command does not support the `-v` option.
 :::
 
-:::{tip}
+:::tip
 It is also possible to mount multiple volumes using the `pod` directive, for example:
 
 ```groovy
@@ -120,7 +118,7 @@ k8s.pod = [ [volumeClaim: "other-pvc", mountPath: "/other" ]]
 
 ## Pod settings
 
-The process {ref}`process-pod` directive allows the definition of pods specific settings, such as environment variables, secrets and config maps when using the {ref}`k8s-executor` executor. See the {ref}`process-pod` directive for more details.
+The process [pod][process-pod] directive allows the definition of pods specific settings, such as environment variables, secrets and config maps when using the [Kubernetes][k8s-executor] executor. See the [pod][process-pod] directive for more details.
 
 ## Limitations
 
@@ -128,4 +126,11 @@ The `kuberun` command does not allow the execution of local Nextflow scripts. It
 
 ## Advanced configuration
 
-Read the {ref}`Kubernetes configuration<config-k8s>` and {ref}`executor <k8s-executor>` sections to learn more about advanced configuration options.
+See [k8s][config-k8s] and [Kubernetes][k8s-executor] to learn more about advanced configuration options.
+
+[config-k8s]: /nextflow_docs/nextflow_repo/docs/reference/config#k8s
+[fusion-page]: /nextflow_docs/nextflow_repo/docs/fusion
+[k8s-executor]: /nextflow_docs/nextflow_repo/docs/executor#kubernetes
+[process-container]: /nextflow_docs/nextflow_repo/docs/reference/process#container
+[process-pod]: /nextflow_docs/nextflow_repo/docs/reference/process#pod
+[wave-page]: /nextflow_docs/nextflow_repo/docs/wave

@@ -1,18 +1,16 @@
-(google-page)=
-
 # Google Cloud
 
 ## Credentials
 
 Credentials for submitting requests to the Google Cloud Batch API are picked up from your environment using [Application Default Credentials](https://github.com/googleapis/google-auth-library-java#google-auth-library-oauth2-http). Application Default Credentials are designed to use the credentials most natural to the environment in which a tool runs.
 
-The most common case will be to pick up your end-user Google credentials from your workstation. You can create these by running the command:
+The most common case will be to pick up your end-user Google credentials from your workstation. You can create these by running the following command and running through the authentication flow:
 
 ```bash
 gcloud auth application-default login
 ```
 
-and running through the authentication flow. This will write a credential file to your gcloud configuration directory that will be used for any tool you run on your workstation that picks up default credentials.
+This will write a credential file to your gcloud configuration directory that will be used for any tool you run on your workstation that picks up default credentials.
 
 The next most common case would be when running on a Compute Engine VM. In this case, Application Default Credentials will pick up the Compute Engine Service Account credentials for that VM.
 
@@ -38,26 +36,22 @@ export GOOGLE_APPLICATION_CREDENTIALS="/path/your/file/creds.json"
 See [Get started with Nextflow on Google Cloud Batch](https://www.nextflow.io/blog/2023/nextflow-with-gbatch.html) for more information on how to use Google Cloud Batch, 
 including how to set the required roles for your service account.
 
-(google-batch)=
-
 ## Cloud Batch
 
-:::{versionadded} 22.07.1-edge
+:::note{title="Added in version 22.07.1-edge"}
 :::
 
 [Google Cloud Batch](https://cloud.google.com/batch) is a managed computing service that allows the execution of containerized workloads in the Google Cloud Platform infrastructure.
 
 Nextflow provides built-in support for Google Cloud Batch, allowing the seamless deployment of Nextflow pipelines in the cloud, in which tasks are offloaded to the Cloud Batch service.
 
-Read the {ref}`Google Cloud Batch executor <google-batch-executor>` section to learn more about the `google-batch` executor in Nextflow.
-
-(google-batch-config)=
+Read the [Google Cloud Batch executor][google-batch-executor] section to learn more about the `google-batch` executor in Nextflow.
 
 ### Configuration
 
 Make sure to have defined in your environment the `GOOGLE_APPLICATION_CREDENTIALS` variable. See the [Credentials](#credentials) section for details.
 
-:::{note}
+:::note
 Make sure your Google account is allowed to access the Google Cloud Batch service by checking the [APIs & Services](https://console.cloud.google.com/apis/dashboard) dashboard.
 :::
 
@@ -83,13 +77,11 @@ google {
 
 Notes:
 
-- A container image must be specified to execute processes. You can use a different Docker image for each process using one or more {ref}`config-process-selectors`.
+- A container image must be specified to execute processes. You can use a different Docker image for each process using one or more [process selectors][config-process-selectors].
 - Make sure to specify the project ID, not the project name.
 - Make sure to specify a location where Google Batch is available. Refer to the [Google Batch documentation](https://cloud.google.com/batch/docs/get-started#locations) for region availability.
 
-Read the {ref}`Google configuration<config-google>` section to learn more about advanced configuration options.
-
-(google-batch-process)=
+Read the [Google configuration][config-google] section to learn more about advanced configuration options.
 
 ### Process definition
 
@@ -120,7 +112,7 @@ process other_task {
 }
 ```
 
-:::{versionadded} 23.02.0-edge
+:::note{title="Added in version 23.02.0-edge"}
 :::
 
 The `machineType` directive can also be a comma-separated list of patterns. The pattern can contain a `*` to match any
@@ -139,7 +131,7 @@ process my_task {
 }
 ```
 
-:::{versionadded} 23.12.0-edge
+:::note{title="Added in version 23.12.0-edge"}
 :::
 
 The `machineType` directive can also be an [Instance Template](https://cloud.google.com/compute/docs/instance-templates),
@@ -158,7 +150,7 @@ process my_task {
 }
 ```
 
-:::{note}
+:::note
 Using an instance template will overwrite the `accelerator` and `disk` directives, as well as the following Google Batch
 config options: `bootDiskImage`, `cpuPlatform`, `preemptible`, and `spot`.
 :::
@@ -169,7 +161,7 @@ To use an instance template with Fusion, the instance template must include a `l
 See the [Google Batch documentation](https://cloud.google.com/compute/docs/disks/local-ssd) for more details about local SSDs.
 
 
-:::{versionadded} 23.06.0-edge
+:::note{title="Added in version 23.06.0-edge"}
 :::
 
 The `disk` directive can be used to set the boot disk size or provision a disk for scratch storage. If the disk type is specified with the `type` option, a new disk will be mounted to the task VM at `/tmp` with the requested size and type. Otherwise, it will set the boot disk size, overriding the `google.batch.bootDiskSize` config option. See the [Google Batch documentation](https://cloud.google.com/compute/docs/disks) for more information about the available disk types.
@@ -197,12 +189,12 @@ The pipeline execution must specify a Google Storage bucket where the workflow's
 nextflow run <script or project name> -work-dir gs://my-bucket/some/path
 ```
 
-:::{tip}
+:::tip
 Any input data **not** stored in a Google Storage bucket will automatically be transferred to the pipeline work bucket. Use this feature with caution being careful to avoid unnecessary data transfers.
 :::
 
-:::{warning}
-The Google Storage path needs to contain at least sub-directory. Don't use only the bucket name e.g. `gs://my-bucket`.
+:::warning
+The Google Storage path needs to contain at least sub-directory. Don't use only the bucket name. For example, `gs://my-bucket`.
 :::
 
 ### Spot Instances
@@ -215,7 +207,7 @@ google {
 }
 ```
 
-:::{versionadded} 23.11.0-edge
+:::note{title="Added in version 23.11.0-edge"}
 :::
 
 Since this type of virtual machines can be retired by the provider before the job completion, it is advisable to add the following retry strategy to your config file to instruct Nextflow to automatically re-execute a job if the virtual machine was terminated preemptively:
@@ -229,10 +221,10 @@ process {
 
 ### Fusion file system
 
-:::{versionadded} 23.02.0-edge
+:::note{title="Added in version 23.02.0-edge"}
 :::
 
-The Google Batch executor supports the use of {ref}`fusion-page`. Fusion allows the use of Google Cloud Storage as a virtual distributed file system, optimizing the data transfer and speeding up most job I/O operations.
+The Google Batch executor supports the use of [Fusion][fusion-page]. Fusion allows the use of Google Cloud Storage as a virtual distributed file system, optimizing the data transfer and speeding up most job I/O operations.
 
 See [Google Cloud Batch](https://docs.seqera.io/fusion/guide/gcp-batch) for more information about configuring Fusion for Google Cloud Batch.
 
@@ -240,21 +232,21 @@ See [Google Cloud Batch](https://docs.seqera.io/fusion/guide/gcp-batch) for more
 
 Currently, the following Nextflow directives are supported by the Google Batch executor:
 
-- {ref}`process-accelerator`
-- {ref}`process-container`
-- {ref}`process-containeroptions`
-- {ref}`process-cpus`
-- {ref}`process-disk`
-- {ref}`process-executor`
-- {ref}`process-machinetype`
-- {ref}`process-memory`
-- {ref}`process-time`
+- [accelerator][process-accelerator]
+- [container][process-container]
+- [containerOptions][process-containeroptions]
+- [cpus][process-cpus]
+- [disk][process-disk]
+- [executor][process-executor]
+- [machineType][process-machinetype]
+- [memory][process-memory]
+- [time][process-time]
 
 ### Hybrid execution
 
 Nextflow allows the use of multiple executors in the same workflow. This feature enables the deployment of hybrid workloads, in which some jobs are executed in the local computer or local computing cluster, and some jobs are offloaded to Google Cloud.
 
-To enable this feature, use one or more {ref}`config-process-selectors` in your Nextflow configuration file to apply the Google Cloud executor to the subset of processes that you want to offload. For example:
+To enable this feature, use one or more [process selectors][config-process-selectors] in your Nextflow configuration file to apply the Google Cloud executor to the subset of processes that you want to offload. For example:
 
 ```groovy
 process {
@@ -276,11 +268,11 @@ Then launch the pipeline with the `-bucket-dir` option to specify a Google Stora
 nextflow run <script or project name> -bucket-dir gs://my-bucket/some/path
 ```
 
-:::{warning}
+:::warning
 The Google Storage path needs to contain at least one sub-directory (e.g. `gs://my-bucket/work` rather than `gs://my-bucket`).
 :::
 
-:::{note}
+:::note
 Nextflow will automatically manage the transfer of input and output files between the local and cloud environments when using hybrid workloads.
 :::
 
@@ -290,3 +282,16 @@ Nextflow will automatically manage the transfer of input and output files betwee
 
 - Currently, it's not possible to specify a disk type different from the default one assigned by the service depending on the chosen instance type.
 
+[config-google]: /nextflow_docs/nextflow_repo/docs/reference/config#google
+[config-process-selectors]: /nextflow_docs/nextflow_repo/docs/config#process-selectors
+[fusion-page]: /nextflow_docs/nextflow_repo/docs/fusion
+[google-batch-executor]: /nextflow_docs/nextflow_repo/docs/executor#google-cloud-batch
+[process-accelerator]: /nextflow_docs/nextflow_repo/docs/reference/process#accelerator
+[process-container] /nextflow_docs/nextflow_repo/docs/reference/process#container
+[process-containeroptions]: /nextflow_docs/nextflow_repo/docs/reference/process#containeroptios
+[process-cpus]: /nextflow_docs/nextflow_repo/docs/reference/process#cpus
+[process-disk]: /nextflow_docs/nextflow_repo/docs/reference/process#disk
+[process-executor]: /nextflow_docs/nextflow_repo/docs/reference/process#executor
+[process-machinetype]: /nextflow_docs/nextflow_repo/docs/reference/process#machinetype
+[process-memory]: /nextflow_docs/nextflow_repo/docs/reference/process#memory
+[process-time]: /nextflow_docs/nextflow_repo/docs/reference/process#time

@@ -1,8 +1,6 @@
-(aws-page)=
-
 # Amazon Web Services
 
-:::{tip}
+:::tip
 This page describes how to manually set up and use Nextflow with AWS Cloud.
 You may be interested in using [Batch Forge](https://docs.seqera.io/platform/latest/compute-envs/aws-batch) in [Seqera Platform](https://seqera.io/platform/),
 which automatically creates the required AWS infrastructure for you with minimal intervention.
@@ -14,7 +12,7 @@ Nextflow uses the [AWS security credentials](https://docs.aws.amazon.com/general
 
 The AWS credentials are selected from the following sources, in order of descending priority:
 
-1. Nextflow configuration file - `aws.accessKey` and `aws.secretKey`. See {ref}`AWS configuration<config-aws>` for more details.
+1. Nextflow configuration file - `aws.accessKey` and `aws.secretKey`. See [aws][config-aws] for more details.
 
 2. A custom profile in `$HOME/.aws/credentials` and/or `$HOME/.aws/config`. The profile can be supplied from the `aws.profile` config option, or the `AWS_PROFILE` or `AWS_DEFAULT_PROFILE` environmental variables.
 
@@ -24,7 +22,7 @@ The AWS credentials are selected from the following sources, in order of descend
 
 5. Single Sign-On (SSO) credentials. See the [AWS documentation](https://docs.aws.amazon.com/cli/latest/userguide/sso-configure-profile-token.html) for more details.
 
-   :::{versionadded} 23.07.0-edge
+   :::note{title="Added in version 23.07.0-edge"}
    :::
 
 6. EC2 instance profile credentials. See the [AWS documentation](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html) and [this blog post](https://aws.amazon.com/blogs/security/granting-permission-to-launch-ec2-instances-with-iam-roles-passrole-permission/) for more details.
@@ -88,7 +86,7 @@ Minimal permissions policies to be attached to the AWS account used by Nextflow 
 
   Alternatively, you can use AWS provided `AmazonEC2ContainerRegistryReadOnly` managed policy.
 
-:::{note}
+:::note
 If you are running Fargate or Fargate Spot, you may need the following policies in addition to the listed above:
   ```json
   "ec2:DescribeSubnets"
@@ -150,28 +148,24 @@ Depending on the pipeline configuration, the above actions can be done all in a 
 
 See the [bucket policy documentation](https://docs.aws.amazon.com/config/latest/developerguide/s3-bucket-policy.html) for additional details.
 
-(aws-batch)=
-
 ## AWS Batch
 
 [AWS Batch](https://aws.amazon.com/batch/) is a managed computing service that allows the execution of containerised workloads in the AWS cloud infrastructure. It dynamically provisions the optimal quantity and type of compute resources (e.g., CPU or memory optimized compute resources) based on the volume and specific resource requirements of the jobs submitted.
 
 Nextflow provides built-in support for AWS Batch, allowing the seamless deployment of Nextflow pipelines in the cloud, in which tasks are offloaded as Batch jobs.
 
-Read the {ref}`AWS Batch executor <awsbatch-executor>` section to learn more about the `awsbatch` executor in Nextflow.
-
-(aws-batch-cli)=
+See [AWS Batch][awsbatch-executor] to learn more about the `awsbatch` executor in Nextflow.
 
 ### AWS CLI
 
-:::{tip}
+:::tip
 The need for the AWS CLI is considered a legacy requirement for the deployment of Nextflow pipelines with AWS Batch.
-Instead, consider using {ref}`wave-page` and {ref}`fusion-page` to facilitate access to S3 without using the AWS CLI.
+Instead, consider using [Wave][wave-page] and [Fusion][fusion-page] to facilitate access to S3 without using the AWS CLI.
 :::
 
 Nextflow uses the [AWS command line tool](https://aws.amazon.com/cli/) (`aws`) to stage input files and output files between S3 and the task containers.
 
-The `aws` command can be made available by either (1) installing it in the container image(s) or (2) installing it in a {ref}`custom AMI <aws-custom-ami>` to be used instead of the default AMI when configuring AWS Batch.
+The `aws` command can be made available by either (1) installing it in the container image(s) or (2) installing it in a [custom AMI][aws-custom-ami]` to be used instead of the default AMI when configuring AWS Batch.
 
 ### Get started
 
@@ -186,7 +180,7 @@ The `aws` command can be made available by either (1) installing it in the conta
 
 3. In the AWS Console, create an S3 bucket for the work directory (see below). You can also create separate buckets for input data and results, as needed.
 
-4. Make sure that every process in your pipeline specifies a Docker container with the {ref}`process-container` directive.
+4. Make sure that every process in your pipeline specifies a Docker container with the [container][process-container] directive.
 
 5. Make sure that all of your container images are published in a Docker registry that can be reached by AWS Batch, such as [Docker Hub](https://hub.docker.com/), [Quay](https://quay.io/), or [Elastic Container Registry](https://aws.amazon.com/ecr/).
 
@@ -194,9 +188,9 @@ The `aws` command can be made available by either (1) installing it in the conta
 
 To configure your pipeline for AWS Batch:
 
-1. Specify the AWS Batch {ref}`executor <awsbatch-executor>`
-2. Specify the AWS Batch queue with the {ref}`process-queue` directive
-3. Specify any Batch job container options with the {ref}`process-containerOptions` directive.
+1. Specify the AWS Batch [executor][awsbatch-executor]
+2. Specify the AWS Batch queue with the [queue][process-queue] directive
+3. Specify any Batch job container options with the [containerOptions][process-containerOptions] directive.
 
 An example `nextflow.config` file is shown below:
 
@@ -217,16 +211,16 @@ aws {
 }
 ```
 
-:::{tip}
-Each process can be configured with its own queue by using the {ref}`process-queue` directive in the process definition or via {ref}`config-process-selectors` in your Nextflow configuration.
+:::tip
+Each process can be configured with its own queue by using the [queue][process-queue] directive in the process definition or via [Process selectors][config-process-selectors] in your Nextflow configuration.
 :::
 
 ## Container Options
 
-:::{versionadded} 21.12.1-edge
+:::note{title="Added in version 21.12.1-edge"}
 :::
 
-The {ref}`process-containerOptions` directive can be used to control the properties of the container execution associated with each Batch job.
+The [containerOptions][process-containerOptions] directive can be used to control the properties of the container execution associated with each Batch job.
 
 The following container options are currently supported:
 
@@ -267,8 +261,6 @@ containerOptions '--ulimit nofile=1280:2560 --ulimit nproc=16:32 --privileged'
 
 Check the [AWS documentation](https://docs.aws.amazon.com/batch/latest/APIReference/API_ContainerProperties.html) for further details.
 
-(aws-custom-ami)=
-
 ## Custom AMI
 
 There are several reasons why you might need to create your own [AMI (Amazon Machine Image)](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) to use in your Compute Environments:
@@ -283,7 +275,7 @@ There are several reasons why you might need to create your own [AMI (Amazon Mac
 From the EC2 Dashboard, select **Launch Instance**, then select **Browse more AMIs**. In the new page, select
 **AWS Marketplace AMIs**, and then search for **Amazon ECS-Optimized Amazon Linux 2 (AL2) x86_64 AMI**. Select the AMI and continue as usual to configure and launch the instance.
 
-:::{note}
+:::note
 The selected instance has a root volume of 30GB. Make sure to increase its size or add a second EBS volume with enough storage for real genomic workloads.
 :::
 
@@ -293,17 +285,16 @@ Finally, select **Create Image** from the EC2 Dashboard to create a new AMI from
 
 The new AMI ID needs to be specified when creating the Batch Compute Environment.
 
-:::{warning}
+:::warning
 Any additional software must be installed on the EC2 instance *before* creating the AMI.
 :::
 
-(id2)=
 
 ### AWS CLI installation
 
-:::{tip}
+:::tip
 The need for the AWS CLI is considered a legacy requirement for the deployment of Nextflow pipelines with AWS Batch.
-Instead, consider using {ref}`wave-page` and {ref}`fusion-page` to facilitate access to S3 without using the AWS CLI.
+Instead, consider using [Wave][wave-page] and [Fusion][fusion-page] to facilitate access to S3 without using the AWS CLI.
 :::
 
 The [AWS CLI](https://aws.amazon.com/cli) should be installed in your custom AMI using a self-contained package manager such as [Conda](https://conda.io). That way, you can control which version of Python is used by the AWS CLI (which is written in Python).
@@ -328,7 +319,7 @@ $ ./miniconda/bin/aws --version
 aws-cli/1.29.20 Python/3.11.4 Linux/4.14.318-241.531.amzn2.x86_64 botocore/1.31.20
 ```
 
-:::{note}
+:::note
 The `aws` tool will be placed in a directory named `bin` in the main installation folder. Modifying this directory structure after the tool is installed will cause it to not work properly.
 :::
 
@@ -340,11 +331,7 @@ aws.batch.cliPath = '/home/ec2-user/miniconda/bin/aws'
 
 Replace the path above with the one matching the location where the `aws` tool is installed in your AMI.
 
-:::{versionchanged} 19.07.0
-The `executor.awscli` config option was replaced by `aws.batch.cliPath`.
-:::
-
-:::{warning}
+:::warning
 The grandparent directory of the `aws` tool will be mounted into the container at the same path as the host, e.g. `/home/ec2-user/miniconda`, which will shadow existing files in the container. Make sure you use a path that is not already present in the container.
 :::
 
@@ -389,11 +376,11 @@ To test the installation:
 curl -s http://localhost:51678/v1/metadata | python -mjson.tool (test)
 ```
 
-:::{note}
+:::note
 The `AmazonEC2ContainerServiceforEC2Role` policy must be attached to the instance role in order to be able to connect the EC2 instance created by the Compute Environment to the ECS container.
 :::
 
-:::{note}
+:::note
 The `AmazonEC2ContainerRegistryReadOnly` policy should be attached to the instance role in order to get read-only access to Amazon EC2 Container Registry repositories.
 :::
 
@@ -405,7 +392,7 @@ Nextflow automatically creates the Batch [Job definitions](http://docs.aws.amazo
 
 However, sometimes you may still need to specify a custom **Job Definition** to fine tune the configuration of a specific job, for example to define custom mount paths.
 
-To do that, first create a **Job Definition** in the AWS Console (or by other means). Note the name of the Job definition you created. You can then associate a process execution with this Job definition by using the {ref}`process-container` directive and specifying, in place of the container image name, the Job definition name prefixed by `job-definition://`, as shown below:
+To do that, first create a **Job Definition** in the AWS Console (or by other means). Note the name of the Job definition you created. You can then associate a process execution with this Job definition by using the [container][process-container] directive and specifying, in place of the container image name, the Job definition name prefixed by `job-definition://`, as shown below:
 
 ```groovy
 process.container = 'job-definition://your-job-definition-name'
@@ -415,7 +402,7 @@ process.container = 'job-definition://your-job-definition-name'
 
 Nextflow allows the use of multiple executors in the same workflow application. This feature enables the deployment of hybrid workloads in which some jobs are executed in the local computer or local computing cluster and some jobs are offloaded to AWS Batch.
 
-To enable this feature, use one or more {ref}`config-process-selectors` in your Nextflow configuration to apply the AWS Batch configuration to the subset of processes that you want to offload. For example:
+To enable this feature, use one or more [Process selectors][config-process-selectors] in your Nextflow configuration to apply the AWS Batch configuration to the subset of processes that you want to offload. For example:
 
 ```groovy
 process {
@@ -431,7 +418,7 @@ aws {
 }
 ```
 
-With the above configuration, processes with the `bigTask` {ref}`process-label` will run on AWS Batch, while the remaining processes will run in the local computer.
+With the above configuration, processes with the `bigTask` [label][process-label] will run on AWS Batch, while the remaining processes will run in the local computer.
 
 Then launch the pipeline with the -bucket-dir option to specify an AWS S3 path for the jobs computed with AWS Batch and, optionally, the -work-dir to specify the local storage for the jobs computed locally:
 
@@ -439,18 +426,15 @@ Then launch the pipeline with the -bucket-dir option to specify an AWS S3 path f
 nextflow run <script or project name> -bucket-dir s3://my-bucket/some/path
 ```
 
-:::{warning}
+:::warning
 The AWS S3 path needs to contain at least one sub-directory (e.g. `s3://my-bucket/work` rather than `s3://my-bucket`).
 :::
 
-:::{note}
+:::note
 Nextflow will automatically manage the transfer of input and output files between the local and cloud environments when using hybrid workloads.
 :::
 
 ### Volume mounts
-
-:::{versionadded} 19.07.0
-:::
 
 User provided container volume mounts can be provided as shown below:
 
@@ -515,11 +499,9 @@ There are multiple reasons why this can happen. They are mainly related to the C
 
 This [AWS page](https://aws.amazon.com/premiumsupport/knowledge-center/batch-job-stuck-runnable-status/) provides several resolutions and tips to investigate and work around the issue.
 
-(aws-fargate)=
-
 ## AWS Fargate
 
-:::{versionadded} 23.12.0-edge
+:::note{title="Added in version 23.12.0-edge"}
 :::
 
 Nextflow provides experimental support for the execution of [AWS Batch jobs with Fargate resources](https://docs.aws.amazon.com/batch/latest/userguide/fargate.html).
@@ -542,11 +524,22 @@ wave.enabled = true
 See the AWS documentation for details how to create the required AWS Batch queue for Fargate, the Batch Job Role
 and the Batch Execution Role.
 
-:::{note}
+:::note
 Nextflow uses [s5cmd](https://github.com/peak/s5cmd) to download the task input data and upload the task outputs.
-To enable this capability, you need to enable the Wave service in the Nextflow configuration, as shown in the above example. See {ref}`Wave <wave-page>` documentation for more details.
+To enable this capability, you need to enable the Wave service in the Nextflow configuration, as shown in the above example. See [Wave][] for more details.
 :::
 
 ## Advanced configuration
 
-Read the {ref}`AWS configuration<config-aws>` section to learn more about advanced configuration options.
+See [aws][config-aws] to learn more about advanced configuration options.
+
+[awsbatch-executor]: /nextflow_docs/nextflow_repo/docs/executor#aws-batch
+[aws-custom-ami]: /nextflow_docs/nextflow_repo/docs/aws#custom-ami
+[config-aws]: /nextflow_docs/nextflow_repo/docs/reference/config#aws
+[config-process-selectors]: /nextflow_docs/nextflow_repo/docs/config#process-selectors
+[fusion-page]: /nextflow_docs/nextflow_repo/docs/fusion
+[process-container]: /nextflow_docs/nextflow_repo/docs/reference/process#container
+[process-containerOptions]: /nextflow_docs/nextflow_repo/docs/reference/process#containeroptions
+[process-label]: /nextflow_docs/nextflow_repo/docs/reference/process#label
+[process-queue]: /nextflow_docs/nextflow_repo/docs/reference/process#queue
+[wave-page]: /nextflow_docs/nextflow_repo/docs/wave

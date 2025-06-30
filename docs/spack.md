@@ -1,8 +1,6 @@
-(spack-page)=
-
 # Spack environments
 
-:::{versionadded} 23.02.0-edge
+:::note{title="Added in version 23.02.0-edge"}
 :::
 
 [Spack](https://spack.io/) is a package manager for supercomputers, Linux, and macOS. It makes installing scientific software easy. Spack is not tied to a particular language; you can build a software stack in Python or R, link to libraries written in C, C++, or Fortran, and easily swap compilers or target specific CPU microarchitectures.
@@ -19,21 +17,21 @@ This feature requires the [Spack](https://spack.io) package manager to be instal
 
 Nextflow automatically creates and activates the Spack environment(s) given the dependencies specified by each process.
 
-Dependencies are specified by using the {ref}`process-spack` directive, providing either the names of the required Spack packages, the path of a Spack environment yaml file or the path of an existing Spack environment directory.
+Dependencies are specified by using the [spack][process-spack] directive, providing either the names of the required Spack packages, the path of a Spack environment yaml file or the path of an existing Spack environment directory.
 
-:::{note}
+:::note
 Spack always installs the software packages in its own directories, regardless of the Nextflow specifications. The Spack environment created by Nextflow only contains symbolic links pointing to the appropriate package locations, and therefore it is relatively small in size.
 :::
 
-You can specify the directory where the Spack environment is stored using the `spack.cacheDir` configuration property (see the {ref}`configuration page <config-spack>` for details). When using a computing cluster, make sure to use a shared file system path accessible from all compute nodes.
+You can specify the directory where the Spack environment is stored using the `spack.cacheDir` configuration property (see [spack][config-spack] for more information). When using a computing cluster, make sure to use a shared file system path accessible from all compute nodes.
 
-:::{warning}
+:::warning
 The Spack environment feature is not supported by executors that use remote object storage as the work directory, e.g. AWS Batch.
 :::
 
 ### Enabling Spack environment
 
-The use of Spack recipes specified using the {ref}`process-spack` directive needs to be enabled explicitly by setting the option shown below in the pipeline configuration file (i.e. `nextflow.config`):
+The use of Spack recipes specified using the [spack][process-spack] directive needs to be enabled explicitly by setting the option shown below in the pipeline configuration file (i.e. `nextflow.config`):
 
 ```groovy
 spack.enabled = true
@@ -60,7 +58,7 @@ Using the above definition, a Spack environment that includes BWA, Samtools, and
 
 The usual Spack package syntax and naming conventions can be used. The version of a package can be specified after the package name like so: `bwa@0.7.15`.
 
-Spack is able to infer the local CPU microarchitecture and optimize the build accordingly. If you really need to customize this option, you can use the {ref}`process-arch` directive.
+Spack is able to infer the local CPU microarchitecture and optimize the build accordingly. If you really need to customize this option, you can use the [arch][process-arch] directive.
 
 Read the Spack documentation for more details about [package specifications](https://spack.readthedocs.io/en/latest/basic_usage.html#specs-dependencies).
 
@@ -80,11 +78,11 @@ spack:
 
 Here, the `concretizer` option is a sensible default for Spack environments.
 
-:::{note}
+:::note
 When creating a Spack environment, Nextflow always enables the corresponding Spack view. This is required by Nextflow to locate executables at pipeline runtime.
 :::
 
-As mentioned above, Spack is able to guess the target CPU microarchitecture and optimize the build accordingly. If you really need to customize this option, we advise to use the {ref}`process-arch` directive rather than the available options for the Spack environment file.
+As mentioned above, Spack is able to guess the target CPU microarchitecture and optimize the build accordingly. If you really need to customize this option, we advise to use the [arch][process-arch] directive rather than the available options for the Spack environment file.
 
 Read the Spack documentation for more details about how to create [environment files](https://spack.readthedocs.io/en/latest/environments.html).
 
@@ -101,7 +99,7 @@ process hello {
 }
 ```
 
-:::{warning}
+:::warning
 The environment file name **must** have a `.yaml` extension or else it won't be properly recognized.
 :::
 
@@ -142,13 +140,13 @@ Spack builds most software package from their source codes, and it does this for
 2. Use the Nextflow stub functionality prior to running the pipeline for production.
    Nextflow will run the stub pipeline, skipping process executions but still setting up the required software packages.
    This option is useful if it is not possible to write a Spack yaml file for the environment.
-   The stub functionality is described in the {ref}`Stub <process-stub>` section of the Processes page.
+   The stub functionality is described in the [Stub][process-stub] section of the Processes page.
 
 ### Configuration file
 
 When the `spack` directive is used in any `process` definition within the pipeline script, Spack is required for the pipeline execution.
 
-Specifying the Spack environments in a separate configuration {ref}`profile <config-profiles>` is therefore
+Specifying the Spack environments in a separate configuration [profile][config-profiles] is therefore
 recommended to allow the execution via a command line option and to enhance the pipeline portability. For example:
 
 ```groovy
@@ -169,4 +167,10 @@ The above configuration snippet allows the execution either with Spack or Docker
 
 ## Advanced settings
 
-Spack advanced configuration settings are described in the {ref}`Spack <config-spack>` section on the Nextflow configuration page.
+Spack advanced configuration settings are described in the [spack][config-spack] section on the Nextflow configuration page.
+
+[config-profiles]: /nextflow_docs/nextflow_repo/docs/config#config-profiles
+[config-spack]: /nextflow_docs/nextflow_repo/docs/reference/config#spack
+[process-arch]: /nextflow_docs/nextflow_repo/docs/reference/process#arch
+[process-spack]: /nextflow_docs/nextflow_repo/docs/reference/process#spack
+[process-stub]: /nextflow_docs/nextflow_repo/docs/process#stub

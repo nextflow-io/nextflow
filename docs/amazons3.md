@@ -1,5 +1,3 @@
-(amazons3-page)=
-
 # Amazon S3
 
 Nextflow includes support for AWS S3 storage. Files stored in an S3 bucket can be accessed transparently in your pipeline script like any other file in the local file system.
@@ -20,7 +18,7 @@ The usual file operations can be applied to a path handle with the above notatio
 println file('s3://my-bucket/data/sequences.fa').text
 ```
 
-See {ref}`working-with-files` and the {ref}`stdlib-types-path` reference to learn more about available file operations.
+See [Working with files][working-with-files] and the [Path][stdlib-types-path] reference to learn more about available file operations.
 
 ## Security credentials
 
@@ -96,4 +94,9 @@ aws {
 
 ## Advanced configuration
 
-Read {ref}`AWS configuration<config-aws>` section to learn more about advanced S3 client configuration options.
+See [AWS configuration][config-aws] for more information about advanced S3 client configuration options.
+
+
+[config-aws]: /nextflow_docs/nextflow_repo/docs/reference/config#aws
+[stdlib-types-path]: /nextflow_docs/nextflow_repo/docs/reference/stdlib-types#path
+[working-with-files]: /nextflow_docs/nextflow_repo/docs/working-with-files

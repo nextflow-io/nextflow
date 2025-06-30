@@ -1,11 +1,9 @@
-(fusion-page)=
-
 # Fusion file system
 
-:::{versionadded} 22.10.0
+:::note{title="Added in version 22.10.0"}
 :::
 
-:::{versionadded} 23.02.0-edge
+:::note{title="Added in version 23.02.0-edge"}
 Support for Google Cloud Storage.
 :::
 
@@ -15,7 +13,7 @@ Fusion is a virtual, lightweight, distributed file system that bridges the gap b
 
 See [Fusion file system](https://docs.seqera.io/fusion) for more information about Fusion features.
 
-:::{note}
+:::note
 Fusion requires a license for use in Seqera Platform compute environments or directly in Nextflow. Fusion can be trialed at no cost. [Contact Seqera](https://seqera.io/contact-us/) for more details.
 :::
 
@@ -25,8 +23,7 @@ Fusion integrates with Nextflow directly and does not require any installation o
 
 To enable Fusion in your Nextflow pipeline, add the following to your `nextflow.config` file:
 
-```{code-block} nextflow
-:class: copyable
+```nextflow
 fusion.enabled = true
 wave.enabled = true
 tower.accessToken = '<PLATFORM_ACCESS_TOKEN>'

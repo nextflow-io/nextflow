@@ -1,5 +1,3 @@
-(azure-page)=
-
 # Azure
 
 ## Overview
@@ -9,7 +7,7 @@ Nextflow provides built-in support for Azure Cloud Services. It enables you to:
 - Store and access data using Azure Blob Storage and Azure file shares.
 - Execute workflows using Azure Batch.
 
-:::{tip}
+:::tip
 For automated Azure infrastructure setup, consider using [Batch Forge](https://docs.seqera.io/platform/latest/compute-envs/azure-batch#compute-environment) in [Seqera Platform](https://seqera.io/platform/).
 :::
 
@@ -37,7 +35,7 @@ To run pipelines with Azure Batch:
     nextflow run <PIPELINE_NAME>
     ```
 
-:::{tip}
+:::tip
 You can list Azure regions with:
 
 ```bash
@@ -70,11 +68,9 @@ For Azure Batch:
 
 To assign roles to a managed identity or service principal, see the [Azure documentation](https://learn.microsoft.com/en-us/azure/role-based-access-control/role-assignments-portal?tabs=current).
 
-(azure-managed-identities)=
-
 ### Managed identities
 
-:::{versionadded} 24.05.0-edge
+:::note{title="Added in version 24.05.0-edge"}
 :::
 
 [Managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) is the recommended authentication method when running Nextflow within Azure. It automatically manages credentials without requiring you to store secrets.
@@ -117,7 +113,7 @@ Replace the following:
 - `BATCH_ACCOUNT_NAME`: your Azure Batch account name
 - `BATCH_ACCOUNT_LOCATION`: your Azure Batch account location
 
-:::{tip}
+:::tip
 Nextflow uses the `AZURE_MANAGED_IDENTITY_SYSTEM` environment variable if the managed identity is not set in the Nextflow configuration file. Set this to `true` to enable a system-assigned managed identity
 :::
 
@@ -157,13 +153,13 @@ Replace the following:
 - `BATCH_ACCOUNT_NAME`: your Azure Batch account name
 - `BATCH_ACCOUNT_LOCATION`: your Azure Batch account location
 
-:::{tip}
+:::tip
 Nextflow uses the `AZURE_MANAGED_IDENTITY_USER` environment variable if the managed identity client ID is not provided in the Nextflow configuration file.
 :::
 
 ### Service principals
 
-:::{versionadded} 22.11.0-edge
+:::note{title="Added in version 22.11.0-edge"}
 :::
 
 [Service principal](https://learn.microsoft.com/en-us/entra/identity-platform/app-objects-and-service-principals) credentials can be used to access Azure Batch and Storage accounts.
@@ -189,7 +185,7 @@ azure {
 }
 ```
 
-:::{tip}
+:::tip
 Nextflow uses the following environment variables if storage settings are not set in the Nextflow config file:
 
 - `AZURE_CLIENT_ID`: your Azure service principal application ID
@@ -228,11 +224,11 @@ You can also use a Shared Access Token (SAS) instead of an account key to provid
 azure.storage.sasToken = '<SAS_TOKEN>'
 ```
 
-:::{tip}
+:::tip
 When creating a SAS token, make sure to enable `Read`, `Write`, `Delete`, `List`, `Add`, `Create` permissions for the `Container` and `Object` resource types. The value of `sasToken` should be stripped of the leading `?` character.
 :::
 
-:::{tip}
+:::tip
 Nextflow uses the following environment variables if storage settings are not provided in the Nextflow configuration file:
 
 - `AZURE_STORAGE_ACCOUNT_NAME`: your Azure Storage account name
@@ -262,15 +258,13 @@ azure {
 }
 ```
 
-:::{tip}
+:::tip
 Nextflow uses the following environment variables if storage settings are not provided in the Nextflow configuration file:
 
 - `AZURE_STORAGE_ACCOUNT_NAME`: your Azure Storage account name
 - `AZURE_STORAGE_ACCOUNT_KEY`: your Azure Storage account access key
 - `AZURE_STORAGE_SAS_TOKEN`: a shared access signature (SAS) token for Azure Storage access
 :::
-
-(azure-batch)=
 
 ## Azure Batch
 
@@ -317,7 +311,7 @@ azure {
 }
 ```
 
-:::{note}
+:::note
 The work directory must be a subdirectory, for example, `az://container/work`, not `az://container`.
 :::
 
@@ -343,7 +337,7 @@ You can increase your quota on the Azure Portal by opening your Batch account an
 
 Nextflow supports two approaches for managing Batch pools: auto pools and named pools. These approaches are described in the following sections.
 
-:::{warning}
+:::warning
 Clean up the Batch pools or use auto-scaling to avoid additional charges in the Batch account.
 :::
 
@@ -434,9 +428,9 @@ process {
 }
 ```
 
-The above example defines the configuration for two node pools, `small` and `large`. The `small` pool provisions 10 compute nodes of type *Standard_D2_v2*, and the `large` pool provisions 5 nodes of type *Standard_E2_v3*. See the {ref}`config-azure` configuration scope for the list of available configuration options.
+The above example defines the configuration for two node pools, `small` and `large`. The `small` pool provisions 10 compute nodes of type *Standard_D2_v2*, and the `large` pool provisions 5 nodes of type *Standard_E2_v3*. See the [azure][config-azure] configuration scope for the list of available configuration options.
 
-:::{warning}
+:::warning
 Pool names may contain alphanumeric characters, hyphens, and underscores. Hyphenated names must be quoted, e.g., `'pool-1'`.
 :::
 
@@ -494,7 +488,7 @@ The `azure.batch.pools.<POOL_NAME>.scaleFormula` setting can be used to specify 
 
 By default, Nextflow creates SAS tokens for specific containers and passes them to tasks to enable file operations with Azure Storage. SAS tokens expire after a set period of time. The expiration time is 48 hours by default and cat be configured using `azure.storage.tokenDuration` in your configuration.
 
-:::{versionadded} 25.05.0-edge
+:::note{title="Added in version 25.05.0-edge"}
 :::
 
 You can also authenticate to Azure Storage using a managed identity when using Fusion.
@@ -527,7 +521,7 @@ For example, consider a *Standard_D4d_v5* machine with 4 vCPUs, 16 GB of memory,
 
 Resource overprovisioning can occur if tasks consume more than their allocated share of resources. For instance, the node described above my become overloaded and fail if a task with `cpus 2` uses more than 8 GB of memory or 75 GB of disk space. Make sure to accurately specify resource requirements to ensure optimal performance and prevent task failures.
 
-:::{warning}
+:::warning
 Azure virtual machines come with fixed storage disks that are not expandable. Tasks will fail if the tasks running concurrently on a node use more storage than the machine has available.
 :::
 
@@ -547,7 +541,7 @@ azure {
 }
 ```
 
-:::{tip}
+:::tip
 Nextflow uses the following environment variables if the registry credentials are not provided in the Nextflow configuration file:
 
 - `AZURE_REGISTRY_USER_NAME`: the username for Azure Container Registry authentication
@@ -619,7 +613,7 @@ The subnet ID must be in the following format:
 
 Nextflow can submit tasks to existing pools that are already attached to a virtual network without requiring additional configuration.
 
-:::{warning}
+:::warning
 Virtual networks require Microsoft Entra authentication (service principal or managed identity).
 :::
 
@@ -663,7 +657,7 @@ azure {
 }
 ```
 
-:::{warning}
+:::warning
 File shares must be authenticated using a storage account key. Managed identity and service principal are not supported.
 :::
 
@@ -705,10 +699,14 @@ Launch the pipeline with the above configuration:
 nextflow run <PIPELINE_NAME>
 ```
 
-:::{note}
+:::note
 When using Fusion, `bucketDir` is not needed as all tasks will use the remote work directory. Specify `workDir` instead.
 :::
 
 ## Advanced configuration
 
-See the {ref}`config-azure` configuration scope for the list of available configuration options.
+See the [azure][config-azure] configuration scope for the list of available configuration options.
+
+
+
+[config-azure]: /nextflow_docs/nextflow_repo/docs/reference/config#azure

@@ -1,8 +1,6 @@
-(wave-page)=
-
 # Wave containers
 
-:::{versionadded} 22.10.0
+:::note{title="Added in version 22.10.0"}
 :::
 
 [Wave](https://seqera.io/wave/) is a container provisioning service integrated with Nextflow. With Wave, you can build, upload, and manage the container images required by your data analysis workflows automatically and on-demand during pipeline execution.
@@ -23,13 +21,11 @@ tower {
 }
 ```
 
-:::{note}
+:::note
 The Seqera Platform access token is not mandatory, but it is recommended in order to access private container repositories and pull public containers without being affected by service rate limits. Credentials should be made available to Wave using the [credentials manager](https://docs.seqera.io/platform/latest/credentials/overview) in Seqera Platform.
 :::
 
 ## Use cases
-
-(wave-authenticate-private-repos)=
 
 ### Authenticate private repositories
 
@@ -48,9 +44,9 @@ tower {
 
 Wave can build and provision container images on-demand for your Nextflow pipelines.
 
-To enable this feature, add the Dockerfile of the container to be built in the {ref}`module directory <module-directory>` where the pipeline process is defined. When Wave is enabled, it automatically uses the Dockerfile to build the required container, upload to the registry, and it uses the container to carry out the tasks defined in the module.
+To enable this feature, add the Dockerfile of the container to be built in the [module directory][module-directory] where the pipeline process is defined. When Wave is enabled, it automatically uses the Dockerfile to build the required container, upload to the registry, and it uses the container to carry out the tasks defined in the module.
 
-:::{tip}
+:::tip
 Make sure the process does not declare a `container` directive, otherwise it will take precedence over the Dockerfile definition.
 :::
 
@@ -62,13 +58,13 @@ wave.strategy = ['dockerfile','container']
 
 This setting instructs Wave to prioritize the module Dockerfile over process `container` directives.
 
-:::{warning}
+:::warning
 When building containers, Wave currently does not support `ADD`, `COPY`, or any other Dockerfile commands that access files in the host file system.
 :::
 
 ### Build Conda based containers
 
-Wave allows the provisioning of containers based on the {ref}`process-conda` directive used by the processes in your pipeline. This is a quick alternative to building Conda packages in the local computer. Moreover, this enables the use of Conda packages in your pipeline when deploying in cloud-native platforms such as AWS Batch and Kubernetes, which do not allow the (easy) use of the Conda package manager.
+Wave allows the provisioning of containers based on the [conda][process-conda] directive used by the processes in your pipeline. This is a quick alternative to building Conda packages in the local computer. Moreover, this enables the use of Conda packages in your pipeline when deploying in cloud-native platforms such as AWS Batch and Kubernetes, which do not allow the (easy) use of the Conda package manager.
 
 With Wave enabled in your pipeline, simply define the `conda` requirements in the pipeline processes, provided the same process does not also specify a `container` directive or a Dockerfile.
 
@@ -80,7 +76,7 @@ wave.strategy = ['conda']
 
 The above setting instructs Wave to use the `conda` directive to provision the pipeline containers and ignore the `container` directive and any Dockerfile(s).
 
-:::{tip}
+:::tip
 Some configuration options in the `conda` scope are used when Wave is used to build Conda-based containers.
 For example, the Conda channels and their priority can be set with `conda.channels`:
 
@@ -90,20 +86,18 @@ conda.channels = 'conda-forge,bioconda'
 ```
 :::
 
-Packages from the [Python Package Index](https://pypi.org/) can also be added to a Conda `environment.yml` file. See {ref}`Conda and PyPI <conda-pypi>` for more information.
-
-(wave-singularity)=
+Packages from the [Python Package Index](https://pypi.org/) can also be added to a Conda `environment.yml` file. See [Conda and PyPI][conda-pypi] for more information.
 
 ### Build Singularity native images
 
-:::{versionadded} 23.09.0-edge
+:::note{title="Added in version 23.09.0-edge"}
 :::
 
 Nextflow can build Singularity native images on-demand either using `Singularityfile`,
 Conda packages or Spack packages. The Singularity images are automatically uploaded in a container registry OCI compliant
 of your choice and stored as a [ORAS artefact](https://oras.land/).
 
-:::{note}
+:::note
 This feature requires of Singularity (or Apptainer) version supporting the pull of images using the `oras:` pseudo-protocol.
 :::
 
@@ -120,15 +114,14 @@ wave.build.repository = 'docker.io/user/repo'
 In the above configuration replace `docker.io/user/repo` with a repository of your choice where Singularity image files
 should be uploaded.
 
-:::{note}
-When using a private repository, the repository access keys must be provided via the Seqera Platform credentials manager (see {ref}`above <wave-authenticate-private-repos>`).
+:::note
+When using a private repository, the repository access keys must be provided via the Seqera Platform credentials manager (see [Use cases](#use-cases)).
 
-Moreover the access to the repository must be granted in the compute nodes by using the command `singularity remote login <registry>`.
-Please see Singularity documentation for further details.
+Moreover the access to the repository must be granted in the compute nodes by using the command singularity remote login. See Singularity documentation for further details.
 :::
 
-:::{note}
-In order to build Singularity native images, both `singularity.ociAutoPull` and `singularity.ociMode` need to be disabled in the configuration (see the {ref}`config-singularity` section).
+:::note
+In order to build Singularity native images, both `singularity.ociAutoPull` and `singularity.ociMode` need to be disabled in the configuration. See [singularity][config-singularity] for more information.
 :::
 
 ### Push to a private repository
@@ -168,7 +161,7 @@ The container will be copied with the same name, tag, and checksum in the specif
 container is `quay.io/biocontainers/bwa:0.7.13--1` and the build repository setting is `example.com`, the resulting container
 name is `example.com/biocontainers/bwa:0.7.13--1`.
 
-:::{tip}
+:::tip
 When using a path prefix in the target registry name, it will be prepended to the resulting container name. For example,
 having `quay.io/biocontainers/bwa:0.7.13--1` as source container and `example.com/library` as build repository, the resulting
 container will be named `example.com/library/biocontainers/bwa:0.7.13--1`.
@@ -199,18 +192,25 @@ wave.scan.allowedLevels = 'low,medium'
 
 The above setting will allow the use of containers with *low* and *medium* vulnerabilities. Accepted values are `low`, `medium`, `high`, and `critical`. See [common vulnerabilities scoring system](https://en.wikipedia.org/wiki/Common_Vulnerability_Scoring_System) for more information about these levels.
 
-:::{note}
+:::note
 Wave's security scanning applies to any container used in your pipeline, whether it was built by Wave or simply accessed through it. The security scan automatically expires after one week. If a container is accessed again after 7 days or more, the scan will be re-executed.
 :::
 
 ### Run pipelines using Fusion file system
 
-Wave containers allows you to run your containerised workflow with {ref}`fusion-page`.
+Wave containers allows you to run your containerized workflow with [Fusion][fusion-page].
 
 This enables the use of an object storage bucket such as AWS S3 or Google Cloud Storage as your pipeline work directory, simplifying and speeding up many operations on local, AWS Batch, Google Batch or Kubernetes executions.
 
-See {ref}`Fusion <fusion-page>` for more details.
+See [Fusion][fusion-page] for more information.
 
 ## Advanced settings
 
-Wave advanced configuration settings are described in the {ref}`Wave <config-wave>` section on the Nextflow configuration page.
+Wave advanced configuration settings are described in the [Wave][config-wave] section on the Nextflow configuration page.
+
+[conda-pypi]: /nextflow_docs/nextflow_repo/docs/conda#python-packages-from-pypi
+[config-singularity]: /nextflow_docs/nextflow_repo/docs/reference/config#singularity
+[config-wave]: /nextflow_docs/nextflow_repo/docs/reference/config#wave
+[fusion-page]: /nextflow_docs/nextflow_repo/docs/fusion
+[module-directory]: /nextflow_docs/nextflow_repo/docs/module#module-directory
+[process-conda]: /nextflow_docs/nextflow_repo/docs/reference/process#conda
