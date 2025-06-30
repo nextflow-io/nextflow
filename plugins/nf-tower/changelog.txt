@@ -1,5 +1,8 @@
 nf-tower changelog
 ===================
+1.11.4 - 30 Jun 2025
+- Fix JWT token refresh to Fusion validation request (#6231) [267ee1cf]
+
 1.11.3 - 2 Jun 2025
 - Add Platform info to Fusion license (#6142)
 
