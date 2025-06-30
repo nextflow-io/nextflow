@@ -80,7 +80,7 @@ class TowerFusionEnvTest extends Specification {
         )
 
         and:
-        def client = TowerFactory.client()
+        def client = TowerFactory.client(session, SysEnv.get())
         client.onFlowCreate(session)
 
         and: 'a mock endpoint returning a valid token'
@@ -149,7 +149,7 @@ class TowerFusionEnvTest extends Specification {
         )
 
         and:
-        def client = TowerFactory.client()
+        def client = TowerFactory.client(session, SysEnv.get())
         client.onFlowCreate(session)
 
         and: 'a mock endpoint returning a valid token'
@@ -220,7 +220,7 @@ class TowerFusionEnvTest extends Specification {
         )
 
         and:
-        def client = TowerFactory.client()
+        def client = TowerFactory.client(session, SysEnv.get())
         client.onFlowCreate(session)
 
         and: 'a mock endpoint returning an error'
