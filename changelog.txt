@@ -1,5 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
+24.10.9 - 30 Jun 2025
+- Fix JWT token refresh to Fusion validation request (#6231) [716468d6]
+- Disable latest upload [35b0c5c6]
+- Bump nf-tower@1.9.3-patch2 [4ed40831]
+
 24.10.8 - 6 Jun 2025
 - Add Fusion license validation [02b4dd74]
 - Bump nf-wave@1.7.5-patch1 [cf6af9c5]
