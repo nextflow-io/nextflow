@@ -2,7 +2,6 @@
 title: Groovy and Java classes
 description: Groovy and Java classes available to Nextflow at runtime
 ---
-Java class that is available to Nextflow at runtime
 
 # Groovy and Java classes
 
