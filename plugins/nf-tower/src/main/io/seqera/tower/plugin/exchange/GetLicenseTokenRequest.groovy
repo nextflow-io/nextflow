@@ -29,4 +29,16 @@ class GetLicenseTokenRequest {
      * The Platform workspace ID associated with this request
      */
     String workspaceId
+
+    /**
+     * @return a Map representation of the request
+     */
+    Map<String, String> toMap() {
+        final map = new HashMap<String, String>()
+        map.product = this.product
+        map.version = this.version
+        map.workflowId = this.workflowId
+        map.workspaceId = this.workspaceId
+        return map
+    }
 }
