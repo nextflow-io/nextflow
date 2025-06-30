@@ -1,5 +1,3 @@
-(syntax-page)=
-
 # Syntax
 
 This page provides a comprehensive description of the Nextflow language.
@@ -51,7 +49,7 @@ workflow {
 }
 ```
 
-:::{warning}
+:::warning
 Statements and script declarations can not be mixed at the same level.
 :::
 
@@ -65,7 +63,7 @@ The first line of a script can be a [shebang](https://en.wikipedia.org/wiki/Sheb
 
 ### Feature flag
 
-A feature flag declaration is an assignment. The target should be a valid {ref}`feature flag <config-feature-flags>` and the source should be a literal (i.e. number, string, boolean):
+A feature flag declaration is an assignment. The target should be a valid [feature flag][config-feature-flags] and the source should be a literal (i.e. number, string, boolean):
 
 ```nextflow
 nextflow.preview.recursion = true
@@ -116,8 +114,6 @@ params.message = 'Hello world!'
 ```
 
 Parameters supplied via command line options, params files, and config files take precedence over parameter definitions in a script.
-
-(syntax-workflow)=
 
 ### Workflow
 
@@ -173,8 +169,6 @@ In order for a script to be executable, it must either define an entry workflow 
 
 Entry workflow definitions are ignored when a script is included as a module. This way, the same script can be included as a module or executed as a pipeline.
 
-(syntax-process)=
-
 ### Process
 
 A process consists of a name and a body. The process body consists of one or more [statements](#statements). A minimal process definition must return a string:
@@ -220,7 +214,7 @@ process greet {
 
 - Sections must be defined in the order shown above, with the exception of the output section, which can also be specified after the script and stub.
 
-Each section may contain one or more statements. For directives, inputs, and outputs, these statements must be [function calls](#function-call). See {ref}`process-reference` for the set of available input qualifiers, output qualifiers, and directives.
+Each section may contain one or more statements. For directives, inputs, and outputs, these statements must be [function calls](#function-call). See [Process reference][process-reference] for the set of available input qualifiers, output qualifiers, and directives.
 
 The script section can be substituted with an exec section:
 
@@ -240,9 +234,7 @@ process greet {
 
 The script and stub sections must return a string in the same manner as a [function](#function).
 
-See {ref}`process-page` for more information on the semantics of each process section.
-
-(syntax-function)=
+See [Processes][process-page] for more information on the semantics of each process section.
 
 ### Function
 
@@ -292,7 +284,7 @@ enum Day {
 
 Enum values in the above example can be accessed as `Day.MONDAY`, `Day.TUESDAY`, and so on.
 
-:::{note}
+:::note
 Enum types cannot be included across modules at this time.
 :::
 
@@ -311,7 +303,7 @@ output {
 }
 ```
 
-Only one output block may be defined in a script. See {ref}`workflow-output-def` for the set of available output directives.
+Only one output block may be defined in a script. See [Workflow outputs][workflow-output-def] for the set of available output directives.
 
 ## Statements
 
@@ -499,7 +491,7 @@ def isEven2(n) {
 }
 ```
 
-:::{note}
+:::note
 If the last statement is not a return or expression statement (implicit return), it is equivalent to appending an empty return.
 :::
 
@@ -511,8 +503,9 @@ A throw statement consists of the `throw` keyword followed by an expression that
 throw new Exception('something failed!')
 ```
 
-:::{note}
-In general, the appropriate way to raise an error is to use the {ref}`error <stdlib-namespaces-global>` function:
+:::note
+In general, the appropriate way to raise an error is to use the [error][stdlib-namespaces-global] function:
+
 ```nextflow
 error 'something failed!'
 ```
@@ -589,7 +582,7 @@ def x = null
 x = 42
 ```
 
-:::{note}
+:::note
 Using a null value in certain expressions (e.g. the object of a property expression or method call) will lead to a "null reference" error. It is best to avoid the use of `null` where possible.
 :::
 
@@ -622,7 +615,7 @@ A *slashy string* is enclosed by slashes instead of quotes:
 /no escape!/
 ```
 
-:::{note}
+:::note
 A slashy string cannot be empty because it would become a line comment.
 :::
 
@@ -735,7 +728,7 @@ println result
 // -> 14
 ```
 
-See {ref}`standard library <stdlib-page>` and {ref}`operator <operator-page>` for more examples of how closures are used in practice.
+See [standard library][stdlib-page] and [operator][operator-page] for more examples of how closures are used in practice.
 
 ### Index expression
 
@@ -827,7 +820,7 @@ If the type is implicitly available in the script, the *fully-qualified type nam
 new Date()
 ```
 
-See {ref}`stdlib-page` for the set of types that are available in Nextflow scripts.
+See [Standard library][stdlib-page] for the set of types that are available in Nextflow scripts.
 
 ### Unary expressions
 
@@ -939,7 +932,19 @@ Compound expressions are evaluated in the following order:
 
 The following legacy features were excluded from this page because they are deprecated:
 
-- The `addParams` and `params` clauses of include declarations. See {ref}`module-params` for more information.
-- The `when:` section of a process definition. See {ref}`process-when` for more information.
-- The `shell:` section of a process definition. See {ref}`process-shell` for more information.
-- The implicit `it` closure parameter. See {ref}`script-closure` for more information.
+- The `addParams` and `params` clauses of include declarations. See [Module parameters][module-params] for more information.
+- The `when:` section of a process definition. See [When][process-when] for more information.
+- The `shell:` section of a process definition. See [Shell][process-shell] for more information.
+- The implicit `it` closure parameter. See [Closures][script-closure] for more information.
+
+[config-feature-flags]: /nextflow_docs/nextflow_repo/docs/reference/feature-flags
+[module-params]: /nextflow_docs/nextflow_repo/docs/module#module-parameters
+[operator-page]: /nextflow_docs/nextflow_repo/docs/reference/operator
+[process-page]: /nextflow_docs/nextflow_repo/docs/process
+[process-reference]: /nextflow_docs/nextflow_repo/docs/reference/process
+[process-shell]: /nextflow_docs/nextflow_repo/docs/process#shell
+[process-when]: /nextflow_docs/nextflow_repo/docs/process#when
+[script-closure]: /nextflow_docs/nextflow_repo/docs/script#closures
+[stdlib-namespaces-global]: /nextflow_docs/nextflow_repo/docs/reference/stdlib-namespaces
+[stdlib-page]: /nextflow_docs/nextflow_repo/docs/reference/stdlib.md
+[workflow-output-def]: /nextflow_docs/nextflow_repo/docs/workflow#workflow-outputs

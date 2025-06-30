@@ -1,4 +1,8 @@
-(stdlib-groovy)=
+---
+title: Groovy and Java classes
+description: Groovy and Java classes available to Nextflow at runtime
+---
+Java class that is available to Nextflow at runtime
 
 # Groovy and Java classes
 
@@ -20,6 +24,8 @@ def vals = [1, 2, 3]
 println groovy.json.JsonOutput.toJson(vals)
 ```
 
-:::{note}
-The set of classes in Nextflow's runtime classpath can change between different Nextflow versions. As a best practice, any code that uses classes outside the Nextflow standard library should either be refactored to only use the Nextflow standard library or be refactored as a {ref}`plugin <plugins-dev-page>` with explicit dependencies.
+:::note
+The set of classes in Nextflow's runtime classpath can change between different Nextflow versions. As a best practice, any code that uses classes outside the Nextflow standard library should either be refactored to only use the Nextflow standard library or be refactored as a [plugin][plugins-dev-page] with explicit dependencies.
 :::
+
+[plugins-dev-page]: /nextflow_docs/nextflow_repo/docs/developer/plugins

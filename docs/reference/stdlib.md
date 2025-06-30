@@ -1,12 +1,7 @@
-(stdlib-page)=
+import DocCardList from "@theme/DocCardList";
 
 # Standard library
 
-This section describes the Nextflow standard library, which consists of built-in namespaces and types.
+Pages in this section describe the Nextflow standard library, which consists of built-in namespaces and types.
 
-```{toctree}
-:maxdepth: 1
-stdlib-namespaces
-stdlib-types
-stdlib-groovy
-```
+<DocCardList />
