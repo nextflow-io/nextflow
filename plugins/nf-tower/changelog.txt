@@ -1,5 +1,8 @@
 nf-tower changelog
 ===================
+1.9.1.patch2 - 30 Jun 2025
+- Fix JWT token refresh to Fusion validation request (#6231) [ci fast] [3ee05c0e]
+
 1.9.1-patch1 - 6 Jun 2025
 Add Fusion license validation [cb7210b9]
 
