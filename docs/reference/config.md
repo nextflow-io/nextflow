@@ -185,7 +185,7 @@ The following settings are available:
 
 `aws.batch.terminateUnschedulableJobs`
 : :::{versionadded} 25.03.0-edge
-:::
+  :::
 : When `true`, jobs that cannot be scheduled for lack of resources or misconfiguration are terminated automatically (default: `false`). The pipeline may complete with an error status depending on the error strategy defined for the corresponding jobs.
 
 `aws.batch.volumes`
