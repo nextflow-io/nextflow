@@ -1,6 +1,15 @@
 NEXTFLOW CHANGE-LOG
 ===================
-25.04.4 - 16 Jun 2024
+25.04.5 - 30 Jun 2025 
+- Fix JWT token refresh to Fusion validation request (#6231) [267ee1cf]
+- Fix null reference error in lint command (#6202) [5347bb72]
+- Fix false error on nested closure in config process directive (#6203) [d6f4e662]
+- Fix false error when using stdin/stdout in a tuple (#6219) [159ec370]
+- Document `bucketDir` config option (#6191) [e5ed05b1]
+- Document secrets config variable (#6230) [79f1ad64]
+- Bump nf-tower@1.11.4 [3cbc2aa7]
+
+25.04.4 - 16 Jun 2025
 - Fix bug in generated Groovy code (#6082) [ead2f320]
 - Fix default imports in included configs (#6096) [831a577b]
 - Fix variable checking in v2 config parser (#6097) [686ff608]
