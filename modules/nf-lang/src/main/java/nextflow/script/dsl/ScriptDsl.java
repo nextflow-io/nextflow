@@ -70,9 +70,9 @@ public interface ScriptDsl extends DslScope {
 
     @Constant("secrets")
     @Description("""
-        Map of user-defined pipeline secrets.
+        Map of pipeline secrets.
     """)
-    Map<String,?> getSecrets();
+    Map<String,String> getSecrets();
 
     @Constant("workDir")
     @Description("""

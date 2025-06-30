@@ -1282,6 +1282,63 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 
   See {ref}`cli-params` for more information about writing custom parameters files.
 
+(cli-secrets)=
+
+### `secrets`
+
+Manage {ref}`pipeline secrets <secrets-page>`.
+
+**Usage**
+
+```console
+$ nextflow secrets <SUBCOMMAND> [OPTIONS]
+```
+
+**Options**
+
+`-h, -help`
+: Print the command usage.
+
+**Subcommands**
+
+`list`
+: List secrets available in the current store.
+
+`get <secret>`
+: Retrieve a secret value.
+
+`set <secret> <value> `
+: Create or update a secret.
+
+`delete <secret>`
+: Delete a secret.
+
+**Examples**
+
+- Set a secret:
+
+    ```console
+    $ nextflow secrets set FOO "Hello world"
+    ```
+
+- List secrets:
+
+    ```console
+    $ nextflow secrets list
+    ```
+
+- Get a secret:
+
+    ```console
+    $ nextflow secrets get FOO
+    ```
+
+- Delete a secret:
+
+    ```console
+    $ nextflow secrets delete FOO
+    ```
+
 ### `self-update`
 
 Update the nextflow runtime to the latest available version.
