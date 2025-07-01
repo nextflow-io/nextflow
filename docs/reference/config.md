@@ -270,7 +270,7 @@ The following settings are available:
 
 `aws.client.signerOverride`
 : The name of the signature algorithm to use for signing requests made by the client. 
-: Since 25.06.0-edge, the nf-amazon plugin is using the SDK V2, this option is deprecated and only AWS V4 Signer is supported. 
+: Since 25.06.0-edge, the nf-amazon plugin is using the SDK V2. This option is deprecated and only AWS V4 Signer is supported. 
 
 `aws.client.socketSendBufferSizeHint`
 : :::{deprecated} 25.06.0-edge

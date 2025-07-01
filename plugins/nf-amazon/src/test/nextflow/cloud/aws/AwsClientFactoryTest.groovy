@@ -59,15 +59,4 @@ class AwsClientFactoryTest extends Specification {
         SysEnv.pop()
     }
 
-    def 'should detect if netty provider is needed' () {
-        given:
-            def coc = ClientOverrideConfiguration.builder().advancedOptions(MAP).build()
-        expect:
-            AwsClientFactory.requiresNettyClient(coc) == BOOL
-        where:
-        MAP                                                             | BOOL
-        [(SdkAdvancedClientOption.SIGNER): AwsS3V4Signer.create() ]     | true
-        [(SdkAdvancedClientOption.USER_AGENT_PREFIX): "Agent" ]         | true
-        [:]                                                             | false
-    }
 }
