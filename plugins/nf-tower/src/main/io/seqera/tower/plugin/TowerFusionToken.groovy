@@ -34,7 +34,7 @@ import nextflow.fusion.FusionConfig
 import nextflow.fusion.FusionToken
 import nextflow.platform.PlatformHelper
 import nextflow.plugin.Priority
-import nextflow.util.GsonHelper
+import nextflow.serde.gson.GsonEncoder
 import nextflow.util.Threads
 import org.pf4j.Extension
 /**
@@ -269,7 +269,8 @@ class TowerFusionToken implements FusionToken {
      * @return The resulting HttpRequest object
      */
     private HttpRequest makeHttpRequest(GetLicenseTokenRequest req) {
-        final body = HttpRequest.BodyPublishers.ofString( GsonHelper.toJson(req) )
+        final gson = new GsonEncoder<GetLicenseTokenRequest>() {}
+        final body = HttpRequest.BodyPublishers.ofString( gson.encode(req) )
         return HttpRequest.newBuilder()
             .uri(URI.create("${endpoint}/${LICENSE_TOKEN_PATH}").normalize())
             .header('Content-Type', 'application/json')
@@ -298,7 +299,8 @@ class TowerFusionToken implements FusionToken {
      * @throws JsonSyntaxException if the JSON string is not well-formed
      */
     protected static GetLicenseTokenResponse parseLicenseTokenResponse(String json) throws JsonSyntaxException {
-        return GsonHelper.fromJson(json, GetLicenseTokenResponse.class)
+        final gson = new GsonEncoder<GetLicenseTokenResponse>() {}
+        return gson.decode(json)
     }
 
     /**
