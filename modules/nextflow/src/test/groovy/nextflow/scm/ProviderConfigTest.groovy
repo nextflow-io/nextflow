@@ -95,7 +95,7 @@ class ProviderConfigTest extends Specification {
         then:
         config.name == 'bitbucket'
         config.server == 'https://bitbucket.org'
-        config.endpoint == 'https://bitbucket.org'
+        config.endpoint == 'https://api.bitbucket.org'
         config.platform == 'bitbucket'
         config.domain == 'bitbucket.org'
     }
