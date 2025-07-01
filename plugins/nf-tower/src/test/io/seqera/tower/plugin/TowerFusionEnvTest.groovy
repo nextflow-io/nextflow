@@ -1,21 +1,21 @@
 package io.seqera.tower.plugin
 
+import static com.github.tomakehurst.wiremock.client.WireMock.*
+
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.stubbing.Scenario
+import com.google.gson.GsonBuilder
 import io.seqera.tower.plugin.exception.UnauthorizedException
 import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
-import nextflow.util.GsonHelper
+import nextflow.serde.gson.InstantAdapter
 import spock.lang.Shared
 import spock.lang.Specification
-
-import static com.github.tomakehurst.wiremock.client.WireMock.*
-
 /**
  * Test cases for the TowerFusionEnv class.
  *
@@ -42,6 +42,13 @@ class TowerFusionEnvTest extends Specification {
 
     def cleanup() {
         SysEnv.pop()      // <-- restore the system host env
+    }
+
+    static String toJson(Object obj) {
+        new GsonBuilder()
+            .registerTypeAdapter(Instant, new InstantAdapter())
+            .create()
+            .toJson(obj)
     }
 
     def 'should return the endpoint from the config'() {
@@ -263,7 +270,7 @@ class TowerFusionEnvTest extends Specification {
 
         and: 'a mock endpoint returning a valid token'
         final now = Instant.now()
-        final expirationDate = GsonHelper.toJson(now.plus(1, ChronoUnit.DAYS))
+        final expirationDate = toJson(now.plus(1, ChronoUnit.DAYS))
         wireMockServer.stubFor(
             WireMock.post(urlEqualTo("/license/token/"))
                 .withHeader('Authorization', equalTo('Bearer abc123'))
@@ -306,7 +313,7 @@ class TowerFusionEnvTest extends Specification {
 
         and: 'a mock endpoint returning a valid token'
         final now = Instant.now()
-        final expirationDate = GsonHelper.toJson(now.plus(1, ChronoUnit.DAYS))
+        final expirationDate = toJson(now.plus(1, ChronoUnit.DAYS))
         wireMockServer.stubFor(
             WireMock.post(urlEqualTo("/license/token/"))
                 .withHeader('Authorization', equalTo('Bearer abc123'))
@@ -354,7 +361,7 @@ class TowerFusionEnvTest extends Specification {
         and: 'prepare stubs'
 
         final now = Instant.now()
-        final expirationDate = GsonHelper.toJson(now.plus(1, ChronoUnit.DAYS))
+        final expirationDate = toJson(now.plus(1, ChronoUnit.DAYS))
 
         // 1️⃣ First attempt: /license/token/ fails with 401
         wireMockServer.stubFor(
