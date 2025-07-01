@@ -34,7 +34,7 @@ class S3FileSystemProviderTest extends Specification {
                                 maxConnections: 100, maxErrorRetry: 3, socketTimeout: 20000, requesterPays: true, s3PathStyleAccess: true,
                                 proxyHost: 'host.com', proxyPort: 80, proxyScheme: 'https', proxyUsername: 'user', proxyPassword: 'pass',
                                 signerOverride: 'S3SignerType', userAgent: 'Agent1', storageEncryption: 'AES256', storageKmsKeyId: 'arn:key:id',
-                                tmThreads: 20, uploadMaxThreads: 15, uploadChunkSize: '7MB', uploadMaxAttempts: 4, uploadRetrySleep: '200ms'
+                                transferManagerThreads: 20, uploadMaxThreads: 15, uploadChunkSize: '7MB', uploadMaxAttempts: 4, uploadRetrySleep: '200ms'
                               ],
                       accessKey: '123456abc', secretKey: '78910def', profile: 'test']
         def provider = new S3FileSystemProvider();

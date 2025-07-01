@@ -219,10 +219,10 @@ The following settings are available:
 `aws.client.maxConcurrency`
 : :::{versionadded} 25.06.0-edge
   :::
-: Overrides the maximum number of concurrent connections in S3 Async client used in the S3 Transfer Manager. This is automatically set according to `targetThroughputInGbps`. Modifying this value can affect the memory used by the S3 transfers. See [S3CrtAsyncClientBuilder](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html)e details](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html#maxConcurrency(java.lang.Integer)) for more details.
+: The maximum number of concurrent S3 transfers when using the asynchronous S3 client. By default, this setting is determined by `aws.client.targetThroughputInGbps`. Modifying this value can affect the amount of memory used for S3 transfers.
 
 `aws.client.maxConnections`
-: The maximum number of allowed open HTTP connections (default: `50`). In AWS SDK v2, different AWS clients are used. This will only affect the synchronous clients. For asynchronous clients used in the S3 Transfer Manager use `aws.client.maxConcurrency`.
+: The maximum number of allowed open HTTP connections when using the synchronous S3 client (default: `50`).
 
 `aws.client.maxErrorRetry`
 : The maximum number of retry attempts for failed retryable requests (default: `-1`).
@@ -230,12 +230,17 @@ The following settings are available:
 `aws.client.maxNativeMemory`
 : :::{versionadded} 25.06.0-edge
   :::
-: The maximum native memory used by the S3 asynchronous client for S3 transfers. This is automatically set according to `targetThroughputInGbps`. Modifying this value can affect the memory used by the S3 transfers. See [maxNativeMemoryLimitInBytes](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html#maxNativeMemoryLimitInBytes(java.lang.Long)) for more details.
+: The maximum native memory for S3 transfers when using the asynchronous S3 client. By default, this setting is determined by `aws.client.targetThroughputInGbps`. Modifying this value can affect the memory used by the S3 transfers.
 
 `aws.client.minimumPartSize`
 : :::{versionadded} 25.06.0-edge
-:::
-: The minimum part size used by the S3 async client in multipart upload mode. (default: `8 MB`). See [minimumPartSizeInBytes](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html#minimumPartSizeInBytes(java.lang.Long)) for more details.
+  :::
+: The minimum part size for multi-part uploads when using the asynchronous S3 client (default: `8 MB`).
+
+`aws.client.multipartThreshold`
+: :::{versionadded} 25.06.0-edge
+  :::
+: The object size threshold for performing multi-part uploads when using the asynchronous S3 client (default: same as `aws.cllient.minimumPartSize`).
 
 `aws.client.protocol`
 : :::{deprecated} 25.06.0-edge
@@ -269,8 +274,10 @@ The following settings are available:
 : Use the path-based access model to access objects in S3-compatible storage systems (default: `false`).
 
 `aws.client.signerOverride`
-: The name of the signature algorithm to use for signing requests made by the client. 
-: Since 25.06.0-edge, the nf-amazon plugin is using the SDK V2. This option is deprecated and only AWS V4 Signer is supported. 
+: :::{deprecated} 25.06.0-edge
+  This option is no longer supported.
+  :::
+: The name of the signature algorithm to use for signing requests made by the client.
 
 `aws.client.socketSendBufferSizeHint`
 : :::{deprecated} 25.06.0-edge
@@ -298,35 +305,42 @@ The following settings are available:
 `aws.client.targetThroughputInGbps`
 : :::{versionadded} 25.06.0-edge
   :::
-: The S3 Async client target network throughput in Gbps. This value is used to automatically set `maxConcurrency` and `maxNativeMemory`. (Default: `10`). See [targetThroughputInGbps](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html#targetThroughputInGbps(java.lang.Double)) for more details.
+: The target network throughput (in Gbps) when using the asynchronous S3 client (default: `10`). This setting is not used when `aws.client.maxConcurrency` and `aws.client.maxNativeMemory` are specified.
 
-`aws.client.multipartThreshold`
+`aws.client.transferManagerThreads`
 : :::{versionadded} 25.06.0-edge
   :::
-: The S3 Async client threshold to create multipart S3 transfers. Default is the same as `minimumPartSize` https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html#thresholdInBytes(java.lang.Long)
-
-`aws.client.tmThreads`
-: :::{versionadded} 25.06.0-edge
-  :::
-: Number of threads used by the S3 transfer manager. (default `10`).
+: Number of threads used by the S3 transfer manager (default `10`).
 
 `aws.client.userAgent`
-:::{deprecated} 25.06.0-edge
+: :::{deprecated} 25.06.0-edge
   This option is no longer supported.
   :::
 : The HTTP user agent header passed with all HTTP requests.
 
 `aws.client.uploadChunkSize`
-: The size of a single part in a multipart upload (default: `100 MB`). Since version 25.06.0-edge, this option only applies to uploads generated from OutputStream. Other uploads are managed by the S3 transfer manager.
+: The size of a single part in a multipart upload (default: `100 MB`).
+: :::{versionchanged} 25.06.0-edge
+  This option only applies when uploading via `Files.newOutputStream()`. Other uploads are managed by the S3 transfer manager.
+  :::
 
 `aws.client.uploadMaxAttempts`
-: The maximum number of upload attempts after which a multipart upload returns an error (default: `5`). Since version 25.06.0-edge, this option only applies to uploads generated from OutputStream. Other uploads are managed by the S3 transfer manager.
+: The maximum number of upload attempts after which a multipart upload returns an error (default: `5`).
+: :::{versionchanged} 25.06.0-edge
+  This option only applies when uploading via `Files.newOutputStream()`. Other uploads are managed by the S3 transfer manager.
+  :::
 
 `aws.client.uploadMaxThreads`
-: The maximum number of threads used for multipart upload (default: `10`). Since version 25.06.0-edge, this option only applies to uploads generated from OutputStream. Other uploads are managed by the S3 transfer manager.
+: The maximum number of threads used for multipart upload (default: `10`).
+: :::{versionchanged} 25.06.0-edge
+  This option only applies when uploading via `Files.newOutputStream()`. Other uploads are managed by the S3 transfer manager.
+  :::
 
 `aws.client.uploadRetrySleep`
-: The time to wait after a failed upload attempt to retry the part upload (default: `500ms`). Since version 25.06.0-edge, this option only applies to uploads generated from OutputStream. Other uploads are managed by the S3 transfer manager.
+: The time to wait after a failed upload attempt to retry the part upload (default: `500ms`).
+: :::{versionchanged} 25.06.0-edge
+  This option only applies when uploading via `Files.newOutputStream()`. Other uploads are managed by the S3 transfer manager.
+  :::
 
 `aws.client.uploadStorageClass`
 : The S3 storage class applied to stored objects. Can be `STANDARD`, `STANDARD_IA`, `ONEZONE_IA`, or `INTELLIGENT_TIERING` (default: `STANDARD`).

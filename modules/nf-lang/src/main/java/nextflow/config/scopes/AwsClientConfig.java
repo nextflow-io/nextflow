@@ -81,6 +81,12 @@ public class AwsClientConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        The S3 Async client threshold to create multipart S3 transfers. Default is the same as `minimumPartSize`.
+    """)
+    public MemoryUnit multipartThreshold;
+
+    @ConfigOption
+    @Description("""
         The protocol (i.e. HTTP or HTTPS) to use when connecting to AWS.
     """)
     public String protocol;
@@ -171,15 +177,9 @@ public class AwsClientConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The S3 Async client threshold to create multipart S3 transfers. Default is the same as `minimumPartSize`.
-    """)
-    public MemoryUnit multipartThreshold;
-
-    @ConfigOption
-    @Description("""
         The number of threads used by the S3 transfer manager (default: `10`).
     """)
-    public int tmThreads;
+    public int transferManagerThreads;
 
     @ConfigOption
     @Description("""
