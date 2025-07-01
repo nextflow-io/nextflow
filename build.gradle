@@ -349,9 +349,9 @@ configure(coreProjects) {
                 def releasesRepoUrl = "s3://maven.seqera.io/releases/"
                 def snapshotsRepoUrl = "s3://maven.seqera.io/snapshots/"
                 url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-                credentials(PasswordCredentials) {
-                    username nexusUsername
-                    password nexusPassword
+                credentials(AwsCredentials) {
+                    accessKey nexusUsername
+                    secretKey nexusPassword
                 }
             }
         }
