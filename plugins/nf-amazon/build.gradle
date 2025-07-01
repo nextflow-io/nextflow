@@ -52,7 +52,6 @@ dependencies {
     api ('software.amazon.awssdk:s3-transfer-manager:2.31.64')
     api ('software.amazon.awssdk:apache-client:2.31.64')
     api ('software.amazon.awssdk:aws-crt-client:2.31.64')
-    api ('software.amazon.awssdk:netty-nio-client:2.31.64')
 
     constraints {
         api 'com.fasterxml.jackson.core:jackson-databind:2.12.7.1'

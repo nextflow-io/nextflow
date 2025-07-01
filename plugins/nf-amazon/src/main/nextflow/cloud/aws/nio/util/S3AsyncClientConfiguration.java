@@ -16,9 +16,6 @@
  */
 package nextflow.cloud.aws.nio.util;
 
-import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
-import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
-import software.amazon.awssdk.http.nio.netty.ProxyConfiguration;
 import software.amazon.awssdk.services.s3.crt.S3CrtProxyConfiguration;
 import software.amazon.awssdk.services.s3.crt.S3CrtHttpConfiguration;
 import software.amazon.awssdk.services.s3.crt.S3CrtRetryConfiguration;
@@ -34,10 +31,8 @@ import java.util.Properties;
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
 public class S3AsyncClientConfiguration extends S3ClientConfiguration{
-    private static Duration DEFAULT_NETTY_ACQUISITION_TIMEOUT = Duration.ofSeconds(300);
 
     private S3CrtHttpConfiguration.Builder crtHttpConfiguration;
-    private NettyNioAsyncHttpClient.Builder nettyHttpClientBuilder = NettyNioAsyncHttpClient.builder().connectionAcquisitionTimeout(DEFAULT_NETTY_ACQUISITION_TIMEOUT);
     private MultipartConfiguration.Builder multiPartBuilder;
     private S3CrtRetryConfiguration crtRetryConfiguration;
     private Integer maxConcurrency ;
@@ -66,10 +61,6 @@ public class S3AsyncClientConfiguration extends S3ClientConfiguration{
         if( this.multiPartBuilder == null )
             return null;
         return this.multiPartBuilder.build();
-    }
-
-    public SdkAsyncHttpClient.Builder getNettyHttpClientBuilder(){
-        return this.nettyHttpClientBuilder;
     }
 
     private S3AsyncClientConfiguration(){
@@ -102,7 +93,6 @@ public class S3AsyncClientConfiguration extends S3ClientConfiguration{
         if( props.containsKey("max_concurrency")) {
             log.trace("AWS client config - max_concurrency: {}", props.getProperty("max_concurrency"));
             this.maxConcurrency = Integer.parseInt(props.getProperty("max_concurrency"));
-            this.nettyHttpClientBuilder.maxConcurrency(Integer.parseInt(props.getProperty("max_concurrency")));
         }
 
         if( props.containsKey("target_throughput_in_gbps")) {
@@ -128,7 +118,6 @@ public class S3AsyncClientConfiguration extends S3ClientConfiguration{
         if( props.containsKey("connection_timeout") ) {
             log.trace("AWS client config - connection_timeout: {}", props.getProperty("connection_timeout"));
             crtHttpConfiguration().connectionTimeout(Duration.ofMillis(Long.parseLong(props.getProperty("connection_timeout"))));
-            this.nettyHttpClientBuilder.connectionTimeout(Duration.ofMillis(Long.parseLong(props.getProperty("connection_timeout"))));
         }
 
         if( props.containsKey("socket_timeout")) {
@@ -138,25 +127,19 @@ public class S3AsyncClientConfiguration extends S3ClientConfiguration{
         if( props.containsKey("proxy_host")) {
             final String host = props.getProperty("proxy_host");
             final S3CrtProxyConfiguration.Builder crtProxyConfig = S3CrtProxyConfiguration.builder();
-            final ProxyConfiguration.Builder nettyProxyConfig = ProxyConfiguration.builder();
             log.trace("AWS client config - proxy host {}", host);
             crtProxyConfig.host(host);
-            nettyProxyConfig.host(host);
             if (props.containsKey("proxy_port")) {
                 crtProxyConfig.port(Integer.parseInt(props.getProperty("proxy_port")));
-                nettyProxyConfig.port(Integer.parseInt(props.getProperty("proxy_port")));
             }
             if (props.containsKey("proxy_username")) {
                 crtProxyConfig.username(props.getProperty("proxy_username"));
-                nettyProxyConfig.username(props.getProperty("proxy_username"));
             }
             if (props.containsKey("proxy_password")) {
                 crtProxyConfig.password(props.getProperty("proxy_password"));
-                nettyProxyConfig.password(props.getProperty("proxy_password"));
             }
             if (props.containsKey("proxy_scheme")) {
                 crtProxyConfig.scheme(props.getProperty("proxy_scheme"));
-                nettyProxyConfig.scheme(props.getProperty("proxy_scheme"));
             }
             if (props.containsKey("proxy_domain")) {
                 log.warn("AWS client config 'proxy_domain' doesn't exist in AWS SDK V2 Async Client");
@@ -165,7 +148,6 @@ public class S3AsyncClientConfiguration extends S3ClientConfiguration{
                 log.warn("AWS client config 'proxy_workstation' doesn't exist in AWS SDK V2 Async Client");
             }
             crtHttpConfiguration().proxyConfiguration(crtProxyConfig.build());
-            nettyHttpClientBuilder.proxyConfiguration(nettyProxyConfig.build());
         }
     }
 

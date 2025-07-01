@@ -270,7 +270,7 @@ The following settings are available:
 
 `aws.client.signerOverride`
 : The name of the signature algorithm to use for signing requests made by the client. 
-: Since 25.06.0-edge, the nf-amazon plugin is using the SDK V2, this option is deprecated and only AWS V4 Signer is supported. In case a custom signer is required, this option is still usable by providing the custom implementation in the classpath and specifying the custom signer fully qualified class name. The default S3 CRT-based Async client is not supporting custom signers, therefore Nextflow will use the S3 Netty Async client when this option is activated. This could cause performance degradation when transferring large files.
+: Since 25.06.0-edge, the nf-amazon plugin is using the SDK V2, this option is deprecated and only AWS V4 Signer is supported. 
 
 `aws.client.socketSendBufferSizeHint`
 : :::{deprecated} 25.06.0-edge
@@ -311,8 +311,10 @@ The following settings are available:
 : Number of threads used by the S3 transfer manager. (default `10`).
 
 `aws.client.userAgent`
+:::{deprecated} 25.06.0-edge
+  This option is no longer supported.
+  :::
 : The HTTP user agent header passed with all HTTP requests.
-: : Since 25.06.0-edge, the nf-amazon plugin is using the SDK V2. The default S3 CRT-based Async client is not supporting advanced http options like this option. Nextflow will use the S3 Netty Async client when this option is activated. This could cause performance degradation when transferring large files.
 
 `aws.client.uploadChunkSize`
 : The size of a single part in a multipart upload (default: `100 MB`). Since version 25.06.0-edge, this option only applies to uploads generated from OutputStream. Other uploads are managed by the S3 transfer manager.

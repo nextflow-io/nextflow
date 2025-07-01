@@ -239,28 +239,6 @@ class AwsClientFactory {
     }
 
     S3AsyncClient getS3AsyncClient(S3AsyncClientConfiguration s3ClientConfig, boolean global = false) {
-        final clientOverride = s3ClientConfig.getClientOverrideConfiguration()
-        if( requiresNettyClient(clientOverride) ) {
-            log.debug("Generating a Netty S3 Async Client")
-            return generateNettyS3Client(s3ClientConfig, global)
-        } else {
-            log.debug("Generating a CRT S3 Async Client")
-            return generateCrtS3Client(s3ClientConfig, global)
-        }
-    }
-
-    /** Checks if Netty S3 Async Client is required.
-     *  The Netty client is required if the clientOverride contains the SIGNER or USER_AGENT_PREFIX.
-     *
-      * @param clientOverride
-     * @return
-     */
-    static boolean requiresNettyClient(ClientOverrideConfiguration clientOverride){
-        !clientOverride.advancedOption(SdkAdvancedClientOption.SIGNER).isEmpty() ||
-            !clientOverride.advancedOption(SdkAdvancedClientOption.USER_AGENT_PREFIX).isEmpty()
-    }
-
-    private S3AsyncClient generateCrtS3Client(S3AsyncClientConfiguration s3ClientConfig, boolean global) {
         def builder = S3AsyncClient.crtBuilder()
             .crossRegionAccessEnabled(global)
             .credentialsProvider(config.s3Config.anonymous ? AnonymousCredentialsProvider.create() : new S3CredentialsProvider(getCredentialsProvider0()))
@@ -301,26 +279,6 @@ class AwsClientFactory {
             builder.minimumPartSizeInBytes(multipartConfig.minimumPartSizeInBytes())
         if( multipartConfig.thresholdInBytes() != null )
             builder.thresholdInBytes(multipartConfig.thresholdInBytes())
-    }
-
-    private S3AsyncClient generateNettyS3Client(S3AsyncClientConfiguration s3ClientConfig, boolean global = false) {
-        def builder = S3AsyncClient.builder()
-            .crossRegionAccessEnabled(global)
-            .credentialsProvider(config.s3Config.anonymous ? AnonymousCredentialsProvider.create() : new S3CredentialsProvider(getCredentialsProvider0()))
-            .forcePathStyle(config.s3Config.pathStyleAccess)
-            .multipartEnabled(true)
-            .defaultsMode(DefaultsMode.AUTO)
-            .httpClientBuilder(s3ClientConfig.getNettyHttpClientBuilder())
-            .region(getRegionObj(region))
-            .overrideConfiguration(s3ClientConfig.getClientOverrideConfiguration())
-        if( config.s3Config.endpoint ) {
-            builder.endpointOverride(URI.create(config.s3Config.endpoint))
-        }
-        final multipartConfig = s3ClientConfig.getMultipartConfiguration()
-        if( multipartConfig != null ) {
-            builder.multipartConfiguration(multipartConfig)
-        }
-        return builder.build()
     }
 
     protected AwsCredentialsProvider getCredentialsProvider0() {

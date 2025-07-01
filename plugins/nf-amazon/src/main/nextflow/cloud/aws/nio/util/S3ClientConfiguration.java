@@ -70,8 +70,8 @@ public class S3ClientConfiguration {
 		}
 
 		if ( props.containsKey("signer_override")) {
-			log.warn("AWS client config - 'signerOverride' is deprecated");
-			cocBuilder().putAdvancedOption(SdkAdvancedClientOption.SIGNER, resolveSigner(props.getProperty("signer_override")));
+			log.warn("AWS client config 'signerOverride' is not supported in AWS SDK V2. This option will be ignored.");
+
 		}
 
 		if( props.containsKey("socket_send_buffer_size_hints") || props.containsKey("socket_recv_buffer_size_hints") ) {
@@ -79,30 +79,8 @@ public class S3ClientConfiguration {
 		}
 
 		if( props.containsKey("user_agent")) {
-			log.trace("AWS client config - user_agent: {}", props.getProperty("user_agent"));
-			cocBuilder().putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_PREFIX, props.getProperty("user_agent"));
+			log.warn("AWS client config 'user_agent' is not supported in AWS SDK V2. This option will be ignored.");
 		}
 	}
-
-    private static Signer resolveSigner(String signerOverride) {
-        switch (signerOverride) {
-            case "AWSS3V4SignerType":
-            case "S3SignerType":
-                return AwsS3V4Signer.create();
-        case "AWS4SignerType":
-            return Aws4Signer.create();
-        default:
-            try {
-                Class<?> signerClass = ClassLoaderHelper.loadClass(signerOverride, false, (Class) null);
-                Method m = signerClass.getDeclaredMethod("create");
-                Object o = m.invoke(null);
-                return (Signer) o;
-            } catch (ClassNotFoundException e) {
-                throw new IllegalStateException("Cannot find the " + signerOverride + " class.", e);
-            } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
-                throw new IllegalStateException("Failed to create " + signerOverride, e);
-            }
-    }
-}
 }
 

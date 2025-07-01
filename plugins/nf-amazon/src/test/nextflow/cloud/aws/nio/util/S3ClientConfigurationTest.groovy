@@ -27,15 +27,12 @@ class S3ClientConfigurationTest extends Specification{
         given:
         def props = new Properties()
         def config = new AwsConfig([client: [connectionTimeout: 20000, maxConnections: 100, maxErrorRetry: 3, socketTimeout: 20000,
-                                            proxyHost: 'host.com', proxyPort: 80, proxyScheme: 'https', proxyUsername: 'user', proxyPassword: 'pass',
-                                            signerOverride: 'S3SignerType', userAgent: 'Agent1' ]])
+                                            proxyHost: 'host.com', proxyPort: 80, proxyScheme: 'https', proxyUsername: 'user', proxyPassword: 'pass']])
         props.putAll(config.getS3LegacyProperties())
         when:
         def clientConfig = S3SyncClientConfiguration.create(props)
         then:
         def overrideConfig = clientConfig.getClientOverrideConfiguration()
-        overrideConfig.advancedOption(SdkAdvancedClientOption.USER_AGENT_PREFIX).get() == 'Agent1'
-        overrideConfig.advancedOption(SdkAdvancedClientOption.SIGNER).get() instanceof AwsS3V4Signer
         overrideConfig.retryStrategy().get().maxAttempts() == 4
         def httpClientbuilder = clientConfig.getHttpClientBuilder()
         httpClientbuilder.proxyConfiguration.host() == 'host.com'
@@ -54,15 +51,12 @@ class S3ClientConfigurationTest extends Specification{
         def config = new AwsConfig([client: [
                                              maxConcurrency: 10, maxNativeMemory: '500MB', minimumPartSize: '7MB', multipartThreshold: '32MB',
                                              targetThroughputInGbps: 15, connectionTimeout: 20000, maxConnections: 100, maxErrorRetry: 3, socketTimeout: 20000,
-                                             proxyHost: 'host.com', proxyPort: 80, proxyScheme: 'https', proxyUsername: 'user', proxyPassword: 'pass',
-                                             signerOverride: 'S3SignerType', userAgent: 'Agent1' ]])
+                                             proxyHost: 'host.com', proxyPort: 80, proxyScheme: 'https', proxyUsername: 'user', proxyPassword: 'pass']])
         props.putAll(config.getS3LegacyProperties())
         when:
         def clientConfig = S3AsyncClientConfiguration.create(props)
         then:
         def overrideConfig = clientConfig.getClientOverrideConfiguration()
-        overrideConfig.advancedOption(SdkAdvancedClientOption.USER_AGENT_PREFIX).get() == 'Agent1'
-        overrideConfig.advancedOption(SdkAdvancedClientOption.SIGNER).get() instanceof AwsS3V4Signer
         overrideConfig.retryStrategy().get().maxAttempts() == 4
         // Check Crt performance settings
         clientConfig.getMaxConcurrency() == 10
@@ -82,16 +76,6 @@ class S3ClientConfigurationTest extends Specification{
         //Check Crt Retry Configuration
         def retryConfig = clientConfig.getCrtRetryConfiguration()
         retryConfig.numRetries() == 3
-        // Check Netty async builder
-        def httpClientbuilder = clientConfig.getNettyHttpClientBuilder()
-        httpClientbuilder.proxyConfiguration.host() == 'host.com'
-        httpClientbuilder.proxyConfiguration.port() == 80
-        httpClientbuilder.proxyConfiguration.scheme() == 'https'
-        httpClientbuilder.proxyConfiguration.username() == 'user'
-        httpClientbuilder.proxyConfiguration.password() == 'pass'
-        httpClientbuilder.standardOptions.get(SdkHttpConfigurationOption.CONNECTION_TIMEOUT).toMillis()== 20000
-        httpClientbuilder.standardOptions.get(SdkHttpConfigurationOption.READ_TIMEOUT) == null //socket timeout not supported in async client
-        httpClientbuilder.standardOptions.get(SdkHttpConfigurationOption.MAX_CONNECTIONS) == 10
     }
 
 
