@@ -1,5 +1,6 @@
+#!/usr/bin/env nextflow
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,22 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.script.ast;
 
-import org.codehaus.groovy.ast.ASTNode;
-import org.codehaus.groovy.ast.expr.Expression;
+params {
+  /**
+   * List of IDs.
+   */
+  input
 
-/**
- * A parameter declaration.
- *
- * @author Ben Sherman <bentshermann@gmail.com>
- */
-public class ParamNode extends ASTNode {
-    public final Expression target;
-    public Expression value;
+  /**
+   * Whether to save intermediate outputs.
+   */
+  save_intermeds = false
+}
 
-    public ParamNode(Expression target, Expression value) {
-        this.target = target;
-        this.value = value;
-    }
+workflow {
+  main:
+  println "params.input = ${params.input.tokenize(',')}"
+  println "params.save_intermeds = ${params.save_intermeds}"
 }
