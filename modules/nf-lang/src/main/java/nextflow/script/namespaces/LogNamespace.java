@@ -13,24 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.script.ast;
+package nextflow.script.namespaces;
 
-import java.util.List;
+import groovy.lang.Closure;
+import nextflow.script.dsl.Description;
+import nextflow.script.dsl.Namespace;
 
-import org.codehaus.groovy.ast.ASTNode;
-import org.codehaus.groovy.ast.expr.ConstantExpression;
+public interface LogNamespace extends Namespace {
 
-/**
- * An include declaration.
- *
- * @author Ben Sherman <bentshermann@gmail.com>
- */
-public class IncludeNode extends ASTNode {
-    public final ConstantExpression source;
-    public final List<IncludeEntryNode> entries;
+    @Description("""
+        Log an error message to the console.
+    """)
+    void error(String message);
 
-    public IncludeNode(ConstantExpression source, List<IncludeEntryNode> entries) {
-        this.source = source;
-        this.entries = entries;
-    }
+    @Description("""
+        Log an info message to the console.
+    """)
+    void info(String message);
+
+    @Description("""
+        Log a warning message to the console.
+    """)
+    void warn(String message);
+
 }
