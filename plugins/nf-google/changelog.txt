@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.21.1 - 1 Jul 2025
+- Upload Google Batch log on task exit (#6226) [3f2f85a8]
+
 1.21.0 - 8 May 2025
 - Add Support for Google Batch network tags (#5951) [d6e4d6c2]
 - Remove test constructors or mark as TestOnly (#5216) [d4fadd42]
