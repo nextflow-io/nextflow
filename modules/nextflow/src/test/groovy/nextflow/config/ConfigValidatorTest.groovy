@@ -64,4 +64,23 @@ class ConfigValidatorTest extends Specification {
         !capture.toString().contains('the following environment variable in the config will be ignored: \'NXF_DEBUG\'')
     }
 
+    def 'should ignore process selectors' () {
+        given:
+        def config = new ConfigMap([
+            process: [
+                'withLabel:foobar': [
+                    cpus: 2
+                ],
+                'withName:foobar': [
+                    cpus: 2
+                ]
+            ]
+        ])
+
+        when:
+        new ConfigValidator().validate(config)
+        then:
+        !capture.toString().contains('Unrecognized config option')
+    }
+
 }
