@@ -19,9 +19,6 @@ package nextflow.cloud.aws
 
 import nextflow.SysEnv
 import nextflow.cloud.aws.config.AwsConfig
-import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration
-import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption
-import software.amazon.awssdk.auth.signer.AwsS3V4Signer;
 import spock.lang.Specification
 /**
  *

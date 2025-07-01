@@ -91,17 +91,19 @@ public class S3Iterator implements Iterator<Path> {
      */
     private List<S3Path> parseObjectListing( ListObjectsV2Response current) {
         List<S3Path> listPath = new ArrayList<>();
-        // add all the objects i.e. the files
+        // add all the objects i.e. the files, except iterator key.
+        // In V2, object listing is also returning the key of the request. Skip it from the iterator to avoid loops.
         for (final S3Object objectSummary : current.contents()) {
             final String key = objectSummary.key();
+            if( this.key.equals(key)) continue;
             final S3Path path = new S3Path(s3FileSystem, "/" + bucket, key.split("/"));
             path.setObjectSummary(objectSummary);
             listPath.add(path);
         }
 
-        // add all the common prefixes i.e. the directories
+        // add all the common prefixes i.e. the directories, except iterator key
         for(final CommonPrefix prefix : current.commonPrefixes()) {
-            if( prefix.prefix().equals("/") ) continue;
+            if( prefix.prefix().equals("/") || this.key.equals(prefix.prefix())) continue;
             listPath.add(new S3Path(s3FileSystem, "/" + bucket, prefix.prefix()));
         }
         return listPath;
