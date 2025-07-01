@@ -1,5 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.04.6 - 1 Jul 2025
+- Upload Google Batch log on task exit (#6226) [ci fast] [3f2f85a8]
+- Bump nf-google@1.21.1 [d145d9fd]
+
 25.04.5 - 30 Jun 2025 
 - Fix JWT token refresh to Fusion validation request (#6231) [267ee1cf]
 - Fix null reference error in lint command (#6202) [5347bb72]
