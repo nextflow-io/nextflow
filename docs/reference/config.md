@@ -219,7 +219,7 @@ The following settings are available:
 `aws.client.maxConcurrency`
 : :::{versionadded} 25.06.0-edge
   :::
-: Overrides the maximum number of concurrent connections in S3 Async client used in the S3 Transfer Manager. This is automatically set according to `targetThroughputInGbps`. Modifying this value can affect the memory used by the S3 transfers. [More details](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html#maxConcurrency(java.lang.Integer)).
+: Overrides the maximum number of concurrent connections in S3 Async client used in the S3 Transfer Manager. This is automatically set according to `targetThroughputInGbps`. Modifying this value can affect the memory used by the S3 transfers. See [S3CrtAsyncClientBuilder](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html)e details](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html#maxConcurrency(java.lang.Integer)) for more details.
 
 `aws.client.maxConnections`
 : The maximum number of allowed open HTTP connections (default: `50`). In AWS SDK v2, different AWS clients are used. This will only affect the synchronous clients. For asynchronous clients used in the S3 Transfer Manager use `aws.client.maxConcurrency`.
@@ -230,12 +230,12 @@ The following settings are available:
 `aws.client.maxNativeMemory`
 : :::{versionadded} 25.06.0-edge
   :::
-: The maximum native memory used by the S3 asynchronous client for S3 transfers. This is automatically set according to `targetThroughputInGbps`. Modifying this value can affect the memory used by the S3 transfers. [More details](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html#maxNativeMemoryLimitInBytes(java.lang.Long)).
+: The maximum native memory used by the S3 asynchronous client for S3 transfers. This is automatically set according to `targetThroughputInGbps`. Modifying this value can affect the memory used by the S3 transfers. See [maxNativeMemoryLimitInBytes](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html#maxNativeMemoryLimitInBytes(java.lang.Long)) for more details.
 
 `aws.client.minimumPartSize`
 : :::{versionadded} 25.06.0-edge
 :::
-: The minimum part size used by the S3 async client in multipart upload mode. (default: `8 MB`). [More details](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html#minimumPartSizeInBytes(java.lang.Long)).
+: The minimum part size used by the S3 async client in multipart upload mode. (default: `8 MB`). See [minimumPartSizeInBytes](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html#minimumPartSizeInBytes(java.lang.Long)) for more details.
 
 `aws.client.protocol`
 : :::{deprecated} 25.06.0-edge
@@ -298,7 +298,7 @@ The following settings are available:
 `aws.client.targetThroughputInGbps`
 : :::{versionadded} 25.06.0-edge
   :::
-: The S3 Async client target network throughput in Gbps. This value is used to automatically set `maxConcurrency` and `maxNativeMemory`. (Default: `10`). [More details](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html#targetThroughputInGbps(java.lang.Double)).
+: The S3 Async client target network throughput in Gbps. This value is used to automatically set `maxConcurrency` and `maxNativeMemory`. (Default: `10`). See [targetThroughputInGbps](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/s3/S3CrtAsyncClientBuilder.html#targetThroughputInGbps(java.lang.Double)) for more details.
 
 `aws.client.multipartThreshold`
 : :::{versionadded} 25.06.0-edge
