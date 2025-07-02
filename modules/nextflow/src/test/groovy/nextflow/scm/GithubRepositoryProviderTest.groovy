@@ -139,5 +139,16 @@ class GithubRepositoryProviderTest extends Specification {
         cleanup:
         SysEnv.pop()
     }
+
+    def 'should read bytes github content'() {
+
+        given:
+        def repo = new GithubRepositoryProvider('nf-core/rnaseq')
+
+        when:
+        def result = repo.readBytes('/docs/images/nf-core-rnaseq_logo_dark.png')
+        then:
+        result.size() == 26500
+    }
 }
 

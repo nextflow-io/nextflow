@@ -100,4 +100,28 @@ class GiteaRepositoryProviderTest extends Specification {
 
     }
 
+    def 'should read bytes gitea content'() {
+
+        given:
+        final String FREE_TIER_CONFIG = '''
+        providers {
+
+            mygitea {
+                server = 'https://gitea.com'
+                endpoint = 'https://gitea.com/api/v1'
+                platform = 'gitea'
+            }
+
+        }
+        '''
+        def config = new ProviderConfig('gitea', new ConfigSlurper().parse(FREE_TIER_CONFIG).providers.mygitea as ConfigObject)
+        def repo = new GiteaRepositoryProvider('swingingsimiangitea/rnaseq', config)
+
+        when:
+        def result = repo.readBytes('/docs/images/nf-core-rnaseq_logo_dark.png')
+
+        then:
+        result.size() == 26500
+    }
+
 }
