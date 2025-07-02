@@ -319,28 +319,30 @@ The following settings are available:
 : The HTTP user agent header passed with all HTTP requests.
 
 `aws.client.uploadChunkSize`
-: The size of a single part in a multipart upload (default: `100 MB`).
-: :::{versionchanged} 25.06.0-edge
-  This option only applies when uploading via `Files.newOutputStream()`. Other uploads are managed by the S3 transfer manager.
+: :::{deprecated} 25.06.0-edge
+  This option is no longer supported.
   :::
+: The size of a single part in a multipart upload (default: `100 MB`).
 
 `aws.client.uploadMaxAttempts`
-: The maximum number of upload attempts after which a multipart upload returns an error (default: `5`).
-: :::{versionchanged} 25.06.0-edge
-  This option only applies when uploading via `Files.newOutputStream()`. Other uploads are managed by the S3 transfer manager.
+: :::{deprecated} 25.06.0-edge
+  This option is no longer supported.
   :::
+: The maximum number of upload attempts after which a multipart upload returns an error (default: `5`).
 
 `aws.client.uploadMaxThreads`
-: The maximum number of threads used for multipart upload (default: `10`).
-: :::{versionchanged} 25.06.0-edge
-  This option only applies when uploading via `Files.newOutputStream()`. Other uploads are managed by the S3 transfer manager.
+: :::{deprecated} 25.06.0-edge
+  This option is no longer supported.
   :::
+: The maximum number of threads used for multipart upload (default: `10`).
+
 
 `aws.client.uploadRetrySleep`
-: The time to wait after a failed upload attempt to retry the part upload (default: `500ms`).
-: :::{versionchanged} 25.06.0-edge
-  This option only applies when uploading via `Files.newOutputStream()`. Other uploads are managed by the S3 transfer manager.
+: :::{deprecated} 25.06.0-edge
+  This option is no longer supported.
   :::
+: The time to wait after a failed upload attempt to retry the part upload (default: `500ms`).
+
 
 `aws.client.uploadStorageClass`
 : The S3 storage class applied to stored objects. Can be `STANDARD`, `STANDARD_IA`, `ONEZONE_IA`, or `INTELLIGENT_TIERING` (default: `STANDARD`).
