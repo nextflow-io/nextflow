@@ -1103,6 +1103,18 @@ class Session implements ISession {
         notifyEvent(observersV2, ob -> ob.onFilePublish(event))
     }
 
+    void notifyFileStage(Path destination, Path source=null) {
+        def copy = new ArrayList<TraceObserver>(observers)
+        for( TraceObserver observer : copy  ) {
+            try {
+                observer.onFileStage(destination, source)
+            }
+            catch( Exception e ) {
+                log.error "Failed to invoke observer on file stage: $observer", e
+            }
+        }
+    }
+
     void notifyFlowComplete() {
         notifyEvent(observersV1, ob -> ob.onFlowComplete())
         notifyEvent(observersV2, ob -> ob.onFlowComplete())
