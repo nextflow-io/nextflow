@@ -550,3 +550,31 @@ To enable this capability, you need to enable the Wave service in the Nextflow c
 ## Advanced configuration
 
 Read the {ref}`AWS configuration<config-aws>` section to learn more about advanced configuration options.
+
+## AWS SDK v1 to v2 migration
+
+AWS Java SDK v1 is reaching end of life in December 2025. Since version `25.06.0-edge`, Nextflow uses AWS Java SDK v2 in the `nf-amazon` core plugin.
+The migration to the new version has introduced significant changes in the plugin. This section provides an overview of how these changes can affect the Nextflow configuration.
+
+### HTTP Client
+
+The most important change is in the HTTP clients. In v1, there was a single synchronous HTTP client to interact with AWS services.
+In v2, AWS Java SDK users can choose between different sync and async clients.
+To reduce the number of changes, the `nf-amazon` core plugin uses the HTTP sync client as in v1 in most cases, except for S3 transfers managed by the S3 Transfer Manager, where an async client is required.
+For these transfers, the plugin uses the CRT-based S3 async client, which is recommended for performance in large transfers.
+
+### Signer and User Agent
+
+Another important change in SDK v2 is the supported request signer. The new SDK only implements the AWS Signer V4, and the CRT client does not support overriding advanced HTTP options such as the signer override or user agent prefix.
+For this reason, overriding the signer or defining a user agent is no longer supported.
+
+### Nextflow configuration
+
+As a consequence of the changes mentioned above, the supported `aws.client` configuration options have been modified as described below.
+
+* New options have been added to tune the new S3 Transfer Manager and CRT-based client. The main CRT-based client configuration is `targetThroughputInGbps`. This is used to automatically set low-level parameters like `maxConcurrency`, `maxNativeMemory`, `minimumPartSize`, and `multipartThreshold`.
+  You can also define `transferManagerThreads`, but note this does not limit transfer concurrency — it is used for auxiliary tasks such as traversing directories, etc.
+
+* Options `signerOverride`, `userAgent`, `protocol`, `socketSendBufferSizeHint`, and `socketRecvBufferSizeHint` are no longer supported by AWS SDK v2.
+
+* Multi-part uploads are automatically managed by the S3 Transfer Manager in most cases. Therefore, the options `uploadChunkSize`, `uploadMaxAttempts`, `uploadMaxThreads`, and `uploadRetrySleep` are only used in the `Files.newOutputStream()` case, which cannot be handled by the S3 Transfer Manager.

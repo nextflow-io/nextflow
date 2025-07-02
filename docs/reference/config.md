@@ -219,7 +219,7 @@ The following settings are available:
 `aws.client.maxConcurrency`
 : :::{versionadded} 25.06.0-edge
   :::
-: The maximum number of concurrent S3 transfers when using the asynchronous S3 client. By default, this setting is determined by `aws.client.targetThroughputInGbps`. Modifying this value can affect the amount of memory used for S3 transfers.
+: The maximum number of concurrent S3 transfers in the S3 Transfer Manager's client. By default, this setting is determined by `aws.client.targetThroughputInGbps`. Modifying this value can affect the amount of memory used for S3 transfers.
 
 `aws.client.maxConnections`
 : The maximum number of allowed open HTTP connections when using the synchronous S3 client (default: `50`).
@@ -230,17 +230,17 @@ The following settings are available:
 `aws.client.maxNativeMemory`
 : :::{versionadded} 25.06.0-edge
   :::
-: The maximum native memory for S3 transfers when using the asynchronous S3 client. By default, this setting is determined by `aws.client.targetThroughputInGbps`. Modifying this value can affect the memory used by the S3 transfers.
+: The maximum native memory used by the S3 Transfers Manager's client. By default, this setting is determined by `aws.client.targetThroughputInGbps`. Modifying this value can affect the memory used by the S3 transfers.
 
 `aws.client.minimumPartSize`
 : :::{versionadded} 25.06.0-edge
   :::
-: The minimum part size for multi-part uploads when using the asynchronous S3 client (default: `8 MB`).
+: The minimum part size used by the S3 Transfer Manager's client multi-part uploads (default: `8 MB`).
 
 `aws.client.multipartThreshold`
 : :::{versionadded} 25.06.0-edge
   :::
-: The object size threshold for performing multi-part uploads when using the asynchronous S3 client (default: same as `aws.cllient.minimumPartSize`).
+: The object size threshold for performing multi-part uploads in the S3 Transfer Manager's client (default: same as `aws.cllient.minimumPartSize`).
 
 `aws.client.protocol`
 : :::{deprecated} 25.06.0-edge
