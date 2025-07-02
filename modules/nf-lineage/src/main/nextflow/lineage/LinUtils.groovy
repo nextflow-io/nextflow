@@ -40,8 +40,6 @@ import nextflow.serde.gson.GsonEncoder
 @CompileStatic
 class LinUtils {
 
-    private static final String[] EMPTY_ARRAY = new String[] {}
-
     /**
      * Get a lineage record or fragment from the Lineage store.
      *

@@ -211,7 +211,7 @@ class BatchClient {
         final now = System.currentTimeMillis()
         TaskStatusRecord record = arrayTaskStatus.get(taskName)
         if( !record || now - record.timestamp > TASK_STATE_INVALID_TIME ){
-            log.debug("[GOOGLE BATCH] Updating tasks status for job $jobId")
+            log.trace("[GOOGLE BATCH] Updating tasks status for job $jobId")
             updateArrayTasks(jobId, now)
             record = arrayTaskStatus.get(taskName)
         }

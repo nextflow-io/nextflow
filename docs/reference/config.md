@@ -8,6 +8,9 @@ This page lists all of the available settings in the {ref}`Nextflow configuratio
 
 ## Unscoped options
 
+`bucketDir`
+: The remote work directory used by hybrid workflows. Equivalent to the `-bucket-dir` option of the `run` command.
+
 `cleanup`
 : If `true`, on a successful completion of a run all files in *work* directory are automatically deleted.
 
@@ -182,7 +185,7 @@ The following settings are available:
 
 `aws.batch.terminateUnschedulableJobs`
 : :::{versionadded} 25.03.0-edge
-:::
+  :::
 : When `true`, jobs that cannot be scheduled for lack of resources or misconfiguration are terminated automatically (default: `false`). The pipeline may complete with an error status depending on the error strategy defined for the corresponding jobs.
 
 `aws.batch.volumes`
@@ -1246,9 +1249,25 @@ Read the {ref}`sharing-page` page to learn how to publish your pipeline to GitHu
 
 ## `nextflow`
 
-:::{deprecated} 24.10.0
-The `nextflow.publish` scope has been renamed to `workflow.output`. See {ref}`config-workflow` for more information.
+:::{versionchanged} 24.10.0
+The `nextflow.publish.retryPolicy` settings were moved to `workflow.output.retryPolicy`.
 :::
+
+:::{versionchanged} 25.06.0-edge
+The `workflow.output.retryPolicy` settings were moved to `nextflow.retryPolicy`.
+:::
+
+`retryPolicy.delay`
+: Delay used for retryable operations (default: `350ms`).
+
+`retryPolicy.jitter`
+: Jitter value used for retryable operations (default: `0.25`).
+
+`retryPolicy.maxAttempts`
+: Max attempts used for retryable operations (default: `5`).
+
+`retryPolicy.maxDelay`
+: Max delay used for retryable operations (default: `90s`).
 
 (config-notification)=
 
@@ -1589,7 +1608,7 @@ The following settings are available:
 `wave.retryPolicy.delay`
 : :::{versionadded} 22.06.0-edge
   :::
-: The initial delay when a failing HTTP request is retried (default: `150ms`).
+: The initial delay when a failing HTTP request is retried (default: `450ms`).
 
 `wave.retryPolicy.jitter`
 : :::{versionadded} 22.06.0-edge
@@ -1604,7 +1623,7 @@ The following settings are available:
 `wave.retryPolicy.maxDelay`
 : :::{versionadded} 22.06.0-edge
   :::
-: The max delay when a failing HTTP request is retried (default: `90 seconds`).
+: The max delay when a failing HTTP request is retried (default: `90s`).
 
 `wave.scan.mode`
 : :::{versionadded} 24.09.1-edge
@@ -1704,18 +1723,6 @@ The `workflow` scope provides workflow execution options.
 
   `'standard'`
   : Overwrite existing files when the file size or last modified timestamp is different.
-
-`workflow.output.retryPolicy.delay`
-: Delay when retrying a failed publish operation (default: `350ms`).
-
-`workflow.output.retryPolicy.jitter`
-: Jitter value when retrying a failed publish operation (default: `0.25`).
-
-`workflow.output.retryPolicy.maxAttempt`
-: Max attempts when retrying a failed publish operation (default: `5`).
-
-`workflow.output.retryPolicy.maxDelay`
-: Max delay when retrying a failed publish operation (default: `90s`).
 
 `workflow.output.storageClass`
 : *Currently only supported for S3.*
