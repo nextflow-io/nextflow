@@ -22,6 +22,14 @@ import java.lang.annotation.Retention
 import java.lang.annotation.RetentionPolicy
 import java.lang.annotation.Target
 
+import groovy.transform.CompileStatic
+import nextflow.config.control.StripSecretsVisitor
+import org.codehaus.groovy.ast.ASTNode
+import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.control.CompilePhase
+import org.codehaus.groovy.control.SourceUnit
+import org.codehaus.groovy.transform.ASTTransformation
+import org.codehaus.groovy.transform.GroovyASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformationClass
 
 /**
@@ -34,4 +42,14 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass
 @Target(ElementType.METHOD)
 @GroovyASTTransformationClass(classes = [StripSecretsXformImpl])
 @interface StripSecretsXform {
+
+    @CompileStatic
+    @GroovyASTTransformation(phase = CompilePhase.CONVERSION)
+    class StripSecretsXformImpl implements ASTTransformation {
+
+        @Override
+        void visit(ASTNode[] nodes, SourceUnit source) {
+            new StripSecretsVisitor(source).visitClass((ClassNode)nodes[1])
+        }
+    }
 }
