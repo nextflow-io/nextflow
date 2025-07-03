@@ -28,7 +28,7 @@ import spock.lang.Unroll
 
 /**
  *
- * @author Satoshi Ohshima <xxx@xxx.xxxx>
+ * @author Satoshi Ohshima <ohshima@cc.kyushu-u.ac.jp>
  */
 
 class TcsExecutorTest extends Specification {
@@ -86,20 +86,60 @@ class TcsExecutorTest extends Specification {
         task.workDir = Paths.get('/work/path')
         task.name = 'the task name'
 
+        // 1min job
         when:
 		task.index = 21
         task.config = new TaskConfig()
 		task.config.time = '00:10:00'
         then:
         executor.getHeaders(task) == '''
-		        #PJM -N nf-the_task_name
-				#PJM -j
-				#PJM -S
-				#PJM -L elapse=00:10:00
+                #PJM -N nf-the_task_name
+                #PJM -L elapse=00:10:00
+                #PJM -o /work/path/.command.log
+                #PJM -j
+                #PJM -S
+                '''
+                .stripIndent().leftTrim()
+
+        // 1hour job
+        when:
+		task.index = 22
+        task.config = new TaskConfig()
+		task.config.time = '01:00:00'
+        task.name = '1hour job'
+        then:
+        executor.getHeaders(task) == '''
+                #PJM -N nf-1hour_job
+                #PJM -L elapse=01:00:00
+                #PJM -o /work/path/.command.log
+                #PJM -j
+                #PJM -S
+                '''
+                .stripIndent().leftTrim()
+
+        // job array (bulk job)
+        when: 'with job array (bulk job)'
+		task.config = new TaskConfig()
+		task.workDir = Paths.get('/work/path')
+		task.name = 'array job'
+        def taskArray = Mock(TaskArrayRun) {
+            config >> new TaskConfig()
+            name >> task.name
+            getArraySize() >> 5
+            workDir >> task.workDir
+        }
+		taskArray.config.time = '01:00:00'
+
+        then:
+        executor.getHeaders(taskArray) == '''
+                #PJM -N nf-array_job
+                #PJM -L elapse=01:00:00
+                #PJM -j
+                #PJM -S
                 '''
                 .stripIndent().leftTrim()
     }
-/*
+
     def testWorkDirWithBlanks() {
 
         setup:
@@ -122,16 +162,15 @@ class TcsExecutorTest extends Specification {
 		task.config.time = '00:10:00'
         then:
         executor.getHeaders(task) == '''
-		        #PJM -N nf-the_task_name
-				#PJM -j
-				#PJM -S
-				#PJM -L elapse=00:10:00
+                #PJM -N nf-the_task_name
+                #PJM -L elapse=00:10:00
                 #PJM -o "/work/some\\ data/path/.command.log"
+                #PJM -j
+                #PJM -S
                 '''
                 .stripIndent().leftTrim()
 
     }
-*/
 
     def testQstatCommand() {
 
@@ -169,12 +208,9 @@ class TcsExecutorTest extends Specification {
 
     def testQueueStatusCommand() {
         when:
-        def usr = System.getProperty('user.name')
         def exec = [:] as TcsExecutor
         then:
-        usr
-        exec.queueStatusCommand(null) == ['pjstat2', '-E']
-        //exec.queueStatusCommand('long') == ['pjstat2','-E']
+        exec.queueStatusCommand(null) == ['pjstat', '-E']
     }
 
     def 'should get array (bulk) index name and start' () {
@@ -197,39 +233,7 @@ class TcsExecutorTest extends Specification {
         JOB_ID      | TASK_INDEX    | EXPECTED
         '1234'      | 1             | '1234[1]'
         '123456'    | 2             | '123456[2]'
-/*
-        JOB_ID      JOB_NAME  MD  STATUS  USER        RSCGROUP     START_DATE             ELAPSE    NODE  CORE  GPU  POINT
-        3209914     bulk1.sh  BU  RUN     ku40000105  a-batch-low  -                      -            -     1    -      -
-        3209914[1]  bulk1.sh  BU  RUN     ku40000105  a-batch-low  2025/06/13 17:53:43    00:00:01     -     1    -      1
-*/
     }
 
-/* There is no project option in TCS. (on Genkai and Flow) */
-/*
-    @Unroll
-    def 'should set tcs account' () {
-        given:
-        // task
-        def task = new TaskRun()
-        task.workDir = Paths.get('/work/dir')
-        task.processor = Mock(TaskProcessor)
-        task.processor.getSession() >> Mock(Session)
-        task.config = Mock(TaskConfig)
-        and:
-        def executor = Spy(TcsExecutor)
-        executor.getJobNameFor(_) >> 'foo'
-        executor.getName() >> 'tcs'
-        executor.getSession() >> Mock(Session) { getExecConfigProp('tcs', 'account',null)>>ACCOUNT }
-
-        when:
-        def result = executor.getDirectives(task, [])
-        then:
-        result == EXPECTED
-
-        where:
-        ACCOUNT             | EXPECTED
-        null                | ['-N', 'foo', '-o', '/work/dir/.command.log', '-j']
-        'project-123'       | ['-N', 'foo', '-o', '/work/dir/.command.log', '-j']
-    }
-	*/
 }
+
