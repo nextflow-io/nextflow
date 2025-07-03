@@ -87,12 +87,6 @@ public class AwsClientConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The protocol (i.e. HTTP or HTTPS) to use when connecting to AWS.
-    """)
-    public String protocol;
-
-    @ConfigOption
-    @Description("""
         The proxy host to connect through.
     """)
     public String proxyHost;
@@ -135,24 +129,6 @@ public class AwsClientConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The name of the signature algorithm to use for signing requests made by the client.
-    """)
-    public String signerOverride;
-
-    @ConfigOption
-    @Description("""
-        The size hint (in bytes) for the low level TCP send buffer.
-    """)
-    public int socketSendBufferSizeHint;
-
-    @ConfigOption
-    @Description("""
-        The size hint (in bytes) for the low level TCP receive buffer.
-    """)
-    public int socketRecvBufferSizeHint;
-
-    @ConfigOption
-    @Description("""
         The amount of time to wait (in milliseconds) for data to be transferred over an established, open connection before the connection is timed out.
     """)
     public int socketTimeout;
@@ -180,36 +156,6 @@ public class AwsClientConfig implements ConfigScope {
         The number of threads used by the S3 transfer manager (default: `10`).
     """)
     public int transferManagerThreads;
-
-    @ConfigOption
-    @Description("""
-        The HTTP user agent header passed with all HTTP requests.
-    """)
-    public String userAgent;
-
-    @ConfigOption
-    @Description("""
-        The size of a single part in a multipart upload (default: `100 MB`).
-    """)
-    public MemoryUnit uploadChunkSize;
-
-    @ConfigOption
-    @Description("""
-        The maximum number of upload attempts after which a multipart upload returns an error (default: `5`).
-    """)
-    public int uploadMaxAttempts;
-
-    @ConfigOption
-    @Description("""
-        The maximum number of threads used for multipart upload.
-    """)
-    public int uploadMaxThreads;
-
-    @ConfigOption
-    @Description("""
-        The time to wait after a failed upload attempt to retry the part upload (default: `500ms`).
-    """)
-    public Duration uploadRetrySleep;
 
     @ConfigOption
     @Description("""

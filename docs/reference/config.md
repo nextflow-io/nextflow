@@ -222,10 +222,10 @@ The following settings are available:
 `aws.client.maxConcurrency`
 : :::{versionadded} 25.06.0-edge
   :::
-: The maximum number of concurrent S3 transfers in the S3 Transfer Manager's client. By default, this setting is determined by `aws.client.targetThroughputInGbps`. Modifying this value can affect the amount of memory used for S3 transfers.
+: The maximum number of concurrent S3 transfers used by the S3 transfer manager. By default, this setting is determined by `aws.client.targetThroughputInGbps`. Modifying this value can affect the amount of memory used for S3 transfers.
 
 `aws.client.maxConnections`
-: The maximum number of allowed open HTTP connections when using the synchronous S3 client (default: `50`).
+: The maximum number of open HTTP connections used by the S3 transfer manager (default: `50`).
 
 `aws.client.maxErrorRetry`
 : The maximum number of retry attempts for failed retryable requests (default: `-1`).
@@ -233,17 +233,17 @@ The following settings are available:
 `aws.client.maxNativeMemory`
 : :::{versionadded} 25.06.0-edge
   :::
-: The maximum native memory used by the S3 Transfers Manager's client. By default, this setting is determined by `aws.client.targetThroughputInGbps`. Modifying this value can affect the memory used by the S3 transfers.
+: The maximum native memory used by the S3 transfer manager. By default, this setting is determined by `aws.client.targetThroughputInGbps`.
 
 `aws.client.minimumPartSize`
 : :::{versionadded} 25.06.0-edge
   :::
-: The minimum part size used by the S3 Transfer Manager's client multi-part uploads (default: `8 MB`).
+: The minimum part size used by the S3 transfer manager for multi-part uploads (default: `8 MB`).
 
 `aws.client.multipartThreshold`
 : :::{versionadded} 25.06.0-edge
   :::
-: The object size threshold for performing multi-part uploads in the S3 Transfer Manager's client (default: same as `aws.cllient.minimumPartSize`).
+: The object size threshold used by the S3 transfer manager for performing multi-part uploads (default: same as `aws.cllient.minimumPartSize`).
 
 `aws.client.protocol`
 : :::{deprecated} 25.06.0-edge
@@ -308,7 +308,7 @@ The following settings are available:
 `aws.client.targetThroughputInGbps`
 : :::{versionadded} 25.06.0-edge
   :::
-: The target network throughput (in Gbps) when using the asynchronous S3 client (default: `10`). This setting is not used when `aws.client.maxConcurrency` and `aws.client.maxNativeMemory` are specified.
+: The target network throughput (in Gbps) used by the S3 transfer manager (default: `10`). This setting is not used when `aws.client.maxConcurrency` and `aws.client.maxNativeMemory` are specified.
 
 `aws.client.transferManagerThreads`
 : :::{versionadded} 25.06.0-edge
@@ -339,13 +339,11 @@ The following settings are available:
   :::
 : The maximum number of threads used for multipart upload (default: `10`).
 
-
 `aws.client.uploadRetrySleep`
 : :::{deprecated} 25.06.0-edge
   This option is no longer supported.
   :::
 : The time to wait after a failed upload attempt to retry the part upload (default: `500ms`).
-
 
 `aws.client.uploadStorageClass`
 : The S3 storage class applied to stored objects. Can be `STANDARD`, `STANDARD_IA`, `ONEZONE_IA`, or `INTELLIGENT_TIERING` (default: `STANDARD`).
