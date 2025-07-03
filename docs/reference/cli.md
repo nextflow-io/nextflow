@@ -1,10 +1,8 @@
-(cli-reference)=
+import { AddedInVersion, ChangedInVersion, DeprecatedInVersion } from '@site/src/components/VersionedAdmonitions';
 
 # CLI reference
 
-This page lists all of the available options and subcommands for the {ref}`Nextflow CLI <cli-page>`.
-
-(cli-options)=
+This page lists all of the available options and subcommands for the [Nextflow CLI][cli-page].
 
 ## Options
 
@@ -12,47 +10,62 @@ The top-level options are meant to be invoked in relation to the core Nextflow a
 
 Available options:
 
-`-C`
-: Comma-separated list of configuration files which are used as the configuration set. Any other default configuration files are ignored.
+##### `-C`
 
-`-D`
-: Set JVM properties.
+Comma-separated list of configuration files which are used as the configuration set. Any other default configuration files are ignored.
 
-`-bg`
-: Execute nextflow in background.
+##### `-D`
 
-`-c, -config`
-: Comma-separated list of configuration files which are added to the configuration set.
+Set JVM properties.
 
-`-d, -dockerize`
-: :::{deprecated} 23.09.0-edge
-  :::
-: Launch nextflow via Docker (experimental).
+##### `-bg`
 
-`-h`
-: Print this help.
+Execute nextflow in background.
 
-`-log`
-: Set nextflow log file path.
+##### `-c, -config`
 
-`-q, -quiet`
-: Do not print information messages.
+Comma-separated list of configuration files which are added to the configuration set.
 
-`-remote-debug`
-: Enable JVM interactive remote debugging (experimental).
+##### `-d, -dockerize`
 
-`-syslog`
-: Send logs to syslog server (e.g. localhost:514).
+<DeprecatedInVersion version="23.09.0-edge">
+</DeprecatedInVersion>
 
-`-trace`
-: Enable trace level logging for the specified packages. Multiple packages can be provided separating them with a comma, e.g. `-trace nextflow,io.seqera`.
+Launch nextflow via Docker (experimental).
 
-`-v, -version`
-: Print the program version.
+##### `-h`
+
+Print this help.
+
+##### `-log`
+
+Set nextflow log file path.
+
+##### `-q, -quiet`
+
+Do not print information messages.
+
+##### `-remote-debug`
+
+Enable JVM interactive remote debugging (experimental).
+
+##### `-syslog`
+
+Send logs to syslog server (e.g. localhost:514).
+
+##### `-trace`
+
+Enable trace level logging for the specified packages. Multiple packages can be provided separating them with a comma, e.g. `-trace nextflow,io.seqera`.
+
+##### `-v, -version`
+
+Print the program version.
+
+##### `-E`
+
+Exports all current system environment.
 
 ## Commands
-
-(cli-clean)=
 
 ### `clean`
 
@@ -72,29 +85,40 @@ If no run name or session id is provided, it will clean the latest run.
 
 **Options**
 
-`-after`
-: Clean up runs executed *after* the specified one.
+##### `-after`
 
-`-before`
-: Clean up runs executed *before* the specified one.
+Clean up runs executed *after* the specified one.
 
-`-but`
-: Clean up all runs *except* the specified one.
+##### `-before`
 
-`-n, -dry-run`
-: Print names of files to be removed without deleting them.
+Clean up runs executed *before* the specified one.
 
-`-f, -force`
-: Force clean command.
+##### `-but`
 
-`-h, -help`
-: Print the command usage.
+Clean up all runs *except* the specified one.
 
-`-k, -keep-logs`
-: Removes only temporary files but retains execution log entries and metadata.
+##### `-n, -dry-run`
 
-`-q, -quiet`
-: Do not print names of files removed.
+Print names of files to be removed without deleting them.
+
+##### `-f, -force`
+
+Force clean command.
+
+##### `-h, -help`
+
+Print the command usage.
+
+##### `-k, -keep-logs`
+
+Removes only temporary files but retains execution log entries and metadata.
+
+##### `-q, -quiet`
+
+Do not print names of files removed.
+
+
+#
 
 **Examples**
 
@@ -175,20 +199,26 @@ The `clone` command downloads a pipeline from a Git-hosting platform into the *c
 
 **Options**
 
-`-d, -deep`
+##### `-d, -deep`
 : Create a shallow clone of the specified depth.
 
-`-h, -help`
-: Print the command usage.
+##### `-h, -help`
 
-`-hub` (`github`)
-: Service hub where the project is hosted. Options: `gitlab` or `bitbucket`.
+Print the command usage.
 
-`-r` (`master`)
-: Revision to clone - It can be a git branch, tag, or revision number.
+##### `-hub` (`github`)
 
-`-user`
-: Private repository user name.
+Service hub where the project is hosted. Options: `gitlab` or `bitbucket`.
+
+##### `-r` (`master`)
+
+Revision to clone - It can be a git branch, tag, or revision number.
+
+##### `-user`
+
+Private repository user name.
+
+#
 
 **Examples**
 
@@ -218,32 +248,41 @@ $ nextflow config [options] [project name or path]
 
 **Description**
 
-The `config` command is used for printing the project's configuration i.e. the `nextflow.config` and is especially useful for understanding the resolved profiles and parameters that Nextflow will use run a pipeline. For in-depth information, please refer the {ref}`config-profiles` section.
+The `config` command is used for printing the project's configuration i.e. the `nextflow.config` and is especially useful for understanding the resolved profiles and parameters that Nextflow will use run a pipeline. For in-depth information, please refer the [Config profiles][config-profiles] section.
 
 **Options**
 
-`-flat`
-: Print config using flat notation.
+##### `-flat`
 
-`-h, -help`
-: Print the command usage.
+Print config using flat notation.
 
-`-profile`
-: Choose a configuration profile.
+##### `-h, -help`
 
-`-properties`
-: Print config using Java properties notation.
+Print the command usage.
 
-`-a, -show-profiles`
-: Show all configuration profiles.
+##### `-profile`
 
-`-sort`
-: Sort config attributes.
+Choose a configuration profile.
 
-`-value`
-: :::{versionadded} 23.08.0-edge
-  :::
-: Print the value of a config option, or fail if the option is not defined.
+##### `-properties`
+Print config using Java properties notation.
+
+##### `-a, -show-profiles`
+
+Show all configuration profiles.
+
+##### `-sort`
+
+Sort config attributes.
+
+##### `-value`
+
+<AddedInVersion version="23.08.0-edge">
+</AddedInVersion>
+
+Print the value of a config option, or fail if the option is not defined.
+
+#
 
 **Examples**
 
@@ -310,8 +349,6 @@ profiles {
 }
 ```
 
-(cli-console)=
-
 ### `console`
 
 Launch the Nextflow interactive console.
@@ -354,11 +391,15 @@ The `drop` command is used to remove the projects which have been downloaded int
 
 **Options**
 
-`-f`
-: Delete the repository without taking care of local changes.
+##### `-f`
 
-`-h, -help`
-: Print the command usage.
+Delete the repository without taking care of local changes.
+
+##### `-h, -help`
+
+Print the command usage.
+
+#
 
 **Examples**
 
@@ -390,8 +431,11 @@ The `fs` command is used to perform filesystem operations like copy, move, delet
 
 **Options**
 
-`-h, -help`
-: Print the command usage.
+##### `-h, -help`
+
+Print the command usage.
+
+#
 
 **Examples**
 
@@ -425,8 +469,8 @@ Delete a file or directory.
 $ nextflow fs rm <path>
 ```
 
-:::{versionadded} 23.10.0
-:::
+<AddedInVersion version="23.10.0">
+</AddedInVersion>
 
 Print file or directory attributes.
 
@@ -450,8 +494,11 @@ The `help` command prints out the overview of the CLI interface and enumerates t
 
 **Options**
 
-`-h, -help`
-: Print the command usage.
+##### `-h, -help`
+
+Print the command usage.
+
+#
 
 **Examples**
 
@@ -489,17 +536,23 @@ If no run name or session id is provided, it will clean the latest run.
 
 **Options**
 
-`-u, -check-updates`
-: Check for remote updates.
+##### `-u, -check-updates`
 
-`-d`
-: Show detailed information.
+Check for remote updates.
 
-`-h, -help`
-: Print the command usage.
+##### `-d`
 
-`-o` (`text`)
-: Output format, either `text`, `json` or `yaml`.
+Show detailed information.
+
+##### `-h, -help`
+
+Print the command usage.
+
+##### `-o` (`text`)
+
+Output format, either `text`, `json` or `yaml`.
+
+#
 
 **Examples**
 
@@ -532,12 +585,10 @@ $ nextflow info nextflow-io/hello
     v1.2 [t]
 ```
 
-(cli-inspect)=
-
 ### `inspect`
 
-:::{versionadded} 23.09.0-edge
-:::
+<AddedInVersion version="23.09.0-edge">
+</AddedInVersion>
 
 Inspect process settings in a pipeline project. Currently only supports the `container` directive.
 
@@ -553,23 +604,31 @@ The `inspect` command allows you to determine the container for each process in 
 
 **Options**
 
-`-concretize`
-: Build the container images resolved by the inspect command.
+##### `-concretize`
 
-`-format` (`json`)
-: Inspect output format. Can be `json` or `config`.
+Build the container images resolved by the inspect command.
 
-`-i, -ignore-errors`
-: Ignore errors while inspecting the pipeline.
+##### `-format` (`json`)
 
-`-params-file`
-: Load script parameters from a JSON/YAML file.
+Inspect output format. Can be `json` or `config`.
 
-`-profile`
-: Use the given configuration profile(s).
+##### `-i, -ignore-errors`
 
-`-r, revision`
-: Revision of the project to inspect (either a git branch, tag or commit SHA number).
+Ignore errors while inspecting the pipeline.
+
+##### `-params-file`
+
+Load script parameters from a JSON/YAML file.
+
+##### `-profile`
+
+Use the given configuration profile(s).
+
+##### `-r, revision`
+
+Revision of the project to inspect (either a git branch, tag or commit SHA number).
+
+#
 
 **Examples**
 
@@ -597,7 +656,7 @@ $ nextflow kuberun [options] [project]
 
 **Description**
 
-The `kuberun` command builds upon the `run` command and offers a deep integration with the Kubernetes execution environment. This command deploys the Nextflow runtime as a Kubernetes pod and assumes that you've already installed the `kubectl` CLI. The `kuberun` command does not allow the execution of local Nextflow scripts. See {ref}`k8s-page` for more information.
+The `kuberun` command builds upon the `run` command and offers a deep integration with the Kubernetes execution environment. This command deploys the Nextflow runtime as a Kubernetes pod and assumes that you've already installed the `kubectl` CLI. The `kuberun` command does not allow the execution of local Nextflow scripts. See [kubernetes][k8s-page] for more information.
 
 **Options**
 
@@ -643,37 +702,39 @@ The `kuberun` command supports the following options from [`run`](#run):
 
 The following new options are also available:
 
-`-head-cpus`
-: :::{versionadded} 22.01.0-edge
-  :::
-: Specify number of CPUs requested for the Nextflow pod.
+##### `-head-cpus`
 
-`-head-image`
-: :::{versionadded} 22.07.1-edge
-  :::
-: Specify the container image for the Nextflow driver pod.
+Specify number of CPUs requested for the Nextflow pod.
 
-`-head-memory`
-: :::{versionadded} 22.01.0-edge
-  :::
-: Specify amount of memory requested for the Nextflow pod.
+##### `-head-image`
 
-`-head-prescript`
-: :::{versionadded} 22.05.0-edge
-  :::
-: Specify script to be run before the Nextflow pod starts.
+Specify the container image for the Nextflow driver pod.
 
-`-n, -namespace`
-: Specify the K8s namespace to use.
+##### `-head-memory`
 
-`-remoteConfig`
-: Add the specified file from the K8s cluster to configuration set.
+Specify amount of memory requested for the Nextflow pod.
 
-`-remoteProfile`
-: Choose a configuration profile in the remoteConfig.
+##### `-head-prescript`
 
-`-v, -volume-mount`
-: Volume claim mounts, e.g. `my-pvc:/mnt/path`.
+Specify script to be run before the Nextflow pod starts.
+
+##### `-n, -namespace`
+
+Specify the K8s namespace to use.
+
+##### `-remoteConfig`
+
+Add the specified file from the K8s cluster to configuration set.
+
+##### `-remoteProfile`
+
+Choose a configuration profile in the remoteConfig.
+
+##### `-v, -volume-mount`
+
+Volume claim mounts, e.g. `my-pvc:/mnt/path`.
+
+#
 
 **Examples**
 
@@ -683,14 +744,12 @@ Execute a pipeline into a Kubernetes cluster.
 $ nextflow kuberun nextflow-io/hello
 ```
 
-(cli-lineage)=
-
 ### `lineage`
 
-:::{versionadded} 25.04.0
-:::
+<AddedInVersion version="25.04.0">
+</AddedInVersion>
 
-:::{warning} *Experimental: may change in a future release.*
+:::warning{title="Experimental: may change in a future release."}
 :::
 
 Inspect lineage metadata for Nextflow runs.
@@ -705,35 +764,41 @@ $ nextflow lineage SUBCOMMAND [arg ..]
 
 The `lineage` command is used to inspect lineage metadata.
 
-See the {ref}`data-lineage-page` guide to learn how to get started with data lineage.
+See the [Data lineage][data-lineage-page] guide to learn how to get started with data lineage.
 
 **Options**
 
-`-h, -help`
-: Print the command usage.
+##### `-h, -help`
+
+Print the command usage.
 
 **Subcommands**
 
-`check <lid>`
-: Validate the checksum of output lineage record.
+##### `check <lid>`
 
-`diff <lid-1> <lid-2>`
-: Display a git-style diff between two lineage records.
+Validate the checksum of output lineage record.
 
-`find <field-1>=<value-1> [<field-2>=<value-2> ...]`
-: Find all lineage records that match the given field values.
+##### `diff <lid-1> <lid-2>`
 
-`list`
-: List the Nextflow runs with lineage enabled, printing the corresponding lineage ID (LID) for each run.
+Display a git-style diff between two lineage records.
 
-`render <lid> [path]`
-: Render the lineage graph for a lineage record as an HTML file (default output path: `./lineage.html`).
-: The lineage record should be of type `FileOutput`, `TaskRun`, or `WorkflowRun`.
+##### `find <field-1>=<value-1> [<field-2>=<value-2> ...]`
 
-`view <lid>`
-: View a lineage record.
+Find all lineage records that match the given field values.
 
-(cli-lint)=
+##### `list`
+
+List the Nextflow runs with lineage enabled, printing the corresponding lineage ID (LID) for each run.
+
+##### `render <lid> [path]`
+
+Render the lineage graph for a lineage record as an HTML file (default output path: `./lineage.html`).
+
+The lineage record should be of type `FileOutput`, `TaskRun`, or `WorkflowRun`.
+
+##### `view <lid>`
+
+View a lineage record.
 
 ### `lint`
 
@@ -751,23 +816,31 @@ The `lint` command parses and analyzes the given Nextflow scripts and config fil
 
 **Options**
 
-`-exclude`
-: File pattern to exclude from linting. Can be specified multiple times (default: `.git, .nf-test, work`).
+##### `-exclude`
 
-`-format`
-: Format scripts and config files that have no errors.
+File pattern to exclude from linting. Can be specified multiple times (default: `.git, .nf-test, work`).
 
-`-o, -output`
-: Output mode for reporting errors: `full`, `extended`, `concise`, `json` (default: `full`).
+##### `-format`
 
-`-sort-declarations`
-: Sort script declarations in Nextflow scripts (default: `false`).
+Format scripts and config files that have no errors.
 
-`-spaces`
-: Number of spaces to indent (default: `4`).
+##### `-o, -output`
 
-`-tabs`
-: Indent with tabs (default: `false`).
+Output mode for reporting errors: `full`, `extended`, `concise`, `json` (default: `full`).
+
+##### `-sort-declarations`
+
+Sort script declarations in Nextflow scripts (default: `false`).
+
+##### `-spaces`
+
+Number of spaces to indent (default: `4`).
+
+##### `-tabs`
+
+Indent with tabs (default: `false`).
+
+#
 
 **Examples**
 
@@ -805,8 +878,11 @@ The `list` commands prints a list of the projects which are already downloaded i
 
 **Options**
 
-`-h, -help`
-: Print the command usage.
+##### `-h, -help`
+
+Print the command usage.
+
+#
 
 **Examples**
 
@@ -818,8 +894,6 @@ $ nextflow list
 nextflow-io/hello
 nextflow-hub/fastqc
 ```
-
-(cli-log)=
 
 ### `log`
 
@@ -837,35 +911,47 @@ The `log` command is used to query the execution metadata associated with pipeli
 
 **Options**
 
-`-after`
-: Show log entries for runs executed *after* the specified one.
+##### `-after`
 
-`-before`
-: Show log entries for runs executed *before* the specified one.
+Show log entries for runs executed *after* the specified one.
 
-`-but`
-: Show log entries for runs executed *but* the specified one.
+##### `-before`
 
-`-f, -fields`
-: Comma-separated list of fields to include in the printed log. Use the `-l` option to see the list of available fields.
+Show log entries for runs executed *before* the specified one.
 
-`-F, -filter`
-: Filter log entries by a custom expression, e.g. `process =~ /hello.*/ && status == 'COMPLETED'`.
+##### `-but`
 
-`-h, -help`
-: Print the command usage.
+Show log entries for runs executed *but* the specified one.
 
-`-l, -list-fields`
-: Show all available fields.
+##### `-f, -fields`
 
-`-quiet`
-: Show only run names.
+Comma-separated list of fields to include in the printed log. Use the `-l` option to see the list of available fields.
 
-`-s`
-: Character used to separate column values.
+##### `-F, -filter`
 
-`-t, -template`
-: Text template used to each record in the log.
+Filter log entries by a custom expression, e.g. `process =~ /hello.*/ && status == 'COMPLETED'`.
+
+##### `-h, -help`
+
+Print the command usage.
+
+##### `-l, -list-fields`
+
+Show all available fields.
+
+##### `-quiet`
+
+Show only run names.
+
+##### `-s`
+
+Character used to separate column values.
+
+##### `-t, -template`
+
+Text template used to each record in the log.
+
+#
 
 **Examples**
 
@@ -950,8 +1036,6 @@ $ nextflow log tiny_leavitt -F 'process =~ /split_letters/'
 work/1f/f1ea9158fb23b53d5083953121d6b6
 ```
 
-(cli-plugin)=
-
 ### `plugin`
 
 Manage plugins and run plugin-specific commands.
@@ -962,13 +1046,13 @@ $ nextflow plugin <subcommand> [options]
 
 The `plugin` command provides several subcommands for managing and using plugins:
 
-`install <plugin[@version],..>`
+##### `install <plugin[@version],..>`
 
-: Install a plugin. Multiple plugins can be specified as a comma-separated list. Each plugin id consists of a name and optional version separated by a `@`.
+Install a plugin. Multiple plugins can be specified as a comma-separated list. Each plugin id consists of a name and optional version separated by a `@`.
 
-`<plugin>:<subcommand> [options]`
+##### `<plugin>:<subcommand> [options]`
 
-: Execute a plugin-specific command.
+Execute a plugin-specific command.
 
 ### `pull`
 
@@ -986,24 +1070,33 @@ The `pull` command downloads a pipeline from a Git-hosting platform into the glo
 
 **Options**
 
-`-all`
-: Update all downloaded projects.
+##### `-all`
 
-`-d, -deep`
-: Create a shallow clone of the specified depth.
+Update all downloaded projects.
 
-`-h, -help`
-: Print the command usage.
+##### `-d, -deep`
 
-`-hub` (`github`)
-: Service hub where the project is hosted. Options: `gitlab` or `bitbucket`
+Create a shallow clone of the specified depth.
 
-`-r, -revision`
-: Revision of the project to run (either a git branch, tag or commit hash).
-: When passing a git tag or branch, the `workflow.revision` and `workflow.commitId` fields are populated. When passing only the commit hash, `workflow.revision` is not defined.
+##### `-h, -help`
 
-`-user`
-: Private repository user name.
+Print the command usage.
+
+##### `-hub` (`github`)
+
+Service hub where the project is hosted. Options: `gitlab` or `bitbucket`
+
+##### `-r, -revision`
+
+Revision of the project to run (either a git branch, tag or commit hash).
+
+When passing a git tag or branch, the `workflow.revision` and `workflow.commitId` fields are populated. When passing only the commit hash, `workflow.revision` is not defined.
+
+##### `-user`
+
+Private repository user name.
+
+#
 
 **Examples**
 
@@ -1036,8 +1129,6 @@ Checking nextflow-io/hello ...
 checkout-out at AnyObjectId[1c3e9e7404127514d69369cd87f8036830f5cf64] - revision: 1c3e9e7404 [v1.1]
 ```
 
-(cli-run)=
-
 ### `run`
 
 Execute a pipeline.
@@ -1054,184 +1145,250 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 
 **Options**
 
-`-E`
-: Exports all current system environment.
+##### `-E`
 
-`-ansi-log`
-: Enable/disable ANSI console logging.
+Exports all current system environment.
 
-`-bucket-dir`
-: Remote bucket where intermediate result files are stored. When running a hybrid workflow, `-bucket-dir` and `-work-dir` should define separate work directories for remote tasks and local tasks, respectively.
+##### `-ansi-log`
 
-`-cache`
-: Enable/disable processes caching.
+Enable/disable ANSI console logging.
 
-`-d, -deep`
-: Create a shallow clone of the specified depth.
+##### `-bucket-dir`
 
-`-disable-jobs-cancellation`
-: Prevent the cancellation of child jobs on execution termination
+Remote bucket where intermediate result files are stored. When running a hybrid workflow, `-bucket-dir` and `-work-dir` should define separate work directories for remote tasks and local tasks, respectively.
 
-`-dsl1`
-: :::{deprecated} 23.09.0-edge
-  :::
-: Execute the workflow using DSL1 syntax.
+##### `-cache`
 
-`-dsl2`
-: :::{deprecated} 23.09.0-edge
-  :::
-: Execute the workflow using DSL2 syntax.
+Enable/disable processes caching.
 
-`-dump-channels`
-: Dump channels for debugging purpose.
+##### `-d, -deep`
 
-`-dump-hashes`
-: Dump task hash keys for debugging purposes.
-: :::{versionadded} 23.10.0
-  You can use `-dump-hashes json` to dump the task hash keys as JSON for easier post-processing. See the {ref}`caching and resuming tips <cache-compare-hashes>` for more details.
-  :::
+Create a shallow clone of the specified depth.
 
-`-e.<key>=<value>`
-: Add the specified variable to execution environment.
+##### `-disable-jobs-cancellation`
 
-`-entry`
-: :::{deprecated} 24.10.0
-  Use params in the entry workflow to call different workflows from the command line.
-  :::
-: Entry workflow to be executed.
+Prevent the cancellation of child jobs on execution termination
 
-`-h, -help`
-: Print the command usage.
+##### `-dsl1`
 
-`-hub` (`github`)
-: Service hub where the project is hosted. Options: `gitlab` or `bitbucket`
+<DeprecatedInVersion version="23.09.0-edge">
+</DeprecatedInVersion>
 
-`-latest`
-: Pull latest changes before run.
+Execute the workflow using DSL1 syntax.
 
-`-lib`
-: Library extension path.
+##### `-dsl2`
 
-`-main-script` (`main.nf`)
-: :::{versionadded} 20.09.1-edge
-  :::
-: The script file to be executed when launching a project directory or repository.
+<DeprecatedInVersion version="23.09.0-edge">
+</DeprecatedInVersion>
 
-`-name`
-: Assign a mnemonic name to the a pipeline run.
+Execute the workflow using DSL2 syntax.
 
-`-offline`
-: Do not check for remote project updates.
+##### `-dump-channels`
 
-`-o, -output-dir` (`results`)
-: :::{versionadded} 24.10.0
-  :::
-: Directory where workflow outputs are stored.
+Dump channels for debugging purpose.
 
-`-params-file`
-: Load script parameters from a JSON/YAML file.
+##### `-dump-hashes`
+Dump task hash keys for debugging purposes.
 
-`-plugins`
-: Comma separated list of plugin ids to be applied in the pipeline execution.
+<AddedInVersion version="23.10.0">
+You can use `-dump-hashes json` to dump the task hash keys as JSON for easier post-processing. See the [caching and resuming tip][cache-compare-hashes] for more details.
+</AddedInVersion>
 
-`-preview`
-: :::{versionadded} 22.06.0-edge
-  :::
-: Run the workflow script skipping the execution of all processes.
+##### `-e.<key>=<value>`
 
-`-process.<key>=<value>`
-: Set process config options.
+Add the specified variable to execution environment.
 
-`-profile`
-: Choose a configuration profile.
+##### `-entry`
 
-`-qs, -queue-size`
-: Max number of processes that can be executed in parallel by each executor.
+<DeprecatedInVersion version="24.10.0">
+Use params in the entry workflow to call different workflows from the command line.
+</DeprecatedInVersion>
 
-`-resume`
-: Execute the script using the cached results, useful to continue executions that was stopped by an error.
+Entry workflow to be executed.
 
-`-r, -revision`
-: Revision of the project to run (either a git branch, tag or commit hash).
-: When passing a git tag or branch, the `workflow.revision` and `workflow.commitId` fields are populated. When passing only the commit hash, `workflow.revision` is not defined.
+##### `-h, -help`
 
-`-stub-run, -stub`
-: Execute the workflow replacing process scripts with command stubs
+Print the command usage.
 
-`-test`
-: Test a script function with the name specified.
+##### `-hub` (`github`)
 
-`-user`
-: Private repository user name.
+Service hub where the project is hosted. Options: `gitlab` or `bitbucket`
 
-`-with-apptainer`
-: Enable process execution in an Apptainer container.
+##### `-latest`
 
-`-with-charliecloud`
-: Enable process execution in a Charliecloud container.
+Pull latest changes before run.
 
-`-with-cloudcache`
-: Enable the use of the Cloud cache plugin for storing cache metadata to an object storage bucket.
+##### `-lib`
 
-`-with-conda`
-: Use the specified Conda environment package or file (must end with `.yml` or `.yaml`)
+Library extension path.
 
-`-with-dag` (`dag-<timestamp>.html`)
-: Create pipeline DAG file.
-: :::{versionchanged} 23.10.0
-  The default format was changed from `dot` to `html`.
-  :::
+##### `-main-script` (`main.nf`)
 
-`-with-docker`
-: Enable process execution in a Docker container.
+<AddedInVersion version="20.09.1-edge">
+</AddedInVersion>
 
-`-N, -with-notification`
-: Send a notification email on workflow completion to the specified recipients.
+The script file to be executed when launching a project directory or repository.
 
-`-with-podman`
-: Enable process execution in a Podman container.
 
-`-with-report` (`report-<timestamp>.html`)
-: Create workflow execution HTML report.
+##### `-name`
 
-`-with-singularity`
-: Enable process execution in a Singularity container.
+Assign a mnemonic name to the a pipeline run.
 
-`-with-spack`
-: Use the specified Spack environment package or file (must end with `.yaml`)
+##### `-offline`
 
-`-with-timeline` (`timeline-<timestamp>.html`)
-: Create workflow execution timeline.
+Do not check for remote project updates.
 
-`-with-tower` (`https://api.cloud.seqera.io`)
-: Monitor workflow execution with [Seqera Platform](https://seqera.io/) (formerly Tower Cloud).
+##### `-o, -output-dir` (`results`)
 
-`-with-trace` (`trace-<timestamp>.txt`)
-: Create workflow execution trace file.
+<AddedInVersion version="24.10.0">
+</AddedInVersion>
 
-`-with-wave` (`https://wave.seqera.io`)
-: Enable the use of Wave containers.
+Directory where workflow outputs are stored.
 
-`-with-weblog` (`http://localhost`)
-: Send workflow status messages via HTTP to target URL.
+##### `-params-file`
 
-`-without-conda`
-: Disable process execution with Conda.
+Load script parameters from a JSON/YAML file.
 
-`-without-docker`
-: Disable process execution with Docker.
+##### `-plugins`
 
-`-without-podman`
-: Disable process execution in a Podman container.
+Comma separated list of plugin ids to be applied in the pipeline execution.
 
-`-without-spack`
-: Disable process execution with Spack.
+##### `-preview`
 
-`-without-wave`
-: Disable the use of Wave containers.
+<AddedInVersion version="22.06.0-edge">
+</AddedInVersion>
 
-`-w, -work-dir` (`work`)
-: Directory where intermediate result files are stored.
+Run the workflow script skipping the execution of all processes.
+
+##### `-process.<key>=<value>`
+
+Set process config options.
+
+##### `-profile`
+
+Choose a configuration profile.
+
+##### `-qs, -queue-size`
+
+Max number of processes that can be executed in parallel by each executor.
+
+##### `-resume`
+
+Execute the script using the cached results, useful to continue executions that was stopped by an error.
+
+##### `-r, -revision`
+
+Revision of the project to run (either a git branch, tag or commit hash).
+
+When passing a git tag or branch, the `workflow.revision` and `workflow.commitId` fields are populated. When passing only the commit hash, `workflow.revision` is not defined.
+
+##### `-stub-run, -stub`
+
+Execute the workflow replacing process scripts with command stubs
+
+##### `-test`
+
+Test a script function with the name specified.
+
+##### `-user`
+
+Private repository user name.
+
+##### `-with-apptainer`
+
+Enable process execution in an Apptainer container.
+
+##### `-with-charliecloud`
+
+Enable process execution in a Charliecloud container.
+
+##### `-with-cloudcache`
+
+Enable the use of the Cloud cache plugin for storing cache metadata to an object storage bucket.
+
+##### `-with-conda`
+
+Use the specified Conda environment package or file (must end with `.yml` or `.yaml`)
+
+##### `-with-dag` (`dag-<timestamp>.html`)
+
+Create pipeline DAG file.
+
+Create pipeline DAG file.
+
+<ChangedInVersion version="23.10.0">
+The default format was changed from `dot` to `html`.
+</ChangedInVersion>
+
+##### `-with-docker`
+
+Enable process execution in a Docker container.
+
+##### `-N, -with-notification`
+
+Send a notification email on workflow completion to the specified recipients.
+
+##### `-with-podman`
+
+Enable process execution in a Podman container.
+
+##### `-with-report` (`report-<timestamp>.html`)
+
+Create workflow execution HTML report.
+
+##### `-with-singularity`
+
+Enable process execution in a Singularity container.
+
+##### `-with-spack`
+
+Use the specified Spack environment package or file (must end with `.yaml`)
+
+##### `-with-timeline` (`timeline-<timestamp>.html`)
+
+Create workflow execution timeline.
+
+##### `-with-tower` (`https://api.cloud.seqera.io`)
+
+Monitor workflow execution with [Seqera Platform](https://seqera.io/) (formerly Tower Cloud).
+
+##### `-with-trace` (`trace-<timestamp>.txt`)
+
+Create workflow execution trace file.
+
+##### `-with-wave` (`https://wave.seqera.io`)
+
+Enable the use of Wave containers.
+
+##### `-with-weblog` (`http://localhost`)
+
+Send workflow status messages via HTTP to target URL.
+
+##### `-without-conda`
+
+Disable process execution with Conda.
+
+##### `-without-docker`
+
+Disable process execution with Docker.
+
+##### `-without-podman`
+
+Disable process execution in a Podman container.
+
+##### `-without-spack`
+
+Disable process execution with Spack.
+
+##### `-without-wave`
+
+Disable the use of Wave containers.
+
+##### `-w, -work-dir` (`work`)
+
+Directory where intermediate result files are stored.
+
+#
 
 **Examples**
 
@@ -1250,7 +1407,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
   $ nextflow run main.nf -profile docker
   ```
 
-- Execute a pipeline and generate the summary HTML report. For more information on the metrics, please refer the {ref}`tracing-page` section:
+- Execute a pipeline and generate the summary HTML report. See [Reports][tracing-page] for more information:
 
   ```console
   $ nextflow run main.nf -with-report
@@ -1280,7 +1437,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
   $ nextflow run main.nf -params-file pipeline_params.yml
   ```
 
-  See {ref}`cli-params` for more information about writing custom parameters files.
+See [Pipeline parameters][cli-params] for more information about writing custom parameters files.
 
 ### `secrets`
 
@@ -1294,22 +1451,29 @@ $ nextflow secrets <SUBCOMMAND> [OPTIONS]
 
 **Options**
 
-`-h, -help`
-: Print the command usage.
+##### `-h, -help`
+
+Print the command usage.
 
 **Subcommands**
 
-`list`
-: List secrets available in the current store.
+##### `list`
 
-`get <secret>`
-: Retrieve a secret value.
+List secrets available in the current store.
 
-`set <secret> <value> `
-: Create or update a secret.
+##### `get <secret>`
 
-`delete <secret>`
-: Delete a secret.
+Retrieve a secret value.
+
+##### `set <secret> <value> `
+
+Create or update a secret.
+
+##### `delete <secret>`
+
+Delete a secret.
+
+#
 
 **Examples**
 
@@ -1385,14 +1549,19 @@ The `view` command is used to inspect the pipelines that are already stored in t
 
 **Options**
 
-`-h, -help`
-: Print the command usage.
+##### `-h, -help`
 
-`-l`
-: List repository content.
+Print the command usage.
 
-`-q`
-: Hide header line.
+##### `-l`
+
+List repository content.
+
+##### `-q`
+
+Hide header line.
+
+#
 
 **Examples**
 
@@ -1456,3 +1625,11 @@ workflow {
   channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
 }
 ```
+
+[cache-compare-hashes]: /nextflow_docs/nextflow_repo/docs/cache-and-resume#comparing-the-hashes-of-two-runs
+[config-profiles]: /nextflow_docs/nextflow_repo/docs/config#config-profiles
+[cli-page]: /nextflow_docs/nextflow_repo/docs/cli
+[cli-params]: /nextflow_docs/nextflow_repo/docs/cli#pipeline-parameters
+[data-lineage-page]: /nextflow_docs/nextflow_repo/docs/data-lineage
+[k8s-page]: /nextflow_docs/nextflow_repo/docs/kubernetes
+[tracing-page]: /nextflow_docs/nextflow_repo/docs/reports

@@ -16,35 +16,22 @@ When the pipeline execution is launched Nextflow inject the secrets in pipeline 
 
 Nextflow provides a command named `secrets`. This command allows four simple operations:
 
-<DefinitionList>
-    <DefinitionTerm>
-        `list`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        List secrets available in the current store. For example, `nextflow secrets list`.
-    </DefinitionDescription>
+##### `list`
 
-    <DefinitionTerm>
-        `get`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Retrieve a secret value. For example, `nextflow secrets get FOO`.
-    </DefinitionDescription>
+List secrets available in the current store. For example, `nextflow secrets list`.
 
-    <DefinitionTerm>
-        `set`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Create or update a secret. For example, `nextflow secrets set FOO "Hello world"`
-    </DefinitionDescription>
 
-    <DefinitionTerm>
-        `delete`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Delete a secret. For example, `nextflow secrets delete FOO`.
-    </DefinitionDescription>
-</DefinitionList>
+##### `get`
+
+Retrieve a secret value. For example, `nextflow secrets get FOO`.
+
+##### `set`
+
+Create or update a secret. For example, `nextflow secrets set FOO "Hello world"`
+
+##### `delete`
+
+Delete a secret. For example, `nextflow secrets delete FOO`.
 
 ## Configuration file
 

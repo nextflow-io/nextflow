@@ -11,8 +11,8 @@ The configuration properties for each Git provider are defined inside the `provi
 ```groovy
 providers {
     <provider-name> {
-        property = value
-        // ...
+property = value
+// ...
     }
 }
 ```
@@ -21,57 +21,37 @@ In the above template replace `<provider-name>` with one of the "default" server
 
 The following configuration properties are supported for each provider configuration:
 
-<DefinitionList>
-    <DefinitionTerm>
-        `providers.<provider>.user`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        User name required to access private repositories on the SCM server.
-    </DefinitionDescription>
+##### `providers.<provider>.user`
 
-    <DefinitionTerm>
-        `providers.<provider>.password`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        User password required to access private repositories on the SCM server.
-    </DefinitionDescription>
+User name required to access private repositories on the SCM server.
 
-    <DefinitionTerm>
-        `providers.<provider>.token`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        *Required only for private Gitlab servers.*
-        
-        Private API access token.
-    </DefinitionDescription>
+##### `providers.<provider>.password`
 
-    <DefinitionTerm>
-        `providers.<provider>.platform`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        *Required only for private SCM servers.*
-        
-        Git provider name, either: `github`, `gitlab`, or `bitbucket`.
-    </DefinitionDescription>
+User password required to access private repositories on the SCM server.
 
-    <DefinitionTerm>
-        `providers.<provider>.server`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        *Required only for private SCM servers.*
+##### `providers.<provider>.token`
 
-        SCM server name including the protocol prefix, e.g., `https://github.com`.
-    </DefinitionDescription>
+*Required only for private Gitlab servers.*
 
-    <DefinitionTerm>
-        `providers.<provider>.endpoint`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        *Required only for private SCM servers.*
+Private API access token.
 
-        SCM API `endpoint` URL, e.g., `https://api.github.com` (default: the same as `providers.<provider>.server`).
-    </DefinitionDescription>
-</DefinitionList>
+##### `providers.<provider>.platform`
+
+*Required only for private SCM servers.*
+
+Git provider name, either: `github`, `gitlab`, or `bitbucket`.
+
+##### `providers.<provider>.server`
+
+*Required only for private SCM servers.*
+
+SCM server name including the protocol prefix, e.g., `https://github.com`.
+
+##### `providers.<provider>.endpoint`
+
+*Required only for private SCM servers.*
+
+SCM API `endpoint` URL, e.g., `https://api.github.com` (default: the same as `providers.<provider>.server`).
 
 ## Git providers
 

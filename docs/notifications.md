@@ -65,85 +65,53 @@ sendMail(mail)
 
 The following parameters can be specified:
 
-<DefinitionList>
-    <DefinitionTerm>
-        `to`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        *Multiple email addresses can be specified separating them with a comma.*
-        
-        The mail target recipients.
-    </DefinitionDescription>
+##### `to`
 
-    <DefinitionTerm>
-        `cc`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        *Multiple email addresses can be specified separating them with a comma.*
-        
-        The mail CC recipients.
-    </DefinitionDescription>
+*Multiple email addresses can be specified separating them with a comma.*
 
-    <DefinitionTerm>
-        `bcc`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        *Multiple email addresses can be specified separating them with a comma.*
-        
-        The mail BCC recipients.
-    </DefinitionDescription>
+The mail target recipients.
 
-    <DefinitionTerm>
-        `from`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        *Multiple email addresses can be specified separating them with a comma.*
-        
-        The mail sender address.
-    </DefinitionDescription>
+##### `cc`
 
-    <DefinitionTerm>
-        `subject`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        The mail subject.
-    </DefinitionDescription>
+*Multiple email addresses can be specified separating them with a comma.*
 
-    <DefinitionTerm>
-        `charset`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        The mail content charset (default: `UTF-8`).
-    </DefinitionDescription>
+The mail CC recipients.
 
-    <DefinitionTerm>
-        `text`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        The mail plain text content.
-    </DefinitionDescription>
+##### `bcc`
 
-    <DefinitionTerm>
-        `body`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        The mail body content. It can be either plain text or HTML content.
-    </DefinitionDescription>
+*Multiple email addresses can be specified separating them with a comma.*
 
-    <DefinitionTerm>
-        `type`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        The mail body mime type. If not specified it's automatically detected.
-    </DefinitionDescription>
+The mail BCC recipients.
 
-    <DefinitionTerm>
-        `attach`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Single file or a list of files to be included as mail attachments.
-    </DefinitionDescription>
-</DefinitionList>
+##### `from`
+
+*Multiple email addresses can be specified separating them with a comma.*
+
+The mail sender address.
+
+##### `subject`
+
+The mail subject.
+
+##### `charset`
+
+The mail content charset (default: `UTF-8`).
+
+##### `text`
+
+The mail plain text content.
+
+##### `body`
+
+The mail body content. It can be either plain text or HTML content.
+
+##### `type`
+
+The mail body mime type. If not specified it's automatically detected.
+
+##### `attach`
+
+Single file or a list of files to be included as mail attachments.
 
 ### Advanced mail
 
@@ -181,35 +149,21 @@ When using the curly brackets syntax, the `attach` parameter can be repeated two
 
 Moreover for each attachment it's possible to specify any of the following options:
 
-<DefinitionList>
-    <DefinitionTerm>
-        `contentId`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Defines the `Content-ID` header field for the attachment.
-    </DefinitionDescription>
+##### `contentId`
 
-    <DefinitionTerm>
-        `disposition`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Defines the `Content-Disposition` header field for the attachment.
-    </DefinitionDescription>
+Defines the `Content-ID` header field for the attachment.
 
-    <DefinitionTerm>
-        `fileName`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Defines the `filename` parameter of the `Content-Disposition` header field.
-    </DefinitionDescription>
+##### `disposition`
 
-    <DefinitionTerm>
-        `description`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Defines the `Content-Description` header field for the attachment.
-    </DefinitionDescription>
-</DefinitionList>
+Defines the `Content-Disposition` header field for the attachment.
+
+##### `fileName`
+
+Defines the `filename` parameter of the `Content-Disposition` header field.
+
+##### `description`
+
+Defines the `Content-Description` header field for the attachment.
 
 For example:
 

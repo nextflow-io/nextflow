@@ -1,5 +1,3 @@
-import DefinitionList, { DefinitionTerm, DefinitionDescription } from '@site/src/components/DefinitionList';
-
 # Configuration
 
 ## Configuration file
@@ -68,7 +66,7 @@ executor {
 
 executor {
     retry {
-        maxAttempt = 5
+maxAttempt = 5
     }
 }
 ```
@@ -95,44 +93,32 @@ Config includes can also be specified within config blocks. However, config file
 
 The following constants are globally available in a Nextflow configuration file:
 
-<DefinitionList>
+##### `baseDir: Path`
 
-    <DefinitionTerm>`baseDir: Path`</DefinitionTerm>
-    <DefinitionDescription>
-        :::warning{title="Depreciated since version 20.04.0"} 
-        :::
-        Alias for `projectDir`.
-    </DefinitionDescription>
+:::warning{title="Depreciated since version 20.04.0"} 
+:::
 
-    <DefinitionTerm>`launchDir: Path`</DefinitionTerm>
-    <DefinitionDescription>
-        The directory where the workflow was launched.
-    </DefinitionDescription>
+Alias for `projectDir`.
 
-    <DefinitionTerm>`projectDir: Path`</DefinitionTerm>
-    <DefinitionDescription>
-        The directory where the main script is located.
-    </DefinitionDescription>
+##### `launchDir: Path`
 
-    <DefinitionTerm>`workDir: Path`</DefinitionTerm>
-    <DefinitionDescription>
-        The directory where the workflow work directory is located.
-    </DefinitionDescription>
+The directory where the workflow was launched.
 
-</DefinitionList>
+##### `projectDir: Path`
+
+The directory where the main script is located.
+
+##### `workDir: Path`
+
+The directory where the workflow work directory is located.
 
 ## Functions
 
 The following functions are globally available in a Nextflow configuration file:
 
-<DefinitionList>
+##### `env( name: String ) -> String`
 
-    <DefinitionTerm>`env( name: String ) -> String`</DefinitionTerm>
-    <DefinitionDescription>
-        Get the value of the environment variable with the specified name in the Nextflow launch environment.
-    </DefinitionDescription>
-
-</DefinitionList>
+Get the value of the environment variable with the specified name in the Nextflow launch environment.
 
 ## Parameters
 
@@ -187,9 +173,9 @@ In the same manner, the `withName` selector allows the configuration of a specif
 ```groovy
 process {
     withName: hello {
-        cpus = 4
-        memory = 8.GB
-        queue = 'short'
+cpus = 4
+memory = 8.GB
+queue = 'short'
     }
 }
 ```

@@ -2,6 +2,6 @@ import DocCardList from "@theme/DocCardList";
 
 # Standard library
 
-Pages in this section describe the Nextflow standard library, which consists of built-in namespaces and types.
+This section describe the Nextflow standard library, which consists of built-in namespaces and types.
 
 <DocCardList />

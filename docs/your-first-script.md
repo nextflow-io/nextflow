@@ -191,7 +191,7 @@ The input string is now longer and the `split` process splits it into three chun
 
 See [Pipeline parameters][cli-params] for more information about modifying pipeline parameters.
 
-<h2>Next steps</h2>
+## Next steps
 
 Your first script is a brief introduction to running pipelines, modifying and resuming pipelines, and pipeline parameters. See [training.nextflow.io](https://training.nextflow.io/) for further Nextflow training modules.
 

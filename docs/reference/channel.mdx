@@ -1,22 +1,18 @@
-(channel-factory)=
+import { AddedInVersion, ChangedInVersion, DeprecatedInVersion } from '@site/src/components/VersionedAdmonitions';
 
 # Channel factories
-
-(channel-empty)=
 
 ## empty
 
 The `channel.empty` factory method, by definition, creates a channel that doesn't emit any value.
 
-See also: {ref}`operator-ifempty`.
-
-(channel-from)=
+See also: [ifEmpty]operator-ifempty].
 
 ## from
 
-:::{deprecated} 19.09.0-edge
+<DeprecatedInVersion version="19.09.0-edge">
 Use [channel.of](#of) or [channel.fromList](#fromlist) instead.
-:::
+</DeprecatedInVersion>
 
 The `channel.from` method allows you to create a channel emitting any sequence of values that are specified as the method argument, for example:
 
@@ -41,7 +37,7 @@ zeroToNine = channel.from( 0..9 )
 strings = channel.from( 'A'..'Z' )
 ```
 
-:::{note}
+:::note
 When the `channel.from` argument is an object implementing the (Java) [Collection](http://docs.oracle.com/javase/7/docs/api/java/util/Collection.html) interface, the resulting channel emits the collection entries as individual items.
 :::
 
@@ -58,17 +54,15 @@ But when more than one argument is provided, they are always managed as *single*
 channel.from( [1, 2], [5,6], [7,9] )
 ```
 
-(channel-from-lineage)=
-
 ## fromLineage
 
-:::{versionadded} 25.04.0
+<AddedInVersion version="25.04.0">
+</AddedInVersion>
+
+:::warning *Experimental: may change in a future release.*
 :::
 
-:::{warning} *Experimental: may change in a future release.*
-:::
-
-The `channel.fromLineage` factory creates a channel that emits files from the {ref}`cli-lineage` store that match the given key-value params:
+The `channel.fromLineage` factory creates a channel that emits files from the [lineage][cli-lineage] store that match the given key-value params:
 
 ```nextflow
 channel
@@ -80,21 +74,22 @@ The above snippet emits files published by the given workflow run that are label
 
 Available options:
 
-`label`
-: List of labels associated with the desired files.
+##### `label`
 
-`taskRun`
-: LID of the task run that produced the desired files.
+List of labels associated with the desired files.
 
-`workflowRun`
-: LID of the workflow run that produced the desired files.
+##### `taskRun`
 
-(channel-fromlist)=
+LID of the task run that produced the desired files.
+
+##### `workflowRun`
+
+LID of the workflow run that produced the desired files.
 
 ## fromList
 
-:::{versionadded} 19.10.0
-:::
+<AddedInVersion version="19.10.0">
+</AddedInVersion>
 
 The `channel.fromList` method allows you to create a channel emitting the values provided as a list of elements, for example:
 
@@ -115,8 +110,6 @@ value: d
 
 See also: [channel.of](#of) factory method.
 
-(channel-path)=
-
 ## fromPath
 
 You can create a channel emitting one or more file paths by using the `channel.fromPath` method and specifying a path
@@ -129,7 +122,7 @@ myFileChannel = channel.fromPath( '/data/some/bigfile.txt' )
 The above line creates a channel and binds it to a [Path](http://docs.oracle.com/javase/7/docs/api/java/nio/file/Path.html)
 object for the specified file.
 
-:::{note}
+:::note
 `channel.fromPath` does not check whether the file exists.
 :::
 
@@ -142,7 +135,7 @@ myFileChannel = channel.fromPath( '/data/big/*.txt' )
 
 This example creates a channel and emits as many `Path` items as there are files with `txt` extension in the `/data/big` folder.
 
-:::{tip}
+:::tip
 Two asterisks, i.e. `**`, works like `*` but crosses directory boundaries. This syntax is generally used for matching complete paths. Curly brackets specify a collection of sub-patterns.
 :::
 
@@ -156,7 +149,7 @@ pairFiles = channel.fromPath( 'data/file_{1,2}.fq' )
 
 The first line returns a channel emitting the files ending with the suffix `.fa` in the `data` folder *and* recursively in all its sub-folders. While the second one only emits the files which have the same suffix in *any* sub-folder in the `data` path. Finally the last example emits two files: `data/file_1.fq` and `data/file_2.fq`.
 
-:::{note}
+:::note
 As in Linux Bash, the `*` wildcard does not catch hidden files (i.e. files whose name starts with a `.` character).
 :::
 
@@ -189,28 +182,33 @@ The first example will return all *directory* paths ending with the `b` suffix, 
 
 Available options:
 
-`checkIfExists`
-: When `true` throws an exception of the specified path do not exist in the file system (default: `false`)
+##### `checkIfExists`
 
-`followLinks`
-: When `true` it follows symbolic links during directories tree traversal, otherwise they are managed as files (default: `true`)
+When `true` throws an exception of the specified path do not exist in the file system (default: `false`)
 
-`glob`
-: When `true` interprets characters `*`, `?`, `[]` and `{}` as glob wildcards, otherwise handles them as normal characters (default: `true`)
+##### `followLinks`
 
-`hidden`
-: When `true` includes hidden files in the resulting paths (default: `false`)
+When `true` it follows symbolic links during directories tree traversal, otherwise they are managed as files (default: `true`)
 
-`maxDepth`
-: Maximum number of directory levels to visit (default: no limit)
+##### `glob`
 
-`relative`
-: When `true` returned paths are relative to the top-most common directory (default: `false`)
+When `true` interprets characters `*`, `?`, `[]` and `{}` as glob wildcards, otherwise handles them as normal characters (default: `true`)
 
-`type`
-: Type of paths returned, either `file`, `dir` or `any` (default: `file`)
+##### `hidden`
 
-(channel-filepairs)=
+When `true` includes hidden files in the resulting paths (default: `false`)
+
+##### `maxDepth`
+
+Maximum number of directory levels to visit (default: no limit)
+
+##### `relative`
+
+When `true` returned paths are relative to the top-most common directory (default: `false`)
+
+##### `type`
+
+Type of paths returned, either `file`, `dir` or `any` (default: `file`)
 
 ## fromFilePairs
 
@@ -234,7 +232,7 @@ It will produce an output similar to the following:
 [SRR493371, [/my/data/SRR493371_1.fastq, /my/data/SRR493371_2.fastq]]
 ```
 
-:::{note}
+:::note
 The glob pattern must contain at least one `*` wildcard character.
 :::
 
@@ -254,33 +252,38 @@ channel
 
 Available options:
 
-`checkIfExists`
-: When `true` throws an exception of the specified path do not exist in the file system (default: `false`)
+##### `checkIfExists`
 
-`followLinks`
-: When `true` it follows symbolic links during directories tree traversal, otherwise they are managed as files (default: `true`)
+When `true` throws an exception of the specified path do not exist in the file system (default: `false`)
 
-`flat`
-: When `true` the matching files are produced as sole elements in the emitted tuples (default: `false`).
+##### `followLinks`
 
-`hidden`
-: When `true` includes hidden files in the resulting paths (default: `false`)
+When `true` it follows symbolic links during directories tree traversal, otherwise they are managed as files (default: `true`)
 
-`maxDepth`
-: Maximum number of directory levels to visit (default: no limit)
+##### `flat`
 
-`size`
-: Defines the number of files each emitted item is expected to hold (default: 2). Set to `-1` for any.
+When `true` the matching files are produced as sole elements in the emitted tuples (default: `false`).
 
-`type`
-: Type of paths returned, either `file`, `dir` or `any` (default: `file`)
+##### `hidden`
 
-(channel-fromsra)=
+When `true` includes hidden files in the resulting paths (default: `false`)
+
+##### `maxDepth`
+
+Maximum number of directory levels to visit (default: no limit)
+
+##### `size`
+
+Defines the number of files each emitted item is expected to hold (default: 2). Set to `-1` for any.
+
+##### `type`
+
+Type of paths returned, either `file`, `dir` or `any` (default: `file`)
 
 ## fromSRA
 
-:::{versionadded} 19.04.0
-:::
+<AddedInVersion version="19.04.0">
+</AddedInVersion>
 
 The `channel.fromSRA` method queries the [NCBI SRA](https://www.ncbi.nlm.nih.gov/sra) database and returns a channel emitting the FASTQ files matching the specified criteria i.e project or accession number(s). For example:
 
@@ -317,7 +320,7 @@ channel
 [ERR908505, [ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908505/ERR908505_1.fastq.gz, ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908505/ERR908505_2.fastq.gz]]
 ```
 
-:::{note}
+:::note
 Each read pair is implicitly managed and returned as a list of files.
 :::
 
@@ -337,20 +340,25 @@ To access the ESearch API, you must provide your [NCBI API keys](https://ncbiins
 
 Available options:
 
-`apiKey`
-: NCBI user API key.
+##### `apiKey`
 
-`cache`
-: Enable/disable the caching API requests (default: `true`).
+NCBI user API key.
 
-`max`
-: Maximum number of entries that can be retried (default: unlimited) .
+##### `cache`
 
-`protocol`
-: Allow choosing the protocol for the resulting remote URLs. Available choices: `ftp`, `http`, `https` (default: `ftp`).
+Enable/disable the caching API requests (default: `true`).
 
-`retryPolicy`
-: Set a retry policy in case the SRA request fails with a retriable error.
+##### `max`
+
+Maximum number of entries that can be retried (default: unlimited) .
+
+##### `protocol`
+
+Allow choosing the protocol for the resulting remote URLs. Available choices: `ftp`, `http`, `https` (default: `ftp`).
+
+##### `retryPolicy`
+
+Set a retry policy in case the SRA request fails with a retriable error.
 The retry policy is set as a Map specifying the different policy properties.
 
 Available retry policy properties:
@@ -364,11 +372,9 @@ Available retry policy properties:
 
 The following code snippet shows an example for using the `channel.fromSRA` factory method with a custom `retryPolicy`.
 
-  ```nextflow
-  channel.fromSRA(ids, retryPolicy: [delay: '250ms', maxAttempts: 5])
-  ```
-
-(channel-interval)=
+```nextflow
+channel.fromSRA(ids, retryPolicy: [delay: '250ms', maxAttempts: 5])
+```
 
 ## interval
 
@@ -378,7 +384,7 @@ The `interval` method emits an incrementing index (starting from zero) at a peri
 channel.interval('1s').view()
 ```
 
-The above snippet will emit 0, 1, 2, and so on, every second, forever. You can use an operator such as {ref}`operator-take` or {ref}`operator-until` to close the channel based on a stopping condition.
+The above snippet will emit 0, 1, 2, and so on, every second, forever. You can use an operator such as [take][operator-take] or [until][operator-until] to close the channel based on a stopping condition.
 
 An optional closure can be used to transform the index. Additionally, returning `channel.STOP` will close the channel. For example:
 
@@ -389,12 +395,10 @@ ch = channel.interval('1s') { i ->
 ch.view()
 ```
 
-(channel-of)=
-
 ## of
 
-:::{versionadded} 19.10.0
-:::
+<AddedInVersion version="19.10.0">
+</AddedInVersion>
 
 The `channel.of` method allows you to create a channel that emits the arguments provided to it, for example:
 
@@ -436,20 +440,18 @@ Y
 
 See also: [channel.fromList](#fromlist) factory method.
 
-(channel-topic)=
-
 ## topic
 
-:::{versionadded} 23.11.0-edge
-:::
+<AddedInVersion version="23.11.0-edge">
+</AddedInVersion>
 
-:::{note}
+:::note
 In versions of Nextflow prior to 25.04, this feature requires the `nextflow.preview.topic` feature flag to be enabled.
 :::
 
 A *topic channel* is a queue channel that can receive values from many source channels *implicitly* based on a matching *topic name*.
 
-:::{tip}
+:::tip
 You can think of it as a channel that is shared across many different processes using the same topic name.
 :::
 
@@ -457,17 +459,17 @@ A process output can be assigned to a topic using the `topic` option on an outpu
 
 ```nextflow
 process hello {
-  output:
-  val('hello'), topic: my_topic
+    output:
+    val('hello'), topic: my_topic
 
-  // ...
+    // ...
 }
 
 process bye {
-  output:
-  val('bye'), topic: my_topic
+    output:
+    val('bye'), topic: my_topic
 
-  // ...
+    // ...
 }
 ```
 
@@ -480,13 +482,11 @@ channel.topic('my-topic').view()
 
 This approach is a convenient way to collect related items from many different sources without explicitly connecting them (e.g. using the `mix` operator).
 
-:::{warning}
+:::warning
 Any process that consumes a topic channel (directly or indirectly) should not send any outputs to that topic, or else the pipeline will hang forever.
 :::
 
-See also: {ref}`process-additional-options` for process outputs.
-
-(channel-value)=
+See also: [Options][process-additional-options] for process outputs.
 
 ## value
 
@@ -501,8 +501,6 @@ expl3 = channel.value( [1,2,3,4,5] )
 
 The first line in the example creates an 'empty' variable. The second line creates a channel and binds a string to it.
 The third line creates a channel and binds a list object to it that will be emitted as a single value.
-
-(channel-watchpath)=
 
 ## watchPath
 
@@ -533,16 +531,21 @@ channel
     .subscribe { fa -> println "File created or modified: $fa" }
 ```
 
-:::{warning}
+:::warning
 The `channel.watchPath` factory waits endlessly for files that match the specified pattern and event(s), which means
 that it will cause your pipeline to run forever. Consider using the `take` or `until` operator to close the channel when
 a certain condition is met (e.g. after receiving 10 files, receiving a file named `DONE`).
 :::
 
-:::{note}
+:::note
 The `channel.watchPath` factory only works with local and shared filesystems. It does not support object storage such as S3.
 :::
 
 See also: [channel.fromPath](#frompath) factory method.
 
+[cli-lineage]: /nextflow_docs/nextflow_repo/docs/reference/cli#lineage
 [glob]: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
+[operator-ifempty]: /nextflow_docs/nextflow_repo/docs/reference/operator#ifempty
+[process-additional-options]: /nextflow_docs/nextflow_repo/docs/reference/process#options
+[operator-take]: /nextflow_docs/nextflow_repo/docs/reference/operator#take
+[operator-until]: /nextflow_docs/nextflow_repo/docs/reference/operator#until

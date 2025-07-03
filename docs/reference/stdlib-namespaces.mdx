@@ -3,8 +3,6 @@ title: Namespaces
 description: Namespaces in the Nextflow standard library
 ---
 
-import DefinitionList, { DefinitionTerm, DefinitionDescription } from '@site/src/components/DefinitionList'
-
 # Namespaces
 
 This page lists all of the available namespaces in the Nextflow standard library.
@@ -15,223 +13,139 @@ The global namespace contains globally available constants and functions.
 
 ### Constants
 
-<DefinitionList>
-    <DefinitionTerm>
-        `baseDir: Path`
-    </DefinitionTerm>
-    <DefinitionDescription>
-    :::danger{title="Depreciated in version 20.04.0"}
-    :::
+##### `baseDir: Path`
 
-    Alias of `workflow.projectDir`.
+:::danger{title="Depreciated in version 20.04.0"}
+:::
 
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `launchDir: Path`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Alias of `workflow.launchDir`.
-    </DefinitionDescription>
+Alias of `workflow.projectDir`.
 
-    <DefinitionTerm>
-        `moduleDir: Path`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Directory where a module script is located (equivalent to `projectDir` if used in the main script).
-    </DefinitionDescription>
+##### `launchDir: Path`
 
-    <DefinitionTerm>
-        `params`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Map of workflow parameters specified in the config file or as command line options.
-    </DefinitionDescription>
+Alias of `workflow.launchDir`.
 
-    <DefinitionTerm>
-        `projectDir: Path`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Alias of `workflow.projectDir`.
-    </DefinitionDescription>
+##### `moduleDir: Path`
 
-    <DefinitionTerm>
-        `secrets: Map<String,String>`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        :::note{title="Added in version 24.02.0-edge"}
-        :::
+Directory where a module script is located (equivalent to `projectDir` if used in the main script).
 
-        Map of pipeline secrets. See [Secrets][secrets-page] for more information.
-    </DefinitionDescription>
-    
-    <DefinitionTerm>
-        `workDir: Path`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Alias of `workflow.workDir`.
-    </DefinitionDescription>
-</DefinitionList>
+
+##### `params`
+
+Map of workflow parameters specified in the config file or as command line options.
+
+
+##### `projectDir: Path`
+
+Alias of `workflow.projectDir`.
+
+##### `secrets: Map<String,String>`
+
+:::note{title="Added in version 24.02.0-edge"}
+:::
+
+Map of pipeline secrets. See [Secrets][secrets-page] for more information.
+
+##### `workDir: Path`
+
+Alias of `workflow.workDir`.
 
 ### Functions
 
-<DefinitionList>
-    <DefinitionTerm>
-        `branchCriteria( criteria: Closure ) -> Closure`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Create a branch criteria to use with the [branch][operator-branch] operator.
-    </DefinitionDescription>
-    
-    <DefinitionTerm>
-        `env( name: String ) -> String`
-    </DefinitionTerm>
-    <DefinitionDescription>
-    :::note{title="Added in version 24.11.0-edge"}
-    :::
+##### `branchCriteria( criteria: Closure ) -> Closure`
 
-    Get the value of the environment variable with the specified name in the Nextflow launch environment.
-    </DefinitionDescription>
+Create a branch criteria to use with the [branch][operator-branch] operator.
 
-    <DefinitionTerm>
-        `error( message: String = null )`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Throw a script runtime error with an optional error message.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `exit( exitCode: int = 0, message: String = null )`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        :::danger{title="Depreciated in version 22.06.0-edge"}
-        Use `error()` instead
-        :::
+##### `env( name: String ) -> String`
+
+:::note{title="Added in version 24.11.0-edge"}
+:::
+
+Get the value of the environment variable with the specified name in the Nextflow launch environment.
+
+##### `error( message: String = null )`
+
+Throw a script runtime error with an optional error message.
+
+##### `exit( exitCode: int = 0, message: String = null )`
+
+:::danger{title="Depreciated in version 22.06.0-edge"}
+Use `error()` instead
+:::
+
+Stop the pipeline execution and return an exit code and optional error message.
+
+##### `file( filePattern: String, [options] ) -> Path | List<Path>`
+
+Get a file from a file name or glob pattern. Returns a collection of files if the glob pattern yields zero or multiple files.
+
+The following options are available:
+
+###### `checkIfExists: boolean`
+
+When `true`, throws an exception if the specified path does not exist in the file system (default: `false`).
+
+###### `followLinks: boolean`
+
+When `true`, follows symbolic links when traversing a directory tree, otherwise treats them as files (default: `true`).
+
+###### `glob: boolean`
+
+When `true`, interprets characters `*`, `?`, `[]` and `{}` as glob wildcards, otherwise handles them as normal characters (default: `true`).
         
-        Stop the pipeline execution and return an exit code and optional error message.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `file( filePattern: String, [options] ) -> Path | List<Path>`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Get a file from a file name or glob pattern. Returns a collection of files if the glob pattern yields zero or multiple files.
+###### `hidden: boolean`
+
+When `true`, includes hidden files in the resulting paths (default: `false`).
         
-        The following options are available:
 
-        <DefinitionList>
-            <DefinitionTerm>
-                `checkIfExists: boolean`
-            </DefinitionTerm>
-            <DefinitionDescription>
-                When `true`, throws an exception if the specified path does not exist in the file system (default: `false`).
-            </DefinitionDescription>
+###### `maxDepth: int`
 
-            <DefinitionTerm>
-                `followLinks: boolean`
-            </DefinitionTerm>
-            <DefinitionDescription>
-                When `true`, follows symbolic links when traversing a directory tree, otherwise treats them as files (default: `true`).
-            </DefinitionDescription>
-
-            <DefinitionTerm>
-                `glob: boolean`
-            </DefinitionTerm>
-            <DefinitionDescription>
-                When `true`, interprets characters `*`, `?`, `[]` and `{}` as glob wildcards, otherwise handles them as normal characters (default: `true`).
-            </DefinitionDescription>
-
-            <DefinitionTerm>
-                `hidden: boolean`
-            </DefinitionTerm>
-            <DefinitionDescription>
-                When `true`, includes hidden files in the resulting paths (default: `false`).
-            </DefinitionDescription>
-
-            <DefinitionTerm>
-                `maxDepth: int`
-            </DefinitionTerm>
-            <DefinitionDescription>
-                Maximum number of directory levels to visit (default: *no limit*).
-            </DefinitionDescription>
-            <DefinitionTerm>
-                `type: String`
-            </DefinitionTerm>
-            <DefinitionDescription>
-                Type of paths returned, can be `'file'`, `'dir'` or `'any'` (default: `'file'`).
-            </DefinitionDescription>
-        </DefinitionList>
+Maximum number of directory levels to visit (default: *no limit*).
         
-        See also: [channel.fromPath][channel-path].
-    </DefinitionDescription>
+###### `type: String`
 
-    <DefinitionTerm>
-        `files( filePattern: String, [options] ) -> List<Path>`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Get a collection of files from a file name or glob pattern. Supports the same options as `file()`.
-    </DefinitionDescription>
-    
-    <DefinitionTerm>
-        `groupKey( key, size: int ) -> GroupKey`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Create a grouping key to use with the [groupTuple][operator-grouptuple] operator.
-    </DefinitionDescription>
+Type of paths returned, can be `'file'`, `'dir'` or `'any'` (default: `'file'`).
 
-    <DefinitionTerm>
-        `multiMapCriteria( criteria: Closure ) -> Closure`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Create a multi-map criteria to use with the [multiMap][operator-multimap] operator.
-    </DefinitionDescription>
+See also: [channel.fromPath][channel-path].
 
-    <DefinitionTerm>
-        `print( value )`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Print a value to standard output.
-    </DefinitionDescription>
+##### `files( filePattern: String, [options] ) -> List<Path>`
 
-    <DefinitionTerm>
-        `printf( format: String, values... )`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Print a formatted string with the given values to standard output.
-    </DefinitionDescription>
-    
-    <DefinitionTerm>
-        `println( value )`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Print a value to standard output with a newline.
-    </DefinitionDescription>
+Get a collection of files from a file name or glob pattern. Supports the same options as `file()`.
 
-    <DefinitionTerm>
-        `sendMail( [options] )`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Send an email. See [Notifications][mail-page] for more information.
-    </DefinitionDescription>
+##### `groupKey( key, size: int ) -> GroupKey`
 
-    <DefinitionTerm>
-        `sleep( milliseconds: long )`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Sleep for the given number of milliseconds.
-    </DefinitionDescription>
+Create a grouping key to use with the [groupTuple][operator-grouptuple] operator.
 
-    <DefinitionTerm>
-        `tuple( collection: List ) -> ArrayTuple`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Create a tuple object from the given collection.
-    </DefinitionDescription>
+##### `multiMapCriteria( criteria: Closure ) -> Closure`
 
-    <DefinitionTerm>
-        `tuple( args... ) -> ArrayTuple`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Create a tuple object from the given arguments.
-    </DefinitionDescription>
-</DefinitionList>
+Create a multi-map criteria to use with the [multiMap][operator-multimap] operator.
+
+##### `print( value )`
+
+Print a value to standard output.
+
+##### `printf( format: String, values... )`
+
+Print a formatted string with the given values to standard output.
+
+##### `println( value )`
+
+Print a value to standard output with a newline.
+
+##### `sendMail( [options] )`
+
+Send an email. See [Notifications][mail-page] for more information.
+
+##### `sleep( milliseconds: long )`
+
+Sleep for the given number of milliseconds.
+
+##### `tuple( collection: List ) -> ArrayTuple`
+
+Create a tuple object from the given collection.
+
+##### `tuple( args... ) -> ArrayTuple`
+
+Create a tuple object from the given arguments.
 
 ## `channel`
 
@@ -241,28 +155,17 @@ The `channel` namespace contains the built-in channel factories. See [Channel fa
 
 The `nextflow` namespace contains information about the current Nextflow runtime.
 
-<DefinitionList>
-    <DefinitionTerm>
-        `build: int`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Nextflow runtime build number.
-    </DefinitionDescription>
+##### `build: int`
 
-    <DefinitionTerm>
-        `timestamp: String`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Nextflow runtime compile timestamp.
-    </DefinitionDescription>
+Nextflow runtime build number.
 
-    <DefinitionTerm>
-        `version: VersionNumber`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Nextflow runtime version number. See [VersionNumber][stdlib-types-versionnumber] for more information.
-    </DefinitionDescription>
-</DefinitionList>
+##### `timestamp: String`
+
+Nextflow runtime compile timestamp.
+
+##### `version: VersionNumber`
+
+Nextflow runtime version number. See [VersionNumber][stdlib-types-versionnumber] for more information.
 
 ## `workflow`
 
@@ -270,303 +173,190 @@ The `workflow` namespace contains information about the current workflow run.
 
 ### Properties
 
-<DefinitionList>
-    <DefinitionTerm>
-        `commandLine: String`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Command line as entered by the user to launch the workflow execution.
-    </DefinitionDescription>
+##### `commandLine: String`
 
-    <DefinitionTerm>
-        `commitId: String`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Git commit ID of the executed workflow repository.
+Command line as entered by the user to launch the workflow execution.
 
-        When providing a Git tag, branch name, or commit hash using the `-r` CLI option, the associated `workflow.commitId` is also populated.
-    </DefinitionDescription>
+##### `commitId: String`
 
-    <DefinitionTerm>
-    `complete: OffsetDateTime`
-    </DefinitionTerm>
-    <DefinitionDescription>
-    *Available only in the `workflow.onComplete` handler*
+Git commit ID of the executed workflow repository.
 
-    Timestamp of workflow when execution is completed.
-    </DefinitionDescription>
+When providing a Git tag, branch name, or commit hash using the `-r` CLI option, the associated `workflow.commitId` is also populated.
 
-    <DefinitionTerm>
-    `configFiles: List<Path>`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Configuration files used for the workflow execution.
-    </DefinitionDescription>
-
-    <DefinitionTerm>
-        `container: String | Map<String,String>`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Docker image used to run workflow tasks, or a map of process names to process containers when multiple images are used.
-    </DefinitionDescription>
-
-    <DefinitionTerm>
-        `containerEngine: String`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Returns the name of the container engine (e.g. docker or singularity) or null if no container engine is enabled.
-    </DefinitionDescription>
-
-    <DefinitionTerm>
-        `duration: Duration`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        *Available only in the `workflow.onComplete` handler*
-
-        Time elapsed to complete workflow execution.
-    </DefinitionDescription>
-
-    <DefinitionTerm>
-        `errorMessage: String`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        *Available only in the `workflow.onComplete` and `workflow.onError` handlers*
-        
-        Error message of the task that caused the workflow execution to fail.
-    </DefinitionDescription>
-
-    <DefinitionTerm>
-        `errorReport: String`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        *Available only in the `workflow.onComplete` and `workflow.onError` handlers*
-
-        Detailed error of the task that caused the workflow execution to fail.
-    </DefinitionDescription>
-
-    <DefinitionTerm>
-        `exitStatus: int`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        *Available only in the `workflow.onComplete` and `workflow.onError` handlers*
-        
-        Exit status of the task that caused the workflow execution to fail.
-    </DefinitionDescription>
-
-    <DefinitionTerm>
-    `failOnIgnore: boolean`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        :::note{title="Added in version 24.05.0-edge"}
-        :::
-
-        Whether the `workflow.failOnIgnore` config option was enabled.
-
-        See also: [errorStrategy][process-error-strategy]
-    </DefinitionDescription>
-
-    <DefinitionTerm>
-        `fusion`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Namespace containing information about the current Fusion runtime. The following properties are available:
-
-        <DefinitionList>
-            <DefinitionTerm>
-                `enabled: boolean`
-            </DefinitionTerm>
-            <DefinitionDescription>
-                Whether Fusion is enabled.
-            </DefinitionDescription>
-            <DefinitionTerm>
-                `version: String`
-            </DefinitionTerm>
-            <DefinitionDescription>
-                The Fusion version being used.
-            </DefinitionDescription>
-        </DefinitionList>
-    </DefinitionDescription>
+##### `complete: OffsetDateTime`
     
-    <DefinitionTerm>
-        `homeDir: Path`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        User system home directory.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `launchDir: Path`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Directory where the workflow was launched.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `manifest`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Namespace corresponding to the [`manifest`][config-manifest] config scope.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `outputDir: Path`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        :::note{title="Added in version 24.10.0"}
-        :::
+*Available only in the `workflow.onComplete` handler*
 
-        Workflow output directory.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `preview: boolean`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        :::note{title="Added in version 24.04.0"}
-        :::
+Timestamp of workflow when execution is completed.
 
-        Whether the current workflow run is a preview run.
-    </DefinitionDescription>
+##### `configFiles: List<Path>`
 
-    <DefinitionTerm>
-        `profile: String`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Comma-separated list of active configuration profiles.
-    </DefinitionDescription>
+Configuration files used for the workflow execution.
 
-    <DefinitionTerm>
-        `projectDir: Path`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Directory where the workflow project is located.
-    </DefinitionDescription>
+##### `container: String | Map<String,String>`
 
-    <DefinitionTerm>
-        `repository: String`
-    </DefinitionTerm>
-    <DefinitionDescription>
-    Project repository Git remote URL.
-    </DefinitionDescription>
+Docker image used to run workflow tasks, or a map of process names to process containers when multiple images are used.
 
-    <DefinitionTerm>
-        `resume: boolean`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Returns `true` whenever the current instance is resumed from a previous execution.
-    </DefinitionDescription>
+##### `containerEngine: String`
 
-    <DefinitionTerm>
-        `revision: String`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Git branch/tag of the executed workflow repository.
+Returns the name of the container engine (e.g. docker or singularity) or null if no container engine is enabled.
 
-        When providing a Git tag or branch name using the `-r` CLI option, the `workflow.revision` is also populated.
-    </DefinitionDescription>
+##### `duration: Duration`
 
-    <DefinitionTerm>
-        `runName: String`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Mnemonic name assigned to this execution instance.
-    </DefinitionDescription>
+*Available only in the `workflow.onComplete` handler*
 
-    <DefinitionTerm>
-        `scriptFile: Path`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Project main script file path.
-    </DefinitionDescription>
+Time elapsed to complete workflow execution.
 
-    <DefinitionTerm>
-        `scriptId: String`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Project main script unique hash ID.
-    </DefinitionDescription>
+##### `errorMessage: String`
 
-    <DefinitionTerm>
-        `scriptName: String`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Project main script file name.
-    </DefinitionDescription>
-
-    <DefinitionTerm>
-        `sessionId: UUID`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Unique identifier (UUID) associated to current execution.
-    </DefinitionDescription>
-
-    <DefinitionTerm>
-        `start: OffsetDateTime`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Timestamp of workflow at execution start.
-    </DefinitionDescription>
-
-    <DefinitionTerm>
-        `stubRun: boolean`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Returns `true` whenever the current instance is a stub-run execution .
-    </DefinitionDescription>
-
-    <DefinitionTerm>
-        `success: boolean`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        *Available only in the `workflow.onComplete` and `workflow.onError` handlers*
-
-        Reports if the execution completed successfully.
-    </DefinitionDescription>
-
-    <DefinitionTerm>
-        `userName: String`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        User system account name.
-    </DefinitionDescription>
-
-    <DefinitionTerm>
-    `wave`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Namespace containing Wave runtime information. The following properties are available:
+*Available only in the `workflow.onComplete` and `workflow.onError` handlers*
     
-        <DefinitionList>
-            <DefinitionTerm>
-                `enabled: boolean`
-            </DefinitionTerm>
-            <DefinitionDescription>
-                Whether Wave is enabled.
-            </DefinitionDescription>
-        </DefinitionList>
-    </DefinitionDescription>
+Error message of the task that caused the workflow execution to fail.
+
+##### `errorReport: String`
+
+*Available only in the `workflow.onComplete` and `workflow.onError` handlers*
+
+Detailed error of the task that caused the workflow execution to fail.
+
+##### `exitStatus: int`
+
+*Available only in the `workflow.onComplete` and `workflow.onError` handlers*
     
-    <DefinitionTerm>
-        `workDir: Path`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        The directory where task temporary files are stored.
-    </DefinitionDescription>
-</DefinitionList>
+Exit status of the task that caused the workflow execution to fail.
+
+##### `failOnIgnore: boolean`
+
+:::note{title="Added in version 24.05.0-edge"}
+:::
+
+Whether the `workflow.failOnIgnore` config option was enabled.
+
+See also: [errorStrategy][process-error-strategy]
+
+##### `fusion`
+
+Namespace containing information about the current Fusion runtime.
+
+The following properties are available:
+
+###### `enabled: boolean`
+
+Whether Fusion is enabled.
+
+###### `version: String`
+
+The Fusion version being used.
+
+##### `homeDir: Path`
+
+User system home directory.
+
+##### `launchDir: Path`
+
+Directory where the workflow was launched.
+
+##### `manifest`
+
+Namespace corresponding to the [`manifest`][config-manifest] config scope.
+
+##### `outputDir: Path`
+
+:::note{title="Added in version 24.10.0"}
+:::
+
+Workflow output directory.
+
+##### `preview: boolean`
+
+:::note{title="Added in version 24.04.0"}
+:::
+
+Whether the current workflow run is a preview run.
+
+##### `profile: String`
+
+Comma-separated list of active configuration profiles.
+
+##### `projectDir: Path`
+
+Directory where the workflow project is located.
+
+##### `repository: String`
+
+Project repository Git remote URL.
+
+##### `resume: boolean`
+
+Returns `true` whenever the current instance is resumed from a previous execution.
+
+##### `revision: String`
+
+Git branch/tag of the executed workflow repository.
+
+When providing a Git tag or branch name using the `-r` CLI option, the `workflow.revision` is also populated.
+
+##### `runName: String`
+
+Mnemonic name assigned to this execution instance.
+
+##### `scriptFile: Path`
+
+Project main script file path.
+
+##### `scriptId: String`
+
+Project main script unique hash ID.
+
+##### `scriptName: String`
+
+Project main script file name.
+
+##### `sessionId: UUID`
+
+Unique identifier (UUID) associated to current execution.
+
+##### `start: OffsetDateTime`
+
+Timestamp of workflow at execution start.
+
+##### `stubRun: boolean`
+
+Returns `true` whenever the current instance is a stub-run execution .
+
+##### `success: boolean`
+
+*Available only in the `workflow.onComplete` and `workflow.onError` handlers*
+
+Reports if the execution completed successfully.
+
+##### `userName: String`
+
+User system account name.
+
+##### `wave`
+
+Namespace containing Wave runtime information.
+
+The following properties are available:
+
+###### `enabled: boolean`
+
+Whether Wave is enabled.
+
+##### `workDir: Path`
+
+The directory where task temporary files are stored.
 
 ### Functions
 
-<DefinitionList>
-    <DefinitionTerm>
-        `onComplete( action: Closure )`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Define an action to take when the workflow completes (whether successful or not).
-    </DefinitionDescription>
-    
-    <DefinitionTerm>
-        `onError( action: Closure )`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Define an action to take if the workflow is terminated due to a runtime error or task failure.
-    </DefinitionDescription>
-</DefinitionList>
+##### `onComplete( action: Closure )`
+
+Define an action to take when the workflow completes (whether successful or not).
+
+##### `onError( action: Closure )`
+
+Define an action to take if the workflow is terminated due to a runtime error or task failure.
 
 [channel-factory]: /nextflow_docs/nextflow_repo/docs/reference/channel
 [channel-path]: /nextflow_docs/nextflow_repo/docs/reference/channel#fromPath

@@ -171,265 +171,180 @@ It will create a file named `trace.txt` in the current directory. The content lo
 
 The following table shows the fields that can be included in the execution report:
 
-<DefinitionList>
-    <DefinitionTerm>
-        `task_id`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Task ID.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `hash`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Task hash code.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `native_id`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Task ID given by the underlying execution system e.g. POSIX process PID when executed locally, job ID when executed by a grid engine, etc.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `process`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Nextflow process name.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `tag`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        User provided identifier associated this task.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `name`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Task name.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `status`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Task status. Possible values are: `NEW`, `SUBMITTED`, `RUNNING`, `COMPLETED`, `FAILED`, and `ABORTED`.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `exit`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        POSIX process exit status.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `module`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Environment module used to run the task.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `container`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Docker image name used to execute the task.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `cpus`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        The cpus number request for the task execution.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `time`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        The time request for the task execution
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `disk`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        The disk space request for the task execution.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `memory`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        The memory request for the task execution.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `attempt`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Attempt at which the task completed.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `submit`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Timestamp when the task has been submitted.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `start`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Timestamp when the task execution has started.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `complete`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Timestamp when task execution has completed.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `duration`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Time elapsed to complete since the submission.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `realtime`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Task execution time i.e. delta between completion and start timestamp.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `queue`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        The queue that the executor attempted to run the process on.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `%cpu`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Percentage of CPU used by the process.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `%mem`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Percentage of memory used by the process.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `rss`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Real memory (resident set) size of the process. Equivalent to `ps -o rss` .
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `vmem`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Virtual memory size of the process. Equivalent to `ps -o vsize` .
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `peak_rss`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Peak of real memory. This data is read from field `VmHWM` in `/proc/$pid/status` file.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `peak_vmem`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Peak of virtual memory. This data is read from field `VmPeak` in `/proc/$pid/status` file.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `rchar`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Number of bytes the process read, using any read-like system call from files, pipes, tty, etc. This data is read from file `/proc/$pid/io`.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `wchar`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Number of bytes the process wrote, using any write-like system call. This data is read from file `/proc/$pid/io`.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `syscr`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Number of read-like system call invocations that the process performed. This data is read from file `/proc/$pid/io`.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `syscw`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Number of write-like system call invocations that the process performed. This data is read from file `/proc/$pid/io`.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `read_bytes`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Number of bytes the process directly read from disk. This data is read from file `/proc/$pid/io`.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `write_bytes`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Number of bytes the process originally dirtied in the page-cache (assuming they will go to disk later). This data is read from file `/proc/$pid/io`.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `vol_ctxt`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Number of voluntary context switches. This data is read from field `voluntary_ctxt_switches` in `/proc/$pid/status` file.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `inv_ctxt`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Number of involuntary context switches. This data is read from field `nonvoluntary_ctxt_switches` in `/proc/$pid/status` file.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `env`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        The variables defined in task execution environment.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `workdir`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        The directory path where the task was executed.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `script`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        The task command script.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `scratch`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        The value of the process `scratch` directive.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `error_action`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        The action applied on errof task failure.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `hostname`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        :::note{title="New in version 25.05.0-edge"} 
-        :::
+#### `task_id`
 
-        The host on which the task was executed. Supported only for the Kubernetes executor yet. Activate with `k8s.fetchNodeName = true` in the Nextflow config file.
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `cpu_model`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        :::note{title="New in version 22.07.0-edge"} 
-        :::
-        The name of the CPU model used to execute the task. This data is read from file `/proc/cpuinfo`.
-    </DefinitionDescription>
-</DefinitionList>
+Task ID.
+
+#### `hash`
+
+Task hash code.
+
+#### `native_id`
+
+Task ID given by the underlying execution system e.g. POSIX process PID when executed locally, job ID when executed by a grid engine, etc.
+
+#### `process`
+
+Nextflow process name.
+
+#### `tag`
+
+User provided identifier associated this task.
+
+#### `name`
+
+Task name.
+
+#### `status`
+
+Task status. Possible values are: `NEW`, `SUBMITTED`, `RUNNING`, `COMPLETED`, `FAILED`, and `ABORTED`.
+
+#### `exit`
+
+POSIX process exit status.
+
+#### `module`
+
+Environment module used to run the task.
+
+#### `container`
+
+Docker image name used to execute the task.
+
+#### `cpus`
+
+The cpus number request for the task execution.
+
+#### `time`
+
+The time request for the task execution
+
+#### `disk`
+
+The disk space request for the task execution.
+
+#### `memory`
+
+The memory request for the task execution.
+
+#### `attempt`
+
+Attempt at which the task completed.
+
+#### `submit`
+
+Timestamp when the task has been submitted.
+
+#### `start`
+
+Timestamp when the task execution has started.
+
+#### `complete`
+
+Timestamp when task execution has completed.
+
+#### `duration`
+
+Time elapsed to complete since the submission.
+
+#### `realtime`
+
+Task execution time i.e. delta between completion and start timestamp.
+
+#### `queue`
+
+The queue that the executor attempted to run the process on.
+
+#### `%cpu`
+
+Percentage of CPU used by the process.
+
+#### `%mem`
+
+Percentage of memory used by the process.
+
+#### `rss`
+
+Real memory (resident set) size of the process. Equivalent to `ps -o rss` .
+
+#### `vmem`
+
+Virtual memory size of the process. Equivalent to `ps -o vsize` .
+
+#### `peak_rss`
+
+Peak of real memory. This data is read from field `VmHWM` in `/proc/$pid/status` file.
+
+#### `peak_vmem`
+
+Peak of virtual memory. This data is read from field `VmPeak` in `/proc/$pid/status` file.
+
+#### `rchar`
+
+Number of bytes the process read, using any read-like system call from files, pipes, tty, etc. This data is read from file `/proc/$pid/io`.
+
+#### `wchar`
+
+Number of bytes the process wrote, using any write-like system call. This data is read from file `/proc/$pid/io`.
+
+#### `syscr`
+
+Number of read-like system call invocations that the process performed. This data is read from file `/proc/$pid/io`.
+
+#### `syscw`
+
+Number of write-like system call invocations that the process performed. This data is read from file `/proc/$pid/io`.
+
+#### `read_bytes`
+
+Number of bytes the process directly read from disk. This data is read from file `/proc/$pid/io`.
+
+#### `write_bytes`
+
+Number of bytes the process originally dirtied in the page-cache (assuming they will go to disk later). This data is read from file `/proc/$pid/io`.
+
+#### `vol_ctxt`
+
+Number of voluntary context switches. This data is read from field `voluntary_ctxt_switches` in `/proc/$pid/status` file.
+
+#### `inv_ctxt`
+
+Number of involuntary context switches. This data is read from field `nonvoluntary_ctxt_switches` in `/proc/$pid/status` file.
+
+#### `env`
+
+The variables defined in task execution environment.
+
+#### `workdir`
+
+The directory path where the task was executed.
+
+#### `script`
+
+The task command script.
+
+#### `scratch`
+
+The value of the process `scratch` directive.
+
+#### `error_action`
+
+The action applied on errof task failure.
+
+#### `hostname`
+
+:::note{title="New in version 25.05.0-edge"} 
+:::
+
+The host on which the task was executed. Supported only for the Kubernetes executor yet. Activate with `k8s.fetchNodeName = true` in the Nextflow config file.
+
+#### `cpu_model`
+
+:::note{title="New in version 22.07.0-edge"} 
+:::
+
+The name of the CPU model used to execute the task. This data is read from file `/proc/cpuinfo`.
+
 
 :::note
 These metrics provide an estimation of the resources used by running tasks. They are not an alternative to low-level performance analysis tools, and they may not be completely accurate, especially for very short-lived tasks (running for less than a few seconds).
@@ -475,58 +390,41 @@ The default output format was changed from DOT to HTML.
 
 The following file formats are supported:
 
-<DefinitionList>
-    <DefinitionTerm>
-        `dot`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Graphviz [DOT](http://www.graphviz.org/content/dot-language) file
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `gexf`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Graph Exchange XML file (Gephi)
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `html`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        HTML file with Mermaid diagram
+#### `dot`
 
-        :::warning{title="Changed in version 23.10.0"} 
-        The HTML format was changed to render a Mermaid diagram instead of a Cytoscape diagram.
-        :::
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `mmd`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        Mermaid diagram
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `pdf`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        *Requires [Graphviz](http://www.graphviz.org) to be installed*
+Graphviz [DOT](http://www.graphviz.org/content/dot-language) file
+
+#### `gexf`
+
+Graph Exchange XML file (Gephi)
+
+#### `html`
+
+HTML file with Mermaid diagram
+
+:::warning{title="Changed in version 23.10.0"} 
+The HTML format was changed to render a Mermaid diagram instead of a Cytoscape diagram.
+:::
+
+#### `mmd`
+
+Mermaid diagram
+
+#### `pdf`
+
+*Requires [Graphviz](http://www.graphviz.org) to be installed*
         <br/>
         Graphviz PDF file
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `png`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        *Requires [Graphviz](http://www.graphviz.org) to be installed*
+
+#### `png`
+
+*Requires [Graphviz](http://www.graphviz.org) to be installed*
         Graphviz PNG file
-    </DefinitionDescription>
-    <DefinitionTerm>
-        `svg`
-    </DefinitionTerm>
-    <DefinitionDescription>
-        *Requires [Graphviz](http://www.graphviz.org) to be installed*
+
+#### `svg`
+
+*Requires [Graphviz](http://www.graphviz.org) to be installed*
         Graphviz SVG file
-    </DefinitionDescription>
-</DefinitionList>
 
 Here is the Mermaid diagram produced by Nextflow for the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline (using the [Mermaid Live Editor](https://mermaid-js.github.io/mermaid-live-editor/edit) with the `default` theme):
 
