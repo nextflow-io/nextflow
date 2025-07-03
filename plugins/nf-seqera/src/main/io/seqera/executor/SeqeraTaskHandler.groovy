@@ -72,6 +72,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         final req = new CreateJobRequest()
             .withCommand(fusionSubmitCli())
             .withImage(task.getContainer())
+            .withClusterId(executor.getClusterId())
             .withEnvironment(fusionLauncher().fusionEnv())
             .withPlatform(task.getContainerPlatform())
         log.debug "[SEQERA] Submitting job request=${req}"

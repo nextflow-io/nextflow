@@ -17,6 +17,7 @@
 
 package io.seqera.executor
 
+import groovy.util.logging.Slf4j
 import io.seqera.client.SeqeraClient
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
@@ -33,10 +34,13 @@ import org.pf4j.ExtensionPoint
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@ServiceName("seqera")
+@Slf4j
+@ServiceName('seqera')
 class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     private SeqeraClient client
+
+    private String clusterId
 
     @Override
     protected void register() {
@@ -45,6 +49,10 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     protected void createClient() {
         this.client = new SeqeraClient(session)
+        log.debug "[SEQERA] Creating cluster for workflow"
+        final cluster = client.createCluster()
+        this.clusterId = cluster.clusterId
+        log.debug "[SEQERA] Cluster created id: " + cluster.clusterId
     }
 
     @Override
@@ -54,7 +62,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     @Override
     TaskHandler createTaskHandler(TaskRun task) {
-        return new SeqeraTaskHandler(task,  this)
+        return new SeqeraTaskHandler(task, this)
     }
 
     /**
@@ -67,12 +75,16 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
     @Override
     boolean isFusionEnabled() {
         final enabled = FusionHelper.isFusionEnabled(session)
-        if( !enabled )
+        if (!enabled)
             throw new AbortOperationException("Seqera executor requires the use of Fusion file system")
         return true
     }
 
     SeqeraClient getClient() {
         return client
+    }
+
+    String getClusterId() {
+        return clusterId
     }
 }

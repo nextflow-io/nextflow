@@ -30,11 +30,21 @@ class SeqeraConfig {
 
     private String endpoint
 
+    private String region
+
+    private String keyPairName
+
     SeqeraConfig(Map opts) {
         this.retryOpts = new RetryOpts(opts.retryPolicy as Map ?: Map.of())
         this.endpoint = opts.endpoint as String
-        if( !endpoint )
+        if (!endpoint)
             throw new IllegalArgumentException("Missing Seqera endpoint - make sure to specify 'seqera.endpoint' settings")
+
+        this.region = opts.region as String
+        if (!region)
+            region = "eu-central-1"
+
+        this.keyPairName = opts.keyPairName as String
     }
 
     RetryOpts retryOpts() {
@@ -43,5 +53,13 @@ class SeqeraConfig {
 
     String getEndpoint() {
         return endpoint
+    }
+
+    String getRegion() {
+        return region
+    }
+
+    String getKeyPairName() {
+        return keyPairName
     }
 }

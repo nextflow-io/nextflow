@@ -17,14 +17,6 @@
 
 package io.seqera.client
 
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
-import java.time.Duration
-import java.time.temporal.ChronoUnit
-import java.util.concurrent.Executors
-import java.util.function.Predicate
-
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
 import dev.failsafe.event.EventListener
@@ -35,15 +27,20 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.config.SeqeraConfig
 import io.seqera.exception.BadResponseException
-import io.seqera.sched.api.v1a1.CancelJobResponse
-import io.seqera.sched.api.v1a1.CreateJobRequest
-import io.seqera.sched.api.v1a1.CreateJobResponse
-import io.seqera.sched.api.v1a1.DescribeJobResponse
-import io.seqera.sched.api.v1a1.GetJobLogsResponse
+import io.seqera.sched.api.v1a1.*
 import io.seqera.serde.Serde
 import io.seqera.util.trace.TraceUtils
 import nextflow.Session
 import nextflow.util.Threads
+
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
+import java.time.temporal.ChronoUnit
+import java.util.concurrent.Executors
+import java.util.function.Predicate
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -99,6 +96,17 @@ class SeqeraClient {
         return send0(req, response)
     }
 
+    protected <T,R> R delete0WithBody(String uri, T request, Class<R> response) {
+        final trace = TraceUtils.rndTrace()
+        final body = JsonOutput.toJson(request)
+        final req = HttpRequest.newBuilder()
+            .uri(URI.create(uri))
+            .headers('Content-Type','application/json', 'Traceparent', trace)
+            .method("DELETE", HttpRequest.BodyPublishers.ofString(body))
+            .build()
+        return send0(req, response)
+    }
+
     protected <T,R> R post0(String uri, T request, Class<R> response) {
         final trace = TraceUtils.rndTrace()
         final body = JsonOutput.toJson(request)
@@ -140,6 +148,29 @@ class SeqeraClient {
     GetJobLogsResponse getJobLogs(String jobId) {
         final uri = "${config.endpoint}/v1a1/jobs/${jobId}/logs"
         return get0(uri, GetJobLogsResponse)
+    }
+
+    CreateClusterResponse createCluster() {
+        final uri = "${config.endpoint}/v1a1/cluster"
+        final request = [region: this.config.getRegion(), keyName: this.config.getKeyPairName()]
+        return post0(uri, request, CreateClusterResponse)
+    }
+
+    Map getClusterInfo(String clusterId) {
+        final uri = "${config.endpoint}/v1a1/cluster/${clusterId}"
+        return get0(uri, Map)
+    }
+
+    Map deleteCluster(String clusterId) {
+        final uri = "${config.endpoint}/v1a1/cluster"
+        final request = [clusterId: clusterId, region: this.config.getRegion()]
+        return delete0WithBody(uri, request, Map)
+    }
+
+    Map addNodeToCluster(String clusterId, String instanceType) {
+        final uri = "${config.endpoint}/v1a1/cluster/${clusterId}/add"
+        final request = [clusterId: clusterId, instanceType: instanceType]
+        return post0(uri, request, Map)
     }
 
     protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond, Predicate<T> handle) {
