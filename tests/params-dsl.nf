@@ -19,12 +19,12 @@ params {
   /**
    * List of IDs.
    */
-  input
+  input: String
 
   /**
    * Whether to save intermediate outputs.
    */
-  save_intermeds = false
+  save_intermeds: Boolean = false
 }
 
 workflow {

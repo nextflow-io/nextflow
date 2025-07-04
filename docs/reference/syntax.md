@@ -114,8 +114,8 @@ The params block consists of one or more *parameter declarations*. A parameter d
 
 ```nextflow
 params {
-    input
-    save_intermeds = false
+    input: Path
+    save_intermeds: Boolean = false
 }
 ```
 

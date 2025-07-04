@@ -1,6 +1,9 @@
 package nextflow.script
 
+import java.nio.file.Path
+
 import nextflow.Session
+import nextflow.file.FileHelper
 import nextflow.exception.ScriptRuntimeException
 import spock.lang.Specification
 /**
@@ -18,11 +21,11 @@ class ParamsDslTest extends Specification {
 
         when:
         def dsl = new ParamsDsl()
-        dsl.declare('input')
-        dsl.declare('save_intermeds', false)
+        dsl.declare('input', Path)
+        dsl.declare('save_intermeds', Boolean, false)
         dsl.apply(session)
         then:
-        session.binding.getParams() == [input: './data', save_intermeds: false]
+        session.binding.getParams() == [input: FileHelper.asPath('./data'), save_intermeds: false]
     }
 
     def 'should report error for missing required param'() {
@@ -34,8 +37,8 @@ class ParamsDslTest extends Specification {
 
         when:
         def dsl = new ParamsDsl()
-        dsl.declare('input')
-        dsl.declare('save_intermeds', false)
+        dsl.declare('input', Path)
+        dsl.declare('save_intermeds', Boolean, false)
         dsl.apply(session)
         then:
         def e = thrown(ScriptRuntimeException)
@@ -51,12 +54,29 @@ class ParamsDslTest extends Specification {
 
         when:
         def dsl = new ParamsDsl()
-        dsl.declare('input')
-        dsl.declare('save_intermeds', false)
+        dsl.declare('input', Path)
+        dsl.declare('save_intermeds', Boolean, false)
         dsl.apply(session)
         then:
         def e = thrown(ScriptRuntimeException)
         e.message == 'Parameter `inputs` was specified on the command line or params file but is not declared in the script or config'
+    }
+
+    def 'should report error for invalid type'() {
+        given:
+        def cliParams = [input: './data', save_intermeds: 42]
+        def configParams = [:]
+        def session = new Session()
+        session.init(null, null, cliParams, configParams)
+
+        when:
+        def dsl = new ParamsDsl()
+        dsl.declare('input', Path)
+        dsl.declare('save_intermeds', Boolean, false)
+        dsl.apply(session)
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message == 'Parameter `save_intermeds` with type Boolean cannot be assigned to 42 [Integer]'
     }
 
 }

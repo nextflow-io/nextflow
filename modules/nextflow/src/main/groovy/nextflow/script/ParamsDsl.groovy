@@ -16,10 +16,15 @@
 
 package nextflow.script
 
+import java.nio.file.Path
+
+import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.file.FileHelper
 import nextflow.exception.ScriptRuntimeException
+import nextflow.script.types.Types
 /**
  * Implements the DSL for defining workflow params
  *
@@ -29,14 +34,14 @@ import nextflow.exception.ScriptRuntimeException
 @CompileStatic
 class ParamsDsl {
 
-    private Map<String,Optional<?>> declarations = [:]
+    private Map<String,Param> declarations = [:]
 
-    void declare(String name) {
-        declarations[name] = Optional.empty()
+    void declare(String name, Class type) {
+        declarations[name] = new Param(name, type, Optional.empty())
     }
 
-    void declare(String name, Object defaultValue) {
-        declarations[name] = Optional.of(defaultValue)
+    void declare(String name, Class type, Object defaultValue) {
+        declarations[name] = new Param(name, type, Optional.of(defaultValue))
     }
 
     void apply(Session session) {
@@ -50,18 +55,70 @@ class ParamsDsl {
 
         final params = new HashMap<String,?>()
         for( final name : declarations.keySet() ) {
-            final defaultValue = declarations[name]
+            final decl = declarations[name]
             if( cliParams.containsKey(name) )
-                params[name] = cliParams[name]
+                params[name] = resolveFromCli(decl, cliParams[name])
             else if( configParams.containsKey(name) )
-                params[name] = configParams[name]
-            else if( defaultValue.isPresent() )
-                params[name] = defaultValue.get()
+                params[name] = resolveFromCode(decl, configParams[name])
+            else if( decl.defaultValue.isPresent() )
+                params[name] = resolveFromCode(decl, decl.defaultValue.get())
             else
                 throw new ScriptRuntimeException("Parameter `$name` is required but was not specified on the command line, params file, or config")
+
+            final actualType = params[name].getClass()
+            if( !Types.isAssignableFrom(decl.type, actualType) )
+                throw new ScriptRuntimeException("Parameter `$name` with type ${Types.getName(decl.type)} cannot be assigned to ${params[name]} [${Types.getName(actualType)}]")
         }
 
         session.binding.setParams(params)
+    }
+
+    private Object resolveFromCli(Param decl, Object value) {
+        if( value == null )
+            return null
+
+        if( value !instanceof CharSequence )
+            return value
+
+        final str = value.toString()
+
+        if( decl.type == Boolean ) {
+            if( str.toLowerCase() == 'true' ) return Boolean.TRUE
+            if( str.toLowerCase() == 'false' ) return Boolean.FALSE
+        }
+
+        if( decl.type == Integer || decl.type == Number ) {
+            if( str.isInteger() ) return str.toInteger()
+            if( str.isLong() ) return str.toLong()
+        }
+
+        if( decl.type == Number ) {
+            if( str.isFloat() ) return str.toFloat()
+            if( str.isDouble() ) return str.toDouble()
+        }
+
+        if( decl.type == Path ) {
+            return FileHelper.asPath(str)
+        }
+
+        return value
+    }
+
+    private Object resolveFromCode(Param decl, Object value) {
+        if( value == null )
+            return null
+
+        if( decl.type == Path && value instanceof CharSequence )
+            return FileHelper.asPath(value.toString())
+
+        return value
+    }
+
+    @Canonical
+    private static class Param {
+        String name
+        Class type
+        Optional<?> defaultValue
     }
 
 }

@@ -42,14 +42,22 @@ params {
     /**
      * Path to input data.
      */
-    input
+    input: Path
 
     /**
      * Whether to save intermediate files.
      */
-    save_intermeds = false
+    save_intermeds: Boolean = false
 }
 ```
+
+The following types can be used for parameters:
+
+- Boolean
+- Integer
+- Number
+- {ref}`stdlib-types-path`
+- {ref}`stdlib-types-string`
 
 Parameters can be used in the entry workflow:
 
