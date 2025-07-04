@@ -101,7 +101,6 @@ class GiteaRepositoryProviderTest extends Specification {
     }
 
     def 'should read bytes gitea content'() {
-
         given:
         final String FREE_TIER_CONFIG = '''
         providers {
