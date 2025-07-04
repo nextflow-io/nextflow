@@ -17,8 +17,6 @@
 
 package io.seqera.executor
 
-import java.nio.file.Path
-
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -30,6 +28,9 @@ import nextflow.fusion.FusionAwareTask
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+
+import java.nio.file.Path
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -75,6 +76,8 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             .withClusterId(executor.getClusterId())
             .withEnvironment(fusionLauncher().fusionEnv())
             .withPlatform(task.getContainerPlatform())
+            .withCpus(task.config.getCpus())
+            .withMemory(task.config.getMemory().toBytes())
         log.debug "[SEQERA] Submitting job request=${req}"
         final resp = client.createJob(req)
         this.jobId = resp.jobId
@@ -89,10 +92,10 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
 
     @Override
     boolean checkIfRunning() {
-        if(isSubmitted()) {
+        if (isSubmitted()) {
             final state = jobState()
             log.debug "[SEQERA] checkIfRunning job=${jobId}; state=${state}"
-            if( state.isRunningOrTerminated() ) {
+            if (state.isRunningOrTerminated()) {
                 status = TaskStatus.RUNNING
                 return true
             }
@@ -104,16 +107,15 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
     boolean checkIfCompleted() {
         final state = jobState()
         log.debug "[SEQERA] checkIfCompleted state=${state}"
-        if( state.isTerminated() ) {
+        if (state.isTerminated()) {
             log.debug "[SEQERA] Process `${task.lazyName()}` - terminated job=$jobId; state=$state"
             // finalize the task
             task.exitStatus = readExitFile()
-            if( state.isFailed() ) {
+            if (state.isFailed()) {
                 final logs = getJobLogs(jobId)
                 task.stdout = logs?.stdout ?: outputFile
                 task.stderr = logs?.stderr ?: errorFile
-            }
-            else {
+            } else {
                 task.stdout = outputFile
                 task.stderr = errorFile
             }
@@ -134,7 +136,8 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         client.cancelJob(jobId)
     }
 
-    @PackageScope Integer readExitFile() {
+    @PackageScope
+    Integer readExitFile() {
         try {
             final result = exitFile.text as Integer
             log.trace "[SEQERA] Read exit file for job $jobId; exit=${result}"

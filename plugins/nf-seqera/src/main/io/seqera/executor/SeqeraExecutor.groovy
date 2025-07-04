@@ -45,14 +45,29 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
     @Override
     protected void register() {
         createClient()
+        createCluster()
     }
 
-    protected void createClient() {
-        this.client = new SeqeraClient(session)
+    @Override
+    public void shutdown() {
+        deleteCluster()
+    }
+
+    protected void createCluster() {
         log.debug "[SEQERA] Creating cluster for workflow"
         final cluster = client.createCluster()
         this.clusterId = cluster.clusterId
         log.debug "[SEQERA] Cluster created id: " + cluster.clusterId
+    }
+
+    protected void deleteCluster() {
+        log.debug "[SEQERA] Deleting cluster: " + clusterId
+        client.deleteCluster(this.clusterId)
+        log.debug "[SEQERA] Cluster id deleted"
+    }
+
+    protected void createClient() {
+        this.client = new SeqeraClient(session)
     }
 
     @Override
