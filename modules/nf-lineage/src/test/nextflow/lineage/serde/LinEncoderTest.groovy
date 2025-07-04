@@ -16,6 +16,7 @@
 
 package nextflow.lineage.serde
 
+import java.nio.file.Path
 import java.time.OffsetDateTime
 
 import nextflow.lineage.model.v1beta1.Checksum
@@ -83,16 +84,19 @@ class LinEncoderTest extends Specification{
         result.params.get(0).name == "param1"
     }
 
-    def 'should encode and decode WorkflowResults'(){
+    def 'should encode and decode WorkflowOutputs'(){
         given:
         def encoder = new LinEncoder()
         and:
         def time = OffsetDateTime.now()
-        def wfResults = new WorkflowOutput(time, "lid://1234", [new Parameter("String", "a", "A"), new Parameter("String", "b", "B")])
+        def wfResults = new WorkflowOutput(time, "lid://1234", [
+            new Parameter("Collection", "a", [id: 'id', file: 'sample.txt' as Path]),
+            new Parameter("String", "b", "B")
+        ])
+
         when:
         def encoded = encoder.encode(wfResults)
         def object = encoder.decode(encoded)
-
         then:
         object instanceof WorkflowOutput
         def result = object as WorkflowOutput
@@ -133,7 +137,7 @@ class LinEncoderTest extends Specification{
         result.binEntries.get(0).checksum.value == "78910"
     }
 
-    def 'should encode and decode TaskResults'(){
+    def 'should encode and decode TaskOutputs'(){
         given:
         def encoder = new LinEncoder()
         and:
