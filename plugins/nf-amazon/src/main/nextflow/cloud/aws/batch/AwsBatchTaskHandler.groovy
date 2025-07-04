@@ -284,6 +284,38 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return result.join(' - ')
     }
 
+    protected boolean isSpotReclamationError(JobDetail job) {
+        if(!job)
+            return false
+        // Check if the error is related to spot instance reclamation
+        // AWS Batch uses "Host EC2*" pattern for spot reclamation events
+        final statusReason = job.statusReason
+        return statusReason && statusReason.startsWith('Host EC2')
+    }
+
+    protected String formatSpotReclamationError(JobDetail job) {
+        final baseReason = errReason(job)
+        final maxAttempts = maxSpotAttempts()
+        final StringBuilder message = new StringBuilder()
+        
+        message.append("AWS Batch job failed due to EC2 spot instance reclamation.")
+        message.append("\n\nOriginal error: ").append(baseReason)
+        
+        if( maxAttempts == 0 ) {
+            message.append("\n\nTo automatically retry jobs when spot instances are reclaimed, "
+                         + "set 'aws.batch.maxSpotAttempts' to a value greater than 0 in your configuration. "
+                         + "For example: aws.batch.maxSpotAttempts = 5")
+        } else {
+            message.append("\n\nThis job was configured to retry up to ").append(maxAttempts)
+                   .append(" times on spot reclamation, but all attempts failed.")
+        }
+        
+        message.append("\n\nFor more information about spot instance interruptions, see: "
+                     + "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-interruptions.html")
+        
+        return message.toString()
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -299,6 +331,11 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final job = describeJob(jobId)
         final done = job?.status in ['SUCCEEDED', 'FAILED']
         if( done ) {
+            // Log retry attempts for spot reclamation visibility
+            final attemptCount = job?.attempts?.size() ?: 0
+            if( attemptCount > 1 ) {
+                log.info "[AWS BATCH] Process `${task.lazyName()}` completed after ${attemptCount} attempts (job=${jobId})"
+            }
             // take the exit code of the container, if 0 (successful) or missing
             // take the exit code from the `.exitcode` file create by nextflow
             // the rationale of this is that, in case of error, the exit code return
@@ -310,7 +347,11 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                 final reason = errReason(job)
                 // retry all CannotPullContainer errors apart when it does not exist or cannot be accessed
                 final unrecoverable = reason.contains('CannotPullContainer') && reason.contains('unauthorized')
-                task.error = unrecoverable ? new ProcessUnrecoverableException(reason) : new ProcessException(reason)
+                
+                // Check for spot reclamation errors and provide clearer error messages
+                final errorMessage = isSpotReclamationError(job) ? formatSpotReclamationError(job) : reason
+                
+                task.error = unrecoverable ? new ProcessUnrecoverableException(errorMessage) : new ProcessException(errorMessage)
                 task.stderr = executor.getJobOutputStream(jobId) ?: errorFile
             }
             else {
@@ -789,6 +830,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                     .withAttempts( attempts )
                     .withEvaluateOnExit(cond1, cond2)
             result.setRetryStrategy(retry)
+            log.debug "[AWS BATCH] Process `${task.lazyName()}` configured for spot reclamation retry (maxSpotAttempts=${attempts})"
         }
 
         // set task timeout
