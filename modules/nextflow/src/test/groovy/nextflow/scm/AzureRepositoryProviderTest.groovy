@@ -51,7 +51,6 @@ class AzureRepositoryProviderTest extends Specification {
         't-neumann/hello'                   | ['t-neumann', 'hello', 'hello']
         'ORGANIZATION/PROJECT/hello'        | ['ORGANIZATION','PROJECT','hello']
         'ORGANIZATION/PROJECT/_git/hello'   | ['ORGANIZATION','PROJECT','hello']
-
     }
 
     def 'should throw exception if wrong path' () {
@@ -69,7 +68,6 @@ class AzureRepositoryProviderTest extends Specification {
     }
 
     def 'should return repo url' () {
-
         given:
         def config = new ConfigSlurper().parse(CONFIG)
         def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
@@ -85,7 +83,6 @@ class AzureRepositoryProviderTest extends Specification {
     }
 
     def 'should return project URL' () {
-
         given:
         def config = new ConfigSlurper().parse(CONFIG)
         def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
@@ -97,29 +94,24 @@ class AzureRepositoryProviderTest extends Specification {
         't-neumann/hello'                   | 'https://dev.azure.com/t-neumann/hello'
         'ORGANIZATION/PROJECT/hello'        | 'https://dev.azure.com/ORGANIZATION/PROJECT/hello'
         'ORGANIZATION/PROJECT/_git/hello'   | 'https://dev.azure.com/ORGANIZATION/PROJECT/_git/hello'
-
     }
 
     def 'should return content URL' () {
-
         given:
         def config = new ConfigSlurper().parse(CONFIG)
         def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
 
         expect:
         new AzureRepositoryProvider('t-neumann/hello', obj).getContentUrl('main.nf') == 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=main.nf'
-
     }
 
     def 'should return content URL for revision' () {
-
         given:
         def config = new ConfigSlurper().parse(CONFIG)
         def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
 
         expect:
         new AzureRepositoryProvider('t-neumann/hello', obj).setRevision("a-branch").getContentUrl('main.nf') == 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=main.nf&versionDescriptor.version=a-branch'
-
     }
 
     /*
@@ -141,7 +133,6 @@ class AzureRepositoryProviderTest extends Specification {
         def result = repo.readText('main.nf')
         then:
         result == 'println "Hello from Azure repos!"'
-
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
