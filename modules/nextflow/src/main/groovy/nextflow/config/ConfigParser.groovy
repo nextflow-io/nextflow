@@ -68,6 +68,11 @@ interface ConfigParser {
     ConfigParser setParams(Map vars)
 
     /**
+     * Set the profiles that should be applied.
+     */
+    ConfigParser setProfiles(List<String> profiles)
+
+    /**
      * Parse a config object from the given source.
      */
     ConfigObject parse(String text)
@@ -75,13 +80,13 @@ interface ConfigParser {
     ConfigObject parse(Path path)
 
     /**
-     * Set the profiles that should be applied.
+     * Get the set of declared profiles.
      */
-    ConfigParser setProfiles(List<String> profiles)
+    Set<String> getDeclaredProfiles()
 
     /**
-     * Get the set of available profiles.
+     * Get the map of declared params.
      */
-    Set<String> getProfiles()
+    Map<String,Object> getDeclaredParams()
 
 }
