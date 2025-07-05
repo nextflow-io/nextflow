@@ -26,36 +26,47 @@ class GithubRepositoryProviderTest extends Specification {
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testGitCloneUrl() {
-
         given:
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def config = new ProviderConfig('github').setAuth(token)
 
         when:
-        def url = new GithubRepositoryProvider('nextflow-io/hello',config).getCloneUrl()
+        def url = new GithubRepositoryProvider('nextflow-io/test-hello',config).getCloneUrl()
         then:
-        url == 'https://github.com/nextflow-io/hello.git'
-
+        url == 'https://github.com/nextflow-io/test-hello.git'
     }
 
     def testGetHomePage() {
         expect:
-        new GithubRepositoryProvider('nextflow-io/hello').getRepositoryUrl() == "https://github.com/nextflow-io/hello"
+        new GithubRepositoryProvider('nextflow-io/test-hello').getRepositoryUrl() == "https://github.com/nextflow-io/test-hello"
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testReadContent() {
-
         given:
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def config = new ProviderConfig('github').setAuth(token)
+        def repo = new GithubRepositoryProvider('nextflow-io/test-hello', config)
 
         when:
-        def repo = new GithubRepositoryProvider('nextflow-io/hello', config)
         def result = repo.readText('main.nf')
         then:
         result.trim().startsWith('#!/usr/bin/env nextflow')
+    }
 
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should read bytes github content'() {
+        given:
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def config = new ProviderConfig('github').setAuth(token)
+        def repo = new GithubRepositoryProvider('nextflow-io/test-hello', config)
+        and:
+        def DATA = this.class.getResourceAsStream('/test-asset.bin').bytes
+        
+        when:
+        def result = repo.readBytes('/test/test-asset.bin')
+        then:
+        result == DATA
     }
 
     def 'should return content URL' () {
@@ -140,15 +151,5 @@ class GithubRepositoryProviderTest extends Specification {
         SysEnv.pop()
     }
 
-    def 'should read bytes github content'() {
-
-        given:
-        def repo = new GithubRepositoryProvider('nf-core/rnaseq')
-
-        when:
-        def result = repo.readBytes('/docs/images/nf-core-rnaseq_logo_dark.png')
-        then:
-        result.size() == 26500
-    }
 }
 
