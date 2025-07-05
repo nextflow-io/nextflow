@@ -151,5 +151,21 @@ class GithubRepositoryProviderTest extends Specification {
         SysEnv.pop()
     }
 
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should read content from renamed repository'() {
+        given:
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def config = new ProviderConfig('github').setAuth(token)
+        // this repository has been renamed to `pditommaso/ciao`
+        // nevertheless the read content should work, because the
+        // client needs to be able to follow the http redirection
+        // returned by the github backend
+        def repo = new GithubRepositoryProvider('pditommaso/hello', config)
+
+        when:
+        def result = repo.readText('main.nf')
+        then:
+        result.trim().startsWith(/println "I'm the main"/)
+    }
 }
 

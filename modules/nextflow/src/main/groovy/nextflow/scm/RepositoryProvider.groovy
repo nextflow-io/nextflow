@@ -489,6 +489,7 @@ abstract class RepositoryProvider {
         final builder = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)
             .connectTimeout(Duration.ofSeconds(60))
+            .followRedirects(HttpClient.Redirect.NORMAL)
         // use virtual threads executor if enabled
         if( Threads.useVirtual() )
             builder.executor(Executors.newVirtualThreadPerTaskExecutor())
