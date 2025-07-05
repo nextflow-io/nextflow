@@ -24,8 +24,6 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 import groovyx.gpars.dataflow.DataflowReadChannel
-import nextflow.ast.OpXform
-import nextflow.ast.OpXformImpl
 import nextflow.exception.StopSplitIterationException
 import nextflow.exception.WorkflowScriptErrorException
 import nextflow.extension.GroupKey

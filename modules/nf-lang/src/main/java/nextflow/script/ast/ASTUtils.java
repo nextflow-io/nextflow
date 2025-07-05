@@ -42,9 +42,7 @@ import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.BlockStatement;
 import org.codehaus.groovy.ast.stmt.ExpressionStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
-
-import static org.codehaus.groovy.ast.tools.GeneralUtils.args;
-import static org.codehaus.groovy.ast.tools.GeneralUtils.ctorX;
+import org.codehaus.groovy.ast.tools.GeneralUtils;
 
 /**
  * Utility functions for common AST operations.
@@ -53,20 +51,24 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.ctorX;
  */
 public class ASTUtils {
 
+    public static Expression classX(String name) {
+        return GeneralUtils.classX(ClassHelper.makeWithoutCaching(name));
+    }
+
     public static Expression createX(Class type, TupleExpression args) {
-        return ctorX(new ClassNode(type), args);
+        return GeneralUtils.ctorX(new ClassNode(type), args);
     }
 
     public static Expression createX(Class type, Expression... expressions) {
-        return ctorX(new ClassNode(type), args(expressions));
+        return GeneralUtils.ctorX(new ClassNode(type), GeneralUtils.args(expressions));
     }
 
     public static Expression createX(String name, TupleExpression args) {
-        return ctorX(ClassHelper.makeWithoutCaching(name), args);
+        return GeneralUtils.ctorX(ClassHelper.makeWithoutCaching(name), args);
     }
 
     public static Expression createX(String name, Expression... expressions) {
-        return ctorX(ClassHelper.makeWithoutCaching(name), args(expressions));
+        return GeneralUtils.ctorX(ClassHelper.makeWithoutCaching(name), GeneralUtils.args(expressions));
     }
 
     public static List<Statement> asBlockStatements(Statement statement) {
