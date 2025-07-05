@@ -28,7 +28,6 @@ class BitbucketRepositoryProviderTest extends Specification {
 
     @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )
     def testBitbucketCloneURL() {
-
         given:
         def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')
         def config = new ProviderConfig('bitbucket').setAuth(token)
@@ -39,16 +38,13 @@ class BitbucketRepositoryProviderTest extends Specification {
         url == "https://${config.user}@bitbucket.org/pditommaso/tutorial.git".toString()
     }
 
-
     def testGetHomePage() {
         expect:
         new BitbucketRepositoryProvider('pditommaso/tutorial').getRepositoryUrl() == "https://bitbucket.org/pditommaso/tutorial"
     }
 
-
     @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )
     def testReadContent() {
-
         given:
         def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')
         def config = new ProviderConfig('bitbucket').setAuth(token)
@@ -59,7 +55,21 @@ class BitbucketRepositoryProviderTest extends Specification {
 
         then:
         result.trim().startsWith('#!/usr/bin/env nextflow')
+    }
 
+    @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )
+    def 'should read binary data'() {
+        given:
+        def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')
+        def config = new ProviderConfig('bitbucket').setAuth(token)
+        def DATA = this.class.getResourceAsStream('/test-sandbucket.jpg').bytes
+
+        when:
+        def repo = new BitbucketRepositoryProvider('pditommaso/tutorial', config)
+        def result = repo.readBytes('sandbucket.jpg')
+
+        then:
+        result == DATA
     }
 
     @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )
@@ -160,6 +170,5 @@ class BitbucketRepositoryProviderTest extends Specification {
         then:
         !data.contains('world')
         data.contains('mundo')
-
     }
 }
