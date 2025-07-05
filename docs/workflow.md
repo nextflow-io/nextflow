@@ -541,7 +541,7 @@ The `path` directive can also be a closure which defines a custom publish path f
 workflow {
     main:
     ch_samples = channel.of(
-        [id: 'SAMP1', fastq_1: file('1.fastq'), fastq_1: file('2.fastq')]
+        [id: 'SAMP1', fastq_1: file('1.fastq'), fastq_2: file('2.fastq')]
     )
 
     publish:

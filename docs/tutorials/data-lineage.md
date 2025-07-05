@@ -1,6 +1,6 @@
 (data-lineage-page)=
 
-# Data lineage
+# Getting started with data lineage
 
 Data lineage in Nextflow provides comprehensive tracking of workflow runs, task executions, and output files. This feature helps you verify the integrity and reproducibility of your pipeline results by maintaining a complete history of computations and intermediate data.
 

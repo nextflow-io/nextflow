@@ -158,11 +158,19 @@ developer/plugins
 
 ```{toctree}
 :hidden:
+:caption: Tutorials
+:maxdepth: 1
+
+tutorials/data-lineage
+tutorials/workflow-outputs
+tutorials/metrics
+tutorials/flux
+```
+
+```{toctree}
+:hidden:
 :caption: Guides
 :maxdepth: 1
 
-data-lineage
 updating-spot-retries
-metrics
-flux
 ```
