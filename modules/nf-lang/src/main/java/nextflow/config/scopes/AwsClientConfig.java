@@ -51,6 +51,12 @@ public class AwsClientConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        The maximum number of concurrency in S3 async clients.
+    """)
+    public int maxConcurrency;
+
+    @ConfigOption
+    @Description("""
         The maximum number of allowed open HTTP connections.
     """)
     public int maxConnections;
@@ -63,9 +69,21 @@ public class AwsClientConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The protocol (i.e. HTTP or HTTPS) to use when connecting to AWS.
+        The maximum native memory used by the S3 asynchronous client for S3 transfers.
     """)
-    public String protocol;
+    public MemoryUnit maxNativeMemory;
+
+    @ConfigOption
+    @Description("""
+        The minimum size of a single part in a multipart upload (default: `8 MB`).
+    """)
+    public MemoryUnit minimumPartSize;
+
+    @ConfigOption
+    @Description("""
+        The S3 Async client threshold to create multipart S3 transfers. Default is the same as `minimumPartSize`.
+    """)
+    public MemoryUnit multipartThreshold;
 
     @ConfigOption
     @Description("""
@@ -78,6 +96,12 @@ public class AwsClientConfig implements ConfigScope {
         The port on the proxy host to connect through.
     """)
     public int proxyPort;
+
+    @ConfigOption
+    @Description("""
+        The protocol scheme to use when connecting through a proxy (http/https).
+    """)
+    public String proxyScheme;
 
     @ConfigOption
     @Description("""
@@ -105,24 +129,6 @@ public class AwsClientConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The name of the signature algorithm to use for signing requests made by the client.
-    """)
-    public String signerOverride;
-
-    @ConfigOption
-    @Description("""
-        The size hint (in bytes) for the low level TCP send buffer.
-    """)
-    public int socketSendBufferSizeHint;
-
-    @ConfigOption
-    @Description("""
-        The size hint (in bytes) for the low level TCP receive buffer.
-    """)
-    public int socketRecvBufferSizeHint;
-
-    @ConfigOption
-    @Description("""
         The amount of time to wait (in milliseconds) for data to be transferred over an established, open connection before the connection is timed out.
     """)
     public int socketTimeout;
@@ -141,33 +147,15 @@ public class AwsClientConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The HTTP user agent header passed with all HTTP requests.
+        The S3 Async client target network throughput in Gbps. This value is used to automatically set `maxConcurrency` and `maxNativeMemory` (default: `10`).
     """)
-    public String userAgent;
+    public Double targetThroughputInGbps;
 
     @ConfigOption
     @Description("""
-        The size of a single part in a multipart upload (default: `100 MB`).
+        The number of threads used by the S3 transfer manager (default: `10`).
     """)
-    public MemoryUnit uploadChunkSize;
-
-    @ConfigOption
-    @Description("""
-        The maximum number of upload attempts after which a multipart upload returns an error (default: `5`).
-    """)
-    public int uploadMaxAttempts;
-
-    @ConfigOption
-    @Description("""
-        The maximum number of threads used for multipart upload.
-    """)
-    public int uploadMaxThreads;
-
-    @ConfigOption
-    @Description("""
-        The time to wait after a failed upload attempt to retry the part upload (default: `500ms`).
-    """)
-    public Duration uploadRetrySleep;
+    public int transferManagerThreads;
 
     @ConfigOption
     @Description("""

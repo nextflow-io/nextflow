@@ -158,11 +158,19 @@ developer/plugins
 
 ```{toctree}
 :hidden:
-:caption: Guides
+:caption: Tutorials
 :maxdepth: 1
 
 data-lineage
-updating-spot-retries
 metrics
 flux
+```
+
+```{toctree}
+:hidden:
+:caption: Guides
+:maxdepth: 1
+
+guides/aws-java-sdk-v2
+guides/updating-spot-retries
 ```

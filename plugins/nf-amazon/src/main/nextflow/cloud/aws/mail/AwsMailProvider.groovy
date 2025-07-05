@@ -18,12 +18,10 @@
 package nextflow.cloud.aws.mail
 
 import javax.mail.internet.MimeMessage
-import java.nio.ByteBuffer
-
-import com.amazonaws.services.simpleemail.AmazonSimpleEmailService
-import com.amazonaws.services.simpleemail.AmazonSimpleEmailServiceClientBuilder
-import com.amazonaws.services.simpleemail.model.RawMessage
-import com.amazonaws.services.simpleemail.model.SendRawEmailRequest
+import software.amazon.awssdk.core.SdkBytes
+import software.amazon.awssdk.services.ses.SesClient
+import software.amazon.awssdk.services.ses.model.RawMessage
+import software.amazon.awssdk.services.ses.model.SendRawEmailRequest
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.mail.MailProvider
@@ -57,15 +55,13 @@ class AwsMailProvider implements MailProvider {
         final outputStream = new ByteArrayOutputStream()
         message.writeTo(outputStream)
         // send the email
-        final rawMessage = new RawMessage(ByteBuffer.wrap(outputStream.toByteArray()))
-        final result = client.sendRawEmail(new SendRawEmailRequest(rawMessage));
+        final rawMessage = RawMessage.builder().data(SdkBytes.fromByteArray(outputStream.toByteArray())).build()
+        final result = client.sendRawEmail(SendRawEmailRequest.builder().rawMessage(rawMessage).build())
         log.debug "Mail message sent: ${result}"
     }
 
-    AmazonSimpleEmailService getEmailClient() {
-        return AmazonSimpleEmailServiceClientBuilder
-                .standard()
-                .build()
+    SesClient getEmailClient() {
+        return SesClient.builder().build()
     }
 
 }

@@ -217,7 +217,7 @@ class LoggerHelper {
         final logger = createLogger(MAIN_PACKAGE, mainLevel)
 
         // -- set AWS lib level to WARN to reduce noise in the log file
-        final AWS = 'com.amazonaws'
+        final AWS = 'software.amazon'
         if( !debugConf.contains(AWS) && !traceConf.contains(AWS)) {
             createLogger(AWS, Level.WARN)
         }

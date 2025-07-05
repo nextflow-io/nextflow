@@ -20,10 +20,10 @@ import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
-import com.amazonaws.services.batch.AWSBatch
-import com.amazonaws.services.batch.model.AWSBatchException
-import com.amazonaws.services.ecs.model.AccessDeniedException
-import com.amazonaws.services.logs.model.ResourceNotFoundException
+import software.amazon.awssdk.services.batch.BatchClient
+import software.amazon.awssdk.services.batch.model.BatchException
+import software.amazon.awssdk.services.ecs.model.AccessDeniedException
+import software.amazon.awssdk.services.cloudwatchlogs.model.ResourceNotFoundException
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -177,7 +177,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
     }
 
     @PackageScope
-    AWSBatch getClient() {
+    BatchClient getClient() {
         client
     }
 
@@ -238,7 +238,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
         final size = Runtime.runtime.availableProcessors() * 5
 
         final opts = new ThrottlingExecutor.Options()
-                .retryOn { Throwable t -> t instanceof AWSBatchException && (t.errorCode=='TooManyRequestsException' || t.statusCode in RETRYABLE_STATUS) }
+                .retryOn { Throwable t -> t instanceof BatchException && (t.awsErrorDetails().errorCode() == 'TooManyRequestsException' || t.statusCode() in RETRYABLE_STATUS) }
                 .onFailure { Throwable t -> session?.abort(t) }
                 .onRateLimitChange { RateUnit rate -> logRateLimitChange(rate) }
                 .withRateLimit(limit)
