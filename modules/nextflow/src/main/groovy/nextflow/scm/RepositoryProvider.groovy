@@ -224,14 +224,25 @@ abstract class RepositoryProvider {
      * @return The remote service response as a text
      */
     protected String invoke( String api ) {
+        final result = invokeBytes(api)
+        return result!=null ? new String(result) : null
+    }
+
+    /**
+     * Invoke the API request specified and return binary content
+     *
+     * @param api A API request url e.g. https://api.github.com/repos/nextflow-io/hello/raw/image.png
+     * @return The remote service response as byte array
+     */
+    protected byte[] invokeBytes( String api ) {
         assert api
         log.debug "Request [credentials ${getAuthObfuscated() ?: '-'}] -> $api"
         final request = newRequest(api)
         // submit the request
-        final HttpResponse<String> resp = httpSend(request)
+        final HttpResponse<byte[]> resp = httpSend0(request)
         // check the response code
         checkResponse(resp)
-        // return the body as string
+        // return the body as byte array
         return resp.body()
     }
 
@@ -263,7 +274,7 @@ abstract class RepositoryProvider {
      *
      * @param response A {@link HttpURLConnection} response instance
      */
-    protected checkResponse( HttpResponse<String> response ) {
+    protected checkResponse( HttpResponse<?> response ) {
         final code = response.statusCode()
         if( code==401 ) {
             log.debug "Response status: $code -- ${response.body()}"
@@ -447,6 +458,7 @@ abstract class RepositoryProvider {
             return isCausedByUnresolvedAddressException(t.cause)
     }
 
+    @Deprecated
     protected HttpResponse<String> httpSend(HttpRequest request) {
         if( httpClient==null )
             httpClient = newHttpClient()
@@ -460,10 +472,24 @@ abstract class RepositoryProvider {
         }
     }
 
+    private HttpResponse<byte[]> httpSend0(HttpRequest request) {
+        if( httpClient==null )
+            httpClient = newHttpClient()
+        if( retryConfig==null )
+            retryConfig = new RetryConfig()
+        try {
+            safeApply(()-> httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray()))
+        }
+        catch (FailsafeException e) {
+            throw e.cause
+        }
+    }
+
     private HttpClient newHttpClient() {
         final builder = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)
             .connectTimeout(Duration.ofSeconds(60))
+            .followRedirects(HttpClient.Redirect.NORMAL)
         // use virtual threads executor if enabled
         if( Threads.useVirtual() )
             builder.executor(Executors.newVirtualThreadPerTaskExecutor())

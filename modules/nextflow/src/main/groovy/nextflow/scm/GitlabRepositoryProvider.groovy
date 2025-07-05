@@ -113,10 +113,8 @@ class GitlabRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     byte[] readBytes(String path) {
-
         def url = getContentUrl(path)
         Map response  = invokeAndParseResponse(url)
         response.get('content')?.toString()?.decodeBase64()
-
     }
 }
