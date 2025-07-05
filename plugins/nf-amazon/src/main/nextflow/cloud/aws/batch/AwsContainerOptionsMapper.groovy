@@ -15,7 +15,7 @@
  */
 package nextflow.cloud.aws.batch
 
-import software.amazon.awssdk.services.batch.model.ContainerProperties
+import nextflow.cloud.aws.batch.model.ContainerPropertiesModel
 import software.amazon.awssdk.services.batch.model.KeyValuePair
 import software.amazon.awssdk.services.batch.model.LinuxParameters
 import software.amazon.awssdk.services.batch.model.Tmpfs
@@ -36,35 +36,31 @@ import nextflow.util.MemoryUnit
 class AwsContainerOptionsMapper {
 
     @Deprecated
-    static ContainerProperties createContainerOpts(CmdLineOptionMap options) {
+    static ContainerPropertiesModel createContainerOpts(CmdLineOptionMap options) {
         return createContainerProperties(options)
     }
 
-    static ContainerProperties createContainerProperties(CmdLineOptionMap options) {
-        final builder = ContainerProperties.builder()
-        addCmdOptions(options, builder)
-        return builder.build()
-    }
-
-    static void addCmdOptions(CmdLineOptionMap options, ContainerProperties.Builder builder){
+    static ContainerPropertiesModel createContainerProperties(CmdLineOptionMap options) {
+        final containerProperties = new ContainerPropertiesModel()
         if ( options?.hasOptions() ) {
-            checkPrivileged(options, builder)
-            checkEnvVars(options, builder)
-            checkUser(options, builder)
-            checkReadOnly(options, builder)
-            checkUlimit(options, builder)
+            checkPrivileged(options, containerProperties)
+            checkEnvVars(options, containerProperties)
+            checkUser(options, containerProperties)
+            checkReadOnly(options, containerProperties)
+            checkUlimit(options, containerProperties)
             LinuxParameters params = checkLinuxParameters(options)
             if ( params != null )
-                builder.linuxParameters(params)
+                containerProperties.linuxParameters(params)
         }
+        return containerProperties
     }
 
-    protected static void checkPrivileged(CmdLineOptionMap options, ContainerProperties.Builder containerProperties) {
+    protected static void checkPrivileged(CmdLineOptionMap options, ContainerPropertiesModel containerProperties) {
         if ( findOptionWithBooleanValue(options, 'privileged') )
-            containerProperties.privileged(true);
+            containerProperties.privileged(true)
     }
 
-    protected static void checkEnvVars(CmdLineOptionMap options, ContainerProperties.Builder containerProperties) {
+    protected static void checkEnvVars(CmdLineOptionMap options, ContainerPropertiesModel containerProperties) {
         final keyValuePairs = new ArrayList<KeyValuePair>()
         List<String> values = findOptionWithMultipleValues(options, 'env')
         values.addAll(findOptionWithMultipleValues(options, 'e'))
@@ -76,7 +72,7 @@ class AwsContainerOptionsMapper {
             containerProperties.environment(keyValuePairs)
     }
 
-    protected static void checkUser(CmdLineOptionMap options, ContainerProperties.Builder containerProperties) {
+    protected static void checkUser(CmdLineOptionMap options, ContainerPropertiesModel containerProperties) {
         String user = findOptionWithSingleValue(options, 'u')
         if ( !user)
             user = findOptionWithSingleValue(options, 'user')
@@ -84,12 +80,12 @@ class AwsContainerOptionsMapper {
             containerProperties.user(user)
     }
 
-    protected static void checkReadOnly(CmdLineOptionMap options, ContainerProperties.Builder containerProperties) {
+    protected static void checkReadOnly(CmdLineOptionMap options, ContainerPropertiesModel containerProperties) {
         if ( findOptionWithBooleanValue(options, 'read-only') )
             containerProperties.readonlyRootFilesystem(true);
     }
 
-    protected static void checkUlimit(CmdLineOptionMap options, ContainerProperties.Builder containerProperties) {
+    protected static void checkUlimit(CmdLineOptionMap options, ContainerPropertiesModel containerProperties) {
         final ulimits = new ArrayList<Ulimit>()
         findOptionWithMultipleValues(options, 'ulimit').each { value ->
             final tokens = value.tokenize('=')

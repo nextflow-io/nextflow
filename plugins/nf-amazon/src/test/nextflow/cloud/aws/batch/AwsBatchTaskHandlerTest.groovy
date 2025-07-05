@@ -16,29 +16,14 @@
 
 package nextflow.cloud.aws.batch
 
-import software.amazon.awssdk.services.batch.model.DescribeJobsResponse
-import software.amazon.awssdk.services.batch.model.ResourceType
-import software.amazon.awssdk.services.batch.model.SubmitJobResponse
-
 import java.nio.file.Path
 import java.time.Instant
 
-import software.amazon.awssdk.services.batch.BatchClient
-import software.amazon.awssdk.services.batch.model.ContainerProperties
-import software.amazon.awssdk.services.batch.model.DescribeJobDefinitionsRequest
-import software.amazon.awssdk.services.batch.model.DescribeJobDefinitionsResponse
-import software.amazon.awssdk.services.batch.model.DescribeJobsRequest
-import software.amazon.awssdk.services.batch.model.EvaluateOnExit
-import software.amazon.awssdk.services.batch.model.JobDefinition
-import software.amazon.awssdk.services.batch.model.JobDetail
-import software.amazon.awssdk.services.batch.model.KeyValuePair
-import software.amazon.awssdk.services.batch.model.RegisterJobDefinitionRequest
-import software.amazon.awssdk.services.batch.model.RegisterJobDefinitionResponse
-import software.amazon.awssdk.services.batch.model.RetryStrategy
-import software.amazon.awssdk.services.batch.model.SubmitJobRequest
 import nextflow.BuildInfo
 import nextflow.Global
 import nextflow.Session
+import nextflow.cloud.aws.batch.model.ContainerPropertiesModel
+import nextflow.cloud.aws.batch.model.RegisterJobDefinitionModel
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.aws.util.S3PathFactory
 import nextflow.cloud.types.CloudMachineInfo
@@ -57,6 +42,22 @@ import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
 import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
+import software.amazon.awssdk.services.batch.BatchClient
+import software.amazon.awssdk.services.batch.model.DescribeJobDefinitionsRequest
+import software.amazon.awssdk.services.batch.model.DescribeJobDefinitionsResponse
+import software.amazon.awssdk.services.batch.model.DescribeJobsRequest
+import software.amazon.awssdk.services.batch.model.DescribeJobsResponse
+import software.amazon.awssdk.services.batch.model.EvaluateOnExit
+import software.amazon.awssdk.services.batch.model.JobDefinition
+import software.amazon.awssdk.services.batch.model.JobDefinitionType
+import software.amazon.awssdk.services.batch.model.JobDetail
+import software.amazon.awssdk.services.batch.model.KeyValuePair
+import software.amazon.awssdk.services.batch.model.PlatformCapability
+import software.amazon.awssdk.services.batch.model.RegisterJobDefinitionResponse
+import software.amazon.awssdk.services.batch.model.ResourceType
+import software.amazon.awssdk.services.batch.model.RetryStrategy
+import software.amazon.awssdk.services.batch.model.SubmitJobRequest
+import software.amazon.awssdk.services.batch.model.SubmitJobResponse
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -428,7 +429,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def handler = Spy(AwsBatchTaskHandler)
         def task = Mock(TaskRun) { getContainer()>>IMAGE }
 
-        def req = RegisterJobDefinitionRequest.builder().jobDefinitionName(JOB_NAME).parameters([ 'nf-token': JOB_ID ])
+        def req = new RegisterJobDefinitionModel().jobDefinitionName(JOB_NAME).parameters(['nf-token': JOB_ID])
 
         when:
         handler.resolveJobDefinition(task)
@@ -491,14 +492,13 @@ class AwsBatchTaskHandlerTest extends Specification {
     }
 
     def 'should create job definition existence' () {
-
         given:
         def JOB_NAME = 'foo-bar-1-0'
         def client = Mock(BatchClient)
         def handler = Spy(AwsBatchTaskHandler)
         handler.@client = client
 
-        def req = RegisterJobDefinitionRequest.builder() as RegisterJobDefinitionRequest.Builder
+        def req = new RegisterJobDefinitionModel().jobDefinitionName(JOB_NAME)
         def res = RegisterJobDefinitionResponse.builder().jobDefinitionName(JOB_NAME).revision(10).build()
 
         when:
@@ -508,15 +508,13 @@ class AwsBatchTaskHandlerTest extends Specification {
         and:
         result == "$JOB_NAME:10"
         and:
-        def modReq = req.build() as RegisterJobDefinitionRequest
-        modReq.tags().get('nextflow.io/version') == BuildInfo.version
-        Instant.parse(modReq.tags().get('nextflow.io/createdAt'))
-
+        req.tags.get('nextflow.io/version') == BuildInfo.version
+        Instant.parse(req.tags.get('nextflow.io/createdAt'))
     }
 
     def 'should add container mounts' () {
         given:
-        def containerBuilder = ContainerProperties.builder()
+        def containerModel = new ContainerPropertiesModel()
         def handler = Spy(AwsBatchTaskHandler)
         def mounts = [
                 vol0: '/foo',
@@ -526,8 +524,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         ]
         
         when:
-        handler.addVolumeMountsToContainer(mounts, containerBuilder)
-        def container = containerBuilder.build()
+        handler.addVolumeMountsToContainer(mounts, containerModel)
+        def container = containerModel.toContainerProperties()
         then:
         container.volumes().size() == 4
         container.mountPoints().size() == 4
@@ -575,11 +573,11 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> new AwsOptions()
         result.jobDefinitionName == JOB_NAME
-        result.type == 'container'
-        result.parameters.'nf-token' == CacheHelper.hasher([JOB_NAME, result.containerProperties.build().toString()]).hash().toString()
-        !result.containerProperties.logConfiguration
-        !result.containerProperties.mountPoints
-        !result.containerProperties.privileged
+        result.type == JobDefinitionType.CONTAINER
+        result.parameters.'nf-token' == CacheHelper.hasher([JOB_NAME, result.containerProperties.toString()]).hash().toString()
+        result.containerProperties.logConfiguration == null
+        result.containerProperties.mountPoints == null
+        result.containerProperties.privileged == false
         
         when:
         result = handler.makeJobDefRequest(task)
@@ -587,16 +585,16 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/home/conda/bin/aws', logsGroup: '/aws/batch'], region: 'us-east-1'))
         result.jobDefinitionName == JOB_NAME
-        result.type == 'container'
-        result.parameters.'nf-token' == CacheHelper.hasher([JOB_NAME, result.containerProperties.build().toString()]).hash().toString()
-        result.containerProperties.logConfiguration.'LogDriver' == 'awslogs'
-        result.containerProperties.logConfiguration.'Options'.'awslogs-region' == 'us-east-1'
-        result.containerProperties.logConfiguration.'Options'.'awslogs-group' == '/aws/batch'
-        result.containerProperties.mountPoints[0].sourceVolume == 'aws-cli'
-        result.containerProperties.mountPoints[0].containerPath == '/home/conda'
-        result.containerProperties.mountPoints[0].readOnly
-        result.containerProperties.volumes[0].host.sourcePath == '/home/conda'
-        result.containerProperties.volumes[0].name == 'aws-cli'
+        result.type == JobDefinitionType.CONTAINER
+        result.parameters.'nf-token' == CacheHelper.hasher([JOB_NAME, result.containerProperties.toString()]).hash().toString()
+        result.containerProperties.logConfiguration.logDriver().toString() == 'awslogs'
+        result.containerProperties.logConfiguration.options()['awslogs-region'] == 'us-east-1'
+        result.containerProperties.logConfiguration.options()['awslogs-group'] == '/aws/batch'
+        result.containerProperties.mountPoints[0].sourceVolume() == 'aws-cli'
+        result.containerProperties.mountPoints[0].containerPath() == '/home/conda'
+        result.containerProperties.mountPoints[0].readOnly()
+        result.containerProperties.volumes[0].host().sourcePath() == '/home/conda'
+        result.containerProperties.volumes[0].name() == 'aws-cli'
 
     }
 
@@ -627,14 +625,14 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getAwsOptions() >> opts
         and:
         result.jobDefinitionName == JOB_NAME
-        result.type == 'container'
-        result.getPlatformCapabilities() == ['FARGATE']
+        result.type == JobDefinitionType.CONTAINER
+        result.platformCapabilities == [PlatformCapability.FARGATE]
         result.containerProperties.getJobRoleArn() == 'the-job-role'
         result.containerProperties.getExecutionRoleArn() == 'the-exec-role'
-        result.containerProperties.getResourceRequirements().find { it.type=='VCPU'}.getValue() == '1'
-        result.containerProperties.getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '2048'
+        result.containerProperties.getResourceRequirements().find { it.type()==ResourceType.VCPU}.value() == '1'
+        result.containerProperties.getResourceRequirements().find { it.type()==ResourceType.MEMORY}.value() == '2048'
         and:
-        result.containerProperties.getEphemeralStorage().sizeInGiB == 50
+        result.containerProperties.getEphemeralStorage().sizeInGiB() == 50
         result.containerProperties.getRuntimePlatform() == null
 
         when:
@@ -646,15 +644,15 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getAwsOptions() >> opts
         and:
         result.jobDefinitionName == JOB_NAME
-        result.type == 'container'
-        result.getPlatformCapabilities() == ['FARGATE']
+        result.type == JobDefinitionType.CONTAINER
+        result.platformCapabilities == [PlatformCapability.FARGATE]
         result.containerProperties.getJobRoleArn() == 'the-job-role'
         result.containerProperties.getExecutionRoleArn() == 'the-exec-role'
-        result.containerProperties.getResourceRequirements().find { it.type=='VCPU'}.getValue() == '1'
-        result.containerProperties.getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '2048'
+        result.containerProperties.getResourceRequirements().find { it.type()==ResourceType.VCPU}.value() == '1'
+        result.containerProperties.getResourceRequirements().find { it.type()==ResourceType.MEMORY}.value() == '2048'
         and:
-        result.containerProperties.getEphemeralStorage().sizeInGiB == 100
-        result.containerProperties.getRuntimePlatform().getCpuArchitecture() == 'ARM64'
+        result.containerProperties.getEphemeralStorage().sizeInGiB() == 100
+        result.containerProperties.getRuntimePlatform().cpuArchitecture() == 'ARM64'
     }
 
     def 'should create a job definition request object for fusion' () {
@@ -675,8 +673,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> new AwsOptions()
         result.jobDefinitionName == JOB_NAME
-        result.type == 'container'
-        result.parameters.'nf-token' == CacheHelper.hasher([JOB_NAME, result.containerProperties.build().toString()]).hash().toString()
+        result.type == JobDefinitionType.CONTAINER
+        result.parameters.'nf-token' == CacheHelper.hasher([JOB_NAME, result.containerProperties.toString()]).hash().toString()
         result.containerProperties.privileged
 
     }
