@@ -16,24 +16,48 @@
 
 package nextflow.cloud.aws.batch
 
-import static AwsContainerOptionsMapper.*
+
+import static nextflow.cloud.aws.batch.AwsContainerOptionsMapper.*
 
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Instant
 
+import groovy.transform.Canonical
+import groovy.transform.CompileStatic
+import groovy.transform.Memoized
+import groovy.util.logging.Slf4j
+import nextflow.BuildInfo
+import nextflow.SysEnv
+import nextflow.cloud.aws.batch.model.ContainerPropertiesModel
+import nextflow.cloud.aws.batch.model.RegisterJobDefinitionModel
+import nextflow.cloud.types.CloudMachineInfo
+import nextflow.container.ContainerNameValidator
+import nextflow.exception.ProcessException
+import nextflow.exception.ProcessSubmitException
+import nextflow.exception.ProcessUnrecoverableException
+import nextflow.executor.BashWrapperBuilder
+import nextflow.fusion.FusionAwareTask
+import nextflow.processor.BatchContext
+import nextflow.processor.BatchHandler
+import nextflow.processor.TaskArrayRun
+import nextflow.processor.TaskHandler
+import nextflow.processor.TaskRun
+import nextflow.processor.TaskStatus
+import nextflow.trace.TraceRecord
+import nextflow.util.CacheHelper
+import nextflow.util.MemoryUnit
+import nextflow.util.TestOnly
 import software.amazon.awssdk.services.batch.BatchClient
-import software.amazon.awssdk.services.batch.model.BatchException
 import software.amazon.awssdk.services.batch.model.ArrayProperties
 import software.amazon.awssdk.services.batch.model.AssignPublicIp
 import software.amazon.awssdk.services.batch.model.AttemptContainerDetail
+import software.amazon.awssdk.services.batch.model.BatchException
 import software.amazon.awssdk.services.batch.model.ClientException
 import software.amazon.awssdk.services.batch.model.ContainerOverrides
-import software.amazon.awssdk.services.batch.model.ContainerProperties
 import software.amazon.awssdk.services.batch.model.DescribeJobDefinitionsRequest
 import software.amazon.awssdk.services.batch.model.DescribeJobDefinitionsResponse
 import software.amazon.awssdk.services.batch.model.DescribeJobsRequest
-import software.amazon.awssdk.services.batch.model.DescribeJobsResponse
 import software.amazon.awssdk.services.batch.model.EphemeralStorage
 import software.amazon.awssdk.services.batch.model.EvaluateOnExit
 import software.amazon.awssdk.services.batch.model.Host
@@ -57,29 +81,6 @@ import software.amazon.awssdk.services.batch.model.SubmitJobRequest
 import software.amazon.awssdk.services.batch.model.SubmitJobResponse
 import software.amazon.awssdk.services.batch.model.TerminateJobRequest
 import software.amazon.awssdk.services.batch.model.Volume
-import groovy.transform.Canonical
-import groovy.transform.CompileStatic
-import groovy.transform.Memoized
-import groovy.util.logging.Slf4j
-import nextflow.BuildInfo
-import nextflow.SysEnv
-import nextflow.cloud.types.CloudMachineInfo
-import nextflow.container.ContainerNameValidator
-import nextflow.exception.ProcessException
-import nextflow.exception.ProcessSubmitException
-import nextflow.exception.ProcessUnrecoverableException
-import nextflow.executor.BashWrapperBuilder
-import nextflow.fusion.FusionAwareTask
-import nextflow.processor.BatchContext
-import nextflow.processor.BatchHandler
-import nextflow.processor.TaskArrayRun
-import nextflow.processor.TaskHandler
-import nextflow.processor.TaskRun
-import nextflow.processor.TaskStatus
-import nextflow.trace.TraceRecord
-import nextflow.util.CacheHelper
-import nextflow.util.MemoryUnit
-import nextflow.util.TestOnly
 /**
  * Implements a task handler for AWS Batch jobs
  */
@@ -488,10 +489,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     @CompileStatic
     protected String resolveJobDefinition0(TaskRun task) {
-        final builder = makeJobDefRequest(task)
-        final req = builder.build()
+        final req = makeJobDefRequest(task)
         final container = task.getContainer()
-        final token = req.parameters().get('nf-token')
+        final token = req.parameters.get('nf-token')
         final jobKey = "$container:$token".toString()
         if( jobDefinitions.containsKey(jobKey) )
             return jobDefinitions[jobKey]
@@ -501,12 +501,12 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                 return jobDefinitions[jobKey]
 
             def msg
-            def name = findJobDef(req.jobDefinitionName(), token)
+            def name = findJobDef(req.jobDefinitionName, token)
             if( name ) {
                 msg = "[AWS BATCH] Found job definition name=$name; container=$container"
             }
             else {
-                name = createJobDef(builder)
+                name = createJobDef(req)
                 msg = "[AWS BATCH] Created job definition name=$name; container=$container"
             }
             // log the request
@@ -524,9 +524,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * Create a Batch job definition request object for the specified Docker image
      *
      * @param image The Docker container image for which is required to create a Batch job definition
-     * @return An instance of {@link software.amazon.awssdk.services.batch.model.RegisterJobDefinitionRequest.Builder} for the specified Docker image
+     * @return An instance of {@link RegisterJobDefinitionModel} for the specified Docker image
      */
-    protected RegisterJobDefinitionRequest.Builder makeJobDefRequest(TaskRun task) {
+    @CompileStatic
+    protected RegisterJobDefinitionModel makeJobDefRequest(TaskRun task) {
         final uniq = new ArrayList()
         final result = configJobDefRequest(task, uniq)
 
@@ -550,27 +551,27 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      *      A list used to collect values that should be used to create a unique job definition Id for the given job request.
      *      It should be used to return such values in the calling context
      * @return
-     *      An instance of {@link software.amazon.awssdk.services.batch.model.RegisterJobDefinitionRequest} for the specified Docker image
+     *      An instance of {@link RegisterJobDefinitionModel} for the specified Docker image
      */
-    protected RegisterJobDefinitionRequest.Builder configJobDefRequest(TaskRun task, List hashingTokens) {
+    @CompileStatic
+    protected RegisterJobDefinitionModel configJobDefRequest(TaskRun task, List hashingTokens) {
         final image = task.getContainer()
         final name = normalizeJobDefinitionName(image)
         final opts = getAwsOptions()
 
-        final result = RegisterJobDefinitionRequest.builder()
+        final result = new RegisterJobDefinitionModel()
         result.jobDefinitionName(name)
         result.type(JobDefinitionType.CONTAINER)
 
         // create the container opts based on task config
-        final builder = ContainerProperties.builder()
         final containerOpts = task.getConfig().getContainerOptionsMap()
-        addCmdOptions(containerOpts, builder)
+        final container = createContainerProperties(containerOpts)
 
         // container definition
         // https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html
         final reqCpus = ResourceRequirement.builder().type(ResourceType.VCPU).value('1').build()
         final reqMem = ResourceRequirement.builder().type(ResourceType.MEMORY).value( opts.fargateMode ? '2048' : '1024').build()
-        builder
+        container
                 .image(image)
                 .command('true')
                 // note the actual command, memory and cpus are overridden when the job is executed
@@ -578,17 +579,17 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
         final jobRole = opts.getJobRole()
         if( jobRole )
-            builder.jobRoleArn(jobRole)
+            container.jobRoleArn(jobRole)
 
         if( opts.executionRole )
-            builder.executionRoleArn(opts.executionRole)
+            container.executionRoleArn(opts.executionRole)
         
         final logsGroup = opts.getLogsGroup()
         if( logsGroup )
-            builder.logConfiguration(getLogConfiguration(logsGroup, opts.getRegion()))
+            container.logConfiguration(getLogConfiguration(logsGroup, opts.getRegion()))
 
         if( fusionEnabled() )
-            builder.privileged(true)
+            container.privileged(true)
 
         final mountsMap = new LinkedHashMap( 10)
         final awscli = opts.cliPath
@@ -604,20 +605,20 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         }
 
         if( mountsMap )
-            addVolumeMountsToContainer(mountsMap, builder)
+            addVolumeMountsToContainer(mountsMap, container)
 
         // Fargate specific settings
         if( opts.isFargateMode() ) {
             result.platformCapabilities(List.of(PlatformCapability.FARGATE))
-            builder.networkConfiguration( NetworkConfiguration.builder().assignPublicIp(AssignPublicIp.ENABLED).build() )
+            container.networkConfiguration( NetworkConfiguration.builder().assignPublicIp(AssignPublicIp.ENABLED).build() )
             // use at least 50 GB as disk local storage
             final diskGb = task.config.getDisk()?.toGiga()?.toInteger() ?: 50
-            builder.ephemeralStorage( EphemeralStorage.builder().sizeInGiB(diskGb).build() )
+            container.ephemeralStorage( EphemeralStorage.builder().sizeInGiB(diskGb).build() )
             // check for arm64 cpu architecture
             if( task.config.getArchitecture()?.arch == 'arm64' )
-                builder.runtimePlatform(RuntimePlatform.builder().cpuArchitecture('ARM64').build())
+                container.runtimePlatform(RuntimePlatform.builder().cpuArchitecture('ARM64').build())
         }
-        final container = builder.build()
+
         // finally set the container options
         result.containerProperties(container)
 
@@ -641,7 +642,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             ]).build()
     }
 
-    protected void addVolumeMountsToContainer(Map<String,String> mountsMap, ContainerProperties.Builder container) {
+    @CompileStatic
+    protected void addVolumeMountsToContainer(Map<String,String> mountsMap, ContainerPropertiesModel container) {
         final mounts = new ArrayList<MountPoint>(mountsMap.size())
         final volumes = new  ArrayList<Volume>(mountsMap.size())
         for( Map.Entry<String,String> entry : mountsMap.entrySet() ) {
@@ -656,12 +658,14 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             def mount = MountPoint.builder()
                     .sourceVolume(mountName)
                     .containerPath(hostPath)
-                    .readOnly(readOnly).build()
+                    .readOnly(readOnly)
+                    .build()
             mounts << mount
 
             def vol = Volume.builder()
                     .name(mountName)
-                    .host(Host.builder().sourcePath(containerPath).build()).build()
+                    .host(Host.builder().sourcePath(containerPath).build())
+                    .build()
             volumes << vol
         }
 
@@ -698,17 +702,16 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     /**
      * Create (aka register) a new Batch job definition
      *
-     * @param req A {@link RegisterJobDefinitionRequest} representing the Batch jib definition to create
+     * @param model A {@link RegisterJobDefinitionRequest} representing the Batch jib definition to create
      * @return The fully qualified Batch job definition name eg {@code my-job-definition:3}
      */
-    protected String createJobDef(RegisterJobDefinitionRequest.Builder builder) {
+    protected String createJobDef(RegisterJobDefinitionModel model) {
         // add nextflow tags
-        builder.tags([
-            'nextflow.io/createdAt': Instant.now().toString(),
-            'nextflow.io/version': BuildInfo.version
-        ])
+        model.addTagsEntry('nextflow.io/createdAt', Instant.now().toString())
+        model.addTagsEntry('nextflow.io/version', BuildInfo.version)
         // create the job def
-        final res = createJobDef0(bypassProxy(client), builder.build() as RegisterJobDefinitionRequest) // bypass the client proxy! see #1024
+        final req = model.toBatchRequest()
+        final res = createJobDef0(bypassProxy(client), req) // bypass the client proxy! see #1024
         return "${res.jobDefinitionName()}:${res.revision()}"
     }
 
