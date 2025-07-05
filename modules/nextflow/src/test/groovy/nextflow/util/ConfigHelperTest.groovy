@@ -436,4 +436,5 @@ class ConfigHelperTest extends Specification {
         'one'       | 'foo_'    | 'bar'             | [FOO_BAR: 'one']
         'one'       | 'foo_'    | 'thisAndThat'     | [FOO_THIS_AND_THAT: 'one']
     }
+
 }
