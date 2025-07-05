@@ -102,10 +102,8 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     byte[] readBytes(String path) {
-
         def url = getContentUrl(path)
-        def contents = invoke(url)
-        return contents?.getBytes()
+        return invokeBytes(url)
     }
 
 }
