@@ -161,9 +161,9 @@ class LinPathTest extends Specification {
 
         wdir.resolve('12345/output1').mkdirs()
         wdir.resolve('12345/path/to/file2.txt').mkdirs()
-        wdir.resolve('12345/.data.json').text = '{"version":"lineage/v1beta1","kind":"TaskRun"}'
-        wdir.resolve('12345/output1/.data.json').text = '{"version":"lineage/v1beta1","kind":"FileOutput", "path": "' + outputFolder.toString() + '"}'
-        wdir.resolve('12345/path/to/file2.txt/.data.json').text = '{"version":"lineage/v1beta1","kind":"FileOutput", "path": "' + outputFile.toString() + '"}'
+        wdir.resolve('12345/.data.json').text = '{"version":"lineage/v1beta1","kind":"TaskRun","spec":{"name":"test"}}'
+        wdir.resolve('12345/output1/.data.json').text = '{"version":"lineage/v1beta1","kind":"FileOutput","spec":{"path": "' + outputFolder.toString() + '"}}'
+        wdir.resolve('12345/path/to/file2.txt/.data.json').text = '{"version":"lineage/v1beta1","kind":"FileOutput","spec":{"path": "' + outputFile.toString() + '"}}'
         def time = OffsetDateTime.now()
         def wfResultsMetadata = new LinEncoder().withPrettyPrint(true).encode(new WorkflowOutput(time, "lid://1234", [new Parameter( "Path", "a", "lid://1234/a.txt")]))
         wdir.resolve('5678/').mkdirs()
