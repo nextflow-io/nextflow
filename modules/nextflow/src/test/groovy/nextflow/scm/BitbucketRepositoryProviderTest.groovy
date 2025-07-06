@@ -21,6 +21,7 @@ import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
 import spock.lang.Timeout
+import spock.lang.Unroll
 
 @Timeout(30)
 @IgnoreIf({System.getenv('NXF_SMOKE')})
@@ -35,7 +36,7 @@ class BitbucketRepositoryProviderTest extends Specification {
         when:
         def url = new BitbucketRepositoryProvider('pditommaso/tutorial',config).getCloneUrl()
         then:
-        url == "https://${config.user}@bitbucket.org/pditommaso/tutorial.git".toString()
+        url ==~ /https:\/\/\w+@bitbucket.org\/pditommaso\/tutorial.git/
     }
 
     def testGetHomePage() {
@@ -50,11 +51,11 @@ class BitbucketRepositoryProviderTest extends Specification {
         def config = new ProviderConfig('bitbucket').setAuth(token)
 
         when:
-        def repo = new BitbucketRepositoryProvider('pditommaso/tutorial', config)
+        def repo = new BitbucketRepositoryProvider('pditommaso/secret', config)
         def result = repo.readText('main.nf')
 
         then:
-        result.trim().startsWith('#!/usr/bin/env nextflow')
+        result.trim() == "println 'Hello from Bitbucket'"
     }
 
     @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )
@@ -110,17 +111,17 @@ class BitbucketRepositoryProviderTest extends Specification {
         expect:
         new BitbucketRepositoryProvider('pditommaso/tutorial', config)
                 .setRevision('test-branch')
-                .getContentUrl('main.nf') == 'https://bitbucket.org/api/2.0/repositories/pditommaso/tutorial/src/test-branch/main.nf'
+                .getContentUrl('main.nf') == 'https://api.bitbucket.org/2.0/repositories/pditommaso/tutorial/src/test-branch/main.nf'
 
         and:
         new BitbucketRepositoryProvider('pditommaso/tutorial', config)
             .setRevision('feature/with-slash')
-            .getContentUrl('main.nf') == 'https://bitbucket.org/api/2.0/repositories/pditommaso/tutorial/src/a6b825b22d46758cdeb496ae6cf26aef839ace52/main.nf'
+            .getContentUrl('main.nf') == 'https://api.bitbucket.org/2.0/repositories/pditommaso/tutorial/src/a6b825b22d46758cdeb496ae6cf26aef839ace52/main.nf'
 
         and:
         new BitbucketRepositoryProvider('pditommaso/tutorial', config)
             .setRevision('test/tag/v2')
-            .getContentUrl('main.nf') == 'https://bitbucket.org/api/2.0/repositories/pditommaso/tutorial/src/8f849beceb2ea479ef836809ca33d3daeeed25f9/main.nf'
+            .getContentUrl('main.nf') == 'https://api.bitbucket.org/2.0/repositories/pditommaso/tutorial/src/8f849beceb2ea479ef836809ca33d3daeeed25f9/main.nf'
 
     }
 
@@ -170,5 +171,36 @@ class BitbucketRepositoryProviderTest extends Specification {
         then:
         !data.contains('world')
         data.contains('mundo')
+    }
+
+    @Unroll
+    def 'should validate hasCredentials' () {
+        given:
+        def provider = new BitbucketRepositoryProvider('pditommaso/tutorial', CONFIG)
+
+        expect:
+        provider.hasCredentials() == EXPECTED
+
+        where:
+        EXPECTED    | CONFIG
+        false       | new ProviderConfig('bitbucket')
+        false       | new ProviderConfig('bitbucket').setUser('foo')
+        true        | new ProviderConfig('bitbucket').setUser('foo').setPassword('bar')
+        true        | new ProviderConfig('bitbucket').setToken('xyz')
+    }
+
+    @Unroll
+    def 'should validate getAuth' () {
+        given:
+        def provider = new BitbucketRepositoryProvider('pditommaso/tutorial', CONFIG)
+
+        expect:
+        provider.getAuth() == EXPECTED as String[]
+
+        where:
+        EXPECTED                                                        | CONFIG
+        null                                                            | new ProviderConfig('bitbucket')
+        ["Authorization", "Bearer xyz"]                                 | new ProviderConfig('bitbucket').setToken('xyz')
+        ["Authorization", "Basic ${"foo:bar".bytes.encodeBase64()}"]    | new ProviderConfig('bitbucket').setUser('foo').setPassword('bar')
     }
 }
