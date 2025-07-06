@@ -20,6 +20,8 @@ import java.net.http.HttpClient
 import java.net.http.HttpResponse
 import java.nio.channels.UnresolvedAddressException
 
+import nextflow.SysEnv
+import nextflow.exception.HttpResponseLengthExceedException
 import nextflow.util.RetryConfig
 import spock.lang.Specification
 /**
@@ -167,6 +169,68 @@ class RepositoryProviderTest extends Specification {
         true        | new SocketException()
         false       | new SocketException(new UnresolvedAddressException())
         false       | new SocketTimeoutException()
+    }
+
+    def 'should check max length with SysEnv' () {
+        given:
+        def provider = Spy(RepositoryProvider)
+        and:
+        def response = Mock(HttpResponse)
+        def headers = Mock(java.net.http.HttpHeaders)
+        response.headers() >> headers
+        response.uri() >> new URI('https://api.github.com/repos/test/repo')
+
+        when: 'max length is disabled (0)'
+        SysEnv.push(['NXF_GIT_RESPONSE_MAX_LENGTH': '0'])
+        provider.checkMaxLength(response)
+        then:
+        noExceptionThrown()
+
+        cleanup:
+        SysEnv.pop()
+
+        when: 'max length is disabled (not set)'
+        SysEnv.push([:])
+        provider.checkMaxLength(response)
+        then:
+        noExceptionThrown()
+
+        cleanup:
+        SysEnv.pop()
+
+        when: 'content length is not available'
+        SysEnv.push(['NXF_GIT_RESPONSE_MAX_LENGTH': '1000'])
+        headers.firstValueAsLong('Content-Length') >> OptionalLong.empty()
+        provider.checkMaxLength(response)
+        then:
+        noExceptionThrown()
+
+        cleanup:
+        SysEnv.pop()
+
+        when: 'content length is within limit'
+        SysEnv.push(['NXF_GIT_RESPONSE_MAX_LENGTH': '1000'])
+        headers.firstValueAsLong('Content-Length') >> OptionalLong.of(500)
+        provider.checkMaxLength(response)
+        then:
+        noExceptionThrown()
+
+        cleanup:
+        SysEnv.pop()
+
+        when: 'content length exceeds limit'
+        SysEnv.push(['NXF_GIT_RESPONSE_MAX_LENGTH': '1000'])
+        headers.firstValueAsLong('Content-Length') >> OptionalLong.of(1500)
+        provider.checkMaxLength(response)
+        then:
+        def e = thrown(HttpResponseLengthExceedException)
+        e.message.contains('HTTP response')
+        e.message.contains('is too big')
+        e.message.contains('response length: 1500')
+        e.message.contains('max allowed length: 1000')
+
+        cleanup:
+        SysEnv.pop()
     }
 
 }
