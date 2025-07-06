@@ -19,6 +19,7 @@ NEXTFLOW CHANGE-LOG
 - Fix replace List.getFirst with List.get(0) for compatibility [83428ee2]
 - Fix same Conda env is re-created for same module (#6166) [b46f01f9]
 - Fix stack overflow error with workflow metadata (#5988) [9d50c495]
+- Fix Maven publish with aws credentials [34d64ab3]
 - Implement retry strategy for Git repository provider (#6195) [0f922826]
 - Implement unordered directory hash (#6197) [a0eeed8d]
 - Minor Azure Batch disk slot calculation demoted to debug (#6234) [c65955ce]
@@ -38,6 +39,11 @@ NEXTFLOW CHANGE-LOG
 - Bump Logback version 1.5.18 [e3d5cedd]
 - Bump Slf4j version 2.0.17 [93199e09]
 - Bump gson version 2.13.1 [ab8e36a2]
+- Bump nf-wave@1.14.0 [71ecf264]
+- Bump nf-tower@1.13.0 [53d1bfb4]
+- Bump nf-google@1.22.1 [cdf56d14]
+- Bump nf-azure@1.18.0 [fc514062]
+- Bump nf-amazon@3.0.0 [ffe699bd]
 
 25.04.4 - 16 Jun 2024
 - Fix bug in generated Groovy code (#6082) [ead2f320]
