@@ -44,7 +44,7 @@ class ContainerConfig extends LinkedHashMap {
     }
 
     boolean isEnabled() {
-        get('enabled')?.toString() == 'true'
+        return get('enabled')?.toString() == 'true'
     }
 
     ContainerConfig setEnabled(boolean value) {
@@ -53,11 +53,11 @@ class ContainerConfig extends LinkedHashMap {
     }
 
     String getEngine() {
-        get('engine')
+        return get('engine')
     }
 
     String getRegistry() {
-        get('registry')
+        return get('registry')
     }
 
     boolean getRegistryOverride() {
