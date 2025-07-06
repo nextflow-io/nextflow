@@ -40,7 +40,9 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Const
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
+import nextflow.exception.HttpResponseLengthExceedException
 import nextflow.exception.RateLimitExceededException
 import nextflow.util.RetryConfig
 import nextflow.util.Threads
@@ -242,6 +244,7 @@ abstract class RepositoryProvider {
         final HttpResponse<byte[]> resp = httpSend0(request)
         // check the response code
         checkResponse(resp)
+        checkMaxLength(resp)
         // return the body as byte array
         return resp.body()
     }
@@ -308,6 +311,17 @@ abstract class RepositoryProvider {
             }
             throw new IOException(msg)
         }
+    }
+
+    protected void checkMaxLength(HttpResponse<byte[]> response) {
+        final max = SysEnv.getLong("NXF_GIT_RESPONSE_MAX_LENGTH", 0)
+        if( max<=0 )
+            return
+        final length = response.headers().firstValueAsLong('Content-Length').orElse(0)
+        if( length<=0 )
+            return
+        if( length>max )
+            throw new HttpResponseLengthExceedException("HTTP response '${response.uri()}' is too big - response length: ${length}; max allowed length: ${max}")
     }
 
     protected <T> List<T> invokeAndResponseWithPaging(String request, Closure<T> parse) {
