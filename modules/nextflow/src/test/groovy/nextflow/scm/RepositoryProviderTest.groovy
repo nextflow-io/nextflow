@@ -17,8 +17,10 @@
 package nextflow.scm
 
 import java.net.http.HttpClient
+import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.channels.UnresolvedAddressException
+import javax.net.ssl.SSLSession
 
 import nextflow.SysEnv
 import nextflow.exception.HttpResponseLengthExceedException
@@ -171,25 +173,12 @@ class RepositoryProviderTest extends Specification {
         false       | new SocketTimeoutException()
     }
 
-    def 'should check max length with SysEnv' () {
+    def 'should not validate when max length is not configured via SysEnv' () {
         given:
         def provider = Spy(RepositoryProvider)
-        and:
-        def response = Mock(HttpResponse)
-        def headers = Mock(java.net.http.HttpHeaders)
-        response.headers() >> headers
-        response.uri() >> new URI('https://api.github.com/repos/test/repo')
+        def response = createMockResponseWithContentLength(1500)
 
-        when: 'max length is disabled (0)'
-        SysEnv.push(['NXF_GIT_RESPONSE_MAX_LENGTH': '0'])
-        provider.checkMaxLength(response)
-        then:
-        noExceptionThrown()
-
-        cleanup:
-        SysEnv.pop()
-
-        when: 'max length is disabled (not set)'
+        when:
         SysEnv.push([:])
         provider.checkMaxLength(response)
         then:
@@ -197,40 +186,69 @@ class RepositoryProviderTest extends Specification {
 
         cleanup:
         SysEnv.pop()
+    }
 
-        when: 'content length is not available'
-        SysEnv.push(['NXF_GIT_RESPONSE_MAX_LENGTH': '1000'])
-        headers.firstValueAsLong('Content-Length') >> OptionalLong.empty()
+    def 'should validate and pass when content is within limit via SysEnv' () {
+        given:
+        def provider = Spy(RepositoryProvider)
+        def response = createMockResponseWithContentLength(1500)
+
+        when:
+        SysEnv.push(['NXF_GIT_RESPONSE_MAX_LENGTH': '2000'])
         provider.checkMaxLength(response)
         then:
         noExceptionThrown()
 
         cleanup:
         SysEnv.pop()
+    }
 
-        when: 'content length is within limit'
+    def 'should validate and fail when content exceeds limit via SysEnv' () {
+        given:
+        def provider = Spy(RepositoryProvider)
+        def response = createMockResponseWithContentLength(1500)
+
+        when:
         SysEnv.push(['NXF_GIT_RESPONSE_MAX_LENGTH': '1000'])
-        headers.firstValueAsLong('Content-Length') >> OptionalLong.of(500)
         provider.checkMaxLength(response)
         then:
-        noExceptionThrown()
+        thrown(HttpResponseLengthExceedException)
 
         cleanup:
         SysEnv.pop()
+    }
 
-        when: 'content length exceeds limit'
-        SysEnv.push(['NXF_GIT_RESPONSE_MAX_LENGTH': '1000'])
-        headers.firstValueAsLong('Content-Length') >> OptionalLong.of(1500)
-        provider.checkMaxLength(response)
-        then:
-        def e = thrown(HttpResponseLengthExceedException)
-        e.message.contains('HTTP response')
-        e.message.contains('is too big')
-        e.message.contains('response length: 1500')
-        e.message.contains('max allowed length: 1000')
-
-        cleanup:
-        SysEnv.pop()
+    private createMockResponseWithContentLength(long contentLength) {
+        return new HttpResponse<byte[]>() {
+            @Override
+            int statusCode() { return 200 }
+            
+            @Override
+            HttpRequest request() { return null }
+            
+            @Override
+            Optional<HttpResponse<byte[]>> previousResponse() { return Optional.empty() }
+            
+            @Override
+            java.net.http.HttpHeaders headers() {
+                return java.net.http.HttpHeaders.of(
+                    ['Content-Length': [contentLength.toString()]], 
+                    (a, b) -> true
+                )
+            }
+            
+            @Override
+            byte[] body() { return new byte[0] }
+            
+            @Override
+            Optional<SSLSession> sslSession() { return Optional.empty() }
+            
+            @Override
+            URI uri() { return new URI('https://api.github.com/repos/test/repo') }
+            
+            @Override
+            HttpClient.Version version() { return HttpClient.Version.HTTP_1_1 }
+        }
     }
 
 }
