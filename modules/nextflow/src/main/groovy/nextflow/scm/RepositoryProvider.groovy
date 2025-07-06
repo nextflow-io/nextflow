@@ -16,8 +16,18 @@
 
 package nextflow.scm
 
+import java.nio.channels.UnresolvedAddressException
+import java.time.temporal.ChronoUnit
+import java.util.function.Predicate
+
 import static nextflow.util.StringUtils.*
 
+import dev.failsafe.Failsafe
+import dev.failsafe.FailsafeException
+import dev.failsafe.RetryPolicy
+import dev.failsafe.event.EventListener
+import dev.failsafe.event.ExecutionAttemptedEvent
+import dev.failsafe.function.CheckedSupplier
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
@@ -34,6 +44,7 @@ import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.exception.HttpResponseLengthExceedException
 import nextflow.exception.RateLimitExceededException
+import nextflow.util.RetryConfig
 import nextflow.util.Threads
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.Ref
@@ -48,8 +59,6 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 @Slf4j
 @CompileStatic
 abstract class RepositoryProvider {
-
-    static final public String[] EMPTY_ARRAY = new String[0]
 
     @Canonical
     static class TagInfo {
@@ -66,7 +75,12 @@ abstract class RepositoryProvider {
     /**
      * The client used to carry out http requests
      */
-    private HttpClient httpClient = { newHttpClient() }()
+    private HttpClient httpClient
+
+    /**
+     * The retry options to be used for http requests
+     */
+    private RetryConfig retryConfig
 
     /**
      * The pipeline qualified name following the syntax {@code owner/repository}
@@ -95,6 +109,11 @@ abstract class RepositoryProvider {
 
     RepositoryProvider setRevision(String revision) {
         this.revision = revision
+        return this
+    }
+
+    RepositoryProvider setRetryConfig(RetryConfig retryConfig) {
+        this.retryConfig = retryConfig
         return this
     }
 
@@ -190,6 +209,16 @@ abstract class RepositoryProvider {
         return new UsernamePasswordCredentialsProvider(getUser(), getPassword())
     }
 
+    protected HttpRequest newRequest(String api) {
+        final builder = HttpRequest
+            .newBuilder()
+            .uri(new URI(api))
+        final auth0 = getAuth()
+        if( auth0 )
+            builder.headers(auth0)
+        return builder.GET().build()
+    }
+
     /**
      * Invoke the API request specified
      *
@@ -197,20 +226,26 @@ abstract class RepositoryProvider {
      * @return The remote service response as a text
      */
     protected String invoke( String api ) {
-        assert api
+        final result = invokeBytes(api)
+        return result!=null ? new String(result) : null
+    }
 
+    /**
+     * Invoke the API request specified and return binary content
+     *
+     * @param api A API request url e.g. https://api.github.com/repos/nextflow-io/hello/raw/image.png
+     * @return The remote service response as byte array
+     */
+    protected byte[] invokeBytes( String api ) {
+        assert api
         log.debug "Request [credentials ${getAuthObfuscated() ?: '-'}] -> $api"
-        final request = HttpRequest
-            .newBuilder()
-            .uri(new URI(api))
-            .headers(getAuth())
-            .GET()
+        final request = newRequest(api)
         // submit the request
-        final resp = httpClient.send(request.build(), HttpResponse.BodyHandlers.ofString())
+        final HttpResponse<byte[]> resp = httpSend0(request)
         // check the response code
         checkResponse(resp)
         checkMaxLength(resp)
-        // return the body as string
+        // return the body as byte array
         return resp.body()
     }
 
@@ -225,50 +260,60 @@ abstract class RepositoryProvider {
      *
      * @return
      *      A string array holding the authentication HTTP headers e.g.
-     *      {@code [ "Authorization", "Bearer 1234567890"] } or an empty
-     *      array when the credentials are not available or provided.
-     *      Note: {@code null} is not a valid return value for this method.
+     *      {@code [ "Authorization", "Bearer 1234567890"] } or null when
+     *      the credentials are not available or provided.
      */
     protected String[] getAuth() {
         if( hasCredentials() ) {
             String authString = "${getUser()}:${getPassword()}".bytes.encodeBase64().toString()
             return new String[] { "Authorization", "Basic " + authString }
         }
-        return EMPTY_ARRAY
+        return null
     }
 
     /**
      * Check for response error status. Throws a {@link AbortOperationException} exception
      * when a 401 or 403 error status is returned.
      *
-     * @param response A {@link HttpURLConnection} connection instance
+     * @param response A {@link HttpURLConnection} response instance
      */
-    protected checkResponse( HttpResponse<String> response ) {
+    protected checkResponse( HttpResponse<?> response ) {
         final code = response.statusCode()
-
-        switch( code ) {
-            case 401:
-                log.debug "Response status: $code -- ${response.body()}"
-                throw new AbortOperationException("Not authorized -- Check that the ${name.capitalize()} user name and password provided are correct")
-
-            case 403:
-                log.debug "Response status: $code -- ${response.body()}"
-                def limit = response.headers().firstValue('X-RateLimit-Remaining').orElse(null)
-                if( limit == '0' ) {
-                    def message = config.auth ? "Check ${name.capitalize()}'s API rate limits for more details" : "Provide your ${name.capitalize()} user name and password to get a higher rate limit"
-                    throw new RateLimitExceededException("API rate limit exceeded -- $message")
-                }
-                else {
-                    def message = config.auth ? "Check that the ${name.capitalize()} user name and password provided are correct" : "Provide your ${name.capitalize()} user name and password to access this repository"
-                    throw new AbortOperationException("Forbidden -- $message")
-                }
-            case 404:
-                log.debug "Response status: $code -- ${response.body()}"
-                throw new AbortOperationException("Remote resource not found: ${response.uri()}")
+        if( code==401 ) {
+            log.debug "Response status: $code -- ${response.body()}"
+            throw new AbortOperationException("Not authorized -- Check that the ${name.capitalize()} user name and password provided are correct")
+        }
+        if( code==403 ) {
+            log.debug "Response status: $code -- ${response.body()}"
+            def limit = response.headers().firstValue('X-RateLimit-Remaining').orElse(null)
+            if( limit == '0' ) {
+                def message = config.auth ? "Check ${name.capitalize()}'s API rate limits for more details" : "Provide your ${name.capitalize()} user name and password to get a higher rate limit"
+                throw new RateLimitExceededException("API rate limit exceeded -- $message")
+            }
+            else {
+                def message = config.auth ? "Check that the ${name.capitalize()} user name and password provided are correct" : "Provide your ${name.capitalize()} user name and password to access this repository"
+                throw new AbortOperationException("Forbidden -- $message")
+            }
+        }
+        if( code==404 ) {
+            log.debug "Response status: $code -- ${response.body()}"
+            throw new AbortOperationException("Remote resource not found: ${response.uri()}")
+        }
+        if( code>=500 ) {
+            String msg = "Unexpected HTTP request error '${response.uri()}' [${code}]"
+            try {
+                final body = response.body()
+                if ( body )
+                    msg += " - response: ${body}"
+            }
+            catch (Throwable t) {
+                log.debug "Enable to read response body - ${t.message}"
+            }
+            throw new IOException(msg)
         }
     }
 
-    protected void checkMaxLength(HttpResponse<String> response) {
+    protected void checkMaxLength(HttpResponse<byte[]> response) {
         final max = SysEnv.get("NXF_GIT_RESPONSE_MAX_LENGTH")
         if( !max )
             return
@@ -323,10 +368,8 @@ abstract class RepositoryProvider {
      */
     @Memoized
     protected Map invokeAndParseResponse( String request ) {
-
-        def response = invoke(request)
+        final response = invoke(request)
         return new JsonSlurper().parseText(response) as Map
-
     }
 
     /**
@@ -368,10 +411,99 @@ abstract class RepositoryProvider {
         }
     }
 
+    /**
+     * Creates a retry policy using the configuration specified by {@link RetryConfig}
+     *
+     * @param cond
+     *      A predicate that determines when a retry should be triggered
+     * @param handle
+     *
+     * @return
+     *      The {@link dev.failsafe.RetryPolicy} instance
+     */
+    protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond, Predicate<T> handle) {
+        final listener = new EventListener<ExecutionAttemptedEvent<?>>() {
+            @Override
+            void accept(ExecutionAttemptedEvent<?> event) throws Throwable {
+                def msg = "Git provider connection failure - attempt: ${event.attemptCount}"
+                if( event.lastResult !=null )
+                    msg += "; response: ${event.lastResult}"
+                if( event.lastFailure != null )
+                    msg += "; exception: [${event.lastFailure.class.name}] ${event.lastFailure.message}"
+                log.debug(msg)
+            }
+        }
+        return RetryPolicy.<T>builder()
+            .handleIf(cond)
+            .handleResultIf(handle)
+            .withBackoff(retryConfig.delay.toMillis(), retryConfig.maxDelay.toMillis(), ChronoUnit.MILLIS)
+            .withMaxAttempts(retryConfig.maxAttempts)
+            .withJitter(retryConfig.jitter)
+            .onRetry(listener as EventListener)
+            .build()
+    }
+
+    static private final List<Integer> HTTP_RETRYABLE_ERRORS = [429, 500, 502, 503, 504]
+
+    /**
+     * Carry out the invocation of the specified action using a retry policy.
+     *
+     * @param action A {@link dev.failsafe.function.CheckedSupplier} instance modeling the action to be performed in a safe manner
+     * @return The result of the supplied action
+     */
+    protected <T> HttpResponse<T> safeApply(CheckedSupplier action) {
+        final retryOnException = ((Throwable e) -> isRetryable(e) || isRetryable(e.cause)) as Predicate<? extends Throwable>
+        final retryOnStatusCode = ((HttpResponse<T> resp) -> resp.statusCode() in HTTP_RETRYABLE_ERRORS) as Predicate<HttpResponse<T>>
+        final policy = retryPolicy(retryOnException, retryOnStatusCode)
+        return Failsafe.with(policy).get(action)
+    }
+
+    protected boolean isRetryable(Throwable t) {
+        // only retry SocketException and ignore generic IOException
+        return t instanceof SocketException && !isCausedByUnresolvedAddressException(t)
+    }
+
+    private boolean isCausedByUnresolvedAddressException(Throwable t) {
+        if( t instanceof UnresolvedAddressException )
+            return true
+        if( t.cause==null )
+            return false
+        else
+            return isCausedByUnresolvedAddressException(t.cause)
+    }
+
+    @Deprecated
+    protected HttpResponse<String> httpSend(HttpRequest request) {
+        if( httpClient==null )
+            httpClient = newHttpClient()
+        if( retryConfig==null )
+            retryConfig = new RetryConfig()
+        try {
+            safeApply(()-> httpClient.send(request, HttpResponse.BodyHandlers.ofString()))
+        }
+        catch (FailsafeException e) {
+            throw e.cause
+        }
+    }
+
+    private HttpResponse<byte[]> httpSend0(HttpRequest request) {
+        if( httpClient==null )
+            httpClient = newHttpClient()
+        if( retryConfig==null )
+            retryConfig = new RetryConfig()
+        try {
+            safeApply(()-> httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray()))
+        }
+        catch (FailsafeException e) {
+            throw e.cause
+        }
+    }
+
     private HttpClient newHttpClient() {
         final builder = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)
             .connectTimeout(Duration.ofSeconds(60))
+            .followRedirects(HttpClient.Redirect.NORMAL)
         // use virtual threads executor if enabled
         if( Threads.useVirtual() )
             builder.executor(Executors.newVirtualThreadPerTaskExecutor())

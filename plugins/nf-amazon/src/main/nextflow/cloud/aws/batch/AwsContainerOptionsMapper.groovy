@@ -15,11 +15,11 @@
  */
 package nextflow.cloud.aws.batch
 
-import com.amazonaws.services.batch.model.ContainerProperties
-import com.amazonaws.services.batch.model.KeyValuePair
-import com.amazonaws.services.batch.model.LinuxParameters
-import com.amazonaws.services.batch.model.Tmpfs
-import com.amazonaws.services.batch.model.Ulimit
+import nextflow.cloud.aws.batch.model.ContainerPropertiesModel
+import software.amazon.awssdk.services.batch.model.KeyValuePair
+import software.amazon.awssdk.services.batch.model.LinuxParameters
+import software.amazon.awssdk.services.batch.model.Tmpfs
+import software.amazon.awssdk.services.batch.model.Ulimit
 import groovy.transform.CompileStatic
 import nextflow.util.CmdLineOptionMap
 import nextflow.util.MemoryUnit
@@ -36,12 +36,12 @@ import nextflow.util.MemoryUnit
 class AwsContainerOptionsMapper {
 
     @Deprecated
-    static ContainerProperties createContainerOpts(CmdLineOptionMap options) {
-        createContainerProperties(options)
+    static ContainerPropertiesModel createContainerOpts(CmdLineOptionMap options) {
+        return createContainerProperties(options)
     }
 
-    static ContainerProperties createContainerProperties(CmdLineOptionMap options) {
-        final containerProperties = new ContainerProperties()
+    static ContainerPropertiesModel createContainerProperties(CmdLineOptionMap options) {
+        final containerProperties = new ContainerPropertiesModel()
         if ( options?.hasOptions() ) {
             checkPrivileged(options, containerProperties)
             checkEnvVars(options, containerProperties)
@@ -50,65 +50,64 @@ class AwsContainerOptionsMapper {
             checkUlimit(options, containerProperties)
             LinuxParameters params = checkLinuxParameters(options)
             if ( params != null )
-                containerProperties.setLinuxParameters(params)
+                containerProperties.linuxParameters(params)
         }
         return containerProperties
     }
 
-    protected static void checkPrivileged(CmdLineOptionMap options, ContainerProperties containerProperties) {
+    protected static void checkPrivileged(CmdLineOptionMap options, ContainerPropertiesModel containerProperties) {
         if ( findOptionWithBooleanValue(options, 'privileged') )
-            containerProperties.setPrivileged(true);
+            containerProperties.privileged(true)
     }
 
-    protected static void checkEnvVars(CmdLineOptionMap options, ContainerProperties containerProperties) {
+    protected static void checkEnvVars(CmdLineOptionMap options, ContainerPropertiesModel containerProperties) {
         final keyValuePairs = new ArrayList<KeyValuePair>()
         List<String> values = findOptionWithMultipleValues(options, 'env')
         values.addAll(findOptionWithMultipleValues(options, 'e'))
         for( String it : values ) {
             final tokens = it.tokenize('=')
-            keyValuePairs << new KeyValuePair().withName(tokens[0]).withValue(tokens.size() == 2 ? tokens[1] : null)
+            keyValuePairs << KeyValuePair.builder().name(tokens[0]).value(tokens.size() == 2 ? tokens[1] : null).build()
         }
         if ( keyValuePairs )
-            containerProperties.setEnvironment(keyValuePairs)
+            containerProperties.environment(keyValuePairs)
     }
 
-    protected static void checkUser(CmdLineOptionMap options, ContainerProperties containerProperties) {
+    protected static void checkUser(CmdLineOptionMap options, ContainerPropertiesModel containerProperties) {
         String user = findOptionWithSingleValue(options, 'u')
         if ( !user)
             user = findOptionWithSingleValue(options, 'user')
         if ( user )
-            containerProperties.setUser(user)
+            containerProperties.user(user)
     }
 
-    protected static void checkReadOnly(CmdLineOptionMap options, ContainerProperties containerProperties) {
+    protected static void checkReadOnly(CmdLineOptionMap options, ContainerPropertiesModel containerProperties) {
         if ( findOptionWithBooleanValue(options, 'read-only') )
-            containerProperties.setReadonlyRootFilesystem(true);
+            containerProperties.readonlyRootFilesystem(true);
     }
 
-    protected static void checkUlimit(CmdLineOptionMap options, ContainerProperties containerProperties) {
+    protected static void checkUlimit(CmdLineOptionMap options, ContainerPropertiesModel containerProperties) {
         final ulimits = new ArrayList<Ulimit>()
         findOptionWithMultipleValues(options, 'ulimit').each { value ->
             final tokens = value.tokenize('=')
             final limits = tokens[1].tokenize(':')
             if ( limits.size() > 1 )
-                ulimits << new Ulimit().withName(tokens[0])
-                        .withSoftLimit(limits[0] as Integer).withHardLimit(limits[1] as Integer)
+                ulimits << Ulimit.builder().name(tokens[0]).softLimit(limits[0] as Integer).hardLimit(limits[1] as Integer).build()
             else
-                ulimits << new Ulimit().withName(tokens[0]).withSoftLimit(limits[0] as Integer)
+                ulimits << Ulimit.builder().name(tokens[0]).softLimit(limits[0] as Integer).build()
         }
         if ( ulimits.size() )
-            containerProperties.setUlimits(ulimits)
+            containerProperties.ulimits(ulimits)
     }
 
     protected static LinuxParameters checkLinuxParameters(CmdLineOptionMap options) {
-        final params = new LinuxParameters()
+        final params = LinuxParameters.builder()
         boolean atLeastOneSet = false
 
         // shared Memory Size
         def value = findOptionWithSingleValue(options, 'shm-size')
         if ( value ) {
             final sharedMemorySize = MemoryUnit.of(value)
-            params.setSharedMemorySize(sharedMemorySize.mega as Integer)
+            params.sharedMemorySize(sharedMemorySize.mega as Integer)
             atLeastOneSet = true
         }
 
@@ -117,39 +116,40 @@ class AwsContainerOptionsMapper {
         findOptionWithMultipleValues(options, 'tmpfs').each { ovalue ->
             def matcher = ovalue =~ /^(?<path>.*):(?<options>.*?),size=(?<sizeMiB>.*)$/
             if (matcher.matches()) {
-                tmpfs << new Tmpfs().withContainerPath(matcher.group('path'))
-                        .withSize(matcher.group('sizeMiB') as Integer)
-                        .withMountOptions(matcher.group('options').tokenize(','))
+                tmpfs << Tmpfs.builder().containerPath(matcher.group('path'))
+                        .size(matcher.group('sizeMiB') as Integer)
+                        .mountOptions(matcher.group('options').tokenize(','))
+                        .build()
             } else {
                 throw new IllegalArgumentException("Found a malformed value '${ovalue}' for --tmpfs option")
             }
         }
         if ( tmpfs ) {
-            params.setTmpfs(tmpfs)
+            params.tmpfs(tmpfs)
             atLeastOneSet = true
         }
 
         // swap limit equal to memory plus swap
         value = findOptionWithSingleValue(options, 'memory-swap')
         if ( value ) {
-            params.setMaxSwap(value as Integer)
+            params.maxSwap(value as Integer)
             atLeastOneSet = true
         }
 
         // run an init inside the container
         if ( findOptionWithBooleanValue(options, 'init') ) {
-            params.setInitProcessEnabled(true)
+            params.initProcessEnabled(true)
             atLeastOneSet = true
         }
 
         // tune container memory swappiness
         value = findOptionWithSingleValue(options, 'memory-swappiness')
         if ( value ) {
-            params.setSwappiness(value as Integer)
+            params.swappiness(value as Integer)
             atLeastOneSet = true
         }
 
-        return atLeastOneSet ? params : null
+        return atLeastOneSet ? params.build() : null
     }
 
     /**

@@ -848,7 +848,7 @@ process hello {
   errorStrategy 'retry'
   maxSubmitAwait '10 mins'
   maxRetries 3
-  queue "${task.submitAttempt==1 : 'spot-compute' : 'on-demand-compute'}"
+  queue "${task.submitAttempt==1 ? 'spot-compute' : 'on-demand-compute'}"
 
   script:
   """
@@ -1422,34 +1422,6 @@ Resource limits are a useful way to specify environment-specific limits alongsid
 
 (process-scratch)=
 
-### secret
-
-The `secret` directive allows a process to access secrets.
-
-Secrets can be added to a process as follows:
-
-```nextflow
-process hello_secret {
-    secret 'MY_ACCESS_KEY'
-    secret 'MY_SECRET_KEY'
-
-    script:
-    """
-    your_command --access \$MY_ACCESS_KEY --secret \$MY_SECRET_KEY
-    """
-}
-```
-
-See {ref}`secrets-page` for more information. 
-
-:::{warning}
-Secrets are made available as environment variables in the process command context. To prevent evaluation in the Nextflow script context, escape variable names with a backslash (e.g., `\$MY_ACCESS_KEY`) as shown in the above example.
-:::
-
-:::{note}
-This feature is only available for local or grid executors (e.g., Slurm or Grid Engine). The AWS Batch executor allows the use of secrets when deploying pipelines via Seqera Platform.
-:::
-
 ### scratch
 
 The `scratch` directive allows you to execute the process in a temporary folder that is local to the execution node.
@@ -1494,6 +1466,36 @@ The following values are supported:
 
 `'ram-disk'`
 : Create a scratch directory in the RAM disk `/dev/shm/`.
+
+(process-secret)=
+
+### secret
+
+The `secret` directive allows a process to access secrets.
+
+Secrets can be added to a process as follows:
+
+```nextflow
+process hello_secret {
+    secret 'MY_ACCESS_KEY'
+    secret 'MY_SECRET_KEY'
+
+    script:
+    """
+    your_command --access \$MY_ACCESS_KEY --secret \$MY_SECRET_KEY
+    """
+}
+```
+
+See {ref}`secrets-page` for more information. 
+
+:::{warning}
+Secrets are made available as environment variables in the process script. To prevent evaluation in the Nextflow script context, escape variable names with a backslash (e.g., `\$MY_ACCESS_KEY`) as shown above.
+:::
+
+:::{note}
+Secrets can only be used with the local or grid executors (e.g., Slurm or Grid Engine). Secrets can be used with the AWS Batch executor when launched from Seqera Platform.
+:::
 
 (process-directive-shell)=
 
