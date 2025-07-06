@@ -314,11 +314,11 @@ abstract class RepositoryProvider {
     }
 
     protected void checkMaxLength(HttpResponse<byte[]> response) {
-        final max = SysEnv.get("NXF_GIT_RESPONSE_MAX_LENGTH")
-        if( !max )
+        final max = SysEnv.getLong("NXF_GIT_RESPONSE_MAX_LENGTH", 0)
+        if( max<=0 )
             return
-        final length = response.headers().firstValueAsLong('Content-Length')
-        if( !length )
+        final length = response.headers().firstValueAsLong('Content-Length').orElse(0)
+        if( length<=0 )
             return
         if( length>max )
             throw new HttpResponseLengthExceedException("HTTP response '${response.uri()}' is too big - response length: ${length}; max allowed length: ${max}")
