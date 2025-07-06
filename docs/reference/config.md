@@ -656,6 +656,11 @@ The following settings are available:
 `docker.registry`
 : The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
 
+`docker.registryOverride`
+: :::{versionadded} 25.06.0-edge
+  :::
+: When `true`, forces the override of the registry name in fully qualified container image names with the registry specified by `docker.registry` (default: `false`). This setting allows you to redirect container image pulls from their original registry to a different registry, such as a private mirror or proxy.
+
 `docker.remove`
 : Clean-up the container after the execution (default: `true`). See the [Docker documentation](https://docs.docker.com/engine/reference/run/#clean-up---rm) for details.
 
