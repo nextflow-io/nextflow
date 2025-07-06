@@ -32,9 +32,9 @@ import java.util.List;
 import java.util.Map;
 import javax.annotation.Nullable;
 
-import com.amazonaws.services.s3.model.S3ObjectId;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.amazonaws.services.s3.model.Tag;
+import nextflow.cloud.aws.nio.util.S3ObjectId;
+import software.amazon.awssdk.services.s3.model.S3Object;
+import software.amazon.awssdk.services.s3.model.Tag;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -64,7 +64,7 @@ public class S3Path implements Path, TagAwareFile {
 	 */
 	private S3FileSystem fileSystem;
 
-	private S3ObjectSummary objectSummary;
+	private S3Object object;
 
 	private Map<String,String> tags;
 
@@ -512,23 +512,23 @@ public class S3Path implements Path, TagAwareFile {
 	}
 
 	/**
-	 * This method returns the cached {@link S3ObjectSummary} instance if this path has been created
+	 * This method returns the cached {@link S3Object} instance if this path has been created
 	 * while iterating a directory structures by the {@link S3Iterator}.
 	 * <br>
 	 * After calling this method the cached object is reset, so any following method invocation will return {@code null}.
 	 * This is necessary to discard the object meta-data and force to reload file attributes when required.
 	 *
-	 * @return The cached {@link S3ObjectSummary} for this path if any.
+	 * @return The cached {@link S3Object} for this path if any.
 	 */
-	public S3ObjectSummary fetchObjectSummary() {
-		S3ObjectSummary result = objectSummary;
-		objectSummary = null;
+	public S3Object fetchObject() {
+		S3Object result = object;
+		object = null;
 		return result;
 	}
 
 	// note: package scope to limit the access to this setter
-	void setObjectSummary(S3ObjectSummary objectSummary) {
-		this.objectSummary = objectSummary;
+	void setObjectSummary(S3Object objectSummary) {
+		this.object = objectSummary;
 	}
 
 	@Override
@@ -553,7 +553,7 @@ public class S3Path implements Path, TagAwareFile {
 		// create a list of Tag out of the Map
 		List<Tag> result = new ArrayList<>();
 		for( Map.Entry<String,String> entry : tags.entrySet()) {
-			result.add( new Tag(entry.getKey(), entry.getValue()) );
+			result.add( Tag.builder().key(entry.getKey()).value(entry.getValue()).build() );
 		}
 		return result;
 	}

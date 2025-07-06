@@ -50,7 +50,8 @@ rediraffe_redirects = {
     'mail.md': 'notifications.md',
     'operator.md': 'reference/operator.md',
     'dsl1.md': 'migrations/dsl1.md',
-    'updating-syntax.md': 'strict-syntax.md'
+    'updating-syntax.md': 'strict-syntax.md',
+    'updating-spot-retries.md': 'guides/updating-spot-retries.md'
 }
 
 # Add any paths that contain templates here, relative to this directory.
