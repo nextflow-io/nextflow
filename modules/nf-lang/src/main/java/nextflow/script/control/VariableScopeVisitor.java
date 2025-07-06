@@ -107,14 +107,14 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
     }
 
     private void declareInclude(IncludeNode node) {
-        for( var module : node.modules ) {
-            if( module.getTarget() == null )
+        for( var entry : node.entries ) {
+            if( entry.getTarget() == null )
                 continue;
-            var name = module.getNameOrAlias();
+            var name = entry.getNameOrAlias();
             var otherInclude = vsc.getInclude(name);
             if( otherInclude != null )
                 vsc.addError("`" + name + "` is already included", node, "First included here", otherInclude);
-            vsc.include(name, module.getTarget());
+            vsc.include(name, entry.getTarget());
         }
     }
 
@@ -443,7 +443,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         var variable = vsc.findVariableDeclaration(ve.getName(), ve);
         if( variable != null ) {
             if( isDslVariable(variable) )
-                vsc.addError("Built-in variable cannot be re-assigned", ve);
+                vsc.addError("Built-in constant or namespace cannot be re-assigned", ve);
             ve.setAccessedVariable(variable);
             return false;
         }
@@ -492,7 +492,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
                 vsc.addWarning("Params should be declared at the top-level (i.e. outside the workflow)", target.getName(), target);
             // TODO: re-enable after workflow.onComplete bug is fixed
             // else
-            //     vsc.addError("Built-in variable cannot be mutated", target);
+            //     vsc.addError("Built-in constant or namespace cannot be mutated", target);
         }
         else if( variable != null ) {
             checkExternalWriteInAsyncClosure(target, variable);
@@ -529,11 +529,18 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             declareAssignedVariable(target);
             return;
         }
+        if( node.getObjectExpression() instanceof VariableExpression ve )
+            checkClassNamespaces(ve);
         checkMethodCall(node);
         var ioc = inOperatorCall;
         inOperatorCall = isOperatorCall(node);
         super.visitMethodCallExpression(node);
         inOperatorCall = ioc;
+    }
+
+    private void checkClassNamespaces(VariableExpression node) {
+        if( "Channel".equals(node.getName()) )
+            vsc.addWarning("The use of `Channel` to access channel factories is deprecated -- use `channel` instead", "CHannel", node);
     }
 
     private static boolean isOperatorCall(MethodCallExpression node) {
@@ -645,6 +652,9 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             else if( "params".equals(name) ) {
                 vsc.addParanoidWarning("The use of `params` outside the entry workflow will not be supported in a future version", node);
             }
+            else if( isStdinStdout(name) ) {
+                // stdin, stdout can be declared without parentheses
+            }
             else {
                 variable = new DynamicVariable(name, false);
             }
@@ -653,6 +663,17 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             checkGlobalVariableInProcess(variable, node);
             node.setAccessedVariable(variable);
         }
+    }
+
+    private boolean isStdinStdout(String name) {
+        var classScope = currentScope().getClassScope();
+        if( classScope != null ) {
+            if( "stdin".equals(name) && classScope.getTypeClass() == ProcessDsl.InputDsl.class )
+                return true;
+            if( "stdout".equals(name) && classScope.getTypeClass() == ProcessDsl.OutputDsl.class )
+                return true;
+        }
+        return false;
     }
 
     private static final List<String> WARN_GLOBALS = List.of(

@@ -39,6 +39,7 @@ import com.google.common.util.concurrent.UncheckedExecutionException
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import dev.failsafe.Failsafe
+import dev.failsafe.FailsafeException
 import dev.failsafe.RetryPolicy
 import dev.failsafe.event.EventListener
 import dev.failsafe.event.ExecutionAttemptedEvent
@@ -230,7 +231,8 @@ class WaveClient {
                 dryRun: ContainerInspectMode.dryRun(),
                 mirror: config.mirrorMode(),
                 scanMode: config.scanMode(),
-                scanLevels: config.scanAllowedLevels()
+                scanLevels: config.scanAllowedLevels(),
+                buildCompression: config.buildCompression()
         )
     }
 
@@ -257,7 +259,8 @@ class WaveClient {
                 dryRun: ContainerInspectMode.dryRun(),
                 mirror: config.mirrorMode(),
                 scanMode: config.scanMode(),
-                scanLevels: config.scanAllowedLevels()
+                scanLevels: config.scanAllowedLevels(),
+                buildCompression: config.buildCompression()
         )
         return sendRequest(request)
     }
@@ -315,7 +318,7 @@ class WaveClient {
                     return sendRequest0(request, attempt+1)
                 }
                 else
-                    throw new UnauthorizedException("Unauthorized [401] - Verify you have provided a valid access token")
+                    throw new UnauthorizedException("Unauthorized [401] - Verify you have provided a valid Seqera Platform access token")
             }
             else
                 throw new BadResponseException("Wave invalid response: POST ${uri} [${resp.statusCode()}] ${resp.body()}")
@@ -843,6 +846,11 @@ class WaveClient {
     static private final List<Integer> SERVER_ERRORS = [429,500,502,503,504]
 
     protected HttpResponse<String> httpSend(HttpRequest req)  {
-        return safeApply(() -> httpClient.send(req, HttpResponse.BodyHandlers.ofString()))
+        try {
+            return safeApply(() -> httpClient.send(req, HttpResponse.BodyHandlers.ofString()))
+        }
+        catch (FailsafeException e) {
+            throw e.cause
+        }
     }
 }

@@ -13,29 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.script.types;
+package nextflow.script.namespaces;
 
-import nextflow.script.dsl.Constant;
+import groovy.lang.Closure;
 import nextflow.script.dsl.Description;
+import nextflow.script.dsl.Namespace;
 
-public interface NextflowMetadata {
+public interface LogNamespace extends Namespace {
 
-    @Constant("build")
     @Description("""
-        Nextflow runtime build number.
+        Log an error message to the console.
     """)
-    int getBuild();
+    void error(String message);
 
-    @Constant("timestamp")
     @Description("""
-        Nextflow runtime compile timestamp.
+        Log an info message to the console.
     """)
-    String getTimestamp();
+    void info(String message);
 
-    @Constant("version")
     @Description("""
-        Nextflow runtime version number.
+        Log a warning message to the console.
     """)
-    VersionNumber getVersion();
+    void warn(String message);
 
 }

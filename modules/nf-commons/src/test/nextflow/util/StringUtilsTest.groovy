@@ -83,6 +83,7 @@ class StringUtilsTest extends Specification {
 
         where:
         SECRET                                  | EXPECTED
+        null                                    | null
         [foo:'Hello']                           | [foo:'Hello']
         [foo: [bar: 'World']]                   | [foo: [bar: 'World']]
         [foo: [password:'hola', token:'hi']]    | [foo: [password:'****', token:'****']]

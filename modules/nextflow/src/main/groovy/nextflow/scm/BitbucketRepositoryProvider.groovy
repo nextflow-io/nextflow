@@ -39,23 +39,37 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
         this.config = config ?: new ProviderConfig('bitbucket')
     }
 
-    /** {@inheritDoc} */
+    @Override
+    protected String[] getAuth() {
+        return config.token
+            ? new String[] { "Authorization", "Bearer ${config.token}" }
+            : super.getAuth()
+    }
+
+    @Override
+    boolean hasCredentials() {
+        return config.token
+            ? true
+            : super.hasCredentials()
+    }
+
+   /** {@inheritDoc} */
     @Override
     String getName() { "BitBucket" }
 
     @Override
     String getEndpointUrl() {
-        "${config.endpoint}/api/2.0/repositories/${project}"
+        "${config.endpoint}/2.0/repositories/${project}"
     }
 
     @Override
     String getContentUrl( String path ) {
         final ref = revision ? getRefForRevision(revision) : getMainBranch()
-        return "${config.endpoint}/api/2.0/repositories/$project/src/$ref/$path"
+        return "${config.endpoint}/2.0/repositories/$project/src/$ref/$path"
     }
 
     private String getMainBranchUrl() {
-        "${config.endpoint}/api/2.0/repositories/$project"
+        "${config.endpoint}/2.0/repositories/$project"
     }
 
     String getMainBranch() {
@@ -87,7 +101,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     }
 
     private String getRefForRevision0(String revision, String type){
-        final resp = invokeAndParseResponse("${config.endpoint}/api/2.0/repositories/$project/refs/$type/$revision")
+        final resp = invokeAndParseResponse("${config.endpoint}/2.0/repositories/$project/refs/$type/$revision")
         return resp?.target?.hash
     }
 
@@ -117,7 +131,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     @Override
     List<TagInfo> getTags() {
         final result = new ArrayList<TagInfo>()
-        final url = "$config.endpoint/api/2.0/repositories/$project/refs/tags"
+        final url = "$config.endpoint/2.0/repositories/$project/refs/tags"
         final mapper = { Map entry -> result.add( new TagInfo(entry.name, entry.target?.hash) ) }
         invokeAndResponseWithPaging(url, mapper)
         return result
@@ -131,7 +145,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     @Override
     List<BranchInfo> getBranches() {
         final result = new ArrayList<BranchInfo>()
-        final url = "$config.endpoint/api/2.0/repositories/$project/refs/branches"
+        final url = "$config.endpoint/2.0/repositories/$project/refs/branches"
         final mapper = { Map entry -> result.add( new BranchInfo(entry.name, entry.target?.hash) ) }
         invokeAndResponseWithPaging(url, mapper)
         return result
@@ -159,8 +173,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
 
     @Override
     byte[] readBytes(String path) {
-
-        def url = getContentUrl(path)
-        invoke(url)?.getBytes()
+        final url = getContentUrl(path)
+        return invokeBytes(url)
     }
 }
