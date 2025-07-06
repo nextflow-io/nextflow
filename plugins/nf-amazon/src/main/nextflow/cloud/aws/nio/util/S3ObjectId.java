@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2020-2025, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,19 +17,33 @@
 
 package nextflow.cloud.aws.nio.util;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-
 /**
- * https://stackoverflow.com/a/31809148/395921
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * Class to mimic Old V1 S3ObjectId
  */
-public class CopyOutputStream extends ByteArrayOutputStream {
+public class S3ObjectId {
+    private final String bucket;
+    private final String key;
+    private final String versionId;
 
-    //Creates InputStream without actually copying the buffer and using up mem for that.
-    public InputStream toInputStream(){
-        return new ByteArrayInputStream(buf, 0, count);
+    public S3ObjectId(String bucket, String key, String versionId) {
+        this.bucket = bucket;
+        this.key = key;
+        this.versionId = versionId;
+    }
+
+    public S3ObjectId(String bucket, String key) {
+        this(bucket, key, null);
+    }
+
+    public String bucket() {
+        return bucket;
+    }
+
+    public String key() {
+        return key;
+    }
+
+    public String versionId() {
+        return versionId;
     }
 }
