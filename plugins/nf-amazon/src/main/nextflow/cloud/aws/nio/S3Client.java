@@ -101,7 +101,7 @@ public class S3Client {
 			List<Bucket> buckets = client.listBuckets(ListBucketsRequest.builder().maxBuckets(1).build()).buckets();
 			if (buckets == null || buckets.isEmpty())
 				return null;
-			return getBucketAcl(buckets.getFirst().name()).owner().id();
+			return getBucketAcl(buckets.get(0).name()).owner().id();
 		}catch (Throwable e){
 			log.debug("Exception fetching caller account", e);
 			return null;
