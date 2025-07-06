@@ -181,12 +181,9 @@ class CondaCacheTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
-
     }
 
-
     def 'should create a conda environment' () {
-
         given:
         def ENV = 'bwa=1.1.1'
         def PREFIX = Files.createTempDirectory('foo')
@@ -208,11 +205,9 @@ class CondaCacheTest extends Specification {
         0 * cache.makeAbsolute(_)
         1 * cache.runCommand( "conda create --yes --quiet --prefix $PREFIX $ENV" ) >> null
         result == PREFIX
-
     }
 
     def 'should create a conda environment - using mamba' () {
-
         given:
         def ENV = 'bwa=1.1.1'
         def PREFIX = Files.createTempDirectory('foo')
@@ -234,11 +229,9 @@ class CondaCacheTest extends Specification {
         0 * cache.makeAbsolute(_)
         1 * cache.runCommand("mamba create --yes --quiet --prefix $PREFIX $ENV") >> null
         result == PREFIX
-
     }
 
     def 'should create a conda environment - using micromamba' () {
-
         given:
         def ENV = 'bwa=1.1.1'
         def PREFIX = Files.createTempDirectory('foo')
@@ -260,11 +253,9 @@ class CondaCacheTest extends Specification {
         0 * cache.makeAbsolute(_)
         1 * cache.runCommand("micromamba create --yes --quiet --prefix $PREFIX $ENV") >> null
         result == PREFIX
-
     }
 
     def 'should create a conda environment using mamba and remote lock file' () {
-
         given:
         def ENV = 'http://foo.com/some/file-lock.yml'
         def PREFIX = Files.createTempDirectory('foo')
@@ -284,12 +275,11 @@ class CondaCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand("mamba env create --prefix $PREFIX --file $ENV") >> null
+        1 * cache.runCommand("mamba env create --yes --prefix $PREFIX --file $ENV") >> null
         result == PREFIX
-
     }
-    def 'should create a conda environment using micromamba and remote lock file' () {
 
+    def 'should create a conda environment using micromamba and remote lock file' () {
         given:
         def ENV = 'http://foo.com/some/file-lock.yml'
         def PREFIX = Files.createTempDirectory('foo')
@@ -311,7 +301,6 @@ class CondaCacheTest extends Specification {
         0 * cache.makeAbsolute(_)
         1 * cache.runCommand("micromamba env create --yes --prefix $PREFIX --file $ENV") >> null
         result == PREFIX
-
     }
 
     def 'should create conda env with options' () {

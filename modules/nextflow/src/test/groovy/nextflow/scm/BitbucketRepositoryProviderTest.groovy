@@ -39,7 +39,6 @@ class BitbucketRepositoryProviderTest extends Specification {
         url ==~ /https:\/\/\w+@bitbucket.org\/pditommaso\/tutorial.git/
     }
 
-
     def testGetHomePage() {
         expect:
         new BitbucketRepositoryProvider('pditommaso/tutorial').getRepositoryUrl() == "https://bitbucket.org/pditommaso/tutorial"
@@ -57,6 +56,21 @@ class BitbucketRepositoryProviderTest extends Specification {
 
         then:
         result.trim() == "println 'Hello from Bitbucket'"
+    }
+
+    @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )
+    def 'should read binary data'() {
+        given:
+        def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')
+        def config = new ProviderConfig('bitbucket').setAuth(token)
+        def DATA = this.class.getResourceAsStream('/test-sandbucket.jpg').bytes
+
+        when:
+        def repo = new BitbucketRepositoryProvider('pditommaso/tutorial', config)
+        def result = repo.readBytes('sandbucket.jpg')
+
+        then:
+        result == DATA
     }
 
     @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )

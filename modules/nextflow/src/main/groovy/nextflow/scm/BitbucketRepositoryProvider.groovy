@@ -173,7 +173,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
 
     @Override
     byte[] readBytes(String path) {
-        def url = getContentUrl(path)
-        invoke(url)?.getBytes()
+        final url = getContentUrl(path)
+        return invokeBytes(url)
     }
 }
