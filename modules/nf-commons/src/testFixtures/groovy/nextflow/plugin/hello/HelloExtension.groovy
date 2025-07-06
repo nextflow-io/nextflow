@@ -27,11 +27,10 @@ import nextflow.Global
 import nextflow.NF
 import nextflow.Session
 import nextflow.extension.CH
-import nextflow.extension.DataflowHelper
+import nextflow.extension.SubscribeOp
 import nextflow.plugin.extension.Function
 import nextflow.plugin.extension.Operator
 import nextflow.plugin.extension.PluginExtensionPoint
-
 /**
  * @author : jorge <jorge.aguilera@seqera.io>
  *
@@ -106,7 +105,10 @@ class HelloExtension extends PluginExtensionPoint {
         final done = {
             target.bind(Channel.STOP)
         }
-        DataflowHelper.subscribeImpl(source, [onNext: next, onComplete: done])
+        new SubscribeOp()
+            .withInput(source)
+            .withEvents([onNext: next, onComplete: done])
+            .apply()
         return target
     }
 
