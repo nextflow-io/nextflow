@@ -56,8 +56,7 @@ channel.from( [1, 2], [5,6], [7,9] )
 
 ## fromLineage
 
-<AddedInVersion version="25.04.0">
-</AddedInVersion>
+<AddedInVersion version="25.04.0" />
 
 :::warning *Experimental: may change in a future release.*
 :::
@@ -88,8 +87,7 @@ LID of the workflow run that produced the desired files.
 
 ## fromList
 
-<AddedInVersion version="19.10.0">
-</AddedInVersion>
+<AddedInVersion version="19.10.0" />
 
 The `channel.fromList` method allows you to create a channel emitting the values provided as a list of elements, for example:
 
@@ -282,8 +280,7 @@ Type of paths returned, either `file`, `dir` or `any` (default: `file`)
 
 ## fromSRA
 
-<AddedInVersion version="19.04.0">
-</AddedInVersion>
+<AddedInVersion version="19.04.0" />
 
 The `channel.fromSRA` method queries the [NCBI SRA](https://www.ncbi.nlm.nih.gov/sra) database and returns a channel emitting the FASTQ files matching the specified criteria i.e project or accession number(s). For example:
 
@@ -397,8 +394,7 @@ ch.view()
 
 ## of
 
-<AddedInVersion version="19.10.0">
-</AddedInVersion>
+<AddedInVersion version="19.10.0" />
 
 The `channel.of` method allows you to create a channel that emits the arguments provided to it, for example:
 
@@ -442,8 +438,7 @@ See also: [channel.fromList](#fromlist) factory method.
 
 ## topic
 
-<AddedInVersion version="23.11.0-edge">
-</AddedInVersion>
+<AddedInVersion version="23.11.0-edge" />
 
 :::note
 In versions of Nextflow prior to 25.04, this feature requires the `nextflow.preview.topic` feature flag to be enabled.
@@ -543,9 +538,9 @@ The `channel.watchPath` factory only works with local and shared filesystems. It
 
 See also: [channel.fromPath](#frompath) factory method.
 
-[cli-lineage]: /nextflow_docs/nextflow_repo/docs/reference/cli#lineage
+[cli-lineage]: /nextflow_docs/nextflow_repo/docs/reference/cli.mdx#lineage
 [glob]: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
-[operator-ifempty]: /nextflow_docs/nextflow_repo/docs/reference/operator#ifempty
-[process-additional-options]: /nextflow_docs/nextflow_repo/docs/reference/process#options
-[operator-take]: /nextflow_docs/nextflow_repo/docs/reference/operator#take
-[operator-until]: /nextflow_docs/nextflow_repo/docs/reference/operator#until
+[operator-ifempty]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#ifempty
+[process-additional-options]: /nextflow_docs/nextflow_repo/docs/reference/process.mdx#options
+[operator-take]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#take
+[operator-until]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#until

@@ -36,8 +36,7 @@ The task name.
 
 ##### `task.previousException`
 
-<AddedInVersion version="24.10.0">
-</AddedInVersion>
+<AddedInVersion version="24.10.0" />
 
 The exception reported by the previous task attempt.
 
@@ -45,8 +44,7 @@ Since the exception is available after a failed task attempt, it can only be acc
 
 ##### `task.previousTrace`
 
-<AddedInVersion version="24.10.0">
-</AddedInVersion>
+<AddedInVersion version="24.10.0" />
 
 The trace record associated with the previous task attempt.
 
@@ -92,8 +90,7 @@ Available options:
 
 ##### `arity`
 
-<AddedInVersion version="23.09.0-edge">
-</AddedInVersion>
+<AddedInVersion version="23.09.0-edge" />
 
 Specify the number of expected files. Can be a number, e.g. `'1'`, or a range, e.g. `'1..*'`. If a task receives an invalid number of files for this `path` input, it will fail.
 
@@ -143,8 +140,7 @@ Available options:
 
 ##### `arity`
 
-<AddedInVersion version="23.09.0-edge">
-</AddedInVersion>
+<AddedInVersion version="23.09.0-edge" />
 
 Specify the number of expected files. Can be a number or a range. If a task produces an invalid number of files for this `path` output, it will fail.
 
@@ -192,8 +188,7 @@ Declare a `stdout` output. It receives the standard output of the task script.
 
 ##### `eval( command )`
 
-<AddedInVersion version="24.02.0-edge">
-</AddedInVersion>
+<AddedInVersion version="24.02.0-edge" />
 
 Declare an `eval` output. It receives the standard output of the given command, which is executed in the task environment after the task script.
 
@@ -217,21 +212,17 @@ When `true`, the task will not fail if the specified output is missing (default:
 
 ##### `topic: <name>`
 
-<AddedInVersion version="23.11.0-edge">
-</AddedInVersion>
+<AddedInVersion version="23.11.0-edge" />
 
 *Experimental: may change in a future release.*
 
 Defines the [channel topic][channel-topic>] to which the output will be sent.
 
-(process-reference-directives)=
-
 ## Directives
 
 ### accelerator
 
-<AddedInVersion version="19.09.0-edge">
-</AddedInVersion>
+<AddedInVersion version="19.09.0-edge" />
 
 The `accelerator` directive allows you to request hardware accelerators (e.g. GPUs) for the task execution. For example:
 
@@ -306,8 +297,7 @@ Examples of values for the architecture `target` option are `cascadelake`, `icel
 
 ### array
 
-<AddedInVersion version="24.04.0">
-</AddedInVersion>
+<AddedInVersion version="24.04.0" />
 
 :::warning *Experimental: may change in a future release.*
 :::
@@ -745,8 +735,7 @@ process.ext.args = '--alpha --beta'
 
 ### fair
 
-<AddedInVersion version="22.12.0-edge">
-</AddedInVersion>
+<AddedInVersion version="22.12.0-edge" />
 
 The `fair` directive, when enabled, guarantees that process outputs will be emitted in the order in which they were received. For example:
 
@@ -807,8 +796,7 @@ See also: [resourceLabels](#resourcelabels)
 
 ### machineType
 
-<AddedInVersion version="19.07.0">
-</AddedInVersion>
+<AddedInVersion version="19.07.0" />
 
 The `machineType` can be used to specify a predefined Google Compute Platform [machine type](https://cloud.google.com/compute/docs/machine-types) when running using the [Google Batch][google-batch-executor], or when using the autopools feature of the [Azure Batch executor][azurebatch-executor].
 
@@ -1037,8 +1025,7 @@ The following options are available:
 
 ##### `affinity: <config>`
 
-<AddedInVersion version="22.01.0-edge">
-</AddedInVersion>
+<AddedInVersion version="22.01.0-edge" />
 
 Specifies the pod [affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) with the given configuration.
 
@@ -1050,8 +1037,7 @@ Defines a pod [annotation](https://kubernetes.io/docs/concepts/overview/working-
 
 #####  `automountServiceAccountToken: true | false`
 
-<AddedInVersion version="22.01.0-edge">
-</AddedInVersion>
+<AddedInVersion version="22.01.0-edge" />
 
 Specifies whether to [automount service account token](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#opt-out-of-api-credential-automounting) into the pod (default: `true`).
 
@@ -1063,8 +1049,7 @@ Mounts a [ConfigMap](https://kubernetes.io/docs/tasks/configure-pod-container/co
 
 ##### `csi: '<config>', mountPath: '</absolute/path>'`
 
-<AddedInVersion version="22.11.0-edge">
-</AddedInVersion>
+<AddedInVersion version="22.11.0-edge" />
 
 *Can be specified multiple times*
 
@@ -1072,8 +1057,7 @@ Mounts a [CSI ephemeral volume](https://kubernetes.io/docs/concepts/storage/ephe
 
 ##### `emptyDir: <config>, mountPath: '</absolute/path>'`
 
-<AddedInVersion version="22.11.0-edge">
-</AddedInVersion>
+<AddedInVersion version="22.11.0-edge" />
 
 *Can be specified multiple times*
 
@@ -1087,8 +1071,7 @@ Defines an environment variable whose value is defined by the given [ConfigMap](
 
 ##### `env: '<name>', fieldPath: '<fieldPath>'`
 
-<AddedInVersion version="21.09.1-edge">
-</AddedInVersion>
+<AddedInVersion version="21.09.1-edge" />
 
 *Can be specified multiple times*
 
@@ -1124,8 +1107,7 @@ Defines an environment variable with the given name and value.
 
 ##### `hostPath: '/host/absolute/path', mountPath: '</pod/absolute/path>'`
 
-<AddedInVersion version="23.10.0">
-</AddedInVersion>
+<AddedInVersion version="23.10.0" />
 
 *Can be specified multiple times*
 
@@ -1161,15 +1143,13 @@ pod = [nodeSelector: 'disktype=ssd,cpu=intel']
 
 ##### `priorityClassName: '<name>'`
 
-<AddedInVersion version="22.01.0-edge">
-</AddedInVersion>
+<AddedInVersion version="22.01.0-edge" />
 
 Specifies the [priority class name](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) for pods.
 
 ##### `privileged: true | false`
 
-<AddedInVersion version="22.05.0-edge">
-</AddedInVersion>
+<AddedInVersion version="22.05.0-edge" />
 
 Specifies whether the pod should run as a *privileged* container (default: `false`).
 
@@ -1193,8 +1173,7 @@ Specifies the pod [security context](https://kubernetes.io/docs/tasks/configure-
 
 ##### `toleration: <config>`
 
-<AddedInVersion version="22.04.0">
-</AddedInVersion>
+<AddedInVersion version="22.04.0" />
 
 *Can be specified multiple times*
 
@@ -1224,8 +1203,7 @@ tolerations:
 
 ##### `ttlSecondsAfterFinished`
 
-<AddedInVersion version="24.02.0-edge">
-</AddedInVersion>
+<AddedInVersion version="24.02.0-edge" />
 
 Specifies the [TTL mechanism](https://kubernetes.io/docs/concepts/workloads/controllers/job/#ttl-mechanism-for-finished-jobs) for finished jobs in seconds. Applies to both successful and failed jobs.
 
@@ -1291,8 +1269,7 @@ Available options:
 
 ##### `contentType`
 
-<AddedInVersion version="22.10.0">
-</AddedInVersion>
+<AddedInVersion version="22.10.0" />
 
 *Experimental: currently only supported for S3.*
 
@@ -1339,8 +1316,7 @@ A closure which, given the name of the file being published, returns the actual 
 
 ##### `storageClass`
 
-<AddedInVersion version="22.12.0-edge">
-</AddedInVersion>
+<AddedInVersion version="22.12.0-edge" />
 
 *Experimental: currently only supported for S3.*
 
@@ -1348,8 +1324,7 @@ Allow specifying the storage class to be used for the published file.
 
 ##### `tags`
 
-<AddedInVersion version="21.12.0-edge">
-</AddedInVersion>
+<AddedInVersion version="21.12.0-edge" />
 
 *Experimental: currently only supported for S3.*
 
@@ -1387,8 +1362,7 @@ This directive is only used by certain executors. Refer to the [Executors][execu
 
 ### resourceLabels
 
-<AddedInVersion version="22.09.1-edge">
-</AddedInVersion>
+<AddedInVersion version="22.09.1-edge" />
 
 The `resourceLabels` directive allows you to specify custom name-value pairs that Nextflow applies to the computing resource used to carry out the process execution. Resource labels can be specified using the syntax shown below:
 
@@ -1422,8 +1396,7 @@ See also: [label](#label)
 
 ### resourcelimits
 
-<AddedInVersion version="24.04.0">
-</AddedInVersion>
+<AddedInVersion version="24.04.0" />
 
 The `resourceLimits` directive allows you to specify environment-specific limits for task resource requests. Resource limits can be specified in a process:
 
@@ -1605,8 +1578,7 @@ Output files are copied from the scratch directory to the work directory.
 
 ##### `'fcp'`
 
-<AddedInVersion version="23.02.0-edge">
-</AddedInVersion>
+<AddedInVersion version="23.02.0-edge" />
 
 Output files are copied from the scratch directory to the work directory by using the [fcp](https://github.com/Svetlitski/fcp) utility (note: it must be available in your cluster computing nodes).
 
@@ -1616,8 +1588,7 @@ Output files are moved from the scratch directory to the work directory.
 
 ##### `'rclone'`
 
-<AddedInVersion version="23.01.0-edge">
-</AddedInVersion>
+<AddedInVersion version="23.01.0-edge" />
 
 Output files are copied from the scratch directory to the work directory by using the [rclone](https://rclone.org) utility (note: it must be available in your cluster computing nodes).
 
@@ -1731,30 +1702,30 @@ This directive is only used by certain executors. Refer to the [Executors][execu
 
 See also: [cpus](#cpus), [memory](#memory), [queue](#queue) and [dynamic task resources][dynamic-task-resources].
 
-[awsbatch-executor]: /nextflow_docs/nextflow_repo/docs/executor#aws-batch
-[azurebatch-executor]: /nextflow_docs/nextflow_repo/docs/executor#azure-batch
-[cache-resume-page]: /nextflow_docs/nextflow_repo/docs/cache-and-resume
-[channel-topic]: /nextflow_docs/nextflow_repo/docs/reference/channel#topic
-[config-process-selectors]: /nextflow_docs/nextflow_repo/docs/config#process-selectors
-[conda-page]: /nextflow_docs/nextflow_repo/docs/conda
-[dynamic-directives]: /nextflow_docs/nextflow_repo/docs/process#dynamic-directives
-[dynamic-task-resources]: /nextflow_docs/nextflow_repo/docs/process#dynamic-task-resources
-[executor-page]: /nextflow_docs/nextflow_repo/docs/executor
-[google-batch-executor]: /nextflow_docs/nextflow_repo/docs/executor#google-cloud-batch
-[k8s-executor]: /nextflow_docs/nextflow_repo/docs/executor#kubernetes
-[lsf-executor]: /nextflow_docs/nextflow_repo/docs/executor#lsf
-[pbs-executor]: /nextflow_docs/nextflow_repo/docs/executor#pbs-torque
-[pbspro-executor]: /nextflow_docs/nextflow_repo/docs/executor#pbs-pro
-[process-page]: /nextflow_docs/nextflow_repo/docs/process
-[process-native]: /nextflow_docs/nextflow_repo/docs/process#native-execution
-[getstarted-resume]: /nextflow_docs/nextflow_repo/docs/your-first-script#modify-and-resume
-[secrets-page]: /nextflow_docs/nextflow_repo/docs/secrets
-[sge-executor]: /nextflow_docs/nextflow_repo/docs/executor#sge
-[slurm-executor]: /nextflow_docs/nextflow_repo/docs/executor#slurm
-[spack-page]: /nextflow_docs/nextflow_repo/docs/spack
-[stdlib-namespaces-workflow]: /nextflow_docs/nextflow_repo/docs/reference/stdlib-namespaces#workflow
-[stdlib-types-duration]: /nextflow_docs/nextflow_repo/docs/reference/stdlib-types#duration
-[stdlib-types-memoryunit]: /nextflow_docs/nextflow_repo/docs/reference/stdlib-types#memoryunit
-[trace-report]: /nextflow_docs/nextflow_repo/docs/reports#trace-file
-[wave-page]: /nextflow_docs/nextflow_repo/docs/wave
-[workflow-output-def]: /nextflow_docs/nextflow_repo/docs/workflow#workflow-outputs
+[awsbatch-executor]: /nextflow_docs/nextflow_repo/docs/executor.mdx#aws-batch
+[azurebatch-executor]: /nextflow_docs/nextflow_repo/docs/executor.mdx#azure-batch
+[cache-resume-page]: /nextflow_docs/nextflow_repo/docs/cache-and-resume.mdx
+[channel-topic]: /nextflow_docs/nextflow_repo/docs/reference/channel.mdx#topic
+[config-process-selectors]: /nextflow_docs/nextflow_repo/docs/config.mdx#process-selectors
+[conda-page]: /nextflow_docs/nextflow_repo/docs/conda.mdx
+[dynamic-directives]: /nextflow_docs/nextflow_repo/docs/process.mdx#dynamic-directives
+[dynamic-task-resources]: /nextflow_docs/nextflow_repo/docs/process.mdx#dynamic-task-resources
+[executor-page]: /nextflow_docs/nextflow_repo/docs/executor.mdx
+[google-batch-executor]: /nextflow_docs/nextflow_repo/docs/executor.mdx#google-cloud-batch
+[k8s-executor]: /nextflow_docs/nextflow_repo/docs/executor.mdx#kubernetes
+[lsf-executor]: /nextflow_docs/nextflow_repo/docs/executor.mdx#lsf
+[pbs-executor]: /nextflow_docs/nextflow_repo/docs/executor.mdx#pbs-torque
+[pbspro-executor]: /nextflow_docs/nextflow_repo/docs/executor.mdx#pbs-pro
+[process-page]: /nextflow_docs/nextflow_repo/docs/process.mdx
+[process-native]: /nextflow_docs/nextflow_repo/docs/process.mdx#native-execution
+[getstarted-resume]: /nextflow_docs/nextflow_repo/docs/your-first-script.mdx#modify-and-resume
+[secrets-page]: /nextflow_docs/nextflow_repo/docs/secrets.mdx
+[sge-executor]: /nextflow_docs/nextflow_repo/docs/executor.mdx#sge
+[slurm-executor]: /nextflow_docs/nextflow_repo/docs/executor.mdx#slurm
+[spack-page]: /nextflow_docs/nextflow_repo/docs/spack.mdx
+[stdlib-namespaces-workflow]: /nextflow_docs/nextflow_repo/docs/reference/stdlib-namespaces.mdx#workflow
+[stdlib-types-duration]: /nextflow_docs/nextflow_repo/docs/reference/stdlib-types.mdx#duration
+[stdlib-types-memoryunit]: /nextflow_docs/nextflow_repo/docs/reference/stdlib-types.mdx#memoryunit
+[trace-report]: /nextflow_docs/nextflow_repo/docs/reports.mdx#trace-file
+[wave-page]: /nextflow_docs/nextflow_repo/docs/wave.mdx
+[workflow-output-def]: /nextflow_docs/nextflow_repo/docs/workflow.mdx#workflow-outputs

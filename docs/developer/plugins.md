@@ -1,5 +1,3 @@
-(plugins-dev-page)=
-
 # Plugins
 
 This page describes how to create, test, and publish third-party plugins.
