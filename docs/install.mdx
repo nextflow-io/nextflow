@@ -1,3 +1,5 @@
+import { AddedInVersion, ChangedInVersion, DeprecatedInVersion } from '@site/src/components/VersionedAdmonitions';
+
 # Installation
 
 Nextflow can be used on any POSIX-compatible system (Linux, macOS, etc), and on Windows through [WSL](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux). This page describes how to install Nextflow.
@@ -14,9 +16,9 @@ Nextflow requires Bash 3.2 (or later) and [Java 17 (or later, up to 24)](http://
 java -version
 ```
 
-:::warning{title="Depreciated in version 24.11.0-edge"}
+<DeprecatedInVersion version="24.11.0-edge">
 Support for Java versions prior to 17 was dropped.
-:::
+</DeprecatedInVersion>
 
 If you don't have a compatible version of Java installed, it is recommended that you install it through [SDKMAN!](https://sdkman.io/), and that you use the latest Long-Term-Support (LTS) version of Temurin. See [Which version of JDK should I use?](https://whichjdk.com/) for more information about different versions of Java.
 
@@ -153,4 +155,4 @@ Launching from Seqera Platform provides you with:
 Seqera Cloud Basic is free for small teams. Researchers at qualifying academic institutions can apply for free access to Seqera Cloud Pro.
 See the [Seqera Platform documentation](https://docs.seqera.io/platform) for tutorials to get started.
 
-[updating-nextflow]: /nextflow_docs/nextflow_repo/docs/upating-nextflow.mdx
+[updating-nextflow]: /nextflow_docs/nextflow_repo/docs/updating-nextflow.mdx

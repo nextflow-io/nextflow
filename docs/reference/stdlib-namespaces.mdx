@@ -3,6 +3,8 @@ title: Namespaces
 description: Namespaces in the Nextflow standard library
 ---
 
+import { AddedInVersion, ChangedInVersion, DeprecatedInVersion } from '@site/src/components/VersionedAdmonitions';
+
 # Namespaces
 
 This page lists all of the available namespaces in the Nextflow standard library.
@@ -15,8 +17,7 @@ The global namespace contains globally available constants and functions.
 
 ##### `baseDir: Path`
 
-:::danger{title="Depreciated in version 20.04.0"}
-:::
+<DeprecatedInVersion version="20.04.0" />
 
 Alias of `workflow.projectDir`.
 
@@ -40,8 +41,7 @@ Alias of `workflow.projectDir`.
 
 ##### `secrets: Map<String,String>`
 
-:::note{title="Added in version 24.02.0-edge"}
-:::
+<AddedInVersion version="24.02.0-edge" />
 
 Map of pipeline secrets. See [Secrets][secrets-page] for more information.
 
@@ -57,8 +57,7 @@ Create a branch criteria to use with the [branch][operator-branch] operator.
 
 ##### `env( name: String ) -> String`
 
-:::note{title="Added in version 24.11.0-edge"}
-:::
+<AddedInVersion version="24.11.0-edge" />
 
 Get the value of the environment variable with the specified name in the Nextflow launch environment.
 
@@ -68,9 +67,9 @@ Throw a script runtime error with an optional error message.
 
 ##### `exit( exitCode: int = 0, message: String = null )`
 
-:::danger{title="Depreciated in version 22.06.0-edge"}
+<DeprecatedInVersion version="22.06.0-edge">
 Use `error()` instead
-:::
+</DeprecatedInVersion>
 
 Stop the pipeline execution and return an exit code and optional error message.
 
@@ -227,9 +226,7 @@ Exit status of the task that caused the workflow execution to fail.
 
 ##### `failOnIgnore: boolean`
 
-:::note{title="Added in version 24.05.0-edge"}
-:::
-
+<AddedInVersion version="24.05.0-edge" />
 Whether the `workflow.failOnIgnore` config option was enabled.
 
 See also: [errorStrategy][process-error-strategy]
@@ -262,15 +259,13 @@ Namespace corresponding to the [`manifest`][config-manifest] config scope.
 
 ##### `outputDir: Path`
 
-:::note{title="Added in version 24.10.0"}
-:::
+<AddedInVersion version="24.10.0" />
 
 Workflow output directory.
 
 ##### `preview: boolean`
 
-:::note{title="Added in version 24.04.0"}
-:::
+<AddedInVersion version="24.04.0" />
 
 Whether the current workflow run is a preview run.
 

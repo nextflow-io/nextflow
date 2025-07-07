@@ -1,3 +1,5 @@
+import { AddedInVersion, ChangedInVersion, DeprecatedInVersion } from '@site/src/components/VersionedAdmonitions';
+
 # Amazon Web Services
 
 :::tip
@@ -22,8 +24,8 @@ The AWS credentials are selected from the following sources, in order of descend
 
 5. Single Sign-On (SSO) credentials. See the [AWS documentation](https://docs.aws.amazon.com/cli/latest/userguide/sso-configure-profile-token.html) for more details.
 
-   :::note{title="Added in version 23.07.0-edge"}
-   :::
+
+    <AddedInVersion version="23.07.0-edge" />
 
 6. EC2 instance profile credentials. See the [AWS documentation](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html) and [this blog post](https://aws.amazon.com/blogs/security/granting-permission-to-launch-ec2-instances-with-iam-roles-passrole-permission/) for more details.
 
@@ -217,8 +219,7 @@ Each process can be configured with its own queue by using the [queue][process-q
 
 ## Container Options
 
-:::note{title="Added in version 21.12.1-edge"}
-:::
+<AddedInVersion version="21.12.1-edge" />
 
 The [containerOptions][process-containerOptions] directive can be used to control the properties of the container execution associated with each Batch job.
 
@@ -501,8 +502,7 @@ This [AWS page](https://aws.amazon.com/premiumsupport/knowledge-center/batch-job
 
 ## AWS Fargate
 
-:::note{title="Added in version 23.12.0-edge"}
-:::
+<AddedInVersion version="23.12.0-edge" />
 
 Nextflow provides experimental support for the execution of [AWS Batch jobs with Fargate resources](https://docs.aws.amazon.com/batch/latest/userguide/fargate.html).
 

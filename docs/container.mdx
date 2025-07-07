@@ -1,3 +1,5 @@
+import { AddedInVersion, ChangedInVersion, DeprecatedInVersion } from '@site/src/components/VersionedAdmonitions';
+
 # Containers
 
 Nextflow supports a variety of container runtimes. Containerization allows you to write self-contained and truly reproducible computational pipelines, by packaging the binary dependencies of a script into a standard and portable format that can be executed on any platform that supports a container runtime. Furthermore, the same pipeline can be transparently executed with any of the supported container runtimes, depending on which runtimes are available in the target compute environment.
@@ -8,8 +10,7 @@ When creating a container image to use with Nextflow, make sure that Bash (3.x o
 
 ## Apptainer
 
-:::note{title="Added in version 22.11.0-edge"}
-:::
+<AddedInVersion version="22.11.0-edge" />
 
 [Apptainer](https://apptainer.org) is an alternative container runtime to Docker and an open source fork of Singularity. The main advantages of Apptainer are that it can be used without root privileges and it doesn't require a separate daemon process. These, along with other features such as support for autofs mounts, makes Apptainer better suited to the requirements of HPC workloads. Apptainer is able to use existing Docker images and can pull from Docker registries.
 
@@ -62,9 +63,9 @@ Unlike Docker, Nextflow does not automatically mount host paths in the container
 When a process input is a *symbolic link* file, make sure the linked file is stored in a host folder that is accessible from a bind path defined in your Apptainer installation. Otherwise the process execution will fail because the launched container won't be able to access the linked file.
 :::
 
-:::warning{title="Changed in version 23.07.0-edge"}
+<ChangedInVersion version="23.07.0-edge">
 Nextflow no longer mounts the home directory when launching an Apptainer container. To re-enable the old behavior, set the environment variable `NXF_APPTAINER_HOME_MOUNT` to `true`.
-:::
+</ChangedInVersion>
 
 ### Multiple containers
 
@@ -136,16 +137,15 @@ Apptainer advanced configuration settings are described in[Apptainer][config-app
 
 ## Charliecloud
 
-:::note{title="Added in version 20.12.0-edge"}
-:::
+<AddedInVersion version="20.12.0-edge" />
 
-:::warning{title="Changed in version 21.03.0-edge"}
+<ChangedInVersion version="21.03.0-edge">
 Requires Charliecloud 0.22 to 0.27.
-:::
+</ChangedInVersion>
 
-:::warning{title="Changed in version 22.09.0-edge"}
+<ChangedInVersion version="22.09.0-edge">
 Requires Charliecloud 0.28 or later.
-:::
+</ChangedInVersion>
 
 :::warning{title="Experimental: not recommended for production environments."}
 :::
@@ -326,8 +326,7 @@ Docker advanced configuration settings are described in the [docker][config-dock
 
 ## Podman
 
-:::note{title="Added in version 20.01.0"}
-:::
+<AddedInVersion version="20.01.0" />
 
 [Podman](http://www.podman.io) is a drop-in replacement for Docker that can run containers with or without root privileges.
 
@@ -413,9 +412,9 @@ Podman advanced configuration settings are described in the [podman][config-podm
 
 ## Sarus
 
-:::note{title="Added in verison  22.12.0-edge"}
+<AddedInVersion version="22.12.0-edge">
 Requires Sarus 1.5.1 or later.
-:::
+</AddedInVersion>
 
 [Sarus](https://sarus.readthedocs.io) is an alternative container runtime to Docker. Sarus works by converting Docker images to a common format that can then be distributed and launched on HPC systems. The user interface to Sarus enables a user to select an image from [Docker Hub](https://hub.docker.com/) and then submit jobs which run entirely within the container.
 
@@ -560,17 +559,17 @@ Unlike Docker, Nextflow does not automatically mount host paths in the container
 When a process input is a *symbolic link* file, make sure the linked file is stored in a host folder that is accessible from a bind path defined in your Singularity installation. Otherwise the process execution will fail because the launched container won't be able to access the linked file.
 :::
 
-:::warning{title="Changed in version 23.07.0-edge"}
+<ChangedInVersion version="23.07.0-edge">
 Nextflow no longer mounts the home directory when launching a Singularity container. To re-enable the old behavior, set the environment variable `NXF_SINGULARITY_HOME_MOUNT` to `true`.
-:::
+</ChangedInVersion>
 
-:::warning{title="Changed in version 23.09.0-edge"}
+<ChangedInVersion version="23.09.0-edge">
 Nextflow automatically mounts the required host paths in the container. To re-enable the old behavior, set the environment variable `NXF_SINGULARITY_AUTO_MOUNTS` to `false` or set `singularity.autoMounts=false` in the Nextflow configuration file.
-:::
+</ChangedInVersion>
 
-:::warning{title="Changed in version 23.09.0-edge"}
+<ChangedInVersion version="23.09.0-edge">
 The execution command for Singularity/Apptainer containers can be set to `run` by means of the environment variable `NXF_SINGULARITY_RUN_COMMAND` (default command is `exec`).
-:::
+</ChangedInVersion>
 
 ### Multiple containers
 
@@ -620,10 +619,6 @@ singularity.enabled = true
 ```
 
 You do not need to specify `docker://` to pull from a Docker repository. Nextflow will automatically prepend it to your image name when Singularity is enabled. Additionally, the Docker engine will not work with containers specified as `docker://`.
-
-:::note{title="Added in verison 19.04.0"}
-Requires Singularity 3.0.3 or later.
-:::
 
 Nextflow supports the [Singularity Library](https://cloud.sylabs.io/library/) repository:
 

@@ -1,4 +1,4 @@
-import DefinitionList, { DefinitionTerm, DefinitionDescription } from '@site/src/components/DefinitionList';
+import { AddedInVersion, ChangedInVersion, DeprecatedInVersion } from '@site/src/components/VersionedAdmonitions';
 
 # Notifications
 
@@ -197,8 +197,7 @@ See the [mail scope][config-mail] section to learn more the mail server configur
 
 ### AWS SES configuration
 
-:::note{title="New in version 23.06.0-edge"}
-:::
+<AddedInVersion version="23.06.0-edge" />
 
 Nextflow supports [AWS SES](https://aws.amazon.com/ses/) native API as an alternative
 provider to send emails in place of SMTP server.

@@ -1,3 +1,5 @@
+import { AddedInVersion, ChangedInVersion, DeprecatedInVersion } from '@site/src/components/VersionedAdmonitions';
+
 # Modules
 
 Nextflow scripts can include **definitions** (workflows, processes, and functions) from other scripts. When a script is included in this way, it is referred to as a **module**. Modules can be included by other modules or pipeline scripts and can even be shared across workflows.
@@ -32,8 +34,7 @@ Module includes are subject to the following rules:
 
 ## Module directory
 
-:::note{title="New in version 22.10.0"}
-:::
+<AddedInVersion version="22.10.0" />
 
 A module can be defined as a directory with the same name as the module and with a script named `main.nf`. For example:
 
@@ -92,10 +93,9 @@ workflow {
 
 ## Module parameters
 
-
-:::danger{title="Depreciated in version 24.07.0-edge"}
+<DeprecatedInVersion version="24.07.0-edge">
 As a best practice, parameters should be used in the entry workflow and passed to workflows, processes, and functions as explicit inputs.
-:::
+</DeprecatedInVersion>
 
 A module can define parameters using the same syntax as a Nextflow workflow script:
 
@@ -237,8 +237,7 @@ baseDir
 
 ## Module binaries
 
-:::note{title="New in version 22.10.0"}
-:::
+<AddedInVersion version="22.10.0" />
 
 Modules can define binary scripts that are locally scoped to the processes defined by the tasks.
 

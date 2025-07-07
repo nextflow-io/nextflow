@@ -1,7 +1,8 @@
+import { AddedInVersion, ChangedInVersion, DeprecatedInVersion } from '@site/src/components/VersionedAdmonitions';
+
 # Wave containers
 
-:::note{title="Added in version 22.10.0"}
-:::
+<AddedInVersion version="22.10.0" />
 
 [Wave](https://seqera.io/wave/) is a container provisioning service integrated with Nextflow. With Wave, you can build, upload, and manage the container images required by your data analysis workflows automatically and on-demand during pipeline execution.
 
@@ -90,8 +91,7 @@ Packages from the [Python Package Index](https://pypi.org/) can also be added to
 
 ### Build Singularity native images
 
-:::note{title="Added in version 23.09.0-edge"}
-:::
+<AddedInVersion version="23.09.0-edge" />
 
 Nextflow can build Singularity native images on-demand either using `Singularityfile`,
 Conda packages or Spack packages. The Singularity images are automatically uploaded in a container registry OCI compliant

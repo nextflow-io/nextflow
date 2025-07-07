@@ -1,3 +1,5 @@
+import { AddedInVersion, ChangedInVersion, DeprecatedInVersion } from '@site/src/components/VersionedAdmonitions';
+
 # Executors
 
 In the Nextflow framework architecture, the *executor* is the component that determines the system where a pipeline process is run and supervises its execution.
@@ -57,8 +59,7 @@ See [Azure Batch][azure-batch] for more information.
 
 ## Bridge
 
-:::note{title="New in version 22.09.1-edge"}  
-:::
+<AddedInVersion version="22.09.1-edge" />
 
 [Bridge](https://github.com/cea-hpc/bridge) is an abstraction layer to ease batch system and resource manager usage in heterogeneous HPC environments.
 
@@ -78,8 +79,7 @@ Resource requests and other job characteristics can be controlled via the follow
 
 ## Flux Executor
 
-:::note{title="New in version 22.11.0-edge"}  
-:::
+<AddedInVersion version="22.11.0-edge" />
 
 The `flux` executor allows you to run your pipeline script using the [Flux Framework](https://flux-framework.org).
 
@@ -104,8 +104,7 @@ By default, Flux will send all output to the `.command.log` file. To send this o
 
 ## Google Cloud Batch
 
-:::note{title="New in version 22.07.1-edge"}  
-:::
+<AddedInVersion version="22.07.1-edge" />
 
 [Google Cloud Batch](https://cloud.google.com/batch) is a managed computing service that allows the execution of containerized workloads in the Google Cloud Platform infrastructure.
 
@@ -157,13 +156,13 @@ Resource requests and other job characteristics can be controlled via the follow
 
 ## HyperQueue
 
-:::warning{title="Changed in version 24.06.0-edge"}  
+<ChangedInVersion version="24.06.0-edge">
 HyperQueue 0.17.0 or later is required.
-:::
+</ChangedInVersion>
 
-:::warning{title="Changed in version 25.01.0-edge"}  
+<ChangedInVersion version="25.01.0-edge">
 HyperQueue 0.20.0 or later is required.
-:::
+</ChangedInVersion>
 
 The `hyperqueue` executor allows you to run your pipeline script by using the [HyperQueue](https://github.com/It4innovations/hyperqueue) job scheduler.
 
@@ -307,8 +306,7 @@ When specifying `clusterOptions` as a string, multiple options must be separated
 clusterOptions = '-t besteffort;--project myproject'
 ```
 
-:::note{title="New in version 24.04.0"}  
-:::
+<AddedInVersion version="24.04.0" />
 
 The same behavior can now be achieved using a string list:
 ```groovy
@@ -398,9 +396,9 @@ SLURM partitions can be specified with the `queue` directive.
 Nextflow does not provide direct support for SLURM multi-clusters. If you need to submit workflow executions to a cluster other than the current one, specify it with the `SLURM_CLUSTERS` variable in the launch environment.
 :::
 
-:::note{title="New in version 23.07.0-edge"}
+<AddedInVersion version="23.07.0-edge">
 Some SLURM clusters require memory allocations to be specified with `--mem-per-cpu` instead of `--mem`. You can specify `executor.perCpuMemAllocation = true` in the Nextflow configuration to enable this behavior. Nextflow will automatically compute the memory per CPU for each task (by default 1 CPU is used).
-:::
+</AddedInVersion>
 
 [aws-batch]: /nextflow_docs/nextflow_repo/docs/aws.mdx#aws-batch
 [azure-batch]: /nextflow_docs/nextflow_repo/docs/azure.mdx#azure-batch

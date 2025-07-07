@@ -1,15 +1,12 @@
-(metrics-page)=
-
 # Understanding task resource metrics
 
-This tutorial explains how resource usage metrics are computed from execution reports. See {ref}`Execution report <execution-report>` for more information about how to enable them.
+This tutorial explains how resource usage metrics are computed from execution reports. See [Execution report][execution-report] for more information about how to enable them.
 
 ## CPU Usage
 
 CPU Usage plots report how CPU resources are used by each process.
 
-```{image} _static/report-resource-cpu-noheader.png
-```
+![CPU usage](_static/report-resource-cpu-noheader.png)
 
 **Raw Usage** tabs are expected to show 100% core usage if processes perform one task of pure computation. If tasks are distributed over, 2, 3, or 4 CPUs, the raw usage will be 200%, 300%, or 400%, respectively. **% Allocated** tabs rescale raw usage values relative to the number of CPUs that are set with the `cpus` directive. If the `cpus` directive is not set, CPUs are set to `1` and **% Allocated** tabs will show the same values **Raw Usage** tabs.
 
@@ -30,7 +27,7 @@ workflow{
 }
 ```
 
-:::{tip}
+:::tip
 See [Linux stress command with examples](https://www.geeksforgeeks.org/linux-stress-command-with-examples/) for more information about the stress command.
 :::
 
@@ -92,6 +89,7 @@ Memory Usage plots report how memory was used by each process. It has three tabs
 Peak usage during process executions is reported for both physical and virtual memories. The total amount of memory used by a process is the `virtual memory (vmem)`. The `vmem` contains all memory areas, including in the physical memory (RAM), in the swap space, on the disk, or shared with other processes. The `resident set size (RSS)` is the amount of `physical memory (RAM)` held by a process.
 
 The relationship is:
+
 
 $$
 vmem \geq RSS + Swap
@@ -256,17 +254,17 @@ The **Virtual (RAM + Disk swap)** tab shows that both `malloc` and `malloc_fill`
 ```{image} _static/report-resource-memory-vmem.png
 ```
 
+![Memory vmem](_static/report-resource-memory-vmem.png)
+
 However, the **Physical (RAM)** tab shows that `malloc_fill` uses ~1 GiB of RAM while `malloc` uses ~0 GiB of RAM:
 
-```{image} _static/report-resource-memory-ram.png
-```
+![Memory ram](_static/report-resource-memory-ram.png)
 
 The **% RAM Allocated** tab shows that `malloc` and `malloc_fill` used 0% and 67% of resources set in the `memory` directive, respectively:
 
-```{image} _static/report-resource-memory-pctram.png
-```
+![Memory pctram](_static/report-resource-memory-pctram.png)
 
-:::{warning}
+:::warning
 Memory and storage metrics are reported in bytes. For example, 1 KB = $1024$ bytes, 1 MB = $1024^2$ bytes, and 1 GB = $1024^3$ bytes.
 :::
 
@@ -276,6 +274,8 @@ Memory and storage metrics are reported in bytes. For example, 1 KB = $1024$ byt
 
 ```{image} _static/report-resource-job-duration.png
 ```
+
+![Job duration](_static/report-resource-job-duration.png)
 
 ## I/O Usage
 
@@ -306,10 +306,10 @@ workflow{
 
 The **Read** tab shows that ~1 Gib and ~256 Mb are read:
 
-```{image} _static/report-resource-io-read.png
-```
+![Resources io read](_static/report-resource-io-read.png)
 
 The **Write** tab shows that ~1 Gib and ~256 Mb are written:
 
-```{image} _static/report-resource-io-write.png
-```
+![Resources io write](_static/report-resource-io-write.png)
+
+[execution-report]: /nextflow_docs/nextflow_repo/docs/execution-report.mdx#execution-report

@@ -1,3 +1,5 @@
+import { AddedInVersion, ChangedInVersion, DeprecatedInVersion } from '@site/src/components/VersionedAdmonitions';
+
 # Plugins
 
 This page describes how to create, test, and publish third-party plugins.
@@ -36,11 +38,11 @@ Plugin-Version: 0.0.0
 
 Nextflow's plugin system exposes a variety of extension points for plugins. This section describes how to use these extension points when writing a plugin, as well as how they are used in a pipeline.
 
-:::{note}
+:::note
 If you would like to implement something in a plugin that isn't covered by any of the following sections, feel free to create an issue on GitHub and describe your use case. In general, any class in the Nextflow codebase that implements `ExtensionPoint` can be extended by a plugin, and existing plugins are a great source of examples when writing new plugins.
 :::
 
-:::{note}
+:::note
 Plugin extension points must be added to `extensions.idx` in the plugin repository to make them discoverable. See the [`nf-hello`](https://github.com/nextflow-io/nf-hello) plugin for an example.
 :::
 
@@ -80,7 +82,7 @@ You can then execute this command using the `nextflow plugin` command:
 nextflow plugin my-plugin:hello --alpha --beta
 ```
 
-See the {ref}`cli-plugin` CLI command for usage information.
+See the [plugin][cli-plugin] CLI command for usage information.
 
 ### Configuration
 
@@ -114,8 +116,7 @@ myplugin {
 }
 ```
 
-:::{versionadded} 25.02.0-edge
-:::
+<AddedInVersion version="25.02.0-edge" />
 
 Plugins can declare their config options by implementing the `ConfigScope` interface and declaring each config option as a field with the `@ConfigOption` annotation:
 
@@ -172,13 +173,13 @@ process hello {
 }
 ```
 
-:::{tip}
+:::tip
 Refer to the source code of Nextflow's built-in executors to see how to implement the various components of an executor. You might be able to implement most of your executor by simply reusing existing code.
 :::
 
 ### Filesystems
 
-Plugins can define custom filesystems that can be used by Nextflow to interact with external storage systems using a single interface. For more information about accessing remote files, see {ref}`remote-files`.
+Plugins can define custom filesystems that can be used by Nextflow to interact with external storage systems using a single interface. For more information about accessing remote files, see [Remote files][remote-files].
 
 To implement a custom filesystem, create a class in your plugin that extends [`FileSystemProvider`](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/spi/FileSystemProvider.html). Implement the `getScheme()` method to define the URI scheme for your filesystem:
 
@@ -204,14 +205,13 @@ input = file('myfs://path/to/input/file.txt')
 
 See [Developing a Custom File System Provider](https://docs.oracle.com/javase/8/docs/technotes/guides/io/fsp/filesystemprovider.html) for more information. Refer to the `nf-https` module (`XFileSystemProvider`) or `nf-amazon` plugin (`S3FileSystemProvider`) in the Nextflow source code for examples of custom filesystems.
 
-:::{tip}
+:::tip
 Custom filesystems are an advanced type of plugin extension. Before creating a new filesystem, make sure that your use case can't already be supported through an existing filesystem such as HTTP or S3.
 :::
 
 ### Functions
 
-:::{versionadded} 22.09.0-edge
-:::
+<AddedInVersion version="22.09.0-edge" />
 
 Plugins can define custom functions, which can then be included in Nextflow pipelines.
 
@@ -251,8 +251,7 @@ include { reverseString as anotherReverseMethod } from 'plugin/my-plugin'
 
 ### Operators
 
-:::{versionadded} 22.04.0
-:::
+<AddedInVersion version="22.04.0" />
 
 Plugins can define custom channel factories and operators, which can then be included into Nextflow pipelines.
 
@@ -300,9 +299,9 @@ is included under the alias `fromTable`.
 
 ### Process directives
 
-Plugins that implement a [custom executor](#executors) will likely need to access {ref}`process directives <process-directives>` that affect the task execution. When an executor receives a task, the process directives can be accessed through that task's configuration. As a best practice, custom executors should try to support all process directives that have executor-specific behavior and are relevant to your executor.
+Plugins that implement a [custom executor](#executors) will likely need to access [process directives][process-directives] that affect the task execution. When an executor receives a task, the process directives can be accessed through that task's configuration. As a best practice, custom executors should try to support all process directives that have executor-specific behavior and are relevant to your executor.
 
-Nextflow does not provide the ability to define custom process directives in a plugin. Instead, you can use the {ref}`process-ext` directive to provide custom process settings to your executor. Try to use specific names that are not likely to conflict with other plugins or existing pipelines.
+Nextflow does not provide the ability to define custom process directives in a plugin. Instead, you can use the [ext][process-ext] directive to provide custom process settings to your executor. Try to use specific names that are not likely to conflict with other plugins or existing pipelines.
 
 For example, a custom executor can use existing process directives as well as a custom setting through the `ext` directive:
 
@@ -327,9 +326,9 @@ class MyExecutor extends Executor {
 
 ### Trace observers
 
-:::{versionchanged} 25.04
+<ChangedInVersion version="25.04">
 The `TraceObserver` interface is now deprecated. Use [TraceObserverV2](https://github.com/nextflow-io/nextflow/blob/master/modules/nextflow/src/main/groovy/nextflow/trace/TraceObserverV2.groovy) and [TraceObserverFactoryV2](https://github.com/nextflow-io/nextflow/blob/master/modules/nextflow/src/main/groovy/nextflow/trace/TraceObserverFactoryV2.groovy) instead.
-:::
+</ChangedInVersion>
 
 A *trace observer* in Nextflow is an entity that can listen and react to workflow events, such as when a workflow starts, a task completes, a file is published, etc. Several components in Nextflow, such as the execution report and DAG visualization, are implemented as trace observers.
 
@@ -418,11 +417,9 @@ Here is an example meta file for a plugin release:
 }
 ```
 
-:::{note}
+:::note
 The plugin version should be a valid [semantic version](https://semver.org/).
 :::
-
-(testing-plugins)=
 
 ## Testing plugins
 
@@ -446,37 +443,43 @@ When running in development mode, the plugin system uses the `DevPluginClasspath
 
 The following environment variables are available when developing and testing plugins:
 
-`NXF_PLUGINS_MODE`
-: The plugin execution mode, either `prod` for production or `dev` for development (see below for details).
+##### `NXF_PLUGINS_MODE`
 
-`NXF_PLUGINS_DIR`
-: The path where the plugin archives are loaded and stored (default: `$NXF_HOME/plugins` in production, `./plugins` in development).
+The plugin execution mode, either `prod` for production or `dev` for development (see below for details).
 
-`NXF_PLUGINS_DEFAULT`
-: Whether to use the default plugins when no plugins are specified in the Nextflow configuration (default: `true`).
+##### `NXF_PLUGINS_DIR`
 
-`NXF_PLUGINS_DEV`
-: Comma-separated list of development plugin root directories.
+The path where the plugin archives are loaded and stored (default: `$NXF_HOME/plugins` in production, `./plugins` in development).
 
-`NXF_PLUGINS_TEST_REPOSITORY`
-: :::{versionadded} 23.04.0
-  :::
-: Comma-separated list of URIs for additional plugin registries or meta files, which will be used in addition to the default registry.
-: The URI should refer to a plugins repository JSON file or a specific plugin JSON meta file. In the latter case it should match the pattern `https://host.name/some/path/<plugin id>-X.Y.Z-meta.json`.
+##### `NXF_PLUGINS_DEFAULT`
 
-: For example:
+Whether to use the default plugins when no plugins are specified in the Nextflow configuration (default: `true`).
 
-    ```bash
-    # custom plugin repository at https://github.com/my-org/plugins
-    export NXF_PLUGINS_TEST_REPOSITORY="https://raw.githubusercontent.com/my-org/plugins/main/plugins.json"
+##### `NXF_PLUGINS_DEV`
 
-    # custom plugin release
-    export NXF_PLUGINS_TEST_REPOSITORY="https://github.com/nextflow-io/nf-hello/releases/download/0.3.0/nf-hello-0.3.0-meta.json"
+Comma-separated list of development plugin root directories.
 
-    nextflow run <pipeline> -plugins nf-hello
-    ```
+##### `NXF_PLUGINS_TEST_REPOSITORY`
 
-: This variable is useful for testing a plugin release before publishing it to the main registry.
+<AddedInVersion version="23.04.0" />
+
+Comma-separated list of URIs for additional plugin registries or meta files, which will be used in addition to the default registry.
+
+The URI should refer to a plugins repository JSON file or a specific plugin JSON meta file. In the latter case it should match the pattern `https://host.name/some/path/<plugin id>-X.Y.Z-meta.json`.
+
+For example:
+
+```bash
+# custom plugin repository at https://github.com/my-org/plugins
+export NXF_PLUGINS_TEST_REPOSITORY="https://raw.githubusercontent.com/my-org/plugins/main/plugins.json"
+
+# custom plugin release
+export NXF_PLUGINS_TEST_REPOSITORY="https://github.com/nextflow-io/nf-hello/releases/download/0.3.0/nf-hello-0.3.0-meta.json"
+
+nextflow run <pipeline> -plugins nf-hello
+```
+
+This variable is useful for testing a plugin release before publishing it to the main registry.
 
 ## Gradle Tasks
 
@@ -505,29 +508,37 @@ Copy the plugin archive to the root project build directory, i.e. `build/plugins
 
 Upload the plugin archive and meta file to the corresponding GitHub repository. Options:
 
-`release`
-: The plugin version, e.g. `1.0.1`.
+##### `release`
 
-`repo`
-: The GitHub repository name, e.g. `nf-amazon`.
+The plugin version, e.g. `1.0.1`.
 
-`owner`
-: The GitHub owning organization, e.g. `nextflow-io`.
+##### `repo`
 
-`skipExisting`
-: Do not upload a file if it already exists, i.e. checksum is the same (default: `true`).
+The GitHub repository name, e.g. `nf-amazon`.
 
-`dryRun`
-: Execute the tasks without uploading file (default: `false`).
+##### `owner`
 
-`overwrite`
-: Prevent to overwrite a remote file already existing (default: `false`).
+The GitHub owning organization, e.g. `nextflow-io`.
 
-`userName`
-: The user name used to authenticate GitHub API requests.
+##### `skipExisting`
 
-`authToken`
-: The personal token used to authenticate GitHub API requests.
+Do not upload a file if it already exists, i.e. checksum is the same (default: `true`).
+
+##### `dryRun`
+
+Execute the tasks without uploading file (default: `false`).
+
+##### `overwrite`
+
+Prevent to overwrite a remote file already existing (default: `false`).
+
+##### `userName`
+
+The user name used to authenticate GitHub API requests.
+
+##### `authToken`
+
+The personal token used to authenticate GitHub API requests.
 
 ### `upload`
 
@@ -541,3 +552,8 @@ Upload the plugins index to the repository hosted at [nextflow-io/plugins](https
 
 * [PF4J](https://pf4j.org/)
 * [Understanding Gradle: The Build Lifecycle](https://proandroiddev.com/understanding-gradle-the-build-lifecycle-5118c1da613f)
+
+[cli-plugin]: /nextflow_docs/nextflow_repo/docs/reference/cli.mdx#plugin
+[process-directives]: /nextflow_docs/nextflow_repo/docs/process.mdx#directives
+[process-ext]: /nextflow_docs/nextflow_repo/docs/reference/process.mdx#ext
+[remote-files]: /nextflow_docs/nextflow_repo/docs/working-with-files.mdx#remote-files

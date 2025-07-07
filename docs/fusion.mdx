@@ -1,11 +1,10 @@
+import { AddedInVersion, ChangedInVersion, DeprecatedInVersion } from '@site/src/components/VersionedAdmonitions';
+
 # Fusion file system
 
-:::note{title="Added in version 22.10.0"}
-:::
+<AddedInVersion version="22.10.0" />
 
-:::note{title="Added in version 23.02.0-edge"}
-Support for Google Cloud Storage.
-:::
+<AddedInVersion version="23.02.0-edge" />
 
 Cloud object stores such as AWS S3 are scalable and cost-effective, but they don't present a POSIX (Portable Operating System Interface). This means containerized applications must copy data to and from cloud storage for every task — a slow and inefficient process.
 

@@ -1,10 +1,8 @@
-(data-lineage-page)=
-
 # Data lineage
 
 Data lineage in Nextflow provides comprehensive tracking of workflow runs, task executions, and output files. This feature helps you verify the integrity and reproducibility of your pipeline results by maintaining a complete history of computations and intermediate data.
 
-:::{warning}
+:::warning
 Data lineage is an experimental feature added in Nextflow 25.04. The functionality may change in future releases.
 :::
 
@@ -18,7 +16,7 @@ Data lineage tracks the complete history of your Nextflow runs, including:
 
 Each lineage record has a unique identifier called a *lineage ID* (LID) that you can use to access and query the data.
 
-:::{note}
+:::note
 The data model for every lineage record is defined in the Nextflow [source code](https://github.com/nextflow-io/nextflow/tree/master/modules/nf-lineage/src/main/nextflow/lineage/model).
 :::
 
@@ -36,11 +34,11 @@ By default, lineage data is stored in the `.lineage` directory in your current w
 lineage.store.location = '<PATH_TO_STORAGE>'
 ```
 
-:::{tip}
+:::tip
 For global configuration, add these settings to `$HOME/.nextflow/config`.
 :::
 
-See the {ref}`config-lineage` configuration scope for details.
+See the [lineage][config-lineage] configuration scope for details.
 
 ## Generate lineage metadata
 
@@ -54,7 +52,7 @@ Nextflow will automatically record the workflow run, task executions, and output
 
 ## Explore lineage
 
-Now that you have generated some lineage metadata, you can explore it from the command line using the {ref}`cli-lineage` command.
+Now that you have generated some lineage metadata, you can explore it from the command line using the [lineage][cli-lineage] command.
 
 First, use the `list` subcommand to list the workflow runs in the lineage store:
 
@@ -95,7 +93,7 @@ Every workflow run is represented in the lineage store as a `WorkflowRun` record
 
 The output files of a workflow run can be accessed as `lid://<WORKFLOW_RUN_HASH>/<PATH>`, where `<PATH>` is the file path relative to the workflow output directory.
 
-:::{note}
+:::note
 Files must be published to the workflow output directory as defined by the `outputDir` config option (or `-output-dir` command line option) in order to be recorded as workflow outputs in the lineage store.
 :::
 
@@ -242,13 +240,13 @@ $ nextflow lineage find type=TaskRun workflowRun=lid://16b31030474f2e96c55f4940b
 
 You can use any field defined in the [lineage data model](https://github.com/nextflow-io/nextflow/tree/master/modules/nf-lineage/src/main/nextflow/lineage/model).
 
-:::{tip}
+:::tip
 Since the `find` and `view` subcommands always output JSON, you can use JSON processing tools such as [jq](https://jqlang.org/) to further query and transform results.
 :::
 
 ## Compare task runs
 
-Task run LIDs are based on the standard {ref}`task hash <cache-resume-task-hash>`, which makes it easy to compare two task runs in the lineage metadata. For example, if a task is unexpectedly re-executed during a resumed run, as long as lineage is enabled for both the initial and resumed runs, the two tasks can be compared without any additional runs.
+Task run LIDs are based on the standard [task hash][cache-resume-task-hash], which makes it easy to compare two task runs in the lineage metadata. For example, if a task is unexpectedly re-executed during a resumed run, as long as lineage is enabled for both the initial and resumed runs, the two tasks can be compared without any additional runs.
 
 This section builds on the above [`rnaseq-nf` example](#generate-lineage-metadata) to demonstrate how to compare two task runs in the event of a cache invalidation.
 
@@ -329,7 +327,7 @@ $ nextflow lineage view lid://9410d13abeec617640b5fe9735ba12fc#output
 
 This view can be used to traverse output files directly instead of inferring LIDs from the workflow output directory.
 
-See {ref}`workflow-output-def` for more information about the `output` block.
+See [Workflow outputs][workflow-output-def] for more information about the `output` block.
 
 ## Use lineage in a Nextflow script
 
@@ -349,4 +347,10 @@ It should produce the following output:
 [id:gut, quant:/results/gut/quant, fastqc:/results/gut/fastqc]
 ```
 
-The `fromLineage` channel factory can also be used to query lineage records in a similar manner as the `find` subcommand. See {ref}`channel-from-lineage` for details.
+The `fromLineage` channel factory can also be used to query lineage records in a similar manner as the `find` subcommand. See [fromLineage][channel-from-lineage] for details.
+
+[cache-resume-task-hash]: /nextflow_docs/nextflow_repo/docs/cache-and-resume.mdx#task-cache
+[channel-from-lineage]: /nextflow_docs/nextflow_repo/docs/reference/channel.mdx#fromlineage
+[cli-lineage]: /nextflow_docs/nextflow_repo/docs/reference/cli.mdx#lineage
+[config-lineage]: /nextflow_docs/nextflow_repo/docs/reference/config.mdx#lineage
+[workflow-output-def]: /nextflow_docs/nextflow_repo/docs/workflow.mdx#workflow-outputs

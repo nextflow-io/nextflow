@@ -1,3 +1,5 @@
+import { AddedInVersion, ChangedInVersion, DeprecatedInVersion } from '@site/src/components/VersionedAdmonitions';
+
 # Configuration
 
 ## Configuration file
@@ -95,8 +97,7 @@ The following constants are globally available in a Nextflow configuration file:
 
 ##### `baseDir: Path`
 
-:::warning{title="Depreciated since version 20.04.0"} 
-:::
+<DeprecatedInVersion version="20.04.0" />
 
 Alias for `projectDir`.
 
@@ -280,10 +281,9 @@ nextflow run main.nf -profile standard,cloud
 
 Config profiles are applied in the order in which they were defined in the config file, regardless of the order they are specified on the command line.
 
-
-:::note{title="New in version 25.02.0-edge"}  
+<AddedInVersion version="25.02.0-edge">
 When using the [strict config syntax][updating-config-syntax], profiles are applied in the order in which they are specified on the command line.
-:::
+</AddedInVersion>
 
 :::warning
 When defining a profile in the config file, avoid using both the dot and block syntax for the same scope. For example:

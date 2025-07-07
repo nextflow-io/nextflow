@@ -1,3 +1,5 @@
+import { AddedInVersion, ChangedInVersion, DeprecatedInVersion } from '@site/src/components/VersionedAdmonitions';
+
 # Azure
 
 ## Overview
@@ -70,8 +72,8 @@ To assign roles to a managed identity or service principal, see the [Azure docum
 
 ### Managed identities
 
-:::note{title="Added in version 24.05.0-edge"}
-:::
+<AddedInVersion version="24.05.0-edge" />
+
 
 [Managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) is the recommended authentication method when running Nextflow within Azure. It automatically manages credentials without requiring you to store secrets.
 
@@ -159,8 +161,7 @@ Nextflow uses the `AZURE_MANAGED_IDENTITY_USER` environment variable if the mana
 
 ### Service principals
 
-:::note{title="Added in version 22.11.0-edge"}
-:::
+<AddedInVersion version="22.11.0-edge" />
 
 [Service principal](https://learn.microsoft.com/en-us/entra/identity-platform/app-objects-and-service-principals) credentials can be used to access Azure Batch and Storage accounts.
 
@@ -488,8 +489,7 @@ The `azure.batch.pools.<POOL_NAME>.scaleFormula` setting can be used to specify 
 
 By default, Nextflow creates SAS tokens for specific containers and passes them to tasks to enable file operations with Azure Storage. SAS tokens expire after a set period of time. The expiration time is 48 hours by default and cat be configured using `azure.storage.tokenDuration` in your configuration.
 
-:::note{title="Added in version 25.05.0-edge"}
-:::
+<AddedInVersion version="25.05.0-edge" />
 
 You can also authenticate to Azure Storage using a managed identity when using Fusion.
 
@@ -706,7 +706,5 @@ When using Fusion, `bucketDir` is not needed as all tasks will use the remote wo
 ## Advanced configuration
 
 See the [azure][config-azure] configuration scope for the list of available configuration options.
-
-
 
 [config-azure]: /nextflow_docs/nextflow_repo/docs/reference/config.mdx#azure

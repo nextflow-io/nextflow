@@ -1,3 +1,5 @@
+import { AddedInVersion, ChangedInVersion, DeprecatedInVersion } from '@site/src/components/VersionedAdmonitions';
+
 # Workflows
 
 In Nextflow, a **workflow** is a function that is specialized for composing processes and dataflow logic (i.e. channels and operators).
@@ -371,8 +373,7 @@ workflow {
 
 ## Process and workflow recursion
 
-:::note{title="New in version 21.11.0-edge"}
-:::
+<AddedInVersion version="21.11.0-edge" />
 
 :::note
 This feature requires the `nextflow.preview.recursion` feature flag to be enabled.
@@ -417,16 +418,15 @@ Workflows can also be invoked recursively:
 
 ## Workflow outputs
 
-:::note{title="New in version 24.04.0"}
-:::
+<AddedInVersion version="24.04.0" />
 
-:::warning{title="Changed in version 24.10.0"}
+<ChangedInVersion version="24.10.0">
 A second preview version was introduced. See the [migration notes][workflow-outputs-second-preview] for details.
-:::
+</ChangedInVersion>
 
-:::warning{title="Changed in version 25.04.0-edge"}
+<ChangedInVersion version="25.04.0-edge">
 A third preview version was introduced. See the [migration notes][workflow-outputs-third-preview] for details.
-:::
+</ChangedInVersion>
 
 :::note
 This feature requires the `nextflow.preview.output` feature flag to be enabled.
@@ -674,6 +674,6 @@ output {
 [process-naming-outputs]: /nextflow_docs/nextflow_repo/docs/process.mdx#naming-outputs
 [operator-map]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#map
 [operator-mix]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#mix
-[operator-view]: /nextflow_docs/nextflow_repo/docsreference/operator.mdx#view
+[operator-view]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#view
 [process-publishdir]: /nextflow_docs/nextflow_repo/docs/reference/process.mdx#publishdir
 [syntax-workflow]: /nextflow_docs/nextflow_repo/docs/reference/syntax.mdx#workflow

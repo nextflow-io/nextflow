@@ -1,3 +1,5 @@
+import { AddedInVersion, ChangedInVersion, DeprecatedInVersion } from '@site/src/components/VersionedAdmonitions';
+
 # Google Cloud
 
 ## Credentials
@@ -38,8 +40,7 @@ including how to set the required roles for your service account.
 
 ## Cloud Batch
 
-:::note{title="Added in version 22.07.1-edge"}
-:::
+<AddedInVersion version="22.07.1-edge" />
 
 [Google Cloud Batch](https://cloud.google.com/batch) is a managed computing service that allows the execution of containerized workloads in the Google Cloud Platform infrastructure.
 
@@ -112,8 +113,7 @@ process other_task {
 }
 ```
 
-:::note{title="Added in version 23.02.0-edge"}
-:::
+<AddedInVersion version="23.02.0-edge" />
 
 The `machineType` directive can also be a comma-separated list of patterns. The pattern can contain a `*` to match any
 number of characters and `?` to match any single character. Examples of valid patterns: `c2-*`, `m?-standard*`, `n*`.
@@ -131,8 +131,7 @@ process my_task {
 }
 ```
 
-:::note{title="Added in version 23.12.0-edge"}
-:::
+<AddedInVersion version="23.12.0-edge" />
 
 The `machineType` directive can also be an [Instance Template](https://cloud.google.com/compute/docs/instance-templates),
 specified as `template://<instance-template>`. For example:
@@ -160,9 +159,7 @@ To use an instance template with GPUs, you must also set the `google.batch.insta
 To use an instance template with Fusion, the instance template must include a `local-ssd` disk named `fusion` with 375 GB.
 See the [Google Batch documentation](https://cloud.google.com/compute/docs/disks/local-ssd) for more details about local SSDs.
 
-
-:::note{title="Added in version 23.06.0-edge"}
-:::
+<AddedInVersion version="23.06.0-edge" />
 
 The `disk` directive can be used to set the boot disk size or provision a disk for scratch storage. If the disk type is specified with the `type` option, a new disk will be mounted to the task VM at `/tmp` with the requested size and type. Otherwise, it will set the boot disk size, overriding the `google.batch.bootDiskSize` config option. See the [Google Batch documentation](https://cloud.google.com/compute/docs/disks) for more information about the available disk types.
 
@@ -207,8 +204,7 @@ google {
 }
 ```
 
-:::note{title="Added in version 23.11.0-edge"}
-:::
+<AddedInVersion version="23.11.0-edge" />
 
 Since this type of virtual machines can be retired by the provider before the job completion, it is advisable to add the following retry strategy to your config file to instruct Nextflow to automatically re-execute a job if the virtual machine was terminated preemptively:
 
@@ -221,8 +217,7 @@ process {
 
 ### Fusion file system
 
-:::note{title="Added in version 23.02.0-edge"}
-:::
+<AddedInVersion version="23.02.0-edge" />
 
 The Google Batch executor supports the use of [Fusion][fusion-page]. Fusion allows the use of Google Cloud Storage as a virtual distributed file system, optimizing the data transfer and speeding up most job I/O operations.
 
@@ -293,5 +288,5 @@ Nextflow will automatically manage the transfer of input and output files betwee
 [process-disk]: /nextflow_docs/nextflow_repo/docs/reference/process.mdx#disk
 [process-executor]: /nextflow_docs/nextflow_repo/docs/reference/process.mdx#executor
 [process-machinetype]: /nextflow_docs/nextflow_repo/docs/reference/process.mdx#machinetype
-[process-memory]: /nextflow_docs/nextflow_repo/docs/reference/process.mdxmemory
+[process-memory]: /nextflow_docs/nextflow_repo/docs/reference/process.mdx#memory
 [process-time]: /nextflow_docs/nextflow_repo/docs/reference/process.mdx#time

@@ -1,4 +1,4 @@
-import Mermaid from '@theme/Mermaid';
+import { AddedInVersion, ChangedInVersion, DeprecatedInVersion } from '@site/src/components/VersionedAdmonitions';
 
 # Caching and resuming
 
@@ -33,9 +33,9 @@ The task hash is computed from the following metadata:
 Nextflow also includes an incrementing component in the hash generation process, which allows it to iterate through multiple hash values until it finds one that does not match an existing execution directory. This mechanism typically usually aligns with task retries (i.e., task attempts), however this is not guaranteed.
 :::
 
-:::warning{title="Changed in version 23.09.2-edge"}  
+<ChangedInVersion version="23.09.2-edge">
 The [`ext`][process-ext] directive was added to the task hash.
-:::
+</ChangedInVersion>
 
 Nextflow computes this hash for every task when it is created but before it is executed. If resumability is enabled and there is an entry in the task cache with the same hash, Nextflow tries to recover the previous task execution. A cache hit does not guarantee that the task will be resumed, because it must also recover the task outputs from the [work directory](#work-directory).
 
@@ -51,8 +51,7 @@ The default cache store uses the `.nextflow/cache` directory, relative to the la
 
 Due to the limitations of LevelDB, the database for a given session ID can only be accessed by one reader/writer at a time. This means, for example, that you cannot use `nextflow log` to query the task metadata for a pipeline run while it is still running.
 
-:::note{title="New in version 23.07.0-edge"}  
-:::
+<AddedInVersion version="23.07.0-edge" />
 
 The cloud cache is an alternative cache store that uses cloud storage instead of the local cache directory. You can use it by setting the `NXF_CLOUDCACHE_PATH` environment variable to the desired cache path (e.g. `s3://my-bucket/cache`) and providing the necessary credentials.
 
@@ -200,8 +199,7 @@ One way to debug a resumed run is to compare the task hashes of each run using t
 
 While some manual effort is required, the final diff can often reveal the exact change that caused a task to be re-executed.
 
-:::note{title="New in version 23.10.0"}
-:::
+<AddedInVersion version="23.10.0" />
 
 When using `-dump-hashes json`, the task hashes can be more easily extracted into a diff. Here is an example Bash script to perform two runs and produce a diff:
 
@@ -225,9 +223,9 @@ diff run_1.tasks.log run_2.tasks.log
 
 You can then view the `diff` output or use a graphical diff viewer to compare `run_1.tasks.log` and `run_2.tasks.log`.
 
-:::note{title="New in version 25.04.0"}
+<AddedInVersion version="25.04.0">
 Nextflow now has a built-in way to compare two task runs. See the [Data lineage][data-lineage-page] guide for details.
-:::
+</AddedInVersion>
 
 [bundling-executables]: /nextflow_docs/nextflow_repo/docs/sharing.mdx#the-bin-directory
 [data-lineage-page]: /nextflow_docs/nextflow_repo/docs/data-lineage.mdx

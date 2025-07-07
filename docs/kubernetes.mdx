@@ -1,3 +1,5 @@
+import { AddedInVersion, ChangedInVersion, DeprecatedInVersion } from '@site/src/components/VersionedAdmonitions';
+
 # Kubernetes
 
 [Kubernetes](https://kubernetes.io/) is a cloud-native open-source system for deployment, scaling, and management of containerized applications.
@@ -77,8 +79,7 @@ The pod is automatically destroyed once the shell session terminates. Do not use
 
 ### Launch with Fusion
 
-:::note{title="Added in version 22.10.0"}
-:::
+<AddedInVersion version="22.10.0" />
 
 The use of [Fusion][fusion-page] allows deploying a Nextflow pipeline to a remote (or local) cluster without the need to use a shared file system and configure a persistent volume claim for the deployment of Nextflow pipeline with Kubernetes.
 
