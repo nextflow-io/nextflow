@@ -381,12 +381,10 @@ This feature requires the `nextflow.preview.recursion` feature flag to be enable
 
 Processes can be invoked recursively using the `recurse` method.
 
-```{literalinclude} snippets/recurse-process.nf
-:language: nextflow
+```nextflow file=./snippets/recurse-process.nf
 ```
 
-```{literalinclude} snippets/recurse-process.out
-:language: console
+```nextflow file=./snippets/recurse-process.out
 ```
 
 In the above example, the `count_down` process is first invoked with the value `params.start`. On each subsequent iteration, the process is invoked again using the output from the previous iteration. The recursion continues until the specified condition is satisfied, as defined by the `until` method, which terminates the recursion.
@@ -403,11 +401,9 @@ count_down
 Workflows can also be invoked recursively:
 
 ```nextflow file=./snippets/recurse-workflow.nf
-:language: nextflow
 ```
 
 ```console file=./snippets/recurse-workflow.out
-:language: console
 ```
 
 **Limitations**
