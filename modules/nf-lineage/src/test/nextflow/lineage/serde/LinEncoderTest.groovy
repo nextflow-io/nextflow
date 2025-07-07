@@ -102,7 +102,7 @@ class LinEncoderTest extends Specification{
         def result = object as WorkflowOutput
         result.createdAt == time
         result.workflowRun == "lid://1234"
-        result.output == [new Parameter("String", "a", "A"), new Parameter("String", "b", "B")]
+        result.output == [new Parameter("Collection", "a", [id: 'id', file: 'sample.txt']), new Parameter("String", "b", "B")]
     }
 
     def 'should encode and decode TaskRun'() {
