@@ -29,7 +29,7 @@ import java.nio.file.spi.FileSystemProvider;
 import java.util.Properties;
 import java.util.Set;
 
-import com.amazonaws.services.s3.model.Bucket;
+import software.amazon.awssdk.services.s3.model.Bucket;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
@@ -84,7 +84,7 @@ public class S3FileSystem extends FileSystem {
 		ImmutableList.Builder<Path> builder = ImmutableList.builder();
 
 		for (Bucket bucket : client.listBuckets()) {
-			builder.add(new S3Path(this, bucket.getName()));
+			builder.add(new S3Path(this, bucket.name()));
 		}
 
 		return builder.build();

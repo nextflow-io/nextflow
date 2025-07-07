@@ -45,6 +45,9 @@ class AwsS3Legacy {
     static protected Map normalizeAwsClientConfig(Map<String,?> client) {
 
         normalizeMemUnit(client, 'uploadChunkSize');
+        normalizeMemUnit(client, 'minimumPartSize');
+        normalizeMemUnit(client, 'multipartThreshold');
+        normalizeMemUnit(client, 'maxNativeMemory');
         normalizeDuration(client, 'uploadRetrySleep');
 
 

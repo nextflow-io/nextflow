@@ -172,5 +172,6 @@ tutorials/flux
 :caption: Guides
 :maxdepth: 1
 
-updating-spot-retries
+guides/aws-java-sdk-v2
+guides/updating-spot-retries
 ```

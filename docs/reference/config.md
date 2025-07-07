@@ -185,7 +185,7 @@ The following settings are available:
 
 `aws.batch.terminateUnschedulableJobs`
 : :::{versionadded} 25.03.0-edge
-:::
+  :::
 : When `true`, jobs that cannot be scheduled for lack of resources or misconfiguration are terminated automatically (default: `false`). The pipeline may complete with an error status depending on the error strategy defined for the corresponding jobs.
 
 `aws.batch.volumes`
@@ -219,13 +219,36 @@ The following settings are available:
   :::
 : The retrieval tier to use when restoring objects from Glacier, one of [`Expedited`, `Standard`, `Bulk`].
 
+`aws.client.maxConcurrency`
+: :::{versionadded} 25.06.0-edge
+  :::
+: The maximum number of concurrent S3 transfers used by the S3 transfer manager. By default, this setting is determined by `aws.client.targetThroughputInGbps`. Modifying this value can affect the amount of memory used for S3 transfers.
+
 `aws.client.maxConnections`
-: The maximum number of allowed open HTTP connections (default: `50`).
+: The maximum number of open HTTP connections used by the S3 transfer manager (default: `50`).
 
 `aws.client.maxErrorRetry`
 : The maximum number of retry attempts for failed retryable requests (default: `-1`).
 
+`aws.client.maxNativeMemory`
+: :::{versionadded} 25.06.0-edge
+  :::
+: The maximum native memory used by the S3 transfer manager. By default, this setting is determined by `aws.client.targetThroughputInGbps`.
+
+`aws.client.minimumPartSize`
+: :::{versionadded} 25.06.0-edge
+  :::
+: The minimum part size used by the S3 transfer manager for multi-part uploads (default: `8 MB`).
+
+`aws.client.multipartThreshold`
+: :::{versionadded} 25.06.0-edge
+  :::
+: The object size threshold used by the S3 transfer manager for performing multi-part uploads (default: same as `aws.cllient.minimumPartSize`).
+
 `aws.client.protocol`
+: :::{deprecated} 25.06.0-edge
+  This option is no longer supported.
+  :::
 : The protocol to use when connecting to AWS. Can be `http` or `https` (default: `'https'`).
 
 `aws.client.proxyHost`
@@ -233,6 +256,11 @@ The following settings are available:
 
 `aws.client.proxyPort`
 : The port to use when connecting through a proxy.
+
+`aws.client.proxyScheme`
+: :::{versionadded} 25.06.0-edge
+  :::
+: The protocol scheme to use when connecting through a proxy. Can be `http` or `https` (default: `'http'`).
 
 `aws.client.proxyUsername`
 : The user name to use when connecting through a proxy.
@@ -243,18 +271,27 @@ The following settings are available:
 `aws.client.requesterPays`
 : :::{versionadded} 24.05.0-edge
   :::
-: Use [Rrequester Pays](https://docs.aws.amazon.com/AmazonS3/latest/userguide/RequesterPaysBuckets.html) for S3 buckets (default: `false`).
+: Use [Requester Pays](https://docs.aws.amazon.com/AmazonS3/latest/userguide/RequesterPaysBuckets.html) for S3 buckets (default: `false`).
 
 `aws.client.s3PathStyleAccess`
 : Use the path-based access model to access objects in S3-compatible storage systems (default: `false`).
 
 `aws.client.signerOverride`
+: :::{deprecated} 25.06.0-edge
+  This option is no longer supported.
+  :::
 : The name of the signature algorithm to use for signing requests made by the client.
 
 `aws.client.socketSendBufferSizeHint`
+: :::{deprecated} 25.06.0-edge
+  This option is no longer supported.
+  :::
 : The Size hint (in bytes) for the low level TCP send buffer (default: `0`).
 
 `aws.client.socketRecvBufferSizeHint`
+: :::{deprecated} 25.06.0-edge
+  This option is no longer supported.
+  :::
 : The Size hint (in bytes) for the low level TCP receive buffer (default: `0`).
 
 `aws.client.socketTimeout`
@@ -268,19 +305,44 @@ The following settings are available:
   :::
 : The AWS KMS key Id to be used to encrypt files stored in the target S3 bucket.
 
+`aws.client.targetThroughputInGbps`
+: :::{versionadded} 25.06.0-edge
+  :::
+: The target network throughput (in Gbps) used by the S3 transfer manager (default: `10`). This setting is not used when `aws.client.maxConcurrency` and `aws.client.maxNativeMemory` are specified.
+
+`aws.client.transferManagerThreads`
+: :::{versionadded} 25.06.0-edge
+  :::
+: Number of threads used by the S3 transfer manager (default `10`).
+
 `aws.client.userAgent`
+: :::{deprecated} 25.06.0-edge
+  This option is no longer supported.
+  :::
 : The HTTP user agent header passed with all HTTP requests.
 
 `aws.client.uploadChunkSize`
+: :::{deprecated} 25.06.0-edge
+  This option is no longer supported.
+  :::
 : The size of a single part in a multipart upload (default: `100 MB`).
 
 `aws.client.uploadMaxAttempts`
+: :::{deprecated} 25.06.0-edge
+  This option is no longer supported.
+  :::
 : The maximum number of upload attempts after which a multipart upload returns an error (default: `5`).
 
 `aws.client.uploadMaxThreads`
+: :::{deprecated} 25.06.0-edge
+  This option is no longer supported.
+  :::
 : The maximum number of threads used for multipart upload (default: `10`).
 
 `aws.client.uploadRetrySleep`
+: :::{deprecated} 25.06.0-edge
+  This option is no longer supported.
+  :::
 : The time to wait after a failed upload attempt to retry the part upload (default: `500ms`).
 
 `aws.client.uploadStorageClass`
@@ -593,6 +655,11 @@ The following settings are available:
 
 `docker.registry`
 : The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
+
+`docker.registryOverride`
+: :::{versionadded} 25.06.0-edge
+  :::
+: When `true`, forces the override of the registry name in fully qualified container image names with the registry specified by `docker.registry` (default: `false`). This setting allows you to redirect container image pulls from their original registry to a different registry, such as a private mirror or proxy.
 
 `docker.remove`
 : Clean-up the container after the execution (default: `true`). See the [Docker documentation](https://docs.docker.com/engine/reference/run/#clean-up---rm) for details.
