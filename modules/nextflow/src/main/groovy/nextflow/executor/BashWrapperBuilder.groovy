@@ -117,7 +117,7 @@ class BashWrapperBuilder {
     private BashTemplateEngine engine = new BashTemplateEngine()
 
     BashWrapperBuilder( TaskRun task ) {
-        this(new TaskBean(task))
+        this(task.toTaskBean())
     }
 
     BashWrapperBuilder( TaskBean bean, ScriptFileCopyStrategy strategy = null ) {

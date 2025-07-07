@@ -123,6 +123,10 @@ class TaskBean implements Serializable, Cloneable {
     }
 
     TaskBean(TaskRun task) {
+        this(task, false)
+    }
+
+    TaskBean(TaskRun task, boolean stubRun) {
 
         this.name = task.name
 
@@ -154,9 +158,10 @@ class TaskBean implements Serializable, Cloneable {
         this.containerEnabled = task.isContainerEnabled()
         this.containerOptions = task.config.getContainerOptions()
         this.containerPlatform = task.getContainerPlatform()
+
         // secret management
         this.secretNative = task.isSecretNative()
-        this.secretNames = task.config.getSecret()
+        this.secretNames = stubRun ? task.config.getSecret() : null
 
         // stats
         this.outputEnvNames = task.getOutputEnvNames()
