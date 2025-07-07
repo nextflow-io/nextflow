@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@ package nextflow.util
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import nextflow.SysEnv
+import nextflow.config.ConfigClosurePlaceholder
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -245,6 +247,100 @@ class ConfigHelperTest extends Specification {
 
     }
 
+    def 'should render config as json' () {
+        given:
+        def config = new ConfigObject()
+        config.process.queue = 'long'
+        config.process.executor = 'slurm'
+        config.process.memory = new ConfigClosurePlaceholder('{ 1.GB }')
+        config.docker.enabled = true
+        config.zeta.'quoted-attribute'.foo = 1
+
+        when:
+        def result = ConfigHelper.toJsonString(config, true)
+        then:
+        result == '''
+            {
+                "docker": {
+                    "enabled": true
+                },
+                "process": {
+                    "executor": "slurm",
+                    "memory": "{ 1.GB }",
+                    "queue": "long"
+                },
+                "zeta": {
+                    "quoted-attribute": {
+                        "foo": 1
+                    }
+                }
+            }
+            '''.stripIndent().trim()
+
+
+        when:
+        result = ConfigHelper.toJsonString(config, false)
+        then:
+        result == '''
+            {
+                "process": {
+                    "queue": "long",
+                    "executor": "slurm",
+                    "memory": "{ 1.GB }"
+                },
+                "docker": {
+                    "enabled": true
+                },
+                "zeta": {
+                    "quoted-attribute": {
+                        "foo": 1
+                    }
+                }
+            }
+            '''.stripIndent().trim()
+    }
+
+    def 'should render config as yaml' () {
+        given:
+        def config = new ConfigObject()
+        config.process.queue = 'long'
+        config.process.executor = 'slurm'
+        config.process.memory = new ConfigClosurePlaceholder('{ 1.GB }')
+        config.docker.enabled = true
+        config.zeta.'quoted-attribute'.foo = 1
+
+        when:
+        def result = ConfigHelper.toYamlString(config, true)
+        then:
+        result == '''\
+            docker:
+              enabled: true
+            process:
+              executor: slurm
+              memory: '{ 1.GB }'
+              queue: long
+            zeta:
+              quoted-attribute:
+                foo: 1
+            '''.stripIndent()
+
+
+        when:
+        result = ConfigHelper.toYamlString(config, false)
+        then:
+        result == '''\
+            process:
+              queue: long
+              executor: slurm
+              memory: '{ 1.GB }'
+            docker:
+              enabled: true
+            zeta:
+              quoted-attribute:
+                foo: 1
+            '''.stripIndent()
+    }
+
     def 'should verify valid identifiers' () {
 
         expect:
@@ -273,6 +369,72 @@ class ConfigHelperTest extends Specification {
         "withName:2foo"     | "'withName:2foo'"     | "withName:'2foo'"
     }
 
+    @Unroll
+    def 'should get config from map' () {
+        given:
+        def NAME = 'foo'
+        def PREFIX = 'P_'
+        and:
+        SysEnv.push(ENV)
 
+        expect:
+        ConfigHelper.valueOf(CONFIG, NAME, PREFIX, DEF_VAL, DEF_TYPE) == EXPECTED
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        CONFIG          | ENV           | DEF_VAL       | DEF_TYPE      | EXPECTED
+        null            | [:]           | null          | String        | null
+        [:]             | [:]           | null          | String        | null
+        [:]             | [:]           | 'one'         | String        | 'one'
+        [foo:'two']     | [:]           | 'one'         | String        | 'two'
+        [foo:'']        | [:]           | 'one'         | String        | ''
+        [foo:'two']     | [P_FOO:'bar'] | 'one'         | String        | 'two'
+        [:]             | [P_FOO:'bar'] | 'one'         | String        | 'bar'
+
+        and:
+        null            | [:]           | null          | Integer       | null
+        [:]             | [:]           | null          | Integer       | null
+        [:]             | [:]           | 1             | Integer       | 1
+        [foo:2]         | [:]           | 1             | Integer       | 2
+        [foo:'2']       | [:]           | 1             | Integer       | 2
+        [foo:'2']       | [P_FOO:'3']   | 1             | Integer       | 2
+        [:]             | [P_FOO:'3']   | 1             | Integer       | 3
+
+        and:
+        null            | [:]           | null          | Boolean       | null
+        [:]             | [:]           | true          | Boolean       | true
+        [foo:false]     | [:]           | true          | Boolean       | false
+        [foo:'false']   | [:]           | true          | Boolean       | false
+        [foo:true]      | [:]           | false         | Boolean       | true
+        [foo:'true']    | [:]           | false         | Boolean       | true
+        [foo:'true']    | [P_FOO:'false']| null         | Boolean       | true
+        [:]             | [P_FOO:'false']| null         | Boolean       | false
+        [:]             | [P_FOO:'true'] | null         | Boolean       | true
+
+        and:
+        [:]             | [:]           | Duration.of('1s') | Duration  | Duration.of('1s')
+        [foo:'10ms']    | [:]           | null              | Duration  | Duration.of('10ms')
+        [:]             | [P_FOO:'1s']  | null              | Duration  | Duration.of('1s')
+    }
+
+    def 'should map camelCase to snake uppercase' () {
+        given:
+        SysEnv.push(ENV)
+
+        expect:
+        ConfigHelper.valueOf([:], NAME, PREFIX, null, String) == EXPECTED
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        EXPECTED    | PREFIX    | NAME              | ENV
+        null        | 'foo'     | 'bar'             | [:]
+        'one'       | 'foo'     | 'bar'             | [FOO_BAR: 'one']
+        'one'       | 'foo_'    | 'bar'             | [FOO_BAR: 'one']
+        'one'       | 'foo_'    | 'thisAndThat'     | [FOO_THIS_AND_THAT: 'one']
+    }
 
 }

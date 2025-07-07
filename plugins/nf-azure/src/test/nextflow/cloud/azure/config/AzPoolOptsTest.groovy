@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,6 +47,8 @@ class AzPoolOptsTest extends Specification {
         !opts.password
         !opts.virtualNetwork
         !opts.lowPriority
+        !opts.startTask.script
+        !opts.startTask.privileged
     }
 
     def 'should create pool with custom options' () {
@@ -68,7 +70,11 @@ class AzPoolOptsTest extends Specification {
             userName: 'some-user',
             password: 'some-pwd',
             virtualNetwork: 'some-vnet',
-            lowPriority: true
+            lowPriority: true,
+            startTask: [
+                script: 'echo hello-world',
+                privileged: true
+            ]
         ])
         then:
         opts.runAs == 'foo'
@@ -89,6 +95,8 @@ class AzPoolOptsTest extends Specification {
         opts.password == 'some-pwd'
         opts.virtualNetwork == 'some-vnet'
         opts.lowPriority
+        opts.startTask.script == 'echo hello-world'
+        opts.startTask.privileged
     }
 
 }

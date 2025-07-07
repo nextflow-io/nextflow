@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import org.yaml.snakeyaml.Yaml
 /**
  * Add helper methods to {@link groovy.json.JsonSlurper} class
  *
- * Check resource file: `META-INF/services/org.codehaus.groovy.runtime.ExtensionModule
+ * Check resource file: `META-INF/services/org.apache.groovy.runtime.ExtensionModule
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

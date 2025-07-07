@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,10 +26,17 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class ContainerInspectMode {
 
-    private static boolean active
+    private static Boolean dryRun
 
-    static boolean active() { return active }
+    static boolean active() { return dryRun!=null }
 
-    static void activate(boolean value) { active=value }
+    static boolean dryRun() { return dryRun==true }
 
+    static void activate(boolean dryRun) {
+        this.dryRun = dryRun
+    }
+
+    static void reset() {
+        dryRun = null
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package io.seqera.wave.plugin.config
 
 import java.time.Duration
 
+import nextflow.util.RateUnit
 import spock.lang.Specification
 /**
  *
@@ -31,11 +32,13 @@ class HttpOptsTest extends Specification {
         def opts = new HttpOpts([:])
         then:
         opts.connectTimeout() == Duration.ofSeconds(30)
+        opts.maxRate() == RateUnit.of('1/sec')
 
         when:
-        opts = new HttpOpts([connectTimeout:'50s'])
+        opts = new HttpOpts([connectTimeout:'50s', maxRate: '10/s'])
         then:
         opts.connectTimeout() == Duration.ofSeconds(50)
+        opts.maxRate()  == RateUnit.of('10/s')
 
     }
 }

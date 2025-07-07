@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -95,7 +95,7 @@ class ProviderConfigTest extends Specification {
         then:
         config.name == 'bitbucket'
         config.server == 'https://bitbucket.org'
-        config.endpoint == 'https://bitbucket.org'
+        config.endpoint == 'https://api.bitbucket.org'
         config.platform == 'bitbucket'
         config.domain == 'bitbucket.org'
     }
@@ -238,8 +238,9 @@ class ProviderConfigTest extends Specification {
         'a/b/c'       | 'http://dot.com/a'      | 'b/c'
         'a/b/c'       | 'http://dot.com/a/'     | 'b/c'
         and:
-        'paolo0758/nf-azure-repo'                    | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo'
-        'paolo0758/nf-azure-repo/_git/nf-azure-repo' | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo'
+        'paolo0758/nf-azure-repo'                    | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo/nf-azure-repo'
+        'paolo0758/nf-azure-repo/_git/nf-azure-repo' | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo/nf-azure-repo'
+        'paolo0758/nf-azure-repo/_git/another-azure-repo' | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo/another-azure-repo'
     }
 
 }

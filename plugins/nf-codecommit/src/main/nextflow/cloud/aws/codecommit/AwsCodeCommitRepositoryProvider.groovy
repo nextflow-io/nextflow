@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -134,7 +134,7 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
     // called by AssetManager
     // called by RepositoryProvider.readText()
     @Override
-    protected byte[] readBytes( String path ) {
+    byte[] readBytes( String path ) {
 
         final request = new GetFileRequest()
             .withRepositoryName(repositoryName)

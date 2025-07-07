@@ -17,7 +17,7 @@
 
 package nextflow.cloud.aws.config
 
-import com.amazonaws.services.s3.model.CannedAccessControlList
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 import nextflow.SysEnv
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -61,7 +61,7 @@ class AwsS3ConfigTest extends Specification {
         client.storageClass == 'STANDARD'
         client.storageKmsKeyId == 'key-1'
         client.storageEncryption == 'AES256'
-        client.s3Acl == CannedAccessControlList.PublicRead
+        client.s3Acl == ObjectCannedACL.PUBLIC_READ
         client.pathStyleAccess
         client.anonymous
     }
@@ -154,5 +154,8 @@ class AwsS3ConfigTest extends Specification {
         false       | [:]
         false       | [endpoint: 'https://s3.us-east-2.amazonaws.com']
         true        | [endpoint: 'https://foo.com']
+        // consider AWS china as custom ednpoint
+        // see https://github.com/nextflow-io/nextflow/issues/5836
+        true        | [endpoint: 'https://xxxx.s3.cn-north-1.vpce.amazonaws.com.cn']
     }
 }

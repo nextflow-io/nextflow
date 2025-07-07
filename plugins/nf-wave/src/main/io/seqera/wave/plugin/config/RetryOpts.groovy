@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import nextflow.util.Duration
 class RetryOpts {
     Duration delay = Duration.of('450ms')
     Duration maxDelay = Duration.of('90s')
-    int maxAttempts = 10
+    int maxAttempts = 5
     double jitter = 0.25
 
     RetryOpts() {

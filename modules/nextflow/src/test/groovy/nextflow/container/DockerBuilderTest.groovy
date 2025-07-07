@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -186,6 +186,23 @@ class DockerBuilderTest extends Specification {
                 .params(capAdd: 'SYS_ADMIN')
                 .build()
                 .runCommand == 'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --device /dev/fuse --cap-add SYS_ADMIN fedora'
+    }
+
+    def 'test container platform' () {
+        expect:
+        new DockerBuilder('fedora')
+            .build()
+            .runCommand == 'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
+
+        new DockerBuilder('fedora')
+            .setPlatform('amd64')
+            .build()
+            .runCommand == 'docker run -i --platform amd64 -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
+
+        new DockerBuilder('fedora')
+            .setPlatform('linux/arm64')
+            .build()
+            .runCommand == 'docker run -i --platform linux/arm64 -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
     }
 
     def 'test add mount'() {

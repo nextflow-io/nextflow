@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -246,7 +246,7 @@ class SessionTest extends Specification {
 
         when:
         session = [:] as Session
-        result = session.createObservers()
+        result = session.createObserversV1()
         then:
         result.size()==1
         result.any { it instanceof WorkflowStatsObserver }
@@ -254,7 +254,7 @@ class SessionTest extends Specification {
         when:
         session = [:] as Session
         session.config = [trace: [enabled: true, file:'name.txt']]
-        result = session.createObservers()
+        result = session.createObserversV1()
         observer = result[1] as TraceFileObserver
         then:
         result.size() == 2
@@ -264,7 +264,7 @@ class SessionTest extends Specification {
         when:
         session = [:] as Session
         session.config = [trace: [enabled: true, sep: 'x', fields: 'task_id,name,exit', file: 'alpha.txt']]
-        result = session.createObservers()
+        result = session.createObserversV1()
         observer = result[1] as TraceFileObserver
         then:
         result.size() == 2
@@ -275,14 +275,14 @@ class SessionTest extends Specification {
         when:
         session = [:] as Session
         session.config = [trace: [sep: 'x', fields: 'task_id,name,exit']]
-        result = session.createObservers()
+        result = session.createObserversV1()
         then:
         !result.any { it instanceof TraceFileObserver }
 
         when:
         session = [:] as Session
         session.config = [trace: [enabled: true, fields: 'task_id,name,exit,vmem']]
-        result = session.createObservers()
+        result = session.createObserversV1()
         observer = result[1] as TraceFileObserver
         then:
         result.size() == 2
@@ -310,7 +310,8 @@ class SessionTest extends Specification {
         !session.workDir.toString().contains('..')
         session.scriptName == 'pipeline.nf'
         session.classesDir.exists()
-        session.observers != null
+        session.observersV1 != null
+        session.observersV2 != null
         session.workflowMetadata != null
         
         cleanup:
@@ -601,16 +602,22 @@ class SessionTest extends Specification {
 
     }
 
+    @Unroll
     def 'should get module binaries status'() {
         given:
-        def session = new Session(CONFIG)
+        def session = new Session()
+        NextflowMeta.instance.moduleBinaries(MODE)
 
         expect:
         session.enableModuleBinaries() == EXPECTED
-        
+
+        cleanup:
+        NextflowMeta.instance.moduleBinaries(false)
+
         where:
-        CONFIG                                      | EXPECTED
-        [:]                                         | false
-        [nextflow:[enable:[moduleBinaries: true]]]  | true
+        MODE  | EXPECTED
+        false | false
+        true  | true
+
     }
 }

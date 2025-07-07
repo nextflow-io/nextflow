@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,11 @@
 
 package io.seqera.tower.plugin
 
-
 import java.nio.file.Path
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
@@ -29,10 +29,14 @@ import groovy.json.JsonGenerator
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.container.resolver.ContainerMeta
+import nextflow.container.resolver.ContainerResolver
+import nextflow.container.resolver.ContainerResolverProvider
 import nextflow.exception.AbortOperationException
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
@@ -44,8 +48,8 @@ import nextflow.util.Duration
 import nextflow.util.LoggerHelper
 import nextflow.util.ProcessHelper
 import nextflow.util.SimpleHttpClient
+import nextflow.util.TestOnly
 import nextflow.util.Threads
-
 /**
  * Send out messages via HTTP to a configured URL on different workflow
  * execution events.
@@ -56,7 +60,7 @@ import nextflow.util.Threads
 @CompileStatic
 class TowerClient implements TraceObserver {
 
-    static final public String DEF_ENDPOINT_URL = 'https://api.tower.nf'
+    static final public String DEF_ENDPOINT_URL = 'https://api.cloud.seqera.io'
 
     static private final int TASKS_PER_REQUEST = 100
 
@@ -138,6 +142,7 @@ class TowerClient implements TraceObserver {
 
     private TowerReports reports
 
+    private Map<String,Boolean> allContainers = new ConcurrentHashMap<>()
 
     /**
      * Constructor that consumes a URL and creates
@@ -157,9 +162,7 @@ class TowerClient implements TraceObserver {
         return this
     }
 
-    /**
-     * only for testing purpose -- do not use
-     */
+    @TestOnly
     protected TowerClient() {
         this.generator = TowerJsonGenerator.create(Collections.EMPTY_MAP)
     }
@@ -212,6 +215,10 @@ class TowerClient implements TraceObserver {
      * @return The requested url or the default url, if invalid
      */
     protected String checkUrl(String url){
+        // report a warning for legacy endpoint
+        if( url.contains('https://api.tower.nf') ) {
+            log.warn "The endpoint `https://api.tower.nf` is deprecated - Please use `https://api.cloud.seqera.io` instead"
+        }
         if( url =~ "^(https|http)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]" ) {
             while( url.endsWith('/') )
                 url = url[0..-2]
@@ -268,7 +275,7 @@ class TowerClient implements TraceObserver {
      */
     @Override
     void onFlowCreate(Session session) {
-        log.debug "Creating Tower observer -- endpoint=$endpoint; requestInterval=$requestInterval; aliveInterval=$aliveInterval; maxRetries=$maxRetries; backOffBase=$backOffBase; backOffDelay=$backOffDelay"
+        log.debug "Creating Seqera Platform observer -- endpoint=$endpoint; requestInterval=$requestInterval; aliveInterval=$aliveInterval; maxRetries=$maxRetries; backOffBase=$backOffBase; backOffDelay=$backOffDelay"
         
         this.session = session
         this.aggregator = new ResourcesAggregator(session)
@@ -293,7 +300,7 @@ class TowerClient implements TraceObserver {
         final ret = parseTowerResponse(resp)
         this.workflowId = ret.workflowId
         if( !workflowId )
-            throw new AbortOperationException("Invalid Tower response - Missing workflow Id")
+            throw new AbortOperationException("Invalid Seqera Platform API response - Missing workflow Id")
         if( ret.message )
             log.warn(ret.message.toString())
 
@@ -367,7 +374,7 @@ class TowerClient implements TraceObserver {
         final payload = parseTowerResponse(resp)
         this.watchUrl = payload.watchUrl
         this.sender = Threads.start('Tower-thread', this.&sendTasks0)
-        final msg = "Monitor the execution with Nextflow Tower using this URL: ${watchUrl}"
+        final msg = "Monitor the execution with Seqera Platform using this URL: ${watchUrl}"
         log.info(LoggerHelper.STICKY, msg)
     }
 
@@ -379,7 +386,7 @@ class TowerClient implements TraceObserver {
                 ? env.get('TOWER_ACCESS_TOKEN')
                 : session.config.navigate('tower.accessToken', env.get('TOWER_ACCESS_TOKEN'))
         if( !token )
-            throw new AbortOperationException("Missing Nextflow Tower access token -- Make sure there's a variable TOWER_ACCESS_TOKEN in your environment")
+            throw new AbortOperationException("Missing Seqera Platform access token -- Make sure there's a variable TOWER_ACCESS_TOKEN in your environment")
         return token
     }
 
@@ -390,6 +397,8 @@ class TowerClient implements TraceObserver {
     void onFlowComplete() {
         // submit the record
         events << new ProcessEvent(completed: true)
+        // publish runtime reports
+        reports.publishRuntimeReports()
         // wait the submission of pending events
         sender.join()
         // wait and flush reports content
@@ -538,7 +547,7 @@ class TowerClient implements TraceObserver {
                 return new Response(httpClient.responseCode, httpClient.getResponse())
             }
             catch( ConnectException e ) {
-                String msg = "Unable to connect to Tower API: ${getHostUrl(url)}"
+                String msg = "Unable to connect to Seqera Platform API: ${getHostUrl(url)}"
                 return new Response(0, msg)
             }
             catch (IOException e) {
@@ -556,7 +565,7 @@ class TowerClient implements TraceObserver {
 
                 String msg
                 if( code == 401 ) {
-                    msg = 'Unauthorized Tower access -- Make sure you have specified the correct access token'
+                    msg = 'Unauthorized Seqera Platform API access -- Make sure you have specified the correct access token'
                 }
                 else {
                     msg = parseCause(httpClient.response) ?: "Unexpected response for request $url"
@@ -701,7 +710,20 @@ class TowerClient implements TraceObserver {
         final result = new LinkedHashMap(5)
         result.put('tasks', payload)
         result.put('progress', getWorkflowProgress(true))
+        result.put('containers', getNewContainers(tasks))
         result.instant = Instant.now().toEpochMilli()
+        return result
+    }
+
+    protected List<ContainerMeta> getNewContainers(Collection<TraceRecord> tasks) {
+        final result = new ArrayList<ContainerMeta>()
+        for( TraceRecord it : tasks ) {
+            final meta = it.getContainerMeta()
+            if( meta && !allContainers.get(meta.targetImage) ) {
+                allContainers.put(meta.targetImage, Boolean.TRUE)
+                result.add(meta)
+            }
+        }
         return result
     }
 
@@ -743,7 +765,7 @@ class TowerClient implements TraceObserver {
         def cause = parseCause(resp.cause)
 
         def msg = """\
-                Unexpected Tower response
+                Unexpected Seqera Platform API response
                 - endpoint url: $endpoint
                 - status code : $resp.code
                 - response msg: ${resp.message} 
@@ -835,4 +857,8 @@ class TowerClient implements TraceObserver {
         }
     }
 
+    @Memoized
+    private ContainerResolver containerResolver() {
+        ContainerResolverProvider.load()
+    }
 }

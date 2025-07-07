@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ process foo {
     output:
     file 'dir2/*' 
 
+    script:
     '''
     ls dir1 | sort
     mkdir dir2
@@ -33,7 +34,7 @@ process foo {
 }
 
 workflow {
-  Channel.fromPath("$baseDir/data/p{1,2,3}.fa") \
+  channel.fromPath("$baseDir/data/p{1,2,3}.fa") \
     | toList \
     | foo \
     | flatten \

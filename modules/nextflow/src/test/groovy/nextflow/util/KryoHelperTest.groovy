@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -163,6 +163,16 @@ class KryoHelperTest extends  Specification {
         then:
         KryoHelper.deserialize(buffer).getClass().getName() == 'nextflow.file.http.XPath'
         KryoHelper.deserialize(buffer).toUri() == new URI('http://host.com/foo.txt')
+    }
+
+    def 'should serialise xfilesystem' () {
+        when:
+        def uri = new URI('https://host.com/path/foo.txt')
+        def fs = FileHelper.getOrCreateFileSystemFor(new URI('https://host.com/path/foo.txt'))
+        def fsBuffer = KryoHelper.serialize(fs)
+        then:
+        KryoHelper.deserialize(fsBuffer).getClass().getName() == 'nextflow.file.http.XFileSystem'
+        KryoHelper.deserialize(fsBuffer).getPath("/path/foo.txt").toUri() == uri
     }
 
     @EqualsAndHashCode

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,6 +84,8 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
     protected boolean privileged
 
+    protected String platform
+
     String getImage() { image }
 
     V addRunOptions(String str) {
@@ -118,6 +120,11 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
         else
             throw new IllegalArgumentException("Not a supported memory value")
 
+        return (V)this
+    }
+
+    V setPlatform(String platform) {
+        this.platform = platform
         return (V)this
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -135,6 +135,10 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
 
         if( memory ) {
             result << "--memory ${memory} "
+        }
+
+        if( platform ) {
+            result << "--platform ${platform} "
         }
 
         // the name is after the user option so it has precedence over any options provided by the user

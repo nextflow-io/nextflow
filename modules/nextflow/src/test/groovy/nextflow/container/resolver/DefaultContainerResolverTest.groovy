@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,5 +53,14 @@ class DefaultContainerResolverTest extends Specification {
         result.hashKey == 'quay.io/ubuntu:latest'
     }
 
+    def 'should return default meta' () {
+        given:
+        def image = 'my/container:latest'
+        def resolver = new DefaultContainerResolver()
+        when:
+        def meta = resolver.getContainerMeta(image)
+        then:
+        meta == new ContainerMeta(targetImage: image)
+    }
 
 }

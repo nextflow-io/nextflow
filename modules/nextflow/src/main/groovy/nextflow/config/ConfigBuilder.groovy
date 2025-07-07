@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,8 +32,6 @@ import nextflow.cli.CmdNode
 import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
-import nextflow.secret.SecretHolder
-import nextflow.secret.SecretsContext
 import nextflow.secret.SecretsLoader
 import nextflow.trace.GraphObserver
 import nextflow.trace.ReportObserver
@@ -73,9 +71,9 @@ class ConfigBuilder {
 
     List<Path> parsedConfigFiles = []
 
-    List<String> parsedProfileNames
-
     boolean showClosures
+
+    boolean stripSecrets
 
     boolean showMissingVariables
 
@@ -92,6 +90,11 @@ class ConfigBuilder {
 
     ConfigBuilder setShowClosures(boolean value) {
         this.showClosures = value
+        return this
+    }
+
+    ConfigBuilder setStripSecrets(boolean value) {
+        this.stripSecrets = value
         return this
     }
 
@@ -333,8 +336,8 @@ class ConfigBuilder {
         binding.put('baseDir', base)
         binding.put('projectDir', base)
         binding.put('launchDir', Paths.get('.').toRealPath())
-        if( SecretsLoader.isEnabled() )
-            binding.put('secrets', new SecretsContext())
+        binding.put('outputDir', Paths.get('results').complete())
+        binding.put('secrets', SecretsLoader.secretContext())
         return binding
     }
 
@@ -342,13 +345,14 @@ class ConfigBuilder {
         assert env != null
 
         final ignoreIncludes = options ? options.ignoreConfigIncludes : false
-        final slurper = new ConfigParser()
+        final parser = ConfigParserFactory.create()
                 .setRenderClosureAsString(showClosures)
+                .setStripSecrets(stripSecrets)
                 .setIgnoreIncludes(ignoreIncludes)
         ConfigObject result = new ConfigObject()
 
         if( cmdRun && (cmdRun.hasParams()) )
-            slurper.setParams(cmdRun.parsedParams(configVars()))
+            parser.setParams(cmdRun.parsedParams(configVars()))
 
         // add the user specified environment to the session env
         env.sort().each { name, value -> result.env.put(name,value) }
@@ -361,13 +365,13 @@ class ConfigBuilder {
             binding.putAll(env)
             binding.putAll(configVars())
 
-            slurper.setBinding(binding)
+            parser.setBinding(binding)
 
             // merge of the provided configuration files
             for( def entry : configEntries ) {
 
                 try {
-                    merge0(result, slurper, entry)
+                    merge0(result, parser, entry)
                 }
                 catch( ConfigParseException e ) {
                     throw e
@@ -378,9 +382,8 @@ class ConfigBuilder {
                 }
             }
 
-            this.parsedProfileNames = new ArrayList<>(slurper.getProfileNames())
             if( validateProfile ) {
-                checkValidProfile(slurper.getConditionalBlockNames())
+                checkValidProfile(parser.getProfiles())
             }
 
         }
@@ -397,44 +400,43 @@ class ConfigBuilder {
      * Merge the main config with a separate config file
      *
      * @param result The main {@link ConfigObject}
-     * @param slurper The {@ComposedConfigSlurper} parsed instance
+     * @param parser The {@ConfigParser} instance
      * @param entry The next config snippet/file to be parsed
      * @return
      */
-    protected void merge0(ConfigObject result, ConfigParser slurper, entry) {
+    protected void merge0(ConfigObject result, ConfigParser parser, entry) {
         if( !entry )
             return
 
         // select the profile
-        if( showAllProfiles ) {
-            def config = parse0(slurper,entry)
-            validate(config,entry)
-            result.merge(config)
-            return
+        if( !showAllProfiles ) {
+            log.debug "Applying config profile: `${profile}`"
+            parser.setProfiles(profile.tokenize(','))
         }
 
-        log.debug "Applying config profile: `${profile}`"
-        def allNames = profile.tokenize(',')
-        slurper.registerConditionalBlock('profiles', allNames)
-
-        def config = parse0(slurper,entry)
-        validate(config,entry)
+        final config = parse0(parser, entry)
+        if( NF.getSyntaxParserVersion() == 'v1' )
+            validate(config, entry)
         result.merge(config)
     }
 
-    protected ConfigObject parse0(ConfigParser slurper, entry) {
+    protected ConfigObject parse0(ConfigParser parser, entry) {
         if( entry instanceof File ) {
             final path = entry.toPath()
             parsedConfigFiles << path
-            return slurper.parse(path)
+            return parser.parse(path)
         }
 
         if( entry instanceof Path ) {
             parsedConfigFiles << entry
-            return slurper.parse(entry)
+            return parser.parse(entry)
         }
 
-        return slurper.parse(entry.toString())
+        if( entry instanceof CharSequence ) {
+            return parser.parse(entry.toString())
+        }
+
+        throw new IllegalStateException("Unexpected config entry: ${entry}")
     }
 
     /**
@@ -444,7 +446,7 @@ class ConfigBuilder {
      * @param file The source config file/snippet
      * @return
      */
-    protected validate(ConfigObject config, file, String parent=null, List stack = new ArrayList()) {
+    protected void validate(ConfigObject config, file, String parent=null, List stack = new ArrayList()) {
         for( String key : new ArrayList<>(config.keySet()) ) {
             final value = config.get(key)
             if( value instanceof ConfigObject ) {
@@ -539,6 +541,13 @@ class ConfigBuilder {
 
         if( cmdRun.stubRun )
             config.stubRun = cmdRun.stubRun
+
+        // -- set the output directory
+        if( cmdRun.outputDir )
+            config.outputDir = cmdRun.outputDir
+
+        if( cmdRun.preview )
+            config.preview = cmdRun.preview
 
         // -- sets the working directory
         if( cmdRun.workDir )
@@ -672,6 +681,7 @@ class ConfigBuilder {
 
         // -- sets the messages options
         if( cmdRun.withWebLog ) {
+            log.warn "The command line option '-with-weblog' is deprecated - consider enabling this feature by setting 'weblog.enabled=true' in your configuration file"
             if( !(config.weblog instanceof Map) )
                 config.weblog = [:]
             config.weblog.enabled = true
@@ -689,7 +699,7 @@ class ConfigBuilder {
             if( cmdRun.withTower != '-' )
                 config.tower.endpoint = cmdRun.withTower
             else if( !config.tower.endpoint )
-                config.tower.endpoint = 'https://api.tower.nf'
+                config.tower.endpoint = 'https://api.cloud.seqera.io'
         }
 
         // -- set wave options
@@ -841,10 +851,6 @@ class ConfigBuilder {
             }
             return result
         }
-        else if( config instanceof GString ) {
-            final holdSecrets = config.values.any { it instanceof SecretHolder }
-            return holdSecrets ? config : config.toString()
-        }
         else {
             return config
         }
@@ -900,6 +906,7 @@ class ConfigBuilder {
 
         final config = new ConfigBuilder()
                 .setShowClosures(true)
+                .setStripSecrets(true)
                 .setOptions(cmdRun.launcher.options)
                 .setCmdRun(cmdRun)
                 .setBaseDir(baseDir)

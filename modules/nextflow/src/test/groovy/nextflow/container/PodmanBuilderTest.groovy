@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -239,5 +239,22 @@ class PodmanBuilderTest extends Specification {
                 .build()
                 .runCommand == 'podman run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --cpu-shares 1024 --memory 400m fedora'
 
+    }
+
+    def 'test container platform' () {
+        expect:
+        new PodmanBuilder('fedora')
+            .build()
+            .runCommand == 'podman run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
+
+        new PodmanBuilder('fedora')
+            .setPlatform('amd64')
+            .build()
+            .runCommand == 'podman run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --platform amd64 fedora'
+
+        new PodmanBuilder('fedora')
+            .setPlatform('linux/arm64')
+            .build()
+            .runCommand == 'podman run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --platform linux/arm64 fedora'
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import java.nio.file.Paths
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
@@ -65,7 +66,7 @@ class CacheManager {
         if( !sessionUuid )
             throw new AbortOperationException("Missing target uuid - cache sync cannot be performed")
 
-        this.localCachePath = Paths.get(".nextflow/cache/${sessionUuid}")
+        this.localCachePath = Const.appCacheDir.resolve("cache/${sessionUuid}")
 
         if( env.NXF_OUT_FILE )
             localOutFile = Paths.get(env.NXF_OUT_FILE)

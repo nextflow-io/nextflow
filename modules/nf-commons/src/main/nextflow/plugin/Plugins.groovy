@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,10 @@ import org.pf4j.PluginManager
 @CompileStatic
 class Plugins {
 
-    public static final String DEFAULT_PLUGINS_REPO = 'https://raw.githubusercontent.com/nextflow-io/plugins/main/plugins.json'
+    // this is deprecated and should not be used to avoid accessing this static attribute
+    // cause the instantiation of the PluginsFacade class
+    @Deprecated
+    public static final String DEFAULT_PLUGINS_REPO = PluginsFacade.DEFAULT_PLUGINS_REPO
 
     private final static PluginsFacade INSTANCE = new PluginsFacade()
 

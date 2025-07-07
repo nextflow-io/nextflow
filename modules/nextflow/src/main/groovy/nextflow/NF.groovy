@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,14 @@ class NF {
 
     static private Session session() {
         return (Session)Global.session
+    }
+
+    static String getSyntaxParserVersion() {
+        return SysEnv.get('NXF_SYNTAX_PARSER', 'v1')
+    }
+
+    static boolean isSyntaxParserV2() {
+        return getSyntaxParserVersion() == 'v2'
     }
 
     static void init() {
@@ -64,11 +72,15 @@ class NF {
         NextflowMeta.instance.isStrictModeEnabled()
     }
 
-    static boolean isRecurseEnabled() {
-        NextflowMeta.instance.preview.recursion
+    static boolean isModuleBinariesEnabled() {
+        NextflowMeta.instance.isModuleBinariesEnabled()
     }
 
-    static boolean isTopicChannelEnabled() {
-        NextflowMeta.instance.preview.topic
+    static boolean isOutputDefinitionEnabled() {
+        NextflowMeta.instance.preview.output
+    }
+
+    static boolean isRecurseEnabled() {
+        NextflowMeta.instance.preview.recursion
     }
 }

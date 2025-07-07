@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,8 @@ import nextflow.NextflowMeta
 import nextflow.mail.Attachment
 import nextflow.mail.Mail
 import nextflow.mail.Mailer
+import nextflow.script.FusionMetadata
+import nextflow.script.WaveMetadata
 import nextflow.trace.WorkflowStats
 import nextflow.util.Duration
 import spock.lang.Specification
@@ -64,6 +66,8 @@ class WorkflowNotifierTest extends Specification {
                 profile: 'my-cluster',
                 container: 'image/foo:tag',
                 containerEngine: 'docker',
+                wave: new WaveMetadata(true),
+                fusion: new FusionMetadata(true, '1.2.3'),
                 nextflow: new NextflowMeta('0.27.0', 333, '2017-12-12'),
                 stats: new WorkflowStats(succeedMillis: 4_000_000, succeededCount: 10, failedCount: 20, cachedCount: 30, ignoredCount: 0)
         )
@@ -103,6 +107,8 @@ class WorkflowNotifierTest extends Specification {
                   Workflow profile  : my-cluster
                   Workflow container: image/foo:tag
                   Container engine  : docker
+                  Wave enabled      : true
+                  Fusion enabled    : true, version 1.2.3
                   Nextflow version  : 0.27.0, build 333 (2017-12-12)
 
                 --
@@ -152,6 +158,8 @@ class WorkflowNotifierTest extends Specification {
                   Workflow profile  : my-cluster
                   Workflow container: image/foo:tag
                   Container engine  : docker
+                  Wave enabled      : true
+                  Fusion enabled    : true, version 1.2.3
                   Nextflow version  : 0.27.0, build 333 (2017-12-12)
 
                 --
@@ -191,6 +199,9 @@ class WorkflowNotifierTest extends Specification {
                 profile: 'my-cluster',
                 container: 'image/foo:tag',
                 containerEngine: 'docker',
+                wave: new WaveMetadata(true),
+                fusion: new FusionMetadata(true, '1.2.3'),
+
                 nextflow: new NextflowMeta('0.27.0', 333, '2017-12-12'),
                 stats: new WorkflowStats(succeedMillis: 4000)
         )

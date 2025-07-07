@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,68 +42,76 @@ class AzureRepositoryProviderTest extends Specification {
         }
         '''
 
-    def 'should return repo url' () {
-
-        given:
-        def config = new ConfigSlurper().parse(CONFIG)
-        def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
-
+    def 'should parse repo fields from path' () {
         expect:
-        new AzureRepositoryProvider('t-neumann/hello', obj).getEndpointUrl() == 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello'
+        AzureRepositoryProvider.getUniformPath(PATH) == EXPECTED
+
+        where:
+        PATH                                | EXPECTED
+        't-neumann/hello'                   | ['t-neumann', 'hello', 'hello']
+        'ORGANIZATION/PROJECT/hello'        | ['ORGANIZATION','PROJECT','hello']
+        'ORGANIZATION/PROJECT/_git/hello'   | ['ORGANIZATION','PROJECT','hello']
     }
 
-    def 'should return repo with organization url' () {
+    def 'should throw exception if wrong path' () {
+        when:
+        def path = AzureRepositoryProvider.getUniformPath(PATH)
 
+        then :
+        def exception = thrown(IllegalArgumentException)
+        exception?.message == EXCEPTION
+
+        where:
+        PATH                                | EXCEPTION
+        'incorrect_path_1'                  | "Unexpected Azure repository path format - offending value: 'incorrect_path_1'"
+        'ORG/PROJ/hello/incorrect'          | "Unexpected Azure repository path format - offending value: 'ORG/PROJ/hello/incorrect'"
+    }
+
+    def 'should return repo url' () {
         given:
         def config = new ConfigSlurper().parse(CONFIG)
         def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
 
         expect:
-        new AzureRepositoryProvider('ORGANIZATION/PROJECT/hello', obj).getEndpointUrl() == 'https://dev.azure.com/ORGANIZATION/PROJECT/_apis/git/repositories/hello'
+        new AzureRepositoryProvider(PATH, obj).getEndpointUrl() == EXPECTED
+
+        where:
+        PATH                                | EXPECTED
+        't-neumann/hello'                   | 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello'
+        'ORGANIZATION/PROJECT/hello'        | 'https://dev.azure.com/ORGANIZATION/PROJECT/_apis/git/repositories/hello'
+        'ORGANIZATION/PROJECT/_git/hello'   | 'https://dev.azure.com/ORGANIZATION/PROJECT/_apis/git/repositories/hello'
     }
 
     def 'should return project URL' () {
-
         given:
         def config = new ConfigSlurper().parse(CONFIG)
         def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
 
         expect:
-        new AzureRepositoryProvider('t-neumann/hello', obj).getRepositoryUrl() == 'https://dev.azure.com/t-neumann/hello'
-
-    }
-
-    def 'should return project with organization URL' () {
-
-        given:
-        def config = new ConfigSlurper().parse(CONFIG)
-        def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
-
-        expect:
-        new AzureRepositoryProvider('ORGANIZATION/PROJECT/hello', obj).getRepositoryUrl() == 'https://dev.azure.com/ORGANIZATION/PROJECT'
-
+        new AzureRepositoryProvider(PATH, obj).getRepositoryUrl() == EXPECTED
+        where:
+        PATH                                | EXPECTED
+        't-neumann/hello'                   | 'https://dev.azure.com/t-neumann/hello'
+        'ORGANIZATION/PROJECT/hello'        | 'https://dev.azure.com/ORGANIZATION/PROJECT/hello'
+        'ORGANIZATION/PROJECT/_git/hello'   | 'https://dev.azure.com/ORGANIZATION/PROJECT/_git/hello'
     }
 
     def 'should return content URL' () {
-
         given:
         def config = new ConfigSlurper().parse(CONFIG)
         def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
 
         expect:
         new AzureRepositoryProvider('t-neumann/hello', obj).getContentUrl('main.nf') == 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=main.nf'
-
     }
 
     def 'should return content URL for revision' () {
-
         given:
         def config = new ConfigSlurper().parse(CONFIG)
         def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
 
         expect:
         new AzureRepositoryProvider('t-neumann/hello', obj).setRevision("a-branch").getContentUrl('main.nf') == 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=main.nf&versionDescriptor.version=a-branch'
-
     }
 
     /*
@@ -125,7 +133,6 @@ class AzureRepositoryProviderTest extends Specification {
         def result = repo.readText('main.nf')
         then:
         result == 'println "Hello from Azure repos!"'
-
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})

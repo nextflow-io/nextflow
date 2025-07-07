@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,6 @@ import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.Session
 import nextflow.exception.AbortOperationException
-import nextflow.secret.SecretHolder
-import org.apache.commons.lang.StringUtils
 /**
  * Defines the script execution context. By default provided the following variables
  * <li>{@code __$session}: the current execution session
@@ -72,8 +70,8 @@ class ScriptBinding extends WorkflowBinding {
         // create and populate args
         args = new ArrayList<>()
         if( vars.args ) {
-            if( !(vars.args instanceof List) ) throw new IllegalArgumentException("ScriptBinding 'args' must be a List value")
-            args.addAll((List)vars.args)
+            if( !(vars.args instanceof List<String>) ) throw new IllegalArgumentException("ScriptBinding 'args' must be a List value")
+            args.addAll((List<String>)vars.args)
         }
         vars.put('args', args)
         
@@ -203,14 +201,10 @@ class ScriptBinding extends WorkflowBinding {
     }
 
     /**
-     * Holds parameter immutable values
+     * Implements immutable params map
      */
     @CompileStatic
     static class ParamsMap implements Map<String,Object> {
-
-        private Set<String> readOnlyNames
-
-        private List<String> realNames
 
         private List<String> scriptAssignment = []
 
@@ -218,8 +212,6 @@ class ScriptBinding extends WorkflowBinding {
         private Map<String,Object> target
 
         ParamsMap() {
-            readOnlyNames = []
-            realNames = []
             target = new LinkedHashMap<>()
         }
 
@@ -228,23 +220,15 @@ class ScriptBinding extends WorkflowBinding {
             putAll(values)
         }
 
-        private ParamsMap(ParamsMap template, Map overrides) {
-            this(template)
-            allowNames(overrides.keySet())
-            putAll(overrides)
+        private ParamsMap(ParamsMap values, Map<String,?> overrides) {
+            this(values)
+
+            for( def entry : overrides )
+                put0(entry.key, entry.value, true)
         }
 
-        ParamsMap copyWith(Map overrides) {
+        ParamsMap copyWith(Map<String,?> overrides) {
             return new ParamsMap(this, overrides)
-        }
-
-        private ParamsMap allowNames(Set names) {
-            for( String name : names ) {
-                final name2 = name.contains('-') ? hyphenToCamelCase(name) : camelCaseToHyphen(name)
-                readOnlyNames.remove(name)
-                readOnlyNames.remove(name2)
-            }
-            return this
         }
 
         @Override
@@ -270,144 +254,24 @@ class ScriptBinding extends WorkflowBinding {
         @Override
         String put(String name, Object value) {
             assert name
-            (name in scriptAssignment
-                    ? log.warn("`params.$name` is defined multiple times -- Assignments following the first are ignored")
-                    : scriptAssignment << name )
+            if( name in scriptAssignment )
+                log.warn("`params.$name` is defined multiple times -- Assignments following the first are ignored")
+            else
+                scriptAssignment << name
             return put0(name,value)
         }
 
-        private String put0(String name, Object value) {
-            if( value instanceof SecretHolder ) {
-                log.warn "`params.$name` cannot be assigned to a secret value -- Assignment is ignored"
-                return null
-            }
-            
-            // keep track of the real name
-            realNames << name
-
-            // normalize the name
-            def name2 = name.contains('-') ? hyphenToCamelCase(name) : camelCaseToHyphen(name)
-
-            final readOnly = name in readOnlyNames || name2 in readOnlyNames
-
-            def result = null
-            if( !readOnly ) {
-                readOnlyNames << name
-                readOnlyNames << name2
-                result = target.put(name, value)
-                target.put(name2, value)
-            }
-
-            return result
+        private String put0(String name, Object value, boolean allowOverride=false) {
+            return allowOverride || !target.containsKey(name)
+                ? target.put(name, value)
+                : null
         }
 
         @Override
-        void putAll(Map other) {
-            for( Entry<String,Object> entry : other.entrySet() ) {
+        void putAll(Map<? extends String,? extends Object> other) {
+            for( def entry : other.entrySet() ) {
                 put0(entry.getKey(), entry.getValue())
             }
-        }
-
-        /**
-         * Renders a string containing all name-value pairs as a command line string
-         *
-         * @param opts String formatting options:
-         *   {@code sep}: the key-value pair separator
-         *   {@code quote}: the character to be used to quote the parameter value
-         *   {@code prefix}: the character(s) prepended to the parameter key
-         *
-         * @return A command line formatted string e.g. {@code --foo x --bar y}
-         */
-        String all(Map opts = null) {
-
-            String sep = opts?.sep ?: ' '
-            String quote = opts?.quote ?: ''
-            String prefix = opts?.prefix ?: '--'
-
-            def result = []
-            realNames.each {
-                result << ("$prefix$it$sep${wrap(this.get(it).toString(), quote)}".toString())
-            }
-            return result.join(' ')
-        }
-
-        /**
-         * Wrap a string value with quote characters
-         *
-         * @param str The string with value to be wrapped by quote characters
-         * @param quote The quote character
-         * @return The quoted string
-         */
-        @PackageScope
-        static String wrap( String str, String quote ) {
-            if( !quote && (str.contains(' ') || str.contains('"') || str.contains("'") ))
-                quote = '"'
-
-            if( !quote )
-                return str
-
-            def result = new StringBuilder()
-            result.append(quote)
-            str.each {
-                result.append( it == quote ? '\\'+quote : it )
-            }
-            result.append(quote)
-            return result.toString()
-        }
-
-        /**
-         *  Converts a string containing words separated by a hyphen character to a camelCase string
-         *
-         * @param str The string to be converted
-         * @return
-         */
-        @PackageScope
-        static String hyphenToCamelCase( String str ) {
-
-            if( !str ) { return str }
-
-            def result = new StringBuilder()
-            str.split('-').eachWithIndex{ String entry, int i ->
-                result << (i>0 ? StringUtils.capitalize(entry) : entry )
-            }
-
-            return result.toString()
-        }
-
-        /**
-         * Converts a camel-case string to a string where words are separated by hyphen character
-         *
-         * @param str The string to be converted
-         * @return A string where camel-case words are converted to words separated by hyphen character
-         */
-        @PackageScope
-        static String camelCaseToHyphen( String str ) {
-
-            def lower = 'a'..'z'
-            def upper = 'A'..'Z'
-
-            def result = new StringBuilder()
-            if( !str ) {
-                return str
-            }
-
-            result << str[0]
-            for( int i=1; i<str.size(); i++ ) {
-                if( str[i] in upper && str[i-1] in lower  ) {
-                    result << '-'
-                    if( i+1<str.size() && str[i+1] in lower ) {
-                        result << str[i].toLowerCase()
-                    }
-                    else {
-                        result << str[i]
-                    }
-                }
-                else {
-                    result << str[i]
-                }
-            }
-
-            return result.toString()
         }
 
     }

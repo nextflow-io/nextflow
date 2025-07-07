@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
+import nextflow.util.TestOnly
 /**
  * CLI sub-command PULL
  *
@@ -49,7 +50,7 @@ class CmdPull extends CmdBase implements HubOptions {
     @Override
     final String getName() { NAME }
 
-    /* only for testing purpose */
+    @TestOnly
     protected File root
 
     @Override
@@ -64,7 +65,6 @@ class CmdPull extends CmdBase implements HubOptions {
             return
         }
 
-        /* only for testing purpose */
         if( root ) {
             AssetManager.root = root
         }

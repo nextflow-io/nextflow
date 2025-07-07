@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 package nextflow.script.params
 
 import groovy.transform.InheritConstructors
-import nextflow.NF
+import nextflow.script.TokenEvalCall
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenFileCall
 import nextflow.script.TokenPathCall
@@ -75,6 +75,9 @@ class TupleInParam extends BaseInParam {
             }
             else if( item instanceof TokenEnvCall ) {
                 newItem(EnvInParam).bind(item.val)
+            }
+            else if( item instanceof TokenEvalCall ) {
+                throw new IllegalArgumentException('Command input declaration is not supported')
             }
             else if( item instanceof TokenStdinCall ) {
                 newItem(StdInParam)

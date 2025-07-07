@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,10 @@ class OutputsList implements List<OutParam>, Cloneable {
         return result
     }
 
-    @Delegate
+    // note: excludes 'reversed' to prevent issues caused by the introduction
+    // of SequenceCollection by Java 21 when running on Java 20 or earlier
+    // see: https://github.com/nextflow-io/nextflow/issues/5029
+    @Delegate(excludes = ['reversed','addFirst','addLast','getFirst','getLast','removeFirst','removeLast'])
     private List<OutParam> target = new LinkedList<>()
 
     List<DataflowWriteChannel> getChannels() {

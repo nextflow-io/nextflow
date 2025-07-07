@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -94,7 +94,8 @@ class DumpOpTest extends Specification {
     def 'should validate isEnabled when tag=#tag and names=#names'() {
 
         given:
-        def op = new DumpOp(tag: tag, dumpNames: names.tokenize(','))
+        new Session(dumpChannels: names.tokenize(','))
+        def op = new DumpOp(tag ? [tag: tag] : [:], null)
 
         expect:
         op.isEnabled() == expected

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
-import nextflow.script.ProcessConfig
 import nextflow.script.ScriptBinding
 import nextflow.script.ScriptMeta
 import nextflow.util.BlankSeparatedList
@@ -48,10 +47,9 @@ class TaskContextTest extends Specification {
     def 'should save and read TaskContext object' () {
 
         setup:
-        def taskConfig = new ProcessConfig([:])
-        def processor = [:] as TaskProcessor
-        processor.metaClass.getTaskConfig = { taskConfig }
-        processor.metaClass.getTaskBody = { new BodyDef(null,'source') }
+        def processor = Mock(TaskProcessor) {
+            getTaskBody() >> new BodyDef(null,'source')
+        }
         def str = 'Hola'
         def map = new TaskContext(processor, [:])
         map.alpha = 1

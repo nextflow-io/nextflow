@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -166,13 +166,13 @@ class WorkflowStatsTest extends Specification {
 
     def 'should return task percents' () {
         given:
-        def stats = new WorkflowStats(succeededCount: 20, cachedCount: 40, ignoredCount: 60, failedCount: 80)
+        def stats = new WorkflowStats(succeededCount: 20, cachedCount: 40, ignoredCount: 60, failedCount: 140)
 
         expect: 
         stats.getSucceedPct() == 10.0f
         stats.getCachedPct() == 20.0f
         stats.getIgnoredPct() == 30.0f
-        stats.getFailedPct() == 40.0f
+        stats.getEffectiveFailedPct() == 40.0f
 
     }
 

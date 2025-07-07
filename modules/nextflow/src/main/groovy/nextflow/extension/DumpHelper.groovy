@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import nextflow.extension.FilesEx
 import org.codehaus.groovy.runtime.InvokerHelper
+import org.yaml.snakeyaml.Yaml
 /**
  * Helper converters for {@link DumpOp} operator
  *
@@ -52,13 +53,20 @@ class DumpHelper {
     }
 
     static String prettyPrint(value) {
-        if( value instanceof List || value instanceof Map || value instanceof Path ) {
-            def converted = deepConvertToString(value)
-            JsonOutput.prettyPrint(JsonOutput.toJson(converted))
-        }
-
+        if( value instanceof List || value instanceof Map || value instanceof Path )
+            return prettyPrintJson(value)
         else
-            InvokerHelper.inspect(value)
+            return InvokerHelper.inspect(value)
+    }
+
+    static String prettyPrintJson(value) {
+        final converted = deepConvertToString(value)
+        return JsonOutput.prettyPrint(JsonOutput.toJson(converted))
+    }
+
+    static String prettyPrintYaml(value) {
+        final converted = deepConvertToString(value)
+        return new Yaml().dump(converted)
     }
 
 }

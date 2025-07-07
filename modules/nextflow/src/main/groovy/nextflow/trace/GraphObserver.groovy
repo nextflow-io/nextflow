@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package nextflow.trace
 
+import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.transform.PackageScope
@@ -81,6 +82,10 @@ class GraphObserver implements TraceObserver {
     void onFlowComplete() {
         // -- normalise the DAG
         dag.normalize()
+
+        // -- make sure parent path exists
+        file.parent?.mkdirs()
+
         // -- render it to a file
         createRender().renderDocument(dag,file)
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,10 @@ package io.seqera.wave.plugin.config
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
+import io.seqera.wave.api.BuildCompression
+import io.seqera.wave.api.ScanLevel
+import io.seqera.wave.api.ScanMode
 import io.seqera.wave.config.CondaOpts
-import io.seqera.wave.config.SpackOpts
 import nextflow.file.FileHelper
 import nextflow.util.Duration
 /**
@@ -30,43 +32,49 @@ import nextflow.util.Duration
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@ToString(includeNames = true, includePackage = false, includeFields = true, excludes = 'reportOpts')
+@ToString(includeNames = true, includePackage = false, includeFields = true)
 @CompileStatic
 class WaveConfig {
     final private static String DEF_ENDPOINT = 'https://wave.seqera.io'
-    final private static List<String> DEF_STRATEGIES = List.of('container','dockerfile','conda', 'spack')
+    final private static List<String> DEF_STRATEGIES = List.of('container','dockerfile','conda')
     final private Boolean enabled
     final private String endpoint
     final private List<URL> containerConfigUrl
     final private Duration tokensCacheMaxDuration
     final private CondaOpts condaOpts
-    final private SpackOpts spackOpts
     final private List<String> strategy
     final private Boolean bundleProjectResources
     final private String buildRepository
     final private String cacheRepository
-    final private ReportOpts reportOpts
     final private RetryOpts retryOpts
     final private HttpOpts httpClientOpts
     final private Boolean freezeMode
     final private Boolean preserveFileTimestamp
+    final private Duration buildMaxDuration
+    final private Boolean mirrorMode
+    final private ScanMode scanMode
+    final private List<ScanLevel> scanAllowedLevels
+    final private BuildCompression buildCompression
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
         this.endpoint = (opts.endpoint?.toString() ?: env.get('WAVE_API_ENDPOINT') ?: DEF_ENDPOINT)?.stripEnd('/')
-        this.freezeMode = opts.freeze as Boolean
+        this.freezeMode = opts.freeze
+        this.mirrorMode = opts.mirror
         this.preserveFileTimestamp = opts.preserveFileTimestamp as Boolean
         this.containerConfigUrl = parseConfig(opts, env)
         this.tokensCacheMaxDuration = opts.navigate('tokens.cache.maxDuration', '30m') as Duration
         this.condaOpts = opts.navigate('build.conda', Collections.emptyMap()) as CondaOpts
-        this.spackOpts = opts.navigate('build.spack', Collections.emptyMap()) as SpackOpts
         this.buildRepository = opts.navigate('build.repository') as String
         this.cacheRepository = opts.navigate('build.cacheRepository') as String
         this.strategy = parseStrategy(opts.strategy)
         this.bundleProjectResources = opts.bundleProjectResources
-        this.reportOpts = new ReportOpts(opts.report as Map ?: Map.of())
         this.retryOpts = retryOpts0(opts)
         this.httpClientOpts = new HttpOpts(opts.httpClient as Map ?: Map.of())
+        this.buildMaxDuration = opts.navigate('build.maxDuration', '40m') as Duration
+        this.scanMode = opts.navigate('scan.mode') as ScanMode
+        this.scanAllowedLevels = parseScanLevels(opts.navigate('scan.allowedLevels'))
+        this.buildCompression = parseCompression(opts.navigate('build.compression') as Map)
         // some validation
         validateConfig()
     }
@@ -77,8 +85,6 @@ class WaveConfig {
 
     CondaOpts condaOpts() { this.condaOpts }
 
-    SpackOpts spackOpts() { this.spackOpts }
-
     RetryOpts retryOpts() { this.retryOpts }
 
     HttpOpts httpOpts() { this.httpClientOpts }
@@ -87,6 +93,8 @@ class WaveConfig {
 
     boolean freezeMode() { return this.freezeMode }
 
+    boolean mirrorMode() { return this.mirrorMode }
+
     boolean preserveFileTimestamp() { return this.preserveFileTimestamp }
 
     boolean bundleProjectResources() { bundleProjectResources }
@@ -94,6 +102,10 @@ class WaveConfig {
     String buildRepository() { buildRepository }
 
     String cacheRepository() { cacheRepository }
+
+    Duration buildMaxDuration() { buildMaxDuration }
+
+    BuildCompression buildCompression() { buildCompression }
 
     private void validateConfig() {
         def scheme= FileHelper.getUrlProtocol(endpoint)
@@ -164,6 +176,37 @@ class WaveConfig {
         return tokensCacheMaxDuration 
     }
 
-    @Deprecated
-    ReportOpts reportOpts() { reportOpts }
+    ScanMode scanMode() {
+        return scanMode
+    }
+
+    List<ScanLevel> scanAllowedLevels() {
+        return scanAllowedLevels
+    }
+
+    protected List<ScanLevel> parseScanLevels(value) {
+        if( !value )
+            return null
+        if( value instanceof CharSequence ) {
+            final str = value.toString()
+            value = str.tokenize(',').collect(it->it.trim())
+        }
+        if( value instanceof List ) {
+            return (value as List).collect(it-> ScanLevel.valueOf(it.toString().toUpperCase()))
+        }
+        throw new IllegalArgumentException("Invalid value for 'wave.scan.levels' setting - offending value: $value; type: ${value.getClass().getName()}")
+    }
+
+    protected BuildCompression parseCompression(Map opts) {
+        if( !opts )
+            return null
+        final result = new BuildCompression()
+        if( opts.mode )
+            result.mode = BuildCompression.Mode.valueOf(opts.mode.toString().toLowerCase())
+        if( opts.level )
+            result.level = opts.level as Integer
+        if( opts.force )
+            result.force = opts.force as Boolean
+        return result
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import io.seqera.wave.plugin.WaveClient
 import io.seqera.wave.plugin.config.WaveConfig
 import nextflow.container.ContainerConfig
 import nextflow.container.resolver.ContainerInfo
+import nextflow.container.resolver.ContainerMeta
 import nextflow.container.resolver.DefaultContainerResolver
 import nextflow.executor.Executor
 import nextflow.processor.TaskProcessor
@@ -52,7 +53,7 @@ class WaveContainerResolverTest extends Specification {
         when:
         def result = resolver.resolveImage(task, CONTAINER_NAME)
         then:
-        resolver.client() >> Mock(WaveClient) { enabled()>>true; config()>>Mock(WaveConfig) }
+        resolver.client() >> Mock(WaveClient) { config()>>Mock(WaveConfig) }
         _ * task.getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'docker' }
         and:
         1 * resolver.waveContainer(task, CONTAINER_NAME, false) >> WAVE_CONTAINER
@@ -63,8 +64,8 @@ class WaveContainerResolverTest extends Specification {
         when:
         result = resolver.resolveImage(task, CONTAINER_NAME)
         then:
-        resolver.client() >> Mock(WaveClient) { enabled()>>true; config()>>Mock(WaveConfig) }
-        _ * task.getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'singularity' }
+        resolver.client() >> Mock(WaveClient) { config()>>Mock(WaveConfig) }
+        _ * task.getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'singularity'; isEnabled()>>true }
         and:
         1 * resolver.waveContainer(task, CONTAINER_NAME, false) >> WAVE_CONTAINER
         1 * defaultResolver.resolveImage(task, WAVE_CONTAINER.target, WAVE_CONTAINER.hashKey) >> SINGULARITY_CONTAINER
@@ -75,8 +76,8 @@ class WaveContainerResolverTest extends Specification {
         when:
         result = resolver.resolveImage(task, CONTAINER_NAME)
         then:
-        resolver.client() >> Mock(WaveClient) { enabled()>>true; config()>>Mock(WaveConfig) { freezeMode()>>true } }
-        _ * task.getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'singularity' }
+        resolver.client() >> Mock(WaveClient) { config()>>Mock(WaveConfig) { freezeMode()>>true } }
+        _ * task.getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'singularity'; isEnabled()>>true }
         and:
         1 * resolver.waveContainer(task, CONTAINER_NAME, true) >> ORAS_CONTAINER
         0 * defaultResolver.resolveImage(task, WAVE_CONTAINER.target) >> null
@@ -84,4 +85,21 @@ class WaveContainerResolverTest extends Specification {
         result == ORAS_CONTAINER
     }
 
+    def 'should return container meta' () {
+        given:
+        def containerKey = 'abc'
+        def client = Mock(WaveClient)
+        def resolver = Spy(new WaveContainerResolver())
+        def meta = Mock(ContainerMeta)
+
+        when:
+        def result = resolver.getContainerMeta(containerKey)
+        then:
+        resolver.client()>>client
+        and:
+        client.enabled()>>true
+        client.getContainerMeta(containerKey)>>meta
+        and:
+        result == meta
+    }
 }

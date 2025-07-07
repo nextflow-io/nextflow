@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,8 +51,7 @@ class CmdSecretTest extends Specification {
         secretFile = new File("$tempDir/store.json")
         SysEnv.push([NXF_SECRETS_FILE: secretFile.toString()])
         //required to run all test due collisions with others
-        def memoized = SecretsLoader.instance.memoizedMethodClosure$load
-        memoized.@cache.clear()
+        SecretsLoader.instance.reset()
     }
 
     def cleanupSpec() {

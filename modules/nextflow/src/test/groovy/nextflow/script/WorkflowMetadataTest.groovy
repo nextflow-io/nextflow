@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,7 +58,8 @@ class WorkflowMetadataTest extends Specification {
         def handlerInvoked
         def config = [workflow: [onComplete: { -> handlerInvoked=workflow.commandLine } ],
                     docker:[enabled:true],
-                    manifest: [version: '1.0.0', nextflowVersion: '>=0.31.1']]
+                    manifest: [version: '1.0.0', nextflowVersion: '>=0.31.1'],
+                    wave:[enabled:true], fusion:[enabled:true, containerConfigUrl: 'https://fusionfs.seqera.io/releases/v1.2.3-amd64.json']]
         Session session = Spy(Session, constructorArgs: [config])
         session.configFiles >> [Paths.get('foo'), Paths.get('bar')]
         session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
@@ -89,13 +90,18 @@ class WorkflowMetadataTest extends Specification {
         metadata.sessionId == session.uniqueId
         metadata.runName == session.runName
         metadata.containerEngine == 'docker'
+        metadata.wave.enabled == true
+        metadata.fusion.enabled == true
+        metadata.fusion.version == '1.2.3'
         metadata.configFiles == [Paths.get('foo').toAbsolutePath(), Paths.get('bar').toAbsolutePath()]
         metadata.resume == false
         metadata.stubRun == false
+        metadata.preview == false
         metadata.userName == System.getProperty('user.name')
         metadata.homeDir == Paths.get(System.getProperty('user.home'))
         metadata.manifest.version == '1.0.0'
         metadata.manifest.nextflowVersion == '>=0.31.1'
+        !metadata.failOnIgnore
 
         when:
         metadata.invokeOnComplete()
@@ -110,11 +116,15 @@ class WorkflowMetadataTest extends Specification {
         session.profile >> 'foo_profile'
         session.resumeMode >> true
         session.stubRun >> true
+        session.preview >> true
+        session.failOnIgnore() >> true
         metadata = new WorkflowMetadata(session, script)
         then:
         metadata.profile == 'foo_profile'
         metadata.resume
         metadata.stubRun
+        metadata.preview
+        metadata.failOnIgnore
     }
 
     def foo_test_method() {
@@ -260,6 +270,19 @@ class WorkflowMetadataTest extends Specification {
         result.scriptId == '123'
         result.commitId == 'abcd'
         result.profile == 'standard'
+    }
+
+    def 'should not cause a stack overflow error on missing property' () {
+
+        given:
+        def script = Mock(ScriptFile)
+        def session = Spy(Session)
+        def metadata = new WorkflowMetadata(session, script)
+
+        when:
+        println metadata.executor
+        then:
+        thrown(MissingPropertyException)
     }
 
 }

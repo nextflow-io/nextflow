@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ProcessFactory
 import nextflow.script.ScriptBinding
-import nextflow.script.ScriptParser
+import nextflow.script.ScriptLoaderFactory
 /**
  * An helper class to parse nextflow script snippets
  *
@@ -50,7 +50,7 @@ class TestParser {
         }
 
         session.init(null,null)
-        new ScriptParser(session) .runScript(scriptText)
+        ScriptLoaderFactory.create(session) .runScript(scriptText)
         session.fireDataflowNetwork(false)
         return TaskProcessor.currentProcessor()
     }

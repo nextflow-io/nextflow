@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import nextflow.exception.IllegalFileException
 import nextflow.file.FilePatternSplitter
 import nextflow.script.TokenVar
 import nextflow.util.BlankSeparatedList
+import nextflow.util.TestOnly
 /**
  * Model a process *file* output parameter
  *
@@ -35,9 +36,7 @@ import nextflow.util.BlankSeparatedList
 @InheritConstructors
 class FileOutParam extends BaseOutParam implements OutParam, ArityParam, OptionalParam, PathQualifier {
 
-    /**
-     * ONLY FOR TESTING DO NOT USE
-     */
+    @TestOnly
     protected FileOutParam(Map params) {
         super(new Binding(), [])
     }

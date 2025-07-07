@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,25 @@ import nextflow.processor.TaskRun
 @CompileStatic
 class DefaultContainerResolver implements ContainerResolver {
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    final boolean enabled() {
+        return true
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    String defaultContainerPlatform() {
+        return null
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     @Override
     ContainerInfo resolveImage(TaskRun task, String imageName) {
         if( !imageName ) {
@@ -55,4 +74,16 @@ class DefaultContainerResolver implements ContainerResolver {
         return new ContainerInfo(imageName, ret, hashKey)
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    boolean isContainerReady(String key) {
+        return true
+    }
+
+    @Override
+    ContainerMeta getContainerMeta(String key) {
+        return new ContainerMeta(targetImage: key)
+    }
 }

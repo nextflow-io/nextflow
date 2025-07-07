@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,7 +66,9 @@ class Const {
         return result
     }
 
-    static public final String S3_UPLOADER_CLASS = 'nextflow.cloud.aws.nio'
+    static final Path getAppCacheDir() {
+        return Path.of(SysEnv.get('NXF_CACHE_DIR', '.nextflow'))
+    }
 
     static public final String ROLE_WORKER = 'worker'
 
@@ -80,7 +82,7 @@ class Const {
 
     static public final String DEFAULT_HUB = System.getenv('NXF_HUB') ?: 'github'
 
-    static public final File DEFAULT_ROOT = System.getenv('NXF_ASSETS') ? new File(System.getenv('NXF_ASSETS')) : Const.APP_HOME_DIR.resolve('assets').toFile()
+    static public final File DEFAULT_ROOT = System.getenv('NXF_ASSETS') ? new File(System.getenv('NXF_ASSETS')) : APP_HOME_DIR.resolve('assets').toFile()
 
     static public final String DEFAULT_BRANCH = 'master'
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,8 @@
  * limitations under the License.
  */
 
-seqs = channel.fromList(file("$baseDir/data/seqs/*.fastq"))
-
 workflow {
+  seqs = channel.fromList(file("$baseDir/data/seqs/*.fastq"))
   seqs | proc1
   seqs | proc2
   seqs | proc3

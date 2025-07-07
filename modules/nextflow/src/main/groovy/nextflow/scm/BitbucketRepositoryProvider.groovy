@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,23 +39,37 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
         this.config = config ?: new ProviderConfig('bitbucket')
     }
 
-    /** {@inheritDoc} */
+    @Override
+    protected String[] getAuth() {
+        return config.token
+            ? new String[] { "Authorization", "Bearer ${config.token}" }
+            : super.getAuth()
+    }
+
+    @Override
+    boolean hasCredentials() {
+        return config.token
+            ? true
+            : super.hasCredentials()
+    }
+
+   /** {@inheritDoc} */
     @Override
     String getName() { "BitBucket" }
 
     @Override
     String getEndpointUrl() {
-        "${config.endpoint}/api/2.0/repositories/${project}"
+        "${config.endpoint}/2.0/repositories/${project}"
     }
 
     @Override
     String getContentUrl( String path ) {
         final ref = revision ? getRefForRevision(revision) : getMainBranch()
-        return "${config.endpoint}/api/2.0/repositories/$project/src/$ref/$path"
+        return "${config.endpoint}/2.0/repositories/$project/src/$ref/$path"
     }
 
     private String getMainBranchUrl() {
-        "${config.endpoint}/api/2.0/repositories/$project"
+        "${config.endpoint}/2.0/repositories/$project"
     }
 
     String getMainBranch() {
@@ -63,7 +77,31 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     }
 
     private String getRefForRevision(String revision){
-        final resp = invokeAndParseResponse("${config.endpoint}/api/2.0/repositories/$project/refs/branches/$revision")
+        // when the revision does not contain a slash just use as it is
+        if( !revision.contains('/') ) {
+            return revision
+        }
+        // when the revision contains a slash, it's needed to find the corresponding branch or tag name
+        // see
+        // https://github.com/nextflow-io/nextflow/issues/4599
+        // https://jira.atlassian.com/browse/BCLOUD-20223
+        try {
+            return getRefForRevision0(revision, 'branches')
+        }
+        catch (Exception e1) {
+            // if an error is reported it may be a tag name instead of a branch
+            try {
+                return getRefForRevision0(revision, 'tags')
+            }
+            // still failing, raise the previous error
+            catch (Exception e2) {
+                throw e1
+            }
+        }
+    }
+
+    private String getRefForRevision0(String revision, String type){
+        final resp = invokeAndParseResponse("${config.endpoint}/2.0/repositories/$project/refs/$type/$revision")
         return resp?.target?.hash
     }
 
@@ -93,7 +131,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     @Override
     List<TagInfo> getTags() {
         final result = new ArrayList<TagInfo>()
-        final url = "$config.endpoint/api/2.0/repositories/$project/refs/tags"
+        final url = "$config.endpoint/2.0/repositories/$project/refs/tags"
         final mapper = { Map entry -> result.add( new TagInfo(entry.name, entry.target?.hash) ) }
         invokeAndResponseWithPaging(url, mapper)
         return result
@@ -107,7 +145,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     @Override
     List<BranchInfo> getBranches() {
         final result = new ArrayList<BranchInfo>()
-        final url = "$config.endpoint/api/2.0/repositories/$project/refs/branches"
+        final url = "$config.endpoint/2.0/repositories/$project/refs/branches"
         final mapper = { Map entry -> result.add( new BranchInfo(entry.name, entry.target?.hash) ) }
         invokeAndResponseWithPaging(url, mapper)
         return result
@@ -135,8 +173,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
 
     @Override
     byte[] readBytes(String path) {
-
-        def url = getContentUrl(path)
-        invoke(url)?.getBytes()
+        final url = getContentUrl(path)
+        return invokeBytes(url)
     }
 }

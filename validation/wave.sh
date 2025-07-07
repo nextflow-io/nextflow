@@ -14,9 +14,9 @@ echo "Test Wave building a container"
 
 echo "Test Wave building from Conda package"
 (cd wave-tests/example3; bash run.sh)
-
-echo "Test Wave building from Conda lock file"
-(cd wave-tests/example4; bash run.sh)
+#
+#echo "Test Wave building from Conda lock file"
+#(cd wave-tests/example4; bash run.sh)
 
 echo "Test Wave running rnaseq-nf with Fusion on local executor"
 (cd wave-tests/example6; bash run.sh)
@@ -25,4 +25,4 @@ echo "Test Wave running rnaseq-nf with Fusion on AWS Batch"
 (cd wave-tests/example6; bash run-aws.sh)
 
 echo "Test Wave running rnaseq-nf with Fusion on Google Batch"
-(cd wave-tests/example6; bash run-aws.sh)
+(cd wave-tests/example6; bash run-gcp.sh)

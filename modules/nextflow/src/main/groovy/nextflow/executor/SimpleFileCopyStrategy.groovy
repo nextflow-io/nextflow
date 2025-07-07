@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -183,7 +183,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         return """\
             IFS=\$'\\n'
             for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
-                ${stageOutCommand('$name', targetDir, mode)} || true
+                ${stageOutCommand('$name', targetDir, mode)}
             done
             unset IFS""".stripIndent(true)
     }

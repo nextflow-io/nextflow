@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.nio.file.Paths
 
 import nextflow.Session
 import nextflow.container.ContainerConfig
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -337,6 +338,26 @@ class CrgExecutorTest extends Specification {
                 .stripIndent().leftTrim()
     }
 
+    def 'should get headers with job array' () {
+        when:
+        def executor = Spy(new CrgExecutor())
+        def task = Mock(TaskArrayRun) {
+            config >> new TaskConfig()
+            name >> 'mapping tag'
+            workDir >> Paths.get('/abc')
+            getArraySize() >> 5
+        }
+        then:
+        executor.getHeaders(task) == '''
+                    #$ -t 1-5
+                    #$ -N nf-mapping_tag
+                    #$ -o /dev/null
+                    #$ -j y
+                    #$ -terse
+                    #$ -notify
+                    '''
+                .stripIndent().leftTrim()
+    }
 
     def testParseJobId() {
 

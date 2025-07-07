@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ class RetryOptsTest extends Specification {
         expect:
         new RetryOpts().delay == Duration.of('450ms')
         new RetryOpts().maxDelay == Duration.of('90s')
-        new RetryOpts().maxAttempts == 10
+        new RetryOpts().maxAttempts == 5
         new RetryOpts().jitter == 0.25d
 
         and:

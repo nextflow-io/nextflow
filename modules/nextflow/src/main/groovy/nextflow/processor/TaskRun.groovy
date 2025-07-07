@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,14 +20,18 @@ import java.nio.file.FileSystems
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
+import java.util.function.Function
 
 import com.google.common.hash.HashCode
-import groovy.transform.PackageScope
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.conda.CondaCache
+import nextflow.conda.CondaConfig
 import nextflow.container.ContainerConfig
 import nextflow.container.resolver.ContainerInfo
+import nextflow.container.resolver.ContainerMeta
+import nextflow.container.resolver.ContainerResolver
 import nextflow.container.resolver.ContainerResolverProvider
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessTemplateException
@@ -38,6 +42,7 @@ import nextflow.script.BodyDef
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.script.params.CmdEvalParam
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.EnvOutParam
 import nextflow.script.params.FileInParam
@@ -324,6 +329,11 @@ class TaskRun implements Cloneable {
      */
     volatile ErrorStrategy errorAction
 
+    /**
+     * Unique key for the container used by this task
+     */
+    volatile String containerKey
+
     TaskConfig config
 
     TaskContext context
@@ -392,7 +402,7 @@ class TaskRun implements Cloneable {
     }
 
     String getTraceScript() {
-        return template!=null && body.source
+        return template!=null && body?.source
             ? body.source
             : getScript()
     }
@@ -447,10 +457,16 @@ class TaskRun implements Cloneable {
     /**
      * Look at the {@code nextflow.script.FileOutParam} which name is the expected
      *  output name
-     *
      */
     List<String> getOutputFilesNames() {
-        cache0.computeIfAbsent('outputFileNames', (it)-> getOutputFilesNames0())
+        // note: use an explicit function instead of a closure or lambda syntax, otherwise
+        // when calling this method from a subclass it will result into a MissingMethodExeception
+        // see  https://issues.apache.org/jira/browse/GROOVY-2433
+        cache0.computeIfAbsent('outputFileNames', new Function<String,List<String>>() {
+            @Override
+            List<String> apply(String s) {
+                return getOutputFilesNames0()
+            }})
     }
 
     private List<String> getOutputFilesNames0() {
@@ -587,11 +603,40 @@ class TaskRun implements Cloneable {
 
     List<String> getOutputEnvNames() {
         final items = getOutputsByType(EnvOutParam)
-        return items ? new ArrayList<String>(items.keySet()*.name) : Collections.<String>emptyList()
+        if( !items )
+            return List.<String>of()
+        final result = new ArrayList<String>(items.size())
+        for( EnvOutParam it : items.keySet() ) {
+            if( !it.name ) throw new IllegalStateException("Missing output environment name - offending parameter: $it")
+            result.add(it.name)
+        }
+        return result
+    }
+
+    /**
+     * @return A {@link Map} instance holding a collection of key-pairs
+     * where the key represents a environment variable name holding the command
+     * output and the value the command the executed.
+     */
+    Map<String,String> getOutputEvals() {
+        final items = getOutputsByType(CmdEvalParam)
+        final result = new LinkedHashMap(items.size())
+        for( CmdEvalParam it : items.keySet() ) {
+            if( !it.name ) throw new IllegalStateException("Missing output eval name - offending parameter: $it")
+            result.put(it.name, it.getTarget(context))
+        }
+        return result
     }
 
     Path getCondaEnv() {
-        cache0.computeIfAbsent('condaEnv', (it)-> getCondaEnv0())
+        // note: use an explicit function instead of a closure or lambda syntax, otherwise
+        // when calling this method from a subclass it will result into a MissingMethodExeception
+        // see  https://issues.apache.org/jira/browse/GROOVY-2433
+        cache0.computeIfAbsent('condaEnv', new Function<String,Path>() {
+            @Override
+            Path apply(String it) {
+                return getCondaEnv0()
+            }})
     }
 
     private Path getCondaEnv0() {
@@ -603,7 +648,14 @@ class TaskRun implements Cloneable {
     }
 
     Path getSpackEnv() {
-        cache0.computeIfAbsent('spackEnv', (it)-> getSpackEnv0())
+        // note: use an explicit function instead of a closure or lambda syntax, otherwise
+        // when calling this method from a subclass it will result into a MissingMethodExeception
+        // see  https://issues.apache.org/jira/browse/GROOVY-2433
+        cache0.computeIfAbsent('spackEnv', new Function<String,Path>() {
+            @Override
+            Path apply(String it) {
+                return getSpackEnv0()
+            }})
     }
 
     private Path getSpackEnv0() {
@@ -617,7 +669,19 @@ class TaskRun implements Cloneable {
     }
 
     protected ContainerInfo containerInfo() {
-        cache0.computeIfAbsent('containerInfo', (it)-> containerInfo0())
+        // note: use an explicit function instead of a closure or lambda syntax, otherwise
+        // when calling this method from a subclass it will result into a MissingMethodException
+        // see  https://issues.apache.org/jira/browse/GROOVY-2433
+        cache0.computeIfAbsent('containerInfo', new Function<String,ContainerInfo>() {
+            @Override
+            ContainerInfo apply(String s) {
+                return containerInfo0()
+            }})
+    }
+
+    @Memoized
+    protected ContainerResolver containerResolver() {
+        ContainerResolverProvider.load()
     }
 
     private ContainerInfo containerInfo0() {
@@ -630,8 +694,11 @@ class TaskRun implements Cloneable {
         if( !configImage )
             configImage = null
 
-        final res = ContainerResolverProvider.load()
-        final info = res.resolveImage(this, configImage as String)
+        final info = containerResolver().resolveImage(this, configImage as String)
+        // track the key of the container used
+        if( info!=null )
+            this.containerKey = info.hashKey
+        // return the info
         return info
     }
 
@@ -646,6 +713,23 @@ class TaskRun implements Cloneable {
     String getContainerFingerprint() {
         final info = containerInfo()
         return info?.hashKey
+    }
+
+    boolean isContainerReady() {
+       return containerKey
+            ? containerResolver().isContainerReady(containerKey)
+            : true
+    }
+
+    ContainerMeta containerMeta() {
+        return containerKey
+            ? containerResolver().getContainerMeta(containerKey)
+            : null
+    }
+    
+    String getContainerPlatform() {
+        final result = config.getArchitecture()
+        return result ? result.dockerArch : containerResolver().defaultContainerPlatform()
     }
 
     ResourcesBundle getModuleBundle() {
@@ -683,6 +767,10 @@ class TaskRun implements Cloneable {
         return processor.executor?.isContainerNative() ?: false
     }
 
+    boolean isArray() {
+        return false
+    }
+
     boolean isContainerEnabled() {
         return getContainerConfig().isEnabled() && getContainer()!=null
     }
@@ -712,7 +800,13 @@ class TaskRun implements Cloneable {
      *
      * @param body A {@code BodyDef} object instance
      */
-    @PackageScope void resolve(BodyDef body) {
+    void resolve(BodyDef body)  {
+        processor.session.stubRun && config.getStubBlock()
+            ? resolveStub(config.getStubBlock())
+            : resolveBody(body)
+    }
+
+    protected void resolveBody(BodyDef body) {
 
         // -- initialize the task code to be executed
         this.code = body.closure.clone() as Closure
@@ -754,7 +848,7 @@ class TaskRun implements Cloneable {
             throw new ProcessUnrecoverableException("Process `${getName()}` script is empty")
     }
 
-    @PackageScope void resolve(TaskClosure block) {
+    protected void resolveStub(TaskClosure block) {
         this.code = block.clone() as Closure
         this.code.delegate = this.context
         this.code.setResolveStrategy(Closure.DELEGATE_ONLY)
@@ -764,7 +858,13 @@ class TaskRun implements Cloneable {
         this.source = block.getSource()
 
         try {
-            script = code.call()?.toString()
+            final result = code.call()
+            if ( result instanceof Path ) {
+                script = renderTemplate(result)
+            }
+            else {
+                script = result.toString()
+            }
         }
         catch( ProcessException e ) {
             throw e
@@ -885,6 +985,14 @@ class TaskRun implements Cloneable {
 
     TaskBean toTaskBean() {
         return new TaskBean(this)
+    }
+
+    CondaConfig getCondaConfig() {
+        return processor.session.getCondaConfig()
+    }
+
+    String getStubSource() {
+        return config?.getStubBlock()?.source
     }
 }
 

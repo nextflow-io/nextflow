@@ -19,7 +19,7 @@ package nextflow.cloud.aws.config
 
 import static nextflow.cloud.aws.util.AwsHelper.*
 
-import com.amazonaws.services.s3.model.CannedAccessControlList
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
@@ -43,11 +43,13 @@ class AwsS3Config {
 
     private Boolean debug
 
-    private CannedAccessControlList s3Acl
+    private ObjectCannedACL s3Acl
 
     private Boolean pathStyleAccess
 
     private Boolean anonymous
+
+    private Boolean requesterPays
 
     AwsS3Config(Map opts) {
         this.debug = opts.debug as Boolean
@@ -60,6 +62,7 @@ class AwsS3Config {
         this.pathStyleAccess = opts.s3PathStyleAccess as Boolean
         this.anonymous = opts.anonymous as Boolean
         this.s3Acl = parseS3Acl(opts.s3Acl as String)
+        this.requesterPays = opts.requesterPays as Boolean
     }
 
     private String parseStorageClass(String value) {
@@ -103,7 +106,7 @@ class AwsS3Config {
         return debug
     }
 
-    CannedAccessControlList getS3Acl() {
+    ObjectCannedACL getS3Acl() {
         return s3Acl
     }
 
@@ -115,7 +118,11 @@ class AwsS3Config {
         return anonymous
     }
 
+    Boolean getRequesterPays() {
+        return requesterPays
+    }
+
     boolean isCustomEndpoint() {
-        endpoint && !endpoint.contains(".amazonaws.com")
+        endpoint && !endpoint.endsWith(".amazonaws.com")
     }
 }

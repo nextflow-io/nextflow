@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ class MermaidHtmlRenderer implements DagRenderer {
         file.text = template.replace('REPLACE_WITH_NETWORK_DATA', network)
     }
 
-    private String readTemplate() {
+    static String readTemplate() {
         final writer = new StringWriter()
         final res = MermaidHtmlRenderer.class.getResourceAsStream('mermaid.dag.template.html')
         int ch

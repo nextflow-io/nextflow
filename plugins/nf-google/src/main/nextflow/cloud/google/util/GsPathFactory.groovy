@@ -27,7 +27,6 @@ import groovy.transform.CompileStatic
 import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.google.GoogleOpts
-import nextflow.cloud.google.lifesciences.GoogleLifeSciencesFileCopyStrategy
 import nextflow.file.FileSystemPathFactory
 /**
  * Implements FileSystemPathFactory interface for Google storage
@@ -97,9 +96,10 @@ class GsPathFactory extends FileSystemPathFactory {
         init()
         final str = uri.substring(5)
         final p = str.indexOf('/')
-        return p == -1
+        final ret = p == -1
             ? CloudStorageFileSystem.forBucket(str, storageConfig, storageOptions).getPath('')
             : CloudStorageFileSystem.forBucket(str.substring(0,p), storageConfig, storageOptions).getPath(str.substring(p))
+        return ret.normalize()
     }
 
     @Override
@@ -112,17 +112,11 @@ class GsPathFactory extends FileSystemPathFactory {
 
     @Override
     protected String getBashLib(Path path) {
-        if( path instanceof CloudStoragePath ) {
-            return GsBashLib.fromSession( Global.session as Session )
-        }
         return null
     }
 
     @Override
     protected String getUploadCmd(String source, Path target) {
-        if( target instanceof CloudStoragePath ) {
-            GoogleLifeSciencesFileCopyStrategy.uploadCmd(source,target)
-        }
         return null
     }
 }

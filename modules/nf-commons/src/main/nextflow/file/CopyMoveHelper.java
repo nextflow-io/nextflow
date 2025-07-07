@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.EnumSet;
 
+import nextflow.extension.FilesEx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +41,10 @@ import org.slf4j.LoggerFactory;
  * Helper class to handle copy/move files and directories
  */
 public class CopyMoveHelper {
+    /**
+     * True if currently performing a copy of a foreign file.
+     */
+    public static final ThreadLocal<Boolean> IN_FOREIGN_COPY = new ThreadLocal<>();
 
     private static Logger log = LoggerFactory.getLogger(CopyMoveHelper.class);
 
@@ -80,14 +85,16 @@ public class CopyMoveHelper {
     private static void copyFile(Path source, Path target, boolean foreign, CopyOption... options)
             throws IOException
     {
-
         if( !foreign ) {
             source.getFileSystem().provider().copy(source, target, options);
             return;
         }
 
+        IN_FOREIGN_COPY.set(true);
         try (InputStream in = Files.newInputStream(source)) {
             Files.copy(in, target);
+        } finally {
+            IN_FOREIGN_COPY.set(false);
         }
     }
 
@@ -130,7 +137,7 @@ public class CopyMoveHelper {
                 String delta = rel != null ? rel.toString() : null;
                 Path newFile = delta != null ? target.resolve(delta) : target;
                 if( log.isTraceEnabled())
-                    log.trace("Copy file: " + current + " -> "+newFile.toUri());
+                    log.trace("Copy file: " + current + " -> "+ FilesEx.toUriString(newFile));
                 copyFile(current, newFile, foreign, options);
                 return FileVisitResult.CONTINUE;
             }

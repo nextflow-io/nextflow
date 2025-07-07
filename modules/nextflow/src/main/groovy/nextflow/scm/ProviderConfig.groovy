@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
-import nextflow.config.ConfigParser
+import nextflow.config.ConfigParserFactory
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.file.FileHelper
@@ -84,6 +84,7 @@ class ProviderConfig {
             case 'bitbucket':
                 attr.platform = name
                 if( !attr.server ) attr.server = 'https://bitbucket.org'
+                if( !attr.endpoint ) attr.endpoint = 'https://api.bitbucket.org'
                 break
 
             case 'azurerepos':
@@ -245,7 +246,7 @@ class ProviderConfig {
 
     @PackageScope
     static Map parse(String text) {
-        def slurper = new ConfigParser()
+        def slurper = ConfigParserFactory.create()
         slurper.setBinding(env)
         return slurper.parse(text)
     }
@@ -362,9 +363,7 @@ class ProviderConfig {
         }
 
         if( server == 'https://dev.azure.com' ) {
-            final parts = project.tokenize('/')
-            if( parts[2]=='_git' )
-                project = "${parts[0]}/${parts[1]}"
+            project = AzureRepositoryProvider.getUniformPath(project).join('/')
         }
 
         return project.stripStart('/')

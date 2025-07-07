@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,10 +21,13 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import nextflow.Session
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -44,6 +47,8 @@ class LsfExecutorTest extends Specification {
         given:
         def WORK_DIR = Paths.get('/work/dir')
         def executor = Spy(LsfExecutor)
+        executor.getSession() >> Mock(Session)
+        and:
         def task = Mock(TaskRun)
         task.workDir >> WORK_DIR
 
@@ -54,14 +59,24 @@ class LsfExecutorTest extends Specification {
         _ * task.config >> new TaskConfig(memory: '10MB')
         then:
         result == ['-o', '/work/dir/.command.log',
-                   '-M', '10240', 
+                   '-M', '10240',
                    '-R', 'select[mem>=10240] rusage[mem=10]',
                    '-J', 'foo']
+    }
+
+    def testMemDirectiveMemUnit2() {
+        given:
+        def WORK_DIR = Paths.get('/work/dir')
+        def executor = Spy(new LsfExecutor(memUnit:'GB', usageUnit:'GB'))
+        executor.getSession() >> Mock(Session)
+        and:
+        def task = Mock(TaskRun)
+        task.workDir >> WORK_DIR
 
         when:
         executor.@memUnit = 'GB'
         executor.@usageUnit = 'GB'
-        result = executor.getDirectives(task, [])
+        def result = executor.getDirectives(task, [])
         then:
         1 * executor.getJobNameFor(task) >> 'foo'
         _ * task.config >> new TaskConfig(memory: '100GB')
@@ -75,7 +90,9 @@ class LsfExecutorTest extends Specification {
     def testReserveMemPerTask() {
         given:
         def WORK_DIR = Paths.get('/work/dir')
-        def executor = Spy(LsfExecutor)
+        def executor = Spy(new LsfExecutor(usageUnit:'KB', perJobMemLimit:true))
+        executor.getSession() >> Mock(Session)
+        and:
         def task = Mock(TaskRun)
         task.workDir >> WORK_DIR
 
@@ -89,15 +106,25 @@ class LsfExecutorTest extends Specification {
         then:
         result == ['-o', '/work/dir/.command.log',
                    '-n', '2',
-                   '-R', 'span[hosts=1]', 
+                   '-R', 'span[hosts=1]',
                    '-M', '10240',
                    '-R', 'select[mem>=10240] rusage[mem=10240]',
                    '-J', 'foo']
+    }
+
+    def testReserveMemPerTask2() {
+        given:
+        def WORK_DIR = Paths.get('/work/dir')
+        def executor = Spy(new LsfExecutor(perTaskReserve:true, perJobMemLimit: true, usageUnit:'KB'))
+        executor.getSession() >> Mock(Session)
+        and:
+        def task = Mock(TaskRun)
+        task.workDir >> WORK_DIR
 
         when:
         executor.@perJobMemLimit = true
         executor.@perTaskReserve = true
-        result = executor.getDirectives(task, [])
+        def result = executor.getDirectives(task, [])
         then:
         1 * executor.getJobNameFor(task) >> 'foo'
         _ * task.config >> new TaskConfig(memory: '10MB', cpus: 2)
@@ -111,21 +138,17 @@ class LsfExecutorTest extends Specification {
 
     }
 
-    def testHeaders() {
+    def 'test job script headers' () {
 
         setup:
-        // LSF executor
         def executor = Spy(LsfExecutor)
         executor.@memUnit = 'MB'
         executor.@usageUnit = 'MB'
         executor.session = new Session()
 
-        // mock process
         def proc = Mock(TaskProcessor)
-        // process name
         proc.getName() >> 'task'
 
-        // task object
         def task = new TaskRun()
         task.processor = proc
         task.workDir = Paths.get('/scratch')
@@ -133,13 +156,11 @@ class LsfExecutorTest extends Specification {
 
         when:
         task.config = new TaskConfig()
-        // config
         task.config.queue = 'bsc_ls'
         task.config.clusterOptions = "-x 1 -R \"span[ptile=2]\""
         task.config.cpus = '2'
         task.config.time = '1h 30min'
         task.config.memory = '8GB'
-
         then:
         executor.getHeaders(task) == '''
                 #BSUB -o /scratch/.command.log
@@ -155,6 +176,27 @@ class LsfExecutorTest extends Specification {
                 '''
                 .stripIndent().leftTrim()
 
+        when:
+        task.config = new TaskConfig()
+        task.config.queue = 'bsc_ls'
+        task.config.clusterOptions = ['-x 1', '-R "span[ptile=2]"']
+        task.config.cpus = '2'
+        task.config.time = '1h 30min'
+        task.config.memory = '8GB'
+        then:
+        executor.getHeaders(task) == '''
+                #BSUB -o /scratch/.command.log
+                #BSUB -q bsc_ls
+                #BSUB -n 2
+                #BSUB -R "span[hosts=1]"
+                #BSUB -W 01:30
+                #BSUB -M 4096
+                #BSUB -R "select[mem>=8192] rusage[mem=8192]"
+                #BSUB -J nf-mapping_hola
+                #BSUB -x 1
+                #BSUB -R "span[ptile=2]"
+                '''
+            .stripIndent().leftTrim()
 
         when:
         task.config = new TaskConfig()
@@ -167,7 +209,6 @@ class LsfExecutorTest extends Specification {
                 #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()
-
 
         when:
         task.config = new TaskConfig()
@@ -186,7 +227,6 @@ class LsfExecutorTest extends Specification {
                 '''
                 .stripIndent().leftTrim()
 
-
         when:
         task.config = new TaskConfig()
         task.config.queue = 'gamma'
@@ -203,7 +243,6 @@ class LsfExecutorTest extends Specification {
                 #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()
-
 
         when:
         task.config = new TaskConfig()
@@ -241,7 +280,6 @@ class LsfExecutorTest extends Specification {
                 '''
                 .stripIndent().leftTrim()
 
-
         when:
         task.config = new TaskConfig()
         task.config.queue = 'gamma'
@@ -261,7 +299,6 @@ class LsfExecutorTest extends Specification {
                 '''
                 .stripIndent().leftTrim()
 
-
         when:
         task.config = new TaskConfig()
         task.config.queue = 'delta'
@@ -278,18 +315,34 @@ class LsfExecutorTest extends Specification {
                 '''
                 .stripIndent().leftTrim()
 
+        when: 'with job array'
+        def taskArray = Mock(TaskArrayRun) {
+            config >> new TaskConfig()
+            name >> task.name
+            workDir >> task.workDir
+            getArraySize() >> 5
+        }
+        then:
+        executor.getHeaders(taskArray) == '''
+                #BSUB -o /dev/null
+                #BSUB -J "nf-mapping_hola[1-5]"
+                '''
+                .stripIndent().leftTrim()
+
     }
 
     def testDiskResources() {
         given:
         def config = new TaskConfig(clusterOptions: [], disk: '10GB')
         def WORKDIR = Paths.get('/my/work')
-        def lsf = Spy(LsfExecutor)
-        lsf.@memUnit = 'MB'
+        def executor = Spy(LsfExecutor)
+        executor.getSession() >> Mock(Session)
+        executor.@memUnit = 'MB'
+        and:
         def task = Mock(TaskRun)
 
         when:
-        def result = lsf.getDirectives(task)
+        def result = executor.getDirectives(task)
         then:
         task.workDir >> WORKDIR
         task.config >> config
@@ -380,7 +433,7 @@ class LsfExecutorTest extends Specification {
 
         given:
         // LSF executor
-        def executor = Spy(LsfExecutor)
+        def executor = Spy(new LsfExecutor(memUnit: 'MB', usageUnit: 'MB'))
         executor.session = new Session()
         executor.@memUnit = 'MB'
         executor.@usageUnit = 'MB'
@@ -683,4 +736,72 @@ class LsfExecutorTest extends Specification {
         config.RESOURCE_RESERVE_PER_TASK == 'Y'
     }
 
+    // Adapted from PbsExecutorTest.groovy
+    @Unroll
+    def 'should return valid job name given #name'() {
+        given:
+        def executor = [:] as LsfExecutor
+        def task = Mock(TaskRun)
+        task.getName() >> name
+
+        expect:
+        executor.getJobNameFor(task) == expected
+        executor.getJobNameFor(task).size() <= 4094
+
+        where:
+        name               | expected
+        'hello'            | 'nf-hello'
+        '12 45'            | 'nf-12_45'
+        'hello[123]-[xyz]' | 'nf-hello123-xyz'
+        'a'.repeat(509)    | 'nf-'.concat("a".repeat(508))
+    }
+
+    def 'should get array index name and start' () {
+        given:
+        def executor = Spy(LsfExecutor)
+        expect:
+        executor.getArrayIndexName() == 'LSB_JOBINDEX'
+        executor.getArrayIndexStart() == 1
+    }
+
+    @Unroll
+    def 'should get array task id' () {
+        given:
+        def executor = Spy(LsfExecutor)
+        expect:
+        executor.getArrayTaskId(JOB_ID, TASK_INDEX) == EXPECTED
+
+        where:
+        JOB_ID      | TASK_INDEX    | EXPECTED
+        'foo'       | 1             | 'foo[2]'
+        'bar'       | 2             | 'bar[3]'
+    }
+    
+    @Unroll
+    def 'should set lsf account' () {
+        given:
+        // task
+        def task = new TaskRun()
+        task.workDir = Paths.get('/work/dir')
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> Mock(Session)
+        task.config = Mock(TaskConfig)  { getClusterOptionsAsList()>>[] }
+        and:
+        def executor = Spy(LsfExecutor)
+        executor.getJobNameFor(_) >> 'foo'
+        executor.getName() >> 'lsf'
+        executor.getSession() >> Mock(Session) { getExecConfigProp('lsf', 'account',null)>>ACCOUNT }
+
+        when:
+        def result = executor.getDirectives(task, [])
+        then:
+        result == EXPECTED
+
+        where:
+        ACCOUNT             | EXPECTED
+        null                | ['-o', '/work/dir/.command.log', '-J', 'foo']
+        'project-123'       | ['-o', '/work/dir/.command.log', '-J', 'foo', '-G', 'project-123']
+    }
+
 }
+

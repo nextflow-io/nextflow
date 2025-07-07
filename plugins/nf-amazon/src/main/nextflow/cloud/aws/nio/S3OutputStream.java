@@ -26,7 +26,7 @@ import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -35,28 +35,13 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
-import com.amazonaws.services.s3.model.CannedAccessControlList;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.ObjectTagging;
-import com.amazonaws.services.s3.model.PartETag;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.S3ObjectId;
-import com.amazonaws.services.s3.model.SSEAlgorithm;
-import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
-import com.amazonaws.services.s3.model.StorageClass;
-import com.amazonaws.services.s3.model.Tag;
-import com.amazonaws.services.s3.model.UploadPartRequest;
-import com.amazonaws.util.Base64;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.*;
 import nextflow.cloud.aws.nio.util.ByteBufferInputStream;
 import nextflow.cloud.aws.nio.util.S3MultipartOptions;
-import nextflow.util.Duration;
-import nextflow.util.ThreadPoolHelper;
+import nextflow.cloud.aws.nio.util.S3ObjectId;
 import nextflow.util.ThreadPoolManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,7 +69,7 @@ public final class S3OutputStream extends OutputStream {
     /**
      * Amazon S3 API implementation to use.
      */
-    private final AmazonS3 s3;
+    private final S3Client s3;
 
     /**
      * ID of the S3 object to store data into.
@@ -96,7 +81,7 @@ public final class S3OutputStream extends OutputStream {
      */
     private StorageClass storageClass;
 
-    private SSEAlgorithm storageEncryption;
+    private ServerSideEncryption storageEncryption;
 
     private String kmsKeyId;
 
@@ -120,7 +105,7 @@ public final class S3OutputStream extends OutputStream {
     /**
      * If a multipart upload is in progress, holds the ETags of the uploaded parts, {@code null} otherwise.
      */
-    private Queue<PartETag> partETags;
+    private Queue<CompletedPart> completedParts;
 
     /**
      * Holds upload request metadata
@@ -157,7 +142,7 @@ public final class S3OutputStream extends OutputStream {
 
     private int bufferSize;
 
-    private CannedAccessControlList cannedAcl;
+    private ObjectCannedACL cannedAcl;
 
     private List<Tag> tags;
 
@@ -168,7 +153,7 @@ public final class S3OutputStream extends OutputStream {
      * No special object metadata or storage class will be attached to the object.
      *
      */
-    public S3OutputStream(final AmazonS3 s3, S3ObjectId objectId, S3MultipartOptions request) {
+    public S3OutputStream(final S3Client s3, S3ObjectId objectId, S3MultipartOptions request) {
         this.s3 = requireNonNull(s3);
         this.objectId = requireNonNull(objectId);
         this.request = request;
@@ -189,7 +174,7 @@ public final class S3OutputStream extends OutputStream {
         return expanded;
     }
 
-    public S3OutputStream setCannedAcl(CannedAccessControlList acl) {
+    public S3OutputStream setCannedAcl(ObjectCannedACL acl) {
         this.cannedAcl = acl;
         return this;
     }
@@ -207,7 +192,7 @@ public final class S3OutputStream extends OutputStream {
 
     public S3OutputStream setStorageEncryption(String storageEncryption) {
         if( storageEncryption!=null )
-            this.storageEncryption = SSEAlgorithm.fromString(storageEncryption);
+            this.storageEncryption = ServerSideEncryption.fromValue(storageEncryption);
         return this;
     }
 
@@ -338,13 +323,13 @@ public final class S3OutputStream extends OutputStream {
      */
     private void init() throws IOException {
         // get the upload id
-        uploadId = initiateMultipartUpload().getUploadId();
+        uploadId = initiateMultipartUpload().uploadId();
         if (uploadId == null) {
             throw new IOException("Failed to get a valid multipart upload ID from Amazon S3");
         }
         // create the executor
         executor = getOrCreateExecutor(request.getMaxThreads());
-        partETags = new LinkedBlockingQueue<>();
+        completedParts = new LinkedBlockingQueue<>();
         phaser = new Phaser();
         phaser.register();
         log.trace("[S3 phaser] Register - Starting S3 upload: {}; chunk-size: {}; max-threads: {}", uploadId, bufferSize, request.getMaxThreads());
@@ -420,43 +405,40 @@ public final class S3OutputStream extends OutputStream {
     /**
      * Starts the multipart upload process
      *
-     * @return An instance of {@link InitiateMultipartUploadResult}
+     * @return An instance of {@link CreateMultipartUploadResponse}
      * @throws IOException
      */
-    private InitiateMultipartUploadResult initiateMultipartUpload() throws IOException {
-        final InitiateMultipartUploadRequest request = //
-                new InitiateMultipartUploadRequest(objectId.getBucket(), objectId.getKey());
-        final ObjectMetadata metadata = new ObjectMetadata();
+    private CreateMultipartUploadResponse initiateMultipartUpload() throws IOException {
+        final CreateMultipartUploadRequest.Builder reqBuilder = //
+                CreateMultipartUploadRequest.builder().bucket(objectId.bucket()).key(objectId.key());
 
         if (storageClass != null) {
-            request.setStorageClass(storageClass);
+            reqBuilder.storageClass(storageClass);
         }
 
         if( cannedAcl != null ) {
-            request.withCannedACL(cannedAcl);
+            reqBuilder.acl(cannedAcl);
         }
 
         if( kmsKeyId !=null ) {
-            request.withSSEAwsKeyManagementParams( new SSEAwsKeyManagementParams(kmsKeyId) );
+            reqBuilder.ssekmsKeyId(kmsKeyId);
         }
 
         if( storageEncryption != null ) {
-            metadata.setSSEAlgorithm(storageEncryption.toString());
-            request.setObjectMetadata(metadata);
+            reqBuilder.serverSideEncryption(storageEncryption);
         }
 
         if( contentType != null ) {
-            metadata.setContentType(contentType);
-            request.setObjectMetadata(metadata);
+            reqBuilder.contentType(contentType);
         }
-
+        final CreateMultipartUploadRequest request = reqBuilder.build();
         if( log.isTraceEnabled() ) {
             log.trace("S3 initiateMultipartUpload {}", request);
         }
 
         try {
-            return s3.initiateMultipartUpload(request);
-        } catch (final AmazonClientException e) {
+            return s3.createMultipartUpload(request);
+        } catch (final SdkException e) {
             throw new IOException("Failed to initiate Amazon S3 multipart upload", e);
         }
     }
@@ -486,7 +468,7 @@ public final class S3OutputStream extends OutputStream {
                     uploadPart( new ByteBufferInputStream(buf), len, checksum , partNumber, lastPart );
                     success=true;
                 }
-                catch (AmazonClientException | IOException e) {
+                catch (SdkException | IOException e) {
                     if( attempt == request.getMaxAttempts() )
                         throw new IOException("Failed to upload multipart data to Amazon S3", e);
 
@@ -511,19 +493,20 @@ public final class S3OutputStream extends OutputStream {
 
         if (aborted) return;
 
-        final UploadPartRequest request = new UploadPartRequest();
-        request.setBucketName(objectId.getBucket());
-        request.setKey(objectId.getKey());
-        request.setUploadId(uploadId);
-        request.setPartNumber(partNumber);
-        request.setPartSize(contentLength);
-        request.setInputStream(content);
-        request.setLastPart(lastPart);
-        request.setMd5Digest(Base64.encodeAsString(checksum));
+        final UploadPartRequest.Builder reqBuilder = UploadPartRequest.builder();
+        reqBuilder.bucket(objectId.bucket());
+        reqBuilder.key(objectId.key());
+        reqBuilder.uploadId(uploadId);
+        reqBuilder.partNumber(partNumber);
+        reqBuilder.contentLength(contentLength);
+        reqBuilder.contentMD5(Base64.getEncoder().encodeToString(checksum));
 
-        final PartETag partETag = s3.uploadPart(request).getPartETag();
-        log.trace("Uploaded part {} with length {} for {}: {}", partETag.getPartNumber(), contentLength, objectId, partETag.getETag());
-        partETags.add(partETag);
+        final UploadPartResponse resp = s3.uploadPart(reqBuilder.build(), RequestBody.fromInputStream(content, contentLength));
+        log.trace("Uploaded part {} with length {} for {}: {}", partNumber, contentLength, objectId, resp.eTag());
+        completedParts.add(CompletedPart.builder()
+                    .partNumber(partNumber)
+                    .eTag(resp.eTag())
+                    .build());
 
     }
 
@@ -544,9 +527,9 @@ public final class S3OutputStream extends OutputStream {
 
         log.debug("Aborting multipart upload {} for {}", uploadId, objectId);
         try {
-            s3.abortMultipartUpload(new AbortMultipartUploadRequest(objectId.getBucket(), objectId.getKey(), uploadId));
+            s3.abortMultipartUpload(AbortMultipartUploadRequest.builder().bucket(objectId.bucket()).key(objectId.key()).uploadId(uploadId).build());
         }
-        catch (final AmazonClientException e) {
+        catch (final SdkException e) {
             log.warn("Failed to abort multipart upload {}: {}", uploadId, e.getMessage());
         }
         aborted = true;
@@ -562,20 +545,28 @@ public final class S3OutputStream extends OutputStream {
         // if aborted upload just ignore it
         if( aborted ) return;
 
-        final int partCount = partETags.size();
+        final int partCount = completedParts.size();
         log.trace("Completing upload to {} consisting of {} parts", objectId, partCount);
 
         try {
-            s3.completeMultipartUpload(new CompleteMultipartUploadRequest( //
-                    objectId.getBucket(), objectId.getKey(), uploadId, new ArrayList<>(partETags)));
-        } catch (final AmazonClientException e) {
+            final CompletedMultipartUpload completedUpload = CompletedMultipartUpload.builder()
+            .parts(completedParts)
+            .build();
+
+            s3.completeMultipartUpload(CompleteMultipartUploadRequest.builder()
+                .bucket(objectId.bucket())
+                .key(objectId.key())
+                .uploadId(uploadId)
+                .multipartUpload(completedUpload)
+                .build());
+        } catch (final SdkException e) {
             throw new IOException("Failed to complete Amazon S3 multipart upload", e);
         }
 
         log.trace("Completed upload to {} consisting of {} parts", objectId, partCount);
 
         uploadId = null;
-        partETags = null;
+        completedParts = null;
     }
 
     /**
@@ -598,43 +589,42 @@ public final class S3OutputStream extends OutputStream {
      * @throws IOException
      */
     private void putObject(final InputStream content, final long contentLength, byte[] checksum) throws IOException {
-
-        final ObjectMetadata meta = new ObjectMetadata();
-        meta.setContentLength(contentLength);
-        meta.setContentMD5( Base64.encodeAsString(checksum) );
-
-        final PutObjectRequest request = new PutObjectRequest(objectId.getBucket(), objectId.getKey(), content, meta);
+        final PutObjectRequest.Builder reqBuilder = PutObjectRequest.builder();
+        reqBuilder.bucket(objectId.bucket());
+        reqBuilder.key(objectId.key());
+        reqBuilder.contentLength(contentLength);
+        reqBuilder.contentMD5( Base64.getEncoder().encodeToString(checksum) );
         if( cannedAcl!=null ) {
-            request.withCannedAcl(cannedAcl);
+            reqBuilder.acl(cannedAcl);
         }
 
         if (storageClass != null) {
-            request.setStorageClass(storageClass);
+            reqBuilder.storageClass(storageClass);
         }
 
         if( tags!=null && tags.size()>0 ) {
-            request.setTagging( new ObjectTagging(tags) );
+            reqBuilder.tagging(Tagging.builder().tagSet(tags).build() );
         }
 
         if( kmsKeyId !=null ) {
-            request.withSSEAwsKeyManagementParams( new SSEAwsKeyManagementParams(kmsKeyId) );
+            reqBuilder.ssekmsKeyId(kmsKeyId);
         }
 
         if( storageEncryption != null ) {
-            meta.setSSEAlgorithm( storageEncryption.toString() );
+            reqBuilder.serverSideEncryption( storageEncryption );
         }
 
         if( contentType != null ) {
-            meta.setContentType(contentType);
+            reqBuilder.contentType(contentType);
         }
-
+        PutObjectRequest request = reqBuilder.build();
         if( log.isTraceEnabled() ) {
             log.trace("S3 putObject {}", request);
         }
 
         try {
-            s3.putObject(request);
-        } catch (final AmazonClientException e) {
+            s3.putObject(request, RequestBody.fromInputStream(content, contentLength));
+        } catch (final SdkException e) {
             throw new IOException("Failed to put data into Amazon S3 object", e);
         }
     }
@@ -663,24 +653,6 @@ public final class S3OutputStream extends OutputStream {
             executorSingleton = ThreadPoolManager.create("S3StreamUploader", maxThreads);
         }
         return executorSingleton;
-    }
-
-    /**
-     * Shutdown the executor and clear the singleton
-     */
-    static void shutdownExecutor(boolean hard) {
-        if( hard ) {
-            executorSingleton.shutdownNow();
-        }
-        else {
-            executorSingleton.shutdown();
-            log.trace("Uploader await completion");
-            final String waitMsg = "[AWS S3] Waiting stream uploader to complete (%d files)";
-            final String exitMsg = "[AWS S3] Exiting before stream uploader thread pool complete -- Some files maybe lost";
-            ThreadPoolHelper.await(executorSingleton, Duration.of("1h") ,waitMsg, exitMsg);
-            log.trace("Uploader shutdown completed");
-            executorSingleton = null;
-        }
     }
 
 }

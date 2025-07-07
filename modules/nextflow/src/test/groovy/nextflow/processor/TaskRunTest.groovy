@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,8 @@ import nextflow.Session
 import nextflow.ast.TaskCmdXform
 import nextflow.container.ContainerConfig
 import nextflow.container.resolver.ContainerInfo
+import nextflow.container.resolver.ContainerMeta
+import nextflow.container.resolver.ContainerResolver
 import nextflow.executor.Executor
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
@@ -402,7 +404,6 @@ class TaskRunTest extends Specification {
     }
 
     def 'should resolve the task body script' () {
-
         given:
         def task = new TaskRun()
         task.processor = [:] as TaskProcessor
@@ -412,7 +413,7 @@ class TaskRunTest extends Specification {
          * plain task script
          */
         when:
-        task.resolve(new BodyDef({-> 'Hello'}, 'Hello', 'script'))
+        task.resolveBody(new BodyDef({-> 'Hello'}, 'Hello', 'script'))
         then:
         task.script == 'Hello'
         task.source == 'Hello'
@@ -422,7 +423,7 @@ class TaskRunTest extends Specification {
          */
         when:
         task.context = new TaskContext(Mock(Script),[x: 'world'],'foo')
-        task.resolve(new BodyDef({-> "Hello ${x}"}, 'Hello ${x}', 'script'))
+        task.resolveBody(new BodyDef({-> "Hello ${x}"}, 'Hello ${x}', 'script'))
         then:
         task.script == 'Hello world'
         task.source == 'Hello ${x}'
@@ -448,7 +449,7 @@ class TaskRunTest extends Specification {
          */
         when:
         task.context = new TaskContext(Mock(Script),VARS,'foo')
-        task.resolve(new BodyDef(body, 'cat ${one}\nhead ${many}', 'script'))
+        task.resolveBody(new BodyDef(body, 'cat ${one}\nhead ${many}', 'script'))
         then:
         task.script == '''
                     cat a\\ b.txt
@@ -481,7 +482,7 @@ class TaskRunTest extends Specification {
         when:
         task.context = new TaskContext(script,local,'foo')
         task.config = new TaskConfig().setContext(task.context)
-        task.resolve(new BodyDef({-> '$BASH_VAR !{nxf_var} - !{params.var_no}'}, '<the source script>', 'shell'))  // <-- note: 'shell' type
+        task.resolveBody(new BodyDef({-> '$BASH_VAR !{nxf_var} - !{params.var_no}'}, '<the source script>', 'shell'))  // <-- note: 'shell' type
         then:
         task.script == '$BASH_VAR YES - NO'
         task.source == '<the source script>'
@@ -493,7 +494,7 @@ class TaskRunTest extends Specification {
         task.context = new TaskContext(Mock(Script),[nxf_var: '>interpolated value<'],'foo')
         task.config = new TaskConfig().setContext(task.context)
         task.config.placeholder = '#' as char
-        task.resolve(new BodyDef({-> '$BASH_VAR #{nxf_var}'}, '$BASH_VAR #{nxf_var}', 'shell'))  // <-- note: 'shell' type
+        task.resolveBody(new BodyDef({-> '$BASH_VAR #{nxf_var}'}, '$BASH_VAR #{nxf_var}', 'shell'))  // <-- note: 'shell' type
         then:
         task.script == '$BASH_VAR >interpolated value<'
         task.source == '$BASH_VAR #{nxf_var}'
@@ -517,7 +518,7 @@ class TaskRunTest extends Specification {
         task.config = new TaskConfig().setContext(task.context)
 
         when:
-        task.resolve( new BodyDef({-> template(my_file)}, 'template($file)', 'script'))
+        task.resolveBody( new BodyDef({-> template(my_file)}, 'template($file)', 'script'))
         then:
         task.script == 'echo Ciao mondo'
         task.source == 'echo ${say_hello}'
@@ -542,7 +543,7 @@ class TaskRunTest extends Specification {
         task.config = new TaskConfig().setContext(task.context)
 
         when:
-        task.resolve( new BodyDef({-> template(my_file)}, 'template($file)', 'shell'))
+        task.resolveBody( new BodyDef({-> template(my_file)}, 'template($file)', 'shell'))
         then:
         task.script == 'echo $HOME ~ Foo bar'
         task.source == 'echo $HOME ~ !{user_name}'
@@ -568,7 +569,7 @@ class TaskRunTest extends Specification {
         task.config.placeholder = '#' as char
 
         when:
-        task.resolve( new BodyDef({-> template(my_file)}, 'template($file)', 'shell'))
+        task.resolveBody( new BodyDef({-> template(my_file)}, 'template($file)', 'shell'))
         then:
         task.script == 'echo $HOME ~ Foo bar'
         task.source == 'echo $HOME ~ #{user_name}'
@@ -750,7 +751,7 @@ class TaskRunTest extends Specification {
         task.context = GroovyMock(TaskContext)
 
         when:
-        task.resolve(new BodyDef({-> "Hello ${x}"}, 'Hello ${x}', 'script'))
+        task.resolveBody(new BodyDef({-> "Hello ${x}"}, 'Hello ${x}', 'script'))
         and:
         def vars = task.getVariableNames()
         then:
@@ -769,7 +770,7 @@ class TaskRunTest extends Specification {
         task.config = new TaskConfig()
 
         when:
-        task.resolve(new BodyDef({-> 'Hello !{foo} !{bar} !{input_x}'}, 'Hello..', 'shell'))
+        task.resolveBody(new BodyDef({-> 'Hello !{foo} !{bar} !{input_x}'}, 'Hello..', 'shell'))
         and:
         def vars = task.getVariableNames()
         then:
@@ -793,7 +794,7 @@ class TaskRunTest extends Specification {
         task.config = new TaskConfig()
 
         when:
-        task.resolve(new BodyDef({-> template }, 'Hello..', 'script'))
+        task.resolveBody(new BodyDef({-> template }, 'Hello..', 'script'))
         and:
         def vars = task.getVariableNames()
         then:
@@ -822,7 +823,7 @@ class TaskRunTest extends Specification {
          * plain task script
          */
         when:
-        task.resolve(dryRun)
+        task.resolveStub(dryRun)
         then:
         task.script == 'echo Hello world'
         task.source == 'command source'
@@ -844,7 +845,6 @@ class TaskRunTest extends Specification {
         session.getContainerConfig(null) >> null
         and:
         config == new ContainerConfig(engine:'docker')
-
 
         when:
         config = task.getContainerConfig()
@@ -869,5 +869,127 @@ class TaskRunTest extends Specification {
         and:
         // the engine is enabled by default
         config == new ContainerConfig(engine:'foo', enabled: true)   // <-- 'foo' engine is enabled
+    }
+
+    def 'should get container info' () {
+        given:
+        def session = Mock(Session)
+        def executor = Mock(Executor) { getSession()>>session }
+        def processor = Mock(TaskProcessor) { getExecutor()>>executor; getSession()>>session }
+        and:
+        def config = new TaskConfig([container:'ubuntu'])
+        def task = new TaskRun(config: config, processor: processor)
+        when:
+        def info = task.containerInfo()
+        then:
+        info == new ContainerInfo('ubuntu','ubuntu','ubuntu')
+    }
+
+    def 'should not be an array' () {
+        given:
+        def task = new TaskRun()
+        expect:
+        !task.isArray()
+    }
+
+    def 'should resolve task body' () {
+        given:
+        def task = Spy(TaskRun)
+        task.processor = Mock(TaskProcessor) {
+            getSession()>>Mock(Session) { getStubRun() >> false}
+        }
+        and:
+        def body = Mock(BodyDef)
+
+        when:
+        task.resolve(body)
+        then:
+        1 * task.resolveBody(body) >> null
+        0 * task.resolveStub(_) >> null
+    }
+
+    def 'should resolve task body when no stub' () {
+        given:
+        def task = Spy(TaskRun)
+        task.processor = Mock(TaskProcessor) {
+            getSession()>>Mock(Session) { getStubRun() >> true}
+        }
+        task.config = Mock(TaskConfig) { getStubBlock()>> null }
+        and:
+        def body = Mock(BodyDef)
+
+        when:
+        task.resolve(body)
+        then:
+        1 * task.resolveBody(body) >> null
+        0 * task.resolveStub(_) >> null
+    }
+
+    def 'should resolve task stub' () {
+        given:
+        def body = Mock(BodyDef)
+        def stub = Mock(TaskClosure)
+        and:
+        def task = Spy(TaskRun)
+        task.config = Mock(TaskConfig) { getStubBlock()>>stub }
+        task.processor = Mock(TaskProcessor) {
+            getSession()>>Mock(Session) { getStubRun() >> true}
+        }
+
+        when:
+        task.resolve(body)
+        then:
+        1 * task.resolveStub(stub) >> null
+        0 * task.resolveBody(_) >> null
+    }
+
+    def 'should get container info & meta' () {
+        given:
+        def image = 'my/container:latest'
+        def meta = new ContainerMeta(sourceImage: image, targetImage: image)
+        def info = new ContainerInfo(image,image,image)
+        def resolver = Mock(ContainerResolver)
+        def config = Mock(TaskConfig) { getContainer() >> image }
+        def task = Spy(new TaskRun(config:config))
+        task.containerResolver() >> resolver
+
+        when:
+        def result1 = task.containerInfo()
+        then:
+        resolver.resolveImage(task,image) >> info
+        and:
+        result1 == info
+
+        when:
+        def result2 = task.containerMeta()
+        then:
+        resolver.getContainerMeta(image) >> meta
+        and:
+        result2 == meta
+    }
+    
+    def 'should resolve task stub from template' () {
+
+        given:
+        def task = new TaskRun()
+        task.processor = [:] as TaskProcessor
+        task.processor.grengine = new Grengine()
+
+        // create a file template
+        def file = TestHelper.createInMemTempFile('template.sh')
+        file.text = 'echo ${say_hello}'
+        // create the task context with two variables
+        // - my_file
+        // - say_hello
+        task.context = new TaskContext(Mock(Script),[say_hello: 'Ciao mondo', my_file: file],'foo')
+        task.config = new TaskConfig().setContext(task.context)
+
+        when:
+        task.resolveStub(new TaskClosure({-> template(my_file)}, 'template($file)'))
+        then:
+        task.script == 'echo Ciao mondo'
+        task.source == 'echo ${say_hello}'
+        task.template == file
+        task.traceScript == 'echo Ciao mondo'
     }
 }

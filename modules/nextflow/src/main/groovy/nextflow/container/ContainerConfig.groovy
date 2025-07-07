@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ class ContainerConfig extends LinkedHashMap {
     }
 
     boolean isEnabled() {
-        get('enabled')?.toString() == 'true'
+        return get('enabled')?.toString() == 'true'
     }
 
     ContainerConfig setEnabled(boolean value) {
@@ -53,7 +53,16 @@ class ContainerConfig extends LinkedHashMap {
     }
 
     String getEngine() {
-        get('engine')
+        return get('engine')
+    }
+
+    String getRegistry() {
+        return get('registry')
+    }
+
+    boolean getRegistryOverride() {
+        final val = get('registryOverride')
+        return val!=null ? Boolean.parseBoolean(val.toString()) : false
     }
 
     /**
