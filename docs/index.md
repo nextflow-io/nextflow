@@ -161,9 +161,10 @@ developer/plugins
 :caption: Tutorials
 :maxdepth: 1
 
-data-lineage
-metrics
-flux
+tutorials/data-lineage
+tutorials/workflow-outputs
+tutorials/metrics
+tutorials/flux
 ```
 
 ```{toctree}
