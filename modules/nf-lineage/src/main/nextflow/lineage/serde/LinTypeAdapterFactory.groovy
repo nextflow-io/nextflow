@@ -16,7 +16,6 @@
 package nextflow.lineage.serde
 
 import com.google.gson.Gson
-import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParseException
 import com.google.gson.JsonParser
@@ -24,7 +23,6 @@ import com.google.gson.TypeAdapter
 import com.google.gson.reflect.TypeToken
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
-
 import groovy.transform.CompileStatic
 import nextflow.lineage.model.v1beta1.FileOutput
 import nextflow.lineage.model.v1beta1.LinModel
@@ -34,7 +32,6 @@ import nextflow.lineage.model.v1beta1.Workflow
 import nextflow.lineage.model.v1beta1.WorkflowOutput
 import nextflow.lineage.model.v1beta1.WorkflowRun
 import nextflow.serde.gson.RuntimeTypeAdapterFactory
-
 /**
  * Class to serialize LiSerializable objects including the Lineage model version.
  *
@@ -42,11 +39,11 @@ import nextflow.serde.gson.RuntimeTypeAdapterFactory
  */
 @CompileStatic
 class LinTypeAdapterFactory<T> extends RuntimeTypeAdapterFactory<T> {
+
     public static final String VERSION_FIELD = 'version'
     public static final String SPEC_FIELD = 'spec'
     public static final String CURRENT_VERSION = LinModel.VERSION
 
-    private labelToClass = [:]
     LinTypeAdapterFactory() {
         super(LinSerializable.class, "kind", false)
         this.registerSubtype(WorkflowRun, WorkflowRun.simpleName)
@@ -55,7 +52,6 @@ class LinTypeAdapterFactory<T> extends RuntimeTypeAdapterFactory<T> {
             .registerSubtype(TaskRun, TaskRun.simpleName)
             .registerSubtype(TaskOutput, TaskOutput.simpleName)
             .registerSubtype(FileOutput, FileOutput.simpleName)
-
     }
 
     @Override
@@ -85,21 +81,21 @@ class LinTypeAdapterFactory<T> extends RuntimeTypeAdapterFactory<T> {
 
             @Override
             R read(JsonReader reader) throws IOException {
-                def obj = JsonParser.parseReader(reader)?.asJsonObject
-                if( !obj )
-                    throw new JsonParseException("Parsed object is null")
-                def versionEl = obj.get(VERSION_FIELD)
+                final obj = JsonParser.parseReader(reader)?.getAsJsonObject()
+                if( obj==null )
+                    throw new JsonParseException("Parsed JSON object is null")
+                final versionEl = obj.get(VERSION_FIELD)
                 if (versionEl == null || versionEl.asString != CURRENT_VERSION) {
-                    throw new JsonParseException("Invalid or missing '${VERSION_FIELD}' property")
+                    throw new JsonParseException("Invalid or missing '${VERSION_FIELD}' JSON property")
                 }
                 final typeEl = obj.get(getTypeFieldName())
-                if( !typeEl )
-                    throw new JsonParseException("'${getTypeFieldName()}' not found")
+                if( typeEl==null )
+                    throw new JsonParseException("JSON property '${getTypeFieldName()}' not found")
                 final specEl = obj.get(SPEC_FIELD)?.asJsonObject
-                if ( !specEl )
-                    throw new JsonParseException("'Invalid or missing '${SPEC_FIELD}' property")
+                if ( specEl==null )
+                    throw new JsonParseException("Invalid or missing '${SPEC_FIELD}' JSON property")
                 specEl.add(getTypeFieldName(), typeEl)
-                return delegate.fromJsonTree(specEl)
+                return (R) delegate.fromJsonTree(specEl)
             }
         }
     }
