@@ -19,9 +19,9 @@ package io.seqera.tower.plugin
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.tower.plugin.fs.SeqeraFileSystemProvider
+import nextflow.cli.PluginExecAware
 import nextflow.file.FileHelper
 import nextflow.plugin.BasePlugin
-import nextflow.cli.PluginExecAware
 import org.pf4j.PluginWrapper
 /**
  * Seqera Platform plugin
