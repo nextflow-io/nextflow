@@ -91,11 +91,18 @@ class LinTypeAdapterFactory<T> extends RuntimeTypeAdapterFactory<T> {
                 final typeEl = obj.get(getTypeFieldName())
                 if( typeEl==null )
                     throw new JsonParseException("JSON property '${getTypeFieldName()}' not found")
+                
+                // Check if this is the new format (has 'spec' field) or old format (data at root level)
                 final specEl = obj.get(SPEC_FIELD)?.asJsonObject
-                if ( specEl==null )
-                    throw new JsonParseException("Invalid or missing '${SPEC_FIELD}' JSON property")
-                specEl.add(getTypeFieldName(), typeEl)
-                return (R) delegate.fromJsonTree(specEl)
+                if ( specEl != null ) {
+                    // New format: data is wrapped in 'spec' field
+                    specEl.add(getTypeFieldName(), typeEl)
+                    return (R) delegate.fromJsonTree(specEl)
+                } else {
+                    // Old format: data is at root level, just remove version field
+                    obj.remove(VERSION_FIELD)
+                    return (R) delegate.fromJsonTree(obj)
+                }
             }
         }
     }
