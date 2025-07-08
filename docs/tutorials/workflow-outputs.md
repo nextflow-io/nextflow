@@ -354,4 +354,4 @@ $ cat results/samples.csv
 "spleen","results/fastqc/spleen","results/quant/spleen"
 ```
 
-In the future, if we add a tool with per-sample outputs, we only need to join the tool output into the `samples_ch` channel and update the output `path` directive accordingly. This approach keeps our output definition concise as we add more tools to the pipeline. Additionally, a single unified index file for all per-sample outputs is easier for downstream pipelines to consume, rather than cross-referencing multiple related index files.
+In the future, if a tool with per-sample outputs were added, we would only need to join the tool output into the `samples_ch` channel and update the output `path` directive accordingly. This approach keeps our output definition concise as we add more tools to the pipeline. Additionally, a single unified index file for all per-sample outputs is easier for downstream pipelines to consume, rather than cross-referencing multiple related index files.

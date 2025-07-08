@@ -7,7 +7,7 @@
 
 ## Overview
 
-The [Flux Framework](https://flux-framework.org/) is a modern resource manager that can span the space between cloud and HPC. If your center does not provide Flux for you, you can [build Flux on your own](https://flux-framework.readthedocs.io/en/latest/quickstart.html#building-the-code) and launch it as a job with your resource manager of choice (e.g. SLURM or a cloud provider).
+The [Flux Framework](https://flux-framework.org/) is a modern resource manager that can span the space between cloud and HPC. If your center does not provide Flux, you can [build Flux yourself](https://flux-framework.readthedocs.io/en/latest/quickstart.html#building-the-code) and launch it as a job using your resource manager of choice (e.g. SLURM or a cloud provider).
 
 In the [`docker/flux`](https://github.com/nextflow-io/nextflow/tree/master/docker/flux) directory we provide a [Dockerfile for interacting with Flux](https://github.com/nextflow-io/nextflow/tree/master/docker/flux/.devcontainer/Dockerfile) along with a [VSCode Developer Container](https://code.visualstudio.com/docs/devcontainers/containers) environment that you can put at the root of the project to be provided with a Flux agent and the dependencies needed to build Nextflow. There are two ways to use this:
 
