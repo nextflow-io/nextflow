@@ -16,7 +16,7 @@
 
 package nextflow.cloud.aws.batch
 
-import com.amazonaws.services.batch.AWSBatch
+import software.amazon.awssdk.services.batch.BatchClient
 import nextflow.util.ClientProxyThrottler
 import nextflow.util.ThrottlingExecutor
 /**
@@ -27,12 +27,12 @@ import nextflow.util.ThrottlingExecutor
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class AwsBatchProxy extends ClientProxyThrottler<AWSBatch> {
+class AwsBatchProxy extends ClientProxyThrottler<BatchClient> {
 
     @Delegate(deprecated=true)
-    private AWSBatch target
+    private BatchClient target
 
-    AwsBatchProxy(AWSBatch client, ThrottlingExecutor executor) {
+    AwsBatchProxy(BatchClient client, ThrottlingExecutor executor) {
         super(client, executor, [describeJobs: 10 as Byte]) // note: use higher priority for `describeJobs` invocations
         this.target = client
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2025, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,35 +12,20 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
-package nextflow.util
+package nextflow.exception
 
-import java.time.Instant
-
-import groovy.transform.Canonical
-import spock.lang.Specification
+import groovy.transform.CompileStatic
+import groovy.transform.InheritConstructors
 
 /**
+ * Exception thrown when the http response length exceed
+ * the max allowed size.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class GsonHelperTest extends Specification{
-
-    @Canonical
-    static class Person {
-        String name
-        Instant birthday
-    }
-
-    def 'should ser-deserialize a custom object' () {
-        given:
-        def person = new Person(name: 'My name', birthday: Instant.now())
-        when:
-        def json = GsonHelper.toJson(person)
-        then:
-        GsonHelper.fromJson(json,Person) == person
-    }
-
+@CompileStatic
+@InheritConstructors
+class HttpResponseLengthExceedException extends IOException {
 }

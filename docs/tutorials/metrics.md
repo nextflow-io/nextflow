@@ -8,7 +8,7 @@ This tutorial explains how resource usage metrics are computed from execution re
 
 CPU Usage plots report how CPU resources are used by each process.
 
-```{image} _static/report-resource-cpu-noheader.png
+```{image} ../_static/report-resource-cpu-noheader.png
 ```
 
 **Raw Usage** tabs are expected to show 100% core usage if processes perform one task of pure computation. If tasks are distributed over, 2, 3, or 4 CPUs, the raw usage will be 200%, 300%, or 400%, respectively. **% Allocated** tabs rescale raw usage values relative to the number of CPUs that are set with the `cpus` directive. If the `cpus` directive is not set, CPUs are set to `1` and **% Allocated** tabs will show the same values **Raw Usage** tabs.
@@ -253,17 +253,17 @@ workflow{
 
 The **Virtual (RAM + Disk swap)** tab shows that both `malloc` and `malloc_fill` use the same amount of virtual memory (~1 GiB):
 
-```{image} _static/report-resource-memory-vmem.png
+```{image} ../_static/report-resource-memory-vmem.png
 ```
 
 However, the **Physical (RAM)** tab shows that `malloc_fill` uses ~1 GiB of RAM while `malloc` uses ~0 GiB of RAM:
 
-```{image} _static/report-resource-memory-ram.png
+```{image} ../_static/report-resource-memory-ram.png
 ```
 
 The **% RAM Allocated** tab shows that `malloc` and `malloc_fill` used 0% and 67% of resources set in the `memory` directive, respectively:
 
-```{image} _static/report-resource-memory-pctram.png
+```{image} ../_static/report-resource-memory-pctram.png
 ```
 
 :::{warning}
@@ -274,7 +274,7 @@ Memory and storage metrics are reported in bytes. For example, 1 KB = $1024$ byt
 
 **Job Duration** plots report how long each process took to run. It has two tabs. The **Raw Usage** tab shows the job duration and the **% Allocated** tab shows the time that was requested relative to what was requested using the `time` directive. Job duration is sometimes known as elapsed real time, real time or wall time.
 
-```{image} _static/report-resource-job-duration.png
+```{image} ../_static/report-resource-job-duration.png
 ```
 
 ## I/O Usage
@@ -306,10 +306,10 @@ workflow{
 
 The **Read** tab shows that ~1 Gib and ~256 Mb are read:
 
-```{image} _static/report-resource-io-read.png
+```{image} ../_static/report-resource-io-read.png
 ```
 
 The **Write** tab shows that ~1 Gib and ~256 Mb are written:
 
-```{image} _static/report-resource-io-write.png
+```{image} ../_static/report-resource-io-write.png
 ```

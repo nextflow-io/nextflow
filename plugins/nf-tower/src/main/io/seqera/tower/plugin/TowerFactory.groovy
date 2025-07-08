@@ -25,8 +25,8 @@ import nextflow.Session
 import nextflow.SysEnv
 import nextflow.file.http.XAuthProvider
 import nextflow.file.http.XAuthRegistry
-import nextflow.trace.TraceObserver
-import nextflow.trace.TraceObserverFactory
+import nextflow.trace.TraceObserverV2
+import nextflow.trace.TraceObserverFactoryV2
 import nextflow.util.Duration
 import nextflow.util.SimpleHttpClient
 /**
@@ -36,7 +36,7 @@ import nextflow.util.SimpleHttpClient
  */
 @Slf4j
 @CompileStatic
-class TowerFactory implements TraceObserverFactory {
+class TowerFactory implements TraceObserverFactoryV2 {
 
     private Map<String,String> env
 
@@ -45,7 +45,7 @@ class TowerFactory implements TraceObserverFactory {
     }
 
     @Override
-    Collection<TraceObserver> create(Session session) {
+    Collection<TraceObserverV2> create(Session session) {
         final client = client(session, env)
         if( !client )
             return Collections.emptyList()
@@ -100,7 +100,7 @@ class TowerFactory implements TraceObserverFactory {
     @Memoized
     static TowerClient client(Session session, Map<String,String> env) {
         final config = session.config
-        Boolean isEnabled = config.navigate('tower.enabled') as Boolean || env.get('TOWER_WORKFLOW_ID')
+        Boolean isEnabled = config.navigate('tower.enabled') as Boolean || env.get('TOWER_WORKFLOW_ID') || config.navigate('fusion.enabled') as Boolean
         return isEnabled
             ? createTowerClient0(session, config, env)
             : null

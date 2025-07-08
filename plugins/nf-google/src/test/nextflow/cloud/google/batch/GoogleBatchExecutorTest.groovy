@@ -126,7 +126,7 @@ class GoogleBatchExecutorTest extends Specification {
 
         where:
         FUSION  | DEFAULT_FS  | TASK_DIR            | EXPECTED
-        false   | false       | 'gs://foo/work/dir' | '/bin/bash -o pipefail -c \'trap "{ cp .command.log gs://foo/work/dir/.command.log; }" ERR; /bin/bash gs://foo/work/dir/.command.run 2>&1 | tee .command.log\''
+        false   | false       | 'gs://foo/work/dir' | '/bin/bash -o pipefail -c \'trap "{ cp .command.log gs://foo/work/dir/.command.log; }" EXIT; /bin/bash gs://foo/work/dir/.command.run 2>&1 | tee .command.log\''
         true    | false       | '/fusion/work/dir'  | 'bash /fusion/work/dir/.command.run'
         false   | true        | '/nfs/work/dir'     | 'bash /nfs/work/dir/.command.run 2>&1 > /nfs/work/dir/.command.log'
     }

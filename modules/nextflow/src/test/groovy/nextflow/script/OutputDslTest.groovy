@@ -135,6 +135,44 @@ class OutputDslTest extends Specification {
         root?.deleteDir()
     }
 
+    def 'should preserve non-task output files in workflow output'() {
+        given:
+        def root = Files.createTempDirectory('test')
+        def outputDir = root.resolve('results')
+        def workDir = root.resolve('work')
+        def inputDir = root.resolve('inputs'); Files.createDirectories(inputDir)
+        def file1 = inputDir.resolve('file1.txt'); file1.text = 'Hello'
+        def file2 = inputDir.resolve('file2.txt'); file2.text = 'world'
+        def record = [id: '1', file1: file1, file2: file2]
+        and:
+        def session = Mock(Session) {
+            getOutputs() >> [:]
+            getConfig() >> [:]
+            getOutputDir() >> outputDir
+            getWorkDir() >> workDir
+        }
+        Global.session = session
+        and:
+        assignOutput(session, 'foo', [ record ])
+        and:
+        def dsl = new OutputDsl()
+        and:
+        SysEnv.push(NXF_FILE_ROOT: root.toString())
+
+        when:
+        dsl.declare('foo') {
+        }
+        dsl.apply(session)
+        await(dsl)
+        then:
+        0 * session.notifyFilePublish(_)
+        1 * session.notifyWorkflowOutput(new WorkflowOutputEvent('foo', [ record ], null))
+
+        cleanup:
+        SysEnv.pop()
+        root?.deleteDir()
+    }
+
     def 'should set publish options in output declaration' () {
         when:
         def dsl1 = new OutputDsl.DeclareDsl()

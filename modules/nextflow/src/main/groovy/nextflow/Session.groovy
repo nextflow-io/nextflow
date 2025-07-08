@@ -439,8 +439,8 @@ class Session implements ISession {
         this.disableRemoteBinDir = getExecConfigProp(null, 'disableRemoteBinDir', false)
         this.classesDir = FileHelper.createLocalDir()
         this.executorFactory = new ExecutorFactory(Plugins.manager)
-        this.observersV1 = createObserversV1()
         this.observersV2 = createObserversV2()
+        this.observersV1 = createObserversV1()
         this.statsEnabled = observersV1.any { ob -> ob.enableMetrics() } || observersV2.any { ob -> ob.enableMetrics() }
         this.workflowMetadata = new WorkflowMetadata(this, scriptFile)
 
@@ -463,31 +463,23 @@ class Session implements ISession {
     }
 
     /**
-     * Given the `run` command line options creates the required {@link TraceObserver}s
-     *
-     * @param runOpts The {@code CmdRun} object holding the run command options
-     * @return A list of {@link TraceObserver} objects or an empty list
+     * Create the required trace observers based on the given CLI and config options.
      */
     @PackageScope
     List<TraceObserver> createObserversV1() {
-
-        final result = new ArrayList(10)
-
-        // stats is created as first because others may depend on it
-        statsObserver = new WorkflowStatsObserver(this)
-        result.add(statsObserver)
-
+        final result = new ArrayList<TraceObserver>(10)
         for( TraceObserverFactory f : Plugins.getExtensions(TraceObserverFactory) ) {
             log.debug "Observer factory: ${f.class.simpleName}"
             result.addAll(f.create(this))
         }
-
         return result
     }
 
     @PackageScope
     List<TraceObserverV2> createObserversV2() {
-        final result = new ArrayList(10)
+        final result = new ArrayList<TraceObserverV2>(10)
+        this.statsObserver = new WorkflowStatsObserver(this)
+        result.add(statsObserver)
         for( TraceObserverFactoryV2 f : Plugins.getExtensions(TraceObserverFactoryV2) ) {
             log.debug "Observer factory (v2): ${f.class.simpleName}"
             result.addAll(f.create(this))
