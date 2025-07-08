@@ -16,7 +16,7 @@
 
 package nextflow.lineage.serde
 
-import nextflow.lineage.model.v1beta1.Checksum
+
 import nextflow.lineage.model.v1beta1.FileOutput
 import nextflow.lineage.model.v1beta1.LinModel
 import nextflow.lineage.model.v1beta1.TaskRun
