@@ -18,6 +18,7 @@ package nextflow.trace
 
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import nextflow.Session
 import nextflow.file.FileHelper
 
@@ -26,6 +27,7 @@ import nextflow.file.FileHelper
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class DefaultObserverFactory implements TraceObserverFactoryV2 {
 
     private Map config
@@ -35,8 +37,7 @@ class DefaultObserverFactory implements TraceObserverFactoryV2 {
         this.config = session.config
 
         final result = new ArrayList<TraceObserverV2>(5)
-        if( session.ansiLog )
-            createAnsiLogObserver(result)
+        createAnsiLogObserver(result, session)
         createGraphObserver(result)
         createReportObserver(result)
         createTimelineObserver(result)
@@ -44,9 +45,11 @@ class DefaultObserverFactory implements TraceObserverFactoryV2 {
         return result
     }
 
-    protected void createAnsiLogObserver(Collection<TraceObserverV2> result) {
-        session.ansiLogObserver = new AnsiLogObserver()
-        result << session.ansiLogObserver
+    protected void createAnsiLogObserver(Collection<TraceObserverV2> result, Session session) {
+        if( session.ansiLog ) {
+            session.ansiLogObserver = new AnsiLogObserver()
+            result << session.ansiLogObserver
+        }
     }
 
     protected void createReportObserver(Collection<TraceObserverV2> result) {

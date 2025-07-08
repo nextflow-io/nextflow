@@ -50,7 +50,7 @@ class TowerFactory implements TraceObserverFactoryV2 {
         if( !client )
             return Collections.emptyList()
 
-        final result = new ArrayList(1)
+        final result = new ArrayList<TraceObserverV2>(1)
         // create the tower client
         result.add(client)
         // create the logs checkpoint
