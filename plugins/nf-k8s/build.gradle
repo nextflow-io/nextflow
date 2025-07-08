@@ -29,7 +29,6 @@ nextflowPlugin {
     extensionPoints = [
         'nextflow.k8s.K8sConfig',
         'nextflow.k8s.K8sExecutor',
-        'nextflow.k8s.cli.KubeCommandImpl',
     ]
 }
 
@@ -48,7 +47,7 @@ configurations {
 }
 
 dependencies {
-    compileOnly project(':nf-cli-v1')
+    compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
     compileOnly 'org.pf4j:pf4j:3.14.1'
 

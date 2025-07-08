@@ -15,6 +15,7 @@ sourceSets {
 
 dependencies {
     api(project(':nextflow'))
+    api(project(':plugins:nf-k8s'))
     api(project(':nf-lineage'))
     api "com.beust:jcommander:1.35"
 
