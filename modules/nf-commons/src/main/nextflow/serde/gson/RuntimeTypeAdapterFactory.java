@@ -263,7 +263,6 @@ public class RuntimeTypeAdapterFactory<T> implements TypeAdapterFactory {
         return typeFieldName;
     }
 
-
     @Override
     public <R> TypeAdapter<R> create(Gson gson, TypeToken<R> type) {
         if (type == null) {
