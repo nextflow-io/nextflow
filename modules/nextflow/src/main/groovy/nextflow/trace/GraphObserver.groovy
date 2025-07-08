@@ -16,7 +16,6 @@
 
 package nextflow.trace
 
-import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.transform.PackageScope
@@ -31,8 +30,6 @@ import nextflow.dag.MermaidRenderer
 import nextflow.dag.MermaidHtmlRenderer
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
-import nextflow.processor.TaskHandler
-import nextflow.processor.TaskProcessor
 /**
  * Render the DAG document on pipeline completion using the
  * format specified by the user
@@ -40,7 +37,7 @@ import nextflow.processor.TaskProcessor
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class GraphObserver implements TraceObserver {
+class GraphObserver implements TraceObserverV2 {
 
     static public final String DEF_FILE_NAME = "dag-${TraceHelper.launchTimestampFmt()}.html"
 
@@ -52,17 +49,18 @@ class GraphObserver implements TraceObserver {
 
     private String format
 
-    boolean overwrite
+    private boolean overwrite
 
     String getFormat() { format }
 
     String getName() { name }
 
-    GraphObserver( Path file ) {
+    GraphObserver(Path file, Boolean overwrite=false) {
         assert file
         this.file = file
         this.name = file.baseName
         this.format = file.getExtension().toLowerCase() ?: 'html'
+        this.overwrite = overwrite
     }
 
     @Override
@@ -108,30 +106,4 @@ class GraphObserver implements TraceObserver {
             new GraphvizRenderer(name, format)
     }
 
-
-    @Override
-    void onProcessCreate(TaskProcessor process) {
-
-    }
-
-
-    @Override
-    void onProcessSubmit(TaskHandler handler, TraceRecord trace) {
-
-    }
-
-    @Override
-    void onProcessStart(TaskHandler handler, TraceRecord trace) {
-
-    }
-
-    @Override
-    void onProcessComplete(TaskHandler handler, TraceRecord trace) {
-
-    }
-
-    @Override
-    boolean enableMetrics() {
-        return false
-    }
 }
