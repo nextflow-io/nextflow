@@ -57,8 +57,6 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
-import nextflow.cli.CliOptions
-import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import nextflow.exception.PlainExceptionMessage
 import nextflow.exception.ProcessException
@@ -100,7 +98,7 @@ class LoggerHelper {
 
     static private LoggerHelper INSTANCE
 
-    private CliOptions opts
+    private LoggerOptions opts
 
     private boolean rolling = false
 
@@ -149,7 +147,7 @@ class LoggerHelper {
         return this
     }
 
-    LoggerHelper(CliOptions opts) {
+    LoggerHelper(LoggerOptions opts) {
         this.opts = opts
         this.loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory()
     }
@@ -169,11 +167,11 @@ class LoggerHelper {
     }
 
     LoggerHelper setup() {
-        logFileName = opts.logFile ?: System.getenv('NXF_LOG_FILE')
+        logFileName = opts.logFile() ?: System.getenv('NXF_LOG_FILE')
 
-        final boolean quiet = opts.quiet
-        final List<String> debugConf = opts.debug ?: new ArrayList<String>()
-        final List<String> traceConf = opts.trace ?: ( System.getenv('NXF_TRACE')?.tokenize(', ') ?: new ArrayList<String>())
+        final boolean quiet = opts.quiet()
+        final List<String> debugConf = opts.debug() ?: new ArrayList<String>()
+        final List<String> traceConf = opts.trace() ?: ( System.getenv('NXF_TRACE')?.tokenize(', ') ?: new ArrayList<String>())
 
         // Reset all the logger
         final root = loggerContext.getLogger('ROOT')
@@ -259,9 +257,9 @@ class LoggerHelper {
 
     protected Appender createConsoleAppender() {
 
-        final Appender<ILoggingEvent> result = daemon && opts.isBackground()
+        final Appender<ILoggingEvent> result = daemon && opts.background()
                 ? (Appender<ILoggingEvent>) null
-                : ((opts.ansiLog || SysEnv.isAgentMode()) ? new CaptureAppender() : new ConsoleAppender<ILoggingEvent>())
+                : ((opts.ansiLog() || SysEnv.isAgentMode()) ? new CaptureAppender() : new ConsoleAppender<ILoggingEvent>())
         if( result )  {
             final filter = new ConsoleLoggerFilter( packages )
             filter.setContext(loggerContext)
@@ -358,11 +356,11 @@ class LoggerHelper {
      * @param traceConf The list of packages for which use a Trace logging level
      */
 
-    static void configureLogger( Launcher launcher ) {
-        INSTANCE = new LoggerHelper(launcher.options)
-                .setDaemon(launcher.isDaemon())
+    static void configureLogger(LoggerOptions opts, boolean daemon) {
+        INSTANCE = new LoggerHelper(opts)
+                .setDaemon(daemon)
                 .setRolling(true)
-                .setSyslog(launcher.options.syslog)
+                .setSyslog(opts.syslog())
                 .setup()
     }
 
