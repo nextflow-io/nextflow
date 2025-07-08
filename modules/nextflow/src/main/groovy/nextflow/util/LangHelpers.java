@@ -14,16 +14,12 @@
  * limitations under the License.
  */
 
-package nextflow.ast;
+package nextflow.util;
 
 import java.nio.file.Path;
 
 import groovy.transform.CompileStatic;
-import groovy.transform.PackageScope;
 import nextflow.processor.TaskPath;
-import nextflow.util.Duration;
-import nextflow.util.PathEscapeAware;
-import nextflow.util.MemoryUnit;
 import org.codehaus.groovy.runtime.ScriptBytecodeAdapter;
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation;
 
@@ -32,7 +28,6 @@ import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation;
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@PackageScope
 @CompileStatic
 class LangHelpers {
 
@@ -49,7 +44,6 @@ class LangHelpers {
      * @param right Right equals operand
      * @return 
      */
-    @PackageScope
     static boolean compareEqual( Object left, Object right )  {
         // -- legacy
         if (left==right) return true;
@@ -69,6 +63,7 @@ class LangHelpers {
         if( left instanceof Path && right instanceof Path ) {
             return TaskPath.equals((Path)left, (Path)right);
         }
+
         // -- compare memory unit
         if( left instanceof MemoryUnit ) {
             if( right == null ) return false;
@@ -78,8 +73,9 @@ class LangHelpers {
             if( left == null ) return false;
             return MemoryUnit.compareTo((MemoryUnit)right, left)==0;
         }
+
         // -- compare duration
-        if( left instanceof Duration) {
+        if( left instanceof Duration ) {
             if( right == null ) return false;
             return Duration.compareTo((Duration)left, right)==0;
         }
@@ -121,6 +117,7 @@ class LangHelpers {
             if( left == null ) return false;
             return MemoryUnit.compareTo((MemoryUnit)right, left)>0;
         }
+
         // -- compare duration
         if( left instanceof Duration ) {
             if( right == null ) return false;
@@ -164,6 +161,7 @@ class LangHelpers {
             if( left == null ) return false;
             return MemoryUnit.compareTo((MemoryUnit)right, left)>=0;
         }
+
         // -- compare duration
         if( left instanceof Duration ) {
             if( right == null ) return false;
@@ -207,6 +205,7 @@ class LangHelpers {
             if( left == null ) return false;
             return MemoryUnit.compareTo((MemoryUnit)right, left)<0;
         }
+
         // -- compare duration
         if( left instanceof Duration ) {
             if( right == null ) return false;
@@ -216,6 +215,7 @@ class LangHelpers {
             if( left == null ) return false;
             return Duration.compareTo((Duration)right, left)<0;
         }
+
         // -- fallback on default
         return ScriptBytecodeAdapter.compareTo(left, right) > 0;
     }
@@ -249,6 +249,7 @@ class LangHelpers {
             if( left == null ) return false;
             return MemoryUnit.compareTo((MemoryUnit)right, left)<=0;
         }
+
         // -- compare duration
         if( left instanceof Duration ) {
             if( right == null ) return false;
@@ -275,8 +276,8 @@ class LangHelpers {
      *      if the argument is not implementing the {@link PathEscapeAware} interface
      */
     static Object applyPathEscapeAware(Object value) {
-        if( value instanceof PathEscapeAware)
-            return ((PathEscapeAware) value).toStringEscape();
+        if( value instanceof PathEscapeAware pea )
+            return pea.toStringEscape();
         else
             return value;
     }

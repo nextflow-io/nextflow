@@ -30,10 +30,10 @@ import java.util.Set;
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyCodeSource;
 import com.google.common.hash.Hashing;
-import nextflow.ast.NextflowXformImpl;
-import nextflow.ast.OpXformImpl;
 import nextflow.script.control.Compiler;
 import nextflow.script.control.ModuleResolver;
+import nextflow.script.control.OpCriteriaVisitor;
+import nextflow.script.control.PathCompareVisitor;
 import nextflow.script.control.ResolveIncludeVisitor;
 import nextflow.script.control.ScriptResolveVisitor;
 import nextflow.script.control.ScriptToGroovyVisitor;
@@ -265,10 +265,9 @@ public class ScriptCompiler {
                 return;
 
             // convert to Groovy
-            var astNodes = new ASTNode[] { cn, cn };
             new ScriptToGroovyVisitor(source).visit();
-            new NextflowXformImpl().visit(astNodes, source);
-            new OpXformImpl().visit(astNodes, source);
+            new PathCompareVisitor(source).visitClass(cn);
+            new OpCriteriaVisitor(source).visitClass(cn);
         }
 
         SourceUnit createSourceUnit(URI uri) {
