@@ -14,31 +14,29 @@
  * limitations under the License.
  */
 
-package nextflow.util
+package nextflow.cli
 
+import spock.lang.Specification
 
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import nextflow.cli.CmdBase
 /**
- * This class is used to resolve at runtime some spurious dependencies
- * with optional modules
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-@Deprecated
-@CompileStatic
-class SpuriousDeps {
+class HubAwareTest extends Specification {
 
-    static CmdBase cmdCloud() {
-        try {
-            final clazz = Class.forName('nextflow.cli.CmdCloud')
-            return (CmdBase)clazz.newInstance()
-        }
-        catch (ClassNotFoundException e) {
-            return null
-        }
+    def testUser() {
+
+        when:
+        def cmd = [:] as HubAware
+        cmd.hubUser = credential
+        then:
+        cmd.toHubOptions().getUser() == user
+        cmd.toHubOptions().getPassword() == password
+
+        where:
+        credential      | user  | password
+        null            | null  | null
+        'paolo'         | 'paolo'   | null
+        'paolo:secret'  | 'paolo'   | 'secret'
     }
-
 }

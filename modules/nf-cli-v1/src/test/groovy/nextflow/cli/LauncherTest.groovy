@@ -111,8 +111,8 @@ class LauncherTest extends Specification {
         launcher.command instanceof CmdPull
         launcher.command.args == ['xxx']
         launcher.command.hubProvider == 'bitbucket'
-        launcher.command.hubUser == 'xx'
-        launcher.command.hubPassword == '11'
+        launcher.command.toHubOptions().getUser() == 'xx'
+        launcher.command.toHubOptions().getPassword() == '11'
 
     }
 
@@ -123,8 +123,8 @@ class LauncherTest extends Specification {
         launcher.command instanceof CmdClone
         launcher.command.args == ['xxx']
         launcher.command.hubProvider == 'bitbucket'
-        launcher.command.hubUser == 'xx'
-        launcher.command.hubPassword == 'yy'
+        launcher.command.toHubOptions().getUser() == 'xx'
+        launcher.command.toHubOptions().getPassword() == 'yy'
     }
 
 
@@ -135,8 +135,8 @@ class LauncherTest extends Specification {
         launcher.command instanceof CmdRun
         launcher.command.args == ['xxx']
         launcher.command.hubProvider == 'bitbucket'
-        launcher.command.hubUser == 'xx'
-        launcher.command.hubPassword == 'yy'
+        launcher.command.toHubOptions().getUser() == 'xx'
+        launcher.command.toHubOptions().getPassword() == 'yy'
 
         when:
         launcher = new Launcher().parseMainArgs('run','alpha', '-hub', 'github')

@@ -14,33 +14,18 @@
  * limitations under the License.
  */
 
-package nextflow.scm
+package nextflow.util
 
-import nextflow.cli.HubOptions
-import spock.lang.Specification
+import groovy.transform.CompileStatic
 
-/**
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
- */
-class HubOptionsTest extends Specification {
-
-    def testUser() {
-
-        when:
-        def cmd = [:] as HubOptions
-        cmd.hubUser = credential
-        then:
-        cmd.getHubUser() == user
-        cmd.getHubPassword() == password
-
-        where:
-        credential      | user  | password
-        null            | null  | null
-        'paolo'         | 'paolo'   | null
-        'paolo:secret'  | 'paolo'   | 'secret'
-
-
-
-    }
+@CompileStatic
+record LoggerOptions(
+    boolean ansiLog,
+    boolean background,
+    List<String> debug,
+    String logFile,
+    boolean quiet,
+    String syslog,
+    List<String> trace
+) {
 }
