@@ -16,7 +16,6 @@
 
 package nextflow.trace
 
-
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
@@ -28,7 +27,8 @@ import groovyx.gpars.agent.Agent
 import nextflow.Session
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
-import nextflow.processor.TaskProcessor
+import nextflow.trace.event.TaskEvent
+import nextflow.util.TestOnly
 /**
  * Create a CSV file containing the processes execution information
  *
@@ -36,7 +36,7 @@ import nextflow.processor.TaskProcessor
  */
 @Slf4j
 @CompileStatic
-class TraceFileObserver implements TraceObserver {
+class TraceFileObserver implements TraceObserverV2 {
 
     public static final String DEF_FILE_NAME = "trace-${TraceHelper.launchTimestampFmt()}.txt"
 
@@ -62,16 +62,15 @@ class TraceFileObserver implements TraceObserver {
 
     List<String> formats
 
-
     /**
      * The delimiter character used to separate column in the CSV file
      */
-    String separator = '\t'
+    protected String separator = '\t'
 
     /**
      * Overwrite existing trace file (required in some cases, as rolling filename has been deprecated)
      */
-    boolean overwrite
+    protected boolean overwrite
 
     /**
      * The path where the file is created. It is set by the object constructor
@@ -94,17 +93,17 @@ class TraceFileObserver implements TraceObserver {
 
     void setFields( List<String> entries ) {
 
-        def names = TraceRecord.FIELDS.keySet()
-        def result = new ArrayList<String>(entries.size())
-        for( def item : entries ) {
-            def thisName = item.trim()
+        final names = TraceRecord.FIELDS.keySet()
+        final result = new ArrayList<String>(entries.size())
+        for( final item : entries ) {
+            final thisName = item.trim()
 
             if( thisName ) {
                 if( thisName in names )
                     result << thisName
                 else {
                     String message = "Not a valid trace field name: '$thisName'"
-                    def alternatives = names.bestMatches(thisName)
+                    final alternatives = names.bestMatches(thisName)
                     if( alternatives )
                         message += " -- Possible solutions: ${alternatives.join(', ')}"
                     throw new IllegalArgumentException(message)
@@ -161,7 +160,7 @@ class TraceFileObserver implements TraceObserver {
         return this
     }
 
-    TraceFileObserver useRawNumbers( boolean value ) {
+    TraceFileObserver useRawNumbers( Boolean value ) {
         this.useRawNumber = value
 
         List<String> local = []
@@ -176,18 +175,19 @@ class TraceFileObserver implements TraceObserver {
         return this
     }
 
-
     /**
      * Create the trace observer
      *
      * @param traceFile A path to the file where save the tracing data
      */
-    TraceFileObserver( Path traceFile ) {
+    TraceFileObserver(Path traceFile, Boolean overwrite=false, String separator='\t') {
         this.tracePath = traceFile
+        this.overwrite = overwrite
+        this.separator = separator
     }
 
-    /** ONLY FOR TESTING PURPOSE */
-    protected TraceFileObserver( ) {}
+    @TestOnly
+    protected TraceFileObserver() {}
 
     /**
      * Create the trace file, in file already existing with the same name it is
@@ -198,7 +198,7 @@ class TraceFileObserver implements TraceObserver {
         log.debug "Workflow started -- trace file: ${tracePath.toUriString()}"
 
         // make sure parent path exists
-        def parent = tracePath.getParent()
+        final parent = tracePath.getParent()
         if( parent )
             Files.createDirectories(parent)
 
@@ -226,39 +226,20 @@ class TraceFileObserver implements TraceObserver {
         traceFile.close()
     }
 
-
     @Override
-    void onProcessCreate(TaskProcessor process) {
-
+    void onTaskSubmit(TaskEvent event) {
+        current[ event.trace.taskId ] = event.trace
     }
 
-
-    /**
-     * This method is invoked before a process run is going to be submitted
-     * @param handler
-     */
     @Override
-    void onProcessSubmit(TaskHandler handler, TraceRecord trace) {
-        current[ trace.taskId ] = trace
+    void onTaskStart(TaskEvent event) {
+        current[ event.trace.taskId ] = event.trace
     }
 
-    /**
-     * This method is invoked when a process run is going to start
-     * @param handler
-     */
     @Override
-    void onProcessStart(TaskHandler handler, TraceRecord trace) {
-        current[ trace.taskId ] = trace
-    }
-
-    /**
-     * This method is invoked when a process run completes
-     * @param handler
-     */
-    @Override
-    void onProcessComplete(TaskHandler handler, TraceRecord trace) {
-        final taskId = handler.task.id
-        if( !trace ) {
+    void onTaskComplete(TaskEvent event) {
+        final taskId = event.handler.task.id
+        if( !event.trace ) {
             log.debug "[WARN] Unable to find record for task run with id: ${taskId}"
             return
         }
@@ -267,18 +248,24 @@ class TraceFileObserver implements TraceObserver {
         current.remove(taskId)
 
         // save to the file
-        writer.send { PrintWriter it -> it.println(render(trace)); it.flush() }
+        writer.send { PrintWriter it ->
+            it.println(render(event.trace))
+            it.flush()
+        }
     }
 
     @Override
-    void onProcessCached(TaskHandler handler, TraceRecord trace) {
+    void onTaskCached(TaskEvent event) {
         // event was triggered by a stored task, ignore it
-        if( trace == null ) {
+        if( !event.trace ) {
             return
         }
 
         // save to the file
-        writer.send { PrintWriter it -> it.println(render( trace )); it.flush() }
+        writer.send { PrintWriter it ->
+            it.println(render(event.trace))
+            it.flush()
+        }
     }
 
     /**
