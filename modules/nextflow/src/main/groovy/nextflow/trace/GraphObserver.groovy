@@ -18,6 +18,7 @@ package nextflow.trace
 
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -37,6 +38,7 @@ import nextflow.file.FileHelper
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class GraphObserver implements TraceObserverV2 {
 
     static public final String DEF_FILE_NAME = "dag-${TraceHelper.launchTimestampFmt()}.html"
