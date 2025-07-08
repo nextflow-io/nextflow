@@ -16,7 +16,6 @@
 
 package nextflow.trace
 
-
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -25,10 +24,10 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.AbortOperationException
-import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
-import nextflow.processor.TaskProcessor
 import nextflow.script.WorkflowMetadata
+import nextflow.trace.event.TaskEvent
+import nextflow.util.TestOnly
 /**
  * Render pipeline report processes execution.
  * Based on original TimelineObserver code by Paolo Di Tommaso
@@ -38,7 +37,7 @@ import nextflow.script.WorkflowMetadata
  */
 @Slf4j
 @CompileStatic
-class ReportObserver implements TraceObserver {
+class ReportObserver implements TraceObserverV2 {
 
     static final public String DEF_FILE_NAME = "report-${TraceHelper.launchTimestampFmt()}.html"
 
@@ -73,16 +72,20 @@ class ReportObserver implements TraceObserver {
     /**
      * Overwrite existing trace file (required in some cases, as rolling filename has been deprecated)
      */
-    boolean overwrite
+    private boolean overwrite
 
     /**
      * Creates a report observer
      *
      * @param file The file path where to store the resulting HTML report document
      */
-    ReportObserver( Path file ) {
+    ReportObserver(Path file, Boolean overwrite=false) {
         this.reportFile = file
+        this.overwrite = overwrite
     }
+
+    @TestOnly
+    protected ReportObserver() {}
 
     /**
      * Enables the collection of the task executions metrics in order to be reported in the HTML report
@@ -147,78 +150,49 @@ class ReportObserver implements TraceObserver {
         }
     }
 
-    /**
-     * This method is invoked when a process is created
-     *
-     * @param process A {@link TaskProcessor} object representing the process created
-     */
     @Override
-    void onProcessCreate(TaskProcessor process) { }
-
-
-    /**
-     * This method is invoked before a process run is going to be submitted
-     *
-     * @param handler A {@link TaskHandler} object representing the task submitted
-     */
-    @Override
-    void onProcessSubmit(TaskHandler handler, TraceRecord trace) {
-        log.trace "Trace report - submit process > $handler"
+    void onTaskSubmit(TaskEvent event) {
+        log.trace "Trace report - submit process > $event.handler"
         synchronized (records) {
-            records[ trace.taskId ] = trace
+            records[ event.trace.taskId ] = event.trace
         }
     }
 
-    /**
-     * This method is invoked when a process run is going to start
-     *
-     * @param handler  A {@link TaskHandler} object representing the task started
-     */
     @Override
-    void onProcessStart(TaskHandler handler, TraceRecord trace) {
-        log.trace "Trace report - start process > $handler"
+    void onTaskStart(TaskEvent event) {
+        log.trace "Trace report - start process > $event.handler"
         synchronized (records) {
-            records[ trace.taskId ] = trace
+            records[ event.trace.taskId ] = event.trace
         }
     }
 
-    /**
-     * This method is invoked when a process run completes
-     *
-     * @param handler A {@link TaskHandler} object representing the task completed
-     */
     @Override
-    void onProcessComplete(TaskHandler handler, TraceRecord trace) {
-        log.trace "Trace report - complete process > $handler"
-        if( !trace ) {
-            log.debug "WARN: Unable to find trace record for task id=${handler.task?.id}"
+    void onTaskComplete(TaskEvent event) {
+        log.trace "Trace report - complete process > $event.handler"
+        if( !event.trace ) {
+            log.debug "WARN: Unable to find trace record for task id=${event.handler.task?.id}"
             return
         }
 
         synchronized (records) {
-            records[ trace.taskId ] = trace
-            aggregate(trace)
+            records[ event.trace.taskId ] = event.trace
+            aggregate(event.trace)
         }
     }
 
-    /**
-     * This method is invoked when a process run cache is hit
-     *
-     * @param handler A {@link TaskHandler} object representing the task cached
-     */
     @Override
-    void onProcessCached(TaskHandler handler, TraceRecord trace) {
-        log.trace "Trace report - cached process > $handler"
+    void onTaskCached(TaskEvent event) {
+        log.trace "Trace report - cached process > $event.handler"
 
         // event was triggered by a stored task, ignore it
-        if( trace == null ) {
+        if( !event.trace ) {
             return
         }
 
         // remove the record from the current records
         synchronized (records) {
-            records[ trace.taskId ] = trace
-            aggregate(trace)
+            records[ event.trace.taskId ] = event.trace
+            aggregate(event.trace)
         }
     }
 
@@ -272,16 +246,16 @@ class ReportObserver implements TraceObserver {
             ]
         ]
         final tpl = readTemplate('ReportTemplate.html')
-        def engine = new GStringTemplateEngine()
-        def html_template = engine.createTemplate(tpl)
-        def html_output = html_template.make(tpl_fields).toString()
+        final engine = new GStringTemplateEngine()
+        final html_template = engine.createTemplate(tpl)
+        final html_output = html_template.make(tpl_fields).toString()
 
         // make sure the parent path exists
-        def parent = reportFile.getParent()
+        final parent = reportFile.getParent()
         if( parent )
             Files.createDirectories(parent)
 
-        def writer = TraceHelper.newFileWriter(reportFile, overwrite, 'Report')
+        final writer = TraceHelper.newFileWriter(reportFile, overwrite, 'Report')
         writer.withWriter { w -> w << html_output }
         writer.close()
     }
@@ -293,9 +267,9 @@ class ReportObserver implements TraceObserver {
      * @return The rendered json payload
      */
     protected String renderJsonData(Collection<TraceRecord> data) {
-        def List<String> formats = null
-        def List<String> fields = null
-        def result = new StringBuilder()
+        List<String> formats = null
+        List<String> fields = null
+        final result = new StringBuilder()
         result << '[\n'
         int i=0
         for( TraceRecord record : data ) {
@@ -315,13 +289,13 @@ class ReportObserver implements TraceObserver {
      * @return The loaded template as a string
      */
     private String readTemplate( String path ) {
-        StringWriter writer = new StringWriter();
-        def res =  this.class.getResourceAsStream( path )
+        final writer = new StringWriter()
+        final res = this.class.getResourceAsStream( path )
         int ch
         while( (ch=res.read()) != -1 ) {
-            writer.append(ch as char);
+            writer.append(ch as char)
         }
-        writer.toString();
+        writer.toString()
     }
 
 }
