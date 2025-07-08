@@ -325,7 +325,7 @@ task compile {
 
 def getRuntimeConfigs() {
     def names = subprojects
-            .findAll { prj -> prj.name in ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'] }
+            .findAll { prj -> prj.name in ['nextflow','nf-cli-v1','nf-commons','nf-httpfs','nf-lang','nf-lineage'] }
             .collect { it.name }
 
     FileCollection result = null
@@ -363,7 +363,7 @@ task exportClasspath {
         }
         
         // Add module jars
-        ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'].each {
+        ['nextflow','nf-cli-v1','nf-commons','nf-httpfs','nf-lang','nf-lineage'].each {
             libs << file("modules/$it/build/libs/${it}-${version}.jar").canonicalPath
         }
         
@@ -387,7 +387,7 @@ ext.nexusEmail = project.findProperty('nexusEmail')
 // `signing.keyId` property needs to be defined in the `gradle.properties` file
 ext.enableSignArchives = project.findProperty('signing.keyId')
 
-ext.coreProjects = projects( ':nextflow', ':nf-commons', ':nf-httpfs', ':nf-lang', ':nf-lineage' )
+ext.coreProjects = projects( ':nextflow', ':nf-cli-v1', ':nf-commons', ':nf-httpfs', ':nf-lang', ':nf-lineage' )
 
 configure(coreProjects) {
     group = 'io.nextflow'
