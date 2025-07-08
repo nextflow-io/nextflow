@@ -15,7 +15,7 @@
  *
  */
 
-package nextflow.cli
+package nextflow.plugin.cli
 
 /**
  * Define the interface for plugin commands
@@ -26,6 +26,6 @@ interface PluginExecAware {
 
     static final String CMD_SEP = ':'
 
-    int exec(Launcher launcher, String pluginId, String cmd, List<String> args)
+    int exec(String pluginId, String cmd, List<String> args)
 
 }

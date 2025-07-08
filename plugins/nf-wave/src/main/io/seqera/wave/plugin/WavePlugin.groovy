@@ -18,8 +18,8 @@
 package io.seqera.wave.plugin
 
 import io.seqera.wave.plugin.cli.WaveCmdEntry
-import nextflow.cli.PluginExecAware
 import nextflow.plugin.BasePlugin
+import nextflow.plugin.cli.PluginExecAware
 import org.pf4j.PluginWrapper
 /**
  * Wave plugin entrypoint

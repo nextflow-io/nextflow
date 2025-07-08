@@ -351,7 +351,7 @@ class ConfigCmdAdapter {
         if( cmdRun.libPath )
             config.libDir = cmdRun.libPath
 
-        else if ( !config.isSet('libDir') && env.get('NXF_LIB') )
+        else if ( !config.libDir && env.get('NXF_LIB') )
             config.libDir = env.get('NXF_LIB')
 
         // -- override 'process' parameters defined on the cmd line
