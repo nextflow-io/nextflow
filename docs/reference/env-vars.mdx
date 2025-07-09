@@ -204,6 +204,31 @@ Defines a custom plugin registry or plugin release URL for testing plugins outsi
 
 Defines the default behavior of `publishDir.failOnError` setting. See the [publishDir][process-publishdir] directive for more information.
 
+##### `NXF_RETRY_POLICY_DELAY`
+
+
+<AddedInVersion version="25.06.0-edge" />
+
+Delay used for HTTP retryable operations (default: `350ms`).
+
+##### `NXF_RETRY_POLICY_JITTER`
+
+<AddedInVersion version="25.06.0-edge" />
+
+Jitter value used for HTTP retryable operations (default: `0.25`).
+
+##### `NXF_RETRY_POLICY_MAX_ATTEMPTS`
+
+<AddedInVersion version="25.06.0-edge" />
+
+Max number of attempts used for HTTP retryable operations (default: `5`).
+
+##### `NXF_RETRY_POLICY_MAX_DELAY`
+
+<AddedInVersion version="25.06.0-edge" />
+
+Max delay used for HTTP retryable operations (default: `90s`).
+
 ##### `NXF_SCM_FILE`
 
 <AddedInVersion version="20.10.0" />

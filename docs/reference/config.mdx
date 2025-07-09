@@ -1553,9 +1553,29 @@ See [Sharing][sharing-page] to learn how to publish your pipeline to GitHub, Bit
 
 ## `nextflow`
 
-<DeprecatedInVersion version="24.10.0">
-The `nextflow.publish` scope has been renamed to `workflow.output`. See [workflow][config-workflow] for more information.
-</DeprecatedInVersion>
+<ChangedInVersion version="24.10.0">
+The `nextflow.publish.retryPolicy` settings were moved to `workflow.output.retryPolicy`.
+</ChangedInVersion>
+
+<ChangedInVersion version="25.06.0-edge">
+The `workflow.output.retryPolicy` settings were moved to `nextflow.retryPolicy`.
+</ChangedInVersion>
+
+##### `retryPolicy.delay`
+
+Delay used for retryable operations (default: `350ms`).
+
+##### `retryPolicy.jitter`
+
+Jitter value used for retryable operations (default: `0.25`).
+
+##### `retryPolicy.maxAttempts`
+
+Max attempts used for retryable operations (default: `5`).
+
+##### `retryPolicy.maxDelay`
+
+Max delay used for retryable operations (default: `90s`).
 
 ## `notification`
 
@@ -1957,7 +1977,7 @@ The target registry is expected to be specified by using the `wave.build.reposit
 <AddedInVersion version="22.06.0-edge">
 </AddedInVersion>
 
-The initial delay when a failing HTTP request is retried (default: `150ms`).
+The initial delay when a failing HTTP request is retried (default: `450ms`).
 
 ##### `wave.retryPolicy.jitter`
 
@@ -1978,7 +1998,7 @@ The max number of attempts a failing HTTP request is retried (default: `5`).
 <AddedInVersion version="22.06.0-edge">
 </AddedInVersion>
 
-The max delay when a failing HTTP request is retried (default: `90 seconds`).
+The max delay when a failing HTTP request is retried (default: `90s`).
 
 ##### `wave.scan.mode`
 
@@ -2110,22 +2130,6 @@ Overwrite existing files when the file size is different.
 ###### `'standard'`
 
 Overwrite existing files when the file size or last modified timestamp is different.
-
-##### `workflow.output.retryPolicy.delay`
-
-Delay when retrying a failed publish operation (default: `350ms`).
-
-##### `workflow.output.retryPolicy.jitter`
-
-Jitter value when retrying a failed publish operation (default: `0.25`).
-
-##### `workflow.output.retryPolicy.maxAttempt`
-
-Max attempts when retrying a failed publish operation (default: `5`).
-
-##### `workflow.output.retryPolicy.maxDelay`
-
-Max delay when retrying a failed publish operation (default: `90s`).
 
 ##### `workflow.output.storageClass`
 
