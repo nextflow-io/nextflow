@@ -259,22 +259,19 @@ Enable auto retrieval of S3 objects with a Glacier storage class (default: `fals
 
 ##### `aws.client.glacierExpirationDays`
 
-<DeprecatedInVersion version="24.02.0-edge">
-</DeprecatedInVersion>
+<DeprecatedInVersion version="24.02.0-edge" />
 
 The time, in days, between when an object is restored to the bucket and when it expires (default: `7`).
 
 ##### `aws.client.glacierRetrievalTier`
 
-<DeprecatedInVersion version="24.02.0-edge">
-</DeprecatedInVersion>
+<DeprecatedInVersion version="24.02.0-edge" />
 
 The retrieval tier to use when restoring objects from Glacier, one of [`Expedited`, `Standard`, `Bulk`].
 
 ##### `aws.client.maxConcurrency`
 
-<AddedInVersion version="25.06.0-edge">
-</AddedInVersion>
+<AddedInVersion version="25.06.0-edge" />
 
 The maximum number of concurrent S3 transfers used by the S3 transfer manager. By default, this setting is determined by `aws.client.targetThroughputInGbps`. Modifying this value can affect the amount of memory used for S3 transfers.
 
@@ -309,9 +306,7 @@ The object size threshold used by the S3 transfer manager for performing multi-p
 
 ##### `aws.client.protocol`
 
-:::{deprecated} 25.06.0-edge
-This option is no longer supported.
-:::
+<AddedInVersion version="25.06.0-edge" />
 
 The protocol to use when connecting to AWS. Can be `http` or `https` (default: `'https'`).
 
@@ -351,25 +346,19 @@ Use the path-based access model to access objects in S3-compatible storage syste
 
 ##### `aws.client.signerOverride`
 
-:::{deprecated} 25.06.0-edge
-This option is no longer supported.
-:::
+<DeprecatedInVersion version="24.06.0-edge" />
 
 The name of the signature algorithm to use for signing requests made by the client.
 
 ##### `aws.client.socketSendBufferSizeHint`
 
-:::{deprecated} 25.06.0-edge
-This option is no longer supported.
-:::
+<DeprecatedInVersion version="24.06.0-edge" />
 
 The Size hint (in bytes) for the low level TCP send buffer (default: `0`).
 
 ##### `aws.client.socketRecvBufferSizeHint`
 
-:::{deprecated} 25.06.0-edge
-This option is no longer supported.
-:::
+<DeprecatedInVersion version="24.06.0-edge" />
 
 The Size hint (in bytes) for the low level TCP receive buffer (default: `0`).
 
@@ -425,17 +414,13 @@ The maximum number of upload attempts after which a multipart upload returns an 
 
 ##### `aws.client.uploadMaxThreads`
 
-:::{deprecated} 25.06.0-edge
-This option is no longer supported.
-:::
+<DeprecatedInVersion version="24.06.0-edge" />
 
 The maximum number of threads used for multipart upload (default: `10`).
 
 ##### `aws.client.uploadRetrySleep`
 
-:::{deprecated} 25.06.0-edge
-This option is no longer supported.
-:::
+<DeprecatedInVersion version="24.06.0-edge" />
 
 The time to wait after a failed upload attempt to retry the part upload (default: `500ms`).
 

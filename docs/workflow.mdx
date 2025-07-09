@@ -558,7 +558,7 @@ output {
 
 Each `>>` specifies a *source file* and *publish target*. The source file should be a file or collection of files, and the publish target should be a directory or file name. If the publish target ends with a slash, it is treated as the directory in which source files are published. Otherwise, it is treated as the target filename of a source file. Only files that are published with the `>>` operator are saved to the output directory.
 
-:::{note}
+:::note
 Files that do not originate from the work directory are not published.
 :::
 
@@ -618,7 +618,7 @@ This example will produce the following index file:
 "3"|"sample 3"|"results/fastq/3a.fastq"|"results/fastq/3b.fastq"
 ```
 
-:::{note}
+:::note
 Files that do not originate from the work directory are not published, but are included in the index file.
 :::
 
