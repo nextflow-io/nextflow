@@ -48,7 +48,7 @@ $NXF_CMD -C ./google.config run ./test-complexpaths.nf -resume
 [[ -e 'foo/sample_(1 2).vcf' ]] || false
 
 NXF_CLOUDCACHE_PATH=gs://rnaseq-nf/cache \
-$NXF_CMD -C ./google.config \
+$NXF_CMD -trace nextflow,io.seqera -C ./google.config \
     run nextflow-io/rnaseq-nf \
     -with-report \
     -with-trace $OPTS \
@@ -56,7 +56,7 @@ $NXF_CMD -C ./google.config \
 [[ `grep -c 'Using Nextflow cache factory: nextflow.cache.CloudCacheFactory' .nextflow.log` == 1 ]] || false
 
 NXF_CLOUDCACHE_PATH=gs://rnaseq-nf/cache \
-$NXF_CMD -C ./google.config \
+$NXF_CMD -trace nextflow,io.seqera -C ./google.config \
     run nextflow-io/rnaseq-nf \
     -with-report \
     -with-trace $OPTS \

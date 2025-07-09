@@ -18,7 +18,7 @@ package nextflow.cloud.aws.batch
 
 import java.nio.file.Paths
 
-import com.amazonaws.services.s3.model.CannedAccessControlList
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 import nextflow.Session
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.exception.ProcessUnrecoverableException
@@ -247,13 +247,13 @@ class AwsOptionsTest extends Specification {
         when:
         def opts = new AwsOptions(new Session(aws:[client:[s3Acl: 'PublicRead']]))
         then:
-        opts.getS3Acl() == CannedAccessControlList.PublicRead
+        opts.getS3Acl() == ObjectCannedACL.PUBLIC_READ
 
 
         when:
         opts = new AwsOptions(new Session(aws:[client:[s3Acl: 'public-read']]))
         then:
-        opts.getS3Acl() == CannedAccessControlList.PublicRead
+        opts.getS3Acl() == ObjectCannedACL.PUBLIC_READ
 
 
         when:

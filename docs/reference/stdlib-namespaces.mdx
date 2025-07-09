@@ -90,16 +90,16 @@ When `true`, follows symbolic links when traversing a directory tree, otherwise 
 ###### `glob: boolean`
 
 When `true`, interprets characters `*`, `?`, `[]` and `{}` as glob wildcards, otherwise handles them as normal characters (default: `true`).
-        
+
 ###### `hidden: boolean`
 
 When `true`, includes hidden files in the resulting paths (default: `false`).
-        
+
 
 ###### `maxDepth: int`
 
 Maximum number of directory levels to visit (default: *no limit*).
-        
+
 ###### `type: String`
 
 Type of paths returned, can be `'file'`, `'dir'` or `'any'` (default: `'file'`).
@@ -150,6 +150,24 @@ Create a tuple object from the given arguments.
 
 The `channel` namespace contains the built-in channel factories. See [Channel factories][channel-factory] for details.
 
+## `log`
+
+The `log` namepsace contains functions for logging messages to the console.
+
+##### `error( message: String )`
+
+Log an error message to the console.
+
+This function does not terminate the pipeline -- use the global `error()` function instead.
+
+##### `info( message: String )`
+
+Log an info message to the console.
+
+##### `warn( message: String )`
+
+Log a warning message to the console.
+
 ## `nextflow`
 
 The `nextflow` namespace contains information about the current Nextflow runtime.
@@ -183,7 +201,7 @@ Git commit ID of the executed workflow repository.
 When providing a Git tag, branch name, or commit hash using the `-r` CLI option, the associated `workflow.commitId` is also populated.
 
 ##### `complete: OffsetDateTime`
-    
+
 *Available only in the `workflow.onComplete` handler*
 
 Timestamp of workflow when execution is completed.
@@ -209,7 +227,7 @@ Time elapsed to complete workflow execution.
 ##### `errorMessage: String`
 
 *Available only in the `workflow.onComplete` and `workflow.onError` handlers*
-    
+
 Error message of the task that caused the workflow execution to fail.
 
 ##### `errorReport: String`
@@ -221,7 +239,7 @@ Detailed error of the task that caused the workflow execution to fail.
 ##### `exitStatus: int`
 
 *Available only in the `workflow.onComplete` and `workflow.onError` handlers*
-    
+
 Exit status of the task that caused the workflow execution to fail.
 
 ##### `failOnIgnore: boolean`

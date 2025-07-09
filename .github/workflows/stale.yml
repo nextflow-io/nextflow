@@ -1,0 +1,21 @@
+name: 'Mark stale issues and PRs'
+on:
+  schedule:
+    - cron: '30 1 * * *'
+  workflow_dispatch:
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          days-before-stale: 180
+          days-before-close: -1
+          stale-issue-label: stale
+          stale-issue-message: ''
+          stale-pr-label: stale
+          stale-pr-message: ''
+          exempt-issue-labels: bug,planned,security
+          exempt-all-milestones: true
+          exempt-all-assignees: true
