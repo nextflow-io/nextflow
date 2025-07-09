@@ -271,15 +271,47 @@ The time, in days, between when an object is restored to the bucket and when it 
 
 The retrieval tier to use when restoring objects from Glacier, one of [`Expedited`, `Standard`, `Bulk`].
 
+##### `aws.client.maxConcurrency`
+
+<AddedInVersion version="25.06.0-edge">
+</AddedInVersion>
+
+The maximum number of concurrent S3 transfers used by the S3 transfer manager. By default, this setting is determined by `aws.client.targetThroughputInGbps`. Modifying this value can affect the amount of memory used for S3 transfers.
+
 ##### `aws.client.maxConnections`
 
-The maximum number of allowed open HTTP connections (default: `50`).
+The maximum number of open HTTP connections used by the S3 transfer manager (default: `50`).
 
 ##### `aws.client.maxErrorRetry`
 
 The maximum number of retry attempts for failed retryable requests (default: `-1`).
 
+##### `aws.client.maxNativeMemory`
+
+<AddedInVersion version="25.06.0-edge">
+</AddedInVersion>
+
+The maximum native memory used by the S3 transfer manager. By default, this setting is determined by `aws.client.targetThroughputInGbps`.
+
+##### `aws.client.minimumPartSize`
+
+<AddedInVersion version="25.06.0-edge">
+</AddedInVersion>
+
+The minimum part size used by the S3 transfer manager for multi-part uploads (default: `8 MB`).
+
+##### `aws.client.multipartThreshold`
+
+<AddedInVersion version="25.06.0-edge">
+</AddedInVersion>
+
+The object size threshold used by the S3 transfer manager for performing multi-part uploads (default: same as `aws.cllient.minimumPartSize`).
+
 ##### `aws.client.protocol`
+
+:::{deprecated} 25.06.0-edge
+This option is no longer supported.
+:::
 
 The protocol to use when connecting to AWS. Can be `http` or `https` (default: `'https'`).
 
@@ -290,6 +322,13 @@ The proxy host to connect through.
 ##### `aws.client.proxyPort`
 
 The port to use when connecting through a proxy.
+
+##### `aws.client.proxyScheme`
+
+<AddedInVersion version="25.06.0-edge">
+</AddedInVersion>
+
+The protocol scheme to use when connecting through a proxy. Can be `http` or `https` (default: `'http'`).
 
 ##### `aws.client.proxyUsername`
 
@@ -304,7 +343,7 @@ The password to use when connecting through a proxy.
 <AddedInVersion version="24.05.0-edge">
 </AddedInVersion>
 
-Use [Rrequester Pays](https://docs.aws.amazon.com/AmazonS3/latest/userguide/RequesterPaysBuckets.html) for S3 buckets (default: `false`).
+Use [Requester Pays](https://docs.aws.amazon.com/AmazonS3/latest/userguide/RequesterPaysBuckets.html) for S3 buckets (default: `false`).
 
 ##### `aws.client.s3PathStyleAccess`
 
@@ -312,13 +351,25 @@ Use the path-based access model to access objects in S3-compatible storage syste
 
 ##### `aws.client.signerOverride`
 
+:::{deprecated} 25.06.0-edge
+This option is no longer supported.
+:::
+
 The name of the signature algorithm to use for signing requests made by the client.
 
 ##### `aws.client.socketSendBufferSizeHint`
 
+:::{deprecated} 25.06.0-edge
+This option is no longer supported.
+:::
+
 The Size hint (in bytes) for the low level TCP send buffer (default: `0`).
 
 ##### `aws.client.socketRecvBufferSizeHint`
+
+:::{deprecated} 25.06.0-edge
+This option is no longer supported.
+:::
 
 The Size hint (in bytes) for the low level TCP receive buffer (default: `0`).
 
@@ -332,28 +383,59 @@ The S3 server side encryption to be used when saving objects on S3. Can be `AES2
 
 ##### `aws.client.storageKmsKeyId`
 
-<AddedInVersion version="22.05.0-edge">
+<AddedInVersion version="25.05.0-edge">
 </AddedInVersion>
 
 The AWS KMS key Id to be used to encrypt files stored in the target S3 bucket.
 
+##### `aws.client.targetThroughputInGbps`
+
+<AddedInVersion version="25.06.0-edge">
+</AddedInVersion>
+
+The target network throughput (in Gbps) used by the S3 transfer manager (default: `10`). This setting is not used when `aws.client.maxConcurrency` and `aws.client.maxNativeMemory` are specified.
+
+##### `aws.client.transferManagerThreads`
+
+<AddedInVersion version="25.06.0-edge">
+</AddedInVersion>
+
+Number of threads used by the S3 transfer manager (default `10`).
+
 ##### `aws.client.userAgent`
+
+<DeprecatedInVersion version="25.06.0-edge">
+</DeprecatedInVersion>
 
 The HTTP user agent header passed with all HTTP requests.
 
 ##### `aws.client.uploadChunkSize`
 
+<DeprecatedInVersion version="25.06.0-edge">
+</DeprecatedInVersion>
+
 The size of a single part in a multipart upload (default: `100 MB`).
 
 ##### `aws.client.uploadMaxAttempts`
+
+<DeprecatedInVersion version="25.06.0-edge">
+</DeprecatedInVersion>
 
 The maximum number of upload attempts after which a multipart upload returns an error (default: `5`).
 
 ##### `aws.client.uploadMaxThreads`
 
+:::{deprecated} 25.06.0-edge
+This option is no longer supported.
+:::
+
 The maximum number of threads used for multipart upload (default: `10`).
 
 ##### `aws.client.uploadRetrySleep`
+
+:::{deprecated} 25.06.0-edge
+This option is no longer supported.
+:::
 
 The time to wait after a failed upload attempt to retry the part upload (default: `500ms`).
 
@@ -748,6 +830,12 @@ Add the specified flags to the volume mounts e.g. `mountFlags = 'ro,Z'`.
 
 The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
 
+##### `docker.registryOverride`
+
+<AddedInVersion version="25.06.0-edge">
+
+When `true`, forces the override of the registry name in fully qualified container image names with the registry specified by `docker.registry` (default: `false`). This setting allows you to redirect container image pulls from their original registry to a different registry, such as a private mirror or proxy.
+
 ##### `docker.remove`
 
 Clean-up the container after the execution (default: `true`). See the [Docker documentation](https://docs.docker.com/engine/reference/run/#clean-up---rm) for details.
@@ -973,7 +1061,7 @@ Fusion client local cache size limit.
 
 ##### `fusion.containerConfigUrl`
 
-URL for downloading the container layer provisioning the Fusion client. 
+URL for downloading the container layer provisioning the Fusion client.
 
 ##### `fusion.exportStorageCredentials`
 
@@ -1107,7 +1195,7 @@ The URL of an existing network resource to which the VM will be attached.
 
 ##### `google.batch.networkTags`
 
-The network tags to be applied to the instances created by Google Batch jobs. Network tags are used to apply firewall rules and control network access (e.g., `['allow-ssh', 'allow-http']`). 
+The network tags to be applied to the instances created by Google Batch jobs. Network tags are used to apply firewall rules and control network access (e.g., `['allow-ssh', 'allow-http']`).
 
 Network tags are ignored when using instance templates. See [Add network tags](https://cloud.google.com/vpc/docs/add-remove-network-tags) for more information.
 
@@ -1392,7 +1480,7 @@ Project author name (use a comma to separate multiple names).
 
 List of project contributors. Should be a list of maps. The following fields are supported in the contributor map:
 
-  - `name`: the contributor's name 
+  - `name`: the contributor's name
   - `affiliation`: the contributor's affiliated organization
   - `email`: the contributor's email address
   - `github`: the contributor's GitHub URL
