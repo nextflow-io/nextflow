@@ -105,6 +105,7 @@ class S3RepositoryProvider extends RepositoryProvider {
         //Not possible to get a single file requires to clone the branch and get the file
         final tmpDir = Files.createTempDirectory("s3-git-remote")
         final command = Git.cloneRepository()
+            .setURI(getEndpointUrl())
             .setDirectory(tmpDir.toFile())
             .setCredentialsProvider(getGitCredentials())
         if( revision )

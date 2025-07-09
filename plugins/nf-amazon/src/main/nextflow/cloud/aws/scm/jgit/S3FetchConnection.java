@@ -71,7 +71,7 @@ public class S3FetchConnection extends S3BaseConnection implements FetchConnecti
         log.debug("Fetching {} in {}", r.getName(), tmpdir);
         final List<S3Object> list = s3.listObjectsV2(ListObjectsV2Request.builder()
                     .bucket(bucket)
-                    .prefix(key + '/' + r.getName())
+                    .prefix(key + '/' + r.getName() + '/')
                     .build()
             ).contents();
 
