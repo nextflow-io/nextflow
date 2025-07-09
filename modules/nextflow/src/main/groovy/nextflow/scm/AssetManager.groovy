@@ -307,7 +307,7 @@ class AssetManager {
     @PackageScope
     String resolveNameFromGitUrl( String repository ) {
 
-        final isUrl = repository.startsWith('http://') || repository.startsWith('https://') || repository.startsWith('file:/')
+        final isUrl = repository.startsWith('http://') || repository.startsWith('https://') || repository.startsWith('file:/') || repository.startsWith('s3://')
         if( !isUrl )
             return null
 
