@@ -428,9 +428,9 @@ The following settings are available:
 `azure.batch.pools.<name>.lowPriority`
 : Enable the use of low-priority VMs (default: `false`).
 
-:::{warning}
-As of September 30, 2025, Low Priority VMs will no longer be supported in Azure Batch accounts that use Batch Managed mode for pool allocation. You may continue to use this setting to configure Spot VMs in Batch accounts configured with User Subscription mode.
-:::
+: :::{warning}
+  As of September 30, 2025, Low Priority VMs will no longer be supported in Azure Batch accounts that use Batch Managed mode for pool allocation. You may continue to use this setting to configure Spot VMs in Batch accounts configured with User Subscription mode.
+  :::
 
 `azure.batch.pools.<name>.maxVmCount`
 : Specify the max of virtual machine when using auto scale option.
