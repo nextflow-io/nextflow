@@ -26,7 +26,7 @@ import spock.lang.Specification
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @IgnoreIf({System.getenv('NXF_SMOKE')})
-@Requires({System.getenv('AWS_ACCESS_KEY_ID') && System.getenv('AWS_SECRET_ACCESS_KEY')})
+//@Requires({System.getenv('AWS_ACCESS_KEY_ID') && System.getenv('AWS_SECRET_ACCESS_KEY')})
 class AwsCodeCommitRepositoryProviderTest extends Specification {
 
     def 'should get repo url' () {
