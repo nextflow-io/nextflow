@@ -16,15 +16,11 @@
  */
 
 params {
-  /**
-   * List of IDs.
-   */
-  input
+  // List of IDs.
+  input: String
 
-  /**
-   * Whether to save intermediate outputs.
-   */
-  save_intermeds = false
+  // Whether to save intermediate outputs.
+  save_intermeds: Boolean = false
 }
 
 workflow {

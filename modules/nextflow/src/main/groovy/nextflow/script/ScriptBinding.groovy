@@ -132,11 +132,17 @@ class ScriptBinding extends WorkflowBinding {
      * The map of the CLI named parameters
      *
      * @param values
+     * @param override
      */
-    ScriptBinding setParams(Map<String,Object> values ) {
-        if( values )
+    ScriptBinding setParams(Map<String,Object> values, boolean override=false) {
+        if( values ) {
+            if( override ) {
+                for( final key : values.keySet() )
+                    params.remove(key)
+            }
             params.putAll(values)
-        super.setVariable0('params', params)
+            super.setVariable0('params', params)
+        }
         return this
     }
 

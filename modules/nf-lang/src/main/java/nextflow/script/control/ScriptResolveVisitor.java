@@ -84,6 +84,7 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
     @Override
     public void visitParam(Parameter node) {
         node.setInitialExpression(resolver.transform(node.getInitialExpression()));
+        resolver.resolveOrFail(node.getType(), node);
     }
 
     @Override

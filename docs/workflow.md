@@ -22,6 +22,8 @@ workflow {
 }
 ```
 
+(workflow-params-def)=
+
 ## Parameters
 
 Parameters can be declared in a Nextflow script with the `params` block or with *legacy* parameter declarations.
@@ -39,26 +41,27 @@ A script can declare parameters using the `params` block:
 
 ```nextflow
 params {
-    /**
-     * Path to input data.
-     */
-    input
+    // Path to input data.
+    input: Path
 
-    /**
-     * Whether to save intermediate files.
-     */
-    save_intermeds = false
+    // Whether to save intermediate files.
+    save_intermeds: Boolean = false
 }
 ```
+
+The following types can be used for parameters:
+
+- Boolean
+- Integer
+- Number
+- {ref}`stdlib-types-path`
+- {ref}`stdlib-types-string`
 
 Parameters can be used in the entry workflow:
 
 ```nextflow
 workflow {
-    if( params.input )
-        analyze(params.input, params.save_intermeds)
-    else
-        analyze(fake_input(), params.save_intermeds)
+    analyze(params.input, params.save_intermeds)
 }
 ```
 
@@ -66,9 +69,11 @@ workflow {
 As a best practice, params should be used only in the entry workflow and passed to workflows and processes as explicit inputs.
 :::
 
-The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in {ref}`cli-params`.
+The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in {ref}`cli-params`. Parameters specified on the command line are converted to the appropriate type based on the corresponding type annotation.
 
 A parameter that doesn't specify a default value is a *required* param. If a required param is not given a value at runtime, the run will fail.
+
+(workflow-params-legacy)=
 
 ### Legacy parameters
 

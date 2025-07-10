@@ -160,7 +160,7 @@ paramsBody
     ;
 
 paramDeclaration
-    :   identifier (ASSIGN expression)?
+    :   identifier (COLON type)? (ASSIGN expression)?
     |   statement
     ;
 

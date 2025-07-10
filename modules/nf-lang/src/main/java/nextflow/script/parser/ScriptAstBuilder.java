@@ -361,7 +361,7 @@ public class ScriptAstBuilder {
             collectSyntaxError(new SyntaxException("Invalid parameter declaration", ast( new EmptyStatement(), ctx.statement() )));
             return null;
         }
-        var type = ClassHelper.dynamicType();
+        var type = type(ctx.type());
         var name = identifier(ctx.identifier());
         var defaultValue = ctx.expression() != null ? expression(ctx.expression()) : null;
         var result = ast( param(type, name, defaultValue), ctx );

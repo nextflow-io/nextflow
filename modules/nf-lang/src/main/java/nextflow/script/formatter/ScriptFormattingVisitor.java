@@ -205,11 +205,15 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             fmt.appendLeadingComments(param);
             fmt.appendIndent();
             fmt.append(param.getName());
-            if( param.hasInitialExpression() ) {
+            if( fmt.hasType(param) ) {
                 if( alignmentWidth > 0 ) {
-                    var padding = alignmentWidth - param.getName().length();
+                    var padding = alignmentWidth - param.getName().length() + 1;
                     fmt.append(" ".repeat(padding));
                 }
+                fmt.append(": ");
+                fmt.visitTypeAnnotation(param.getType());
+            }
+            if( param.hasInitialExpression() ) {
                 fmt.append(" = ");
                 fmt.visit(param.getInitialExpression());
             }

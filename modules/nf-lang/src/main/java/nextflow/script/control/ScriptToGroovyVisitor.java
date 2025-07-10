@@ -124,9 +124,10 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         var statements = Arrays.stream(node.declarations)
             .map((param) -> {
                 var name = constX(param.getName());
+                var type = classX(param.getType());
                 var arguments = param.hasInitialExpression()
-                    ? args(name, param.getInitialExpression())
-                    : args(name);
+                    ? args(name, type, param.getInitialExpression())
+                    : args(name, type);
                 return stmt(callThisX("declare", arguments));
             })
             .toList();

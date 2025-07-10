@@ -704,7 +704,7 @@ class CmdRun extends CmdBase implements HubOptions {
     }
 
     static protected parseParamValue(String str) {
-        if ( SysEnv.get('NXF_DISABLE_PARAMS_TYPE_DETECTION') )
+        if ( SysEnv.get('NXF_DISABLE_PARAMS_TYPE_DETECTION') || NF.isSyntaxParserV2() )
             return str
 
         if ( str == null ) return null
