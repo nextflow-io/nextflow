@@ -46,6 +46,9 @@ dependencies {
     api('com.azure:azure-identity:1.15.1') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
+    api('com.azure.resourcemanager:azure-resourcemanager-batch:1.1.0-beta.4') {
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
 
     // address security vulnerabilities
     runtimeOnly 'io.netty:netty-handler:4.1.118.Final'

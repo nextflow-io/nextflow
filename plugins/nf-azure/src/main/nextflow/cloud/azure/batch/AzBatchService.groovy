@@ -388,6 +388,102 @@ class AzBatchService implements Closeable {
         return builder.buildClient()
     }
 
+    /**
+     * Determines the pool allocation mode of the Azure Batch account
+     * @return The pool allocation mode ('BatchService' or 'UserSubscription'), or null if it cannot be determined
+     */
+    @Memoized
+    protected String getPoolAllocationMode() {
+        try {
+            // Get batch account name from endpoint
+            final accountName = extractAccountName(config.batch().endpoint)
+            if (!accountName) {
+                log.debug "[AZURE BATCH] Cannot extract account name from endpoint"
+                return null
+            }
+            
+            // Get subscription ID
+            final subscriptionId = config.batch().subscriptionId
+            if (!subscriptionId) {
+                log.debug "[AZURE BATCH] No subscription ID configured. Set azure.batch.subscriptionId or AZURE_SUBSCRIPTION_ID"
+                return null
+            }
+            
+            // Get Azure credentials
+            final credential = getAzureCredential()
+            if (!credential) {
+                log.debug "[AZURE BATCH] No valid credentials for Azure Resource Manager"
+                return null
+            }
+            
+            // Create BatchManager with proper configuration
+            final batchManager = createBatchManager(credential, subscriptionId)
+            
+            // Find the batch account
+            return findBatchAccountPoolMode(batchManager, accountName)
+            
+        } catch (Exception e) {
+            log.warn "[AZURE BATCH] Failed to determine pool allocation mode: ${e.message}", e
+            return null
+        }
+    }
+    
+    /**
+     * Extract account name from batch endpoint URL
+     */
+    private String extractAccountName(String endpoint) {
+        if (!endpoint) return null
+        // Format: https://accountname.region.batch.azure.com
+        return endpoint.split('\\.')[0].replace('https://', '')
+    }
+    
+    /**
+     * Get Azure credentials based on configuration
+     */
+    private TokenCredential getAzureCredential() {
+        if (config.managedIdentity().isConfigured()) {
+            return createBatchCredentialsWithManagedIdentity()
+        } else if (config.activeDirectory().isConfigured()) {
+            return createBatchCredentialsWithServicePrincipal()
+        }
+        return null
+    }
+    
+    /**
+     * Create and configure BatchManager
+     */
+    private com.azure.resourcemanager.batch.BatchManager createBatchManager(TokenCredential credential, String subscriptionId) {
+        // AzureProfile constructor: (tenantId, subscriptionId, environment)
+        final profile = new com.azure.core.management.profile.AzureProfile(
+            null, // tenantId - null to use default
+            subscriptionId,
+            com.azure.core.management.AzureEnvironment.AZURE
+        )
+        
+        // Use configure().authenticate() pattern to ensure proper initialization
+        return com.azure.resourcemanager.batch.BatchManager
+            .configure()
+            .authenticate(credential, profile)
+    }
+    
+    /**
+     * Find batch account and return its pool allocation mode
+     */
+    private String findBatchAccountPoolMode(com.azure.resourcemanager.batch.BatchManager batchManager, String accountName) {
+        log.debug "[AZURE BATCH] Searching for account '${accountName}'"
+        
+        for (batchAccount in batchManager.batchAccounts().list()) {
+            if (batchAccount.name() == accountName) {
+                final poolMode = batchAccount.poolAllocationMode()
+                log.debug "[AZURE BATCH] Found account with pool allocation mode: ${poolMode}"
+                return poolMode?.toString()
+            }
+        }
+        
+        log.debug "[AZURE BATCH] Account '${accountName}' not found in subscription"
+        return null
+    }
+
     AzTaskKey submitTask(TaskRun task) {
         final poolId = getOrCreatePool(task)
         final jobId = getOrCreateJob(poolId, task)
