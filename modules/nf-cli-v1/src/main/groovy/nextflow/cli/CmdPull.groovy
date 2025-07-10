@@ -31,7 +31,7 @@ import nextflow.util.TestOnly
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Download or update a project")
-class CmdPull extends CmdBase implements HubOptions {
+class CmdPull extends CmdBase implements HubAware {
 
     static final public NAME = 'pull'
 
@@ -74,7 +74,7 @@ class CmdPull extends CmdBase implements HubOptions {
         
         list.each {
             log.info "Checking $it ..."
-            def manager = new AssetManager(it, this)
+            def manager = new AssetManager(it, toHubOptions())
 
             def result = manager.download(revision,deep)
             manager.updateModules()

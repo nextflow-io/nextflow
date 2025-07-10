@@ -20,7 +20,7 @@ package io.seqera.tower.plugin
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.plugin.BasePlugin
-import nextflow.cli.PluginExecAware
+import nextflow.plugin.cli.PluginExecAware
 import org.pf4j.PluginWrapper
 /**
  * Seqera Platform plugin
@@ -31,7 +31,8 @@ import org.pf4j.PluginWrapper
 @CompileStatic
 class TowerPlugin extends BasePlugin implements PluginExecAware {
 
-    @Delegate private CacheCommand delegate
+    @Delegate
+    private CacheCommand delegate
 
     TowerPlugin(PluginWrapper wrapper) {
         super(wrapper)
