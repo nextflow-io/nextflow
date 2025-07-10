@@ -453,9 +453,10 @@ class AzBatchService implements Closeable {
      * Create and configure BatchManager
      */
     private com.azure.resourcemanager.batch.BatchManager createBatchManager(TokenCredential credential, String subscriptionId) {
-        // AzureProfile constructor: (tenantId, subscriptionId, environment)
+        // AzureProfile requires: (tenantId, subscriptionId, environment)
+        // We pass null for tenantId to use the default from the credential
         final profile = new com.azure.core.management.profile.AzureProfile(
-            null, // tenantId - null to use default
+            null, 
             subscriptionId,
             com.azure.core.management.AzureEnvironment.AZURE
         )

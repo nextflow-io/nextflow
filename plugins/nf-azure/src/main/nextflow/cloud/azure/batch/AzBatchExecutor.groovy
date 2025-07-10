@@ -100,20 +100,18 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
             log.debug "[AZURE BATCH] Pool allocation mode determined as: ${poolAllocationMode}"
             
             if( poolAllocationMode == 'BATCH_SERVICE' || poolAllocationMode == 'BatchService' ) {
-                throw new AbortOperationException("Azure Low Priority VMs are deprecated and no longer supported for Batch Managed pool allocation mode. " +
-                    "Please update your configuration to use standard VMs instead, or migrate to User Subscription pool allocation mode. " +
-                    "Affected pools: ${poolNames}. " +
-                    "Remove 'lowPriority: true' from your pool configuration or set 'lowPriority: false'.")
+                throw new AbortOperationException(
+                    "Low Priority VMs are not supported with Batch Managed pool allocation mode. " +
+                    "Update your configuration to use standard VMs or switch to User Subscription mode. " +
+                    "Pools: ${poolNames}."
+                )
             } else if( poolAllocationMode == 'USER_SUBSCRIPTION' || poolAllocationMode == 'UserSubscription' ) {
                 // Low Priority VMs are still supported in User Subscription mode, proceed without warning
                 log.debug "[AZURE BATCH] User Subscription mode detected, allowing low priority VMs in pools: ${poolNames}"
             } else {
                 // If we can't determine the pool allocation mode, show a warning but allow execution
-                log.warn "[AZURE BATCH] Unable to determine pool allocation mode (got: ${poolAllocationMode}). " +
-                    "Low Priority VMs are configured in pools: ${poolNames}. " +
-                    "Please note that Low Priority VMs are deprecated in Batch Managed accounts. " +
-                    "If you're using a Batch Managed account, please update your configuration to use standard VMs. " +
-                    "To enable automatic detection, set azure.batch.subscriptionId in your config or AZURE_SUBSCRIPTION_ID environment variable."
+                log.warn "[AZURE BATCH] Unable to determine pool allocation mode. Low Priority VMs are configured in pools: ${poolNames}. " +
+                    "Low Priority VMs may not be supported. Set 'azure.batch.subscriptionId' in your config or 'AZURE_SUBSCRIPTION_ID' environment variable for automatic detection."
             }
         }
     }

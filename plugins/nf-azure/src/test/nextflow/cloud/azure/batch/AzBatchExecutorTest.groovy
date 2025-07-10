@@ -27,7 +27,7 @@ class AzBatchExecutorTest extends Specification {
         and:
         def config = new AzConfig(CONFIG)
         def batchService = Mock(AzBatchService) {
-            getPoolAllocationMode() >> 'BATCH_SERVICE'
+            getPoolAllocationMode() >> 'BatchService'
         }
         
         and:
@@ -40,7 +40,8 @@ class AzBatchExecutorTest extends Specification {
 
         then:
         def e = thrown(AbortOperationException)
-        e.message.contains('Azure Low Priority VMs are deprecated and no longer supported for Batch Managed pool allocation mode')
+        e.message.contains('Low Priority VMs are not supported with Batch Managed pool allocation mode')
+        e.message.contains('Update your configuration to use standard VMs or switch to User Subscription mode')
         e.message.contains('pool1')
     }
 
@@ -58,7 +59,7 @@ class AzBatchExecutorTest extends Specification {
         and:
         def config = new AzConfig(CONFIG)
         def batchService = Mock(AzBatchService) {
-            getPoolAllocationMode() >> 'USER_SUBSCRIPTION'
+            getPoolAllocationMode() >> 'UserSubscription'
         }
         
         and:
@@ -117,7 +118,7 @@ class AzBatchExecutorTest extends Specification {
         and:
         def config = new AzConfig(CONFIG)
         def batchService = Mock(AzBatchService) {
-            getPoolAllocationMode() >> 'BATCH_SERVICE'
+            getPoolAllocationMode() >> 'BatchService'
         }
         
         and:
