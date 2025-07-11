@@ -18,19 +18,27 @@ package nextflow.cloud.aws.scm.jgit;
 
 import org.eclipse.jgit.errors.TransportException;
 import org.eclipse.jgit.lib.NullProgressMonitor;
+import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.ProgressMonitor;
 import org.eclipse.jgit.lib.Ref;
+import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.transport.BundleWriter;
 import org.eclipse.jgit.transport.PushConnection;
 import org.eclipse.jgit.transport.RemoteRefUpdate;
 import org.eclipse.jgit.util.FileUtils;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -50,9 +58,7 @@ public class S3PushConnection extends S3BaseConnection implements PushConnection
         try {
             tmpdir = Files.createTempDirectory("s3-remote-git-");
             for (Map.Entry<String, RemoteRefUpdate> entry : refUpdates.entrySet()) {
-                log.trace("Generating bundle for {} in {} ", entry.getKey(), tmpdir);
-                Path bundleFile = bundle(entry.getKey(), tmpdir);
-                s3.putObject(PutObjectRequest.builder().bucket(bucket).key(key+'/'+entry.getKey()).build(),bundleFile);
+                pushBranch(entry, tmpdir);
             }
         }catch (IOException e){
             throw new TransportException(transport.getURI(), "Exception fetching branches", e);
@@ -67,17 +73,90 @@ public class S3PushConnection extends S3BaseConnection implements PushConnection
 
     }
 
+    private void pushBranch(Map.Entry<String, RemoteRefUpdate> entry, Path tmpdir) throws IOException {
+        final Ref ref = transport.getLocal().findRef(entry.getKey());
+        if( ref == null || ref.getObjectId() == null) {
+            throw new IllegalStateException("Branch ${branch} not found");
+        }
+        S3Object oldObject = checkExistingObjectInBranch(entry.getKey());
+        if( oldObject != null && isSameObjectId(oldObject, ref.getObjectId())){
+            setUpdateStatus(entry.getValue(), RemoteRefUpdate.Status.UP_TO_DATE);
+            return;
+        }
+        if( oldObject != null && !isCommitInBranch(oldObject, ref)) {
+            setUpdateStatus(entry.getValue(), RemoteRefUpdate.Status.REJECTED_REMOTE_CHANGED);
+            return;
+        }
+        log.trace("Generating bundle for branch {} in {}", entry.getKey(), tmpdir);
+        Path bundleFile = bundle(ref, tmpdir);
+        String objectKey = String.format("%s/%s/%s", key, entry.getKey(), bundleFile.getFileName().toString());
+
+        log.trace("Uploading bundle {} to s3://{}/{}", bundleFile, bucket, objectKey);
+        s3.putObject(PutObjectRequest.builder()
+                .bucket(bucket)
+                .key(objectKey)
+                .build(),
+            bundleFile);
+        if( oldObject != null ){
+            log.trace("Deleting old bundle s3://{}/{}",bucket,oldObject.key());
+            s3.deleteObject(DeleteObjectRequest.builder()
+                .bucket(bucket)
+                .key(oldObject.key())
+                .build()
+            );
+        }
+        setUpdateStatus(entry.getValue(), RemoteRefUpdate.Status.OK);
+    }
+
+    private boolean isSameObjectId(S3Object s3object, ObjectId commitId){
+        return BranchData.fromKey(s3object.key()).getObjectId().name().equals(commitId.name());
+    }
+
+   private void setUpdateStatus(RemoteRefUpdate update, RemoteRefUpdate.Status status) {
+        try {
+            Field statusField = RemoteRefUpdate.class.getDeclaredField("status");
+            statusField.setAccessible(true);
+            statusField.set(update, status);
+        } catch (Exception e) {
+            throw new RuntimeException("Unable to set status on RemoteRefUpdate", e);
+        }
+    }
+
+    public boolean isCommitInBranch(S3Object s3Object, Ref branchRef) throws IOException {
+        ObjectId commitId = BranchData.fromKey(s3Object.key()).getObjectId();
+        try (RevWalk walk = new RevWalk(transport.getLocal())) {
+            RevCommit branchTip = walk.parseCommit(branchRef.getObjectId());
+            RevCommit targetCommit = walk.parseCommit(commitId);
+
+            // Check if the commit is reachable from the branch tip
+            return walk.isMergedInto(targetCommit, branchTip);
+        }
+    }
+
+    private S3Object checkExistingObjectInBranch(String name) throws TransportException {
+        final List<S3Object> list = s3.listObjectsV2(ListObjectsV2Request.builder()
+                    .bucket(bucket)
+                    .prefix(key + '/' + name + '/')
+                    .build()
+            ).contents();
+
+        if( list == null || list.isEmpty() ) {
+            return null;
+        }
+
+        if( list.size() > 1 ){
+            throw new TransportException(transport.getURI(), " More than one bundle for " + name);
+        }
+        return list.get(0);
+    }
+
     @Override
     public void push(ProgressMonitor monitor, Map<String, RemoteRefUpdate> refUpdates, OutputStream out) throws TransportException {
         push(monitor, refUpdates);
 
     }
 
-    private Path bundle(String refName, Path tmpdir) throws IOException {
-        final Ref ref = transport.getLocal().findRef(refName);
-        if( ref == null ) {
-            throw new IllegalStateException("Branch ${branch} not found");
-        }
+    private Path bundle(Ref ref, Path tmpdir) throws IOException {
         final BundleWriter writer = new BundleWriter(transport.getLocal());
         Path bundleFile = tmpdir.resolve(ref.getObjectId() +".bundle");
         writer.include(ref);

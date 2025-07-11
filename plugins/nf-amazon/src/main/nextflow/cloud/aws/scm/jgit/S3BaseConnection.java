@@ -106,18 +106,12 @@ public class S3BaseConnection implements Connection {
     }
     private void addRef(S3Object obj) {
         String key = obj.key();
-        String[] parts = key.split("/");
-        if (parts.length < 5) throw new RuntimeException("Incorrect key parts");
-        // Expect: repo/refs/<type>/<branch>/<hash>.bundle
-        final String type = parts[2];
-        final String rBranch = parts[3];
-        final String sha = parts[4].replace(".bundle", "");
-        String name = String.format("refs/%s/%s" , type, rBranch);
-        ObjectId objectId = ObjectId.fromString(sha);
+        BranchData branch = BranchData.fromKey(key);
+        String type = branch.getType();
         if ("heads".equals(type)) {
-            advertisedRefs.put(name, new ObjectIdRef.PeeledNonTag(Ref.Storage.NETWORK, name, objectId));
+            advertisedRefs.put(branch.getRefName(), new ObjectIdRef.PeeledNonTag(Ref.Storage.NETWORK, branch.getRefName(), branch.getObjectId()));
         } else if ("tags".equals(type)) {
-            advertisedRefs.put(name, new ObjectIdRef.Unpeeled(Ref.Storage.NETWORK, name, objectId));
+            advertisedRefs.put(branch.getRefName(), new ObjectIdRef.Unpeeled(Ref.Storage.NETWORK, branch.getRefName(), branch.getObjectId()));
         }
     }
 
@@ -147,6 +141,46 @@ public class S3BaseConnection implements Connection {
     @Override
     public String getPeerUserAgent() {
         return "";
+    }
+
+    static class BranchData{
+        private String type;
+        private String simpleName;
+        private String refName;
+        private ObjectId objectId;
+
+        private BranchData(String type, String simpleName, ObjectId objectId){
+            this.type = type;
+            this.simpleName = simpleName;
+            this.refName = String.format("refs/%s/%s" , type, simpleName);
+            this.objectId = objectId;
+        }
+        public static BranchData fromKey(String key){
+            String[] parts = key.split("/");
+            if (parts.length < 5) throw new RuntimeException("Incorrect key parts");
+            // Expect: repo-path/refs/<type>/<branch>/<hash>.bundle
+            final String type = parts[parts.length - 3];
+            final String rBranch = parts[parts.length - 2];
+            final String sha = parts[parts.length - 1].replace(".bundle", "");
+            return new BranchData(type, rBranch, ObjectId.fromString(sha));
+
+        }
+
+        public String getType() {
+            return type;
+        }
+
+        public String getSimpleName() {
+            return simpleName;
+        }
+
+        public String getRefName() {
+            return refName;
+        }
+
+        public ObjectId getObjectId() {
+            return objectId;
+        }
     }
 
 }
