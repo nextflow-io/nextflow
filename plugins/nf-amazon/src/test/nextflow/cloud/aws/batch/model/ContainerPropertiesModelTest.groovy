@@ -1,6 +1,6 @@
 package nextflow.cloud.aws.batch.model
 
-import software.amazon.awssdk.services.batch.model.ContainerProperties
+import software.amazon.awssdk.services.batch.model.EcsTaskProperties
 import software.amazon.awssdk.services.batch.model.EphemeralStorage
 import software.amazon.awssdk.services.batch.model.KeyValuePair
 import software.amazon.awssdk.services.batch.model.LinuxParameters
@@ -10,6 +10,7 @@ import software.amazon.awssdk.services.batch.model.NetworkConfiguration
 import software.amazon.awssdk.services.batch.model.ResourceRequirement
 import software.amazon.awssdk.services.batch.model.ResourceType
 import software.amazon.awssdk.services.batch.model.RuntimePlatform
+import software.amazon.awssdk.services.batch.model.TaskContainerProperties
 import software.amazon.awssdk.services.batch.model.Ulimit
 import software.amazon.awssdk.services.batch.model.Volume
 import spock.lang.Specification
@@ -518,16 +519,19 @@ class ContainerPropertiesModelTest extends Specification {
              .ephemeralStorage(ephemeralStorage)
              .runtimePlatform(runtimePlatform)
         
-        def containerProperties = model.toBatchContainerProperties()
+        def taskProperties = model.toBatchContainerProperties()
         
         then:
-        containerProperties instanceof ContainerProperties
+        taskProperties instanceof EcsTaskProperties
+
+        def containerProperties = taskProperties.containers()[0]
+        containerProperties instanceof TaskContainerProperties
         containerProperties.image() == 'ubuntu:20.04'
         containerProperties.command() == ['echo', 'hello']
         containerProperties.resourceRequirements().size() == 1
         containerProperties.resourceRequirements()[0] == req
-        containerProperties.jobRoleArn() == 'arn:aws:iam::123456789012:role/BatchJobRole'
-        containerProperties.executionRoleArn() == 'arn:aws:iam::123456789012:role/BatchExecutionRole'
+        taskProperties.taskRoleArn() == 'arn:aws:iam::123456789012:role/BatchJobRole'
+        taskProperties.executionRoleArn() == 'arn:aws:iam::123456789012:role/BatchExecutionRole'
         containerProperties.linuxParameters() == linuxParams
         containerProperties.environment().size() == 1
         containerProperties.environment()[0].name() == 'VAR1'
@@ -539,11 +543,11 @@ class ContainerPropertiesModelTest extends Specification {
         containerProperties.logConfiguration() == logConfig
         containerProperties.mountPoints().size() == 1
         containerProperties.mountPoints()[0].sourceVolume() == 'tmp'
-        containerProperties.volumes().size() == 1
-        containerProperties.volumes()[0].name() == 'tmp'
-        containerProperties.networkConfiguration() == networkConfig
-        containerProperties.ephemeralStorage() == ephemeralStorage
-        containerProperties.runtimePlatform() == runtimePlatform
+        taskProperties.volumes().size() == 1
+        taskProperties.volumes()[0].name() == 'tmp'
+        taskProperties.networkConfiguration() == networkConfig
+        taskProperties.ephemeralStorage() == ephemeralStorage
+        taskProperties.runtimePlatform() == runtimePlatform
     }
 
     def 'should convert to ContainerProperties with null fields'() {
@@ -551,15 +555,18 @@ class ContainerPropertiesModelTest extends Specification {
         def model = new ContainerPropertiesModel()
         
         when:
-        def containerProperties = model.toBatchContainerProperties()
+        def taskProperties = model.toBatchContainerProperties()
         
         then:
-        containerProperties instanceof ContainerProperties
+        taskProperties instanceof EcsTaskProperties
+
+        def containerProperties = taskProperties.containers()[0]
+        containerProperties instanceof TaskContainerProperties
         containerProperties.image() == null
         containerProperties.command() == []
         containerProperties.resourceRequirements() == []
-        containerProperties.jobRoleArn() == null
-        containerProperties.executionRoleArn() == null
+        taskProperties.taskRoleArn() == null
+        taskProperties.executionRoleArn() == null
         containerProperties.linuxParameters() == null
         containerProperties.environment() == []
         containerProperties.privileged() == null
@@ -568,10 +575,10 @@ class ContainerPropertiesModelTest extends Specification {
         containerProperties.ulimits() == []
         containerProperties.logConfiguration() == null
         containerProperties.mountPoints() == []
-        containerProperties.volumes() == []
-        containerProperties.networkConfiguration() == null
-        containerProperties.ephemeralStorage() == null
-        containerProperties.runtimePlatform() == null
+        taskProperties.volumes() == []
+        taskProperties.networkConfiguration() == null
+        taskProperties.ephemeralStorage() == null
+        taskProperties.runtimePlatform() == null
     }
 
     def 'should convert to ContainerProperties with empty collections'() {
@@ -584,13 +591,16 @@ class ContainerPropertiesModelTest extends Specification {
              .mountPoints([])
              .volumes([])
         
-        def containerProperties = model.toBatchContainerProperties()
+        def taskProperties = model.toBatchContainerProperties()
         
         then:
-        containerProperties instanceof ContainerProperties
+        taskProperties instanceof EcsTaskProperties
+
+        def containerProperties = taskProperties.containers()[0]
+        containerProperties instanceof TaskContainerProperties
         containerProperties.environment() == []
         containerProperties.ulimits() == []
         containerProperties.mountPoints() == []
-        containerProperties.volumes() == []
+        taskProperties.volumes() == []
     }
 }

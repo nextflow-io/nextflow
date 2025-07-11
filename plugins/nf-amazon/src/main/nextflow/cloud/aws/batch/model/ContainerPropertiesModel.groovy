@@ -17,7 +17,7 @@
 package nextflow.cloud.aws.batch.model
 
 import groovy.transform.CompileStatic
-import software.amazon.awssdk.services.batch.model.ContainerProperties
+import software.amazon.awssdk.services.batch.model.EcsTaskProperties
 import software.amazon.awssdk.services.batch.model.EphemeralStorage
 import software.amazon.awssdk.services.batch.model.KeyValuePair
 import software.amazon.awssdk.services.batch.model.LinuxParameters
@@ -27,13 +27,14 @@ import software.amazon.awssdk.services.batch.model.NetworkConfiguration
 import software.amazon.awssdk.services.batch.model.ResourceRequirement
 import software.amazon.awssdk.services.batch.model.RuntimePlatform
 import software.amazon.awssdk.services.batch.model.Secret
+import software.amazon.awssdk.services.batch.model.TaskContainerProperties
 import software.amazon.awssdk.services.batch.model.Ulimit
 import software.amazon.awssdk.services.batch.model.Volume
 
 /**
  * Models the container properties used to configure an AWS Batch job.
  *
- * This is a mutable version of {@link ContainerProperties} required
+ * This is a mutable version of {@link TaskContainerProperties} required
  * to simplify the extension of container settings in the AWS Batch executor
  * and its sub-classes (e.g. nf-xpack).
  *
@@ -236,14 +237,11 @@ class ContainerPropertiesModel {
         return runtimePlatform
     }
 
-    ContainerProperties toBatchContainerProperties() {
-        def builder = ContainerProperties.builder()
-        
+    EcsTaskProperties toBatchContainerProperties() {
+        def builder = TaskContainerProperties.builder();
         if (image) builder.image(image)
         if (command) builder.command(command)
         if (resourceRequirements) builder.resourceRequirements(resourceRequirements)
-        if (jobRoleArn) builder.jobRoleArn(jobRoleArn)
-        if (executionRoleArn) builder.executionRoleArn(executionRoleArn)
         if (linuxParameters) builder.linuxParameters(linuxParameters)
         if (environment) builder.environment(environment)
         if (privileged) builder.privileged(privileged)
@@ -252,12 +250,16 @@ class ContainerPropertiesModel {
         if (ulimits) builder.ulimits(ulimits)
         if (logConfiguration) builder.logConfiguration(logConfiguration)
         if (mountPoints) builder.mountPoints(mountPoints)
-        if (volumes) builder.volumes(volumes)
-        if (networkConfiguration) builder.networkConfiguration(networkConfiguration)
-        if (ephemeralStorage) builder.ephemeralStorage(ephemeralStorage)
-        if (runtimePlatform) builder.runtimePlatform(runtimePlatform)
+        def ecsTaskBuilder = EcsTaskProperties.builder()
+        ecsTaskBuilder.containers(builder.build())
+        if (jobRoleArn) ecsTaskBuilder.taskRoleArn(jobRoleArn)
+        if (executionRoleArn) ecsTaskBuilder.executionRoleArn(executionRoleArn)
+        if (volumes) ecsTaskBuilder.volumes(volumes)
+        if (networkConfiguration) ecsTaskBuilder.networkConfiguration(networkConfiguration)
+        if (ephemeralStorage) ecsTaskBuilder.ephemeralStorage(ephemeralStorage)
+        if (runtimePlatform) ecsTaskBuilder.runtimePlatform(runtimePlatform)
         
-        return builder.build()
+        return ecsTaskBuilder.build()
     }
 
     @Override

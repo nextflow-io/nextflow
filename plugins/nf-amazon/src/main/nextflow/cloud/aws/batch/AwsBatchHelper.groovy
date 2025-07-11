@@ -20,6 +20,9 @@ import software.amazon.awssdk.services.batch.BatchClient
 import software.amazon.awssdk.services.batch.model.DescribeComputeEnvironmentsRequest
 import software.amazon.awssdk.services.batch.model.DescribeJobQueuesRequest
 import software.amazon.awssdk.services.batch.model.DescribeJobsRequest
+import software.amazon.awssdk.services.batch.model.EcsTaskDetails
+import software.amazon.awssdk.services.batch.model.JobDetail
+import software.amazon.awssdk.services.batch.model.TaskContainerDetails
 import software.amazon.awssdk.services.ec2.Ec2Client
 import software.amazon.awssdk.services.ec2.model.DescribeInstancesRequest
 import software.amazon.awssdk.services.ec2.model.Instance
@@ -193,10 +196,51 @@ class AwsBatchHelper {
         final response = batchClient.describeJobs(request)
         if( response.jobs() ) {
             final detail = response.jobs()[0]
-            return detail.container().logStreamName()
+            return getTaskContainer(detail)?.logStreamName()
+                ?: detail.container()?.logStreamName()
         }
         else {
             log.debug "Unable to find info for batch job id=$jobId"
+            return null
+        }
+    }
+
+    /**
+     * Retrieve the first EcsTaskDetails from the given JobDetail.
+     *
+     * In combination with {@code getTaskContainer(job)} this is analogous to {@code job.getContainer()}, but
+     * using the multi-container ECSProperties model.
+     *
+     * @param job
+     * @return
+     *      The first EcsTaskDetails of the first TaskProperties, or {@code null}
+     */
+    static EcsTaskDetails getTaskProperties(JobDetail job) {
+        try {
+            return job.ecsProperties().taskProperties().first()
+        } catch (Exception e) {
+            def jobId = job?.jobId() ?: '(unknown)'
+            log.debug "Unable to get container properties for batch job id=$jobId: ${e.getMessage()}"
+            return null
+        }
+    }
+
+    /**
+     * Retrieve the first TaskContainerDetails from the given JobDetail.
+     *
+     * In combination with {@code getTaskProperties(job)} this is analogous to {@code job.getContainer()}, but
+     * using the multi-container ECSProperties model.
+     *
+     * @param job
+     * @return
+     *      The first TaskContainerDetails of the first TaskProperties, or {@code null}
+     */
+    static TaskContainerDetails getTaskContainer(JobDetail job) {
+        try {
+            return getTaskProperties(job).containers().first()
+        } catch (Exception e) {
+            def jobId = job?.jobId() ?: '(unknown)'
+            log.debug "Unable to get container details for batch job id=$jobId: ${e.getMessage()}"
             return null
         }
     }
