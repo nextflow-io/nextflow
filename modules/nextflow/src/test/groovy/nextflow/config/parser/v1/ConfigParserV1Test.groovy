@@ -399,7 +399,7 @@ class ConfigParserV1Test extends Specification {
 
     }
 
-    def 'should return the set of visited block names' () {
+    def 'should return the set of declared profiles' () {
 
         given:
         def text = '''
@@ -417,13 +417,13 @@ class ConfigParserV1Test extends Specification {
         def slurper = new ConfigParserV1().setProfiles(['alpha'])
         slurper.parse(text)
         then:
-        slurper.getProfiles() == ['alpha','beta'] as Set
+        slurper.getDeclaredProfiles() == ['alpha','beta'] as Set
 
         when:
         slurper = new ConfigParserV1().setProfiles(['omega'])
         slurper.parse(text)
         then:
-        slurper.getProfiles() == ['alpha','beta'] as Set
+        slurper.getDeclaredProfiles() == ['alpha','beta'] as Set
     }
 
     def 'should disable includeConfig parsing' () {
