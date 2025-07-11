@@ -24,7 +24,7 @@ You can configure the concurrency and throughput of the S3 transfer manager manu
 
 ## Multi-part uploads
 
-The S3 transfer manager handles multi-part uploads. You can use the `aws.client.minimumPartSize` and `aws.client.multipartThreshold` config options to control when and how multi-part uploads are performed.
+Multi-part uploads are handled by the S3 transfer manager. You can use the `aws.client.minimumPartSize` and `aws.client.multipartThreshold` config options to control when and how multi-part uploads are performed.
 
 The following multi-part upload config options are no longer supported:
 
