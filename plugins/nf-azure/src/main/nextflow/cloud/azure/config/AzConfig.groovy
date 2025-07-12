@@ -19,52 +19,66 @@ package nextflow.cloud.azure.config
 import groovy.transform.CompileStatic
 import nextflow.Global
 import nextflow.Session
+import nextflow.config.schema.ConfigScope
+import nextflow.config.schema.ScopeName
+import nextflow.script.dsl.Description
 
 /**
  * Model Azure settings defined in the nextflow.config file
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@ScopeName("azure")
+@Description("""
+    The `azure` scope allows you to configure the interactions with Azure, including Azure Batch and Azure Blob Storage.
+
+    [Read more](https://nextflow.io/docs/latest/reference/config.html#azure)
+""")
 @CompileStatic
-class AzConfig {
+class AzConfig implements ConfigScope {
 
-    private AzCopyOpts azcopyOpts
+    private AzCopyOpts azcopy
 
-    private AzStorageOpts storageOpts
+    private AzStorageOpts storage
 
-    private AzBatchOpts batchOpts
+    private AzBatchOpts batch
 
-    private AzRegistryOpts registryOpts
+    private AzRegistryOpts registry
 
-    private AzRetryConfig retryConfig
+    private AzRetryConfig retry
 
-    private AzActiveDirectoryOpts activeDirectoryOpts
+    private AzActiveDirectoryOpts activeDirectory
 
-    private AzManagedIdentityOpts managedIdentityOpts
+    private AzManagedIdentityOpts managedIdentity
 
-    AzConfig(Map azure) {
-        this.batchOpts = new AzBatchOpts( (Map)azure.batch ?: Collections.emptyMap() )
-        this.storageOpts = new AzStorageOpts( (Map)azure.storage ?: Collections.emptyMap() )
-        this.registryOpts = new AzRegistryOpts( (Map)azure.registry ?: Collections.emptyMap() )
-        this.azcopyOpts = new AzCopyOpts( (Map)azure.azcopy ?: Collections.emptyMap() )
-        this.retryConfig = new AzRetryConfig( (Map)azure.retryPolicy ?: Collections.emptyMap() )
-        this.activeDirectoryOpts = new AzActiveDirectoryOpts((Map) azure.activeDirectory ?: Collections.emptyMap())
-        this.managedIdentityOpts = new AzManagedIdentityOpts((Map) azure.managedIdentity ?: Collections.emptyMap())
+    /* required by extension point -- do not remove */
+    AzConfig() {
+        this(Collections.emptyMap())
     }
 
-    AzCopyOpts azcopy() { azcopyOpts }
+    AzConfig(Map azure) {
+        this.batch = new AzBatchOpts( (Map)azure.batch ?: Collections.emptyMap() )
+        this.storage = new AzStorageOpts( (Map)azure.storage ?: Collections.emptyMap() )
+        this.registry = new AzRegistryOpts( (Map)azure.registry ?: Collections.emptyMap() )
+        this.azcopy = new AzCopyOpts( (Map)azure.azcopy ?: Collections.emptyMap() )
+        this.retry = new AzRetryConfig( (Map)azure.retryPolicy ?: Collections.emptyMap() )
+        this.activeDirectory = new AzActiveDirectoryOpts((Map) azure.activeDirectory ?: Collections.emptyMap())
+        this.managedIdentity = new AzManagedIdentityOpts((Map) azure.managedIdentity ?: Collections.emptyMap())
+    }
 
-    AzBatchOpts batch() { batchOpts }
+    AzCopyOpts azcopy() { azcopy }
 
-    AzStorageOpts storage() { storageOpts }
+    AzBatchOpts batch() { batch }
 
-    AzRegistryOpts registry() { registryOpts }
+    AzStorageOpts storage() { storage }
 
-    AzRetryConfig retryConfig() { retryConfig }
+    AzRegistryOpts registry() { registry }
 
-    AzActiveDirectoryOpts activeDirectory() { activeDirectoryOpts }
+    AzRetryConfig retry() { retry }
 
-    AzManagedIdentityOpts managedIdentity() { managedIdentityOpts }
+    AzActiveDirectoryOpts activeDirectory() { activeDirectory }
+
+    AzManagedIdentityOpts managedIdentity() { managedIdentity }
 
     static AzConfig getConfig(Session session) {
         if( !session )

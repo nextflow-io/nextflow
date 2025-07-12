@@ -13,15 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.config.scopes;
+package nextflow.executor
 
-import nextflow.config.schema.ConfigOption;
-import nextflow.config.schema.ConfigScope;
-import nextflow.script.dsl.Description;
-import nextflow.script.types.Duration;
-import nextflow.script.types.MemoryUnit;
+import groovy.transform.CompileStatic
+import groovy.transform.Memoized
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.config.schema.ScopeName
+import nextflow.script.dsl.Description
+import nextflow.util.Duration
+import nextflow.util.MemoryUnit
 
-public class ExecutorConfig implements ConfigScope {
+@ScopeName("executor")
+@Description("""
+    The `executor` scope controls various executor behaviors.
+
+    [Read more](https://nextflow.io/docs/latest/reference/config.html#executor)
+""")
+@CompileStatic
+class ExecutorConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
@@ -29,7 +39,7 @@ public class ExecutorConfig implements ConfigScope {
 
         Specify the project or organisation account that should be charged for running the pipeline jobs.
     """)
-    public String account;
+    final String account
 
     @ConfigOption
     @Description("""
@@ -37,13 +47,13 @@ public class ExecutorConfig implements ConfigScope {
 
         The maximum number of CPUs made available by the underlying system.
     """)
-    public int cpus;
+    final int cpus
 
     @ConfigOption
     @Description("""
         Determines how often to log the executor status (default: `5 min`).
     """)
-    public Duration dumpInterval;
+    final Duration dumpInterval
 
     @ConfigOption
     @Description("""
@@ -51,24 +61,24 @@ public class ExecutorConfig implements ConfigScope {
 
         Determines how long to wait for the `.exitcode` file to be created after the task has completed, before returning an error status (default: `270 sec`).
     """)
-    public Duration exitReadTimeout;
+    final Duration exitReadTimeout
 
     @ConfigOption
-    @Description("""
+    @Description('''
         *Used only by grid executors and Google Batch.*
 
         Determines the name of jobs submitted to the underlying cluster executor:
         ```nextflow
         executor.jobName = { "$task.name - $task.hash" }
         ```
-    """)
-    public String jobName;
+    ''')
+    final Closure<String> jobName
 
     @ConfigOption
     @Description("""
         Determines the number of jobs that can be killed in a single command execution (default: `100`).
     """)
-    public int killBatchSize = 100;
+    final int killBatchSize
 
     @ConfigOption
     @Description("""
@@ -76,13 +86,13 @@ public class ExecutorConfig implements ConfigScope {
 
         The maximum amount of memory made available by the underlying system.
     """)
-    public MemoryUnit memory;
+    final MemoryUnit memory
 
     @ConfigOption
     @Description("""
         The name of the executor to be used (default: `local`).
     """)
-    public String name;
+    final String name
 
     @ConfigOption
     @Description("""
@@ -90,7 +100,7 @@ public class ExecutorConfig implements ConfigScope {
 
         When `true`, memory allocations for SLURM jobs are specified as `--mem-per-cpu <task.memory / task.cpus>` instead of `--mem <task.memory>`.
     """)
-    public boolean perCpuMemAllocation;
+    final boolean perCpuMemAllocation
 
     @ConfigOption
     @Description("""
@@ -98,7 +108,7 @@ public class ExecutorConfig implements ConfigScope {
 
         Enables the *per-job* memory limit mode for LSF jobs.
     """)
-    public boolean perJobMemLimit;
+    final boolean perJobMemLimit
 
     @ConfigOption
     @Description("""
@@ -106,25 +116,25 @@ public class ExecutorConfig implements ConfigScope {
 
         Enables the *per-task* memory reserve mode for LSF jobs.
     """)
-    public boolean perTaskReserve;
+    final boolean perTaskReserve
 
     @ConfigOption
     @Description("""
         Determines how often to check for process termination. Default varies for each executor.
     """)
-    public Duration pollInterval;
+    final Duration pollInterval
 
     @ConfigOption
     @Description("""
         Determines how job status is retrieved. When `false` only the queue associated with the job execution is queried. When `true` the job status is queried globally i.e. irrespective of the submission queue (default: `false`).
     """)
-    public boolean queueGlobalStatus;
+    final boolean queueGlobalStatus
 
     @ConfigOption
     @Description("""
         The number of tasks the executor will handle in a parallel manner. A queue size of zero corresponds to no limit. Default varies for each executor.
     """)
-    public Integer queueSize;
+    final Integer queueSize
 
     @ConfigOption
     @Description("""
@@ -132,19 +142,93 @@ public class ExecutorConfig implements ConfigScope {
 
         Determines how often to fetch the queue status from the scheduler (default: `1 min`).
     """)
-    public Duration queueStatInterval;
+    final Duration queueStatInterval
 
     @Description("""
         The `executor.retry` scope controls the behavior of retrying failed job submissions.
     
         [Read more](https://nextflow.io/docs/latest/reference/config.html#executor)
     """)
-    public ExecutorRetryConfig retry;
+    final ExecutorRetryConfig retry
 
     @ConfigOption
     @Description("""
         Determines the max rate of job submission per time unit, for example `'10sec'` (10 jobs per second) or `'50/2min'` (50 jobs every 2 minutes) (default: unlimited).
     """)
-    public String submitRateLimit;
+    final String submitRateLimit
+
+    private Map opts
+
+    /* required by extension point -- do not remove */
+    ExecutorConfig() {}
+
+    ExecutorConfig(Map opts) {
+        account = opts.account
+        cpus = opts.cpus as int
+        dumpInterval = opts.dumpInterval as Duration ?: Duration.of('5min')
+        exitReadTimeout = opts.exitReadTimeout as Duration ?: Duration.of('90sec')
+        jobName = opts.jobName as Closure
+        killBatchSize = opts.killBatchSize != null ? opts.killBatchSize as int : 100
+        memory = opts.memory as MemoryUnit
+        name = opts.name
+        perCpuMemAllocation = opts.perCpuMemAllocation as boolean
+        perJobMemLimit = opts.perJobMemLimit as boolean
+        perTaskReserve = opts.perTaskReserve as boolean
+        pollInterval = opts.pollInterval as Duration ?: Duration.of('1sec')
+        queueGlobalStatus = opts.queueGlobalStatus as boolean
+        queueSize = opts.queueSize as Integer
+        queueStatInterval = opts.queueStatInterval as Duration ?: Duration.of('1min')
+        retry = opts.retry as ExecutorRetryConfig
+        submitRateLimit = opts.submitRateLimit
+
+        // preserve executor-specific opts
+        this.opts = opts
+    }
+
+    Duration getExitReadTimeout(String execName, Duration defValue = null) {
+        getExecConfigProp(execName, 'exitReadTimeout', defValue) as Duration
+    }
+
+    Duration getMonitorDumpInterval( String execName, Duration defValue = null) {
+        getExecConfigProp(execName, 'dumpInterval', defValue) as Duration
+    }
+
+    Duration getPollInterval(String execName, Duration defValue = null) {
+        getExecConfigProp(execName, 'pollInterval', defValue) as Duration
+    }
+
+    int getQueueSize(String execName, int defValue) {
+        getExecConfigProp(execName, 'queueSize', defValue) as int
+    }
+
+    Duration getQueueStatInterval(String execName, Duration defValue = null) {
+        getExecConfigProp(execName, 'queueStatInterval', defValue) as Duration
+    }
+
+    @Memoized
+    Object getExecConfigProp(String execName, String name, Object defValue, Map env = null) {
+        // -- check `executor.$<execName>.<name>`
+        final execProp = execProp(execName, name)
+        if( execProp != null )
+            return execProp
+
+        // -- check `executor.<name>`
+        final prop = this.hasProperty(name) ? this.getProperty(name) : null
+        if( prop != null )
+            return prop
+
+        // -- check environment variable
+        final key = "NXF_EXECUTOR_${name.toUpperCase().replaceAll(/\./,'_')}".toString()
+        if( env == null )
+            env = System.getenv()
+        return env.containsKey(key) ? env.get(key) : defValue
+    }
+
+    private Object execProp(String execName, String name) {
+        if( !execName )
+            return null
+        final result = opts['$' + execName]
+        return result instanceof Map ? result[name] : null
+    }
 
 }

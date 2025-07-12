@@ -96,7 +96,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
-        final duration = executor.session?.getExitReadTimeout(executor.name, READ_TIMEOUT) ?: READ_TIMEOUT
+        final duration = executor.config.getExitReadTimeout(executor.name, READ_TIMEOUT)
         this.exitStatusReadTimeoutMillis = duration.toMillis()
         this.queue = task.config?.queue
         this.sanityCheckInterval = duration
@@ -143,12 +143,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
 
     protected <T> RetryPolicy<T> retryPolicy() {
 
-        final delay = executor.session.getConfigAttribute("executor.retry.delay", '500ms') as Duration
-        final maxDelay = executor.session.getConfigAttribute("executor.retry.maxDelay", '30s') as Duration
-        final jitter = executor.session.getConfigAttribute("executor.retry.jitter", '0.25') as double
-        final maxAttempts = executor.session.getConfigAttribute("executor.retry.maxAttempts", '3') as int
-        final reason = executor.session.getConfigAttribute("executor.submit.retry.reason", 'Socket timed out') as String
-
+        final retry = executor.config.retry
         final listener = new EventListener<ExecutionAttemptedEvent>() {
             @Override
             void accept(ExecutionAttemptedEvent event) throws Throwable {
@@ -170,10 +165,10 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         return RetryPolicy.<T>builder()
-                .handleIf(retryCondition(reason))
-                .withBackoff(delay.toMillis(), maxDelay.toMillis(), ChronoUnit.MILLIS)
-                .withMaxAttempts(maxAttempts)
-                .withJitter(jitter)
+                .handleIf(retryCondition(retry.reason))
+                .withBackoff(retry.delay.toMillis(), retry.maxDelay.toMillis(), ChronoUnit.MILLIS)
+                .withMaxAttempts(retry.maxAttempts)
+                .withJitter(retry.jitter)
                 .onFailedAttempt(listener)
                 .build()
     }

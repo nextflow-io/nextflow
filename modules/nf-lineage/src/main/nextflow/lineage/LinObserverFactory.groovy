@@ -18,6 +18,7 @@ package nextflow.lineage
 
 import groovy.transform.CompileStatic
 import nextflow.Session
+import nextflow.lineage.config.LineageConfig
 import nextflow.trace.TraceObserverV2
 import nextflow.trace.TraceObserverFactoryV2
 
@@ -32,7 +33,8 @@ class LinObserverFactory implements TraceObserverFactoryV2 {
     @Override
     Collection<TraceObserverV2> create(Session session) {
         final result = new ArrayList<TraceObserverV2>(1)
-        final store = LinStoreFactory.getOrCreate(session)
+        final config = LineageConfig.create(session.config)
+        final store = LinStoreFactory.getOrCreate(config)
         if( store )
             result.add( new LinObserver(session, store) )
         return result

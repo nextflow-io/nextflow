@@ -13,84 +13,138 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.config.scopes;
+package nextflow.container
 
-import nextflow.config.schema.ConfigOption;
-import nextflow.config.schema.ConfigScope;
-import nextflow.script.dsl.Description;
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.config.schema.ScopeName
+import nextflow.script.dsl.Description
 
-public class DockerConfig implements ConfigScope {
+@ScopeName("docker")
+@Description("""
+    The `docker` scope controls how [Docker](https://www.docker.com) containers are executed by Nextflow.
+
+    [Read more](https://nextflow.io/docs/latest/reference/config.html#docker)
+""")
+@Slf4j
+@CompileStatic
+class DockerConfig implements ConfigScope, ContainerConfig {
 
     @ConfigOption
     @Description("""
         Enable Docker execution (default: `false`).
     """)
-    public boolean enabled;
+    final boolean enabled
 
     @ConfigOption
     @Description("""
         This attribute can be used to provide any option supported by the Docker engine i.e. `docker [OPTIONS]`.
     """)
-    public String engineOptions;
+    final String engineOptions
 
     @ConfigOption
     @Description("""
         Comma separated list of environment variable names to be included in the container environment.
     """)
-    public String envWhitelist;
+    final List<String> envWhitelist
 
     @ConfigOption
     @Description("""
         Fix ownership of files created by the Docker container.
     """)
-    public boolean fixOwnership;
+    final boolean fixOwnership
+
+    @ConfigOption
+    @Description("""
+    """)
+    final Object kill
 
     @ConfigOption
     @Description("""
         Use command line options removed since Docker 1.10.0 (default: `false`).
     """)
-    public boolean legacy;
+    final boolean legacy
 
     @ConfigOption
     @Description("""
         Add the specified flags to the volume mounts e.g. `'ro,Z'`.
     """)
-    public String mountFlags;
+    final String mountFlags
 
     @ConfigOption
     @Description("""
         The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
     """)
-    public String registry;
+    final String registry
+
+    @ConfigOption
+    @Description("""
+        When `true`, forces the override of the registry name in fully qualified container image names with the registry specified by `docker.registry` (default: `false`).
+    """)
+    final boolean registryOverride
 
     @ConfigOption
     @Description("""
         Clean up the container after the execution (default: `true`). See the [Docker documentation](https://docs.docker.com/engine/reference/run/#clean-up---rm) for details.
     """)
-    public boolean remove;
+    final boolean remove
 
     @ConfigOption
     @Description("""
         This attribute can be used to provide any extra command line options supported by the `docker run` command. See the [Docker documentation](https://docs.docker.com/engine/reference/run/) for details.
     """)
-    public String runOptions;
+    final String runOptions
 
     @ConfigOption
     @Description("""
         Executes Docker run command as `sudo` (default: `false`).
     """)
-    public boolean sudo;
+    final boolean sudo
 
     @ConfigOption
     @Description("""
         Mounts a path of your choice as the `/tmp` directory in the container. Use the special value `'auto'` to create a temporary directory each time a container is created.
     """)
-    public String temp;
+    final String temp
 
     @ConfigOption
     @Description("""
         Allocates a pseudo-tty (default: `false`).
     """)
-    public boolean tty;
+    final boolean tty
+
+    /* required by extension point -- do not remove */
+    DockerConfig() {}
+
+    DockerConfig(Map opts) {
+        enabled = opts.enabled as boolean
+        engineOptions = opts.engineOptions
+        envWhitelist = ContainerHelper.parseEnvWhitelist(opts.envWhitelist)
+        fixOwnership = opts.fixOwnership as boolean
+        kill = opts.kill != null ? opts.kill : true
+        legacy = opts.legacy as boolean
+        mountFlags = opts.mountFlags
+        registry = opts.registry
+        remove = opts.remove as boolean
+        runOptions = opts.runOptions
+        sudo = opts.sudo as boolean
+        temp = opts.temp
+        tty = opts.tty as boolean
+
+        if( opts.userEmulation )
+            log.warn1("Config setting `docker.userEmulation` is not supported anymore")
+    }
+
+    @Override
+    String getEngine() {
+        return 'docker'
+    }
+
+    @Override
+    String getFusionOptions() {
+        return '--rm --privileged'
+    }
 
 }

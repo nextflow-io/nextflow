@@ -35,9 +35,9 @@ interface LinExtension {
     /**
      * Query Lineage metadata to get files produced by tasks, workflows or annotations.
      *
-     * @param session Nextflow Session
+     * @param config Session configuration
      * @param channel Channel to publish the Lineage Ids matching the query params
      * @param params Parameters for the lineage metadata query
      */
-    abstract void fromLineage(Session session, DataflowWriteChannel channel, Map<String,?> params)
+    abstract void fromLineage(Map config, DataflowWriteChannel channel, Map<String,?> params)
 }

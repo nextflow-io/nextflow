@@ -13,19 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.config.scopes;
+package nextflow.container
 
-import nextflow.config.schema.ConfigOption;
-import nextflow.config.schema.ConfigScope;
-import nextflow.script.dsl.Description;
-import nextflow.script.types.Duration;
+import groovy.transform.CompileStatic
 
-public class WaveHttpConfig implements ConfigScope {
+@CompileStatic
+class ContainerHelper {
 
-    @ConfigOption
-    @Description("""
-        The connection timeout for the Wave HTTP client (default: `30s`).
-    """)
-    public Duration connectTime;
+    static boolean fixOwnership(ContainerConfig config) {
+        return config instanceof DockerConfig && config.fixOwnership
+    }
+
+    static List<String> parseEnvWhitelist(Object value) {
+        if( !value )
+            return []
+        if( value instanceof List )
+            return value as List<String>
+        throw new IllegalArgumentException("Not a valid `envWhitelist` argument: $value")
+    }
 
 }

@@ -18,6 +18,9 @@ package nextflow.cloud.azure.config
 
 import groovy.transform.CompileStatic
 import nextflow.SysEnv
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.script.dsl.Description
 
 /**
  * Model Azure Batch registry config settings from nextflow config file
@@ -25,11 +28,25 @@ import nextflow.SysEnv
  * @author Manuele Simi <manuele.simi@gmail.com>
  */
 @CompileStatic
-class AzRegistryOpts {
+class AzRegistryOpts implements ConfigScope {
 
-    String server
-    String userName
-    String password
+    @ConfigOption
+    @Description("""
+        The container registry from which to pull the Docker images (default: `docker.io`).
+    """)
+    final String server
+
+    @ConfigOption
+    @Description("""
+        The username to connect to a private container registry.
+    """)
+    final String userName
+
+    @ConfigOption
+    @Description("""
+        The password to connect to a private container registry.
+    """)
+    final String password
 
     AzRegistryOpts() {
         this(Collections.emptyMap())

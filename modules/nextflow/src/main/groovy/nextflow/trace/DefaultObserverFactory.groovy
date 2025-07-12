@@ -16,11 +16,12 @@
 
 package nextflow.trace
 
-import java.nio.file.Path
-
 import groovy.transform.CompileStatic
 import nextflow.Session
-import nextflow.file.FileHelper
+import nextflow.trace.config.DagConfig
+import nextflow.trace.config.ReportConfig
+import nextflow.trace.config.TimelineConfig
+import nextflow.trace.config.TraceConfig
 
 /**
  * Creates Nextflow observes object
@@ -30,14 +31,14 @@ import nextflow.file.FileHelper
 @CompileStatic
 class DefaultObserverFactory implements TraceObserverFactoryV2 {
 
-    private Map config
+    private Session session
 
     @Override
     Collection<TraceObserverV2> create(Session session) {
-        this.config = session.config
+        this.session = session
 
         final result = new ArrayList<TraceObserverV2>(5)
-        createAnsiLogObserver(result, session)
+        createAnsiLogObserver(result)
         createGraphObserver(result)
         createReportObserver(result)
         createTimelineObserver(result)
@@ -45,7 +46,7 @@ class DefaultObserverFactory implements TraceObserverFactoryV2 {
         return result
     }
 
-    protected void createAnsiLogObserver(Collection<TraceObserverV2> result, Session session) {
+    protected void createAnsiLogObserver(Collection<TraceObserverV2> result) {
         if( session.ansiLog ) {
             session.ansiLogObserver = new AnsiLogObserver()
             result << session.ansiLogObserver
@@ -53,56 +54,31 @@ class DefaultObserverFactory implements TraceObserverFactoryV2 {
     }
 
     protected void createReportObserver(Collection<TraceObserverV2> result) {
-        final isEnabled = config.navigate('report.enabled') as Boolean
-        if( !isEnabled )
-            return
-
-        final fileName = config.navigate('report.file', ReportObserver.DEF_FILE_NAME) as String
-        final maxTasks = config.navigate('report.maxTasks', ReportObserver.DEF_MAX_TASKS) as int
-        final overwrite = config.navigate('report.overwrite') as Boolean
-
-        final observer = new ReportObserver(FileHelper.asPath(fileName), overwrite)
-        observer.maxTasks = maxTasks
-        result << observer
+        final opts = session.config.report as Map ?: Collections.emptyMap()
+        final config = new ReportConfig(opts)
+        if( config.enabled )
+            result << new ReportObserver(config)
     }
 
     protected void createTimelineObserver(Collection<TraceObserverV2> result) {
-        final isEnabled = config.navigate('timeline.enabled') as Boolean
-        if( !isEnabled )
-            return
-
-        final fileName = config.navigate('timeline.file', TimelineObserver.DEF_FILE_NAME) as String
-        final overwrite = config.navigate('timeline.overwrite') as Boolean
-
-        result << new TimelineObserver(FileHelper.asPath(fileName), overwrite)
+        final opts = session.config.timeline as Map ?: Collections.emptyMap()
+        final config = new TimelineConfig(opts)
+        if( config.enabled )
+            result << new TimelineObserver(config)
     }
 
     protected void createGraphObserver(Collection<TraceObserverV2> result) {
-        final isEnabled = config.navigate('dag.enabled') as Boolean
-        if( !isEnabled )
-            return
-
-        final fileName = config.navigate('dag.file', GraphObserver.DEF_FILE_NAME) as String
-        final overwrite = config.navigate('dag.overwrite') as Boolean
-
-        result << new GraphObserver(FileHelper.asPath(fileName), overwrite)
+        final opts = session.config.dag as Map ?: Collections.emptyMap()
+        final config = new DagConfig(opts)
+        if( config.enabled )
+            result << new GraphObserver(config)
     }
 
     protected void createTraceFileObserver(Collection<TraceObserverV2> result) {
-        final isEnabled = config.navigate('trace.enabled') as Boolean
-        if( !isEnabled )
-            return
-
-        final fields = config.navigate('trace.fields', '') as String
-        final fileName = config.navigate('trace.file', TraceFileObserver.DEF_FILE_NAME) as String
-        final overwrite = config.navigate('trace.overwrite') as Boolean
-        final raw = config.navigate('trace.raw') as Boolean
-        final separator = config.navigate('trace.sep', '\t') as String
-
-        final observer = new TraceFileObserver(FileHelper.asPath(fileName), overwrite, separator)
-        observer.useRawNumbers(raw)
-        observer.setFieldsAndFormats(fields)
-        result << observer
+        final opts = session.config.trace as Map ?: Collections.emptyMap()
+        final config = new TraceConfig(opts)
+        if( config.enabled )
+            result << new TraceFileObserver(config)
     }
 
 }
