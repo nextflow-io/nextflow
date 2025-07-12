@@ -18,7 +18,10 @@ package nextflow.lineage.config
 
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
-import groovy.util.logging.Slf4j
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.config.schema.ScopeName
+import nextflow.script.dsl.Description
 import nextflow.Global
 import nextflow.Session
 
@@ -27,35 +30,42 @@ import nextflow.Session
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
+@ScopeName("lineage")
+@Description("""
+    The `lineage` scope controls the generation of lineage metadata.
+
+    [Read more](https://nextflow.io/docs/latest/reference/config.html#lineage)
+""")
 @ToString
 @CompileStatic
-class LineageConfig {
+class LineageConfig implements ConfigScope {
 
     final LineageStoreOpts store
 
+    @ConfigOption
+    @Description("""
+        Enable generation of lineage metadata (default: `false`).
+    """)
     final boolean enabled
 
+    /* required by extension point -- do not remove */
+    LineageConfig() {}
+
     LineageConfig(Map opts) {
-        this.store = new LineageStoreOpts(opts.store as Map ?: Map.of())
-        this.enabled = opts.enabled as boolean ?: false
+        this.store = new LineageStoreOpts(opts.store as Map ?: Collections.emptyMap())
+        this.enabled = opts.enabled as boolean
     }
 
-    static Map<String,Object> asMap() {
-        final result = session?.config?.navigate('lineage') as Map
-        return result != null ? result : new HashMap<String,Object>()
+    Map<String,?> toMap() {
+        return [ enabled: enabled, store: store.toMap() ]
     }
 
-    static LineageConfig create(Session session) {
-        if( session ) {
-            return new LineageConfig( session.config.navigate('lineage') as Map ?: Map.of())
-        }
-        else
-            throw new IllegalStateException("Missing Nextflow session")
+    static LineageConfig create(Map config) {
+        new LineageConfig(config.lineage as Map ?: Collections.emptyMap())
     }
 
     static LineageConfig create() {
-        create(getSession())
+        create(getSession().getConfig())
     }
 
     static private Session getSession() {

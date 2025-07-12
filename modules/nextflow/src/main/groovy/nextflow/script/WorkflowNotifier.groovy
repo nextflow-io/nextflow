@@ -74,13 +74,11 @@ class WorkflowNotifier {
     /**
      * Creates {@link Mailer} object that sends the actual email message
      *
-     * @param config The {@link Mailer} settings corresponding to the content of the {@code mail} configuration file scope
+     * @param opts The {@link Mailer} settings corresponding to the content of the {@code mail} configuration file scope
      * @return A {@link Mailer} object
      */
-    protected Mailer createMailer(Map config) {
-        def mailer = new Mailer()
-        mailer.config = config
-        return mailer
+    protected Mailer createMailer(Map opts) {
+        return new Mailer(opts)
     }
 
     /**

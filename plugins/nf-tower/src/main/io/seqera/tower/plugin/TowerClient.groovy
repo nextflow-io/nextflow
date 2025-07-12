@@ -145,14 +145,10 @@ class TowerClient implements TraceObserverV2 {
 
     private Map<String,Boolean> allContainers = new ConcurrentHashMap<>()
 
-    /**
-     * Constructor that consumes a URL and creates
-     * a basic HTTP client.
-     * @param endpoint The target address for sending messages to
-     */
-    TowerClient(Session session, String endpoint) {
+    TowerClient(Session session, TowerConfig config) {
         this.session = session
-        this.endpoint = checkUrl(endpoint)
+        this.endpoint = checkUrl(config.endpoint)
+        this.workspaceId = workspaceId
         this.schema = loadSchema()
         this.generator = TowerJsonGenerator.create(schema)
         this.reports = new TowerReports(session)

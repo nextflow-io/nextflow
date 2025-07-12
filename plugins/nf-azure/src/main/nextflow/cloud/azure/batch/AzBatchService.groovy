@@ -120,7 +120,7 @@ class AzBatchService implements Closeable {
 
     AzBatchService(AzBatchExecutor executor) {
         assert executor
-        this.config = executor.config
+        this.config = executor.azConfig
     }
 
     protected AzVmPoolSpec getPoolSpec(String poolId) {
@@ -1063,7 +1063,7 @@ class AzBatchService implements Closeable {
      * @return The {@link RetryPolicy} instance
      */
     protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond) {
-        final cfg = config.retryConfig()
+        final cfg = config.retry()
         final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
             @Override
             void accept(ExecutionAttemptedEvent<T> event) throws Throwable {

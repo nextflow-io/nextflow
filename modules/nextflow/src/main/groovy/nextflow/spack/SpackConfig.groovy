@@ -17,44 +17,66 @@
 package nextflow.spack
 
 import groovy.transform.CompileStatic
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.config.schema.ScopeName
+import nextflow.script.dsl.Description
+import nextflow.util.Duration
 
 /**
  * Model Spack configuration
  * 
  * @author Marco De La Pierre <marco.delapierre@gmail.com>
  */
+@ScopeName("spack")
+@Description("""
+    The `spack` scope controls the creation of a Spack environment by the Spack package manager.
+
+    [Read more](https://nextflow.io/docs/latest/reference/config.html#spack)
+""")
 @CompileStatic
-class SpackConfig extends LinkedHashMap {
+class SpackConfig implements ConfigScope {
 
-    private Map<String,String> env
+    @ConfigOption
+    @Description("""
+        Enable Spack execution (default: `false`).
+    """)
+    final boolean enabled
 
-    /* required by Kryo deserialization -- do not remove */
-    private SpackConfig() { }
+    @ConfigOption
+    @Description("""
+        The path where Spack environments are stored.
+    """)
+    final String cacheDir
 
-    SpackConfig(Map config, Map<String, String> env) {
-        super(config)
-        this.env = env
-    }
+    @ConfigOption
+    @Description("""
+        Enables checksum verification for source tarballs (default: `true`).
+    """)
+    final boolean checksum
 
-    boolean isEnabled() {
-        def enabled = get('enabled')
-        if( enabled == null )
-            enabled = env.get('NXF_SPACK_ENABLED')
-        return enabled?.toString() == 'true'
-    }
+    @ConfigOption
+    @Description("""
+        The amount of time to wait for the Spack environment to be created before failing (default: `60 min`).
+    """)
+    final Duration createTimeout
 
-    List<String> getChannels() {
-        final value = get('channels')
-        if( !value ) {
-            return Collections.<String>emptyList()
-        }
-        if( value instanceof List ) {
-            return value
-        }
-        if( value instanceof CharSequence ) {
-            return value.tokenize(',').collect(it -> it.trim())
-        }
+    @ConfigOption
+    @Description("""
+        The maximum number of parallel package builds (default: the number of available CPUs).
+    """)
+    final int parallelBuilds
 
-        throw new IllegalArgumentException("Unexpected spack.channels value: $value")
+    /* required by extension point -- do not remove */
+    SpackConfig() {}
+
+    SpackConfig(Map opts, Map<String, String> env) {
+        enabled = opts.enabled != null
+            ? opts.enabled as boolean
+            : (env.NXF_SPACK_ENABLED == 'true')
+        cacheDir = opts.cacheDir
+        checksum = opts.checksum as boolean
+        createTimeout = opts.createTimeout as Duration
+        parallelBuilds = opts.parallelBuilds as int
     }
 }

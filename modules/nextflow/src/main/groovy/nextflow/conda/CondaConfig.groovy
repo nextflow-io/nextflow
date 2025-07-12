@@ -16,9 +16,11 @@
 
 package nextflow.conda
 
-import java.nio.file.Path
-
 import groovy.transform.CompileStatic
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.config.schema.ScopeName
+import nextflow.script.dsl.Description
 import nextflow.util.Duration
 
 /**
@@ -26,58 +28,84 @@ import nextflow.util.Duration
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@ScopeName("conda")
+@Description("""
+    The `conda` scope controls the creation of Conda environments by the Conda package manager.
+
+    [Read more](https://nextflow.io/docs/latest/reference/config.html#conda)
+""")
 @CompileStatic
-class CondaConfig extends LinkedHashMap {
+class CondaConfig implements ConfigScope {
 
-    private Map<String,String> env
+    @ConfigOption
+    @Description("""
+        Enable Conda execution (default: `false`).
+    """)
+    final boolean enabled
 
-    /* required by Kryo deserialization -- do not remove */
-    private CondaConfig() { }
+    @ConfigOption
+    @Description("""
+        The path where Conda environments are stored.
+    """)
+    final String cacheDir
 
-    CondaConfig(Map config, Map<String, String> env) {
-        super(config)
-        this.env = env
+    @ConfigOption
+    @Description("""
+        The Conda channels that can be used to resolve Conda packages.
+    """)
+    final List<String> channels
+
+    @ConfigOption
+    @Description("""
+        Extra command line options to append to the `conda create` command.
+    """)
+    final String createOptions
+
+    @ConfigOption
+    @Description("""
+        The amount of time to wait for the Conda environment to be created before failing (default: `20 min`).
+    """)
+    final Duration createTimeout
+
+    @ConfigOption
+    @Description("""
+        When `true`, use `mamba` instead of `conda` to create the Conda environments.
+
+        [Read more](https://github.com/mamba-org/mamba)
+    """)
+    final boolean useMamba
+
+    @ConfigOption
+    @Description("""
+        When `true`, use `micromamba` instead of `conda` to create the Conda environments.
+
+        [Read more](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html)
+    """)
+    final boolean useMicromamba
+
+    /* required by extension point -- do not remove */
+    CondaConfig() {}
+
+    CondaConfig(Map opts, Map<String, String> env) {
+        enabled = opts.enabled != null
+            ? opts.enabled as boolean
+            : (env.NXF_CONDA_ENABLED == 'true')
+        cacheDir = opts.cacheDir
+        channels = parseChannels(opts.channels)
+        createOptions = opts.createOptions
+        createTimeout = opts.createTimeout as Duration ?: Duration.of('20min')
+        useMamba = opts.useMamba as boolean
+        useMicromamba = opts.useMicromamba as boolean
+
+        if( useMamba && useMicromamba )
+            throw new IllegalArgumentException("Both conda.useMamba and conda.useMicromamba were enabled -- Please choose only one")
     }
 
-    boolean isEnabled() {
-        def enabled = get('enabled')
-        if( enabled == null )
-            enabled = env.get('NXF_CONDA_ENABLED')
-        return enabled?.toString() == 'true'
-    }
-
-    List<String> getChannels() {
-        final value = get('channels')
-        if( !value ) {
-            return Collections.<String>emptyList()
-        }
-        if( value instanceof List ) {
+    private List<String> parseChannels(Object value) {
+        if( !value )
+            return Collections.emptyList()
+        if( value instanceof List )
             return value
-        }
-        if( value instanceof CharSequence ) {
-            return value.tokenize(',').collect(it -> it.trim())
-        }
-
         throw new IllegalArgumentException("Unexpected conda.channels value: $value")
-    }
-
-    Duration createTimeout() {
-        get('createTimeout') as Duration
-    }
-
-    String createOptions() {
-        get('createOptions') as String
-    }
-
-    Path cacheDir() {
-        get('cacheDir') as Path
-    }
-
-    boolean useMamba() {
-        get('useMamba') as boolean
-    }
-
-    boolean useMicromamba() {
-        get('useMicromamba') as boolean
     }
 }

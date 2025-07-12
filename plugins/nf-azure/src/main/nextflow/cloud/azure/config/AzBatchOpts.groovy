@@ -24,7 +24,11 @@ import groovy.transform.CompileStatic
 import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.CloudTransferOptions
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.config.schema.PlaceholderName
 import nextflow.fusion.FusionHelper
+import nextflow.script.dsl.Description
 import nextflow.util.Duration
 import nextflow.util.StringUtils
 
@@ -34,7 +38,7 @@ import nextflow.util.StringUtils
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class AzBatchOpts implements CloudTransferOptions {
+class AzBatchOpts implements ConfigScope, CloudTransferOptions {
 
     static final private Pattern ENDPOINT_PATTERN = ~/https:\/\/(\w+)\.(\w+)\.batch\.azure\.com/
 
@@ -44,21 +48,90 @@ class AzBatchOpts implements CloudTransferOptions {
     int maxTransferAttempts
     Duration delayBetweenAttempts
 
-    String accountName
-    String accountKey
-    String endpoint
-    String location
-    Boolean autoPoolMode
-    Boolean allowPoolCreation
-    Boolean terminateJobsOnCompletion
-    Boolean deleteJobsOnCompletion
-    Boolean deletePoolsOnCompletion
-    Boolean deleteTasksOnCompletion
-    CopyToolInstallMode copyToolInstallMode
-    Duration jobMaxWallClockTime
-    String poolIdentityClientId
+    @ConfigOption
+    @Description("""
+        The batch service account name.
+    """)
+    final String accountName
 
-    Map<String,AzPoolOpts> pools
+    @ConfigOption
+    @Description("""
+        The batch service account key.
+    """)
+    final String accountKey
+
+    @ConfigOption
+    @Description("""
+        Enable the automatic creation of batch pools specified in the Nextflow configuration file (default: `false`).
+    """)
+    final boolean allowPoolCreation
+
+    @ConfigOption
+    @Description("""
+        Enable the automatic creation of batch pools depending on the pipeline resources demand (default: `true`).
+    """)
+    final String autoPoolMode
+
+    @ConfigOption
+    @Description("""
+        The mode in which the `azcopy` tool is installed by Nextflow (default: `'node'`). The following options are available:
+        
+        - `'node'`: the `azcopy` tool is installed once during the pool creation
+        - `'task'`: the `azcopy` tool is installed for each task execution
+        - `'off'`: the `azcopy` tool is not installed
+    """)
+    final String copyToolInstallMode
+
+    @ConfigOption
+    @Description("""
+        Delete all jobs when the workflow completes (default: `false`).
+    """)
+    final boolean deleteJobsOnCompletion
+
+    @ConfigOption
+    @Description("""
+        Delete all compute node pools when the workflow completes (default: `false`).
+    """)
+    final boolean deletePoolsOnCompletion
+
+    @ConfigOption
+    @Description("""
+        Delete each task when it completes (default: `true`).
+    """)
+    final boolean deleteTasksOnCompletion
+
+    @ConfigOption
+    @Description("""
+        The batch service endpoint e.g. `https://nfbatch1.westeurope.batch.azure.com`.
+    """)
+    final String endpoint
+
+    @ConfigOption
+    @Description("""
+        The maximum elapsed time that jobs may run, measured from the time they are created (default: `30d`).
+    """)
+    final Duration jobMaxWallClockTime
+
+    @ConfigOption
+    @Description("""
+        The name of the batch service region, e.g. `westeurope` or `eastus2`. Not needed when the endpoint is specified.
+    """)
+    final String location
+
+    @ConfigOption
+    @Description("""
+        The client ID for an Azure managed identity that is available on all Azure Batch node pools. This identity will be used for task-level authentication to Azure services.
+    """)
+    final String poolIdentityClientId
+
+    @PlaceholderName("<name>")
+    final Map<String, AzPoolOpts> pools
+
+    @ConfigOption
+    @Description("""
+        When the workflow completes, set all jobs to terminate on task completion (default: `true`).
+    """)
+    final boolean terminateJobsOnCompletion
 
     AzBatchOpts(Map config, Map<String,String> env=null) {
         assert config!=null

@@ -52,14 +52,14 @@ import org.pf4j.ExtensionPoint
 class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExecutor {
 
     private BatchClient client
-    private BatchConfig config
+    private BatchConfig batchConfig
     private Path remoteBinDir
     private BatchLogging logging
 
     private final Set<String> deletedJobs = new HashSet<>()
 
     BatchClient getClient() { return client }
-    BatchConfig getConfig() { return config }
+    BatchConfig getBatchConfig() { return batchConfig }
     Path getRemoteBinDir() { return remoteBinDir }
     BatchLogging getLogging() { logging }
 
@@ -94,13 +94,13 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
     }
 
     protected void createConfig() {
-        this.config = BatchConfig.create(session)
-        log.debug "[GOOGLE BATCH] Executor config=$config"
+        this.batchConfig = BatchConfig.create(session)
+        log.debug "[GOOGLE BATCH] Executor config=$batchConfig"
     }
 
     protected void createClient() {
-        this.client = new BatchClient(config)
-        this.logging = new BatchLogging(config)
+        this.client = new BatchClient(batchConfig)
+        this.logging = new BatchLogging(batchConfig)
     }
 
     @Override
@@ -114,7 +114,7 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
 
     @Override
     protected TaskMonitor createTaskMonitor() {
-        TaskPollingMonitor.create(session, name, 1000, Duration.of('10 sec'))
+        TaskPollingMonitor.create(session, config, name, 1000, Duration.of('10 sec'))
     }
 
     @Override

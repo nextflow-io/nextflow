@@ -21,9 +21,6 @@ This page lists all of the available settings in the {ref}`Nextflow configuratio
   The `cleanup` option is not supported for remote work directories, such as Amazon S3, Google Cloud Storage, and Azure Blob Storage.
   :::
 
-`dumpHashes`
-: If `true`, dump task hash keys in the log file, for debugging purposes. Equivalent to the `-dump-hashes` option of the `run` command.
-
 `outputDir`
 : :::{versionadded} 24.10.0
   :::
@@ -521,6 +518,12 @@ The following settings are available:
 `azure.storage.accountKey`
 : The blob storage account key. Defaults to environment variable `AZURE_STORAGE_ACCOUNT_KEY`.
 
+`azure.storage.fileShares.<name>.mountOptions`
+: The file share mount options.
+
+`azure.storage.fileShares.<name>.mountPath`
+: The file share mount path.
+
 `azure.storage.sasToken`
 : The blob storage shared access signature token, which can be provided as an alternative to `accountKey`. Defaults to environment variable `AZURE_STORAGE_SAS_TOKEN`.
 
@@ -798,8 +801,11 @@ The following settings are available:
 : *Used only by grid executors.*
 : Max delay when retrying failed job submissions (default: `30s`).
 
-`executor.submit.retry.reason`
+`executor.retry.reason`
 : :::{versionadded} 22.03.0-edge
+  :::
+: :::{versionchanged} 25.10.0
+  This option was renamed from `executor.submit.retry.reason` to `executor.retry.reason`.
   :::
 : *Used only by grid executors.*
 : Regex pattern that when verified cause a failed submit operation to be re-tried (default: `Socket timed out`).
@@ -1047,6 +1053,9 @@ The following settings are available:
   :::
 : Defines the Kubernetes client request HTTP connection read timeout e.g. `'60s'`.
 
+`k8s.imagePullPolicy`
+: Defines the strategy to be used to pull the container image e.g. `'Always'`.
+
 `k8s.launchDir`
 : Defines the path where the workflow is launched and the user data is stored. This must be a path in a shared K8s persistent volume (default: `<volume-claim-mount-path>/<user-name>`).
 
@@ -1064,9 +1073,6 @@ The following settings are available:
 
 `k8s.projectDir`
 : Defines the path where Nextflow projects are downloaded. This must be a path in a shared K8s persistent volume (default: `<volume-claim-mount-path>/projects`).
-
-`k8s.pullPolicy`
-: Defines the strategy to be used to pull the container image e.g. `'Always'`.
 
 `k8s.retryPolicy.delay`
 : Delay when retrying failed API requests (default: `500ms`).
@@ -1356,7 +1362,7 @@ The following settings are available:
 
 ## `sarus`
 
-The ``sarus`` scope controls how [Sarus](https://sarus.readthedocs.io) containers are executed by Nextflow.
+The `sarus` scope controls how [Sarus](https://sarus.readthedocs.io) containers are executed by Nextflow.
 
 The following settings are available:
 
@@ -1384,6 +1390,9 @@ The following settings are available:
 
 `shifter.enabled`
 : Execute tasks with Shifter containers (default: `false`).
+
+`shifter.envWhitelist`
+: Comma-separated list of environment variable names to be included in the container environment.
 
 Read the {ref}`container-shifter` page to learn more about how to use Shifter containers with Nextflow.
 
@@ -1457,6 +1466,9 @@ Read the {ref}`container-singularity` page to learn more about how to use Singul
 The `spack` scope controls the creation of a Spack environment by the Spack package manager.
 
 The following settings are available:
+
+`spack.enabled`
+: Enable the use of Spack environments (default: `false`).
 
 `spack.cacheDir`
 : Defines the path where Spack environments are stored. When using a compute cluster make sure to provide a shared file system path accessible from all compute nodes.
@@ -1592,10 +1604,15 @@ The following settings are available:
   The container repository authentication must be managed by the underlying infrastructure.
   :::
 
-`wave.httpClient.connectTime`
+`wave.httpClient.connectTimeout`
 : :::{versionadded} 22.06.0-edge
   :::
 : Sets the connection timeout duration for the HTTP client connecting to the Wave service (default: `30s`).
+
+`wave.httpClient.maxRate`
+: :::{versionadded} 25.01.0-edge
+  :::
+: Sets the maximum request rate for the HTTP client connecting to the Wave service (default: `1/sec`).
 
 `wave.mirror`
 : :::{versionadded} 24.09.1-edge

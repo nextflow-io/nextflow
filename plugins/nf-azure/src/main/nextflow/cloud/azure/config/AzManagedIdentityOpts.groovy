@@ -19,6 +19,9 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 import nextflow.cloud.azure.nio.AzFileSystemProvider
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.script.dsl.Description
 
 /**
  * Model Azure managed identity config options
@@ -28,11 +31,23 @@ import nextflow.cloud.azure.nio.AzFileSystemProvider
 @ToString(includePackage = false, includeNames = true)
 @EqualsAndHashCode
 @CompileStatic
-class AzManagedIdentityOpts {
+class AzManagedIdentityOpts implements ConfigScope {
 
-    String clientId
+    @ConfigOption
+    @Description("""
+        The client ID for an Azure managed identity.
 
-    boolean system
+        [Read more](https://nextflow.io/docs/latest/azure.html#managed-identities)
+    """)
+    final String clientId
+
+    @ConfigOption
+    @Description("""
+        When `true`, use the system-assigned managed identity to authenticate Azure resources.
+
+        [Read more](https://nextflow.io/docs/latest/azure.html#managed-identities)
+    """)
+    final boolean system
 
     AzManagedIdentityOpts(Map config) {
         assert config != null

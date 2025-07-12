@@ -536,7 +536,7 @@ class AzFileSystem extends FileSystem {
 
     @Memoized
     protected RetryPolicy retryPolicy0(Predicate<? extends Throwable> cond) {
-        final cfg = AzConfig.getConfig().retryConfig()
+        final cfg = AzConfig.getConfig().retry()
         final listener = new EventListener<ExecutionAttemptedEvent>() {
             @Override
             void accept(ExecutionAttemptedEvent event) throws Throwable {

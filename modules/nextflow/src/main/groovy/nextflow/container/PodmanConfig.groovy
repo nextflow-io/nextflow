@@ -13,60 +13,99 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.config.scopes;
+package nextflow.container
 
-import nextflow.config.schema.ConfigOption;
-import nextflow.config.schema.ConfigScope;
-import nextflow.script.dsl.Description;
+import groovy.transform.CompileStatic
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.config.schema.ScopeName
+import nextflow.script.dsl.Description
 
-public class PodmanConfig implements ConfigScope {
+@ScopeName("podman")
+@Description("""
+    The `podman` scope controls how [Podman](https://podman.io/) containers are executed by Nextflow.
+
+    [Read more](https://nextflow.io/docs/latest/reference/config.html#podman)
+""")
+@CompileStatic
+class PodmanConfig implements ConfigScope, ContainerConfig {
 
     @ConfigOption
     @Description("""
         Enable Podman execution (default: `false`).
     """)
-    public boolean enabled;
+    final boolean enabled
 
     @ConfigOption
     @Description("""
         This attribute can be used to provide any option supported by the Podman engine i.e. `podman [OPTIONS]`.
     """)
-    public String engineOptions;
+    final String engineOptions
 
     @ConfigOption
     @Description("""
         Comma separated list of environment variable names to be included in the container environment.
     """)
-    public String envWhitelist;
+    final List<String> envWhitelist
+
+    @ConfigOption
+    @Description("""
+    """)
+    final Object kill
 
     @ConfigOption
     @Description("""
         Add the specified flags to the volume mounts e.g. `'ro,Z'`.
     """)
-    public String mountFlags;
+    final String mountFlags
 
     @ConfigOption
     @Description("""
         The registry from where container images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
     """)
-    public String registry;
+    final String registry
 
     @ConfigOption
     @Description("""
         Clean-up the container after the execution (default: `true`).
     """)
-    public boolean remove;
+    final boolean remove
 
     @ConfigOption
     @Description("""
         This attribute can be used to provide any extra command line options supported by the `podman run` command.
     """)
-    public String runOptions;
+    final String runOptions
 
     @ConfigOption
     @Description("""
         Mounts a path of your choice as the `/tmp` directory in the container. Use the special value `'auto'` to create a temporary directory each time a container is created.
     """)
-    public String temp;
+    final String temp
+
+    /* required by extension point -- do not remove */
+    PodmanConfig() {}
+
+    PodmanConfig(Map opts) {
+        enabled = opts.enabled as boolean
+        engineOptions = opts.engineOptions
+        envWhitelist = ContainerHelper.parseEnvWhitelist(opts.envWhitelist)
+        kill = opts.kill != null ? opts.kill : true
+        mountFlags = opts.mountFlags
+        registry = opts.registry
+        remove = opts.remove as boolean
+        runOptions = opts.runOptions
+        temp = opts.temp
+    }
+
+    @Override
+    String getEngine() {
+        return 'podman'
+    }
+
+    @Override
+    String getFusionOptions() {
+        return '--rm --privileged'
+    }
 
 }

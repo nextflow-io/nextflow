@@ -244,7 +244,7 @@ class AzHelper {
 
     @Memoized
     static protected RequestRetryOptions requestRetryOptions() {
-        final cfg = AzConfig.getConfig().retryConfig()
+        final cfg = AzConfig.getConfig().retry()
         return requestRetryOptions0(cfg)
     }
 
