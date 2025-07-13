@@ -96,7 +96,7 @@ See {ref}`vscode-page` for more information about the Nextflow extension feature
 
 **nf-core**
 
-[nf-core](https://nf-co.re/) is a community effort to collect a curated set of analysis pipelines built using Nextflow. The [nf-core extension pack](https://marketplace.visualstudio.com/items?itemName=nf-core.nf-core-extensionpack) adds a selection of tools that support develop. For example, it includes [Code Spell Checker](https://marketplace.visualstudio.com/items?itemName=streetsidesoftware.code-spell-checker), [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode), [Todo Tree](https://marketplace.visualstudio.com/items?itemName=Gruntfuggly.todo-tree), and [Markdown Extended](https://marketplace.visualstudio.com/items?itemName=jebbs.markdown-extended).
+[nf-core](https://nf-co.re/) is a community effort to collect a curated set of analysis pipelines built using Nextflow. The [nf-core extension pack](https://marketplace.visualstudio.com/items?itemName=nf-core.nf-core-extensionpack) adds a selection of tools that support development. For example, it includes [Code Spell Checker](https://marketplace.visualstudio.com/items?itemName=streetsidesoftware.code-spell-checker), [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode), [Todo Tree](https://marketplace.visualstudio.com/items?itemName=Gruntfuggly.todo-tree), and [Markdown Extended](https://marketplace.visualstudio.com/items?itemName=jebbs.markdown-extended).
 
 See the [nf-core extension pack](https://marketplace.visualstudio.com/items?itemName=nf-core.nf-core-extensionpack) for more information about the included tools.
 
