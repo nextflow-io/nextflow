@@ -87,11 +87,13 @@ class SQLiteCacheStore implements CacheStore {
             
             // Configure SQLite for better performance and concurrency
             def stmt = connection.createStatement()
-            stmt.execute("PRAGMA journal_mode=WAL;")
-            stmt.execute("PRAGMA synchronous=NORMAL;")
-            stmt.execute("PRAGMA cache_size=10000;")
-            stmt.execute("PRAGMA temp_store=MEMORY;")
-            stmt.execute("PRAGMA busy_timeout=30000;") // 30 seconds timeout
+            stmt.execute("""
+                PRAGMA journal_mode=WAL;
+                PRAGMA synchronous=NORMAL;
+                PRAGMA cache_size=10000;
+                PRAGMA temp_store=MEMORY;
+                PRAGMA busy_timeout=30000;
+            """)
             stmt.close()
             
             // Create tables if they don't exist
