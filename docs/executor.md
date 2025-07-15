@@ -464,24 +464,15 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-time`
 
 :::{note}
-Other options such as queue (resource group), cpu, and node should be indicated by clusterOptions.
-This is because they depend on target systems (required options are not the same) and can be controlled by "-L" options in arguments of pjsub command.
+Use `clusterOptions` to specify system-dependent options such as queue (resource group), CPU, and node. These options vary across target systems and are not standardized. They correspond to `-L` options in the arguments of the `pjsub` command and should be configured according to the requirements of the specific cluster environment.
 
-This is an example of nextflow.config on Supercomputer Genkai (Kyushu University).
+For example:
+
 ```
 process {
   executor = 'tcs'
   time = '00:30:00'
   clusterOptions = '-L rscgrp=a-batch -L vnode-core=4'
-}
-```
-
-This is an example of nextflow.config on Supercomputer Flow (Nagoya University).
-```
-process {
-  executor = 'tcs'
-  time = '00:30:00'
-  clusterOptions = '-L rscunit=cx -L rscgrp=cx-share -L gpu=1'
 }
 ```
 :::
