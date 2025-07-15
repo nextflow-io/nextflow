@@ -811,8 +811,10 @@ class Session implements ISession {
             // dump threads status
             if( log.isTraceEnabled() )
                 log.trace(SysHelper.dumpThreads())
-            // force termination
+            // invoke shutdown callbacks
+            shutdown0()
             notifyError(null)
+            // force termination
             ansiLogObserver?.forceTermination()
             executorFactory?.signalExecutors()
             processesBarrier.forceTermination()
