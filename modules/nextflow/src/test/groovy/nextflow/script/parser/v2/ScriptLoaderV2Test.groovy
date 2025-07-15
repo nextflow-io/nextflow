@@ -119,4 +119,24 @@ class ScriptLoaderV2Test extends Specification {
         meta.getWorkflow('hello').declaredOutputs == ['result']
     }
 
+    def 'should allow explicit `it` closure parameter' () {
+
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+            workflow { 
+                channel.of(1, 2, 3).view { it -> "${it}" }
+            }
+            '''
+
+        when:
+        parser.parse(TEXT)
+        parser.runScript()
+
+        then:
+        noExceptionThrown()
+    }
+
 }
