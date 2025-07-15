@@ -26,7 +26,7 @@ import nextflow.processor.TaskRun
 @CompileStatic
 class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
-    static private Pattern SUBMIT_REGEX = ~/\[INFO\] PJM 0000 pjsub Job (\d+) submitted./
+    static private final Pattern SUBMIT_REGEX = ~/\[INFO\] PJM 0000 pjsub Job (\d+) submitted./
 
     /**
      * Modify job name for TCS on Fugaku.
@@ -47,7 +47,7 @@ class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
      * @return A {@link List} containing all directive tokens and values.
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
-        assert result != null
+        assert result != null, "Argument 'result' cannot be null"
 
         result << '-N' << modName(getJobNameFor(task))
 
@@ -149,15 +149,6 @@ class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
         }
 
         return result
-    }
-
-    static String fetchValue( String prefix, String line ) {
-        final p = line.indexOf(prefix)
-        return p!=-1 ? line.substring(p+prefix.size()).trim() : null
-    }
-
-    static protected boolean matchOptions(String value) {
-        value ? SUBMIT_REGEX.matcher(value).find() : null
     }
 
     @Override
