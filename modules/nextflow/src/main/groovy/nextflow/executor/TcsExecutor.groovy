@@ -26,13 +26,18 @@ import nextflow.processor.TaskRun
 @CompileStatic
 class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
-	static private Pattern SUBMIT_REGEX = ~/\[INFO\] PJM 0000 pjsub Job (\d+) submitted./
-    /* modify jobname for TCS on Fugaku */
-    static String modName(String name1){
-		String name2 = name1.replaceAll("\\(", "")
-		String name3 = name2.replaceAll("\\)", "")
-		return name3
-	}
+    static private Pattern SUBMIT_REGEX = ~/\[INFO\] PJM 0000 pjsub Job (\d+) submitted./
+
+    /**
+     * Modify job name for TCS on Fugaku.
+     *
+     * @param name
+     */
+    static String modName(String name) {
+        return name
+            .replaceAll("\\(", "")
+            .replaceAll("\\)", "")
+    }
 
     /**
      * Gets the directives to submit the specified task to the cluster for execution
@@ -41,14 +46,8 @@ class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
      * @param result The {@link List} instance to which add the job directives
      * @return A {@link List} containing all directive tokens and values.
      */
-    protected List<String> getDirectives( TaskRun task, List<String> result ) {
-        assert result !=null
-
-		// array is indicated by pjsub command instead of PJM directive
-        //if( task instanceof TaskArrayRun ) {
-        //    final arraySize = task.getArraySize()
-        //    result << '--bulk --sparam' << "0-${arraySize - 1}".toString()
-        //}
+    protected List<String> getDirectives(TaskRun task, List<String> result) {
+        assert result != null
 
         result << '-N' << modName(getJobNameFor(task))
 
@@ -56,18 +55,17 @@ class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
         if( task.config.getTime() ) {
             final duration = task.config.getTime()
             result << "-L" << "elapse=${duration.format('HH:mm:ss')}".toString()
-		}
+        }
 
-		// output file
-		if( task.isArray() ) {
-			// If task is array job (bulk job), don't indicate output file (use default setting).
-			// * TCS doesn't support /dev/null for output. (depend on system?)
-		}else{
-			result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
-			//result << '-o' << (task.isArray() ? '/dev/null' : quote(task.workDir.resolve(TaskRun.CMD_LOG)))
-		}
+        // output file
+        if( task.isArray() ) {
+            // If task is array job (bulk job), don't indicate output file (use default setting).
+            // * TCS doesn't support /dev/null for output. (depend on system?)
+        } else {
+            result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
+        }
 
-		// output options
+        // output options
         result << '-j' << '' // marge stderr to stdout
         result << '-S' << '' // output information
 
@@ -85,17 +83,16 @@ class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
      * @return A list representing the submit command line
      */
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
-		if( task instanceof TaskArrayRun ){
-			final arraySize = task.getArraySize()
-			return pipeLauncherScript()
-			? List.of('pjsub', '--bulk --sparam ', "0-${arraySize - 1}".toString())
-			: List.of('pjsub', scriptFile.getName())
-		}else{
-			return pipeLauncherScript()
-			? List.of('pjsub')
-			: List.of('pjsub', scriptFile.getName())
-		}
-/*        [ 'pjsub', '-N', modName(getJobNameFor(task)), scriptFile.getName() ] */
+        if( task instanceof TaskArrayRun ) {
+            final arraySize = task.getArraySize()
+            return pipeLauncherScript()
+                ? List.of('pjsub', '--bulk --sparam ', "0-${arraySize - 1}".toString())
+                : List.of('pjsub', scriptFile.getName())
+        } else {
+            return pipeLauncherScript()
+                ? List.of('pjsub')
+                : List.of('pjsub', scriptFile.getName())
+        }
     }
 
     protected String getHeaderToken() { '#PJM' }
@@ -109,7 +106,7 @@ class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
     @Override
     def parseJobId( String text ) {
         for( String line : text.readLines() ) {
-			log.warn1 line
+            log.warn1 line
             def m = SUBMIT_REGEX.matcher(line)
             if( m.find() ) {
                 return m.group(1).toString()
@@ -123,8 +120,7 @@ class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {
-		final result = ['pjstat', '-E']
-		return result
+        return ['pjstat', '-E']
     }
 
     static private Map<String,QueueStatus> STATUS_MAP = [
@@ -154,6 +150,7 @@ class TcsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
 
         return result
     }
+
     static String fetchValue( String prefix, String line ) {
         final p = line.indexOf(prefix)
         return p!=-1 ? line.substring(p+prefix.size()).trim() : null

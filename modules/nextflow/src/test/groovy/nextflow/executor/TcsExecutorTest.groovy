@@ -213,7 +213,7 @@ class TcsExecutorTest extends Specification {
         exec.queueStatusCommand(null) == ['pjstat', '-E']
     }
 
-    def 'should get array (bulk) index name and start' () {
+    def 'should get array index name and start' () {
         given:
         def executor = Spy(TcsExecutor)
         expect:
@@ -222,14 +222,13 @@ class TcsExecutorTest extends Specification {
     }
 
     @Unroll
-    def 'should get array (bulk) task id' () {
+    def 'should get array task id' () {
         given:
         def executor = Spy(TcsExecutor)
         expect:
         executor.getArrayTaskId(JOB_ID, TASK_INDEX) == EXPECTED
 
         where:
-
         JOB_ID      | TASK_INDEX    | EXPECTED
         '1234'      | 1             | '1234[1]'
         '123456'    | 2             | '123456[2]'

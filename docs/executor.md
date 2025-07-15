@@ -468,7 +468,7 @@ Use `clusterOptions` to specify system-dependent options such as queue (resource
 
 For example:
 
-```
+```groovy
 process {
   executor = 'tcs'
   time = '00:30:00'
