@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2024-2025, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,24 +12,21 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
+package nextflow.script.ast;
 
-package nextflow.cloud.aws.nio.util;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
+import org.codehaus.groovy.ast.ClassHelper;
+import org.codehaus.groovy.ast.Parameter;
 
 /**
- * https://stackoverflow.com/a/31809148/395921
+ * An implicit closure parameter (`it`). Used to discourage
+ * the use of implicit parameters.
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Ben Sherman <bentshermann@gmail.com>
  */
-public class CopyOutputStream extends ByteArrayOutputStream {
+public class ImplicitClosureParameter extends Parameter {
 
-    //Creates InputStream without actually copying the buffer and using up mem for that.
-    public InputStream toInputStream(){
-        return new ByteArrayInputStream(buf, 0, count);
+    public ImplicitClosureParameter() {
+        super(ClassHelper.dynamicType(), "it");
     }
 }

@@ -39,6 +39,7 @@ import com.google.common.util.concurrent.UncheckedExecutionException
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import dev.failsafe.Failsafe
+import dev.failsafe.FailsafeException
 import dev.failsafe.RetryPolicy
 import dev.failsafe.event.EventListener
 import dev.failsafe.event.ExecutionAttemptedEvent
@@ -845,6 +846,11 @@ class WaveClient {
     static private final List<Integer> SERVER_ERRORS = [429,500,502,503,504]
 
     protected HttpResponse<String> httpSend(HttpRequest req)  {
-        return safeApply(() -> httpClient.send(req, HttpResponse.BodyHandlers.ofString()))
+        try {
+            return safeApply(() -> httpClient.send(req, HttpResponse.BodyHandlers.ofString()))
+        }
+        catch (FailsafeException e) {
+            throw e.cause
+        }
     }
 }

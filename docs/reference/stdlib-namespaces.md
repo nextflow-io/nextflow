@@ -119,6 +119,20 @@ The `channel` namespace contains the built-in channel factories. See {ref}`chann
 
 (stdlib-namespaces-nextflow)=
 
+## `log`
+
+The `log` namepsace contains functions for logging messages to the console.
+
+`error( message: String )`
+: Log an error message to the console.
+: This function does not terminate the pipeline -- use the global `error()` function instead.
+
+`info( message: String )`
+: Log an info message to the console.
+
+`warn( message: String )`
+: Log a warning message to the console.
+
 ## `nextflow`
 
 The `nextflow` namespace contains information about the current Nextflow runtime.

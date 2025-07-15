@@ -19,18 +19,18 @@ package nextflow.plugin.hello
 
 import groovy.transform.CompileStatic
 import nextflow.Session
-import nextflow.trace.TraceObserver
-import nextflow.trace.TraceObserverFactory
+import nextflow.trace.TraceObserverV2
+import nextflow.trace.TraceObserverFactoryV2
 /**
  * Implements the validation observer factory
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class HelloFactory implements TraceObserverFactory {
+class HelloFactory implements TraceObserverFactoryV2 {
 
     @Override
-    Collection<TraceObserver> create(Session session) {
+    Collection<TraceObserverV2> create(Session session) {
         final result = new ArrayList()
         result.add( new HelloObserver() )
         return result

@@ -204,7 +204,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
     }
 
     static String launchCommand( String workDir ) {
-        "trap \"{ cp ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}; }\" ERR; /bin/bash ${workDir}/${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
+        "trap \"{ cp ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}; }\" EXIT; /bin/bash ${workDir}/${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
     }
 
     static String containerMountPath(CloudStoragePath path) {

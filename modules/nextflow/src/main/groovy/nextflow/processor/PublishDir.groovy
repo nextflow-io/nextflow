@@ -52,6 +52,7 @@ import nextflow.file.TagAwareFile
 import nextflow.trace.event.FilePublishEvent
 import nextflow.util.HashBuilder
 import nextflow.util.PathTrie
+import nextflow.util.RetryConfig
 /**
  * Implements the {@code publishDir} directory. It create links or copies the output
  * files of a given task to a user specified directory.
@@ -127,7 +128,7 @@ class PublishDir {
      */
     private String storageClass
 
-    private PublishRetryConfig retryConfig
+    private RetryConfig retryConfig
 
     private PathMatcher matcher
 
@@ -231,19 +232,10 @@ class PublishDir {
         return result
     }
 
-    protected Map getRetryOpts() {
-        def result = session.config.navigate('nextflow.publish.retryPolicy') as Map
-        if( result != null )
-            log.warn 'The `nextflow.publish` config scope has been renamed to `workflow.output`'
-        else
-            result = session.config.navigate('workflow.output.retryPolicy') as Map ?: Collections.emptyMap()
-        return result
-    }
-
     protected void apply0(Set<Path> files) {
         assert path
         // setup the retry policy config to be used
-        this.retryConfig = new PublishRetryConfig(getRetryOpts())
+        this.retryConfig = RetryConfig.config(session)
 
         createPublishDir()
         validatePublishMode()

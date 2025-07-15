@@ -16,11 +16,11 @@
 
 package nextflow.cloud.aws.batch
 
-import com.amazonaws.services.batch.AWSBatchClient
-import com.amazonaws.services.batch.model.DescribeJobDefinitionsRequest
-import com.amazonaws.services.batch.model.DescribeJobDefinitionsResult
-import com.amazonaws.services.batch.model.DescribeJobsRequest
-import com.amazonaws.services.batch.model.DescribeJobsResult
+import software.amazon.awssdk.services.batch.BatchClient
+import software.amazon.awssdk.services.batch.model.DescribeJobDefinitionsRequest
+import software.amazon.awssdk.services.batch.model.DescribeJobDefinitionsResponse
+import software.amazon.awssdk.services.batch.model.DescribeJobsRequest
+import software.amazon.awssdk.services.batch.model.DescribeJobsResponse
 import nextflow.util.ThrottlingExecutor
 import spock.lang.Specification
 /**
@@ -32,7 +32,7 @@ class AwsBatchProxyTest extends Specification {
     def 'should get client instance' () {
 
         given:
-        def client = Mock(AWSBatchClient)
+        def client = Mock(BatchClient)
         def exec = Mock(ThrottlingExecutor)
 
         when:
@@ -52,10 +52,10 @@ class AwsBatchProxyTest extends Specification {
     def 'should invoke executor with normal priority' () {
 
         given:
-        def client = Mock(AWSBatchClient)
+        def client = Mock(BatchClient)
         def exec = Mock(ThrottlingExecutor)
-        def req = Mock(DescribeJobDefinitionsRequest)
-        def resp = Mock(DescribeJobDefinitionsResult)
+        def req = DescribeJobDefinitionsRequest.builder().build() as DescribeJobDefinitionsRequest
+        def resp = DescribeJobDefinitionsResponse.builder().build()
         def ZERO = 0 as byte
 
         when:
@@ -70,10 +70,10 @@ class AwsBatchProxyTest extends Specification {
     def 'should invoke executor with higher priority' () {
 
         given:
-        def client = Mock(AWSBatchClient)
+        def client = Mock(BatchClient)
         def exec = Mock(ThrottlingExecutor)
-        def req = Mock(DescribeJobsRequest)
-        def resp = Mock(DescribeJobsResult)
+        def req = DescribeJobsRequest.builder().build() as DescribeJobsRequest
+        def resp = DescribeJobsResponse.builder().build()
         def _10 = 10 as byte
 
         when:
