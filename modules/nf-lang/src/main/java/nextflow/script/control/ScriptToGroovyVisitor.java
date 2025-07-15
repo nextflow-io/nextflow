@@ -125,14 +125,17 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     @Override
     public void visitWorkflow(WorkflowNode node) {
         visitWorkflowTakes(node.takes);
-        visit(node.main);
-        visitWorkflowEmits(node.emits, node.main);
-        visitWorkflowPublishers(node.publishers, node.main);
+
+        var main = node.main instanceof BlockStatement block ? block : new BlockStatement();
+        visitWorkflowEmits(node.emits, main);
+        visitWorkflowPublishers(node.publishers, main);
+        visitWorkflowHandler(node.onComplete, "onComplete", main);
+        visitWorkflowHandler(node.onError, "onError", main);
 
         var bodyDef = stmt(createX(
             "nextflow.script.BodyDef",
             args(
-                closureX(null, node.main),
+                closureX(null, main),
                 constX(getSourceText(node)),
                 constX("workflow")
             )
@@ -157,8 +160,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         }
     }
 
-    private void visitWorkflowEmits(Statement emits, Statement main) {
-        var code = (BlockStatement)main;
+    private void visitWorkflowEmits(Statement emits, BlockStatement main) {
         for( var stmt : asBlockStatements(emits) ) {
             var es = (ExpressionStatement)stmt;
             var emit = es.getExpression();
@@ -167,28 +169,32 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             }
             else if( emit instanceof AssignmentExpression ae ) {
                 var target = (VariableExpression)ae.getLeftExpression();
-                code.addStatement(assignS(target, emit));
+                main.addStatement(assignS(target, emit));
                 es.setExpression(callThisX("_emit_", args(constX(target.getName()))));
-                code.addStatement(es);
+                main.addStatement(es);
             }
             else {
                 var target = varX("$out");
-                code.addStatement(assignS(target, emit));
+                main.addStatement(assignS(target, emit));
                 es.setExpression(callThisX("_emit_", args(constX(target.getName()))));
-                code.addStatement(es);
+                main.addStatement(es);
             }
         }
     }
 
-    private void visitWorkflowPublishers(Statement publishers, Statement main) {
-        var code = (BlockStatement)main;
+    private void visitWorkflowPublishers(Statement publishers, BlockStatement main) {
         for( var stmt : asBlockStatements(publishers) ) {
             var es = (ExpressionStatement)stmt;
             var publish = (BinaryExpression)es.getExpression();
             var target = asVarX(publish.getLeftExpression());
             es.setExpression(callThisX("_publish_", args(constX(target.getName()), publish.getRightExpression())));
-            code.addStatement(es);
+            main.addStatement(es);
         }
+    }
+
+    private void visitWorkflowHandler(Statement code, String name, BlockStatement main) {
+        if( code instanceof BlockStatement block )
+            main.addStatement(stmt(callX(varX("workflow"), name, args(closureX(null, block)))));
     }
 
     @Override
@@ -196,8 +202,6 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         visitProcessDirectives(node.directives);
         visitProcessInputs(node.inputs);
         visitProcessOutputs(node.outputs);
-        visit(node.exec);
-        visit(node.stub);
 
         if( "script".equals(node.type) )
             node.exec.visit(new TaskCmdXformVisitor(sourceUnit));
@@ -380,7 +384,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     @Override
     public void visitFunction(FunctionNode node) {
         if( RESERVED_NAMES.contains(node.getName()) ) {
-            syntaxError(node, "`${node.getName()}` is not allowed as a function name because it is reserved for internal use");
+            syntaxError(node, "`" + node.getName() + "` is not allowed as a function name because it is reserved for internal use");
             return;
         }
         moduleNode.getScriptClassDummy().addMethod(node);
