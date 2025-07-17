@@ -132,6 +132,24 @@ class ScriptFormatterTest extends Specification {
             }
             '''
         )
+
+        checkFormat(
+            '''\
+            workflow hello{
+            take: x ; y ; emit: result = x * y
+            }
+            ''',
+            '''\
+            workflow hello {
+                take:
+                x
+                y
+
+                emit:
+                result = x * y
+            }
+            '''
+        )
     }
 
     def 'should format a process definition' () {

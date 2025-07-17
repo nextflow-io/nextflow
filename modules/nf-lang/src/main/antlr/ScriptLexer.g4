@@ -355,6 +355,8 @@ WHEN            : 'when';
 WORKFLOW        : 'workflow';
 EMIT            : 'emit';
 MAIN            : 'main';
+ONCOMPLETE      : 'onComplete';
+ONERROR         : 'onError';
 PUBLISH         : 'publish';
 TAKE            : 'take';
 
