@@ -81,7 +81,7 @@ class WorkflowStatsObserver implements TraceObserverV2 {
     @Override
     void onTaskComplete(TaskEvent event) {
         log.trace "== event complete pid=${event.handler.task.processor.id}; status=$event.handler.status"
-        agent.send { data.markCompleted(event.handler.task, event.trace) }
+        agent.send { data.markCompleted(event.handler.task, event.trace, event.handler.status) }
     }
 
     @Override
