@@ -12,24 +12,31 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package nextflow.trace
+package nextflow.secret
 
-import nextflow.Session
-import org.pf4j.ExtensionPoint
+import groovy.transform.CompileStatic
+
 /**
- * Factory class for creating {@link TraceObserverV2} instances
+ * Specialization of the null secrets provider that is used to
+ * determine whether secrets are required in the config.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-interface TraceObserverFactoryV2 extends ExtensionPoint {
+@CompileStatic
+class ConfigNullProvider extends NullProvider {
 
-    /**
-     * Register a collection of observers with the given session.
-     *
-     * @param session
-     */
-    Collection<TraceObserverV2> create(Session session)
+    private boolean accessed
 
+    @Override
+    Secret getSecret(String name) {
+        accessed = true
+        return new SecretImpl(name, '')
+    }
+
+    boolean usedSecrets() {
+        return accessed
+    }
 }
