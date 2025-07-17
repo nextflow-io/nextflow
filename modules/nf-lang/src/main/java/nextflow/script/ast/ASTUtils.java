@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import nextflow.script.dsl.DslScope;
+import nextflow.script.dsl.Namespace;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.AnnotatedNode;
@@ -179,4 +181,25 @@ public class ASTUtils {
             .filter(an -> an.getClassNode().getName().equals(type.getName()))
             .findFirst();
     }
+
+    /**
+     * Determine whether a class is a DSL scope.
+     *
+     * @param cn
+     * @return
+     */
+    public static boolean isDslScope(ClassNode cn) {
+        return cn.implementsInterface(ClassHelper.makeCached(DslScope.class));
+    }
+
+    /**
+     * Determine whether a class is a namespace.
+     *
+     * @param cn
+     * @return
+     */
+    public static boolean isNamespace(ClassNode cn) {
+        return cn.implementsInterface(ClassHelper.makeCached(Namespace.class));
+    }
+
 }

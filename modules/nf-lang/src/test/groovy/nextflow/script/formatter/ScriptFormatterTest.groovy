@@ -341,11 +341,11 @@ class ScriptFormatterTest extends Specification {
         expect:
         checkFormat(
             '''\
-            Channel.of( 1, 2, 3 )
+            channel.of( 1, 2, 3 )
                 .multiMap{v->foo:bar:v}.set{result}
             ''',
             '''\
-            Channel.of(1, 2, 3)
+            channel.of(1, 2, 3)
                 .multiMap { v -> foo: bar: v }
                 .set { result }
             '''
