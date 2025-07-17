@@ -1,5 +1,12 @@
 nf-wave changelog
 ==================
+1.14.0 - 6 Jul 2025
+- Fix http response err message [1f05451f]
+- Unwrap Failsafe exception cause in Wave client [0cb39df5]
+- Update wave retryPolicy default values (#6222) [b8069a58]
+- Bump Slf4j version 2.0.17 [93199e09]
+- Bump gson version 2.13.1 [ab8e36a2]
+
 1.13.0 - 2 Jun 2025
 - Deprecated condaFile attribute [9e52b2ad]
 - Add support for container build compression (#5964) [daeefa0c]

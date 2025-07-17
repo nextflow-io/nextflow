@@ -541,7 +541,7 @@ The `path` directive can also be a closure which defines a custom publish path f
 workflow {
     main:
     ch_samples = channel.of(
-        [id: 'SAMP1', fastq_1: file('1.fastq'), fastq_1: file('2.fastq')]
+        [id: 'SAMP1', fastq_1: file('1.fastq'), fastq_2: file('2.fastq')]
     )
 
     publish:
@@ -571,6 +571,10 @@ output {
 ```
 
 Each `>>` specifies a *source file* and *publish target*. The source file should be a file or collection of files, and the publish target should be a directory or file name. If the publish target ends with a slash, it is treated as the directory in which source files are published. Otherwise, it is treated as the target filename of a source file. Only files that are published with the `>>` operator are saved to the output directory.
+
+:::{note}
+Files that do not originate from the work directory are not published.
+:::
 
 ### Index files
 
@@ -627,6 +631,10 @@ This example will produce the following index file:
 "2"|"sample 2"|"results/fastq/2a.fastq"|"results/fastq/2b.fastq"
 "3"|"sample 3"|"results/fastq/3a.fastq"|"results/fastq/3b.fastq"
 ```
+
+:::{note}
+Files that do not originate from the work directory are not published, but are included in the index file.
+:::
 
 See [Output directives](#output-directives) for the list of available index directives.
 

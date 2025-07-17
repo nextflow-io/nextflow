@@ -27,6 +27,7 @@ import nextflow.processor.TaskId
 import nextflow.script.FusionMetadata
 import nextflow.script.WaveMetadata
 import nextflow.script.WorkflowMetadata
+import nextflow.trace.event.TaskEvent
 import spock.lang.Specification
 import test.TestHelper
 /**
@@ -165,28 +166,28 @@ class ReportObserverTest extends Specification {
         def RECORD2 = new TraceRecord([task_id: TASKID2])
         def RECORD3 = new TraceRecord([task_id: TASKID3])
 
-        def HANDLER1 = Mock(TaskHandler)
-        def HANDLER2 = Mock(TaskHandler)
-        def HANDLER3 = Mock(TaskHandler)
+        def EVENT1 = new TaskEvent(Mock(TaskHandler), RECORD1)
+        def EVENT2 = new TaskEvent(Mock(TaskHandler), RECORD2)
+        def EVENT3 = new TaskEvent(Mock(TaskHandler), RECORD3)
 
         when:
-        observer.onProcessStart(HANDLER1, RECORD1)
+        observer.onTaskStart(EVENT1)
         then:
         observer.records[TASKID1] == RECORD1
 
         when:
-        observer.onProcessComplete(HANDLER1, RECORD1)
+        observer.onTaskComplete(EVENT1)
         then:
         1 * observer.aggregate(RECORD1) >> null
 
         when:
-        observer.onProcessCached(HANDLER2, RECORD2)
+        observer.onTaskCached(EVENT2)
         then:
         1 * observer.aggregate(RECORD2) >> null
         observer.records[TASKID2] == RECORD2
 
         when:
-        observer.onProcessStart(HANDLER3, RECORD3)
+        observer.onTaskStart(EVENT3)
         then:
         observer.records[TASKID3] == RECORD3
     }

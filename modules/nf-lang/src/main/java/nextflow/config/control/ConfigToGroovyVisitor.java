@@ -74,7 +74,7 @@ public class ConfigToGroovyVisitor extends ConfigVisitorSupport {
         for( var call : node.statements )
             statements.add(stmt(call));
         var code = block(new VariableScope(), statements);
-        return stmt(callThisX("block", args(constX(node.name), closureX(code))));
+        return stmt(callThisX("block", args(constX(node.name), closureX(null, code))));
     }
 
     @Override
@@ -108,7 +108,7 @@ public class ConfigToGroovyVisitor extends ConfigVisitorSupport {
         }
         var code = block(new VariableScope(), statements);
         var kind = node.kind != null ? node.kind : "block";
-        return stmt(callThisX(kind, args(constX(node.name), closureX(code))));
+        return stmt(callThisX(kind, args(constX(node.name), closureX(null, code))));
     }
 
     @Override
