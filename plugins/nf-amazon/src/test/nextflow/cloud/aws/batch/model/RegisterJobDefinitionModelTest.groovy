@@ -233,11 +233,13 @@ class RegisterJobDefinitionModelTest extends Specification {
         
         then:
         request instanceof RegisterJobDefinitionRequest
+
         request.jobDefinitionName() == 'test-job-def'
         request.type() == JobDefinitionType.CONTAINER
         request.platformCapabilities() == capabilities
-        request.containerProperties() != null
-        request.containerProperties().image() == 'ubuntu:20.04'
+        def container = request.ecsProperties().taskProperties()[0].containers()[0]
+        container != null
+        container.image() == 'ubuntu:20.04'
         request.parameters() == params
         request.tags() == tags
     }
@@ -254,7 +256,7 @@ class RegisterJobDefinitionModelTest extends Specification {
         !request.jobDefinitionName()
         !request.type()
         !request.platformCapabilities()
-        !request.containerProperties()
+        !request.ecsProperties()
         !request.parameters()
         !request.tags()
     }
@@ -276,8 +278,8 @@ class RegisterJobDefinitionModelTest extends Specification {
         request instanceof RegisterJobDefinitionRequest
         request.jobDefinitionName() == 'minimal-job'
         request.type() == JobDefinitionType.CONTAINER
-        request.containerProperties() != null
-        request.containerProperties().image() == 'nginx'
+        request.ecsProperties() != null
+        request.ecsProperties().taskProperties()[0].containers()[0].image() == 'nginx'
         !request.platformCapabilities()
         !request.parameters()
         !request.tags()
@@ -303,7 +305,7 @@ class RegisterJobDefinitionModelTest extends Specification {
         request.jobDefinitionName() == 'empty-collections-job'
         request.type() == JobDefinitionType.CONTAINER
         request.platformCapabilities() == []
-        request.containerProperties() != null
+        request.ecsProperties() != null
         request.parameters() == [:]
         request.tags() == [:]
     }
@@ -327,7 +329,7 @@ class RegisterJobDefinitionModelTest extends Specification {
         request instanceof RegisterJobDefinitionRequest
         request.jobDefinitionName() == 'chained-job'
         request.type() == JobDefinitionType.CONTAINER
-        request.containerProperties().image() == 'alpine'
+        request.ecsProperties().taskProperties()[0].containers()[0].image() == 'alpine'
         request.tags().size() == 2
         request.tags()['env'] == 'test'
         request.tags()['project'] == 'nextflow'
