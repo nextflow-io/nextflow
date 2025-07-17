@@ -126,7 +126,7 @@ abstract class RepositoryProvider {
     }
 
     boolean hasCredentials() {
-        return (getUser() && getPassword()) || getToken()
+        getUser() && getPassword()
     }
 
     String getUser() { config?.user }

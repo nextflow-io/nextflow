@@ -51,6 +51,13 @@ class GitlabRepositoryProvider extends RepositoryProvider {
     }
 
     @Override
+    boolean hasCredentials() {
+        return getToken()
+            ? true
+            : super.hasCredentials()
+    }
+
+    @Override
     String getName() { "GitLab" }
 
     @Override
