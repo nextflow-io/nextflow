@@ -48,7 +48,7 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
 
     @Override
     boolean hasCredentials() {
-        return config.token
+        return getToken()
             ? true
             : super.hasCredentials()
     }

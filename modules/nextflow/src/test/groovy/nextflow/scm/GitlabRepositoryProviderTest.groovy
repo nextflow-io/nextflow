@@ -19,6 +19,7 @@ package nextflow.scm
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -35,6 +36,22 @@ class GitlabRepositoryProviderTest extends Specification {
     def 'should return project URL' () {
         expect:
         new GitlabRepositoryProvider('pditommaso/hello').getRepositoryUrl() == 'https://gitlab.com/pditommaso/hello'
+    }
+
+    @Unroll
+    def 'should validate hasCredentials' () {
+        given:
+        def provider = new GitlabRepositoryProvider('pditommaso/tutorial', CONFIG)
+
+        expect:
+        provider.hasCredentials() == EXPECTED
+
+        where:
+        EXPECTED    | CONFIG
+        false       | new ProviderConfig('gitlab')
+        false       | new ProviderConfig('gitlab').setUser('foo')
+        true        | new ProviderConfig('gitlab').setUser('foo').setPassword('bar')
+        true        | new ProviderConfig('gitlab').setToken('xyz')
     }
 
     @Requires({System.getenv('NXF_GITLAB_ACCESS_TOKEN')})

@@ -19,6 +19,8 @@ package nextflow.scm
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Akira Sekiguchi <pachiras.yokohama@gmail.com>
@@ -66,6 +68,22 @@ class GiteaRepositoryProviderTest extends Specification {
                 .setRevision('12345')
                 .getContentUrl('main.nf') == 'https://gitea.com/api/v1/repos/pditommaso/hello/raw/main.nf?ref=12345'
 
+    }
+
+    @Unroll
+    def 'should validate hasCredentials' () {
+        given:
+        def provider = new GiteaRepositoryProvider('pditommaso/tutorial', PROVIDER_CONFIG)
+
+        expect:
+        provider.hasCredentials() == EXPECTED
+
+        where:
+        EXPECTED    | PROVIDER_CONFIG
+        false       | new ProviderConfig('gitea')
+        false       | new ProviderConfig('gitea').setUser('foo')
+        true        | new ProviderConfig('gitea').setUser('foo').setPassword('bar')
+        true        | new ProviderConfig('gitea').setToken('xyz')
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
