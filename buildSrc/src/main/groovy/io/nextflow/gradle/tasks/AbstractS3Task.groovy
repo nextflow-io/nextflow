@@ -1,15 +1,11 @@
 package io.nextflow.gradle.tasks
 
-import com.amazonaws.auth.AWSCredentialsProviderChain
-import com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper
-import com.amazonaws.auth.EnvironmentVariableCredentialsProvider
-import com.amazonaws.auth.SystemPropertiesCredentialsProvider
-import com.amazonaws.auth.profile.ProfileCredentialsProvider
-import com.amazonaws.regions.Region
-import com.amazonaws.regions.Regions
-import com.amazonaws.services.s3.AmazonS3Client
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Internal
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
+import software.amazon.awssdk.services.s3.S3AsyncClient
+import software.amazon.awssdk.services.s3.S3Client
+import software.amazon.awssdk.regions.Region
 
 /**
  * S3 common operations
@@ -21,27 +17,32 @@ import org.gradle.api.tasks.Internal
 abstract class AbstractS3Task extends DefaultTask {
 
     @Internal
-    AmazonS3Client getS3Client() {
-        def profileCreds
+    S3Client getS3Client() {
+        def credBuilder = DefaultCredentialsProvider.builder()
         if (project.s3.profile) {
             logger.quiet("Using AWS credentials profile: ${project.s3.profile}")
-            profileCreds = new ProfileCredentialsProvider(project.s3.profile)
+            credBuilder.profileName(project.s3.profile)
         }
-        else {
-            profileCreds = new ProfileCredentialsProvider()
-        }
-        def creds = new AWSCredentialsProviderChain(
-                new EnvironmentVariableCredentialsProvider(),
-                new SystemPropertiesCredentialsProvider(),
-                profileCreds,
-                new EC2ContainerCredentialsProviderWrapper()
-        )
-
-        AmazonS3Client s3Client = new AmazonS3Client(creds)
+        def clientBuilder = S3Client.builder().credentialsProvider(credBuilder.build())
         String region = project.s3.region
         if (region) {
-            s3Client.region = Region.getRegion(Regions.fromName(region))
+            clientBuilder.region(Region.of(region))
         }
-        return s3Client
+        return clientBuilder.build()
+    }
+
+    @Internal
+    S3AsyncClient getS3AsyncClient() {
+        def credBuilder = DefaultCredentialsProvider.builder()
+        if (project.s3.profile) {
+            logger.quiet("Using AWS credentials profile: ${project.s3.profile}")
+            credBuilder.profileName(project.s3.profile)
+        }
+        def clientBuilder = S3AsyncClient.crtBuilder().credentialsProvider(credBuilder.build())
+        String region = project.s3.region
+        if (region) {
+            clientBuilder.region(Region.of(region))
+        }
+        return clientBuilder.build()
     }
 }

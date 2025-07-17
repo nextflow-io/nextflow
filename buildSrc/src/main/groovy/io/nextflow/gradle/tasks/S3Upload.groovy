@@ -1,7 +1,5 @@
 package io.nextflow.gradle.tasks
 
-import com.amazonaws.services.s3.model.CannedAccessControlList
-import com.amazonaws.services.s3.model.PutObjectRequest
 import groovy.transform.CompileStatic
 import io.nextflow.gradle.tasks.AbstractS3Task
 import io.nextflow.gradle.util.BucketTokenizer
@@ -10,6 +8,13 @@ import org.gradle.api.GradleException
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
+import software.amazon.awssdk.services.s3.model.GetObjectRequest
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL
+import software.amazon.awssdk.services.s3.model.PutObjectRequest
+import software.amazon.awssdk.services.s3.model.S3Exception
+
 /**
  * Upload files to an S3 bucket
  * 
@@ -56,7 +61,22 @@ class S3Upload extends AbstractS3Task {
         if( !sourceFile.exists() )
             throw new GradleException("S3 upload failed -- source file does not exist: $sourceFile")
 
-        if (s3Client.doesObjectExist(bucket, targetKey)) {
+        boolean objectExists = false
+        try {
+            s3Client.headObject(HeadObjectRequest.builder()
+                .bucket(bucket)
+                .key(targetKey)
+                .build()
+            )
+            objectExists = true
+        } catch ( NoSuchKeyException | S3Exception e) {
+            if (e.awsErrorDetails()?.errorCode() == 'NotFound') {
+                objectExists = false
+            } else {
+                throw new GradleException("S3 upload failed -- error checking if object exists: ${e.message}", e)
+            }
+        }
+        if (objectExists) {
             if( skipExisting ) {
                 logger.quiet("s3://${bucket}/${targetKey} already exists -- skipping")
             }
@@ -79,10 +99,14 @@ class S3Upload extends AbstractS3Task {
     boolean isSameContent(File sourceFile, String bucket, String targetKey) {
         final d1 = sourceFile
                 .withInputStream { InputStream it -> DigestUtils.sha512Hex(it) }
-        final d2 = s3Client
-                .getObject(bucket, targetKey)
-                .getObjectContent()
-                .withStream { InputStream it -> DigestUtils.sha512Hex(it) }
+
+        final request = GetObjectRequest.builder()
+            .bucket(bucket)
+            .key(targetKey)
+            .build()
+
+        final d2 = s3Client.getObject(request)
+            .withStream { InputStream it -> DigestUtils.sha512Hex(it) }
         return d1 == d2
     }
 
@@ -91,12 +115,12 @@ class S3Upload extends AbstractS3Task {
             logger.quiet("S3 will upload ${sourceFile} → s3://${bucket}/${targetKey} ${exists ? '[would overwrite existing]' : ''}")
         }
         else {
-            final req = new PutObjectRequest(bucket, targetKey, sourceFile)
+            final builder = PutObjectRequest.builder().bucket(bucket).key(targetKey)
             if( publicRead )
-                req.withCannedAcl(CannedAccessControlList.PublicRead)
+                builder.acl(ObjectCannedACL.PUBLIC_READ)
 
             logger.quiet("S3 upload ${sourceFile} → s3://${bucket}/${targetKey} ${exists ? '[overwrite existing]': ''}")
-            s3Client.putObject(req)
+            s3Client.putObject(builder.build(), sourceFile.toPath())
         }
     }
 }

@@ -7,12 +7,14 @@ repositories {
     mavenCentral()
 }
 
-version = "1.0.1"
+version = "2.0.0"
 group = "io.nextflow"
 
 dependencies {
-    implementation ('com.amazonaws:aws-java-sdk-s3:1.12.777')
     implementation 'com.google.code.gson:gson:2.13.1'
+    implementation 'software.amazon.awssdk:s3:2.31.64'
+    implementation 'software.amazon.awssdk:s3-transfer-manager:2.31.64'
+    implementation 'commons-codec:commons-codec:1.18.0'
 }
 
 gradlePlugin {
