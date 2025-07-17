@@ -19,6 +19,7 @@ package nextflow.scm
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -50,16 +51,20 @@ class GitlabRepositoryProviderTest extends Specification {
     }
 
     @Requires({System.getenv('NXF_GITLAB_ACCESS_TOKEN')})
-    def 'should read file content'() {
+    @Unroll
+    def 'should read file content: #contentURL'() {
         given:
         def token = System.getenv('NXF_GITLAB_ACCESS_TOKEN')
         def config = new ProviderConfig('gitlab').setAuth(token)
 
         when:
         def repo = new GitlabRepositoryProvider('pditommaso/hello', config)
-        def result = repo.readText('main.nf')
+        def result = repo.readText(contentURL)
         then:
         result.trim().startsWith('#!/usr/bin/env nextflow')
+        where:
+        contentURL << ['main.nf', '/main.nf']
+
     }
 
     @Requires({System.getenv('NXF_GITLAB_ACCESS_TOKEN')})
