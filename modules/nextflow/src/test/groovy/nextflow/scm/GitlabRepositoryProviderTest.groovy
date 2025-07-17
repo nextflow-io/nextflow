@@ -121,5 +121,15 @@ class GitlabRepositoryProviderTest extends Specification {
         new GitlabRepositoryProvider('pditommaso/hello', obj)
                 .getContentUrl('conf/extra.conf') == 'https://gitlab.com/api/v4/projects/pditommaso%2Fhello/repository/files/conf%2Fextra.conf?ref=master'
 
+
+        and: // should strip leading slashes
+        new GitlabRepositoryProvider('pditommaso/hello', obj)
+            .getContentUrl('/main.nf') == 'https://gitlab.com/api/v4/projects/pditommaso%2Fhello/repository/files/main.nf?ref=master'
+
+        and:
+        new GitlabRepositoryProvider('pditommaso/hello', obj)
+            .getContentUrl('//conf/extra.conf') == 'https://gitlab.com/api/v4/projects/pditommaso%2Fhello/repository/files/conf%2Fextra.conf?ref=master'
+
+
     }
 }
