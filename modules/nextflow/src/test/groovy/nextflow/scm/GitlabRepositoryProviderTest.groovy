@@ -19,7 +19,6 @@ package nextflow.scm
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
-import spock.lang.Unroll
 
 /**
  *
@@ -51,20 +50,16 @@ class GitlabRepositoryProviderTest extends Specification {
     }
 
     @Requires({System.getenv('NXF_GITLAB_ACCESS_TOKEN')})
-    @Unroll
-    def 'should read file content: #contentURL'() {
+    def 'should read file content'() {
         given:
         def token = System.getenv('NXF_GITLAB_ACCESS_TOKEN')
         def config = new ProviderConfig('gitlab').setAuth(token)
 
         when:
         def repo = new GitlabRepositoryProvider('pditommaso/hello', config)
-        def result = repo.readText(contentURL)
+        def result = repo.readText('main.nf')
         then:
         result.trim().startsWith('#!/usr/bin/env nextflow')
-        where:
-        contentURL << ['main.nf', '/main.nf']
-
     }
 
     @Requires({System.getenv('NXF_GITLAB_ACCESS_TOKEN')})
@@ -125,6 +120,16 @@ class GitlabRepositoryProviderTest extends Specification {
         and:
         new GitlabRepositoryProvider('pditommaso/hello', obj)
                 .getContentUrl('conf/extra.conf') == 'https://gitlab.com/api/v4/projects/pditommaso%2Fhello/repository/files/conf%2Fextra.conf?ref=master'
+
+
+        and: // should strip leading slashes
+        new GitlabRepositoryProvider('pditommaso/hello', obj)
+            .getContentUrl('/main.nf') == 'https://gitlab.com/api/v4/projects/pditommaso%2Fhello/repository/files/main.nf?ref=master'
+
+        and:
+        new GitlabRepositoryProvider('pditommaso/hello', obj)
+            .getContentUrl('//conf/extra.conf') == 'https://gitlab.com/api/v4/projects/pditommaso%2Fhello/repository/files/conf%2Fextra.conf?ref=master'
+
 
     }
 }

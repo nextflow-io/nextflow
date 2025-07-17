@@ -88,8 +88,7 @@ class GitlabRepositoryProvider extends RepositoryProvider {
         //  https://docs.gitlab.com/ee/api/repository_files.html#get-raw-file-from-repository
         //
         final ref = revision ?: getDefaultBranch()
-        path = path.replaceAll("^/+", "")  // leading slashes cause 400s with GitLab
-        final encodedPath = URLEncoder.encode(path,'utf-8')
+        final encodedPath = URLEncoder.encode(path.stripStart('/'),'utf-8')
         return "${config.endpoint}/api/v4/projects/${getProjectName()}/repository/files/${encodedPath}?ref=${ref}"
     }
 
