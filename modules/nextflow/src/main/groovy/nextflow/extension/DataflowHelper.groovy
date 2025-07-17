@@ -360,14 +360,11 @@ class DataflowHelper {
         if( !(entry instanceof List) ) {
             if( pivot != [0] )
                 throw new IllegalArgumentException("Not a valid `by` index: $pivot")
-            result.keys = [entry]
-            result.values = []
+            result.addKey(entry)
             return result
         }
 
         def list = (List)entry
-        result.keys = new ArrayList(pivot.size())
-        result.values = new ArrayList(list.size())
 
         for( int i=0; i<list.size(); i++ ) {
             if( i in pivot )
