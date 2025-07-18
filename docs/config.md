@@ -106,6 +106,9 @@ The following constants are globally available in a Nextflow configuration file:
 `projectDir: Path`
 : The directory where the main script is located.
 
+`secrets: Map<String,String>`
+: Map of pipeline secrets. See {ref}`secrets-page` for more information.
+
 ## Functions
 
 The following functions are globally available in a Nextflow configuration file:

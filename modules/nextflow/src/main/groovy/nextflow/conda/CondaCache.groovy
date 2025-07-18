@@ -22,7 +22,6 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
 
-import com.google.common.hash.Hashing
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -281,7 +280,7 @@ class CondaCache {
         def cmd
         if( isYamlFilePath(condaEnv) ) {
             final target = isYamlUriPath(condaEnv) ? condaEnv : Escape.path(makeAbsolute(condaEnv))
-            final yesOpt = binaryName == 'micromamba' ? '--yes ' : ''
+            final yesOpt = binaryName=="mamba" || binaryName == "micromamba"  ? '--yes ' : ''
             cmd = "${binaryName} env create ${yesOpt}--prefix ${Escape.path(prefixPath)} --file ${target}"
         }
         else if( isTextFilePath(condaEnv) ) {

@@ -269,6 +269,8 @@ class PublishOp {
                     return normalizePath(el, targetResolver)
                 if( el instanceof Collection<Path> )
                     return normalizePaths(el, targetResolver)
+                if( el instanceof Map )
+                    return normalizePaths(el, targetResolver)
                 return el
             }
         }
@@ -280,6 +282,8 @@ class PublishOp {
                     if( v instanceof Path )
                         return Map.entry(k, normalizePath(v, targetResolver))
                     if( v instanceof Collection<Path> )
+                        return Map.entry(k, normalizePaths(v, targetResolver))
+                    if( v instanceof Map )
                         return Map.entry(k, normalizePaths(v, targetResolver))
                     return Map.entry(k, v)
                 }

@@ -331,7 +331,7 @@ class AzBatchService implements Closeable {
 
     protected int diskSlots(float disk, float vmDisk, int vmCpus) {
         BigDecimal result = disk / (vmDisk / vmCpus)
-        log.warn("[AZURE BATCH] diskSlots: disk=${disk}, vmDisk=${vmDisk}, vmCpus=${vmCpus}, result=${result}")
+        log.debug("[AZURE BATCH] diskSlots: disk=${disk}, vmDisk=${vmDisk}, vmCpus=${vmCpus}, result=${result}")
         result.setScale(0, RoundingMode.UP).intValue()
     }
 

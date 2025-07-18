@@ -20,7 +20,7 @@ package nextflow.cloud.aws.config
 import java.nio.file.Path
 import java.nio.file.Paths
 
-import com.amazonaws.regions.Regions
+import software.amazon.awssdk.regions.Region
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Global
@@ -83,7 +83,7 @@ class AwsConfig {
 
     String getS3GlobalRegion() {
         return !region || !s3Config.endpoint || s3Config.endpoint.contains(".amazonaws.com")
-            ? Regions.US_EAST_1.getName()   // always use US_EAST_1 as global region for AWS endpoints
+            ? Region.US_EAST_1.id()         // always use US_EAST_1 as global region for AWS endpoints
             : region                        // for custom endpoint use the config provided region
     }
 

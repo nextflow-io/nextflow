@@ -164,6 +164,26 @@ The following environment variables control the configuration of the Nextflow ru
   :::
 : Defines the default behavior of `publishDir.failOnError` setting. See {ref}`publishDir<process-publishdir>` directive for more information.
 
+`NXF_RETRY_POLICY_DELAY`
+: :::{versionadded} 25.06.0-edge
+  :::
+: Delay used for HTTP retryable operations (default: `350ms`).
+
+`NXF_RETRY_POLICY_JITTER`
+: :::{versionadded} 25.06.0-edge
+  :::
+: Jitter value used for HTTP retryable operations (default: `0.25`).
+
+`NXF_RETRY_POLICY_MAX_ATTEMPTS`
+: :::{versionadded} 25.06.0-edge
+  :::
+: Max number of attempts used for HTTP retryable operations (default: `5`).
+
+`NXF_RETRY_POLICY_MAX_DELAY`
+: :::{versionadded} 25.06.0-edge
+  :::
+: Max delay used for HTTP retryable operations (default: `90s`).
+
 `NXF_SCM_FILE`
 : :::{versionadded} 20.10.0
   :::

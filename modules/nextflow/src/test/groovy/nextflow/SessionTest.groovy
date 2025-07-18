@@ -23,11 +23,12 @@ import java.nio.file.attribute.PosixFilePermission
 import nextflow.config.Manifest
 import nextflow.container.ContainerConfig
 import nextflow.exception.AbortOperationException
+import nextflow.file.FileHelper
 import nextflow.script.ScriptFile
 import nextflow.script.WorkflowMetadata
+import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceHelper
 import nextflow.trace.WorkflowStatsObserver
-import nextflow.trace.TraceFileObserver
 import nextflow.util.Duration
 import nextflow.util.VersionNumber
 import spock.lang.Specification
@@ -246,7 +247,7 @@ class SessionTest extends Specification {
 
         when:
         session = [:] as Session
-        result = session.createObserversV1()
+        result = session.createObserversV2()
         then:
         result.size()==1
         result.any { it instanceof WorkflowStatsObserver }
@@ -254,39 +255,39 @@ class SessionTest extends Specification {
         when:
         session = [:] as Session
         session.config = [trace: [enabled: true, file:'name.txt']]
-        result = session.createObserversV1()
+        result = session.createObserversV2()
         observer = result[1] as TraceFileObserver
         then:
         result.size() == 2
-        observer.tracePath == Paths.get('name.txt').complete()
+        observer.tracePath == FileHelper.asPath('name.txt')
         observer.separator == '\t'
 
         when:
         session = [:] as Session
         session.config = [trace: [enabled: true, sep: 'x', fields: 'task_id,name,exit', file: 'alpha.txt']]
-        result = session.createObserversV1()
+        result = session.createObserversV2()
         observer = result[1] as TraceFileObserver
         then:
         result.size() == 2
-        observer.tracePath == Paths.get('alpha.txt').complete()
+        observer.tracePath == FileHelper.asPath('alpha.txt')
         observer.separator == 'x'
         observer.fields == ['task_id','name','exit']
 
         when:
         session = [:] as Session
         session.config = [trace: [sep: 'x', fields: 'task_id,name,exit']]
-        result = session.createObserversV1()
+        result = session.createObserversV2()
         then:
         !result.any { it instanceof TraceFileObserver }
 
         when:
         session = [:] as Session
         session.config = [trace: [enabled: true, fields: 'task_id,name,exit,vmem']]
-        result = session.createObserversV1()
+        result = session.createObserversV2()
         observer = result[1] as TraceFileObserver
         then:
         result.size() == 2
-        observer.tracePath == Paths.get('trace-20221001.txt').complete()
+        observer.tracePath == FileHelper.asPath('trace-20221001.txt')
         observer.separator == '\t'
         observer.fields == ['task_id','name','exit','vmem']
 
