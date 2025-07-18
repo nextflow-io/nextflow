@@ -171,177 +171,177 @@ It will create a file named `trace.txt` in the current directory. The content lo
 
 The following table shows the fields that can be included in the execution report:
 
-#### `task_id`
+##### `task_id`
 
 Task ID.
 
-#### `hash`
+##### `hash`
 
 Task hash code.
 
-#### `native_id`
+##### `native_id`
 
 Task ID given by the underlying execution system e.g. POSIX process PID when executed locally, job ID when executed by a grid engine, etc.
 
-#### `process`
+##### `process`
 
 Nextflow process name.
 
-#### `tag`
+##### `tag`
 
 User provided identifier associated this task.
 
-#### `name`
+##### `name`
 
 Task name.
 
-#### `status`
+##### `status`
 
 Task status. Possible values are: `NEW`, `SUBMITTED`, `RUNNING`, `COMPLETED`, `FAILED`, and `ABORTED`.
 
-#### `exit`
+##### `exit`
 
 POSIX process exit status.
 
-#### `module`
+##### `module`
 
 Environment module used to run the task.
 
-#### `container`
+##### `container`
 
 Docker image name used to execute the task.
 
-#### `cpus`
+##### `cpus`
 
 The cpus number request for the task execution.
 
-#### `time`
+##### `time`
 
 The time request for the task execution
 
-#### `disk`
+##### `disk`
 
 The disk space request for the task execution.
 
-#### `memory`
+##### `memory`
 
 The memory request for the task execution.
 
-#### `attempt`
+##### `attempt`
 
 Attempt at which the task completed.
 
-#### `submit`
+##### `submit`
 
 Timestamp when the task has been submitted.
 
-#### `start`
+##### `start`
 
 Timestamp when the task execution has started.
 
-#### `complete`
+##### `complete`
 
 Timestamp when task execution has completed.
 
-#### `duration`
+##### `duration`
 
 Time elapsed to complete since the submission.
 
-#### `realtime`
+##### `realtime`
 
 Task execution time i.e. delta between completion and start timestamp.
 
-#### `error_action`
+##### `error_action`
 
 Task execution time i.e. delta between completion and start timestamp.
 
-#### `queue`
+##### `queue`
 
 The queue that the executor attempted to run the process on.
 
-#### `%cpu`
+##### `%cpu`
 
 Percentage of CPU used by the process.
 
-#### `%mem`
+##### `%mem`
 
 Percentage of memory used by the process.
 
-#### `rss`
+##### `rss`
 
 Real memory (resident set) size of the process. Equivalent to `ps -o rss` .
 
-#### `vmem`
+##### `vmem`
 
 Virtual memory size of the process. Equivalent to `ps -o vsize` .
 
-#### `peak_rss`
+##### `peak_rss`
 
 Peak of real memory. This data is read from field `VmHWM` in `/proc/$pid/status` file.
 
-#### `peak_vmem`
+##### `peak_vmem`
 
 Peak of virtual memory. This data is read from field `VmPeak` in `/proc/$pid/status` file.
 
-#### `rchar`
+##### `rchar`
 
 Number of bytes the process read, using any read-like system call from files, pipes, tty, etc. This data is read from file `/proc/$pid/io`.
 
-#### `wchar`
+##### `wchar`
 
 Number of bytes the process wrote, using any write-like system call. This data is read from file `/proc/$pid/io`.
 
-#### `syscr`
+##### `syscr`
 
 Number of read-like system call invocations that the process performed. This data is read from file `/proc/$pid/io`.
 
-#### `syscw`
+##### `syscw`
 
 Number of write-like system call invocations that the process performed. This data is read from file `/proc/$pid/io`.
 
-#### `read_bytes`
+##### `read_bytes`
 
 Number of bytes the process directly read from disk. This data is read from file `/proc/$pid/io`.
 
-#### `write_bytes`
+##### `write_bytes`
 
 Number of bytes the process originally dirtied in the page-cache (assuming they will go to disk later). This data is read from file `/proc/$pid/io`.
 
-#### `vol_ctxt`
+##### `vol_ctxt`
 
 Number of voluntary context switches. This data is read from field `voluntary_ctxt_switches` in `/proc/$pid/status` file.
 
-#### `inv_ctxt`
+##### `inv_ctxt`
 
 Number of involuntary context switches. This data is read from field `nonvoluntary_ctxt_switches` in `/proc/$pid/status` file.
 
-#### `env`
+##### `env`
 
 The variables defined in task execution environment.
 
-#### `workdir`
+##### `workdir`
 
 The directory path where the task was executed.
 
-#### `script`
+##### `script`
 
 The task command script.
 
-#### `scratch`
+##### `scratch`
 
 The value of the process `scratch` directive.
 
-#### `error_action`
+##### `error_action`
 
 The action applied on error task failure.
 
-#### `hostname`
+##### `hostname`
 
 <AddedInVersion version="25.05.0-edge" />
 
 The host on which the task was executed. Supported only for the Kubernetes executor yet. Activate with `k8s.fetchNodeName = true` in the Nextflow config file.
 
-#### `cpu_model`
+##### `cpu_model`
 
 <AddedInVersion version="22.07.0-edge" />
 
@@ -391,15 +391,15 @@ The default output format was changed from DOT to HTML.
 
 The following file formats are supported:
 
-#### `dot`
+##### `dot`
 
 Graphviz [DOT](http://www.graphviz.org/content/dot-language) file
 
-#### `gexf`
+##### `gexf`
 
 Graph Exchange XML file (Gephi)
 
-#### `html`
+##### `html`
 
 HTML file with Mermaid diagram
 
@@ -407,23 +407,23 @@ HTML file with Mermaid diagram
 The HTML format was changed to render a Mermaid diagram instead of a Cytoscape diagram.
 </ChangedInVersion>
 
-#### `mmd`
+##### `mmd`
 
 Mermaid diagram
 
-#### `pdf`
+##### `pdf`
 
 *Requires [Graphviz](http://www.graphviz.org) to be installed*
 
 Graphviz PDF file
 
-#### `png`
+##### `png`
 
 *Requires [Graphviz](http://www.graphviz.org) to be installed*
 
 Graphviz PNG file
 
-#### `svg`
+##### `svg`
 
 *Requires [Graphviz](http://www.graphviz.org) to be installed*
 
