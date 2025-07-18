@@ -137,6 +137,9 @@ public class Types {
             builder.append('>');
         }
 
+        if( type.getNodeMetaData(ASTNodeMarker.NULLABLE) != null )
+            builder.append('?');
+
         return builder.toString();
     }
 
