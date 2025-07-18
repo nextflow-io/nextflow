@@ -1,0 +1,79 @@
+# Channels
+
+In Nextflow, **channels** are the key data structures that facilitate the dataflow dependencies between each step (i.e. [Processes][process-page]) in a pipeline.
+
+There are two kinds of channels, *queue channels* and *value channels*. Channels are created using *channel factories* and transformed using *channel operators*.
+
+### Queue channel
+
+A *queue channel* is a channel that *emits* an asynchronous sequence of values.
+
+A queue channel can be created by channel factories (e.g., [of][channel-of] and [fromPath][channel-path]), operators (e.g., [map][operator-map] and [flatMap][operator-flatmap]), and processes (see [Process outputs][process-output]).
+
+### Value channel
+
+A *value channel* is a channel that is *bound* to an asynchronous value.
+
+A value channel can be created with the [value][channel-value] factory, certain operators (e.g., [collect][operator-collect] and [reduce][operator-reduce]), and processes (under [certain conditions][process-out-singleton]).
+
+The values in a queue channel cannot be accessed directly -- they can only be accessed by passing the channel as input to an operator or process. For example:
+
+```nextflow
+channel.value(1).view { v -> "value channel is ${v}" }
+```
+
+```console
+value channel is 1
+```
+
+## Channel factories
+
+Channel factories are functions that create channels from regular values.
+
+The `channel.fromPath()` factory creates a channel from a file name or glob pattern, similar to the `files()` function:
+
+```nextflow
+channel.fromPath('input/*.txt').view()
+```
+
+See [Channel factories][channel-factory] for the full list of channel factories.
+
+## Operators
+
+Channel operators, or *operators* for short, are functions that consume and produce channels. Because channels are asynchronous, operators are necessary to manipulate the values in a channel. Operators are particularly useful for implementing glue logic between processes.
+
+Commonly used operators include:
+
+- [combine][operator-combine]: emit the combinations of two channels
+- [collect][operator-collect]: collect the values from a channel into a list
+- [filter][operator-filter]: select the values in a channel that satisfy a condition
+- [flatMap][operator-flatMap]: transform each value from a channel into a list and emit each list element separately
+- [groupTuple][operator-grouptuple]: group the values from a channel based on a grouping key
+- [join][operator-join]: join the values from two channels based on a matching key
+- [map][operator-map]: transform each value from a channel with a mapping function
+- [mix][operator-mix]: emit the values from multiple channels
+- [view][operator-view]: print each value in a channel to standard output
+
+See [Operators][operator-page] for the full list of operators.
+
+[channel-of]: /nextflow_docs/nextflow_repo/docs/reference/channel.mdx#of
+[channel-path]: /nextflow_docs/nextflow_repo/docs/reference/channel.mdx#frompath
+[operator-map]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#map
+[operator-flatmap]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#flatmap
+[process-output]: /nextflow_docs/nextflow_repo/docs/process.mdx#outputs
+[channel-value]: /nextflow_docs/nextflow_repo/docs/reference/channel.mdx#value
+[operator-first]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#first
+[operator-collect]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#collect
+[operator-reduce]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#reduce
+[process-page]: /nextflow_docs/nextflow_repo/docs/process.mdx
+[process-out-singleton]: /nextflow_docs/nextflow_repo/docs/process.mdx#process-out-singleton
+[process-multiple-input-channels]: /nextflow_docs/nextflow_repo/docs/process.mdx#multiple-input-channels
+[channel-factory]: /nextflow_docs/nextflow_repo/docs/channel.mdx
+[operator-combine]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#combine
+[operator-filter]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#filter
+[operator-flatMap]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#flatmap
+[operator-grouptuple]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#grouptuple
+[operator-join]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#join
+[operator-mix]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#mix
+[operator-view]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx#view
+[operator-page]: /nextflow_docs/nextflow_repo/docs/reference/operator.mdx
