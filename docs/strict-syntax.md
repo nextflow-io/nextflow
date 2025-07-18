@@ -299,9 +299,21 @@ def str = 'hello'
 def meta = [:]
 ```
 
-:::{note}
-Because type annotations are useful for providing type checking at runtime, the language server will not report errors for Groovy-style type annotations at this time. Type annotations will be addressed in a future version of the Nextflow language specification.
+:::{versionadded} 25.10.0
 :::
+
+Local variables can be declared with a type annotation:
+
+```nextflow
+def a: Integer = 1
+def b: Integer = 2
+def (c: Integer, d: Integer) = [3, 4]
+def (e: Integer, f: Integer) = [5, 6]
+def str: String = 'hello'
+def meta: Map = [:]
+```
+
+While Groovy-style type annotations are still supported, the linter and language server will automatically convert them to Nextflow-style type annotations when formatting code. Groovy-style type annotations will not be supported in a future version.
 
 ### Strings
 
@@ -368,20 +380,25 @@ def map = (Map) readJson(json)  // soft cast
 def map = readJson(json) as Map // hard cast
 ```
 
-In the strict syntax, only hard casts are supported. However, hard casts are discouraged because they can cause unexpected behavior if used improperly. Groovy-style type annotations should be used instead:
+In the strict syntax, only hard casts are supported.
 
-```groovy
-def Map map = readJson(json)
-```
-
-Nextflow will raise an error at runtime if the `readJson()` function does not return a `Map`.
-
-When converting a value to a different type, it is better to use an explicit method rather than a cast. For example, to parse a string as a number:
+When casting a value to a different type, it is always better to use an explicit method if one is available. For example, to parse a string as a number:
 
 ```groovy
 def x = '42' as Integer
 def x = '42'.toInteger()    // preferred
 ```
+
+:::{versionadded} 25.10.0
+:::
+
+In cases where a function returns an unknown type, use a type annotation:
+
+```groovy
+def map: Map = readJson(json)
+```
+
+Nextflow will raise an error at runtime if the `readJson()` function does not return a `Map`.
 
 ### Process env inputs and outputs
 

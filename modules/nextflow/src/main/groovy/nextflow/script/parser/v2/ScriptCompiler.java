@@ -68,7 +68,8 @@ public class ScriptCompiler {
         "java.nio.file.Path",
         "nextflow.Channel",
         "nextflow.util.Duration",
-        "nextflow.util.MemoryUnit"
+        "nextflow.util.MemoryUnit",
+        "nextflow.util.VersionNumber"
     );
     private static final String MAIN_CLASS_NAME = "Main";
     private static final String BASE_CLASS_NAME = "nextflow.script.BaseScript";

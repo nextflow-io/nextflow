@@ -45,7 +45,8 @@ public class Types {
         new ClassNode(Channel.class),
         new ClassNode(Duration.class),
         new ClassNode(MemoryUnit.class),
-        new ClassNode(Path.class)
+        new ClassNode(Path.class),
+        new ClassNode(VersionNumber.class)
     );
 
     public static final List<ClassNode> DEFAULT_CONFIG_IMPORTS = List.of(
@@ -78,7 +79,7 @@ public class Types {
             return true;
         if( target.equals(source) )
             return true;
-        return isAssignableFrom(target.getTypeClass(), source.getTypeClass());
+        return hasTypeClass(target) && hasTypeClass(source) && isAssignableFrom(target.getTypeClass(), source.getTypeClass());
     }
 
     public static boolean isAssignableFrom(Class target, Class source) {
@@ -182,6 +183,9 @@ public class Types {
             genericsTypeNames(type.getGenericsTypes(), builder);
             builder.append('>');
         }
+
+        if( type.getNodeMetaData(ASTNodeMarker.NULLABLE) != null )
+            builder.append('?');
 
         return builder.toString();
     }

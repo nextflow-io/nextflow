@@ -105,10 +105,7 @@ The global namespace contains globally available constants and functions.
 `sleep( milliseconds: long )`
 : Sleep for the given number of milliseconds.
 
-`tuple( collection: List ) -> ArrayTuple`
-: Create a tuple object from the given collection.
-
-`tuple( args... ) -> ArrayTuple`
+`tuple( args... ) -> Tuple`
 : Create a tuple object from the given arguments.
 
 (stdlib-namespaces-channel)=

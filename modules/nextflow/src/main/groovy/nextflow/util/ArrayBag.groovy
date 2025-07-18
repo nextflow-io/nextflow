@@ -15,11 +15,13 @@
  */
 
 package nextflow.util
+
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoSerializable
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import groovy.transform.CompileStatic
+import nextflow.script.types.Bag
 import org.codehaus.groovy.runtime.InvokerHelper
 
 /**
