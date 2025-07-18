@@ -110,7 +110,8 @@ scriptDeclaration
     :   featureFlagDeclaration      #featureFlagDeclAlt
     |   includeDeclaration          #includeDeclAlt
     |   importDeclaration           #importDeclAlt
-    |   paramDeclaration            #paramDeclAlt
+    |   paramsDef                   #paramsDefAlt
+    |   paramDeclarationV1          #paramDeclV1Alt
     |   enumDef                     #enumDefAlt
     |   processDef                  #processDefAlt
     |   workflowDef                 #workflowDefAlt
@@ -147,8 +148,24 @@ importDeclaration
     :   IMPORT qualifiedClassName
     ;
 
-// -- param declaration
+// -- params definition
+paramsDef
+    :   PARAMS nls LBRACE
+        paramsBody?
+        sep? RBRACE
+    ;
+
+paramsBody
+    :   sep? paramDeclaration (sep paramDeclaration)*
+    ;
+
 paramDeclaration
+    :   identifier (COLON type)? (ASSIGN expression)?
+    |   statement
+    ;
+
+// -- legacy parameter declaration
+paramDeclarationV1
     :   PARAMS (DOT identifier)+ nls ASSIGN nls expression
     ;
 
