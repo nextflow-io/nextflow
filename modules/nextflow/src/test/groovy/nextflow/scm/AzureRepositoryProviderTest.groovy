@@ -20,6 +20,10 @@ import nextflow.exception.AbortOperationException
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
+
+import javax.imageio.ImageIO
+import javax.imageio.stream.MemoryCacheImageInputStream
+
 /**
  *
  * @author Tobias Neumann <tobias.neumann.at@gmail.com>
@@ -134,6 +138,26 @@ class AzureRepositoryProviderTest extends Specification {
         then:
         result == 'println "Hello from Azure repos!"'
     }
+
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
+    @Requires({System.getenv('NXF_AZURE_REPOS_TOKEN')})
+    def 'should read bytes file content'() {
+        given:
+        def token = System.getenv('NXF_AZURE_REPOS_TOKEN')
+        def config = new ProviderConfig('azurerepos').setAuth(token)
+
+        when:
+        // uses repo at https://dev.azure.com/seqera-pipelines-dev/_git/rnaseq
+        def repo = new AzureRepositoryProvider('seqera-pipelines-dev/rnaseq', config)
+        def result = repo.readBytes('/docs/images/nf-core-rnaseq_logo_light.png')
+
+        then:
+        def inputStream = new ByteArrayInputStream(result)
+        def imageInput = new MemoryCacheImageInputStream(inputStream)
+        final readers = ImageIO.getImageReaders(imageInput)
+        readers.hasNext()
+    }
+
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
     @Requires({System.getenv('NXF_AZURE_REPOS_TOKEN')})
