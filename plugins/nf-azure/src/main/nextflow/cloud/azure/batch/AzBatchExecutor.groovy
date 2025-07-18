@@ -48,7 +48,7 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
 
     private Path remoteBinDir
 
-    private AzConfig config
+    private AzConfig azConfig
 
     private AzBatchService batchService
 
@@ -98,14 +98,14 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
     }
 
     protected void initBatchService() {
-        config = AzConfig.getConfig(session)
+        azConfig = AzConfig.getConfig(session)
         batchService = new AzBatchService(this)
 
         // Generate an account SAS token using either activeDirectory configs or storage account keys
-        if (!config.storage().sasToken) {
-            config.storage().sasToken = config.activeDirectory().isConfigured() || config.managedIdentity().isConfigured()
-                    ? AzHelper.generateContainerSasWithActiveDirectory(workDir, config.storage().tokenDuration)
-                    : AzHelper.generateAccountSasWithAccountKey(workDir, config.storage().tokenDuration)
+        if (!azConfig.storage().sasToken) {
+            azConfig.storage().sasToken = azConfig.activeDirectory().isConfigured() || azConfig.managedIdentity().isConfigured()
+                    ? AzHelper.generateContainerSasWithActiveDirectory(workDir, azConfig.storage().tokenDuration)
+                    : AzHelper.generateAccountSasWithAccountKey(workDir, azConfig.storage().tokenDuration)
         }
 
         Global.onCleanup((it) -> batchService.close())
@@ -123,13 +123,13 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
         uploadBinDir()
     }
 
-    @PackageScope AzConfig getConfig() {
-        return config
+    @PackageScope AzConfig getAzConfig() {
+        return azConfig
     }
 
     @Override
     protected TaskMonitor createTaskMonitor() {
-        TaskPollingMonitor.create(session, name, 1000, Duration.of('10 sec'))
+        TaskPollingMonitor.create(session, config, name, 1000, Duration.of('10 sec'))
     }
 
     @Override

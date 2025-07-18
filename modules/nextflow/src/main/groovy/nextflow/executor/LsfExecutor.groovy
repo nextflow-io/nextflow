@@ -118,7 +118,7 @@ class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
         addClusterOptionsDirective(task.config, result)
 
         // add account from config
-        final account = session.getExecConfigProp(getName(), 'account', null) as String
+        final account = config.getExecConfigProp(name, 'account', null) as String
         if( account ) {
             result << '-G' << account
         }
@@ -325,7 +325,7 @@ class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
             log.debug "[LSF] Detected lsf.conf LSB_JOB_MEMLIMIT=$str ($perJobMemLimit)"
         }
 
-        perJobMemLimit = session.getExecConfigProp(name, 'perJobMemLimit', perJobMemLimit)
+        perJobMemLimit = config.getExecConfigProp(name, 'perJobMemLimit', perJobMemLimit)
 
         // per task reserve https://github.com/nextflow-io/nextflow/issues/1071#issuecomment-481412239
         if( conf.get('RESOURCE_RESERVE_PER_TASK') ) {
@@ -334,7 +334,7 @@ class LsfExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
             log.debug "[LSF] Detected lsf.conf RESOURCE_RESERVE_PER_TASK=$str ($perTaskReserve)"
         }
 
-        perTaskReserve = session.getExecConfigProp(name, 'perTaskReserve', perTaskReserve)
+        perTaskReserve = config.getExecConfigProp(name, 'perTaskReserve', perTaskReserve)
     }
 
     @Override

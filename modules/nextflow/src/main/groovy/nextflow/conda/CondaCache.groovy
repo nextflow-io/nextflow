@@ -28,6 +28,7 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.LazyDataflowVariable
 import nextflow.Global
+import nextflow.file.FileHelper
 import nextflow.file.FileMutex
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
@@ -53,35 +54,12 @@ class CondaCache {
      */
     private CondaConfig config
 
-    /**
-     * Timeout after which the environment creation is aborted
-     */
-    private Duration createTimeout = Duration.of('20min')
-
-    private String createOptions
-
-    private boolean useMamba
-
-    private boolean useMicromamba 
-
-    private Path configCacheDir0
-
-    private List<String> channels = Collections.emptyList()
-
-    @PackageScope String getCreateOptions() { createOptions }
-
-    @PackageScope Duration getCreateTimeout() { createTimeout }
-
     @PackageScope Map<String,String> getEnv() { System.getenv() }
 
-    @PackageScope Path getConfigCacheDir0() { configCacheDir0 }
-
-    @PackageScope List<String> getChannels() { channels }
-
     @PackageScope String getBinaryName() {
-        if (useMamba)
+        if( config.useMamba )
             return "mamba"
-        if (useMicromamba) 
+        if( config.useMicromamba ) 
             return "micromamba"
         return "conda"
     }
@@ -96,28 +74,6 @@ class CondaCache {
      */
     CondaCache(CondaConfig config) {
         this.config = config
-
-        if( config.createTimeout() )
-            createTimeout = config.createTimeout()
-
-        if( config.createOptions() )
-            createOptions = config.createOptions()
-
-        if( config.cacheDir() )
-            configCacheDir0 = config.cacheDir().toAbsolutePath()
-
-        if( config.useMamba() && config.useMicromamba() )
-            throw new IllegalArgumentException("Both conda.useMamba and conda.useMicromamba were enabled -- Please choose only one")
-        
-        if( config.useMamba() ) {
-            useMamba = config.useMamba()
-        }
-
-        if( config.useMicromamba() )
-            useMicromamba = config.useMicromamba()
-
-        if( config.getChannels() )
-            channels = config.getChannels()
     }
 
     /**
@@ -133,7 +89,7 @@ class CondaCache {
     @PackageScope
     Path getCacheDir() {
 
-        def cacheDir = configCacheDir0
+        Path cacheDir = FileHelper.toCanonicalPath(config.cacheDir)
 
         if( !cacheDir && getEnv().NXF_CONDA_CACHEDIR )
             cacheDir = getEnv().NXF_CONDA_CACHEDIR as Path
@@ -244,9 +200,9 @@ class CondaCache {
 
         final file = new File("${prefixPath.parent}/.${prefixPath.name}.lock")
         final wait = "Another Nextflow instance is creating the conda environment $condaEnv -- please wait till it completes"
-        final err =  "Unable to acquire exclusive lock after $createTimeout on file: $file"
+        final err =  "Unable to acquire exclusive lock after $config.createTimeout on file: $file"
 
-        final mutex = new FileMutex(target: file, timeout: createTimeout, waitMessage: wait, errorMessage: err)
+        final mutex = new FileMutex(target: file, timeout: config.createTimeout, waitMessage: wait, errorMessage: err)
         try {
             mutex .lock { createLocalCondaEnv0(condaEnv, prefixPath) }
         }
@@ -275,7 +231,7 @@ class CondaCache {
 
         log.info "Creating env using ${binaryName}: $condaEnv [cache $prefixPath]"
 
-        String opts = createOptions ? "$createOptions " : ''
+        String opts = config.createOptions ? "$config.createOptions " : ''
 
         def cmd
         if( isYamlFilePath(condaEnv) ) {
@@ -288,7 +244,7 @@ class CondaCache {
         }
 
         else {
-            final channelsOpt = channels.collect(it -> "-c $it ").join('')
+            final channelsOpt = config.channels.collect(it -> "-c $it ").join('')
             cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} ${channelsOpt}$condaEnv"
         }
 
@@ -314,9 +270,9 @@ class CondaCache {
     int runCommand( String cmd ) {
         log.trace """${binaryName} create
                      command: $cmd
-                     timeout: $createTimeout""".stripIndent(true)
+                     timeout: $config.createTimeout""".stripIndent(true)
 
-        final max = createTimeout.toMillis()
+        final max = config.createTimeout.toMillis()
         final builder = new ProcessBuilder(['bash','-c',cmd])
         final proc = builder.redirectErrorStream(true).start()
         final err = new StringBuilder()

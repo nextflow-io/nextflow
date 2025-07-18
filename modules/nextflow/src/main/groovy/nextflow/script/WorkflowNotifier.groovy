@@ -24,6 +24,7 @@ import groovy.util.logging.Slf4j
 import nextflow.mail.Attachment
 import nextflow.mail.Mail
 import nextflow.mail.Mailer
+import nextflow.mail.Notification
 /**
  * Send workflow completion notification
  *
@@ -34,12 +35,17 @@ import nextflow.mail.Mailer
 class WorkflowNotifier {
 
     /**
-     * A map representing the nextflow configuration
+     * Object that sends the actual email message
      */
-    private Map config
+    private Mailer mailer
 
     /**
-    * A map representing the variables defined in the script global scope
+     * Notification configuration settings
+     */
+    private Notification notification
+
+    /**
+     * A map representing the variables defined in the script global scope
      */
     private Map variables
 
@@ -48,16 +54,16 @@ class WorkflowNotifier {
      */
     private WorkflowMetadata workflow
 
-    /**
-     * Send notification email
-     *
-     * @param config A {@link Map} representing the nextflow configuration object
-     */
+    WorkflowNotifier(Map config, Map variables, WorkflowMetadata workflow) {
+        this.mailer = new Mailer( config.mail as Map ?: Collections.emptyMap() )
+        this.notification = new Notification( config.notification as Map ?: Collections.emptyMap() )
+        this.variables = variables
+        this.workflow = workflow
+    }
+
     void sendNotification() {
 
-        // fetch the `notification` configuration map defined in the config file
-        def notification = (Map)config.notification
-        if (!notification || !notification.enabled) {
+        if (!notification.enabled) {
             return
         }
 
@@ -67,34 +73,13 @@ class WorkflowNotifier {
         }
 
         def mail = createMail(notification)
-        def mailer = createMailer( (Map)config.mail )
         mailer.send(mail)
     }
 
     /**
-     * Creates {@link Mailer} object that sends the actual email message
-     *
-     * @param config The {@link Mailer} settings corresponding to the content of the {@code mail} configuration file scope
-     * @return A {@link Mailer} object
-     */
-    protected Mailer createMailer(Map config) {
-        def mailer = new Mailer()
-        mailer.config = config
-        return mailer
-    }
-
-    /**
      * Create notification {@link nextflow.mail.Mail} object given the user parameters
-     *
-     * @param notification
-     *      The user  provided notification parameters
-     *      - to: one or more comma separate notification recipient email address
-     *      - from: the sender email address
-     *      - template: template file path, multiple templates can be provided by using a list object
-     *      - binding: user provided map representing the variables used in the template
-     * @return
      */
-    protected Mail createMail(Map notification) {
+    protected Mail createMail(Notification notification) {
 
         def mail = new Mail()
         // -- the subject

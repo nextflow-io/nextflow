@@ -485,10 +485,7 @@ class WorkflowMetadata {
      */
     protected void safeMailNotification() {
         try {
-            final notifier = new WorkflowNotifier(
-                workflow: this,
-                config: session.config,
-                variables: NF.binding.variables )
+            final notifier = new WorkflowNotifier(session.config, NF.binding.variables, this)
             notifier.sendNotification()
         }
         catch (Exception e) {

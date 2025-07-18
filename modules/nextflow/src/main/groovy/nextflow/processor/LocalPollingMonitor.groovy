@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.executor.ExecutorConfig
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
@@ -64,6 +65,7 @@ class LocalPollingMonitor extends TaskPollingMonitor {
      * Valid parameters are:
      * <li>name: The name of the executor for which the polling monitor is created
      * <li>session: The current {@code Session}
+     * <li>config: The `executor` configuration settings
      * <li>capacity: The maximum number of this monitoring queue
      * <li>pollInterval: Determines how often a poll occurs to check for a process termination
      * <li>dumpInterval: Determines how often the executor status is written in the application log file
@@ -83,22 +85,23 @@ class LocalPollingMonitor extends TaskPollingMonitor {
      *
      * @param session
      *      The current {@link Session} object
+     * @param config
+     *      The `executor` configuration settings
      * @param name
      *      The name of the executor that created this tasks monitor
      * @return
      *      An instance of {@link LocalPollingMonitor}
      */
-    static LocalPollingMonitor create(Session session, String name) {
+    static LocalPollingMonitor create(Session session, ExecutorConfig config, String name) {
         assert session
+        assert config
         assert name
 
-        final defPollInterval = Duration.of('100ms')
-        final pollInterval = session.getPollInterval(name, defPollInterval)
-        final dumpInterval = session.getMonitorDumpInterval(name)
-
-        final int cpus = configCpus(session,name)
-        final long memory = configMem(session,name)
-        final int size = session.getQueueSize(name, OS.getAvailableProcessors())
+        final pollInterval = config.getPollInterval(name, Duration.of('100ms'))
+        final dumpInterval = config.getMonitorDumpInterval(name)
+        final cpus = configCpus(config, name)
+        final memory = configMem(config, name)
+        final size = config.getQueueSize(name, OS.getAvailableProcessors())
 
         log.debug "Creating local task monitor for executor '$name' > cpus=$cpus; memory=${new MemoryUnit(memory)}; capacity=$size; pollInterval=$pollInterval; dumpInterval=$dumpInterval"
 
@@ -107,6 +110,7 @@ class LocalPollingMonitor extends TaskPollingMonitor {
                 cpus: cpus,
                 memory: memory,
                 session: session,
+                config: config,
                 capacity: size,
                 pollInterval: pollInterval,
                 dumpInterval: dumpInterval,
@@ -114,8 +118,8 @@ class LocalPollingMonitor extends TaskPollingMonitor {
     }
 
     @PackageScope
-    static int configCpus(Session session, String name) {
-        int cpus = session.getExecConfigProp(name, 'cpus', 0) as int
+    static int configCpus(ExecutorConfig config, String name) {
+        int cpus = config.getExecConfigProp(name, 'cpus', 0) as int
 
         if( !cpus )
             cpus = OS.getAvailableProcessors()
@@ -124,8 +128,9 @@ class LocalPollingMonitor extends TaskPollingMonitor {
     }
 
     @PackageScope
-    static long configMem(Session session, String name) {
-        (session.getExecConfigProp(name, 'memory', OS.getTotalPhysicalMemorySize()) as MemoryUnit).toBytes()
+    static long configMem(ExecutorConfig config, String name) {
+        final memory = config.getExecConfigProp(name, 'memory', OS.getTotalPhysicalMemorySize()) as MemoryUnit
+        return memory.toBytes()
     }
 
     /**

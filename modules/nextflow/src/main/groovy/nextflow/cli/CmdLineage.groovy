@@ -23,7 +23,6 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import nextflow.config.ConfigBuilder
-import nextflow.config.ConfigMap
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import org.pf4j.ExtensionPoint
@@ -40,12 +39,12 @@ class CmdLineage extends CmdBase implements UsageAware {
     private static final String NAME = 'lineage'
 
     interface LinCommand extends ExtensionPoint {
-        void list(ConfigMap config)
-        void view(ConfigMap config, List<String> args)
-        void render(ConfigMap config, List<String> args)
-        void diff(ConfigMap config, List<String> args)
-        void find(ConfigMap config, List<String> args)
-        void check(ConfigMap config, List<String> args)
+        void list(Map config)
+        void view(Map config, List<String> args)
+        void render(Map config, List<String> args)
+        void diff(Map config, List<String> args)
+        void find(Map config, List<String> args)
+        void check(Map config, List<String> args)
     }
 
     interface SubCmd {
@@ -59,7 +58,7 @@ class CmdLineage extends CmdBase implements UsageAware {
 
     private LinCommand operation
 
-    private ConfigMap config
+    private Map config
 
     CmdLineage() {
         commands << new CmdList()

@@ -29,10 +29,22 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class ApptainerBuilder extends SingularityBuilder {
 
-    ApptainerBuilder(String name) {
+    ApptainerBuilder(String name, ApptainerConfig config) {
         super(name)
+        applyConfig(config)
     }
 
     @Override
     protected String getBinaryName() { 'apptainer' }
+
+    protected void applyConfig(ApptainerConfig config) {
+
+        this.autoMounts = config.autoMounts
+
+        if( config.engineOptions )
+            this.addEngineOptions(config.engineOptions)
+
+        if( config.runOptions )
+            this.addRunOptions(config.runOptions)
+    }
 }

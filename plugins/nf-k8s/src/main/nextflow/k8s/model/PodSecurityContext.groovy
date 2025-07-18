@@ -35,7 +35,7 @@ class PodSecurityContext {
 
     private Map spec
 
-    PodSecurityContext(def user) {
+    PodSecurityContext(String user) {
         spec = [runAsUser: user]
     }
 
