@@ -24,6 +24,7 @@ import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.CodeVisitorSupport;
 import org.codehaus.groovy.ast.Parameter;
+import org.codehaus.groovy.ast.Variable;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
 import org.codehaus.groovy.ast.expr.BitwiseNegationExpression;
 import org.codehaus.groovy.ast.expr.CastExpression;
@@ -711,6 +712,10 @@ public class Formatter extends CodeVisitorSupport {
 
     private static boolean hasTrailingComma(Expression node) {
         return node.getNodeMetaData(ASTNodeMarker.TRAILING_COMMA) != null;
+    }
+
+    public static boolean hasType(Variable variable) {
+        return !variable.isDynamicTyped() || isLegacyType(variable.getType());
     }
 
     public static boolean isLegacyType(ClassNode cn) {

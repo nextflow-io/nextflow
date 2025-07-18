@@ -121,6 +121,16 @@ class Session implements ISession {
     ScriptBinding binding
 
     /**
+     * Params that were specified on the command line.
+     */
+    Map cliParams
+
+    /**
+     * Params that were specified in the configuration.
+     */
+    Map configParams
+
+    /**
      * Holds the configuration object
      */
     Map config
@@ -425,7 +435,7 @@ class Session implements ISession {
     /**
      * Initialize the session workDir, libDir, baseDir and scriptName variables
      */
-    Session init( ScriptFile scriptFile, List<String> args=null ) {
+    Session init( ScriptFile scriptFile, List<String> args=null, Map<String,?> cliParams=null, Map<String,?> configParams=null ) {
 
         if(!workDir.mkdirs()) throw new AbortOperationException("Cannot create work-dir: $workDir -- Make sure you have write permissions or specify a different directory by using the `-w` command line option")
         log.debug "Work-dir: ${workDir.toUriString()} [${FileHelper.getPathFsType(workDir)}]"
@@ -452,6 +462,8 @@ class Session implements ISession {
         this.workflowMetadata = new WorkflowMetadata(this, scriptFile)
 
         // configure script params
+        this.cliParams = cliParams
+        this.configParams = configParams
         binding.setParams( (Map)config.params )
         binding.setArgs( new ScriptRunner.ArgsList(args) )
 
