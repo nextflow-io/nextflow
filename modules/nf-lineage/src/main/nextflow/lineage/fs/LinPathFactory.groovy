@@ -54,6 +54,6 @@ class LinPathFactory extends FileSystemPathFactory {
 
     static LinPath create(String path) {
         final uri = LinPath.asUri(path)
-        return (LinPath) FileHelper.getOrCreateFileSystemFor(uri, LineageConfig.asMap()).provider().getPath(uri)
+        return (LinPath) FileHelper.getOrCreateFileSystemFor(uri, LineageConfig.create().toMap()).provider().getPath(uri)
     }
 }

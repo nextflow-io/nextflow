@@ -33,11 +33,6 @@ class BatchCleanup {
      */
     int size = 100
 
-    /**
-     * The current session object
-     */
-    Session session
-
     /*
      * helper class
      */
@@ -67,9 +62,6 @@ class BatchCleanup {
         def pair = aggregate.get(name)
         if( !pair ) {
             aggregate.put(name, pair = new ExecutorJobsPair(executor))
-            if( !session ) {
-                session = executor.session
-            }
         }
         pair.jobIds.add(jobId)
     }
@@ -80,10 +72,9 @@ class BatchCleanup {
      */
     void kill() {
         aggregate.values().each { pair ->
-
-            int batchSize =  session ? session.getExecConfigProp(pair.executor.name, 'killBatchSize', size) as int: size
+            final executor = pair.executor
+            final batchSize = executor.config.getExecConfigProp(executor.name, 'killBatchSize', size) as int
             kill0(pair.executor, pair.jobIds, batchSize)
-
         }
     }
 

@@ -19,6 +19,9 @@ package io.seqera.wave.plugin.config
 
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.script.dsl.Description
 import nextflow.util.Duration
 
 /**
@@ -26,10 +29,30 @@ import nextflow.util.Duration
  */
 @ToString(includeNames = true, includePackage = false)
 @CompileStatic
-class RetryOpts {
+class RetryOpts implements ConfigScope {
+
+    @ConfigOption
+    @Description("""
+        The initial delay when a failing HTTP request is retried (default: `450ms`).
+    """)
     Duration delay = Duration.of('450ms')
+
+    @ConfigOption
+    @Description("""
+        The max delay when a failing HTTP request is retried (default: `90s`).
+    """)
     Duration maxDelay = Duration.of('90s')
+
+    @ConfigOption
+    @Description("""
+        The max number of attempts a failing HTTP request is retried (default: `5`).
+    """)
     int maxAttempts = 5
+
+    @ConfigOption
+    @Description("""
+        The jitter factor used to randomly vary retry delays (default: `0.25`).
+    """)
     double jitter = 0.25
 
     RetryOpts() {

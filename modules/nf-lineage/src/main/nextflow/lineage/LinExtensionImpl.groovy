@@ -22,6 +22,7 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.Session
 import nextflow.extension.LinExtension
+import nextflow.lineage.config.LineageConfig
 import nextflow.lineage.fs.LinPathFactory
 import nextflow.lineage.model.v1beta1.FileOutput
 
@@ -37,11 +38,11 @@ import static nextflow.lineage.fs.LinPath.*
 class LinExtensionImpl implements LinExtension {
 
     @Override
-    void fromLineage(Session session, DataflowWriteChannel channel, Map<String,?> opts) {
+    void fromLineage(Map config, DataflowWriteChannel channel, Map<String,?> opts) {
         final queryParams = buildQueryParams(opts)
         log.trace("Querying lineage with params: $queryParams")
         new LinPropertyValidator().validateQueryParams(queryParams.keySet())
-        final store = getStore(session)
+        final store = getStore(config)
         try( def stream = store.search(queryParams) ){
             stream.forEach { channel.bind( LinPathFactory.create( asUriString(it) ) ) }
         }
@@ -63,8 +64,8 @@ class LinExtensionImpl implements LinExtension {
         return queryParams
     }
 
-    protected LinStore getStore(Session session) {
-        final store = LinStoreFactory.getOrCreate(session)
+    protected LinStore getStore(Map config) {
+        final store = LinStoreFactory.getOrCreate( LineageConfig.create(config), false )
         if( !store ) {
             throw new Exception("Lineage store not found - Check Nextflow configuration")
         }

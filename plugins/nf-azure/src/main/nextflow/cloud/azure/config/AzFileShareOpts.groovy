@@ -20,6 +20,9 @@ import com.google.common.hash.Hasher
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.script.dsl.Description
 import nextflow.util.CacheFunnel
 import nextflow.util.CacheHelper
 
@@ -31,12 +34,21 @@ import nextflow.util.CacheHelper
 @ToString(includeNames = true, includePackage = false)
 @EqualsAndHashCode
 @CompileStatic
-class AzFileShareOpts implements CacheFunnel {
+class AzFileShareOpts implements CacheFunnel, ConfigScope {
 
 	static public final String DEFAULT_MOUNT_OPTIONS = '-o vers=3.0,dir_mode=0777,file_mode=0777,sec=ntlmssp'
 
-	String mountPath
-	String mountOptions
+	@ConfigOption
+	@Description("""
+		The file share mount path.
+	""")
+	final String mountPath
+
+	@ConfigOption
+	@Description("""
+		The file share mount options.
+	""")
+	final String mountOptions
 
 	AzFileShareOpts(Map opts) {
 		assert opts != null

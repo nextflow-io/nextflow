@@ -25,6 +25,7 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
+import nextflow.container.ContainerHelper
 import nextflow.container.DockerBuilder
 import nextflow.exception.NodeTerminationException
 import nextflow.k8s.client.PodUnschedulableException
@@ -165,7 +166,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
     protected String getOwner() { OWNER }
 
     protected Boolean fixOwnership() {
-        task.containerConfig.fixOwnership
+        ContainerHelper.fixOwnership(task.containerConfig)
     }
 
     /**
@@ -189,7 +190,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected boolean entrypointOverride() {
-        return executor.getK8sConfig().entrypointOverride()
+        return executor.getK8sConfig().entrypointOverride
     }
 
     protected boolean cpuLimitsEnabled() {
@@ -257,7 +258,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
             if( fusionConfig().privileged() )
                 builder.withPrivileged(true)
             else {
-                final device= k8sConfig.fuseDevicePlugin()
+                final device = k8sConfig.fuseDevicePlugin
                 builder.withResourcesLimits(device)
             }
 
@@ -475,9 +476,6 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
      */
     @Override
     protected void killTask() {
-        if( cleanupDisabled() )
-            return
-        
         if( podName ) {
             log.trace "[K8s] deleting ${resourceType.lower()} name=$podName"
             if ( useJobResource() )
@@ -490,15 +488,8 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         }
     }
 
-    protected boolean cleanupDisabled() {
-        !k8sConfig.getCleanup()
-    }
-
     protected void deletePodIfSuccessful(TaskRun task) {
         if( !podName )
-            return
-
-        if( cleanupDisabled() )
             return
 
         if( !task.isSuccess() ) {
@@ -519,7 +510,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private void determineNode(){
         try {
-            if ( k8sConfig.fetchNodeName() && !runsOnNode )
+            if ( k8sConfig.fetchNodeName && !runsOnNode )
                 runsOnNode = client.getNodeOfPod( podName )
         } catch ( Exception e ){
             log.warn ("Unable to get the node name of pod $podName -- see the log file for details", e)

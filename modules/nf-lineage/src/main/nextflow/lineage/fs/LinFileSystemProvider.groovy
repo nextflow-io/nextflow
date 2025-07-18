@@ -71,19 +71,17 @@ class LinFileSystemProvider extends FileSystemProvider {
     }
 
     @Override
-    synchronized FileSystem newFileSystem(URI uri, Map<String, ?> config) throws IOException {
+    synchronized FileSystem newFileSystem(URI uri, Map<String, ?> opts) throws IOException {
         checkScheme(uri)
         if (fileSystem) {
             return fileSystem
         }
-        //Overwrite default values with provided configuration
-        final defaultConfig = LineageConfig.asMap()
-        if (config) {
-            for (Map.Entry<String, ?> e : config.entrySet()) {
-                defaultConfig.put(e.key, e.value)
-            }
+        // Overwrite default values with provided configuration
+        final defaultOpts = LineageConfig.create().toMap()
+        if (opts) {
+            defaultOpts.putAll(opts)
         }
-        return fileSystem = new LinFileSystem(this, new LineageConfig(defaultConfig))
+        return fileSystem = new LinFileSystem(this, new LineageConfig(defaultOpts))
     }
 
     @Override
@@ -96,7 +94,7 @@ class LinFileSystemProvider extends FileSystemProvider {
     synchronized FileSystem getFileSystemOrCreate(URI uri) {
         checkScheme(uri)
         if (!fileSystem) {
-            fileSystem = (LinFileSystem) newFileSystem(uri, LineageConfig.asMap())
+            fileSystem = (LinFileSystem) newFileSystem(uri, Collections.emptyMap())
         }
         return fileSystem
     }

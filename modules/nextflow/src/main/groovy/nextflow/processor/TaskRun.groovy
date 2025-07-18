@@ -640,10 +640,10 @@ class TaskRun implements Cloneable {
     }
 
     private Path getCondaEnv0() {
-        if( !config.conda || !processor.session.getCondaConfig().isEnabled() )
+        if( !config.conda || !getCondaConfig().enabled )
             return null
 
-        final cache = new CondaCache(processor.session.getCondaConfig())
+        final cache = new CondaCache(getCondaConfig())
         cache.getCachePathFor(config.conda as String)
     }
 
