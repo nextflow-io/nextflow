@@ -77,7 +77,7 @@ class ProviderConfig {
 
             case 'gitea':
                 attr.platform = name
-                if( !attr.server ) attr.server = 'https://try.gitea.io'
+                if( !attr.server ) attr.server = 'https://gitea.com' // default to free tier
                 if( !attr.endpoint ) attr.endpoint = attr.server.toString().stripEnd('/') + '/api/v1'
                 break
 

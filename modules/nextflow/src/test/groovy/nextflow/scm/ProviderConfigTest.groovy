@@ -189,6 +189,16 @@ class ProviderConfigTest extends Specification {
         config.user == null
         config.password == null
         config.token == 'xyz'
+
+        when:
+        config = new ProviderConfig('gitea', [auth: 'xyz'])
+        then:
+        config.auth == null
+        config.user == null
+        config.password == null
+        config.token == 'xyz'
+        config.server == 'https://gitea.com'
+        config.endpoint == 'https://gitea.com/api/v1'
     }
 
     def 'should ending slash and add protocol prefix' () {
