@@ -30,6 +30,7 @@ import groovy.util.logging.Slf4j
 import nextflow.cli.CmdKubeRun
 import nextflow.cli.CmdRun
 import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigCmdAdapter
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.k8s.client.K8sClient
@@ -265,17 +266,20 @@ class K8sDriverLauncher {
         // -- load local config if available
         final builder = new ConfigBuilder()
                 .setShowClosures(true)
-                .setOptions(cmd.launcher.options)
                 .setProfile(cmd.profile)
+
+        final adapter = new ConfigCmdAdapter(builder)
+                .setOptions(cmd.launcher.options)
                 .setCmdRun(cmd)
 
         if( !interactive && !pipelineName.startsWith('/') && !cmd.remoteProfile && !cmd.runRemoteConfig ) {
             // -- check and parse project remote config
             final pipelineConfig = new AssetManager(pipelineName, cmd) .getConfigFile()
-            builder.setUserConfigFiles(pipelineConfig)
+            if( pipelineConfig )
+                adapter.setUserConfigFiles(pipelineConfig)
         }
 
-        return builder.buildConfigObject()
+        return adapter.buildConfigObject()
     }
 
     protected K8sConfig makeK8sConfig(Map config) {
