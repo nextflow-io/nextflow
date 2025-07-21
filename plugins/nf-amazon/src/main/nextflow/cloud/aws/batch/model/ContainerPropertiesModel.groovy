@@ -282,7 +282,7 @@ class ContainerPropertiesModel {
             ", networkConfiguration=" + networkConfiguration +
             ", ephemeralStorage=" + ephemeralStorage +
             ", runtimePlatform=" + runtimePlatform +
-            ", ecsMode=true" //Added to generate a different token if the job definition was generated with older containerProperties
+            ", ecsMode=true" + //Added to generate a different token if the job definition was generated with older containerProperties
             '}';
     }
 }
