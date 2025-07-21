@@ -24,9 +24,7 @@ import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider
-import software.amazon.awssdk.awscore.defaultsmode.DefaultsMode
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration
-import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption
 import software.amazon.awssdk.core.exception.SdkClientException
 import software.amazon.awssdk.http.SdkHttpClient
 import software.amazon.awssdk.regions.Region
@@ -48,7 +46,6 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.cloud.aws.config.AwsConfig
-import nextflow.cloud.aws.util.S3CredentialsProvider
 import nextflow.exception.AbortOperationException
 /**
  * Implement a factory class for AWS client objects
@@ -217,7 +214,7 @@ class AwsClientFactory {
         final ClientOverrideConfiguration overrideConfiguration = s3ClientConfig.getClientOverrideConfiguration()
         final builder = S3Client.builder()
             .crossRegionAccessEnabled(global)
-            .credentialsProvider(config.s3Config.anonymous ? AnonymousCredentialsProvider.create() : new S3CredentialsProvider(getCredentialsProvider0()))
+            .credentialsProvider(getS3CredentialsProvider())
             .serviceConfiguration(S3Configuration.builder()
                 .pathStyleAccessEnabled(config.s3Config.pathStyleAccess)
                 .multiRegionEnabled(global)
@@ -241,7 +238,7 @@ class AwsClientFactory {
     S3AsyncClient getS3AsyncClient(S3AsyncClientConfiguration s3ClientConfig, boolean global = false) {
         def builder = S3AsyncClient.crtBuilder()
             .crossRegionAccessEnabled(global)
-            .credentialsProvider(config.s3Config.anonymous ? AnonymousCredentialsProvider.create() : new S3CredentialsProvider(getCredentialsProvider0()))
+            .credentialsProvider(getS3CredentialsProvider())
             .forcePathStyle(config.s3Config.pathStyleAccess)
             .region(getRegionObj(region))
         if( config.s3Config.endpoint )
@@ -272,6 +269,19 @@ class AwsClientFactory {
             builder.maxConcurrency(maxConcurrency)
 
         return builder.build()
+    }
+
+    private AwsCredentialsProvider getS3CredentialsProvider() {
+        if ( config.s3Config.anonymous )
+            return AnonymousCredentialsProvider.create()
+        def provider = getCredentialsProvider0()
+        try {
+            provider.resolveCredentials()
+        } catch (Exception e) {
+            log.debug("No AWS credentials available - falling back to anonymous access")
+            return AnonymousCredentialsProvider.create()
+        }
+        return provider
     }
 
     private void setMultipartConfiguration(MultipartConfiguration multipartConfig, S3CrtAsyncClientBuilder builder) {
