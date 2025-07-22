@@ -72,67 +72,76 @@ For this reason, it is important to preserve both the task cache (`.nextflow/cac
 
 ## Troubleshooting
 
-Cache failures happen when either (1) a task that was supposed to be cached was re-executed, or (2) a task that was supposed to be re-executed was cached.
+Cache failures occur when a task that was supposed to be cached was re-executed or a task that was supposed to be re-executed was cached.
 
-When this happens, consider the following questions:
+Common causes of cache failures include:
 
-- Is resume enabled via `-resume`?
-- Is the {ref}`process-cache` directive set to a non-default value?
-- Is the task still present in the task cache and work directory?
-- Were any of the task inputs changed?
+- [Resume not being enabled](#resume-not-enabled)
+- [Non-default cache directives](#non-default-cache-directives)
+- [Modified inputs](#modified-input-files)
+- [Inconsistent file attributes](#inconsistent-file-attributes)
+- [Race condition on a global variable](#race-condition-on-a-global-variable)
+- [Non-deterministic process inputs](#non-deterministic-process-inputs)
 
-Changing any of the inputs included in the [task hash](#task-hash) will invalidate the cache, for example:
+### Resume not enabled
 
+The `-resume` option is required to resume a pipeline. Ensure you enable `-resume` in your run command or your Nextflow configuration file.
+
+### Non-default cache directives
+
+The `cache` directive is enabled by default. However, you can disable or modify its behavior for a specific process. For example:
+
+```nextflow
+process FOO {
+  cache false
+  // ...
+}
+```
+
+Ensure that the cache has not been set to a non-default value. See {ref}`process-cache` for more information about the `cache` directive.
+
+### Modified input files
+
+Modifying inputs that are used in the task hash invalidates the cache. Common causes of modified inputs include:
+
+- Changing input files
 - Resuming from a different session ID
 - Changing the process name
 - Changing the task container image or Conda environment
 - Changing the task script
-- Changing an input file or bundled script used by the task
+- Changing a bundled script used by the task
 
-While the following examples would not invalidate the cache:
-
-- Changing the value of a directive (other than {ref}`process-ext`), even if that directive is used in the task script
-
-In many cases, cache failures happen because of a change to the pipeline script or configuration, or because the pipeline itself has some non-deterministic behavior.
-
-Here are some common reasons for cache failures:
-
-### Modified input files
-
-Make sure that your input files have not been changed. Keep in mind that the default caching mode uses the complete file path, the last modified timestamp, and the file size. If any of these attributes change, the task will be re-executed, even if the file content is unchanged.
-
-### Process that modifies its inputs
-
-If a process modifies its own input files, it cannot be resumed for the reasons described in the previous point. As a result, processes that modify their own input files are considered an anti-pattern and should be avoided.
+Nextflow calculates a hash for an input file using its full path, last modified timestamp, and file size. If any of these attributes change, Nextflow re-executes the task. If a process modifies its input files, you cannot resume it. Avoid processes that modify their own input files as this is considered an anti-pattern.
 
 ### Inconsistent file attributes
 
-Some shared file systems, such as NFS, may report inconsistent file timestamps, which can invalidate the cache. If you encounter this problem, you can avoid it by using the `'lenient'` {ref}`caching mode <process-cache>`, which ignores the last modified timestamp and uses only the file path and size.
+Some shared file systems, such as NFS, may report inconsistent file timestamps.
+
+To resolve this issue, use the `'lenient'` {ref}`caching mode <process-cache>` to ignore the last modified timestamp and use only the file path.
 
 (cache-global-var-race-condition)=
 
 ### Race condition on a global variable
 
-While Nextflow tries to make it easy to write safe concurrent code, it is still possible to create race conditions, which can in turn impact the caching behavior of your pipeline.
-
-Consider the following example:
+Race conditions can in disrupt caching behavior of your pipeline. For example:
 
 ```nextflow
 channel.of(1,2,3) | map { v -> X=v; X+=2 } | view { v -> "ch1 = $v" }
 channel.of(1,2,3) | map { v -> X=v; X*=2 } | view { v -> "ch2 = $v" }
 ```
 
-The problem here is that `X` is declared in each `map` closure without the `def` keyword (or other type qualifier). Using the `def` keyword makes the variable local to the enclosing scope; omitting the `def` keyword makes the variable global to the entire script.
+In the above example, `X` is declared in each `map` closure. Without the `def` keyword, or other type qualifier, the variable `X` is global to the entire script. Operators and executed concurrently and, as `X` is global, there is a *race condition* that causes the emitted values to vary depending on the order of the concurrent operations. If these values were passed to a process as inputs the process would execute different tasks during each run due to the race condition.
 
-Because `X` is global, and operators are executed concurrently, there is a *race condition* on `X`, which means that the emitted values will vary depending on the particular order of the concurrent operations. If the values were passed as inputs into a process, the process would execute different tasks on each run due to the race condition.
-
-The solution is to not use a global variable where a local variable is enough (or in this simple example, avoid the variable altogether):
+To resolve this failure type, use local variables:
 
 ```nextflow
 // local variable
 channel.of(1,2,3) | map { v -> def X=v; X+=2 } | view { v -> "ch1 = $v" }
+```
 
-// no variable
+Alternatively, remove the variable:
+
+```nextflow
 channel.of(1,2,3) | map { v -> v * 2 } | view { v -> "ch2 = $v" }
 ```
 
@@ -140,7 +149,7 @@ channel.of(1,2,3) | map { v -> v * 2 } | view { v -> "ch2 = $v" }
 
 ### Non-deterministic process inputs
 
-Sometimes a process needs to merge inputs from different sources. Consider the following example:
+A process that merges inputs from different sources non-deterministically may invalidate the cache. For example:
 
 ```nextflow
 workflow {
@@ -161,9 +170,9 @@ process check_bam_bai {
 }
 ```
 
-It is tempting to assume that the process inputs will be matched by `id` like the {ref}`operator-join` operator. But in reality, they are simply merged like the {ref}`operator-merge` operator. As a result, not only will the process inputs be incorrect, they will also be non-deterministic, thus invalidating the cache.
+In the above example, the inputs will merge without matching. This is the same way method used by the {ref}`operator-merge` operator. When merged, the inputs are incorrect, non-deterministic, and invalidate the cache.
 
-The solution is to explicitly join the two channels before the process invocation:
+To resolve this failure type, join channels before invoking the process:
 
 ```nextflow
 workflow {
