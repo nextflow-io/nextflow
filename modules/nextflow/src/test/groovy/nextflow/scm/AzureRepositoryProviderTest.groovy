@@ -20,10 +20,6 @@ import nextflow.exception.AbortOperationException
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
-
-import javax.imageio.ImageIO
-import javax.imageio.stream.MemoryCacheImageInputStream
-
 /**
  *
  * @author Tobias Neumann <tobias.neumann.at@gmail.com>
@@ -153,11 +149,7 @@ class AzureRepositoryProviderTest extends Specification {
 
         then:
         result.length == 22915
-        and:
-        def inputStream = new ByteArrayInputStream(result)
-        def imageInput = new MemoryCacheImageInputStream(inputStream)
-        final readers = ImageIO.getImageReaders(imageInput)
-        readers.hasNext()
+        result.sha256() == '7a396344498750f614155f6e4f38b7d6ca98ced45daf0921b64acf73b18efaf4'
     }
 
 

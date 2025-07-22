@@ -19,10 +19,6 @@ package nextflow.scm
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
-
-import javax.imageio.ImageIO
-import javax.imageio.stream.MemoryCacheImageInputStream
-
 /**
  *
  * @author Akira Sekiguchi <pachiras.yokohama@gmail.com>
@@ -112,20 +108,18 @@ class GiteaRepositoryProviderTest extends Specification {
 
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
-    @Requires({System.getenv('NXF_AZURE_REPOS_TOKEN')})
+    @Requires({System.getenv('NXF_GITEA_ACCESS_TOKEN')})
     def 'should read bytes file content'() {
         given:
         def token =  System.getenv('NXF_GITEA_ACCESS_TOKEN')
         def config = new ProviderConfig('gitea', new ConfigSlurper().parse(CONFIG).providers.mygitea as ConfigObject).setAuth(token)
 
         when:
-        def repo = new GiteaRepositoryProvider('swingingsimiangitea/rnaseq', config)
+        def repo = new GiteaRepositoryProvider('pditommaso/test-hello', config)
         def result = repo.readBytes('docs/images/nf-core-rnaseq_logo_light.png')
 
         then:
-        def inputStream = new ByteArrayInputStream(result)
-        def imageInput = new MemoryCacheImageInputStream(inputStream)
-        final readers = ImageIO.getImageReaders(imageInput)
-        readers.hasNext()
+        result.length == 22915
+        result.sha256() == '7a396344498750f614155f6e4f38b7d6ca98ced45daf0921b64acf73b18efaf4'
     }
 }
