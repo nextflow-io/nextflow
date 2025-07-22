@@ -106,7 +106,6 @@ class GiteaRepositoryProviderTest extends Specification {
         result == DATA
     }
 
-
     @IgnoreIf({System.getenv('NXF_SMOKE')})
     @Requires({System.getenv('NXF_GITEA_ACCESS_TOKEN')})
     def 'should read bytes file content'() {
