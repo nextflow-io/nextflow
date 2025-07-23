@@ -61,3 +61,9 @@ To use Nextflow plugins in an offline environment:
 4. In your Nextflow configuration file, specify each plugin that you downloaded, both name and version, including default plugins. This will prevent Nextflow from trying to download newer versions of plugins.
 
 Nextflow caches the plugins that it downloads, so as long as you keep using the same Nextflow version and pin your plugin versions in your config file, Nextflow will use the locally installed plugins and won't try to download them from the Internet.
+
+For manual installation for offline usage:
+
+1. Download the `.zip` file of the release required from github directly. For example for `nf-schema` the github releases page can be [found here](https://github.com/nextflow-io/nf-schema/releases).
+2. Uncompress the .zip file, make sure to name the output folder with the version, for example `nf-schema-2.3.0`.
+3. Copy the folder containing the uncompressed contents to `$HOME/.nextflow` folder.
