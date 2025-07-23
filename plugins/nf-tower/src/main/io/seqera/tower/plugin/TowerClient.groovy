@@ -137,6 +137,8 @@ class TowerClient implements TraceObserverV2 {
 
     private boolean towerLaunch
 
+    private String accessToken
+
     private String refreshToken
 
     private String workspaceId
@@ -145,14 +147,11 @@ class TowerClient implements TraceObserverV2 {
 
     private Map<String,Boolean> allContainers = new ConcurrentHashMap<>()
 
-    /**
-     * Constructor that consumes a URL and creates
-     * a basic HTTP client.
-     * @param endpoint The target address for sending messages to
-     */
-    TowerClient(Session session, String endpoint) {
+    TowerClient(Session session, TowerConfig config) {
         this.session = session
-        this.endpoint = checkUrl(endpoint)
+        this.endpoint = checkUrl(config.endpoint)
+        this.accessToken = config.accessToken
+        this.workspaceId = config.workspaceId
         this.schema = loadSchema()
         this.generator = TowerJsonGenerator.create(schema)
         this.reports = new TowerReports(session)
@@ -199,10 +198,6 @@ class TowerClient implements TraceObserverV2 {
 
     void setBackOffDelay( int value ) {
         this.backOffDelay = value
-    }
-
-    void setWorkspaceId( String workspaceId ) {
-        this.workspaceId = workspaceId
     }
 
     String getWorkspaceId() { workspaceId }
@@ -381,15 +376,9 @@ class TowerClient implements TraceObserverV2 {
     }
 
     String getAccessToken() {
-        // when 'TOWER_WORKFLOW_ID' is provided in the env, it's a tower made launch
-        // therefore the access token should only be taken from the env
-        // otherwise check into the config file and fallback in the env
-        def token = env.get('TOWER_WORKFLOW_ID')
-                ? env.get('TOWER_ACCESS_TOKEN')
-                : session.config.navigate('tower.accessToken', env.get('TOWER_ACCESS_TOKEN'))
-        if( !token )
+        if( !accessToken )
             throw new AbortOperationException("Missing Seqera Platform access token -- Make sure there's a variable TOWER_ACCESS_TOKEN in your environment")
-        return token
+        return accessToken
     }
 
     /**

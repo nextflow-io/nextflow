@@ -22,7 +22,6 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
 import nextflow.Channel
-import nextflow.Session
 import nextflow.extension.CH
 import nextflow.lineage.config.LineageConfig
 import nextflow.lineage.fs.LinPathFactory
@@ -70,10 +69,7 @@ class LinExtensionImplTest extends Specification {
         def key4 = "testKey4"
         def value4 = new FileOutput("/path/tp/file", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", "taskid", 1234, time, time, ["value4","value3"])
         def lidStore = new DefaultLinStore()
-        def session = Mock(Session) {
-            getConfig() >> configMap
-        }
-        lidStore.open(LineageConfig.create(session))
+        lidStore.open(LineageConfig.create(configMap))
         lidStore.save(key, value1)
         lidStore.save(key2, value2)
         lidStore.save(key3, value3)
@@ -81,27 +77,27 @@ class LinExtensionImplTest extends Specification {
         def linExt = Spy(new LinExtensionImpl())
         when:
         def results = CH.create()
-        linExt.fromLineage(session, results,  [label: ["value2", "value3"]])
+        linExt.fromLineage(configMap, results,  [label: ["value2", "value3"]])
         then:
-        linExt.getStore(session) >> lidStore
+        linExt.getStore(configMap) >> lidStore
         and:
         results.val == LinPathFactory.create( asUriString(key3) )
         results.val == Channel.STOP
 
         when:
         results = CH.create()
-        linExt.fromLineage(session, results, [taskRun: "taskid", label: ["value4"]])
+        linExt.fromLineage(configMap, results, [taskRun: "taskid", label: ["value4"]])
         then:
-        linExt.getStore(session) >> lidStore
+        linExt.getStore(configMap) >> lidStore
         and:
         results.val == LinPathFactory.create( asUriString(key4) )
         results.val == Channel.STOP
 
         when:
         results = CH.create()
-        linExt.fromLineage(session, results, [workflowRun: "testkey", taskRun: "taskid", label: "value2"])
+        linExt.fromLineage(configMap, results, [workflowRun: "testkey", taskRun: "taskid", label: "value2"])
         then:
-        linExt.getStore(session) >> lidStore
+        linExt.getStore(configMap) >> lidStore
         and:
         results.val == LinPathFactory.create( asUriString(key2) )
         results.val == Channel.STOP

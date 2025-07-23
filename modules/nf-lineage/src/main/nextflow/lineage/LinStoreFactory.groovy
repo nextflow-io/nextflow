@@ -41,7 +41,7 @@ abstract class LinStoreFactory implements ExtensionPoint {
 
     protected abstract LinStore newInstance(LineageConfig config)
 
-     static LinStore create(LineageConfig config){
+    static LinStore create(LineageConfig config){
          final factory = Plugins
              .getPriorityExtensions(LinStoreFactory)
              .find( f-> f.canOpen(config))
@@ -51,15 +51,14 @@ abstract class LinStoreFactory implements ExtensionPoint {
         return factory.newInstance(config)
     }
 
-    static LinStore getOrCreate(Session session) {
+    static LinStore getOrCreate(LineageConfig config, boolean requireConfig=true) {
         if( instance || initialized )
             return instance
         synchronized (LinStoreFactory.class) {
             if( instance || initialized )
                 return instance
             initialized = true
-            final config = LineageConfig.create(session)
-            if( !config.enabled )
+            if( requireConfig && !config.enabled )
                 return null
             return instance = create(config)
         }

@@ -673,7 +673,7 @@ class Channel  {
         final linExt = Plugins.getExtension(LinExtension)
         if( !linExt )
             throw new IllegalStateException("Unable to load lineage extensions.")
-        final future = CompletableFuture.runAsync(() -> linExt.fromLineage(session, channel, params))
+        final future = CompletableFuture.runAsync(() -> linExt.fromLineage(session.config, channel, params))
         future.exceptionally(this.&handlerException)
     }
 }

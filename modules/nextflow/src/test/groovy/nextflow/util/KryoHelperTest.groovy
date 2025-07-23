@@ -17,7 +17,7 @@
 package nextflow.util
 
 import groovy.transform.EqualsAndHashCode
-import nextflow.container.ContainerConfig
+import nextflow.container.DockerConfig
 import nextflow.file.FileHelper
 import nextflow.io.SerializableMarker
 import spock.lang.Specification
@@ -118,15 +118,15 @@ class KryoHelperTest extends  Specification {
     def testSerializeContainerConfig() {
 
         given:
-        def cfg = new ContainerConfig([enabled: true, engine: 'docker', xxx: 'hello'])
+        def cfg = new DockerConfig([enabled: true, runOptions: 'hello'])
         when:
         def copy = KryoHelper.deserialize(KryoHelper.serialize(cfg))
         then:
         copy == cfg
-        copy instanceof ContainerConfig
+        copy instanceof DockerConfig
         copy.engine == 'docker'
         copy.enabled == true
-        copy.xxx == 'hello'
+        copy.runOptions == 'hello'
 
     }
 

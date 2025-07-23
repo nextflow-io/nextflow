@@ -36,6 +36,7 @@ import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.cloud.types.PriceModel
 import nextflow.executor.Executor
+import nextflow.executor.ExecutorConfig
 import nextflow.executor.res.AcceleratorResource
 import nextflow.executor.res.DiskResource
 import nextflow.processor.TaskBean
@@ -59,7 +60,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
         def CONTAINER_IMAGE = 'debian:latest'
         def exec = Mock(GoogleBatchExecutor) {
-            getConfig() >> Mock(BatchConfig)
+            getBatchConfig() >> Mock(BatchConfig)
         }
         and:
         def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
@@ -140,19 +141,19 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def TIMEOUT = Duration.of('1 hour')
         and:
         def exec = Mock(GoogleBatchExecutor) {
-            getConfig() >> Mock(BatchConfig) {
+            getBatchConfig() >> Mock(BatchConfig) {
                 getAllowedLocations() >> ['zones/us-central1-a', 'zones/us-central1-c']
                 getBootDiskSize() >> BOOT_DISK
                 getBootDiskImage() >> BOOT_IMAGE
                 getCpuPlatform() >> CPU_PLATFORM
                 getMaxSpotAttempts() >> 5
                 getAutoRetryExitCodes() >> [50001,50002]
-                getSpot() >> true
+                spot >> true
                 getNetwork() >> 'net-1'
                 getNetworkTags() >> ['tag1', 'tag2']
                 getServiceAccountEmail() >> 'foo@bar.baz'
                 getSubnetwork() >> 'subnet-1'
-                getUsePrivateAddress() >> true
+                usePrivateAddress >> true
             }
         }
         and:
@@ -257,8 +258,11 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def CONTAINER_IMAGE = 'debian:latest'
         and:
         def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
-        def sess = Mock(Session)
-        def exec = new GoogleBatchExecutor(session: sess)
+        def config = Mock(ExecutorConfig)
+        def exec = Mock(GoogleBatchExecutor) {
+            getConfig() >> config
+            getBatchConfig() >> Mock(BatchConfig)
+        }
 
         and:
         def task = Mock(TaskRun) {
@@ -274,14 +278,14 @@ class GoogleBatchTaskHandlerTest extends Specification {
         when:
         def result = handler.customJobName(task)
         then:
-        1 * sess.getExecConfigProp(_,'jobName', null) >> null
+        1 * config.getExecConfigProp(_, 'jobName', null) >> null
         and:
         result == null
 
         when:
         result = handler.customJobName(task)
         then:
-        1 * sess.getExecConfigProp(_,'jobName', null) >> { return { "foo-${task.hashLog}" }  }
+        1 * config.getExecConfigProp(_, 'jobName', null) >> { return { "foo-${task.hashLog}" } }
         and:
         result == 'foo-abcd1234'
 
@@ -294,7 +298,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def CONTAINER_IMAGE = 'debian:latest'
         def INSTANCE_TEMPLATE = 'instance-template'
         def exec = Mock(GoogleBatchExecutor) {
-            getConfig() >> Mock(BatchConfig) {
+            getBatchConfig() >> Mock(BatchConfig) {
                 getInstallGpuDrivers() >> true
             }
         }
@@ -381,7 +385,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
         def CONTAINER_IMAGE = 'debian:latest'
         def exec = Mock(GoogleBatchExecutor) {
-            getConfig() >> Mock(BatchConfig)
+            getBatchConfig() >> Mock(BatchConfig)
         }
         and:
         def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
@@ -441,7 +445,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
         def CONTAINER_IMAGE = 'debian:latest'
         def exec = Mock(GoogleBatchExecutor) {
-            getConfig() >> Mock(BatchConfig)
+            getBatchConfig() >> Mock(BatchConfig)
         }
         def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
         def task = Mock(TaskRun) {
@@ -511,7 +515,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         }
         def exec = Mock(GoogleBatchExecutor) {
             getClient() >> client
-            getConfig() >> Mock(BatchConfig) { getSpot()>>false }
+            getBatchConfig() >> Mock(BatchConfig) { getSpot()>>false }
             isCloudinfoEnabled() >> true
         }
         def handler = Spy(new GoogleBatchTaskHandler(task, exec))
@@ -539,7 +543,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         }
         def exec = Mock(GoogleBatchExecutor) {
             getClient() >> client
-            getConfig() >> Mock(BatchConfig) { getSpot()>>false }
+            getBatchConfig() >> Mock(BatchConfig) { getSpot()>>false }
             isCloudinfoEnabled() >> false
         }
         def handler = Spy(new GoogleBatchTaskHandler(task, exec))
