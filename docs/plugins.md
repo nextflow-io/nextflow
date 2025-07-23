@@ -64,6 +64,6 @@ Nextflow caches the plugins that it downloads, so as long as you keep using the 
 
 For manual installation for offline usage:
 
-1. Download the `.zip` file of the release required from github directly. For example for `nf-schema` the github releases page can be [found here](https://github.com/nextflow-io/nf-schema/releases).
+1. Download the `.zip` file of the plugin from Github releases page. For example for `nf-schema` plugin, the github release page can be [found here](https://github.com/nextflow-io/nf-schema/releases).
 2. Uncompress the .zip file, make sure to name the output folder with the version, for example `nf-schema-2.3.0`.
 3. Copy the folder containing the uncompressed contents to `$HOME/.nextflow` folder.
