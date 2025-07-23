@@ -114,7 +114,7 @@ Modifying inputs that are used in the task hash invalidates the cache. Common ca
 
 Nextflow calculates a hash for an input file using its full path, last modified timestamp, and file size. If any of these attributes change, Nextflow re-executes the task.
 
-:::{warn}
+:::{warning}
 If a process modifies its input files, it cannot be resumed. Avoid processes that modify their own input files as this is considered an anti-pattern.
 :::
 
