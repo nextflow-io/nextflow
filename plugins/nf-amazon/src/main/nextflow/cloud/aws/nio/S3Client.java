@@ -103,7 +103,7 @@ public class S3Client {
 				return null;
 			return getBucketAcl(buckets.get(0).name()).owner().id();
 		}catch (Throwable e){
-			log.debug("Exception fetching caller account", e);
+			log.debug("Unable to fetch caller account - {} ", e.getMessage());
 			return null;
 		}
 	}
