@@ -169,7 +169,7 @@ function install() {
     local action="a=${2:-default}"
     get "$NXF_BASE/$version/nextflow?$action" "$tmpfile" "$1" || exit $?
     mv "$tmpfile" "$1" || exit $?
-    chmod +x "$1" || exit $?
+    chmod +rx "$1" || exit $?
     bash "$1" -download || exit $?
     echo ''
     echo -e $'Nextflow installation completed. Please note:'
