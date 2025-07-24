@@ -132,12 +132,12 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         var bodyDef = stmt(createX(
             "nextflow.script.BodyDef",
             args(
-                closureX(node.main),
+                closureX(null, node.main),
                 constX(getSourceText(node)),
                 constX("workflow")
             )
         ));
-        var closure = closureX(block(new VariableScope(), List.of(
+        var closure = closureX(null, block(new VariableScope(), List.of(
             node.takes,
             node.emits,
             bodyDef
@@ -207,13 +207,13 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         var bodyDef = stmt(createX(
             "nextflow.script.BodyDef",
             args(
-                closureX(node.exec),
+                closureX(null, node.exec),
                 constX(getSourceText(node.exec)),
                 constX(node.type)
             )
         ));
         var stub = processStub(node.stub);
-        var closure = closureX(block(new VariableScope(), List.of(
+        var closure = closureX(null, block(new VariableScope(), List.of(
             node.directives,
             node.inputs,
             node.outputs,
@@ -350,7 +350,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     }
 
     protected ClosureExpression wrapExpressionInClosure(Expression node)  {
-        return closureX(block(stmt(node)));
+        return closureX(null, block(stmt(node)));
     }
 
     private Statement processWhen(Expression when) {
@@ -371,7 +371,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         return stmt(callThisX("stub", createX(
             "nextflow.script.TaskClosure",
             args(
-                closureX(stub),
+                closureX(null, stub),
                 constX(getSourceText(stub))
             )
         )));
@@ -392,11 +392,11 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             .map((output) -> {
                 new PublishDslVisitor().visit(output.body);
                 var name = constX(output.name);
-                var body = closureX(output.body);
+                var body = closureX(null, output.body);
                 return stmt(callThisX("declare", args(name, body)));
             })
             .toList();
-        var closure = closureX(block(new VariableScope(), statements));
+        var closure = closureX(null, block(new VariableScope(), statements));
         var result = stmt(callThisX("output", args(closure)));
         moduleNode.addStatement(result);
     }
