@@ -378,19 +378,15 @@ class TowerClient implements TraceObserver {
         log.info(LoggerHelper.STICKY, msg)
     }
 
-    /**
-     * Get the access token for Seqera Platform authentication.
-     * When 'TOWER_WORKFLOW_ID' is provided in the env, it's a tower made launch
-     * therefore the access token should only be taken from the env.
-     * Otherwise check into the config file and fallback in the env.
-     * The access token can be provided via either SEQERA_ACCESS_TOKEN (preferred) or TOWER_ACCESS_TOKEN environment variables.
-     */
     String getAccessToken() {
+        // when 'TOWER_WORKFLOW_ID' is provided in the env, it's a tower made launch
+        // therefore the access token should only be taken from the env
+        // otherwise check into the config file and fallback in the env
         def token = env.get('TOWER_WORKFLOW_ID')
-                ? (env.get('SEQERA_ACCESS_TOKEN') ?: env.get('TOWER_ACCESS_TOKEN'))
-                : session.config.navigate('tower.accessToken', env.get('SEQERA_ACCESS_TOKEN') ?: env.get('TOWER_ACCESS_TOKEN'))
+                ? env.get('TOWER_ACCESS_TOKEN')
+                : session.config.navigate('tower.accessToken', env.get('TOWER_ACCESS_TOKEN'))
         if( !token )
-            throw new AbortOperationException("Missing Seqera Platform access token -- Make sure there's a variable SEQERA_ACCESS_TOKEN or TOWER_ACCESS_TOKEN in your environment")
+            throw new AbortOperationException("Missing Seqera Platform access token -- Make sure there's a variable TOWER_ACCESS_TOKEN in your environment")
         return token
     }
 

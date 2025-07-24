@@ -30,8 +30,7 @@ class PlatformHelper {
     /**
      * Return the configured Platform access token: if `TOWER_WORKFLOW_ID` is provided in the environment, it means
      * we are running in a Platform-made run and we should ONLY retrieve the token from the environment. Otherwise,
-     * check the configuration or fallback to the environment. The access token can be provided via either
-     * SEQERA_ACCESS_TOKEN (preferred) or TOWER_ACCESS_TOKEN environment variables. If no token is found, return null.
+     * check the configuration or fallback to the environment. If no token is found, return null.
      *
      * @param opts the configuration options for Platform (e.g. `session.config.navigate('tower')`)
      * @param env the applicable environment variables
@@ -39,8 +38,8 @@ class PlatformHelper {
      */
     static String getAccessToken(Map opts, Map<String,String> env) {
         final token = env.get('TOWER_WORKFLOW_ID')
-            ? (env.get('SEQERA_ACCESS_TOKEN') ?: env.get('TOWER_ACCESS_TOKEN'))
-            : opts.containsKey('accessToken') ? opts.accessToken as String : (env.get('SEQERA_ACCESS_TOKEN') ?: env.get('TOWER_ACCESS_TOKEN'))
+            ? env.get('TOWER_ACCESS_TOKEN')
+            : opts.containsKey('accessToken') ? opts.accessToken as String : env.get('TOWER_ACCESS_TOKEN')
         return token
     }
 
