@@ -38,10 +38,12 @@ dependencies {
     compileOnly 'org.pf4j:pf4j:3.12.0'
 
     api ('javax.xml.bind:jaxb-api:2.4.0-b180830.0359')
-    api ('com.amazonaws:aws-java-sdk-codecommit:1.12.777')
+    api ('software.amazon.awssdk:codecommit:2.31.64')
+    api ('software.amazon.awssdk:sso:2.31.64')
+    api ('software.amazon.awssdk:ssooidc:2.31.64')
         
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.apache.groovy:groovy:4.0.27"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.27"
+    testImplementation "org.apache.groovy:groovy:4.0.28"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.28"
 }

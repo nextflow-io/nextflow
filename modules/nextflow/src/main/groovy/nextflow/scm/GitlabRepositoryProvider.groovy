@@ -51,6 +51,13 @@ class GitlabRepositoryProvider extends RepositoryProvider {
     }
 
     @Override
+    boolean hasCredentials() {
+        return getToken()
+            ? true
+            : super.hasCredentials()
+    }
+
+    @Override
     String getName() { "GitLab" }
 
     @Override
@@ -88,7 +95,7 @@ class GitlabRepositoryProvider extends RepositoryProvider {
         //  https://docs.gitlab.com/ee/api/repository_files.html#get-raw-file-from-repository
         //
         final ref = revision ?: getDefaultBranch()
-        final encodedPath = URLEncoder.encode(path,'utf-8')
+        final encodedPath = URLEncoder.encode(path.stripStart('/'),'utf-8')
         return "${config.endpoint}/api/v4/projects/${getProjectName()}/repository/files/${encodedPath}?ref=${ref}"
     }
 

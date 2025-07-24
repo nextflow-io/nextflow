@@ -54,6 +54,13 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
     }
 
     @Override
+    boolean hasCredentials() {
+        return getToken()
+            ? true
+            : super.hasCredentials()
+    }
+
+    @Override
     @CompileDynamic
     List<BranchInfo> getBranches() {
         // https://try.gitea.io/api/swagger#/repository/repoListBranches
