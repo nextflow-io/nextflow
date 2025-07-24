@@ -16,16 +16,16 @@
 
 package nextflow.cloud.aws.codecommit
 
-import com.amazonaws.SdkClientException
-import com.amazonaws.auth.AWSStaticCredentialsProvider
-import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
-import com.amazonaws.services.codecommit.AWSCodeCommit
-import com.amazonaws.services.codecommit.AWSCodeCommitClientBuilder
-import com.amazonaws.services.codecommit.model.AWSCodeCommitException
-import com.amazonaws.services.codecommit.model.GetFileRequest
-import com.amazonaws.services.codecommit.model.GetRepositoryRequest
-import com.amazonaws.services.codecommit.model.RepositoryMetadata
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
+import software.amazon.awssdk.core.exception.SdkException
+import software.amazon.awssdk.regions.Region
+import software.amazon.awssdk.services.codecommit.CodeCommitClient
+import software.amazon.awssdk.services.codecommit.model.CodeCommitException
+import software.amazon.awssdk.services.codecommit.model.GetFileRequest
+import software.amazon.awssdk.services.codecommit.model.GetRepositoryRequest
+import software.amazon.awssdk.services.codecommit.model.RepositoryMetadata
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
@@ -56,22 +56,21 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
     }
 
     private String region
-    private AWSCodeCommit client
+    private CodeCommitClient client
     private String repositoryName
 
 
-    protected AWSCodeCommit createClient(AwsCodeCommitProviderConfig config) {
-        final builder = AWSCodeCommitClientBuilder
-                .standard()
-                .withRegion(region)
+    protected CodeCommitClient createClient(AwsCodeCommitProviderConfig config) {
+        final builder = CodeCommitClient.builder()
+                .region(Region.of(region))
         if( config.user && config.password ) {
-            final creds = new BasicAWSCredentials(config.user, config.password)
+            final creds = AwsBasicCredentials.create(config.user, config.password)
             log.debug "AWS CodeCommit using username=$config.user; password=${StringUtils.redact(config.password)}"
-            builder.withCredentials( new AWSStaticCredentialsProvider(creds) )
+            builder.credentialsProvider( StaticCredentialsProvider.create(creds) )
         }
         else {
             log.debug "AWS CodeCommit using default credentials chain"
-            builder.withCredentials( new DefaultAWSCredentialsProviderChain() )
+            builder.credentialsProvider( DefaultCredentialsProvider.builder().build() )
         }
         builder.build()
     }
@@ -84,12 +83,13 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
     }
 
     private RepositoryMetadata getRepositoryMetadata() {
-        final request = new GetRepositoryRequest()
-                .withRepositoryName(repositoryName)
+        final request = GetRepositoryRequest.builder()
+                .repositoryName(repositoryName)
+                .build()
 
         return client
                 .getRepository(request)
-                .getRepositoryMetadata()
+                .repositoryMetadata()
     }
 
     /** {@inheritDoc} **/
@@ -136,16 +136,16 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
     @Override
     byte[] readBytes( String path ) {
 
-        final request = new GetFileRequest()
-            .withRepositoryName(repositoryName)
-            .withFilePath(path)
+        final builder = GetFileRequest.builder()
+            .repositoryName(repositoryName)
+            .filePath(path)
         if( revision )
-            request.withCommitSpecifier(revision)
+            builder.commitSpecifier(revision)
 
         try {
             return client
-                    .getFile( request )
-                    .getFileContent()?.array()
+                    .getFile( builder.build() )
+                    .fileContent()?.asByteArray()
         }
         catch (Exception e) {
             checkMissingCredsException(e)
@@ -160,9 +160,9 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
                 "Unable to load AWS credentials",
                 "The security token included in the request is invalid",
                 "The request signature we calculated does not match the signature you provided"]
-        if( e !instanceof SdkClientException )
+        if( e !instanceof SdkException )
             return
-        if( e instanceof AWSCodeCommitException && e.message?.startsWith("Could not find path") ) {
+        if( e instanceof CodeCommitException && e.message?.startsWith("Could not find path") ) {
             // it cannot find the request file
             return
         }
