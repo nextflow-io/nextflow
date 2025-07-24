@@ -270,7 +270,23 @@ class AwsClientFactory {
 
         return builder.build()
     }
-
+    /**
+     * Returns an AwsCredentialsProvider for S3 clients.
+     *
+     * This method wraps the same AWS credentials used for other clients, but ensures proper handling of anonymous S3 access.
+     * If the 'anonymous' flag is set in Nextflow's AWS S3 configuration, or if no credentials are resolved by other providers,
+     * an AnonymousCredentialsProvider instance is returned.
+     *
+     * Prior to AWS SDK v2, the S3CredentialsProvider automatically managed fallback to anonymous access when no credentials were found.
+     * However, due to a limitation in the AWS SDK v2 CRT Async S3 client (see https://github.com/aws/aws-sdk-java-v2/issues/5810),
+     * anonymous credentials only work when explicitly configured via AnonymousCredentialsProvider.
+     * Custom credential providers or provider chains that resolve to anonymous credentials are not handled correctly by the CRT client.
+     *
+     * To work around this, this method explicitly checks whether credentials can be resolved.
+     * If no credentials are found, it returns an AnonymousCredentialsProvider; otherwise, it returns the resolved provider.
+     *
+     * @return an AwsCredentialsProvider instance, falling back to anonymous if needed.
+     */
     private AwsCredentialsProvider getS3CredentialsProvider() {
         if ( config.s3Config.anonymous )
             return AnonymousCredentialsProvider.create()
