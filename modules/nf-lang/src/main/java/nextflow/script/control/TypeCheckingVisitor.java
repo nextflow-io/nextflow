@@ -26,6 +26,7 @@ import nextflow.script.types.TypeChecker;
 import nextflow.script.types.Types;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.MethodNode;
+import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.Variable;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
 import org.codehaus.groovy.ast.expr.DeclarationExpression;
@@ -81,6 +82,18 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         var actualType = node.value.getType();
         if( !Types.isAssignableFrom(expectedType, actualType) )
             addError("Type mismatch for feature flag '" + node.name + "' -- expected a " + Types.getName(expectedType) + " but received a " + Types.getName(actualType), node);
+    }
+
+    @Override
+    public void visitParam(Parameter node) {
+        if( !experimental )
+            return;
+        if( !node.hasInitialExpression() )
+            return;
+        var expectedType = node.getType();
+        var actualType = node.getInitialExpression().getType();
+        if( !Types.isAssignableFrom(expectedType, actualType) )
+            addError("Parameter '" + node.getName() + "' with type " + Types.getName(expectedType) + " cannot be assigned to default value with type " + Types.getName(actualType), node);
     }
 
     // statements
