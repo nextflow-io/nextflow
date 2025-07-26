@@ -835,7 +835,7 @@ class AzBatchService implements Closeable {
         }
 
         // otherwise return a StartTask object with the start task command and resource files
-        return new BatchStartTask(startCmd.join('; '))
+        return new BatchStartTask(startCmd.join(' && '))
             .setResourceFiles(resourceFiles)
             .setUserIdentity(userIdentity(opts.privileged, null, AutoUserScope.POOL))
     }
