@@ -185,6 +185,9 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         visitWorkflowOutputs(node.emits, "emit");
         visitWorkflowOutputs(node.publishers, "output");
 
+        visit(node.onComplete);
+        visit(node.onError);
+
         currentDefinition = null;
         vsc.popScope();
     }

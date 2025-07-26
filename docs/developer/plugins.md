@@ -327,6 +327,8 @@ class MyExecutor extends Executor {
 }
 ```
 
+(plugins-trace-observers)=
+
 ### Trace observers
 
 :::{versionchanged} 25.04

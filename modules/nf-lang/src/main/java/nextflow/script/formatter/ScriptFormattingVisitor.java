@@ -221,9 +221,11 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             fmt.appendIndent();
             fmt.append("take:\n");
             visitWorkflowTakes(asBlockStatements(node.takes));
-            fmt.appendNewLine();
         }
         if( node.main instanceof BlockStatement ) {
+            if( node.takes instanceof BlockStatement ) {
+                fmt.appendNewLine();
+            }
             if( node.takes instanceof BlockStatement || node.emits instanceof BlockStatement || node.publishers instanceof BlockStatement ) {
                 fmt.appendIndent();
                 fmt.append("main:\n");
@@ -241,6 +243,18 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             fmt.appendIndent();
             fmt.append("publish:\n");
             fmt.visit(node.publishers);
+        }
+        if( node.onComplete instanceof BlockStatement ) {
+            fmt.appendNewLine();
+            fmt.appendIndent();
+            fmt.append("onComplete:\n");
+            fmt.visit(node.onComplete);
+        }
+        if( node.onError instanceof BlockStatement ) {
+            fmt.appendNewLine();
+            fmt.appendIndent();
+            fmt.append("onError:\n");
+            fmt.visit(node.onError);
         }
         fmt.decIndent();
         fmt.append("}\n");
