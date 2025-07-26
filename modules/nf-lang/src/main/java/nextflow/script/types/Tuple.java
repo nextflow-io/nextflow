@@ -13,25 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.script.ast;
-
-import org.codehaus.groovy.ast.ASTNode;
-import org.codehaus.groovy.ast.ClassNode;
-import org.codehaus.groovy.ast.stmt.Statement;
+package nextflow.script.types;
 
 /**
- * An output declaration.
- *
- * @author Ben Sherman <bentshermann@gmail.com>
+ * Placeholder type used to model tuples.
  */
-public class OutputNode extends ASTNode {
-    public final String name;
-    public final ClassNode type;
-    public final Statement body;
-
-    public OutputNode(String name, ClassNode type, Statement body) {
-        this.name = name;
-        this.type = type;
-        this.body = body;
-    }
+public interface Tuple {
 }

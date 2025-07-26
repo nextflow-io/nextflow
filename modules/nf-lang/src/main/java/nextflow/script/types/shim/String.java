@@ -56,14 +56,24 @@ public interface String {
     boolean isEmpty();
 
     @Description("""
-        Returns `true` if the string can be parsed as a floating-point number.
+        Returns `true` if the string can be parsed as a 64-bit floating-point number.
+    """)
+    boolean isDouble();
+
+    @Description("""
+        Returns `true` if the string can be parsed as a 32-bit floating-point number.
     """)
     boolean isFloat();
 
     @Description("""
-        Returns `true` if the string can be parsed as an integer.
+        Returns `true` if the string can be parsed as a 32-bit integer.
     """)
     boolean isInteger();
+
+    @Description("""
+        Returns `true` if the string can be parsed as a 64-bit integer.
+    """)
+    boolean isLong();
 
     @Description("""
         Returns the index within the string of the last occurrence of the given substring. Returns -1 if the string does not contain the substring.
@@ -146,14 +156,24 @@ public interface String {
     Boolean toBoolean();
 
     @Description("""
-        Parses the string into a floating-point number.
+        Parses the string into a 64-bit floating-point number.
+    """)
+    Double toDouble();
+
+    @Description("""
+        Parses the string into a 32-bit floating-point number.
     """)
     Float toFloat();
 
     @Description("""
-        Parses the string into an integer.
+        Parses the string into a 32-bit integer.
     """)
     Integer toInteger();
+
+    @Description("""
+        Parses the string into a 64-bit integer.
+    """)
+    Long toLong();
 
     @Description("""
         Returns a copy of this string with all characters converted to lower case.
