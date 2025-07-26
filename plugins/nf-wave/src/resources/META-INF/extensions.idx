@@ -10,4 +10,5 @@
 #
 
 io.seqera.wave.plugin.WaveFactory
+io.seqera.wave.plugin.config.WaveConfig
 io.seqera.wave.plugin.resolver.WaveContainerResolver

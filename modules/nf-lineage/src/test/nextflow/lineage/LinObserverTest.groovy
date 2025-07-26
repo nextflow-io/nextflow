@@ -134,7 +134,7 @@ class LinObserverTest extends Specification {
             getWorkflowMetadata() >> metadata
             getParams() >> new ScriptBinding.ParamsMap()
         }
-        store.open(LineageConfig.create(session))
+        store.open(LineageConfig.create(config))
         def observer = Spy(new LinObserver(session, store))
 
         when:
@@ -180,7 +180,7 @@ class LinObserverTest extends Specification {
             getWorkflowMetadata() >> metadata
             getParams() >> new ScriptBinding.ParamsMap()
         }
-        store.open(LineageConfig.create(session))
+        store.open(LineageConfig.create(config))
         def observer = new LinObserver(session, store)
         def mainScript = new DataPath("file://${scriptFile.toString()}", new Checksum("78910", "nextflow", "standard"))
         def workflow = new Workflow([mainScript],"https://nextflow.io/nf-test/", "123456" )
@@ -233,7 +233,7 @@ class LinObserverTest extends Specification {
         }
         and:
         def store = new DefaultLinStore();
-        store.open(LineageConfig.create(session))
+        store.open(LineageConfig.create(config))
         and:
         def observer = new LinObserver(session, store)
         def normalizer = new PathNormalizer(metadata)
@@ -344,7 +344,7 @@ class LinObserverTest extends Specification {
         def session = Mock(Session) {
             getConfig()>>config
         }
-        store.open(LineageConfig.create(session))
+        store.open(LineageConfig.create(config))
         def observer = Spy(new LinObserver(session, store))
         observer.executionHash = "hash"
         and:
@@ -398,7 +398,7 @@ class LinObserverTest extends Specification {
             getWorkDir() >> WORK_DIR
             getConfig() >> taskConfig
         }
-        store.open(LineageConfig.create(session))
+        store.open(LineageConfig.create(config))
         def observer = new LinObserver(session, store)
         then:
         observer.getTaskRelative(task, PATH) == EXPECTED
@@ -431,7 +431,7 @@ class LinObserverTest extends Specification {
             getWorkDir() >> WORK_DIR
             getConfig() >> taskConfig
         }
-        store.open(LineageConfig.create(session))
+        store.open(LineageConfig.create(config))
         def observer = new LinObserver(session, store)
         observer.getTaskRelative(task, PATH)
         then:
@@ -452,7 +452,7 @@ class LinObserverTest extends Specification {
                 getOutputDir()>>OUTPUT_DIR
                 getConfig()>>config
             }
-            store.open(LineageConfig.create(session))
+            store.open(LineageConfig.create(config))
             def observer = new LinObserver(session, store)
         then:
             observer.getWorkflowRelative(PATH) == EXPECTED
@@ -509,7 +509,7 @@ class LinObserverTest extends Specification {
             getRunName()>>"test_run"
             getParams() >> new ScriptBinding.ParamsMap()
         }
-        store.open(LineageConfig.create(session))
+        store.open(LineageConfig.create(config))
         def observer = new LinObserver(session, store)
         def encoder = new LinEncoder()
 
@@ -590,7 +590,7 @@ class LinObserverTest extends Specification {
             getRunName() >> "test_run"
             getParams() >> new ScriptBinding.ParamsMap()
         }
-        store.open(LineageConfig.create(session))
+        store.open(LineageConfig.create(config))
         def observer = new LinObserver(session, store)
 
         when:

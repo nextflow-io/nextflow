@@ -17,6 +17,7 @@
 package nextflow.k8s
 
 import nextflow.BuildInfo
+import nextflow.SysEnv
 import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.model.PodEnv
 import nextflow.k8s.model.PodSecurityContext
@@ -62,36 +63,6 @@ class K8sConfigTest extends Specification {
         cfg = new K8sConfig()
         then: 'it should return false specified as default'
         !cfg.getCleanup(false)
-
-        when:
-        cfg = new K8sConfig(cleanup:false)
-        then: 'it should return false'
-        !cfg.getCleanup()
-
-        when:
-        cfg = new K8sConfig(cleanup:'false')
-        then: 'it should return false'
-        !cfg.getCleanup()
-
-        when:
-        cfg = new K8sConfig(cleanup:true)
-        then: 'it should return true'
-        cfg.getCleanup()
-
-        when:
-        cfg = new K8sConfig(cleanup:'true')
-        then: 'it should return true'
-        cfg.getCleanup()
-
-        when:
-        cfg = new K8sConfig(cleanup:true)
-        then: 'the default value should be ignored'
-        cfg.getCleanup(false)
-
-        when:
-        cfg = new K8sConfig(cleanup:'true')
-        then: 'the default value should be ignored'
-        cfg.getCleanup(false)
     }
 
     def 'should create config with storage claims' () {
@@ -141,62 +112,16 @@ class K8sConfigTest extends Specification {
         cfg.fuseDevicePlugin() == ['foo/fuse':10]
     }
 
+    @Unroll
     def 'should create client config' () {
 
         given:
-        def CONFIG = [namespace: 'this', serviceAccount: 'that', client: [server: 'http://foo']]
-
-        when:
-        def config = new K8sConfig(CONFIG)
-        def client = config.getClient()
-        then:
-        client.server == 'http://foo'
-        client.namespace == 'this'
-        client.serviceAccount == 'that'
-        client.httpConnectTimeout == null // testing default null
-        client.httpReadTimeout == null // testing default null
-        client.retryConfig.maxAttempts == 4
-
-    }
-
-    def 'should set maxErrorRetry' () {
-        given:
-        def CONFIG = [retryPolicy: [ maxAttempts: 10], namespace: 'this', serviceAccount: 'that', client: [server: 'http://foo']]
-
-        when:
-        def config = new K8sConfig(CONFIG)
-        def client = config.getClient()
-        then:
-        client.retryConfig.maxAttempts == 10
-    }
-
-    def 'should create client config with http request timeouts' () {
-
-        given:
         def CONFIG = [
-                namespace: 'this',
-                serviceAccount: 'that',
-                client: [server: 'http://foo'],
+                context: CONTEXT,
+                namespace: NAMESPACE,
+                serviceAccount: SERVICE_ACCOUNT,
                 httpReadTimeout: '20s',
                 httpConnectTimeout: '25s' ]
-
-        when:
-        def config = new K8sConfig(CONFIG)
-        def client = config.getClient()
-        then:
-        client.server == 'http://foo'
-        client.namespace == 'this'
-        client.serviceAccount == 'that'
-        client.httpConnectTimeout == Duration.of('25s')
-        client.httpReadTimeout == Duration.of('20s')
-
-    }
-
-    @Unroll
-    def 'should create client config with discovery' () {
-
-        given:
-        def CONFIG = [context: CONTEXT, namespace: NAMESPACE, serviceAccount: SERVICE_ACCOUNT]
         K8sConfig config = Spy(K8sConfig, constructorArgs: [ CONFIG ])
 
         when:
@@ -207,6 +132,8 @@ class K8sConfigTest extends Specification {
         client.server == SERVER
         client.namespace == NAMESPACE ?: 'default'
         client.serviceAccount == SERVICE_ACCOUNT ?: 'default'
+        client.httpConnectTimeout == Duration.of('25s')
+        client.httpReadTimeout == Duration.of('20s')
 
         where:
         CONTEXT     | SERVER    | NAMESPACE | SERVICE_ACCOUNT
@@ -221,11 +148,6 @@ class K8sConfigTest extends Specification {
         def cfg = new K8sConfig()
         then:
         cfg.getNextflowImageName() ==  "nextflow/nextflow:${BuildInfo.version}"
-
-        when:
-        cfg = new K8sConfig(nextflow: [image: 'foo/bar:1.0'])
-        then:
-        cfg.getNextflowImageName() == 'foo/bar:1.0'
 
     }
 
@@ -242,17 +164,7 @@ class K8sConfigTest extends Specification {
         cfg.getAutoMountHostPaths()
 
         when:
-        cfg = new K8sConfig(autoMountHostPaths: 'true')
-        then:
-        cfg.getAutoMountHostPaths()
-
-        when:
         cfg = new K8sConfig(autoMountHostPaths: false)
-        then:
-        !cfg.getAutoMountHostPaths()
-
-        when:
-        cfg = new K8sConfig(autoMountHostPaths: 'false')
         then:
         !cfg.getAutoMountHostPaths()
     }
@@ -283,11 +195,6 @@ class K8sConfigTest extends Specification {
         def cfg = new K8sConfig()
         then:
         cfg.getUserName() == System.properties.get('user.name')
-
-        when:
-        cfg = new K8sConfig(userName: 'foo')
-        then:
-        cfg.getUserName() == 'foo'
     }
 
     def 'should return user dir' () {
@@ -297,12 +204,12 @@ class K8sConfigTest extends Specification {
         cfg.getLaunchDir() == '/workspace/' + System.properties.get('user.name')
 
         when:
-        cfg = new K8sConfig(storageMountPath: '/this/path', userName: 'foo')
+        cfg = new K8sConfig(storageMountPath: '/this/path')
         then:
-        cfg.getLaunchDir() == '/this/path/foo'
+        cfg.getLaunchDir() == '/this/path/' + System.properties.get('user.name')
 
         when:
-        cfg = new K8sConfig(storageMountPath: '/this/path', userName: 'foo', launchDir: '/my/path')
+        cfg = new K8sConfig(storageMountPath: '/this/path', launchDir: '/my/path')
         then:
         cfg.getLaunchDir() == '/my/path'
 
@@ -459,27 +366,20 @@ class K8sConfigTest extends Specification {
         !cfg.entrypointOverride()
 
         when:
-        cfg = new K8sConfig( entrypointOverride: true )
+        SysEnv.push(NXF_CONTAINER_ENTRYPOINT_OVERRIDE: 'true')
+        cfg = new K8sConfig()
+        def result = cfg.entrypointOverride()
+        SysEnv.pop()
         then:
-        cfg.entrypointOverride()
+        result
 
     }
 
     def 'should set debug.yaml' () {
         when:
-        def cfg = new K8sConfig( debug: [yaml: 'true'] )
+        def cfg = new K8sConfig( debug: [yaml: true] )
         then:
         cfg.getDebug().getYaml()
-
-        when:
-        cfg = new K8sConfig( debug: [yaml: true] )
-        then:
-        cfg.getDebug().getYaml()
-
-        when:
-        cfg = new K8sConfig( debug: [yaml: 'false'] )
-        then:
-        !cfg.getDebug().getYaml()
 
         when:
         cfg = new K8sConfig( debug: [yaml: false] )
@@ -495,28 +395,13 @@ class K8sConfigTest extends Specification {
         cfg = new K8sConfig( debug: [:] )
         then:
         !cfg.getDebug().getYaml()
-
-        when:
-        cfg = new K8sConfig( null )
-        then:
-        !cfg.getDebug().getYaml()
     }
   
     def 'should set fetchNodeName' () {
         when:
-        def cfg = new K8sConfig( fetchNodeName: 'true' )
+        def cfg = new K8sConfig( fetchNodeName: true )
         then:
         cfg.fetchNodeName() == true
-
-        when:
-        cfg = new K8sConfig( fetchNodeName: true )
-        then:
-        cfg.fetchNodeName() == true
-
-        when:
-        cfg = new K8sConfig( fetchNodeName: 'false' )
-        then:
-        cfg.fetchNodeName() == false
 
         when:
         cfg = new K8sConfig( fetchNodeName: false )

@@ -23,7 +23,6 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
 import nextflow.SysEnv
-import nextflow.config.ConfigMap
 import nextflow.dag.MermaidHtmlRenderer
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
@@ -55,7 +54,7 @@ class LinCommandImplTest extends Specification{
     Path storeLocation
 
     @Shared
-    ConfigMap configMap
+    Map configMap
 
     def reset() {
         def provider = FileHelper.getProviderFor('lid') as LinFileSystemProvider
@@ -69,7 +68,7 @@ class LinCommandImplTest extends Specification{
         SysEnv.push([:])
         tmpDir = Files.createTempDirectory('tmp')
         storeLocation = tmpDir.resolve("store")
-        configMap = new ConfigMap([lineage: [enabled: true, store: [location: storeLocation.toString(), logLocation: storeLocation.resolve(".log").toString()]]])
+        configMap = [lineage: [enabled: true, store: [location: storeLocation.toString()]]]
     }
 
     def cleanup() {
@@ -451,7 +450,7 @@ class LinCommandImplTest extends Specification{
 
     def 'should print error store is not found in diff'(){
         when:
-        def config = new ConfigMap()
+        def config = [:]
         new LinCommandImpl().list(config)
         new LinCommandImpl().view(config, ["lid:///12345"])
         new LinCommandImpl().render(config, ["lid://12345", "output.html"])

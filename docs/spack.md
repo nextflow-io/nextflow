@@ -164,8 +164,11 @@ profiles {
 }
 ```
 
-The above configuration snippet allows the execution either with Spack or Docker by specifying `-profile spack` or
-`-profile docker` when running the pipeline script.
+The above configuration snippet allows the execution either with Spack or Docker by specifying `-profile spack` or `-profile docker` when running the pipeline script.
+
+:::{note}
+Nextflow does not allow for fine-grained configuration of the Spack package manager. Instead, this has to be performed directly on the host Spack installation. For more information see the [Spack documentation](https://spack.readthedocs.io).
+:::
 
 ## Advanced settings
 

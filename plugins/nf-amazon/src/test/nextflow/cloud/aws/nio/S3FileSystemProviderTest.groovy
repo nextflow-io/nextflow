@@ -29,14 +29,38 @@ class S3FileSystemProviderTest extends Specification {
 
     def 'should create filesystem from config'(){
         given:
-        def config = [client: [ anonymous: true, s3acl: 'Private', connectionTimeout: 20000, endpoint: 'https://s3.eu-west-1.amazonaws.com',
-                                maxConcurrency: 10, maxNativeMemory: '500MB', minimumPartSize: '7MB', multipartThreshold: '32MB',
-                                maxConnections: 100, maxErrorRetry: 3, socketTimeout: 20000, requesterPays: true, s3PathStyleAccess: true,
-                                proxyHost: 'host.com', proxyPort: 80, proxyScheme: 'https', proxyUsername: 'user', proxyPassword: 'pass',
-                                signerOverride: 'S3SignerType', userAgent: 'Agent1', storageEncryption: 'AES256', storageKmsKeyId: 'arn:key:id',
-                                transferManagerThreads: 20, uploadMaxThreads: 15, uploadChunkSize: '7MB', uploadMaxAttempts: 4, uploadRetrySleep: '200ms'
-                              ],
-                      accessKey: '123456abc', secretKey: '78910def', profile: 'test']
+        def config = [
+            client: [
+                anonymous: true,
+                s3Acl: 'Private',
+                connectionTimeout: 20000,
+                endpoint: 'https://s3.eu-west-1.amazonaws.com',
+                maxConcurrency: 10,
+                maxNativeMemory: '500MB',
+                minimumPartSize: '7MB',
+                multipartThreshold: '32MB',
+                maxConnections: 100,
+                maxErrorRetry: 3,
+                socketTimeout: 20000,
+                requesterPays: true,
+                s3PathStyleAccess: true,
+                proxyHost: 'host.com',
+                proxyPort: 80,
+                proxyScheme: 'https',
+                proxyUsername: 'user',
+                proxyPassword: 'pass',
+                storageEncryption: 'AES256',
+                storageKmsKeyId: 'arn:key:id',
+                transferManagerThreads: 20,
+                uploadMaxThreads: 15,
+                uploadChunkSize: '7MB',
+                uploadMaxAttempts: 4,
+                uploadRetrySleep: '200ms'
+            ],
+            accessKey: '123456abc',
+            secretKey: '78910def',
+            profile: 'test'
+        ]
         def provider = new S3FileSystemProvider();
         when:
         def fs = provider.newFileSystem(new URI("s3:///bucket/key"), config) as S3FileSystem
@@ -60,8 +84,6 @@ class S3FileSystemProviderTest extends Specification {
         fs.properties().getProperty('proxy_scheme') == 'https'
         fs.properties().getProperty('proxy_username') == 'user'
         fs.properties().getProperty('proxy_password') == 'pass'
-        fs.properties().getProperty('signer_override') == 'S3SignerType'
-        fs.properties().getProperty('user_agent') == 'Agent1'
         fs.properties().getProperty('socket_timeout') == '20000'
         fs.properties().getProperty('connection_timeout') == '20000'
         fs.properties().getProperty('max_connections') == '100'

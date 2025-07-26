@@ -26,14 +26,24 @@ class ShifterBuilder extends ContainerBuilder<ShifterBuilder> {
 
     private boolean verbose
 
-    ShifterBuilder( String image ) {
-        assert image
+    ShifterBuilder(String image, ShifterConfig config) {
         this.image = image
+        this.verbose = config.verbose
+    }
+
+    ShifterBuilder(String image) {
+        this(image, new ShifterConfig([:]))
+    }
+
+    ShifterBuilder params( Map params ) {
+        if( params.containsKey('entry') )
+            this.entryPoint = params.entry
+
+        return this
     }
 
     @Override
     ShifterBuilder build(StringBuilder result) {
-        assert image
 
         appendEnv(result)
 
@@ -45,17 +55,6 @@ class ShifterBuilder extends ContainerBuilder<ShifterBuilder> {
         result << '--image ' << image
 
         runCommand = result.toString()
-        return this
-    }
-
-    ShifterBuilder params( Map params ) {
-
-        if( params.containsKey('verbose') )
-            this.verbose = params.verbose.toString() == 'true'
-
-        if( params.containsKey('entry') )
-            this.entryPoint = params.entry
-
         return this
     }
 

@@ -89,8 +89,7 @@ class BatchLoggingTest extends Specification {
     @Requires({System.getenv('GOOGLE_APPLICATION_CREDENTIALS')})
     def 'should fetch logs' () {
         given:
-        def sess = Mock(Session) { getConfig() >> [:] }
-        def config = BatchConfig.create(sess)
+        def config = new BatchConfig([:])
         and:
         def batchClient = new BatchClient(config)
         def logClient = new BatchLogging(config)

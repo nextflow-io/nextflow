@@ -17,16 +17,19 @@
 
 package nextflow.cloud.google.config
 
+import groovy.transform.CompileStatic
+import nextflow.config.schema.ConfigScope
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class GoogleStorageOpts {
+@CompileStatic
+class GoogleStorageOpts implements ConfigScope {
 
     final GoogleRetryOpts retryPolicy
 
     GoogleStorageOpts(Map opts) {
-        retryPolicy = new GoogleRetryOpts( opts.retryPolicy as Map ?: Map.of()  )
+        retryPolicy = new GoogleRetryOpts( opts.retryPolicy as Map ?: Collections.emptyMap() )
     }
 
 }

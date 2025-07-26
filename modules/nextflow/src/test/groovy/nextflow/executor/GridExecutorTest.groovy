@@ -34,7 +34,9 @@ class GridExecutorTest extends Specification {
         def work = Files.createTempDirectory('test')
         def task = new TaskRun(workDir: work, name: 'hello', config: new TaskConfig(queue: 'gamma'))
 
-        def executor = Mock(AbstractGridExecutor)
+        def executor = Mock(AbstractGridExecutor) {
+            getConfig() >> new ExecutorConfig([:])
+        }
 
         when:
         def handler = new GridTaskHandler(task, executor)
@@ -55,7 +57,9 @@ class GridExecutorTest extends Specification {
         def task = Mock(TaskRun)
         task.getWorkDir() >> workDir
 
-        def executor = Mock(AbstractGridExecutor)
+        def executor = Mock(AbstractGridExecutor) {
+            getConfig() >> new ExecutorConfig([:])
+        }
 
         when:
         def handler = new GridTaskHandler(task, executor)
@@ -93,7 +97,9 @@ class GridExecutorTest extends Specification {
         def task = new TaskRun()
         task.workDir = Files.createTempDirectory('testHandler')
 
-        def executor = Mock(AbstractGridExecutor)
+        def executor = Mock(AbstractGridExecutor) {
+            getConfig() >> new ExecutorConfig([:])
+        }
 
         when:
         def handler = new GridTaskHandler(task, executor)
@@ -112,7 +118,9 @@ class GridExecutorTest extends Specification {
         def task = new TaskRun(name: 'task1')
         task.workDir = Files.createTempDirectory('testHandler')
 
-        def executor = Mock(AbstractGridExecutor)
+        def executor = Mock(AbstractGridExecutor) {
+            getConfig() >> new ExecutorConfig([:])
+        }
         executor.checkActiveStatus(_) >> { return true }
 
         when:
@@ -142,7 +150,9 @@ class GridExecutorTest extends Specification {
         def task = new TaskRun(name: 'task1')
         task.workDir = Files.createTempDirectory('testHandler')
 
-        def executor = Mock(AbstractGridExecutor)
+        def executor = Mock(AbstractGridExecutor) {
+            getConfig() >> new ExecutorConfig([:])
+        }
         executor.checkActiveStatus(_) >> { true }
 
         when:

@@ -51,12 +51,12 @@ class GoogleBatchScriptLauncherTest extends Specification{
     def 'should compute volume mounts' () {
         given:
         def launcher = new GoogleBatchScriptLauncher()
-        launcher.config = Mock(BatchConfig) {
-            getGoogleOpts() >> Mock(GoogleOpts) {
-                getProjectId() >> 'my-project'
-                getEnableRequesterPaysBuckets() >> true
+        launcher.config = Mock(GoogleOpts) {
+            getBatch() >> Mock(BatchConfig) {
+                getGcsfuseOptions() >> ['-o rw', '-implicit-dirs', '-o allow_other', '--uid=1000']
             }
-            getGcsfuseOptions() >> ['-o rw', '-implicit-dirs', '-o allow_other', '--uid=1000']
+            getProjectId() >> 'my-project'
+            enableRequesterPaysBuckets >> true
         }
         and:
         def PATH1 = CloudStorageFileSystem.forBucket('alpha').getPath('/data/sample1.bam')

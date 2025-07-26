@@ -19,7 +19,7 @@ package nextflow.dag
 import java.nio.file.Files
 
 import groovyx.gpars.dataflow.DataflowQueue
-import nextflow.Session
+import nextflow.trace.config.DagConfig
 import spock.lang.Specification
 /**
  *
@@ -33,16 +33,16 @@ class MermaidRendererTest extends Specification {
         def ch1 = new DataflowQueue()
         def ch2 = new DataflowQueue()
         def ch3 = new DataflowQueue()
-
-        def session = new Session([dag: [verbose: true]])
+        and:
         def dag = new DAG()
         dag.addOperatorNode('Op1', ch1, ch2)
         dag.addOperatorNode('Op2', ch2, ch3)
-
         dag.normalize()
+        and:
+        def config = new DagConfig(verbose: true)
 
         when:
-        new MermaidRenderer().renderDocument(dag, file)
+        new MermaidRenderer(config).renderDocument(dag, file)
         then:
         file.text ==
             '''

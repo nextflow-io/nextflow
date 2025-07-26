@@ -2,6 +2,8 @@
 
 # Google Cloud
 
+(google-credentials)=
+
 ## Credentials
 
 Credentials for submitting requests to the Google Cloud Batch API are picked up from your environment using [Application Default Credentials](https://github.com/googleapis/google-auth-library-java#google-auth-library-oauth2-http). Application Default Credentials are designed to use the credentials most natural to the environment in which a tool runs.

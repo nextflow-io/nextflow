@@ -16,6 +16,7 @@
 
 package nextflow.container
 
+import nextflow.SysEnv
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -28,7 +29,7 @@ class ContainerConfigTest extends Specification {
     @Unroll
     def 'should return env whitelist for=#VAL' () {
         when:
-        def cfg = new ContainerConfig(envWhitelist: VAL)
+        def cfg = new DockerConfig(envWhitelist: VAL)
         then:
         cfg.getEnvWhitelist() == EXPECTED
 
@@ -46,74 +47,53 @@ class ContainerConfigTest extends Specification {
     def 'should validate legacy entry point' () {
 
         when:
-        def cfg = new ContainerConfig(OPTS, ENV)
+        SysEnv.push(ENV)
+        def cfg = new DockerConfig(OPTS)
+        def result = cfg.entrypointOverride()
+        SysEnv.pop()
         then:
-        cfg.entrypointOverride() == EXPECTED
-        
+        result == EXPECTED
+
         where:
-        OPTS                            | ENV          | EXPECTED
-        [:]                             | [:]          | false
-        [entrypointOverride: false]     | [:]          | false
-        [entrypointOverride: true]      | [:]          | true
+        OPTS    | ENV          | EXPECTED
+        [:]     | [:]          | false
         and:
-        [:]                             | [NXF_CONTAINER_ENTRYPOINT_OVERRIDE: 'true']  | true
-        [entrypointOverride: false]     | [NXF_CONTAINER_ENTRYPOINT_OVERRIDE: 'true']  | false
+        [:]     | [NXF_CONTAINER_ENTRYPOINT_OVERRIDE: 'true']  | true
 
     }
 
     @Unroll
-    def 'should validate oci mode and direct mode' () {
+    def 'should validate oci auto-pull mode' () {
 
-        when:
-        def cfg = new ContainerConfig(OPTS)
-        then:
-        cfg.isSingularityOciMode() == OCI_MODE
-        cfg.canRunOciImage() == AUTO_PULL
+        expect:
+        CONFIG.canRunOciImage() == OCI_AUTO_PULL
 
         where:
-        OPTS                                        | OCI_MODE  | AUTO_PULL
-        [:]                                         | false     | false
-        [oci:true]                                  | false     | false
-        [oci:false]                                 | false     | false
-        [ociMode:true]                              | false     | false
+        CONFIG                                      | OCI_AUTO_PULL
+        new SingularityConfig([:])                  | false
+        new SingularityConfig(ociAutoPull:false)    | false
         and:
-        [engine:'docker', oci:true]                 | false     | false
-        [engine:'singularity']                      | false     | false
-        [engine:'singularity', oci:false]           | false     | false
-        [engine:'singularity', ociAutoPull:false]   | false     | false
+        new SingularityConfig(ociMode:true)         | true
+        new ApptainerConfig(ociMode:true)           | false
         and:
-        [engine:'singularity', oci:true]            | true      | true
-        [engine:'singularity', ociMode:true]        | true      | true
-        [engine:'apptainer', oci:true]              | false     | false
-        [engine:'apptainer', ociMode:true]          | false     | false
-        and:
-        [engine:'singularity', ociAutoPull:true]    | false         | true
-        [engine:'apptainer', ociAutoPull:true]      | false         | true
+        new SingularityConfig(ociAutoPull:true)     | true
+        new ApptainerConfig(ociAutoPull:true)       | true
 
     }
 
     def 'should get fusion options' () {
-        when:
-        def cfg = new ContainerConfig(OPTS)
+        expect:
+        CONFIG.getFusionOptions() == EXPECTED
 
-        then:
-        cfg.fusionOptions() == EXPECTED
-        
         where:
-        OPTS                                            | EXPECTED
-        [:]                                             | null
-        [engine:'docker']                               | '--rm --privileged'
-        [engine:'podman']                               | '--rm --privileged'
+        CONFIG                                          | EXPECTED
+        new DockerConfig([:])                           | '--rm --privileged'
+        new PodmanConfig([:])                           | '--rm --privileged'
         and:
-        [engine: 'singularity']                         | null
-        [engine: 'singularity', ociMode:true]           | '-B /dev/fuse'
-        [engine: 'singularity', ociAutoPull: true]      | null
-        [engine: 'apptainer', oci:true]                 | null
-        and:
-        [engine:'docker', fusionOptions:'--cap-add foo']| '--cap-add foo'
-        [engine:'podman', fusionOptions:'--cap-add bar']| '--cap-add bar'
-        and:
-        [engine:'sarus', fusionOptions:'--other']       | '--other'
+        new SingularityConfig([:])                      | null
+        new SingularityConfig(ociMode:true)             | '-B /dev/fuse'
+        new SingularityConfig(ociAutoPull:true)         | null
+        new ApptainerConfig(oci:true)                   | null
     }
 
 }
