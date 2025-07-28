@@ -20,7 +20,10 @@ import java.lang.annotation.Retention
 import java.lang.annotation.RetentionPolicy
 import java.lang.annotation.Target
 /**
- * Assign a name to a runtime loaded service object
+ * Assign a name to a runtime loaded service object.
+ *
+ * Beside the generic name "service", this class is only mean for
+ * annotating Nextflow executor classes.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -29,8 +32,23 @@ import java.lang.annotation.Target
 @Target(ElementType.TYPE)
 @interface ServiceName {
 
+    /**
+     * @return The name of the executor service.
+     */
     String value()
 
+    /**
+     * Determine if the service should have precedence over a service
+     * having #important flag marked as false.
+     *
+     * NOTE: this option is deprecated and it's only meant to be used for
+     * Nextflow executor discovery mechanism.
+     *
+     * Consider using {@link nextflow.plugin.PluginsFacade#getPriorityExtensions}
+     * for new services or plugin extensions.
+     *
+     * @return {@code true} when the executor should have priority over non-important ones
+     */
     @Deprecated
     boolean important() default Boolean.FALSE
 

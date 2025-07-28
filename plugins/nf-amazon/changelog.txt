@@ -1,5 +1,15 @@
 nf-amazon changelog
 ===================
+3.0.0 - 6 Jul 2025
+- Fix AWS nio tests [ci fast] [069653dd]
+- Fix replace List.getFirst with List.get(0) for compatibility [83428ee2]
+- Upgrade to AWS Java SDK v2 (#6165) [fc99b447]
+- Bump Slf4j version 2.0.17 [93199e09]
+
+2.15.0 - 8 May 2025
+- Add verbose AWS Batch job cleanup logging [504bd2df]
+- Remove test constructors or mark as TestOnly (#5216) [d4fadd42]
+
 2.14.0 - 23 Apr 2025
 - Add support for data and execution lineage  (#5715) [20e06da7]
 - Manage AWS Batch Unscheduled jobs (#5936) [44abe60c]

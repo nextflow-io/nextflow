@@ -269,6 +269,8 @@ class PublishOp {
                     return normalizePath(el, targetResolver)
                 if( el instanceof Collection<Path> )
                     return normalizePaths(el, targetResolver)
+                if( el instanceof Map )
+                    return normalizePaths(el, targetResolver)
                 return el
             }
         }
@@ -280,6 +282,8 @@ class PublishOp {
                     if( v instanceof Path )
                         return Map.entry(k, normalizePath(v, targetResolver))
                     if( v instanceof Collection<Path> )
+                        return Map.entry(k, normalizePaths(v, targetResolver))
+                    if( v instanceof Map )
                         return Map.entry(k, normalizePaths(v, targetResolver))
                     return Map.entry(k, v)
                 }
@@ -309,10 +313,15 @@ class PublishOp {
 
         // if the target resolver is a directory, resolve the source
         // filename against it
-        if( targetResolver instanceof Path )
-            return targetResolver.resolve(sourceDir.relativize(path)).normalize()
+        if( targetResolver instanceof Path ) {
+            // note: make sure to convert the relative path to as a string to prevent
+            // an exception when mixing different path providers e.g. local fs and remove cloud
+            // thrown by {@link Path#resolve) method
+            final relPath = sourceDir.relativize(path).toString()
+            return targetResolver.resolve(relPath).normalize()
+        }
 
-        throw new IllegalStateException()
+        throw new IllegalStateException("Unexpected targetResolver argument: ${targetResolver}")
     }
 
     /**

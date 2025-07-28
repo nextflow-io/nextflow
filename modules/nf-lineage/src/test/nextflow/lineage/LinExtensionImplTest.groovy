@@ -26,12 +26,12 @@ import nextflow.Session
 import nextflow.extension.CH
 import nextflow.lineage.config.LineageConfig
 import nextflow.lineage.fs.LinPathFactory
-import nextflow.lineage.model.Checksum
-import nextflow.lineage.model.DataPath
-import nextflow.lineage.model.FileOutput
-import nextflow.lineage.model.Parameter
-import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowRun
+import nextflow.lineage.model.v1beta1.Checksum
+import nextflow.lineage.model.v1beta1.DataPath
+import nextflow.lineage.model.v1beta1.FileOutput
+import nextflow.lineage.model.v1beta1.Parameter
+import nextflow.lineage.model.v1beta1.Workflow
+import nextflow.lineage.model.v1beta1.WorkflowRun
 import spock.lang.Specification
 import spock.lang.TempDir
 

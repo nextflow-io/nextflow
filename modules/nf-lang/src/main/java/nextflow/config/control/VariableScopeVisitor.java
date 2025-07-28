@@ -29,6 +29,7 @@ import nextflow.config.ast.ConfigVisitorSupport;
 import nextflow.config.dsl.ConfigDsl;
 import nextflow.config.schema.SchemaNode;
 import nextflow.script.ast.ASTNodeMarker;
+import nextflow.script.ast.ImplicitClosureParameter;
 import nextflow.script.control.VariableScopeChecker;
 import nextflow.script.dsl.ProcessDsl;
 import nextflow.script.dsl.ScriptDsl;
@@ -41,6 +42,7 @@ import org.codehaus.groovy.ast.expr.ClosureExpression;
 import org.codehaus.groovy.ast.expr.ConstantExpression;
 import org.codehaus.groovy.ast.expr.DeclarationExpression;
 import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.expr.MapEntryExpression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.TupleExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
@@ -105,14 +107,18 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
         checkMethodCall(node);
     }
 
+    private boolean inProcess;
+
+    private boolean inClosure;
+
     @Override
     public void visitConfigAssign(ConfigAssignNode node) {
         for( int i = 0; i < node.names.size() - 1; i++ )
             configScopes.add(node.names.get(i));
 
         var scopes = currentConfigScopes();
-        var inProcess = !scopes.isEmpty() && "process".equals(scopes.get(0));
-        var inClosure = node.value instanceof ClosureExpression;
+        inProcess = !scopes.isEmpty() && "process".equals(scopes.get(0));
+        inClosure = node.value instanceof ClosureExpression;
         if( inClosure && !inProcess && !isWorkflowHandler(scopes, node) )
             vsc.addError("Dynamic config options are only allowed in the `process` scope", node);
         if( inClosure ) {
@@ -128,6 +134,8 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
                 vsc.popScope();
             vsc.popScope();
         }
+        inClosure = false;
+        inProcess = false;
 
         for( int i = 0; i < node.names.size() - 1; i++ )
             configScopes.pop();
@@ -138,6 +146,17 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
         return scopes.size() == 1
             && "workflow".equals(scopes.get(0))
             && List.of("onComplete", "onError").contains(option);
+    }
+
+    @Override
+    public void visitMapEntryExpression(MapEntryExpression node) {
+        node.getKeyExpression().visit(this);
+
+        var ic = inClosure;
+        if( inProcess && node.getValueExpression() instanceof ClosureExpression )
+            inClosure = true;
+        node.getValueExpression().visit(this);
+        inClosure = ic;
     }
 
     @Override
@@ -186,11 +205,15 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
     @Override
     public void visitExpressionStatement(ExpressionStatement node) {
         var exp = node.getExpression();
+        if( exp instanceof DeclarationExpression de ) {
+            visitDeclarationExpression(de);
+            return;
+        }
         if( exp instanceof BinaryExpression be && Types.isAssignment(be.getOperation().getType()) ) {
             var source = be.getRightExpression();
             var target = be.getLeftExpression();
             visit(source);
-            if( !checkImplicitDeclaration(target) ) {
+            if( !visitAssignment(target) ) {
                 visit(target);
             }
             return;
@@ -198,20 +221,20 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
         super.visitExpressionStatement(node);
     }
 
-    private boolean checkImplicitDeclaration(Expression node) {
+    private boolean visitAssignment(Expression node) {
         if( node instanceof TupleExpression te ) {
             var result = false;
             for( var el : te.getExpressions() )
-                result |= declareAssignedVariable((VariableExpression) el);
+                result |= visitAssignedVariable((VariableExpression) el);
             return result;
         }
         else if( node instanceof VariableExpression ve ) {
-            return declareAssignedVariable(ve);
+            return visitAssignedVariable(ve);
         }
         return false;
     }
 
-    private boolean declareAssignedVariable(VariableExpression ve) {
+    private boolean visitAssignedVariable(VariableExpression ve) {
         var variable = vsc.findVariableDeclaration(ve.getName(), ve);
         if( variable != null ) {
             ve.setAccessedVariable(variable);
@@ -266,18 +289,18 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
     public void visitClosureExpression(ClosureExpression node) {
         vsc.pushScope();
         node.setVariableScope(currentScope());
-        if( node.getParameters() != null ) {
+        if( node.isParameterSpecified() ) {
             for( var parameter : node.getParameters() ) {
                 vsc.declare(parameter, parameter);
                 if( parameter.hasInitialExpression() )
-                    visit(parameter.getInitialExpression());
+                    parameter.getInitialExpression().visit(this);
             }
         }
-        super.visitClosureExpression(node);
-        for( var it = currentScope().getReferencedLocalVariablesIterator(); it.hasNext(); ) {
-            var variable = it.next();
-            variable.setClosureSharedVariable(true);
+        else if( node.getParameters() != null ) {
+            var implicit = new ImplicitClosureParameter();
+            currentScope().putDeclaredVariable(implicit);
         }
+        super.visitClosureExpression(node);
         vsc.popScope();
     }
 
@@ -286,12 +309,15 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
         var name = node.getName();
         Variable variable = vsc.findVariableDeclaration(name, node);
         if( variable == null ) {
-            if( "it".equals(name) ) {
-                vsc.addParanoidWarning("Implicit closure parameter `it` will not be supported in a future version", node);
+            if( inProcess && inClosure ) {
+                // dynamic process directives can reference process inputs which are not known at this point
             }
             else {
                 variable = new DynamicVariable(name, false);
             }
+        }
+        if( variable instanceof ImplicitClosureParameter ) {
+            vsc.addWarning("Implicit closure parameter is deprecated, declare an explicit parameter instead", variable.getName(), node);
         }
         if( variable != null ) {
             node.setAccessedVariable(variable);

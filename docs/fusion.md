@@ -16,7 +16,7 @@ Fusion is a virtual, lightweight, distributed file system that bridges the gap b
 See [Fusion file system](https://docs.seqera.io/fusion) for more information about Fusion features.
 
 :::{note}
-Fusion requires a license for use in Seqera Platform compute environments or directly in Nextflow. Fusion can be trialed at no cost. [Contact Seqera](https://seqera.io/contact-us/) for more details.
+Fusion requires a license for use in Seqera Platform compute environments or directly in Nextflow. Fusion can be trialed at no cost. See the [Fusion licensing documentation](https://docs.seqera.io/fusion/licensing) for more information.
 :::
 
 ## Get started

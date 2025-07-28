@@ -28,14 +28,14 @@ import java.time.OffsetDateTime
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.lineage.model.Checksum
-import nextflow.lineage.model.FileOutput
-import nextflow.lineage.model.DataPath
-import nextflow.lineage.model.Parameter
-import nextflow.lineage.model.TaskOutput
-import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowOutput
-import nextflow.lineage.model.WorkflowRun
+import nextflow.lineage.model.v1beta1.Checksum
+import nextflow.lineage.model.v1beta1.FileOutput
+import nextflow.lineage.model.v1beta1.DataPath
+import nextflow.lineage.model.v1beta1.Parameter
+import nextflow.lineage.model.v1beta1.TaskOutput
+import nextflow.lineage.model.v1beta1.Workflow
+import nextflow.lineage.model.v1beta1.WorkflowOutput
+import nextflow.lineage.model.v1beta1.WorkflowRun
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.processor.TaskRun
@@ -96,11 +96,6 @@ class LinObserver implements TraceObserverV2 {
         this.store = store
     }
 
-    @Override
-    void onFlowCreate(Session session) {
-        this.store.getHistoryLog().write(session.runName, session.uniqueId, '-')
-    }
-
     @TestOnly
     String getExecutionHash(){ executionHash }
 
@@ -120,7 +115,7 @@ class LinObserver implements TraceObserverV2 {
             executionUri,
             new LinkedList<Parameter>()
         )
-        this.store.getHistoryLog().updateRunLid(session.uniqueId, executionUri)
+        this.store.getHistoryLog().write(session.runName, session.uniqueId, executionUri)
     }
 
     @Override
@@ -152,7 +147,7 @@ class LinObserver implements TraceObserverV2 {
             final dataPath = new DataPath(normalizer.normalizePath(it.normalize()), Checksum.ofNextflow(it.text))
             result.add(dataPath)
         }
-        return result
+        return result.sort{it.path}
     }
 
     protected String storeWorkflowRun(PathNormalizer normalizer) {
@@ -252,7 +247,7 @@ class LinObserver implements TraceObserverV2 {
 
     protected String storeTaskRun(TaskRun task, PathNormalizer normalizer) {
         final codeChecksum = Checksum.ofNextflow(session.stubRun ? task.stubSource : task.source)
-        final value = new nextflow.lineage.model.TaskRun(
+        final value = new nextflow.lineage.model.v1beta1.TaskRun(
             session.uniqueId.toString(),
             task.getName(),
             codeChecksum,

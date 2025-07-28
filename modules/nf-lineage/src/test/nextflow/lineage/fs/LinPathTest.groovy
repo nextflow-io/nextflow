@@ -16,28 +16,25 @@
 
 package nextflow.lineage.fs
 
-import nextflow.lineage.LinUtils
-import nextflow.lineage.model.Checksum
-import nextflow.lineage.model.Parameter
-import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowOutput
-import nextflow.lineage.model.FileOutput
-import nextflow.lineage.model.WorkflowRun
-import nextflow.lineage.serde.LinEncoder
-import nextflow.util.CacheHelper
-import org.junit.Rule
-import test.OutputCapture
-
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.ProviderMismatchException
+import java.time.OffsetDateTime
 
+import nextflow.lineage.LinUtils
+import nextflow.lineage.model.v1beta1.Checksum
+import nextflow.lineage.model.v1beta1.FileOutput
+import nextflow.lineage.model.v1beta1.Parameter
+import nextflow.lineage.model.v1beta1.Workflow
+import nextflow.lineage.model.v1beta1.WorkflowOutput
+import nextflow.lineage.model.v1beta1.WorkflowRun
+import nextflow.lineage.serde.LinEncoder
+import nextflow.util.CacheHelper
+import org.junit.Rule
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
-
-import java.time.OffsetDateTime
-
+import test.OutputCapture
 /**
  * LID Path Tests
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
@@ -164,9 +161,9 @@ class LinPathTest extends Specification {
 
         wdir.resolve('12345/output1').mkdirs()
         wdir.resolve('12345/path/to/file2.txt').mkdirs()
-        wdir.resolve('12345/.data.json').text = '{"type":"TaskRun"}'
-        wdir.resolve('12345/output1/.data.json').text = '{"type":"FileOutput", "path": "' + outputFolder.toString() + '"}'
-        wdir.resolve('12345/path/to/file2.txt/.data.json').text = '{"type":"FileOutput", "path": "' + outputFile.toString() + '"}'
+        wdir.resolve('12345/.data.json').text = '{"version":"lineage/v1beta1","kind":"TaskRun","spec":{"name":"test"}}'
+        wdir.resolve('12345/output1/.data.json').text = '{"version":"lineage/v1beta1","kind":"FileOutput","spec":{"path": "' + outputFolder.toString() + '"}}'
+        wdir.resolve('12345/path/to/file2.txt/.data.json').text = '{"version":"lineage/v1beta1","kind":"FileOutput","spec":{"path": "' + outputFile.toString() + '"}}'
         def time = OffsetDateTime.now()
         def wfResultsMetadata = new LinEncoder().withPrettyPrint(true).encode(new WorkflowOutput(time, "lid://1234", [new Parameter( "Path", "a", "lid://1234/a.txt")]))
         wdir.resolve('5678/').mkdirs()
@@ -208,8 +205,18 @@ class LinPathTest extends Specification {
         then:
         thrown(FileNotFoundException)
 
+        when: 'LinPath is not an output data description but is a workflow/task run'
+        def result = new LinPath(lidFs, '12345').getTargetOrIntermediatePath()
+        then:
+        result instanceof LinIntermediatePath
+
+        when: 'LinPath is a subpath of a workflow/task run data description'
+        result = new LinPath(lidFs, '12345/path').getTargetOrIntermediatePath()
+        then:
+        result instanceof LinIntermediatePath
+
         when: 'Lid description'
-        def result = new LinPath(lidFs, '5678').getTargetOrMetadataPath()
+        result = new LinPath(lidFs, '5678').getTargetOrMetadataPath()
         then:
         result instanceof LinMetadataPath
         result.text == wfResultsMetadata
@@ -232,7 +239,7 @@ class LinPathTest extends Specification {
         def wf = new WorkflowRun(new Workflow([],"repo", "commit"), "sessionId", "runId", [new Parameter("String", "param1", "value1")])
 
         when: 'workflow repo in workflow run'
-        Path p = LinPath.getMetadataAsTargetPath(wf, lidFs, "123456", ["workflow", "repository"] as String[])
+        Path p = LinPath.getMetadataAsTargetPath(wf, lidFs, "123456", "workflow.repository")
         then:
         p instanceof LinMetadataPath
         p.text == '"repo"'
@@ -240,25 +247,25 @@ class LinPathTest extends Specification {
         when: 'outputs'
         def outputs = new WorkflowOutput(OffsetDateTime.now(), "lid://123456", [new Parameter("Collection", "samples", ["sample1", "sample2"])])
         lidFs.store.save("123456#output", outputs)
-        Path p2 = LinPath.getMetadataAsTargetPath(wf, lidFs, "123456", ["output"] as String[])
+        Path p2 = LinPath.getMetadataAsTargetPath(wf, lidFs, "123456", "output")
         then:
         p2 instanceof LinMetadataPath
         p2.text == LinUtils.encodeSearchOutputs([new Parameter("Collection", "samples", ["sample1", "sample2"])], true)
 
         when: 'child does not exists'
-        LinPath.getMetadataAsTargetPath(wf, lidFs, "123456", ["no-exist"] as String[])
+        LinPath.getMetadataAsTargetPath(wf, lidFs, "123456", "no-exist")
         then:
         def exception = thrown(FileNotFoundException)
         exception.message == "Target path '123456#no-exist' does not exist"
 
         when: 'outputs does not exists'
-        LinPath.getMetadataAsTargetPath(wf, lidFs, "6789", ["output"] as String[])
+        LinPath.getMetadataAsTargetPath(wf, lidFs, "6789", "output")
         then:
         def exception1 = thrown(FileNotFoundException)
         exception1.message == "Target path '6789#output' does not exist"
 
         when: 'null object'
-        LinPath.getMetadataAsTargetPath(null, lidFs, "123456", ["no-exist"] as String[])
+        LinPath.getMetadataAsTargetPath(null, lidFs, "123456", "no-exist")
         then:
         def exception2 = thrown(FileNotFoundException)
         exception2.message == "Target path '123456' does not exist"
@@ -622,65 +629,45 @@ class LinPathTest extends Specification {
     }
 
     def 'should validate correct hash'(){
-        when:
+        given:
         def file = wdir.resolve("file.txt")
         file.text = "this is a data file"
         def hash = CacheHelper.hasher(file).hash().toString()
         def correctData = new FileOutput(file.toString(), new Checksum(hash,"nextflow", "standard"))
-        LinPath.validateDataOutput(correctData)
-        def stdout = capture
-            .toString()
-            .readLines()// remove the log part
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }
-            .findResults { line -> !line.contains('plugin') ? line : null }
-
+        when:
+        def error = LinPath.validateDataOutput(correctData)
         then:
-        stdout.size() == 0
+        !error
 
         cleanup:
         file.delete()
     }
 
     def 'should warn with incorrect hash'(){
-        when:
+        given:
         def file = wdir.resolve("file.txt")
         file.text = "this is a data file"
         def hash = CacheHelper.hasher(file).hash().toString()
         def correctData = new FileOutput(file.toString(), new Checksum("abscd","nextflow", "standard"))
-        LinPath.validateDataOutput(correctData)
-        def stdout = capture
-            .toString()
-            .readLines()// remove the log part
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }
-            .findResults { line -> !line.contains('plugin') ? line : null }
-
+        when:
+        def error = LinPath.validateDataOutput(correctData)
         then:
-        stdout.size() == 1
-        stdout[0].endsWith("Checksum of '$file' does not match with the one stored in the metadata")
+        error == "Checksum of '$file' does not match with lineage metadata"
 
         cleanup:
         file.delete()
     }
 
     def 'should warn when hash algorithm is not supported'(){
-        when:
+        given:
         def file = wdir.resolve("file.txt")
         file.text = "this is a data file"
         def hash = CacheHelper.hasher(file).hash().toString()
         def correctData = new FileOutput(file.toString(), new Checksum(hash,"not-supported", "standard"))
-        LinPath.validateDataOutput(correctData)
-        def stdout = capture
-            .toString()
-            .readLines()// remove the log part
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }
-            .findResults { line -> !line.contains('plugin') ? line : null }
-
+        when:
+        def error = LinPath.validateDataOutput(correctData)
         then:
-        stdout.size() == 1
-        stdout[0].endsWith("Checksum of '$file' can't be validated. Algorithm 'not-supported' is not supported")
+        error == "Checksum of '$file' can't be validated - algorithm 'not-supported' is not supported"
 
         cleanup:
         file.delete()
@@ -693,7 +680,41 @@ class LinPathTest extends Specification {
 
         then:
         thrown(FileNotFoundException)
+    }
 
+    def 'should validate path' () {
+        given:
+        def outputFolder = data.resolve('output')
+        outputFolder.mkdirs()
+        def outputFile = outputFolder.resolve('file1.txt')
+        outputFile.text = "this is file1"
+       def encoder = new LinEncoder()
+        def hash = CacheHelper.hasher(outputFile).hash().toString()
+        def correctData = new FileOutput(outputFile.toString(), new Checksum(hash,"nextflow", "standard"))
+        def incorrectData = new FileOutput(outputFile.toString(), new Checksum("incorrectHash","nextflow", "standard"))
+        wdir.resolve('12345/output/file1.txt').mkdirs()
+        wdir.resolve('12345/output/file2.txt').mkdirs()
+        wdir.resolve('12345/output/file1.txt/.data.json').text = encoder.encode(correctData)
+        wdir.resolve('12345/output/file2.txt/.data.json').text = encoder.encode(incorrectData)
+        def lidFs = new LinFileSystemProvider().newFileSystem(new URI("lid:///"), [enabled: true, store: [location: wdir.toString()]])
+
+        when:
+        def succeed = new LinPath(lidFs, '12345/output/file1.txt').validate()
+        then:
+        succeed
+
+        when:
+        succeed = new LinPath(lidFs, '12345/output/file2.txt').validate()
+        then:
+        !succeed
+
+        when:
+        succeed = new LinPath(lidFs, '12345/output/file3.txt').validate()
+        then:
+        !succeed
+
+        cleanup:
+        outputFile.delete()
     }
 
 

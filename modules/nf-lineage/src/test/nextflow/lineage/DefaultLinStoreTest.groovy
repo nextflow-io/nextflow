@@ -22,12 +22,12 @@ import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
-import nextflow.lineage.model.Checksum
-import nextflow.lineage.model.DataPath
-import nextflow.lineage.model.FileOutput
-import nextflow.lineage.model.Parameter
-import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowRun
+import nextflow.lineage.model.v1beta1.Checksum
+import nextflow.lineage.model.v1beta1.DataPath
+import nextflow.lineage.model.v1beta1.FileOutput
+import nextflow.lineage.model.v1beta1.Parameter
+import nextflow.lineage.model.v1beta1.Workflow
+import nextflow.lineage.model.v1beta1.WorkflowRun
 import nextflow.lineage.serde.LinEncoder
 import nextflow.lineage.config.LineageConfig
 import spock.lang.Specification
@@ -123,13 +123,39 @@ class DefaultLinStoreTest extends Specification {
         lidStore.save(key4, value4)
 
         when:
-        def results = lidStore.search( [type:['FileOutput'], labels:['value2']])
+        def results = lidStore.search( [type:['FileOutput'], labels:['value2']]).toList()
         then:
         results.size() == 2
-        results.keySet().containsAll([key2,key3])
-        results[key2] == value2
-        results[key3] == value3
+        results.containsAll([key2,key3])
     }
 
+    def 'should search subkeys' () {
+         given:
+         def uniqueId = UUID.randomUUID()
+         def time = OffsetDateTime.ofInstant(Instant.ofEpochMilli(1234567), ZoneOffset.UTC)
+         def mainScript = new DataPath("file://path/to/main.nf", new Checksum("78910", "nextflow", "standard"))
+         def workflow = new Workflow([mainScript], "https://nextflow.io/nf-test/", "123456")
+         def key = "testKey"
+         def value1 = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [new Parameter("String", "param1", "value1"), new Parameter("String", "param2", "value2")])
+         def key2 = "testKey/file1"
+         def value2 = new FileOutput("/path/file1", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, ["value1", "value2"])
+         def key3 = "testKey/subfolder/file3"
+         def value3 = new FileOutput("/path//file2", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, ["value2", "value3"])
+         def key4 = "testKey2/file2"
+         def value4 = new FileOutput("/path/tp/file", new Checksum("78910", "nextflow", "standard"), "testkey", "testkey", null, 1234, time, time, ["value4", "value3"])
+
+         def lidStore = new DefaultLinStore()
+         lidStore.open(config)
+         lidStore.save(key, value1)
+         lidStore.save(key2, value2)
+         lidStore.save(key3, value3)
+         lidStore.save(key4, value4)
+
+         when:
+         def results = lidStore.getSubKeys("testKey").toList()
+         then:
+         results.size() == 2
+         results.containsAll([key2, key3])
+     }
 
 }

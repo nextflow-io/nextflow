@@ -308,8 +308,6 @@ class TaskProcessor {
         this.ownerScript = script
         this.config = config
         this.taskBody = taskBody
-        if( taskBody.isShell )
-            log.warn1 "The `shell` process section is deprecated -- use the `script` section instead"
         this.name = name
         this.maxForks = config.maxForks && config.maxForks>0 ? config.maxForks as int : 0
         this.forksCount = maxForks ? new LongAdder() : null
@@ -2213,6 +2211,13 @@ class TaskProcessor {
             keys.add( it.value )
         }
 
+        // add all eval commands (they are part of the script)
+        for( Map.Entry<OutParam,Object> it : task.outputs ) {
+            if( it.key instanceof CmdEvalParam ) {
+                keys.add(((CmdEvalParam) it.key).getTarget(task.context))
+            }
+        }
+
         // add all variable references in the task script but not declared as input/output
         def vars = getTaskGlobalVars(task)
         if( vars ) {
@@ -2247,6 +2252,7 @@ class TaskProcessor {
             }
         }
 
+        // add stub-run flag
         if( session.stubRun && task.config.getStubBlock() ) {
             keys.add('stub-run')
         }

@@ -102,7 +102,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
 
     @Override
     FileDownloader getFileDownloader() {
-        return new SimpleFileDownloader()
+        return new OciAwareFileDownloader()
     }
 
     @Override

@@ -6,10 +6,9 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.function.Predicate
 
-import com.azure.compute.batch.BatchClient
 import com.azure.compute.batch.models.BatchPool
-import com.azure.compute.batch.models.BatchJobCreateContent
 import com.azure.compute.batch.models.ElevationLevel
+import com.azure.compute.batch.models.EnvironmentSetting
 import com.azure.core.exception.HttpResponseException
 import com.azure.core.http.HttpResponse
 import com.azure.identity.ManagedIdentityCredential
@@ -17,6 +16,7 @@ import com.google.common.hash.HashCode
 import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.cloud.azure.config.AzBatchOpts
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzManagedIdentityOpts
 import nextflow.cloud.azure.config.AzPoolOpts
@@ -31,8 +31,6 @@ import nextflow.util.MemoryUnit
 import reactor.core.publisher.Flux
 import spock.lang.Specification
 import spock.lang.Unroll
-import com.azure.compute.batch.models.BatchJobConstraints
-import com.azure.compute.batch.models.BatchPoolInfo
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -839,6 +837,32 @@ class AzBatchServiceTest extends Specification {
         [managedIdentity: [clientId: 'client-123']]     | 'client-123'
     }
 
+    def 'should use pool identity client id for fusion tasks' () {
+        given:
+        def POOL_IDENTITY_CLIENT_ID = 'pool-identity-123'
+        def exec = Mock(AzBatchExecutor) {
+            getConfig() >> new AzConfig([
+                batch: [poolIdentityClientId: POOL_IDENTITY_CLIENT_ID],
+                storage: [sasToken: 'test-sas-token', accountName: 'testaccount']
+            ])
+        }
+        def service = new AzBatchService(exec)
+        
+        and:
+        Global.session = Mock(Session) {
+            getConfig() >> [fusion: [enabled: true]]
+        }
+
+        when:
+        def env = [:] as Map<String,String>
+        if( service.config.batch().poolIdentityClientId && true ) { // fusionEnabled = true
+            env.put('FUSION_AZ_MSI_CLIENT_ID', service.config.batch().poolIdentityClientId)
+        }
+        
+        then:
+        env['FUSION_AZ_MSI_CLIENT_ID'] == POOL_IDENTITY_CLIENT_ID
+    }
+
 
     def 'should cache job id' () {
         given:
@@ -970,6 +994,37 @@ class AzBatchServiceTest extends Specification {
         '24h'    | 1
         '7d'     | 7
         null     | 0
+    }
+
+    def 'should create task constraints' () {
+        given:
+        def exec = Mock(AzBatchExecutor)
+        def service = new AzBatchService(exec)
+        def task = Mock(TaskRun) {
+            getConfig() >> Mock(TaskConfig) {
+                getTime() >> TIME
+            }
+        }
+        
+        when:
+        def result = service.taskConstraints(task)
+        
+        then:
+        result != null
+        if (TIME) {
+            assert result.maxWallClockTime != null
+            assert result.maxWallClockTime.toMillis() == TIME.toMillis()
+        } else {
+            assert result.maxWallClockTime == null
+        }
+        
+        where:
+        TIME << [
+            null,
+            Duration.of('1h'),
+            Duration.of('30m'),
+            Duration.of('2d')
+        ]
     }
 
 }

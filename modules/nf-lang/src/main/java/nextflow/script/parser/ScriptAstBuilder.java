@@ -30,7 +30,7 @@ import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
-import nextflow.script.ast.IncludeModuleNode;
+import nextflow.script.ast.IncludeEntryNode;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.IncompleteNode;
 import nextflow.script.ast.InvalidDeclaration;
@@ -341,11 +341,11 @@ public class ScriptAstBuilder {
 
     private IncludeNode includeDeclaration(IncludeDeclarationContext ctx) {
         var source = ast( string(ctx.stringLiteral()), ctx.stringLiteral() );
-        var modules = ctx.includeNames().includeName().stream()
+        var entries = ctx.includeNames().includeName().stream()
             .map(it -> {
                 var name = it.name.getText();
                 var alias = it.alias != null ? it.alias.getText() : null;
-                var result = new IncludeModuleNode(name, alias);
+                var result = new IncludeEntryNode(name, alias);
                 result.putNodeMetaData("_START_NAME", tokenPosition(it.name));
                 if( it.alias != null )
                     result.putNodeMetaData("_START_ALIAS", tokenPosition(it.alias));
@@ -353,7 +353,7 @@ public class ScriptAstBuilder {
             })
             .toList();
 
-        return ast( new IncludeNode(source, modules), ctx );
+        return ast( new IncludeNode(source, entries), ctx );
     }
 
     private ClassNode enumDef(EnumDefContext ctx) {
@@ -1545,24 +1545,12 @@ public class ScriptAstBuilder {
     /// MISCELLANEOUS
 
     private Parameter[] formalParameterList(FormalParameterListContext ctx) {
-        // NOTE: implicit `it` parameter is deprecated, but allow it for now
         if( ctx == null )
             return Parameter.EMPTY_ARRAY;
 
-        var params = ctx.formalParameter().stream()
+        return ctx.formalParameter().stream()
             .map(this::formalParameter)
-            .toList();
-        for( int n = params.size(), i = n - 1; i >= 0; i -= 1 ) {
-            var param = params.get(i);
-            for( var other : params ) {
-                if( other == param )
-                    continue;
-                if( other.getName().equals(param.getName()) )
-                    throw createParsingFailedException("Duplicated parameter '" + param.getName() + "' found", param);
-            }
-        }
-
-        return params.toArray(Parameter.EMPTY_ARRAY);
+            .toArray(Parameter[]::new);
     }
 
     private Parameter formalParameter(FormalParameterContext ctx) {

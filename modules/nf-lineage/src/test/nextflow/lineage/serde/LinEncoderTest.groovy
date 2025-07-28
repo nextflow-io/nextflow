@@ -16,18 +16,19 @@
 
 package nextflow.lineage.serde
 
-import nextflow.lineage.model.Checksum
-import nextflow.lineage.model.DataPath
-import nextflow.lineage.model.Parameter
-import nextflow.lineage.model.FileOutput
-import nextflow.lineage.model.TaskOutput
-import nextflow.lineage.model.TaskRun
-import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowOutput
-import nextflow.lineage.model.WorkflowRun
-import spock.lang.Specification
-
+import java.nio.file.Path
 import java.time.OffsetDateTime
+
+import nextflow.lineage.model.v1beta1.Checksum
+import nextflow.lineage.model.v1beta1.DataPath
+import nextflow.lineage.model.v1beta1.FileOutput
+import nextflow.lineage.model.v1beta1.Parameter
+import nextflow.lineage.model.v1beta1.TaskOutput
+import nextflow.lineage.model.v1beta1.TaskRun
+import nextflow.lineage.model.v1beta1.Workflow
+import nextflow.lineage.model.v1beta1.WorkflowOutput
+import nextflow.lineage.model.v1beta1.WorkflowRun
+import spock.lang.Specification
 
 class LinEncoderTest extends Specification{
 
@@ -83,22 +84,25 @@ class LinEncoderTest extends Specification{
         result.params.get(0).name == "param1"
     }
 
-    def 'should encode and decode WorkflowResults'(){
+    def 'should encode and decode WorkflowOutputs'(){
         given:
         def encoder = new LinEncoder()
         and:
         def time = OffsetDateTime.now()
-        def wfResults = new WorkflowOutput(time, "lid://1234", [new Parameter("String", "a", "A"), new Parameter("String", "b", "B")])
+        def wfResults = new WorkflowOutput(time, "lid://1234", [
+            new Parameter("Collection", "a", [id: 'id', file: 'sample.txt' as Path]),
+            new Parameter("String", "b", "B")
+        ])
+
         when:
         def encoded = encoder.encode(wfResults)
         def object = encoder.decode(encoded)
-
         then:
         object instanceof WorkflowOutput
         def result = object as WorkflowOutput
         result.createdAt == time
         result.workflowRun == "lid://1234"
-        result.output == [new Parameter("String", "a", "A"), new Parameter("String", "b", "B")]
+        result.output == [new Parameter("Collection", "a", [id: 'id', file: 'sample.txt']), new Parameter("String", "b", "B")]
     }
 
     def 'should encode and decode TaskRun'() {
@@ -133,7 +137,7 @@ class LinEncoderTest extends Specification{
         result.binEntries.get(0).checksum.value == "78910"
     }
 
-    def 'should encode and decode TaskResults'(){
+    def 'should encode and decode TaskOutputs'(){
         given:
         def encoder = new LinEncoder()
         and:
@@ -163,7 +167,7 @@ class LinEncoderTest extends Specification{
         def encoded = encoder.encode(wfResults)
         def object = encoder.decode(encoded)
         then:
-        encoded == '{"type":"WorkflowOutput","createdAt":null,"workflowRun":"lid://1234","output":null}'
+        encoded == '{"version":"lineage/v1beta1","kind":"WorkflowOutput","spec":{"createdAt":null,"workflowRun":"lid://1234","output":null}}'
         def result = object as WorkflowOutput
         result.createdAt == null
 

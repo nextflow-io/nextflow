@@ -27,6 +27,12 @@ public class Config implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        The remote work directory used by hybrid workflows. Equivalent to the `-bucket-dir` option of the `run` command.
+    """)
+    public Path bucketDir;
+
+    @ConfigOption
+    @Description("""
         If `true`, on a successful completion of a run all files in *work* directory are automatically deleted.
     """)
     public boolean cleanup;
