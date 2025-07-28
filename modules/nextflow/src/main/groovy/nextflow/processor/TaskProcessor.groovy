@@ -2211,6 +2211,13 @@ class TaskProcessor {
             keys.add( it.value )
         }
 
+        // add all eval commands (they are part of the script)
+        for( Map.Entry<OutParam,Object> it : task.outputs ) {
+            if( it.key instanceof CmdEvalParam ) {
+                keys.add(((CmdEvalParam) it.key).getTarget(task.context))
+            }
+        }
+
         // add all variable references in the task script but not declared as input/output
         def vars = getTaskGlobalVars(task)
         if( vars ) {
@@ -2245,6 +2252,7 @@ class TaskProcessor {
             }
         }
 
+        // add stub-run flag
         if( session.stubRun && task.config.getStubBlock() ) {
             keys.add('stub-run')
         }
