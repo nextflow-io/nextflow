@@ -21,7 +21,7 @@ import java.util.List;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
-import nextflow.script.ast.IncludeModuleNode;
+import nextflow.script.ast.IncludeEntryNode;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.OutputBlockNode;
 import nextflow.script.ast.OutputNode;
@@ -97,7 +97,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         // -- prepare alignment widths if needed
         if( options.harshilAlignment() ) {
             maxIncludeWidth = scriptNode.getIncludes().stream()
-                .flatMap(in -> in.modules.stream())
+                .flatMap(in -> in.entries.stream())
                 .map(this::getIncludeWidth)
                 .max(Integer::compare).orElse(0);
 
@@ -148,7 +148,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.append("include {");
         if( wrap )
             fmt.incIndent();
-        for( int i = 0; i < node.modules.size(); i++ ) {
+        for( int i = 0; i < node.entries.size(); i++ ) {
             if( wrap ) {
                 fmt.appendNewLine();
                 fmt.appendIndent();
@@ -156,17 +156,17 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             else {
                 fmt.append(' ');
             }
-            var module = node.modules.get(i);
-            fmt.append(module.name);
-            if( module.alias != null ) {
+            var entry = node.entries.get(i);
+            fmt.append(entry.name);
+            if( entry.alias != null ) {
                 fmt.append(" as ");
-                fmt.append(module.alias);
+                fmt.append(entry.alias);
             }
-            if( !wrap && node.modules.size() == 1 && options.harshilAlignment() ) {
-                var padding = maxIncludeWidth - getIncludeWidth(module);
+            if( !wrap && node.entries.size() == 1 && options.harshilAlignment() ) {
+                var padding = maxIncludeWidth - getIncludeWidth(entry);
                 fmt.append(" ".repeat(padding));
             }
-            if( i + 1 < node.modules.size() )
+            if( i + 1 < node.entries.size() )
                 fmt.append(" ;");
         }
         if( wrap ) {
@@ -181,10 +181,10 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.appendNewLine();
     }
 
-    protected int getIncludeWidth(IncludeModuleNode module) {
-        return module.alias != null
-            ? module.name.length() + 4 + module.alias.length()
-            : module.name.length();
+    protected int getIncludeWidth(IncludeEntryNode entry) {
+        return entry.alias != null
+            ? entry.name.length() + 4 + entry.alias.length()
+            : entry.name.length();
     }
 
     @Override

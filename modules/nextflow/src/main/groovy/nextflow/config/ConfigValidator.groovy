@@ -36,7 +36,6 @@ class ConfigValidator {
      * Hidden options added by ConfigBuilder
      */
     private static final List<String> hiddenOptions = List.of(
-        'bucketDir',
         'cacheable',
         'dumpChannels',
         'libDir',
@@ -79,7 +78,7 @@ class ConfigValidator {
     void validate(ConfigObject config) {
         final flatConfig = config.flatten()
         for( String key : flatConfig.keySet() ) {
-            final names = key.tokenize('.')
+            final names = key.tokenize('.').findAll { name -> !isSelector(name) }
             if( names.first() == 'profiles' ) {
                 if( !names.isEmpty() ) names.remove(0)
                 if( !names.isEmpty() ) names.remove(0)
@@ -99,6 +98,15 @@ class ConfigValidator {
                 continue
             }
         }
+    }
+
+    /**
+     * Determine whether a scope name is a process selector.
+     *
+     * @param name
+     */
+    private boolean isSelector(String name) {
+        return name.startsWith('withLabel:') || name.startsWith('withName:')
     }
 
     /**

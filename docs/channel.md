@@ -2,81 +2,63 @@
 
 # Channels
 
-Nextflow is based on the dataflow programming model in which processes communicate through channels.
+In Nextflow, **channels** are the key data structures that facilitate the dataflow dependencies between each step (i.e. {ref}`process <process-page>`) in a pipeline.
 
-A channel has two major properties:
-
-1. Sending a message is an *asynchronous* (i.e. non-blocking) operation, which means the sender doesn't have to wait for the receiving process.
-2. Receiving a message is a *synchronous* (i.e. blocking) operation, which means the receiving process must wait until a message has arrived.
-
-(channel-types)=
-
-## Channel types
-
-In Nextflow there are two kinds of channels: *queue channels* and *value channels*.
+There are two kinds of channels, *queue channels* and *value channels*. Channels are created using *channel factories* and transformed using *channel operators*.
 
 (channel-type-queue)=
 
-### Queue channel
+## Queue channels
 
-A *queue channel* is a non-blocking unidirectional FIFO queue connecting a *producer* process (i.e. outputting a value)
-to a consumer process or an operator.
+A *queue channel* is a channel that *emits* an asynchronous sequence of values.
 
-A queue channel can be created by factory methods ({ref}`channel-of`, {ref}`channel-path`, etc), operators ({ref}`operator-map`, {ref}`operator-flatmap`, etc), and processes (see {ref}`Process outputs <process-output>`).
+A queue channel can be created by channel factories (e.g., {ref}`channel.of <channel-of>` and {ref}`channel.fromPath <channel-path>`), operators (e.g., {ref}`operator-map` and  {ref}`operator-filter`), and processes (see {ref}`Process outputs <process-output>`).
+
+The values in a queue channel cannot be accessed directly -- they can only be accessed by passing the channel as input to an operator or process. For example:
+
+```nextflow
+channel.of(1, 2, 3).view { v -> "queue channel emits ${v}" }
+```
+
+```console
+queue channel emits 1
+queue channel emits 2
+queue channel emits 3
+```
 
 (channel-type-value)=
 
-### Value channel
+## Value channels
 
-A *value channel* can be bound (i.e. assigned) with one and only one value, and can be consumed any number of times by
-a process or an operator.
+A *value channel* is a channel that is *bound* to an asynchronous value.
 
-A value channel can be created with the {ref}`channel-value` factory method or by any operator that produces a single value
-({ref}`operator-first`, {ref}`operator-collect`, {ref}`operator-reduce`, etc). Additionally, a process will emit value
-channels if it is invoked with all value channels, including simple values which are implicitly wrapped in a value channel.
+A value channel can be created with the {ref}`channel.value <channel-value>` factory, certain operators (e.g., {ref}`operator-collect` and {ref}`operator-reduce`), and processes (under {ref}`certain conditions <process-out-singleton>`).
 
-For example:
+The value in a value channel cannot be accessed directly -- it can only be accessed by passing the channel as input to an operator or process. For example:
 
 ```nextflow
-process echo {
-  input:
-  val x
-
-  output:
-  path 'x.txt'
-
-  script:
-  """
-  echo $x > x.txt
-  """
-}
-
-workflow {
-  result = echo(1)
-  result.view { file -> "Result: ${file}" }
-}
+channel.value(1).view { v -> "value channel is ${v}" }
 ```
 
-In the above example, since the `echo` process is invoked with a simple value instead of a channel, the input is implicitly
-wrapped in a value channel, and the output is also emitted as a value channel.
-
-See also: {ref}`process-multiple-input-channels`.
+```console
+value channel is 1
+```
 
 ## Channel factories
 
-Channel factories are functions that can create channels.
+Channel factories are functions that create channels from regular values.
 
-For example, the `channel.of()` factory can be used to create a channel from an arbitrary list of arguments:
+The `channel.fromPath()` factory creates a channel from a file name or glob pattern, similar to the `files()` function:
 
 ```nextflow
-channel.of(1, 2, 3).view()
+channel.fromPath('input/*.txt').view()
 ```
 
 See {ref}`channel-factory` for the full list of channel factories.
 
 ## Operators
 
-Channel operators, or _operators_ for short, are functions that consume and produce channels. Because channels are asynchronous, operators are necessary to manipulate the values in a channel, aside from using a process. As a result, operators are useful for implementing the _glue logic_ between processes.
+Channel operators, or *operators* for short, are functions that consume and produce channels. Because channels are asynchronous, operators are necessary to manipulate the values in a channel. Operators are particularly useful for implementing glue logic between processes.
 
 Commonly used operators include:
 

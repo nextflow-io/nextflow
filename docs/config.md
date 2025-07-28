@@ -108,6 +108,9 @@ The following constants are globally available in a Nextflow configuration file:
 `projectDir: Path`
 : The directory where the main script is located.
 
+`secrets: Map<String,String>`
+: Map of pipeline secrets. See {ref}`secrets-page` for more information.
+
 ## Functions
 
 The following functions are globally available in a Nextflow configuration file:
@@ -240,7 +243,7 @@ process {
     cpus = 4
     withLabel: hello { cpus = 8 }
     withName: bye { cpus = 16 }
-    withName: 'mysub:bye' { cpus = 32 }
+    withName: 'aloha:bye' { cpus = 32 }
 }
 ```
 
@@ -248,7 +251,7 @@ With the above configuration:
 - All processes will use 4 cpus (unless otherwise specified in their process definition).
 - Processes annotated with the `hello` label will use 8 cpus.
 - Any process named `bye` (or imported as `bye`) will use 16 cpus.
-- Any process named `bye` (or imported as `bye`) invoked by a workflow named `mysub` will use 32 cpus.
+- Any process named `bye` (or imported as `bye`) invoked by a workflow named `aloha` will use 32 cpus.
 
 (config-profiles)=
 
