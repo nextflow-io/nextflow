@@ -21,8 +21,12 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.pf4j.update.SimpleFileDownloader
 
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Duration
 import java.util.regex.Pattern
 
 /**
@@ -43,18 +47,43 @@ class OciAwareFileDownloader extends SimpleFileDownloader {
      */
     @Override
     protected Path downloadFileHttp(URL fileUrl) {
+        HttpClient client = HttpClient.newBuilder()
+            .followRedirects(HttpClient.Redirect.NEVER)
+            .connectTimeout(Duration.ofSeconds(30))
+            .build()
 
-        Path destination = Files.createTempDirectory("pf4j-update-downloader");
-        destination.toFile().deleteOnExit();
+        Path destination = Files.createTempDirectory("pf4j-update-downloader")
+        //destination.toFile().deleteOnExit()
 
-        String path = fileUrl.getPath();
-        String fileName = path.substring(path.lastIndexOf('/') + 1);
-        Path file = destination.resolve(fileName);
-        HttpURLConnection conn = (HttpURLConnection) fileUrl.openConnection()
-        conn.instanceFollowRedirects = true
+        String path = fileUrl.getPath()
+        String fileName = path.substring(path.lastIndexOf('/') + 1)
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(fileUrl.toURI())
+            .timeout(Duration.ofMinutes(5))
+            .GET()
+            .build()
 
-        if (conn.responseCode == HttpURLConnection.HTTP_UNAUTHORIZED) {
-            def wwwAuth = conn.getHeaderField("WWW-Authenticate")
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString())
+
+        // Handle redirects manually because of filename is got from path
+        if (response.statusCode() in [301, 302, 303]) {
+            String newUrl = response.headers().firstValue("Location").orElse(null)
+            if (newUrl) {
+                log.debug("Managing redirection to $newUrl")
+                fileUrl = URI.create(newUrl).toURL()
+                path = fileUrl.getPath()
+                fileName = path.substring(path.lastIndexOf('/') + 1)
+                request = HttpRequest.newBuilder()
+                    .uri(fileUrl.toURI())
+                    .timeout(Duration.ofMinutes(5))
+                    .GET()
+                    .build()
+                response = client.send(request, HttpResponse.BodyHandlers.ofString())
+            }
+        }
+
+        if (response.statusCode() == 401) {
+            def wwwAuth = response.headers().firstValue("WWW-Authenticate").orElse(null)
             if (wwwAuth?.contains("Bearer")) {
                 log.debug("Received 401 — attempting OCI token auth")
 
@@ -68,30 +97,37 @@ class OciAwareFileDownloader extends SimpleFileDownloader {
                 def token = fetchToken(tokenUrl)
 
                 // Retry download with Bearer token
-                def authConn = (HttpURLConnection) fileUrl.openConnection()
-                authConn.setRequestProperty("Authorization", "Bearer $token")
-                authConn.instanceFollowRedirects = true
-
-                authConn.inputStream.withStream { input ->
-                    file.withOutputStream { out -> out << input }
-                }
-
+                HttpRequest authRequest = HttpRequest.newBuilder()
+                    .uri(fileUrl.toURI())
+                    .header("Authorization", "Bearer $token")
+                    .timeout(Duration.ofMinutes(5))
+                    .GET()
+                    .build()
+                HttpResponse<byte[]> authResponse = client.send(authRequest, HttpResponse.BodyHandlers.ofByteArray())
+                Path file = destination.resolve(fileName)
+                Files.write(file, authResponse.body())
                 return file
             }
         }
-
-        // Fallback to default behavior
-        conn.inputStream.withStream { input ->
-            file.withOutputStream { out -> out << input }
-        }
+        // Fallback to default behavior - download with initial response
+        HttpResponse<byte[]> downloadResponse = client.send(request, HttpResponse.BodyHandlers.ofByteArray())
+        Path file = destination.resolve(fileName)
+        Files.write(file, downloadResponse.body())
         return file
     }
 
     private String fetchToken(String tokenUrl) {
-        def conn = (HttpURLConnection) URI.create(tokenUrl).toURL().openConnection()
-        conn.setRequestProperty("Accept", "application/json")
-
-        def json = conn.inputStream.getText("UTF-8")
+        HttpClient client = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(30))
+            .build()
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(tokenUrl))
+            .header("Accept", "application/json")
+            .timeout(Duration.ofMinutes(1))
+            .GET()
+            .build()
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString())
+        def json = response.body()
         def matcher = json =~ /"token"\s*:\s*"([^"]+)"/
         if (matcher.find()) {
             return matcher.group(1)

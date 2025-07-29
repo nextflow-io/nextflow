@@ -15,7 +15,6 @@ import org.pf4j.PluginRuntimeException
 import org.pf4j.update.FileDownloader
 import org.pf4j.update.FileVerifier
 import org.pf4j.update.PluginInfo
-import org.pf4j.update.SimpleFileDownloader
 import org.pf4j.update.verifier.CompoundVerifier
 
 import java.net.http.HttpClient
@@ -127,14 +126,11 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
     private Map<String, PluginInfo> fetchMetadata0(List<PluginSpec> specs) {
         final gson = new Gson()
 
-        def reqBody = gson.toJson([
-            'nextflowVersion': BuildInfo.version,
-            'plugins'        : specs
-        ])
-
+        def pluginsParam = specs.collect { "${it.id}${it.version ? '@' + it.version : ''}" }.join(',')
+        def uri = url.resolve("v1/plugins/dependencies?plugins=${URLEncoder.encode(pluginsParam, 'UTF-8')}&nextflowVersion=${URLEncoder.encode(BuildInfo.version, 'UTF-8')}")
         def req = HttpRequest.newBuilder()
-            .uri(url.resolve("plugins/collect"))
-            .POST(HttpRequest.BodyPublishers.ofString(reqBody))
+            .uri(uri)
+            .GET()
             .build()
 
         def rep = client.send(req, HttpResponse.BodyHandlers.ofString())

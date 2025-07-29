@@ -3,6 +3,7 @@ package nextflow.plugin
 import com.github.tomakehurst.wiremock.junit.WireMockRule
 import com.github.tomjankes.wiremock.WireMockGroovy
 import dev.failsafe.FailsafeException
+import nextflow.BuildInfo
 import org.junit.Rule
 import org.pf4j.PluginRuntimeException
 import spock.lang.Specification
@@ -28,8 +29,8 @@ class HttpPluginRepositoryTest extends Specification {
         given:
         wm.stub {
             request {
-                method 'POST'
-                url '/plugins/collect'
+                method 'GET'
+                url "/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"
             }
             response {
                 status 200
@@ -62,8 +63,8 @@ class HttpPluginRepositoryTest extends Specification {
         given:
         wm.stub {
             request {
-                method 'POST'
-                url '/plugins/collect'
+                method 'GET'
+                url "/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"
             }
             response {
                 status 200
@@ -124,8 +125,8 @@ class HttpPluginRepositoryTest extends Specification {
         given:
         wm.stub {
             request {
-                method 'POST'
-                url '/plugins/collect'
+                method 'GET'
+                url "/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"
             }
             response {
                 status 500
@@ -147,8 +148,8 @@ class HttpPluginRepositoryTest extends Specification {
         given:
         wm.stub {
             request {
-                method: 'POST'
-                url: '/plugins/collect'
+                method 'GET'
+                url "/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"
             }
             response {
                 status 200
@@ -177,8 +178,8 @@ class HttpPluginRepositoryTest extends Specification {
         given:
         wm.stub {
             request {
-                method: 'POST'
-                url: '/plugins/collect'
+                method 'GET'
+                url "/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"
             }
             response {
                 status 400
