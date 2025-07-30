@@ -19,7 +19,7 @@ import java.lang.reflect.Modifier;
 import java.util.Optional;
 
 import nextflow.script.types.Channel;
-import nextflow.script.types.NamedTuple;
+import nextflow.script.types.Record;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.FieldNode;
@@ -66,7 +66,7 @@ public class ProcessNode extends MethodNode {
     }
 
     private static ClassNode dummyReturnType(Statement outputs) {
-        var cn = new ClassNode(NamedTuple.class);
+        var cn = new ClassNode(Record.class);
         asDirectives(outputs)
             .map(call -> emitName(call))
             .filter(name -> name != null)
