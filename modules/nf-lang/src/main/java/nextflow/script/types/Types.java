@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 import groovy.lang.GString;
 import groovy.lang.Tuple2;
 import nextflow.script.ast.ASTNodeMarker;
+import nextflow.script.dsl.DslScope;
 import nextflow.script.dsl.Namespace;
 import nextflow.script.types.shim.ShimType;
 import org.codehaus.groovy.GroovyBugError;
@@ -92,14 +93,31 @@ public class Types {
     }
 
     /**
+     * Determine whether a class is a DSL scope.
+     *
+     * @param cn
+     */
+    public static boolean isDslScope(ClassNode cn) {
+        return cn.implementsInterface(ClassHelper.makeCached(DslScope.class));
+    }
+
+    /**
+     * Determine whether a class is a namespace.
+     *
+     * @param cn
+     */
+    public static boolean isNamespace(ClassNode cn) {
+        return cn.implementsInterface(ClassHelper.makeCached(Namespace.class));
+    }
+
+    /**
      * Given a method node corresponding to a built-in constant, determine
      * whether the constant is a namespace.
      *
      * @param mn
      */
     public static boolean isNamespace(MethodNode mn) {
-        var cn = mn.getReturnType();
-        return hasTypeClass(cn) && Namespace.class.isAssignableFrom(cn.getTypeClass());
+        return isNamespace(mn.getReturnType());
     }
 
     /**
