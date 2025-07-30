@@ -69,4 +69,29 @@ class CmdPluginCreateTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should clone and create a plugin project for v0.2.0 tag' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def args = [
+            'create',
+            'hello world plugin',
+            'foo',
+            folder.toAbsolutePath().toString() + '/hello']
+        def params = [tag: 'v0.2.0']
+
+        when:
+        def cmd = new CmdPlugin(args: args, params: params)
+        and:
+        cmd.run()
+
+        then:
+        //Checks that clone is done from v0.2.0 by checking that gradle plugin version and url is the same as in the tag
+        Path.of(folder.resolve('hello/build.gradle').toUri()).text.contains("id 'io.nextflow.nextflow-plugin' version '0.0.1-alpha4'")
+        Path.of(folder.resolve('hello/build.gradle').toUri()).text.contains("url = 'https://nf-plugins-registry.dev-tower.net/api'")
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
 }
