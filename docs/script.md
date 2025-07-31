@@ -152,8 +152,8 @@ assert !true == false           // logical NOT
 The `in` and `!in` operators can be used to test *membership*, i.e. whether a collection contains a value:
 
 ```nextflow
-assert 'lo wo' in 'Hello world!'
 assert 2 in [1, 2, 3]
+assert 'a' in [a: 1, b: 2, c: 3]
 ```
 
 Arithmetic operators can be used to do math:
