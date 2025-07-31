@@ -17,6 +17,8 @@
 
 package nextflow.cloud.aws.config
 
+import software.amazon.awssdk.services.s3.model.ChecksumAlgorithm
+
 import static nextflow.cloud.aws.util.AwsHelper.*
 
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL
@@ -41,6 +43,8 @@ class AwsS3Config {
 
     private String storageKmsKeyId
 
+    private String checksumAlgorithm
+
     private Boolean debug
 
     private ObjectCannedACL s3Acl
@@ -59,6 +63,7 @@ class AwsS3Config {
         this.storageClass = parseStorageClass((opts.storageClass ?: opts.uploadStorageClass) as String)     // 'uploadStorageClass' is kept for legacy purposes
         this.storageEncryption = parseStorageEncryption(opts.storageEncryption as String)
         this.storageKmsKeyId = opts.storageKmsKeyId
+        this.checksumAlgorithm = parseChecksumAlgorithm(opts.checksumAlgorithm as String)
         this.pathStyleAccess = opts.s3PathStyleAccess as Boolean
         this.anonymous = opts.anonymous as Boolean
         this.s3Acl = parseS3Acl(opts.s3Acl as String)
@@ -85,6 +90,15 @@ class AwsS3Config {
         return null
     }
 
+    private String parseChecksumAlgorithm(String value) {
+        if (value) {
+            if( value in ChecksumAlgorithm.knownValues()*.toString() )
+                return value
+            log.warn "Unsupported AWS checksum algorithm: $value"
+        }
+        return null
+    }
+
     // ==== getters =====
     String getEndpoint() {
         return endpoint
@@ -100,6 +114,10 @@ class AwsS3Config {
 
     String getStorageKmsKeyId() {
         return storageKmsKeyId
+    }
+
+    String getChecksumAlgorithm() {
+        return checksumAlgorithm
     }
 
     Boolean getDebug() {

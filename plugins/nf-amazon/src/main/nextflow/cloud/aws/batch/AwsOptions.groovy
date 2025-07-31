@@ -116,6 +116,10 @@ class AwsOptions implements CloudTransferOptions {
         return awsConfig.s3Config.getStorageClass()
     }
 
+    String getChecksumAlgorithm(){
+        return awsConfig.s3Config.getChecksumAlgorithm()
+    }
+
     String getStorageEncryption() {
         return awsConfig.s3Config.getStorageEncryption()
     }

@@ -87,6 +87,8 @@ public final class S3OutputStream extends OutputStream {
 
     private String contentType;
 
+    private ChecksumAlgorithm checksumAlgorithm;
+
     /**
      * Indicates if the stream has been closed.
      */
@@ -198,6 +200,12 @@ public final class S3OutputStream extends OutputStream {
 
     public S3OutputStream setKmsKeyId(String kmsKeyId) {
         this.kmsKeyId = kmsKeyId;
+        return this;
+    }
+
+    public S3OutputStream setChecksumAlgorithm(String checksumAlgorithm){
+        if( checksumAlgorithm !=null )
+            this.checksumAlgorithm = ChecksumAlgorithm.fromValue(checksumAlgorithm);
         return this;
     }
 
@@ -428,6 +436,10 @@ public final class S3OutputStream extends OutputStream {
             reqBuilder.serverSideEncryption(storageEncryption);
         }
 
+        if( checksumAlgorithm != null ) {
+            reqBuilder.checksumAlgorithm(checksumAlgorithm);
+        }
+
         if( contentType != null ) {
             reqBuilder.contentType(contentType);
         }
@@ -612,6 +624,10 @@ public final class S3OutputStream extends OutputStream {
 
         if( storageEncryption != null ) {
             reqBuilder.serverSideEncryption( storageEncryption );
+        }
+
+        if( checksumAlgorithm != null ) {
+            reqBuilder.checksumAlgorithm(checksumAlgorithm);
         }
 
         if( contentType != null ) {

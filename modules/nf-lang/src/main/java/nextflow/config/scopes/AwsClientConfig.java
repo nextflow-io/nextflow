@@ -31,6 +31,12 @@ public class AwsClientConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        The S3 checksum algorithm to be used when saving objects on S3. Can be one of `CRC32`, `CRC32C`, `SHA1`, `SHA256` or `CRC64NVME`.
+    """)
+    public String checksumAlgorithm;
+
+    @ConfigOption
+    @Description("""
         Specify predefined bucket permissions, also known as *canned ACL*. Can be one of `Private`, `PublicRead`, `PublicReadWrite`, `AuthenticatedRead`, `LogDeliveryWrite`, `BucketOwnerRead`, `BucketOwnerFullControl`, or `AwsExecRead`.
         
         [Read more](https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl)

@@ -340,6 +340,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 				.setCannedAcl(s3.getCannedAcl())
 				.setStorageClass(storageClass)
 				.setStorageEncryption(props.getProperty("storage_encryption"))
+                .setChecksumAlgorithm(props.getProperty("checksum_algorithm"))
 				.setKmsKeyId(props.getProperty("storage_kms_key_id"))
 				.setContentType(fileToUpload.getContentType())
 				.setTags(fileToUpload.getTagsList());
@@ -742,6 +743,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		// set the client acl
 		client.setCannedAcl(getProp(props, "s_3_acl", "s3_acl", "s3acl", "s3Acl"));
 		client.setStorageEncryption(props.getProperty("storage_encryption"));
+        client.setChecksumAlgorithm(props.getProperty("checksum_algorithm"));
 		client.setKmsKeyId(props.getProperty("storage_kms_key_id"));
 		client.setTransferManagerThreads(props.getProperty("transfer_manager_threads"));
         client.setRequesterPaysEnabled(props.getProperty("requester_pays"));

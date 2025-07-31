@@ -35,6 +35,7 @@ class AwsS3ConfigTest extends Specification {
         !client.storageClass
         !client.storageKmsKeyId
         !client.storageEncryption
+        !client.checksumAlgorithm
         !client.debug
         !client.s3Acl
         !client.pathStyleAccess
@@ -49,6 +50,7 @@ class AwsS3ConfigTest extends Specification {
                 storageClass: 'STANDARD',
                 storageKmsKeyId: 'key-1',
                 storageEncryption: 'AES256',
+                checksumAlgorithm: 'SHA256',
                 s3Acl: 'public-read',
                 s3PathStyleAccess: true,
                 anonymous: true
@@ -61,6 +63,7 @@ class AwsS3ConfigTest extends Specification {
         client.storageClass == 'STANDARD'
         client.storageKmsKeyId == 'key-1'
         client.storageEncryption == 'AES256'
+        client.checksumAlgorithm == 'SHA256'
         client.s3Acl == ObjectCannedACL.PUBLIC_READ
         client.pathStyleAccess
         client.anonymous

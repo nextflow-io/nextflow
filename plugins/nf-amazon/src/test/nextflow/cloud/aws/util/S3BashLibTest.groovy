@@ -25,6 +25,7 @@ class S3BashLibTest extends Specification {
         1 * opts.getAwsCli() >> 'aws'
         1 * opts.getStorageClass() >> null
         1 * opts.getStorageEncryption() >> null
+        1 * opts.getChecksumAlgorithm() >> null
 
         script == '''\
                     # bash helper functions
@@ -122,6 +123,7 @@ class S3BashLibTest extends Specification {
         then:
         opts.getStorageClass() >> 'S-CLAZZ'
         opts.getStorageEncryption() >> 'S-ENCRYPT'
+        opts.getChecksumAlgorithm() >> 'S-CHECK'
         opts.getAwsCli() >> '/foo/bin/aws'
         opts.getMaxParallelTransfers() >> 33
 
@@ -188,11 +190,11 @@ class S3BashLibTest extends Specification {
                         local name=$1
                         local s3path=$2
                         if [[ "$name" == - ]]; then
-                          /foo/bin/aws s3 cp --only-show-errors --sse S-ENCRYPT --storage-class S-CLAZZ - "$s3path"
+                          /foo/bin/aws s3 cp --only-show-errors --sse S-ENCRYPT --checksum-algorithm S-CHECK --storage-class S-CLAZZ - "$s3path"
                         elif [[ -d "$name" ]]; then
-                          /foo/bin/aws s3 cp --only-show-errors --recursive --sse S-ENCRYPT --storage-class S-CLAZZ "$name" "$s3path/$name"
+                          /foo/bin/aws s3 cp --only-show-errors --recursive --sse S-ENCRYPT --checksum-algorithm S-CHECK --storage-class S-CLAZZ "$name" "$s3path/$name"
                         else
-                          /foo/bin/aws s3 cp --only-show-errors --sse S-ENCRYPT --storage-class S-CLAZZ "$name" "$s3path/$name"
+                          /foo/bin/aws s3 cp --only-show-errors --sse S-ENCRYPT --checksum-algorithm S-CHECK --storage-class S-CLAZZ "$name" "$s3path/$name"
                         fi
                     }
                     
@@ -551,7 +553,7 @@ class S3BashLibTest extends Specification {
     def 'should create with storage encrypt' () {
         given:
         def sess1 = Mock(Session)  {
-            getConfig() >> [aws: [ client: [ storageKmsKeyId: 'my-kms-key', storageEncryption: 'aws:kms']]]
+            getConfig() >> [aws: [ client: [ storageKmsKeyId: 'my-kms-key', storageEncryption: 'aws:kms', checksumAlgorithm: 'SHA256']]]
         }
         and:
         def opts = new AwsOptions(sess1)
@@ -623,11 +625,11 @@ class S3BashLibTest extends Specification {
                 local name=$1
                 local s3path=$2
                 if [[ "$name" == - ]]; then
-                  aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id my-kms-key --storage-class STANDARD - "$s3path"
+                  aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id my-kms-key --checksum-algorithm SHA256 --storage-class STANDARD - "$s3path"
                 elif [[ -d "$name" ]]; then
-                  aws s3 cp --only-show-errors --recursive --sse aws:kms --sse-kms-key-id my-kms-key --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --recursive --sse aws:kms --sse-kms-key-id my-kms-key --checksum-algorithm SHA256 --storage-class STANDARD "$name" "$s3path/$name"
                 else
-                  aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id my-kms-key --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id my-kms-key --checksum-algorithm SHA256 --storage-class STANDARD "$name" "$s3path/$name"
                 fi
             }
             

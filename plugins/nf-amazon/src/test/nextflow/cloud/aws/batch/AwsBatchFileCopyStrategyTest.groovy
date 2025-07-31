@@ -126,6 +126,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         1 * opts.getAwsCli() >> 'aws'
         1 * opts.getStorageClass() >> null
         1 * opts.getStorageEncryption() >> null
+        1 * opts.getChecksumAlgorithm() >> null
 
         script ==   '''\
                     # bash helper functions
@@ -217,6 +218,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         1 * opts.getAwsCli() >> '/foo/aws'
         1 * opts.getStorageClass() >> 'STANDARD_IA'
         1 * opts.getStorageEncryption() >> 'AES256'
+        1 * opts.getChecksumAlgorithm() >> 'SHA256'
 
         script == '''\
                 # bash helper functions
@@ -281,11 +283,11 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                     local name=$1
                     local s3path=$2
                     if [[ "$name" == - ]]; then
-                      /foo/aws s3 cp --only-show-errors --sse AES256 --storage-class STANDARD_IA - "$s3path"
+                      /foo/aws s3 cp --only-show-errors --sse AES256 --checksum-algorithm SHA256 --storage-class STANDARD_IA - "$s3path"
                     elif [[ -d "$name" ]]; then
-                      /foo/aws s3 cp --only-show-errors --recursive --sse AES256 --storage-class STANDARD_IA "$name" "$s3path/$name"
+                      /foo/aws s3 cp --only-show-errors --recursive --sse AES256 --checksum-algorithm SHA256 --storage-class STANDARD_IA "$name" "$s3path/$name"
                     else
-                      /foo/aws s3 cp --only-show-errors --sse AES256 --storage-class STANDARD_IA "$name" "$s3path/$name"
+                      /foo/aws s3 cp --only-show-errors --sse AES256 --checksum-algorithm SHA256 --storage-class STANDARD_IA "$name" "$s3path/$name"
                     fi
                 }
  
