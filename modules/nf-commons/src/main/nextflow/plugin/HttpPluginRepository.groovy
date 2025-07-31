@@ -1,16 +1,11 @@
 package nextflow.plugin
 
 import com.google.gson.Gson
-import dev.failsafe.Failsafe
-import dev.failsafe.FailsafeExecutor
-import dev.failsafe.Fallback
-import dev.failsafe.RetryPolicy
-import dev.failsafe.event.EventListener
-import dev.failsafe.event.ExecutionAttemptedEvent
-import dev.failsafe.function.CheckedSupplier
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
+import nextflow.Global
+import nextflow.util.HttpRetryableClient
 import org.pf4j.PluginRuntimeException
 import org.pf4j.update.FileDownloader
 import org.pf4j.update.FileVerifier
@@ -34,9 +29,9 @@ import java.net.http.HttpResponse
 @Slf4j
 @CompileStatic
 class HttpPluginRepository implements PrefetchUpdateRepository {
-    private final HttpClient client = HttpClient.newHttpClient()
     private final String id
     private final URI url
+    private final HttpRetryableClient retriableHttpClient
 
     private Map<String, PluginInfo> plugins = new HashMap<>()
 
@@ -46,6 +41,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
         this.url = !url.toString().endsWith("/")
             ? URI.create(url.toString() + "/")
             : url
+        this.retriableHttpClient = HttpRetryableClient.create(HttpClient.newHttpClient(), Global.session?.getCommonRetryConfig())
     }
 
     // NOTE ON PREFETCHING
@@ -119,48 +115,36 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
 
     private Map<String, PluginInfo> fetchMetadata(Collection<PluginSpec> specs) {
         final ordered = specs.sort(false)
-        final CheckedSupplier<Map<String, PluginInfo>> supplier = () -> fetchMetadata0(ordered)
-        return retry().get(supplier)
+        return fetchMetadata0(ordered)
     }
 
     private Map<String, PluginInfo> fetchMetadata0(List<PluginSpec> specs) {
-        final gson = new Gson()
-
         def pluginsParam = specs.collect { "${it.id}${it.version ? '@' + it.version : ''}" }.join(',')
         def uri = url.resolve("v1/plugins/dependencies?plugins=${URLEncoder.encode(pluginsParam, 'UTF-8')}&nextflowVersion=${URLEncoder.encode(BuildInfo.version, 'UTF-8')}")
         def req = HttpRequest.newBuilder()
             .uri(uri)
             .GET()
             .build()
-
-        def rep = client.send(req, HttpResponse.BodyHandlers.ofString())
-        if (rep.statusCode() != 200) throw new PluginRuntimeException(errorMessage(rep, gson))
-
         try {
-            def repBody = gson.fromJson(rep.body(), FetchResponse)
-            return repBody.plugins.collectEntries { p -> Map.entry(p.id, p) }
-        } catch (Exception e) {
-            log.info("Plugin metadata response body: '${rep.body()}'")
-            throw new PluginRuntimeException("Failed to parse response body", e)
+            return sendAndParse(req)
+        } catch( ConnectException e ) {
+            throw new ConnectException("Failed to download plugins metadata")
+        } catch( Exception e ) {
+            throw new PluginRuntimeException("Failed to download plugin metadata: ${e.message}")
         }
     }
 
-    // create a retry executor using failsafe
-    private static FailsafeExecutor retry() {
-        EventListener<ExecutionAttemptedEvent> logAttempt = (ExecutionAttemptedEvent attempt) -> {
-            log.debug("Retrying download of plugins metadata - attempt ${attempt.attemptCount}, ${attempt.lastFailure.message}", attempt.lastFailure)
+    private Map<String, PluginInfo> sendAndParse(HttpRequest req) {
+        final gson = new Gson()
+        def rep = retriableHttpClient.send(req, HttpResponse.BodyHandlers.ofString())
+        if( rep.statusCode() != 200 ) throw new PluginRuntimeException(errorMessage(rep, gson))
+        try {
+            def repBody = gson.fromJson(rep.body(), FetchResponse)
+            return repBody.plugins.collectEntries { p -> Map.entry(p.id, p) }
+        } catch( Exception e ) {
+            log.info("Plugin metadata response body: '${rep.body()}'")
+            throw new PluginRuntimeException("Failed to parse response body", e)
         }
-        Fallback fallback = Fallback.ofException { e ->
-            e.lastFailure instanceof ConnectException
-                ? new ConnectException("Failed to download plugins metadata")
-                : new PluginRuntimeException("Failed to download plugin metadata: ${e.lastFailure.message}")
-        }
-        final policy = RetryPolicy.builder()
-            .withMaxAttempts(3)
-            .handle(ConnectException)
-            .onRetry(logAttempt)
-            .build()
-        return Failsafe.with(fallback, policy)
     }
 
     private static String errorMessage(HttpResponse<String> rep, Gson gson) {

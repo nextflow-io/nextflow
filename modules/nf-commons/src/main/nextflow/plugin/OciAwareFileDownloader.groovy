@@ -19,6 +19,8 @@ package nextflow.plugin
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.Global
+import nextflow.util.HttpRetryableClient
 import org.pf4j.update.SimpleFileDownloader
 
 import java.net.http.HttpClient
@@ -47,13 +49,17 @@ class OciAwareFileDownloader extends SimpleFileDownloader {
      */
     @Override
     protected Path downloadFileHttp(URL fileUrl) {
-        HttpClient client = HttpClient.newBuilder()
-            .followRedirects(HttpClient.Redirect.NEVER)
-            .connectTimeout(Duration.ofSeconds(30))
-            .build()
+        def retriableHttpClient = HttpRetryableClient.create(
+            HttpClient.newBuilder()
+                .followRedirects(HttpClient.Redirect.NEVER)
+                .connectTimeout(Duration.ofSeconds(30))
+                .build(),
+            Global.session?.getCommonRetryConfig()
+        )
+
 
         Path destination = Files.createTempDirectory("pf4j-update-downloader")
-        //destination.toFile().deleteOnExit()
+        destination.toFile().deleteOnExit()
 
         String path = fileUrl.getPath()
         String fileName = path.substring(path.lastIndexOf('/') + 1)
@@ -63,7 +69,7 @@ class OciAwareFileDownloader extends SimpleFileDownloader {
             .GET()
             .build()
 
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString())
+        HttpResponse<String> response = retriableHttpClient.send(request, HttpResponse.BodyHandlers.ofString())
 
         // Handle redirects manually because of filename is got from path
         if (response.statusCode() in [301, 302, 303]) {
@@ -78,7 +84,7 @@ class OciAwareFileDownloader extends SimpleFileDownloader {
                     .timeout(Duration.ofMinutes(5))
                     .GET()
                     .build()
-                response = client.send(request, HttpResponse.BodyHandlers.ofString())
+                response = retriableHttpClient.send(request, HttpResponse.BodyHandlers.ofString())
             }
         }
 
@@ -103,30 +109,34 @@ class OciAwareFileDownloader extends SimpleFileDownloader {
                     .timeout(Duration.ofMinutes(5))
                     .GET()
                     .build()
-                HttpResponse<byte[]> authResponse = client.send(authRequest, HttpResponse.BodyHandlers.ofByteArray())
+                HttpResponse<byte[]> authResponse = retriableHttpClient.send(authRequest, HttpResponse.BodyHandlers.ofByteArray())
                 Path file = destination.resolve(fileName)
                 Files.write(file, authResponse.body())
                 return file
             }
         }
         // Fallback to default behavior - download with initial response
-        HttpResponse<byte[]> downloadResponse = client.send(request, HttpResponse.BodyHandlers.ofByteArray())
+        HttpResponse<byte[]> downloadResponse = retriableHttpClient.send(request, HttpResponse.BodyHandlers.ofByteArray())
         Path file = destination.resolve(fileName)
         Files.write(file, downloadResponse.body())
         return file
     }
 
     private String fetchToken(String tokenUrl) {
-        HttpClient client = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(30))
-            .build()
+        def retriableHttpClient = HttpRetryableClient.create(
+            HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(30))
+                .build(),
+            Global.session?.getCommonRetryConfig()
+        )
+
         HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(tokenUrl))
             .header("Accept", "application/json")
             .timeout(Duration.ofMinutes(1))
             .GET()
             .build()
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString())
+        HttpResponse<String> response = retriableHttpClient.send(request, HttpResponse.BodyHandlers.ofString())
         def json = response.body()
         def matcher = json =~ /"token"\s*:\s*"([^"]+)"/
         if (matcher.find()) {

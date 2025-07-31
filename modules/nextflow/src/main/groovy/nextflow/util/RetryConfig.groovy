@@ -34,7 +34,7 @@ import nextflow.Session
 @ToString(includePackage = false, includeNames = true)
 @EqualsAndHashCode
 @CompileStatic
-class RetryConfig {
+class RetryConfig implements IRetryConfig{
 
     private final static Duration DEFAULT_DELAY = Duration.of('350ms')
     private final static Duration DEFAULT_MAX_DELAY = Duration.of('90s')

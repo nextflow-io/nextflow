@@ -115,8 +115,8 @@ class HttpPluginRepositoryTest extends Specification {
         unit.prefetch([new PluginSpec("nf-fake")])
 
         then:
-        def err = thrown FailsafeException
-        err.message == "java.net.ConnectException: Failed to download plugins metadata"
+        def err = thrown ConnectException
+        err.message == "Failed to download plugins metadata"
     }
 
     // ------------------------------------------------------------------------
