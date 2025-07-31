@@ -21,6 +21,7 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -104,6 +105,7 @@ import static nextflow.script.ast.ASTUtils.*;
 import static nextflow.script.parser.PositionConfigureUtils.ast;
 import static nextflow.script.parser.PositionConfigureUtils.tokenPosition;
 import static nextflow.script.parser.ScriptParser.*;
+import static nextflow.script.parser.Comment;
 import static org.codehaus.groovy.ast.expr.VariableExpression.THIS_EXPRESSION;
 import static org.codehaus.groovy.ast.tools.GeneralUtils.*;
 
@@ -118,6 +120,8 @@ public class ScriptAstBuilder {
     private ScriptNode moduleNode;
     private ScriptLexer lexer;
     private ScriptParser parser;
+    private CommonTokenStream commentTokens;
+    private List<Token> unattachedComments;
     private final GroovydocManager groovydocManager;
 
     private Tuple2<ParserRuleContext,Exception> numberFormatError;
@@ -130,6 +134,11 @@ public class ScriptAstBuilder {
         this.lexer = new ScriptLexer(charStream);
         this.parser = new ScriptParser(new CommonTokenStream(lexer));
         parser.setErrorHandler(new DescriptiveErrorStrategy(charStream));
+
+        // Collect all the comments from the lexer
+        this.commentTokens = new CommonTokenStream(lexer, ScriptLexer.COMMENTS);
+        this.unattachedComments = commentTokens.getTokens(); 
+
 
         var groovydocEnabled = sourceUnit.getConfiguration().isGroovydocEnabled();
         this.groovydocManager = new GroovydocManager(groovydocEnabled);
@@ -249,20 +258,23 @@ public class ScriptAstBuilder {
 
     private boolean scriptDeclaration(ScriptDeclarationContext ctx) {
         if( ctx instanceof FeatureFlagDeclAltContext ffac ) {
+            var leadingComments = getLeadingComments(ctx);
             var node = featureFlagDeclaration(ffac.featureFlagDeclaration());
-            saveLeadingComments(node, ctx);
+            saveLeadingComments(node, leadingComments);
             moduleNode.addFeatureFlag(node);
         }
 
         else if( ctx instanceof EnumDefAltContext edac ) {
+            var leadingComments = getLeadingComments(ctx);
             var node = enumDef(edac.enumDef());
-            saveLeadingComments(node, ctx);
+            saveLeadingComments(node, leadingComments);
             moduleNode.addClass(node);
         }
 
         else if( ctx instanceof FunctionDefAltContext fdac ) {
+            var leadingComments = getLeadingComments(ctx);
             var node = functionDef(fdac.functionDef());
-            saveLeadingComments(node, ctx);
+            saveLeadingComments(node, leadingComments);
             moduleNode.addFunction(node);
         }
 
@@ -273,34 +285,39 @@ public class ScriptAstBuilder {
         }
 
         else if( ctx instanceof IncludeDeclAltContext iac ) {
+            var leadingComments = getLeadingComments(ctx);
             var node = includeDeclaration(iac.includeDeclaration());
-            saveLeadingComments(node, ctx);
+            saveLeadingComments(node, leadingComments);
             moduleNode.addInclude(node);
         }
 
         else if( ctx instanceof OutputDefAltContext odac ) {
+            var leadingComments = getLeadingComments(ctx);
             var node = outputDef(odac.outputDef());
-            saveLeadingComments(node, ctx);
+            saveLeadingComments(node, leadingComments);
             if( moduleNode.getOutputs() != null )
                 collectSyntaxError(new SyntaxException("Output block defined more than once", node));
             moduleNode.setOutputs(node);
         }
 
         else if( ctx instanceof ParamDeclAltContext pac ) {
+            var leadingComments = getLeadingComments(ctx);
             var node = paramDeclaration(pac.paramDeclaration());
-            saveLeadingComments(node, ctx);
+            saveLeadingComments(node, leadingComments);
             moduleNode.addParam(node);
         }
 
         else if( ctx instanceof ProcessDefAltContext pdac ) {
+            var leadingComments = getLeadingComments(ctx);
             var node = processDef(pdac.processDef());
-            saveLeadingComments(node, ctx);
+            saveLeadingComments(node, leadingComments);
             moduleNode.addProcess(node);
         }
 
         else if( ctx instanceof WorkflowDefAltContext wdac ) {
+            var leadingComments = getLeadingComments(ctx);
             var node = workflowDef(wdac.workflowDef());
-            saveLeadingComments(node, ctx);
+            saveLeadingComments(node, leadingComments);
             if( node.isEntry() ) {
                 if( moduleNode.getEntry() != null )
                     collectSyntaxError(new SyntaxException("Entry workflow defined more than once", node));
@@ -665,6 +682,10 @@ public class ScriptAstBuilder {
 
     private Statement statement(StatementContext ctx) {
         Statement result;
+        if( ctx instanceof EmptyStmtAltContext )
+            return EmptyStatement.INSTANCE;
+
+        List<String> leadingComments = getLeadingComments(ctx);
 
         if( ctx instanceof IfElseStmtAltContext ieac )
             result = ast( ifElseStatement(ieac.ifElseStatement()), ieac );
@@ -693,13 +714,11 @@ public class ScriptAstBuilder {
         else if( ctx instanceof ExpressionStmtAltContext eac )
             result = ast( expressionStatement(eac.expressionStatement()), eac );
 
-        else if( ctx instanceof EmptyStmtAltContext )
-            return EmptyStatement.INSTANCE;
-
         else
             throw createParsingFailedException("Invalid statement: " + ctx.getText(), ctx);
+        
+        saveLeadingComments(result, leadingComments);
 
-        saveLeadingComments(result, ctx);
         return result;
     }
 
@@ -1671,17 +1690,29 @@ public class ScriptAstBuilder {
 
     /// COMMENTS
 
-    private void saveLeadingComments(ASTNode node, ParserRuleContext ctx) {
-        var comments = new ArrayList<String>();
-        var child = ctx;
-        while( saveLeadingComments0(child, comments) )
-            child = child.getParent();
+    private List<String> getLeadingComments(ParserRuleContext ctx) {
+        // Get all the unattached comments up until this point
+        var leadingComments = new ArrayList<String>(unattachedComments.stream().map(Token::getText).toList());
+        // int stopIndex = ctx.getStart().getTokenIndex();
+        // Iterator<Token> it = unattachedComments.iterator();
+        // while( it.hasNext() ) {
+        //     var comment = it.next();
+        //     if( comment.getTokenIndex() >= stopIndex )
+        //         break;
+        //     leadingComments.add(comment.getText());
+        //     it.remove(); // The comment has been attached to this node, so remove it from the unattached comments list
+        // }
 
+        return leadingComments;
+    }
+
+    private void saveLeadingComments(ASTNode node, List<String> comments) {
         if( !comments.isEmpty() )
             node.putNodeMetaData(ASTNodeMarker.LEADING_COMMENTS, comments);
     }
 
     private boolean saveLeadingComments0(ParserRuleContext ctx, List<String> comments) {
+
         var parent = ctx.getParent();
         if( parent == null )
             return false;

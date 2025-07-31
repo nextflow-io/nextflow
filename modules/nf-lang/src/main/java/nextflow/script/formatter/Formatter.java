@@ -101,18 +101,23 @@ public class Formatter extends CodeVisitorSupport {
 
     public void appendLeadingComments(ASTNode node) {
         var comments = (List<String>) node.getNodeMetaData(ASTNodeMarker.LEADING_COMMENTS);
-        if( comments == null || comments.isEmpty() )
+        append("/*l*/");
+        if( comments == null || comments.isEmpty() ) {
             return;
-
-        for( var line : DefaultGroovyMethods.asReversed(comments) ) {
-            if( "\n".equals(line) ) {
-                append(line);
-            }
-            else {
-                appendIndent();
-                append(line.stripLeading());
-            }
         }
+        for( var comment : comments ) {
+            appendIndent();
+            append(comment);
+        }
+        // for( var line : DefaultGroovyMethods.asReversed(comments) ) {
+        //     if( "\n".equals(line) ) {
+        //         append(line);
+        //     }
+        //     else {
+        //         appendIndent();
+        //         append(line.stripLeading());
+        //     }
+        // }
     }
 
     public boolean hasTrailingComment(ASTNode node) {
@@ -122,6 +127,7 @@ public class Formatter extends CodeVisitorSupport {
 
     public void appendTrailingComment(ASTNode node) {
         var comment = (String) node.getNodeMetaData(ASTNodeMarker.TRAILING_COMMENT);
+        append("/* <trailing> */");
         if( comment != null ) {
             append(' ');
             append(comment);
@@ -151,7 +157,7 @@ public class Formatter extends CodeVisitorSupport {
         appendLeadingComments(node);
         if( preIndent )
             appendIndent();
-        append("if (");
+        append("i f (");
         visit(node.getBooleanExpression());
         append(") {\n");
         incIndent();
@@ -370,6 +376,7 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitBinaryExpression(BinaryExpression node) {
+        appendLeadingComments(node);
         if( node instanceof DeclarationExpression ) {
             append("def ");
             inVariableDeclaration = true;
@@ -434,6 +441,7 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitTernaryExpression(TernaryExpression node) {
+        appendLeadingComments(node);
         if( shouldWrapExpression(node) ) {
             visit(node.getBooleanExpression());
             incIndent();
@@ -458,6 +466,7 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitShortTernaryExpression(ElvisOperatorExpression node) {
+        appendLeadingComments(node);
         visit(node.getTrueExpression());
         append(" ?: ");
         visit(node.getFalseExpression());
@@ -465,12 +474,14 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitNotExpression(NotExpression node) {
+        appendLeadingComments(node);
         append('!');
         visit(node.getExpression());
     }
 
     @Override
     public void visitClosureExpression(ClosureExpression node) {
+        appendLeadingComments(node);
         append('{');
         if( node.getParameters() != null && node.getParameters().length > 0 ) {
             append(' ');
@@ -516,6 +527,7 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitTupleExpression(TupleExpression node) {
+        appendLeadingComments(node);
         var wrap = shouldWrapExpression(node);
         append('(');
         if( wrap )
@@ -531,6 +543,7 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitListExpression(ListExpression node) {
+        appendLeadingComments(node);
         var wrap = hasTrailingComma(node) || shouldWrapExpression(node);
         append('[');
         if( wrap )
@@ -560,6 +573,7 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitMapExpression(MapExpression node) {
+        appendLeadingComments(node);
         if( node.getMapEntryExpressions().isEmpty() ) {
             append("[:]");
             return;
@@ -593,6 +607,7 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitMapEntryExpression(MapEntryExpression node) {
+        appendLeadingComments(node);
         visit(node.getKeyExpression());
         append(": ");
         visit(node.getValueExpression());
@@ -600,6 +615,7 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitRangeExpression(RangeExpression node) {
+        appendLeadingComments(node);
         visit(node.getFrom());
         if( node.isExclusiveLeft() )
             append('<');
@@ -611,24 +627,28 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitUnaryMinusExpression(UnaryMinusExpression node) {
+        appendLeadingComments(node);
         append('-');
         visit(node.getExpression());
     }
 
     @Override
     public void visitUnaryPlusExpression(UnaryPlusExpression node) {
+        appendLeadingComments(node);
         append('+');
         visit(node.getExpression());
     }
 
     @Override
     public void visitBitwiseNegationExpression(BitwiseNegationExpression node) {
+        appendLeadingComments(node);
         append('~');
         visit(node.getExpression());
     }
 
     @Override
     public void visitCastExpression(CastExpression node) {
+        appendLeadingComments(node);
         visit(node.getExpression());
         append(" as ");
         visitTypeAnnotation(node.getType());
@@ -636,6 +656,7 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitConstantExpression(ConstantExpression node) {
+        appendLeadingComments(node);
         var text = (String) node.getNodeMetaData(ASTNodeMarker.VERBATIM_TEXT);
         if( text != null )
             append(text);
@@ -645,10 +666,12 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitClassExpression(ClassExpression node) {
+        appendLeadingComments(node);
         visitTypeAnnotation(node.getType());
     }
 
     public void visitTypeAnnotation(ClassNode type) {
+        appendLeadingComments(type);
         if( isLegacyType(type) ) {
             append(type.getNodeMetaData(ASTNodeMarker.LEGACY_TYPE));
             return;
@@ -659,6 +682,7 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitVariableExpression(VariableExpression node) {
+        appendLeadingComments(node);
         if( inVariableDeclaration && isLegacyType(node.getType()) ) {
             visitTypeAnnotation(node.getType());
             append(' ');
@@ -679,6 +703,7 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitGStringExpression(GStringExpression node) {
+        appendLeadingComments(node);
         // see also: GStringUtil.writeToImpl()
         var quoteChar = (String) node.getNodeMetaData(ASTNodeMarker.QUOTE_CHAR, k -> DQ_STR);
         append(quoteChar);
@@ -699,6 +724,7 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visit(Expression node) {
+        appendLeadingComments(node);
         var number = (Number) node.getNodeMetaData(ASTNodeMarker.INSIDE_PARENTHESES_LEVEL);
         if( number != null && number.intValue() > 0 )
             append('(');
