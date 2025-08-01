@@ -805,9 +805,6 @@ The following operations are supported for strings:
 `[] : (String, int) -> char`
 : Given a string and an index, returns the character at the given index in the string.
 
-`in, !in : (String, String) -> boolean`
-: Given a substring and a string, returns `true` if the substring occurs anywhere in the string (or not).
-
 `~ : (String) -> Pattern`
 : Creates a regular expression from a string.
 : See [Pattern](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/regex/Pattern.html) in the Java standard library for more information.
@@ -820,6 +817,9 @@ The following operations are supported for strings:
 : Given a string and a pattern, returns `true` if the string matches the pattern exactly.
 
 The following methods are available for a string:
+
+`contains( str: String ) -> boolean`
+: Returns `true` if the given substring occurs anywhere in the string.
 
 `endsWith( suffix: String ) -> boolean`
 : Returns `true` if the string ends with the given suffix.
