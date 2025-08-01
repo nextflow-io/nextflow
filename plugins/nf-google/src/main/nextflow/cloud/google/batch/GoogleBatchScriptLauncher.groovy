@@ -25,7 +25,7 @@ import com.google.cloud.batch.v1.Volume
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.cloud.google.batch.client.BatchConfig
+import nextflow.cloud.google.GoogleOpts
 import nextflow.executor.BashWrapperBuilder
 import nextflow.extension.FilesEx
 import nextflow.processor.TaskBean
@@ -45,7 +45,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
 
     private static final String MOUNT_ROOT = '/mnt/disks'
 
-    private BatchConfig config
+    private GoogleOpts config
     private CloudStoragePath remoteWorkDir
     private Path remoteBinDir
     private Set<String> buckets = new HashSet<>()
@@ -146,10 +146,10 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         final result = new ArrayList(10)
         for( String it : buckets ) {
             final mountOptions = new LinkedList<String>()
-            if( config && config.gcsfuseOptions )
-                mountOptions.addAll(config.gcsfuseOptions)
-            if( config && config.googleOpts.enableRequesterPaysBuckets )
-                mountOptions << "--billing-project ${config.googleOpts.projectId}".toString()
+            if( config && config.batch.gcsfuseOptions )
+                mountOptions.addAll(config.batch.gcsfuseOptions)
+            if( config && config.enableRequesterPaysBuckets )
+                mountOptions.add("--billing-project ${config.projectId}".toString())
 
             result.add(
                 Volume.newBuilder()
@@ -184,7 +184,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         return remoteWorkDir.resolve(TaskRun.CMD_INFILE)
     }
 
-    GoogleBatchScriptLauncher withConfig(BatchConfig config) {
+    GoogleBatchScriptLauncher withConfig(GoogleOpts config) {
         this.config = config
         return this
     }

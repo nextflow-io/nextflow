@@ -82,7 +82,7 @@ class PbsExecutor extends AbstractGridExecutor implements TaskArrayExecutor {
         }
 
         // add account from config
-        final account = session.getExecConfigProp(getName(), 'account', null) as String
+        final account = config.getExecConfigProp(name, 'account', null) as String
         if( account ) {
             result << '-P' << account
         }

@@ -50,10 +50,10 @@ class BatchCleanupTest extends Specification {
 
         given:
         def batch = new BatchCleanup()
-        def lsf = Mock(AbstractGridExecutor)
+        def lsf = Mock(AbstractGridExecutor) {
+            getConfig() >> new ExecutorConfig([killBatchSize: 5])
+        }
         lsf.getName() >> 'lsf'
-        and:
-        batch.size = 5
 
         when:
         5.times { batch.collect(lsf, 100+it)  }

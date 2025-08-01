@@ -13,67 +13,87 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.config.scopes;
+package nextflow.container
 
-import nextflow.config.schema.ConfigOption;
-import nextflow.config.schema.ConfigScope;
-import nextflow.script.dsl.Description;
-import nextflow.script.types.Duration;
+import groovy.transform.CompileStatic
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.config.schema.ScopeName
+import nextflow.script.dsl.Description
+import nextflow.util.Duration
 
-public class CharliecloudConfig implements ConfigScope {
+@ScopeName("charliecloud")
+@Description("""
+    The `charliecloud` scope controls how [Charliecloud](https://hpc.github.io/charliecloud/) containers are executed by Nextflow.
+""")
+@CompileStatic
+class CharliecloudConfig implements ConfigScope, ContainerConfig {
 
     @ConfigOption
     @Description("""
         The directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
     """)
-    public String cacheDir;
+    final String cacheDir
 
     @ConfigOption
     @Description("""
-        Enable Charliecloud execution (default: `false`).
+        Execute tasks with Charliecloud containers (default: `false`).
     """)
-    public boolean enabled;
+    final boolean enabled
 
     @ConfigOption
     @Description("""
         Comma separated list of environment variable names to be included in the container environment.
     """)
-    public String envWhitelist;
+    final List<String> envWhitelist
 
     @ConfigOption
     @Description("""
         The amount of time the Charliecloud pull can last, exceeding which the process is terminated (default: `20 min`).
     """)
-    public Duration pullTimeout;
+    final Duration pullTimeout
 
     @ConfigOption
     @Description("""
         The registry from where images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
     """)
-    public String registry;
+    final String registry
 
     @ConfigOption
     @Description("""
-        This attribute can be used to provide any extra command line options supported by the `ch-run` command.
+        Specify extra command line options supported by the `ch-run` command.
     """)
-    public String runOptions;
+    final String runOptions
 
     @ConfigOption
     @Description("""
         Mounts a path of your choice as the `/tmp` directory in the container. Use the special value `'auto'` to create a temporary directory each time a container is created.
     """)
-    public String temp;
+    final String temp
 
     @ConfigOption
     @Description("""
-        Create a temporary squashFS container image in the process work directory instead of a folder.
+        Run containers from storage in writeable mode using overlayfs (default: `true`).
     """)
-    public boolean useSquash;
+    final boolean writeFake
 
-    @ConfigOption
-    @Description("""
-        Enable `writeFake` with charliecloud. This allows to run containers from storage in writeable mode using overlayfs.
-    """)
-    public boolean writeFake;
+    /* required by extension point -- do not remove */
+    CharliecloudConfig() {}
+
+    CharliecloudConfig(Map opts) {
+        cacheDir = opts.cacheDir
+        enabled = opts.enabled as boolean
+        envWhitelist = ContainerHelper.parseEnvWhitelist(opts.envWhitelist)
+        pullTimeout = opts.pullTimeout as Duration ?: Duration.of('20min')
+        registry = opts.registry
+        runOptions = opts.runOptions
+        temp = opts.temp
+        writeFake = opts.writeFake != null ? opts.writeFake as boolean : true
+    }
+
+    @Override
+    String getEngine() {
+        return 'charliecloud'
+    }
 
 }

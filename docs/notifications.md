@@ -220,6 +220,16 @@ mail {
 }
 ```
 
+:::{note}
+Some versions of Java (e.g. Java 11 Corretto) do not default to TLS v1.2, and as a result may have issues with 3rd party integrations that enforce TLS v1.2 (e.g. Azure Active Directory OIDC). This problem can be addressed by setting the following config option:
+
+```groovy
+mail {
+    smtp.ssl.protocols = 'TLSv1.2'
+}
+```
+:::
+
 See the {ref}`mail scope <config-mail>` section to learn more the mail server configuration options.
 
 ### AWS SES configuration
@@ -227,10 +237,9 @@ See the {ref}`mail scope <config-mail>` section to learn more the mail server co
 :::{versionadded} 23.06.0-edge
 :::
 
-Nextflow supports [AWS SES](https://aws.amazon.com/ses/) native API as an alternative
-provider to send emails in place of SMTP server.
+Nextflow supports the [AWS Simple Email Service](https://aws.amazon.com/ses/) API as an alternative provider to send emails in place of an SMTP server.
 
-To enable this feature add the following environment variable in the launching environment:
+To enable this feature, set the following environment variable in the launch environment:
 
 ```bash
 export NXF_ENABLE_AWS_SES=true
@@ -240,6 +249,20 @@ Make also sure to add the following AWS IAM permission to the AWS user (or role)
 
 ```
 ses:SendRawEmail
+```
+
+The following snippet shows how to configure Nextflow to send emails through SES:
+
+```groovy
+mail {
+    smtp.host = 'email-smtp.us-east-1.amazonaws.com'
+    smtp.port = 587
+    smtp.user = '<Your AWS SES access key>'
+    smtp.password = '<Your AWS SES secret key>'
+    smtp.auth = true
+    smtp.starttls.enable = true
+    smtp.starttls.required = true
+}
 ```
 
 ## Mail notification

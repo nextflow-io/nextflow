@@ -29,12 +29,8 @@ class BatchConfigTest extends Specification {
 
     @Requires({System.getenv('GOOGLE_APPLICATION_CREDENTIALS')})
     def 'should create batch config' () {
-        given:
-        def CONFIG = [:]
-        def session = Mock(Session) { getConfig()>>CONFIG }
-
         when:
-        def config = BatchConfig.create(session)
+        def config = new BatchConfig([:])
         then:
         !config.getSpot()
         and:
@@ -49,20 +45,17 @@ class BatchConfigTest extends Specification {
     @Requires({System.getenv('GOOGLE_APPLICATION_CREDENTIALS')})
     def 'should create batch config with custom settings' () {
         given:
-        def CONFIG = [google: [
-            batch: [
-                spot: true,
-                maxSpotAttempts: 8,
-                autoRetryExitCodes: [50001, 50003, 50005],
-                retryPolicy: [maxAttempts: 10],
-                bootDiskImage: 'batch-foo',
-                bootDiskSize: '100GB'
-            ]
-        ] ]
-        def session = Mock(Session) { getConfig()>>CONFIG }
+        def opts = [
+            spot: true,
+            maxSpotAttempts: 8,
+            autoRetryExitCodes: [50001, 50003, 50005],
+            retryPolicy: [maxAttempts: 10],
+            bootDiskImage: 'batch-foo',
+            bootDiskSize: '100GB'
+        ]
 
         when:
-        def config = BatchConfig.create(session)
+        def config = new BatchConfig(opts)
         then:
         config.getSpot()
         and:

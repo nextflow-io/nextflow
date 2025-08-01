@@ -44,6 +44,11 @@ abstract class Executor {
     Session session
 
     /**
+     * The `executor` configuration settings
+     */
+    ExecutorConfig config
+
+    /**
      * The executor simple name
      */
     String name

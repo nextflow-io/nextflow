@@ -13,85 +13,125 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.config.scopes;
+package nextflow.container
 
-import nextflow.config.schema.ConfigOption;
-import nextflow.config.schema.ConfigScope;
-import nextflow.script.dsl.Description;
-import nextflow.script.types.Duration;
+import groovy.transform.CompileStatic
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.config.schema.ScopeName
+import nextflow.script.dsl.Description
+import nextflow.util.Duration
 
-public class SingularityConfig implements ConfigScope {
+@ScopeName("singularity")
+@Description("""
+    The `singularity` scope controls how [Singularity](https://sylabs.io/singularity/) containers are executed by Nextflow.
+""")
+@CompileStatic
+class SingularityConfig implements ConfigScope, ContainerConfig {
 
     @ConfigOption
     @Description("""
-        When `true` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature to be enabled in your Singularity installation (default: `true`).
+        Automatically mount host paths in the executed container (default: `true`). It requires the `user bind control` feature to be enabled in your Singularity installation.
     """)
-    public boolean autoMounts;
+    final Boolean autoMounts
 
     @ConfigOption
     @Description("""
         The directory where remote Singularity images are stored. When using a compute cluster, it must be a shared folder accessible to all compute nodes.
     """)
-    public String cacheDir;
+    final String cacheDir
 
     @ConfigOption
     @Description("""
-        Enable Singularity execution (default: `false`).
+        Execute tasks with Singularity containers (default: `false`).
     """)
-    public boolean enabled;
+    final boolean enabled
 
     @ConfigOption
     @Description("""
-        This attribute can be used to provide any option supported by the Singularity engine i.e. `singularity [OPTIONS]`.
+        Specify additional options supported by the Singularity engine i.e. `singularity [OPTIONS]`.
     """)
-    public String engineOptions;
+    final String engineOptions
 
     @ConfigOption
     @Description("""
         Comma separated list of environment variable names to be included in the container environment.
     """)
-    public String envWhitelist;
+    final List<String> envWhitelist
 
     @ConfigOption
     @Description("""
         Directory where remote Singularity images are retrieved. When using a computing cluster it must be a shared folder accessible to all compute nodes.
     """)
-    public String libraryDir;
+    final String libraryDir
 
     @ConfigOption
     @Description("""
         Pull the Singularity image with http protocol (default: `false`).
     """)
-    public boolean noHttps;
+    final boolean noHttps
 
     @ConfigOption
     @Description("""
         When enabled, OCI (and Docker) container images are pull and converted to a SIF image file format implicitly by the Singularity run command, instead of Nextflow (default: `false`).
     """)
-    public boolean ociAutoPull;
+    final boolean ociAutoPull
 
     @ConfigOption
     @Description("""
         Enable OCI-mode, that allows running native OCI compliant container image with Singularity using `crun` or `runc` as low-level runtime (default: `false`).
     """)
-    public boolean ociMode;
+    final Boolean ociMode
 
     @ConfigOption
     @Description("""
         The amount of time the Singularity pull can last, after which the process is terminated (default: `20 min`).
     """)
-    public Duration pullTimeout;
+    final Duration pullTimeout
 
     @ConfigOption
     @Description("""
         The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
     """)
-    public String registry;
+    final String registry
 
     @ConfigOption
     @Description("""
-        This attribute can be used to provide any extra command line options supported by `singularity exec`.
+        Specify extra command line options supported by `singularity exec`.
     """)
-    public String runOptions;
+    final String runOptions
+
+    /* required by extension point -- do not remove */
+    SingularityConfig() {}
+
+    SingularityConfig(Map opts) {
+        autoMounts = opts.autoMounts as Boolean
+        cacheDir = opts.cacheDir
+        enabled = opts.enabled as boolean
+        engineOptions = opts.engineOptions
+        envWhitelist = ContainerHelper.parseEnvWhitelist(opts.envWhitelist)
+        libraryDir = opts.libraryDir
+        noHttps = opts.noHttps as boolean
+        ociAutoPull = opts.ociAutoPull as boolean
+        ociMode = opts.ociMode as Boolean
+        pullTimeout = opts.pullTimeout as Duration ?: Duration.of('20min')
+        registry = opts.registry
+        runOptions = opts.runOptions
+    }
+
+    @Override
+    String getEngine() {
+        return 'singularity'
+    }
+
+    @Override
+    boolean canRunOciImage() {
+        return ociMode || ociAutoPull
+    }
+
+    @Override
+    String getFusionOptions() {
+        return ociMode ? '-B /dev/fuse' : null
+    }
 
 }

@@ -13,54 +13,68 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.config.scopes;
+package nextflow.executor
 
-import nextflow.config.schema.ConfigOption;
-import nextflow.config.schema.ConfigScope;
-import nextflow.script.dsl.Description;
-import nextflow.script.types.Duration;
+import groovy.transform.CompileStatic
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.script.dsl.Description
+import nextflow.util.Duration
 
-public class ExecutorRetryConfig implements ConfigScope {
+@CompileStatic
+class ExecutorRetryConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
         *Used only by grid executors.*
 
         Delay when retrying failed job submissions (default: `500ms`).
-        """)
-    public Duration delay;
+    """)
+    Duration delay = Duration.of('500ms')
 
     @ConfigOption
     @Description("""
         *Used only by grid executors.*
 
         Jitter value when retrying failed job submissions (default: `0.25`).
-        """)
-    public double jitter;
+    """)
+    double jitter = 0.25
 
     @ConfigOption
     @Description("""
         *Used only by grid executors.*
 
         Max attempts when retrying failed job submissions (default: `3`).
-        """)
-    public int maxAttempts;
+    """)
+    int maxAttempts = 3
 
     @ConfigOption
     @Description("""
         *Used only by grid executors.*
 
         Max delay when retrying failed job submissions (default: `30s`).
-        """)
-    public Duration maxDelay;
+    """)
+    Duration maxDelay = Duration.of('30s')
 
     @ConfigOption
     @Description("""
         *Used only by grid executors.*
 
         Regex pattern that when verified causes a failed submit operation to be re-tried (default: `Socket timed out`).
-        """)
-    public String reason;
+    """)
+    String reason = 'Socket timed out'
 
+    ExecutorRetryConfig(Map opts) {
+        if( opts.delay )
+            delay = opts.delay as Duration
+        if( opts.jitter )
+            jitter = opts.jitter as double
+        if( opts.maxAttempts )
+            maxAttempts = opts.maxAttempts as int
+        if( opts.maxDelay )
+            maxDelay = opts.maxDelay as Duration
+        if( opts.reason )
+            reason = opts.reason
+    }
 
 }

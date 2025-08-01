@@ -34,6 +34,7 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 import nextflow.io.LogOutputStream
 import nextflow.plugin.Plugins
 import org.jsoup.Jsoup
@@ -72,21 +73,21 @@ class Mailer {
     /**
      * Holds mail settings and configuration attributes
      */
-    private Map config = [:]
+    private MailConfig config
 
-    private Map env = System.getenv()
+    private Map env = SysEnv.get()
 
     private String fMailer
 
-    Mailer setConfig( Map params ) {
-        if( params ) {
-            if( config == null ) config = [:]
-            config.putAll(params)
-        }
-        return this
+    Mailer() {
+        this(Collections.emptyMap())
     }
 
-    Map getConfig() { config }
+    Mailer(Map opts) {
+        config = new MailConfig(opts)
+    }
+
+    MailConfig getConfig() { config }
 
     protected String getSysMailer() {
         if( !fMailer )
@@ -119,10 +120,10 @@ class Mailer {
     @CompileDynamic
     protected Properties createProps() {
 
-        if( config.smtp instanceof Map ) {
-            def cfg = [mail: [smtp: config.smtp]] as ConfigObject
-            def props = cfg.toProperties()
-            props.setProperty('mail.transport.protocol', config.transport?.protocol  ?: 'smtp')
+        if( config.smtp != null ) {
+            final cfg = [mail: [smtp: config.smtp.toMap()]] as ConfigObject
+            final props = cfg.toProperties()
+            props.setProperty('mail.transport.protocol', 'smtp')
             // -- check proxy configuration
             if( !props.contains('mail.smtp.proxy.host') && System.getProperty('http.proxyHost') ) {
                 props['mail.smtp.proxy.host'] = System.getProperty('http.proxyHost')
@@ -130,9 +131,8 @@ class Mailer {
             }
 
             // -- debug for debugging
-            if( config.debug == true ) {
+            if( config.debug )
                 log.debug "Mail session properties:\n${dumpProps(props)}"
-            }
             else
                 log.trace "Mail session properties:\n${dumpProps(props)}"
             return props
@@ -159,7 +159,8 @@ class Mailer {
     protected Session getSession() {
         if( !session ) {
             session = Session.getInstance(createProps())
-            if( config.debug != true ) return session
+            if( !config.debug )
+                return session
 
             session.setDebugOut(new PrintStream( new LogOutputStream() {
                 @Override protected void processLine(String line, int logLevel) {
@@ -183,8 +184,8 @@ class Mailer {
      * @return The SMTP host port
      */
     protected int getPort() {
-        def port = getConfig('port')
-        port ? port as int : -1
+        final port = getConfig('port')
+        port != null ? port as int : -1
     }
 
     /**
@@ -202,12 +203,16 @@ class Mailer {
     }
 
     protected getConfig(String name) {
-        def key = "smtp.${name}"
-        def value = config.navigate(key)
-        if( !value ) {
-            // fallback on env properties
-            value = env.get("NXF_${key.toUpperCase().replace('.','_')}".toString())
-        }
+        def value
+
+        // check `mail.smtp` config
+        if( config.smtp != null )
+            value = config.smtp.toMap().navigate(name)
+
+        // check nvironment variable
+        if( !value )
+            value = env.get("NXF_SMTP_${name.toUpperCase().replace('.','_')}".toString())
+
         return value
     }
 
@@ -224,7 +229,7 @@ class Mailer {
         if( mail.from )
             msg.addFrom(InternetAddress.parse(mail.from))
         else if( config.from )
-            msg.addFrom(InternetAddress.parse(config.from.toString()))
+            msg.addFrom(InternetAddress.parse(config.from))
 
         if( mail.to )
             msg.setRecipients(Message.RecipientType.TO, mail.to)
@@ -375,7 +380,7 @@ class Mailer {
                 log.warn "Unable to load AWS Simple Email Service (SES) client"
         }
 
-        if( config.containsKey('smtp') ) {
+        if( config.smtp != null ) {
             return providers.find(it -> it.name()=='javamail')
         }
 
