@@ -37,6 +37,7 @@ import org.eclipse.jgit.api.Git
 @CompileStatic
 @Parameters(commandDescription = "Execute plugin-specific commands")
 class CmdPlugin extends CmdBase {
+    private static String DEFAULT_TEMPLATE_TAG='v0.2.1'
 
     @Override
     String getName() {
@@ -64,7 +65,7 @@ class CmdPlugin extends CmdBase {
             Plugins.pull(args[1].tokenize(','))
         }
         else if( args[0] == 'create' ) {
-            createPlugin(args)
+            createPlugin(args, params.get('tag', DEFAULT_TEMPLATE_TAG))
         }
         // plugin run command
         else if( args[0].contains(CMD_SEP) ) {
@@ -98,7 +99,7 @@ class CmdPlugin extends CmdBase {
         }
     }
 
-    static createPlugin(List<String> args) {
+    static createPlugin(List<String> args, String tag) {
         if( args != ['create'] && (args[0] != 'create' || !(args.size() in [3, 4])) )
             throw new AbortOperationException("Invalid create parameters - usage: nextflow plugin create <Plugin name> <Organization name>")
 
@@ -132,7 +133,7 @@ class CmdPlugin extends CmdBase {
         final File targetDir = refactor.getPluginDir()
 
         // clone the template repo
-        clonePluginTemplate(targetDir)
+        clonePluginTemplate(targetDir, tag)
         // now refactor the template code
         refactor.apply()
         // remove git plat
@@ -148,14 +149,14 @@ class CmdPlugin extends CmdBase {
             : new BufferedReader(new InputStreamReader(System.in)).readLine()
     }
 
-    static private void clonePluginTemplate(File targetDir) {
+    static private void clonePluginTemplate(File targetDir, String tag) {
         final templateUri = "https://github.com/nextflow-io/nf-plugin-template.git"
         try {
             Git.cloneRepository()
                 .setURI(templateUri)
                 .setDirectory(targetDir)
-                .setBranchesToClone(["refs/tags/v0.2.0"])
-                .setBranch("refs/tags/v0.2.0")
+                .setBranchesToClone(["refs/tags/$tag".toString()])
+                .setBranch("refs/tags/$tag")
                 .call()
         }
         catch (Exception e) {
