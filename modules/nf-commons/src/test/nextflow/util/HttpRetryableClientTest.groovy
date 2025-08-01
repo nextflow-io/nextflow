@@ -60,30 +60,6 @@ class HttpRetryableClientTest extends Specification {
         client.retryConfig == null
     }
 
-    def "should create client with IRetryConfig"() {
-        given:
-        def httpClient = Mock(HttpClient)
-        def iRetryConfig = Mock(IRetryConfig) {
-            getDelay() >> nextflow.util.Duration.of('500ms')
-            getMaxDelay() >> nextflow.util.Duration.of('30s')
-            getMaxAttempts() >> 5
-            getJitter() >> 0.25d
-        }
-
-        when:
-        def client = HttpRetryableClient.create(httpClient, iRetryConfig)
-
-        then:
-        client != null
-        client.httpClient == httpClient
-        client.retryConfig != null
-        client.retryConfig.delay == Duration.ofMillis(500)
-        client.retryConfig.maxDelay == Duration.ofMillis(30000)
-        client.retryConfig.maxAttempts == 5
-        client.retryConfig.jitter == 0.25d
-        client.retryConfig.multiplier == 2.0d
-    }
-
     def "should send request without retry when no config"() {
         given:
         def httpClient = Mock(HttpClient)
@@ -108,14 +84,16 @@ class HttpRetryableClientTest extends Specification {
             statusCode() >> 200
             body() >> "success"
         }
-        def iRetryConfig = Mock(IRetryConfig) {
-            getDelay() >> nextflow.util.Duration.of('500ms')
-            getMaxDelay() >> nextflow.util.Duration.of('30s')
+        def retryConfig = Mock(Retryable.Config) {
             getMaxAttempts() >> 5
-            getJitter() >> 0.25d
+            getDelay() >> Duration.ofMillis(10)
+            getMaxDelay() >> Duration.ofSeconds(1)
+            getJitter() >> 0.1d
+            getMultiplier() >> 2.0d
         }
 
-        def client = HttpRetryableClient.create(httpClient, iRetryConfig)
+
+        def client = HttpRetryableClient.create(httpClient, retryConfig)
 
         when:
         def result = client.send(request, HttpResponse.BodyHandlers.ofString())
@@ -275,27 +253,6 @@ class HttpRetryableClientTest extends Specification {
             throw new IOException("Generic IO error") 
         }
         thrown(IOException)
-    }
-
-
-    def "should convert IRetryConfig to Retryable.Config correctly"() {
-        given:
-        def iRetryConfig = Mock(IRetryConfig) {
-            getDelay() >> nextflow.util.Duration.of('1s')
-            getMaxDelay() >> nextflow.util.Duration.of('2m')
-            getMaxAttempts() >> 10
-            getJitter() >> 0.5d
-        }
-
-        when:
-        def retryableConfig = HttpRetryableClient.toRetryableConfig(iRetryConfig)
-
-        then:
-        retryableConfig.delay == Duration.ofSeconds(1)
-        retryableConfig.maxDelay == Duration.ofMinutes(2)
-        retryableConfig.maxAttempts == 10
-        retryableConfig.jitter == 0.5d
-        retryableConfig.multiplier == 2.0d
     }
 
     def "should exhaust retries and throw exception"() {

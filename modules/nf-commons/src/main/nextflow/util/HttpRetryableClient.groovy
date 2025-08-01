@@ -25,7 +25,6 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.channels.UnresolvedAddressException
-import java.time.Duration
 
 /**
  * A utility class that provides HTTP client functionality with built-in retry capabilities
@@ -105,25 +104,5 @@ class HttpRetryableClient {
      */
     static HttpRetryableClient create(HttpClient httpClient) {
         return new HttpRetryableClient(httpClient, null)
-    }
-
-    /**
-     * Factory method to create an HttpRetryableClient with IRetryConfig
-     */
-    static HttpRetryableClient create(HttpClient httpClient, IRetryConfig retryConfig) {
-        return new HttpRetryableClient(httpClient, retryConfig ? toRetryableConfig(retryConfig) : null)
-    }
-
-    /**
-     * Converts IRetryConfig to Retryable.Config
-     */
-    static Retryable.Config toRetryableConfig(IRetryConfig config) {
-        return new Retryable.Config() {
-            Duration getDelay() { Duration.ofMillis(config.delay.toMillis()) }
-            Duration getMaxDelay() { Duration.ofMillis(config.maxDelay.toMillis()) }
-            int getMaxAttempts() { config.maxAttempts }
-            double getJitter() { config.jitter }
-            double getMultiplier() { 2.0d } // Default multiplier since IRetryConfig doesn't have it
-        }
     }
 }

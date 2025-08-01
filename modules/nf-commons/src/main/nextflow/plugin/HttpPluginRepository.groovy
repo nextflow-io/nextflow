@@ -3,6 +3,7 @@ package nextflow.plugin
 import com.google.gson.Gson
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.util.retry.Retryable
 import nextflow.BuildInfo
 import nextflow.Global
 import nextflow.util.HttpRetryableClient
@@ -41,7 +42,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
         this.url = !url.toString().endsWith("/")
             ? URI.create(url.toString() + "/")
             : url
-        this.retriableHttpClient = HttpRetryableClient.create(HttpClient.newHttpClient(), Global.session?.getCommonRetryConfig())
+        this.retriableHttpClient = HttpRetryableClient.create(HttpClient.newHttpClient(), Retryable.ofDefaults().config())
     }
 
     // NOTE ON PREFETCHING
