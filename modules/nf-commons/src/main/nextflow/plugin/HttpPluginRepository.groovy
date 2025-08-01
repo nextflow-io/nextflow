@@ -5,7 +5,6 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.util.retry.Retryable
 import nextflow.BuildInfo
-import nextflow.Global
 import nextflow.util.HttpRetryableClient
 import org.pf4j.PluginRuntimeException
 import org.pf4j.update.FileDownloader

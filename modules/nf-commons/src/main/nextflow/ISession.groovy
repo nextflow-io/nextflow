@@ -16,7 +16,6 @@
 
 package nextflow
 
-
 import java.nio.file.Path
 
 /**
