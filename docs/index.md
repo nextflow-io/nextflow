@@ -152,6 +152,7 @@ migrations/index
 
 developer/index
 developer/diagram
+developer/config-scopes
 developer/packages
 developer/plugins
 ```

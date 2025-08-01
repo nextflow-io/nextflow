@@ -131,7 +131,7 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     private Boolean shouldDelete() {
-        executor.config.batch().deleteTasksOnCompletion
+        executor.azConfig.batch().deleteTasksOnCompletion
     }
 
     protected void deleteTask(AzTaskKey taskKey, TaskRun task) {

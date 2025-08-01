@@ -40,24 +40,20 @@ class CharliecloudBuilderTest extends Specification {
                 .build()
                 .runCommand == 'ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env --write-fake -b "$NXF_TASK_WORKDIR" /cacheDir/busybox --'
 
-        new CharliecloudBuilder('/cacheDir/busybox')
-                .params(writeFake: false)
+        new CharliecloudBuilder('/cacheDir/busybox', new CharliecloudConfig(writeFake: false))
                 .build()
                 .runCommand == 'ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env -w -b "$NXF_TASK_WORKDIR" /cacheDir/busybox --'
 
-        new CharliecloudBuilder('/cacheDir/busybox')
-                .params(writeFake: false)
+        new CharliecloudBuilder('/cacheDir/busybox', new CharliecloudConfig(writeFake: false))
                 .params(readOnlyInputs: true)
                 .build()
                 .runCommand == 'ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env -b "$NXF_TASK_WORKDIR" /cacheDir/busybox --'
 
-        new CharliecloudBuilder('/cacheDir/busybox')
-                .params(runOptions: '-j --no-home')
+        new CharliecloudBuilder('/cacheDir/busybox', new CharliecloudConfig(runOptions: '-j --no-home'))
                 .build()
                 .runCommand == 'ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env --write-fake -b "$NXF_TASK_WORKDIR" -j --no-home /cacheDir/busybox --'
         
-        new CharliecloudBuilder('/cacheDir/busybox')
-                .params(temp: '/foo')
+        new CharliecloudBuilder('/cacheDir/busybox', new CharliecloudConfig(temp: '/foo'))
                 .build()
                 .runCommand == 'ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env --write-fake -b /foo:/tmp -b "$NXF_TASK_WORKDIR" /cacheDir/busybox --'
 
@@ -90,16 +86,16 @@ class CharliecloudBuilderTest extends Specification {
         cmd == 'ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env --write-fake -b "$NXF_TASK_WORKDIR" /cacheDir/ubuntu --'
 
         when:
-        cmd = new CharliecloudBuilder('/cacheDir/ubuntu')
-            .params(writeFake: 'true')
+        def config = new CharliecloudConfig(writeFake: true)
+        cmd = new CharliecloudBuilder('/cacheDir/ubuntu', config)
             .build()
             .getRunCommand()
         then:
         cmd == 'ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env --write-fake -b "$NXF_TASK_WORKDIR" /cacheDir/ubuntu --'
 
         when:
-        cmd = new CharliecloudBuilder('/cacheDir/ubuntu')
-            .params(writeFake: 'false')
+        config = new CharliecloudConfig(writeFake: false)
+        cmd = new CharliecloudBuilder('/cacheDir/ubuntu', config)
             .build()
             .getRunCommand()
         then:
@@ -116,7 +112,7 @@ class CharliecloudBuilderTest extends Specification {
         when:
         cmd = new CharliecloudBuilder('/cacheDir/ubuntu')
             .params(entry:'/bin/sh')
-            .params(readOnlyInputs: 'true')
+            .params(readOnlyInputs: true)
             .build()
             .getRunCommand('bwa --this --that file.fastq')
         then:
@@ -125,27 +121,27 @@ class CharliecloudBuilderTest extends Specification {
         when:
         cmd = new CharliecloudBuilder('/cacheDir/ubuntu')
             .params(entry:'/bin/sh')
-            .params(readOnlyInputs: 'false')
+            .params(readOnlyInputs: false)
             .build()
             .getRunCommand('bwa --this --that file.fastq')
         then:
         cmd == 'ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env --write-fake -b "$NXF_TASK_WORKDIR" /cacheDir/ubuntu -- /bin/sh -c "bwa --this --that file.fastq"'
 
         when:
-        cmd = new CharliecloudBuilder('/cacheDir/ubuntu')
+        config = new CharliecloudConfig(writeFake: false)
+        cmd = new CharliecloudBuilder('/cacheDir/ubuntu', config)
             .params(entry:'/bin/sh')
-            .params(readOnlyInputs: 'false')
-            .params(writeFake: 'false')
+            .params(readOnlyInputs: false)
             .build()
             .getRunCommand('bwa --this --that file.fastq')
         then:
         cmd == 'ch-run --unset-env="*" -c "$NXF_TASK_WORKDIR" --set-env -w -b "$NXF_TASK_WORKDIR" /cacheDir/ubuntu -- /bin/sh -c "bwa --this --that file.fastq"'
 
         when:
-        cmd = new CharliecloudBuilder('/cacheDir/ubuntu')
+        config = new CharliecloudConfig(writeFake: false)
+        cmd = new CharliecloudBuilder('/cacheDir/ubuntu', config)
             .params(entry:'/bin/sh')
-            .params(readOnlyInputs: 'true')
-            .params(writeFake: 'false')
+            .params(readOnlyInputs: true)
             .addMount(db_file)
             .addMount(db_file)
             .build().getRunCommand('bwa --this --that file.fastq')
@@ -155,9 +151,9 @@ class CharliecloudBuilderTest extends Specification {
         when:
         cmd = new CharliecloudBuilder('/cacheDir/ubuntu')
             .params(entry:'/bin/sh')
+            .params(readOnlyInputs: false)
             .addMount(db_file)
             .addMount(db_file)
-            .params(readOnlyInputs: 'false')
             .build()
             .getRunCommand('bwa --this --that file.fastq')
         then:
@@ -168,7 +164,7 @@ class CharliecloudBuilderTest extends Specification {
     def 'test charliecloud env'() {
 
         given:
-        def builder = Spy(CharliecloudBuilder)
+        def builder = new CharliecloudBuilder('/cacheDir/ubuntu')
 
         expect:
         builder.makeEnv(ENV).toString() == RESULT
