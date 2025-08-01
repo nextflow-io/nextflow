@@ -120,6 +120,7 @@ class AwsBatchExecutorTest extends Specification {
             getAwsOptions() >> Mock(AwsOptions) {
                 getS5cmdPath() >> { S5CMD ? 's5cmd' : null }
                 getAwsCli() >> { 'aws' }
+                getChecksumAlgorithm() >> 'SHA256'
             }
         }
         expect:
@@ -127,7 +128,7 @@ class AwsBatchExecutorTest extends Specification {
 
         where:
         FUSION  | DEFAULT_FS  | S5CMD   | TASK_DIR            | EXPECTED
-        false   | false       | false   | 's3://foo/work/dir' | 'bash -o pipefail -c \'trap "{ ret=$?; aws s3 cp --only-show-errors .command.log s3://foo/work/dir/.command.log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors s3://foo/work/dir/.command.run - | bash 2>&1 | tee .command.log\''
+        false   | false       | false   | 's3://foo/work/dir' | 'bash -o pipefail -c \'trap "{ ret=$?; aws s3 cp --only-show-errors --checksum-algorithm SHA256 .command.log s3://foo/work/dir/.command.log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors --checksum-algorithm SHA256 s3://foo/work/dir/.command.run - | bash 2>&1 | tee .command.log\''
         false   | false       | true    | 's3://foo/work/dir' | 'bash -o pipefail -c \'trap "{ ret=$?; s5cmd cp .command.log s3://foo/work/dir/.command.log||true; exit $ret; }" EXIT; s5cmd cat s3://foo/work/dir/.command.run | bash 2>&1 | tee .command.log\''
         and:
         true    | false       | false   | '/fusion/work/dir'  | 'bash /fusion/work/dir/.command.run'
