@@ -13,80 +13,113 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.config.scopes;
+package nextflow.container
 
-import groovy.transform.CompileStatic;
-import nextflow.config.schema.ConfigOption;
-import nextflow.config.schema.ConfigScope;
-import nextflow.script.dsl.Description;
-import nextflow.script.types.Duration;
+import groovy.transform.CompileStatic
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.config.schema.ScopeName
+import nextflow.script.dsl.Description
+import nextflow.util.Duration
 
-public class ApptainerConfig implements ConfigScope {
+@ScopeName("apptainer")
+@Description("""
+    The `apptainer` scope controls how [Apptainer](https://apptainer.org) containers are executed by Nextflow.
+""")
+@CompileStatic
+class ApptainerConfig implements ConfigScope, ContainerConfig {
 
     @ConfigOption
     @Description("""
-        When `true` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature to be enabled in your Apptainer installation (default: `true`).
+        Automatically mount host paths in the executed container (default: `true`). It requires the `user bind control` feature to be enabled in your Apptainer installation.
     """)
-    public boolean autoMounts;
+    final Boolean autoMounts
 
     @ConfigOption
     @Description("""
         The directory where remote Apptainer images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
     """)
-    public String cacheDir;
+    final String cacheDir
 
     @ConfigOption
     @Description("""
-        Enable Apptainer execution (default: `false`).
+        Execute tasks with Apptainer containers (default: `false`).
     """)
-    public boolean enabled;
+    final boolean enabled
 
     @ConfigOption
     @Description("""
-        This attribute can be used to provide any option supported by the Apptainer engine i.e. `apptainer [OPTIONS]`.
+        Specify additional options supported by the Apptainer engine i.e. `apptainer [OPTIONS]`.
     """)
-    public String engineOptions;
+    final String engineOptions
 
     @ConfigOption
     @Description("""
         Comma separated list of environment variable names to be included in the container environment.
     """)
-    public String envWhitelist;
+    final List<String> envWhitelist
 
     @ConfigOption
     @Description("""
         Directory where remote Apptainer images are retrieved. When using a computing cluster it must be a shared folder accessible to all compute nodes.
     """)
-    public String libraryDir;
+    final String libraryDir
 
     @ConfigOption
     @Description("""
         Pull the Apptainer image with http protocol (default: `false`).
     """)
-    public boolean noHttps;
+    final boolean noHttps
 
     @ConfigOption
     @Description("""
         When enabled, OCI (and Docker) container images are pulled and converted to the SIF format by the Apptainer run command, instead of Nextflow (default: `false`).
     """)
-    public boolean ociAutoPull;
+    final boolean ociAutoPull
 
     @ConfigOption
     @Description("""
         The amount of time the Apptainer pull can last, exceeding which the process is terminated (default: `20 min`).
     """)
-    public Duration pullTimeout;
+    final Duration pullTimeout
 
     @ConfigOption
     @Description("""
         The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
     """)
-    public String registry;
+    final String registry
 
     @ConfigOption
     @Description("""
-        This attribute can be used to provide any extra command line options supported by `apptainer exec`.
+        Specify extra command line options supported by `apptainer exec`.
     """)
-    public String runOptions;
+    final String runOptions
+
+    /* required by extension point -- do not remove */
+    ApptainerConfig() {}
+
+    ApptainerConfig(Map opts) {
+        autoMounts = opts.autoMounts as Boolean
+        cacheDir = opts.cacheDir
+        enabled = opts.enabled as boolean
+        engineOptions = opts.engineOptions
+        envWhitelist = ContainerHelper.parseEnvWhitelist(opts.envWhitelist)
+        libraryDir = opts.libraryDir
+        noHttps = opts.noHttps as boolean
+        ociAutoPull = opts.ociAutoPull as boolean
+        pullTimeout = opts.pullTimeout as Duration
+        registry = opts.registry
+        runOptions = opts.runOptions
+    }
+
+    @Override
+    String getEngine() {
+        return 'apptainer'
+    }
+
+    @Override
+    boolean canRunOciImage() {
+        return ociAutoPull
+    }
 
 }

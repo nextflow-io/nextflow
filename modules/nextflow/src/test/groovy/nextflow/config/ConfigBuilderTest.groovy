@@ -29,7 +29,6 @@ import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.extension.FilesEx
 import nextflow.secret.SecretsLoader
-import nextflow.trace.TraceHelper
 import nextflow.util.ConfigHelper
 import spock.lang.Ignore
 import spock.lang.Specification
@@ -40,8 +39,12 @@ import spock.lang.Unroll
  */
 class ConfigBuilderTest extends Specification {
 
-    def setup() {
-        TraceHelper.testTimestampFmt = '20221001'
+    def setupSpec() {
+        SysEnv.push([:])
+    }
+
+    def cleanupSpec() {
+        SysEnv.pop()
     }
 
     def 'build config object' () {
@@ -833,7 +836,6 @@ class ConfigBuilderTest extends Specification {
         then: // command line should override the config file
         config.trace instanceof Map
         config.trace.enabled
-        config.trace.file == 'trace-20221001.txt'
     }
 
     def 'should set session report options' () {
@@ -889,7 +891,6 @@ class ConfigBuilderTest extends Specification {
         then:
         config.report instanceof Map
         config.report.enabled
-        config.report.file == 'report-20221001.html'
     }
 
 
@@ -946,7 +947,6 @@ class ConfigBuilderTest extends Specification {
         then:
         config.dag instanceof Map
         config.dag.enabled
-        config.dag.file == 'dag-20221001.html'
     }
 
     def 'should set session weblog options' () {
@@ -1065,7 +1065,6 @@ class ConfigBuilderTest extends Specification {
         then:
         config.timeline instanceof Map
         config.timeline.enabled
-        config.timeline.file == 'timeline-20221001.html'
     }
 
     def 'should set tower options' () {
@@ -1714,10 +1713,12 @@ class ConfigBuilderTest extends Specification {
 
 
         when:
+        SysEnv.push(HOME: '/home/user')
         def opt = new CliOptions(config: [file.toFile().canonicalPath] )
         def cfg = new ConfigBuilder().setOptions(opt).build()
+        SysEnv.pop()
         then:
-        cfg.params.foo == System.getenv('HOME')
+        cfg.params.foo == '/home/user'
 
         when:
         file.text =

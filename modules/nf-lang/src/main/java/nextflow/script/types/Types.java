@@ -85,9 +85,9 @@ public class Types {
     public static boolean isAssignableFrom(Class target, Class source) {
         target = normalize(target);
         source = normalize(source);
-        if( target == Integer.class && source == Number.class )
+        if( target == Integer.class && source == Float.class )
             return false;
-        if( target == Number.class && source == Integer.class )
+        if( target == Float.class && source == Integer.class )
             return true;
         return target.equals(source);
     }
@@ -235,11 +235,11 @@ public class Types {
     private static final List<Class> STANDARD_TYPES = List.of(
         Boolean.class,
         Duration.class,
+        Float.class,
         Integer.class,
         List.class,
         Map.class,
         MemoryUnit.class,
-        Number.class,
         Path.class,
         Set.class,
         String.class,
@@ -248,8 +248,8 @@ public class Types {
 
     private static final Map<Class,Class> PRIMITIVE_TYPES = Map.ofEntries(
         Map.entry(boolean.class, Boolean.class),
-        Map.entry(double.class,  Number.class),
-        Map.entry(float.class,   Number.class),
+        Map.entry(double.class,  Float.class),
+        Map.entry(float.class,   Float.class),
         Map.entry(int.class,     Integer.class),
         Map.entry(long.class,    Integer.class),
         Map.entry(GString.class, String.class)

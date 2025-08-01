@@ -109,7 +109,7 @@ class TraceFileObserverTest extends Specification {
         def now = System.currentTimeMillis()
 
         // the observer class under test
-        def observer = new TraceFileObserver(file)
+        def observer = new TraceFileObserver(tracePath: file)
 
         when:
         observer.onFlowCreate(null)

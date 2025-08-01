@@ -41,6 +41,7 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
      * Valid parameters are:
      * <li>name: The name of the executor for which the polling monitor is created
      * <li>session: The current {@code Session}
+     * <li>config: The `executor` configuration settings
      * <li>capacity: The maximum number of this monitoring queue
      * <li>pollInterval: Determines how often a poll occurs to check for a process termination
      * <li>dumpInterval: Determines how often the executor status is written in the application log file
