@@ -48,7 +48,7 @@ class AwsS3Config implements ConfigScope {
     @Description("""
         The amount of time to wait (in milliseconds) when initially establishing a connection before timing out (default: `10000`).
     """)
-    final int connectionTimeout
+    final Integer connectionTimeout
 
     final Boolean debug
 
@@ -146,7 +146,7 @@ class AwsS3Config implements ConfigScope {
     @Description("""
         The amount of time to wait (in milliseconds) for data to be transferred over an established, open connection before the connection is timed out (default: `50000`).
     """)
-    final int socketTimeout
+    final Integer socketTimeout
 
     @ConfigOption
     @Description("""
@@ -217,7 +217,7 @@ class AwsS3Config implements ConfigScope {
 
     AwsS3Config(Map opts) {
         this.anonymous = opts.anonymous as Boolean
-        this.connectionTimeout = opts.connectionTimeout != null ? opts.connectionTimeout as int : 10000
+        this.connectionTimeout = opts.connectionTimeout as Integer
         this.debug = opts.debug as Boolean
         this.endpoint = opts.endpoint ?: SysEnv.get('AWS_S3_ENDPOINT')
         if( endpoint && FileHelper.getUrlProtocol(endpoint) !in ['http','https'] )
@@ -236,7 +236,7 @@ class AwsS3Config implements ConfigScope {
         this.requesterPays = opts.requesterPays as Boolean
         this.s3Acl = parseS3Acl(opts.s3Acl as String)
         this.s3PathStyleAccess = opts.s3PathStyleAccess as Boolean
-        this.socketTimeout = opts.socketTimeout != null ? opts.socketTimeout as int : 50000
+        this.socketTimeout = opts.socketTimeout as Integer
         this.storageClass = parseStorageClass((opts.storageClass ?: opts.uploadStorageClass) as String)     // 'uploadStorageClass' is kept for legacy purposes
         this.storageEncryption = parseStorageEncryption(opts.storageEncryption as String)
         this.storageKmsKeyId = opts.storageKmsKeyId

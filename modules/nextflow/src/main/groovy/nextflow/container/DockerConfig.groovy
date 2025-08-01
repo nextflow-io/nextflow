@@ -36,7 +36,7 @@ class DockerConfig implements ConfigScope, ContainerConfig {
     @Description("""
         Enable Docker execution (default: `false`).
     """)
-    final boolean enabled
+    boolean enabled
 
     @ConfigOption
     @Description("""
