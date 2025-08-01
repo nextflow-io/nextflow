@@ -79,7 +79,7 @@ public class Types {
             return true;
         if( target.equals(source) )
             return true;
-        return isAssignableFrom(target.getTypeClass(), source.getTypeClass());
+        return hasTypeClass(target) && hasTypeClass(source) && isAssignableFrom(target.getTypeClass(), source.getTypeClass());
     }
 
     public static boolean isAssignableFrom(Class target, Class source) {

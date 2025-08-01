@@ -75,7 +75,7 @@ class ScriptBinding extends WorkflowBinding {
         }
         vars.put('args', args)
         
-        // create and populate args
+        // create and populate params
         params = new ParamsMap()
         if( vars.params ) {
             if( !(vars.params instanceof Map) ) throw new IllegalArgumentException("ScriptBinding 'params' must be a Map value")
@@ -132,10 +132,17 @@ class ScriptBinding extends WorkflowBinding {
      * The map of the CLI named parameters
      *
      * @param values
+     * @param override
      */
-    ScriptBinding setParams(Map<String,Object> values ) {
-        if( values )
+    ScriptBinding setParams(Map<String,Object> values, boolean override=false) {
+        if( values ) {
+            if( override ) {
+                for( final key : values.keySet() )
+                    params.remove(key)
+            }
             params.putAll(values)
+            super.setVariable0('params', params)
+        }
         return this
     }
 
