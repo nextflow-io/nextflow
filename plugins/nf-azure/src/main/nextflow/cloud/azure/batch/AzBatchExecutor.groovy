@@ -97,9 +97,8 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
         }
     }
 
-    protected void initBatchService() {
+    protected void initConfig() {
         config = AzConfig.getConfig(session)
-        batchService = new AzBatchService(this)
 
         // Generate an account SAS token using either activeDirectory configs or storage account keys
         if (!config.storage().sasToken) {
@@ -107,7 +106,10 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
                     ? AzHelper.generateContainerSasWithActiveDirectory(workDir, config.storage().tokenDuration)
                     : AzHelper.generateAccountSasWithAccountKey(workDir, config.storage().tokenDuration)
         }
+    }
 
+    protected void initBatchService() {
+        batchService = new AzBatchService(this)
         Global.onCleanup((it) -> batchService.close())
     }
 
@@ -117,6 +119,7 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
     @Override
     protected void register() {
         super.register()
+        initConfig()
         initBatchService()
         validateWorkDir()
         validatePathDir()
