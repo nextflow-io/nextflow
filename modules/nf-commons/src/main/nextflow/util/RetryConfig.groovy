@@ -24,7 +24,8 @@ import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Global
-import nextflow.Session
+import nextflow.ISession
+import nextflow.extension.Bolts
 /**
  * Models retry policy configuration
  *
@@ -34,7 +35,7 @@ import nextflow.Session
 @ToString(includePackage = false, includeNames = true)
 @EqualsAndHashCode
 @CompileStatic
-class RetryConfig implements IRetryConfig{
+class RetryConfig {
 
     private final static Duration DEFAULT_DELAY = Duration.of('350ms')
     private final static Duration DEFAULT_MAX_DELAY = Duration.of('90s')
@@ -72,12 +73,12 @@ class RetryConfig implements IRetryConfig{
     double getJitter() { jitter }
 
     static RetryConfig config() {
-        config(Global.session as Session)
+        config(Global.session)
     }
 
-    static RetryConfig config(Session session) {
+    static RetryConfig config(ISession session) {
         if( session ) {
-            return new RetryConfig(session.config.navigate('nextflow.retryPolicy') as Map ?: Collections.emptyMap())
+            return new RetryConfig(Bolts.navigate(session.config,'nextflow.retryPolicy') as Map ?: Collections.emptyMap())
         }
         log.warn "Missing nextflow session - using default retry config"
         return new RetryConfig()

@@ -16,8 +16,6 @@
 
 package nextflow
 
-import nextflow.util.IRetryConfig
-
 import java.nio.file.Path
 
 /**
@@ -67,8 +65,5 @@ interface ISession {
     boolean isResumeMode()
 
     String getCommitId()
-
-    IRetryConfig getCommonRetryConfig()
-
 
 }

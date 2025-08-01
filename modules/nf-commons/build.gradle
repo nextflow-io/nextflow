@@ -28,6 +28,7 @@ dependencies {
     api "ch.qos.logback:logback-classic:1.5.18"
     api "org.apache.groovy:groovy:4.0.28"
     api "org.apache.groovy:groovy-nio:4.0.28"
+    api "org.apache.groovy:groovy-json:4.0.28"
     api "commons-lang:commons-lang:2.6"
     api 'com.google.guava:guava:33.0.0-jre'
     api 'org.pf4j:pf4j:3.12.0'
@@ -36,6 +37,7 @@ dependencies {
     api 'io.seqera:lib-retry:1.1.0'
     // patch gson dependency required by pf4j
     api 'com.google.code.gson:gson:2.13.1'
+    api ('org.yaml:snakeyaml:2.2')
 
     /* testImplementation inherited from top gradle build file */
     testImplementation(testFixtures(project(":nextflow")))

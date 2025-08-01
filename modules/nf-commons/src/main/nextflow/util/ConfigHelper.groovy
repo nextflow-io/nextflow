@@ -23,9 +23,10 @@ import groovy.json.JsonOutput
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
-import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.config.ConfigClosurePlaceholder
+import nextflow.extension.Bolts
+import nextflow.extension.FilesEx
 import org.codehaus.groovy.runtime.InvokerHelper
 import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.Yaml
@@ -34,7 +35,6 @@ import org.yaml.snakeyaml.Yaml
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
 @CompileStatic
 class ConfigHelper {
 
@@ -103,12 +103,12 @@ class ConfigHelper {
             return result
 
         for( Path path : dirs ) {
-            if( path.isFile() && path.name.endsWith('.jar') ) {
+            if( FilesEx.isFile(path) && FilesEx.getName(path).endsWith('.jar') ) {
                 result << path
             }
-            else if( path.isDirectory() ) {
+            else if( FilesEx.isDirectory(path) ) {
                 result << path
-                path.eachFileMatch( ~/.+\.jar$/ ) { if(it.isFile()) result << it }
+                path.eachFileMatch( ~/.+\.jar$/ ) { if(FilesEx.isFile(it)) result << it }
             }
         }
 
@@ -287,7 +287,7 @@ class ConfigHelper {
      * @return
      */
     static String toCanonicalString(Map map, boolean sort=false) {
-        toCanonicalString(map.toConfigObject(), sort)
+        toCanonicalString(Bolts.toConfigObject(map), sort)
     }
 
     static String toPropertiesString(ConfigObject config, boolean sort=false) {
@@ -297,7 +297,7 @@ class ConfigHelper {
     }
 
     static String toPropertiesString(Map map, boolean sort=false) {
-        toPropertiesString(map.toConfigObject(), sort)
+        toPropertiesString(Bolts.toConfigObject(map), sort)
     }
 
     static String toFlattenString(ConfigObject object, boolean sort=false) {
@@ -305,7 +305,7 @@ class ConfigHelper {
     }
 
     static String toFlattenString(Map map, boolean sort=false) {
-        flattenFormat(map.toConfigObject(), sort)
+        flattenFormat(Bolts.toConfigObject(map), sort)
     }
 
     static String toJsonString(ConfigObject config, boolean sort=false) {

@@ -19,8 +19,8 @@ package nextflow.plugin
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.Global
 import nextflow.util.HttpRetryableClient
+import nextflow.util.RetryConfig
 import org.pf4j.update.SimpleFileDownloader
 
 import java.net.http.HttpClient
@@ -54,7 +54,7 @@ class OciAwareFileDownloader extends SimpleFileDownloader {
                 .followRedirects(HttpClient.Redirect.NEVER)
                 .connectTimeout(Duration.ofSeconds(30))
                 .build(),
-            Global.session?.getCommonRetryConfig()
+            RetryConfig.config()
         )
 
 
@@ -127,7 +127,7 @@ class OciAwareFileDownloader extends SimpleFileDownloader {
             HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))
                 .build(),
-            Global.session?.getCommonRetryConfig()
+            RetryConfig.config()
         )
 
         HttpRequest request = HttpRequest.newBuilder()
