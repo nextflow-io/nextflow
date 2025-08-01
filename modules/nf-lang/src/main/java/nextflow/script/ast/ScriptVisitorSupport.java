@@ -66,6 +66,8 @@ public abstract class ScriptVisitorSupport extends ClassCodeVisitorSupport imple
         visit(node.main);
         visit(node.emits);
         visit(node.publishers);
+        visit(node.onComplete);
+        visit(node.onError);
     }
 
     @Override

@@ -88,6 +88,8 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
         resolver.visit(node.main);
         resolver.visit(node.emits);
         resolver.visit(node.publishers);
+        resolver.visit(node.onComplete);
+        resolver.visit(node.onError);
     }
 
     @Override
