@@ -16,6 +16,11 @@
 
 package nextflow
 
+import dev.failsafe.RetryPolicy
+import io.seqera.util.retry.Retryable
+import nextflow.util.IRetryConfig
+import nextflow.util.RetryConfig
+
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -580,6 +585,11 @@ class Session implements ISession {
     }
 
     ScriptBinding getBinding() { binding }
+
+    @Override
+    IRetryConfig getCommonRetryConfig() {
+        RetryConfig.config(this)
+    }
 
     @Memoized
     ClassLoader getClassLoader() { getClassLoader0() }

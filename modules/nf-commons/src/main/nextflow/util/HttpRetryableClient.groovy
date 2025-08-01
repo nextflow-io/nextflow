@@ -108,22 +108,22 @@ class HttpRetryableClient {
     }
 
     /**
-     * Factory method to create an HttpRetryableClient with RetryConfig
+     * Factory method to create an HttpRetryableClient with IRetryConfig
      */
-    static HttpRetryableClient create(HttpClient httpClient, RetryConfig retryConfig) {
+    static HttpRetryableClient create(HttpClient httpClient, IRetryConfig retryConfig) {
         return new HttpRetryableClient(httpClient, retryConfig ? toRetryableConfig(retryConfig) : null)
     }
 
     /**
-     * Converts RetryConfig to Retryable.Config
+     * Converts IRetryConfig to Retryable.Config
      */
-    static Retryable.Config toRetryableConfig(RetryConfig config) {
+    static Retryable.Config toRetryableConfig(IRetryConfig config) {
         return new Retryable.Config() {
             Duration getDelay() { Duration.ofMillis(config.delay.toMillis()) }
             Duration getMaxDelay() { Duration.ofMillis(config.maxDelay.toMillis()) }
             int getMaxAttempts() { config.maxAttempts }
             double getJitter() { config.jitter }
-            double getMultiplier() { 2.0d } // Default multiplier since RetryConfig doesn't have it
+            double getMultiplier() { 2.0d } // Default multiplier since IRetryConfig doesn't have it
         }
     }
 }

@@ -60,10 +60,10 @@ class HttpRetryableClientTest extends Specification {
         client.retryConfig == null
     }
 
-    def "should create client with RetryConfig"() {
+    def "should create client with IRetryConfig"() {
         given:
         def httpClient = Mock(HttpClient)
-        def retryConfig = Mock(RetryConfig) {
+        def iRetryConfig = Mock(IRetryConfig) {
             getDelay() >> nextflow.util.Duration.of('500ms')
             getMaxDelay() >> nextflow.util.Duration.of('30s')
             getMaxAttempts() >> 5
@@ -71,7 +71,7 @@ class HttpRetryableClientTest extends Specification {
         }
 
         when:
-        def client = HttpRetryableClient.create(httpClient, retryConfig)
+        def client = HttpRetryableClient.create(httpClient, iRetryConfig)
 
         then:
         client != null
@@ -108,14 +108,14 @@ class HttpRetryableClientTest extends Specification {
             statusCode() >> 200
             body() >> "success"
         }
-        def retryConfig = Mock(RetryConfig) {
+        def iRetryConfig = Mock(IRetryConfig) {
             getDelay() >> nextflow.util.Duration.of('500ms')
             getMaxDelay() >> nextflow.util.Duration.of('30s')
             getMaxAttempts() >> 5
             getJitter() >> 0.25d
         }
 
-        def client = HttpRetryableClient.create(httpClient, retryConfig)
+        def client = HttpRetryableClient.create(httpClient, iRetryConfig)
 
         when:
         def result = client.send(request, HttpResponse.BodyHandlers.ofString())
@@ -278,9 +278,9 @@ class HttpRetryableClientTest extends Specification {
     }
 
 
-    def "should convert RetryConfig to Retryable.Config correctly"() {
+    def "should convert IRetryConfig to Retryable.Config correctly"() {
         given:
-        def retryConfig = Mock(RetryConfig) {
+        def iRetryConfig = Mock(IRetryConfig) {
             getDelay() >> nextflow.util.Duration.of('1s')
             getMaxDelay() >> nextflow.util.Duration.of('2m')
             getMaxAttempts() >> 10
@@ -288,7 +288,7 @@ class HttpRetryableClientTest extends Specification {
         }
 
         when:
-        def retryableConfig = HttpRetryableClient.toRetryableConfig(retryConfig)
+        def retryableConfig = HttpRetryableClient.toRetryableConfig(iRetryConfig)
 
         then:
         retryableConfig.delay == Duration.ofSeconds(1)

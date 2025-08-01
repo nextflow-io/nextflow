@@ -4,8 +4,8 @@ import com.google.gson.Gson
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
+import nextflow.Global
 import nextflow.util.HttpRetryableClient
-import nextflow.util.RetryConfig
 import org.pf4j.PluginRuntimeException
 import org.pf4j.update.FileDownloader
 import org.pf4j.update.FileVerifier
@@ -41,7 +41,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
         this.url = !url.toString().endsWith("/")
             ? URI.create(url.toString() + "/")
             : url
-        this.retriableHttpClient = HttpRetryableClient.create(HttpClient.newHttpClient(), RetryConfig.config())
+        this.retriableHttpClient = HttpRetryableClient.create(HttpClient.newHttpClient(), Global.session?.getCommonRetryConfig())
     }
 
     // NOTE ON PREFETCHING
