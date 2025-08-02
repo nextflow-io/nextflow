@@ -256,6 +256,28 @@ class ScriptResolveTest extends Specification {
         errors[0].getStartLine() == 10
         errors[0].getStartColumn() == 9
         errors[0].getOriginalMessage() == 'Processes cannot be called from within a closure'
+
+        when:
+        errors = check(
+            '''\
+            process hello {
+                script:
+                """
+                echo hello
+                """
+            }
+
+            workflow {
+                hello()
+                hello()
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 10
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == 'Process `hello` cannot be called more than once in the same workflow -- use an alias instead'
     }
 
     def 'should report an error for an invalid workflow invocation' () {
@@ -294,6 +316,24 @@ class ScriptResolveTest extends Specification {
         errors[0].getStartLine() == 6
         errors[0].getStartColumn() == 9
         errors[0].getOriginalMessage() == 'Workflows cannot be called from within a closure'
+
+        when:
+        errors = check(
+            '''\
+            workflow hello {
+            }
+
+            workflow {
+                hello()
+                hello()
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 6
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == 'Workflow `hello` cannot be called more than once in the same workflow -- use an alias instead'
     }
 
 }

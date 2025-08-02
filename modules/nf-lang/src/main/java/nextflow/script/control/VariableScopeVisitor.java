@@ -16,7 +16,9 @@
 package nextflow.script.control;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AssignmentExpression;
@@ -168,12 +170,15 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         }
     }
 
+    private Set<String> workflowComponents;
+
     private boolean inWorkflowEmit;
 
     @Override
     public void visitWorkflow(WorkflowNode node) {
         vsc.pushScope(node.isEntry() ? EntryWorkflowDsl.class : WorkflowDsl.class);
         currentDefinition = node;
+        workflowComponents = new HashSet<String>();
         node.setVariableScope(currentScope());
 
         declareWorkflowInputs(node.takes);
@@ -185,6 +190,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         visitWorkflowOutputs(node.emits, "emit");
         visitWorkflowOutputs(node.publishers, "output");
 
+        workflowComponents = null;
         currentDefinition = null;
         vsc.popScope();
     }
@@ -589,6 +595,14 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             var type = dataflowMethodType(mn);
             vsc.addError(type + " cannot be called from within a closure", node);
             return;
+        }
+        if( mn instanceof ProcessNode || mn instanceof WorkflowNode ) {
+            var name = node.getMethodAsString();
+            if( workflowComponents.contains(name) ) {
+                var type = mn instanceof ProcessNode ? "Process" : "Workflow";
+                vsc.addError(type + " `" + name + "` cannot be called more than once in the same workflow -- use an alias instead", node);
+            }
+            workflowComponents.add(name);
         }
     }
 
