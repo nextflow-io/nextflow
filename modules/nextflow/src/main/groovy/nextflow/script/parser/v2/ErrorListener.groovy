@@ -237,13 +237,13 @@ class StandardErrorListener implements ErrorListener {
             term.newline()
         term.bold().a("Nextflow linting complete!").reset().newline()
         if( summary.filesWithErrors > 0 ) {
-            term.fg(Ansi.Color.RED).a(" ❌ ${summary.filesWithErrors} file${summary.filesWithErrors==1 ? '' : 's'} had ${summary.errors} error${summary.errors==1 ? '' : 's'}").newline()
+            term.fg(Ansi.Color.RED).a(" ❌ ${summary.filesWithErrors} file${summary.filesWithErrors==1 ? '' : 's'} had ${summary.errors} error${summary.errors==1 ? '' : 's'}").reset().newline()
         }
         if( summary.filesWithoutErrors > 0 ) {
             term.fg(Ansi.Color.GREEN).a(" ✅ ${summary.filesWithoutErrors} file${summary.filesWithoutErrors==1 ? '' : 's'} had no errors")
             if( summary.filesFormatted > 0 )
                 term.fg(Ansi.Color.BLUE).a(" (${summary.filesFormatted} formatted)")
-            term.newline()
+            term.reset().newline()
         }
         if( summary.filesWithErrors == 0 && summary.filesWithoutErrors == 0 ) {
             term.a(" No files found to process").newline()
