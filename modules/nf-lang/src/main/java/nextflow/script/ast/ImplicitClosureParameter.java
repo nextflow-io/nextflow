@@ -1,5 +1,5 @@
 /*
- * Copyright 2025, Seqera Labs
+ * Copyright 2024-2025, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,23 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-plugins {
-  id 'antlr'
-}
+package nextflow.script.ast;
 
-dependencies {
-  antlr 'me.sunlan:antlr4:4.13.2.6'
-  api 'org.apache.groovy:groovy:4.0.28'
-  api 'org.pf4j:pf4j:3.12.0'
+import org.codehaus.groovy.ast.ClassHelper;
+import org.codehaus.groovy.ast.Parameter;
 
-  testFixturesApi 'com.google.jimfs:jimfs:1.2'
-  testImplementation(testFixtures(project(":nextflow")))
-}
+/**
+ * An implicit closure parameter (`it`). Used to discourage
+ * the use of implicit parameters.
+ *
+ * @author Ben Sherman <bentshermann@gmail.com>
+ */
+public class ImplicitClosureParameter extends Parameter {
 
-generateGrammarSource {
-  arguments += ['-no-listener', '-no-visitor']
-}
-
-tasks.named('sourcesJar') {
-    dependsOn tasks.named('generateGrammarSource')
+    public ImplicitClosureParameter() {
+        super(ClassHelper.dynamicType(), "it");
+    }
 }

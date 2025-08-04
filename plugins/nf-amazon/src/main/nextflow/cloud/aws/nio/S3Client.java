@@ -103,7 +103,7 @@ public class S3Client {
 				return null;
 			return getBucketAcl(buckets.get(0).name()).owner().id();
 		}catch (Throwable e){
-			log.debug("Exception fetching caller account", e);
+			log.debug("Unable to fetch caller account - {} ", e.getMessage());
 			return null;
 		}
 	}
@@ -506,7 +506,11 @@ public class S3Client {
 
 		DirectoryDownload downloadDirectory = transferManager().downloadDirectory(downloadDirRequest);
 		try{
-			downloadDirectory.completionFuture().get();
+			CompletedDirectoryDownload completed = downloadDirectory.completionFuture().get();
+            if (!completed.failedTransfers().isEmpty()){
+				log.debug("S3 download directory: s3://{}/{} failed transfers", source.getBucket(), source.getKey());
+				throw new IOException("Some transfers in S3 download directory: s3://"+ source.getBucket() +"/"+ source.getKey() +" has failed - Transfers: " +  completed.failedTransfers() );
+			}
 		} catch (InterruptedException e){
 			log.debug("S3 download directory: s3://{}/{} interrupted", source.getBucket(), source.getKey());
 			Thread.currentThread().interrupt();

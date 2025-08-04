@@ -23,6 +23,7 @@ import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -30,10 +31,13 @@ import java.util.Set;
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyCodeSource;
 import com.google.common.hash.Hashing;
+import nextflow.script.ast.WorkflowNode;
+import nextflow.script.control.CallSiteCollector;
 import nextflow.script.control.Compiler;
 import nextflow.script.control.ModuleResolver;
 import nextflow.script.control.OpCriteriaVisitor;
 import nextflow.script.control.PathCompareVisitor;
+import nextflow.script.control.ProcessNameResolver;
 import nextflow.script.control.ResolveIncludeVisitor;
 import nextflow.script.control.ScriptResolveVisitor;
 import nextflow.script.control.ScriptToGroovyVisitor;
@@ -42,6 +46,7 @@ import nextflow.script.parser.ScriptParserPluginFactory;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.CompilationUnit;
 import org.codehaus.groovy.control.CompilerConfiguration;
@@ -162,24 +167,31 @@ public class ScriptCompiler {
             .findFirst()
             .get();
 
+        var modules = collectModules(unit, classes);
+        var processNames = new ProcessNameResolver(unit.getCallSites()).resolve(su);
+        return new CompileResult(main, modules, processNames);
+    }
+
+    private Map<Path,Class> collectModules(ScriptCompilationUnit unit, List<Class> classes) {
         // match each module script class to the source path
         // using the class name
-        var modules = new HashMap<Path,Class>();
+        var result = new HashMap<Path,Class>();
         for( var c : classes ) {
             for( var source : unit.getModules() ) {
                 if( source.getName().equals(c.getSimpleName()) ) {
                     var path = Path.of(source.getSource().getURI());
-                    modules.put(path, c);
+                    result.put(path, c);
                     break;
                 }
             }
         }
-        return new CompileResult(main, modules);
+        return result;
     }
 
     public static record CompileResult(
         Class main,
-        Map<Path,Class> modules
+        Map<Path,Class> modules,
+        Set<String> processNames
     ) {}
 
     private static class ScriptClassLoader extends GroovyClassLoader {
@@ -207,6 +219,8 @@ public class ScriptCompiler {
 
         private Set<SourceUnit> modules;
 
+        private Map<WorkflowNode, Map<String, MethodNode>> callSites = new IdentityHashMap<>();
+
         ScriptCompilationUnit(CompilerConfiguration configuration, GroovyClassLoader loader) {
             super(configuration, null, loader);
             super.addPhaseOperation(source -> analyze(source), Phases.CONVERSION);
@@ -214,6 +228,10 @@ public class ScriptCompiler {
 
         Set<SourceUnit> getModules() {
             return modules;
+        }
+
+        Map<WorkflowNode, Map<String, MethodNode>> getCallSites() {
+            return callSites;
         }
 
         @Override
@@ -263,6 +281,9 @@ public class ScriptCompiler {
             new TypeCheckingVisitor(source, false).visit();
             if( source.getErrorCollector().hasErrors() )
                 return;
+
+            // collect call sites for each workflow in the script
+            callSites.putAll(new CallSiteCollector().apply(source));
 
             // convert to Groovy
             new ScriptToGroovyVisitor(source).visit();
