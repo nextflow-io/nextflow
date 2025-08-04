@@ -30,6 +30,8 @@ import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
+import nextflow.script.parser.CommentWriter;
+
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.expr.EmptyExpression;
 import org.codehaus.groovy.ast.expr.PropertyExpression;
@@ -39,6 +41,8 @@ import org.codehaus.groovy.ast.stmt.EmptyStatement;
 import org.codehaus.groovy.ast.stmt.ExpressionStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.control.SourceUnit;
+
+import groovy.lang.Tuple2;
 
 import static nextflow.script.ast.ASTUtils.*;
 
@@ -53,6 +57,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     private FormattingOptions options;
 
+    private CommentWriter commentWriter;
+
     private Formatter fmt;
 
     private int maxIncludeWidth = 0;
@@ -62,13 +68,25 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
     public ScriptFormattingVisitor(SourceUnit sourceUnit, FormattingOptions options) {
         this.sourceUnit = sourceUnit;
         this.options = options;
-        this.fmt = new Formatter(options);
+        this.commentWriter = getCommentWriter();
+        this.fmt = new Formatter(options, this.commentWriter);
+    }
+
+    public CommentWriter getCommentWriter() {
+        var moduleNode = sourceUnit.getAST();
+        if( moduleNode instanceof ScriptNode ) {
+            var scriptNode = (ScriptNode) moduleNode;
+            return (CommentWriter)scriptNode.getNodeMetaData("commentWriter");
+        }
+        return null;
     }
 
     @Override
     protected SourceUnit getSourceUnit() {
         return sourceUnit;
     }
+
+    
 
     public void visit() {
         var moduleNode = sourceUnit.getAST();
@@ -124,6 +142,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             else if( decl instanceof WorkflowNode wn )
                 visitWorkflow(wn);
         }
+        fmt.append(commentWriter.toNFComments());
     }
 
     public String toString() {
@@ -209,13 +228,23 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitWorkflow(WorkflowNode node) {
+        var leadingComments = commentWriter.getLeadingComments(node);
+        var withinComments = commentWriter.getWithinComments(node);
+
         fmt.appendLeadingComments(node);
         fmt.append("workflow");
-        if( !node.isEntry() ) {
-            fmt.append(' ');
-            fmt.append(node.getName());
+        fmt.append(' ');
+        if( withinComments.containsKey("keyword") ) {
+            fmt.writeComments(withinComments.get("keyword"), false);
         }
-        fmt.append(" {\n");
+        if( !node.isEntry() ) {
+            fmt.append(node.getName());
+            fmt.append(' ');
+            if( withinComments.containsKey("name") ) {
+                fmt.writeComments(withinComments.get("name"), false);
+            }
+        }
+        fmt.append("{\n");
         fmt.incIndent();
         if( node.takes instanceof BlockStatement ) {
             fmt.appendIndent();

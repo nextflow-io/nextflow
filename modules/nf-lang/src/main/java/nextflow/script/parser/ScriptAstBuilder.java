@@ -105,7 +105,7 @@ import static nextflow.script.ast.ASTUtils.*;
 import static nextflow.script.parser.PositionConfigureUtils.ast;
 import static nextflow.script.parser.PositionConfigureUtils.tokenPosition;
 import static nextflow.script.parser.ScriptParser.*;
-import static nextflow.script.parser.Comment;
+import static nextflow.script.parser.CommentWriter.*;
 import static org.codehaus.groovy.ast.expr.VariableExpression.THIS_EXPRESSION;
 import static org.codehaus.groovy.ast.tools.GeneralUtils.*;
 
@@ -120,8 +120,8 @@ public class ScriptAstBuilder {
     private ScriptNode moduleNode;
     private ScriptLexer lexer;
     private ScriptParser parser;
-    private CommonTokenStream commentTokens;
-    private List<Token> unattachedComments;
+    private CommentWriter commentWriter;
+
     private final GroovydocManager groovydocManager;
 
     private Tuple2<ParserRuleContext,Exception> numberFormatError;
@@ -135,10 +135,31 @@ public class ScriptAstBuilder {
         this.parser = new ScriptParser(new CommonTokenStream(lexer));
         parser.setErrorHandler(new DescriptiveErrorStrategy(charStream));
 
-        // Collect all the comments from the lexer
-        this.commentTokens = new CommonTokenStream(lexer, ScriptLexer.COMMENTS);
-        this.unattachedComments = commentTokens.getTokens(); 
-
+        // // Collect all the comments from a separate lexer instance
+        var commentCharStream = createCharStream(sourceUnit);
+        var commentLexer = new ScriptLexer(commentCharStream);
+        var commentTokenStream = new CommonTokenStream(commentLexer);
+        
+        // Consume all tokens first
+        commentTokenStream.fill();
+        
+        // Filter for only COMMENT channel tokens
+        var allTokens = commentTokenStream.getTokens();
+        var commentTokensList = allTokens.stream()
+            .filter(token -> token.getChannel() == ScriptLexer.COMMENT)
+            .toList();
+        var semanticTokensList = allTokens.stream()
+            .filter(token -> token.getChannel() == ScriptLexer.DEFAULT_TOKEN_CHANNEL)
+            .toList();
+        
+        System.err.println("DEBUG: Found " + commentTokensList.size() + " comment tokens out of " + allTokens.size() + " total tokens");
+        for (int i = 0; i < commentTokensList.size(); i++) {
+            var token = commentTokensList.get(i);
+            System.err.println("DEBUG: Comment token " + i + ": '" + token.getText() + "' (type: " + token.getType() + ", channel: " + token.getChannel() + ")");
+        }
+        
+        this.commentWriter = new CommentWriter(allTokens);
+        moduleNode.putNodeMetaData("commentWriter", commentWriter);
 
         var groovydocEnabled = sourceUnit.getConfiguration().isGroovydocEnabled();
         this.groovydocManager = new GroovydocManager(groovydocEnabled);
@@ -257,24 +278,19 @@ public class ScriptAstBuilder {
     }
 
     private boolean scriptDeclaration(ScriptDeclarationContext ctx) {
+
         if( ctx instanceof FeatureFlagDeclAltContext ffac ) {
-            var leadingComments = getLeadingComments(ctx);
             var node = featureFlagDeclaration(ffac.featureFlagDeclaration());
-            saveLeadingComments(node, leadingComments);
             moduleNode.addFeatureFlag(node);
         }
 
         else if( ctx instanceof EnumDefAltContext edac ) {
-            var leadingComments = getLeadingComments(ctx);
             var node = enumDef(edac.enumDef());
-            saveLeadingComments(node, leadingComments);
             moduleNode.addClass(node);
         }
 
         else if( ctx instanceof FunctionDefAltContext fdac ) {
-            var leadingComments = getLeadingComments(ctx);
             var node = functionDef(fdac.functionDef());
-            saveLeadingComments(node, leadingComments);
             moduleNode.addFunction(node);
         }
 
@@ -285,39 +301,29 @@ public class ScriptAstBuilder {
         }
 
         else if( ctx instanceof IncludeDeclAltContext iac ) {
-            var leadingComments = getLeadingComments(ctx);
             var node = includeDeclaration(iac.includeDeclaration());
-            saveLeadingComments(node, leadingComments);
             moduleNode.addInclude(node);
         }
 
         else if( ctx instanceof OutputDefAltContext odac ) {
-            var leadingComments = getLeadingComments(ctx);
             var node = outputDef(odac.outputDef());
-            saveLeadingComments(node, leadingComments);
             if( moduleNode.getOutputs() != null )
                 collectSyntaxError(new SyntaxException("Output block defined more than once", node));
             moduleNode.setOutputs(node);
         }
 
         else if( ctx instanceof ParamDeclAltContext pac ) {
-            var leadingComments = getLeadingComments(ctx);
             var node = paramDeclaration(pac.paramDeclaration());
-            saveLeadingComments(node, leadingComments);
             moduleNode.addParam(node);
         }
 
         else if( ctx instanceof ProcessDefAltContext pdac ) {
-            var leadingComments = getLeadingComments(ctx);
             var node = processDef(pdac.processDef());
-            saveLeadingComments(node, leadingComments);
             moduleNode.addProcess(node);
         }
 
         else if( ctx instanceof WorkflowDefAltContext wdac ) {
-            var leadingComments = getLeadingComments(ctx);
             var node = workflowDef(wdac.workflowDef());
-            saveLeadingComments(node, leadingComments);
             if( node.isEntry() ) {
                 if( moduleNode.getEntry() != null )
                     collectSyntaxError(new SyntaxException("Entry workflow defined more than once", node));
@@ -387,11 +393,13 @@ public class ScriptAstBuilder {
     }
 
     private ProcessNode processDef(ProcessDefContext ctx) {
+        var leadingComments = commentWriter.getLeadingComments(ctx);
         var name = ctx.name.getText();
         if( ctx.body == null ) {
             var empty = EmptyStatement.INSTANCE;
             var result = ast( new ProcessNode(name, empty, empty, empty, EmptyExpression.INSTANCE, null, empty, empty), ctx );
             collectSyntaxError(new SyntaxException("Missing process script body", result));
+            commentWriter.attachComments(result, leadingComments);
             return result;
         }
 
@@ -411,6 +419,7 @@ public class ScriptAstBuilder {
         }
 
         var result = ast( new ProcessNode(name, directives, inputs, outputs, when, type, exec, stub), ctx );
+        commentWriter.attachComments(result, leadingComments);
         groovydocManager.handle(result, ctx);
         return result;
     }
@@ -428,21 +437,33 @@ public class ScriptAstBuilder {
     private Statement processInputs(ProcessInputsContext ctx) {
         if( ctx == null )
             return EmptyStatement.INSTANCE;
+        var comments = commentWriter.getLeadingComments(ctx);
+        comments.addAll(commentWriter.getWithinComments(
+            ctx.INPUT(), ctx.COLON(), "input", false, true
+        ));
         var statements = ctx.statement().stream()
             .map(this::statement)
             .map(stmt -> checkDirective(stmt, "Invalid process input"))
             .toList();
-        return ast( block(null, statements), ctx );
+        var result = ast( block(null, statements), ctx );
+        commentWriter.attachComments(result, comments);
+        return result;
     }
 
     private Statement processOutputs(ProcessOutputsContext ctx) {
         if( ctx == null )
             return EmptyStatement.INSTANCE;
+        var leadingComments = commentWriter.getLeadingComments(ctx);
+        var comments = commentWriter.getWithinComments(
+            ctx.OUTPUT(), ctx.COLON(), "output", false, true
+        );
         var statements = ctx.statement().stream()
             .map(this::statement)
             .map(stmt -> checkDirective(stmt, "Invalid process output"))
             .toList();
-        return ast( block(null, statements), ctx );
+        var result = ast( block(null, statements), ctx );
+        commentWriter.attachComments(result, comments);
+        return result;
     }
 
     private Statement checkDirective(Statement stmt, String errorMessage) {
@@ -497,7 +518,13 @@ public class ScriptAstBuilder {
     private Expression processWhen(ProcessWhenContext ctx) {
         if( ctx == null )
             return EmptyExpression.INSTANCE;
-        return ast( expression(ctx.expression()), ctx );
+        var comments = commentWriter.getLeadingComments(ctx);
+        comments.addAll(commentWriter.getWithinComments(
+            ctx.WHEN(), ctx.COLON(), "when", false, true
+        ));
+        var result = ast( expression(ctx.expression()), ctx );
+        commentWriter.attachComments(result, comments);
+        return result;
     }
 
     private String processType(ProcessExecContext ctx) {
@@ -517,40 +544,56 @@ public class ScriptAstBuilder {
     private Statement processStub(ProcessStubContext ctx) {
         if( ctx == null )
             return EmptyStatement.INSTANCE;
-        return ast( blockStatements(ctx.blockStatements()), ctx );
+        var comments = commentWriter.getLeadingComments(ctx);
+        comments.addAll(commentWriter.getWithinComments(
+            ctx.STUB(), ctx.COLON(), "stub", false, true
+        ));
+        var result = ast( blockStatements(ctx.blockStatements()), ctx );
+        commentWriter.attachComments(result, comments);
+        return result;
     }
 
     private WorkflowNode workflowDef(WorkflowDefContext ctx) {
         var name = ctx.name != null ? ctx.name.getText() : null;
+        WorkflowNode result;
+        var comments = commentWriter.getLeadingComments(ctx);
+        if( name != null ) {
+            // Look for comments between the name and the body
+            comments.addAll(commentWriter.getCommentsInbetween(ctx.getStart(), ctx.name.getStop(), "keyword", false, true));
+            comments.addAll(commentWriter.getCommentsInbetween(ctx.name.getStop(), ctx.LBRACE().getSymbol(), "name", false, true));
+        } else {
+            comments.addAll(commentWriter.getCommentsInbetween(ctx.getStart(), ctx.LBRACE().getSymbol(), "keyword", false, true));
+        }
 
         if( ctx.body == null ) {
-            var result = ast( new WorkflowNode(name, null, null, null, null), ctx );
+            result = ast( new WorkflowNode(name, null, null, null, null), ctx );
             groovydocManager.handle(result, ctx);
             return result;
-        }
+        } else {
+            var takes = workflowTakes(ctx.body.workflowTakes());
+            var emits = workflowEmits(ctx.body.workflowEmits());
+            var publishers = workflowPublishers(ctx.body.workflowPublishers());
+            var main = blockStatements(
+                ctx.body.workflowMain() != null
+                    ? ctx.body.workflowMain().blockStatements()
+                    : null
+            );
 
-        var takes = workflowTakes(ctx.body.workflowTakes());
-        var emits = workflowEmits(ctx.body.workflowEmits());
-        var publishers = workflowPublishers(ctx.body.workflowPublishers());
-        var main = blockStatements(
-            ctx.body.workflowMain() != null
-                ? ctx.body.workflowMain().blockStatements()
-                : null
-        );
+            if( name == null ) {
+                if( takes instanceof BlockStatement )
+                    collectSyntaxError(new SyntaxException("Entry workflow cannot have a take section", takes));
+                if( emits instanceof BlockStatement )
+                    collectSyntaxError(new SyntaxException("Entry workflow cannot have an emit section", emits));
+            }
+            if( name != null ) {
+                if( publishers instanceof BlockStatement )
+                    collectSyntaxError(new SyntaxException("Named workflow cannot have a publish section", publishers));
+            }
 
-        if( name == null ) {
-            if( takes instanceof BlockStatement )
-                collectSyntaxError(new SyntaxException("Entry workflow cannot have a take section", takes));
-            if( emits instanceof BlockStatement )
-                collectSyntaxError(new SyntaxException("Entry workflow cannot have an emit section", emits));
+            result = ast( new WorkflowNode(name, takes, main, emits, publishers), ctx );
+            groovydocManager.handle(result, ctx);
         }
-        if( name != null ) {
-            if( publishers instanceof BlockStatement )
-                collectSyntaxError(new SyntaxException("Named workflow cannot have a publish section", publishers));
-        }
-
-        var result = ast( new WorkflowNode(name, takes, main, emits, publishers), ctx );
-        groovydocManager.handle(result, ctx);
+        commentWriter.attachComments(result, comments);
         return result;
     }
 
@@ -581,6 +624,7 @@ public class ScriptAstBuilder {
         if( ctx == null )
             return EmptyStatement.INSTANCE;
 
+        var comments = commentWriter.getLeadingComments(ctx);
         var statements = ctx.statement().stream()
             .map(this::workflowEmit)
             .filter(stmt -> stmt != null)
@@ -589,6 +633,7 @@ public class ScriptAstBuilder {
         var hasEmitExpression = statements.stream().anyMatch(this::isEmitExpression);
         if( hasEmitExpression && statements.size() > 1 )
             collectSyntaxError(new SyntaxException("Every emit must be assigned to a name when there are multiple emits", result));
+        commentWriter.attachComments(result, comments);
         return result;
     }
 
@@ -685,7 +730,7 @@ public class ScriptAstBuilder {
         if( ctx instanceof EmptyStmtAltContext )
             return EmptyStatement.INSTANCE;
 
-        List<String> leadingComments = getLeadingComments(ctx);
+        List<CommentWriter.Comment> leadingComments = commentWriter.getLeadingComments(ctx);
 
         if( ctx instanceof IfElseStmtAltContext ieac )
             result = ast( ifElseStatement(ieac.ifElseStatement()), ieac );
@@ -717,7 +762,7 @@ public class ScriptAstBuilder {
         else
             throw createParsingFailedException("Invalid statement: " + ctx.getText(), ctx);
         
-        saveLeadingComments(result, leadingComments);
+        commentWriter.attachComments(result, leadingComments);
 
         return result;
     }
@@ -831,9 +876,11 @@ public class ScriptAstBuilder {
     }
 
     private Expression variableName(IdentifierContext ctx) {
+        var comments = commentWriter.getLeadingComments(ctx);
         var name = identifier(ctx);
         var result = ast( varX(name), ctx );
         checkInvalidVarName(name, result);
+        commentWriter.attachComments(result, comments);
         return result;
     }
 
@@ -1690,26 +1737,26 @@ public class ScriptAstBuilder {
 
     /// COMMENTS
 
-    private List<String> getLeadingComments(ParserRuleContext ctx) {
-        // Get all the unattached comments up until this point
-        var leadingComments = new ArrayList<String>(unattachedComments.stream().map(Token::getText).toList());
-        // int stopIndex = ctx.getStart().getTokenIndex();
-        // Iterator<Token> it = unattachedComments.iterator();
-        // while( it.hasNext() ) {
-        //     var comment = it.next();
-        //     if( comment.getTokenIndex() >= stopIndex )
-        //         break;
-        //     leadingComments.add(comment.getText());
-        //     it.remove(); // The comment has been attached to this node, so remove it from the unattached comments list
-        // }
+    // private List<String> getLeadingComments(ParserRuleContext ctx) {
+    //     // Get all the unattached comments up until this point
+    //     var leadingComments = new ArrayList<String>(unattachedComments.stream().map(Token::getText).toList());
+    //     // int stopIndex = ctx.getStart().getTokenIndex();
+    //     // Iterator<Token> it = unattachedComments.iterator();
+    //     // while( it.hasNext() ) {
+    //     //     var comment = it.next();
+    //     //     if( comment.getTokenIndex() >= stopIndex )
+    //     //         break;
+    //     //     leadingComments.add(comment.getText());
+    //     //     it.remove(); // The comment has been attached to this node, so remove it from the unattached comments list
+    //     // }
 
-        return leadingComments;
-    }
+    //     return leadingComments;
+    // }
 
-    private void saveLeadingComments(ASTNode node, List<String> comments) {
-        if( !comments.isEmpty() )
-            node.putNodeMetaData(ASTNodeMarker.LEADING_COMMENTS, comments);
-    }
+    // private void saveLeadingComments(ASTNode node, List<CommentWriter.Comment> comments) {
+    //     if( !comments.isEmpty() )
+    //         node.putNodeMetaData(ASTNodeMarker.LEADING_COMMENTS, comments.stream().map(CommentWriter.Comment::getToken).map(Token::getText).toList());
+    // }
 
     private boolean saveLeadingComments0(ParserRuleContext ctx, List<String> comments) {
 
@@ -1855,7 +1902,7 @@ public class ScriptAstBuilder {
 
         else if( t instanceof Exception e )
             collectException(e);
-
+        
         return new CompilationFailedException(
                 CompilePhase.PARSING.getPhaseNumber(),
                 sourceUnit,
@@ -1863,10 +1910,12 @@ public class ScriptAstBuilder {
     }
 
     private void collectSyntaxError(SyntaxException e) {
+        e.printStackTrace();
         sourceUnit.getErrorCollector().addFatalError(new SyntaxErrorMessage(e, sourceUnit));
     }
 
     private void collectException(Exception e) {
+        e.printStackTrace();
         sourceUnit.getErrorCollector().addException(e, sourceUnit);
     }
 

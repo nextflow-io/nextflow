@@ -55,7 +55,7 @@ options {
 }
 
 channels {
-    COMMENTS // The COMMENTS channel will contain all comments, and are separatly introduced into the AST during creation
+    COMMENT // The COMMENT channel will contain all comments, and are separatly introduced into the AST during creation
 }
 
 @header {
@@ -834,18 +834,18 @@ NL  : LineTerminator   /* { this.ignoreTokenInsideParens(); } */
 
 // Multiple-line comments (including groovydoc comments)
 ML_COMMENT
-    :   '/*' .*? '*/'       /* { this.ignoreMultiLineCommentConditionally(); } */ -> channel(COMMENTS)
+    :   '/*' .*? '*/'       /* { this.ignoreMultiLineCommentConditionally(); } */ -> channel(COMMENT)
     ;
 
 // Single-line comments
 SL_COMMENT
-    :   '//' ~[\r\n\uFFFF]* /* { this.ignoreTokenInsideParens(); } */             -> channel(COMMENTS)
+    :   '//' ~[\r\n\uFFFF]* /* { this.ignoreTokenInsideParens(); } */             -> channel(COMMENT)
     ;
 
 // Script-header comments.
 // The very first characters of the file may be "#!".  If so, ignore the first line.
 SH_COMMENT
-    :   '#!' { require(errorIgnored || 0 == this.tokenIndex, "Shebang comment should appear at the first line", -2, true); } ShCommand (LineTerminator '#!' ShCommand)* -> channel(COMMENTS)
+    :   '#!' { require(errorIgnored || 0 == this.tokenIndex, "Shebang comment should appear at the first line", -2, true); } ShCommand (LineTerminator '#!' ShCommand)* -> channel(COMMENT)
     ;
 
 // Unexpected characters will be handled by groovy parser later.

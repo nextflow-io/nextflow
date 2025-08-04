@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import nextflow.script.ast.ASTNodeMarker;
+import nextflow.script.parser.CommentWriter;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
@@ -72,12 +73,20 @@ public class Formatter extends CodeVisitorSupport {
 
     private FormattingOptions options;
 
+    private CommentWriter commentWriter;
+
     private StringBuilder builder = new StringBuilder();
 
     private int indentCount = 0;
 
     public Formatter(FormattingOptions options) {
         this.options = options;
+        this.commentWriter = null;
+    }
+
+    public Formatter(FormattingOptions options, CommentWriter commentWriter) {
+        this.options = options;
+        this.commentWriter = commentWriter;
     }
 
     public void append(char c) {
@@ -99,25 +108,26 @@ public class Formatter extends CodeVisitorSupport {
         builder.append('\n');
     }
 
-    public void appendLeadingComments(ASTNode node) {
-        var comments = (List<String>) node.getNodeMetaData(ASTNodeMarker.LEADING_COMMENTS);
-        append("/*l*/");
-        if( comments == null || comments.isEmpty() ) {
-            return;
+    public void writeComment(CommentWriter.Comment comment, boolean shouldBreakLine) {
+        var tuple = comment.write();
+        appendIndent();
+        append(tuple.getV1());
+        if( tuple.getV2() || shouldBreakLine) {
+            appendNewLine();
+        } else {
+            append(' ');
         }
+    }
+
+    public void writeComments(List<CommentWriter.Comment> comments, boolean shouldBreakLine) {
         for( var comment : comments ) {
-            appendIndent();
-            append(comment);
+            writeComment(comment, shouldBreakLine);
         }
-        // for( var line : DefaultGroovyMethods.asReversed(comments) ) {
-        //     if( "\n".equals(line) ) {
-        //         append(line);
-        //     }
-        //     else {
-        //         appendIndent();
-        //         append(line.stripLeading());
-        //     }
-        // }
+    }
+
+    public void appendLeadingComments(ASTNode node) {
+        var comments = commentWriter.getLeadingComments(node);
+        writeComments(comments, true);
     }
 
     public boolean hasTrailingComment(ASTNode node) {

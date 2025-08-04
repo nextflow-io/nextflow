@@ -99,8 +99,10 @@ public class Compiler {
             source.buildAST();
         }
         catch( RecognitionException e ) {
+            System.err.println("RecognitionException: " + e.getMessage());
         }
         catch( CompilationFailedException e ) {
+            System.err.println("CompilationFailedException: " + e.getMessage());
         }
     }
 

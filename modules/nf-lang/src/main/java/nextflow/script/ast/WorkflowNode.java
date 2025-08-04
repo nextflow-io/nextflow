@@ -45,7 +45,14 @@ public class WorkflowNode extends MethodNode {
     public final Statement publishers;
 
     public WorkflowNode(String name, Statement takes, Statement main, Statement emits, Statement publishers) {
-        super(name, 0, dummyReturnType(emits), dummyParams(takes), ClassNode.EMPTY_ARRAY, EmptyStatement.INSTANCE);
+        super(
+            name != null ? name : "", // getText causes an exception if name is null, ugly hack for now
+            0,
+            dummyReturnType(emits),
+            dummyParams(takes),
+            ClassNode.EMPTY_ARRAY,
+            EmptyStatement.INSTANCE
+        );
         this.takes = takes;
         this.main = main;
         this.emits = emits;
@@ -53,7 +60,7 @@ public class WorkflowNode extends MethodNode {
     }
 
     public boolean isEntry() {
-        return getName() == null;
+        return getName() == "";
     }
 
     public boolean isCodeSnippet() {
