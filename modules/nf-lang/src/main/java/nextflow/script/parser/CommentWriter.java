@@ -29,7 +29,7 @@ public class CommentWriter {
 
     private final Map<ASTNode, List<Comment>> leadingComments = new HashMap<>();
     private final Map<ASTNode, Map<String, List<Comment>>> withinComments = new HashMap<>();
-    private final Map<ASTNode, List<Comment>> trailingComments = new HashMap<>();
+    private final Map<ASTNode, Map<String, List<Comment>>> trailingComments = new HashMap<>();
 
     public CommentWriter(List<Token> allTokens) {
         this.commentTokens = allTokens.stream().filter(t -> t.getChannel() == ScriptLexer.COMMENT).collect(Collectors.toList());
@@ -65,6 +65,11 @@ public class CommentWriter {
         
         public boolean isComment() {
             return comment != null;
+        }
+
+        @Override
+        public String toString() {
+            return "TokenInfo:" + (isComment() ? "COMMENT" : "SEMANTIC") + ": '" +  token.getText().replace("\n", "\\n") + "'";
         }
     }
 
@@ -118,12 +123,18 @@ public class CommentWriter {
                 var maybeText = attachedTo != null ? attachedTo.getText(): null;
                 var attachToCode = maybeText != null ? maybeText.replaceAll("\n", "\\n") : "null";
                 var attachedToText = attachedTo != null ? simpleName + " " + attachToCode : "null";
+                var relPos = (
+                    (t.isWithin() ? "within " : "")+
+                    (t.isLeading() ? "leading " : "") + 
+                    (t.isTrailing() ? "trailing " : "")
+                );
                 return (
                     "// " + indent + line + ":" + column + "{\n" + 
                     "// " + indent + indent + "content    : " + text + "\n" +
                     "// " + indent + indent + "attached to: " + attachedToText + "\n" +
-                    "// " + indent + indent + "position   : " + t.getPositionInfo() + "\n" +
+                    "// " + indent + indent + "token      : " + t.getPositionInfo() + "\n" +
                     "// " + indent + indent + "written    : " + t.isWritten() + "\n" +
+                    "// " + indent + indent + "rel. pos.  : " + relPos + "\n" +
                     "// " + indent + "}\n"
                 );
             })
@@ -153,7 +164,7 @@ public class CommentWriter {
         );
     }
 
-    public List<Comment> getLeadingComments(ParserRuleContext ctx) {
+    public List<Comment> processLeadingComments(ParserRuleContext ctx) {
         if (unattachedComments.isEmpty()) {
             return new ArrayList<>();
         }
@@ -165,24 +176,24 @@ public class CommentWriter {
         // Get all comment tokens that are before the context and only separated by newlines
         for (int i = contextStartIndex - 1; i >= firstCommentIndex; i--) {
             TokenInfo token = tokensWithInfo.get(i);
-            if (token.isComment()) {
+            if( token.isComment() && !token.getComment().isConsumed() ) {
                 comments.add(token.getComment());
-            } else if (token.getToken().getType() == ScriptLexer.NL) {
+            } else if( token.getToken().getType() == ScriptLexer.NL ){
                continue; 
             } else {
                 break;
             }
         }
-        
-        // Remove the comments we've processed from unattachedComments
-        unattachedComments.removeAll(comments);
+
+        comments.forEach(c -> {
+            c.makePending();
+            c.markAsLeading(ctx.getStart());
+        });
         
         return comments;
     }
-    
-    
 
-    public List<Comment> getCommentsInbetween(
+    public List<Comment> processInbetweenComments(
         Token start, Token end, String positionInfo, boolean isLeading, boolean isTrailing
     ) {
         List<Comment> comments = new ArrayList<>();
@@ -194,54 +205,86 @@ public class CommentWriter {
             if (comment.getStartIndex() >= startIdx && comment.getStopIndex() <= endIdx) {
                 System.err.println(comment.getToken().getLine() + ":" + comment.getToken().getCharPositionInLine() + " " + comment.getToken().getText());
                 comments.add(comment);
-                comment.markAsWithin(positionInfo, isLeading, isTrailing);
-                comment.makePending();
-                it.remove();
             }
         }
+        comments.forEach(c -> {
+            c.markAsWithin(positionInfo, start, end, isLeading, isTrailing);
+            c.makePending();
+
+        });
         return comments;
     }
 
-    public List<Comment> getWithinComments(TerminalNode start, TerminalNode end, String positionInfo, boolean isLeading, boolean isTrailing) {
-        return getCommentsInbetween(start.getSymbol(), end.getSymbol(), positionInfo, isLeading, isTrailing);
+    public List<Comment> processInbetweenComments(TerminalNode start, TerminalNode end, String positionInfo, boolean isLeading, boolean isTrailing) {
+        return processInbetweenComments(start.getSymbol(), end.getSymbol(), positionInfo, isLeading, isTrailing);
     }
 
-    public List<Comment> getTrailingComments(Token lastCtxToken) {
+
+    public List<Comment> processTrailingComments(Token lastCtxToken, String positionInfo, boolean allowNewlines) {
         // A trailing comment is either on the same line as the last token of the context,
         // or on the next line line after the last token of the context, but in this case it must
         // be separated by at least one blank line from the next context
 
         List<Comment> comments = new ArrayList<>();
         int contextStopIndex = lastCtxToken.getTokenIndex();
-        ListIterator<TokenInfo> it = tokensWithInfo.listIterator(contextStopIndex);
-        TokenInfo token = it.next(); 
-        if (token.isComment()) 
-            comments.add(comment); // If the token directly after the context then it is always trailing
-
+        ListIterator<TokenInfo> it = tokensWithInfo.listIterator(contextStopIndex + 1);
+        TokenInfo token = null;
         int nlsBefore = 0;
-        List<Comment> candiateComments = new ArrayList<>();
-        boolean isLeading = false;
-        while( it.hasNext() && nlsBefore < 2 ) {
-            TokenInfo token = it.next();
-            if (token.isComment()) {
-                candidateComments.add(token.getComment());
-            } else if (token.getToken().getType() == ScriptLexer.NL) {
-                nlsBefore++;
+        // First get tokens that are directly after the context, without any newlines
+        while( it.hasNext() ) {
+            token = it.next(); 
+            System.err.println(token);
+            if (token.isComment() && !token.getComment().isConsumed()) {
+                comments.add(token.getComment());
             } else {
-                // We encountered a non newline token before there were a blank line 
-                // this means that the comment should be leading to the next statement instead
-                isLeading = true;
+                if (token.getToken().getType() == ScriptLexer.NL) {
+                    nlsBefore++;
+                }
+                break;
             }
         }
-        if (!isLeading) {
-            comments.addAll(candiatesComments);
+
+        if (allowNewlines) {
+            // Get comments that are on the lines following the context
+            // but only if they seem to be trailing rather than leading 
+            // for the next context
+            List<Comment> candidateComments = new ArrayList<>();
+            boolean isLeading = false;
+            while( it.hasNext() && nlsBefore < 2 ) {
+                token = it.next();
+                if (token.isComment() && !token.getComment().isConsumed()) {
+                    candidateComments.add(token.getComment());
+                } else if (token.getToken().getType() == ScriptLexer.NL) {
+                    nlsBefore++;
+                } else {
+                    // We encountered a non newline token before there were a blank line 
+                    // this means that the comment should be leading to the next statement instead
+                    isLeading = true;
+                }
+            }
+            if (!isLeading) {
+                comments.addAll(candidateComments);
+            }
         }
-        commments.foreach(c -> {
+
+        comments.forEach(c -> {
             c.makePending();
-            c.markAsTrailing();
-        })
-        unattachedComments.removeAll(comments); 
+            c.markAsTrailing(lastCtxToken, positionInfo);
+        });
+
         return comments;
+    }
+
+    public List<Comment> processTrailingComments(TerminalNode term, String positionInfo, boolean allowNewlines) {
+        return processTrailingComments(term.getSymbol(), positionInfo, allowNewlines);
+    }
+
+    public List<Comment> processTrailingComments(TerminalNode term, boolean allowNewlines) {
+        return processTrailingComments(term.getSymbol(), "STANDARD", allowNewlines);
+    }
+
+    public List<Comment> processTrailingComments(Token token, boolean allowNewlines) {
+        return processTrailingComments(token, "STANDARD", allowNewlines);
     }
 
     public void attachComments(ASTNode node, List<Comment> comments) {
@@ -256,8 +299,8 @@ public class CommentWriter {
         return withinComments.getOrDefault(node, new HashMap<>());
     }
 
-    public List<Comment> getTrailingComments(ASTNode node) {
-        return trailingComments.getOrDefault(node, new ArrayList<>());
+    public Map<String, List<Comment>> getTrailingComments(ASTNode node) {
+        return trailingComments.getOrDefault(node, new HashMap<>());
     }
 
     public class Comment {
@@ -267,10 +310,13 @@ public class CommentWriter {
         private boolean isWithin = false;
 
         private ASTNode attachedTo = null;
+        private boolean consumed = false;
 
         // If the comment is within a node, we need to keep track of where it was originally
         // We use the field below to keep track of this
         private String positionInfo = null;
+        private Token precedingToken = null;
+        private Token followingToken = null;
 
         private boolean isWritten = false;
 
@@ -283,23 +329,24 @@ public class CommentWriter {
                 throw new IllegalStateException("Comment already attached to " + attachedTo);
             }
             this.attachedTo = node;
-            if (pendingComments.contains(this)) {
-                pendingComments.remove(this);
-            } else {
-                System.err.println("Comment not pending: " + token.getText());
-            }
+            pendingComments.remove(this);
             attachedComments.computeIfAbsent(node, k -> new ArrayList<>()).add(this);
             if( isWithin ) {
                 withinComments.computeIfAbsent(node, k -> new HashMap<>()).computeIfAbsent(positionInfo, k -> new ArrayList<>()).add(this);
             } else if( isLeading ) {
                 leadingComments.computeIfAbsent(node, k -> new ArrayList<>()).add(this);
             } else if( isTrailing ) {
-                trailingComments.computeIfAbsent(node, k -> new ArrayList<>()).add(this);
+                trailingComments.computeIfAbsent(node, k -> new HashMap<>()).computeIfAbsent(positionInfo, k -> new ArrayList<>()).add(this);
             }
         }
 
         public void makePending() {
+            if (consumed) {
+                throw new IllegalStateException("Cannot make comment " + token.getText() + " pending since it already is");
+            }
+            unattachedComments.remove(this);
             pendingComments.add(this);
+            consumed = true;            
         }
 
         public Token getToken() {
@@ -310,19 +357,34 @@ public class CommentWriter {
             return attachedTo;
         }
 
-        public void markAsLeading() {
+        public void markAsLeading(Token followingToken) {
             this.isLeading = true;
+            this.followingToken = followingToken;
         }
 
-        public void markAsTrailing() {
+        public void markAsTrailing(Token precedingToken, String positionInfo) {
             this.isTrailing = true;
+            this.precedingToken = precedingToken;
+            this.positionInfo = positionInfo;
         }
 
-        public void markAsWithin(String positionInfo, boolean isLeading, boolean isTrailing) {
+        public void markAsWithin(
+            String positionInfo,
+            Token start,
+            Token end,
+            boolean isLeading,
+            boolean isTrailing
+        ) {
             this.isWithin = true;
             this.positionInfo = positionInfo;
+            this.precedingToken = start;
+            this.followingToken = end;
             this.isLeading = isLeading;
             this.isTrailing = isTrailing;
+        }
+
+        public boolean isConsumed() {
+            return consumed;
         }
 
         public boolean isLeading() {

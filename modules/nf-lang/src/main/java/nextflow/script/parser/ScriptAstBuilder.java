@@ -393,13 +393,20 @@ public class ScriptAstBuilder {
     }
 
     private ProcessNode processDef(ProcessDefContext ctx) {
-        var leadingComments = commentWriter.getLeadingComments(ctx);
+        var comments = commentWriter.processLeadingComments(ctx);
         var name = ctx.name.getText();
+        // Comments between keyword and name
+        comments.addAll(commentWriter.processInbetweenComments(ctx.getStart(), ctx.name.getStop(), "KEYWORD", false, true));
+        // Comments between name and '{'
+        comments.addAll(commentWriter.processInbetweenComments(ctx.name.getStop(), ctx.LBRACE().getSymbol(), "NAME", false, true));
+        // Look for trailing comments after the '{'
+        comments.addAll(commentWriter.processTrailingComments(ctx.LBRACE().getSymbol(), "LBRACE", false));
+
         if( ctx.body == null ) {
             var empty = EmptyStatement.INSTANCE;
             var result = ast( new ProcessNode(name, empty, empty, empty, EmptyExpression.INSTANCE, null, empty, empty), ctx );
             collectSyntaxError(new SyntaxException("Missing process script body", result));
-            commentWriter.attachComments(result, leadingComments);
+            commentWriter.attachComments(result, comments);
             return result;
         }
 
@@ -407,7 +414,7 @@ public class ScriptAstBuilder {
         var inputs = processInputs(ctx.body.processInputs());
         var outputs = processOutputs(ctx.body.processOutputs());
         var when = processWhen(ctx.body.processWhen());
-        var type = processType(ctx.body.processExec());
+        var type = processExec(ctx.body.processExec());
         var exec = ctx.body.blockStatements() != null
             ? blockStatements(ctx.body.blockStatements())
             : blockStatements(ctx.body.processExec().blockStatements());
@@ -418,8 +425,11 @@ public class ScriptAstBuilder {
                 collectSyntaxError(new SyntaxException("The `script:` or `exec:` label is required when other sections are present", exec));
         }
 
+        // Look for trailing comments after the '}'
+        comments.addAll(commentWriter.processTrailingComments(ctx.RBRACE().getSymbol(), "RBRACE", true));
+
         var result = ast( new ProcessNode(name, directives, inputs, outputs, when, type, exec, stub), ctx );
-        commentWriter.attachComments(result, leadingComments);
+        commentWriter.attachComments(result, comments);
         groovydocManager.handle(result, ctx);
         return result;
     }
@@ -437,10 +447,16 @@ public class ScriptAstBuilder {
     private Statement processInputs(ProcessInputsContext ctx) {
         if( ctx == null )
             return EmptyStatement.INSTANCE;
-        var comments = commentWriter.getLeadingComments(ctx);
-        comments.addAll(commentWriter.getWithinComments(
-            ctx.INPUT(), ctx.COLON(), "input", false, true
+        var comments = commentWriter.processLeadingComments(ctx);
+        comments.addAll(commentWriter.processInbetweenComments(
+            ctx.INPUT(), ctx.COLON(), "INPUT", false, true
         ));
+        // Capture any trailing comment that occurs after the colon
+        comments.addAll(
+            commentWriter.processTrailingComments(
+                ctx.COLON(), "COLON", false
+            )
+        );    
         var statements = ctx.statement().stream()
             .map(this::statement)
             .map(stmt -> checkDirective(stmt, "Invalid process input"))
@@ -453,10 +469,19 @@ public class ScriptAstBuilder {
     private Statement processOutputs(ProcessOutputsContext ctx) {
         if( ctx == null )
             return EmptyStatement.INSTANCE;
-        var leadingComments = commentWriter.getLeadingComments(ctx);
-        var comments = commentWriter.getWithinComments(
-            ctx.OUTPUT(), ctx.COLON(), "output", false, true
-        );
+
+        var comments = commentWriter.processLeadingComments(ctx);
+        comments.addAll(commentWriter.processInbetweenComments(
+            ctx.OUTPUT(), ctx.COLON(), "OUTPUT", false, true
+        ));
+
+        // Capture any trailing comment that occurs after the colon
+        comments.addAll(
+            commentWriter.processTrailingComments(
+                ctx.COLON(), false
+            )
+        );    
+
         var statements = ctx.statement().stream()
             .map(this::statement)
             .map(stmt -> checkDirective(stmt, "Invalid process output"))
@@ -518,36 +543,62 @@ public class ScriptAstBuilder {
     private Expression processWhen(ProcessWhenContext ctx) {
         if( ctx == null )
             return EmptyExpression.INSTANCE;
-        var comments = commentWriter.getLeadingComments(ctx);
-        comments.addAll(commentWriter.getWithinComments(
+        var comments = commentWriter.processLeadingComments(ctx);
+        comments.addAll(commentWriter.processInbetweenComments(
             ctx.WHEN(), ctx.COLON(), "when", false, true
         ));
+        // Capture any trailing comment that occurs after the colon
+        comments.addAll(
+            commentWriter.processTrailingComments(
+                ctx.COLON(), false
+            )
+        );    
+
         var result = ast( expression(ctx.expression()), ctx );
         commentWriter.attachComments(result, comments);
         return result;
     }
 
-    private String processType(ProcessExecContext ctx) {
+    private String processExec(ProcessExecContext ctx) {
+        
         if( ctx == null )
+            // If there is no body default to body
             return "script";
+        else {
+            var execTypeToken = ctx.execType;
 
-        if( ctx.EXEC() != null ) {
-            return "exec";
+            // Collect comments
+            var comments = commentWriter.processLeadingComments(ctx);
+            comments.addAll(commentWriter.processInbetweenComments(
+                execTypeToken, ctx.COLON().getSymbol(), "EXEC", false, true
+            ));
+            // Capture any trailing comment that occurs after the colon
+            comments.addAll(
+                commentWriter.processTrailingComments(
+                    ctx.COLON(), false
+                )
+            );  
+            if (execTypeToken.getType() == ScriptLexer.SHELL)
+                collectWarning("The `shell` block is deprecated, use `script` instead", ctx.SHELL().getText(), ast( new EmptyExpression(), ctx.SHELL() ));
+            
+            return execTypeToken.getText();
         }
-        if( ctx.SHELL() != null ) {
-            collectWarning("The `shell` block is deprecated, use `script` instead", ctx.SHELL().getText(), ast( new EmptyExpression(), ctx.SHELL() ));
-            return "shell";
-        }
-        return "script";
     }
 
     private Statement processStub(ProcessStubContext ctx) {
         if( ctx == null )
             return EmptyStatement.INSTANCE;
-        var comments = commentWriter.getLeadingComments(ctx);
-        comments.addAll(commentWriter.getWithinComments(
+        var comments = commentWriter.processLeadingComments(ctx);
+        comments.addAll(commentWriter.processInbetweenComments(
             ctx.STUB(), ctx.COLON(), "stub", false, true
         ));
+        // Capture any trailing comment that occurs after the colon
+        comments.addAll(
+            commentWriter.processTrailingComments(
+                ctx.COLON(), false
+            )
+        );    
+
         var result = ast( blockStatements(ctx.blockStatements()), ctx );
         commentWriter.attachComments(result, comments);
         return result;
@@ -556,13 +607,13 @@ public class ScriptAstBuilder {
     private WorkflowNode workflowDef(WorkflowDefContext ctx) {
         var name = ctx.name != null ? ctx.name.getText() : null;
         WorkflowNode result;
-        var comments = commentWriter.getLeadingComments(ctx);
+        var comments = commentWriter.processLeadingComments(ctx);
         if( name != null ) {
             // Look for comments between the name and the body
-            comments.addAll(commentWriter.getCommentsInbetween(ctx.getStart(), ctx.name.getStop(), "keyword", false, true));
-            comments.addAll(commentWriter.getCommentsInbetween(ctx.name.getStop(), ctx.LBRACE().getSymbol(), "name", false, true));
+            comments.addAll(commentWriter.processInbetweenComments(ctx.getStart(), ctx.name.getStop(), "KEYWORD", false, true));
+            comments.addAll(commentWriter.processInbetweenComments(ctx.name.getStop(), ctx.LBRACE().getSymbol(), "NAME", false, true));
         } else {
-            comments.addAll(commentWriter.getCommentsInbetween(ctx.getStart(), ctx.LBRACE().getSymbol(), "keyword", false, true));
+            comments.addAll(commentWriter.processInbetweenComments(ctx.getStart(), ctx.LBRACE().getSymbol(), "KEYWORD", false, true));
         }
 
         if( ctx.body == null ) {
@@ -624,7 +675,7 @@ public class ScriptAstBuilder {
         if( ctx == null )
             return EmptyStatement.INSTANCE;
 
-        var comments = commentWriter.getLeadingComments(ctx);
+        var comments = commentWriter.processLeadingComments(ctx);
         var statements = ctx.statement().stream()
             .map(this::workflowEmit)
             .filter(stmt -> stmt != null)
@@ -730,7 +781,7 @@ public class ScriptAstBuilder {
         if( ctx instanceof EmptyStmtAltContext )
             return EmptyStatement.INSTANCE;
 
-        List<CommentWriter.Comment> leadingComments = commentWriter.getLeadingComments(ctx);
+        List<CommentWriter.Comment> comments = commentWriter.processLeadingComments(ctx);
 
         if( ctx instanceof IfElseStmtAltContext ieac )
             result = ast( ifElseStatement(ieac.ifElseStatement()), ieac );
@@ -762,7 +813,8 @@ public class ScriptAstBuilder {
         else
             throw createParsingFailedException("Invalid statement: " + ctx.getText(), ctx);
         
-        commentWriter.attachComments(result, leadingComments);
+        comments.addAll(commentWriter.processTrailingComments(ctx.getStop(), true));
+        commentWriter.attachComments(result, comments);
 
         return result;
     }
@@ -876,7 +928,7 @@ public class ScriptAstBuilder {
     }
 
     private Expression variableName(IdentifierContext ctx) {
-        var comments = commentWriter.getLeadingComments(ctx);
+        var comments = commentWriter.processLeadingComments(ctx);
         var name = identifier(ctx);
         var result = ast( varX(name), ctx );
         checkInvalidVarName(name, result);

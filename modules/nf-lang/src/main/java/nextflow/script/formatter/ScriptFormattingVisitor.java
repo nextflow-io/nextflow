@@ -142,7 +142,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             else if( decl instanceof WorkflowNode wn )
                 visitWorkflow(wn);
         }
-        fmt.append(commentWriter.toNFComments());
+        System.out.print(commentWriter.toNFComments());
     }
 
     public String toString() {
@@ -234,15 +234,11 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.appendLeadingComments(node);
         fmt.append("workflow");
         fmt.append(' ');
-        if( withinComments.containsKey("keyword") ) {
-            fmt.writeComments(withinComments.get("keyword"), false);
-        }
+        fmt.writeComments(withinComments, "KEYWORD", false);
         if( !node.isEntry() ) {
             fmt.append(node.getName());
             fmt.append(' ');
-            if( withinComments.containsKey("name") ) {
-                fmt.writeComments(withinComments.get("name"), false);
-            }
+            fmt.writeComments(withinComments, "NAME", false);
         }
         fmt.append("{\n");
         fmt.incIndent();
@@ -359,10 +355,17 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitProcess(ProcessNode node) {
+        var withinComments = commentWriter.getWithinComments(node);
+        var trailingComments = commentWriter.getTrailingComments(node);
+        System.err.println(trailingComments);
         fmt.appendLeadingComments(node);
         fmt.append("process ");
+        fmt.writeComments(withinComments, "KEYWORD", false);
         fmt.append(node.getName());
-        fmt.append(" {\n");
+        fmt.writeComments(withinComments, "NAME", false);
+        fmt.append(" {");
+        fmt.writeComments(trailingComments, "LBRACE", false);
+        fmt.append("\n");
         fmt.incIndent();
         if( node.directives instanceof BlockStatement ) {
             visitDirectives(node.directives);
@@ -370,7 +373,14 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         }
         if( node.inputs instanceof BlockStatement ) {
             fmt.appendIndent();
-            fmt.append("input:\n");
+            fmt.appendLeadingComments(node.inputs);
+            var inputWithinComments = commentWriter.getWithinComments(node.inputs);
+            var inputTrailingComments = commentWriter.getTrailingComments(node.inputs);
+            fmt.append("input");
+            fmt.writeComments(inputWithinComments, "INPUT", false);
+            fmt.append(":");
+            fmt.writeComments(inputTrailingComments, "COLON", false);
+            fmt.append("\n");
             visitDirectives(node.inputs);
             fmt.appendNewLine();
         }
@@ -380,19 +390,40 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         }
         if( !(node.when instanceof EmptyExpression) ) {
             fmt.appendIndent();
-            fmt.append("when:\n");
+            var whenWithinComments = commentWriter.getWithinComments(node.when);
+            var whenTrailingComments = commentWriter.getTrailingComments(node.when);
+            fmt.appendLeadingComments(node.when);
+            fmt.append("when");
+            fmt.writeComments(whenWithinComments, "WHEN", false);
+            fmt.append(":");
+            fmt.writeComments(whenTrailingComments, "COLON", false);
+            fmt.append("\n");
+            fmt.incIndent();
             fmt.appendIndent();
             fmt.visit(node.when);
             fmt.append("\n\n");
         }
+        fmt.appendLeadingComments(node.exec);
         fmt.appendIndent();
+        var execWithinComments = commentWriter.getWithinComments(node.exec);
+        var execTrailingComments = commentWriter.getTrailingComments(node.exec);
         fmt.append(node.type);
-        fmt.append(":\n");
+        fmt.writeComments(execWithinComments, "EXEC", false);
+        fmt.append(":");
+        fmt.writeComments(execTrailingComments, "COLON", false);
+        fmt.append("\n");
         fmt.visit(node.exec);
         if( !(node.stub instanceof EmptyStatement) ) {
             fmt.appendNewLine();
             fmt.appendIndent();
-            fmt.append("stub:\n");
+            fmt.appendLeadingComments(node.stub);
+            var commentWriter = getCommentWriter();
+            var stubWithinComments = commentWriter.getWithinComments(node.stub);
+            var stubTrailingComments = commentWriter.getTrailingComments(node.stub);
+            fmt.append("stub");
+            fmt.writeComments(stubWithinComments, "STUB", false);
+            fmt.append(":");
+            fmt.writeComments(stubTrailingComments, "COLON", false);
             fmt.visit(node.stub);
         }
         if( options.maheshForm() && node.outputs instanceof BlockStatement ) {
@@ -400,7 +431,9 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             visitProcessOutputs(node.outputs);
         }
         fmt.decIndent();
-        fmt.append("}\n");
+        fmt.append("}");
+        fmt.writeComments(trailingComments, "RBRACE", false);
+        fmt.append("\n");
     }
 
     private void visitProcessOutputs(Statement outputs) {

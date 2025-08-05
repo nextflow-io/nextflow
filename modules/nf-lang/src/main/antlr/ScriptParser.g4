@@ -211,7 +211,7 @@ processWhen
     ;
 
 processExec
-    :   (SCRIPT | SHELL | EXEC) COLON nls blockStatements
+    :   execType=(SCRIPT | SHELL | EXEC) COLON nls blockStatements
     ;
 
 processStub

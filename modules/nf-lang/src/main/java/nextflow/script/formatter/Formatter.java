@@ -16,6 +16,7 @@
 package nextflow.script.formatter;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import nextflow.script.ast.ASTNodeMarker;
@@ -119,6 +120,12 @@ public class Formatter extends CodeVisitorSupport {
         }
     }
 
+    public void writeComments(Map<String, List<CommentWriter.Comment>> comments, String key, boolean shouldBreakLine) {
+        if (comments.containsKey(key)) {
+            writeComments(comments.get(key), shouldBreakLine);
+        }
+    }
+
     public void writeComments(List<CommentWriter.Comment> comments, boolean shouldBreakLine) {
         for( var comment : comments ) {
             writeComment(comment, shouldBreakLine);
@@ -167,7 +174,7 @@ public class Formatter extends CodeVisitorSupport {
         appendLeadingComments(node);
         if( preIndent )
             appendIndent();
-        append("i f (");
+        append("if (");
         visit(node.getBooleanExpression());
         append(") {\n");
         incIndent();
