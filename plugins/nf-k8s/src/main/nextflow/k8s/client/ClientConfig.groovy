@@ -100,6 +100,42 @@ class ClientConfig {
         new ConfigDiscovery().discover(context, namespace, serviceAccount)
     }
 
+    static ClientConfig fromNextflowConfig(Map opts, String namespace, String serviceAccount) {
+        final result = new ClientConfig()
+
+        if( opts.server )
+            result.server = opts.server
+
+        if( opts.token )
+            result.token = opts.token
+        else if( opts.tokenFile )
+            result.token = Paths.get(opts.tokenFile.toString()).getText('UTF-8')
+
+        result.namespace = namespace ?: opts.namespace ?: 'default'
+
+        result.serviceAccount = serviceAccount ?: 'default'
+
+        if( opts.verifySsl )
+            result.verifySsl = opts.verifySsl as boolean
+
+        if( opts.sslCert )
+            result.sslCert = opts.sslCert.toString().decodeBase64()
+        else if( opts.sslCertFile )
+            result.sslCert = Paths.get(opts.sslCertFile.toString()).bytes
+
+        if( opts.clientCert )
+            result.clientCert = opts.clientCert.toString().decodeBase64()
+        else if( opts.clientCertFile )
+            result.clientCert = Paths.get(opts.clientCertFile.toString()).bytes
+
+        if( opts.clientKey )
+            result.clientKey = opts.clientKey.toString().decodeBase64()
+        else if( opts.clientKeyFile )
+            result.clientKey = Paths.get(opts.clientKeyFile.toString()).bytes
+
+        return result
+    }
+
     static ClientConfig fromUserAndCluster(Map user, Map cluster, Path location) {
         final base = location.isDirectory() ? location : location.parent
         final result = new ClientConfig()

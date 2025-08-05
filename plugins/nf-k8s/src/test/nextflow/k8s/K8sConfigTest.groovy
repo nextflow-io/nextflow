@@ -63,6 +63,21 @@ class K8sConfigTest extends Specification {
         cfg = new K8sConfig()
         then: 'it should return false specified as default'
         !cfg.getCleanup(false)
+
+        when:
+        cfg = new K8sConfig(cleanup:false)
+        then: 'it should return false'
+        !cfg.getCleanup()
+
+        when:
+        cfg = new K8sConfig(cleanup:true)
+        then: 'it should return true'
+        cfg.getCleanup()
+
+        when:
+        cfg = new K8sConfig(cleanup:true)
+        then: 'the default value should be ignored'
+        cfg.getCleanup(false)
     }
 
     def 'should create config with storage claims' () {
@@ -112,16 +127,51 @@ class K8sConfigTest extends Specification {
         cfg.fuseDevicePlugin() == ['foo/fuse':10]
     }
 
-    @Unroll
     def 'should create client config' () {
 
         given:
+        def CONFIG = [namespace: 'this', serviceAccount: 'that', client: [server: 'http://foo']]
+
+        when:
+        def config = new K8sConfig(CONFIG)
+        def client = config.getClient()
+        then:
+        client.server == 'http://foo'
+        client.namespace == 'this'
+        client.serviceAccount == 'that'
+        client.httpConnectTimeout == null // testing default null
+        client.httpReadTimeout == null // testing default null
+        client.retryConfig.maxAttempts == 4
+
+    }
+
+    def 'should create client config with http request timeouts' () {
+
+        given:
         def CONFIG = [
-                context: CONTEXT,
-                namespace: NAMESPACE,
-                serviceAccount: SERVICE_ACCOUNT,
+                namespace: 'this',
+                serviceAccount: 'that',
+                client: [server: 'http://foo'],
                 httpReadTimeout: '20s',
                 httpConnectTimeout: '25s' ]
+
+        when:
+        def config = new K8sConfig(CONFIG)
+        def client = config.getClient()
+        then:
+        client.server == 'http://foo'
+        client.namespace == 'this'
+        client.serviceAccount == 'that'
+        client.httpConnectTimeout == Duration.of('25s')
+        client.httpReadTimeout == Duration.of('20s')
+
+    }
+
+    @Unroll
+    def 'should create client config with discovery' () {
+
+        given:
+        def CONFIG = [context: CONTEXT, namespace: NAMESPACE, serviceAccount: SERVICE_ACCOUNT]
         K8sConfig config = Spy(K8sConfig, constructorArgs: [ CONFIG ])
 
         when:
@@ -132,8 +182,6 @@ class K8sConfigTest extends Specification {
         client.server == SERVER
         client.namespace == NAMESPACE ?: 'default'
         client.serviceAccount == SERVICE_ACCOUNT ?: 'default'
-        client.httpConnectTimeout == Duration.of('25s')
-        client.httpReadTimeout == Duration.of('20s')
 
         where:
         CONTEXT     | SERVER    | NAMESPACE | SERVICE_ACCOUNT
@@ -195,6 +243,11 @@ class K8sConfigTest extends Specification {
         def cfg = new K8sConfig()
         then:
         cfg.getUserName() == System.properties.get('user.name')
+
+        when:
+        cfg = new K8sConfig(userName: 'foo')
+        then:
+        cfg.getUserName() == 'foo'
     }
 
     def 'should return user dir' () {
@@ -204,12 +257,12 @@ class K8sConfigTest extends Specification {
         cfg.getLaunchDir() == '/workspace/' + System.properties.get('user.name')
 
         when:
-        cfg = new K8sConfig(storageMountPath: '/this/path')
+        cfg = new K8sConfig(storageMountPath: '/this/path', userName: 'foo')
         then:
-        cfg.getLaunchDir() == '/this/path/' + System.properties.get('user.name')
+        cfg.getLaunchDir() == '/this/path/foo'
 
         when:
-        cfg = new K8sConfig(storageMountPath: '/this/path', launchDir: '/my/path')
+        cfg = new K8sConfig(storageMountPath: '/this/path', userName: 'foo', launchDir: '/my/path')
         then:
         cfg.getLaunchDir() == '/my/path'
 

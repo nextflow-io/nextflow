@@ -56,7 +56,7 @@ class DockerConfig implements ConfigScope, ContainerConfig {
     """)
     final boolean fixOwnership
 
-    @ConfigOption
+    @ConfigOption(types=[String,Boolean])
     @Description("""
     """)
     final Object kill

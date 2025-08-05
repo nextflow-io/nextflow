@@ -69,6 +69,20 @@ class K8sConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        When `true`, successful pods are automatically deleted (default: `true`).
+    """)
+    final private Boolean cleanup
+
+    @ConfigOption
+    @Description("""
+        Map of options for the K8s client.
+
+        If this option is specified, it will be used instead of `.kube/config`.
+    """)
+    final Map client
+
+    @ConfigOption
+    @Description("""
         The Kubernetes [configuration context](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/) to use.
     """)
     final String context
@@ -183,6 +197,11 @@ class K8sConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+    """)
+    final String userName
+
+    @ConfigOption
+    @Description("""
         The path of the shared work directory (default: `<user-dir>/work`). Must be a path in a shared K8s persistent volume.
     """)
     final String workDir
@@ -194,6 +213,8 @@ class K8sConfig implements ConfigScope {
 
     K8sConfig(Map opts) {
         autoMountHostPaths = opts.autoMountHostPaths as boolean
+        cleanup = opts.cleanup as Boolean
+        client = opts.client as Map
         computeResourceType = opts.computeResourceType
         context = opts.context
         cpuLimits = opts.cpuLimits as boolean
@@ -212,6 +233,7 @@ class K8sConfig implements ConfigScope {
         storageClaimName = opts.storageClaimName
         storageMountPath = opts.storageMountPath ?: '/workspace'
         storageSubPath = opts.storageSubPath
+        userName = opts.userName
 
         launchDir = opts.launchDir ?: "${storageMountPath}/${getUserName()}"
         projectDir = opts.projectDir ?: "${storageMountPath}/projects"
@@ -256,11 +278,11 @@ class K8sConfig implements ConfigScope {
     }
 
     boolean getCleanup(boolean defValue=true) {
-        defValue
+        cleanup == null ? defValue : cleanup
     }
 
     String getUserName() {
-        System.properties.get('user.name')
+        userName ?: System.properties.get('user.name')
     }
 
     Map<String,?> fuseDevicePlugin() {
@@ -332,7 +354,9 @@ class K8sConfig implements ConfigScope {
     @Memoized
     ClientConfig getClient() {
 
-        final result = clientDiscovery(context, namespace, serviceAccount)
+        final result = client != null
+                ? clientFromNextflow(client, namespace, serviceAccount)
+                : clientDiscovery(context, namespace, serviceAccount)
 
         if( httpConnectTimeout )
             result.httpConnectTimeout = httpConnectTimeout
@@ -344,6 +368,23 @@ class K8sConfig implements ConfigScope {
             result.retryConfig = retryPolicy
 
         return result
+    }
+
+    /**
+     * Get the K8s client config from the declaration made in the Nextflow config file
+     *
+     * @param map
+     *      A map representing the clint configuration options define in the nextflow
+     *      config file
+     * @param namespace
+     *      The K8s namespace to be used. If omitted {@code default} is used.
+     * @param serviceAccount
+     *      The K8s service account to be used. If omitted {@code default} is used.
+     * @return
+     *      The Kubernetes {@link ClientConfig} object
+     */
+    @PackageScope ClientConfig clientFromNextflow(Map map, @Nullable String namespace, @Nullable String serviceAccount ) {
+        ClientConfig.fromNextflowConfig(map,namespace,serviceAccount)
     }
 
     /**

@@ -984,6 +984,24 @@ The following settings are available:
 `k8s.autoMountHostPaths`
 : Automatically mount host paths into the task pods (default: `false`). Only intended for development purposes when using a single node.
 
+`k8s.cleanup`
+: When `true`, successful pods are automatically deleted (default: `true`).
+
+`k8s.client`
+: Map of options for the Kubernetes HTTP client.
+: If this option is specified, it will be used instead of `.kube/config`.
+: The following options are available:
+  - `server`
+  - `token`
+  - `tokenFile`
+  - `verifySsl`
+  - `sslCert`
+  - `sslCertFile`
+  - `clientCert`
+  - `clientCertFile`
+  - `clientKey`
+  - `clientKeyFile`
+
 `k8s.computeResourceType`
 : :::{versionadded} 22.05.0-edge
   :::

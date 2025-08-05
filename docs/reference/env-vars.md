@@ -49,6 +49,11 @@ The following environment variables control the configuration of the Nextflow ru
   :::
 : Enable the use of Conda recipes defined by using the {ref}`process-conda` directive. (default: `false`).
 
+`NXF_CONTAINER_ENTRYPOINT_OVERRIDE`
+: :::{deprecated} 22.10.0
+  :::
+: When `true`, override the container entrypoint with `/bin/bash` (default: `false`).
+
 `NXF_DEFAULT_DSL`
 : :::{versionadded} 22.03.0-edge
   :::
