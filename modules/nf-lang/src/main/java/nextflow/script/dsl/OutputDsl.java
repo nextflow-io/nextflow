@@ -106,11 +106,6 @@ public interface OutputDsl extends DslScope {
         void header(Object value);
 
         @Description("""
-            Closure which defines how to transform each published value into a CSV record. The closure should return a list or map. By default, no transformation is applied.
-        """)
-        void mapper(Closure value);
-
-        @Description("""
             The name of the index file relative to the target path (required).
         """)
         void path(String value);
