@@ -173,7 +173,7 @@ workflow {
 
 - The publish section consists of one or more *publish statements*. A publish statement is an [assignment](#assignment), where the assignment target is the name of a workflow output.
 
-- The onComplete and onError sections consist of one or more [statements](#statements).
+- The `onComplete` and `onError` sections consist of one or more [statements](#statements).
 
 In order for a script to be executable, it must either define an entry workflow or be a code snippet as described [above](#script-declarations).
 

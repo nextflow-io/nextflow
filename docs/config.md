@@ -329,7 +329,7 @@ This limitation can be avoided by using the {ref}`strict config syntax <updating
 Use a {ref}`trace observer <plugins-trace-observers>` in a plugin to add custom workflow handlers to a pipeline via configuration.
 :::
 
-Workflow event handlers can be defined in the config file:
+You can define workflow event handlers in the config file:
 
 ```groovy
 workflow.onComplete = {
@@ -343,4 +343,4 @@ workflow.onError = {
 }
 ```
 
-While these handlers can also be defined in the pipeline code, this approach is useful for handling workflow events without modifying the pipeline code. See {ref}`workflow-handlers` for more information.
+This approach is useful for handling workflow events without modifying the pipeline code. See {ref}`workflow-handlers` for more information.
