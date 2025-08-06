@@ -73,7 +73,8 @@ public class ScriptCompiler {
         "java.nio.file.Path",
         "nextflow.Channel",
         "nextflow.util.Duration",
-        "nextflow.util.MemoryUnit"
+        "nextflow.util.MemoryUnit",
+        "nextflow.util.VersionNumber"
     );
     private static final String MAIN_CLASS_NAME = "Main";
     private static final String BASE_CLASS_NAME = "nextflow.script.BaseScript";
@@ -278,7 +279,7 @@ public class ScriptCompiler {
             new ScriptResolveVisitor(source, this, DEFAULT_IMPORTS, Collections.emptyList()).visit();
             if( source.getErrorCollector().hasErrors() )
                 return;
-            new TypeCheckingVisitor(source, false).visit();
+            new TypeCheckingVisitor(source).visit();
             if( source.getErrorCollector().hasErrors() )
                 return;
 

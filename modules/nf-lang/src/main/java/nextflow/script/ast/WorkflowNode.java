@@ -18,8 +18,7 @@ package nextflow.script.ast;
 import java.lang.reflect.Modifier;
 import java.util.Optional;
 
-import nextflow.script.types.Channel;
-import nextflow.script.types.NamedTuple;
+import nextflow.script.types.Record;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.FieldNode;
@@ -76,7 +75,7 @@ public class WorkflowNode extends MethodNode {
     }
 
     private static ClassNode dummyReturnType(Statement emits) {
-        var cn = new ClassNode(NamedTuple.class);
+        var cn = new ClassNode(Record.class);
         asBlockStatements(emits).stream()
             .map(stmt -> ((ExpressionStatement) stmt).getExpression())
             .map(emit -> emitName(emit))
