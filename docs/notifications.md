@@ -23,6 +23,22 @@ workflow.onComplete {
 }
 ```
 
+:::{versionadded} 25.10.0
+:::
+
+Entry workflows can define an `onComplete` section instead of using `workflow.onComplete`:
+
+```nextflow
+workflow {
+    main:
+    // ...
+
+    onComplete:
+    println "Pipeline completed at: $workflow.complete"
+    println "Execution status: ${ workflow.success ? 'OK' : 'failed' }"
+}
+```
+
 (metadata-error-handler)=
 
 ### Error handler
@@ -38,6 +54,21 @@ workflow.onError {
 :::{note}
 Both the `onError` and `onComplete` handlers are invoked when an error condition is encountered. The first is called as soon as the error is raised, while the second is called just before the pipeline execution is about to terminate. When using the `finish` {ref}`process-error-strategy`, there may be a significant gap between the two, depending on the time required to complete any pending job.
 :::
+
+:::{versionadded} 25.10.0
+:::
+
+Entry workflows can define an `onError` section instead of using `workflow.onError`:
+
+```nextflow
+workflow {
+    main:
+    // ...
+
+    onError:
+    println "Error: Pipeline execution stopped with the following message: ${workflow.errorMessage}"
+}
+```
 
 ## Mail
 
