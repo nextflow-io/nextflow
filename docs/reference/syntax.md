@@ -169,7 +169,7 @@ workflow {
 
 - Only one entry workflow may be defined in a script.
 
-- The `main:` section label can be omitted if the other sections not specified.
+- The `main:` section label can be omitted if the other sections are not specified.
 
 - The publish section consists of one or more *publish statements*. A publish statement is an [assignment](#assignment), where the assignment target is the name of a workflow output.
 
