@@ -25,6 +25,7 @@ import nextflow.script.namespaces.ChannelNamespace;
 import nextflow.script.namespaces.LogNamespace;
 import nextflow.script.namespaces.NextflowNamespace;
 import nextflow.script.namespaces.WorkflowNamespace;
+import nextflow.script.types.Tuple;
 
 /**
  * The built-in namespaces, constants, and functions in a script.
@@ -180,6 +181,6 @@ public interface ScriptDsl extends DslScope {
     @Description("""
         Create a tuple from the given arguments.
     """)
-    List<?> tuple(Object... args);
+    Tuple tuple(Object... args);
 
 }

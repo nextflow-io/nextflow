@@ -655,7 +655,7 @@ hello
 
 ### Input tuples (`tuple`)
 
-The `tuple` qualifier allows you to group multiple values into a single input definition. It can be useful when a channel emits tuples of values that need to be handled separately. Each element in the tuple is associated with a corresponding element in the `tuple` definition. For example:
+The `tuple` qualifier groups multiple values into a single input definition. It can be useful when a channel emits {ref}`tuples <script-tuples>` of values that need to be handled separately. Each element in the tuple is associated with a corresponding element in the `tuple` definition. For example:
 
 ```nextflow
 process cat {
@@ -1056,7 +1056,7 @@ If the command fails, the task will also fail. In Bash, you can append `|| true`
 
 ### Output tuples (`tuple`)
 
-The `tuple` qualifier allows you to output multiple values in a single channel. It is useful when you need to associate outputs with metadata, for example:
+The `tuple` qualifier outputs multiple values in a single channel as a {ref}`tuple <script-tuples>`. It is useful when you need to associate outputs with metadata, for example:
 
 ```nextflow
 process blast {
