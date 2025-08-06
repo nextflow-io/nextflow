@@ -45,6 +45,9 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
         if( config.temp )
             this.temp = config.temp
 
+        if( !config.writableInputMounts )
+            this.readOnlyInputs = true
+
         this.writeFake = config.writeFake
     }
 
@@ -57,9 +60,6 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
 
         if( params.containsKey('entry') )
             this.entryPoint = params.entry
-
-        if( params.containsKey('readOnlyInputs') )
-            this.readOnlyInputs = params.readOnlyInputs
 
         return this
     }

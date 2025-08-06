@@ -526,6 +526,9 @@ The following settings are available:
 `charliecloud.temp`
 : Mounts a path of your choice as the `/tmp` directory in the container. Use the special value `'auto'` to create a temporary directory each time a container is created.
 
+`charliecloud.writableInputMounts`
+: When `false`, mount input directories as read-only (default: `true`).
+
 `charliecloud.writeFake`
 : Run containers from storage in writeable mode using overlayfs (default: `true`).
 : This option requires unprivileged `overlayfs` (Linux kernel >= 5.11). For full support, tempfs with xattrs in the user namespace (Linux kernel >= 6.6) is required. See [charliecloud documentation](https://hpc.github.io/charliecloud/ch-run.html#ch-run-overlay) for details.
@@ -645,6 +648,9 @@ The following settings are available:
 
 `docker.tty`
 : Allocates a pseudo-tty (default: `false`).
+
+`docker.writableInputMounts`
+: When `false`, mount input directories as read-only (default: `true`).
 
 (config-env)=
 

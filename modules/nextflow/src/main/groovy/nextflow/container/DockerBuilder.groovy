@@ -74,6 +74,9 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
             this.temp = config.temp
 
         this.tty = config.tty
+
+        if( !config.writableInputMounts )
+            this.readOnlyInputs = true
     }
 
     DockerBuilder(String name) {
@@ -89,9 +92,6 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
         if( params.containsKey('kill') )
             this.kill = params.kill
-
-        if( params.containsKey('readOnlyInputs') )
-            this.readOnlyInputs = params.readOnlyInputs
 
         if( params.containsKey('privileged') )
             this.privileged = params.privileged

@@ -73,6 +73,12 @@ class CharliecloudConfig implements ConfigScope, ContainerConfig {
 
     @ConfigOption
     @Description("""
+        When `false`, mount input directories as read-only (default: `true`).
+    """)
+    final boolean writableInputMounts
+
+    @ConfigOption
+    @Description("""
         Run containers from storage in writeable mode using overlayfs (default: `true`).
     """)
     final boolean writeFake
@@ -88,6 +94,7 @@ class CharliecloudConfig implements ConfigScope, ContainerConfig {
         registry = opts.registry
         runOptions = opts.runOptions
         temp = opts.temp
+        writableInputMounts = opts.writableInputMounts != null ? opts.writableInputMounts as boolean : true
         writeFake = opts.writeFake != null ? opts.writeFake as boolean : true
     }
 

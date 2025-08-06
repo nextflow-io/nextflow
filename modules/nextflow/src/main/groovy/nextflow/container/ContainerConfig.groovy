@@ -54,10 +54,6 @@ interface ContainerConfig {
         return null
     }
 
-    default boolean writableInputMounts() {
-        return true
-    }
-
     String getEngine()
 
     List<String> getEnvWhitelist()

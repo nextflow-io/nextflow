@@ -740,9 +740,6 @@ class BashWrapperBuilder {
         if( containerConfig.getKill() != null )
             builder.params(kill: containerConfig.getKill())
 
-        if( containerConfig.writableInputMounts()==false )
-            builder.params(readOnlyInputs: true)
-
         if( containerConfig.entrypointOverride() )
             builder.params(entry: '/bin/bash')
 

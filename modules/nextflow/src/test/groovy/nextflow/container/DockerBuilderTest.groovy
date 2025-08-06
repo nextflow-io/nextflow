@@ -110,12 +110,10 @@ class DockerBuilderTest extends Specification {
                 .build()
                 .runCommand == 'docker run -i -e "FOO=1" -e "BAR=hello world" -v /home/db:/home/db -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
 
-        new DockerBuilder('fedora')
-                .params(readOnlyInputs: true)
+        new DockerBuilder('fedora', new DockerConfig(writableInputMounts: false))
                 .addMount(db_file)
                 .build()
                 .runCommand == 'docker run -i -v /home/db:/home/db:ro -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
-
 
         new DockerBuilder('fedora', new DockerConfig(mountFlags: 'Z'))
                 .addMount(db_file)

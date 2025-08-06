@@ -115,6 +115,12 @@ class DockerConfig implements ConfigScope, ContainerConfig {
     """)
     final boolean tty
 
+    @ConfigOption
+    @Description("""
+        When `false`, mount input directories as read-only (default: `true`).
+    """)
+    final boolean writableInputMounts
+
     /* required by extension point -- do not remove */
     DockerConfig() {}
 
@@ -133,6 +139,7 @@ class DockerConfig implements ConfigScope, ContainerConfig {
         sudo = opts.sudo as boolean
         temp = opts.temp
         tty = opts.tty as boolean
+        writableInputMounts = opts.writableInputMounts != null ? opts.writableInputMounts as boolean : true
 
         if( opts.userEmulation )
             log.warn1("Config setting `docker.userEmulation` is not supported anymore")
