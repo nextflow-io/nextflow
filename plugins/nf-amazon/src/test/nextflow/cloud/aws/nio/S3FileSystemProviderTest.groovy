@@ -17,6 +17,7 @@
 
 package nextflow.cloud.aws.nio
 
+import software.amazon.awssdk.services.s3.model.ChecksumAlgorithm
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 import software.amazon.awssdk.services.s3.model.ServerSideEncryption
 import spock.lang.Specification
@@ -33,7 +34,7 @@ class S3FileSystemProviderTest extends Specification {
                                 maxConcurrency: 10, maxNativeMemory: '500MB', minimumPartSize: '7MB', multipartThreshold: '32MB',
                                 maxConnections: 100, maxErrorRetry: 3, socketTimeout: 20000, requesterPays: true, s3PathStyleAccess: true,
                                 proxyHost: 'host.com', proxyPort: 80, proxyScheme: 'https', proxyUsername: 'user', proxyPassword: 'pass',
-                                signerOverride: 'S3SignerType', userAgent: 'Agent1', storageEncryption: 'AES256', storageKmsKeyId: 'arn:key:id',
+                                signerOverride: 'S3SignerType', userAgent: 'Agent1', storageEncryption: 'AES256', storageKmsKeyId: 'arn:key:id', checksumAlgorithm: 'SHA256',
                                 transferManagerThreads: 20, uploadMaxThreads: 15, uploadChunkSize: '7MB', uploadMaxAttempts: 4, uploadRetrySleep: '200ms'
                               ],
                       accessKey: '123456abc', secretKey: '78910def', profile: 'test']
@@ -47,6 +48,7 @@ class S3FileSystemProviderTest extends Specification {
         client.transferManagerThreads == 20
         client.cannedAcl == ObjectCannedACL.PRIVATE
         client.storageEncryption == ServerSideEncryption.AES256
+        client.checksumAlgorithm == ChecksumAlgorithm.SHA256
         client.isRequesterPaysEnabled == true
         client.kmsKeyId == 'arn:key:id'
         client.factory.accessKey() == '123456abc'

@@ -370,13 +370,17 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint, TaskArrayExec
         final debug = opts.debug ? ' --debug' : ''
         final sse = opts.storageEncryption ? " --sse $opts.storageEncryption" : ''
         final kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''
+        final checksum = opts.checksumAlgorithm ? " --checksum-algorithm $opts.checksumAlgorithm" : ''
         final requesterPays = opts.requesterPays ? ' --request-payer requester' : ''
-        final aws = "$cli s3 cp --only-show-errors${sse}${kms}${debug}${requesterPays}"
+        final aws = "$cli s3 cp --only-show-errors${sse}${kms}${checksum}${debug}${requesterPays}"
         final cmd = "trap \"{ ret=\$?; $aws ${TaskRun.CMD_LOG} ${workDir}/${TaskRun.CMD_LOG}||true; exit \$ret; }\" EXIT; $aws ${workDir}/${TaskRun.CMD_RUN} - | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
         return cmd
     }
 
     static String s5Cmd(String workDir, AwsOptions opts) {
+        if( opts.checksumAlgorithm ){
+            log.warn1("Checksum Algorithm is not supported by `s5cmd` command. This option will be ignored in command line operations.")
+        }
         final cli = opts.getS5cmdPath()
         final sse = opts.storageEncryption ? " --sse $opts.storageEncryption" : ''
         final kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''

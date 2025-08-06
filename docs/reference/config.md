@@ -101,6 +101,7 @@ aws {
         connectionTimeout = 10000
         uploadStorageClass = 'INTELLIGENT_TIERING'
         storageEncryption = 'AES256'
+        checksumAlgorithm = 'SHA256'
     }
     batch {
         cliPath = '/home/ec2-user/miniconda/bin/aws'
@@ -193,6 +194,9 @@ The following settings are available:
 
 `aws.client.anonymous`
 : Allow the access of public S3 buckets without the need to provide AWS credentials (default: `false`). Any service that does not accept unsigned requests will return a service access error.
+
+`aws.client.checksumAlgorithm`
+: The S3 checksum algorithm to be used when saving objects on S3. Can be one of `CRC32`, `CRC32C`, `SHA1`, `SHA256` or `CRC64NVME`.
 
 `aws.client.s3Acl`
 : Allow the setting of predefined bucket permissions, also known as *canned ACL*. Permitted values are `Private`, `PublicRead`, `PublicReadWrite`, `AuthenticatedRead`, `LogDeliveryWrite`, `BucketOwnerRead`, `BucketOwnerFullControl`, and `AwsExecRead` (default: none). See [Amazon docs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl) for details.

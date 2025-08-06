@@ -76,6 +76,8 @@ public class S3Client {
 
 	private boolean global;
 
+    private ChecksumAlgorithm checksumAlgorithm;
+
 	public S3Client(AwsClientFactory factory, Properties props, boolean global) {
 		S3SyncClientConfiguration clientConfig = S3SyncClientConfiguration.create(props);
 		this.factory = factory;
@@ -155,6 +157,9 @@ public class S3Client {
 		if( storageEncryption!=null ) {
 			reqBuilder.serverSideEncryption(storageEncryption);
 		}
+        if( checksumAlgorithm != null ) {
+            reqBuilder.checksumAlgorithm(checksumAlgorithm);
+        }
 		if( contentType!=null ) {
 			reqBuilder.contentType(contentType);
 		}
@@ -183,6 +188,9 @@ public class S3Client {
 		if( storageEncryption!=null ) {
 			reqBuilder.serverSideEncryption(storageEncryption);
 		}
+        if( checksumAlgorithm != null ) {
+            reqBuilder.checksumAlgorithm(checksumAlgorithm);
+        }
 		if( contentType!=null ) {
 			reqBuilder.contentType(contentType);
 		}
@@ -217,6 +225,9 @@ public class S3Client {
 		if( kmsKeyId !=null ) {
 			reqBuilder.ssekmsKeyId(kmsKeyId);
 		}
+        if( checksumAlgorithm != null ) {
+            reqBuilder.checksumAlgorithm(checksumAlgorithm);
+        }
 		if( contentType!=null ) {
 			reqBuilder.metadataDirective(MetadataDirective.REPLACE);
 			reqBuilder.contentType(contentType);
@@ -281,6 +292,13 @@ public class S3Client {
 		}
 	}
 
+    public void setChecksumAlgorithm(String alg){
+        if( alg == null )
+			return;
+		this.checksumAlgorithm = ChecksumAlgorithm.fromValue(alg);
+		log.debug("Setting S3 ChecksumAlgorithm={}", alg);
+    }
+
 	public ObjectCannedACL getCannedAcl() {
 		return cannedAcl;
 	}
@@ -340,6 +358,9 @@ public class S3Client {
 		if( kmsKeyId != null ) {
 			reqBuilder.ssekmsKeyId(kmsKeyId);
 		}
+        if( checksumAlgorithm != null ) {
+            reqBuilder.checksumAlgorithm(checksumAlgorithm);
+        }
 
 		if( tags != null && tags.size()>0 ) {
 			reqBuilder.tagging( Tagging.builder().tagSet(tags).build() );
@@ -548,6 +569,9 @@ public class S3Client {
 			porBuilder.serverSideEncryption(storageEncryption);
 		if( kmsKeyId != null )
 			porBuilder.ssekmsKeyId(kmsKeyId);
+        if( checksumAlgorithm != null ) {
+            porBuilder.checksumAlgorithm(checksumAlgorithm);
+        }
 		if( tags != null && !tags.isEmpty() )
 			porBuilder.tagging(Tagging.builder().tagSet(tags).build());
 		return porBuilder;
@@ -593,6 +617,9 @@ public class S3Client {
 		if( kmsKeyId !=null ) {
             reqBuilder.ssekmsKeyId(kmsKeyId);
 		}
+        if( checksumAlgorithm != null ) {
+            reqBuilder.checksumAlgorithm(checksumAlgorithm);
+        }
 		if( contentType!=null ) {
 			reqBuilder.metadataDirective(MetadataDirective.REPLACE);
             reqBuilder.contentType(contentType);

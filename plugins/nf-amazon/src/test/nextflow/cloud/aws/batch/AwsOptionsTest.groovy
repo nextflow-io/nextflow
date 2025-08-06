@@ -85,7 +85,8 @@ class AwsOptionsTest extends Specification {
                                         volumes: '/foo,/this:/that'],
                                     client: [
                                         uploadStorageClass: 'STANDARD',
-                                        storageEncryption: 'AES256'],
+                                        storageEncryption: 'AES256',
+                                        checksumAlgorithm: 'SHA256'],
                                     region: 'aws-west-2'
                                 ]
             ]
@@ -103,6 +104,7 @@ class AwsOptionsTest extends Specification {
         opts.delayBetweenAttempts.seconds == 9
         opts.storageClass == 'STANDARD'
         opts.storageEncryption == 'AES256'
+        opts.checksumAlgorithm == 'SHA256'
         opts.region == 'aws-west-2'
         opts.jobRole == 'aws::foo::bar'
         opts.volumes == ['/foo','/this:/that']
@@ -137,6 +139,16 @@ class AwsOptionsTest extends Specification {
 
     }
 
+    def 'should set aws checksum algorithm' () {
+        when:
+        def sess1 = Mock(Session) {
+            getConfig() >> [aws: [client: [checksumAlgorithm: 'SHA256']]]
+        }
+        and:
+        def opts = new AwsOptions(sess1)
+        then:
+        opts.checksumAlgorithm == 'SHA256'
+    }
 
 
     @Unroll
@@ -145,7 +157,8 @@ class AwsOptionsTest extends Specification {
         def cfg = [
                 aws: [client: [
                         uploadStorageClass: awsStorClass,
-                        storageEncryption  : awsStorEncrypt],
+                        storageEncryption: awsStorEncrypt,
+                        checksumAlgorithm: awsChecksum ],
                       batch: [ cliPath: awscliPath ]]
         ]
         def session = new Session(cfg)
@@ -156,11 +169,12 @@ class AwsOptionsTest extends Specification {
         opts.cliPath == awscliPath
         opts.storageClass == awsStorClass
         opts.storageEncryption == awsStorEncrypt
+        opts.checksumAlgorithm == awsChecksum
 
         where:
-        awscliPath      | awsStorClass | awsStorEncrypt
-        null            | null         | null
-        '/foo/bin/aws'  | 'STANDARD'   | 'AES256'
+        awscliPath      | awsStorClass | awsStorEncrypt | awsChecksum
+        null            | null         | null           | null
+        '/foo/bin/aws'  | 'STANDARD'   | 'AES256'       | 'SHA256'
 
     }
 
@@ -174,11 +188,12 @@ class AwsOptionsTest extends Specification {
         opts.getStorageEncryption() == null
 
         when:
-        opts = new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/foo/bin/aws'], client: [storageClass: 'STANDARD', storageEncryption: 'AES256']))
+        opts = new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/foo/bin/aws'], client: [storageClass: 'STANDARD', storageEncryption: 'AES256', checksumAlgorithm: 'SHA256']))
         then:
         opts.getCliPath() == '/foo/bin/aws'
         opts.getStorageClass() == 'STANDARD'
         opts.getStorageEncryption() == 'AES256'
+        opts.getChecksumAlgorithm() == 'SHA256'
 
         when:
         opts = new AwsOptions(awsConfig: new AwsConfig(client:[storageClass: 'foo']))
@@ -189,6 +204,11 @@ class AwsOptionsTest extends Specification {
         opts = new AwsOptions(awsConfig: new AwsConfig(client:[storageEncryption: 'abr']))
         then:
         opts.getStorageEncryption() == null
+
+        when:
+        opts = new AwsOptions(awsConfig: new AwsConfig(client:[checksumAlgorithm: 'foo']))
+        then:
+        opts.getChecksumAlgorithm() == null
 
         when:
         opts = new AwsOptions(awsConfig: new AwsConfig(client:[storageKmsKeyId: 'arn:aws:kms:eu-west-1:1234567890:key/e97ecf28-951e-4700-bf22-1bd416ec519f']))
