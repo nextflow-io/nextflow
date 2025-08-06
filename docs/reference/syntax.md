@@ -123,7 +123,7 @@ Parameters supplied via command line options, params files, and config files tak
 
 A workflow can be a *named workflow* or an *entry workflow*.
 
-A *named workflow* consists of a name and a body, and may consist of a *take*, *main*, *emit*, and *publish* section:
+A *named workflow* consists of a name and a body, and may consist of a *take*, *main*, and *emit* section:
 
 ```nextflow
 workflow greet {
@@ -146,28 +146,34 @@ workflow greet {
 
 - The emit section consists of one or more *emit statements*. An emit statement can be a [variable name](#variable), an [assignment](#assignment), or an [expression statement](#expression-statement). If an emit statement is an expression statement, it must be the only emit.
 
-- The publish section can be specified but is intended to be used in the entry workflow (see below).
 
-
-An *entry workflow* has no name and may consist of a *main* and *publish* section:
+An *entry workflow* has no name and may consist of a *main*, *publish*, *onComplete*, and *onError* section:
 
 ```nextflow
 workflow {
     main:
     greetings = channel.of('Bonjour', 'Ciao', 'Hello', 'Hola')
     messages = greetings.map { v -> "$v world!" }
-    greetings.view { it -> '$it world!' }
+    greetings.view { v -> "$v world!" }
 
     publish:
-    messages >> 'messages'
+    messages = messages
+
+    onComplete:
+    log.info 'Workflow completed successfully!'
+
+    onError:
+    log.error 'Workflow failed.'
 }
 ```
 
 - Only one entry workflow may be defined in a script.
 
-- The `main:` section label can be omitted if the publish section is not specified.
+- The `main:` section label can be omitted if the other sections are not specified.
 
-- The publish section consists of one or more *publish statements*. A publish statement is a [right-shift expression](#binary-expressions), where the left-hand side is an expression that refers to a value in the workflow body, and the right-hand side is an expression that returns a string.
+- The publish section consists of one or more *publish statements*. A publish statement is an [assignment](#assignment), where the assignment target is the name of a workflow output.
+
+- The `onComplete` and `onError` sections consist of one or more [statements](#statements).
 
 In order for a script to be executable, it must either define an entry workflow or be a code snippet as described [above](#script-declarations).
 
