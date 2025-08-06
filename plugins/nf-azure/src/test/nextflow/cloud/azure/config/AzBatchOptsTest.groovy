@@ -105,4 +105,26 @@ class AzBatchOptsTest extends Specification {
         then:
         opts3.jobMaxWallClockTime.toString() == '12h'
     }
+
+    def 'should set subscription ID from config or environment' () {
+        when:
+        def opts1 = new AzBatchOpts([:], [:])
+        then:
+        opts1.subscriptionId == null
+
+        when:
+        def opts2 = new AzBatchOpts([subscriptionId: 'config-sub-id'], [:])
+        then:
+        opts2.subscriptionId == 'config-sub-id'
+
+        when:
+        def opts3 = new AzBatchOpts([:], [AZURE_SUBSCRIPTION_ID: 'env-sub-id'])
+        then:
+        opts3.subscriptionId == 'env-sub-id'
+
+        when:
+        def opts4 = new AzBatchOpts([subscriptionId: 'config-sub-id'], [AZURE_SUBSCRIPTION_ID: 'env-sub-id'])
+        then:
+        opts4.subscriptionId == 'config-sub-id'  // config takes precedence over environment
+    }
 }

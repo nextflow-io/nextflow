@@ -48,6 +48,7 @@ class AzBatchOpts implements CloudTransferOptions {
     String accountKey
     String endpoint
     String location
+    String subscriptionId
     Boolean autoPoolMode
     Boolean allowPoolCreation
     Boolean terminateJobsOnCompletion
@@ -67,6 +68,7 @@ class AzBatchOpts implements CloudTransferOptions {
         accountKey = config.accountKey ?: sysEnv.get('AZURE_BATCH_ACCOUNT_KEY')
         endpoint = config.endpoint
         location = config.location
+        subscriptionId = config.subscriptionId ?: sysEnv.get('AZURE_SUBSCRIPTION_ID')
         autoPoolMode = config.autoPoolMode
         allowPoolCreation = config.allowPoolCreation
         terminateJobsOnCompletion = config.terminateJobsOnCompletion != Boolean.FALSE
