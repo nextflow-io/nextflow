@@ -1,5 +1,6 @@
+#!/usr/bin/env nextflow
 /*
- * Copyright 2025, Seqera Labs
+ * Copyright 2013-2024, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,23 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-plugins {
-  id 'antlr'
-}
 
-dependencies {
-  antlr 'me.sunlan:antlr4:4.13.2.6'
-  api 'org.apache.groovy:groovy:4.0.28'
-  api 'org.pf4j:pf4j:3.12.0'
+workflow {
+  channel.of(1, 2, 3)
+    .collect()
+    .subscribe { values ->
+      if( values.size() < 10 )
+        error 'Not enough values!'
+    }
 
-  testFixturesApi 'com.google.jimfs:jimfs:1.2'
-  testImplementation(testFixtures(project(":nextflow")))
-}
+  workflow.onComplete = {
+    println "workflow onComplete: ${workflow.success}"
+  }
 
-generateGrammarSource {
-  arguments += ['-no-listener', '-no-visitor']
-}
-
-tasks.named('sourcesJar') {
-    dependsOn tasks.named('generateGrammarSource')
+  workflow.onError = {
+    println "workflow onError: ${workflow.errorMessage}"
+  }
 }

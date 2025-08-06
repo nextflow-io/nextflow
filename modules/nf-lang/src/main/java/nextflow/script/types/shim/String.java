@@ -26,6 +26,11 @@ import nextflow.script.dsl.Description;
 public interface String {
 
     @Description("""
+        Returns `true` if the given substring occurs anywhere in the string.
+    """)
+    boolean contains(String str);
+
+    @Description("""
         Returns `true` if the string ends with the given suffix.
     """)
     boolean endsWith(String suffix);

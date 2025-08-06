@@ -2,26 +2,23 @@
 
 # Feature flags
 
-Feature flags are used to introduce experimental or other opt-in features. They can be specified in the pipeline script or the configuration file.
+Feature flags are used to introduce experimental or other opt-in features. They must be specified in the pipeline script.
 
 `nextflow.enable.configProcessNamesValidation`
+: :::{deprecated} 25.10.0
+  Use the {ref}`strict syntax <strict-syntax-page>` instead. It validates process selectors without producing false warnings.
+  :::
 : When `true`, prints a warning for every `withName:` process selector that doesn't match a process in the pipeline (default: `true`).
 
 `nextflow.enable.dsl`
+: :::{deprecated} 25.04.0
+  :::
 : Defines the DSL version to use (`1` or `2`).
-: :::{versionchanged} 22.03.0-edge
-  DSL2 was made the default DSL version.
-  :::
-: :::{versionchanged} 22.12.0-edge
-  DSL1 was removed.
-  :::
 
 `nextflow.enable.moduleBinaries`
 : When `true`, enables the use of modules with binary scripts. See {ref}`module-binaries` for more information.
 
 `nextflow.enable.strict`
-: :::{versionadded} 22.05.0-edge
-  :::
 : When `true`, the pipeline is executed in "strict" mode, which introduces the following rules:
 
   - When reading a params file, Nextflow will fail if a dynamic param value references an undefined variable
@@ -53,15 +50,13 @@ Feature flags are used to introduce experimental or other opt-in features. They 
 : When `true`, enables the use of the {ref}`workflow output definition <workflow-output-def>`.
 
 `nextflow.preview.recursion`
-: :::{versionadded} 21.11.0-edge
-  :::
 : *Experimental: may change in a future release.*
 : When `true`, enables {ref}`process and workflow recursion <workflow-recursion>`.
 
 `nextflow.preview.topic`
-: :::{versionadded} 23.11.0-edge
+: :::{versionadded} 24.04.0
   :::
-: :::{versionchanged} 25.04.0
+: :::{deprecated} 25.04.0
   This feature flag is no longer required to use topic channels.
   :::
 : When `true`, enables {ref}`topic channels <channel-topic>` feature.

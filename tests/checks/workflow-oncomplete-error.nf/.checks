@@ -1,0 +1,7 @@
+set -e
+
+echo ''
+$NXF_RUN > stdout || true
+
+[[ `grep -c 'workflow onComplete: false' stdout` == 1 ]] || false
+[[ `grep -c 'workflow onError: Not enough values!' stdout` == 1 ]] || false
