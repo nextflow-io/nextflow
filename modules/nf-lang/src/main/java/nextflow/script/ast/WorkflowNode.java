@@ -43,13 +43,21 @@ public class WorkflowNode extends MethodNode {
     public final Statement main;
     public final Statement emits;
     public final Statement publishers;
+    public final Statement onComplete;
+    public final Statement onError;
 
-    public WorkflowNode(String name, Statement takes, Statement main, Statement emits, Statement publishers) {
+    public WorkflowNode(String name, Statement takes, Statement main, Statement emits, Statement publishers, Statement onComplete, Statement onError) {
         super(name, 0, dummyReturnType(emits), dummyParams(takes), ClassNode.EMPTY_ARRAY, EmptyStatement.INSTANCE);
         this.takes = takes;
         this.main = main;
         this.emits = emits;
         this.publishers = publishers;
+        this.onComplete = onComplete;
+        this.onError = onError;
+    }
+
+    public WorkflowNode(String name, Statement main) {
+        this(name, EmptyStatement.INSTANCE, main, EmptyStatement.INSTANCE, EmptyStatement.INSTANCE, EmptyStatement.INSTANCE, EmptyStatement.INSTANCE);
     }
 
     public boolean isEntry() {
