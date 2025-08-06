@@ -17,6 +17,7 @@ package nextflow.script.ast;
 
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.expr.ElvisOperatorExpression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
 
 public abstract class ScriptVisitorSupport extends ClassCodeVisitorSupport implements ScriptVisitor {
@@ -111,6 +112,12 @@ public abstract class ScriptVisitorSupport extends ClassCodeVisitorSupport imple
             node.getObjectExpression().visit(this);
         node.getMethod().visit(this);
         node.getArguments().visit(this);
+    }
+
+    @Override
+    public void visitShortTernaryExpression(ElvisOperatorExpression node) {
+        node.getTrueExpression().visit(this);
+        node.getFalseExpression().visit(this);
     }
 
 }

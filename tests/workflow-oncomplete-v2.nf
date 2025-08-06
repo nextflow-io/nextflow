@@ -15,13 +15,6 @@
  * limitations under the License.
  */
 
-/*
-  * This test verify the `workflow.onComplete` defined in the config file
-  * works OK.
-  *
-  * See file `$PWD/checks/workflow-oncomplete.nf/.config` for details
-  */
-
 params.command = 'echo'
 
 process sayHello {
