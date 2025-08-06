@@ -46,6 +46,9 @@ class CsvWriter {
         else if( header instanceof List ) {
             columns = header
         }
+        else {
+            columns = null
+        }
 
         path.delete()
 
