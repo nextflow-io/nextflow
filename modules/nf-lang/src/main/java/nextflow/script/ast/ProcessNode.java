@@ -18,7 +18,6 @@ package nextflow.script.ast;
 import java.lang.reflect.Modifier;
 import java.util.Optional;
 
-import nextflow.script.types.Channel;
 import nextflow.script.types.Record;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
@@ -71,7 +70,7 @@ public class ProcessNode extends MethodNode {
             .map(call -> emitName(call))
             .filter(name -> name != null)
             .forEach((name) -> {
-                var type = ClassHelper.makeCached(Channel.class);
+                var type = ClassHelper.dynamicType();
                 var fn = new FieldNode(name, Modifier.PUBLIC, type, cn, null);
                 fn.setDeclaringClass(cn);
                 cn.addField(fn);

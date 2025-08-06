@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.ModuleNode;
 import org.codehaus.groovy.control.SourceUnit;
 
@@ -64,10 +65,7 @@ public class ScriptNode extends ModuleNode {
         }
         declarations.addAll(processes);
         declarations.addAll(functions);
-        for( var cn : getClasses() ) {
-            if( cn.isEnum() )
-                declarations.add(cn);
-        }
+        declarations.addAll(getTypes());
         return declarations;
     }
 
@@ -101,6 +99,12 @@ public class ScriptNode extends ModuleNode {
 
     public List<FunctionNode> getFunctions() {
         return functions;
+    }
+
+    public List<ClassNode> getTypes() {
+        return getClasses().stream()
+            .filter(cn -> cn.isEnum())
+            .toList();
     }
 
     public void setShebang(String shebang) {

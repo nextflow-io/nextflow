@@ -182,6 +182,7 @@ processBody
     // explicit "Mahesh" form
     |   (sep processDirectives)?
         (sep processInputs)?
+        (sep processWhen)?
         sep processExec
         (sep processStub)?
         sep processOutputs

@@ -18,7 +18,6 @@ package nextflow.script.ast;
 import java.lang.reflect.Modifier;
 import java.util.Optional;
 
-import nextflow.script.types.Channel;
 import nextflow.script.types.Record;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;

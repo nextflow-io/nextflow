@@ -77,7 +77,9 @@ public interface Channel<E> {
 
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#combine)
     """)
-    Channel combine(Map<String,?> opts, Object right);
+    Channel combine(Map<String,?> opts, Channel right);
+    Channel combine(Channel right);
+    Channel combine(Tuple right);
 
     @Operator
     @Description("""
@@ -133,7 +135,7 @@ public interface Channel<E> {
 
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#first)
     """)
-    Channel first(Object criteria);
+    Channel first(Closure criteria);
 
     @Operator
     @Description("""
@@ -175,6 +177,7 @@ public interface Channel<E> {
 
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#join)
     """)
+    Channel join(Map<String,?> opts, Channel right);
     Channel join(Channel right);
 
     @Operator
@@ -264,6 +267,7 @@ public interface Channel<E> {
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#splitcsv)
     """)
     Channel splitCsv(Map<String,?> opts);
+    Channel splitCsv();
 
     @Operator
     @Description("""
@@ -272,6 +276,7 @@ public interface Channel<E> {
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#splitfasta)
     """)
     Channel splitFasta(Map<String,?> opts);
+    Channel splitFasta();
 
     @Operator
     @Description("""
@@ -280,6 +285,16 @@ public interface Channel<E> {
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#splitfastq)
     """)
     Channel splitFastq(Map<String,?> opts);
+    Channel splitFastq();
+
+    @Operator
+    @Description("""
+        The splitJson operator splits JSON files or text from a source channel into individual records.
+
+        [Read more](https://nextflow.io/docs/latest/reference/operator.html#splitjson)
+    """)
+    Channel splitJson(Map<String,?> opts);
+    Channel splitJson();
 
     @Operator
     @Description("""
@@ -287,7 +302,8 @@ public interface Channel<E> {
 
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#splittext)
     """)
-    Channel splitText(Map<String,?> opts, Closure closure);
+    Channel splitText(Map<String,?> opts);
+    Channel splitText();
 
     @Operator
     @Description("""
@@ -352,6 +368,7 @@ public interface Channel<E> {
         [Read more](https://nextflow.io/docs/latest/reference/operator.html#unique)
     """)
     Channel unique(Closure comparator);
+    Channel unique();
 
     @Operator
     @Description("""

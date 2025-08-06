@@ -132,11 +132,13 @@ public interface ScriptDsl extends DslScope {
         *NOTE: This function will return a collection if the glob pattern yields zero or multiple files. Use `files()` to get a collection of files.*
     """)
     Path file(Map<String,?> opts, String filePattern);
+    Path file(String filePattern);
 
     @Description("""
         Get a collection of files from a file name or glob pattern.
     """)
     Collection<Path> files(Map<String,?> opts, String filePattern);
+    Collection<Path> files(String filePattern);
 
     @Description("""
         Create a grouping key to use with the [groupTuple](https://nextflow.io/docs/latest/operator.html#grouptuple) operator.
@@ -172,6 +174,7 @@ public interface ScriptDsl extends DslScope {
         Send an email.
     """)
     void sendMail(Map<String,?> params);
+    void sendMail(Closure params);
 
     @Description("""
         Sleep for the given number of milliseconds.
