@@ -1,0 +1,11 @@
+
+set -e
+
+$NXF_CMD secrets set MY_SECRET hello-world
+
+$NXF_RUN -c ../../config-secrets.config | tee stdout
+
+< .nextflow.log grep "Config file used secrets -- reloading config with secrets provider" || false
+< stdout grep "outputDir: results-hello-world" || false
+
+$NXF_CMD secrets delete MY_SECRET

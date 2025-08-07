@@ -44,6 +44,8 @@ import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
+import nextflow.secret.ConfigNullProvider
+import nextflow.secret.SecretsLoader
 import nextflow.util.CustomPoolFactory
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
@@ -320,24 +322,38 @@ class CmdRun extends CmdBase implements HubOptions {
         checkRunName()
 
         printBanner()
-        Plugins.init()
 
-        // -- specify the arguments
+        // -- resolve main script
         final scriptFile = getScriptFile(pipeline)
 
-        // create the config object
-        final builder = new ConfigBuilder()
+        // -- load config (without secrets)
+        final secretsProvider = new ConfigNullProvider()
+        ConfigBuilder builder = new ConfigBuilder()
+            .setOptions(launcher.options)
+            .setCmdRun(this)
+            .setBaseDir(scriptFile.parent)
+            .setSecretsProvider(secretsProvider)
+        ConfigMap config = builder.build()
+
+        // -- load plugins
+        Plugins.init()
+        Plugins.load(config)
+
+        // -- load secrets provider
+        SecretsLoader.getInstance().load()
+
+        // -- reload config if secrets were used
+        if( secretsProvider.usedSecrets() ) {
+            log.debug "Config file used secrets -- reloading config with secrets provider"
+            builder = new ConfigBuilder()
                 .setOptions(launcher.options)
                 .setCmdRun(this)
                 .setBaseDir(scriptFile.parent)
-        final config = builder .build()
+            config = builder.build()
+        }
 
         // check DSL syntax in the config
         launchInfo(config, scriptFile)
-
-        // -- load plugins
-        final cfg = plugins ? [plugins: plugins.tokenize(',')] : config
-        Plugins.load(cfg)
 
         // -- validate config options
         if( NF.isSyntaxParserV2() )
