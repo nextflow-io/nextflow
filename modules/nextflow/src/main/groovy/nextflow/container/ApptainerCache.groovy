@@ -27,8 +27,8 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class ApptainerCache extends SingularityCache {
 
-    ApptainerCache(ContainerConfig config, Map<String,String> env=null) {
-        super(config, env)
+    ApptainerCache(ApptainerConfig config, Map<String,String> env=null) {
+        super(config.cacheDir, config.libraryDir, config.noHttps, config.pullTimeout, env)
     }
 
     @Override

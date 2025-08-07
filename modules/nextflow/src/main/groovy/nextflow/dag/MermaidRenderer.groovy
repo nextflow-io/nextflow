@@ -23,8 +23,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
-import nextflow.Global
-import nextflow.Session
+import nextflow.trace.config.DagConfig
 /**
  * Render the DAG using the Mermaid format to the specified file.
  * See https://mermaid-js.github.io/mermaid/#/ for more info.
@@ -39,15 +38,17 @@ class MermaidRenderer implements DagRenderer {
 
     static private final String OUTPUTS = 'outputs'
 
-    private Session session = Global.session as Session
+    private int depth
 
-    private int depth = session.config.navigate('dag.depth', -1) as int
+    private String direction
 
-    private String direction = session.config.navigate('dag.direction', 'TB')
+    private boolean verbose
 
-    private boolean verbose = session.config.navigate('dag.verbose', false);
+    MermaidRenderer(DagConfig config) {
+        this.depth = config.depth
+        this.direction = config.direction
+        this.verbose = config.verbose
 
-    {
         if( direction !in ['TB','LR'] ) {
             log.warn "Invalid configuration property `dag.direction = '$direction'` - use either: 'TB' (top-bottom) or 'LR' (left-right)"
             this.direction = 'TB'
