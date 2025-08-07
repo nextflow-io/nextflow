@@ -428,7 +428,7 @@ class ConfigParserV2Test extends Specification {
                 .parse(configText)
         then:
         config.params.str1 instanceof String
-        config.params.str2 instanceof GString
+        config.params.str2 instanceof String
         config.process.clusterOptions instanceof Closure
         config.process.ext.bar instanceof Closure
 
@@ -438,7 +438,7 @@ class ConfigParserV2Test extends Specification {
                 .parse(configText)
         then:
         config.params.str1 instanceof String
-        config.params.str2 instanceof GString
+        config.params.str2 instanceof String
         config.process.clusterOptions instanceof Closure
         config.process.ext.bar instanceof Closure
 

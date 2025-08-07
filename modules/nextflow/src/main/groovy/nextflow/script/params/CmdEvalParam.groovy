@@ -45,7 +45,7 @@ class CmdEvalParam extends BaseOutParam implements OptionalParam {
     }
 
     BaseOutParam bind( def obj ) {
-        if( obj !instanceof CharSequence )
+        if( obj !instanceof CharSequence && obj !instanceof Closure )
             throw new IllegalArgumentException("Invalid argument for command output: $this")
         // the target value object
         target = obj
@@ -54,7 +54,9 @@ class CmdEvalParam extends BaseOutParam implements OptionalParam {
 
     @Memoized
     String getTarget(Map<String,Object> context) {
-        return target instanceof GString
+        return target instanceof Closure
+            ? context.with(target)
+            : target instanceof GString
             ? target.cloneAsLazy(context).toString()
             : target.toString()
     }

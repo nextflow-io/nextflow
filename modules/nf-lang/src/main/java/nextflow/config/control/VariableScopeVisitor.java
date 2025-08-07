@@ -119,8 +119,12 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
         var scopes = currentConfigScopes();
         inProcess = !scopes.isEmpty() && "process".equals(scopes.get(0));
         inClosure = node.value instanceof ClosureExpression;
-        if( inClosure && !inProcess && !isWorkflowHandler(scopes, node) )
-            vsc.addError("Dynamic config options are only allowed in the `process` scope", node);
+        if( inClosure ) {
+            if( isWorkflowHandler(scopes, node) )
+                vsc.addWarning("The use of workflow handlers in the config is deprecated -- use the entry workflow or a plugin instead", String.join(".", node.names), node);
+            else if( !inProcess )
+                vsc.addError("Dynamic config options are only allowed in the `process` scope", node);
+        }
         if( inClosure ) {
             vsc.pushScope(ScriptDsl.class);
             if( inProcess )
