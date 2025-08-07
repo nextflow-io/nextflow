@@ -177,7 +177,7 @@ public class CommentWriter {
         for (int i = contextStartIndex - 1; i >= firstCommentIndex; i--) {
             TokenInfo token = tokensWithInfo.get(i);
             if( token.isComment() && !token.getComment().isConsumed() ) {
-                comments.add(token.getComment());
+                comments.add(0, token.getComment());
             } else if( token.getToken().getType() == ScriptLexer.NL ){
                continue; 
             } else {
@@ -203,7 +203,6 @@ public class CommentWriter {
         while( it.hasNext() ) {
             Comment comment = it.next();
             if (comment.getStartIndex() >= startIdx && comment.getStopIndex() <= endIdx) {
-                System.err.println(comment.getToken().getLine() + ":" + comment.getToken().getCharPositionInLine() + " " + comment.getToken().getText());
                 comments.add(comment);
             }
         }
@@ -224,7 +223,6 @@ public class CommentWriter {
         // A trailing comment is either on the same line as the last token of the context,
         // or on the next line line after the last token of the context, but in this case it must
         // be separated by at least one blank line from the next context
-
         List<Comment> comments = new ArrayList<>();
         int contextStopIndex = lastCtxToken.getTokenIndex();
         ListIterator<TokenInfo> it = tokensWithInfo.listIterator(contextStopIndex + 1);
@@ -233,7 +231,6 @@ public class CommentWriter {
         // First get tokens that are directly after the context, without any newlines
         while( it.hasNext() ) {
             token = it.next(); 
-            System.err.println(token);
             if (token.isComment() && !token.getComment().isConsumed()) {
                 comments.add(token.getComment());
             } else {
@@ -326,7 +323,7 @@ public class CommentWriter {
 
         public void attachTo(ASTNode node) {
             if (attachedTo != null) {
-                throw new IllegalStateException("Comment already attached to " + attachedTo);
+                throw new IllegalStateException(this + " already attached to " + attachedTo);
             }
             this.attachedTo = node;
             pendingComments.remove(this);
@@ -342,7 +339,7 @@ public class CommentWriter {
 
         public void makePending() {
             if (consumed) {
-                throw new IllegalStateException("Cannot make comment " + token.getText() + " pending since it already is");
+                throw new IllegalStateException(this + " is already consumed");
             }
             unattachedComments.remove(this);
             pendingComments.add(this);
@@ -417,14 +414,21 @@ public class CommentWriter {
 
         public Tuple2<String, Boolean> write() {
             if( isWritten ) {
-                throw new IllegalStateException("Comment already written");
+                throw new IllegalStateException(this + " already written");
             }
             isWritten = true;
             return new Tuple2<>(token.getText(), token.getType() == ScriptLexer.SL_COMMENT);
         }
 
-        
-
+        @Override 
+        public String toString() {
+            return String.format(
+                "Comment:%d:%d:'%s'",
+                token.getLine(),
+                token.getCharPositionInLine(),
+                token.getText().replaceAll("\n", "\\n")
+            );
+        }
         @Override
         public int hashCode() {
             return token.getTokenIndex();

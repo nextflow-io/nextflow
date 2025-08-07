@@ -15,6 +15,7 @@
  */
 package nextflow.script.formatter;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -98,57 +99,223 @@ public class Formatter extends CodeVisitorSupport {
         builder.append(str);
     }
 
-    public void appendIndent() {
+    private char peekBuilder() {
+        return builder.charAt(builder.length() - 1);
+    }
+
+    public void appendSpace() {
+        if (Character.isWhitespace(peekBuilder())) {
+            // We never want to append double space, or a space directly after an indent of a newline 
+            return;
+        } else {
+            append(' ');
+        }
+    }
+
+    public void appendPadding(int padding) {
+        append(" ".repeat(padding));
+    }
+
+    public void appendIndent() {}
+
+    public void _appendIndent() {
         var str = options.insertSpaces()
             ? " ".repeat(options.tabSize() * indentCount)
             : "\t".repeat(indentCount);
         builder.append(str);
     }
 
-    public void appendNewLine() {
+    boolean isFirst = true;
+    private void appendNL() {
+        if (isFirst) {
+            isFirst = false;
+            return;
+        }
         builder.append('\n');
     }
 
-    public void writeComment(CommentWriter.Comment comment, boolean shouldBreakLine) {
-        var tuple = comment.write();
-        appendIndent();
-        append(tuple.getV1());
-        if( tuple.getV2() || shouldBreakLine) {
+    private void appendNLs(int i) {
+        builder.append("\n".repeat(i));
+    }
+
+    public void appendNewLine() {
+        appendNL();
+        _appendIndent();
+    }
+
+    public void appendBlanks(int i) {
+        appendNLs(i);
+    }
+
+    /*
+     * Write a single comment while keeping track of breaking lines and WS before and after
+     */
+    public boolean writeComment(
+        CommentWriter.Comment comment,
+        boolean newlineBefore,
+        boolean newlineAfter,
+        boolean makeWSBefore,
+        boolean makeWSAfter
+    ) {
+        var commentAndIsSLC = comment.write(); 
+        String commentText = commentAndIsSLC.getV1();
+        boolean isSLC = commentAndIsSLC.getV2();
+
+        if( newlineBefore ) {
             appendNewLine();
-        } else {
-            append(' ');
+        } else if( makeWSBefore ) {
+            appendSpace();
         }
+
+        append(commentText);
+
+        if( isSLC || newlineAfter ) {
+            return true;
+        } 
+
+        if( makeWSAfter ) {
+            appendSpace();
+        }
+
+        return false;
     }
 
-    public void writeComments(Map<String, List<CommentWriter.Comment>> comments, String key, boolean shouldBreakLine) {
+    public void writeComments(
+        Map<String, List<CommentWriter.Comment>> comments,
+        String key,
+        boolean newlineBefore,
+        boolean makeWSBefore,
+        boolean makeWSAfter,
+        boolean MLCOnOwnLines,
+        boolean inExpression
+    ) {
         if (comments.containsKey(key)) {
-            writeComments(comments.get(key), shouldBreakLine);
+            writeComments(
+                comments.get(key),
+                newlineBefore,
+                makeWSBefore,
+                makeWSAfter,
+                MLCOnOwnLines,
+                inExpression
+            );
         }
     }
 
-    public void writeComments(List<CommentWriter.Comment> comments, boolean shouldBreakLine) {
-        for( var comment : comments ) {
-            writeComment(comment, shouldBreakLine);
+    public void writeComments(
+        List<CommentWriter.Comment> comments,
+        boolean newlineBefore,
+        boolean makeWSBefore,
+        boolean makeWSAfter,
+        boolean MLCOnOwnLines,
+        boolean inExpression
+    ) {
+        if (comments.isEmpty()) return;
+        /*
+         * These are are the four cases:
+         * - WSBefore && WSAfter:
+         *   The first comment writes WS before and after,
+         *   the rest are responsible for writing the WS after
+         * 
+         * - WSBefore = true, WSAfter = false:
+         *   Each comment should only write WS before
+         * 
+         * - WSBefore = false, WSAfter = true:
+         *   Each comment should only write WS after
+         * 
+         * 
+         * - WSBefore = false, WSAfter = false:
+         *   The first comment writes no whitespace at all (if it is not alone),
+         *   the rest of the comment only write WS before
+         */
+        Iterator<CommentWriter.Comment> it = comments.iterator();
+        var breakNext = writeComment(
+            it.next(), newlineBefore, MLCOnOwnLines, makeWSBefore, makeWSAfter
+        );
+        while( it.hasNext() ) 
+            breakNext = writeComment(
+                it.next(), breakNext, MLCOnOwnLines, !makeWSAfter, makeWSAfter
+            );
+
+        if (breakNext && inExpression) {
+            // If we inside an expression where the next token will not break the line
+            // we are required to break the line here already
+            appendNewLine(); 
         }
+    }
+
+    public void appendLeadingComments(
+        ASTNode node,
+        boolean newlineBefore,
+        boolean makeWSBefore,
+        boolean makeWSAfter,
+        boolean MLCOnOwnLines,
+        boolean inExpression
+    ) {
+        var comments = commentWriter.getLeadingComments(node);
+        writeComments(
+            comments,
+            newlineBefore,
+            makeWSBefore,
+            makeWSAfter,
+            MLCOnOwnLines,
+            inExpression
+        );
     }
 
     public void appendLeadingComments(ASTNode node) {
-        var comments = commentWriter.getLeadingComments(node);
-        writeComments(comments, true);
+        appendLeadingComments(node, true, false, false, true, false);
     }
 
-    public boolean hasTrailingComment(ASTNode node) {
-        var comment = (String) node.getNodeMetaData(ASTNodeMarker.TRAILING_COMMENT);
-        return comment != null;
+    public void appendLeadingCommentsExpression(ASTNode node) {
+        appendLeadingComments(node, false, false, true, false, true);
+
     }
 
-    public void appendTrailingComment(ASTNode node) {
-        var comment = (String) node.getNodeMetaData(ASTNodeMarker.TRAILING_COMMENT);
-        append("/* <trailing> */");
-        if( comment != null ) {
-            append(' ');
-            append(comment);
+    public void appendLeadingCommentsStatement(ASTNode node) {
+        appendLeadingComments(node, true, false, false, true, false);
+    }
+
+    public void appendTrailingComments(
+        ASTNode node,
+        boolean newlineBefore,
+        boolean makeWSBefore,
+        boolean makeWSAfter,
+        boolean MLCOnOwnLines,
+        boolean inExpression
+    ) {
+        var comments = commentWriter.getTrailingComments(node);
+        if (comments.containsKey("STANDARD")) {
+            writeComments(
+                comments.get("STANDARD"),
+                newlineBefore,
+                makeWSBefore,
+                makeWSAfter,
+                MLCOnOwnLines,
+                inExpression               
+            );
         }
+    }
+
+    public void appendTrailingInside(
+        Map<String, List<CommentWriter.Comment>> comments,
+        String key
+    ) {
+        writeComments(comments, key, false, true, true, false, true);
+    }
+
+    public void appendWithinComments(
+        Map<String, List<CommentWriter.Comment>> comments,
+        String key
+    ) {
+        writeComments(comments, key, false, true, false, false, true);
+    }
+
+    public void appendTrailingComments(ASTNode node) {
+        appendTrailingComments(node, false, true, false, false, false);
+    }
+
+    public void appendTrailingCommentsExpression(ASTNode node) {
+        appendTrailingComments(node, false, true, true, false, true);
     }
 
     public void incIndent() {
@@ -172,29 +339,35 @@ public class Formatter extends CodeVisitorSupport {
 
     protected void visitIfElse(IfStatement node, boolean preIndent) {
         appendLeadingComments(node);
-        if( preIndent )
-            appendIndent();
-        append("if (");
+        appendNewLine();
+        append("if");
+        appendSpace();
+        append('(');
         visit(node.getBooleanExpression());
-        append(") {\n");
+        append(')');
+        appendSpace();
+        append("{");
         incIndent();
         visit(node.getIfBlock());
         decIndent();
-        appendIndent();
-        append("}\n");
+        appendNewLine();
+        append("}");
         if( node.getElseBlock() instanceof IfStatement is ) {
-            appendIndent();
-            append("else ");
+            appendNewLine();
+            append("else");
+            appendSpace();
             visitIfElse(is, false);
         }
         else if( !(node.getElseBlock() instanceof EmptyStatement) ) {
-            appendIndent();
-            append("else {\n");
+            appendNewLine();
+            append("else");
+            appendSpace();
+            append('{');
             incIndent();
             visit(node.getElseBlock());
             decIndent();
-            appendIndent();
-            append("}\n");
+            appendNewLine();
+            append("}");
         }
     }
 
@@ -205,10 +378,10 @@ public class Formatter extends CodeVisitorSupport {
         var cre = currentRootExpr;
         currentRootExpr = node.getExpression();
         appendLeadingComments(node);
-        appendIndent();
+        appendNewLine();
         visitStatementLabels(node);
         visit(node.getExpression());
-        appendNewLine();
+        appendTrailingComments(node);
         currentRootExpr = cre;
     }
 
@@ -217,7 +390,8 @@ public class Formatter extends CodeVisitorSupport {
             return;
         for( var label : DefaultGroovyMethods.asReversed(node.getStatementLabels()) ) {
             append(label);
-            append(": ");
+            append(":");
+            appendSpace();
         }
     }
 
@@ -226,36 +400,41 @@ public class Formatter extends CodeVisitorSupport {
         var cre = currentRootExpr;
         currentRootExpr = node.getExpression();
         appendLeadingComments(node);
-        appendIndent();
-        append("return ");
-        visit(node.getExpression());
         appendNewLine();
+        append("return");
+        appendSpace();
+        visit(node.getExpression());
         currentRootExpr = cre;
     }
 
     @Override
     public void visitAssertStatement(AssertStatement node) {
         appendLeadingComments(node);
-        appendIndent();
-        append("assert ");
+        appendNewLine();
+        append("assert");
+        appendSpace();
         visit(node.getBooleanExpression());
         if( !(node.getMessageExpression() instanceof ConstantExpression ce && ce.isNullExpression()) ) {
-            append(" : ");
+            appendSpace();
+            append(":");
+            appendSpace();
             visit(node.getMessageExpression());
         }
-        appendNewLine();
     }
 
     @Override
     public void visitTryCatchFinally(TryCatchStatement node) {
         appendLeadingComments(node);
-        appendIndent();
-        append("try {\n");
+        appendNewLine();
+        append("try");
+        appendSpace();
+        append('{');
         incIndent();
+        appendNewLine();
         visit(node.getTryStatement());
         decIndent();
-        appendIndent();
-        append("}\n");
+        appendNewLine();
+        append("}");
         for( var catchStatement : node.getCatchStatements() ) {
             visit(catchStatement);
         }
@@ -264,32 +443,35 @@ public class Formatter extends CodeVisitorSupport {
     @Override
     public void visitThrowStatement(ThrowStatement node) {
         appendLeadingComments(node);
-        appendIndent();
-        append("throw ");
-        visit(node.getExpression());
         appendNewLine();
+        append("throw");
+        appendSpace();
+        visit(node.getExpression());
     }
 
     @Override
     public void visitCatchStatement(CatchStatement node) {
         appendLeadingComments(node);
-        appendIndent();
-        append("catch (");
+        appendNewLine();
+        append("catch");
+        appendSpace();
+        append('(');
 
         var variable = node.getVariable();
         var type = variable.getType();
         if( !ClassHelper.isObjectType(type) ) {
             append(type.getNameWithoutPackage());
-            append(' ');
+            appendSpace();
         }
         append(variable.getName());
-
-        append(") {\n");
+        append(')');
+        appendSpace();
+        append('{');
         incIndent();
         visit(node.getCode());
         decIndent();
-        appendIndent();
-        append("}\n");
+        appendNewLine();
+        append("}");
     }
 
     // expressions
@@ -335,14 +517,13 @@ public class Formatter extends CodeVisitorSupport {
                 incIndent();
             visitArguments(parenArgs, wrap);
             if( wrap ) {
-                appendNewLine();
                 decIndent();
-                appendIndent();
+                appendNewLine();
             }
             append(')');
         }
         if( lastClosureArg ) {
-            append(' ');
+            appendSpace();
             visit(args.get(args.size() - 1));
         }
         inWrappedMethodChain = iwmc;
@@ -355,7 +536,8 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitConstructorCallExpression(ConstructorCallExpression node) {
-        append("new ");
+        append("new");
+        appendSpace();
         visitTypeAnnotation(node.getType());
         append('(');
         visitArguments(asMethodCallArguments(node), false);
@@ -363,14 +545,14 @@ public class Formatter extends CodeVisitorSupport {
     }
 
     public void visitDirective(MethodCallExpression call) {
-        appendIndent();
+        appendLeadingComments(call);
+        appendNewLine();
         append(call.getMethodAsString());
         var arguments = asMethodCallArguments(call);
         if( !arguments.isEmpty() ) {
-            append(' ');
+            appendSpace();
             visitArguments(arguments, false);
         }
-        appendNewLine();
     }
 
     public void visitArguments(List<Expression> args, boolean wrap) {
@@ -381,7 +563,8 @@ public class Formatter extends CodeVisitorSupport {
         visitPositionalArgs(positionalArgs, wrap);
         if( hasNamedArgs ) {
             if( positionalArgs.size() > 0 )
-                append(wrap ? "," : ", ");
+                append(',');
+                if (!wrap) appendSpace();
             var mapX = (MapExpression)args.get(0);
             visitNamedArgs(mapX.getMapEntryExpressions(), wrap);
         }
@@ -393,15 +576,18 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitBinaryExpression(BinaryExpression node) {
-        appendLeadingComments(node);
+        appendLeadingCommentsExpression(node);
         if( node instanceof DeclarationExpression ) {
-            append("def ");
+            appendNewLine(); // A declaration expression is treated as a statement here, so break the line
+            append("def");
+            appendSpace();
             inVariableDeclaration = true;
             visit(node.getLeftExpression());
             inVariableDeclaration = false;
             var source = node.getRightExpression();
             if( !(source instanceof EmptyExpression) ) {
-                append(" = ");
+                append("=");
+                appendSpace();
                 var cre = currentRootExpr;
                 currentRootExpr = source;
                 visit(source);
@@ -425,15 +611,14 @@ public class Formatter extends CodeVisitorSupport {
         visit(node.getLeftExpression());
 
         if( inWrappedPipeChain ) {
-            appendNewLine();
             incIndent();
-            appendIndent();
+            appendNewLine();
         }
         else {
-            append(' ');
+            appendSpace();
         }
         append(node.getOperation().getText());
-        append(' ');
+        appendSpace();
 
         var iwpc = inWrappedPipeChain;
         inWrappedPipeChain = false;
@@ -458,69 +643,77 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitTernaryExpression(TernaryExpression node) {
-        appendLeadingComments(node);
+        appendLeadingCommentsExpression(node);
         if( shouldWrapExpression(node) ) {
             visit(node.getBooleanExpression());
             incIndent();
             appendNewLine();
-            appendIndent();
-            append("? ");
+            append("?");
+            appendSpace();
             visit(node.getTrueExpression());
             appendNewLine();
-            appendIndent();
-            append(": ");
+            append(":");
+            appendSpace();
             visit(node.getFalseExpression());
             decIndent();
         }
         else {
             visit(node.getBooleanExpression());
-            append(" ? ");
+            appendSpace();
+            append("?");
+            appendSpace();
             visit(node.getTrueExpression());
-            append(" : ");
+            appendSpace();
+            append(":");
+            appendSpace();
             visit(node.getFalseExpression());
         }
     }
 
     @Override
     public void visitShortTernaryExpression(ElvisOperatorExpression node) {
-        appendLeadingComments(node);
+        appendLeadingCommentsExpression(node);
         visit(node.getTrueExpression());
-        append(" ?: ");
+        appendSpace();
+        append("?:");
+        appendSpace();
         visit(node.getFalseExpression());
     }
 
     @Override
     public void visitNotExpression(NotExpression node) {
-        appendLeadingComments(node);
+        appendLeadingCommentsExpression(node);
         append('!');
         visit(node.getExpression());
     }
 
     @Override
     public void visitClosureExpression(ClosureExpression node) {
-        appendLeadingComments(node);
+        appendLeadingCommentsExpression(node);
         append('{');
         if( node.getParameters() != null && node.getParameters().length > 0 ) {
-            append(' ');
+            appendSpace();
             visitParameters(node.getParameters());
-            append(" ->");
+            appendSpace();
+            append("->");
         }
         var code = (BlockStatement) node.getCode();
         if( code.getStatements().size() == 0 ) {
-            append(" }");
+            appendSpace();
+            append("}");
         }
         else if( code.getStatements().size() == 1 && code.getStatements().get(0) instanceof ExpressionStatement es && !shouldWrapExpression(node) ) {
-            append(' ');
+            appendSpace();
             visitStatementLabels(es);
             visit(es.getExpression());
-            append(" }");
+            appendSpace();
+            append("}");
         }
         else {
-            appendNewLine();
             incIndent();
             visit(code);
             decIndent();
-            appendIndent();
+            appendNewLine();
             append('}');
         }
     }
@@ -530,37 +723,40 @@ public class Formatter extends CodeVisitorSupport {
             var param = parameters[i];
             if( isLegacyType(param.getType()) ) {
                 visitTypeAnnotation(param.getType());
-                append(' ');
+                appendSpace();
             }
             append(param.getName());
             if( param.hasInitialExpression() ) {
-                append(" = ");
+                appendSpace();
+                append("=");
+                appendSpace();
                 visit(param.getInitialExpression());
             }
-            if( i + 1 < parameters.length )
-                append(", ");
+            if( i + 1 < parameters.length ) {
+                append(",");
+                appendSpace();
+            }
         }
     }
 
     @Override
     public void visitTupleExpression(TupleExpression node) {
-        appendLeadingComments(node);
+        appendLeadingCommentsExpression(node);
         var wrap = shouldWrapExpression(node);
         append('(');
         if( wrap )
             incIndent();
         visitPositionalArgs(node.getExpressions(), wrap);
         if( wrap ) {
-            appendNewLine();
             decIndent();
-            appendIndent();
+            appendNewLine();
         }
         append(')');
     }
 
     @Override
     public void visitListExpression(ListExpression node) {
-        appendLeadingComments(node);
+        appendLeadingCommentsExpression(node);
         var wrap = hasTrailingComma(node) || shouldWrapExpression(node);
         append('[');
         if( wrap )
@@ -580,7 +776,6 @@ public class Formatter extends CodeVisitorSupport {
         for( int i = 0; i < args.size(); i++ ) {
             if( wrap ) {
                 appendNewLine();
-                appendIndent();
             }
             visit(args.get(i));
             if( trailingComma || i + 1 < args.size() )
@@ -590,7 +785,7 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitMapExpression(MapExpression node) {
-        appendLeadingComments(node);
+        appendLeadingCommentsExpression(node);
         if( node.getMapEntryExpressions().isEmpty() ) {
             append("[:]");
             return;
@@ -601,9 +796,8 @@ public class Formatter extends CodeVisitorSupport {
             incIndent();
         visitNamedArgs(node.getMapEntryExpressions(), wrap);
         if( wrap ) {
-            appendNewLine();
             decIndent();
-            appendIndent();
+            appendNewLine();
         }
         append(']');
     }
@@ -614,7 +808,6 @@ public class Formatter extends CodeVisitorSupport {
         for( int i = 0; i < args.size(); i++ ) {
             if( wrap ) {
                 appendNewLine();
-                appendIndent();
             }
             visit(args.get(i));
             if( trailingComma || i + 1 < args.size() )
@@ -624,15 +817,16 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitMapEntryExpression(MapEntryExpression node) {
-        appendLeadingComments(node);
+        appendLeadingCommentsExpression(node);
         visit(node.getKeyExpression());
-        append(": ");
+        append(":");
+        appendSpace();
         visit(node.getValueExpression());
     }
 
     @Override
     public void visitRangeExpression(RangeExpression node) {
-        appendLeadingComments(node);
+        appendLeadingCommentsExpression(node);
         visit(node.getFrom());
         if( node.isExclusiveLeft() )
             append('<');
@@ -644,51 +838,54 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitUnaryMinusExpression(UnaryMinusExpression node) {
-        appendLeadingComments(node);
+        appendLeadingCommentsExpression(node);
         append('-');
         visit(node.getExpression());
     }
 
     @Override
     public void visitUnaryPlusExpression(UnaryPlusExpression node) {
-        appendLeadingComments(node);
+        appendLeadingCommentsExpression(node);
         append('+');
         visit(node.getExpression());
     }
 
     @Override
     public void visitBitwiseNegationExpression(BitwiseNegationExpression node) {
-        appendLeadingComments(node);
+        appendLeadingCommentsExpression(node);
         append('~');
         visit(node.getExpression());
     }
 
     @Override
     public void visitCastExpression(CastExpression node) {
-        appendLeadingComments(node);
+        appendLeadingCommentsExpression(node);
         visit(node.getExpression());
-        append(" as ");
+        appendSpace();
+        append("as");
+        appendSpace();
         visitTypeAnnotation(node.getType());
     }
 
     @Override
     public void visitConstantExpression(ConstantExpression node) {
-        appendLeadingComments(node);
+        appendLeadingCommentsExpression(node);
         var text = (String) node.getNodeMetaData(ASTNodeMarker.VERBATIM_TEXT);
         if( text != null )
             append(text);
         else
             append(node.getText());
+        appendTrailingCommentsExpression(node);
     }
 
     @Override
     public void visitClassExpression(ClassExpression node) {
-        appendLeadingComments(node);
+        appendLeadingCommentsExpression(node);
         visitTypeAnnotation(node.getType());
     }
 
     public void visitTypeAnnotation(ClassNode type) {
-        appendLeadingComments(type);
+        appendLeadingCommentsExpression(type);
         if( isLegacyType(type) ) {
             append(type.getNodeMetaData(ASTNodeMarker.LEGACY_TYPE));
             return;
@@ -699,12 +896,13 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitVariableExpression(VariableExpression node) {
-        appendLeadingComments(node);
+        appendLeadingCommentsExpression(node);
         if( inVariableDeclaration && isLegacyType(node.getType()) ) {
             visitTypeAnnotation(node.getType());
-            append(' ');
+            appendSpace();
         }
         append(node.getText());
+        appendTrailingCommentsExpression(node);
     }
 
     @Override
@@ -720,7 +918,7 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitGStringExpression(GStringExpression node) {
-        appendLeadingComments(node);
+        appendLeadingCommentsExpression(node);
         // see also: GStringUtil.writeToImpl()
         var quoteChar = (String) node.getNodeMetaData(ASTNodeMarker.QUOTE_CHAR, k -> DQ_STR);
         append(quoteChar);
@@ -741,7 +939,6 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visit(Expression node) {
-        appendLeadingComments(node);
         var number = (Number) node.getNodeMetaData(ASTNodeMarker.INSIDE_PARENTHESES_LEVEL);
         if( number != null && number.intValue() > 0 )
             append('(');

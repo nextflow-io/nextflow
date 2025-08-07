@@ -33,6 +33,7 @@ import nextflow.script.ast.WorkflowNode;
 import nextflow.script.parser.CommentWriter;
 
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.expr.EmptyExpression;
 import org.codehaus.groovy.ast.expr.PropertyExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
@@ -142,6 +143,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             else if( decl instanceof WorkflowNode wn )
                 visitWorkflow(wn);
         }
+        fmt.appendBlanks(1);
         System.out.print(commentWriter.toNFComments());
     }
 
@@ -155,7 +157,9 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
     public void visitFeatureFlag(FeatureFlagNode node) {
         fmt.appendLeadingComments(node);
         fmt.append(node.name);
-        fmt.append(" = ");
+        fmt.appendSpace();
+        fmt.append("=");
+        fmt.appendSpace();
         fmt.visit(node.value);
         fmt.appendNewLine();
     }
@@ -164,7 +168,9 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
     public void visitInclude(IncludeNode node) {
         var wrap = node.getLineNumber() < node.getLastLineNumber();
         fmt.appendLeadingComments(node);
-        fmt.append("include {");
+        fmt.append("include");
+        fmt.appendSpace();
+        fmt.append('{');
         if( wrap )
             fmt.incIndent();
         for( int i = 0; i < node.entries.size(); i++ ) {
@@ -173,29 +179,35 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 fmt.appendIndent();
             }
             else {
-                fmt.append(' ');
+                fmt.appendSpace();
             }
             var entry = node.entries.get(i);
             fmt.append(entry.name);
             if( entry.alias != null ) {
-                fmt.append(" as ");
+                fmt.appendSpace();
+                fmt.append("as");
+                fmt.appendSpace();
                 fmt.append(entry.alias);
             }
             if( !wrap && node.entries.size() == 1 && options.harshilAlignment() ) {
                 var padding = maxIncludeWidth - getIncludeWidth(entry);
-                fmt.append(" ".repeat(padding));
+                fmt.appendPadding(padding);
             }
             if( i + 1 < node.entries.size() )
-                fmt.append(" ;");
+                fmt.appendSpace();
+                fmt.append(";");
         }
         if( wrap ) {
             fmt.appendNewLine();
             fmt.decIndent();
         }
         else {
-            fmt.append(' ');
+            fmt.appendSpace();
         }
-        fmt.append("} from ");
+        fmt.append('}');
+        fmt.appendSpace();
+        fmt.append("from");
+        fmt.appendSpace();
         fmt.visit(node.source);
         fmt.appendNewLine();
     }
@@ -213,9 +225,11 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.visit(node.target);
         if( maxParamWidth > 0 ) {
             var padding = maxParamWidth - getParamWidth(node);
-            fmt.append(" ".repeat(padding));
+            fmt.appendPadding(padding);
         }
-        fmt.append(" = ");
+        fmt.appendSpace();
+        fmt.append("=");
+        fmt.appendSpace();
         fmt.visit(node.value);
         fmt.appendNewLine();
     }
@@ -228,47 +242,47 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitWorkflow(WorkflowNode node) {
-        var leadingComments = commentWriter.getLeadingComments(node);
-        var withinComments = commentWriter.getWithinComments(node);
-
         fmt.appendLeadingComments(node);
+        var withinComments = commentWriter.getWithinComments(node);
+        fmt.appendNewLine();
         fmt.append("workflow");
-        fmt.append(' ');
-        fmt.writeComments(withinComments, "KEYWORD", false);
+        fmt.appendSpace();
+        fmt.writeComments(withinComments, "KEYWORD", false, true, false, false, true);
         if( !node.isEntry() ) {
             fmt.append(node.getName());
-            fmt.append(' ');
-            fmt.writeComments(withinComments, "NAME", false);
+            fmt.appendSpace();
+            fmt.writeComments(withinComments, "NAME", false, true, false, false, true);
         }
-        fmt.append("{\n");
+        fmt.append("{");
         fmt.incIndent();
         if( node.takes instanceof BlockStatement ) {
-            fmt.appendIndent();
-            fmt.append("take:\n");
+            appendColonStatement("take", "TAKE", node.takes);
             visitWorkflowTakes(asBlockStatements(node.takes));
             fmt.appendNewLine();
         }
         if( node.main instanceof BlockStatement ) {
             if( node.takes instanceof BlockStatement || node.emits instanceof BlockStatement || node.publishers instanceof BlockStatement ) {
                 fmt.appendIndent();
-                fmt.append("main:\n");
+                appendColonStatement("main", "MAIN", node.main);
             }
             fmt.visit(node.main);
         }
         if( node.emits instanceof BlockStatement ) {
             fmt.appendNewLine();
             fmt.appendIndent();
-            fmt.append("emit:\n");
+            appendColonStatement("emit", "EMIT", node.takes);
             visitWorkflowEmits(asBlockStatements(node.emits));
         }
         if( node.publishers instanceof BlockStatement ) {
             fmt.appendNewLine();
             fmt.appendIndent();
-            fmt.append("publish:\n");
+            appendColonStatement("publish", "PUBLISH", node.publishers);
             fmt.visit(node.publishers);
         }
         fmt.decIndent();
-        fmt.append("}\n");
+        fmt.appendNewLine();
+        fmt.append("}");
+        fmt.appendTrailingComments(node);
     }
 
     protected void visitWorkflowTakes(List<Statement> takes) {
@@ -280,13 +294,13 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             var ve = asVarX(stmt);
             fmt.appendIndent();
             fmt.visit(ve);
-            if( fmt.hasTrailingComment(stmt) ) {
-                if( alignmentWidth > 0 ) {
-                    var padding = alignmentWidth - ve.getName().length();
-                    fmt.append(" ".repeat(padding));
-                }
-                fmt.appendTrailingComment(stmt);
-            }
+            // if( fmt.hasTrailingComment(stmt) ) {
+            //     if( alignmentWidth > 0 ) {
+            //         var padding = alignmentWidth - ve.getName().length();
+            //         fmt.append(" ".repeat(padding));
+            //     }
+            // }
+            fmt.appendTrailingComments(stmt);
             fmt.appendNewLine();
         }
     }
@@ -305,23 +319,25 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 fmt.visit(ve);
                 if( alignmentWidth > 0 ) {
                     var padding = alignmentWidth - ve.getName().length();
-                    fmt.append(" ".repeat(padding));
+                    fmt.appendPadding(padding);
                 }
-                fmt.append(" = ");
+                fmt.appendSpace();
+                fmt.append("=");
+                fmt.appendSpace();
                 fmt.visit(assign.getRightExpression());
-                fmt.appendTrailingComment(stmt);
+                fmt.appendTrailingComments(stmt);
                 fmt.appendNewLine();
             }
             else if( emit instanceof VariableExpression ve ) {
                 fmt.appendIndent();
                 fmt.visit(ve);
-                if( fmt.hasTrailingComment(stmt) ) {
-                    if( alignmentWidth > 0 ) {
-                        var padding = alignmentWidth - ve.getName().length();
-                        fmt.append(" ".repeat(padding));
-                    }
-                    fmt.appendTrailingComment(stmt);
-                }
+                // if( fmt.hasTrailingComment(stmt) ) {
+                //     if( alignmentWidth > 0 ) {
+                //         var padding = alignmentWidth - ve.getName().length();
+                //         fmt.append(" ".repeat(padding));
+                //     }
+                // }
+                fmt.appendTrailingComments(stmt);
                 fmt.appendNewLine();
             }
             else {
@@ -359,145 +375,146 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         var trailingComments = commentWriter.getTrailingComments(node);
         System.err.println(trailingComments);
         fmt.appendLeadingComments(node);
-        fmt.append("process ");
-        fmt.writeComments(withinComments, "KEYWORD", false);
+        fmt.appendNewLine();
+        fmt.append("process");
+        fmt.appendSpace();
+        fmt.writeComments(withinComments, "KEYWORD", false, false, true, false, true);
         fmt.append(node.getName());
-        fmt.writeComments(withinComments, "NAME", false);
-        fmt.append(" {");
-        fmt.writeComments(trailingComments, "LBRACE", false);
-        fmt.append("\n");
+        fmt.writeComments(withinComments, "NAME", false, true, false, false, true);
+        fmt.appendSpace();
+        fmt.append("{");
+        fmt.writeComments(trailingComments, "LBRACE", false, true, true, false, false);
         fmt.incIndent();
+
         if( node.directives instanceof BlockStatement ) {
             visitDirectives(node.directives);
-            fmt.appendNewLine();
+            fmt.appendBlanks(1);
         }
+
         if( node.inputs instanceof BlockStatement ) {
-            fmt.appendIndent();
-            fmt.appendLeadingComments(node.inputs);
-            var inputWithinComments = commentWriter.getWithinComments(node.inputs);
-            var inputTrailingComments = commentWriter.getTrailingComments(node.inputs);
-            fmt.append("input");
-            fmt.writeComments(inputWithinComments, "INPUT", false);
-            fmt.append(":");
-            fmt.writeComments(inputTrailingComments, "COLON", false);
-            fmt.append("\n");
+            appendColonStatement("input", "INPUT", node.inputs);
             visitDirectives(node.inputs);
-            fmt.appendNewLine();
+            fmt.appendBlanks(1);
         }
+
         if( !options.maheshForm() && node.outputs instanceof BlockStatement ) {
-            visitProcessOutputs(node.outputs);
-            fmt.appendNewLine();
+            appendColonStatement("output", "OUTPUT", node.outputs);
+            visitDirectives(node.outputs);
+            fmt.appendBlanks(1);
         }
+
         if( !(node.when instanceof EmptyExpression) ) {
-            fmt.appendIndent();
-            var whenWithinComments = commentWriter.getWithinComments(node.when);
-            var whenTrailingComments = commentWriter.getTrailingComments(node.when);
-            fmt.appendLeadingComments(node.when);
-            fmt.append("when");
-            fmt.writeComments(whenWithinComments, "WHEN", false);
-            fmt.append(":");
-            fmt.writeComments(whenTrailingComments, "COLON", false);
-            fmt.append("\n");
+            appendColonStatement("when", "WHEN", node.when);
             fmt.incIndent();
-            fmt.appendIndent();
+            fmt.appendNewLine();
             fmt.visit(node.when);
-            fmt.append("\n\n");
+            fmt.appendBlanks(1);
         }
-        fmt.appendLeadingComments(node.exec);
-        fmt.appendIndent();
-        var execWithinComments = commentWriter.getWithinComments(node.exec);
-        var execTrailingComments = commentWriter.getTrailingComments(node.exec);
-        fmt.append(node.type);
-        fmt.writeComments(execWithinComments, "EXEC", false);
-        fmt.append(":");
-        fmt.writeComments(execTrailingComments, "COLON", false);
-        fmt.append("\n");
+
+        appendColonStatement(node.type, "EXEC", node.exec);
         fmt.visit(node.exec);
+        fmt.appendBlanks(1);
+
         if( !(node.stub instanceof EmptyStatement) ) {
-            fmt.appendNewLine();
-            fmt.appendIndent();
-            fmt.appendLeadingComments(node.stub);
-            var commentWriter = getCommentWriter();
-            var stubWithinComments = commentWriter.getWithinComments(node.stub);
-            var stubTrailingComments = commentWriter.getTrailingComments(node.stub);
-            fmt.append("stub");
-            fmt.writeComments(stubWithinComments, "STUB", false);
-            fmt.append(":");
-            fmt.writeComments(stubTrailingComments, "COLON", false);
+            appendColonStatement("stub", "STUB", node.stub);
             fmt.visit(node.stub);
+            fmt.appendBlanks(1);
         }
+
         if( options.maheshForm() && node.outputs instanceof BlockStatement ) {
-            fmt.appendNewLine();
-            visitProcessOutputs(node.outputs);
+            appendColonStatement("output", "OUTPUT", node.outputs);
+            visitDirectives(node.outputs);
+            fmt.appendBlanks(1);
         }
+
         fmt.decIndent();
+        fmt.appendNewLine();
         fmt.append("}");
-        fmt.writeComments(trailingComments, "RBRACE", false);
-        fmt.append("\n");
+        fmt.writeComments(trailingComments, "RBRACE", false, true, true, false, false);
     }
 
-    private void visitProcessOutputs(Statement outputs) {
-        fmt.appendIndent();
-        fmt.append("output:\n");
-        visitDirectives(outputs);
+    private void appendColonStatement(String name, String commentKey, ASTNode stmt) {
+        fmt.appendLeadingComments(stmt);
+        fmt.appendNewLine();
+        var colonWithinComments = commentWriter.getWithinComments(stmt);
+        var colonTrailingComments = commentWriter.getTrailingComments(stmt);
+        // Write the name of the statement
+        fmt.append(name);
+        // Write commend inbetween the name and the colon
+        fmt.appendWithinComments(colonWithinComments, commentKey);
+        fmt.append(":");
+        // Write trailing comments after the colon
+        fmt.appendTrailingInside(colonTrailingComments, "COLON");
     }
 
     @Override
     public void visitFunction(FunctionNode node) {
         fmt.appendLeadingComments(node);
-        fmt.append("def ");
+        fmt.appendNewLine();
+        fmt.append("def");
+        fmt.appendSpace();
         if( Formatter.isLegacyType(node.getReturnType()) ) {
             fmt.visitTypeAnnotation(node.getReturnType());
-            fmt.append(' ');
+            fmt.appendSpace();
         }
         fmt.append(node.getName());
         fmt.append('(');
         fmt.visitParameters(node.getParameters());
-        fmt.append(") {\n");
+        fmt.append(')');
+        fmt.appendSpace();
+        fmt.append('{');
         fmt.incIndent();
         fmt.visit(node.getCode());
         fmt.decIndent();
-        fmt.append("}\n");
+        fmt.appendNewLine();
+        fmt.append("}");
     }
 
     @Override
     public void visitEnum(ClassNode node) {
         fmt.appendLeadingComments(node);
-        fmt.append("enum ");
+        fmt.appendNewLine();
+        fmt.append("enum");
+        fmt.appendSpace();
         fmt.append(node.getName());
-        fmt.append(" {\n");
         fmt.incIndent();
+        fmt.appendSpace();
+        fmt.append("{");
         for( var fn : node.getFields() ) {
-            fmt.appendIndent();
+            fmt.appendNewLine();
             fmt.append(fn.getName());
             fmt.append(',');
-            fmt.appendNewLine();
         }
         fmt.decIndent();
-        fmt.append("}\n");
+        fmt.appendNewLine();
+        fmt.append("}");
     }
 
     @Override
     public void visitOutputs(OutputBlockNode node) {
         fmt.appendLeadingComments(node);
-        fmt.append("output {\n");
+        fmt.appendNewLine();
+        fmt.append("output");
+        fmt.appendSpace();
+        fmt.append('{');
         fmt.incIndent();
         super.visitOutputs(node);
         fmt.decIndent();
-        fmt.append("}\n");
+        fmt.appendNewLine();
+        fmt.append("}");
     }
 
     @Override
     public void visitOutput(OutputNode node) {
         fmt.appendLeadingComments(node);
-        fmt.appendIndent();
+        fmt.appendNewLine();
         fmt.append(node.name);
-        fmt.append(" {\n");
-        fmt.incIndent();
+        fmt.appendSpace();
+        fmt.append("{");
         visitOutputBody((BlockStatement) node.body);
         fmt.decIndent();
-        fmt.appendIndent();
-        fmt.append("}\n");
+        fmt.appendNewLine();
+        fmt.append("}");
     }
 
     protected void visitOutputBody(BlockStatement block) {
@@ -514,12 +531,15 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                     fmt.appendLeadingComments(stmt);
                     fmt.appendIndent();
                     fmt.append(name);
-                    fmt.append(" {\n");
+                    fmt.appendSpace();
+                    fmt.append("{");
                     fmt.incIndent();
+                    fmt.appendNewLine();
                     visitDirectives(code);
                     fmt.decIndent();
                     fmt.appendIndent();
-                    fmt.append("}\n");
+                    fmt.append("}");
+                    fmt.appendNewLine();
                     return;
                 }
             }

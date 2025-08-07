@@ -152,10 +152,8 @@ public class ScriptAstBuilder {
             .filter(token -> token.getChannel() == ScriptLexer.DEFAULT_TOKEN_CHANNEL)
             .toList();
         
-        System.err.println("DEBUG: Found " + commentTokensList.size() + " comment tokens out of " + allTokens.size() + " total tokens");
         for (int i = 0; i < commentTokensList.size(); i++) {
             var token = commentTokensList.get(i);
-            System.err.println("DEBUG: Comment token " + i + ": '" + token.getText() + "' (type: " + token.getType() + ", channel: " + token.getChannel() + ")");
         }
         
         this.commentWriter = new CommentWriter(allTokens);
@@ -414,10 +412,18 @@ public class ScriptAstBuilder {
         var inputs = processInputs(ctx.body.processInputs());
         var outputs = processOutputs(ctx.body.processOutputs());
         var when = processWhen(ctx.body.processWhen());
-        var type = processExec(ctx.body.processExec());
-        var exec = ctx.body.blockStatements() != null
-            ? blockStatements(ctx.body.blockStatements())
-            : blockStatements(ctx.body.processExec().blockStatements());
+
+        String type;
+        BlockStatement exec;
+        if (ctx.body.processExec() == null) {
+            type = "script";
+            exec = blockStatements(ctx.body.blockStatements());
+        } else {
+            Tuple2<String, BlockStatement> t = processExec(ctx.body.processExec());
+            type = t.getV1();
+            exec = t.getV2();
+        }
+
         var stub = processStub(ctx.body.processStub());
 
         if( ctx.body.blockStatements() != null ) {
@@ -559,30 +565,28 @@ public class ScriptAstBuilder {
         return result;
     }
 
-    private String processExec(ProcessExecContext ctx) {
+    private Tuple2<String, BlockStatement> processExec(ProcessExecContext ctx) {
         
-        if( ctx == null )
-            // If there is no body default to body
-            return "script";
-        else {
-            var execTypeToken = ctx.execType;
+        var execTypeToken = ctx.execType;
 
-            // Collect comments
-            var comments = commentWriter.processLeadingComments(ctx);
-            comments.addAll(commentWriter.processInbetweenComments(
-                execTypeToken, ctx.COLON().getSymbol(), "EXEC", false, true
-            ));
-            // Capture any trailing comment that occurs after the colon
-            comments.addAll(
-                commentWriter.processTrailingComments(
-                    ctx.COLON(), false
-                )
-            );  
-            if (execTypeToken.getType() == ScriptLexer.SHELL)
-                collectWarning("The `shell` block is deprecated, use `script` instead", ctx.SHELL().getText(), ast( new EmptyExpression(), ctx.SHELL() ));
-            
-            return execTypeToken.getText();
-        }
+        // Collect comments
+        var comments = commentWriter.processLeadingComments(ctx);
+        comments.addAll(commentWriter.processInbetweenComments(
+            execTypeToken, ctx.COLON().getSymbol(), "EXEC", false, true
+        ));
+        // Capture any trailing comment that occurs after the colon
+        comments.addAll(
+            commentWriter.processTrailingComments(
+                ctx.COLON(), false
+            )
+        );  
+
+        if (execTypeToken.getType() == ScriptLexer.SHELL)
+            collectWarning("The `shell` block is deprecated, use `script` instead", ctx.SHELL().getText(), ast( new EmptyExpression(), ctx.SHELL() ));
+
+        var result = blockStatements(ctx.blockStatements());
+        commentWriter.attachComments(result, comments); 
+        return new Tuple2<>(execTypeToken.getText(), result);
     }
 
     private Statement processStub(ProcessStubContext ctx) {
@@ -932,6 +936,7 @@ public class ScriptAstBuilder {
         var name = identifier(ctx);
         var result = ast( varX(name), ctx );
         checkInvalidVarName(name, result);
+        comments.addAll(commentWriter.processTrailingComments(ctx.getStop(), false));
         commentWriter.attachComments(result, comments);
         return result;
     }
@@ -1279,22 +1284,28 @@ public class ScriptAstBuilder {
     }
 
     private Expression literal(LiteralContext ctx) {
+        Expression result;
+        var comments = commentWriter.processLeadingComments(ctx);
         if( ctx instanceof IntegerLiteralAltContext iac )
-            return ast( integerLiteral(iac), iac );
+            result = ast( integerLiteral(iac), iac );
 
-        if( ctx instanceof FloatingPointLiteralAltContext fac )
-            return ast( floatingPointLiteral(fac), fac );
+        else if( ctx instanceof FloatingPointLiteralAltContext fac )
+            result = ast( floatingPointLiteral(fac), fac );
 
-        if( ctx instanceof StringLiteralAltContext sac )
-            return ast( string(sac.stringLiteral()), sac );
+        else if( ctx instanceof StringLiteralAltContext sac )
+            result = ast( string(sac.stringLiteral()), sac );
 
-        if( ctx instanceof BooleanLiteralAltContext bac )
-            return ast( constX("true".equals(bac.getText())), bac );
+        else if( ctx instanceof BooleanLiteralAltContext bac )
+            result = ast( constX("true".equals(bac.getText())), bac );
 
-        if( ctx instanceof NullLiteralAltContext nac )
-            return ast( constX(null), nac );
+        else if( ctx instanceof NullLiteralAltContext nac )
+            result = ast( constX(null), nac );
 
-        throw createParsingFailedException("Invalid expression: " + ctx.getText(), ctx);
+        else
+            throw createParsingFailedException("Invalid expression: " + ctx.getText(), ctx);
+        comments.addAll(commentWriter.processTrailingComments(ctx.getStop(), false));
+        commentWriter.attachComments(result, comments);
+        return result; 
     }
 
     private Expression integerLiteral(IntegerLiteralAltContext ctx) {
