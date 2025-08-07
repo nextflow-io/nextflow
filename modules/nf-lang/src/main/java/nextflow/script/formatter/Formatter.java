@@ -63,6 +63,7 @@ import org.codehaus.groovy.ast.stmt.ThrowStatement;
 import org.codehaus.groovy.ast.stmt.TryCatchStatement;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.codehaus.groovy.syntax.Types;
+import org.stringtemplate.v4.compiler.STParser.compoundElement_return;
 
 import static nextflow.script.ast.ASTUtils.*;
 
@@ -89,6 +90,10 @@ public class Formatter extends CodeVisitorSupport {
     public Formatter(FormattingOptions options, CommentWriter commentWriter) {
         this.options = options;
         this.commentWriter = commentWriter;
+    }
+
+    public boolean exit() {
+        return commentWriter.verifyAllWritten();
     }
 
     public void append(char c) {

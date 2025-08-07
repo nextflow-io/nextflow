@@ -144,7 +144,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 visitWorkflow(wn);
         }
         fmt.appendBlanks(1);
-        System.out.print(commentWriter.toNFComments());
+        fmt.exit();
     }
 
     public String toString() {

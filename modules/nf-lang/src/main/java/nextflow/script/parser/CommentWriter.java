@@ -26,6 +26,7 @@ public class CommentWriter {
     private final List<TokenInfo> tokensWithInfo;
     private final Set<Comment> pendingComments = new HashSet<>();
     private final Map<ASTNode, List<Comment>> attachedComments = new HashMap<>();
+    private final Map<ASTNode, Set<Comment>> writtenComments = new HashMap<>(); 
 
     private final Map<ASTNode, List<Comment>> leadingComments = new HashMap<>();
     private final Map<ASTNode, Map<String, List<Comment>>> withinComments = new HashMap<>();
@@ -73,11 +74,10 @@ public class CommentWriter {
         }
     }
 
+    String indent = "    ";
 
-    public String toNFComments() {
-        var header = "// CommentWriter with " + commentTokens.size() + " comment tokens";
-        var unattachedHeader = "// Unattached comments:";
-        var indent = "    ";
+    public String writeUnattached() {
+        var unattachedHeader = "Unattached comments:";
         var unattachedText = unattachedComments.stream()
             .map(t -> {
                 var line = t.getToken().getLine();
@@ -88,27 +88,35 @@ public class CommentWriter {
                 var attachedTo = t.getAttachedTo();
                 var attachedToText = attachedTo != null ? attachedTo.getText() : "null";
                 return (
-                    "// " + indent + line + ":" + column + "{\n" + 
-                    "// " + indent + indent + "content: " + text + "\n" +
-                    "// " + indent + indent + "attach:  " + attachedToText + "\n" +
-                    "// " + indent + "}\n"
+                    indent + line + ":" + column + "{\n" + 
+                    indent + indent + "content: " + text + "\n" +
+                    indent + indent + "attach:  " + attachedToText + "\n" +
+                    indent + "}\n"
                 );
             })
             .collect(Collectors.joining("\n"));
-        var pendingHeader = "// Pending comments:";
+        return unattachedHeader + unattachedText;
+    }
+
+    public String writePending() {
+        var pendingHeader = "Pending comments:";
         var pendingText = pendingComments.stream()
             .map(t -> {
                 var line = t.getToken().getLine();
                 var column = t.getToken().getCharPositionInLine();
                 var text = t.getToken().getText().replaceAll("\n", "\\n");
                 return (    
-                    "// " + indent + line + ":" + column + "{\n" + 
-                    "// " + indent + indent + "content: " + text + "\n" +
-                    "// " + indent + "}\n"
+                    indent + line + ":" + column + "{\n" + 
+                    indent + indent + "content: " + text + "\n" +
+                    indent + "}\n"
                 );
             })
             .collect(Collectors.joining("\n"));
-        var attachedHeader = "// Attached comments:";
+        return pendingHeader + pendingText;
+    }
+
+    public String writeAttached() {
+        var attachedHeader = "Attached comments:";
         var attachedText = attachedComments.values()
             .stream()
             .flatMap(List::stream)
@@ -129,17 +137,63 @@ public class CommentWriter {
                     (t.isTrailing() ? "trailing " : "")
                 );
                 return (
-                    "// " + indent + line + ":" + column + "{\n" + 
-                    "// " + indent + indent + "content    : " + text + "\n" +
-                    "// " + indent + indent + "attached to: " + attachedToText + "\n" +
-                    "// " + indent + indent + "token      : " + t.getPositionInfo() + "\n" +
-                    "// " + indent + indent + "written    : " + t.isWritten() + "\n" +
-                    "// " + indent + indent + "rel. pos.  : " + relPos + "\n" +
-                    "// " + indent + "}\n"
+                    indent + line + ":" + column + "{\n" + 
+                    indent + indent + "content    : " + text + "\n" +
+                    indent + indent + "attached to: " + attachedToText + "\n" +
+                    indent + indent + "token      : " + t.getPositionInfo() + "\n" +
+                    indent + indent + "written    : " + t.isWritten() + "\n" +
+                    indent + indent + "rel. pos.  : " + relPos + "\n" +
+                    indent + "}\n"
                 );
             })
             .collect(Collectors.joining("\n"));
-        return header + "\n" + unattachedHeader + "\n" + unattachedText + "\n" + pendingHeader + "\n" + pendingText + "\n" + attachedHeader + "\n" + attachedText;
+        return attachedHeader + attachedText;
+    }
+
+    public String writeWritten() {
+        var writtenHeader = "Written comments:";
+        var writtenText = writtenComments.values()
+            .stream()
+            .flatMap(Set::stream)
+            .map(t -> {
+                var line = t.getToken().getLine();
+                var column = t.getToken().getCharPositionInLine();
+                var text = t.getToken().getText().replaceAll("\n", "\\n");
+                var isLeading = t.isLeading();
+                var isTrailing = t.isTrailing();
+                ASTNode attachedTo = t.getAttachedTo();
+                var simpleName = attachedTo != null ? attachedTo.getClass().getSimpleName() : null;
+                var maybeText = attachedTo != null ? attachedTo.getText(): null;
+                var attachToCode = maybeText != null ? maybeText.replaceAll("\n", "\\n") : "null";
+                var attachedToText = attachedTo != null ? simpleName + " " + attachToCode : "null";
+                var relPos = (
+                    (t.isWithin() ? "within " : "")+
+                    (t.isLeading() ? "leading " : "") + 
+                    (t.isTrailing() ? "trailing " : "")
+                );
+                return (
+                    indent + line + ":" + column + "{\n" + 
+                    indent + indent + "content    : " + text + "\n" +
+                    indent + indent + "attached to: " + attachedToText + "\n" +
+                    indent + indent + "token      : " + t.getPositionInfo() + "\n" +
+                    indent + indent + "written    : " + t.isWritten() + "\n" +
+                    indent + indent + "rel. pos.  : " + relPos + "\n" +
+                    indent + "}\n"
+                );
+            })
+            .collect(Collectors.joining("\n"));
+        return writtenHeader + writtenText;
+    }
+
+
+    public String writeUnWritten() {
+        var header = "CommentWriter with " + commentTokens.size() + " comment tokens";
+        return header + "\n" + writeUnattached() + "\n" + writePending() + "\n"+ writeAttached() + "\n";
+    }
+
+    public String writeAll() {
+        var header = "CommentWriter with " + commentTokens.size() + " comment tokens";
+        return header + "\n" + writeUnattached() + "\n" + writePending() + "\n"+ writeUnattached() + "\n" + writeWritten();
     }
 
     public Map<String, List<Comment>> getAttachedComments(ASTNode node) {
@@ -300,6 +354,23 @@ public class CommentWriter {
         return trailingComments.getOrDefault(node, new HashMap<>());
     }
 
+    public boolean verifyAllWritten() {
+        if (
+            !(
+                unattachedComments.size() == 0 &&
+                pendingComments.size() == 0 &&
+                attachedComments.size() == 0
+            )
+        ) {
+            // Likely replace this error message with an exception
+            System.err.println("The following comments are left to be written");
+            System.err.println(writeUnWritten());
+            return false;
+        } else {
+            return true;
+        }
+    }
+
     public class Comment {
         private final Token token;
         private boolean isLeading = false;
@@ -417,6 +488,19 @@ public class CommentWriter {
                 throw new IllegalStateException(this + " already written");
             }
             isWritten = true;
+
+            writtenComments.computeIfAbsent(attachedTo, k -> new HashSet<>()).add(this);
+            var attachedNodeComments = attachedComments.get(attachedTo);
+            if (attachedNodeComments.contains(this)) {
+                if (attachedNodeComments.size() == 1) {
+                    attachedComments.remove(attachedTo);
+                } else {
+                    attachedNodeComments.remove(this);
+                }
+            } else {
+                throw new IllegalStateException(this + " was not attached to " + attachedTo);
+            }
+
             return new Tuple2<>(token.getText(), token.getType() == ScriptLexer.SL_COMMENT);
         }
 
