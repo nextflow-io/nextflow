@@ -27,6 +27,7 @@ import nextflow.processor.TaskId
 import nextflow.script.FusionMetadata
 import nextflow.script.WaveMetadata
 import nextflow.script.WorkflowMetadata
+import nextflow.trace.config.ReportConfig
 import nextflow.trace.event.TaskEvent
 import spock.lang.Specification
 import test.TestHelper
@@ -129,7 +130,7 @@ class ReportObserverTest extends Specification {
         )
 
         def file = TestHelper.createInMemTempFile('report.html')
-        def observer = Spy(ReportObserver, constructorArgs: [file])
+        def observer = Spy(new ReportObserver(reportFile: file))
 
         when:
         observer.renderHtml()
@@ -154,7 +155,7 @@ class ReportObserverTest extends Specification {
 
         def aggregator = Mock(ResourcesAggregator)
         def file = TestHelper.createInMemTempFile('report.html')
-        ReportObserver observer = Spy(ReportObserver, constructorArgs: [file])
+        def observer = Spy(new ReportObserver(reportFile: file))
         observer.getWorkflowMetadata() >> workflow
         observer.@aggregator = aggregator
 
@@ -195,9 +196,9 @@ class ReportObserverTest extends Specification {
     def 'should render not tasks payload' () {
 
         given:
-        def observer = Spy(ReportObserver)
+        def observer = Spy(new ReportObserver(new ReportConfig([:])))
         def BIG = Mock(Map)
-        BIG.size() >> ReportObserver.DEF_MAX_TASKS+1
+        BIG.size() >> ReportConfig.DEF_MAX_TASKS+1
 
         when:
         def result = observer.renderTasksJson()
@@ -208,7 +209,7 @@ class ReportObserverTest extends Specification {
 
     def 'should render tasks payload' () {
         given:
-        def observer = Spy(ReportObserver)
+        def observer = Spy(new ReportObserver(new ReportConfig([:])))
 
         def TASKID1 = TaskId.of(10)
         def TASKID2 = TaskId.of(20)

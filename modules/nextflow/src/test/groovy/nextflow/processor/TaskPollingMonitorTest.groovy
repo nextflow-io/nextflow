@@ -19,6 +19,7 @@ package nextflow.processor
 import java.util.concurrent.atomic.LongAdder
 
 import nextflow.Session
+import nextflow.executor.ExecutorConfig
 import nextflow.util.Duration
 import nextflow.util.RateUnit
 import nextflow.util.ThrottlingExecutor
@@ -34,12 +35,13 @@ class TaskPollingMonitorTest extends Specification {
 
         setup:
         def name = 'hello'
-        def session = new Session( executor: [pollInterval: '1h', queueSize: 11, dumpInterval: '3h'] )
+        def session = Mock(Session)
+        def config = new ExecutorConfig(pollInterval: '1h', queueSize: 11, dumpInterval: '3h')
 
         def defSize = 99
         def defPollDuration = Duration.of('44s')
         when:
-        def monitor = TaskPollingMonitor.create(session, name, defSize, defPollDuration)
+        def monitor = TaskPollingMonitor.create(session, config, name, defSize, defPollDuration)
         then:
         monitor.name == 'hello'
         monitor.pollIntervalMillis == Duration.of('1h').toMillis()
@@ -52,12 +54,12 @@ class TaskPollingMonitorTest extends Specification {
 
         given:
         def session = Mock(Session)
-        def monitor = new TaskPollingMonitor(name:'local', session: session, pollInterval: '1s', capacity: 100)
+        def config = new ExecutorConfig(submitRateLimit: RATE)
+        def monitor = new TaskPollingMonitor(name:'local', session: session, config: config, pollInterval: '1s', capacity: 100)
         
         when:
         def limit = monitor.createSubmitRateLimit()
         then:
-        1 * session.getExecConfigProp('local','submitRateLimit', null) >> RATE
         limit ? Math.round(limit.getRate()) : null == EXPECTED
 
         where:

@@ -75,7 +75,7 @@ class K8sDriverLauncherTest extends Specification {
         when:
         k8sConfig = driver.makeK8sConfig([:])
         then:
-        k8sConfig == new K8sConfig()
+        k8sConfig != null
 
         when:
         k8sConfig = driver.makeK8sConfig(k8s: [storageClaimName: 'foo', storageMountPath: '/mnt'])

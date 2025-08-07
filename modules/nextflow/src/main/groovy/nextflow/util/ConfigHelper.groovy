@@ -38,23 +38,6 @@ import org.yaml.snakeyaml.Yaml
 @CompileStatic
 class ConfigHelper {
 
-
-    def static getConfigProperty( def config, String execName, String propName ) {
-        def result = null
-
-        // make sure that the *executor* is a map object
-        // it could also be a plain string (when it specifies just the its name)
-        if( execName && config instanceof Map && config['$'+execName] instanceof Map ) {
-            result = config['$'+execName][propName]
-        }
-
-        if( result==null && config instanceof Map && config[propName] != null ) {
-            result = config[propName]
-        }
-
-        return result
-    }
-
     /**
      * Given a string value converts to its native object representation.
      *
