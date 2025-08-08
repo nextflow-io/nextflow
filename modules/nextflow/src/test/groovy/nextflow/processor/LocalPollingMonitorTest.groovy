@@ -23,7 +23,6 @@ import nextflow.Session
 import nextflow.SysEnv
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.ExecutorConfig
-import nextflow.executor.local.LocalTaskHandler
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
 /**
@@ -48,7 +47,7 @@ class LocalPollingMonitorTest extends Specification {
 
         def task = new TaskRun()
         task.config = new TaskConfig(cpus: 3, memory: MemoryUnit.of('2GB'))
-        def handler = Mock(LocalTaskHandler)
+        def handler = Mock(TaskHandler)
         handler.getTask() >> { task }
 
         expect:
@@ -96,7 +95,7 @@ class LocalPollingMonitorTest extends Specification {
 
         def task = new TaskRun()
         task.config = new TaskConfig(cpus: 4, memory: MemoryUnit.of('8GB'))
-        def handler = Mock(LocalTaskHandler)
+        def handler = Mock(TaskHandler)
         handler.getTask() >> { task }
         handler.canForkProcess() >> true
         handler.isReady() >> true
@@ -142,7 +141,7 @@ class LocalPollingMonitorTest extends Specification {
 
         def task = new TaskRun()
         task.config = new TaskConfig(cpus: 1, memory: MemoryUnit.of('8GB'))
-        def handler = Mock(LocalTaskHandler)
+        def handler = Mock(TaskHandler)
         handler.getTask() >> { task }
         handler.canForkProcess() >> true
         handler.isReady() >> true

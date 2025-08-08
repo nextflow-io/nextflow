@@ -219,9 +219,9 @@ class LocalPollingMonitor extends TaskPollingMonitor {
         availMemory -= mem(handler)
 
         final taskAccelerators = accelerators(handler)
-        if ( taskAccelerators > 0 ) {
-            ((LocalTaskHandler) handler).acceleratorEnv = acceleratorTracker.name()
-            ((LocalTaskHandler) handler).acceleratorIds = acceleratorTracker.acquire(taskAccelerators)
+        if( handler instanceof LocalTaskHandler && taskAccelerators > 0 ) {
+            handler.acceleratorEnv = acceleratorTracker.name()
+            handler.acceleratorIds = acceleratorTracker.acquire(taskAccelerators)
         }
 
         super.submit(handler)
@@ -243,7 +243,8 @@ class LocalPollingMonitor extends TaskPollingMonitor {
         if( result ) {
             availCpus += cpus(handler)
             availMemory += mem(handler)
-            acceleratorTracker.release(((LocalTaskHandler) handler).acceleratorIds ?: Collections.<String>emptyList())
+            if( handler instanceof LocalTaskHandler )
+                acceleratorTracker.release(handler.acceleratorIds ?: Collections.<String>emptyList())
         }
         return result
     }
