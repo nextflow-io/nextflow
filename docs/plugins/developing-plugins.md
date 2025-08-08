@@ -2,33 +2,108 @@
 
 # Developing plugins
 
-The Nextflow plugin framework streamlines plugin development by providing the structure and tools needed to extend Nextflow functionality. The Gradle plugin for Nextflow plugins simplifies development by configuring default Nextflow dependencies and incorporates custom Gradle tasks that streamline building and publishing plugins.
+This page describes how to develop plugins for Nextflow.
+
+(dev-plugins-template)=
+
+## Nextflow plugin template
+
+The [Nextflow plugin template](https://github.com/nextflow-io/nf-plugin-template/) is a scaffold for plugin development. It uses [Gradle](https://gradle.org/), a build automation tool optimized for Java and Groovy projects, as well as the [Nextflow Gradle plugin](https://github.com/nextflow-io/nextflow-plugin-gradle).
+
+You can use the `nextflow plugin create` sub-command to create plugins from the plugin template. See {ref}`gradle-plugin-create` for more information.
 
 :::{note}
-Nextflow Plugins can be developed without the Gradle plugin. However, this approach is only suggested if you are an advanced developer and your project is incompatible with the Gradle plugin.
+The Nextflow Gradle plugin is currently available as a private beta. See the {ref}`migration guide <plugin-registry-page>` for more information.
 :::
 
-(dev-plugins-framework)=
+### Structure
 
-## Framework
+The plugin template includes the source directories, build configuration files, and metadata required for development, testing, and publishing. Depending on the developer’s preference, plugins can be written in Java or Groovy.
 
-Nextflow plugins use the [Plugin Framework for Java (p4fj)](https://github.com/pf4j/pf4j) framework to install, update, load, and unload plugins. p4fj creates a separate class loader for each plugin, allowing plugins to use their own versions of dependency jars. Nextflow defines several p4fj `ExtensionPoints` that plugin developers can extend.
+For example, a plugin created from the plugin template with the name `nf-hello` and organization `nextflow` will have the following structure:
 
-(dev-plugins-gradle)=
-
-## Gradle plugin for Nextflow plugins
-
-[Gradle](https://gradle.org/) is a flexible build automation tool optimized for Java and Groovy projects. The [Gradle plugin for Nextflow plugins](https://github.com/nextflow-io/nextflow-plugin-gradle) streamlines the development process by automatically setting up essential Nextflow dependencies and providing custom Gradle tasks to simplify plugin building and publishing.
-
-### make commands
-
-The [Gradle plugin for Nextflow plugins](https://github.com/nextflow-io/nextflow-plugin-gradle) defines tasks that can be executed with `./gradlew`. For example:
-
-```bash
-./gradlew assemble
+```console
+nf-hello
+├── COPYING
+├── Makefile
+├── README.md
+├── build.gradle
+├── gradle
+│   └── wrapper
+│       ├── gradle-wrapper.jar
+│       └── gradle-wrapper.properties
+├── gradlew
+├── settings.gradle
+├── src
+│   ├── main
+│   │   └── groovy
+│   │       └── nextflow
+│   │           └── hello
+│   │               ├── HelloExtension.groovy
+│   │               ├── HelloFactory.groovy
+│   │               ├── HelloObserver.groovy
+│   │               └── HelloPlugin.groovy
+│   └── test
+│       └── groovy
+│           └── nextflow
+│               └── hello
+│                   └── HelloObserverTest.groovy
+└── validation
+    └── main.nf
+    └── nextflow.config
 ```
 
-For convenience, the most important tasks are wrapped in a `Makefile` and can be executed with the `make` command. For example:
+This structure contains the following key files and folders:
+
+- `.github/workflows`: GitHub Action which implements continuous integration for the plugin.
+
+- `build.gradle`: The Gradle build script.
+
+- `COPYING`: The project license, detailing the terms under which the code can be used and distributed.​
+
+- `gradle/wrapper/`: Helper files for the Gradle Wrapper.
+
+- `gradlew`: The Gradle Wrapper script, which allows you to use Gradle without installing it into your environment.
+
+- `Makefile`: Defines common tasks for building, testing, and publishing the plugin with Make.​
+
+- `README.md`: The project README, which provides an overview of the project, including its purpose, features, and instructions for usage and development.​
+
+- `settings.gradle`: The Gradle project configuration, which specifies project-specific settings such as the project name and included modules.
+
+- `src/main/groovy/<ORGANIZATION>/<NAME>/`: The main source directory, which contains the plugin source code and resources.​
+
+- `src/test/groovy/<ORGANIZATION>/<NAME>/`: The test source directory, which contains the plugin unit tests.
+
+- `validation`: A small Nextflow pipeline which serves as an end-to-end test for the plugin.
+
+The plugin template also implements the following example features:
+
+- A custom trace observer that prints a message when the workflow starts and when the workflow completes (see `HelloObserver`).
+
+- A custom function called `sayHello` (see `HelloExtension`).
+
+### Nextflow Gradle plugin
+
+The [Nextflow Gradle plugin](https://github.com/nextflow-io/nextflow-plugin-gradle) simplifies the development of Nextflow plugins. It provides default configuration required for Nextflow integration, as well as custom Gradle tasks for building, testing, and publishing plugins.
+
+It is versioned and published to the [Gradle Plugin Portal](https://plugins.gradle.org/), and can be declared and managed like any other dependency in the `build.gradle` file:
+
+```nextflow
+plugins {
+    id 'io.nextflow.nextflow-plugin' version '0.0.1-alpha4'
+}
+```
+
+:::{note}
+Nextflow plugins can be developed without the Gradle plugin. However, this approach is only suggested if you are an advanced developer and your project is incompatible with the Gradle plugin.
+:::
+
+### Make commands
+
+The plugin template includes a Makefile which wraps the most important Gradle tasks provided by the Nextflow Gradle plugin.
+
+These tasks can be executed with [Make](https://www.gnu.org/software/make/). For example:
 
 ```bash
 make assemble
@@ -37,95 +112,22 @@ make assemble
 The following `make` commands are available:
 
 `assemble`
-: Compiles the Nextflow plugin code and assembles it into a zip file. See {ref}`gradle-plugin-create` for more information.
-
-`test`
-: Runs plugin unit tests. See {ref}`gradle-plugin-unit-test` for more information.
+: Compiles the Nextflow plugin code and assembles it into a zip archive.
 
 `install`
-: Installs the plugin into the local nextflow plugins directory. See {ref}`gradle-plugin-install` for more information.
+: Installs the plugin into the local Nextflow plugins directory.
 
 `release`
-: Publishes the plugin. See {ref}`gradle-plugin-package` for more information.
+: Publishes the plugin. See {ref}`gradle-plugin-publish` for more information.
 
-(dev-plugins-versioning)=
+`test`
+: Runs plugin unit tests. See {ref}`gradle-plugin-test` for more information.
 
-### Versioning
-
-The Gradle plugin is versioned and published to the [Gradle Plugin Portal](https://plugins.gradle.org/). It can be declared and managed like any other dependency in the `build.gradle` file:
-
-```nextflow
-plugins {
-    id 'io.nextflow.nextflow-plugin' version '0.0.1-alpha4'
-}
-```
-
-See the source code in [nextflow-plugin-gradle](https://github.com/nextflow-io/nextflow-plugin-gradle) for implementation details.
-
-(dev-plugins-template)=
-
-## nf-plugin-template
-
-The [`nf-plugin-template`](https://github.com/nextflow-io/nf-plugin-template/) is a scaffold for plugin development. It incorporates the {ref}`dev-plugins-gradle` by default. You can use the `nextflow plugin create` sub-command to create plugins with the [`nf-plugin-template`](https://github.com/nextflow-io/nf-plugin-template/) scaffold. See {ref}`gradle-plugin-create` for more information.
-
-(dev-plugins-structure)=
-
-### Structure
-
-Plugins built with [`nf-plugin-template`](https://github.com/nextflow-io/nf-plugin-template/) includes the [Gradle plugin for Nextflow plugins](https://github.com/nextflow-io/nextflow-plugin-gradle). The template includes the source directories, build configuration files, and metadata required for development, testing, and publishing. Depending on the developer’s preference, plugins can be written in Java or Groovy.
-
-Plugins built with the [`nf-plugin-template`](https://github.com/nextflow-io/nf-plugin-template/) have the following structure:
-
-```
-.
-├── build.gradle
-├── COPYING
-├── gradle
-│   └── wrapper
-│       └── ...
-├── gradlew
-├── Makefile
-├── README.md
-├── settings.gradle
-└── src
-    ├── main
-    │   └── groovy
-    │       └── <ORGANIZATION>
-    │           └── plugin
-    │               └── ...
-    └── test
-        └── groovy
-            └── <ORGANIZATION>
-                └── plugin
-                    └── ...
-```
-
-This structure contains the following key files and folders:
-
-- `build.gradle`: The primary build script for Gradle.
-- `COPYING`: Contains the licensing information for the project, detailing the terms under which the code can be used and distributed.​
-- `gradle/wrapper/`: Holds files related to the Gradle Wrapper.
-- `gradlew`: A script for executing the Gradle Wrapper.
-- `Makefile`: Defines a set of tasks and commands for building and managing the project with the `make` automation tool.​
-- `README.md`: Provides an overview of the project, including its purpose, features, and instructions for usage and development.​
-- `settings.gradle`: Configures the Gradle build, specifying project-specific settings such as the project name and included modules.
-- `src/main/groovy/<ORGANIZATION>/plugin/`: The main source directory containing the plugin's implementation and resources.​
-- `src/test/groovy/<ORGANIZATION>/plugin/`: The main source directory containing the plugin's unit testing.
-
-See {ref}`nf-hello-page` for an example of a plugin built using this structure.
-
-:::{note}
-Nextflow plugins can be developed without the Gradle plugin. However, this approach is only suggested if you are an advanced developer and your project is incompatible with the Gradle plugin.
-:::
-
-(dev-plugins-make)=
-
-
-(dev-plugins-extension)=
+(dev-plugins-extension-points)=
 
 ## Extension points
 
-Nextflow’s plugin system exposes various extension points. This section gives examples of typical extension points and how they can be used.
+Nextflow’s plugin system exposes various extension points. This section gives examples of typical extension points and how to use them.
 
 ### Commands
 
@@ -214,8 +216,9 @@ import nextflow.script.dsl.Description
 ''')
 class MyPluginConfig implements ConfigScope {
 
-    /* required by extension point -- do not remove */
-    MyPluginConfig() {}
+    // no-arg constructor is required to enable validation of config options
+    MyPluginConfig() {
+    }
 
     MyPluginConfig(Map opts) {
         this.createMessage = opts.createMessage
@@ -233,7 +236,7 @@ This approach is not required to support plugin config options. However, it allo
 
 Plugins can define custom executors that can be used with the `executor` process directive.
 
-To implement an executor, create a class in your plugin that extends the [`Executor`](https://github.com/nextflow-io/nextflow/blob/master/modules/nextflow/src/main/groovy/nextflow/executor/Executor.groovy)class and implements the `ExtensionPoint` interface. Add the `@ServiceName` annotation to your class with the name of your executor. For example:
+To implement an executor, create a class in your plugin that extends the [`Executor`](https://github.com/nextflow-io/nextflow/blob/master/modules/nextflow/src/main/groovy/nextflow/executor/Executor.groovy) class and implements the `ExtensionPoint` interface. Add the `@ServiceName` annotation to your class with the name of your executor. For example:
 
 ```groovy
 import nextflow.executor.Executor
@@ -262,7 +265,6 @@ process hello {
 See the source code of Nextflow's built-in executors for examples of how to implement various executor components.
 :::
 
-
 ### Filesystems
 
 Plugins can define custom filesystems that Nextflow can use to interact with external storage systems using a single interface. For more information about accessing remote files, see {ref}`remote-files`.
@@ -289,7 +291,7 @@ You can then use this filesystem in your pipeline:
 input = file('myfs://<PATH_TO_INPUT_FILE>')
 ```
 
-See [Developing a Custom File System Provider](https://docs.oracle.com/javase/8/docs/technotes/guides/io/fsp/filesystemprovider.html) for more information and the `nf-amazon` plugin (`S3FileSystemProvider`) for examples of custom filesystems.
+See [Developing a Custom File System Provider](https://docs.oracle.com/javase/8/docs/technotes/guides/io/fsp/filesystemprovider.html) for more information and the `nf-amazon` plugin (`S3FileSystemProvider`) for an example of a custom filesystem.
 
 :::{tip}
 Custom filesystems are an advanced plugin extension. Before creating a new filesystem, check that your use case cannot already be supported by an existing filesystem such as HTTP or S3.
@@ -323,7 +325,7 @@ class MyExtension extends PluginExtensionPoint {
 
 You can then add this function to your pipeline:
 
-```
+```nextflow
 include { reverseString } from 'plugin/my-plugin'
 
 channel.of( reverseString('hi') )
@@ -382,7 +384,11 @@ channel
 ```
 
 :::{note}
-The above snippet is based on the <code>[nf-sqldb](https://github.com/nextflow-io/nf-sqldb)</code> plugin. The `fromQuery` factory is included under the alias `fromTable`.
+The above snippet is based on the [nf-sqldb](https://github.com/nextflow-io/nf-sqldb) plugin. The `fromQuery` factory is included under the alias `fromTable`.
+:::
+
+:::{tip}
+Before creating a custom operator, consider whether the operator can be defined as a [function](#functions) that can be composed with existing operators such as `map` or `subscribe`. Functions are easier to implement and can be used anywhere in your pipeline, not just channel logic.
 :::
 
 ### Process directives
@@ -473,7 +479,7 @@ myplugin.enabled = true
 
 See the [`TraceObserver` source code](https://github.com/nextflow-io/nextflow/blob/master/modules/nextflow/src/main/groovy/nextflow/trace/TraceObserver.groovy) for descriptions of the available workflow events.
 
-(dev-plugins-env-var)=
+(dev-plugins-env-vars)=
 
 ## Environment variables
 

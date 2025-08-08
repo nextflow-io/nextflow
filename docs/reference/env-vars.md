@@ -161,6 +161,9 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_PLUGINS_DIR`
 : The path where the plugin archives are loaded and stored (default: `$NXF_HOME/plugins`).
 
+`NXF_PLUGINS_INDEX_URL`
+: The plugin registry URL from which to download plugins (default: `https://raw.githubusercontent.com/nextflow-io/plugins/main/plugins.json`).
+
 `NXF_PLUGINS_TEST_REPOSITORY`
 : :::{versionadded} 23.04.0
   :::

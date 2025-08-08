@@ -964,7 +964,7 @@ $ nextflow plugin <subcommand> [options]
 
 : :::{versionadded} 25.04.0
   :::
-: Create a plugin scaffold using [`nf-plugin-template`](https://github.com/nextflow-io/nf-plugin-template/). See {ref}`gradle-plugin-create` for more information.
+: Create a plugin scaffold using the [Nextflow plugin template](https://github.com/nextflow-io/nf-plugin-template/). See {ref}`gradle-plugin-create` for more information.
 
 `install <plugin[@version],..>`
 

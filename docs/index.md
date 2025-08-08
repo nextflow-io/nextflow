@@ -163,7 +163,6 @@ developer/packages
 plugins/plugins
 plugins/using-plugins
 plugins/developing-plugins
-plugins/example-nf-hello
 ```
 
 ```{toctree}
@@ -183,7 +182,7 @@ tutorials/flux
 :maxdepth: 1
 
 guides/aws-java-sdk-v2
+guides/gradle-plugin
+guides/plugin-registry
 guides/updating-spot-retries
-gradle-plugin
-migrating-gradle-plugin
 ```
