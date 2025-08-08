@@ -21,8 +21,6 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.Global
-import nextflow.Session
 
 /**
  * Render the DAG using the Graphviz DOT format
@@ -41,15 +39,8 @@ class DotRenderer implements DagRenderer {
 
     private final String direction
 
-    /**
-     * Create a render instance
-     *
-     * @param name The graph name used in the DOT format
-     */
-    DotRenderer( String name ) {
+    DotRenderer(String name, String direction) {
         this.name = normalise(name)
-        final session = Global.session as Session
-        final direction = session.config.navigate('dag.direction', 'TB') as String
         if( direction !in ['TB','LR'] ) {
             log.warn "Invalid configuration property `dag.direction = '$direction'` - use either: 'TB' (top-bottom) or 'LR' (left-right)"
             this.direction = 'TB'

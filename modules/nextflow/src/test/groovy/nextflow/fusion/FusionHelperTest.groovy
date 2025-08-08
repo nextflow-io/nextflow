@@ -19,7 +19,8 @@ package nextflow.fusion
 
 import java.nio.file.Path
 
-import nextflow.container.ContainerConfig
+import nextflow.container.DockerConfig
+import nextflow.container.SingularityConfig
 import nextflow.file.http.XPath
 import spock.lang.Specification
 
@@ -54,21 +55,21 @@ class FusionHelperTest extends Specification {
         }
 
         when:
-        def result = FusionHelper.runWithContainer(launcher, new ContainerConfig(CONFIG), NAME, OPTS, CMD)
+        def result = FusionHelper.runWithContainer(launcher, CONFIG, NAME, OPTS, CMD)
         then:
         1 * launcher.fusionEnv() >> ENV
         and:
         result == EXPECTED
 
         where:
-        CONFIG                  | ENV               | NAME          | OPTS          | CMD                   | EXPECTED
-        [engine:'docker']       | [:]               | 'image:1'     | null          | ['echo', 'hello']     | "docker run -i --rm --privileged image:1 echo 'hello'"
-        [engine:'docker']       | [FOO:'one']       | 'image:2'     | null          | ['echo', 'hello']     | "docker run -i -e \"FOO=one\" --rm --privileged image:2 echo 'hello'"
-        [engine:'docker']       | [FOO:'one']       | 'image:2'     | '--this=that' | ['echo', 'hello']     | "docker run -i -e \"FOO=one\" --this=that --rm --privileged image:2 echo 'hello'"
+        CONFIG                     | ENV               | NAME          | OPTS          | CMD                   | EXPECTED
+        new DockerConfig([:])      | [:]               | 'image:1'     | null          | ['echo', 'hello']     | "docker run -i --rm --privileged image:1 echo 'hello'"
+        new DockerConfig([:])      | [FOO:'one']       | 'image:2'     | null          | ['echo', 'hello']     | "docker run -i -e \"FOO=one\" --rm --privileged image:2 echo 'hello'"
+        new DockerConfig([:])      | [FOO:'one']       | 'image:2'     | '--this=that' | ['echo', 'hello']     | "docker run -i -e \"FOO=one\" --this=that --rm --privileged image:2 echo 'hello'"
         and:
-        [engine:'singularity']  | [:]               | 'image:1'     | null          | ['echo', 'hello']     | "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} singularity exec --no-home --pid image:1 echo 'hello'"
-        [engine:'singularity']  | [FOO:'one']       | 'image:1'     | null          | ['echo', 'hello']     | "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} SINGULARITYENV_FOO=\"one\" singularity exec --no-home --pid image:1 echo 'hello'"
-        [engine:'singularity']  | [FOO:'one']       | 'image:1'     | '--this=that' | ['echo', 'hello']     | "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} SINGULARITYENV_FOO=\"one\" singularity exec --no-home --pid --this=that image:1 echo 'hello'"
+        new SingularityConfig([:]) | [:]               | 'image:1'     | null          | ['echo', 'hello']     | "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} singularity exec --no-home --pid image:1 echo 'hello'"
+        new SingularityConfig([:]) | [FOO:'one']       | 'image:1'     | null          | ['echo', 'hello']     | "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} SINGULARITYENV_FOO=\"one\" singularity exec --no-home --pid image:1 echo 'hello'"
+        new SingularityConfig([:]) | [FOO:'one']       | 'image:1'     | '--this=that' | ['echo', 'hello']     | "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} SINGULARITYENV_FOO=\"one\" singularity exec --no-home --pid --this=that image:1 echo 'hello'"
 
     }
 

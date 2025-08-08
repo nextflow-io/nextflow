@@ -321,9 +321,15 @@ process {
 This limitation can be avoided by using the {ref}`strict config syntax <updating-config-syntax>`.
 :::
 
+(config-workflow-handlers)=
+
 ## Workflow handlers
 
-Workflow event handlers can be defined in the config file, which is useful for handling pipeline events without having to modify the pipeline code:
+:::{deprecated} 25.10.0
+Use a {ref}`trace observer <plugins-trace-observers>` in a plugin to add custom workflow handlers to a pipeline via configuration.
+:::
+
+You can define workflow event handlers in the config file:
 
 ```groovy
 workflow.onComplete = {
@@ -337,4 +343,4 @@ workflow.onError = {
 }
 ```
 
-See {ref}`workflow-handlers` for more information.
+This approach is useful for handling workflow events without modifying the pipeline code. See {ref}`workflow-handlers` for more information.
