@@ -16,42 +16,58 @@
 
 package nextflow.lineage.cli
 
-import nextflow.SysEnv
-import nextflow.config.ConfigMap
-import nextflow.dag.MermaidHtmlRenderer
-import nextflow.lineage.LinHistoryRecord
-import nextflow.lineage.LinStoreFactory
-import nextflow.lineage.DefaultLinHistoryLog
-import nextflow.lineage.model.Checksum
-import nextflow.lineage.model.FileOutput
-import nextflow.lineage.model.DataPath
-import nextflow.lineage.model.Parameter
-import nextflow.lineage.model.TaskRun
-import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowRun
-import nextflow.lineage.serde.LinEncoder
-import nextflow.plugin.Plugins
-import org.junit.Rule
-import spock.lang.Specification
-import spock.lang.TempDir
-import test.OutputCapture
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
+import nextflow.SysEnv
+import nextflow.config.ConfigMap
+import nextflow.dag.MermaidHtmlRenderer
+import nextflow.exception.AbortOperationException
+import nextflow.file.FileHelper
+import nextflow.lineage.DefaultLinHistoryLog
+import nextflow.lineage.LinHistoryRecord
+import nextflow.lineage.LinStoreFactory
+import nextflow.lineage.fs.LinFileSystemProvider
+import nextflow.lineage.model.v1beta1.Checksum
+import nextflow.lineage.model.v1beta1.DataPath
+import nextflow.lineage.model.v1beta1.FileOutput
+import nextflow.lineage.model.v1beta1.Parameter
+import nextflow.lineage.model.v1beta1.TaskRun
+import nextflow.lineage.model.v1beta1.Workflow
+import nextflow.lineage.model.v1beta1.WorkflowRun
+import nextflow.lineage.serde.LinEncoder
+import nextflow.plugin.Plugins
+import nextflow.util.CacheHelper
+import org.junit.Rule
+import spock.lang.Shared
+import spock.lang.Specification
+import test.OutputCapture
+
 class LinCommandImplTest extends Specification{
 
-    @TempDir
+    @Shared
     Path tmpDir
 
+    @Shared
     Path storeLocation
+
+    @Shared
     ConfigMap configMap
 
+    def reset() {
+        def provider = FileHelper.getProviderFor('lid') as LinFileSystemProvider
+        provider?.reset()
+        LinStoreFactory.reset()
+    }
+
     def setup() {
+        reset()
         // clear the environment to avoid the local env pollute the test env
         SysEnv.push([:])
+        tmpDir = Files.createTempDirectory('tmp')
         storeLocation = tmpDir.resolve("store")
         configMap = new ConfigMap([lineage: [enabled: true, store: [location: storeLocation.toString(), logLocation: storeLocation.resolve(".log").toString()]]])
     }
@@ -60,11 +76,13 @@ class LinCommandImplTest extends Specification{
         Plugins.stop()
         LinStoreFactory.reset()
         SysEnv.pop()
+        tmpDir?.deleteDir()
     }
 
     def setupSpec() {
-        LinStoreFactory.reset()
+        reset()
     }
+
     /*
      * Read more http://mrhaki.blogspot.com.es/2015/02/spocklight-capture-and-assert-system.html
      */
@@ -246,22 +264,21 @@ class LinCommandImplTest extends Specification{
             'this is a script',
             null,null, null, null, null, [:],[])
         lidFile5.text = encoder.encode(entry)
-        final network = """flowchart BT
-    lid://12345/file.bam@{shape: document, label: "lid://12345/file.bam"}
-    lid://123987/file.bam@{shape: document, label: "lid://123987/file.bam"}
-    lid://123987@{shape: process, label: "foo [lid://123987]"}
-    ggal_gut@{shape: document, label: "ggal_gut"}
-    path/to/file@{shape: document, label: "path/to/file"}
-    lid://45678/output.txt@{shape: document, label: "lid://45678/output.txt"}
-    lid://45678@{shape: process, label: "bar [lid://45678]"}
-
-    lid://123987/file.bam -->lid://12345/file.bam
-    lid://123987 -->lid://123987/file.bam
-    ggal_gut -->lid://123987
-    lid://45678/output.txt -->lid://123987
-    path/to/file -->lid://123987
-    lid://45678 -->lid://45678/output.txt
-"""
+        final network = """\
+            flowchart TB
+                lid://12345/file.bam["lid://12345/file.bam"]
+                lid://123987/file.bam["lid://123987/file.bam"]
+                lid://123987(["foo [lid://123987]"])
+                ggal_gut["ggal_gut"]
+                path/to/file["path/to/file"]
+                lid://45678/output.txt["lid://45678/output.txt"]
+                lid://45678(["bar [lid://45678]"])
+                lid://123987/file.bam --> lid://12345/file.bam
+                lid://123987 --> lid://123987/file.bam
+                ggal_gut --> lid://123987
+                lid://45678/output.txt --> lid://123987
+                path/to/file --> lid://123987
+                lid://45678 --> lid://45678/output.txt""".stripIndent()
         final template = MermaidHtmlRenderer.readTemplate()
         def expectedOutput = template.replace('REPLACE_WITH_NETWORK_DATA', network)
 
@@ -276,7 +293,7 @@ class LinCommandImplTest extends Specification{
 
         then:
         stdout.size() == 1
-        stdout[0] == "Linage graph for lid://12345/file.bam rendered in ${outputHtml}"
+        stdout[0] == "Rendered lineage graph for lid://12345/file.bam to ${outputHtml}"
         outputHtml.exists()
         outputHtml.text == expectedOutput
     }
@@ -300,16 +317,15 @@ class LinCommandImplTest extends Specification{
             [new Parameter( "String", "sample_id","ggal_gut"),
              new Parameter("Integer","reads",2)])
         lidFile3.text = encoder.encode(entry)
-        final network = """flowchart BT
-    lid://12345/file.bam@{shape: document, label: "lid://12345/file.bam"}
-    lid://12345@{shape: processes, label: "run_name [lid://12345]"}
-    ggal_gut@{shape: document, label: "ggal_gut"}
-    2.0@{shape: document, label: "2.0"}
-
-    lid://12345 -->lid://12345/file.bam
-    ggal_gut -->lid://12345
-    2.0 -->lid://12345
-"""
+        final network = """\
+            flowchart TB
+                lid://12345/file.bam["lid://12345/file.bam"]
+                lid://12345(["run_name [lid://12345]"])
+                ggal_gut["ggal_gut"]
+                2.0["2.0"]
+                lid://12345 --> lid://12345/file.bam
+                ggal_gut --> lid://12345
+                2.0 --> lid://12345""".stripIndent()
         final template = MermaidHtmlRenderer.readTemplate()
         def expectedOutput = template.replace('REPLACE_WITH_NETWORK_DATA', network)
 
@@ -324,7 +340,7 @@ class LinCommandImplTest extends Specification{
 
         then:
         stdout.size() == 1
-        stdout[0] == "Linage graph for lid://12345/file.bam rendered in ${outputHtml}"
+        stdout[0] == "Rendered lineage graph for lid://12345/file.bam to ${outputHtml}"
         outputHtml.exists()
         outputHtml.text == expectedOutput
     }
@@ -371,26 +387,27 @@ class LinCommandImplTest extends Specification{
         def expectedOutput = '''diff --git 12345 67890
 --- 12345
 +++ 67890
-@@ -1,15 +1,15 @@
- {
-   "type": "FileOutput",
--  "path": "path/to/file",
-+  "path": "path/to/file2",
-   "checksum": {
--    "value": "45372qe",
-+    "value": "42472qet",
-     "algorithm": "nextflow",
-     "mode": "standard"
-   },
--  "source": "lid://123987/file.bam",
-+  "source": "lid://123987/file2.bam",
-   "workflowRun": "lid://123987/",
-   "taskRun": null,
--  "size": 1234,
-+  "size": 1235,
-   "createdAt": "1970-01-02T10:17:36.789Z",
-   "modifiedAt": "1970-01-02T10:17:36.789Z",
-   "labels": null
+@@ -2,16 +2,16 @@
+   "version": "lineage/v1beta1",
+   "kind": "FileOutput",
+   "spec": {
+-    "path": "path/to/file",
++    "path": "path/to/file2",
+     "checksum": {
+-      "value": "45372qe",
++      "value": "42472qet",
+       "algorithm": "nextflow",
+       "mode": "standard"
+     },
+-    "source": "lid://123987/file.bam",
++    "source": "lid://123987/file2.bam",
+     "workflowRun": "lid://123987/",
+     "taskRun": null,
+-    "size": 1234,
++    "size": 1235,
+     "createdAt": "1970-01-02T10:17:36.789Z",
+     "modifiedAt": "1970-01-02T10:17:36.789Z",
+     "labels": null
 '''
 
         when:
@@ -471,8 +488,8 @@ class LinCommandImplTest extends Specification{
             "lid://123987/file2.bam", "lid://123987/", null, 1235, time, time, ["experiment=test"])
         def entry3 = new FileOutput("path/to/file3",new Checksum("42472qet","nextflow","standard"),
             "lid://123987/file2.bam", "lid://123987/", null, 1235, time, time, null)
-        def expectedOutput1 = '[\n  "lid://123987/file.bam",\n  "lid://123987/file2.bam"\n]'
-        def expectedOutput2 = '[\n  "lid://123987/file2.bam",\n  "lid://123987/file.bam"\n]'
+        def expectedOutput1 = 'lid://123987/file.bam\nlid://123987/file2.bam'
+        def expectedOutput2 = 'lid://123987/file2.bam\nlid://123987/file.bam'
         lidFile.text = encoder.encode(entry)
         lidFile2.text = encoder.encode(entry2)
         lidFile3.text = encoder.encode(entry3)
@@ -489,6 +506,42 @@ class LinCommandImplTest extends Specification{
         stdout.join('\n') == expectedOutput1 || stdout.join('\n') == expectedOutput2
     }
 
+    def 'should print correct validate path' () {
+        given:
+        def outputFolder = tmpDir.resolve('output')
+        Files.createDirectories(outputFolder)
+        def outputFile = outputFolder.resolve('file1.txt')
+        outputFile.text = "this   is file1  == "
 
+        and:
+        def encoder = new LinEncoder().withPrettyPrint(true)
+        def hash = CacheHelper.hasher(outputFile).hash().toString()
+        def correctData = new FileOutput(outputFile.toString(), new Checksum(hash,"nextflow", "standard"))
+        def incorrectData = new FileOutput(outputFile.toString(), new Checksum("incorrectHash","nextflow", "standard"))
+        def lid1 = storeLocation.resolve('12345/output/file1.txt/.data.json')
+        Files.createDirectories(lid1.parent)
+        lid1.text = encoder.encode(correctData)
+        def lid2 = storeLocation.resolve('12345/output/file2.txt/.data.json')
+        Files.createDirectories(lid2.parent)
+        lid2.text = encoder.encode(incorrectData)
+        when:
+        new LinCommandImpl().check(configMap, ["lid://12345/output/file1.txt"])
+        def stdout = capture
+            .toString()
+            .readLines()// remove the log part
+            .findResults { line -> !line.contains('DEBUG') ? line : null }
+            .findResults { line -> !line.contains('INFO') ? line : null }
+            .findResults { line -> !line.contains('plugin') ? line : null }
+        def expectedOutput1 = "Checksum validation succeed"
+        then:
+        stdout.size() == 1
+        stdout[0] == expectedOutput1
+
+        when:
+        new LinCommandImpl().check(configMap, ["lid://12345/output/file2.txt"])
+        then:
+        def err = thrown(AbortOperationException)
+        err.message == "Checksum of '${outputFile}' does not match with lineage metadata"
+    }
 
 }

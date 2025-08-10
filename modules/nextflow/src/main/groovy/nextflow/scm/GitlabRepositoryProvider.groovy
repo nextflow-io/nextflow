@@ -39,13 +39,22 @@ class GitlabRepositoryProvider extends RepositoryProvider {
     }
 
     @Override
-    protected void auth( URLConnection connection ) {
+    protected String[] getAuth() {
         if( config.token ) {
             // set the token in the request header
-            connection.setRequestProperty("PRIVATE-TOKEN", config.token)
-        } else if( config.password ) {
-            connection.setRequestProperty("PRIVATE-TOKEN", config.password)
+            return new String[] { "PRIVATE-TOKEN", config.token }
         }
+        if( config.password ) {
+            return new String[] { "PRIVATE-TOKEN", config.password }
+        }
+        return null
+    }
+
+    @Override
+    boolean hasCredentials() {
+        return getToken()
+            ? true
+            : super.hasCredentials()
     }
 
     @Override
@@ -86,7 +95,7 @@ class GitlabRepositoryProvider extends RepositoryProvider {
         //  https://docs.gitlab.com/ee/api/repository_files.html#get-raw-file-from-repository
         //
         final ref = revision ?: getDefaultBranch()
-        final encodedPath = URLEncoder.encode(path,'utf-8')
+        final encodedPath = URLEncoder.encode(path.stripStart('/'),'utf-8')
         return "${config.endpoint}/api/v4/projects/${getProjectName()}/repository/files/${encodedPath}?ref=${ref}"
     }
 
@@ -111,10 +120,8 @@ class GitlabRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     byte[] readBytes(String path) {
-
         def url = getContentUrl(path)
         Map response  = invokeAndParseResponse(url)
         response.get('content')?.toString()?.decodeBase64()
-
     }
 }

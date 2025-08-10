@@ -190,6 +190,10 @@ class OutputDsl {
             setOption('header', value)
         }
 
+        void header(String... value) {
+            setOption('header', value as List)
+        }
+
         void path(String value) {
             setOption('path', value)
         }

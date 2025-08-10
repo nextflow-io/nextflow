@@ -166,7 +166,7 @@ import com.google.gson.stream.JsonWriter;
  * Shape shape = gson.fromJson(json, Shape.class);
  * }</pre>
  */
-public final class RuntimeTypeAdapterFactory<T> implements TypeAdapterFactory {
+public class RuntimeTypeAdapterFactory<T> implements TypeAdapterFactory {
     private final Class<?> baseType;
     private final String typeFieldName;
     private final Map<String, Class<?>> labelToSubtype = new LinkedHashMap<>();
@@ -174,7 +174,7 @@ public final class RuntimeTypeAdapterFactory<T> implements TypeAdapterFactory {
     private final boolean maintainType;
     private boolean recognizeSubtypes;
 
-    private RuntimeTypeAdapterFactory(Class<?> baseType, String typeFieldName, boolean maintainType) {
+    protected RuntimeTypeAdapterFactory(Class<?> baseType, String typeFieldName, boolean maintainType) {
         if (typeFieldName == null || baseType == null) {
             throw new NullPointerException();
         }
@@ -249,6 +249,18 @@ public final class RuntimeTypeAdapterFactory<T> implements TypeAdapterFactory {
     @CanIgnoreReturnValue
     public RuntimeTypeAdapterFactory<T> registerSubtype(Class<? extends T> type) {
         return registerSubtype(type, type.getSimpleName());
+    }
+
+    protected Class<?> getSubTypeFromLabel(String label){
+        return labelToSubtype.get(label);
+    }
+
+    protected String getLabelFromSubtype(Class<?> subType){
+        return subtypeToLabel.get(subType);
+    }
+
+    protected String getTypeFieldName(){
+        return typeFieldName;
     }
 
     @Override

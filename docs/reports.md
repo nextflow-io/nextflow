@@ -72,7 +72,7 @@ script:
 
     $script
 
-exist status: $exit
+exit status: $exit
 task status: $status
 task folder: $folder
 ```
@@ -88,7 +88,7 @@ nextflow log goofy_kilby -t my-template.md > execution-report.md
 The `filter` option makes it possible to select which entries to include in the log report. Any valid groovy boolean expression on the log fields can be used to define the filter condition. For example:
 
 ```bash
-nextflow log goofy_kilby -filter 'name =~ /foo.*/ && status == "FAILED"'
+nextflow log goofy_kilby -filter 'name =~ /hello.*/ && status == "FAILED"'
 ```
 
 (execution-report)=
@@ -302,7 +302,7 @@ The following table shows the fields that can be included in the execution repor
 : The value of the process `scratch` directive.
 
 `error_action`
-: The action applied on errof task failure.
+: The action applied on error for task failure.
 
 `hostname`
 : :::{versionadded} 22.05.0-edge

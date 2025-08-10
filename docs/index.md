@@ -146,23 +146,34 @@ migrations/index
 
 ```{toctree}
 :hidden:
+:caption: Contributing
+:maxdepth: 1
+
+developer/index
+developer/diagram
+developer/config-scopes
+developer/packages
+```
+
+```{toctree}
+:hidden:
 :caption: Plugins
 :maxdepth: 1
 
 plugins/plugins
 plugins/using-plugins
 plugins/developing-plugins
-plugins/example-nf-hello
 ```
 
 ```{toctree}
 :hidden:
-:caption: Contributing
+:caption: Tutorials
 :maxdepth: 1
 
-developer/index
-developer/diagram
-developer/packages
+tutorials/data-lineage
+tutorials/workflow-outputs
+tutorials/metrics
+tutorials/flux
 ```
 
 ```{toctree}
@@ -170,9 +181,8 @@ developer/packages
 :caption: Guides
 :maxdepth: 1
 
-gradle-plugin
-migrating-gradle-plugin
-updating-spot-retries
-metrics
-flux
+guides/aws-java-sdk-v2
+guides/gradle-plugin
+guides/plugin-registry
+guides/updating-spot-retries
 ```

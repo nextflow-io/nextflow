@@ -16,6 +16,7 @@
 
 package nextflow.lineage.model
 
+import nextflow.lineage.model.v1beta1.Checksum
 import nextflow.util.CacheHelper
 import spock.lang.Specification
 

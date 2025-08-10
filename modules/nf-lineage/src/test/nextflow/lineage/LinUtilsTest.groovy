@@ -18,12 +18,12 @@ package nextflow.lineage
 
 import java.time.ZoneId
 
-import nextflow.lineage.model.Checksum
-import nextflow.lineage.model.DataPath
-import nextflow.lineage.model.Parameter
-import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowOutput
-import nextflow.lineage.model.WorkflowRun
+import nextflow.lineage.model.v1beta1.Checksum
+import nextflow.lineage.model.v1beta1.DataPath
+import nextflow.lineage.model.v1beta1.Parameter
+import nextflow.lineage.model.v1beta1.Workflow
+import nextflow.lineage.model.v1beta1.WorkflowOutput
+import nextflow.lineage.model.v1beta1.WorkflowRun
 import nextflow.lineage.config.LineageConfig
 import spock.lang.Specification
 import spock.lang.TempDir
@@ -115,19 +115,7 @@ class LinUtilsTest extends Specification{
         when:
         LinUtils.getMetadataObject(lidStore, new URI('lid://no-exist#something'))
         then:
-        thrown(IllegalArgumentException)
-    }
-
-    def "should parse children elements form Fragment string"() {
-        expect:
-        LinUtils.parseChildrenFromFragment(FRAGMENT) == EXPECTED as String[]
-
-        where:
-        FRAGMENT                | EXPECTED
-        "workflow"              | ["workflow"]
-        "workflow.repository"   | ["workflow", "repository"]
-        null                    | []
-        ""                      | []
+        thrown(FileNotFoundException)
     }
 
 

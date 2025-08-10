@@ -16,9 +16,6 @@
 
 package nextflow.lineage.fs
 
-import nextflow.lineage.DefaultLinStore
-import spock.lang.Shared
-
 import java.nio.ByteBuffer
 import java.nio.channels.NonWritableChannelException
 import java.nio.file.AccessDeniedException
@@ -32,8 +29,9 @@ import java.nio.file.attribute.BasicFileAttributes
 
 import nextflow.Global
 import nextflow.Session
+import nextflow.lineage.DefaultLinStore
+import spock.lang.Shared
 import spock.lang.Specification
-
 /**
  * LID File system provider tests
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
@@ -125,7 +123,7 @@ class LinFileSystemProviderTest extends Specification {
         def output = data.resolve("output.txt")
         output.text = "Hello, World!"
         outputMeta.mkdirs()
-        outputMeta.resolve(".data.json").text = '{"type":"FileOutput","path":"'+output.toString()+'"}'
+        outputMeta.resolve(".data.json").text = '{"version":"lineage/v1beta1","kind":"FileOutput","spec":{"path":"'+output.toString()+'"}}'
 
         Global.session = Mock(Session) { getConfig()>>config }
         and:
@@ -181,7 +179,7 @@ class LinFileSystemProviderTest extends Specification {
         def config = [lineage:[store:[location:wdir.toString()]]]
         def outputMeta = wdir.resolve("12345")
         outputMeta.mkdirs()
-        outputMeta.resolve(".data.json").text = '{"type":"WorkflowRun","sessionId":"session","name":"run_name","params":[{"type":"String","name":"param1","value":"value1"}]}'
+        outputMeta.resolve(".data.json").text = '{"version":"lineage/v1beta1","kind":"WorkflowRun","spec":{"sessionId":"session","name":"run_name","params":[{"type":"String","name":"param1","value":"value1"}]}}'
 
         Global.session = Mock(Session) { getConfig()>>config }
         and:
@@ -240,7 +238,7 @@ class LinFileSystemProviderTest extends Specification {
         def output = data.resolve("output.txt")
         output.text = "Hello, World!"
         outputMeta.mkdirs()
-        outputMeta.resolve(".data.json").text = '{"type":"FileOutput","path":"'+output.toString()+'"}'
+        outputMeta.resolve(".data.json").text = '{"version":"lineage/v1beta1","kind":"FileOutput","spec":{"path":"'+output.toString()+'"}}'
 
         Global.session = Mock(Session) { getConfig()>>config }
         and:
@@ -280,8 +278,8 @@ class LinFileSystemProviderTest extends Specification {
         output1.resolve('file3.txt').text = 'file3'
         wdir.resolve('12345/output1').mkdirs()
         wdir.resolve('12345/output2').mkdirs()
-        wdir.resolve('12345/.data.json').text = '{"type":"TaskRun"}'
-        wdir.resolve('12345/output1/.data.json').text = '{"type":"FileOutput", "path": "' + output1.toString() + '"}'
+        wdir.resolve('12345/.data.json').text = '{"version":"lineage/v1beta1","kind":"TaskRun","spec":{"name":"dummy"}}'
+        wdir.resolve('12345/output1/.data.json').text = '{"version":"lineage/v1beta1","kind":"FileOutput","spec":{"path": "' + output1.toString() + '"}}'
 
         and:
         def config = [lineage:[store:[location:wdir.toString()]]]
@@ -290,6 +288,7 @@ class LinFileSystemProviderTest extends Specification {
         def provider = new LinFileSystemProvider()
         def lid = provider.getPath(LinPath.asUri('lid://12345/output1'))
         def lid2 = provider.getPath(LinPath.asUri('lid://12345'))
+        def lid3 = provider.getPath(LinPath.asUri('lid://678'))
 
         expect:
         Files.exists(lid)
@@ -298,7 +297,7 @@ class LinFileSystemProviderTest extends Specification {
         Files.exists(lid.resolve('file3.txt'))
 
         when:
-        provider.newDirectoryStream(lid2, (p) -> true)
+        provider.newDirectoryStream(lid3, (p) -> true)
         then:
         thrown(FileNotFoundException)
 
@@ -312,6 +311,14 @@ class LinFileSystemProviderTest extends Specification {
             lid.resolve('file2.txt'),
             lid.resolve('file3.txt')
         ] as Set
+
+        when:
+        stream = provider.newDirectoryStream(lid2, (p) -> true)
+        and:
+        result = stream.toList()
+        then:
+        result.size() == 1
+        result[0] ==  lid2.resolve('output1')
 
         cleanup:
         wdir.resolve('12345').deleteDir()
@@ -396,7 +403,7 @@ class LinFileSystemProviderTest extends Specification {
         output.resolve('abc').text = 'file1'
         output.resolve('.foo').text = 'file2'
         wdir.resolve('12345/output').mkdirs()
-        wdir.resolve('12345/output/.data.json').text = '{"type":"FileOutput", "path": "' + output.toString() + '"}'
+        wdir.resolve('12345/output/.data.json').text = '{"version":"lineage/v1beta1","kind":"FileOutput","spec":{"path": "' + output.toString() + '"}}'
         and:
         def provider = new LinFileSystemProvider()
         def lid1 = provider.getPath(LinPath.asUri('lid://12345/output/abc'))
@@ -416,7 +423,8 @@ class LinFileSystemProviderTest extends Specification {
         def file = data.resolve('abc')
         file.text = 'Hello'
         wdir.resolve('12345/abc').mkdirs()
-        wdir.resolve('12345/abc/.data.json').text = '{"type":"FileOutput", "path": "' + file.toString() + '"}'
+        wdir.resolve('12345/abc/.data.json').text = '{"version":"lineage/v1beta1","kind":"FileOutput","spec":{"path":"' + file.toString() + '"}}'
+        and:
         Global.session = Mock(Session) { getConfig()>>config }
         and:
         def provider = new LinFileSystemProvider()

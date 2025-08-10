@@ -1,4 +1,4 @@
-process sayHello {
+process hello {
     output:
     eval('echo Hello world!')
 
@@ -9,5 +9,5 @@ process sayHello {
 }
 
 workflow {
-    sayHello | view
+    hello | view
 }
