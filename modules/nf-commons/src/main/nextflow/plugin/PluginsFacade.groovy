@@ -61,7 +61,7 @@ class PluginsFacade implements PluginStateListener {
     PluginsFacade() {
         mode = getPluginsMode()
         root = getPluginsDir()
-        indexUrl = getPluginsIndexUrl()
+        indexUrl = getPluginsRegistryUrl()
         offline = env.get('NXF_OFFLINE') == 'true'
         if( mode==DEV_MODE && root.toString()=='plugins' && !isRunningFromDistArchive() )
             root = detectPluginsDevRoot()
@@ -119,13 +119,13 @@ class PluginsFacade implements PluginStateListener {
             || hostname.endsWith('.seqera.io')
     }
 
-    protected String getPluginsIndexUrl() {
-        final url = env.get('NXF_PLUGINS_INDEX_URL')
+    protected String getPluginsRegistryUrl() {
+        final url = env.get('NXF_PLUGINS_REGISTRY_URL')
         if( !url ) {
             log.trace "Using default plugins url"
             return DEFAULT_PLUGINS_REPO
         }
-        log.debug "Detected NXF_PLUGINS_INDEX_URL=$url"
+        log.debug "Detected NXF_PLUGINS_REGISTRY_URL=$url"
         if( !isSupportedIndex(url) ) {
             // warn that this is experimental behaviour
             log.warn """\

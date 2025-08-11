@@ -1,21 +1,20 @@
 package nextflow.plugin
 
+
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+
 import com.google.gson.Gson
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import io.seqera.util.retry.Retryable
+import io.seqera.http.HxClient
 import nextflow.BuildInfo
-import nextflow.util.HttpRetryableClient
+import nextflow.util.RetryConfig
 import org.pf4j.PluginRuntimeException
 import org.pf4j.update.FileDownloader
 import org.pf4j.update.FileVerifier
 import org.pf4j.update.PluginInfo
 import org.pf4j.update.verifier.CompoundVerifier
-
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
-
 /**
  * Represents an update repository served via an HTTP api.
  *
@@ -31,9 +30,9 @@ import java.net.http.HttpResponse
 class HttpPluginRepository implements PrefetchUpdateRepository {
     private final String id
     private final URI url
-    private final HttpRetryableClient retriableHttpClient
+    private final HxClient httpClient
 
-    private Map<String, PluginInfo> plugins = new HashMap<>()
+    private Map<String, PluginInfo> plugins
 
     HttpPluginRepository(String id, URI url) {
         this.id = id
@@ -41,7 +40,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
         this.url = !url.toString().endsWith("/")
             ? URI.create(url.toString() + "/")
             : url
-        this.retriableHttpClient = HttpRetryableClient.create(HttpClient.newHttpClient(), Retryable.ofDefaults().config())
+        this.httpClient = HxClient.create(RetryConfig.config())
     }
 
     // NOTE ON PREFETCHING
@@ -78,7 +77,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
 
     @Override
     Map<String, PluginInfo> getPlugins() {
-        if (plugins.isEmpty()) {
+        if (plugins==null) {
             log.warn "getPlugins() called before prefetch() - plugins map will be empty"
             return Map.of()
         }
@@ -127,32 +126,41 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
             .build()
         try {
             return sendAndParse(req)
-        } catch( ConnectException e ) {
-            throw new ConnectException("Failed to download plugins metadata")
-        } catch( Exception e ) {
-            throw new PluginRuntimeException("Failed to download plugin metadata: ${e.message}")
+        }
+        catch (PluginRuntimeException e) {
+            throw e
+        }
+        catch (Exception e) {
+            throw new PluginRuntimeException(e, "Unable to connect to ${uri}- cause: ${e.message}")
         }
     }
 
     private Map<String, PluginInfo> sendAndParse(HttpRequest req) {
         final gson = new Gson()
-        def rep = retriableHttpClient.send(req, HttpResponse.BodyHandlers.ofString())
-        if( rep.statusCode() != 200 ) throw new PluginRuntimeException(errorMessage(rep, gson))
-        try {
-            def repBody = gson.fromJson(rep.body(), FetchResponse)
-            return repBody.plugins.collectEntries { p -> Map.entry(p.id, p) }
-        } catch( Exception e ) {
-            log.info("Plugin metadata response body: '${rep.body()}'")
-            throw new PluginRuntimeException("Failed to parse response body", e)
+        final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
+        final body = resp.body()
+        log.debug "Registry request: ${resp.uri()}\n- code: ${resp.statusCode()}\n- body: ${body}"
+        if( resp.statusCode() != 200 ) {
+            final msg = "Invalid response while fetching plugin metadata from: ${req.uri()}\n- http status: ${resp.statusCode()}\n- response   : ${body}"
+            throw new PluginRuntimeException(msg)
         }
-    }
-
-    private static String errorMessage(HttpResponse<String> rep, Gson gson) {
         try {
-            def err = gson.fromJson(rep.body(), ErrorResponse)
-            return "${err.type} - ${err.message}"
-        } catch (Exception e) {
-            return rep.body()
+            final FetchResponse decoded = gson.fromJson(body,FetchResponse)
+            if( decoded.plugins == null ) {
+                throw new PluginRuntimeException("Failed to download plugin metadata: Failed to parse response body")
+            }
+            final result = new HashMap<String, PluginInfo>()
+            for( PluginInfo plugin : decoded.plugins ) {
+                if( plugin.releases )
+                    result.put(plugin.id, plugin)
+                else
+                    log.debug "Registry ${resp.uri().host} has no releases for plugin: ${plugin}"
+            }
+            return result
+        }
+        catch( Exception e ) {
+            final msg = "Unexpected error while fetching plugin metadata from: ${req.uri()}\n- message : ${e.message}\n- response: ${body}"
+            throw new PluginRuntimeException(msg)
         }
     }
 
@@ -165,8 +173,4 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
         List<PluginInfo> plugins
     }
 
-    private static class ErrorResponse {
-        String type
-        String message
-    }
 }

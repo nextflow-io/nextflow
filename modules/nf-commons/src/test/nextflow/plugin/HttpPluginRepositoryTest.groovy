@@ -1,15 +1,14 @@
 package nextflow.plugin
 
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
+
 import com.github.tomakehurst.wiremock.junit.WireMockRule
 import com.github.tomjankes.wiremock.WireMockGroovy
-import dev.failsafe.FailsafeException
 import nextflow.BuildInfo
 import org.junit.Rule
 import org.pf4j.PluginRuntimeException
 import spock.lang.Specification
-
-import java.time.ZoneOffset
-import java.time.ZonedDateTime
 
 class HttpPluginRepositoryTest extends Specification {
     @Rule
@@ -37,8 +36,7 @@ class HttpPluginRepositoryTest extends Specification {
                 body """{
                   "plugins": [
                     {
-                      "id": "nf-fake",
-                      "releases": []
+                      "id": "nf-fake"
                     }
                   ]
                 }
@@ -51,10 +49,7 @@ class HttpPluginRepositoryTest extends Specification {
 
         then:
         def plugins = unit.getPlugins()
-        plugins.size() == 1
-        def p1 = plugins.get("nf-fake")
-        p1.id == "nf-fake"
-        p1.releases.size() == 0
+        plugins.size() == 0
     }
 
     // ------------------------------------------------------------------------
@@ -115,8 +110,8 @@ class HttpPluginRepositoryTest extends Specification {
         unit.prefetch([new PluginSpec("nf-fake")])
 
         then:
-        def err = thrown ConnectException
-        err.message == "Failed to download plugins metadata"
+        def err = thrown PluginRuntimeException
+        err.message.startsWith("Unable to connect to http://localhost")
     }
 
     // ------------------------------------------------------------------------
@@ -139,7 +134,10 @@ class HttpPluginRepositoryTest extends Specification {
 
         then:
         def err = thrown PluginRuntimeException
-        err.message == "Failed to download plugin metadata: Server error!"
+        err.message == """\
+            Invalid response while fetching plugin metadata from: http://localhost:${wiremock.port()}/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}
+            - http status: 500
+            - response   : Server error!""".stripIndent()
     }
 
     // ------------------------------------------------------------------------
@@ -169,7 +167,7 @@ class HttpPluginRepositoryTest extends Specification {
 
         then:
         def err = thrown PluginRuntimeException
-        err.message == "Failed to download plugin metadata: Failed to parse response body"
+        err.message.startsWith("Unexpected error while fetching plugin metadata from: http://localhost")
     }
 
     // ------------------------------------------------------------------------
@@ -195,7 +193,7 @@ class HttpPluginRepositoryTest extends Specification {
 
         then:
         def err = thrown PluginRuntimeException
-        err.message == "Failed to download plugin metadata: SOME_ERROR - Unparseable request"
+        err.message.startsWith("Invalid response while fetching plugin metadata from: http://localhost")
     }
 
     // ------------------------------------------------------------------------
