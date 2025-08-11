@@ -52,7 +52,7 @@ No immediate actions are required for plugin users. The plugin configuration has
 
 ## Impact on plugin developers
 
-Plugin developers will need to update their plugin to publish to the Nextflow plugin registry instead of the legacy plugin index. The easiest way to do this is to migrate to the Nextflow Gradle plugin, which simplifies the development process and supports publishing to the plugin registry from the command line.
+Plugin developers will need to update their plugin to publish to the Nextflow plugin registry instead of the legacy plugin index. The best way to do this is to migrate to the Nextflow Gradle plugin, which simplifies the development process and supports publishing to the plugin registry from the command line.
 
 ### Migrating to the Nextflow Gradle plugin
 
@@ -114,12 +114,12 @@ To migrate an existing Nextflow plugin:
 
     Replace the following:
 
-    - `DEPENDENCY`: (Optional) Your plugins dependency libraries—for example, `commons-io:commons-io:2.18.0`.
-    - `PLUGIN_VERSION:` Your plugin version—for example, `0.5.0`.
-    - `MINIMUM_NEXTFLOW_VERSION`: The minimum Nextflow version required to run your plugin—for example, `25.04.0`.
-    - `PROVIDER`: Your name or organization—for example, `acme`.
-    - `CLASS_NAME`: Your plugin class name—for example, `acme.plugin.MyPlugin`.
-    - `EXTENSION_POINT`: Your extension point identifiers that the plugin will implement or expose—for example, `acme.plugin.MyFactory`.
+    - `DEPENDENCY`: (Optional) Your plugins dependency libraries. For example, `commons-io:commons-io:2.18.0`.
+    - `PLUGIN_VERSION:` Your plugin version. For example, `0.5.0`.
+    - `MINIMUM_NEXTFLOW_VERSION`: The minimum Nextflow version required to run your plugin. For example, `25.04.0`.
+    - `PROVIDER`: Your name or organization. For example, `acme`.
+    - `CLASS_NAME`: Your plugin class name. For example, `acme.plugin.MyPlugin`.
+    - `EXTENSION_POINT`: Your extension point identifiers that the plugin will implement or expose. For example, `acme.plugin.MyFactory`.
 
 5. Replace the contents of `Makefile` with the following:
 

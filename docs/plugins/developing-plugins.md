@@ -13,7 +13,7 @@ The [Nextflow plugin template](https://github.com/nextflow-io/nf-plugin-template
 You can use the `nextflow plugin create` sub-command to create plugins from the plugin template. See {ref}`gradle-plugin-create` for more information.
 
 :::{note}
-The Nextflow Gradle plugin is currently available as a private beta. See the {ref}`migration guide <plugin-registry-page>` for more information.
+The Nextflow Gradle plugin is currently available as a private beta. See {ref}`Migrating to the Nextflow plugin registry <plugin-registry-page>` for more information.
 :::
 
 (dev-plugins-structure)=
@@ -73,9 +73,9 @@ This structure contains the following key files and folders:
 
 - `settings.gradle`: The Gradle project configuration, which specifies project-specific settings such as the project name and included modules.
 
-- `src/main/groovy/<ORGANIZATION>/<NAME>/`: The main source directory, which contains the plugin source code and resources.​
+- `src/main/groovy/<ORGANIZATION>/`: The main source directory, which contains the plugin source code and resources.​
 
-- `src/test/groovy/<ORGANIZATION>/<NAME>/`: The test source directory, which contains the plugin unit tests.
+- `src/test/groovy/<ORGANIZATION>/`: The test source directory, which contains the plugin unit tests.
 
 - `validation`: A small Nextflow pipeline which serves as an end-to-end test for the plugin.
 
@@ -98,7 +98,7 @@ plugins {
 ```
 
 :::{note}
-Nextflow plugins can be developed without the Gradle plugin. However, this approach is only suggested if you are an advanced developer and your project is incompatible with the Gradle plugin.
+You can develop Nextflow plugins without the Gradle plugin. However, this approach is only suggested if you are an advanced developer and your project is incompatible with the Gradle plugin.
 :::
 
 ### Make commands
@@ -485,7 +485,7 @@ See the [`TraceObserver` source code](https://github.com/nextflow-io/nextflow/bl
 
 ## Environment variables
 
-The following environment variables are available when developing and testing plugins:
+The following environment variables are available to develop and test plugins:
 
 `NXF_PLUGINS_MODE`
 : The plugin execution mode. Either `prod` for production or `dev` for development.
