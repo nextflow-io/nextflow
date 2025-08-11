@@ -20,6 +20,7 @@ import com.google.common.base.CaseFormat
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+import groovy.transform.Memoized
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import io.seqera.util.retry.Retryable
@@ -93,12 +94,14 @@ class RetryConfig implements Retryable.Config {
         config(Global.config)
     }
 
+    @Memoized
     static RetryConfig config(Map config) {
-        if( config!=null ) {
-            return new RetryConfig(getNestedConfig(config, 'nextflow', 'retryPolicy') ?: Collections.emptyMap())
+        if( config==null ) {
+            log.debug "Missing nextflow session - using default retry config"
+            config = Collections.emptyMap()
         }
-        log.warn "Missing nextflow session - using default retry config"
-        return new RetryConfig()
+
+        return new RetryConfig(getNestedConfig(config, 'nextflow', 'retryPolicy') ?: Collections.emptyMap())
     }
 
     private static Map getNestedConfig(Map config, String... keys) {
