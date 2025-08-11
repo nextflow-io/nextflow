@@ -161,6 +161,11 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_PLUGINS_DIR`
 : The path where the plugin archives are loaded and stored (default: `$NXF_HOME/plugins`).
 
+`NXF_PLUGINS_REGISTRY_URL`
+: :::{versionadded} 25.08.0-edge
+  :::
+: Specifies the URL of the plugin registry used to download and resolve plugins. This allows using custom or private plugin registries instead of the default public registry.
+
 `NXF_PLUGINS_TEST_REPOSITORY`
 : :::{versionadded} 23.04.0
   :::
@@ -190,6 +195,11 @@ The following environment variables control the configuration of the Nextflow ru
 : :::{versionadded} 25.06.0-edge
   :::
 : Max delay used for HTTP retryable operations (default: `90s`).
+
+`NXF_RETRY_POLICY_MULTIPLIER`
+: :::{versionadded} 25.08.0-edge
+  :::
+: Delay multiplier used for HTTP retryable operations (default: `2.0`).
 
 `NXF_SCM_FILE`
 : :::{versionadded} 20.10.0
