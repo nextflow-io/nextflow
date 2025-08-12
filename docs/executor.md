@@ -18,7 +18,7 @@ The pipeline processes must specify the Docker image to use by defining the `con
 
 To enable this executor, set `process.executor = 'awsbatch'` in the `nextflow.config` file.
 
-The pipeline can be launched either in a local computer, or an EC2 instance. EC2 is suggested for heavy or long-running workloads. Additionally, an S3 bucket must be used as the pipeline work directory.
+The pipeline can be launched either on a local computer, or an EC2 instance. EC2 is suggested for heavy or long-running workloads. Additionally, an S3 bucket must be used as the pipeline work directory.
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
@@ -45,7 +45,7 @@ The pipeline processes must specify the Docker image to use by defining the `con
 
 To enable this executor, set `process.executor = 'azurebatch'` in the `nextflow.config` file.
 
-The pipeline can be launched either in a local computer, or a cloud virtual machine. The cloud VM is suggested for heavy or long-running workloads. Additionally, an Azure Blob storage container must be used as the pipeline work directory.
+The pipeline can be launched either on a local computer, or a cloud virtual machine. The cloud VM is suggested for heavy or long-running workloads. Additionally, an Azure Blob storage container must be used as the pipeline work directory.
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
@@ -121,7 +121,7 @@ By default, Flux will send all output to the `.command.log` file. To send this o
 
 [Google Cloud Batch](https://cloud.google.com/batch) is a managed computing service that allows the execution of containerized workloads in the Google Cloud Platform infrastructure.
 
-Nextflow provides built-in support for the Cloud Batch API, which allows the seamless deployment of a Nextflow pipeline in the cloud, offloading the process executions as pipelines.
+Nextflow provides built-in support for the Cloud Batch API, which allows the seamless deployment of Nextflow pipelines in the cloud, offloading the pipeline process executions.
 
 The pipeline processes must specify the Docker image to use by defining the `container` directive, either in the pipeline script or the `nextflow.config` file. Additionally, the pipeline work directory must be located in a Google Storage bucket.
 
@@ -299,7 +299,7 @@ Resource requests and other job characteristics can be controlled via the follow
 
 ## NQSII
 
-The `nsqii` executor allows you to run your pipeline script using the [NQSII](https://www.rz.uni-kiel.de/en/our-portfolio/hiperf/nec-linux-cluster) resource manager.
+The `nqsii` executor allows you to run your pipeline script using the [NQSII](https://www.rz.uni-kiel.de/en/our-portfolio/hiperf/nec-linux-cluster) resource manager.
 
 Nextflow manages each process as a separate job that is submitted to the cluster using the `qsub` command provided by the scheduler.
 

@@ -4,7 +4,7 @@
 
 ## Git configuration
 
-The file `$HOME/.nextflow/scm` allows you to centralise the security credentials required to access private project repositories on Bitbucket, GitHub and GitLab source code management (SCM) platforms or to manage the configuration properties of private server installations (of the same platforms).
+The file `$HOME/.nextflow/scm` allows you to centralize the security credentials required to access private project repositories on Bitbucket, GitHub and GitLab source code management (SCM) platforms or to manage the configuration properties of private server installations (of the same platforms).
 
 The configuration properties for each Git provider are defined inside the `providers` section. Properties for the same provider are grouped with a common name and delimited with curly brackets. For example:
 
@@ -74,7 +74,7 @@ App passwords are substitute passwords for a user account which you can use for 
 BitBucket Server uses a different API from the [BitBucket](https://bitbucket.org/) Cloud service. Make sure to use the right configuration whether you are using the cloud service or a self-hosted installation.
 :::
 
-To access your local BitBucket Server create an entry in the [SCM configuration file](#git-configuration) specifying as shown below:
+To access your local BitBucket Server create an entry in the [SCM configuration file](#git-configuration) as shown below:
 
 ```groovy
 providers {
@@ -146,7 +146,7 @@ See [Gitea documentation](https://docs.gitea.io/en-us/api-usage/) about how to e
 
 ### Azure Repos
 
-Nextflow has builtin support for [Azure Repos](https://azure.microsoft.com/en-us/services/devops/repos/), a Git source code management service hosted in the Azure cloud. To access your Azure Repos with Nextflow provide the repository credentials using the configuration snippet shown below:
+Nextflow has built-in support for [Azure Repos](https://azure.microsoft.com/en-us/services/devops/repos/), a Git source code management service hosted in the Azure cloud. To access your Azure Repos with Nextflow provide the repository credentials using the configuration snippet shown below:
 
 ```groovy
 providers {
@@ -194,7 +194,7 @@ Then the pipeline can be accessed with Nextflow as shown below:
 nextflow run https://git-codecommit.eu-west-1.amazonaws.com/v1/repos/my-repo
 ```
 
-In the above example replace `my-repo` with your own repository. Note also that AWS CodeCommit has different URLs depending the region in which you are working.
+In the above example replace `my-repo` with your own repository. Note also that AWS CodeCommit has different URLs depending on the region in which you are working.
 
 :::{note}
 The support for protocols other than HTTPS is not available at this time.
