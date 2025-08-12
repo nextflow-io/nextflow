@@ -49,7 +49,7 @@ The following configuration properties are supported for each provider configura
 
 ## Git providers
 
-### BitBucket
+### Bitbucket
 
 Create a `bitbucket` entry in the [SCM configuration file](#git-configuration) specifying your user name and app password, as shown below:
 
@@ -66,15 +66,15 @@ providers {
 App passwords are substitute passwords for a user account which you can use for scripts and integrating tools in order to avoid putting your real password into configuration files. Learn more at [this link](https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/).
 :::
 
-### BitBucket Server
+### Bitbucket Server
 
-[BitBucket Server](https://confluence.atlassian.com/bitbucketserver) is a self-hosted Git repository and management platform.
+[Bitbucket Server](https://confluence.atlassian.com/bitbucketserver) is a self-hosted Git repository and management platform.
 
 :::{note}
-BitBucket Server uses a different API from the [BitBucket](https://bitbucket.org/) Cloud service. Make sure to use the right configuration whether you are using the cloud service or a self-hosted installation.
+Bitbucket Server uses a different API from the [Bitbucket](https://bitbucket.org/) Cloud service. Make sure to use the right configuration whether you are using the cloud service or a self-hosted installation.
 :::
 
-To access your local BitBucket Server create an entry in the [SCM configuration file](#git-configuration) as shown below:
+To access your local Bitbucket Server create an entry in the [SCM configuration file](#git-configuration) as shown below:
 
 ```groovy
 providers {
@@ -202,7 +202,7 @@ The support for protocols other than HTTPS is not available at this time.
 
 ## Private server configuration
 
-Nextflow is able to access repositories hosted on private BitBucket, GitHub, GitLab and Gitea server installations.
+Nextflow is able to access repositories hosted on private Bitbucket, GitHub, GitLab and Gitea server installations.
 
 In order to use a private SCM installation you will need to set the server name and access credentials in your [SCM configuration file](#git-configuration) .
 

@@ -12,9 +12,9 @@ This page documents how to handle workflow events and send notifications.
 
 ### Completion handler
 
-Due to the asynchronous nature of Nextflow the termination of a script does not correspond to the termination of the running workflow. Thus some information, only available on execution completion, needs to be accessed by using an asynchronous handler.
+Due to the asynchronous nature of Nextflow, the termination of a script does not correspond to the termination of the running workflow. Thus some information, only available on execution completion, needs to be accessed by using an asynchronous handler.
 
-The `onComplete` event handler is invoked by the framework when the workflow execution is completed. It allows one to access the workflow termination status and other useful information. For example:
+Nextflow invokes the `onComplete` event handler when the workflow execution is completed. It allows one to access the workflow termination status and other useful information. For example:
 
 ```nextflow
 workflow.onComplete {
@@ -43,7 +43,7 @@ workflow {
 
 ### Error handler
 
-The `onError` event handler is invoked by Nextflow when a runtime or process error caused the pipeline execution to stop. For example:
+Nextflow invokes the `onError` event handler when a runtime or process error caused the pipeline execution to stop. For example:
 
 ```nextflow
 workflow.onError {
@@ -105,19 +105,19 @@ sendMail(mail)
 The following parameters can be specified:
 
 `to`
-: *Multiple email addresses can be specified separating them with a comma.*
+: *Multiple email addresses can be specified by separating them with a comma.*
 : The mail target recipients.
 
 `cc`
-: *Multiple email addresses can be specified separating them with a comma.*
+: *Multiple email addresses can be specified by separating them with a comma.*
 : The mail CC recipients.
 
 `bcc`
-: *Multiple email addresses can be specified separating them with a comma.*
+: *Multiple email addresses can be specified by separating them with a comma.*
 : The mail BCC recipients.
 
 `from`
-: *Multiple email addresses can be specified separating them with a comma.*
+: *Multiple email addresses can be specified by separating them with a comma.*
 : The mail sender address.
 
 `subject`
@@ -208,9 +208,9 @@ sendMail {
 
 ### Mail configuration
 
-If no mail server configuration is provided, Nextflow tries to send the email by using the external mail command eventually provided by the underlying system (e.g. `sendmail` or `mail`).
+If no mail server configuration is provided, Nextflow tries to send the email using the external mail command eventually provided by the underlying system (e.g. `sendmail` or `mail`).
 
-If your system does not provide access to none of the above you can configure a SMTP server in the `nextflow.config` file. For example:
+If your system does not provide access to any of the above you can configure a SMTP server in the `nextflow.config` file. For example:
 
 ```groovy
 mail {
@@ -267,7 +267,7 @@ mail {
 
 ## Mail notification
 
-You can use the `sendMail` function with a {ref}`workflow completion handler <metadata-completion-handler>` to notify the completion of a workflow completion. For example:
+You can use the `sendMail` function with a {ref}`workflow completion handler <metadata-completion-handler>` to notify a workflow completion. For example:
 
 ```nextflow
 workflow.onComplete {
@@ -291,7 +291,7 @@ This is useful to send a custom notification message. Note however that Nextflow
 
 ## Workflow notification
 
-Nextflow includes a built-in workflow notification features that automatically sends a notification message when a workflow execution terminates.
+Nextflow includes built-in workflow notification features that automatically sends a notification message when a workflow execution terminates.
 
 To enable simply specify the `-N` option when launching the pipeline execution. For example:
 
