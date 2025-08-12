@@ -72,7 +72,7 @@ The `channel.fromLineage` factory creates a channel that emits files from the {r
 
 ```nextflow
 channel
-    .fromLineage(workflowRun: 'lid://0d1d1622ced3e4edc690bec768919b45', labels: ['alpha', 'beta'])
+    .fromLineage(workflowRun: 'lid://0d1d1622ced3e4edc690bec768919b45', label: ['alpha', 'beta'])
     .view()
 ```
 
@@ -80,7 +80,7 @@ The above snippet emits files published by the given workflow run that are label
 
 Available options:
 
-`labels`
+`label`
 : List of labels associated with the desired files.
 
 `taskRun`
@@ -456,16 +456,16 @@ You can think of it as a channel that is shared across many different processes 
 A process output can be assigned to a topic using the `topic` option on an output, for example:
 
 ```nextflow
-process foo {
+process hello {
   output:
-  val('foo'), topic: my_topic
+  val('hello'), topic: my_topic
 
   // ...
 }
 
-process bar {
+process bye {
   output:
-  val('bar'), topic: my_topic
+  val('bye'), topic: my_topic
 
   // ...
 }

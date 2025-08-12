@@ -1,4 +1,8 @@
 nf-k8s changelog
 ===================
+1.1.0 - 2 Jun 2025
+- Add Failsafe retry mechanism in K8s (#6083) [ci fast] [9e675c6a]
+- Bump Groovy to version 4.0.27 (#6125) [ci fast] [258e1790]
+
 1.0.0 - 13 Apr 2025
 - Refactor Kubernetes support as a core plugin

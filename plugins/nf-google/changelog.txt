@@ -1,6 +1,21 @@
 nf-google changelog
 ===================
-1.20.0 - 23 Apri 2025
+1.22.1 - 6 Jul 2025
+- Fix class not found exception Google Life science executor (#6193) [7bfb9358]
+- Update Google dependencies (#6229) [8bd42acb]
+- Upload Google Batch log on task exit (#6226) [78d9f473]
+- Bump Slf4j version 2.0.17 [93199e09]
+- Bump gson version 2.13.1 [ab8e36a2]
+
+1.22.0 - 2 Jun 2025
+- Sunset the Google LS executor (#6070) [06e0d426]
+- Bump Groovy to version 4.0.27 (#6125) [258e1790]
+
+1.21.0 - 8 May 2025
+- Add Support for Google Batch network tags (#5951) [d6e4d6c2]
+- Remove test constructors or mark as TestOnly (#5216) [d4fadd42]
+
+1.20.0 - 23 Apr 2025
 - Add Google Batch gcsfuseOptions (#5991) [1d4dd574]
 
 1.19.0 - 17 Mar 2025

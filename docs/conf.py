@@ -50,7 +50,12 @@ rediraffe_redirects = {
     'mail.md': 'notifications.md',
     'operator.md': 'reference/operator.md',
     'dsl1.md': 'migrations/dsl1.md',
-    'updating-syntax.md': 'strict-syntax.md'
+    'updating-syntax.md': 'strict-syntax.md',
+    'updating-spot-retries.md': 'guides/updating-spot-retries.md',
+    'metrics.md': 'tutorials/metrics.md',
+    'data-lineage.md' : 'tutorials/data-lineage.md',
+    'workflow-outputs.md': 'tutorials/workflow-outputs.md',
+    'flux.md': 'tutorials/flux.md'
 }
 
 # Add any paths that contain templates here, relative to this directory.

@@ -83,6 +83,23 @@ class AzureConfigTest extends Specification {
         cfg.batch().autoPoolOpts().scaleInterval == Duration.of('5 min')
         cfg.batch().autoPoolOpts().autoScale == false
         !cfg.batch().canCreatePool()
+        cfg.batch().poolIdentityClientId == null
+    }
+
+    def 'should get azure batch pool identity client id' () {
+        given:
+        def POOL_IDENTITY_CLIENT_ID = 'pool-identity-123'
+        def session = Mock(Session) {
+            getConfig() >> [ azure:
+                                     [batch:[
+                                             poolIdentityClientId: POOL_IDENTITY_CLIENT_ID
+                                     ] ]]
+        }
+
+        when:
+        def cfg = AzConfig.getConfig(session)
+        then:
+        cfg.batch().poolIdentityClientId == POOL_IDENTITY_CLIENT_ID
     }
 
     def 'should get azure batch options' () {

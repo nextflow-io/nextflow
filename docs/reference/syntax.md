@@ -76,29 +76,29 @@ nextflow.preview.recursion = true
 An include declaration consists of an *include source* and one or more *include clauses*:
 
 ```nextflow
-include { foo as bar } from './some/module'
+include { hallo as sayHello } from './some/module'
 ```
 
-The include source should be a string literal and should refer to either a local path (e.g. `./module.nf`) or a plugin (e.g. `plugin/nf-hello`). Each include clause should specify a name, and may also specify an *alias*. In the above example, `foo` is included under the alias `bar`.
+The include source should be a string literal and should refer to either a local path (e.g. `./module.nf`) or a plugin (e.g. `plugin/nf-hello`). Each include clause should specify a name, and may also specify an *alias*. In the above example, `hallo` is included under the alias `sayHello`.
 
 Include clauses can be separated by semi-colons or newlines:
 
 ```nextflow
 // semi-colons
-include { foo ; bar as baz } from './some/module'
+include { hallo ; bye as goodbye } from './some/module'
 
 // newlines
 include {
-    foo
-    bar as baz
+    hallo
+    bye as goodbye
 } from './some/module'
 ```
 
 Include clauses can also be specified as separate includes:
 
 ```nextflow
-include { foo } from './some/module'
-include { bar as baz } from './some/module'
+include { hallo } from './some/module'
+include { bye as goodbye } from './some/module'
 ```
 
 The following definitions can be included:
@@ -123,7 +123,7 @@ Parameters supplied via command line options, params files, and config files tak
 
 A workflow can be a *named workflow* or an *entry workflow*.
 
-A *named workflow* consists of a name and a body, and may consist of a *take*, *main*, *emit*, and *publish* section:
+A *named workflow* consists of a name and a body, and may consist of a *take*, *main*, and *emit* section:
 
 ```nextflow
 workflow greet {
@@ -146,28 +146,34 @@ workflow greet {
 
 - The emit section consists of one or more *emit statements*. An emit statement can be a [variable name](#variable), an [assignment](#assignment), or an [expression statement](#expression-statement). If an emit statement is an expression statement, it must be the only emit.
 
-- The publish section can be specified but is intended to be used in the entry workflow (see below).
 
-
-An *entry workflow* has no name and may consist of a *main* and *publish* section:
+An *entry workflow* has no name and may consist of a *main*, *publish*, *onComplete*, and *onError* section:
 
 ```nextflow
 workflow {
     main:
     greetings = channel.of('Bonjour', 'Ciao', 'Hello', 'Hola')
     messages = greetings.map { v -> "$v world!" }
-    greetings.view { it -> '$it world!' }
+    greetings.view { v -> "$v world!" }
 
     publish:
-    messages >> 'messages'
+    messages = messages
+
+    onComplete:
+    log.info 'Workflow completed successfully!'
+
+    onError:
+    log.error 'Workflow failed.'
 }
 ```
 
 - Only one entry workflow may be defined in a script.
 
-- The `main:` section label can be omitted if the publish section is not specified.
+- The `main:` section label can be omitted if the other sections are not specified.
 
-- The publish section consists of one or more *publish statements*. A publish statement is a [right-shift expression](#binary-expressions), where the left-hand side is an expression that refers to a value in the workflow body, and the right-hand side is an expression that returns a string.
+- The publish section consists of one or more *publish statements*. A publish statement is an [assignment](#assignment), where the assignment target is the name of a workflow output.
+
+- The `onComplete` and `onError` sections consist of one or more [statements](#statements).
 
 In order for a script to be executable, it must either define an entry workflow or be a code snippet as described [above](#script-declarations).
 
@@ -180,7 +186,7 @@ Entry workflow definitions are ignored when a script is included as a module. Th
 A process consists of a name and a body. The process body consists of one or more [statements](#statements). A minimal process definition must return a string:
 
 ```nextflow
-process sayHello {
+process hello {
     """
     echo 'Hello world!'
     """
@@ -225,7 +231,7 @@ Each section may contain one or more statements. For directives, inputs, and out
 The script section can be substituted with an exec section:
 
 ```nextflow
-process greetExec {
+process greet {
     input: 
     val greeting
     val name
@@ -352,13 +358,13 @@ Variables declared in an if or else branch exist only within that branch:
 
 ```nextflow
 if( true )
-    def x = 'foo'
+    def x = 'hello'
 println x           // error: `x` is undefined
 
 // solution: declare `x` outside of if branch
 def x
 if( true )
-    x = 'foo'
+    x = 'hello'
 println x
 ```
 
@@ -525,10 +531,10 @@ A try/catch statement consists of a *try block* followed by any number of *catch
 ```nextflow
 def text = null
 try {
-    text = file('foo.txt').text
+    text = file('hello.txt').text
 }
 catch( IOException e ) {
-    log.warn "Could not load foo.txt"
+    log.warn "Could not load hello.txt"
 }
 ```
 
@@ -676,7 +682,7 @@ A list literal consists of a comma-separated list of zero or more expressions, e
 A map literal consists of a comma-separated list of one or more *map entries*, enclosed in square brackets. Each map entry consists of a *key expression* and *value expression* separated by a colon:
 
 ```nextflow
-[foo: 1, bar: 2, baz: 3]
+[alpha: 1, beta: 2, gamma: 3]
 ```
 
 An empty map is specified with a single colon to distinguish it from an empty list:
@@ -688,9 +694,9 @@ An empty map is specified with a single colon to distinguish it from an empty li
 Both the key and value can be any expression. Identifier keys are treated as string literals (i.e. the quotes can be omitted). A variable can be used as a key by enclosing it in parentheses:
 
 ```nextflow
-def x = 'foo'
+def x = 'alpha'
 [(x): 1]
-// -> ['foo': 1]
+// -> ['alpha': 1]
 ```
 
 ### Closure

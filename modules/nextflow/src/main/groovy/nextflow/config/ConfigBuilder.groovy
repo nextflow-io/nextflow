@@ -26,6 +26,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.NF
+import nextflow.SysEnv
 import nextflow.cli.CliOptions
 import nextflow.cli.CmdConfig
 import nextflow.cli.CmdNode
@@ -33,10 +34,6 @@ import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.secret.SecretsLoader
-import nextflow.trace.GraphObserver
-import nextflow.trace.ReportObserver
-import nextflow.trace.TimelineObserver
-import nextflow.trace.TraceFileObserver
 import nextflow.util.HistoryFile
 import nextflow.util.SecretHelper
 /**
@@ -79,7 +76,7 @@ class ConfigBuilder {
 
     Map<ConfigObject, String> emptyVariables = new LinkedHashMap<>(10)
 
-    Map<String,String> env = new HashMap<>(System.getenv())
+    Map<String,String> env = new HashMap<>(SysEnv.get())
 
     List<String> warnings = new ArrayList<>(10);
 
@@ -282,7 +279,7 @@ class ConfigBuilder {
         Map env = [:]
         if( exportSysEnv ) {
             log.debug "Adding current system environment to session environment"
-            env.putAll(System.getenv())
+            env.putAll(SysEnv.get())
         }
         if( vars ) {
             log.debug "Adding the following variables to session environment: $vars"
@@ -361,7 +358,7 @@ class ConfigBuilder {
             // the configuration object binds always the current environment
             // so that in the configuration file may be referenced any variable
             // in the current environment
-            final binding = new HashMap(System.getenv())
+            final binding = new HashMap(SysEnv.get())
             binding.putAll(env)
             binding.putAll(configVars())
 
@@ -630,8 +627,6 @@ class ConfigBuilder {
             config.trace.enabled = true
             if( cmdRun.withTrace != '-' )
                 config.trace.file = cmdRun.withTrace
-            else if( !config.trace.file )
-                config.trace.file = TraceFileObserver.DEF_FILE_NAME
         }
 
         // -- sets report report options
@@ -641,8 +636,6 @@ class ConfigBuilder {
             config.report.enabled = true
             if( cmdRun.withReport != '-' )
                 config.report.file = cmdRun.withReport
-            else if( !config.report.file )
-                config.report.file = ReportObserver.DEF_FILE_NAME
         }
 
         // -- sets timeline report options
@@ -652,8 +645,6 @@ class ConfigBuilder {
             config.timeline.enabled = true
             if( cmdRun.withTimeline != '-' )
                 config.timeline.file = cmdRun.withTimeline
-            else if( !config.timeline.file )
-                config.timeline.file = TimelineObserver.DEF_FILE_NAME
         }
 
         // -- sets DAG report options
@@ -663,8 +654,6 @@ class ConfigBuilder {
             config.dag.enabled = true
             if( cmdRun.withDag != '-' )
                 config.dag.file = cmdRun.withDag
-            else if( !config.dag.file )
-                config.dag.file = GraphObserver.DEF_FILE_NAME
         }
 
         if( cmdRun.withNotification ) {
@@ -816,7 +805,7 @@ class ConfigBuilder {
         def config = buildGivenFiles(configFiles)
 
         if( cmdRun )
-            configRunOptions(config, System.getenv(), cmdRun)
+            configRunOptions(config, SysEnv.get(), cmdRun)
 
         return config
     }

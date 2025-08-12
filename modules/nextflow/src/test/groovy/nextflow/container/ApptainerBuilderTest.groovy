@@ -40,13 +40,11 @@ class ApptainerBuilderTest extends Specification {
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer run --no-home --pid busybox'
 
-        new ApptainerBuilder('busybox')
-                .params(engineOptions: '-q -v')
+        new ApptainerBuilder('busybox', new ApptainerConfig(engineOptions: '-q -v'))
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer -q -v run --no-home --pid busybox'
 
-        new ApptainerBuilder('busybox')
-                .params(runOptions: '--contain --writable')
+        new ApptainerBuilder('busybox', new ApptainerConfig(runOptions: '--contain --writable'))
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer run --no-home --pid --contain --writable busybox'
 
@@ -55,31 +53,27 @@ class ApptainerBuilderTest extends Specification {
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer run --no-home --pid ubuntu'
 
-        new ApptainerBuilder('ubuntu')
+        new ApptainerBuilder('ubuntu', new ApptainerConfig(autoMounts: true))
                 .addMount(path1)
                 .addMount(path2)
-                .params(autoMounts: true)
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer run --no-home --pid -B /foo/data/file1 -B /bar/data/file2 -B "$NXF_TASK_WORKDIR" ubuntu'
 
-        new ApptainerBuilder('ubuntu')
+        new ApptainerBuilder('ubuntu', new ApptainerConfig(autoMounts: true))
                 .addMount(path1)
                 .addMount(path1)
-                .params(autoMounts: true)
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer run --no-home --pid -B /foo/data/file1 -B "$NXF_TASK_WORKDIR" ubuntu'
 
-        new ApptainerBuilder('ubuntu')
+        new ApptainerBuilder('ubuntu', new ApptainerConfig(autoMounts: true))
                 .addMount(path1)
                 .addMount(path1)
-                .params(autoMounts: true)
                 .params(readOnlyInputs: true)
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer run --no-home --pid -B /foo/data/file1:/foo/data/file1:ro -B "$NXF_TASK_WORKDIR" ubuntu'
 
-        new ApptainerBuilder('ubuntu')
+        new ApptainerBuilder('ubuntu', new ApptainerConfig(autoMounts: true))
                 .addMount(path3)
-                .params(autoMounts: true)
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer run --no-home --pid -B /bar/data\\ file -B "$NXF_TASK_WORKDIR" ubuntu'
 
@@ -104,47 +98,40 @@ class ApptainerBuilderTest extends Specification {
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --no-home --pid -B "$NXF_TASK_WORKDIR" busybox'
 
-        new ApptainerBuilder('busybox')
-                .params(engineOptions: '-q -v')
+        new ApptainerBuilder('busybox', new ApptainerConfig(engineOptions: '-q -v'))
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer -q -v exec --no-home --pid -B "$NXF_TASK_WORKDIR" busybox'
 
-        new ApptainerBuilder('busybox')
-                .params(runOptions: '--contain --writable')
+        new ApptainerBuilder('busybox', new ApptainerConfig(runOptions: '--contain --writable'))
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --no-home --pid -B "$NXF_TASK_WORKDIR" --contain --writable busybox'
 
-        new ApptainerBuilder('ubuntu')
+        new ApptainerBuilder('ubuntu', new ApptainerConfig(autoMounts: false))
                 .addMount(path1)
-                .params(autoMounts: false)
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --no-home --pid ubuntu'
 
-        new ApptainerBuilder('ubuntu')
+        new ApptainerBuilder('ubuntu', new ApptainerConfig(autoMounts: true))
                 .addMount(path1)
                 .addMount(path2)
-                .params(autoMounts: true)
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --no-home --pid -B /foo/data/file1 -B /bar/data/file2 -B "$NXF_TASK_WORKDIR" ubuntu'
 
-        new ApptainerBuilder('ubuntu')
+        new ApptainerBuilder('ubuntu', new ApptainerConfig(autoMounts: true))
                 .addMount(path1)
                 .addMount(path1)
-                .params(autoMounts: true)
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --no-home --pid -B /foo/data/file1 -B "$NXF_TASK_WORKDIR" ubuntu'
 
-        new ApptainerBuilder('ubuntu')
+        new ApptainerBuilder('ubuntu', new ApptainerConfig(autoMounts: true))
                 .addMount(path1)
                 .addMount(path1)
-                .params(autoMounts: true)
                 .params(readOnlyInputs: true)
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --no-home --pid -B /foo/data/file1:/foo/data/file1:ro -B "$NXF_TASK_WORKDIR" ubuntu'
 
-        new ApptainerBuilder('ubuntu')
+        new ApptainerBuilder('ubuntu', new ApptainerConfig(autoMounts: true))
                 .addMount(path3)
-                .params(autoMounts: true)
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --no-home --pid -B /bar/data\\ file -B "$NXF_TASK_WORKDIR" ubuntu'
 
@@ -153,8 +140,7 @@ class ApptainerBuilderTest extends Specification {
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --no-home -B "$NXF_TASK_WORKDIR" ubuntu'
 
-        new ApptainerBuilder('ubuntu')
-            .params(oci: true)
+        new ApptainerBuilder('ubuntu', new ApptainerConfig(ociMode: true))
             .build()
             .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --no-home --pid -B "$NXF_TASK_WORKDIR" ubuntu'
 
@@ -238,7 +224,7 @@ class ApptainerBuilderTest extends Specification {
     def 'test apptainer env'() {
 
         given:
-        def builder = Spy(ApptainerBuilder)
+        def builder = new ApptainerBuilder('busybox')
 
         expect:
         builder.makeEnv(ENV).toString() == RESULT

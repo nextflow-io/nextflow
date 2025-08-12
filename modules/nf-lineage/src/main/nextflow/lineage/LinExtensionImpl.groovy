@@ -23,8 +23,7 @@ import nextflow.Channel
 import nextflow.Session
 import nextflow.extension.LinExtension
 import nextflow.lineage.fs.LinPathFactory
-import nextflow.lineage.model.FileOutput
-import nextflow.lineage.serde.LinSerializable
+import nextflow.lineage.model.v1beta1.FileOutput
 
 import static nextflow.lineage.fs.LinPath.*
 
@@ -43,7 +42,9 @@ class LinExtensionImpl implements LinExtension {
         log.trace("Querying lineage with params: $queryParams")
         new LinPropertyValidator().validateQueryParams(queryParams.keySet())
         final store = getStore(session)
-        emitSearchResults(channel, store.search(queryParams))
+        try( def stream = store.search(queryParams) ){
+            stream.forEach { channel.bind( LinPathFactory.create( asUriString(it) ) ) }
+        }
         channel.bind(Channel.STOP)
     }
 
@@ -53,8 +54,12 @@ class LinExtensionImpl implements LinExtension {
             queryParams['workflowRun'] = [opts.workflowRun as String]
         if( opts.taskRun )
             queryParams['taskRun'] = [opts.taskRun as String]
-        if( opts.labels )
-            queryParams['labels'] = opts.labels as List<String>
+        if( opts.label ) {
+            if( opts.label instanceof List )
+                queryParams['labels'] = opts.label as List<String>
+            else
+                queryParams['labels'] = [ opts.label.toString() ]
+        }
         return queryParams
     }
 
@@ -64,12 +69,5 @@ class LinExtensionImpl implements LinExtension {
             throw new Exception("Lineage store not found - Check Nextflow configuration")
         }
         return store
-    }
-
-    private void emitSearchResults(DataflowWriteChannel channel, Map<String, LinSerializable> results) {
-        if( !results ) {
-            return
-        }
-        results.keySet().forEach { channel.bind( LinPathFactory.create( asUriString(it) ) ) }
     }
 }

@@ -16,16 +16,16 @@
 
 package nextflow.cloud.aws.batch
 
-import com.amazonaws.services.batch.AWSBatch
-import com.amazonaws.services.batch.model.DescribeComputeEnvironmentsRequest
-import com.amazonaws.services.batch.model.DescribeJobQueuesRequest
-import com.amazonaws.services.batch.model.DescribeJobsRequest
-import com.amazonaws.services.ec2.AmazonEC2
-import com.amazonaws.services.ec2.model.DescribeInstanceAttributeRequest
-import com.amazonaws.services.ec2.model.InstanceAttributeName
-import com.amazonaws.services.ecs.AmazonECS
-import com.amazonaws.services.ecs.model.DescribeContainerInstancesRequest
-import com.amazonaws.services.ecs.model.DescribeTasksRequest
+import software.amazon.awssdk.services.batch.BatchClient
+import software.amazon.awssdk.services.batch.model.DescribeComputeEnvironmentsRequest
+import software.amazon.awssdk.services.batch.model.DescribeJobQueuesRequest
+import software.amazon.awssdk.services.batch.model.DescribeJobsRequest
+import software.amazon.awssdk.services.ec2.Ec2Client
+import software.amazon.awssdk.services.ec2.model.DescribeInstanceAttributeRequest
+import software.amazon.awssdk.services.ec2.model.InstanceAttributeName
+import software.amazon.awssdk.services.ecs.EcsClient
+import software.amazon.awssdk.services.ecs.model.DescribeContainerInstancesRequest
+import software.amazon.awssdk.services.ecs.model.DescribeTasksRequest
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 /**
@@ -36,9 +36,9 @@ import groovy.transform.Memoized
 @CompileStatic
 class BatchHelper {
 
-    AWSBatch batchClient
-    AmazonECS ecsClient
-    AmazonEC2 ec2Client
+    BatchClient batchClient
+    EcsClient ecsClient
+    Ec2Client ec2Client
 
     @Memoized(maxCacheSize = 100)
     protected List<String> getClusterArnByBatchQueue(String queueName) {
@@ -47,20 +47,20 @@ class BatchHelper {
     }
 
     protected List<String> getClusterArnByCompEnvNames(List<String> envNames) {
-        final req = new DescribeComputeEnvironmentsRequest().withComputeEnvironments(envNames)
+        final req = DescribeComputeEnvironmentsRequest.builder().computeEnvironments(envNames).build() as DescribeComputeEnvironmentsRequest
         batchClient
                 .describeComputeEnvironments(req)
-                .getComputeEnvironments()
-                *.getEcsClusterArn()
+                .computeEnvironments()
+                *.ecsClusterArn()
     }
 
     protected List<String> getComputeEnvByQueueName(String queueName) {
-        final req = new DescribeJobQueuesRequest().withJobQueues(queueName)
+        final req = DescribeJobQueuesRequest.builder().jobQueues(queueName).build() as DescribeJobQueuesRequest
         final resp = batchClient.describeJobQueues(req)
         final result = new ArrayList(10)
-        for (def queue : resp.getJobQueues()) {
-            for (def order : queue.getComputeEnvironmentOrder()) {
-                result.add(order.getComputeEnvironment())
+        for (def queue : resp.jobQueues()) {
+            for (def order : queue.computeEnvironmentOrder()) {
+                result.add(order.computeEnvironment())
             }
         }
         return result
@@ -78,13 +78,14 @@ class BatchHelper {
     }
 
     protected String getContainerIdByClusterAndTaskArn(String clusterArn, String taskArn) {
-        final describeTaskReq = new DescribeTasksRequest()
-                .withCluster(clusterArn)
-                .withTasks(taskArn)
+        final describeTaskReq = DescribeTasksRequest.builder()
+                .cluster(clusterArn)
+                .tasks(taskArn)
+                .build()
         final containers = ecsClient
                 .describeTasks(describeTaskReq)
-                .getTasks()
-                *.getContainerInstanceArn()
+                .tasks()
+                *.containerInstanceArn()
         if( containers.size()==1 )
             return containers.get(0)
         if( containers.size()==0 )
@@ -94,13 +95,14 @@ class BatchHelper {
     }
 
     protected String getInstanceIdByClusterAndContainerId(String clusterArn, String containerId) {
-        final describeContainerReq = new DescribeContainerInstancesRequest()
-                .withCluster(clusterArn)
-                .withContainerInstances(containerId)
+        final describeContainerReq = DescribeContainerInstancesRequest.builder()
+                .cluster(clusterArn)
+                .containerInstances(containerId)
+                .build()
         final instanceIds = ecsClient
                 .describeContainerInstances(describeContainerReq)
-                .getContainerInstances()
-                *.getEc2InstanceId()
+                .containerInstances()
+                *.ec2InstanceId()
         if( !instanceIds )
             return null
         if( instanceIds.size()==1 )
@@ -112,13 +114,13 @@ class BatchHelper {
     @Memoized(maxCacheSize = 100)
     protected String getInstanceTypeByInstanceId(String instanceId) {
         assert instanceId
-        final instanceAttributeReq = new DescribeInstanceAttributeRequest()
-                .withInstanceId(instanceId)
-                .withAttribute(InstanceAttributeName.InstanceType)
+        final instanceAttributeReq = DescribeInstanceAttributeRequest.builder()
+                .instanceId(instanceId)
+                .attribute(InstanceAttributeName.INSTANCE_TYPE)
+                .build()
         ec2Client
                 .describeInstanceAttribute(instanceAttributeReq)
-                .getInstanceAttribute()
-                .getInstanceType()
+                .instanceType()
 
     }
 
@@ -132,14 +134,14 @@ class BatchHelper {
         return null
     }
 
-    def describeJob(String jobId) {
-        def req = new DescribeJobsRequest().withJobs(jobId)
+    String describeJob(String jobId) {
+        final req = DescribeJobsRequest.builder().jobs(jobId).build()
         batchClient
                 .describeJobs(req)
-                .getJobs()
+                .jobs()
                 .get(0)
-                .getContainer()
-                .getContainerInstanceArn()
+                .container()
+                .containerInstanceArn()
     }
 
     String getInstanceTypeByQueueAndContainerArn(String queue, String containerArn) {

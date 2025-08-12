@@ -26,12 +26,12 @@ import nextflow.Session
 import nextflow.extension.CH
 import nextflow.lineage.config.LineageConfig
 import nextflow.lineage.fs.LinPathFactory
-import nextflow.lineage.model.Checksum
-import nextflow.lineage.model.DataPath
-import nextflow.lineage.model.FileOutput
-import nextflow.lineage.model.Parameter
-import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowRun
+import nextflow.lineage.model.v1beta1.Checksum
+import nextflow.lineage.model.v1beta1.DataPath
+import nextflow.lineage.model.v1beta1.FileOutput
+import nextflow.lineage.model.v1beta1.Parameter
+import nextflow.lineage.model.v1beta1.Workflow
+import nextflow.lineage.model.v1beta1.WorkflowRun
 import spock.lang.Specification
 import spock.lang.TempDir
 
@@ -81,7 +81,7 @@ class LinExtensionImplTest extends Specification {
         def linExt = Spy(new LinExtensionImpl())
         when:
         def results = CH.create()
-        linExt.fromLineage(session, results,  [labels: ["value2", "value3"]])
+        linExt.fromLineage(session, results,  [label: ["value2", "value3"]])
         then:
         linExt.getStore(session) >> lidStore
         and:
@@ -90,7 +90,7 @@ class LinExtensionImplTest extends Specification {
 
         when:
         results = CH.create()
-        linExt.fromLineage(session, results, [taskRun: "taskid", labels: ["value4"]])
+        linExt.fromLineage(session, results, [taskRun: "taskid", label: ["value4"]])
         then:
         linExt.getStore(session) >> lidStore
         and:
@@ -99,7 +99,7 @@ class LinExtensionImplTest extends Specification {
 
         when:
         results = CH.create()
-        linExt.fromLineage(session, results, [workflowRun: "testkey", taskRun: "taskid", labels: ["value2"]])
+        linExt.fromLineage(session, results, [workflowRun: "testkey", taskRun: "taskid", label: "value2"])
         then:
         linExt.getStore(session) >> lidStore
         and:

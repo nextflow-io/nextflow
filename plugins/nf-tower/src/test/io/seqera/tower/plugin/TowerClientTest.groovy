@@ -25,7 +25,7 @@ import java.time.ZoneId
 import nextflow.Session
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
-import nextflow.container.ContainerConfig
+import nextflow.container.DockerConfig
 import nextflow.container.resolver.ContainerMeta
 import nextflow.exception.AbortOperationException
 import nextflow.script.ScriptBinding
@@ -156,36 +156,29 @@ class TowerClientTest extends Specification {
         def session = Mock(Session)
 
         when:
-        def observer = new TowerClient(session: session, env: [TOWER_ACCESS_TOKEN: 'xyz'])
-        def result = observer.getAccessToken()
+        def config = new TowerConfig([accessToken: 'abc'], [TOWER_ACCESS_TOKEN: 'xyz'])
+        def observer = new TowerClient(session, config)
         then:
-        session.getConfig() >> [tower:[accessToken: 'abc'] ]
-        and:
         // the token in the config overrides the one in the env
-        result == 'abc'
+        observer.getAccessToken() == 'abc'
 
         when:
-        observer = new TowerClient(session: session, env: [TOWER_ACCESS_TOKEN: 'xyz', TOWER_WORKFLOW_ID: '111222333'])
-        result = observer.getAccessToken()
+        config = new TowerConfig([accessToken: 'abc'], [TOWER_ACCESS_TOKEN: 'xyz', TOWER_WORKFLOW_ID: '111222333'])
+        observer = new TowerClient(session, config)
         then:
-        session.getConfig() >> [tower:[accessToken: 'abc'] ]
-        and:
         // the token from the env is taken because is a tower launch aka TOWER_WORKFLOW_ID is set
-        result == 'xyz'
+        observer.getAccessToken() == 'xyz'
 
         when:
-        observer = new TowerClient(session: session, env: [TOWER_ACCESS_TOKEN: 'xyz'])
-        result = observer.getAccessToken()
+        config = new TowerConfig([:], [TOWER_ACCESS_TOKEN: 'xyz'])
+        observer = new TowerClient(session, config)
         then:
-        session.getConfig() >> [:]
-        and:
-        result == 'xyz'
+        observer.getAccessToken() == 'xyz'
 
         when:
-        observer = new TowerClient(session: session, env:[:])
+        config = new TowerConfig([:], [:])
+        observer = new TowerClient(session, config)
         observer.getAccessToken()
-        then:
-        session.getConfig() >> [:]
         then:
         thrown(AbortOperationException)
     }
@@ -283,7 +276,7 @@ class TowerClientTest extends Specification {
         session.getUniqueId() >> sessionId
         session.getRunName() >> 'foo'
         session.config >> [:]
-        session.containerConfig >> new ContainerConfig()
+        session.containerConfig >> new DockerConfig([:])
         session.getParams() >> new ScriptBinding.ParamsMap([foo:'Hello', bar:'World'])
 
         def meta = new WorkflowMetadata(
@@ -394,15 +387,16 @@ class TowerClientTest extends Specification {
             getRunName() >> 'foo_bar'
             getWorkflowMetadata() >> meta
         }
+        def config = new TowerConfig([:], [:])
 
-        TowerClient client = Spy(TowerClient, constructorArgs: [session, 'https://tower.nf'])
+        def client = Spy(new TowerClient(session, config))
 
         when:
         client.onFlowCreate(session)
         then:
         1 * client.getAccessToken() >> 'secret'
         1 * client.makeCreateReq(session) >> [runName: 'foo']
-        1 * client.sendHttpMessage('https://tower.nf/trace/create', [runName: 'foo'], 'POST') >> new TowerClient.Response(200, '{"workflowId":"xyz123"}')
+        1 * client.sendHttpMessage('https://api.cloud.seqera.io/trace/create', [runName: 'foo'], 'POST') >> new TowerClient.Response(200, '{"workflowId":"xyz123"}')
         and:
         client.runName == 'foo_bar'
         client.runId == uuid.toString()
@@ -414,36 +408,38 @@ class TowerClientTest extends Specification {
 
     def 'should get trace endpoint' () {
         given:
-        def tower = new TowerClient(Mock(Session), 'https://tower.nf')
+        def config = new TowerConfig([:], [:])
+        def tower = new TowerClient(Mock(Session), config)
         tower.workflowId = '12345'
 
         expect:
-        tower.getUrlTraceCreate() == 'https://tower.nf/trace/create'
-        tower.getUrlTraceBegin() == 'https://tower.nf/trace/12345/begin'
-        tower.getUrlTraceProgress() == 'https://tower.nf/trace/12345/progress'
-        tower.getUrlTraceHeartbeat() == 'https://tower.nf/trace/12345/heartbeat'
-        tower.getUrlTraceComplete() == 'https://tower.nf/trace/12345/complete'
+        tower.getUrlTraceCreate() == 'https://api.cloud.seqera.io/trace/create'
+        tower.getUrlTraceBegin() == 'https://api.cloud.seqera.io/trace/12345/begin'
+        tower.getUrlTraceProgress() == 'https://api.cloud.seqera.io/trace/12345/progress'
+        tower.getUrlTraceHeartbeat() == 'https://api.cloud.seqera.io/trace/12345/heartbeat'
+        tower.getUrlTraceComplete() == 'https://api.cloud.seqera.io/trace/12345/complete'
     }
 
     def 'should get trace endpoint with workspace' () {
         given:
-        def tower = new TowerClient(Mock(Session),'https://tower.nf')
+        def config = new TowerConfig([workspaceId: '300'], [:])
+        def tower = new TowerClient(Mock(Session), config)
         tower.workflowId = '12345'
-        tower.workspaceId = '300'
 
         expect:
-        tower.getUrlTraceCreate() == 'https://tower.nf/trace/create?workspaceId=300'
-        tower.getUrlTraceBegin() == 'https://tower.nf/trace/12345/begin?workspaceId=300'
-        tower.getUrlTraceProgress() == 'https://tower.nf/trace/12345/progress?workspaceId=300'
-        tower.getUrlTraceHeartbeat() == 'https://tower.nf/trace/12345/heartbeat?workspaceId=300'
-        tower.getUrlTraceComplete() == 'https://tower.nf/trace/12345/complete?workspaceId=300'
+        tower.getUrlTraceCreate() == 'https://api.cloud.seqera.io/trace/create?workspaceId=300'
+        tower.getUrlTraceBegin() == 'https://api.cloud.seqera.io/trace/12345/begin?workspaceId=300'
+        tower.getUrlTraceProgress() == 'https://api.cloud.seqera.io/trace/12345/progress?workspaceId=300'
+        tower.getUrlTraceHeartbeat() == 'https://api.cloud.seqera.io/trace/12345/heartbeat?workspaceId=300'
+        tower.getUrlTraceComplete() == 'https://api.cloud.seqera.io/trace/12345/complete?workspaceId=300'
     }
 
     def 'should set the auth token' () {
         given:
         def http = Mock(SimpleHttpClient)
         def session = Mock(Session)
-        TowerClient client = Spy(TowerClient, constructorArgs: [session, 'https://tower.nf'])
+        def config = new TowerConfig([:], [:])
+        def client = Spy(new TowerClient(session, config))
         and:
         def SIMPLE = '4ffbf1009ebabea77db3d72efefa836dfbb71271'
         def BEARER = 'eyJ0aWQiOiA1fS5jZmM1YjVhOThjZjM2MTk1NjBjZWU1YmMwODUxYzA1ZjkzMDdmN2Iz'

@@ -89,7 +89,11 @@ class PluginUpdater extends UpdateManager {
             result.add(new LocalUpdateRepository('downloaded', local))
         }
         else {
-            result.add(new DefaultUpdateRepository('nextflow.io', remote))
+            def remoteRepo = remote.path.endsWith('.json')
+                ? new DefaultUpdateRepository('nextflow.io', remote)
+                : new HttpPluginRepository('registry', remote.toURI())
+
+            result.add(remoteRepo)
             result.addAll(customRepos())
         }
         return result
@@ -136,6 +140,20 @@ class PluginUpdater extends UpdateManager {
         // create the update repository instance
         final fileName = uri.tokenize('/')[-1]
         return new DefaultUpdateRepository('uri', new URL(uri), fileName)
+    }
+
+    /**
+     * Prefetch metadata for plugins. This gives an opportunity for certain
+     * repository types to perform some data-loading optimisations.
+     */
+    void prefetchMetadata(List<PluginSpec> plugins) {
+        // use direct field access to avoid the refresh() call in getRepositories()
+        // which could fail anything which hasn't had a chance to prefetch yet
+        for( def repo : this.@repositories ) {
+            if( repo instanceof PrefetchUpdateRepository ) {
+                repo.prefetch(plugins)
+            }
+        }
     }
 
     /**
@@ -221,10 +239,8 @@ class PluginUpdater extends UpdateManager {
         // 2. download to temporary location
         Path downloaded = safeDownloadPlugin(id, version);
 
-        // 3. rename if filename is sha digest
-        // when the plugin is downloaded from the (OCI) registry, it is named as "sha256:<CHECKSUM>"
-        // rename it to something meaningful using the target plugin path
-        if ( downloaded.getFileName().toString().startsWith("sha256:")) {
+        // 3. rename to match the expected name
+        if ( downloaded.getFileName().toString() != "${pluginPath.getFileName()}.zip" ) {
             final targetName = downloaded.resolveSibling("${pluginPath.getFileName()}.zip")
             if ( !Files.move(downloaded, targetName) ) throw new PluginRuntimeException("Failed to rename '$downloaded'")
             downloaded = targetName

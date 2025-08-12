@@ -60,7 +60,7 @@ abstract class BaseMailProvider implements MailProvider {
     }
 
     private long sendTimeout(Mailer mailer) {
-        final timeout = mailer.config.sendMailTimeout as Duration
+        final timeout = mailer.config.sendMailTimeout
         return timeout ? timeout.toMillis() : SEND_MAIL_TIMEOUT
     }
 

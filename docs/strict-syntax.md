@@ -79,7 +79,7 @@ workflow {
 Script declarations and statements cannot be mixed at the same level. All statements must reside within script declarations unless the script is a code snippet:
 
 ```nextflow
-process foo {
+process hello {
     // ...
 }
 
@@ -101,7 +101,7 @@ Mixing statements and script declarations was necessary in DSL1 and optional in 
 In Groovy, variables can be assigned in an expression:
 
 ```groovy
-foo(x = 1, y = 2)
+hello(x = 1, y = 2)
 ```
 
 In the strict syntax, assignments are allowed only as statements:
@@ -109,13 +109,13 @@ In the strict syntax, assignments are allowed only as statements:
 ```nextflow
 x = 1
 y = 2
-foo(x, y)
+hello(x, y)
 ```
 
 In Groovy, variables can be incremented and decremented in an expression:
 
 ```groovy
-foo(x++, y--)
+hello(x++, y--)
 ```
 
 In the strict syntax, use `+=` and `-=` instead:
@@ -123,7 +123,7 @@ In the strict syntax, use `+=` and `-=` instead:
 ```nextflow
 x += 1
 y -= 1
-foo(x, y)
+hello(x, y)
 ```
 
 ### For and while loops
@@ -284,7 +284,7 @@ def a = 1
 final b = 2
 def c = 3, d = 4
 def (e, f) = [5, 6]
-String str = 'foo'
+String str = 'hello'
 def Map meta = [:]
 ```
 
@@ -295,7 +295,7 @@ def a = 1
 def b = 2
 def (c, d) = [3, 4]
 def (e, f) = [5, 6]
-def str = 'foo'
+def str = 'hello'
 def meta = [:]
 ```
 
@@ -368,15 +368,7 @@ def map = (Map) readJson(json)  // soft cast
 def map = readJson(json) as Map // hard cast
 ```
 
-In the strict syntax, only hard casts are supported. However, hard casts are discouraged because they can cause unexpected behavior if used improperly. Groovy-style type annotations should be used instead:
-
-```groovy
-def Map map = readJson(json)
-```
-
-Nextflow will raise an error at runtime if the `readJson()` function does not return a `Map`.
-
-When converting a value to a different type, it is better to use an explicit method rather than a cast. For example, to parse a string as a number:
+In the strict syntax, only hard casts are supported. Use an explicit method to cast a value to a different type if one is available. For example, to parse a string as a number:
 
 ```groovy
 def x = '42' as Integer
@@ -388,7 +380,7 @@ def x = '42'.toInteger()    // preferred
 In Nextflow DSL2, the name of a process `env` input/output can be specified with or without quotes:
 
 ```nextflow
-process PROC {
+process my_task {
     input:
     env FOO
     env 'BAR'
@@ -400,7 +392,7 @@ process PROC {
 In the strict syntax, the name must be specified with quotes:
 
 ```nextflow
-process PROC {
+process my_task {
     input:
     env 'FOO'
     env 'BAR'
@@ -427,7 +419,7 @@ process greet {
 In the strict syntax, the `script:` label can be omitted only if there are no other sections:
 
 ```nextflow
-process sayHello {
+process hello {
     """
     echo 'Hello world!'
     """
@@ -474,61 +466,61 @@ A more concise syntax for workflow handlers will be addressed in a future versio
 
 ## Deprecated syntax
 
-The following patterns are deprecated. The language server reports _paranoid warnings_ for these patterns, which are disabled by default. Enable them by setting the error reporiting mode (**Nextflow > Paranoid Warnings** in the extension settings) to `paranoid`. These warnings may become errors in the future.
+The following patterns are deprecated, and the strict syntax reports warnings for them. These warnings will become errors in the future.
+
+### Process shell section
+
+The process `shell` section is deprecated. Use the `script` section instead. The strict syntax provides error checking to help distinguish between Nextflow variables and Bash variables.
+
+## Best practices
+
+The following patterns are discouraged. The language server reports informative messages for these patterns, which are disabled by default. Enable them by setting the error reporiting mode (**Nextflow > Error reporting mode** in the extension settings) to `paranoid`. These messages may become warnings or errors in the future.
 
 ### Implicit closure parameter
 
 In Groovy, a closure with no parameters is assumed to have a single parameter named `it`:
 
 ```nextflow
-ch | map { it * 2 }
+ch.map { it * 2 }
 ```
 
-In the strict syntax, the closure parameter should be explicitly declared:
+As a best practice, the closure parameter should be explicitly declared:
 
 ```nextflow
-ch | map { v -> v * 2 }   // correct
-ch | map { it -> it * 2 } // also correct
+ch.map { v -> v * 2 }   // correct
+ch.map { it -> it * 2 } // also correct
 ```
 
 ### Using params outside the entry workflow
 
 While params can be used anywhere in the pipeline code, they are only intended to be used in the entry workflow.
 
-In the strict syntax, processes and workflows should receive params as explicit inputs:
+As a best practice, processes and workflows should receive params as explicit inputs:
 
 ```nextflow
-process foo {
+process myproc {
     input:
-    val foo_args
+    val myproc_args
 
     // ...
 }
 
-workflow bar {
+workflow myflow {
     take:
-    bar_args
+    myflow_args
 
     // ...
 }
 
 workflow {
-    foo(params.foo_args)
-    bar(params.bar_args)
+    myproc(params.myproc_args)
+    myflow(params.myflow_args)
 }
 ```
 
-### Process each input
-
-The `each` process input is deprecated. Use the `combine` or `cross` operator to explicitly repeat over inputs in the calling workflow.
-
 ### Process when section
 
-The process `when` section is deprecated. Use conditional logic, such as an `if` statement or the `filter` operator, to control the process invocation in the calling workflow.
-
-### Process shell section
-
-The process `shell` section is deprecated. Use the `script` block instead. The strict syntax provides error checking to help distinguish between Nextflow variables and Bash variables.
+The process {ref}`process-when` section is discouraged. As a best practice, conditional logic should be implemented in the calling workflow (e.g. using an `if` statement or {ref}`operator-filter` operator) instead of the process definition.
 
 (updating-config-syntax)=
 

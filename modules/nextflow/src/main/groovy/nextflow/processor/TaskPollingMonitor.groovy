@@ -16,12 +16,6 @@
 
 package nextflow.processor
 
-import nextflow.cloud.CloudSpotTerminationException
-import nextflow.exception.FailedGuardException
-import nextflow.exception.ProcessEvalException
-import nextflow.exception.ProcessException
-import nextflow.exception.ProcessRetryableException
-
 import static nextflow.processor.TaskProcessor.*
 
 import java.util.concurrent.ExecutorService
@@ -36,8 +30,14 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.cloud.CloudSpotTerminationException
+import nextflow.exception.FailedGuardException
+import nextflow.exception.ProcessEvalException
+import nextflow.exception.ProcessException
+import nextflow.exception.ProcessRetryableException
 import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.executor.BatchCleanup
+import nextflow.executor.ExecutorConfig
 import nextflow.executor.GridTaskHandler
 import nextflow.util.Duration
 import nextflow.util.SysHelper
@@ -59,6 +59,11 @@ class TaskPollingMonitor implements TaskMonitor {
      * The current session object
      */
     final Session session
+
+    /**
+     * The `executor` configuration settings
+     */
+    final ExecutorConfig config
 
     /**
      * The time interval (in milliseconds) elapsed which execute a new poll
@@ -133,6 +138,7 @@ class TaskPollingMonitor implements TaskMonitor {
      * Valid parameters are:
      * <li>name: The name of the executor for which the polling monitor is created
      * <li>session: The current {@code Session}
+     * <li>config: The `executor` configuration settings
      * <li>capacity: The maximum number of this monitoring queue
      * <li>pollInterval: Determines how often a poll occurs to check for a process termination
      * <li>dumpInterval: Determines how often the executor status is written in the application log file
@@ -147,34 +153,37 @@ class TaskPollingMonitor implements TaskMonitor {
 
         this.name = params.name
         this.session = params.session as Session
+        this.config = params.config as ExecutorConfig
         this.pollIntervalMillis = ( params.pollInterval as Duration ).toMillis()
-        this.dumpInterval = (params.dumpInterval as Duration) ?: Duration.of('5min')
+        this.dumpInterval = params.dumpInterval as Duration
         this.capacity = (params.capacity ?: 0) as int
 
         this.pendingQueue = new LinkedBlockingQueue<TaskHandler>()
         this.runningQueue = new LinkedBlockingQueue<TaskHandler>()
     }
 
-    static TaskPollingMonitor create( Session session, String name, int defQueueSize, Duration defPollInterval ) {
+    static TaskPollingMonitor create( Session session, ExecutorConfig config, String name, int defQueueSize, Duration defPollInterval ) {
         assert session
+        assert config
         assert name
-        final capacity = session.getQueueSize(name, defQueueSize)
-        final pollInterval = session.getPollInterval(name, defPollInterval)
-        final dumpInterval = session.getMonitorDumpInterval(name)
+        final capacity = config.getQueueSize(name, defQueueSize)
+        final pollInterval = config.getPollInterval(name, defPollInterval)
+        final dumpInterval = config.getMonitorDumpInterval(name)
 
         log.debug "Creating task monitor for executor '$name' > capacity: $capacity; pollInterval: $pollInterval; dumpInterval: $dumpInterval "
-        new TaskPollingMonitor(name: name, session: session, capacity: capacity, pollInterval: pollInterval, dumpInterval: dumpInterval)
+        new TaskPollingMonitor(name: name, session: session, config: config, capacity: capacity, pollInterval: pollInterval, dumpInterval: dumpInterval)
     }
 
-    static TaskPollingMonitor create( Session session, String name, Duration defPollInterval ) {
+    static TaskPollingMonitor create( Session session, ExecutorConfig config, String name, Duration defPollInterval ) {
         assert session
+        assert config
         assert name
 
-        final pollInterval = session.getPollInterval(name, defPollInterval)
-        final dumpInterval = session.getMonitorDumpInterval(name)
+        final pollInterval = config.getPollInterval(name, defPollInterval)
+        final dumpInterval = config.getMonitorDumpInterval(name)
 
         log.debug "Creating task monitor for executor '$name' > pollInterval: $pollInterval; dumpInterval: $dumpInterval "
-        new TaskPollingMonitor(name: name, session: session, pollInterval: pollInterval, dumpInterval: dumpInterval)
+        new TaskPollingMonitor(name: name, session: session, config: config, pollInterval: pollInterval, dumpInterval: dumpInterval)
     }
 
     /**
@@ -198,7 +207,12 @@ class TaskPollingMonitor implements TaskMonitor {
      *      by the polling monitor
      */
     protected boolean canSubmit(TaskHandler handler) {
-        (capacity>0 ? runningQueue.size() < capacity : true) && handler.canForkProcess() && handler.isReady()
+        int slots = handler.getForksCount()
+        if( capacity > 0 && slots > capacity )
+            throw new IllegalArgumentException("Job array ${handler.task.name} exceeds the queue size (array size: $slots, queue size: $capacity)")
+        if( capacity > 0 && runningQueue.size() + slots > capacity )
+            return false
+        return handler.canForkProcess() && handler.isReady()
     }
 
     /**
@@ -338,11 +352,11 @@ class TaskPollingMonitor implements TaskMonitor {
     }
 
     protected RateLimiter createSubmitRateLimit() {
-        def limit = session.getExecConfigProp(name,'submitRateLimit',null) as String
+        final limit = config.getExecConfigProp(name, 'submitRateLimit', null) as String
         if( !limit )
             return null
 
-        def tokens = limit.tokenize('/')
+        final tokens = limit.tokenize('/')
         if( tokens.size() == 2 ) {
             /*
              * the rate limit is provide num of task over a duration

@@ -582,7 +582,7 @@ $ nextflow inspect nextflow-io/hello
 Specify parameters as with the `run` command:
 
 ```console
-$ nextflow inspect main.nf --alpha 1 --beta foo
+$ nextflow inspect main.nf --alpha 1 --beta hello
 ```
 
 ### `kuberun`
@@ -703,56 +703,35 @@ $ nextflow lineage SUBCOMMAND [arg ..]
 
 **Description**
 
-The `lineage` command is used to inspect lineage metadata. Data lineage can be enabled by setting `lineage.enabled` to `true` in your Nextflow configuration (see the {ref}`config-lineage` config scope for details).
+The `lineage` command is used to inspect lineage metadata.
+
+See the {ref}`data-lineage-page` guide to learn how to get started with data lineage.
 
 **Options**
 
 `-h, -help`
 : Print the command usage.
 
-**Examples**
+**Subcommands**
 
-List the Nextflow runs with lineage metadata enabled, printing the corresponding lineage ID (LID) for each run.
+`check <lid>`
+: Validate the checksum of output lineage record.
 
-```console
-$ nextflow lineage list
-TIMESTAMP          	RUN NAME              	SESSION ID                          	LINEAGE ID                            
-2025-04-22 14:45:43	backstabbing_heyrovsky	21bc4fad-e8b8-447d-9410-388f926a711f	lid://c914d714877cc5c882c55a5428b510b1
-```
+`diff <lid-1> <lid-2>`
+: Display a git-style diff between two lineage records.
 
-View a lineage record.
+`find <field-1>=<value-1> [<field-2>=<value-2> ...]`
+: Find all lineage records that match the given field values.
 
-```console
-$ nextflow lineage view <lid>
-```
+`list`
+: List the Nextflow runs with lineage enabled, printing the corresponding lineage ID (LID) for each run.
 
-The output of a workflow run can be shown by appending `#output` to the workflow run LID:
+`render <lid> [path]`
+: Render the lineage graph for a lineage record as an HTML file (default output path: `./lineage.html`).
+: The lineage record should be of type `FileOutput`, `TaskRun`, or `WorkflowRun`.
 
-```console
-$ nextflow lineage view lid://c914d714877cc5c882c55a5428b510b1#output
-```
-
-:::{tip}
-You can use the [jq](https://jqlang.org/) command-line tool to apply further queries and transformations on the resulting lineage record.
-:::
-
-Find all lineage records that match a set of key-value pairs:
-
-```console
-$ nextflow lineage find <key-1>=<value-1> <key-2>=<value-2> ...
-```
-
-Display a git-style diff between two lineage records.
-
-```console
-$ nextflow lineage diff <lid-1> <lid-2>
-```
-
-Render the lineage graph for a workflow or task output as an HTML file. (default file path: `./lineage.html`).
-
-```console
-$ nextflow lineage render <lid> [html-file-path]
-```
+`view <lid>`
+: View a lineage record.
 
 (cli-lint)=
 
@@ -871,7 +850,7 @@ The `log` command is used to query the execution metadata associated with pipeli
 : Comma-separated list of fields to include in the printed log. Use the `-l` option to see the list of available fields.
 
 `-F, -filter`
-: Filter log entries by a custom expression, e.g. `process =~ /foo.*/ && status == 'COMPLETED'`.
+: Filter log entries by a custom expression, e.g. `process =~ /hello.*/ && status == 'COMPLETED'`.
 
 `-h, -help`
 : Print the command usage.
@@ -958,15 +937,15 @@ Filter specific fields from the execution log of a process.
 ```console
 $ nextflow log tiny_leavitt -f 'process,exit,hash,duration'
 
-splitLetters        0       1f/f1ea91       112ms
-convertToUpper      0       bf/334115       144ms
-convertToUpper      0       a3/06521d       139ms
+split_letters       0       1f/f1ea91       112ms
+convert_to_upper    0       bf/334115       144ms
+convert_to_upper    0       a3/06521d       139ms
 ```
 
 Filter fields from the execution log of a process based on a criteria.
 
 ```console
-$ nextflow log tiny_leavitt -F 'process =~ /splitLetters/'
+$ nextflow log tiny_leavitt -F 'process =~ /split_letters/'
 
 work/1f/f1ea9158fb23b53d5083953121d6b6
 ```
@@ -1303,6 +1282,63 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 
   See {ref}`cli-params` for more information about writing custom parameters files.
 
+(cli-secrets)=
+
+### `secrets`
+
+Manage {ref}`pipeline secrets <secrets-page>`.
+
+**Usage**
+
+```console
+$ nextflow secrets <SUBCOMMAND> [OPTIONS]
+```
+
+**Options**
+
+`-h, -help`
+: Print the command usage.
+
+**Subcommands**
+
+`list`
+: List secrets available in the current store.
+
+`get <secret>`
+: Retrieve a secret value.
+
+`set <secret> <value> `
+: Create or update a secret.
+
+`delete <secret>`
+: Delete a secret.
+
+**Examples**
+
+- Set a secret:
+
+    ```console
+    $ nextflow secrets set FOO "Hello world"
+    ```
+
+- List secrets:
+
+    ```console
+    $ nextflow secrets list
+    ```
+
+- Get a secret:
+
+    ```console
+    $ nextflow secrets get FOO
+    ```
+
+- Delete a secret:
+
+    ```console
+    $ nextflow secrets delete FOO
+    ```
+
 ### `self-update`
 
 Update the nextflow runtime to the latest available version.
@@ -1392,15 +1428,12 @@ List the folder structure of the downloaded pipeline:
 $ nextflow view -l nextflow-io/hello
 
 == content of path: .nextflow/assets/nextflow-io/hello
+.git
+.gitignore
 LICENSE
 README.md
-nextflow.config
-.gitignore
-circle.yml
-foo.nf
-.git
-.travis.yml
 main.nf
+nextflow.config
 ```
 
 View the contents of a downloaded pipeline without omitting the header:

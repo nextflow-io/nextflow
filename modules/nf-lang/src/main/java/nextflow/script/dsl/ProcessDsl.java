@@ -251,7 +251,7 @@ public interface ProcessDsl extends DslScope {
 
             [Read more](https://nextflow.io/docs/latest/reference/process.html#resourcelabels)
         """)
-        void resourceLabels(Map<String,?> value);
+        void resourceLabels(Map<String,String> value);
 
         @Description("""
             The `resourceLimits` directive allows you to specify environment-specific limits for task resource requests.
@@ -362,7 +362,6 @@ public interface ProcessDsl extends DslScope {
         """)
         void tuple(Object... args);
 
-        @Deprecated
         @Description("""
             Declare an `each` input.
         """)

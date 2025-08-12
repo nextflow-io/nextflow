@@ -17,14 +17,24 @@
 package nextflow.lineage.config
 
 import groovy.transform.CompileStatic
+import groovy.transform.ToString
+import nextflow.config.schema.ConfigOption
+import nextflow.config.schema.ConfigScope
+import nextflow.script.dsl.Description
+
 /**
  * Model data store options
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@ToString
 @CompileStatic
-class LineageStoreOpts {
+class LineageStoreOpts implements ConfigScope {
 
+    @ConfigOption
+    @Description("""
+        The location of the lineage metadata store (default: `./.lineage`).
+    """)
     final String location
 
     LineageStoreOpts(Map opts) {

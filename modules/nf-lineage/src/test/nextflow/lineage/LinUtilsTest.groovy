@@ -18,12 +18,12 @@ package nextflow.lineage
 
 import java.time.ZoneId
 
-import nextflow.lineage.model.Checksum
-import nextflow.lineage.model.DataPath
-import nextflow.lineage.model.Parameter
-import nextflow.lineage.model.Workflow
-import nextflow.lineage.model.WorkflowOutput
-import nextflow.lineage.model.WorkflowRun
+import nextflow.lineage.model.v1beta1.Checksum
+import nextflow.lineage.model.v1beta1.DataPath
+import nextflow.lineage.model.v1beta1.Parameter
+import nextflow.lineage.model.v1beta1.Workflow
+import nextflow.lineage.model.v1beta1.WorkflowOutput
+import nextflow.lineage.model.v1beta1.WorkflowRun
 import nextflow.lineage.config.LineageConfig
 import spock.lang.Specification
 import spock.lang.TempDir
@@ -72,13 +72,16 @@ class LinUtilsTest extends Specification{
         def uniqueId = UUID.randomUUID()
         def mainScript = new DataPath("file://path/to/main.nf", new Checksum("78910", "nextflow", "standard"))
         def workflow = new Workflow([mainScript], "https://nextflow.io/nf-test/", "123456")
-        def key = "testKey"
+        def key1 = "testKey"
         def value1 = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [new Parameter("String", "param1", "value1"), new Parameter("String", "param2", "value2")])
         def outputs1 = new WorkflowOutput(OffsetDateTime.now(), "lid://testKey", [new Parameter( "String", "output", "name")] )
+        def key2 = "testKey2"
+        def value2 = new WorkflowRun(workflow, uniqueId.toString(), "test_run2", [new Parameter("String", "param1", "value1"), new Parameter("String", "param2", "value2")])
         def lidStore = new DefaultLinStore()
         lidStore.open(config)
-        lidStore.save(key, value1)
-        lidStore.save("$key#output", outputs1)
+        lidStore.save(key1, value1)
+        lidStore.save("$key1#output", outputs1)
+        lidStore.save(key2, value2)
 
         when:
         def params = LinUtils.getMetadataObject(lidStore, new URI('lid://testKey#params'))
@@ -94,6 +97,12 @@ class LinUtilsTest extends Specification{
         param.name == "output"
 
         when:
+        outputs = LinUtils.getMetadataObject(lidStore, new URI('lid://testKey2#output'))
+        then:
+        outputs instanceof List
+        (outputs as List).isEmpty()
+
+        when:
         LinUtils.getMetadataObject(lidStore, new URI('lid://testKey#no-exist'))
         then:
         thrown(IllegalArgumentException)
@@ -106,19 +115,7 @@ class LinUtilsTest extends Specification{
         when:
         LinUtils.getMetadataObject(lidStore, new URI('lid://no-exist#something'))
         then:
-        thrown(IllegalArgumentException)
-    }
-
-    def "should parse children elements form Fragment string"() {
-        expect:
-        LinUtils.parseChildrenFromFragment(FRAGMENT) == EXPECTED as String[]
-
-        where:
-        FRAGMENT                | EXPECTED
-        "workflow"              | ["workflow"]
-        "workflow.repository"   | ["workflow", "repository"]
-        null                    | []
-        ""                      | []
+        thrown(FileNotFoundException)
     }
 
 
