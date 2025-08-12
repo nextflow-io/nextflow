@@ -45,7 +45,7 @@ class PluginsFacade implements PluginStateListener {
     @PackageScope
     final static String LEGACY_PLUGINS_REPO = 'https://raw.githubusercontent.com/nextflow-io/plugins/main/plugins.json'
 
-    final static String NEXTFLOW_PLUGINS_REPO = 'https://registry.nextflow.io'
+    final static String NEXTFLOW_PLUGINS_REPO = 'https://registry.nextflow.io/api'
 
     private static final String DEV_MODE = 'dev'
     private static final String PROD_MODE = 'prod'
