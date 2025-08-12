@@ -68,8 +68,7 @@ Commonly used operators include:
 
 - {ref}`operator-filter`: select the values in a channel that satisfy a condition
 
-- {ref}`operator-flatMap`: transform each value from a channel into a list and emit each list 
-element separately
+- {ref}`operator-flatMap`: transform each value from a channel into a list and emit each list element separately
 
 - {ref}`operator-grouptuple`: group the values from a channel based on a grouping key
 

@@ -32,7 +32,7 @@ The task hash is computed from the following metadata:
 - Whether the task is a {ref}`stub run <process-stub>`
 
 :::{note}
-Nextflow also includes an incrementing component in the hash generation process, which allows it to iterate through multiple hash values until it finds one that does not match an existing execution directory. This mechanism typically usually aligns with task retries (i.e., task attempts), however this is not guaranteed.
+Nextflow also includes an incrementing component in the hash generation process, which allows it to iterate through multiple hash values until it finds one that does not match an existing execution directory. This mechanism typically aligns with task retries (i.e., task attempts), however this is not guaranteed.
 :::
 
 :::{versionchanged} 23.09.2-edge
