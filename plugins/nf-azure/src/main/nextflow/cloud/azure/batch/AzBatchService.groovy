@@ -336,7 +336,7 @@ class AzBatchService implements Closeable {
     }
 
     protected AzureNamedKeyCredential createBatchCredentialsWithKey() {
-        log.debug "[AZURE BATCH] Creating Azure Batch client using shared key creddentials"
+        log.debug "[AZURE BATCH] Creating Azure Batch client using shared key credentials"
 
         if( !config.batch().endpoint )
             throw new IllegalArgumentException("Missing Azure Batch endpoint -- Specify it in the nextflow.config file using the setting 'azure.batch.endpoint'")
@@ -568,9 +568,57 @@ class AzBatchService implements Closeable {
     }
 
     AzTaskKey runTask(String poolId, String jobId, TaskRun task) {
-        final taskToAdd = createTask(poolId, jobId, task)
-        apply(() -> client.createTask(jobId, taskToAdd))
-        return new AzTaskKey(jobId, taskToAdd.getId())
+        final BatchTaskCreateContent taskToAdd = createTask(poolId, jobId, task)
+        final AzTaskKey submitted = submitTaskToJob(poolId, jobId, task, taskToAdd)
+        setAutoTerminateIfEnabled(submitted.jobId, taskToAdd.getId())
+        return submitted
+    }
+
+    /**
+     * Submit a task and transparently recover from a 409 job state conflict by
+     * creating a fresh job and retrying the submission.
+     */
+    protected AzTaskKey submitTaskToJob(String poolId, String jobId, TaskRun task, BatchTaskCreateContent taskToAdd) {
+        try {
+            apply(() -> client.createTask(jobId, taskToAdd))
+            return new AzTaskKey(jobId, taskToAdd.getId())
+        }
+        catch( HttpResponseException e ) {
+            if( e.response.statusCode == 409 && config.batch().terminateJobsOnCompletion ) {
+                final String newJobId = recreateJobForTask(poolId, task, jobId, taskToAdd.getId())
+                apply(() -> client.createTask(newJobId, taskToAdd))
+                return new AzTaskKey(newJobId, taskToAdd.getId())
+            }
+            throw e
+        }
+    }
+
+    /**
+     * Create a new Azure Batch job for the given process and update internal bookkeeping
+     * so subsequent tasks for the same (process,pool) use the fresh job id.
+     */
+    protected String recreateJobForTask(String poolId, TaskRun task, String oldJobId, String taskId) {
+        log.debug "Job ${oldJobId} is in completed/terminating state, creating a new job for task ${taskId}"
+        allJobIds.values().removeAll { it == oldJobId }
+        final String newJobId = createJob0(poolId, task)
+        final AzJobKey mapKey = new AzJobKey(task.processor, poolId)
+        allJobIds[mapKey] = newJobId
+        return newJobId
+    }
+
+    /**
+     * If configured, set the job to auto-terminate when all tasks complete.
+     */
+    protected void setAutoTerminateIfEnabled(String jobId, String taskId) {
+        if( !config.batch().terminateJobsOnCompletion )
+            return
+        log.trace "Eagerly setting job ${jobId} to auto-terminate after submitting task ${taskId}"
+        try {
+            setJobAutoTermination(jobId)
+        }
+        catch( Exception e ) {
+            log.trace "Failed to eagerly set auto-termination for job ${jobId} after task submission - ${e.message ?: e}"
+        }
     }
 
     protected List<String> getShareVolumeMounts(AzVmPoolSpec spec) {
@@ -984,6 +1032,7 @@ class AzBatchService implements Closeable {
      * @param jobId The Azure Batch job ID to set for auto-termination
      */
     void setJobAutoTermination(String jobId) {
+        log.trace "Eagerly setting Azure Batch job ${jobId} to auto-terminate when all tasks complete"
         setJobTermination(jobId)
     }
 
@@ -994,22 +1043,20 @@ class AzBatchService implements Closeable {
      */
     protected void setJobTermination(String jobId) {
         try {
-            log.trace "Setting Azure job ${jobId} to terminate on completion"
-
             final job = apply(() -> client.getJob(jobId))
+            
             final poolInfo = job.poolInfo
 
             final jobParameter = new BatchJobUpdateContent()
                     .setOnAllTasksComplete(OnAllBatchTasksComplete.TERMINATE_JOB)
                     .setPoolInfo(poolInfo)
-
             apply(() -> client.updateJob(jobId, jobParameter))
         }
         catch (HttpResponseException e) {
             if (e.response.statusCode == 409) {
-                log.debug "Azure Batch job ${jobId} already terminated, skipping auto-termination setup"
+                log.debug "Azure Batch job ${jobId} already terminated or in terminal state, skipping auto-termination setup"
             } else {
-                log.warn "Unable to set auto-termination for Azure Batch job ${jobId} - Status: ${e.response.statusCode}, Reason: ${e.message ?: e}"
+                log.warn "Unable to set auto-termination for Azure Batch job ${jobId} - HTTP Status: ${e.response.statusCode}, Reason: ${e.message ?: e}"
             }
         }
         catch (Exception e) {
