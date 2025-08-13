@@ -40,6 +40,10 @@ class PluginRefactorTest extends Specification {
         "   mixed---separators___"      || "MixedSeparators"
         "alreadyPascalCase"             || "AlreadyPascalCase"
         "foo-plugin"                    || "Foo"
+        "nf-hello"                      || "Hello"
+        "nf-my-plugin"                  || "My"
+        "NfHelloWorld"                  || "HelloWorld"
+        "my-nf-plugin"                  || "MyNf"
     }
 
     def "should normalize strings into kebab-case names"() {
